@@ -67,3 +67,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   visual-language, validation, and MVP contracts; `git diff --check` passed.
 - Commit status: ready to commit as
   `Flatten overall circuit canvas architecture`.
+
+## 2026-08-07 - Establish phased execution documentation
+
+- Target: turn the accepted architecture into a navigable, staged execution
+  system with complete Phase 0–7 plans and durable homes for normative specs,
+  Agent guidance, and architecture decisions.
+- Changed areas: added `docs/README.md`; added roadmap index, phase template,
+  and substantive Phase 0–7 plans; added specification, Agent, and ADR indexes
+  and templates; updated the repository README; added the bounded target plan
+  under `plan/2026-08-07-establish-execution-docs/`.
+- Validation: confirmed all eight phase files contain every required planning
+  section; all relative Markdown links resolve; all Markdown fences are
+  balanced; no application source scaffold was created; `git diff --check`
+  passed.
+- Commit status: ready to commit as
+  `Establish phased execution documentation`.

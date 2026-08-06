@@ -7,6 +7,11 @@ descriptions into reviewable schematics.
 
 - `lib/circuit.vss`: binary Microsoft Visio stencil containing circuit symbols.
 - `netlists/`: SPICE fixtures and local model declarations, grouped by circuit.
+- `docs/overall-product-plan.md`: accepted product and architecture baseline.
+- `docs/roadmap/`: staged delivery plans and phase exit gates.
+- `docs/specs/`: normative module, file-format, and API contracts.
+- `docs/agent/`: Agent API usage and layout guidance.
+- `docs/adr/`: architecture decision records and their template.
 - `plan/`: target plans, templates, and the factual maintenance log.
 - `docs/experience/`: human-triggered reusable lessons and their template.
 - `AGENTS.md`: repository-wide rules for Agent-assisted work.
@@ -26,6 +31,7 @@ human reviews evidence -> Agent drafts a candidate lesson -> human decides
 ```
 
 See `AGENTS.md` and `plan/README.md` before changing project assets.
+Start product-planning navigation at `docs/README.md`.
 
 ## Validation Baseline
 
