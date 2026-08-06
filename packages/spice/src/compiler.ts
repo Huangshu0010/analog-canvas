@@ -3,6 +3,12 @@ import type { SourceSpan } from "@icm/model";
 
 import { diagnostic } from "./diagnostics.js";
 import type { SpiceDiagnostic } from "./diagnostics.js";
+import {
+  detectSpiceDialect,
+  type SpiceCompileOptions,
+  type SpiceDialectEvidence,
+} from "./dialect.js";
+import { evaluateSpiceExpression } from "./expression.js";
 import { CircuitIRSchema } from "./ir.js";
 import type {
   CircuitCellIR,
@@ -13,6 +19,7 @@ import type {
   CircuitParameterDeclarationIR,
   ModelDeclarationIR,
   OpaqueStatement,
+  PreservedStatementIR,
 } from "./ir.js";
 import { createSourceBundle } from "./source.js";
 import type { SourceBundle, SpiceSourceInput } from "./source-types.js";
@@ -38,6 +45,7 @@ export interface SpiceCompileResult {
   bundle: SourceBundle;
   ir: CircuitIR | null;
   diagnostics: SpiceDiagnostic[];
+  dialectEvidence: SpiceDialectEvidence;
   successful: boolean;
 }
 
@@ -78,19 +86,137 @@ function collectDefinitions(
   models: ModelDeclarationIR[];
   globalNames: Set<string>;
   opaque: OpaqueStatement[];
+  preserved: PreservedStatementIR[];
 } {
   const definitions: CellDefinition[] = [];
   const parameters: CircuitParameterDeclarationIR[] = [];
   const models: ModelDeclarationIR[] = [];
   const globalNames = new Set(["0"]);
   const opaque: OpaqueStatement[] = [];
+  const preserved: PreservedStatementIR[] = [];
   const topInstances: InstanceStatement[] = [];
+  const globalSymbols = new Map<string, number>();
+  const selectedSectionsByFile = new Map<string, Set<string>>();
+  for (const dependency of bundle.dependencies) {
+    if (!dependency.targetFileId || !dependency.section) continue;
+    const sections =
+      selectedSectionsByFile.get(dependency.targetFileId) ?? new Set<string>();
+    sections.add(normalizeName(dependency.section));
+    selectedSectionsByFile.set(dependency.targetFileId, sections);
+  }
+
+  const preserve = (
+    statement: SpiceStatement,
+    kind: PreservedStatementIR["kind"],
+    name: string,
+  ): void => {
+    preserved.push({
+      kind,
+      name,
+      rawText: statement.rawText,
+      sourceRef: statement.sourceRef,
+    });
+  };
+
+  interface ConditionFrame {
+    parentActive: boolean;
+    active: boolean;
+    branchTaken: boolean;
+    resolved: boolean;
+  }
 
   for (const syntaxFile of bundle.syntaxFiles) {
     let current: CellDefinition | null = null;
+    let currentSymbols = new Map(globalSymbols);
+    let librarySection: string | null = null;
+    const selectedSections = selectedSectionsByFile.get(syntaxFile.fileId);
+    const conditions: ConditionFrame[] = [];
+    const isActive = (): boolean => conditions.every((frame) => frame.active);
     for (const statement of syntaxFile.statements) {
+      if (statement.kind === "library") {
+        preserve(
+          statement,
+          "library",
+          `${statement.mode}:${statement.section}`,
+        );
+        if (statement.mode === "section-start") {
+          librarySection = normalizeName(statement.section);
+        } else if (statement.mode === "section-end") {
+          librarySection = null;
+        }
+        continue;
+      }
+      if (
+        selectedSections &&
+        (!librarySection || !selectedSections.has(librarySection))
+      ) {
+        continue;
+      }
+      if (statement.kind === "conditional") {
+        preserve(statement, "conditional", statement.form);
+        const parentActive = conditions.every((frame) => frame.active);
+        if (statement.form === "if") {
+          const value = evaluateSpiceExpression(
+            statement.rawExpression ?? "",
+            current ? currentSymbols : globalSymbols,
+          );
+          if (value === null) {
+            diagnostics.push(
+              diagnostic(
+                "SPICE_BIND_CONDITION_UNRESOLVED",
+                "warning",
+                "bind",
+                `Conditional expression was preserved but not elaborated: ${statement.rawExpression ?? ""}`,
+                statement.sourceRef,
+              ),
+            );
+          }
+          conditions.push({
+            parentActive,
+            active: parentActive && value !== null && value !== 0,
+            branchTaken: value !== null && value !== 0,
+            resolved: value !== null,
+          });
+        } else {
+          const frame = conditions.at(-1);
+          if (!frame) {
+            diagnostics.push(
+              diagnostic(
+                "SPICE_BIND_CONDITIONAL_MISMATCH",
+                "error",
+                "bind",
+                `.${statement.form} has no matching .if`,
+                statement.sourceRef,
+              ),
+            );
+            continue;
+          }
+          if (statement.form === "elseif") {
+            const value = evaluateSpiceExpression(
+              statement.rawExpression ?? "",
+              current ? currentSymbols : globalSymbols,
+            );
+            frame.resolved = frame.resolved && value !== null;
+            frame.active =
+              frame.parentActive &&
+              frame.resolved &&
+              !frame.branchTaken &&
+              value !== 0;
+            if (value !== null && value !== 0) frame.branchTaken = true;
+          } else if (statement.form === "else") {
+            frame.active =
+              frame.parentActive && frame.resolved && !frame.branchTaken;
+            frame.branchTaken = true;
+          } else {
+            conditions.pop();
+          }
+        }
+        continue;
+      }
+      if (!isActive()) continue;
       switch (statement.kind) {
         case "include":
+          preserve(statement, "directive", "include");
           break;
         case "subckt_start":
           if (current) {
@@ -113,6 +239,15 @@ function collectDefinitions(
             instances: [],
             sourceRef: statement.sourceRef,
           };
+          currentSymbols = new Map(globalSymbols);
+          for (const parameter of statement.parameters) {
+            const value = evaluateSpiceExpression(
+              parameter.rawText,
+              currentSymbols,
+            );
+            if (value !== null)
+              currentSymbols.set(normalizeName(parameter.name), value);
+          }
           break;
         case "subckt_end":
           if (!current) {
@@ -151,10 +286,20 @@ function collectDefinitions(
           current.sourceRef = fullSpan(current.sourceRef, statement.sourceRef);
           definitions.push(current);
           current = null;
+          currentSymbols = new Map(globalSymbols);
           break;
         case "parameter":
-          if (current) current.parameters.push(...statement.parameters);
-          else parameters.push(...statement.parameters.map(declaration));
+          if (current) {
+            current.parameters.push(...statement.parameters);
+          } else {
+            parameters.push(...statement.parameters.map(declaration));
+          }
+          for (const parameter of statement.parameters) {
+            const target = current ? currentSymbols : globalSymbols;
+            const value = evaluateSpiceExpression(parameter.rawText, target);
+            if (value !== null)
+              target.set(normalizeName(parameter.name), value);
+          }
           break;
         case "model":
           models.push({
@@ -175,7 +320,29 @@ function collectDefinitions(
         case "opaque":
           opaque.push(opaqueIr(statement));
           break;
+        case "function":
+          preserve(statement, "function", statement.name);
+          break;
+        case "control_boundary":
+          preserve(statement, "control", statement.form);
+          break;
+        case "control_command":
+          preserve(statement, "control", statement.command);
+          break;
+        case "directive":
+          preserve(statement, "directive", statement.name);
+          break;
       }
+    }
+    if (conditions.length > 0) {
+      diagnostics.push(
+        diagnostic(
+          "SPICE_BIND_UNTERMINATED_CONDITIONAL",
+          "error",
+          "bind",
+          "Conditional block has no matching .endif",
+        ),
+      );
     }
     if (current) {
       diagnostics.push(
@@ -203,7 +370,14 @@ function collectDefinitions(
       ),
     });
   }
-  return { definitions, parameters, models, globalNames, opaque };
+  return {
+    definitions,
+    parameters,
+    models,
+    globalNames,
+    opaque,
+    preserved,
+  };
 }
 
 function parameterRecord(
@@ -238,8 +412,16 @@ function defaultPinNames(statement: InstanceStatement): string[] {
     ccvs: ["OUT+", "OUT-"],
     diode: ["A", "K"],
     bjt: ["C", "B", "E", "S"],
+    jfet: ["D", "G", "S"],
+    mesfet: ["D", "G", "S"],
     switch: ["1", "2", "CTRL+", "CTRL-"],
+    "current-switch": ["1", "2"],
     mosfet: ["D", "G", "S", "B"],
+    "behavioral-source": ["+", "-"],
+    "lossless-transmission-line": ["1+", "1-", "2+", "2-"],
+    "lossy-transmission-line": ["1+", "1-", "2+", "2-"],
+    "single-lossy-transmission-line": ["1+", "1-", "2+", "2-"],
+    "uniform-rc-line": ["1", "2", "REF"],
   };
   const known = byFamily[statement.family] ?? [];
   return statement.nodes.map((_, index) => known[index] ?? `P${index + 1}`);
@@ -267,7 +449,19 @@ function targetFor(
     };
   }
   if (
-    ["diode", "bjt", "switch", "mosfet"].includes(statement.family) &&
+    [
+      "diode",
+      "bjt",
+      "jfet",
+      "mesfet",
+      "switch",
+      "current-switch",
+      "mosfet",
+      "lossy-transmission-line",
+      "coupled-multiconductor-line",
+      "uniform-rc-line",
+      "single-lossy-transmission-line",
+    ].includes(statement.family) &&
     statement.master
   ) {
     return {
@@ -380,10 +574,20 @@ function buildCell(
   };
 }
 
-export function compileSourceBundle(bundle: SourceBundle): SpiceCompileResult {
+export function compileSourceBundle(
+  bundle: SourceBundle,
+  options: SpiceCompileOptions = {},
+): SpiceCompileResult {
   const diagnostics = [...bundle.diagnostics];
+  const dialect = detectSpiceDialect(bundle, options.dialect);
   if (!bundle.entryFileId) {
-    return { bundle, ir: null, diagnostics, successful: false };
+    return {
+      bundle,
+      ir: null,
+      diagnostics,
+      dialectEvidence: dialect,
+      successful: false,
+    };
   }
   const collected = collectDefinitions(bundle, diagnostics);
   const definitions = new Map<string, CellDefinition>();
@@ -429,11 +633,12 @@ export function compileSourceBundle(bundle: SourceBundle): SpiceCompileResult {
     );
   }
   const candidate = CircuitIRSchema.safeParse({
-    dialect: "spice-current-profile",
+    dialect: dialect.dialect,
     topCells,
     cells,
     parameters: collected.parameters,
     models: collected.models,
+    preservedStatements: collected.preserved,
     unresolvedStatements: collected.opaque,
   });
   if (!candidate.success) {
@@ -447,12 +652,19 @@ export function compileSourceBundle(bundle: SourceBundle): SpiceCompileResult {
           .join("; "),
       ),
     );
-    return { bundle, ir: null, diagnostics, successful: false };
+    return {
+      bundle,
+      ir: null,
+      diagnostics,
+      dialectEvidence: dialect,
+      successful: false,
+    };
   }
   return {
     bundle,
     ir: candidate.data,
     diagnostics,
+    dialectEvidence: dialect,
     successful: !diagnostics.some((item) => item.severity === "error"),
   };
 }
@@ -460,6 +672,10 @@ export function compileSourceBundle(bundle: SourceBundle): SpiceCompileResult {
 export async function compileSpiceSources(
   inputs: readonly SpiceSourceInput[],
   entryPath: string,
+  options: SpiceCompileOptions = {},
 ): Promise<SpiceCompileResult> {
-  return compileSourceBundle(await createSourceBundle(inputs, entryPath));
+  return compileSourceBundle(
+    await createSourceBundle(inputs, entryPath),
+    options,
+  );
 }

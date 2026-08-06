@@ -127,6 +127,12 @@ export const OpaqueStatementSchema = z.strictObject({
   sourceRef: SourceSpanSchema,
   probableType: z.enum(["element", "directive", "control"]).optional(),
 });
+export const PreservedStatementIRSchema = z.strictObject({
+  kind: z.enum(["directive", "control", "conditional", "function", "library"]),
+  name: z.string().min(1),
+  rawText: z.string(),
+  sourceRef: SourceSpanSchema,
+});
 export const CircuitIRSchema = z
   .strictObject({
     dialect: SpiceDialectIdSchema,
@@ -134,6 +140,7 @@ export const CircuitIRSchema = z
     cells: z.array(CircuitCellIRSchema),
     parameters: z.array(CircuitParameterDeclarationIRSchema),
     models: z.array(ModelDeclarationIRSchema),
+    preservedStatements: z.array(PreservedStatementIRSchema),
     unresolvedStatements: z.array(OpaqueStatementSchema),
   })
   .superRefine((ir, context) => {
@@ -175,4 +182,5 @@ export type CircuitParameterDeclarationIR = z.infer<
 >;
 export type ModelDeclarationIR = z.infer<typeof ModelDeclarationIRSchema>;
 export type OpaqueStatement = z.infer<typeof OpaqueStatementSchema>;
+export type PreservedStatementIR = z.infer<typeof PreservedStatementIRSchema>;
 export type CircuitIR = z.infer<typeof CircuitIRSchema>;

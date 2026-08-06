@@ -160,6 +160,26 @@ test("imports a selected SPICE source set into unplaced Documents", async ({
   );
 });
 
+test("imports the ngspice 46 structural baseline through the browser", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByTestId("spice-files")
+    .setInputFiles([
+      resolve(process.cwd(), "fixtures/spice-baseline/core.cir"),
+      resolve(process.cwd(), "fixtures/spice-baseline/models.lib"),
+    ]);
+
+  await expect(page.getByTestId("status")).toHaveText(
+    "Imported 3 Documents and 27 instances; 21 generic symbols",
+  );
+  await expect(page.getByTestId("document-count")).toHaveText("3");
+  await expect(page.getByTestId("instance-count")).toHaveText("27");
+  await expect(page.getByTestId("unplaced-XTOP")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("0");
+});
+
 test("routes explicit connectivity without treating crossings as joins", async ({
   page,
 }) => {

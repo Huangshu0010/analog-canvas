@@ -610,12 +610,19 @@ export function App({ project: initialProject }: AppProps) {
         bytes: new Uint8Array(await file.arrayBuffer()),
       })),
     );
-    const entryCandidates = sourceInputs.filter(
+    const conventionalEntries = sourceInputs.filter((input) =>
+      /\.(?:cir|sp|spi)$/iu.test(input.path),
+    );
+    const namedCircuitEntries = conventionalEntries.filter(
       (input) => input.path.split("/").at(-1)?.toLowerCase() === "circuit.spi",
     );
+    const entryCandidates =
+      namedCircuitEntries.length === 1
+        ? namedCircuitEntries
+        : conventionalEntries;
     if (entryCandidates.length !== 1) {
       setStatus(
-        `Select one circuit.spi entry and its local include files; found ${entryCandidates.length}`,
+        `Select one unambiguous .cir, .sp, or .spi entry and its local include files; found ${entryCandidates.length}`,
       );
       return;
     }

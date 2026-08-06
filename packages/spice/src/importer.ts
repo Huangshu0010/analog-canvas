@@ -11,6 +11,7 @@ import type {
 } from "@icm/model";
 
 import type { SpiceCompileResult } from "./compiler.js";
+import type { SpiceCompileOptions } from "./dialect.js";
 import { diagnostic } from "./diagnostics.js";
 import type { SpiceDiagnostic } from "./diagnostics.js";
 import type { CircuitCellIR, CircuitIR, CircuitInstanceIR } from "./ir.js";
@@ -87,7 +88,20 @@ function importDocument(
   cell: CircuitCellIR,
   diagnostics: SpiceDiagnostic[],
 ): SchematicDocument {
-  const instances = cell.instances.map((instance) =>
+  const visibleInstances = cell.instances.filter((instance) => {
+    if (instance.terminals.length > 0) return true;
+    diagnostics.push(
+      diagnostic(
+        "SPICE_IMPORT_NON_VISUAL_INSTANCE",
+        "warning",
+        "import",
+        `Structural instance ${instance.name} has no electrical terminals and remains in transient Circuit IR only`,
+        instance.sourceRef,
+      ),
+    );
+    return false;
+  });
+  const instances = visibleInstances.map((instance) =>
     importInstance(instance, diagnostics),
   );
   const importedInstanceById = new Map(
@@ -107,7 +121,7 @@ function importDocument(
     id: net.id,
     name: net.name,
     scope: net.scope,
-    terminals: cell.instances.flatMap((instance) =>
+    terminals: visibleInstances.flatMap((instance) =>
       instance.terminals
         .filter((terminal) => terminal.netId === net.id)
         .map((terminal) => ({
@@ -228,6 +242,9 @@ export function importCompileResult(
 export async function importSpiceSources(
   inputs: readonly SpiceSourceInput[],
   entryPath: string,
+  options: SpiceCompileOptions = {},
 ): Promise<SpiceImportResult> {
-  return importCompileResult(await compileSpiceSources(inputs, entryPath));
+  return importCompileResult(
+    await compileSpiceSources(inputs, entryPath, options),
+  );
 }

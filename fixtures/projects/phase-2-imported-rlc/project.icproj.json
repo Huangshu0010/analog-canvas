@@ -231,7 +231,7 @@
   "name": "rlc_broadband_match (SPICE Import)",
   "schemaVersion": 1,
   "source": {
-    "dialect": "spice-current-profile",
+    "dialect": "spice3f5-core",
     "entry": "circuit.spi",
     "files": [
       {

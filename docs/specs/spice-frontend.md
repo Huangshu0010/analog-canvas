@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0-current-corpus`
+Version: `2.0-ngspice-46-core`
 
 Owning phase: `Phase 2/4`
 
@@ -41,16 +41,18 @@ to the persistent model.
 - Every non-comment logical statement retains its exact physical slice,
   physical line numbers, and a half-open offset span with one-based line and
   column positions.
-- A leading `+` joins a SPICE continuation to the preceding logical statement.
+- A leading `+` or a preceding line ending in two backslashes joins a SPICE
+  continuation to the preceding logical statement.
 - Top-level whitespace splitting respects quotes, parentheses, and braces.
-- Inline `$` and `;` comments are ignored for typed projection only; source
-  text and raw statement text remain unchanged.
+- Inline `$`, `;`, and `//` comments are ignored for typed projection only;
+  source text and raw statement text remain unchanged.
 - Unrecognized or malformed non-comment statements become opaque statements
   and emit a source-located diagnostic. They are never silently discarded.
 
 ## Include policy
 
-Phase 2 supports quoted or unquoted local relative `.include` targets.
+Quoted or unquoted local relative `.include`, `.incpslt`, and `.lib file
+section` targets use the same sandboxed resolver.
 
 - paths are resolved relative to the including file;
 - absolute, URL, drive-qualified, and root-escaping paths are denied;
@@ -59,31 +61,47 @@ Phase 2 supports quoted or unquoted local relative `.include` targets.
 - files not reachable from the entry remain outside the resulting bundle;
 - parsing never performs network access.
 
-Library-section selection and configured search paths enter the Phase 4
-compatibility matrix; they are not guessed in Phase 2.
+For `.lib`, only the named `.lib section` through matching `.endl` content is
+elaborated. All library text remains losslessly available. Configured simulator
+search paths are not used or guessed.
 
-## Current compatibility profile
+## Compatibility profile
 
-The Phase 2 typed surface is deliberately the syntax present in `netlists/`:
+The accepted baseline is `ngspice-46-core`, defined by
+[`ADR 0004`](../adr/0004-ngspice-46-core-structural-baseline.md) and the
+[machine-readable matrix](../../fixtures/spice-baseline/ngspice-46-core.json).
+The baseline is structural, not a promise of simulation equivalence.
 
-| Form | Phase 2 projection |
+| Form | Projection |
 |---|---|
-| `.include` | dependency request |
-| `.subckt` / `.ends` | ordered cell definition |
-| `.param` | raw named parameter declarations |
-| `.model` | model name, type, and raw parameter tail |
-| R/C/L | two terminals and raw value |
-| V/I | two terminals and raw source value |
-| E/G | four terminals and raw gain |
-| F/H | two output terminals, controlling source, and raw gain |
-| D | two terminals and model |
-| Q | ordered transistor terminals and model |
-| S | four terminals and model |
+| R/C/L, V/I, E/F/G/H, B | primitive connectivity plus raw value/expression |
+| D/Q/J/Z/M, S/W | model-backed ordered connectivity |
+| T/O/P/U/Y | transmission/distributed-line connectivity plus raw tail |
+| K | typed coupling references without invented electrical terminals |
 | X | ordered terminals and subcircuit/master name |
+| `.subckt`, `.ends`, `.model`, `.global` | structural definitions |
+| `.param`, `.func`, `.if/.elseif/.else/.endif` | raw expressions plus bounded deterministic elaboration |
+| `.include`, `.incpslt`, `.lib/.endl` | sandboxed dependency/section structure |
+| analyses, output, option, metadata dot commands | typed name/category plus raw arguments |
+| `.control/.endc` and enclosed commands | preserved structure; never executed |
 
-M is accepted as a conservative four-terminal/model form because it is a
-SPICE baseline primitive, but broader device and directive coverage remains a
-Phase 4 gate.
+XSPICE A devices, Verilog-A/OSDI N devices, XSPICE-specific U forms, CIDER,
+and vendor translations remain opaque with warnings. They are preserved
+exactly and do not block recognized surrounding circuit structure.
+
+## Expressions and dialect evidence
+
+Official T/G/Meg/K/mil/m/u/n/p/f/a scale factors are recognized. Raw
+expressions remain authoritative. A bounded evaluator supports numeric,
+arithmetic, relational, logical, and common scalar-function forms needed for
+deterministic condition selection. If a condition cannot be evaluated, all of
+its branches are excluded from Circuit IR and a warning is emitted; the source
+is not guessed or repaired.
+
+Callers may explicitly select `ngspice-46-core` or `spice3f5-core`. In auto
+mode, `.control`, `.func`, conditionals, or ngspice-specific dot commands are
+recorded as evidence for `ngspice-46-core`; otherwise the shared core is
+classified as `spice3f5-core`.
 
 ## Elaboration rules
 
@@ -93,13 +111,13 @@ Phase 4 gate.
   order.
 - Known X masters bind to subcircuit cells. Unknown X masters remain opaque
   targets with positional pins.
-- R/C/L/V/I/E/F/G/H are primitive targets. D/Q/S/M retain model targets when
-  a model name is present.
+- Primitive, model-backed, transmission-line, and subcircuit families retain
+  ordered terminals according to the compatibility matrix.
 - Net identity is scoped to a cell. `0` and explicit `.global` names are global;
   other names are local.
 - Root candidates are defined cells not called by another bound subcircuit.
-- Parameters and models retain raw expressions; Phase 2 does not simulate or
-  require evaluation.
+- Parameters and models retain raw expressions. Bounded condition evaluation
+  does not simulate devices or execute analyses/control commands.
 
 ## Diagnostics
 
@@ -122,13 +140,17 @@ transient or test-fixture data.
 - offset/line/column tests;
 - missing, cycle, duplicate, and escape include tests;
 - per-family typed statement tests;
+- compatibility-matrix completeness tests;
+- exact parse/print and no-silent-loss accounting;
+- official scale-factor and conditional-expression tests;
+- `.lib` section and control-block tests;
+- deterministic fuzz termination/preservation tests;
 - opaque-preservation assertions;
 - hierarchy, terminal-order, parameter, and model tests;
 - schema validation and connectivity goldens for every current netlist.
 
-## Phase 4 extension rule
+## Extension rule
 
-Phase 4 may add typed statements, expressions, `.lib` sections, control blocks,
-and wider ngspice/SPICE3 compatibility. It must preserve Phase 2 source and
-opaque behavior and update an explicit compatibility matrix rather than
-silently changing token interpretation.
+Later dialect work must preserve this source and opaque behavior and add a new
+versioned profile or explicit matrix revision rather than silently changing
+`ngspice-46-core` interpretation.

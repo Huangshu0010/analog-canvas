@@ -4,8 +4,8 @@ import { createSourceBundle } from "./source.js";
 
 const encoder = new TextEncoder();
 
-describe("current SPICE statement profile", () => {
-  it("projects every current element family and preserves unknown directives", async () => {
+describe("SPICE statement profile", () => {
+  it("projects every Phase 2 element family and recognizes baseline directives", async () => {
     const text = [
       ".param BASE=1k SCALE={2*BASE}",
       ".model DMOD D (is=1e-15)",
@@ -55,10 +55,11 @@ describe("current SPICE statement profile", () => {
     expect(instances[0]!.parameters[0]!.rawText).toBe("{BASE}");
     expect(instances.at(-1)!.master).toBe("child");
     expect(
-      statements.find((statement) => statement.kind === "opaque")?.rawText,
+      statements.find(
+        (statement) =>
+          statement.kind === "directive" && statement.name === "save",
+      )?.rawText,
     ).toBe(".save A");
-    expect(bundle.diagnostics.map((item) => item.code)).toEqual([
-      "SPICE_SYNTAX_OPAQUE",
-    ]);
+    expect(bundle.diagnostics).toEqual([]);
   });
 });

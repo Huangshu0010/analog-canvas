@@ -9,7 +9,11 @@ import type {
   SpiceSourceInput,
 } from "./source-types.js";
 import { parseSpiceSource } from "./syntax.js";
-import type { IncludeStatement, SpiceSyntaxFile } from "./syntax.js";
+import type {
+  IncludeStatement,
+  LibraryStatement,
+  SpiceSyntaxFile,
+} from "./syntax.js";
 
 function normalizePath(path: string): string | null {
   const replaced = path.replaceAll("\\", "/").replace(/^\.\//u, "");
@@ -201,8 +205,15 @@ export async function createSourceBundle(
     syntaxFiles.push(syntax);
     diagnostics.push(...syntax.diagnostics);
     for (const statement of syntax.statements) {
-      if (statement.kind !== "include") continue;
-      const includeStatement: IncludeStatement = statement;
+      if (
+        statement.kind !== "include" &&
+        !(statement.kind === "library" && statement.mode === "include")
+      ) {
+        continue;
+      }
+      const includeStatement = statement as
+        | IncludeStatement
+        | (LibraryStatement & { mode: "include"; requestedPath: string });
       const resolvedPath = resolveInclude(
         path,
         includeStatement.requestedPath,
@@ -215,6 +226,9 @@ export async function createSourceBundle(
           resolvedPath: null,
           targetFileId: null,
           status: "denied",
+          ...(includeStatement.kind === "library"
+            ? { section: includeStatement.section }
+            : {}),
           sourceRef: includeStatement.sourceRef,
         });
         diagnostics.push(
@@ -236,6 +250,9 @@ export async function createSourceBundle(
           resolvedPath,
           targetFileId: null,
           status: "missing",
+          ...(includeStatement.kind === "library"
+            ? { section: includeStatement.section }
+            : {}),
           sourceRef: includeStatement.sourceRef,
         });
         diagnostics.push(
@@ -256,6 +273,9 @@ export async function createSourceBundle(
           resolvedPath,
           targetFileId: target.id,
           status: "cycle",
+          ...(includeStatement.kind === "library"
+            ? { section: includeStatement.section }
+            : {}),
           sourceRef: includeStatement.sourceRef,
         });
         diagnostics.push(
@@ -276,6 +296,9 @@ export async function createSourceBundle(
           resolvedPath,
           targetFileId: target.id,
           status: "duplicate",
+          ...(includeStatement.kind === "library"
+            ? { section: includeStatement.section }
+            : {}),
           sourceRef: includeStatement.sourceRef,
         });
         diagnostics.push(
@@ -295,6 +318,9 @@ export async function createSourceBundle(
         resolvedPath,
         targetFileId: target.id,
         status: "resolved",
+        ...(includeStatement.kind === "library"
+          ? { section: includeStatement.section }
+          : {}),
         sourceRef: includeStatement.sourceRef,
       });
       visit(resolvedPath);

@@ -24,6 +24,7 @@ const minimalIr = {
   ],
   parameters: [],
   models: [],
+  preservedStatements: [],
   unresolvedStatements: [
     { kind: "opaque" as const, rawText: ".vendor foo", sourceRef: span },
   ],

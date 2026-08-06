@@ -148,3 +148,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   passed.
 - Commit status: ready to commit as
   `Complete Phase 3 connectivity and routing`.
+
+## 2026-08-07 - Complete Phase 4 full SPICE baseline
+
+- Target: replace the fixture-only parser label with an explicit, lossless,
+  structurally broad SPICE3/ngspice compatibility baseline.
+- Changed areas: accepted ADR 0004; expanded syntax, source dependency,
+  expression, dialect, compiler, IR, importer, and exact-printer modules; added
+  a machine-readable ngspice 46 matrix and minimized baseline/vendor corpus.
+- Validation: frozen install, formatting, immutable Reference checks,
+  TypeScript typecheck, 67 tests in 18 files including 256 deterministic fuzz
+  samples and all current netlists, workspace build, four Playwright
+  regressions, Markdown link/fence checks, product/reference coupling
+  inspection, and `git diff --check` passed.
+- Commit status: ready to commit as `Complete Phase 4 full SPICE baseline`.

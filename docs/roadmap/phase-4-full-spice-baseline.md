@@ -1,6 +1,6 @@
 # Phase 4 - Full SPICE Baseline
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -125,3 +125,21 @@ Import a vendor extension not understood by the selected dialect
 - the corpus round-trips without silent loss;
 - structural Circuit IR is correct for every baseline device family;
 - unsupported extensions remain recoverable and diagnostic rather than fatal.
+
+## Completion evidence
+
+- ADR 0004 pins the `ngspice-46-core` structural profile to the official
+  stable manual and explicitly separates understood connectivity from opaque
+  XSPICE, Verilog-A/OSDI, CIDER, and vendor execution surfaces.
+- A machine-readable matrix covers every official conventional device letter
+  and summarized dot command; one minimized original corpus fixture projects
+  every typed device family into ordered Circuit IR terminals.
+- Exact printing returns decoded source text unchanged, including comments,
+  newline style, plus/two-backslash continuations, control blocks, and unknown
+  statements. Every logical source statement has one syntax record.
+- `.lib` section selection, parameter/function structure, official numeric
+  suffixes, deterministic condition evaluation, dialect evidence/override,
+  preserved control commands, and vendor-extension recovery are tested.
+- Frozen install, formatting, reference checks, typecheck, 67 tests in 18
+  files, workspace build, four Playwright regressions, documentation checks,
+  coupling inspection, and `git diff --check` passed.
