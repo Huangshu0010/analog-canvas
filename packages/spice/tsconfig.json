@@ -4,7 +4,8 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": "src",
-    "tsBuildInfoFile": "dist/spice.tsbuildinfo"
+    "tsBuildInfoFile": "dist/spice.tsbuildinfo",
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts"]

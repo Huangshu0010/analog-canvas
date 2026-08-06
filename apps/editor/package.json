@@ -11,6 +11,7 @@
     "@icm/edit-engine": "workspace:*",
     "@icm/model": "workspace:*",
     "@icm/render-svg": "workspace:*",
+    "@icm/spice": "workspace:*",
     "@icm/symbols": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8"

@@ -114,3 +114,21 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Playwright GUI flow, browser DOM/geometry/console review, Markdown link and
   fence checks, `git diff --check`, and repository status review passed.
 - Commit status: ready to commit as `Complete Phase 1 core editor slice`.
+
+## 2026-08-07 - Complete Phase 2 SPICE import
+
+- Target: import every current SPICE source set into transient Circuit IR and
+  persistent unplaced Documents without silent statement, hierarchy, terminal,
+  parameter, model, or connectivity loss.
+- Changed areas: added source, syntax, include, diagnostic, compiler, Node
+  adapter, and importer modules under `packages/spice`; added dynamic
+  pin-count-matched generic symbols; connected browser multi-file import; added
+  source, Project, and seven-entry corpus goldens; accepted the SPICE frontend
+  profile and advanced the IR contract.
+- Validation: frozen install, formatting, immutable Reference checks,
+  TypeScript typecheck, 49 tests in 15 files, all seven entries/24 cells/127
+  instances against connectivity hashes, canonical imported Project golden,
+  workspace build, two Playwright flows, browser DOM/geometry/console review,
+  Markdown link and fence checks, product/reference coupling inspection,
+  `git diff --check`, and repository status review passed.
+- Commit status: ready to commit as `Complete Phase 2 SPICE import`.

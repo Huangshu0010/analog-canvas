@@ -1,5 +1,9 @@
 import { SymbolDefinitionSchema } from "./schema.js";
 import type { SymbolDefinition, SymbolVariant } from "./schema.js";
+import {
+  createGenericBlockSymbol,
+  genericBlockPinCount,
+} from "./generic-block.js";
 
 export interface ResolvedSymbol {
   definition: SymbolDefinition;
@@ -13,6 +17,7 @@ export interface SymbolResolver {
 export class InMemorySymbolResolver implements SymbolResolver {
   readonly #symbols = new Map<string, SymbolDefinition>();
   readonly #aliases = new Map<string, string>();
+  readonly #generated = new Map<string, SymbolDefinition>();
 
   constructor(definitions: readonly SymbolDefinition[]) {
     for (const input of definitions) {
@@ -35,7 +40,15 @@ export class InMemorySymbolResolver implements SymbolResolver {
 
   resolve(symbolId: string, variantId?: string): ResolvedSymbol | undefined {
     const canonicalId = this.#aliases.get(symbolId) ?? symbolId;
-    const definition = this.#symbols.get(canonicalId);
+    let definition =
+      this.#symbols.get(canonicalId) ?? this.#generated.get(canonicalId);
+    if (!definition) {
+      const pinCount = genericBlockPinCount(canonicalId);
+      if (pinCount !== null) {
+        definition = createGenericBlockSymbol(pinCount);
+        this.#generated.set(canonicalId, definition);
+      }
+    }
     if (!definition) {
       return undefined;
     }

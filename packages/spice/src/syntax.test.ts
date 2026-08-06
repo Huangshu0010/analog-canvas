@@ -1,0 +1,64 @@
+import { describe, expect, it } from "vitest";
+
+import { createSourceBundle } from "./source.js";
+
+const encoder = new TextEncoder();
+
+describe("current SPICE statement profile", () => {
+  it("projects every current element family and preserves unknown directives", async () => {
+    const text = [
+      ".param BASE=1k SCALE={2*BASE}",
+      ".model DMOD D (is=1e-15)",
+      ".subckt all A B C D",
+      "R1 A B {BASE}",
+      "C1 A B 2p",
+      "L1 A B 3n",
+      "V1 A B 1",
+      "I1 A B 2u",
+      "E1 A B C D 4",
+      "G1 A B C D 5m",
+      "F1 A B V1 6",
+      "H1 A B V1 7",
+      "D1 A B DMOD",
+      "Q1 A B C DMOD",
+      "S1 A B C D DMOD",
+      "M1 A B C D DMOD l=1u",
+      "X1 A B child p=1",
+      ".save A",
+      ".ends all",
+      "",
+    ].join("\n");
+    const bundle = await createSourceBundle(
+      [{ path: "all.spi", bytes: encoder.encode(text) }],
+      "all.spi",
+    );
+    const statements = bundle.syntaxFiles[0]!.statements;
+    const instances = statements.filter(
+      (statement) => statement.kind === "instance",
+    );
+    expect(instances.map((statement) => statement.family)).toEqual([
+      "resistor",
+      "capacitor",
+      "inductor",
+      "voltage-source",
+      "current-source",
+      "vcvs",
+      "vccs",
+      "cccs",
+      "ccvs",
+      "diode",
+      "bjt",
+      "switch",
+      "mosfet",
+      "subcircuit",
+    ]);
+    expect(instances[0]!.parameters[0]!.rawText).toBe("{BASE}");
+    expect(instances.at(-1)!.master).toBe("child");
+    expect(
+      statements.find((statement) => statement.kind === "opaque")?.rawText,
+    ).toBe(".save A");
+    expect(bundle.diagnostics.map((item) => item.code)).toEqual([
+      "SPICE_SYNTAX_OPAQUE",
+    ]);
+  });
+});

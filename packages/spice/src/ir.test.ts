@@ -18,9 +18,11 @@ const minimalIr = {
       ports: [{ name: "in", position: 0, netId: "net-in", sourceRef: span }],
       nets: [{ id: "net-in", name: "in", scope: "local" as const }],
       instances: [],
+      parameters: [],
       sourceRef: span,
     },
   ],
+  parameters: [],
   models: [],
   unresolvedStatements: [
     { kind: "opaque" as const, rawText: ".vendor foo", sourceRef: span },

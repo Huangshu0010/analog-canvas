@@ -1,0 +1,251 @@
+{
+  "documents": [
+    {
+      "annotations": [],
+      "constraints": [],
+      "id": "document-7bc96c98f92ba968",
+      "instances": [
+        {
+          "id": "C1",
+          "placement": null,
+          "properties": {
+            "spice.name": "C1",
+            "spice.param.value": "1.1p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 14,
+              "line": 4,
+              "offset": 210
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 4,
+              "offset": 197
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "L1",
+          "placement": null,
+          "properties": {
+            "spice.name": "L1",
+            "spice.param.value": "5.1n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 15,
+              "line": 5,
+              "offset": 225
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 5,
+              "offset": 211
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "L2",
+          "placement": null,
+          "properties": {
+            "spice.name": "L2",
+            "spice.param.value": "4.3n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 15,
+              "line": 6,
+              "offset": 240
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 6,
+              "offset": 226
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "C2",
+          "placement": null,
+          "properties": {
+            "spice.name": "C2",
+            "spice.param.value": "0.27p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 17,
+              "line": 7,
+              "offset": 257
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 7,
+              "offset": 241
+            }
+          },
+          "symbolId": "capacitor"
+        }
+      ],
+      "junctions": [],
+      "layoutGroups": [],
+      "name": "rlc_broadband_match",
+      "nets": [
+        {
+          "id": "net-79ec8e259f085acf",
+          "name": "IN",
+          "ports": [
+            "port-3307be81d1676790"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "C1",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-1f6ea314f943333f",
+          "name": "OUT",
+          "ports": [
+            "port-d739bdcbeaac0c45"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "L2",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "C2",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-fee1fa14e76bf21e",
+          "name": "COM",
+          "ports": [
+            "port-668d040983329321"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "L1",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "C2",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-79fd43259f164e91",
+          "name": "N1",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "C1",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "L1",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "L2",
+              "pinName": "1"
+            }
+          ]
+        }
+      ],
+      "ports": [
+        {
+          "direction": "passive",
+          "id": "port-3307be81d1676790",
+          "name": "IN",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-d739bdcbeaac0c45",
+          "name": "OUT",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-668d040983329321",
+          "name": "COM",
+          "position": null
+        }
+      ],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "textbook-monochrome-v1"
+      },
+      "revision": 0,
+      "routes": [],
+      "sourceBinding": {
+        "cellName": "rlc_broadband_match",
+        "sourceRef": {
+          "end": {
+            "column": 26,
+            "line": 8,
+            "offset": 283
+          },
+          "fileId": "source-648e50f6f6cd02ee",
+          "start": {
+            "column": 1,
+            "line": 1,
+            "offset": 0
+          }
+        }
+      },
+      "sourceStatus": "in-sync"
+    }
+  ],
+  "id": "project-2fc8b4f9fef6921b",
+  "name": "rlc_broadband_match (SPICE Import)",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "spice-current-profile",
+    "entry": "circuit.spi",
+    "files": [
+      {
+        "hash": "sha256:c366a7973e6a5786370aa2285b31298141ab3c52761b67dced4c25a32d885180",
+        "id": "source-648e50f6f6cd02ee",
+        "path": "circuit.spi"
+      }
+    ],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "development",
+    "id": "builtin-analog",
+    "version": "0.0.0"
+  },
+  "topDocumentId": "document-7bc96c98f92ba968"
+}

@@ -9,7 +9,7 @@ Phases are ordered by dependency and exit gates, not by calendar estimates.
 |---:|---|---|---|
 | 0 | [`Contracts and Scaffold`](phase-0-contracts-and-scaffold.md) | complete | Stable Project, Document, coordinate, Symbol, edit, and IR boundaries |
 | 1 | [`Core Editor Slice`](phase-1-core-editor-slice.md) | complete | Manually place, move, save, reopen, and render a small schematic |
-| 2 | [`SPICE Import`](phase-2-spice-import.md) | proposed | Import current fixtures into Documents without losing connectivity |
+| 2 | [`SPICE Import`](phase-2-spice-import.md) | complete | Import current fixtures into Documents without losing connectivity |
 | 3 | [`Connectivity and Routing`](phase-3-connectivity-and-routing.md) | proposed | Wire, explicit junction, crossing, flightline, stretch, and detach closure |
 | 4 | [`Full SPICE Baseline`](phase-4-full-spice-baseline.md) | proposed | Complete SPICE3/ngspice structural compatibility and lossless round-trip |
 | 5 | [`Symbols and Visual Quality`](phase-5-symbols-and-visual-quality.md) | proposed | VSS-derived symbols and stable textbook-monochrome visual output |

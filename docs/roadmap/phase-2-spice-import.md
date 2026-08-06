@@ -1,6 +1,6 @@
 # Phase 2 - SPICE Import
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -126,3 +126,32 @@ Import an X instance whose symbol is unknown
 - hierarchy and connectivity goldens pass;
 - all instances are mapped or represented by generic fallbacks;
 - Phase 3 can consume imported Documents without accessing syntax-tree data.
+
+## Completion evidence
+
+Completed on `2026-08-07`.
+
+- The pure virtual-file adapter and isolated Node adapter retain source hashes,
+  encoding, exact decoded text, logical continuations, physical lines, and
+  offset/line/column spans. Local includes are deterministic and diagnose
+  duplicates, missing files, cycles, and selected-root escapes.
+- The current profile projects `.include`, `.subckt/.ends`, `.param`, `.model`,
+  and every element family present in the corpus. Unknown statements remain
+  opaque with diagnostics; no non-comment logical statement is unaccounted for.
+- All seven `circuit.spi` entries imported successfully: 24 cells, 127
+  instances, ordered ports/terminals, hierarchy, raw parameters, four included
+  models, and connectivity hashes match the committed corpus golden.
+- The importer creates schema-valid unplaced Documents, source bindings and
+  manifests, logical nets, raw SPICE properties, and pin-count-matched
+  `generic-block-N` fallbacks. A canonical imported RLC Project matches its
+  committed golden byte-for-byte.
+- The editor imported the real mixed-device `circuit.spi` plus `models.inc`
+  into 8 Documents and 32 unplaced instances through the browser file control.
+  Saved JSON excludes source text, syntax, IR, and diagnostics.
+- Fifteen test files with 49 tests passed; both the manual-editor and SPICE-file
+  Playwright flows passed. Browser review confirmed the import control, no
+  horizontal overflow, accessible DOM structure, and an empty warning/error
+  console.
+- Frozen install, formatting, Reference isolation, TypeScript typecheck,
+  workspace build, Markdown link/fence checks, product/reference coupling
+  inspection, `git diff --check`, and repository status review passed.

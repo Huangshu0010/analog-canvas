@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0-boundary`
+Version: `1.1-import`
 
 Owning phase: `Phase 0/2`
 
@@ -30,10 +30,11 @@ into persistent project data.
 
 ## Data model or interface
 
-`CircuitIR` contains dialect ID, candidate top-cell names, cells, model
-declarations, and unresolved statements. A cell contains ordered ports, nets,
-instances, and source spans. An instance contains an explicit target, ordered
-terminals, raw parameter expressions, and source location.
+`CircuitIR` contains dialect ID, candidate top-cell names, cells, global
+parameter declarations, model declarations, and unresolved statements. A cell
+contains ordered ports, nets, instances, local parameter declarations, and
+source spans. An instance contains an explicit target, ordered terminals, raw
+parameter expressions, and source location.
 
 ## Invariants
 
@@ -41,6 +42,7 @@ terminals, raw parameter expressions, and source location.
 - Every terminal and port references a net in the same cell.
 - Every top-cell name resolves to a cell.
 - Original source spans remain available for diagnostics.
+- Global, cell, model, and instance parameter expressions retain raw text.
 - Unknown statements remain as opaque source references.
 - Placement, routes, Junctions, symbols, layout intent, and SVG never enter IR.
 - IR never guesses pin roles from instance or model names.

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { resolve } from "node:path";
 
 async function dragInstance(
   page: Page,
@@ -93,4 +94,41 @@ test("manual place, transform, history, save, reopen, and export closure", async
   const svg = Buffer.concat(chunks).toString("utf8");
   expect(svg).toContain('data-layer="formal"');
   expect(svg).not.toMatch(/selection|hit-target|editor-overlay/u);
+});
+
+test("imports a selected SPICE source set into unplaced Documents", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByTestId("spice-files")
+    .setInputFiles([
+      resolve(process.cwd(), "netlists/mixed-device-acceptance/circuit.spi"),
+      resolve(process.cwd(), "netlists/mixed-device-acceptance/models.inc"),
+    ]);
+
+  await expect(page.getByTestId("status")).toHaveText(
+    "Imported 8 Documents and 32 instances; 23 generic symbols",
+  );
+  await expect(
+    page.getByText("mixed_device_acceptance (SPICE Import)"),
+  ).toBeVisible();
+  await expect(page.getByTestId("document-count")).toHaveText("8");
+  await expect(page.getByTestId("instance-count")).toHaveText("32");
+  await expect(page.getByTestId("revision")).toHaveText("0");
+  await expect(page.getByTestId("unplaced-XFILTER")).toBeVisible();
+  await expect(page.getByTestId("unplaced-XCONTROL")).toBeVisible();
+
+  await page.getByRole("button", { name: "Save snapshot" }).click();
+  const saved = await page.evaluate(() =>
+    localStorage.getItem("icm.phase1.snapshot"),
+  );
+  const project = JSON.parse(saved!);
+  expect(project.documents).toHaveLength(8);
+  expect(
+    project.source.files.map((file: { path: string }) => file.path),
+  ).toEqual(["circuit.spi", "models.inc"]);
+  expect(saved).not.toMatch(
+    /rawText|logicalLines|syntaxFiles|unresolvedStatements|diagnostics/u,
+  );
 });

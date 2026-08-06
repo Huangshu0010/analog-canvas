@@ -57,4 +57,18 @@ describe("Symbol Resolver boundary", () => {
     });
     expect(hidden.pins.map((pin) => pin.name)).toEqual(["1", "2"]);
   });
+
+  it("generates a deterministic positional block for every imported terminal", () => {
+    const resolver = new InMemorySymbolResolver([resistor]);
+    const generated = resolver.resolve("generic-block-5")?.definition;
+    expect(generated?.pins.map((pin) => pin.name)).toEqual([
+      "P1",
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+    ]);
+    expect(resolver.resolve("generic-block-5")?.definition).toBe(generated);
+    expect(resolver.resolve("generic-block-0")).toBeUndefined();
+  });
 });

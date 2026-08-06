@@ -37,6 +37,9 @@ importers:
       "@icm/render-svg":
         specifier: workspace:*
         version: link:../../packages/render-svg
+      "@icm/spice":
+        specifier: workspace:*
+        version: link:../../packages/spice
       "@icm/symbols":
         specifier: workspace:*
         version: link:../../packages/symbols

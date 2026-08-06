@@ -15,6 +15,7 @@ import type {
   SchematicDocument,
 } from "@icm/model";
 import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
+import { importSpiceSources } from "@icm/spice";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
 import { createDemoProject } from "./demo-project";
@@ -74,6 +75,10 @@ export function App({ project: initialProject }: AppProps) {
   );
   const selected = document.instances.find(
     (instance) => instance.id === selectedId,
+  );
+  const projectInstanceCount = project.documents.reduce(
+    (count, candidate) => count + candidate.instances.length,
+    0,
   );
 
   function applyResult(result: EditTransactionResult): void {
@@ -277,6 +282,64 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(`Exported revision ${document.revision}`);
   }
 
+  async function importSpiceFiles(files: FileList | null): Promise<void> {
+    if (!files || files.length === 0) {
+      return;
+    }
+    const selectedFiles = [...files];
+    const sourceInputs = await Promise.all(
+      selectedFiles.map(async (file) => ({
+        path: file.webkitRelativePath || file.name,
+        bytes: new Uint8Array(await file.arrayBuffer()),
+      })),
+    );
+    const entryCandidates = sourceInputs.filter(
+      (input) => input.path.split("/").at(-1)?.toLowerCase() === "circuit.spi",
+    );
+    if (entryCandidates.length !== 1) {
+      setStatus(
+        `Select one circuit.spi entry and its local include files; found ${entryCandidates.length}`,
+      );
+      return;
+    }
+    setStatus("Importing SPICE sources");
+    try {
+      const result = await importSpiceSources(
+        sourceInputs,
+        entryCandidates[0]!.path,
+      );
+      if (!result.project || !result.successful) {
+        const firstError = result.diagnostics.find(
+          (item) => item.severity === "error",
+        );
+        setStatus(firstError?.message ?? "SPICE import failed");
+        return;
+      }
+      const importedDocument = result.project.documents.find(
+        (candidate) => candidate.id === result.project!.topDocumentId,
+      )!;
+      const instanceCount = result.project.documents.reduce(
+        (count, candidate) => count + candidate.instances.length,
+        0,
+      );
+      const genericCount = result.project.documents
+        .flatMap((candidate) => candidate.instances)
+        .filter((instance) =>
+          instance.symbolId.startsWith("generic-block-"),
+        ).length;
+      history.current.reset(importedDocument);
+      setProject(result.project);
+      setSelectedId(null);
+      setDragPreview(null);
+      setViewBox(DEFAULT_VIEWBOX);
+      setStatus(
+        `Imported ${result.project.documents.length} Documents and ${instanceCount} instances; ${genericCount} generic symbols`,
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "SPICE import failed");
+    }
+  }
+
   function zoom(factor: number): void {
     setViewBox((current) => {
       const width = Math.round(current.width * factor);
@@ -335,6 +398,18 @@ export function App({ project: initialProject }: AppProps) {
           <button type="button" onClick={exportSvg}>
             Export SVG
           </button>
+          <label className="file-import">
+            Import SPICE
+            <input
+              data-testid="spice-files"
+              type="file"
+              accept=".spi,.cir,.sp,.inc,.lib"
+              multiple
+              onChange={(event) =>
+                void importSpiceFiles(event.currentTarget.files)
+              }
+            />
+          </label>
         </div>
       </header>
       <aside className="side-panel" aria-label="Unplaced instances">
@@ -362,6 +437,10 @@ export function App({ project: initialProject }: AppProps) {
           <dd>{selectedId ?? "None"}</dd>
           <dt>Revision</dt>
           <dd data-testid="revision">{document.revision}</dd>
+          <dt>Documents</dt>
+          <dd data-testid="document-count">{project.documents.length}</dd>
+          <dt>Instances</dt>
+          <dd data-testid="instance-count">{projectInstanceCount}</dd>
           <dt>Status</dt>
           <dd data-testid="status">{status}</dd>
         </dl>

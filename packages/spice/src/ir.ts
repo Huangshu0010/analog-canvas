@@ -31,6 +31,11 @@ export const CircuitParameterIRSchema = z.strictObject({
   rawText: z.string(),
   normalizedName: z.string().min(1),
 });
+export const CircuitParameterDeclarationIRSchema = z.strictObject({
+  name: z.string().min(1),
+  rawText: z.string(),
+  sourceRef: SourceSpanSchema,
+});
 export const CircuitInstanceIRSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1),
@@ -46,10 +51,22 @@ export const CircuitCellIRSchema = z
     ports: z.array(CircuitPortIRSchema),
     nets: z.array(CircuitNetIRSchema),
     instances: z.array(CircuitInstanceIRSchema),
+    parameters: z.array(CircuitParameterDeclarationIRSchema),
     sourceRef: SourceSpanSchema,
   })
   .superRefine((cell, context) => {
     const netIds = new Set(cell.nets.map((net) => net.id));
+    const instanceIds = new Set<string>();
+    for (const [instanceIndex, instance] of cell.instances.entries()) {
+      if (instanceIds.has(instance.id)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate instance ID: ${instance.id}`,
+          path: ["instances", instanceIndex, "id"],
+        });
+      }
+      instanceIds.add(instance.id);
+    }
     const positions = cell.ports
       .map((port) => port.position)
       .sort((left, right) => left - right);
@@ -115,13 +132,25 @@ export const CircuitIRSchema = z
     dialect: SpiceDialectIdSchema,
     topCells: z.array(z.string().min(1)),
     cells: z.array(CircuitCellIRSchema),
+    parameters: z.array(CircuitParameterDeclarationIRSchema),
     models: z.array(ModelDeclarationIRSchema),
     unresolvedStatements: z.array(OpaqueStatementSchema),
   })
   .superRefine((ir, context) => {
-    const cellNames = new Set(ir.cells.map((cell) => cell.name));
+    const cellNames = new Set<string>();
+    for (const [cellIndex, cell] of ir.cells.entries()) {
+      const normalized = cell.name.toLowerCase();
+      if (cellNames.has(normalized)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate cell name: ${cell.name}`,
+          path: ["cells", cellIndex, "name"],
+        });
+      }
+      cellNames.add(normalized);
+    }
     for (const [topIndex, topCell] of ir.topCells.entries()) {
-      if (!cellNames.has(topCell)) {
+      if (!cellNames.has(topCell.toLowerCase())) {
         context.addIssue({
           code: "custom",
           message: `Unknown top cell: ${topCell}`,
@@ -141,6 +170,9 @@ export type CircuitNetIR = z.infer<typeof CircuitNetIRSchema>;
 export type CircuitTerminalIR = z.infer<typeof CircuitTerminalIRSchema>;
 export type CircuitInstanceIR = z.infer<typeof CircuitInstanceIRSchema>;
 export type CircuitCellIR = z.infer<typeof CircuitCellIRSchema>;
+export type CircuitParameterDeclarationIR = z.infer<
+  typeof CircuitParameterDeclarationIRSchema
+>;
 export type ModelDeclarationIR = z.infer<typeof ModelDeclarationIRSchema>;
 export type OpaqueStatement = z.infer<typeof OpaqueStatementSchema>;
 export type CircuitIR = z.infer<typeof CircuitIRSchema>;

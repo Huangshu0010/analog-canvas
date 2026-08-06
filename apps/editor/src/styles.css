@@ -17,6 +17,35 @@ button {
   font: inherit;
 }
 
+.file-import {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #b8b8b0;
+  border-radius: 0.25rem;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.file-import:hover {
+  border-color: #60605a;
+  background: #f7f7f2;
+}
+
+.file-import:focus-within {
+  outline: 2px solid #1f6feb;
+  outline-offset: 2px;
+}
+
+.file-import input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 button:hover:not(:disabled) {
   border-color: #60605a;
   background: #f7f7f2;
