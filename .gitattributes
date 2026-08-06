@@ -1,0 +1,4 @@
+*.vss binary
+*.spi text eol=lf
+*.inc text eol=lf
+*.md text eol=lf
