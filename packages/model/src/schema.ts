@@ -265,6 +265,8 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
     const junctionById = new Map(
       document.junctions.map((junction) => [junction.id, junction]),
     );
+    const terminalNetByKey = new Map<string, string>();
+    const portNetById = new Map<string, string>();
 
     for (const [netIndex, net] of document.nets.entries()) {
       const terminalKeys = new Set<string>();
@@ -278,6 +280,16 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
           });
         }
         terminalKeys.add(terminalKey);
+        const terminalOwner = terminalNetByKey.get(terminalKey);
+        if (terminalOwner && terminalOwner !== net.id) {
+          context.addIssue({
+            code: "custom",
+            message: `Terminal belongs to multiple nets: ${terminal.instanceId}.${terminal.pinName}`,
+            path: ["nets", netIndex, "terminals", terminalIndex],
+          });
+        } else {
+          terminalNetByKey.set(terminalKey, net.id);
+        }
         if (!instanceIds.has(terminal.instanceId)) {
           context.addIssue({
             code: "custom",
@@ -296,6 +308,16 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
           });
         }
         seenPorts.add(portId);
+        const portOwner = portNetById.get(portId);
+        if (portOwner && portOwner !== net.id) {
+          context.addIssue({
+            code: "custom",
+            message: `Port belongs to multiple nets: ${portId}`,
+            path: ["nets", netIndex, "ports", portIndex],
+          });
+        } else {
+          portNetById.set(portId, net.id);
+        }
         if (!portIds.has(portId)) {
           context.addIssue({
             code: "custom",

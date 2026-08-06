@@ -30,4 +30,41 @@ describe("CircuitProject schema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("rejects terminal and port membership in multiple logical Nets", () => {
+    const project = createEmptyProject("project-test", "Test Project");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: null,
+      properties: {},
+    });
+    document.ports.push({
+      id: "port-out",
+      name: "OUT",
+      direction: "output",
+      position: null,
+    });
+    document.nets.push(
+      {
+        id: "net-a",
+        scope: "local",
+        terminals: [{ instanceId: "M1", pinName: "D" }],
+        ports: ["port-out"],
+      },
+      {
+        id: "net-b",
+        scope: "local",
+        terminals: [{ instanceId: "M1", pinName: "D" }],
+        ports: ["port-out"],
+      },
+    );
+
+    const result = CircuitProjectSchema.safeParse(project);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.message).toMatch(/Terminal belongs to multiple nets/);
+    expect(result.error.message).toMatch(/Port belongs to multiple nets/);
+  });
 });

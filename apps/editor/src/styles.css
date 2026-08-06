@@ -56,6 +56,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button[aria-pressed="true"] {
+  border-color: #1f6feb;
+  background: #eef5ff;
+}
+
 body {
   margin: 0;
   min-width: 760px;
@@ -190,4 +195,48 @@ body {
   stroke-width: 1.5;
   stroke-dasharray: 5 4;
   pointer-events: none;
+}
+
+.flightline {
+  stroke: #888;
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.wire-preview {
+  fill: none;
+  stroke: #1f6feb;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.route-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: pointer;
+  pointer-events: stroke;
+  vector-effect: non-scaling-stroke;
+}
+
+.route-hit.selected {
+  stroke: rgb(31 111 235 / 24%);
+  stroke-width: 14;
+}
+
+.endpoint-hit {
+  fill: transparent;
+  stroke: transparent;
+  cursor: crosshair;
+  vector-effect: non-scaling-stroke;
+}
+
+.endpoint-hit.active {
+  fill: #fff;
+  stroke: #1f6feb;
+  stroke-width: 1.5;
 }

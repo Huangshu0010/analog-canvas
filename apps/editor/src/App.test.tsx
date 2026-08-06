@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { App } from "./App";
 import { createDemoProject } from "./demo-project";
+import { createRoutingDemoProject } from "./routing-demo";
 
 describe("editor shell", () => {
   it("renders an empty project without owning model state", () => {
@@ -27,5 +28,16 @@ describe("editor shell", () => {
     );
     expect(serializeProject(createDemoProject())).toBe(fixture);
     expect(fixture).not.toMatch(/selection|viewport|dragPreview/u);
+  });
+
+  it("keeps the routing demo equal to its canonical Project fixture", () => {
+    const fixture = readFileSync(
+      resolve(
+        process.cwd(),
+        "fixtures/projects/phase-3-routing/project.icproj.json",
+      ),
+      "utf8",
+    );
+    expect(serializeProject(createRoutingDemoProject())).toBe(fixture);
   });
 });

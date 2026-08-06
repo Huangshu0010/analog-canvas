@@ -28,6 +28,9 @@ importers:
 
   apps/editor:
     dependencies:
+      "@icm/derived":
+        specifier: workspace:*
+        version: link:../../packages/derived
       "@icm/edit-engine":
         specifier: workspace:*
         version: link:../../packages/edit-engine
@@ -60,11 +63,26 @@ importers:
         specifier: 6.0.5
         version: 6.0.5(vite@8.2.1(@types/node@24.13.3))
 
-  packages/edit-engine:
+  packages/derived:
     dependencies:
       "@icm/model":
         specifier: workspace:*
         version: link:../model
+      "@icm/symbols":
+        specifier: workspace:*
+        version: link:../symbols
+
+  packages/edit-engine:
+    dependencies:
+      "@icm/derived":
+        specifier: workspace:*
+        version: link:../derived
+      "@icm/model":
+        specifier: workspace:*
+        version: link:../model
+      "@icm/symbols":
+        specifier: workspace:*
+        version: link:../symbols
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -77,6 +95,9 @@ importers:
 
   packages/render-svg:
     dependencies:
+      "@icm/derived":
+        specifier: workspace:*
+        version: link:../derived
       "@icm/model":
         specifier: workspace:*
         version: link:../model

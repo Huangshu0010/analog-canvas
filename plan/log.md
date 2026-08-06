@@ -132,3 +132,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Markdown link and fence checks, product/reference coupling inspection,
   `git diff --check`, and repository status review passed.
 - Commit status: ready to commit as `Complete Phase 2 SPICE import`.
+
+## 2026-08-07 - Complete Phase 3 connectivity and routing
+
+- Target: complete explicit visible connectivity, deterministic flightlines,
+  manual orthogonal routing, Junction/crossing semantics, local stretch,
+  protected geometry, detach behavior, and formal route rendering.
+- Changed areas: added `packages/derived`; extended the model, Edit Engine,
+  history, renderer, and editor; added routing specifications, canonical
+  Project/SVG fixtures, unit/integration tests, and Playwright acceptance.
+- Validation: frozen install, formatting, immutable Reference checks,
+  TypeScript typecheck, 61 tests in 17 files, workspace build, three complete
+  Playwright flows, browser DOM and visual inspection, Markdown link/fence
+  checks, product/reference coupling inspection, and `git diff --check`
+  passed.
+- Commit status: ready to commit as
+  `Complete Phase 3 connectivity and routing`.

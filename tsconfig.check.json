@@ -4,6 +4,7 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "paths": {
+      "@icm/derived": ["./packages/derived/src/index.ts"],
       "@icm/edit-engine": ["./packages/edit-engine/src/index.ts"],
       "@icm/model": ["./packages/model/src/index.ts"],
       "@icm/render-svg": ["./packages/render-svg/src/index.ts"],

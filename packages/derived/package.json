@@ -1,5 +1,5 @@
 {
-  "name": "@icm/edit-engine",
+  "name": "@icm/derived",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,9 +14,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@icm/derived": "workspace:*",
     "@icm/model": "workspace:*",
-    "@icm/symbols": "workspace:*",
-    "zod": "4.4.3"
+    "@icm/symbols": "workspace:*"
   }
 }

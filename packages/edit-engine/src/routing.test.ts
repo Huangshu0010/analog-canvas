@@ -1,0 +1,259 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { parseProject } from "@icm/model";
+import { deriveCrossings, deriveFlightlines } from "@icm/derived";
+import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
+import { describe, expect, it } from "vitest";
+
+import { executeTransaction } from "./transaction.js";
+
+const resolver = new InMemorySymbolResolver(builtInSymbols);
+const context = { symbolResolver: resolver };
+
+function documentFixture() {
+  return parseProject(
+    readFileSync(
+      resolve(
+        process.cwd(),
+        "fixtures/projects/phase-3-routing/project.icproj.json",
+      ),
+      "utf8",
+    ),
+  ).documents[0]!;
+}
+
+const terminal = (instanceId: string) => ({
+  kind: "terminal" as const,
+  instanceId,
+  pinName: "P1",
+});
+
+function transaction(documentId: string, revision: number, edits: unknown[]) {
+  return {
+    transactionId: `routing-${revision}-${edits.length}`,
+    documentId,
+    expectedRevision: revision,
+    actor: { kind: "human" as const, id: "routing-test" },
+    edits,
+  };
+}
+
+describe("routing Edit Engine", () => {
+  it("creates independent crossing routes without changing logical topology", () => {
+    const document = documentFixture();
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+        {
+          kind: "set_route_points",
+          routeId: "route-v",
+          netId: "net-v",
+          from: terminal("C"),
+          to: terminal("D"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toHaveLength(2);
+    expect(deriveCrossings(result.document, resolver)).toHaveLength(1);
+    expect(result.document.nets).toEqual(document.nets);
+    expect(deriveFlightlines(result.document, resolver)).toHaveLength(1);
+  });
+
+  it("atomically splits a route through an explicit Junction", () => {
+    const document = documentFixture();
+    document.routes = [
+      {
+        id: "route-h",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "add_junction",
+          junctionId: "junction-h",
+          netId: "net-h",
+          position: { x: 300, y: 300 },
+          split: {
+            routeId: "route-h",
+            firstRouteId: "route-h-a",
+            secondRouteId: "route-h-b",
+            segmentIndex: 0,
+          },
+        },
+      ]),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.junctions).toEqual([
+      { id: "junction-h", netId: "net-h", position: { x: 300, y: 300 } },
+    ]);
+    expect(result.document.routes.map((route) => route.id)).toEqual([
+      "route-h-a",
+      "route-h-b",
+    ]);
+    expect(result.document.routes[0]!.to).toEqual({
+      kind: "junction",
+      junctionId: "junction-h",
+    });
+    expect(result.document.routes[1]!.from).toEqual({
+      kind: "junction",
+      junctionId: "junction-h",
+    });
+  });
+
+  it("rejects a dot that would visually imply an uncommitted crossing join", () => {
+    const document = documentFixture();
+    document.routes = [
+      {
+        id: "route-h",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-v",
+        netId: "net-v",
+        from: terminal("C"),
+        to: terminal("D"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "add_junction",
+          junctionId: "ambiguous-dot",
+          netId: "net-h",
+          position: { x: 300, y: 300 },
+          split: {
+            routeId: "route-h",
+            firstRouteId: "route-h-a",
+            secondRouteId: "route-h-b",
+            segmentIndex: 0,
+          },
+        },
+      ]),
+      context,
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "EDIT_PRECONDITION",
+        message: expect.stringContaining("split every participating branch"),
+      },
+      document,
+    });
+    expect(document.junctions).toEqual([]);
+  });
+
+  it("rejects diagonal, context-free, and locked route mutations atomically", () => {
+    const document = documentFixture();
+    const diagonal = transaction(document.id, 0, [
+      {
+        kind: "set_route_points",
+        routeId: "route-diagonal",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("E"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ]);
+    expect(executeTransaction(document, diagonal, context)).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+      document,
+    });
+    expect(executeTransaction(document, diagonal)).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_CONTEXT_REQUIRED" },
+      document,
+    });
+
+    const locked = documentFixture();
+    locked.routes = [
+      {
+        id: "route-h",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["locked"],
+      },
+    ];
+    expect(
+      executeTransaction(
+        locked,
+        transaction(locked.id, 0, [
+          {
+            kind: "make_flightline",
+            routeId: "route-h",
+          },
+        ]),
+        context,
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+      document: locked,
+    });
+  });
+
+  it("detaches visible geometry while retaining the logical Net", () => {
+    const document = documentFixture();
+    document.routes = [
+      {
+        id: "route-h",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+    const beforeNet = structuredClone(document.nets[0]);
+    const beforeFlightlines = deriveFlightlines(document, resolver);
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "make_flightline", routeId: "route-h" },
+      ]),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toEqual([]);
+    expect(result.document.nets[0]).toEqual(beforeNet);
+    expect(deriveFlightlines(result.document, resolver).length).toBeGreaterThan(
+      beforeFlightlines.length,
+    );
+  });
+});

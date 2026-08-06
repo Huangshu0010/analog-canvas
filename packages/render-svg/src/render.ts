@@ -3,6 +3,7 @@ import {
   SchematicDocumentSchema,
   transformPoint,
 } from "@icm/model";
+import { routePolyline } from "@icm/derived";
 import type { Rect, SchematicDocument } from "@icm/model";
 import type {
   SymbolDefinition,
@@ -103,6 +104,23 @@ function deriveBounds(
       }
       return symbolBounds(resolved.definition, instance);
     });
+  for (const route of document.routes) {
+    const polyline = routePolyline(document, resolver, route);
+    if (!polyline) {
+      throw new Error(`Cannot derive bounds for unresolved route: ${route.id}`);
+    }
+    for (const point of polyline.points) {
+      bounds.push({ x: point.x, y: point.y, width: 0, height: 0 });
+    }
+  }
+  for (const junction of document.junctions) {
+    bounds.push({
+      x: junction.position.x,
+      y: junction.position.y,
+      width: 0,
+      height: 0,
+    });
+  }
   if (bounds.length === 0) {
     return { x: 0, y: 0, width: 960, height: 640 };
   }
@@ -112,7 +130,12 @@ function deriveBounds(
     Math.max(...bounds.map((bound) => bound.x + bound.width)) + margin;
   const maxY =
     Math.max(...bounds.map((bound) => bound.y + bound.height)) + margin;
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(1, maxX - minX),
+    height: Math.max(1, maxY - minY),
+  };
 }
 
 export function buildSvgScene(
@@ -131,7 +154,13 @@ export function buildSvgScene(
 
   const routes = [...document.routes]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
-    .map(() => "")
+    .map((route) => {
+      const polyline = routePolyline(document, resolver, route);
+      if (!polyline) {
+        throw new Error(`Cannot render unresolved route: ${route.id}`);
+      }
+      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter"/>`;
+    })
     .join("");
   const junctions = [...document.junctions]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -154,9 +183,10 @@ export function buildSvgScene(
       const primitives = resolved.definition.primitives
         .map(renderPrimitive)
         .join("");
-      const labelY =
-        resolved.definition.viewBox.y + resolved.definition.viewBox.height + 14;
-      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}" transform="${instanceTransform(instance)}"><g fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter">${primitives}</g><text x="0" y="${labelY}" text-anchor="middle">${escapeXml(instance.id)}</text></g>`;
+      const bounds = symbolBounds(resolved.definition, instance);
+      const labelX = bounds.x + bounds.width / 2;
+      const labelY = bounds.y + bounds.height + 14;
+      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter">${primitives}</g></g><text x="${labelX}" y="${labelY}" text-anchor="middle">${escapeXml(instance.id)}</text></g>`;
     })
     .join("");
   const annotations = [...document.annotations]

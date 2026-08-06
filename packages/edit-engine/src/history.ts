@@ -9,6 +9,7 @@ import {
 import type {
   AppliedTransaction,
   EditDiff,
+  EditExecutionContext,
   EditTransaction,
   EditTransactionResult,
 } from "./transaction.js";
@@ -48,9 +49,11 @@ export class DocumentHistory {
   #document: SchematicDocument;
   readonly #undoStack: SchematicDocument[] = [];
   readonly #redoStack: SchematicDocument[] = [];
+  readonly #context: EditExecutionContext;
 
-  constructor(document: SchematicDocument) {
+  constructor(document: SchematicDocument, context: EditExecutionContext = {}) {
     this.#document = SchematicDocumentSchema.parse(document);
+    this.#context = context;
   }
 
   get document(): SchematicDocument {
@@ -74,7 +77,7 @@ export class DocumentHistory {
   transact(input: EditTransaction | unknown): EditTransactionResult {
     const parsed = EditTransactionSchema.safeParse(input);
     if (!parsed.success) {
-      return executeTransaction(this.#document, input);
+      return executeTransaction(this.#document, input, this.#context);
     }
     const transaction = parsed.data;
     const historyEdits = transaction.edits.filter(
@@ -82,7 +85,7 @@ export class DocumentHistory {
     );
     if (historyEdits.length === 0) {
       const before = this.#document;
-      const result = executeTransaction(before, transaction);
+      const result = executeTransaction(before, transaction, this.#context);
       if (result.ok && result.applied) {
         this.#undoStack.push(before);
         this.#redoStack.length = 0;
@@ -91,7 +94,11 @@ export class DocumentHistory {
       return result;
     }
 
-    const envelopeResult = executeTransaction(this.#document, transaction);
+    const envelopeResult = executeTransaction(
+      this.#document,
+      transaction,
+      this.#context,
+    );
     if (
       !envelopeResult.ok &&
       envelopeResult.error.code !== "HISTORY_CONTEXT_REQUIRED"

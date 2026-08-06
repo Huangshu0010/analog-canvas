@@ -8,6 +8,7 @@
     "dev": "vite"
   },
   "dependencies": {
+    "@icm/derived": "workspace:*",
     "@icm/edit-engine": "workspace:*",
     "@icm/model": "workspace:*",
     "@icm/render-svg": "workspace:*",

@@ -16,6 +16,33 @@ async function dragInstance(
   await expect(page.getByTestId(`hit-${instanceId}`)).toBeVisible();
 }
 
+async function clickRoute(
+  page: Page,
+  routeId: string,
+  position = 0.5,
+  segmentIndex = 0,
+): Promise<void> {
+  const route = page.getByTestId(`route-hit-${routeId}`);
+  const point = await route.evaluate(
+    (element, options) => {
+      const polyline = element as SVGPolylineElement;
+      const first = polyline.points.getItem(options.segmentIndex);
+      const second = polyline.points.getItem(options.segmentIndex + 1);
+      const matrix = polyline.getScreenCTM();
+      if (!first || !second || !matrix) return null;
+      const local = new DOMPoint(
+        first.x + (second.x - first.x) * options.position,
+        first.y + (second.y - first.y) * options.position,
+      );
+      const screen = local.matrixTransform(matrix);
+      return { x: screen.x, y: screen.y };
+    },
+    { position, segmentIndex },
+  );
+  if (!point) throw new Error(`Route ${routeId} is not measurable`);
+  await page.mouse.click(point.x, point.y);
+}
+
 test("manual place, transform, history, save, reopen, and export closure", async ({
   page,
 }) => {
@@ -131,4 +158,85 @@ test("imports a selected SPICE source set into unplaced Documents", async ({
   expect(saved).not.toMatch(
     /rawText|logicalLines|syntaxFiles|unresolvedStatements|diagnostics/u,
   );
+});
+
+test("routes explicit connectivity without treating crossings as joins", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Routing demo" }).click();
+
+  await expect(page.getByTestId("flightline-count")).toHaveText("3");
+  await expect(page.getByTestId("crossing-count")).toHaveText("0");
+
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-A-P1").click();
+  await page.getByTestId("terminal-B-P1").click();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByTestId("flightline-count")).toHaveText("2");
+
+  await page.getByTestId("terminal-C-P1").click();
+  await page.getByTestId("terminal-D-P1").click();
+  await expect(page.getByTestId("revision")).toHaveText("2");
+  await expect(page.getByTestId("flightline-count")).toHaveText("1");
+  await expect(page.getByTestId("crossing-count")).toHaveText("1");
+
+  await page.getByRole("button", { name: "Junction" }).click();
+  await clickRoute(page, "route-ui-1", 0.25);
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
+
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-E-P1").click();
+  await page.getByTestId("junction-junction-ui-3").click();
+  await expect(page.getByTestId("revision")).toHaveText("4");
+  await expect(page.getByTestId("flightline-count")).toHaveText("0");
+
+  await page.getByRole("button", { name: "Select" }).click();
+  await clickRoute(page, "route-ui-2");
+  await page.getByRole("button", { name: "Stretch" }).click();
+  await expect(page.getByTestId("revision")).toHaveText("5");
+
+  const instanceA = page.getByTestId("hit-A");
+  const canvas = page.getByTestId("schematic-canvas");
+  const instanceBox = await instanceA.boundingBox();
+  const canvasBox = await canvas.boundingBox();
+  if (!instanceBox || !canvasBox) {
+    throw new Error("Routing demo geometry is not measurable");
+  }
+  await page.mouse.move(
+    instanceBox.x + instanceBox.width / 2,
+    instanceBox.y + instanceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(canvasBox.x + 180, canvasBox.y + 340, { steps: 4 });
+  await page.mouse.up();
+  await expect(page.getByTestId("revision")).toHaveText("6");
+
+  await clickRoute(page, "route-ui-4", 0.5, 1);
+  await page.getByRole("button", { name: "Detach" }).click();
+  await expect(page.getByTestId("revision")).toHaveText("7");
+  await expect(page.getByTestId("flightline-count")).toHaveText("1");
+
+  await page.getByRole("button", { name: "Save snapshot" }).click();
+  const saved = await page.evaluate(() =>
+    localStorage.getItem("icm.phase1.snapshot"),
+  );
+  expect(saved).not.toBeNull();
+  expect(saved).toContain("junction-ui-3");
+  expect(saved).not.toMatch(/flightline|crossing|wireSource/u);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export SVG" }).click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.from(chunk));
+  }
+  const svg = Buffer.concat(chunks).toString("utf8");
+  expect(svg).toContain('data-layer="routes"');
+  expect(svg).toContain('data-layer="junctions"');
+  expect(svg).toContain('data-object-id="junction-ui-3"');
+  expect(svg).not.toMatch(/flightline|route-hit|editor-overlay/u);
 });

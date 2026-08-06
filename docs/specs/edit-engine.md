@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.1`
+Version: `1.2`
 
 Owning phase: `Phase 0/1`
 
@@ -41,10 +41,11 @@ interface EditTransaction {
 }
 ```
 
-The executable union currently contains `noop`, `place_instance`,
-`move_instance`, `rotate_instance`, `mirror_instance`, `undo`, and `redo`.
-Later phases extend the typed union and versioned schemas; they do not create
-separate mutation endpoints.
+The executable union contains `noop`, `place_instance`, `move_instance`,
+`rotate_instance`, `mirror_instance`, `set_route_points`, `add_junction`,
+`remove_junction`, `make_flightline`, `undo`, and `redo`. Later phases extend
+the typed union and versioned schemas; they do not create separate mutation
+endpoints.
 
 ## Invariants
 

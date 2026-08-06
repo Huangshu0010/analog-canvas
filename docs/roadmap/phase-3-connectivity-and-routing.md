@@ -1,6 +1,6 @@
 # Phase 3 - Connectivity and Routing
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -132,3 +132,19 @@ Detach a routed branch
 - Manual import/place/flightline/wire/junction/crossing/detach closure passes;
 - topology does not change from pure geometry crossings or route deletion;
 - all derived results are deterministic and absent from saved Project JSON.
+
+## Completion evidence
+
+- `@icm/derived` resolves endpoints, derives explicit visible components,
+  deterministic MST flightlines, route polylines, crossings, normalization,
+  and bounded local-stretch proposals.
+- The Edit Engine accepts typed Route/Junction/flightline edits, validates
+  logical membership and orthogonality, splits branches atomically, and
+  rejects protected geometry without partial mutation.
+- The editor completes Wire, Junction, crossing, Stretch, move-with-stretch,
+  Detach, save, reopen, and formal SVG flows through the shared Edit Engine.
+- Formal output renders routes and explicit Junction dots, omits derived
+  overlays, and keeps instance labels upright under rotation and mirroring.
+- Frozen install, formatting, reference checks, typecheck, 61 tests in 17
+  files, workspace build, three Playwright flows, browser visual inspection,
+  documentation checks, and repository coupling inspection passed.

@@ -68,9 +68,58 @@ describe("textbook monochrome SVG renderer", () => {
         expect(scene.formalBody).toContain(
           `transform="translate(100 80) rotate(${rotation})${expectedMirror}"`,
         );
+        expect(scene.formalBody).toContain(
+          `<text x="100" y="124" text-anchor="middle">M1</text>`,
+        );
         expect(scene.viewBox.width).toBeGreaterThan(0);
         expect(scene.viewBox.height).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("renders two crossing routes without inventing a Junction dot", () => {
+    const project = parseProject(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "fixtures/projects/phase-3-routing/project.icproj.json",
+        ),
+        "utf8",
+      ),
+    );
+    const terminal = (instanceId: string) => ({
+      kind: "terminal" as const,
+      instanceId,
+      pinName: "P1",
+    });
+    project.documents[0]!.routes = [
+      {
+        id: "route-h",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-v",
+        netId: "net-v",
+        from: terminal("C"),
+        to: terminal("D"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+    const svg = renderDocumentSvg(project.documents[0]!, resolver, {
+      title: "Phase 3 Crossing",
+    });
+    expect(svg).toBe(
+      readFileSync(
+        resolve(process.cwd(), "fixtures/visual-golden/phase-3-crossing.svg"),
+        "utf8",
+      ),
+    );
+    expect(svg).toContain('<g data-layer="junctions"></g>');
+    expect(svg).not.toContain("flightline");
   });
 });
