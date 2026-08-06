@@ -38,3 +38,16 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   contracts; reviewed headings and terminology; `git diff --check` passed.
 - Commit status: ready to commit as
   `Document overall circuit canvas architecture`.
+
+## 2026-08-07 - Define the default schematic graphical language
+
+- Target: refine the overall plan so free manual page layout is preserved
+  while human- and AI-created wires, junctions, labels, and electrical
+  annotations share a textbook-style monochrome rendering contract.
+- Changed areas: expanded `docs/overall-product-plan.md` and added the bounded
+  target plan under `plan/2026-08-07-refine-default-schematic-style/`.
+- Validation: confirmed balanced Markdown fences and numbered headings;
+  verified theme, route, junction, annotation, overlay/export, renderer,
+  visual-regression, phase, and MVP contracts; `git diff --check` passed.
+- Commit status: ready to commit as
+  `Define default schematic graphical language`.

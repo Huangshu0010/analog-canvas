@@ -11,6 +11,8 @@
 - 交互原则参考 Cadence Virtuoso，而不是 Visio；
 - SPICE 是正式的一等输入格式，而不是只处理当前样例的临时解析器；
 - 网表导入建立逻辑电路，不强制自动布局或自动布线；
+- 页面布局保持通用和人工可控，不强制电源、输入、输出或器件组采用固定方位；
+- 无论内容由人工还是 AI 创建，Wire、Junction、器件编号、net label 和 annotation 默认使用统一的教材式黑白图形语言；
 - 未完成的可见连接使用动态虚连线；
 - 连接点由显式 junction 小圆点表达，没有小圆点的交叉就是 crossing；
 - 人工和 AI 共用同一套领域命令、校验和历史机制；
@@ -29,6 +31,7 @@
 → 器件进入待放置区
 → 人工放置并观察虚连线
 → 人工绘制明确的实体线路和 junction
+→ 线路、标签和 annotation 以统一默认风格渲染
 → AI 读取结构化上下文并执行 typed commands
 → 程序验证 connectivity 与 geometry
 → 人工继续编辑、保存和导出
@@ -40,6 +43,7 @@
 - 不求解 DC、AC、transient、noise 或器件模型；
 - 不把自动布局作为导入前置条件；
 - 不把自动布线作为核心正确性来源；
+- 不把参考图中的器件方位、信号流方向或紧凑排布固化为通用布局规则；
 - 不从 SVG 几何反推电气 connectivity；
 - 不复刻完整 Cadence 功能集；
 - 不在第一阶段承诺多人实时协作、bus、多页跨页连接或 VSDX 完整编辑兼容。
@@ -167,9 +171,12 @@ Visible Geometry 持久化：
 - 器件位置和方向；
 - Route branch 和 waypoint；
 - 显式 junction；
-- label；
+- 具备语义类型、attachment 和 placement 的 annotation；
+- instance、net、power label；
 - current/voltage annotation；
 - 人工锁定的 segment 和 trunk。
+
+Document 保存图形对象的语义角色和人工位置，不保存渲染后的 SVG，也不在每个对象上重复保存字体、线宽和颜色。默认视觉 token 由内置主题 `textbook-monochrome-v1` 统一提供。主题只控制图形语言，不决定器件应放在页面哪个方向。
 
 ### 4.5 Session State：临时状态
 
@@ -239,6 +246,7 @@ interface SchematicDocument {
 interface SchematicPage {
   id: string
   name: string
+  themeId: string
 
   instances: Instance[]
   nets: Net[]
@@ -247,6 +255,8 @@ interface SchematicPage {
   annotations: Annotation[]
 }
 ```
+
+`themeId` 固定页面的正式渲染契约，默认值为 `textbook-monochrome-v1`，保证人工编辑、AI 命令和不同导出器得到一致图形语言；它不包含或推导页面布局约束。
 
 ### 5.1 Instance
 
@@ -297,6 +307,7 @@ type RouteEndpoint =
 interface RouteBranch {
   id: string
   netId: string
+  styleRole: "wire"
 
   from: RouteEndpoint
   to: RouteEndpoint
@@ -339,6 +350,8 @@ interface Junction {
 - Route 连接到器件 pin 时通常不额外显示 junction 圆点；
 - T 形或四向分支连接必须显示圆点；
 - 两条共线 segment 的普通拼接可以不显示圆点。
+
+默认图形语言下，Junction 使用与 Wire 同色的实心圆点；crossing 不画圆点、跳线弧或自动断口。圆点由独立的 `JunctionRenderer` 根据 Junction 对象渲染，不能只是 Route path 上没有数据对应的装饰。具体圆点半径和线宽来自主题 token。
 
 关键操作语义：
 
@@ -748,19 +761,225 @@ AI、Move Tool 和局部 reroute 不得越权修改 locked segment。
 
 ### 11.4 Annotation
 
-支持：
+Annotation 不是无类型的 SVG text，而是具备领域语义、attachment 和人工 placement 的正式对象：
 
-```text
-device label
-net label
-plain text
-current arrow
-voltage annotation
+```typescript
+type Annotation =
+  | InstanceLabel
+  | NetLabel
+  | PowerLabel
+  | PlainText
+  | CurrentAnnotation
+  | VoltageAnnotation
+  | FigureCaption
+
+interface RichSchematicText {
+  runs: Array<{
+    text: string
+    italic?: boolean
+    subscript?: boolean
+    superscript?: boolean
+  }>
+}
+
+interface LabelPlacement {
+  anchor:
+    | "top-left" | "top" | "top-right"
+    | "left" | "center" | "right"
+    | "bottom-left" | "bottom" | "bottom-right"
+  offset: Point
+  alignment: "start" | "middle" | "end"
+  rotation: 0 | 90 | 180 | 270
+  locked: boolean
+}
 ```
 
-Annotation 可以 attachment 到 instance、pin、net、route segment 或页面坐标。
+#### InstanceLabel
 
-### 11.5 快捷键
+InstanceLabel 表达 `M1`、`R3`、`C2` 等实例名称，attachment 到 instance 并随器件移动。用户拖动后保存相对 offset；manual 或 locked label 不被 AI 擅自复位。
+
+```typescript
+interface InstanceLabel {
+  kind: "instance-label"
+  instanceId: string
+  text: RichSchematicText
+  placement: LabelPlacement
+  styleRole: "instance-label"
+}
+```
+
+默认 Renderer 可以把 `M1` 表达为斜体前缀和较小下标，但数据层保留结构化文本，不依赖 Unicode 下标字符。
+
+#### NetLabel 与 PowerLabel
+
+NetLabel 表达 `Vin`、`Vout1`、`Vb` 等实际 net 名称。它默认贴近对应线路、保持水平、不带背景或边框，并且可以 attachment 到 net 或 route segment。
+
+```typescript
+interface NetLabel {
+  kind: "net-label"
+  netId: string
+  attachment:
+    | {kind: "route-segment"; routeId: string; segmentIndex: number; t: number}
+    | {kind: "net"; netId: string}
+    | {kind: "position"; position: Point}
+  text: RichSchematicText
+  placement: LabelPlacement
+  styleRole: "net-label"
+}
+```
+
+PowerLabel 表达 `VDD`、`VSS`、`GND`、`VREF`，可以 attachment 到 power symbol、net、route endpoint 或页面位置。NetLabel 和 PowerLabel 表达电路对象，PlainText 只负责视觉文字，三者不能混为同一种自由文本。
+
+#### Current、Voltage 与 PlainText
+
+CurrentAnnotation 和 VoltageAnnotation 使用与主图一致的黑色细线、小型箭头或极性标记，并可 attachment 到 instance、pin、net 或 route segment，但不改变 logical connectivity。PlainText 和 FigureCaption 只保存视觉说明。
+
+### 11.5 默认图形语言：Textbook Monochrome
+
+第一阶段内置并默认使用唯一正式主题：
+
+```text
+textbook-monochrome-v1
+```
+
+它统一人工与 AI 创建对象的渲染结果，但不限制用户如何摆放器件、选择信号流方向或组织页面空间。MVP 可以只实现这一套主题，数据模型保留 `styleRole`，不必立即提供主题切换 UI。
+
+#### Theme Tokens
+
+```typescript
+interface SchematicThemeTokens {
+  colors: {
+    background: string
+    foreground: string
+    secondary: string
+  }
+
+  strokes: {
+    symbol: number
+    wire: number
+    annotation: number
+  }
+
+  junction: {
+    radius: number
+    fill: string
+  }
+
+  typography: {
+    serifStack: string[]
+    sansStack: string[]
+    instanceSize: number
+    netSize: number
+    annotationSize: number
+    captionSize: number
+  }
+
+  spacing: {
+    labelClearance: number
+    defaultLeadLength: number
+    pageMargin: number
+  }
+}
+```
+
+初始视觉契约：
+
+```yaml
+id: textbook-monochrome-v1
+
+colors:
+  background: "#ffffff"
+  foreground: "#000000"
+  secondary: "#888888"
+
+strokes:
+  symbol: 1
+  wire: 1
+  annotation: 0.8
+
+junction:
+  radius: 1.75
+  fill: "#000000"
+
+typography:
+  serifStack: ["Times New Roman", "Liberation Serif", "Noto Serif", "serif"]
+  sansStack: ["Arial", "Liberation Sans", "Noto Sans", "sans-serif"]
+  instanceSize: 9
+  netSize: 9
+  annotationSize: 8
+  captionSize: 8
+
+spacing:
+  labelClearance: 3
+  defaultLeadLength: 8
+  pageMargin: 16
+```
+
+数值是第一版设计 token，最终通过原创 SVG golden schematics 校准，而不是从低分辨率参考截图逐像素测量。
+
+#### Route 视觉规则
+
+```yaml
+wire:
+  color: foreground
+  strokeWidth: wire
+  lineCap: square
+  lineJoin: miter
+  fill: none
+  defaultMode: orthogonal
+  roundedCorners: false
+  crossingBridge: false
+```
+
+- 正式 Route 使用黑色细实线和直角折线；
+- Wire Tool 默认正交，但用户决定 waypoint 和具体布局；
+- 不通过颜色区分 net；
+- crossing 不画跳线弧或连接点；
+- selection、hover 和 diagnostic 颜色只存在于 Session Overlay；
+- Flightline 使用灰色、低透明度虚线，默认不导出。
+
+#### Annotation 视觉规则
+
+- InstanceLabel、NetLabel 和 PowerLabel 默认使用 serif 字体；
+- instance 前缀和电气变量允许斜体，下标使用 `tspan` 或等价 rich-text 渲染；
+- label 无背景、无边框、无默认 leader line；
+- NetLabel 默认水平并贴近对应线路；
+- label 初始位置由工具给出，用户可自由拖动并锁定；
+- label collision 产生视觉诊断，不触发自动重排；
+- Current/Voltage annotation 使用与主图一致的黑色细线和小型标记。
+
+#### 正式图形与编辑 Overlay 分离
+
+```text
+正式导出层：
+  routes
+  junctions
+  symbols
+  annotations
+
+仅编辑器层：
+  flightlines
+  selection overlays
+  hover overlays
+  diagnostics
+  hit targets
+```
+
+选中对象可以使用蓝色半透明 overlay，非法连接可以使用红色 diagnostic overlay，hit target 可以是透明粗线；这些状态不能写入正式对象样式，也不能进入 SVG/PNG/PDF 导出。
+
+```svg
+<g id="layer-routes" />
+<g id="layer-junctions" />
+<g id="layer-symbols" />
+<g id="layer-annotations" />
+
+<g id="layer-flightlines" />
+<g id="layer-selection-overlays" />
+<g id="layer-diagnostics" />
+<g id="layer-hit-targets" />
+```
+
+### 11.6 快捷键
 
 | 快捷键 | 操作 |
 |---|---|
@@ -929,9 +1148,16 @@ lock_route_segment
 make_flightline
 route_flightline
 
-add_annotation
+add_instance_label
+add_net_label
+add_power_label
+add_plain_text
+add_current_annotation
+add_voltage_annotation
 move_annotation
 set_annotation_text
+set_annotation_placement
+lock_annotation
 
 undo
 redo
@@ -977,6 +1203,25 @@ interactive-circuit-maker/
 │   │   └── printer/
 │   ├── symbols/
 │   ├── render-svg/
+│   │   ├── theme/
+│   │   │   ├── textbook-monochrome.ts
+│   │   │   └── tokens.ts
+│   │   ├── routes/
+│   │   │   ├── RouteRenderer.ts
+│   │   │   ├── JunctionRenderer.ts
+│   │   │   └── FlightlineRenderer.ts
+│   │   ├── annotations/
+│   │   │   ├── AnnotationRenderer.ts
+│   │   │   ├── InstanceLabelRenderer.ts
+│   │   │   ├── NetLabelRenderer.ts
+│   │   │   ├── PowerLabelRenderer.ts
+│   │   │   ├── RichTextRenderer.ts
+│   │   │   ├── CurrentAnnotationRenderer.ts
+│   │   │   └── VoltageAnnotationRenderer.ts
+│   │   └── overlays/
+│   │       ├── SelectionOverlayRenderer.ts
+│   │       ├── DiagnosticOverlayRenderer.ts
+│   │       └── HitTargetRenderer.ts
 │   ├── agent-protocol/
 │   └── exporters/
 │
@@ -995,7 +1240,8 @@ interactive-circuit-maker/
 │   ├── imported-documents/
 │   ├── expected-connectivity/
 │   ├── commands/
-│   └── expected-diagnostics/
+│   ├── expected-diagnostics/
+│   └── visual-golden/
 │
 ├── references/
 │   ├── manifest.yaml
@@ -1147,6 +1393,8 @@ flowchart LR
 - connectivity 不从几何相交推断；
 - crossing 不连接；
 - junction 必须显式存在；
+- 每个显式 junction 在正式主题中都有对应实心圆点；
+- crossing 不渲染圆点或跳线弧；
 - Route endpoint 必须有效且属于同一 net；
 - 删除 Route 不删除 net；
 - flightline MST 可确定复现；
@@ -1164,7 +1412,10 @@ flowchart LR
 ### 17.5 UI
 
 - Playwright 覆盖放置、Wire、Junction、crossing、Move、Stretch 和 Flightline；
-- 符号、线路、label 使用视觉回归；
+- 符号、Route、Junction、InstanceLabel、NetLabel、PowerLabel 和电气 annotation 使用原创 SVG golden schematics 做视觉回归；
+- 验证 `textbook-monochrome-v1` 的字体角色、线宽、直角 line join、实心 junction、无边框 label 和导出页面边距；
+- 验证 selection、hover、diagnostic、hit target 和 flightline overlay 不进入正式导出；
+- label overlap、wire-through-label 和缺失字体产生视觉诊断，但不自动改变人工 placement；
 - 截图只验证视觉表现，不承担 topology 验证。
 
 ## 18. 参考项目与边界
@@ -1200,23 +1451,29 @@ P3  VSS Symbol Pipeline
 ↓
 P4  SVG 人工画布
     放置、选择、移动、旋转、保存
+    textbook-monochrome-v1、正式层与 Overlay 分层
 ↓
 P5  Flightlines
     Unplaced Instances、routed components、deterministic MST
 ↓
 P6  Wire / Junction / Crossing
     Cadence 式 Wire、Stretch、explicit junction、Detach
+    黑色细实线、直角 join、实心 junction、无点 crossing
 ↓
-P7  Structured Describe API
+P7  Annotation 与视觉回归
+    InstanceLabel、NetLabel、PowerLabel、RichText
+    Current/Voltage annotation、SVG golden schematics
+↓
+P8  Structured Describe API
     selection、region、net、diagnostics、changes
 ↓
-P8  AI Commands
+P9  AI Commands
     transaction、revision、preflight、diff、verifier
 ↓
-P9  Dialect Expansion
+P10 Dialect Expansion
     HSPICE、PSpice、LTspice、Xyce
 ↓
-P10 Export
+P11 Export
     SVG、PNG、PDF；VSDX 后置
 ```
 
@@ -1236,6 +1493,9 @@ SPICE 全语法工作与画布开发采用分层交付：先完成无损接收�
 → 人工绘制实体线路
 → crossing 保持不连接
 → 明确创建 junction 后显示小圆点并连接
+→ 人工和 AI 创建的 Route、Junction 与 Annotation 使用相同的 textbook-monochrome-v1 图形语言
+→ InstanceLabel、NetLabel 和 PowerLabel 使用结构化文本、可人工拖动且保存 attachment/offset
+→ selection、diagnostic、hit target 和 flightline overlay 不进入正式导出
 → 删除实体 Route 后 logical net 保持、flightline 恢复
 → AI 读取结构化文本
 → AI 移动、对齐或完成局部布线
@@ -1255,6 +1515,7 @@ SPICE 全语法工作与画布开发采用分层交付：先完成无损接收�
 5. bus、arrayed instance 和跨页连接的文件格式；
 6. VSS 原始素材的再分发范围和 provenance；
 7. 当前 Net-painting Converter 的迁移清单；
-8. VSDX exporter 的优先级和兼容目标。
+8. VSDX exporter 的优先级和兼容目标；
+9. 正式导出时的字体嵌入、替代字体和跨平台 font metric 策略。
 
 本文档是当前产品定义、架构边界、数据模型和实施路径的统一基线。后续设计变化应通过 ADR 或 RFC 更新，不应只存在于 UI 代码或临时讨论中。
