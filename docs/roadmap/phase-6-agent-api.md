@@ -1,6 +1,6 @@
 # Phase 6 - Agent API
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -132,3 +132,26 @@ Human changes the Document after Agent query
 - no API permits raw document replacement, arbitrary file access, or bypass of
   the Edit Engine;
 - layout guidance and at least three end-to-end examples are reviewed.
+
+## Completion evidence
+
+- ADR 0005 fixes a transport-independent in-process core plus an optional
+  token-protected loopback JSON adapter and explicitly rejects MCP, raw
+  Project/Document replacement, and filesystem access.
+- Checked request/response JSON Schemas and OpenAPI 3.1 describe exactly
+  `capabilities`, `query`, `transact`, and `render`.
+- Eight explicit query scopes enforce object and serialized-byte budgets,
+  report truncation, and gate source spans separately.
+- Geometry, connectivity, presentation, render, and source-span permissions
+  are independently enforced before domain execution. Agent transactions
+  construct an Agent actor and match direct Edit Engine dry-run, commit,
+  revision, lock, atomicity, diff, and stale-revision behavior.
+- Formal and diagnostic render artifacts are bounded base64 SVG with hashes;
+  only diagnostic mode contains the separate Agent overlay layer.
+- The HTTP adapter rejects weak tokens, missing authorization, unsupported
+  media, excessive bodies, and non-loopback configuration. It exposes one
+  `POST /v1/circuit` route and never starts implicitly.
+- Usage, layout/routing guidance, and three reproducible workflows are backed
+  by checked fixtures. Frozen install, formatting, references, typecheck, 80
+  tests in 22 files, workspace build, three API artifact checks, Phase 5
+  goldens, and five Playwright flows passed.

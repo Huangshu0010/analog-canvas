@@ -63,6 +63,27 @@ importers:
         specifier: 6.0.5
         version: 6.0.5(vite@8.2.1(@types/node@24.13.3))
 
+  packages/agent-adapter:
+    dependencies:
+      "@icm/derived":
+        specifier: workspace:*
+        version: link:../derived
+      "@icm/edit-engine":
+        specifier: workspace:*
+        version: link:../edit-engine
+      "@icm/model":
+        specifier: workspace:*
+        version: link:../model
+      "@icm/render-svg":
+        specifier: workspace:*
+        version: link:../render-svg
+      "@icm/symbols":
+        specifier: workspace:*
+        version: link:../symbols
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   packages/derived:
     dependencies:
       "@icm/model":

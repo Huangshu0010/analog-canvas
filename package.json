@@ -10,6 +10,8 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
+    "agent-api:artifacts": "pnpm --filter @icm/agent-adapter build && node scripts/agent-api-artifacts.mjs",
+    "agent-api:artifacts:check": "pnpm --filter @icm/agent-adapter build && node scripts/agent-api-artifacts.mjs --check",
     "dev": "pnpm --filter @icm/editor dev",
     "format": "prettier --write \"apps/**/*.{ts,tsx,json,css,html}\" \"packages/**/*.{ts,tsx,json}\" \"references/**/*.json\" \"scripts/**/*.mjs\" \"*.{json,yaml}\"",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,json,css,html}\" \"packages/**/*.{ts,tsx,json}\" \"references/**/*.json\" \"scripts/**/*.mjs\" \"*.{json,yaml}\"",

@@ -1,0 +1,5 @@
+{
+  "apiVersion": "1.0",
+  "requestId": "example-capabilities",
+  "operation": "capabilities"
+}

@@ -1,40 +1,35 @@
-# Agent Documentation
+# Agent Integration Guide
 
-Agent documentation is split between a small executable API contract and soft
-guidance for producing high-quality layouts. The application does not require
-MCP; any Agent adapter calls the same transport-independent Agent Circuit API.
+Agent Circuit API v1 exposes four operations through an in-process service and
+an optional authenticated loopback HTTP adapter. It is a regular JSON/TypeScript
+API, not MCP, and it does not bundle an LLM provider.
 
-## Planned Documents
+Start with:
 
-| Document | Phase | Purpose |
-|---|---:|---|
-| `api-usage.md` | 6 | Session lifecycle and `capabilities/query/transact/render` examples |
-| `operations.md` | 6 | Supported typed edits, permissions, dry run, and diagnostics |
-| `layout-guide.md` | 5/6 | General signal-flow, grouping, spacing, and locking guidance |
-| `analog-layout-guide.md` | 5/6 | Differential pair, mirror, cascode, bias, supply, and symmetry guidance |
-| `routing-guide.md` | 3/6 | Orthogonal routing, trunks, crossing, junction, and label clearance |
-| `examples/` | 6 | End-to-end query, plan, dry-run, transact, diff, and render examples |
+- [`api-usage.md`](api-usage.md) for the request lifecycle and permissions;
+- [`layout-guidance.md`](layout-guidance.md) for judgment that remains outside
+  hard validators;
+- [`examples.md`](examples.md) for reproducible workflows backed by checked
+  fixtures and tests.
 
-These documents are created when their owning phase begins. Normative API
-schemas belong in `docs/specs/agent-api.md`; this directory explains how an
-Agent should use that contract effectively.
+The normative contract is [`../specs/agent-api.md`](../specs/agent-api.md).
+When guidance and schemas differ, schemas and Edit Engine validation win.
 
-## Enforcement Boundary
+## Enforcement boundary
 
 ```text
-API schema
-  defines what an Agent may request
+API schemas and permissions
+  define what an Agent may request
 
-Schematic Edit Engine + validators
-  enforce hard electrical and document invariants
+Schematic Edit Engine and model validators
+  enforce hard electrical, revision, lock, and atomicity rules
 
-diagnostics
-  identify measurable layout-quality problems
+derived diagnostics
+  report measurable visual problems without moving objects
 
 Agent guides
   describe preferred but non-mandatory layout judgment
 ```
 
-Hard rules such as revision matching, atomic transactions, net consistency,
-locked-object protection, and explicit junction semantics must never depend on
-an Agent following prose instructions.
+Explicit Junction semantics, Net consistency, and locked-object protection
+never depend on an Agent following prose instructions.

@@ -4,6 +4,7 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "paths": {
+      "@icm/agent-adapter": ["./packages/agent-adapter/src/index.ts"],
       "@icm/derived": ["./packages/derived/src/index.ts"],
       "@icm/edit-engine": ["./packages/edit-engine/src/index.ts"],
       "@icm/model": ["./packages/model/src/index.ts"],

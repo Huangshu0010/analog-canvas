@@ -178,3 +178,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `git diff --check`.
 - Commit status: ready to commit as
   `Complete Phase 5 symbols and visual quality`.
+
+## 2026-08-07 - Complete Phase 6 Agent API
+
+- Target: expose bounded Agent inspection, atomic editing, and visual review
+  through four transport-independent operations and an optional normal JSON
+  API, with no MCP.
+- Changed areas: accepted ADR 0005 and the Agent API spec; added the
+  `agent-adapter` package, query describer, permission/budget enforcement,
+  Edit Engine transaction bridge, render artifacts, authenticated loopback
+  adapter, checked JSON Schema/OpenAPI artifacts, fixtures, and Agent guidance.
+- Validation: frozen install, formatting, immutable references, typecheck, 80
+  tests in 22 files including direct-engine parity and live loopback HTTP,
+  workspace build, deterministic API/symbol/visual artifact checks, five
+  Playwright flows, Markdown structure, no-MCP coupling inspection, and
+  `git diff --check`.
+- Commit status: ready to commit as `Complete Phase 6 Agent API`.
