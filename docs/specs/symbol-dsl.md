@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.1`
+Version: `1.2`
 
 Owning phase: `Phase 0/1`
 
@@ -33,9 +33,14 @@ runtime symbols.
 
 Version 1 defines ID, name, integer-grid view box, electrical pins, vector
 primitives, visual variants, and aliases. A pin has name, role, anchor,
-direction, and visibility metadata. Initial primitives are line, polyline,
-circle, and path. The product-owned Phase 1 library contains resistor,
-capacitor, inductor, NMOS, PMOS, ground, port, and generic block definitions.
+direction, and visibility metadata. Primitives are line, polyline, polygon,
+circle, and path. A primitive may carry a stable `part`; a variant may hide
+parts as well as pin presentation without changing electrical pins. Polygon
+fill is explicitly `none` or `foreground`.
+
+The reviewed production library contains resistor, capacitor, inductor, NMOS,
+PMOS, ground, port, independent voltage/current source, diode, NPN, and PNP.
+Procedural `generic-block-N` definitions preserve unsupported terminal counts.
 
 `SymbolResolver.resolve(symbolId, variantId?)` returns one validated definition
 and optional variant, or `undefined`. Resolution never silently substitutes a
@@ -46,6 +51,7 @@ different electrical pin order.
 - Pin names are unique within a definition.
 - Symbol and alias IDs are unique within a library.
 - Every variant-hidden pin names an existing electrical pin.
+- Every variant-hidden primitive part names presentation geometry only.
 - Hiding a pin changes presentation only; the pin remains addressable.
 - Pin anchors use the same integer coordinate convention as the model.
 - Symbol geometry contains no instance placement or net identity.
@@ -56,7 +62,9 @@ different electrical pin order.
 reviewed Symbol DSL → validate → compile library → resolve at runtime
 ```
 
-Raw VSS extraction must pass through review before it becomes Symbol DSL.
+Raw VSS extraction must pass through the pinned source inventory and human pin
+review before it becomes Symbol DSL. See
+[`vss-development-import.md`](vss-development-import.md).
 
 ## Persistence boundary
 
@@ -76,8 +84,9 @@ Duplicate pin names and duplicate aliases are rejected.
 
 ## Compatibility and migration
 
-Phase 5 replaces or calibrates provisional geometry with reviewed VSS-derived
-families without changing canonical IDs or the electrical-pin rule.
+Phase 5 calibrated provisional geometry against reviewed VSS masters without
+changing canonical IDs or the electrical-pin rule. The MOS three-terminal
+variant now hides the tagged bulk lead while retaining addressable pin `B`.
 
 ## Deterministic validation
 
@@ -88,5 +97,5 @@ families without changing canonical IDs or the electrical-pin rule.
 
 ## Open decisions
 
-- Exact path normalization and rich text primitives are finalized with Phase 5
-  extraction and rendering evidence.
+- Rich text beyond semantic annotation kinds remains a later compatible
+  extension.

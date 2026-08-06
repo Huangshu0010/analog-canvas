@@ -6,6 +6,7 @@ import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
 import {
   deriveCrossings,
   deriveFlightlines,
+  diagnoseVisualQuality,
   netEndpoints,
   proposeLocalStretch,
   resolveEndpointPoint,
@@ -29,6 +30,7 @@ import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
 import { createDemoProject } from "./demo-project";
 import { createRoutingDemoProject } from "./routing-demo";
+import { createVisualDemoProject } from "./visual-demo";
 
 const SNAPSHOT_KEY = "icm.phase1.snapshot";
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
@@ -137,6 +139,7 @@ export function App({ project: initialProject }: AppProps) {
   );
   const flightlines = deriveFlightlines(document, resolver);
   const crossings = deriveCrossings(document, resolver);
+  const visualDiagnostics = diagnoseVisualQuality(document, resolver);
   const visibleEndpoints = document.nets.flatMap((net) =>
     netEndpoints(document, net)
       .map((endpoint) => ({
@@ -567,6 +570,62 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(`Saved revision ${document.revision}`);
   }
 
+  function loadVisualDemo(): void {
+    const next = createVisualDemoProject();
+    const nextDocument = next.documents.find(
+      (candidate) => candidate.id === next.topDocumentId,
+    )!;
+    history.current.reset(nextDocument);
+    setProject(next);
+    setSelectedId(null);
+    setSelectedRouteId(null);
+    setViewBox({ x: 20, y: -10, width: 430, height: 350 });
+    setStatus("Loaded Phase 5 visual demo");
+  }
+
+  function addPlainText(): void {
+    transactionCounter.current += 1;
+    const id = `note-${transactionCounter.current}`;
+    const result = transact([
+      {
+        kind: "upsert_annotation",
+        annotation: {
+          id,
+          kind: "plain-text",
+          text: "Design note",
+          position: {
+            x: Math.round(viewBox.x + viewBox.width / 2),
+            y: Math.round(viewBox.y + viewBox.height - 20),
+          },
+          offset: { x: 0, y: 0 },
+          alignment: "middle",
+          rotation: 0,
+          locked: false,
+        },
+      },
+    ]);
+    if (result.ok) setStatus(`Added annotation ${id}`);
+  }
+
+  function alignFirstLayoutGroup(): void {
+    const group = document.layoutGroups[0];
+    if (!group) {
+      setStatus("No multi-instance layout group is available");
+      return;
+    }
+    const instanceIds = group.objectIds.filter((id) =>
+      document.instances.some((instance) => instance.id === id),
+    );
+    if (instanceIds.length < 2) {
+      setStatus("No multi-instance layout group is available");
+      return;
+    }
+    const result = transact([
+      { kind: "align_instances", instanceIds, axis: "y" },
+    ]);
+    if (result.ok) setStatus(`Aligned layout group ${group.id}`);
+  }
+
   function reopenSnapshot(): void {
     const snapshot = localStorage.getItem(SNAPSHOT_KEY);
     if (!snapshot) {
@@ -751,6 +810,15 @@ export function App({ project: initialProject }: AppProps) {
           <button type="button" onClick={loadRoutingDemo}>
             Routing demo
           </button>
+          <button type="button" onClick={loadVisualDemo}>
+            Visual demo
+          </button>
+          <button type="button" onClick={addPlainText}>
+            Add note
+          </button>
+          <button type="button" onClick={alignFirstLayoutGroup}>
+            Align group
+          </button>
           <button type="button" onClick={saveSnapshot}>
             Save snapshot
           </button>
@@ -809,6 +877,20 @@ export function App({ project: initialProject }: AppProps) {
           <dd data-testid="flightline-count">{flightlines.length}</dd>
           <dt>Crossings</dt>
           <dd data-testid="crossing-count">{crossings.length}</dd>
+          <dt>Annotations</dt>
+          <dd data-testid="annotation-count">{document.annotations.length}</dd>
+          <dt>Visual diagnostics</dt>
+          <dd data-testid="visual-diagnostic-count">
+            {visualDiagnostics.length}
+          </dd>
+          <dt>Blocking diagnostics</dt>
+          <dd data-testid="blocking-diagnostic-count">
+            {
+              visualDiagnostics.filter(
+                (diagnostic) => diagnostic.severity === "error",
+              ).length
+            }
+          </dd>
           <dt>Status</dt>
           <dd data-testid="status">{status}</dd>
         </dl>

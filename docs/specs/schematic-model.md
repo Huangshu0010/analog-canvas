@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0`
+Version: `1.1`
 
 Owning phase: `Phase 0`
 
@@ -51,6 +51,9 @@ derived from terminals, ports, or Junction objects.
 - A connected branch requires an explicit endpoint or Junction object.
 - `placement: null` preserves an unplaced logical instance.
 - Layout intent and annotation placement never modify logical connectivity.
+- Annotation attachments reference an existing visual/electrical object.
+- Layout groups and constraints contain unique existing object IDs.
+- A layout constraint targets at least two objects.
 
 ## Operations and state transitions
 
@@ -89,5 +92,5 @@ Project/Document hierarchy requires compatibility analysis and an ADR.
 
 ## Open decisions
 
-- Annotation and layout-constraint variants expand in Phase 5 without changing
-  the electrical truth boundary.
+- Additional constraint parameters may extend a later schema version without
+  changing the electrical truth boundary.

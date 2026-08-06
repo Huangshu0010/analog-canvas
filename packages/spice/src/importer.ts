@@ -22,7 +22,26 @@ export interface SpiceImportResult extends SpiceCompileResult {
   project: CircuitProject | null;
 }
 
-function symbolFor(instance: CircuitInstanceIR): string | null {
+function symbolFor(
+  instance: CircuitInstanceIR,
+  modelTypeByName: ReadonlyMap<string, string>,
+): string | null {
+  if (instance.target.kind === "model") {
+    const modelType = modelTypeByName.get(
+      instance.target.modelName.toLowerCase(),
+    );
+    if (
+      instance.terminals.length === 2 &&
+      (modelType === "d" || instance.name[0]?.toLowerCase() === "d")
+    ) {
+      return "diode";
+    }
+    if (instance.terminals.length === 3 && modelType === "npn") return "npn";
+    if (instance.terminals.length === 3 && modelType === "pnp") return "pnp";
+    if (instance.terminals.length === 4 && modelType === "nmos") return "nmos";
+    if (instance.terminals.length === 4 && modelType === "pmos") return "pmos";
+    return null;
+  }
   if (instance.target.kind !== "primitive") return null;
   const symbols: Record<string, string> = {
     resistor: "resistor",
@@ -30,6 +49,9 @@ function symbolFor(instance: CircuitInstanceIR): string | null {
     inductor: "inductor",
     nmos: "nmos",
     pmos: "pmos",
+    "voltage-source": "voltage-source",
+    "current-source": "current-source",
+    diode: "diode",
   };
   return symbols[instance.target.family] ?? null;
 }
@@ -50,9 +72,11 @@ function targetDescription(instance: CircuitInstanceIR): string {
 function importInstance(
   instance: CircuitInstanceIR,
   diagnostics: SpiceDiagnostic[],
+  modelTypeByName: ReadonlyMap<string, string>,
 ): Instance {
   const symbolId =
-    symbolFor(instance) ?? `generic-block-${instance.terminals.length}`;
+    symbolFor(instance, modelTypeByName) ??
+    `generic-block-${instance.terminals.length}`;
   if (symbolId.startsWith("generic-block-")) {
     diagnostics.push(
       diagnostic(
@@ -87,6 +111,7 @@ function importInstance(
 function importDocument(
   cell: CircuitCellIR,
   diagnostics: SpiceDiagnostic[],
+  modelTypeByName: ReadonlyMap<string, string>,
 ): SchematicDocument {
   const visibleInstances = cell.instances.filter((instance) => {
     if (instance.terminals.length > 0) return true;
@@ -102,7 +127,7 @@ function importDocument(
     return false;
   });
   const instances = visibleInstances.map((instance) =>
-    importInstance(instance, diagnostics),
+    importInstance(instance, diagnostics, modelTypeByName),
   );
   const importedInstanceById = new Map(
     instances.map((instance) => [instance.id, instance]),
@@ -170,7 +195,15 @@ export function importCircuitIR(
   inputDiagnostics: readonly SpiceDiagnostic[] = [],
 ): { project: CircuitProject; diagnostics: SpiceDiagnostic[] } {
   const diagnostics = [...inputDiagnostics];
-  const documents = ir.cells.map((cell) => importDocument(cell, diagnostics));
+  const modelTypeByName = new Map(
+    ir.models.map((model) => [
+      model.name.toLowerCase(),
+      model.modelType.toLowerCase(),
+    ]),
+  );
+  const documents = ir.cells.map((cell) =>
+    importDocument(cell, diagnostics, modelTypeByName),
+  );
   const topCell = ir.topCells[0] ?? ir.cells[0]?.name;
   const topDocument = documents.find(
     (document) =>

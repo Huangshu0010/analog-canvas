@@ -105,6 +105,22 @@ describe("ngspice 46 core structural baseline", () => {
     expect(imported.successful).toBe(true);
     expect(imported.project?.source.dialect).toBe("ngspice-46-core");
     expect(
+      Object.fromEntries(
+        imported
+          .project!.documents.flatMap((document) => document.instances)
+          .filter((instance) =>
+            ["D1", "Q1", "M1", "VBIAS", "I1"].includes(instance.id),
+          )
+          .map((instance) => [instance.id, instance.symbolId]),
+      ),
+    ).toEqual({
+      D1: "diode",
+      I1: "current-source",
+      M1: "nmos",
+      Q1: "npn",
+      VBIAS: "voltage-source",
+    });
+    expect(
       imported.project?.documents
         .flatMap((document) => document.instances)
         .some((instance) => instance.id === "K12"),

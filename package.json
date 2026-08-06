@@ -14,6 +14,10 @@
     "format": "prettier --write \"apps/**/*.{ts,tsx,json,css,html}\" \"packages/**/*.{ts,tsx,json}\" \"references/**/*.json\" \"scripts/**/*.mjs\" \"*.{json,yaml}\"",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,json,css,html}\" \"packages/**/*.{ts,tsx,json}\" \"references/**/*.json\" \"scripts/**/*.mjs\" \"*.{json,yaml}\"",
     "references:check": "node scripts/check-references.mjs",
+    "symbols:review": "pnpm --filter @icm/symbols build && node tools/symbol-review/render-reviewed.mjs",
+    "symbols:review:check": "pnpm --filter @icm/symbols build && node tools/symbol-review/render-reviewed.mjs --check",
+    "visual:phase5": "pnpm build && node scripts/phase-5-golden.mjs",
+    "visual:phase5:check": "pnpm build && node scripts/phase-5-golden.mjs --check",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc -p tsconfig.check.json --noEmit"

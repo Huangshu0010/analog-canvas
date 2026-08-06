@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0-initial`
+Version: `1.1`
 
 Owning phase: `Phase 1/5`
 
@@ -46,6 +46,17 @@ fontFamily: "Georgia, Times New Roman, serif"
 Formal SVG has stable groups for routes, Junctions, symbols, and annotations.
 The editor creates its grid and interaction overlay outside the formal group.
 
+Annotations are semantic `instance-label`, `net-label`, `power-label`,
+`plain-text`, `current`, `voltage`, and `figure-caption` objects. Current
+annotations rotate the arrow independently so their text stays upright.
+Explicit instance labels suppress only the renderer's default instance ID.
+
+Derived visual diagnostics cover unplaced or unresolved symbols, symbol and
+label overlap, short route segments, ambiguous Junction dots, unsatisfied
+layout constraints, and optional export-page bounds. Diagnostics never mutate
+geometry. Unresolved symbols and ambiguous Junction dots are blocking errors;
+spacing and layout-quality findings are warnings.
+
 ## Invariants
 
 - Formal output is black on white with no gradients, shadows, or decorative
@@ -59,6 +70,8 @@ The editor creates its grid and interaction overlay outside the formal group.
 - Selection, hit targets, grid, drag preview, diagnostics, and flightlines are
   absent from formal SVG export.
 - SVG is derived output and never becomes connectivity or persistence truth.
+- Annotation attachment moves with an edited instance while its offset and
+  semantic kind remain persisted.
 - Visual goldens use original project fixtures, not copied textbook artwork.
 
 ## Operations and state transitions
@@ -105,5 +118,4 @@ the change is not backward-compatible.
 
 ## Open decisions
 
-- Final typography metrics, annotation richness, VSS normalization, and dense
-  analog spacing are resolved with Phase 5 evidence.
+- Font embedding and cross-format metric calibration remain Phase 7 work.

@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.2`
+Version: `1.3`
 
 Owning phase: `Phase 0/1`
 
@@ -43,9 +43,11 @@ interface EditTransaction {
 
 The executable union contains `noop`, `place_instance`, `move_instance`,
 `rotate_instance`, `mirror_instance`, `set_route_points`, `add_junction`,
-`remove_junction`, `make_flightline`, `undo`, and `redo`. Later phases extend
-the typed union and versioned schemas; they do not create separate mutation
-endpoints.
+`remove_junction`, `make_flightline`, `upsert_annotation`,
+`remove_annotation`, `set_layout_group`, `remove_layout_group`,
+`set_layout_constraint`, `remove_layout_constraint`, `align_instances`,
+`undo`, and `redo`. Later phases extend the typed union and versioned schemas;
+they do not create separate mutation endpoints.
 
 ## Invariants
 
@@ -58,6 +60,9 @@ endpoints.
 - Dry run returns a proposed revision and deterministic diff but preserves the
   current Document and revision.
 - GUI and Agent callers cannot bypass Document validation.
+- Locked annotation and layout-intent records cannot be replaced or removed.
+- Moving or aligning an instance translates its attached annotations by the
+  same delta in the same atomic transaction.
 
 ## Operations and state transitions
 

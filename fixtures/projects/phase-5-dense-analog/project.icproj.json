@@ -1,0 +1,535 @@
+{
+  "schemaVersion": 1,
+  "id": "project-phase-5-dense-analog",
+  "name": "Original Differential Stage",
+  "source": {
+    "entry": null,
+    "dialect": "none",
+    "sourcePolicy": "copy",
+    "files": []
+  },
+  "symbolLibrary": {
+    "id": "builtin-analog",
+    "version": "0.1.0",
+    "hash": "phase-5-reviewed"
+  },
+  "topDocumentId": "document-differential-stage",
+  "documents": [
+    {
+      "id": "document-differential-stage",
+      "name": "Differential Stage",
+      "revision": 0,
+      "sourceStatus": "in-sync",
+      "ports": [
+        {
+          "id": "port-vdd",
+          "name": "VDD",
+          "direction": "passive",
+          "position": { "x": 225, "y": 20 }
+        },
+        {
+          "id": "port-vss",
+          "name": "VSS",
+          "direction": "passive",
+          "position": { "x": 255, "y": 270 }
+        },
+        {
+          "id": "port-vinp",
+          "name": "VIN+",
+          "direction": "input",
+          "position": { "x": 80, "y": 200 }
+        },
+        {
+          "id": "port-vinn",
+          "name": "VIN-",
+          "direction": "input",
+          "position": { "x": 370, "y": 200 }
+        },
+        {
+          "id": "port-voutp",
+          "name": "VOUT+",
+          "direction": "output",
+          "position": { "x": 70, "y": 140 }
+        },
+        {
+          "id": "port-voutn",
+          "name": "VOUT-",
+          "direction": "output",
+          "position": { "x": 390, "y": 140 }
+        },
+        {
+          "id": "port-bias",
+          "name": "VBIAS",
+          "direction": "input",
+          "position": { "x": 225, "y": 120 }
+        }
+      ],
+      "instances": [
+        {
+          "id": "M1",
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal",
+          "placement": {
+            "position": { "x": 180, "y": 200 },
+            "rotation": 0,
+            "mirror": "none"
+          },
+          "properties": { "role": "input-positive" }
+        },
+        {
+          "id": "M2",
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal",
+          "placement": {
+            "position": { "x": 300, "y": 200 },
+            "rotation": 0,
+            "mirror": "x"
+          },
+          "properties": { "role": "input-negative" }
+        },
+        {
+          "id": "M3",
+          "symbolId": "pmos",
+          "symbolVariantId": "textbook-3terminal",
+          "placement": {
+            "position": { "x": 180, "y": 80 },
+            "rotation": 180,
+            "mirror": "none"
+          },
+          "properties": { "role": "active-load-left" }
+        },
+        {
+          "id": "M4",
+          "symbolId": "pmos",
+          "symbolVariantId": "textbook-3terminal",
+          "placement": {
+            "position": { "x": 300, "y": 80 },
+            "rotation": 180,
+            "mirror": "x"
+          },
+          "properties": { "role": "active-load-right" }
+        }
+      ],
+      "nets": [
+        {
+          "id": "net-vdd",
+          "name": "VDD",
+          "scope": "global",
+          "terminals": [
+            { "instanceId": "M3", "pinName": "S" },
+            { "instanceId": "M4", "pinName": "S" }
+          ],
+          "ports": ["port-vdd"]
+        },
+        {
+          "id": "net-vss",
+          "name": "VSS",
+          "scope": "global",
+          "terminals": [
+            { "instanceId": "M1", "pinName": "S" },
+            { "instanceId": "M2", "pinName": "S" }
+          ],
+          "ports": ["port-vss"]
+        },
+        {
+          "id": "net-vinp",
+          "name": "VIN+",
+          "scope": "local",
+          "terminals": [{ "instanceId": "M1", "pinName": "G" }],
+          "ports": ["port-vinp"]
+        },
+        {
+          "id": "net-vinn",
+          "name": "VIN-",
+          "scope": "local",
+          "terminals": [{ "instanceId": "M2", "pinName": "G" }],
+          "ports": ["port-vinn"]
+        },
+        {
+          "id": "net-voutp",
+          "name": "VOUT+",
+          "scope": "local",
+          "terminals": [
+            { "instanceId": "M3", "pinName": "D" },
+            { "instanceId": "M1", "pinName": "D" }
+          ],
+          "ports": ["port-voutp"]
+        },
+        {
+          "id": "net-voutn",
+          "name": "VOUT-",
+          "scope": "local",
+          "terminals": [
+            { "instanceId": "M4", "pinName": "D" },
+            { "instanceId": "M2", "pinName": "D" }
+          ],
+          "ports": ["port-voutn"]
+        },
+        {
+          "id": "net-bias",
+          "name": "VBIAS",
+          "scope": "local",
+          "terminals": [
+            { "instanceId": "M3", "pinName": "G" },
+            { "instanceId": "M4", "pinName": "G" }
+          ],
+          "ports": ["port-bias"]
+        }
+      ],
+      "routes": [
+        {
+          "id": "route-vdd-feed",
+          "netId": "net-vdd",
+          "from": { "kind": "port", "portId": "port-vdd" },
+          "to": { "kind": "junction", "junctionId": "junction-vdd" },
+          "waypoints": [],
+          "segmentModes": ["trunk"]
+        },
+        {
+          "id": "route-vdd-left",
+          "netId": "net-vdd",
+          "from": { "kind": "junction", "junctionId": "junction-vdd" },
+          "to": { "kind": "terminal", "instanceId": "M3", "pinName": "S" },
+          "waypoints": [],
+          "segmentModes": ["trunk"]
+        },
+        {
+          "id": "route-vdd-right",
+          "netId": "net-vdd",
+          "from": { "kind": "junction", "junctionId": "junction-vdd" },
+          "to": { "kind": "terminal", "instanceId": "M4", "pinName": "S" },
+          "waypoints": [],
+          "segmentModes": ["trunk"]
+        },
+        {
+          "id": "route-vss-feed",
+          "netId": "net-vss",
+          "from": { "kind": "junction", "junctionId": "junction-vss" },
+          "to": { "kind": "port", "portId": "port-vss" },
+          "waypoints": [],
+          "segmentModes": ["trunk"]
+        },
+        {
+          "id": "route-vss-left",
+          "netId": "net-vss",
+          "from": { "kind": "terminal", "instanceId": "M1", "pinName": "S" },
+          "to": { "kind": "junction", "junctionId": "junction-vss" },
+          "waypoints": [],
+          "segmentModes": ["trunk"]
+        },
+        {
+          "id": "route-vss-right",
+          "netId": "net-vss",
+          "from": { "kind": "terminal", "instanceId": "M2", "pinName": "S" },
+          "to": { "kind": "junction", "junctionId": "junction-vss" },
+          "waypoints": [],
+          "segmentModes": ["trunk"]
+        },
+        {
+          "id": "route-vinp",
+          "netId": "net-vinp",
+          "from": { "kind": "port", "portId": "port-vinp" },
+          "to": { "kind": "terminal", "instanceId": "M1", "pinName": "G" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        },
+        {
+          "id": "route-vinn",
+          "netId": "net-vinn",
+          "from": { "kind": "terminal", "instanceId": "M2", "pinName": "G" },
+          "to": { "kind": "port", "portId": "port-vinn" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        },
+        {
+          "id": "route-outp-top",
+          "netId": "net-voutp",
+          "from": { "kind": "terminal", "instanceId": "M3", "pinName": "D" },
+          "to": { "kind": "junction", "junctionId": "junction-outp" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        },
+        {
+          "id": "route-outp-bottom",
+          "netId": "net-voutp",
+          "from": { "kind": "junction", "junctionId": "junction-outp" },
+          "to": { "kind": "terminal", "instanceId": "M1", "pinName": "D" },
+          "waypoints": [{ "x": 165, "y": 170 }],
+          "segmentModes": ["manual", "manual"]
+        },
+        {
+          "id": "route-outp-port",
+          "netId": "net-voutp",
+          "from": { "kind": "port", "portId": "port-voutp" },
+          "to": { "kind": "junction", "junctionId": "junction-outp" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        },
+        {
+          "id": "route-outn-top",
+          "netId": "net-voutn",
+          "from": { "kind": "terminal", "instanceId": "M4", "pinName": "D" },
+          "to": { "kind": "junction", "junctionId": "junction-outn" },
+          "waypoints": [{ "x": 285, "y": 110 }],
+          "segmentModes": ["manual", "manual"]
+        },
+        {
+          "id": "route-outn-bottom",
+          "netId": "net-voutn",
+          "from": { "kind": "junction", "junctionId": "junction-outn" },
+          "to": { "kind": "terminal", "instanceId": "M2", "pinName": "D" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        },
+        {
+          "id": "route-outn-port",
+          "netId": "net-voutn",
+          "from": { "kind": "junction", "junctionId": "junction-outn" },
+          "to": { "kind": "port", "portId": "port-voutn" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        },
+        {
+          "id": "route-bias-feed",
+          "netId": "net-bias",
+          "from": { "kind": "junction", "junctionId": "junction-bias" },
+          "to": { "kind": "port", "portId": "port-bias" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        },
+        {
+          "id": "route-bias-left",
+          "netId": "net-bias",
+          "from": { "kind": "terminal", "instanceId": "M3", "pinName": "G" },
+          "to": { "kind": "junction", "junctionId": "junction-bias" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        },
+        {
+          "id": "route-bias-right",
+          "netId": "net-bias",
+          "from": { "kind": "junction", "junctionId": "junction-bias" },
+          "to": { "kind": "terminal", "instanceId": "M4", "pinName": "G" },
+          "waypoints": [],
+          "segmentModes": ["manual"]
+        }
+      ],
+      "junctions": [
+        {
+          "id": "junction-vdd",
+          "netId": "net-vdd",
+          "position": { "x": 225, "y": 50 }
+        },
+        {
+          "id": "junction-vss",
+          "netId": "net-vss",
+          "position": { "x": 255, "y": 230 }
+        },
+        {
+          "id": "junction-outp",
+          "netId": "net-voutp",
+          "position": { "x": 165, "y": 140 }
+        },
+        {
+          "id": "junction-outn",
+          "netId": "net-voutn",
+          "position": { "x": 285, "y": 140 }
+        },
+        {
+          "id": "junction-bias",
+          "netId": "net-bias",
+          "position": { "x": 225, "y": 80 }
+        }
+      ],
+      "annotations": [
+        {
+          "id": "label-vdd",
+          "kind": "power-label",
+          "text": "VDD",
+          "position": { "x": 225, "y": 12 },
+          "attachedObjectId": "port-vdd",
+          "offset": { "x": 0, "y": -8 },
+          "alignment": "middle",
+          "rotation": 0,
+          "locked": true
+        },
+        {
+          "id": "label-vss",
+          "kind": "power-label",
+          "text": "VSS",
+          "position": { "x": 255, "y": 292 },
+          "attachedObjectId": "port-vss",
+          "offset": { "x": 0, "y": 16 },
+          "alignment": "middle",
+          "rotation": 0,
+          "locked": true
+        },
+        {
+          "id": "label-vinp",
+          "kind": "net-label",
+          "text": "VIN+",
+          "position": { "x": 74, "y": 195 },
+          "attachedObjectId": "port-vinp",
+          "offset": { "x": -6, "y": -5 },
+          "alignment": "end",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "label-vinn",
+          "kind": "net-label",
+          "text": "VIN-",
+          "position": { "x": 376, "y": 195 },
+          "attachedObjectId": "port-vinn",
+          "offset": { "x": 6, "y": -5 },
+          "alignment": "start",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "label-outp",
+          "kind": "net-label",
+          "text": "VOUT+",
+          "position": { "x": 64, "y": 135 },
+          "attachedObjectId": "port-voutp",
+          "offset": { "x": -6, "y": -5 },
+          "alignment": "end",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "label-outn",
+          "kind": "net-label",
+          "text": "VOUT-",
+          "position": { "x": 396, "y": 135 },
+          "attachedObjectId": "port-voutn",
+          "offset": { "x": 6, "y": -5 },
+          "alignment": "start",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "label-bias",
+          "kind": "net-label",
+          "text": "VBIAS",
+          "position": { "x": 225, "y": 132 },
+          "attachedObjectId": "port-bias",
+          "offset": { "x": 0, "y": 12 },
+          "alignment": "middle",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "label-m1",
+          "kind": "instance-label",
+          "text": "M1",
+          "position": { "x": 180, "y": 246 },
+          "attachedObjectId": "M1",
+          "offset": { "x": 0, "y": 46 },
+          "alignment": "middle",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "label-m2",
+          "kind": "instance-label",
+          "text": "M2",
+          "position": { "x": 300, "y": 246 },
+          "attachedObjectId": "M2",
+          "offset": { "x": 0, "y": 46 },
+          "alignment": "middle",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "label-m3",
+          "kind": "instance-label",
+          "text": "M3",
+          "position": { "x": 145, "y": 76 },
+          "attachedObjectId": "M3",
+          "offset": { "x": 0, "y": -10 },
+          "alignment": "end",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "label-m4",
+          "kind": "instance-label",
+          "text": "M4",
+          "position": { "x": 335, "y": 76 },
+          "attachedObjectId": "M4",
+          "offset": { "x": 0, "y": -10 },
+          "alignment": "start",
+          "rotation": 0,
+          "locked": false
+        },
+        {
+          "id": "annotation-tail",
+          "kind": "current",
+          "text": "I_tail",
+          "position": { "x": 255, "y": 260 },
+          "attachedObjectId": "net-vss",
+          "offset": { "x": 0, "y": 0 },
+          "alignment": "middle",
+          "rotation": 90,
+          "locked": false
+        },
+        {
+          "id": "caption",
+          "kind": "figure-caption",
+          "text": "Original matched differential stage",
+          "position": { "x": 225, "y": 322 },
+          "offset": { "x": 0, "y": 0 },
+          "alignment": "middle",
+          "rotation": 0,
+          "locked": true
+        }
+      ],
+      "presentation": {
+        "styleProfileId": "textbook-monochrome-v1",
+        "grid": 10,
+        "compactness": "compact",
+        "flow": {
+          "power": "top",
+          "ground": "bottom",
+          "input": "left",
+          "output": "right"
+        }
+      },
+      "layoutGroups": [
+        {
+          "id": "group-input-pair",
+          "kind": "differential-pair",
+          "objectIds": ["M1", "M2"],
+          "locked": true
+        },
+        {
+          "id": "group-active-load",
+          "kind": "current-mirror",
+          "objectIds": ["M3", "M4"],
+          "locked": true
+        }
+      ],
+      "constraints": [
+        {
+          "id": "constraint-input-y",
+          "kind": "align-y",
+          "objectIds": ["M1", "M2"],
+          "locked": true
+        },
+        {
+          "id": "constraint-load-y",
+          "kind": "align-y",
+          "objectIds": ["M3", "M4"],
+          "locked": true
+        },
+        {
+          "id": "constraint-pair-symmetry",
+          "kind": "symmetric",
+          "objectIds": ["M1", "M2", "M3", "M4"],
+          "locked": true
+        }
+      ]
+    }
+  ]
+}

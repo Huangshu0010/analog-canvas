@@ -195,7 +195,7 @@ export const LayoutConstraintSchema = z.strictObject({
     "equal-spacing",
     "keep-clear",
   ]),
-  objectIds: z.array(StableIdSchema).min(1),
+  objectIds: z.array(StableIdSchema).min(2),
   locked: z.boolean(),
 });
 export const SourceBindingSchema = z.strictObject({
@@ -265,8 +265,60 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
     const junctionById = new Map(
       document.junctions.map((junction) => [junction.id, junction]),
     );
+    const attachableIds = new Set([
+      ...document.ports.map((item) => item.id),
+      ...document.instances.map((item) => item.id),
+      ...document.nets.map((item) => item.id),
+      ...document.routes.map((item) => item.id),
+      ...document.junctions.map((item) => item.id),
+    ]);
+    const layoutObjectIds = new Set([
+      ...attachableIds,
+      ...document.annotations.map((item) => item.id),
+    ]);
     const terminalNetByKey = new Map<string, string>();
     const portNetById = new Map<string, string>();
+
+    for (const [
+      annotationIndex,
+      annotation,
+    ] of document.annotations.entries()) {
+      if (
+        annotation.attachedObjectId &&
+        !attachableIds.has(annotation.attachedObjectId)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown annotation attachment: ${annotation.attachedObjectId}`,
+          path: ["annotations", annotationIndex, "attachedObjectId"],
+        });
+      }
+    }
+    for (const [collectionName, collection] of [
+      ["layoutGroups", document.layoutGroups],
+      ["constraints", document.constraints],
+    ] as const) {
+      for (const [collectionIndex, item] of collection.entries()) {
+        const seen = new Set<string>();
+        for (const [objectIndex, objectId] of item.objectIds.entries()) {
+          if (seen.has(objectId)) {
+            context.addIssue({
+              code: "custom",
+              message: `Duplicate layout object: ${objectId}`,
+              path: [collectionName, collectionIndex, "objectIds", objectIndex],
+            });
+          }
+          seen.add(objectId);
+          if (!layoutObjectIds.has(objectId)) {
+            context.addIssue({
+              code: "custom",
+              message: `Unknown layout object: ${objectId}`,
+              path: [collectionName, collectionIndex, "objectIds", objectIndex],
+            });
+          }
+        }
+      }
+    }
 
     for (const [netIndex, net] of document.nets.entries()) {
       const terminalKeys = new Set<string>();

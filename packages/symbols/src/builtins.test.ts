@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { builtInSymbols } from "./builtins.js";
@@ -5,7 +8,7 @@ import { InMemorySymbolResolver } from "./resolver.js";
 import { SymbolDefinitionSchema } from "./schema.js";
 
 describe("initial built-in Symbol Library", () => {
-  it("contains the eight Phase 1 symbol families", () => {
+  it("contains the reviewed Phase 5 production families", () => {
     expect(builtInSymbols.map((symbol) => symbol.id)).toEqual([
       "resistor",
       "capacitor",
@@ -14,6 +17,11 @@ describe("initial built-in Symbol Library", () => {
       "pmos",
       "ground",
       "port",
+      "voltage-source",
+      "current-source",
+      "diode",
+      "npn",
+      "pnp",
       "generic-block",
     ]);
     for (const symbol of builtInSymbols) {
@@ -31,5 +39,21 @@ describe("initial built-in Symbol Library", () => {
       "B",
     ]);
     expect(nmos?.variant?.hiddenPinNames).toEqual(["B"]);
+    expect(nmos?.variant?.hiddenPrimitiveParts).toEqual(["bulk-lead"]);
+  });
+
+  it("matches the reviewed electrical pins from the owned VSS manifest", () => {
+    const review = JSON.parse(
+      readFileSync(
+        resolve(process.cwd(), "fixtures/symbols/circuit-vss-review.json"),
+        "utf8",
+      ),
+    ) as { mappings: Array<{ symbolId: string; pins: string[] }> };
+    const byId = new Map(builtInSymbols.map((symbol) => [symbol.id, symbol]));
+    for (const mapping of review.mappings) {
+      expect(byId.get(mapping.symbolId)?.pins.map((pin) => pin.name)).toEqual(
+        mapping.pins,
+      );
+    }
   });
 });

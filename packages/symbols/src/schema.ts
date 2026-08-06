@@ -17,21 +17,35 @@ export const SymbolPrimitiveSchema = z.discriminatedUnion("kind", [
     kind: z.literal("line"),
     from: PointSchema,
     to: PointSchema,
+    part: StableIdSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("polyline"),
     points: z.array(PointSchema).min(2),
+    part: StableIdSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("circle"),
     center: PointSchema,
     radius: z.number().positive(),
+    part: StableIdSchema.optional(),
   }),
-  z.strictObject({ kind: z.literal("path"), data: z.string().min(1) }),
+  z.strictObject({
+    kind: z.literal("path"),
+    data: z.string().min(1),
+    part: StableIdSchema.optional(),
+  }),
+  z.strictObject({
+    kind: z.literal("polygon"),
+    points: z.array(PointSchema).min(3),
+    fill: z.enum(["none", "foreground"]),
+    part: StableIdSchema.optional(),
+  }),
 ]);
 export const SymbolVariantSchema = z.strictObject({
   id: StableIdSchema,
   hiddenPinNames: z.array(z.string().min(1)),
+  hiddenPrimitiveParts: z.array(StableIdSchema).optional(),
 });
 export const SymbolDefinitionSchema = z
   .strictObject({

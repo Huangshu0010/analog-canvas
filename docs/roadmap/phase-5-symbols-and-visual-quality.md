@@ -1,6 +1,6 @@
 # Phase 5 - Symbols and Visual Quality
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -132,3 +132,26 @@ Open an original dense analog fixture
 - visual variants preserve electrical terminals;
 - original textbook-monochrome golden schematics render deterministically;
 - formal export is free of editor overlays and blocking visual diagnostics.
+
+## Completion evidence
+
+- Visio COM 16.0 read the owned, hash-pinned `circuit.vss` in read-only mode;
+  the checked inventory contains all 101 masters and ShapeSheet evidence for
+  12 human-reviewed production mappings. Neither builds nor runtime load VSS
+  or Visio.
+- The normalized library adds voltage/current sources, diode, NPN, and PNP;
+  VSS review pins match every built-in definition, generic blocks remain
+  deterministic, and MOS visual variants preserve `D/G/S/B` while hiding the
+  tagged bulk lead.
+- Semantic annotations, layout groups/constraints, locks, attached-label
+  movement, and group alignment use the same Edit Engine transaction union as
+  all other edits.
+- Deterministic diagnostics cover placement, resolution, symbol/label overlap,
+  route length, ambiguous Junction dots, constraint satisfaction, and page
+  bounds without moving user geometry.
+- The original dense differential-stage Project and SVG golden have zero
+  crossings, label-overlap findings, or blocking diagnostics. Browser visual
+  review corrected label placement and kept current text upright.
+- Typecheck, 73 tests in 20 files, workspace build, reviewed-symbol and dense
+  SVG checks, and five Playwright flows passed before the final repository
+  gates.

@@ -88,12 +88,23 @@ function mosSymbol(id: "nmos" | "pmos", name: string): SymbolDefinition {
       { kind: "line", from: { x: 15, y: -30 }, to: { x: 15, y: -12 } },
       { kind: "line", from: { x: -3, y: 12 }, to: { x: 15, y: 12 } },
       { kind: "line", from: { x: 15, y: 12 }, to: { x: 15, y: 30 } },
-      { kind: "line", from: { x: 0, y: 0 }, to: { x: 30, y: 0 } },
+      {
+        kind: "line",
+        from: { x: 0, y: 0 },
+        to: { x: 30, y: 0 },
+        part: "bulk-lead",
+      },
       ...(id === "pmos"
         ? [{ kind: "circle" as const, center: { x: -6, y: 0 }, radius: 3 }]
         : []),
     ],
-    variants: [{ id: "textbook-3terminal", hiddenPinNames: ["B"] }],
+    variants: [
+      {
+        id: "textbook-3terminal",
+        hiddenPinNames: ["B"],
+        hiddenPrimitiveParts: ["bulk-lead"],
+      },
+    ],
     aliases: [id === "nmos" ? "mos-n" : "mos-p"],
   };
 }
@@ -165,6 +176,111 @@ const genericBlock: SymbolDefinition = {
   aliases: [],
 };
 
+function sourceSymbol(
+  id: "voltage-source" | "current-source",
+  name: string,
+): SymbolDefinition {
+  const primitives: SymbolPrimitive[] = [
+    { kind: "line", from: { x: 0, y: -30 }, to: { x: 0, y: -15 } },
+    { kind: "circle", center: { x: 0, y: 0 }, radius: 15 },
+    { kind: "line", from: { x: 0, y: 15 }, to: { x: 0, y: 30 } },
+  ];
+  if (id === "voltage-source") {
+    primitives.push(
+      { kind: "line", from: { x: -5, y: -6 }, to: { x: 5, y: -6 } },
+      { kind: "line", from: { x: 0, y: -11 }, to: { x: 0, y: -1 } },
+      { kind: "line", from: { x: -5, y: 7 }, to: { x: 5, y: 7 } },
+    );
+  } else {
+    primitives.push(
+      { kind: "line", from: { x: 0, y: 9 }, to: { x: 0, y: -7 } },
+      {
+        kind: "polygon",
+        points: [
+          { x: 0, y: -10 },
+          { x: -4, y: -3 },
+          { x: 4, y: -3 },
+        ],
+        fill: "foreground",
+      },
+    );
+  }
+  return {
+    schemaVersion: 1,
+    id,
+    name,
+    viewBox: { x: -18, y: -30, width: 36, height: 60 },
+    pins: [
+      pin("+", "positive", 0, -30, "north"),
+      pin("-", "negative", 0, 30, "south"),
+    ],
+    primitives,
+    variants: [],
+    aliases: [id === "voltage-source" ? "dc-voltage" : "dc-current"],
+  };
+}
+
+const diode: SymbolDefinition = {
+  schemaVersion: 1,
+  id: "diode",
+  name: "Diode",
+  viewBox: { x: -30, y: -16, width: 60, height: 32 },
+  pins: [pin("A", "anode", -30, 0, "west"), pin("K", "cathode", 30, 0, "east")],
+  primitives: [
+    { kind: "line", from: { x: -30, y: 0 }, to: { x: -12, y: 0 } },
+    {
+      kind: "polygon",
+      points: [
+        { x: -12, y: -12 },
+        { x: -12, y: 12 },
+        { x: 10, y: 0 },
+      ],
+      fill: "none",
+    },
+    { kind: "line", from: { x: 10, y: -13 }, to: { x: 10, y: 13 } },
+    { kind: "line", from: { x: 10, y: 0 }, to: { x: 30, y: 0 } },
+  ],
+  variants: [],
+  aliases: ["rectifier-diode"],
+};
+
+function bjtSymbol(id: "npn" | "pnp", name: string): SymbolDefinition {
+  const arrowPoints =
+    id === "npn"
+      ? [
+          { x: 11, y: 15 },
+          { x: 4, y: 13 },
+          { x: 8, y: 8 },
+        ]
+      : [
+          { x: 4, y: 9 },
+          { x: 11, y: 11 },
+          { x: 7, y: 16 },
+        ];
+  return {
+    schemaVersion: 1,
+    id,
+    name,
+    viewBox: { x: -30, y: -30, width: 60, height: 60 },
+    pins: [
+      pin("C", "collector", 15, -30, "north"),
+      pin("B", "base", -30, 0, "west"),
+      pin("E", "emitter", 15, 30, "south"),
+    ],
+    primitives: [
+      { kind: "line", from: { x: -30, y: 0 }, to: { x: -8, y: 0 } },
+      { kind: "line", from: { x: -8, y: -16 }, to: { x: -8, y: 16 } },
+      { kind: "line", from: { x: -8, y: -8 }, to: { x: 15, y: -22 } },
+      { kind: "line", from: { x: 15, y: -30 }, to: { x: 15, y: -22 } },
+      { kind: "line", from: { x: -8, y: 8 }, to: { x: 15, y: 22 } },
+      { kind: "line", from: { x: 15, y: 22 }, to: { x: 15, y: 30 } },
+      { kind: "polygon", points: arrowPoints, fill: "foreground" },
+    ],
+    variants: [],
+    aliases: [`bjt-${id}`],
+  };
+}
+
 export const builtInSymbols: readonly SymbolDefinition[] = [
   resistor,
   capacitor,
@@ -173,5 +289,10 @@ export const builtInSymbols: readonly SymbolDefinition[] = [
   mosSymbol("pmos", "PMOS"),
   ground,
   port,
+  sourceSymbol("voltage-source", "Independent Voltage Source"),
+  sourceSymbol("current-source", "Independent Current Source"),
+  diode,
+  bjtSymbol("npn", "NPN Bipolar Transistor"),
+  bjtSymbol("pnp", "PNP Bipolar Transistor"),
   genericBlock,
 ];

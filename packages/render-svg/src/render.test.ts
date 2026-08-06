@@ -3,6 +3,10 @@ import { resolve } from "node:path";
 
 import { parseProject } from "@icm/model";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
+import {
+  diagnoseVisualQuality,
+  hasBlockingVisualDiagnostics,
+} from "@icm/derived";
 import { describe, expect, it } from "vitest";
 
 import { buildSvgScene, renderDocumentSvg } from "./render.js";
@@ -121,5 +125,38 @@ describe("textbook monochrome SVG renderer", () => {
     );
     expect(svg).toContain('<g data-layer="junctions"></g>');
     expect(svg).not.toContain("flightline");
+  });
+
+  it("renders the original dense analog fixture without blocking visual diagnostics", () => {
+    const project = parseProject(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "fixtures/projects/phase-5-dense-analog/project.icproj.json",
+        ),
+        "utf8",
+      ),
+    );
+    const document = project.documents[0]!;
+    const diagnostics = diagnoseVisualQuality(document, resolver);
+    expect(hasBlockingVisualDiagnostics(diagnostics)).toBe(false);
+    expect(diagnostics.map((item) => item.code)).not.toContain(
+      "VISUAL_LABEL_OVERLAP",
+    );
+    const svg = renderDocumentSvg(document, resolver, {
+      title: project.name,
+    });
+    expect(svg).toBe(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "fixtures/visual-golden/phase-5-dense-analog.svg",
+        ),
+        "utf8",
+      ),
+    );
+    expect(svg).toContain('data-kind="current"');
+    expect(svg).toContain('data-kind="figure-caption"');
+    expect(svg).not.toMatch(/selection|hit-target|flightline|overlay/u);
   });
 });

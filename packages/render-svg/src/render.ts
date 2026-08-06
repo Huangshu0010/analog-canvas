@@ -44,6 +44,8 @@ function renderPrimitive(primitive: SymbolPrimitive): string {
       return `<circle cx="${primitive.center.x}" cy="${primitive.center.y}" r="${primitive.radius}"/>`;
     case "path":
       return `<path d="${escapeXml(primitive.data)}"/>`;
+    case "polygon":
+      return `<polygon points="${pointList(primitive.points)}" fill="${primitive.fill === "foreground" ? "#000" : "none"}"/>`;
   }
 }
 
@@ -121,6 +123,14 @@ function deriveBounds(
       height: 0,
     });
   }
+  for (const annotation of document.annotations) {
+    bounds.push({
+      x: annotation.position.x,
+      y: annotation.position.y,
+      width: 0,
+      height: 0,
+    });
+  }
   if (bounds.length === 0) {
     return { x: 0, y: 0, width: 960, height: 640 };
   }
@@ -169,6 +179,14 @@ export function buildSvgScene(
         `<circle data-object-id="${escapeXml(junction.id)}" cx="${junction.position.x}" cy="${junction.position.y}" r="1.75" fill="#000"/>`,
     )
     .join("");
+  const explicitInstanceLabels = new Set(
+    document.annotations
+      .filter(
+        (annotation) =>
+          annotation.kind === "instance-label" && annotation.attachedObjectId,
+      )
+      .map((annotation) => annotation.attachedObjectId!),
+  );
   const symbols = [...document.instances]
     .filter((instance) => instance.placement !== null)
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -180,21 +198,48 @@ export function buildSvgScene(
       if (!resolved) {
         throw new Error(`Unresolved symbol: ${instance.symbolId}`);
       }
+      const hiddenParts = new Set(resolved.variant?.hiddenPrimitiveParts ?? []);
       const primitives = resolved.definition.primitives
+        .filter(
+          (primitive) => !primitive.part || !hiddenParts.has(primitive.part),
+        )
         .map(renderPrimitive)
         .join("");
       const bounds = symbolBounds(resolved.definition, instance);
       const labelX = bounds.x + bounds.width / 2;
       const labelY = bounds.y + bounds.height + 14;
-      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter">${primitives}</g></g><text x="${labelX}" y="${labelY}" text-anchor="middle">${escapeXml(instance.id)}</text></g>`;
+      const defaultLabel = explicitInstanceLabels.has(instance.id)
+        ? ""
+        : `<text x="${labelX}" y="${labelY}" text-anchor="middle">${escapeXml(instance.id)}</text>`;
+      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter">${primitives}</g></g>${defaultLabel}</g>`;
     })
     .join("");
   const annotations = [...document.annotations]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
-    .map(
-      (annotation) =>
-        `<text data-object-id="${escapeXml(annotation.id)}" x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="rotate(${annotation.rotation} ${annotation.position.x} ${annotation.position.y})">${escapeXml(annotation.text)}</text>`,
-    )
+    .map((annotation) => {
+      const attachment = annotation.attachedObjectId
+        ? ` data-attached-object-id="${escapeXml(annotation.attachedObjectId)}"`
+        : "";
+      const transform = `rotate(${annotation.rotation} ${annotation.position.x} ${annotation.position.y})`;
+      const attributes = `data-object-id="${escapeXml(annotation.id)}" data-kind="${annotation.kind}"${attachment}`;
+      if (annotation.kind === "current") {
+        const x = annotation.position.x;
+        const y = annotation.position.y;
+        const vertical =
+          annotation.rotation === 90 || annotation.rotation === 270;
+        const textX = vertical ? x + 15 : x;
+        const textY = vertical ? y + 4 : y - 7;
+        const textAnchor = vertical ? "start" : annotation.alignment;
+        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="#000" stroke-width="0.8"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="#000"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}">${escapeXml(annotation.text)}</text></g>`;
+      }
+      const emphasis =
+        annotation.kind === "power-label"
+          ? ' font-weight="bold"'
+          : annotation.kind === "figure-caption"
+            ? ' font-style="italic"'
+            : "";
+      return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}>${escapeXml(annotation.text)}</text>`;
+    })
     .join("");
 
   return {

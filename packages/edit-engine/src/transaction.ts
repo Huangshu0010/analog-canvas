@@ -1,5 +1,8 @@
 import {
+  AnnotationSchema,
   JunctionSchema,
+  LayoutConstraintSchema,
+  LayoutGroupSchema,
   MirrorSchema,
   PlacementSchema,
   PointSchema,
@@ -84,6 +87,36 @@ export const MakeFlightlineEditSchema = z.strictObject({
   kind: z.literal("make_flightline"),
   routeId: StableIdSchema,
 });
+export const UpsertAnnotationEditSchema = z.strictObject({
+  kind: z.literal("upsert_annotation"),
+  annotation: AnnotationSchema,
+});
+export const RemoveAnnotationEditSchema = z.strictObject({
+  kind: z.literal("remove_annotation"),
+  annotationId: StableIdSchema,
+});
+export const SetLayoutGroupEditSchema = z.strictObject({
+  kind: z.literal("set_layout_group"),
+  group: LayoutGroupSchema,
+});
+export const RemoveLayoutGroupEditSchema = z.strictObject({
+  kind: z.literal("remove_layout_group"),
+  groupId: StableIdSchema,
+});
+export const SetLayoutConstraintEditSchema = z.strictObject({
+  kind: z.literal("set_layout_constraint"),
+  constraint: LayoutConstraintSchema,
+});
+export const RemoveLayoutConstraintEditSchema = z.strictObject({
+  kind: z.literal("remove_layout_constraint"),
+  constraintId: StableIdSchema,
+});
+export const AlignInstancesEditSchema = z.strictObject({
+  kind: z.literal("align_instances"),
+  instanceIds: z.array(StableIdSchema).min(2).max(64),
+  axis: z.enum(["x", "y"]),
+  coordinate: z.number().int().optional(),
+});
 export const UndoEditSchema = z.strictObject({ kind: z.literal("undo") });
 export const RedoEditSchema = z.strictObject({ kind: z.literal("redo") });
 
@@ -97,6 +130,13 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   AddJunctionEditSchema,
   RemoveJunctionEditSchema,
   MakeFlightlineEditSchema,
+  UpsertAnnotationEditSchema,
+  RemoveAnnotationEditSchema,
+  SetLayoutGroupEditSchema,
+  RemoveLayoutGroupEditSchema,
+  SetLayoutConstraintEditSchema,
+  RemoveLayoutConstraintEditSchema,
+  AlignInstancesEditSchema,
   UndoEditSchema,
   RedoEditSchema,
 ]);
@@ -423,7 +463,18 @@ export function executeTransaction(
             `Instance is not placed: ${edit.instanceId}`,
           );
         }
+        const delta = {
+          x: edit.position.x - instance.placement.position.x,
+          y: edit.position.y - instance.placement.position.y,
+        };
         instance.placement.position = structuredClone(edit.position);
+        for (const annotation of draft.annotations) {
+          if (annotation.attachedObjectId === edit.instanceId) {
+            annotation.position.x += delta.x;
+            annotation.position.y += delta.y;
+            changedObjectIds.add(annotation.id);
+          }
+        }
         changedObjectIds.add(edit.instanceId);
         break;
       }
@@ -672,6 +723,183 @@ export function executeTransaction(
         }
         draft.routes.splice(routeIndex, 1);
         changedObjectIds.add(edit.routeId);
+        break;
+      }
+      case "upsert_annotation": {
+        const existingIndex = draft.annotations.findIndex(
+          (annotation) => annotation.id === edit.annotation.id,
+        );
+        const existing = draft.annotations[existingIndex];
+        if (existing?.locked) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Annotation is locked: ${existing.id}`,
+          );
+        }
+        const annotation = AnnotationSchema.parse(edit.annotation);
+        if (existingIndex >= 0) draft.annotations[existingIndex] = annotation;
+        else draft.annotations.push(annotation);
+        changedObjectIds.add(annotation.id);
+        break;
+      }
+      case "remove_annotation": {
+        const index = draft.annotations.findIndex(
+          (annotation) => annotation.id === edit.annotationId,
+        );
+        const annotation = draft.annotations[index];
+        if (!annotation) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Annotation does not exist: ${edit.annotationId}`,
+          );
+        }
+        if (annotation.locked) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Annotation is locked: ${annotation.id}`,
+          );
+        }
+        if (
+          [...draft.layoutGroups, ...draft.constraints].some((item) =>
+            item.objectIds.includes(annotation.id),
+          )
+        ) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Annotation is referenced by layout intent: ${annotation.id}`,
+          );
+        }
+        draft.annotations.splice(index, 1);
+        changedObjectIds.add(annotation.id);
+        break;
+      }
+      case "set_layout_group": {
+        const index = draft.layoutGroups.findIndex(
+          (group) => group.id === edit.group.id,
+        );
+        const existing = draft.layoutGroups[index];
+        if (existing?.locked) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Layout group is locked: ${existing.id}`,
+          );
+        }
+        const group = LayoutGroupSchema.parse(edit.group);
+        if (index >= 0) draft.layoutGroups[index] = group;
+        else draft.layoutGroups.push(group);
+        changedObjectIds.add(group.id);
+        break;
+      }
+      case "remove_layout_group": {
+        const index = draft.layoutGroups.findIndex(
+          (group) => group.id === edit.groupId,
+        );
+        const group = draft.layoutGroups[index];
+        if (!group) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Layout group does not exist: ${edit.groupId}`,
+          );
+        }
+        if (group.locked) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Layout group is locked: ${group.id}`,
+          );
+        }
+        draft.layoutGroups.splice(index, 1);
+        changedObjectIds.add(group.id);
+        break;
+      }
+      case "set_layout_constraint": {
+        const index = draft.constraints.findIndex(
+          (constraint) => constraint.id === edit.constraint.id,
+        );
+        const existing = draft.constraints[index];
+        if (existing?.locked) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Layout constraint is locked: ${existing.id}`,
+          );
+        }
+        const constraint = LayoutConstraintSchema.parse(edit.constraint);
+        if (index >= 0) draft.constraints[index] = constraint;
+        else draft.constraints.push(constraint);
+        changedObjectIds.add(constraint.id);
+        break;
+      }
+      case "remove_layout_constraint": {
+        const index = draft.constraints.findIndex(
+          (constraint) => constraint.id === edit.constraintId,
+        );
+        const constraint = draft.constraints[index];
+        if (!constraint) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Layout constraint does not exist: ${edit.constraintId}`,
+          );
+        }
+        if (constraint.locked) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Layout constraint is locked: ${constraint.id}`,
+          );
+        }
+        draft.constraints.splice(index, 1);
+        changedObjectIds.add(constraint.id);
+        break;
+      }
+      case "align_instances": {
+        if (new Set(edit.instanceIds).size !== edit.instanceIds.length) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            "Alignment instance IDs must be unique",
+          );
+        }
+        const instances = edit.instanceIds.map((id) =>
+          draft.instances.find((instance) => instance.id === id),
+        );
+        if (instances.some((instance) => !instance)) {
+          const missing = edit.instanceIds.find(
+            (id) => !draft.instances.some((instance) => instance.id === id),
+          );
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${missing}`,
+          );
+        }
+        if (instances.some((instance) => instance!.placement === null)) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            "Every aligned instance must be placed",
+          );
+        }
+        const coordinate =
+          edit.coordinate ?? instances[0]!.placement!.position[edit.axis];
+        for (const instance of instances) {
+          const oldCoordinate = instance!.placement!.position[edit.axis];
+          instance!.placement!.position[edit.axis] = coordinate;
+          for (const annotation of draft.annotations) {
+            if (annotation.attachedObjectId === instance!.id) {
+              annotation.position[edit.axis] += coordinate - oldCoordinate;
+              changedObjectIds.add(annotation.id);
+            }
+          }
+          changedObjectIds.add(instance!.id);
+        }
         break;
       }
     }

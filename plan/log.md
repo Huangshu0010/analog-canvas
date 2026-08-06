@@ -162,3 +162,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   regressions, Markdown link/fence checks, product/reference coupling
   inspection, and `git diff --check` passed.
 - Commit status: ready to commit as `Complete Phase 4 full SPICE baseline`.
+
+## 2026-08-07 - Complete Phase 5 symbols and visual quality
+
+- Target: replace provisional symbols and text-only presentation with a
+  reviewed VSS-to-Symbol-DSL pipeline, semantic presentation edits, measurable
+  visual diagnostics, and a stable original analog golden.
+- Changed areas: added VSS inventory/review tools and evidence; expanded the
+  symbol library, SPICE symbol mapping, model validation, Edit Engine,
+  diagnostics, SVG renderer, editor demo, and visual fixtures/specifications.
+- Validation: source hash and 101-master inventory, 12-family contact sheet,
+  frozen formatting/type/test/build gates, 73 tests in 20 files, five
+  Playwright flows, browser DOM and visual inspection, deterministic dense SVG,
+  Markdown link/fence checks, runtime-Visio/reference coupling inspection, and
+  `git diff --check`.
+- Commit status: ready to commit as
+  `Complete Phase 5 symbols and visual quality`.

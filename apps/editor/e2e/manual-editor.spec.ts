@@ -135,7 +135,7 @@ test("imports a selected SPICE source set into unplaced Documents", async ({
     ]);
 
   await expect(page.getByTestId("status")).toHaveText(
-    "Imported 8 Documents and 32 instances; 23 generic symbols",
+    "Imported 8 Documents and 32 instances; 17 generic symbols",
   );
   await expect(
     page.getByText("mixed_device_acceptance (SPICE Import)"),
@@ -172,7 +172,7 @@ test("imports the ngspice 46 structural baseline through the browser", async ({
     ]);
 
   await expect(page.getByTestId("status")).toHaveText(
-    "Imported 3 Documents and 27 instances; 21 generic symbols",
+    "Imported 3 Documents and 27 instances; 16 generic symbols",
   );
   await expect(page.getByTestId("document-count")).toHaveText("3");
   await expect(page.getByTestId("instance-count")).toHaveText("27");
@@ -259,4 +259,30 @@ test("routes explicit connectivity without treating crossings as joins", async (
   expect(svg).toContain('data-layer="junctions"');
   expect(svg).toContain('data-object-id="junction-ui-3"');
   expect(svg).not.toMatch(/flightline|route-hit|editor-overlay/u);
+});
+
+test("loads and edits the reviewed textbook-monochrome visual demo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Visual demo" }).click();
+  await expect(page.getByTestId("status")).toHaveText(
+    "Loaded Phase 5 visual demo",
+  );
+  await expect(page.getByTestId("annotation-count")).toHaveText("13");
+  await expect(page.getByTestId("crossing-count")).toHaveText("0");
+  await expect(page.getByTestId("blocking-diagnostic-count")).toHaveText("0");
+  await expect(
+    page.locator('[data-layer="annotations"] [data-kind="current"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('[data-layer="annotations"] [data-kind="figure-caption"]'),
+  ).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Add note" }).click();
+  await expect(page.getByTestId("annotation-count")).toHaveText("14");
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByTestId("status")).toHaveText(
+    "Added annotation note-1",
+  );
 });
