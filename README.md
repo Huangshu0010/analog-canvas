@@ -10,9 +10,12 @@ commit through the same Schematic Edit Engine.
 - `lib/circuit.vss`: binary Microsoft Visio stencil containing circuit symbols.
 - `netlists/`: SPICE fixtures and local model declarations, grouped by circuit.
 - `apps/editor/`: React editor application and native SVG canvas shell.
+- `apps/local-host/`: loopback-only production host for the installable PWA.
 - `packages/model/`: Project/Document schemas, geometry, migrations, and
   canonical persistence.
 - `packages/edit-engine/`: typed transaction and revision boundary.
+- `packages/exporters/`: formal SVG, PNG, and PDF export pipeline.
+- `packages/platform-node/`: root-bounded atomic save and recovery adapter.
 - `packages/spice/`: lossless frontend and transient Circuit IR boundary.
 - `packages/symbols/`: Symbol DSL and resolver.
 - `fixtures/`: product-owned Project, connectivity, parser, and visual fixtures.
@@ -55,6 +58,9 @@ pnpm references:check
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm performance:check
+pnpm test:e2e
+pnpm release:package
 ```
 
 Validation must match the changed behavior and risk. At minimum, close out a

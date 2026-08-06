@@ -1,0 +1,29 @@
+{
+  "version": "0.1.0",
+  "sourceProject": "fixtures/projects/phase-5-dense-analog/project.icproj.json",
+  "bounds": {
+    "x": -11,
+    "y": -41,
+    "width": 482,
+    "height": 407
+  },
+  "raster": {
+    "scale": 3,
+    "width": 1446,
+    "height": 1221
+  },
+  "files": {
+    "schematic.svg": {
+      "byteLength": 8411,
+      "sha256": "f8e4e4bb493840d4f72917517803b67e6155166f6d712b8ad65187db141ce5e9"
+    },
+    "schematic.png": {
+      "byteLength": 52726,
+      "sha256": "0d4bb23678e4c67747bffbc3f628f1d282f641a32ab40868895fb2b889ce1e74"
+    },
+    "schematic.pdf": {
+      "byteLength": 29028,
+      "sha256": "0c2e58c491ff1387b717e28292efd62f51c73bb0423967c51675f3e13a52afab"
+    }
+  }
+}

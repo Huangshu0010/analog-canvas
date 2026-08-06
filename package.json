@@ -1,6 +1,6 @@
 {
   "name": "interactive-circuit-maker",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.16.0",
@@ -10,6 +10,13 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
+    "release:package": "pnpm build && node scripts/package-release.mjs",
+    "performance:check": "pnpm build && node scripts/performance-baseline.mjs",
+    "export:phase7": "pnpm build && node scripts/phase-7-export-golden.mjs",
+    "export:phase7:check": "pnpm build && node scripts/phase-7-export-golden.mjs --check",
+    "pwa:icons": "pnpm --filter @icm/exporters build && node scripts/pwa-icons.mjs",
+    "pwa:icons:check": "pnpm --filter @icm/exporters build && node scripts/pwa-icons.mjs --check",
+    "release:verify": "pnpm build && node scripts/performance-baseline.mjs && node scripts/phase-7-export-golden.mjs --check && node scripts/pwa-icons.mjs --check && node scripts/package-release.mjs && node scripts/release-smoke.mjs",
     "agent-api:artifacts": "pnpm --filter @icm/agent-adapter build && node scripts/agent-api-artifacts.mjs",
     "agent-api:artifacts:check": "pnpm --filter @icm/agent-adapter build && node scripts/agent-api-artifacts.mjs --check",
     "dev": "pnpm --filter @icm/editor dev",

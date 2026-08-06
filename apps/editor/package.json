@@ -1,6 +1,6 @@
 {
   "name": "@icm/editor",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
   "dependencies": {
     "@icm/derived": "workspace:*",
     "@icm/edit-engine": "workspace:*",
+    "@icm/exporters": "workspace:*",
     "@icm/model": "workspace:*",
     "@icm/render-svg": "workspace:*",
     "@icm/spice": "workspace:*",

@@ -94,18 +94,40 @@ function deriveBounds(
   resolver: SymbolResolver,
   margin: number,
 ): Rect {
-  const bounds = document.instances
-    .filter((instance) => instance.placement !== null)
-    .map((instance) => {
-      const resolved = resolver.resolve(
-        instance.symbolId,
-        instance.symbolVariantId,
-      );
-      if (!resolved) {
-        throw new Error(`Unresolved symbol: ${instance.symbolId}`);
-      }
-      return symbolBounds(resolved.definition, instance);
-    });
+  const bounds: Rect[] = [];
+  const estimatedTextBounds = (
+    text: string,
+    x: number,
+    y: number,
+    alignment: "start" | "middle" | "end",
+  ): Rect => {
+    const width = Math.max(7, text.length * 7);
+    const left =
+      alignment === "start"
+        ? x
+        : alignment === "end"
+          ? x - width
+          : x - width / 2;
+    return {
+      x: Math.floor(left),
+      y: y - 13,
+      width: Math.ceil(width),
+      height: 17,
+    };
+  };
+  for (const instance of document.instances.filter(
+    (candidate) => candidate.placement !== null,
+  )) {
+    const resolved = resolver.resolve(
+      instance.symbolId,
+      instance.symbolVariantId,
+    );
+    if (!resolved) {
+      throw new Error(`Unresolved symbol: ${instance.symbolId}`);
+    }
+    const instanceBox = symbolBounds(resolved.definition, instance);
+    bounds.push(instanceBox);
+  }
   for (const route of document.routes) {
     const polyline = routePolyline(document, resolver, route);
     if (!polyline) {
@@ -124,12 +146,17 @@ function deriveBounds(
     });
   }
   for (const annotation of document.annotations) {
-    bounds.push({
-      x: annotation.position.x,
-      y: annotation.position.y,
-      width: 0,
-      height: 0,
-    });
+    const verticalCurrent =
+      annotation.kind === "current" &&
+      (annotation.rotation === 90 || annotation.rotation === 270);
+    bounds.push(
+      estimatedTextBounds(
+        annotation.text,
+        annotation.position.x + (verticalCurrent ? 15 : 0),
+        annotation.position.y + (verticalCurrent ? 4 : 0),
+        verticalCurrent ? "start" : annotation.alignment,
+      ),
+    );
   }
   if (bounds.length === 0) {
     return { x: 0, y: 0, width: 960, height: 640 };

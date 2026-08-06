@@ -148,6 +148,31 @@ body {
   overflow-wrap: anywhere;
 }
 
+.diagnostics {
+  margin-top: 1rem;
+  border-top: 1px solid #d8d8d2;
+  padding-top: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.diagnostics h2 {
+  font-size: 0.85rem;
+}
+
+.diagnostics ul {
+  max-height: 12rem;
+  overflow: auto;
+  padding-left: 1.2rem;
+}
+
+.diagnostics [data-severity="error"] {
+  color: #9b1c1c;
+}
+
+.diagnostics [data-severity="warning"] {
+  color: #7a5200;
+}
+
 .canvas-panel {
   position: relative;
   min-width: 0;

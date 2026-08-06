@@ -1,0 +1,33 @@
+{
+  "name": "@icm/exporters",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "development": "./src/browser.ts",
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@icm/model": "workspace:*",
+    "@icm/render-svg": "workspace:*",
+    "@icm/symbols": "workspace:*",
+    "@resvg/resvg-js": "2.6.2",
+    "dejavu-fonts-ttf": "2.37.3",
+    "pdf-lib": "1.17.1"
+  }
+}

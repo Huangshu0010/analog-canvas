@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0-boundary`
+Version: `1.1-implemented`
 
 Owning phase: `Phase 0/7`
 
@@ -22,11 +22,11 @@ an interruption cannot silently corrupt a valid Project file.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| Formal Project | User-selected `project.icproj.json` |
-| Atomic write | Temporary write, flush where supported, and same-volume replace |
-| Recovery snapshot | Validated AppData copy offered after interrupted work |
+| Term              | Meaning                                                         |
+| ----------------- | --------------------------------------------------------------- |
+| Formal Project    | User-selected `project.icproj.json`                             |
+| Atomic write      | Temporary write, flush where supported, and same-volume replace |
+| Recovery snapshot | Validated AppData copy offered after interrupted work           |
 
 ## Data model or interface
 
@@ -54,8 +54,9 @@ expose partial writes as successful saves.
 ## Operations and state transitions
 
 Phase 0 implements validation, canonical serialization, migration registration,
-and the atomic-write adapter boundary. Phase 7 implements platform fault tests,
-AppData recovery, restoration UI, and cleanup policy.
+and the atomic-write adapter boundary. Phase 7 implements a root-bounded Node
+adapter, forced pre-replace failure tests, validated AppData recovery, and
+browser restoration UI.
 
 ## Persistence boundary
 
@@ -86,6 +87,12 @@ through Phase 7.
 - invalid/future-version tests
 - Phase 7 interruption and corrupt-recovery fault tests
 
-## Open decisions
+## Platform decisions
 
-- Desktop packaging and the exact AppData adapter are selected in Phase 7.
+- The v0.1 Node adapter uses `%LOCALAPPDATA%/InteractiveCircuitMaker` on
+  Windows, the standard Application Support directory on macOS, and
+  `$XDG_STATE_HOME` (or `~/.local/state`) on Linux.
+- Browser recovery uses origin-local application data. Formal browser save is
+  an explicit canonical file download.
+- Native-shell storage integration is deferred by ADR 0006 without changing
+  this contract.

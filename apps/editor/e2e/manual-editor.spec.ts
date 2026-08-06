@@ -43,6 +43,15 @@ async function clickRoute(
   await page.mouse.click(point.x, point.y);
 }
 
+async function downloadBytes(page: Page, buttonName: string): Promise<Buffer> {
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: buttonName }).click();
+  const stream = await (await downloadPromise).createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
+}
+
 test("manual place, transform, history, save, reopen, and export closure", async ({
   page,
 }) => {
@@ -285,4 +294,78 @@ test("loads and edits the reviewed textbook-monochrome visual demo", async ({
   await expect(page.getByTestId("status")).toHaveText(
     "Added annotation note-1",
   );
+});
+
+test("exports one formal scene as canonical Project, PNG, and PDF", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Visual demo" }).click();
+
+  const projectBytes = await downloadBytes(page, "Save Project");
+  const savedProject = JSON.parse(projectBytes.toString("utf8"));
+  expect(savedProject.topDocumentId).toBe("document-differential-stage");
+  expect(
+    await page.evaluate(() => localStorage.getItem("icm.recovery.v1")),
+  ).toBeNull();
+  await page.getByTestId("project-file").setInputFiles({
+    name: "saved.icproj.json",
+    mimeType: "application/json",
+    buffer: projectBytes,
+  });
+  await expect(page.getByTestId("status")).toContainText(
+    "Opened saved.icproj.json",
+  );
+
+  const png = await downloadBytes(page, "Export PNG");
+  expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  await expect(page.getByTestId("status")).toContainText("Exported PNG");
+
+  const pdf = await downloadBytes(page, "Export PDF");
+  expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+  await expect(page.getByTestId("status")).toContainText("Exported PDF");
+});
+
+test("offers valid recovery after reload and rejects corrupt recovery", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await dragInstance(page, "M1", 320, 180);
+  expect(
+    await page.evaluate(() => localStorage.getItem("icm.recovery.v1")),
+  ).toContain('"revision": 1');
+
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Restore recovery" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Restore recovery" }).click();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  await page.evaluate(() => localStorage.setItem("icm.recovery.v1", "{broken"));
+  await page.reload();
+  await expect(page.getByTestId("status")).toContainText(
+    "Discarded corrupt recovery",
+  );
+  expect(
+    await page.evaluate(() => localStorage.getItem("icm.recovery.v1")),
+  ).toBeNull();
+});
+
+test("publishes installable PWA metadata and diagnostic UI", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const manifest = await page
+    .locator('link[rel="manifest"]')
+    .getAttribute("href");
+  expect(manifest).toBe("/manifest.webmanifest");
+  const response = await page.request.get("/manifest.webmanifest");
+  expect(await response.json()).toMatchObject({
+    name: "Interactive Circuit Maker",
+    display: "standalone",
+  });
+  await expect(
+    page.getByRole("region", { name: "Import diagnostics" }),
+  ).toContainText("No import diagnostics");
 });

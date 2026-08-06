@@ -194,3 +194,20 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Playwright flows, Markdown structure, no-MCP coupling inspection, and
   `git diff --check`.
 - Commit status: ready to commit as `Complete Phase 6 Agent API`.
+
+## 2026-08-07 - Complete Phase 7 release hardening
+
+- Target: turn the editing and Agent foundations into a versioned, recoverable,
+  exportable, measured, and locally installable v0.1 release candidate.
+- Changed areas: added formal exporters and cross-format goldens; text-aware
+  render bounds; Node atomic storage and recovery; canonical browser open/save,
+  recovery and diagnostics UI; LTspice/Xyce profiles; performance budgets;
+  PWA assets; loopback host; release packaging, smoke, CI, and user/release
+  documentation.
+- Validation: frozen install, formatting, four pinned references, three Agent
+  API artifacts, 12 symbol previews, Phase 5/7 visual goldens, PDF metadata and
+  rendered-page inspection, TypeScript, 89 tests in 26 files, 500-instance
+  performance budgets, workspace/release builds, loopback release smoke, eight
+  Playwright flows, 65 Markdown files, no-MCP package inspection, and
+  `git diff --check` passed.
+- Commit status: ready to commit as `Complete Phase 7 release hardening`.

@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, PointerEvent as ReactPointerEvent } from "react";
 
 import { DocumentHistory } from "@icm/edit-engine";
 import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
+import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
 import {
   deriveCrossings,
   deriveFlightlines,
@@ -24,8 +25,9 @@ import type {
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
-import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
+import { buildSvgScene } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
+import type { SpiceDiagnostic } from "@icm/spice";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
 import { createDemoProject } from "./demo-project";
@@ -33,6 +35,7 @@ import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
 
 const SNAPSHOT_KEY = "icm.phase1.snapshot";
+const RECOVERY_KEY = "icm.recovery.v1";
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 
 interface DragPreview {
@@ -117,6 +120,11 @@ export function App({ project: initialProject }: AppProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewBox, setViewBox] = useState<Rect>(DEFAULT_VIEWBOX);
   const [status, setStatus] = useState("Ready");
+  const [recoveryCandidate, setRecoveryCandidate] =
+    useState<CircuitProject | null>(null);
+  const [importDiagnostics, setImportDiagnostics] = useState<SpiceDiagnostic[]>(
+    [],
+  );
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [tool, setTool] = useState<EditorTool>("select");
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
@@ -186,13 +194,35 @@ export function App({ project: initialProject }: AppProps) {
     0,
   );
 
+  useEffect(() => {
+    const serialized = localStorage.getItem(RECOVERY_KEY);
+    if (!serialized) return;
+    try {
+      setRecoveryCandidate(parseProject(serialized));
+      setStatus("Unsaved recovery is available");
+    } catch (error) {
+      localStorage.removeItem(RECOVERY_KEY);
+      setStatus(
+        `Discarded corrupt recovery: ${error instanceof Error ? error.message : "invalid data"}`,
+      );
+    }
+  }, []);
+
+  function stageRecovery(nextProject: CircuitProject): void {
+    localStorage.setItem(RECOVERY_KEY, serializeProject(nextProject));
+  }
+
   function applyResult(result: EditTransactionResult): void {
     if (!result.ok) {
       setStatus(`${result.error.code}: ${result.error.message}`);
       return;
     }
     if (result.applied) {
-      setProject((current) => replaceDocument(current, result.document));
+      setProject((current) => {
+        const next = replaceDocument(current, result.document);
+        stageRecovery(next);
+        return next;
+      });
     }
     setStatus(
       result.applied
@@ -570,6 +600,63 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(`Saved revision ${document.revision}`);
   }
 
+  function download(
+    bytes: BlobPart,
+    mediaType: string,
+    extension: string,
+  ): void {
+    const url = URL.createObjectURL(new Blob([bytes], { type: mediaType }));
+    const anchor = window.document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${safeExportBaseName(project.name)}.${extension}`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  function saveProjectFile(): void {
+    download(serializeProject(project), "application/json", "icproj.json");
+    localStorage.removeItem(RECOVERY_KEY);
+    setRecoveryCandidate(null);
+    setStatus(`Saved formal Project revision ${document.revision}`);
+  }
+
+  function restoreRecovery(): void {
+    if (!recoveryCandidate) return;
+    const recoveredDocument = recoveryCandidate.documents.find(
+      (candidate) => candidate.id === recoveryCandidate.topDocumentId,
+    )!;
+    history.current.reset(recoveredDocument);
+    setProject(recoveryCandidate);
+    setRecoveryCandidate(null);
+    setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
+  }
+
+  function discardRecovery(): void {
+    localStorage.removeItem(RECOVERY_KEY);
+    setRecoveryCandidate(null);
+    setStatus("Discarded recovery");
+  }
+
+  async function openProjectFile(file: File | null): Promise<void> {
+    if (!file) return;
+    try {
+      const opened = parseProject(await file.text());
+      const openedDocument = opened.documents.find(
+        (candidate) => candidate.id === opened.topDocumentId,
+      )!;
+      history.current.reset(openedDocument);
+      setProject(opened);
+      setSelectedId(null);
+      setSelectedRouteId(null);
+      setImportDiagnostics([]);
+      localStorage.removeItem(RECOVERY_KEY);
+      setRecoveryCandidate(null);
+      setStatus(`Opened ${file.name} at revision ${openedDocument.revision}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Project open failed");
+    }
+  }
+
   function loadVisualDemo(): void {
     const next = createVisualDemoProject();
     const nextDocument = next.documents.find(
@@ -648,14 +735,36 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function exportSvg(): void {
-    const svg = renderDocumentSvg(document, resolver, { title: project.name });
-    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-    const anchor = window.document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${project.name.replaceAll(/[^a-z0-9]+/giu, "-").toLowerCase()}.svg`;
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    const source = createFormalExportSource(document, resolver, {
+      title: project.name,
+    });
+    download(source.svg, "image/svg+xml", "svg");
     setStatus(`Exported revision ${document.revision}`);
+  }
+
+  async function exportRaster(format: "png" | "pdf"): Promise<void> {
+    setStatus(`Preparing ${format.toUpperCase()} export`);
+    try {
+      const source = createFormalExportSource(document, resolver, {
+        title: project.name,
+      });
+      if (format === "png") {
+        const { rasterizeFormalSvgInBrowser } =
+          await import("@icm/exporters/browser");
+        const png = await rasterizeFormalSvgInBrowser(source);
+        download(png.bytes as BlobPart, png.mediaType, "png");
+      } else {
+        const { exportFormalArtifactsInBrowser } =
+          await import("@icm/exporters/browser");
+        const { pdf } = await exportFormalArtifactsInBrowser(source);
+        download(pdf as BlobPart, "application/pdf", "pdf");
+      }
+      setStatus(
+        `Exported ${format.toUpperCase()} revision ${document.revision}`,
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Export failed");
+    }
   }
 
   async function importSpiceFiles(files: FileList | null): Promise<void> {
@@ -691,6 +800,7 @@ export function App({ project: initialProject }: AppProps) {
         sourceInputs,
         entryCandidates[0]!.path,
       );
+      setImportDiagnostics(result.diagnostics);
       if (!result.project || !result.successful) {
         const firstError = result.diagnostics.find(
           (item) => item.severity === "error",
@@ -712,6 +822,7 @@ export function App({ project: initialProject }: AppProps) {
         ).length;
       history.current.reset(importedDocument);
       setProject(result.project);
+      stageRecovery(result.project);
       setSelectedId(null);
       setDragPreview(null);
       setViewBox(DEFAULT_VIEWBOX);
@@ -825,8 +936,38 @@ export function App({ project: initialProject }: AppProps) {
           <button type="button" onClick={reopenSnapshot}>
             Reopen snapshot
           </button>
+          <button type="button" onClick={saveProjectFile}>
+            Save Project
+          </button>
+          <label className="file-import">
+            Open Project
+            <input
+              data-testid="project-file"
+              type="file"
+              accept=".json,.icproj.json,application/json"
+              onChange={(event) =>
+                void openProjectFile(event.currentTarget.files?.[0] ?? null)
+              }
+            />
+          </label>
+          {recoveryCandidate ? (
+            <>
+              <button type="button" onClick={restoreRecovery}>
+                Restore recovery
+              </button>
+              <button type="button" onClick={discardRecovery}>
+                Discard recovery
+              </button>
+            </>
+          ) : null}
           <button type="button" onClick={exportSvg}>
             Export SVG
+          </button>
+          <button type="button" onClick={() => void exportRaster("png")}>
+            Export PNG
+          </button>
+          <button type="button" onClick={() => void exportRaster("pdf")}>
+            Export PDF
           </button>
           <label className="file-import">
             Import SPICE
@@ -892,8 +1033,24 @@ export function App({ project: initialProject }: AppProps) {
             }
           </dd>
           <dt>Status</dt>
-          <dd data-testid="status">{status}</dd>
+          <dd data-testid="status" aria-live="polite">
+            {status}
+          </dd>
         </dl>
+        <section aria-label="Import diagnostics" className="diagnostics">
+          <h2>Import Diagnostics</h2>
+          {importDiagnostics.length === 0 ? <p>No import diagnostics</p> : null}
+          <ul data-testid="import-diagnostics">
+            {importDiagnostics.map((diagnostic, index) => (
+              <li
+                key={`${diagnostic.code}-${index}`}
+                data-severity={diagnostic.severity}
+              >
+                <strong>{diagnostic.code}</strong>: {diagnostic.message}
+              </li>
+            ))}
+          </ul>
+        </section>
       </aside>
       <section className="canvas-panel">
         <div className="viewport-toolbar" aria-label="Viewport toolbar">

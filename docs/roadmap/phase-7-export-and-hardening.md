@@ -1,6 +1,6 @@
 # Phase 7 - Export and Hardening
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -115,12 +115,12 @@ Export an original dense analog fixture
 
 ## Risks and decisions
 
-| Risk or decision | Handling |
-|---|---|
-| Hardening becomes an unlimited backlog | Define explicit release budgets and supported platforms |
-| Raster/PDF diverge from SVG | Derive them from the same formal SVG scene |
-| Recovery overwrites valid user data | Recovery stays in AppData and requires validated promotion |
-| Vendor compatibility is overstated | Publish versioned compatibility matrices and known gaps |
+| Risk or decision                       | Handling                                                   |
+| -------------------------------------- | ---------------------------------------------------------- |
+| Hardening becomes an unlimited backlog | Define explicit release budgets and supported platforms    |
+| Raster/PDF diverge from SVG            | Derive them from the same formal SVG scene                 |
+| Recovery overwrites valid user data    | Recovery stays in AppData and requires validated promotion |
+| Vendor compatibility is overstated     | Publish versioned compatibility matrices and known gaps    |
 
 ## Exit gate
 
@@ -129,3 +129,27 @@ Export an original dense analog fixture
 - performance remains within accepted budgets on representative fixtures;
 - export and dialect support are documented, versioned, and reproducible;
 - a release artifact passes the packaging, security, and smoke-test checklist.
+
+## Completion evidence
+
+- The formal SVG scene now drives checked SVG, 3x PNG, and one-page PDF
+  artifacts. A bundled DejaVu Serif family prevents missing labels, text-aware
+  bounds prevent clipping, and the rendered PDF golden passed visual review.
+- Root-bounded Node storage flushes a same-directory temporary file before
+  replacement. Fault injection preserves the previous formal Project;
+  traversal, corrupt recovery, explicit promotion, cleanup, and replacement
+  behavior are tested.
+- The editor downloads and opens canonical Projects, stages separate browser
+  recovery, offers explicit restore/discard, and shows import diagnostics in a
+  live semantic region.
+- A 500-instance benchmark covers validation, serialization, rendering,
+  bounded Agent query, Edit Engine transaction, SPICE import, and atomic save;
+  all measured operations remain far below the accepted CI budgets.
+- Explicit LTspice 24 and Xyce 7 structural profiles have lossless fixtures.
+  HSPICE and PSpice remain preservation-only with published limitations.
+- ADR 0006 selects a Node 24 loopback host plus installable/offline-capable PWA
+  for v0.1. The versioned bundle, manifest, generated icons, service worker,
+  security headers, path controls, and health endpoint pass release smoke.
+- Frozen install, formatting, references, typecheck, 89 tests in 26 files,
+  workspace build, export/PWA/release checks, performance budgets, and eight
+  Playwright workflows passed on Windows x64 with Node 24.
