@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0-envelope`
+Version: `1.1`
 
 Owning phase: `Phase 0/1`
 
@@ -41,9 +41,10 @@ interface EditTransaction {
 }
 ```
 
-The Phase 0 executable union contains only `noop`, proving the envelope without
-prematurely freezing Phase 1–5 edit payloads. Later phases extend the typed
-union and versioned schemas; they do not create separate mutation endpoints.
+The executable union currently contains `noop`, `place_instance`,
+`move_instance`, `rotate_instance`, `mirror_instance`, `undo`, and `redo`.
+Later phases extend the typed union and versioned schemas; they do not create
+separate mutation endpoints.
 
 ## Invariants
 
@@ -65,8 +66,9 @@ schema → document identity → revision → preflight → candidate apply
 ```
 
 `STALE_REVISION`, `DOCUMENT_MISMATCH`, and validation errors are typed failures.
-Undo and redo are future typed edits that create new monotonically increasing
-revisions; they do not decrement revision.
+Undo and redo require a `DocumentHistory` session. They restore prior validated
+Document content while creating a new monotonically increasing revision; they
+never decrement or reuse a revision. A new normal edit clears the redo stack.
 
 ## Persistence boundary
 
@@ -76,9 +78,9 @@ runtime state unless a later recovery contract explicitly snapshots them.
 
 ## Valid example
 
-A `noop` transaction at revision 0 commits revision 1 with an empty
-`changedObjectIds` array. The same transaction with `dryRun: true` reports
-proposed revision 1 while returning revision 0.
+A `place_instance` transaction at revision 0 assigns one previously null
+placement and commits revision 1. The same transaction with `dryRun: true`
+reports proposed revision 1 while returning the original revision 0 Document.
 
 ## Rejected example
 
@@ -100,4 +102,5 @@ adapter.
 
 ## Open decisions
 
-- History retention and compaction are finalized in Phase 1.
+- Persistent history, history compaction, and recovery integration remain
+  deferred; Phase 1 history is validated in-memory session state.

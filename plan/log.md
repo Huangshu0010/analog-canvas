@@ -99,3 +99,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   fence checks, product/reference coupling inspection, and `git diff --check`
   passed.
 - Commit status: ready to commit as `Complete Phase 0 contracts and scaffold`.
+
+## 2026-08-07 - Complete Phase 1 core editor slice
+
+- Target: satisfy the Phase 1 exit gate with a browser-based manual editor that
+  commits typed placement and transform edits, supports monotonic history and
+  canonical save/reopen, and exports deterministic formal SVG.
+- Changed areas: expanded the Edit Engine and added Document history; added
+  eight provisional built-in symbols and `packages/render-svg`; replaced the
+  editor shell with a native-SVG canvas and controls; added Project/SVG
+  fixtures, visual/edit specifications, Playwright coverage, and CI wiring.
+- Validation: frozen install, formatting, immutable Reference checks,
+  TypeScript typecheck, 41 tests in 11 files, workspace build, one complete
+  Playwright GUI flow, browser DOM/geometry/console review, Markdown link and
+  fence checks, `git diff --check`, and repository status review passed.
+- Commit status: ready to commit as `Complete Phase 1 core editor slice`.

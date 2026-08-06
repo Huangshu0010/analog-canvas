@@ -1,6 +1,6 @@
 # Phase 1 - Core Editor Slice
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -124,3 +124,23 @@ Export the current Document as SVG
 - GUI and direct Edit Engine paths produce identical committed Documents;
 - no SPICE, Agent, React, DOM, or SVG implementation detail leaks into the
   persistent model.
+
+## Completion evidence
+
+Completed on `2026-08-07`.
+
+- The browser editor placed M1, M2, and R1 from the unplaced panel; selected,
+  moved, rotated, and mirrored instances; performed revision-monotonic undo and
+  redo; saved and reopened canonical Project JSON; and downloaded formal SVG.
+- Human GUI operations call the same typed `DocumentHistory.transact` path
+  covered by direct Edit Engine tests. Preview, selection, viewport, grid, and
+  hit-target state remain outside the persisted Project.
+- The product-owned Symbol DSL contains eight provisional symbols. The SVG
+  renderer passed deterministic golden, repeated-render, and all-orientation
+  transform tests and excludes editor overlays from formal output.
+- Eleven test files with 41 tests passed, and the Playwright acceptance flow
+  passed in installed Chrome. Browser review also confirmed the accessible DOM
+  structure, absence of horizontal overflow, and an empty warning/error log.
+- Frozen install, formatting, Reference isolation, TypeScript typecheck,
+  workspace build, Markdown link/fence checks, `git diff --check`, and repository
+  status review passed.

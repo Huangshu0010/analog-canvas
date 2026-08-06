@@ -14,7 +14,7 @@ against. They describe required behavior and invariants, not task history.
 | [`symbol-dsl.md`](symbol-dsl.md) | 0/1 | accepted boundary | Geometry, electrical/visual pins, variants, validation |
 | `spice-frontend.md` | 2/4 | proposed | Lossless syntax, dialects, includes, expressions, elaboration |
 | `connectivity-and-routing.md` | 3 | proposed | Route graph, junction, crossing, flightline, locks |
-| `visual-language.md` | 1/5 | proposed | `textbook-monochrome-v1`, annotations, overlays, golden output |
+| [`visual-language.md`](visual-language.md) | 1/5 | accepted initial | `textbook-monochrome-v1`, annotations, overlays, golden output |
 | `agent-api.md` | 6 | proposed | `capabilities/query/transact/render`, permissions, limits |
 | [`persistence-and-recovery.md`](persistence-and-recovery.md) | 0/7 | accepted boundary | Atomic save, AppData cache/session/recovery, migrations |
 

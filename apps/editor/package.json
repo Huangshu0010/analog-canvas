@@ -8,7 +8,10 @@
     "dev": "vite"
   },
   "dependencies": {
+    "@icm/edit-engine": "workspace:*",
     "@icm/model": "workspace:*",
+    "@icm/render-svg": "workspace:*",
+    "@icm/symbols": "workspace:*",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

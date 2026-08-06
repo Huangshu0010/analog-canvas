@@ -1,0 +1,61 @@
+{
+  "documents": [
+    {
+      "annotations": [],
+      "constraints": [],
+      "id": "document-main",
+      "instances": [
+        {
+          "id": "M1",
+          "placement": null,
+          "properties": {},
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "M2",
+          "placement": null,
+          "properties": {},
+          "symbolId": "pmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "R1",
+          "placement": null,
+          "properties": {
+            "value": "10k"
+          },
+          "symbolId": "resistor"
+        }
+      ],
+      "junctions": [],
+      "layoutGroups": [],
+      "name": "Manual Editor Demo",
+      "nets": [],
+      "ports": [],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "textbook-monochrome-v1"
+      },
+      "revision": 0,
+      "routes": [],
+      "sourceStatus": "in-sync"
+    }
+  ],
+  "id": "project-phase-1-manual",
+  "name": "Phase 1 Manual Editor",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "none",
+    "entry": null,
+    "files": [],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "phase-1-builtins",
+    "id": "builtin-analog",
+    "version": "0.1.0"
+  },
+  "topDocumentId": "document-main"
+}

@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0-boundary`
+Version: `1.1`
 
 Owning phase: `Phase 0/1`
 
@@ -33,8 +33,9 @@ runtime symbols.
 
 Version 1 defines ID, name, integer-grid view box, electrical pins, vector
 primitives, visual variants, and aliases. A pin has name, role, anchor,
-direction, and visibility metadata. Phase 0 primitives are line, polyline,
-circle, and path.
+direction, and visibility metadata. Initial primitives are line, polyline,
+circle, and path. The product-owned Phase 1 library contains resistor,
+capacitor, inductor, NMOS, PMOS, ground, port, and generic block definitions.
 
 `SymbolResolver.resolve(symbolId, variantId?)` returns one validated definition
 and optional variant, or `undefined`. Resolution never silently substitutes a
@@ -75,8 +76,8 @@ Duplicate pin names and duplicate aliases are rejected.
 
 ## Compatibility and migration
 
-Phase 1 adds production primitives and initial symbols. Phase 5 adds reviewed
-VSS-derived families without changing the electrical-pin rule.
+Phase 5 replaces or calibrates provisional geometry with reviewed VSS-derived
+families without changing canonical IDs or the electrical-pin rule.
 
 ## Deterministic validation
 
@@ -87,5 +88,5 @@ VSS-derived families without changing the electrical-pin rule.
 
 ## Open decisions
 
-- Exact path normalization and rich text primitives are finalized with Phase 1
-  and Phase 5 rendering evidence.
+- Exact path normalization and rich text primitives are finalized with Phase 5
+  extraction and rendering evidence.

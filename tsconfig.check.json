@@ -6,6 +6,7 @@
     "paths": {
       "@icm/edit-engine": ["./packages/edit-engine/src/index.ts"],
       "@icm/model": ["./packages/model/src/index.ts"],
+      "@icm/render-svg": ["./packages/render-svg/src/index.ts"],
       "@icm/spice": ["./packages/spice/src/index.ts"],
       "@icm/symbols": ["./packages/symbols/src/index.ts"]
     },

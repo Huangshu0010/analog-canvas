@@ -1,6 +1,6 @@
 :root {
-  color: #111;
-  background: #f5f5f2;
+  color: #151515;
+  background: #ecece7;
   font-family: Inter, system-ui, sans-serif;
 }
 
@@ -8,24 +8,46 @@
   box-sizing: border-box;
 }
 
+button {
+  border: 1px solid #b8b8b0;
+  border-radius: 0.25rem;
+  color: #202020;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+button:hover:not(:disabled) {
+  border-color: #60605a;
+  background: #f7f7f2;
+}
+
+button:disabled {
+  color: #aaa;
+  cursor: not-allowed;
+}
+
 body {
   margin: 0;
-  min-width: 640px;
+  min-width: 760px;
   min-height: 100vh;
 }
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 100vh;
 }
 
 .app-header {
   display: flex;
-  align-items: baseline;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #d7d7d2;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #c9c9c2;
   background: #fff;
 }
 
@@ -40,19 +62,103 @@ body {
 
 .app-header p {
   color: #666;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
 }
 
-.canvas-shell {
-  margin: 1rem;
-  overflow: hidden;
-  border: 1px solid #ccc;
-  background: #fff;
+.toolbar,
+.viewport-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
-.canvas-shell svg {
+.toolbar button,
+.viewport-toolbar button {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.side-panel {
+  padding: 0.9rem;
+  border-right: 1px solid #c9c9c2;
+  background: #f8f8f4;
+}
+
+.side-panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.side-panel > button {
   display: block;
   width: 100%;
-  height: 100%;
-  min-height: 640px;
+  margin-bottom: 0.45rem;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.inspector {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.6rem;
+  margin-top: 1.5rem;
+  font-size: 0.78rem;
+}
+
+.inspector dt {
+  color: #666;
+}
+
+.inspector dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.canvas-panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.9rem;
+}
+
+.viewport-toolbar {
+  position: absolute;
+  z-index: 1;
+  top: 1.4rem;
+  left: 1.4rem;
+  padding: 0.3rem;
+  border: 1px solid #cecec8;
+  border-radius: 0.35rem;
+  background: rgb(255 255 255 / 92%);
+}
+
+.schematic-canvas {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 5.5rem);
+  min-height: 560px;
+  border: 1px solid #c4c4bd;
+  background: #fff;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 6%);
+  touch-action: none;
+}
+
+.hit-target {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 2;
+  cursor: move;
+}
+
+.hit-target.selected {
+  stroke: #1f6feb;
+  stroke-dasharray: 6 4;
+}
+
+.drag-preview {
+  fill: rgb(31 111 235 / 8%);
+  stroke: #1f6feb;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  pointer-events: none;
 }

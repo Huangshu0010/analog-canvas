@@ -15,9 +15,11 @@
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,json,css,html}\" \"packages/**/*.{ts,tsx,json}\" \"references/**/*.json\" \"scripts/**/*.mjs\" \"*.{json,yaml}\"",
     "references:check": "node scripts/check-references.mjs",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "typecheck": "tsc -p tsconfig.check.json --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "@types/node": "24.13.3",
     "prettier": "3.9.6",
     "typescript": "7.0.2",
