@@ -51,3 +51,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   visual-regression, phase, and MVP contracts; `git diff --check` passed.
 - Commit status: ready to commit as
   `Define default schematic graphical language`.
+
+## 2026-08-07 - Flatten overall circuit canvas architecture
+
+- Target: simplify the overall product plan by separating build-time symbol
+  production, import-time SPICE parsing, and runtime editing; reduce exposed
+  protocols and physical project files without removing accepted behavior.
+- Changed areas: rewrote `docs/overall-product-plan.md` around a five-component
+  external model, Project-to-Document persistence, seven protocol operations,
+  GUI-driven human edits, transient parser artifacts, and a minimal user
+  project layout; added the bounded target plan under
+  `plan/2026-08-07-flatten-overall-product-plan/`.
+- Validation: confirmed balanced Markdown fences and required full-SPICE,
+  junction/crossing, VSS isolation, GUI/Edit Engine, protocol, file-layout,
+  visual-language, validation, and MVP contracts; `git diff --check` passed.
+- Commit status: ready to commit as
+  `Flatten overall circuit canvas architecture`.
