@@ -1,0 +1,38 @@
+{
+  "documents": [
+    {
+      "annotations": [],
+      "constraints": [],
+      "id": "document-main",
+      "instances": [],
+      "junctions": [],
+      "layoutGroups": [],
+      "name": "Main",
+      "nets": [],
+      "ports": [],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "textbook-monochrome-v1"
+      },
+      "revision": 0,
+      "routes": [],
+      "sourceStatus": "in-sync"
+    }
+  ],
+  "id": "project-minimal",
+  "name": "Minimal Project",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "none",
+    "entry": null,
+    "files": [],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "development",
+    "id": "builtin-analog",
+    "version": "0.0.0"
+  },
+  "topDocumentId": "document-main"
+}

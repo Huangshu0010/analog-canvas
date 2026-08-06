@@ -83,3 +83,19 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   passed.
 - Commit status: ready to commit as
   `Establish phased execution documentation`.
+
+## 2026-08-07 - Complete Phase 0 contracts and scaffold
+
+- Target: satisfy the Phase 0 exit gate with a runnable TypeScript workspace,
+  stable Project/Document and identity contracts, canonical persistence,
+  transaction/revision semantics, transient Circuit IR, a Symbol Resolver, and
+  isolated Reference governance.
+- Changed areas: added the React editor shell; model, edit-engine, spice, and
+  symbols packages; Project fixtures; pinned Reference manifest and scripts;
+  focused CI; accepted Phase 0 specs and ADRs; and Phase 0 completion evidence.
+- Validation: frozen install, formatting, immutable Reference checks,
+  TypeScript typecheck, 30 tests in eight files, workspace build, direct ESM
+  runtime smoke, Reference fetch failure/idempotence checks, Markdown link and
+  fence checks, product/reference coupling inspection, and `git diff --check`
+  passed.
+- Commit status: ready to commit as `Complete Phase 0 contracts and scaffold`.

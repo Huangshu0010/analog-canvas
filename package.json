@@ -1,0 +1,27 @@
+{
+  "name": "interactive-circuit-maker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.16.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.16.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "dev": "pnpm --filter @icm/editor dev",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,json,css,html}\" \"packages/**/*.{ts,tsx,json}\" \"references/**/*.json\" \"scripts/**/*.mjs\" \"*.{json,yaml}\"",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,json,css,html}\" \"packages/**/*.{ts,tsx,json}\" \"references/**/*.json\" \"scripts/**/*.mjs\" \"*.{json,yaml}\"",
+    "references:check": "node scripts/check-references.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.check.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "prettier": "3.9.6",
+    "typescript": "7.0.2",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  }
+}

@@ -1,0 +1,85 @@
+# Transient Circuit IR
+
+Status: `accepted`
+
+Version: `1.0-boundary`
+
+Owning phase: `Phase 0/2`
+
+Primary owner: `packages/spice`
+
+## Purpose
+
+Define the dialect-neutral structural boundary between the lossless SPICE
+frontend and the Schematic importer without turning parser or renderer details
+into persistent project data.
+
+## Consumers
+
+- SPICE elaborator
+- Schematic importer
+- connectivity golden tests
+
+## Terminology
+
+| Term | Meaning |
+|---|---|
+| Positional terminal | A terminal whose zero-based position preserves source order |
+| Opaque statement | Preserved source text that has no recognized typed projection |
+| Target | Primitive, model, subcircuit, or opaque instance reference |
+
+## Data model or interface
+
+`CircuitIR` contains dialect ID, candidate top-cell names, cells, model
+declarations, and unresolved statements. A cell contains ordered ports, nets,
+instances, and source spans. An instance contains an explicit target, ordered
+terminals, raw parameter expressions, and source location.
+
+## Invariants
+
+- Port and instance terminal positions are contiguous and zero-based.
+- Every terminal and port references a net in the same cell.
+- Every top-cell name resolves to a cell.
+- Original source spans remain available for diagnostics.
+- Unknown statements remain as opaque source references.
+- Placement, routes, Junctions, symbols, layout intent, and SVG never enter IR.
+- IR never guesses pin roles from instance or model names.
+
+## Operations and state transitions
+
+```text
+SourceBundle → lossless syntax + typed projections → elaboration
+→ CircuitIR → Schematic importer → discard CircuitIR
+```
+
+## Persistence boundary
+
+Circuit IR is transient memory and test-fixture data only. It is not written to
+`project.icproj.json`. Re-import reparses the source snapshot.
+
+## Valid example
+
+A subcircuit call retains target cell name and ordered node positions even when
+no dedicated visual symbol exists.
+
+## Rejected example
+
+An instance terminal referencing a net absent from its cell is rejected. A cell
+with a `placement` property is rejected as renderer leakage.
+
+## Compatibility and migration
+
+Phase 2 expands the boundary with parsing evidence while preserving these
+separation rules. Dialect-specific syntax remains in frontend projections, not
+in persistent Documents.
+
+## Deterministic validation
+
+- Zod and generated JSON Schema inspection
+- terminal ordering and net-reference tests
+- unknown statement preservation tests
+- tests rejecting visual fields
+
+## Open decisions
+
+- The full SPICE3/ngspice compatibility matrix is selected in Phase 4.

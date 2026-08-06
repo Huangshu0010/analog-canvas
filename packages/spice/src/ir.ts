@@ -1,0 +1,146 @@
+import { SourceSpanSchema, StableIdSchema } from "@icm/model";
+import { z } from "zod";
+
+export const SpiceDialectIdSchema = z.string().min(1);
+export const CircuitPortIRSchema = z.strictObject({
+  name: z.string().min(1),
+  position: z.number().int().nonnegative(),
+  netId: StableIdSchema,
+  sourceRef: SourceSpanSchema.optional(),
+});
+export const CircuitNetIRSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  scope: z.enum(["local", "global"]),
+});
+export const CircuitTerminalIRSchema = z.strictObject({
+  position: z.number().int().nonnegative(),
+  name: z.string().min(1).optional(),
+  netId: StableIdSchema,
+});
+export const CircuitInstanceTargetIRSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("primitive"), family: z.string().min(1) }),
+  z.strictObject({ kind: z.literal("model"), modelName: z.string().min(1) }),
+  z.strictObject({
+    kind: z.literal("subcircuit"),
+    cellName: z.string().min(1),
+  }),
+  z.strictObject({ kind: z.literal("opaque"), sourceName: z.string().min(1) }),
+]);
+export const CircuitParameterIRSchema = z.strictObject({
+  rawText: z.string(),
+  normalizedName: z.string().min(1),
+});
+export const CircuitInstanceIRSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  target: CircuitInstanceTargetIRSchema,
+  terminals: z.array(CircuitTerminalIRSchema),
+  parameters: z.record(z.string(), CircuitParameterIRSchema),
+  sourceRef: SourceSpanSchema,
+});
+export const CircuitCellIRSchema = z
+  .strictObject({
+    id: StableIdSchema,
+    name: z.string().min(1),
+    ports: z.array(CircuitPortIRSchema),
+    nets: z.array(CircuitNetIRSchema),
+    instances: z.array(CircuitInstanceIRSchema),
+    sourceRef: SourceSpanSchema,
+  })
+  .superRefine((cell, context) => {
+    const netIds = new Set(cell.nets.map((net) => net.id));
+    const positions = cell.ports
+      .map((port) => port.position)
+      .sort((left, right) => left - right);
+    if (positions.some((position, index) => position !== index)) {
+      context.addIssue({
+        code: "custom",
+        message: "Cell port positions must be contiguous and zero-based",
+        path: ["ports"],
+      });
+    }
+    for (const [portIndex, port] of cell.ports.entries()) {
+      if (!netIds.has(port.netId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown port net: ${port.netId}`,
+          path: ["ports", portIndex, "netId"],
+        });
+      }
+    }
+    for (const [instanceIndex, instance] of cell.instances.entries()) {
+      const terminalPositions = instance.terminals
+        .map((terminal) => terminal.position)
+        .sort((left, right) => left - right);
+      if (terminalPositions.some((position, index) => position !== index)) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "Instance terminal positions must be contiguous and zero-based",
+          path: ["instances", instanceIndex, "terminals"],
+        });
+      }
+      for (const [terminalIndex, terminal] of instance.terminals.entries()) {
+        if (!netIds.has(terminal.netId)) {
+          context.addIssue({
+            code: "custom",
+            message: `Unknown terminal net: ${terminal.netId}`,
+            path: [
+              "instances",
+              instanceIndex,
+              "terminals",
+              terminalIndex,
+              "netId",
+            ],
+          });
+        }
+      }
+    }
+  });
+export const ModelDeclarationIRSchema = z.strictObject({
+  name: z.string().min(1),
+  modelType: z.string().min(1),
+  rawParameters: z.string(),
+  sourceRef: SourceSpanSchema,
+});
+export const OpaqueStatementSchema = z.strictObject({
+  kind: z.literal("opaque"),
+  rawText: z.string(),
+  sourceRef: SourceSpanSchema,
+  probableType: z.enum(["element", "directive", "control"]).optional(),
+});
+export const CircuitIRSchema = z
+  .strictObject({
+    dialect: SpiceDialectIdSchema,
+    topCells: z.array(z.string().min(1)),
+    cells: z.array(CircuitCellIRSchema),
+    models: z.array(ModelDeclarationIRSchema),
+    unresolvedStatements: z.array(OpaqueStatementSchema),
+  })
+  .superRefine((ir, context) => {
+    const cellNames = new Set(ir.cells.map((cell) => cell.name));
+    for (const [topIndex, topCell] of ir.topCells.entries()) {
+      if (!cellNames.has(topCell)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown top cell: ${topCell}`,
+          path: ["topCells", topIndex],
+        });
+      }
+    }
+  });
+
+export const CircuitIRJsonSchema = z.toJSONSchema(CircuitIRSchema, {
+  target: "draft-2020-12",
+});
+
+export type SpiceDialectId = z.infer<typeof SpiceDialectIdSchema>;
+export type CircuitPortIR = z.infer<typeof CircuitPortIRSchema>;
+export type CircuitNetIR = z.infer<typeof CircuitNetIRSchema>;
+export type CircuitTerminalIR = z.infer<typeof CircuitTerminalIRSchema>;
+export type CircuitInstanceIR = z.infer<typeof CircuitInstanceIRSchema>;
+export type CircuitCellIR = z.infer<typeof CircuitCellIRSchema>;
+export type ModelDeclarationIR = z.infer<typeof ModelDeclarationIRSchema>;
+export type OpaqueStatement = z.infer<typeof OpaqueStatementSchema>;
+export type CircuitIR = z.infer<typeof CircuitIRSchema>;

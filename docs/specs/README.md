@@ -7,16 +7,16 @@ against. They describe required behavior and invariants, not task history.
 
 | Specification | Owning phase | Initial status | Covers |
 |---|---:|---|---|
-| `project-file-format.md` | 0 | proposed | Project JSON, source manifest, symbol lock, canonical save/load |
-| `schematic-model.md` | 0 | proposed | Document, instance, net, route, junction, annotation, presentation |
-| `edit-engine.md` | 0/1 | proposed | Typed edits, transactions, revision, undo/redo, atomicity |
-| `circuit-ir.md` | 0/2 | proposed | Transient dialect-neutral import boundary |
-| `symbol-dsl.md` | 0/1 | proposed | Geometry, electrical/visual pins, variants, validation |
+| [`project-file-format.md`](project-file-format.md) | 0 | accepted | Project JSON, source manifest, symbol lock, canonical save/load |
+| [`schematic-model.md`](schematic-model.md) | 0 | accepted | Document, instance, net, route, junction, annotation, presentation |
+| [`edit-engine.md`](edit-engine.md) | 0/1 | accepted envelope | Typed edits, transactions, revision, undo/redo, atomicity |
+| [`circuit-ir.md`](circuit-ir.md) | 0/2 | accepted boundary | Transient dialect-neutral import boundary |
+| [`symbol-dsl.md`](symbol-dsl.md) | 0/1 | accepted boundary | Geometry, electrical/visual pins, variants, validation |
 | `spice-frontend.md` | 2/4 | proposed | Lossless syntax, dialects, includes, expressions, elaboration |
 | `connectivity-and-routing.md` | 3 | proposed | Route graph, junction, crossing, flightline, locks |
 | `visual-language.md` | 1/5 | proposed | `textbook-monochrome-v1`, annotations, overlays, golden output |
 | `agent-api.md` | 6 | proposed | `capabilities/query/transact/render`, permissions, limits |
-| `persistence-and-recovery.md` | 0/7 | proposed | Atomic save, AppData cache/session/recovery, migrations |
+| [`persistence-and-recovery.md`](persistence-and-recovery.md) | 0/7 | accepted boundary | Atomic save, AppData cache/session/recovery, migrations |
 
 Create a specification when its owning phase begins; do not create empty files
 only to mirror this table. Start from [`spec.template.md`](spec.template.md).

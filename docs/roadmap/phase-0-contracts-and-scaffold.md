@@ -1,6 +1,6 @@
 # Phase 0 - Contracts and Scaffold
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -17,8 +17,8 @@ unchanged. No interactive editor is promised yet.
 ## In scope
 
 - pnpm workspace and TypeScript build/test baseline;
-- `apps/editor`, `packages/core`, `packages/spice`, `packages/symbols`, and
-  `packages/render-svg` only when their first source target begins;
+- `apps/editor`, `packages/model`, `packages/edit-engine`, `packages/spice`,
+  and `packages/symbols`; `packages/render-svg` begins in Phase 1;
 - stable ID, Point, Rect, orientation, grid, and integer-coordinate contracts;
 - `CircuitProject` and `SchematicDocument` version-1 schemas;
 - canonical JSON serialization and migration framework;
@@ -45,6 +45,15 @@ unchanged. No interactive editor is promised yet.
 
 ## Work packages
 
+### WP-0.0 - Reference governance
+
+- Goal: make selected external and previous repositories reproducible research
+  inputs without creating a source, build, runtime, or CI dependency.
+- Main modules: `references/`, `.reference-src/`, and the fetch script.
+- Required ADR: `0003-isolate-reference-sources.md`.
+- Validation surface: immutable pins, ignored checkouts, repeatable fetch, and
+  successful clean builds without fetched sources.
+
 ### WP-0.1 - Workspace baseline
 
 - Goal: introduce only the workspaces needed by the first executable target.
@@ -55,7 +64,7 @@ unchanged. No interactive editor is promised yet.
 ### WP-0.2 - Primitive and identity contracts
 
 - Goal: define coordinates, orientation, IDs, source spans, and error types.
-- Main modules: `core/model` and shared schema helpers.
+- Main modules: `packages/model` and shared schema helpers.
 - Required specs: `schematic-model.md`.
 - Validation surface: schema and property tests for transforms and IDs.
 
@@ -63,7 +72,7 @@ unchanged. No interactive editor is promised yet.
 
 - Goal: define Project/Document v1, canonical JSON, atomic-save boundary, and
   migration registration.
-- Main modules: `core/model`, `core/schema`, `core/storage`.
+- Main modules: `packages/model` schema and storage boundaries.
 - Required specs: `project-file-format.md`, `persistence-and-recovery.md`.
 - Validation surface: save-load-save semantic equality and rejected fixtures.
 
@@ -71,20 +80,22 @@ unchanged. No interactive editor is promised yet.
 
 - Goal: freeze transaction metadata and edit result/error shapes without
   implementing every edit.
-- Main modules: `core/edit`, `core/history`.
+- Main modules: `packages/edit-engine`; history implementation begins in Phase
+  1.
 - Required specs: `edit-engine.md`.
 - Validation surface: stale revision and atomic no-op transaction tests.
 
 ### WP-0.5 - Import and symbol boundaries
 
 - Goal: define the transient Circuit IR and Symbol Resolver interfaces.
-- Main modules: `spice/ir`, `symbols/library`, importer boundary.
+- Main modules: `packages/spice`, `packages/symbols`, importer boundary.
 - Required specs: `circuit-ir.md`, `symbol-dsl.md`.
 - Validation surface: compile-time consumer fixtures and minimal valid data.
 
 ## Deliverables
 
 - Workspace manifests and focused CI configuration;
+- pinned reference manifest and isolated fetch script;
 - Project/Document v1 schemas;
 - primitive geometry and identity types;
 - canonical save/load and migration skeleton;
@@ -134,3 +145,22 @@ Submit an edit with the wrong expectedRevision
 - canonical save/load succeeds for valid fixtures and rejects invalid ones;
 - Phase 1 and Phase 2 can consume the contracts without depending on each
   other's implementation.
+
+## Completion evidence
+
+Completed on `2026-08-07`.
+
+- `pnpm install --frozen-lockfile`, `pnpm format:check`,
+  `pnpm references:check`, `pnpm typecheck`, `pnpm test`, and `pnpm build`
+  passed from the repository root.
+- Eight test files with 30 tests passed across the editor shell, Project model,
+  persistence, geometry, identity, Edit Transaction, Circuit IR, and Symbol
+  Resolver boundaries.
+- Built ESM outputs loaded directly in Node and completed a model/edit package
+  runtime smoke test.
+- The pinned reference fetch was verified for unknown-name rejection, initial
+  detached checkout, and idempotent re-verification at the recorded commit.
+- Product-source inspection found no dependency on `.reference-src/` or the
+  previous converter repository.
+- Markdown links and fenced blocks were validated, followed by
+  `git diff --check` and repository status review.
