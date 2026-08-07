@@ -17,42 +17,6 @@ function pin(
   };
 }
 
-function twoTerminalSymbol(
-  id: string,
-  name: string,
-  primitives: SymbolPrimitive[],
-): SymbolDefinition {
-  return {
-    schemaVersion: 1,
-    id,
-    name,
-    viewBox: { x: -30, y: -15, width: 60, height: 30 },
-    pins: [
-      pin("1", "passive", -30, 0, "west"),
-      pin("2", "passive", 30, 0, "east"),
-    ],
-    primitives,
-    variants: [],
-    aliases: [],
-  };
-}
-
-const capacitor = twoTerminalSymbol("capacitor", "Capacitor", [
-  { kind: "line", from: { x: -30, y: 0 }, to: { x: -4, y: 0 } },
-  { kind: "line", from: { x: -4, y: -12 }, to: { x: -4, y: 12 } },
-  { kind: "line", from: { x: 4, y: -12 }, to: { x: 4, y: 12 } },
-  { kind: "line", from: { x: 4, y: 0 }, to: { x: 30, y: 0 } },
-]);
-
-const inductor = twoTerminalSymbol("inductor", "Inductor", [
-  { kind: "line", from: { x: -30, y: 0 }, to: { x: -20, y: 0 } },
-  {
-    kind: "path",
-    data: "M -20 0 C -20 -12 -10 -12 -10 0 C -10 -12 0 -12 0 0 C 0 -12 10 -12 10 0 C 10 -12 20 -12 20 0",
-  },
-  { kind: "line", from: { x: 20, y: 0 }, to: { x: 30, y: 0 } },
-]);
-
 function migratedThreeTerminalMosArrow(id: "nmos3" | "pmos3"): SymbolPrimitive {
   return {
     kind: "polygon",
@@ -208,22 +172,6 @@ function threeTerminalMosSymbol(
   };
 }
 
-const ground: SymbolDefinition = {
-  schemaVersion: 1,
-  id: "ground",
-  name: "Ground",
-  viewBox: { x: -15, y: -10, width: 30, height: 40 },
-  pins: [pin("0", "ground", 0, -10, "north")],
-  primitives: [
-    { kind: "line", from: { x: 0, y: -10 }, to: { x: 0, y: 10 } },
-    { kind: "line", from: { x: -12, y: 10 }, to: { x: 12, y: 10 } },
-    { kind: "line", from: { x: -8, y: 16 }, to: { x: 8, y: 16 } },
-    { kind: "line", from: { x: -4, y: 22 }, to: { x: 4, y: 22 } },
-  ],
-  variants: [],
-  aliases: ["gnd"],
-};
-
 function powerPortSymbol(id: "vdd" | "vss", name: string): SymbolDefinition {
   const upward = id === "vdd";
   return {
@@ -267,30 +215,6 @@ function powerPortSymbol(id: "vdd" | "vss", name: string): SymbolDefinition {
   };
 }
 
-const port: SymbolDefinition = {
-  schemaVersion: 1,
-  id: "port",
-  name: "Port",
-  viewBox: { x: -20, y: -10, width: 40, height: 20 },
-  pins: [pin("P", "port", 20, 0, "east")],
-  primitives: [
-    {
-      kind: "polyline",
-      points: [
-        { x: -20, y: -8 },
-        { x: 8, y: -8 },
-        { x: 18, y: 0 },
-        { x: 8, y: 8 },
-        { x: -20, y: 8 },
-        { x: -20, y: -8 },
-      ],
-    },
-    { kind: "line", from: { x: 18, y: 0 }, to: { x: 20, y: 0 } },
-  ],
-  variants: [],
-  aliases: [],
-};
-
 const genericBlock: SymbolDefinition = {
   schemaVersion: 1,
   id: "generic-block",
@@ -318,73 +242,7 @@ const genericBlock: SymbolDefinition = {
   aliases: [],
 };
 
-function sourceSymbol(
-  id: "voltage-source" | "current-source",
-  name: string,
-): SymbolDefinition {
-  const primitives: SymbolPrimitive[] = [
-    { kind: "line", from: { x: 0, y: -30 }, to: { x: 0, y: -15 } },
-    { kind: "circle", center: { x: 0, y: 0 }, radius: 15 },
-    { kind: "line", from: { x: 0, y: 15 }, to: { x: 0, y: 30 } },
-  ];
-  if (id === "voltage-source") {
-    primitives.push(
-      { kind: "line", from: { x: -5, y: -6 }, to: { x: 5, y: -6 } },
-      { kind: "line", from: { x: 0, y: -11 }, to: { x: 0, y: -1 } },
-      { kind: "line", from: { x: -5, y: 7 }, to: { x: 5, y: 7 } },
-    );
-  } else {
-    primitives.push(
-      { kind: "line", from: { x: 0, y: 9 }, to: { x: 0, y: -7 } },
-      {
-        kind: "polygon",
-        points: [
-          { x: 0, y: -10 },
-          { x: -4, y: -3 },
-          { x: 4, y: -3 },
-        ],
-        fill: "foreground",
-      },
-    );
-  }
-  return {
-    schemaVersion: 1,
-    id,
-    name,
-    viewBox: { x: -18, y: -30, width: 36, height: 60 },
-    pins: [
-      pin("+", "positive", 0, -30, "north"),
-      pin("-", "negative", 0, 30, "south"),
-    ],
-    primitives,
-    variants: [],
-    aliases: [id === "voltage-source" ? "dc-voltage" : "dc-current"],
-  };
-}
-
-const diode: SymbolDefinition = {
-  schemaVersion: 1,
-  id: "diode",
-  name: "Diode",
-  viewBox: { x: -30, y: -16, width: 60, height: 32 },
-  pins: [pin("A", "anode", -30, 0, "west"), pin("K", "cathode", 30, 0, "east")],
-  primitives: [
-    { kind: "line", from: { x: -30, y: 0 }, to: { x: -12, y: 0 } },
-    {
-      kind: "polygon",
-      points: [
-        { x: -12, y: -12 },
-        { x: -12, y: 12 },
-        { x: 10, y: 0 },
-      ],
-      fill: "none",
-    },
-    { kind: "line", from: { x: 10, y: -13 }, to: { x: 10, y: 13 } },
-    { kind: "line", from: { x: 10, y: 0 }, to: { x: 30, y: 0 } },
-  ],
-  variants: [],
-  aliases: ["rectifier-diode"],
-};
+const catalogDiode = requireRazaviCatalogSymbol("diode");
 
 function verticalDiodeSymbol(
   id: "zener" | "schottky",
@@ -446,11 +304,11 @@ function verticalDiodeSymbol(
 }
 
 const led: SymbolDefinition = {
-  ...diode,
+  ...catalogDiode,
   id: "led",
   name: "LED",
   primitives: [
-    ...diode.primitives,
+    ...catalogDiode.primitives,
     { kind: "line", from: { x: 0, y: -10 }, to: { x: 10, y: -20 } },
     {
       kind: "polygon",
@@ -637,70 +495,41 @@ const transformer: SymbolDefinition = {
   aliases: [],
 };
 
-function bjtSymbol(id: "npn" | "pnp", name: string): SymbolDefinition {
-  const arrowPoints =
-    id === "npn"
-      ? [
-          { x: 11, y: 15 },
-          { x: 4, y: 13 },
-          { x: 8, y: 8 },
-        ]
-      : [
-          { x: 4, y: 9 },
-          { x: 11, y: 11 },
-          { x: 7, y: 16 },
-        ];
-  return {
-    schemaVersion: 1,
-    id,
-    name,
-    viewBox: { x: -30, y: -30, width: 60, height: 60 },
-    pins: [
-      pin("C", "collector", 20, -30, "north"),
-      pin("B", "base", -30, 0, "west"),
-      pin("E", "emitter", 20, 30, "south"),
-    ],
-    primitives: [
-      { kind: "line", from: { x: -30, y: 0 }, to: { x: -8, y: 0 } },
-      { kind: "line", from: { x: -8, y: -16 }, to: { x: -8, y: 16 } },
-      { kind: "line", from: { x: -8, y: -8 }, to: { x: 20, y: -22 } },
-      { kind: "line", from: { x: 20, y: -30 }, to: { x: 20, y: -22 } },
-      { kind: "line", from: { x: -8, y: 8 }, to: { x: 20, y: 22 } },
-      { kind: "line", from: { x: 20, y: 22 }, to: { x: 20, y: 30 } },
-      { kind: "polygon", points: arrowPoints, fill: "foreground" },
-    ],
-    variants: [],
-    aliases: [`bjt-${id}`],
-  };
-}
-
+const catalogCapacitor = requireRazaviCatalogSymbol("capacitor");
+const catalogCurrentSource = requireRazaviCatalogSymbol("current-source");
+const catalogGround = requireRazaviCatalogSymbol("ground");
+const catalogInductor = requireRazaviCatalogSymbol("inductor");
 const catalogResistor = requireRazaviCatalogSymbol("resistor");
 const catalogNmos = requireRazaviCatalogSymbol("nmos");
+const catalogNpn = requireRazaviCatalogSymbol("npn");
+const catalogPmos = requireRazaviCatalogSymbol("pmos");
 const catalogPmos3 = requireRazaviCatalogSymbol("pmos3");
+const catalogPnp = requireRazaviCatalogSymbol("pnp");
+const catalogPort = requireRazaviCatalogSymbol("port");
 const catalogVoltageSource = requireRazaviCatalogSymbol("voltage-source");
 
 export const builtInSymbols: readonly SymbolDefinition[] = [
   catalogResistor,
-  capacitor,
-  inductor,
+  catalogCapacitor,
+  catalogInductor,
   catalogNmos,
-  mosSymbol("pmos", "PMOS"),
+  catalogPmos,
   threeTerminalMosSymbol("nmos3", "NMOS (3-terminal)"),
   catalogPmos3,
-  ground,
+  catalogGround,
   powerPortSymbol("vdd", "VDD Power Port"),
   powerPortSymbol("vss", "VSS Power Port"),
-  port,
+  catalogPort,
   catalogVoltageSource,
-  sourceSymbol("current-source", "Independent Current Source"),
+  catalogCurrentSource,
   waveformSource("ac-voltage-source", "AC Voltage Source"),
   waveformSource("pulse-voltage-source", "Pulse Voltage Source"),
-  diode,
+  catalogDiode,
   verticalDiodeSymbol("zener", "Zener Diode"),
   verticalDiodeSymbol("schottky", "Schottky Diode"),
   led,
-  bjtSymbol("npn", "NPN Bipolar Transistor"),
-  bjtSymbol("pnp", "PNP Bipolar Transistor"),
+  catalogNpn,
+  catalogPnp,
   opamp,
   switchSymbol("switch-open", "Open Switch"),
   switchSymbol("switch-closed", "Closed Switch"),

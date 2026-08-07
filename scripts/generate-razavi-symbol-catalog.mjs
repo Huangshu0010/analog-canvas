@@ -7,9 +7,16 @@ import { format } from "prettier";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assetRoot = resolve(root, "packages/symbols/assets/razavi-v1");
 const catalogPath = resolve(assetRoot, "catalog.json");
-const masterIrPath = resolve(
+const evidencePaths = [
+  resolve(root, "fixtures/symbols/vss-ir/razavi-rv1-master-ir.json"),
+  resolve(
+    root,
+    "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+  ),
+];
+const reviewManifestPath = resolve(
   root,
-  "fixtures/symbols/vss-ir/razavi-rv1-master-ir.json",
+  "fixtures/symbols/circuit-vss-review.json",
 );
 const generatedPath = resolve(
   root,
@@ -25,7 +32,10 @@ function fail(message) {
 }
 
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
-const masterIr = JSON.parse(await readFile(masterIrPath, "utf8"));
+const evidenceIrs = await Promise.all(
+  evidencePaths.map(async (path) => JSON.parse(await readFile(path, "utf8"))),
+);
+const reviewManifest = JSON.parse(await readFile(reviewManifestPath, "utf8"));
 if (
   catalog.schemaVersion !== 1 ||
   catalog.id !== "razavi-symbols" ||
@@ -36,13 +46,34 @@ if (
 if (!Array.isArray(catalog.entries) || catalog.entries.length === 0) {
   fail("catalog must contain entries");
 }
-if (
-  masterIr.decoder.id !== catalog.decoder.id ||
-  masterIr.decoder.version !== catalog.decoder.version
-) {
-  fail("catalog decoder identity does not match RV-1 evidence");
+for (const evidence of evidenceIrs) {
+  if (
+    evidence.decoder.id !== catalog.decoder.id ||
+    evidence.decoder.version !== catalog.decoder.version
+  ) {
+    fail("catalog decoder identity does not match reviewed evidence");
+  }
 }
-const evidenceMasters = new Set(masterIr.masters.map((master) => master.nameU));
+const evidenceMasters = new Set(
+  evidenceIrs.flatMap((evidence) =>
+    evidence.masters.map((master) => master.nameU),
+  ),
+);
+const evidenceStencilHashes = new Set(
+  evidenceIrs.map((evidence) => evidence.source.sha256),
+);
+const reviewedMappings = new Map(
+  reviewManifest.mappings.map((mapping) => [mapping.symbolId, mapping]),
+);
+const provisionalMappings = new Map(
+  reviewManifest.migrationCandidates.map((mapping) => [
+    mapping.symbolId,
+    mapping,
+  ]),
+);
+if (!evidenceStencilHashes.has(reviewManifest.source.sha256)) {
+  fail("review manifest stencil identity does not match decoder evidence");
+}
 
 const symbols = [];
 const ids = new Set();
@@ -71,14 +102,35 @@ for (const entry of catalog.entries) {
   ) {
     fail(`${entry.symbolId} is unreachable and lacks a manual-only reason`);
   }
+  if (entry.reviewStatus === "reviewed") {
+    const reviewedMapping = reviewedMappings.get(entry.symbolId);
+    if (
+      !reviewedMapping ||
+      reviewedMapping.status !== "reviewed" ||
+      reviewedMapping.masterNameU !== entry.source.masterNameU ||
+      reviewedMapping.pins.join("\u0000") !== entry.pinOrder.join("\u0000")
+    ) {
+      fail(`review manifest mismatch for ${entry.symbolId}`);
+    }
+  } else {
+    const provisionalMapping = provisionalMappings.get(entry.symbolId);
+    if (
+      !provisionalMapping ||
+      provisionalMapping.masterNameU !== entry.source.masterNameU ||
+      provisionalMapping.provisionalPins.join("\u0000") !==
+        entry.pinOrder.join("\u0000")
+    ) {
+      fail(`provisional review manifest mismatch for ${entry.symbolId}`);
+    }
+  }
   if (
-    entry.source.stencilHash !== masterIr.source.sha256 ||
+    !evidenceStencilHashes.has(entry.source.stencilHash) ||
     entry.source.decoderVersion !== catalog.decoder.version
   ) {
     fail(`invalid source provenance for ${entry.symbolId}`);
   }
   if (!evidenceMasters.has(entry.source.masterNameU)) {
-    fail(`missing RV-1 evidence for ${entry.source.masterNameU}`);
+    fail(`missing reviewed evidence for ${entry.source.masterNameU}`);
   }
   if (assetPaths.has(entry.assetPath)) {
     fail(`duplicate asset path ${entry.assetPath}`);
@@ -127,13 +179,13 @@ for (const primitive of catalog.semanticPrimitives ?? []) {
     fail(`invalid semantic disposition for ${primitive.id}`);
   }
   if (
-    primitive.source.stencilHash !== masterIr.source.sha256 ||
+    !evidenceStencilHashes.has(primitive.source.stencilHash) ||
     primitive.source.decoderVersion !== catalog.decoder.version
   ) {
     fail(`invalid source provenance for ${primitive.id}`);
   }
   if (!evidenceMasters.has(primitive.source.masterNameU)) {
-    fail(`missing RV-1 evidence for ${primitive.source.masterNameU}`);
+    fail(`missing reviewed evidence for ${primitive.source.masterNameU}`);
   }
   if (masters.has(primitive.source.masterNameU)) {
     fail(`source Master used twice: ${primitive.source.masterNameU}`);

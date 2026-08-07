@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "id": "diode",
+  "name": "Diode",
+  "viewBox": {
+    "x": -30,
+    "y": -16,
+    "width": 60,
+    "height": 32
+  },
+  "pins": [
+    {
+      "name": "A",
+      "role": "anode",
+      "at": {
+        "x": -30,
+        "y": 0
+      },
+      "direction": "west",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    },
+    {
+      "name": "K",
+      "role": "cathode",
+      "at": {
+        "x": 30,
+        "y": 0
+      },
+      "direction": "east",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": {
+        "x": -30,
+        "y": 0
+      },
+      "to": {
+        "x": -12,
+        "y": 0
+      }
+    },
+    {
+      "kind": "polygon",
+      "points": [
+        {
+          "x": -12,
+          "y": -12
+        },
+        {
+          "x": -12,
+          "y": 12
+        },
+        {
+          "x": 10,
+          "y": 0
+        }
+      ],
+      "fill": "none"
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 10,
+        "y": -13
+      },
+      "to": {
+        "x": 10,
+        "y": 13
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 10,
+        "y": 0
+      },
+      "to": {
+        "x": 30,
+        "y": 0
+      }
+    }
+  ],
+  "variants": [],
+  "aliases": ["rectifier-diode"]
+}

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "inductor",
+  "name": "Inductor",
+  "viewBox": {
+    "x": -30,
+    "y": -15,
+    "width": 60,
+    "height": 30
+  },
+  "pins": [
+    {
+      "name": "1",
+      "role": "passive",
+      "at": {
+        "x": -30,
+        "y": 0
+      },
+      "direction": "west",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    },
+    {
+      "name": "2",
+      "role": "passive",
+      "at": {
+        "x": 30,
+        "y": 0
+      },
+      "direction": "east",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": {
+        "x": -30,
+        "y": 0
+      },
+      "to": {
+        "x": -20,
+        "y": 0
+      }
+    },
+    {
+      "kind": "path",
+      "data": "M -20 0 C -20 -12 -10 -12 -10 0 C -10 -12 0 -12 0 0 C 0 -12 10 -12 10 0 C 10 -12 20 -12 20 0"
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 20,
+        "y": 0
+      },
+      "to": {
+        "x": 30,
+        "y": 0
+      }
+    }
+  ],
+  "variants": [],
+  "aliases": []
+}

@@ -577,6 +577,14 @@ requires catalog conversion and the review status named in
 `circuit-vss-review.json`; presence in the RV-6 evidence file alone does not
 authorize automatic mapping.
 
+RV-6B promotes the 12 mappings marked `reviewed` in that manifest: resistor,
+capacitor, inductor, NMOS4, PMOS4, ground, I/O Port, independent voltage and
+current sources, diode, NPN, and PNP. `Pmos3.a` remains provisional and has no
+automatic mapping; `Nmos3.a` remains outside the catalog. The canonical NMOS
+and PMOS entries retain D/G/S/B, and their three-terminal textbook variant is
+presentation-only. Net-aware automatic selection between visible four-pin and
+implicit-bulk presentation remains a later connectivity-policy target.
+
 ### RV-7: Acceptance and default switch
 
 Land the six-topology board, complete fixed-scale visual review, validate

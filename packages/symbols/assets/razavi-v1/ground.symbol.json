@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "id": "ground",
+  "name": "Ground",
+  "viewBox": {
+    "x": -15,
+    "y": -10,
+    "width": 30,
+    "height": 40
+  },
+  "pins": [
+    {
+      "name": "0",
+      "role": "ground",
+      "at": {
+        "x": 0,
+        "y": -10
+      },
+      "direction": "north",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": -10
+      },
+      "to": {
+        "x": 0,
+        "y": 10
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -12,
+        "y": 10
+      },
+      "to": {
+        "x": 12,
+        "y": 10
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -8,
+        "y": 16
+      },
+      "to": {
+        "x": 8,
+        "y": 16
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -4,
+        "y": 22
+      },
+      "to": {
+        "x": 4,
+        "y": 22
+      }
+    }
+  ],
+  "variants": [],
+  "aliases": ["gnd"]
+}

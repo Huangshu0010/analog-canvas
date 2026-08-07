@@ -731,3 +731,29 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   typecheck, build, formatting, Phase 1/5 visual goldens, Phase 7 export
   goldens, visual PNG inspection, and `git diff --check` passed.
 - Commit status: ready for the dedicated correctness commit.
+
+## 2026-08-07 - Migrate reviewed analog assets to the Razavi catalog
+
+- Target: make the reviewed core analog VSS set the canonical runtime source
+  while retaining the four-terminal MOS electrical contract.
+- Changed areas: nine new normalized Symbol DSL assets, 13-entry catalog and
+  generated adapter, built-in compatibility registry, evidence/review-manifest
+  validation, focused catalog tests, and Razavi style documentation.
+- Catalog result: 12 reviewed assets (`capacitor`, `current-source`, `diode`,
+  `ground`, `inductor`, `nmos`, `npn`, `pmos`, `pnp`, `port`, `resistor`, and
+  `voltage-source`) plus provisional `pmos3`; every exposed matching built-in
+  is the catalog object. `nmos3` remains outside the catalog and `pmos3` has no
+  automatic mapping.
+- Electrical result: reviewed NMOS/PMOS pin order remains D/G/S/B and the
+  textbook three-terminal variant changes presentation only.
+- Deferred: full 101-Master disposition, remaining candidate/Batch C assets,
+  runtime consumption of `automaticMappings`, bulk-Net classification and
+  safe variant selection, exact VSS geometry-overlay proof, the six-topology
+  acceptance board, and separately scoped routing extensions.
+- Validation: catalog generation/check, 12-reviewed/13-candidate preview
+  check, 14 focused tests, 152 full tests in 36 files, typecheck, build,
+  formatting, Phase 1/5 visual goldens, Phase 7 export goldens, and
+  `git diff --check` passed.
+- Dirty-state decision: concurrent OTA recipe/output work and its separate
+  target plan remained untouched and will not be staged in this commit.
+- Commit status: ready for the dedicated RV-6B commit.

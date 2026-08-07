@@ -17,6 +17,96 @@ export const razaviSymbolCatalogIdentity = {
 
 export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
   {
+    symbolId: "capacitor",
+    name: "Capacitor",
+    category: "passive",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "C",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["1", "2"],
+    palette: true,
+    automaticMappings: ["spice:C"],
+    assetPath: "capacitor.symbol.json",
+    assetHash:
+      "ba47e0f26d3e11e5443f24edaf07f500d93c158c9fda7814a6bc64ec9554030c",
+  },
+  {
+    symbolId: "current-source",
+    name: "Independent Current Source",
+    category: "source",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "DC-I",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["+", "-"],
+    palette: true,
+    automaticMappings: ["spice:I"],
+    assetPath: "current-source.symbol.json",
+    assetHash:
+      "8d0afc593f567b599810d275c37b942ef9dd1f9e17728aba5af31ecc18547e05",
+  },
+  {
+    symbolId: "diode",
+    name: "Diode",
+    category: "semiconductor",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "Diode1",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "K"],
+    palette: true,
+    automaticMappings: ["spice:D"],
+    assetPath: "diode.symbol.json",
+    assetHash:
+      "3287f0fbca5b11a9aac4f1566e9da38012afdf4c63039787bebd4f86185859e3",
+  },
+  {
+    symbolId: "ground",
+    name: "Ground",
+    category: "power",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "GND",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["0"],
+    palette: true,
+    automaticMappings: [],
+    assetPath: "ground.symbol.json",
+    assetHash:
+      "4ec98a07833805e2799b7a378002da1b80010c812cd0e54056ee2952c4cafb43",
+  },
+  {
+    symbolId: "inductor",
+    name: "Inductor",
+    category: "passive",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "L",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["1", "2"],
+    palette: true,
+    automaticMappings: ["spice:L"],
+    assetPath: "inductor.symbol.json",
+    assetHash:
+      "f66931b5536ae857032c372ad03126cc8c35552d243563b49bd8270a8f08901d",
+  },
+  {
     symbolId: "nmos",
     name: "NMOS",
     category: "transistor",
@@ -35,6 +125,42 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "8b0a28ddc9041501287c42c3808bbf70ec7c087ee9f2404f87e95473f3b63fb3",
   },
   {
+    symbolId: "npn",
+    name: "NPN Bipolar Transistor",
+    category: "transistor",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "npn",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["C", "B", "E"],
+    palette: true,
+    automaticMappings: ["spice:Q:npn", "pdk:model-type:npn"],
+    assetPath: "npn.symbol.json",
+    assetHash:
+      "1d4fdd28de656b9970e68823bf33a7d55de0acf78f77d1c8a32986f3da1b882c",
+  },
+  {
+    symbolId: "pmos",
+    name: "PMOS",
+    category: "transistor",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "PMOS4",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["D", "G", "S", "B"],
+    palette: true,
+    automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
+    assetPath: "pmos.symbol.json",
+    assetHash:
+      "c43daa01ca0d970ec431be2f3fe2eb074187037f42ff40978cce073859fcd1f7",
+  },
+  {
     symbolId: "pmos3",
     name: "PMOS (3-terminal)",
     category: "transistor",
@@ -51,6 +177,42 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "pmos3.symbol.json",
     assetHash:
       "e7f4281417f841c611d25c48380c6f2437613c729a1c5d4d00af2725c295deff",
+  },
+  {
+    symbolId: "pnp",
+    name: "PNP Bipolar Transistor",
+    category: "transistor",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "pnp",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["C", "B", "E"],
+    palette: true,
+    automaticMappings: ["spice:Q:pnp", "pdk:model-type:pnp"],
+    assetPath: "pnp.symbol.json",
+    assetHash:
+      "17468fc70fb516aa16a9963b0388bd0732793dbf92ada73b7acc767bac7ec7d3",
+  },
+  {
+    symbolId: "port",
+    name: "Port",
+    category: "interface",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "I/O",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "reviewed",
+    pinOrder: ["P"],
+    palette: true,
+    automaticMappings: [],
+    assetPath: "port.symbol.json",
+    assetHash:
+      "a68b858d3dd9d24f4de8a41d8989960d6fdb385e2daf68c8038d8f52792a9f9c",
   },
   {
     symbolId: "resistor",
@@ -112,6 +274,432 @@ export const razaviSemanticPrimitives: readonly RazaviSemanticPrimitiveEntry[] =
   ];
 
 export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
+  {
+    schemaVersion: 1,
+    id: "capacitor",
+    name: "Capacitor",
+    viewBox: {
+      x: -30,
+      y: -15,
+      width: 60,
+      height: 30,
+    },
+    pins: [
+      {
+        name: "1",
+        role: "passive",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "2",
+        role: "passive",
+        at: {
+          x: 30,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -4,
+          y: 0,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -4,
+          y: -12,
+        },
+        to: {
+          x: -4,
+          y: 12,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 4,
+          y: -12,
+        },
+        to: {
+          x: 4,
+          y: 12,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 4,
+          y: 0,
+        },
+        to: {
+          x: 30,
+          y: 0,
+        },
+      },
+    ],
+    variants: [],
+    aliases: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "current-source",
+    name: "Independent Current Source",
+    viewBox: {
+      x: -18,
+      y: -30,
+      width: 36,
+      height: 60,
+    },
+    pins: [
+      {
+        name: "+",
+        role: "positive",
+        at: {
+          x: 0,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "-",
+        role: "negative",
+        at: {
+          x: 0,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: -30,
+        },
+        to: {
+          x: 0,
+          y: -15,
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: 0,
+          y: 0,
+        },
+        radius: 15,
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 15,
+        },
+        to: {
+          x: 0,
+          y: 30,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 9,
+        },
+        to: {
+          x: 0,
+          y: -7,
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 0,
+            y: -10,
+          },
+          {
+            x: -4,
+            y: -3,
+          },
+          {
+            x: 4,
+            y: -3,
+          },
+        ],
+        fill: "foreground",
+      },
+    ],
+    variants: [],
+    aliases: ["dc-current"],
+  },
+  {
+    schemaVersion: 1,
+    id: "diode",
+    name: "Diode",
+    viewBox: {
+      x: -30,
+      y: -16,
+      width: 60,
+      height: 32,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "anode",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "K",
+        role: "cathode",
+        at: {
+          x: 30,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -12,
+          y: 0,
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -12,
+            y: -12,
+          },
+          {
+            x: -12,
+            y: 12,
+          },
+          {
+            x: 10,
+            y: 0,
+          },
+        ],
+        fill: "none",
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: -13,
+        },
+        to: {
+          x: 10,
+          y: 13,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: 0,
+        },
+        to: {
+          x: 30,
+          y: 0,
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["rectifier-diode"],
+  },
+  {
+    schemaVersion: 1,
+    id: "ground",
+    name: "Ground",
+    viewBox: {
+      x: -15,
+      y: -10,
+      width: 30,
+      height: 40,
+    },
+    pins: [
+      {
+        name: "0",
+        role: "ground",
+        at: {
+          x: 0,
+          y: -10,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: -10,
+        },
+        to: {
+          x: 0,
+          y: 10,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -12,
+          y: 10,
+        },
+        to: {
+          x: 12,
+          y: 10,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -8,
+          y: 16,
+        },
+        to: {
+          x: 8,
+          y: 16,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -4,
+          y: 22,
+        },
+        to: {
+          x: 4,
+          y: 22,
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["gnd"],
+  },
+  {
+    schemaVersion: 1,
+    id: "inductor",
+    name: "Inductor",
+    viewBox: {
+      x: -30,
+      y: -15,
+      width: 60,
+      height: 30,
+    },
+    pins: [
+      {
+        name: "1",
+        role: "passive",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "2",
+        role: "passive",
+        at: {
+          x: 30,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -20,
+          y: 0,
+        },
+      },
+      {
+        kind: "path",
+        data: "M -20 0 C -20 -12 -10 -12 -10 0 C -10 -12 0 -12 0 0 C 0 -12 10 -12 10 0 C 10 -12 20 -12 20 0",
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: 0,
+        },
+        to: {
+          x: 30,
+          y: 0,
+        },
+      },
+    ],
+    variants: [],
+    aliases: [],
+  },
   {
     schemaVersion: 1,
     id: "nmos",
@@ -358,6 +946,390 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
   },
   {
     schemaVersion: 1,
+    id: "npn",
+    name: "NPN Bipolar Transistor",
+    viewBox: {
+      x: -30,
+      y: -30,
+      width: 60,
+      height: 60,
+    },
+    pins: [
+      {
+        name: "C",
+        role: "collector",
+        at: {
+          x: 20,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "B",
+        role: "base",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "E",
+        role: "emitter",
+        at: {
+          x: 20,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -8,
+          y: 0,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -8,
+          y: -16,
+        },
+        to: {
+          x: -8,
+          y: 16,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -8,
+          y: -8,
+        },
+        to: {
+          x: 20,
+          y: -22,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: -30,
+        },
+        to: {
+          x: 20,
+          y: -22,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -8,
+          y: 8,
+        },
+        to: {
+          x: 20,
+          y: 22,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: 22,
+        },
+        to: {
+          x: 20,
+          y: 30,
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 11,
+            y: 15,
+          },
+          {
+            x: 4,
+            y: 13,
+          },
+          {
+            x: 8,
+            y: 8,
+          },
+        ],
+        fill: "foreground",
+      },
+    ],
+    variants: [],
+    aliases: ["bjt-npn"],
+  },
+  {
+    schemaVersion: 1,
+    id: "pmos",
+    name: "PMOS",
+    viewBox: {
+      x: -30,
+      y: -30,
+      width: 60,
+      height: 60,
+    },
+    pins: [
+      {
+        name: "D",
+        role: "drain",
+        at: {
+          x: 20,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "G",
+        role: "gate",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "S",
+        role: "source",
+        at: {
+          x: 20,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "B",
+        role: "bulk",
+        at: {
+          x: 30,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -17,
+          y: 0,
+        },
+        style: {
+          lineCap: "round",
+          lineJoin: "round",
+          strokeRole: "normal",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -17,
+          y: -14,
+        },
+        to: {
+          x: -17,
+          y: 14,
+        },
+        style: {
+          lineCap: "round",
+          lineJoin: "round",
+          strokeRole: "emphasis",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -10,
+          y: -20,
+        },
+        to: {
+          x: -10,
+          y: 20,
+        },
+        style: {
+          lineCap: "round",
+          lineJoin: "round",
+          strokeRole: "emphasis",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -10,
+          y: -14,
+        },
+        to: {
+          x: 20,
+          y: -14,
+        },
+        style: {
+          lineCap: "round",
+          lineJoin: "round",
+          strokeRole: "normal",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: -30,
+        },
+        to: {
+          x: 20,
+          y: -14,
+        },
+        style: {
+          lineCap: "round",
+          lineJoin: "round",
+          strokeRole: "normal",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -10,
+          y: 14,
+        },
+        to: {
+          x: 20,
+          y: 14,
+        },
+        style: {
+          lineCap: "round",
+          lineJoin: "round",
+          strokeRole: "normal",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: 14,
+        },
+        to: {
+          x: 20,
+          y: 30,
+        },
+        style: {
+          lineCap: "round",
+          lineJoin: "round",
+          strokeRole: "normal",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -10,
+          y: 0,
+        },
+        to: {
+          x: 30,
+          y: 0,
+        },
+        part: "bulk-lead",
+        style: {
+          lineCap: "round",
+          lineJoin: "round",
+          strokeRole: "normal",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 16,
+            y: 0,
+          },
+          {
+            x: 7,
+            y: -5,
+          },
+          {
+            x: 7,
+            y: 5,
+          },
+        ],
+        fill: "foreground",
+        part: "bulk-lead",
+      },
+    ],
+    variants: [
+      {
+        id: "textbook-3terminal",
+        hiddenPinNames: ["B"],
+        hiddenPrimitiveParts: ["bulk-lead"],
+        additionalPrimitives: [
+          {
+            kind: "polygon",
+            points: [
+              {
+                x: 2,
+                y: 14,
+              },
+              {
+                x: 10,
+                y: 10,
+              },
+              {
+                x: 8,
+                y: 19,
+              },
+            ],
+            fill: "foreground",
+            part: "source-arrow",
+          },
+        ],
+      },
+    ],
+    aliases: ["mos-p"],
+  },
+  {
+    schemaVersion: 1,
     id: "pmos3",
     name: "PMOS (3-terminal)",
     viewBox: {
@@ -542,6 +1514,216 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: ["mos-p-3"],
+  },
+  {
+    schemaVersion: 1,
+    id: "pnp",
+    name: "PNP Bipolar Transistor",
+    viewBox: {
+      x: -30,
+      y: -30,
+      width: 60,
+      height: 60,
+    },
+    pins: [
+      {
+        name: "C",
+        role: "collector",
+        at: {
+          x: 20,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "B",
+        role: "base",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "E",
+        role: "emitter",
+        at: {
+          x: 20,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -8,
+          y: 0,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -8,
+          y: -16,
+        },
+        to: {
+          x: -8,
+          y: 16,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -8,
+          y: -8,
+        },
+        to: {
+          x: 20,
+          y: -22,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: -30,
+        },
+        to: {
+          x: 20,
+          y: -22,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -8,
+          y: 8,
+        },
+        to: {
+          x: 20,
+          y: 22,
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: 22,
+        },
+        to: {
+          x: 20,
+          y: 30,
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 4,
+            y: 9,
+          },
+          {
+            x: 11,
+            y: 11,
+          },
+          {
+            x: 7,
+            y: 16,
+          },
+        ],
+        fill: "foreground",
+      },
+    ],
+    variants: [],
+    aliases: ["bjt-pnp"],
+  },
+  {
+    schemaVersion: 1,
+    id: "port",
+    name: "Port",
+    viewBox: {
+      x: -20,
+      y: -10,
+      width: 40,
+      height: 20,
+    },
+    pins: [
+      {
+        name: "P",
+        role: "port",
+        at: {
+          x: 20,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "polyline",
+        points: [
+          {
+            x: -20,
+            y: -8,
+          },
+          {
+            x: 8,
+            y: -8,
+          },
+          {
+            x: 18,
+            y: 0,
+          },
+          {
+            x: 8,
+            y: 8,
+          },
+          {
+            x: -20,
+            y: 8,
+          },
+          {
+            x: -20,
+            y: -8,
+          },
+        ],
+      },
+      {
+        kind: "line",
+        from: {
+          x: 18,
+          y: 0,
+        },
+        to: {
+          x: 20,
+          y: 0,
+        },
+      },
+    ],
+    variants: [],
+    aliases: [],
   },
   {
     schemaVersion: 1,

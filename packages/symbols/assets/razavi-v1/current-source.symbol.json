@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "id": "current-source",
+  "name": "Independent Current Source",
+  "viewBox": {
+    "x": -18,
+    "y": -30,
+    "width": 36,
+    "height": 60
+  },
+  "pins": [
+    {
+      "name": "+",
+      "role": "positive",
+      "at": {
+        "x": 0,
+        "y": -30
+      },
+      "direction": "north",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    },
+    {
+      "name": "-",
+      "role": "negative",
+      "at": {
+        "x": 0,
+        "y": 30
+      },
+      "direction": "south",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": -30
+      },
+      "to": {
+        "x": 0,
+        "y": -15
+      }
+    },
+    {
+      "kind": "circle",
+      "center": {
+        "x": 0,
+        "y": 0
+      },
+      "radius": 15
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": 15
+      },
+      "to": {
+        "x": 0,
+        "y": 30
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": 9
+      },
+      "to": {
+        "x": 0,
+        "y": -7
+      }
+    },
+    {
+      "kind": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": -10
+        },
+        {
+          "x": -4,
+          "y": -3
+        },
+        {
+          "x": 4,
+          "y": -3
+        }
+      ],
+      "fill": "foreground"
+    }
+  ],
+  "variants": [],
+  "aliases": ["dc-current"]
+}

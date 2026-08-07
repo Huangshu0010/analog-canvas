@@ -34,8 +34,17 @@ describe("Razavi symbol catalog", () => {
         entry.reviewStatus,
       ]),
     ).toEqual([
+      ["capacitor", "C", "reviewed"],
+      ["current-source", "DC-I", "reviewed"],
+      ["diode", "Diode1", "reviewed"],
+      ["ground", "GND", "reviewed"],
+      ["inductor", "L", "reviewed"],
       ["nmos", "NMOS4", "reviewed"],
+      ["npn", "npn", "reviewed"],
+      ["pmos", "PMOS4", "reviewed"],
       ["pmos3", "Pmos3.a", "provisional"],
+      ["pnp", "pnp", "reviewed"],
+      ["port", "I/O", "reviewed"],
       ["resistor", "R", "reviewed"],
       ["voltage-source", "DC-V", "reviewed"],
     ]);
@@ -55,7 +64,13 @@ describe("Razavi symbol catalog", () => {
 
   it("uses semantic roles instead of raw VSS widths in migrated assets", () => {
     for (const symbol of razaviCatalogSymbols) {
-      for (const primitive of symbol.primitives) {
+      const primitives = [
+        ...symbol.primitives,
+        ...symbol.variants.flatMap(
+          (variant) => variant.additionalPrimitives ?? [],
+        ),
+      ];
+      for (const primitive of primitives) {
         if (!primitive.style) continue;
         expect(primitive.style.strokeWidth).toBeUndefined();
         expect(primitive.style.strokeRole).toMatch(/^(normal|emphasis)$/u);
@@ -77,7 +92,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses catalog objects in the built-in compatibility library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(4);
+    expect(razaviCatalogSymbols).toHaveLength(13);
     for (const catalogSymbol of razaviCatalogSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -93,6 +108,17 @@ describe("Razavi symbol catalog", () => {
       automaticMappings: [],
       palette: true,
     });
+  });
+
+  it("keeps canonical MOS assets four-terminal and three-terminal mode visual-only", () => {
+    for (const symbolId of ["nmos", "pmos"]) {
+      const symbol = requireRazaviCatalogSymbol(symbolId);
+      expect(symbol.pins.map((pin) => pin.name)).toEqual(["D", "G", "S", "B"]);
+      expect(
+        symbol.variants.find((variant) => variant.id === "textbook-3terminal"),
+      ).toMatchObject({ hiddenPinNames: ["B"] });
+    }
+    expect(getRazaviCatalogEntry("nmos3")).toBeUndefined();
   });
 
   it("classifies the VSS node as a semantic primitive, not a component", () => {
