@@ -17,7 +17,7 @@ const CELL_ORIGINS = Array.from({ length: 6 }, (_, index) => 220 + index * 300);
 const CAPACITOR_XS = CELL_ORIGINS.map((origin) => origin + 240);
 const VOUT_Y = 70;
 const CAP_Y = 90;
-const PMOS_Y = 300;
+const PMOS_Y = 310;
 const LOGIC_Y = 350;
 const NMOS_Y = 390;
 const LOCAL_VDD_Y = 230;
@@ -443,8 +443,8 @@ export default {
       addEdge(bit, `b${index}-lower`, bitBranch, bitBottom, "trunk");
       addEdge(bit, `b${index}-dn`, dnGate, bitBottom, "escape");
 
-      // NB: inverter drains form the left trunk; two explicit bend paths feed
-      // the switch gates on the right.
+      // NB: DP/DN drains meet at one inverter-output branch. A short
+      // horizontal handoff feeds one vertical SP/SN gate fanout.
       const nb = graphFor(`nb${index}`);
       const dpDrain = addEndpoint(
         nb,
@@ -462,21 +462,26 @@ export default {
         nb,
         term(`nb${index}`, `XU${index}__XSN`, "G"),
       );
-      const nbUpper = addNode(nb, `nb${index}-upper`, "tap", origin + 60, 340);
-      const nbLower = addNode(nb, `nb${index}-lower`, "tap", origin + 60, 350);
+      const nbOutput = addNode(
+        nb,
+        `nb${index}-output`,
+        "tap",
+        origin + 60,
+        LOGIC_Y,
+      );
+      const nbGateBranch = addNode(
+        nb,
+        `nb${index}-gate-branch`,
+        "tap",
+        origin + 110,
+        LOGIC_Y,
+      );
       const nbSpEscape = addNode(
         nb,
         `nb${index}-sp-escape`,
         "bend",
         origin + 110,
         PMOS_Y,
-      );
-      const nbSpTurn = addNode(
-        nb,
-        `nb${index}-sp-turn`,
-        "bend",
-        origin + 110,
-        340,
       );
       const nbSnEscape = addNode(
         nb,
@@ -485,22 +490,13 @@ export default {
         origin + 110,
         NMOS_Y,
       );
-      const nbSnTurn = addNode(
-        nb,
-        `nb${index}-sn-turn`,
-        "bend",
-        origin + 110,
-        350,
-      );
-      addEdge(nb, `nb${index}-dp`, dpDrain, nbUpper, "escape");
-      addEdge(nb, `nb${index}-dn`, dnDrain, nbLower, "escape");
-      addEdge(nb, `nb${index}-trunk`, nbUpper, nbLower, "trunk");
+      addEdge(nb, `nb${index}-dp`, dpDrain, nbOutput, "escape");
+      addEdge(nb, `nb${index}-dn`, dnDrain, nbOutput, "escape");
+      addEdge(nb, `nb${index}-handoff`, nbOutput, nbGateBranch, "link");
       addEdge(nb, `nb${index}-sp-escape`, spGate, nbSpEscape, "escape");
-      addEdge(nb, `nb${index}-sp-down`, nbSpEscape, nbSpTurn);
-      addEdge(nb, `nb${index}-sp-link`, nbSpTurn, nbUpper);
+      addEdge(nb, `nb${index}-sp-down`, nbSpEscape, nbGateBranch, "trunk");
       addEdge(nb, `nb${index}-sn-escape`, snGate, nbSnEscape, "escape");
-      addEdge(nb, `nb${index}-sn-up`, nbSnEscape, nbSnTurn);
-      addEdge(nb, `nb${index}-sn-link`, nbSnTurn, nbLower);
+      addEdge(nb, `nb${index}-sn-up`, nbGateBranch, nbSnEscape, "trunk");
 
       // BOT: switch drains share a short trunk; capacitor bottom approaches
       // vertically in a clear corridor to the right of the switch pair.
@@ -514,32 +510,24 @@ export default {
         term(`bot${index}`, `XU${index}__XSN`, "D"),
       );
       const capBottom = addEndpoint(bot, term(`bot${index}`, `C${index}`, "2"));
-      const botUpper = addNode(
+      const botBranch = addNode(
         bot,
-        `bot${index}-upper`,
+        `bot${index}-branch`,
         "tap",
         origin + 160,
-        340,
-      );
-      const botLower = addNode(
-        bot,
-        `bot${index}-lower`,
-        "bend",
-        origin + 160,
-        350,
+        LOGIC_Y,
       );
       const capTurn = addNode(
         bot,
         `bot${index}-cap-turn`,
         "bend",
         CAPACITOR_XS[index],
-        340,
+        LOGIC_Y,
       );
-      addEdge(bot, `bot${index}-sp`, spDrain, botUpper, "escape");
-      addEdge(bot, `bot${index}-sn`, snDrain, botLower, "escape");
-      addEdge(bot, `bot${index}-trunk`, botUpper, botLower, "trunk");
+      addEdge(bot, `bot${index}-sp`, spDrain, botBranch, "escape");
+      addEdge(bot, `bot${index}-sn`, snDrain, botBranch, "escape");
       addEdge(bot, `bot${index}-cap-escape`, capBottom, capTurn, "escape");
-      addEdge(bot, `bot${index}-cap-link`, capTurn, botUpper);
+      addEdge(bot, `bot${index}-cap-link`, capTurn, botBranch);
     }
 
     // Remaining VSS islands: dummy capacitor and reset transistor.
@@ -690,7 +678,7 @@ export default {
           id: `label-nb${index}`,
           kind: "net-label",
           text: `NB${index}`,
-          position: { x: origin + 85, y: 335 },
+          position: { x: origin + 85, y: LOGIC_Y - 10 },
           alignment: "middle",
         }),
         annotation({
@@ -703,10 +691,10 @@ export default {
         }),
       );
       for (const [child, text, x, y] of [
-        ["XDP", `DP${index}`, origin + 90, PMOS_Y - 8],
-        ["XDN", `DN${index}`, origin + 90, NMOS_Y + 18],
-        ["XSP", `SP${index}`, origin + 190, PMOS_Y - 8],
-        ["XSN", `SN${index}`, origin + 190, NMOS_Y + 18],
+        ["XDP", `DP${index}`, origin + 50, PMOS_Y - 28],
+        ["XDN", `DN${index}`, origin + 50, NMOS_Y + 32],
+        ["XSP", `SP${index}`, origin + 150, PMOS_Y - 28],
+        ["XSN", `SN${index}`, origin + 150, NMOS_Y + 32],
       ]) {
         labels.push(
           annotation({
@@ -715,7 +703,7 @@ export default {
             text,
             attachedObjectId: `XU${index}__${child}`,
             position: { x, y },
-            alignment: "start",
+            alignment: "middle",
           }),
         );
       }

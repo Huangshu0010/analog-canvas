@@ -1541,7 +1541,7 @@
           },
           "position": {
             "x": 305,
-            "y": 335
+            "y": 340
           },
           "rotation": 0,
           "text": "NB0"
@@ -1564,7 +1564,7 @@
           "text": "C0 16 fF"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU0__XDP",
           "id": "label-XU0-XDP",
           "kind": "instance-label",
@@ -1574,14 +1574,14 @@
             "y": 0
           },
           "position": {
-            "x": 310,
-            "y": 292
+            "x": 270,
+            "y": 282
           },
           "rotation": 0,
           "text": "DP0"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU0__XDN",
           "id": "label-XU0-XDN",
           "kind": "instance-label",
@@ -1591,14 +1591,14 @@
             "y": 0
           },
           "position": {
-            "x": 310,
-            "y": 408
+            "x": 270,
+            "y": 422
           },
           "rotation": 0,
           "text": "DN0"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU0__XSP",
           "id": "label-XU0-XSP",
           "kind": "instance-label",
@@ -1608,14 +1608,14 @@
             "y": 0
           },
           "position": {
-            "x": 410,
-            "y": 292
+            "x": 370,
+            "y": 282
           },
           "rotation": 0,
           "text": "SP0"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU0__XSN",
           "id": "label-XU0-XSN",
           "kind": "instance-label",
@@ -1625,8 +1625,8 @@
             "y": 0
           },
           "position": {
-            "x": 410,
-            "y": 408
+            "x": 370,
+            "y": 422
           },
           "rotation": 0,
           "text": "SN0"
@@ -1659,7 +1659,7 @@
           },
           "position": {
             "x": 605,
-            "y": 335
+            "y": 340
           },
           "rotation": 0,
           "text": "NB1"
@@ -1682,7 +1682,7 @@
           "text": "C1 32 fF"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU1__XDP",
           "id": "label-XU1-XDP",
           "kind": "instance-label",
@@ -1692,14 +1692,14 @@
             "y": 0
           },
           "position": {
-            "x": 610,
-            "y": 292
+            "x": 570,
+            "y": 282
           },
           "rotation": 0,
           "text": "DP1"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU1__XDN",
           "id": "label-XU1-XDN",
           "kind": "instance-label",
@@ -1709,14 +1709,14 @@
             "y": 0
           },
           "position": {
-            "x": 610,
-            "y": 408
+            "x": 570,
+            "y": 422
           },
           "rotation": 0,
           "text": "DN1"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU1__XSP",
           "id": "label-XU1-XSP",
           "kind": "instance-label",
@@ -1726,14 +1726,14 @@
             "y": 0
           },
           "position": {
-            "x": 710,
-            "y": 292
+            "x": 670,
+            "y": 282
           },
           "rotation": 0,
           "text": "SP1"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU1__XSN",
           "id": "label-XU1-XSN",
           "kind": "instance-label",
@@ -1743,8 +1743,8 @@
             "y": 0
           },
           "position": {
-            "x": 710,
-            "y": 408
+            "x": 670,
+            "y": 422
           },
           "rotation": 0,
           "text": "SN1"
@@ -1777,7 +1777,7 @@
           },
           "position": {
             "x": 905,
-            "y": 335
+            "y": 340
           },
           "rotation": 0,
           "text": "NB2"
@@ -1800,7 +1800,7 @@
           "text": "C2 64 fF"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU2__XDP",
           "id": "label-XU2-XDP",
           "kind": "instance-label",
@@ -1810,14 +1810,14 @@
             "y": 0
           },
           "position": {
-            "x": 910,
-            "y": 292
+            "x": 870,
+            "y": 282
           },
           "rotation": 0,
           "text": "DP2"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU2__XDN",
           "id": "label-XU2-XDN",
           "kind": "instance-label",
@@ -1827,14 +1827,14 @@
             "y": 0
           },
           "position": {
-            "x": 910,
-            "y": 408
+            "x": 870,
+            "y": 422
           },
           "rotation": 0,
           "text": "DN2"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU2__XSP",
           "id": "label-XU2-XSP",
           "kind": "instance-label",
@@ -1844,14 +1844,14 @@
             "y": 0
           },
           "position": {
-            "x": 1010,
-            "y": 292
+            "x": 970,
+            "y": 282
           },
           "rotation": 0,
           "text": "SP2"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU2__XSN",
           "id": "label-XU2-XSN",
           "kind": "instance-label",
@@ -1861,8 +1861,8 @@
             "y": 0
           },
           "position": {
-            "x": 1010,
-            "y": 408
+            "x": 970,
+            "y": 422
           },
           "rotation": 0,
           "text": "SN2"
@@ -1895,7 +1895,7 @@
           },
           "position": {
             "x": 1205,
-            "y": 335
+            "y": 340
           },
           "rotation": 0,
           "text": "NB3"
@@ -1918,7 +1918,7 @@
           "text": "C3 128 fF"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU3__XDP",
           "id": "label-XU3-XDP",
           "kind": "instance-label",
@@ -1928,14 +1928,14 @@
             "y": 0
           },
           "position": {
-            "x": 1210,
-            "y": 292
+            "x": 1170,
+            "y": 282
           },
           "rotation": 0,
           "text": "DP3"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU3__XDN",
           "id": "label-XU3-XDN",
           "kind": "instance-label",
@@ -1945,14 +1945,14 @@
             "y": 0
           },
           "position": {
-            "x": 1210,
-            "y": 408
+            "x": 1170,
+            "y": 422
           },
           "rotation": 0,
           "text": "DN3"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU3__XSP",
           "id": "label-XU3-XSP",
           "kind": "instance-label",
@@ -1962,14 +1962,14 @@
             "y": 0
           },
           "position": {
-            "x": 1310,
-            "y": 292
+            "x": 1270,
+            "y": 282
           },
           "rotation": 0,
           "text": "SP3"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU3__XSN",
           "id": "label-XU3-XSN",
           "kind": "instance-label",
@@ -1979,8 +1979,8 @@
             "y": 0
           },
           "position": {
-            "x": 1310,
-            "y": 408
+            "x": 1270,
+            "y": 422
           },
           "rotation": 0,
           "text": "SN3"
@@ -2013,7 +2013,7 @@
           },
           "position": {
             "x": 1505,
-            "y": 335
+            "y": 340
           },
           "rotation": 0,
           "text": "NB4"
@@ -2036,7 +2036,7 @@
           "text": "C4 256 fF"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU4__XDP",
           "id": "label-XU4-XDP",
           "kind": "instance-label",
@@ -2046,14 +2046,14 @@
             "y": 0
           },
           "position": {
-            "x": 1510,
-            "y": 292
+            "x": 1470,
+            "y": 282
           },
           "rotation": 0,
           "text": "DP4"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU4__XDN",
           "id": "label-XU4-XDN",
           "kind": "instance-label",
@@ -2063,14 +2063,14 @@
             "y": 0
           },
           "position": {
-            "x": 1510,
-            "y": 408
+            "x": 1470,
+            "y": 422
           },
           "rotation": 0,
           "text": "DN4"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU4__XSP",
           "id": "label-XU4-XSP",
           "kind": "instance-label",
@@ -2080,14 +2080,14 @@
             "y": 0
           },
           "position": {
-            "x": 1610,
-            "y": 292
+            "x": 1570,
+            "y": 282
           },
           "rotation": 0,
           "text": "SP4"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU4__XSN",
           "id": "label-XU4-XSN",
           "kind": "instance-label",
@@ -2097,8 +2097,8 @@
             "y": 0
           },
           "position": {
-            "x": 1610,
-            "y": 408
+            "x": 1570,
+            "y": 422
           },
           "rotation": 0,
           "text": "SN4"
@@ -2131,7 +2131,7 @@
           },
           "position": {
             "x": 1805,
-            "y": 335
+            "y": 340
           },
           "rotation": 0,
           "text": "NB5"
@@ -2154,7 +2154,7 @@
           "text": "C5 512 fF"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU5__XDP",
           "id": "label-XU5-XDP",
           "kind": "instance-label",
@@ -2164,14 +2164,14 @@
             "y": 0
           },
           "position": {
-            "x": 1810,
-            "y": 292
+            "x": 1770,
+            "y": 282
           },
           "rotation": 0,
           "text": "DP5"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU5__XDN",
           "id": "label-XU5-XDN",
           "kind": "instance-label",
@@ -2181,14 +2181,14 @@
             "y": 0
           },
           "position": {
-            "x": 1810,
-            "y": 408
+            "x": 1770,
+            "y": 422
           },
           "rotation": 0,
           "text": "DN5"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU5__XSP",
           "id": "label-XU5-XSP",
           "kind": "instance-label",
@@ -2198,14 +2198,14 @@
             "y": 0
           },
           "position": {
-            "x": 1910,
-            "y": 292
+            "x": 1870,
+            "y": 282
           },
           "rotation": 0,
           "text": "SP5"
         },
         {
-          "alignment": "start",
+          "alignment": "middle",
           "attachedObjectId": "XU5__XSN",
           "id": "label-XU5-XSN",
           "kind": "instance-label",
@@ -2215,8 +2215,8 @@
             "y": 0
           },
           "position": {
-            "x": 1910,
-            "y": 408
+            "x": 1870,
+            "y": 422
           },
           "rotation": 0,
           "text": "SN5"
@@ -2231,7 +2231,7 @@
             "mirror": "x",
             "position": {
               "x": 270,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2307,7 +2307,7 @@
             "mirror": "x",
             "position": {
               "x": 370,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2383,7 +2383,7 @@
             "mirror": "x",
             "position": {
               "x": 570,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2459,7 +2459,7 @@
             "mirror": "x",
             "position": {
               "x": 670,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2535,7 +2535,7 @@
             "mirror": "x",
             "position": {
               "x": 870,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2611,7 +2611,7 @@
             "mirror": "x",
             "position": {
               "x": 970,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2687,7 +2687,7 @@
             "mirror": "x",
             "position": {
               "x": 1170,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2763,7 +2763,7 @@
             "mirror": "x",
             "position": {
               "x": 1270,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2839,7 +2839,7 @@
             "mirror": "x",
             "position": {
               "x": 1470,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2915,7 +2915,7 @@
             "mirror": "x",
             "position": {
               "x": 1570,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -2991,7 +2991,7 @@
             "mirror": "x",
             "position": {
               "x": 1770,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -3067,7 +3067,7 @@
             "mirror": "x",
             "position": {
               "x": 1870,
-              "y": 300
+              "y": 310
             },
             "rotation": 180
           },
@@ -3555,16 +3555,7 @@
           "role": "branch"
         },
         {
-          "id": "nb0-upper",
-          "netId": "net-799288f72172bb44",
-          "position": {
-            "x": 280,
-            "y": 340
-          },
-          "role": "branch"
-        },
-        {
-          "id": "nb0-lower",
+          "id": "nb0-output",
           "netId": "net-799288f72172bb44",
           "position": {
             "x": 280,
@@ -3573,11 +3564,20 @@
           "role": "branch"
         },
         {
-          "id": "bot0-upper",
+          "id": "nb0-gate-branch",
+          "netId": "net-799288f72172bb44",
+          "position": {
+            "x": 330,
+            "y": 350
+          },
+          "role": "branch"
+        },
+        {
+          "id": "bot0-branch",
           "netId": "net-a34fd30c8c8d99f4",
           "position": {
             "x": 380,
-            "y": 340
+            "y": 350
           },
           "role": "branch"
         },
@@ -3591,16 +3591,7 @@
           "role": "branch"
         },
         {
-          "id": "nb1-upper",
-          "netId": "net-799289f72172bcf7",
-          "position": {
-            "x": 580,
-            "y": 340
-          },
-          "role": "branch"
-        },
-        {
-          "id": "nb1-lower",
+          "id": "nb1-output",
           "netId": "net-799289f72172bcf7",
           "position": {
             "x": 580,
@@ -3609,11 +3600,20 @@
           "role": "branch"
         },
         {
-          "id": "bot1-upper",
+          "id": "nb1-gate-branch",
+          "netId": "net-799289f72172bcf7",
+          "position": {
+            "x": 630,
+            "y": 350
+          },
+          "role": "branch"
+        },
+        {
+          "id": "bot1-branch",
           "netId": "net-a34fd40c8c8d9ba7",
           "position": {
             "x": 680,
-            "y": 340
+            "y": 350
           },
           "role": "branch"
         },
@@ -3627,16 +3627,7 @@
           "role": "branch"
         },
         {
-          "id": "nb2-upper",
-          "netId": "net-79928af72172beaa",
-          "position": {
-            "x": 880,
-            "y": 340
-          },
-          "role": "branch"
-        },
-        {
-          "id": "nb2-lower",
+          "id": "nb2-output",
           "netId": "net-79928af72172beaa",
           "position": {
             "x": 880,
@@ -3645,11 +3636,20 @@
           "role": "branch"
         },
         {
-          "id": "bot2-upper",
+          "id": "nb2-gate-branch",
+          "netId": "net-79928af72172beaa",
+          "position": {
+            "x": 930,
+            "y": 350
+          },
+          "role": "branch"
+        },
+        {
+          "id": "bot2-branch",
           "netId": "net-a34fd50c8c8d9d5a",
           "position": {
             "x": 980,
-            "y": 340
+            "y": 350
           },
           "role": "branch"
         },
@@ -3663,16 +3663,7 @@
           "role": "branch"
         },
         {
-          "id": "nb3-upper",
-          "netId": "net-79928bf72172c05d",
-          "position": {
-            "x": 1180,
-            "y": 340
-          },
-          "role": "branch"
-        },
-        {
-          "id": "nb3-lower",
+          "id": "nb3-output",
           "netId": "net-79928bf72172c05d",
           "position": {
             "x": 1180,
@@ -3681,11 +3672,20 @@
           "role": "branch"
         },
         {
-          "id": "bot3-upper",
+          "id": "nb3-gate-branch",
+          "netId": "net-79928bf72172c05d",
+          "position": {
+            "x": 1230,
+            "y": 350
+          },
+          "role": "branch"
+        },
+        {
+          "id": "bot3-branch",
           "netId": "net-a34fd60c8c8d9f0d",
           "position": {
             "x": 1280,
-            "y": 340
+            "y": 350
           },
           "role": "branch"
         },
@@ -3699,16 +3699,7 @@
           "role": "branch"
         },
         {
-          "id": "nb4-upper",
-          "netId": "net-799284f72172b478",
-          "position": {
-            "x": 1480,
-            "y": 340
-          },
-          "role": "branch"
-        },
-        {
-          "id": "nb4-lower",
+          "id": "nb4-output",
           "netId": "net-799284f72172b478",
           "position": {
             "x": 1480,
@@ -3717,11 +3708,20 @@
           "role": "branch"
         },
         {
-          "id": "bot4-upper",
+          "id": "nb4-gate-branch",
+          "netId": "net-799284f72172b478",
+          "position": {
+            "x": 1530,
+            "y": 350
+          },
+          "role": "branch"
+        },
+        {
+          "id": "bot4-branch",
           "netId": "net-a34fcf0c8c8d9328",
           "position": {
             "x": 1580,
-            "y": 340
+            "y": 350
           },
           "role": "branch"
         },
@@ -3735,16 +3735,7 @@
           "role": "branch"
         },
         {
-          "id": "nb5-upper",
-          "netId": "net-799285f72172b62b",
-          "position": {
-            "x": 1780,
-            "y": 340
-          },
-          "role": "branch"
-        },
-        {
-          "id": "nb5-lower",
+          "id": "nb5-output",
           "netId": "net-799285f72172b62b",
           "position": {
             "x": 1780,
@@ -3753,11 +3744,20 @@
           "role": "branch"
         },
         {
-          "id": "bot5-upper",
+          "id": "nb5-gate-branch",
+          "netId": "net-799285f72172b62b",
+          "position": {
+            "x": 1830,
+            "y": 350
+          },
+          "role": "branch"
+        },
+        {
+          "id": "bot5-branch",
           "netId": "net-a34fd00c8c8d94db",
           "position": {
             "x": 1880,
-            "y": 340
+            "y": 350
           },
           "role": "branch"
         }
@@ -5336,7 +5336,7 @@
           "waypoints": [
             {
               "x": 220,
-              "y": 300
+              "y": 310
             }
           ]
         },
@@ -5375,7 +5375,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb0-upper",
+            "junctionId": "nb0-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -5392,7 +5392,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb0-lower",
+            "junctionId": "nb0-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -5407,21 +5407,16 @@
           "netId": "net-799288f72172bb44",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb0-upper",
+            "junctionId": "nb0-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 330,
-              "y": 300
-            },
-            {
-              "x": 330,
-              "y": 340
+              "y": 310
             }
           ]
         },
@@ -5435,36 +5430,31 @@
           "netId": "net-799288f72172bb44",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb0-lower",
+            "junctionId": "nb0-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 330,
               "y": 390
-            },
-            {
-              "x": 330,
-              "y": 350
             }
           ]
         },
         {
           "from": {
-            "junctionId": "nb0-upper",
+            "junctionId": "nb0-output",
             "kind": "junction"
           },
           "id": "route-net-799288f72172bb44-5",
           "netId": "net-799288f72172bb44",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "nb0-lower",
+            "junctionId": "nb0-gate-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5481,7 +5471,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "bot0-upper",
+            "junctionId": "bot0-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5495,10 +5485,10 @@
           "id": "route-net-a34fd30c8c8d99f4-2",
           "netId": "net-a34fd30c8c8d99f4",
           "segmentModes": [
-            "trunk"
+            "escape"
           ],
           "to": {
-            "junctionId": "bot0-upper",
+            "junctionId": "bot0-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5516,13 +5506,13 @@
             "auto"
           ],
           "to": {
-            "junctionId": "bot0-upper",
+            "junctionId": "bot0-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 460,
-              "y": 340
+              "y": 350
             }
           ]
         },
@@ -5561,7 +5551,7 @@
           "waypoints": [
             {
               "x": 520,
-              "y": 300
+              "y": 310
             }
           ]
         },
@@ -5600,7 +5590,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb1-upper",
+            "junctionId": "nb1-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -5617,7 +5607,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb1-lower",
+            "junctionId": "nb1-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -5632,21 +5622,16 @@
           "netId": "net-799289f72172bcf7",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb1-upper",
+            "junctionId": "nb1-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 630,
-              "y": 300
-            },
-            {
-              "x": 630,
-              "y": 340
+              "y": 310
             }
           ]
         },
@@ -5660,36 +5645,31 @@
           "netId": "net-799289f72172bcf7",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb1-lower",
+            "junctionId": "nb1-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 630,
               "y": 390
-            },
-            {
-              "x": 630,
-              "y": 350
             }
           ]
         },
         {
           "from": {
-            "junctionId": "nb1-upper",
+            "junctionId": "nb1-output",
             "kind": "junction"
           },
           "id": "route-net-799289f72172bcf7-5",
           "netId": "net-799289f72172bcf7",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "nb1-lower",
+            "junctionId": "nb1-gate-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5706,7 +5686,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "bot1-upper",
+            "junctionId": "bot1-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5720,10 +5700,10 @@
           "id": "route-net-a34fd40c8c8d9ba7-2",
           "netId": "net-a34fd40c8c8d9ba7",
           "segmentModes": [
-            "trunk"
+            "escape"
           ],
           "to": {
-            "junctionId": "bot1-upper",
+            "junctionId": "bot1-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5741,13 +5721,13 @@
             "auto"
           ],
           "to": {
-            "junctionId": "bot1-upper",
+            "junctionId": "bot1-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 760,
-              "y": 340
+              "y": 350
             }
           ]
         },
@@ -5786,7 +5766,7 @@
           "waypoints": [
             {
               "x": 820,
-              "y": 300
+              "y": 310
             }
           ]
         },
@@ -5825,7 +5805,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb2-upper",
+            "junctionId": "nb2-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -5842,7 +5822,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb2-lower",
+            "junctionId": "nb2-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -5857,21 +5837,16 @@
           "netId": "net-79928af72172beaa",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb2-upper",
+            "junctionId": "nb2-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 930,
-              "y": 300
-            },
-            {
-              "x": 930,
-              "y": 340
+              "y": 310
             }
           ]
         },
@@ -5885,36 +5860,31 @@
           "netId": "net-79928af72172beaa",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb2-lower",
+            "junctionId": "nb2-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 930,
               "y": 390
-            },
-            {
-              "x": 930,
-              "y": 350
             }
           ]
         },
         {
           "from": {
-            "junctionId": "nb2-upper",
+            "junctionId": "nb2-output",
             "kind": "junction"
           },
           "id": "route-net-79928af72172beaa-5",
           "netId": "net-79928af72172beaa",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "nb2-lower",
+            "junctionId": "nb2-gate-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5931,7 +5901,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "bot2-upper",
+            "junctionId": "bot2-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5945,10 +5915,10 @@
           "id": "route-net-a34fd50c8c8d9d5a-2",
           "netId": "net-a34fd50c8c8d9d5a",
           "segmentModes": [
-            "trunk"
+            "escape"
           ],
           "to": {
-            "junctionId": "bot2-upper",
+            "junctionId": "bot2-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -5966,13 +5936,13 @@
             "auto"
           ],
           "to": {
-            "junctionId": "bot2-upper",
+            "junctionId": "bot2-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1060,
-              "y": 340
+              "y": 350
             }
           ]
         },
@@ -6011,7 +5981,7 @@
           "waypoints": [
             {
               "x": 1120,
-              "y": 300
+              "y": 310
             }
           ]
         },
@@ -6050,7 +6020,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb3-upper",
+            "junctionId": "nb3-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -6067,7 +6037,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb3-lower",
+            "junctionId": "nb3-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -6082,21 +6052,16 @@
           "netId": "net-79928bf72172c05d",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb3-upper",
+            "junctionId": "nb3-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1230,
-              "y": 300
-            },
-            {
-              "x": 1230,
-              "y": 340
+              "y": 310
             }
           ]
         },
@@ -6110,36 +6075,31 @@
           "netId": "net-79928bf72172c05d",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb3-lower",
+            "junctionId": "nb3-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1230,
               "y": 390
-            },
-            {
-              "x": 1230,
-              "y": 350
             }
           ]
         },
         {
           "from": {
-            "junctionId": "nb3-upper",
+            "junctionId": "nb3-output",
             "kind": "junction"
           },
           "id": "route-net-79928bf72172c05d-5",
           "netId": "net-79928bf72172c05d",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "nb3-lower",
+            "junctionId": "nb3-gate-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6156,7 +6116,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "bot3-upper",
+            "junctionId": "bot3-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6170,10 +6130,10 @@
           "id": "route-net-a34fd60c8c8d9f0d-2",
           "netId": "net-a34fd60c8c8d9f0d",
           "segmentModes": [
-            "trunk"
+            "escape"
           ],
           "to": {
-            "junctionId": "bot3-upper",
+            "junctionId": "bot3-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6191,13 +6151,13 @@
             "auto"
           ],
           "to": {
-            "junctionId": "bot3-upper",
+            "junctionId": "bot3-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1360,
-              "y": 340
+              "y": 350
             }
           ]
         },
@@ -6236,7 +6196,7 @@
           "waypoints": [
             {
               "x": 1420,
-              "y": 300
+              "y": 310
             }
           ]
         },
@@ -6275,7 +6235,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb4-upper",
+            "junctionId": "nb4-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -6292,7 +6252,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb4-lower",
+            "junctionId": "nb4-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -6307,21 +6267,16 @@
           "netId": "net-799284f72172b478",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb4-upper",
+            "junctionId": "nb4-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1530,
-              "y": 300
-            },
-            {
-              "x": 1530,
-              "y": 340
+              "y": 310
             }
           ]
         },
@@ -6335,36 +6290,31 @@
           "netId": "net-799284f72172b478",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb4-lower",
+            "junctionId": "nb4-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1530,
               "y": 390
-            },
-            {
-              "x": 1530,
-              "y": 350
             }
           ]
         },
         {
           "from": {
-            "junctionId": "nb4-upper",
+            "junctionId": "nb4-output",
             "kind": "junction"
           },
           "id": "route-net-799284f72172b478-5",
           "netId": "net-799284f72172b478",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "nb4-lower",
+            "junctionId": "nb4-gate-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6381,7 +6331,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "bot4-upper",
+            "junctionId": "bot4-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6395,10 +6345,10 @@
           "id": "route-net-a34fcf0c8c8d9328-2",
           "netId": "net-a34fcf0c8c8d9328",
           "segmentModes": [
-            "trunk"
+            "escape"
           ],
           "to": {
-            "junctionId": "bot4-upper",
+            "junctionId": "bot4-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6416,13 +6366,13 @@
             "auto"
           ],
           "to": {
-            "junctionId": "bot4-upper",
+            "junctionId": "bot4-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1660,
-              "y": 340
+              "y": 350
             }
           ]
         },
@@ -6461,7 +6411,7 @@
           "waypoints": [
             {
               "x": 1720,
-              "y": 300
+              "y": 310
             }
           ]
         },
@@ -6500,7 +6450,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb5-upper",
+            "junctionId": "nb5-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -6517,7 +6467,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "nb5-lower",
+            "junctionId": "nb5-output",
             "kind": "junction"
           },
           "waypoints": []
@@ -6532,21 +6482,16 @@
           "netId": "net-799285f72172b62b",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb5-upper",
+            "junctionId": "nb5-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1830,
-              "y": 300
-            },
-            {
-              "x": 1830,
-              "y": 340
+              "y": 310
             }
           ]
         },
@@ -6560,36 +6505,31 @@
           "netId": "net-799285f72172b62b",
           "segmentModes": [
             "escape",
-            "auto",
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "nb5-lower",
+            "junctionId": "nb5-gate-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1830,
               "y": 390
-            },
-            {
-              "x": 1830,
-              "y": 350
             }
           ]
         },
         {
           "from": {
-            "junctionId": "nb5-upper",
+            "junctionId": "nb5-output",
             "kind": "junction"
           },
           "id": "route-net-799285f72172b62b-5",
           "netId": "net-799285f72172b62b",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "nb5-lower",
+            "junctionId": "nb5-gate-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6606,7 +6546,7 @@
             "escape"
           ],
           "to": {
-            "junctionId": "bot5-upper",
+            "junctionId": "bot5-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6620,10 +6560,10 @@
           "id": "route-net-a34fd00c8c8d94db-2",
           "netId": "net-a34fd00c8c8d94db",
           "segmentModes": [
-            "trunk"
+            "escape"
           ],
           "to": {
-            "junctionId": "bot5-upper",
+            "junctionId": "bot5-branch",
             "kind": "junction"
           },
           "waypoints": []
@@ -6641,13 +6581,13 @@
             "auto"
           ],
           "to": {
-            "junctionId": "bot5-upper",
+            "junctionId": "bot5-branch",
             "kind": "junction"
           },
           "waypoints": [
             {
               "x": 1960,
-              "y": 340
+              "y": 350
             }
           ]
         }

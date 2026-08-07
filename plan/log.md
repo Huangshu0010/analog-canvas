@@ -1232,6 +1232,21 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Commit status: ready for
   `fix(agent-routing): restore atomic flat CDAC generation`.
 
+## 2026-08-08 - Clarify flat-CDAC inverter wiring and labels
+
+- Target: remove the ambiguous double-node DP/DN wiring and move repeated MOS
+  labels outside active wiring corridors.
+- Changed areas: flat CDAC placement/Route graphs and regenerated formal
+  Project/SVG/PNG/PDF artifacts.
+- Result: each unit now has one inverter-output junction, one NB horizontal
+  handoff, one switch-gate fanout and one BOT junction. DP/SP labels are above
+  devices, DN/SN below, and NB above its handoff. The flat target remains at 0
+  visual errors/warnings, 0 crossings and 0 flightlines.
+- Validation: completeness gate, workspace typecheck, deterministic artifact
+  hashes and original-resolution PNG inspection. Presentation-only; no
+  simulation claim.
+- Commit status: ready for `fix(cdac): clarify inverter wiring and labels`.
+
 ## 2026-08-08 - Route-attached current arrow, annotation editing, and hit fixes (editor layer)
 
 - Target: land the editor layer for three intertwined annotation/current-arrow
