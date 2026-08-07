@@ -3,7 +3,7 @@ import {
   SchematicDocumentSchema,
   transformPoint,
 } from "@icm/model";
-import { routePolyline } from "@icm/derived";
+import { routeAttachmentPlacement, routePolyline } from "@icm/derived";
 import type { Rect, SchematicDocument } from "@icm/model";
 import type {
   SymbolDefinition,
@@ -229,8 +229,9 @@ function deriveBounds(
     x: number,
     y: number,
     alignment: "start" | "middle" | "end",
+    sizeScale: number,
   ): Rect => {
-    const width = Math.max(7, text.length * 7);
+    const width = Math.max(7 * sizeScale, text.length * 7 * sizeScale);
     const left =
       alignment === "start"
         ? x
@@ -239,9 +240,9 @@ function deriveBounds(
           : x - width / 2;
     return {
       x: Math.floor(left),
-      y: y - 13,
+      y: y - 13 * sizeScale,
       width: Math.ceil(width),
-      height: 17,
+      height: Math.ceil(17 * sizeScale),
     };
   };
   for (const instance of document.instances.filter(
@@ -287,15 +288,43 @@ function deriveBounds(
     }
   }
   for (const annotation of document.annotations) {
+    const attachedRoute = annotation.routeAttachment
+      ? document.routes.find(
+          (route) => route.id === annotation.routeAttachment!.routeId,
+        )
+      : undefined;
+    const attachmentPlacement =
+      attachedRoute && annotation.routeAttachment
+        ? routePolyline(document, resolver, attachedRoute)
+          ? routeAttachmentPlacement(
+              routePolyline(document, resolver, attachedRoute)!,
+              annotation.routeAttachment,
+            )
+          : null
+        : null;
+    const annotationPosition =
+      attachmentPlacement?.position ?? annotation.position;
     const verticalCurrent =
       annotation.kind === "current" &&
-      (annotation.rotation === 90 || annotation.rotation === 270);
+      ((attachmentPlacement?.rotation ?? annotation.rotation) === 90 ||
+        (attachmentPlacement?.rotation ?? annotation.rotation) === 270);
+    const textPosition = attachmentPlacement
+      ? attachmentPlacement.labelPosition
+      : {
+          x: annotationPosition.x + (verticalCurrent ? 15 : 0),
+          y: annotationPosition.y + (verticalCurrent ? 4 : 0),
+        };
     bounds.push(
       estimatedTextBounds(
         annotation.text,
-        annotation.position.x + (verticalCurrent ? 15 : 0),
-        annotation.position.y + (verticalCurrent ? 4 : 0),
-        verticalCurrent ? "start" : annotation.alignment,
+        textPosition.x,
+        textPosition.y,
+        attachmentPlacement
+          ? "middle"
+          : verticalCurrent
+            ? "start"
+            : annotation.alignment,
+        annotation.sizeScale ?? 1,
       ),
     );
   }
@@ -344,6 +373,7 @@ export function buildSvgScene(
     })
     .join("");
   const junctions = [...document.junctions]
+    .filter((junction) => (junction.role ?? "branch") === "branch")
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map(
       (junction) =>
@@ -413,9 +443,12 @@ export function buildSvgScene(
             bounds.height +
             profile.typography.labelGap +
             profile.typography.instanceFontSize;
-      const defaultLabel = explicitInstanceLabels.has(instance.id)
-        ? ""
-        : `<text x="${labelX}" y="${labelY}" text-anchor="middle"${schematicTextSizeAttribute("default-instance", profile)}>${renderSchematicTextContent(instance.id, "default-instance", profile)}</text>`;
+      const labelHiddenBySymbol =
+        resolved.definition.labelVisibility === "hidden";
+      const defaultLabel =
+        explicitInstanceLabels.has(instance.id) || labelHiddenBySymbol
+          ? ""
+          : `<text x="${labelX}" y="${labelY}" text-anchor="middle"${schematicTextSizeAttribute("default-instance", profile)}>${renderSchematicTextContent(instance.id, "default-instance", profile)}</text>`;
       return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}>${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
     })
     .join("");
@@ -425,29 +458,54 @@ export function buildSvgScene(
       const attachment = annotation.attachedObjectId
         ? ` data-attached-object-id="${escapeXml(annotation.attachedObjectId)}"`
         : "";
-      const transform = `rotate(${annotation.rotation} ${annotation.position.x} ${annotation.position.y})`;
+      const attachedRoute = annotation.routeAttachment
+        ? document.routes.find(
+            (route) => route.id === annotation.routeAttachment!.routeId,
+          )
+        : undefined;
+      const attachmentPlacement =
+        attachedRoute && annotation.routeAttachment
+          ? routePolyline(document, resolver, attachedRoute)
+            ? routeAttachmentPlacement(
+                routePolyline(document, resolver, attachedRoute)!,
+                annotation.routeAttachment,
+              )
+            : null
+          : null;
+      const position = attachmentPlacement?.position ?? annotation.position;
+      const rotation = attachmentPlacement?.rotation ?? annotation.rotation;
+      const transform = `rotate(${rotation} ${position.x} ${position.y})`;
       const attributes = `data-object-id="${escapeXml(annotation.id)}" data-kind="${annotation.kind}"${attachment}`;
       if (annotation.kind === "current") {
-        const x = annotation.position.x;
-        const y = annotation.position.y;
-        const vertical =
-          annotation.rotation === 90 || annotation.rotation === 270;
+        const x = position.x;
+        const y = position.y;
+        const vertical = rotation === 90 || rotation === 270;
         const textX = vertical ? x + 15 : x;
         const textY = vertical ? y + 4 : y - 7;
-        const textAnchor = vertical ? "start" : annotation.alignment;
+        const textAnchor = attachmentPlacement
+          ? "middle"
+          : vertical
+            ? "start"
+            : annotation.alignment;
         if (profile.id !== "textbook-monochrome-v1") {
           const arrow = profile.annotations;
           const halfLength = arrow.currentArrowLength / 2;
           const tipX = x + halfLength;
           const baseX = tipX - arrow.arrowHeadLength;
           const halfHeadWidth = arrow.arrowHeadWidth / 2;
-          const razaviTextX = vertical
-            ? x + halfLength + arrow.currentLabelGap
-            : x;
-          const razaviTextY = vertical ? y + 4 : y - arrow.currentLabelGap;
-          return `<g ${attributes}><g transform="${transform}"><line data-role="current-arrow-shaft" x1="${x - halfLength}" y1="${y}" x2="${baseX}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
+          const razaviTextX = attachmentPlacement
+            ? attachmentPlacement.labelPosition.x
+            : vertical
+              ? x + halfLength + arrow.currentLabelGap
+              : x;
+          const razaviTextY = attachmentPlacement
+            ? attachmentPlacement.labelPosition.y
+            : vertical
+              ? y + 4
+              : y - arrow.currentLabelGap;
+          return `<g ${attributes}><g transform="${transform}"><line data-role="current-arrow-shaft" x1="${x - halfLength}" y1="${y}" x2="${baseX}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
         }
-        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
+        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
@@ -460,7 +518,7 @@ export function buildSvgScene(
           port?.position && profile.annotations.supplyBarWidth > 0
             ? `<line data-role="supply-bar" x1="${port.position.x - profile.annotations.supplyBarWidth / 2}" y1="${port.position.y}" x2="${port.position.x + profile.annotations.supplyBarWidth / 2}" y2="${port.position.y}" transform="rotate(${annotation.rotation} ${port.position.x} ${port.position.y})" stroke="${profile.foreground}" stroke-width="${profile.strokes.supply}" stroke-linecap="${profile.lineCap}"/>`
             : "";
-        return `<g ${attributes}>${supplyBar}<text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile)}>${renderSchematicTextContent(annotation.text, "power-label", profile)}</text></g>`;
+        return `<g ${attributes}>${supplyBar}<text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "power-label", profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
@@ -476,7 +534,7 @@ export function buildSvgScene(
           annotation.rotation,
         );
         const polarityStyle = `font-style:normal;font-weight:${profile.typography.plainWeight}`;
-        return `<g ${attributes}><text data-role="polarity-positive" x="${annotation.position.x + positiveOffset.x}" y="${annotation.position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${annotation.position.x + negativeOffset.x}" y="${annotation.position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("voltage", profile)}>${renderSchematicTextContent(annotation.text, "voltage", profile)}</text></g>`;
+        return `<g ${attributes}><text data-role="polarity-positive" x="${annotation.position.x + positiveOffset.x}" y="${annotation.position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${annotation.position.x + negativeOffset.x}" y="${annotation.position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("voltage", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "voltage", profile)}</text></g>`;
       }
       const emphasis =
         profile.id === "textbook-monochrome-v1" &&
@@ -486,7 +544,7 @@ export function buildSvgScene(
               annotation.kind === "figure-caption"
             ? ' font-style="italic"'
             : "";
-      return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile)}>${renderSchematicTextContent(annotation.text, annotation.kind, profile)}</text>`;
+      return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, annotation.kind, profile)}</text>`;
     })
     .join("");
 
