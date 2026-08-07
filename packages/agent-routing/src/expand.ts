@@ -101,6 +101,8 @@ function segmentHitsInstance(
   a: Point,
   b: Point,
   boxes: ReadonlyArray<InstanceBox>,
+  fromEndpointId?: string,
+  toEndpointId?: string,
 ): InstanceBox | undefined {
   const minX = Math.min(a.x, b.x);
   const maxX = Math.max(a.x, b.x);
@@ -111,7 +113,10 @@ function segmentHitsInstance(
       maxX > box.min.x &&
       minX < box.max.x &&
       maxY > box.min.y &&
-      minY < box.max.y,
+      minY < box.max.y &&
+      // Exclude the instance that the endpoint belongs to.
+      box.instanceId !== fromEndpointId &&
+      box.instanceId !== toEndpointId,
   );
 }
 
@@ -313,8 +318,21 @@ export function expandRouteGraph(
         resolvedGeometry.push({ routeId, points: [from, to] });
 
         // Wire-through-symbol detection: check if this segment crosses an
-        // instance silhouette (excluding endpoints that are on the instance).
-        const hit = segmentHitsInstance(from, to, input.instanceBoxes);
+        // instance silhouette. Exclude the instances that the edge's
+        // endpoints belong to (the edge is leaving/entering those instances).
+        const fromInstId = edge.from.includes(":")
+          ? edge.from.split(":")[1]?.split(".")[0]
+          : undefined;
+        const toInstId = edge.to.includes(":")
+          ? edge.to.split(":")[1]?.split(".")[0]
+          : undefined;
+        const hit = segmentHitsInstance(
+          from,
+          to,
+          input.instanceBoxes,
+          fromInstId,
+          toInstId,
+        );
         if (hit) {
           conflicts.push({
             code: "WIRE_THROUGH_SYMBOL",

@@ -409,7 +409,7 @@
         {
           "alignment": "middle",
           "attachedObjectId": "vss-j-reset",
-          "id": "route-net-82ef833d9b98cf34-17",
+          "id": "route-net-82ef833d9b98cf34-14",
           "kind": "net-label",
           "locked": false,
           "offset": {
@@ -417,283 +417,45 @@
             "y": 0
           },
           "position": {
-            "x": 320,
-            "y": 660
+            "x": 790,
+            "y": 680
           },
           "rotation": 0,
           "text": "VSS"
         },
         {
-          "alignment": "start",
-          "id": "conflict-net-5d241e46ea1603fd-ESCAPE_DIRECTION",
-          "kind": "plain-text",
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-dummy",
+          "id": "route-net-82ef833d9b98cf34-16",
+          "kind": "net-label",
           "locked": false,
           "offset": {
             "x": 0,
             "y": 0
           },
           "position": {
-            "x": 60,
-            "y": 1540
+            "x": 520,
+            "y": 1200
           },
           "rotation": 0,
-          "text": "ESCAPE_DIRECTION: Escape edge vout-esc-5 does not leave terminal along outward direction (0,-1)"
+          "text": "VSS"
         },
         {
-          "alignment": "start",
-          "id": "conflict-net-5d241e46ea1603fd-MISALIGNED_EDGE",
-          "kind": "plain-text",
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-port",
+          "id": "route-net-82ef833d9b98cf34-18",
+          "kind": "net-label",
           "locked": false,
           "offset": {
             "x": 0,
             "y": 0
           },
           "position": {
-            "x": 60,
-            "y": 1540
+            "x": 300,
+            "y": 1270
           },
           "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge vout-port-link: (600,680) → (900,640) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-82ef833d9b98cf34-ESCAPE_DIRECTION",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1620
-          },
-          "rotation": 0,
-          "text": "ESCAPE_DIRECTION: Escape edge vss-esc-vss-j-reset-0 does not leave terminal along outward direction (0,1)"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-82ef833d9b98cf34-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1620
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: Escape edge vss-esc-vss-j-reset-3: (340,1280) → (320,660) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-b778eaaff63d68d5-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1640
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge reset-direct: (760,640) → (60,1180) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-b9d1505a12d36a23-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1660
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge b0-direct: (180,180) → (60,200) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-b9d14f5a12d36870-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1680
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge b1-direct: (180,340) → (60,360) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-b9d1525a12d36d89-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1700
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge b2-direct: (180,500) → (60,520) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-b9d1515a12d36bd6-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1720
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge b3-direct: (180,660) → (60,680) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-b9d1545a12d370ef-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1740
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge b4-direct: (180,820) → (60,840) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-b9d1535a12d36f3c-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1760
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge b5-direct: (180,980) → (60,1000) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-2363ccedceb2b67c-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1780
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge bot0-direct: (180,220) → (520,240) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-2363cdedceb2b82f-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1800
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge bot1-direct: (180,380) → (520,400) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-2363ceedceb2b9e2-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1820
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge bot2-direct: (180,540) → (520,560) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-2363cfedceb2bb95-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1840
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge bot3-direct: (180,700) → (520,720) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-2363c8edceb2afb0-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1860
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge bot4-direct: (180,860) → (520,880) is not axis-aligned; add a bend node"
-        },
-        {
-          "alignment": "start",
-          "id": "conflict-net-2363c9edceb2b163-MISALIGNED_EDGE",
-          "kind": "plain-text",
-          "locked": false,
-          "offset": {
-            "x": 0,
-            "y": 0
-          },
-          "position": {
-            "x": 60,
-            "y": 1880
-          },
-          "rotation": 0,
-          "text": "MISALIGNED_EDGE: link edge bot5-direct: (180,1020) → (520,1040) is not axis-aligned; add a bend node"
+          "text": "VSS"
         },
         {
           "alignment": "middle",
@@ -826,7 +588,7 @@
           },
           "position": {
             "x": 520,
-            "y": 270
+            "y": 250
           },
           "rotation": 0,
           "text": "C0"
@@ -843,7 +605,7 @@
           },
           "position": {
             "x": 520,
-            "y": 430
+            "y": 410
           },
           "rotation": 0,
           "text": "C1"
@@ -860,7 +622,7 @@
           },
           "position": {
             "x": 520,
-            "y": 590
+            "y": 570
           },
           "rotation": 0,
           "text": "C2"
@@ -877,7 +639,7 @@
           },
           "position": {
             "x": 520,
-            "y": 750
+            "y": 730
           },
           "rotation": 0,
           "text": "C3"
@@ -894,7 +656,7 @@
           },
           "position": {
             "x": 520,
-            "y": 910
+            "y": 890
           },
           "rotation": 0,
           "text": "C4"
@@ -911,7 +673,7 @@
           },
           "position": {
             "x": 520,
-            "y": 1070
+            "y": 1050
           },
           "rotation": 0,
           "text": "C5"
@@ -928,7 +690,7 @@
           },
           "position": {
             "x": 520,
-            "y": 1230
+            "y": 1210
           },
           "rotation": 0,
           "text": "CDUMMY"
@@ -1185,7 +947,7 @@
             "mirror": "none",
             "position": {
               "x": 520,
-              "y": 220
+              "y": 200
             },
             "rotation": 0
           },
@@ -1217,7 +979,7 @@
             "mirror": "none",
             "position": {
               "x": 520,
-              "y": 380
+              "y": 360
             },
             "rotation": 0
           },
@@ -1249,7 +1011,7 @@
             "mirror": "none",
             "position": {
               "x": 520,
-              "y": 540
+              "y": 520
             },
             "rotation": 0
           },
@@ -1281,7 +1043,7 @@
             "mirror": "none",
             "position": {
               "x": 520,
-              "y": 700
+              "y": 680
             },
             "rotation": 0
           },
@@ -1313,7 +1075,7 @@
             "mirror": "none",
             "position": {
               "x": 520,
-              "y": 860
+              "y": 840
             },
             "rotation": 0
           },
@@ -1345,7 +1107,7 @@
             "mirror": "none",
             "position": {
               "x": 520,
-              "y": 1020
+              "y": 1000
             },
             "rotation": 0
           },
@@ -1377,7 +1139,7 @@
             "mirror": "none",
             "position": {
               "x": 520,
-              "y": 1180
+              "y": 1160
             },
             "rotation": 0
           },
@@ -1406,34 +1168,52 @@
       ],
       "junctions": [
         {
-          "id": "vout-tap-0",
+          "id": "vout-tapC0",
           "netId": "net-5d241e46ea1603fd",
           "position": {
             "x": 600,
-            "y": 200
+            "y": 180
           },
           "role": "branch"
         },
         {
-          "id": "vout-tap-1",
+          "id": "vout-tapC1",
           "netId": "net-5d241e46ea1603fd",
           "position": {
             "x": 600,
-            "y": 360
+            "y": 340
           },
           "role": "branch"
         },
         {
-          "id": "vout-tap-2",
+          "id": "vout-tapC2",
           "netId": "net-5d241e46ea1603fd",
           "position": {
             "x": 600,
-            "y": 520
+            "y": 500
           },
           "role": "branch"
         },
         {
-          "id": "vout-tap-3",
+          "id": "vout-tapReset",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 620
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vout-tapC3",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 660
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vout-tapPort",
           "netId": "net-5d241e46ea1603fd",
           "position": {
             "x": 600,
@@ -1442,73 +1222,91 @@
           "role": "branch"
         },
         {
-          "id": "vout-tap-4",
+          "id": "vout-tapC4",
           "netId": "net-5d241e46ea1603fd",
           "position": {
             "x": 600,
-            "y": 840
+            "y": 820
           },
           "role": "branch"
         },
         {
-          "id": "vout-tap-5",
+          "id": "vout-tapC5",
           "netId": "net-5d241e46ea1603fd",
           "position": {
             "x": 600,
-            "y": 1000
+            "y": 980
           },
           "role": "branch"
         },
         {
-          "id": "vdd-tap-0",
+          "id": "vout-tapDummy",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 1140
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vdd-tapPort",
           "netId": "net-82ae603d9b60fcc6",
           "position": {
-            "x": 340,
+            "x": 300,
+            "y": 100
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vdd-tap0",
+          "netId": "net-82ae603d9b60fcc6",
+          "position": {
+            "x": 300,
             "y": 200
           },
           "role": "branch"
         },
         {
-          "id": "vdd-tap-1",
+          "id": "vdd-tap1",
           "netId": "net-82ae603d9b60fcc6",
           "position": {
-            "x": 340,
+            "x": 300,
             "y": 360
           },
           "role": "branch"
         },
         {
-          "id": "vdd-tap-2",
+          "id": "vdd-tap2",
           "netId": "net-82ae603d9b60fcc6",
           "position": {
-            "x": 340,
+            "x": 300,
             "y": 520
           },
           "role": "branch"
         },
         {
-          "id": "vdd-tap-3",
+          "id": "vdd-tap3",
           "netId": "net-82ae603d9b60fcc6",
           "position": {
-            "x": 340,
+            "x": 300,
             "y": 680
           },
           "role": "branch"
         },
         {
-          "id": "vdd-tap-4",
+          "id": "vdd-tap4",
           "netId": "net-82ae603d9b60fcc6",
           "position": {
-            "x": 340,
+            "x": 300,
             "y": 840
           },
           "role": "branch"
         },
         {
-          "id": "vdd-tap-5",
+          "id": "vdd-tap5",
           "netId": "net-82ae603d9b60fcc6",
           "position": {
-            "x": 340,
+            "x": 300,
             "y": 1000
           },
           "role": "branch"
@@ -1571,8 +1369,26 @@
           "id": "vss-j-reset",
           "netId": "net-82ef833d9b98cf34",
           "position": {
-            "x": 320,
-            "y": 660
+            "x": 790,
+            "y": 680
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-dummy",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 520,
+            "y": 1200
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-port",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 300,
+            "y": 1270
           },
           "role": "branch"
         }
@@ -1975,7 +1791,7 @@
           "id": "port-57827bce9cde161d",
           "name": "vss",
           "position": {
-            "x": 340,
+            "x": 300,
             "y": 1280
           }
         },
@@ -1985,7 +1801,7 @@
           "name": "reset",
           "position": {
             "x": 60,
-            "y": 1180
+            "y": 640
           }
         },
         {
@@ -1994,7 +1810,7 @@
           "name": "b0",
           "position": {
             "x": 60,
-            "y": 200
+            "y": 180
           }
         },
         {
@@ -2003,7 +1819,7 @@
           "name": "b1",
           "position": {
             "x": 60,
-            "y": 360
+            "y": 340
           }
         },
         {
@@ -2012,7 +1828,7 @@
           "name": "b2",
           "position": {
             "x": 60,
-            "y": 520
+            "y": 500
           }
         },
         {
@@ -2021,7 +1837,7 @@
           "name": "b3",
           "position": {
             "x": 60,
-            "y": 680
+            "y": 660
           }
         },
         {
@@ -2030,7 +1846,7 @@
           "name": "b4",
           "position": {
             "x": 60,
-            "y": 840
+            "y": 820
           }
         },
         {
@@ -2039,7 +1855,7 @@
           "name": "b5",
           "position": {
             "x": 60,
-            "y": 1000
+            "y": 980
           }
         },
         {
@@ -2047,7 +1863,7 @@
           "id": "port-875ab2787f258a6f",
           "name": "vdd",
           "position": {
-            "x": 340,
+            "x": 300,
             "y": 60
           }
         },
@@ -2057,7 +1873,7 @@
           "name": "vout",
           "position": {
             "x": 900,
-            "y": 640
+            "y": 680
           }
         }
       ],
@@ -2072,59 +1888,163 @@
         "grid": 10,
         "styleProfileId": "razavi-textbook-v1"
       },
-      "revision": 3,
+      "revision": 4,
       "routes": [
         {
           "from": {
-            "junctionId": "vout-tap-0",
+            "instanceId": "C0",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "id": "route-net-5d241e46ea1603fd-1",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vout-tapC0",
             "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "C1",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "id": "route-net-5d241e46ea1603fd-2",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vout-tapC1",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "C2",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "id": "route-net-5d241e46ea1603fd-3",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vout-tapC2",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XRESET",
+            "kind": "terminal",
+            "pinName": "D"
+          },
+          "id": "route-net-5d241e46ea1603fd-4",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vout-tapReset",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "C3",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "id": "route-net-5d241e46ea1603fd-5",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vout-tapC3",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-0d78f712a5866fb3"
+          },
+          "id": "route-net-5d241e46ea1603fd-6",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vout-tapPort",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "C4",
+            "kind": "terminal",
+            "pinName": "1"
           },
           "id": "route-net-5d241e46ea1603fd-7",
           "netId": "net-5d241e46ea1603fd",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "vout-tap-1",
+            "junctionId": "vout-tapC4",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "junctionId": "vout-tap-1",
-            "kind": "junction"
+            "instanceId": "C5",
+            "kind": "terminal",
+            "pinName": "1"
           },
           "id": "route-net-5d241e46ea1603fd-8",
           "netId": "net-5d241e46ea1603fd",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "vout-tap-2",
+            "junctionId": "vout-tapC5",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "junctionId": "vout-tap-2",
-            "kind": "junction"
+            "instanceId": "CDUMMY",
+            "kind": "terminal",
+            "pinName": "1"
           },
           "id": "route-net-5d241e46ea1603fd-9",
           "netId": "net-5d241e46ea1603fd",
           "segmentModes": [
-            "trunk"
+            "auto"
           ],
           "to": {
-            "junctionId": "vout-tap-3",
+            "junctionId": "vout-tapDummy",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "junctionId": "vout-tap-3",
+            "junctionId": "vout-tapC0",
             "kind": "junction"
           },
           "id": "route-net-5d241e46ea1603fd-10",
@@ -2133,14 +2053,14 @@
             "trunk"
           ],
           "to": {
-            "junctionId": "vout-tap-4",
+            "junctionId": "vout-tapC1",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "junctionId": "vout-tap-4",
+            "junctionId": "vout-tapC1",
             "kind": "junction"
           },
           "id": "route-net-5d241e46ea1603fd-11",
@@ -2149,7 +2069,119 @@
             "trunk"
           ],
           "to": {
-            "junctionId": "vout-tap-5",
+            "junctionId": "vout-tapC2",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tapC2",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-12",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tapReset",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tapReset",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-13",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tapC3",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tapC3",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-14",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tapPort",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tapPort",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-15",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tapC4",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tapC4",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-16",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tapC5",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tapC5",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-17",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tapDummy",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-875ab2787f258a6f"
+          },
+          "id": "route-net-82ae603d9b60fcc6-1",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vdd-tapPort",
             "kind": "junction"
           },
           "waypoints": []
@@ -2160,13 +2192,13 @@
             "kind": "terminal",
             "pinName": "vdd"
           },
-          "id": "route-net-82ae603d9b60fcc6-1",
+          "id": "route-net-82ae603d9b60fcc6-2",
           "netId": "net-82ae603d9b60fcc6",
           "segmentModes": [
             "escape"
           ],
           "to": {
-            "junctionId": "vdd-tap-0",
+            "junctionId": "vdd-tap0",
             "kind": "junction"
           },
           "waypoints": []
@@ -2177,13 +2209,13 @@
             "kind": "terminal",
             "pinName": "vdd"
           },
-          "id": "route-net-82ae603d9b60fcc6-2",
+          "id": "route-net-82ae603d9b60fcc6-3",
           "netId": "net-82ae603d9b60fcc6",
           "segmentModes": [
             "escape"
           ],
           "to": {
-            "junctionId": "vdd-tap-1",
+            "junctionId": "vdd-tap1",
             "kind": "junction"
           },
           "waypoints": []
@@ -2194,13 +2226,13 @@
             "kind": "terminal",
             "pinName": "vdd"
           },
-          "id": "route-net-82ae603d9b60fcc6-3",
+          "id": "route-net-82ae603d9b60fcc6-4",
           "netId": "net-82ae603d9b60fcc6",
           "segmentModes": [
             "escape"
           ],
           "to": {
-            "junctionId": "vdd-tap-2",
+            "junctionId": "vdd-tap2",
             "kind": "junction"
           },
           "waypoints": []
@@ -2211,13 +2243,13 @@
             "kind": "terminal",
             "pinName": "vdd"
           },
-          "id": "route-net-82ae603d9b60fcc6-4",
+          "id": "route-net-82ae603d9b60fcc6-5",
           "netId": "net-82ae603d9b60fcc6",
           "segmentModes": [
             "escape"
           ],
           "to": {
-            "junctionId": "vdd-tap-3",
+            "junctionId": "vdd-tap3",
             "kind": "junction"
           },
           "waypoints": []
@@ -2228,13 +2260,13 @@
             "kind": "terminal",
             "pinName": "vdd"
           },
-          "id": "route-net-82ae603d9b60fcc6-5",
+          "id": "route-net-82ae603d9b60fcc6-6",
           "netId": "net-82ae603d9b60fcc6",
           "segmentModes": [
             "escape"
           ],
           "to": {
-            "junctionId": "vdd-tap-4",
+            "junctionId": "vdd-tap4",
             "kind": "junction"
           },
           "waypoints": []
@@ -2245,36 +2277,20 @@
             "kind": "terminal",
             "pinName": "vdd"
           },
-          "id": "route-net-82ae603d9b60fcc6-6",
+          "id": "route-net-82ae603d9b60fcc6-7",
           "netId": "net-82ae603d9b60fcc6",
           "segmentModes": [
             "escape"
           ],
           "to": {
-            "junctionId": "vdd-tap-5",
+            "junctionId": "vdd-tap5",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "junctionId": "vdd-tap-0",
-            "kind": "junction"
-          },
-          "id": "route-net-82ae603d9b60fcc6-7",
-          "netId": "net-82ae603d9b60fcc6",
-          "segmentModes": [
-            "trunk"
-          ],
-          "to": {
-            "junctionId": "vdd-tap-1",
-            "kind": "junction"
-          },
-          "waypoints": []
-        },
-        {
-          "from": {
-            "junctionId": "vdd-tap-1",
+            "junctionId": "vdd-tapPort",
             "kind": "junction"
           },
           "id": "route-net-82ae603d9b60fcc6-8",
@@ -2283,14 +2299,14 @@
             "trunk"
           ],
           "to": {
-            "junctionId": "vdd-tap-2",
+            "junctionId": "vdd-tap0",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "junctionId": "vdd-tap-2",
+            "junctionId": "vdd-tap0",
             "kind": "junction"
           },
           "id": "route-net-82ae603d9b60fcc6-9",
@@ -2299,14 +2315,14 @@
             "trunk"
           ],
           "to": {
-            "junctionId": "vdd-tap-3",
+            "junctionId": "vdd-tap1",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "junctionId": "vdd-tap-3",
+            "junctionId": "vdd-tap1",
             "kind": "junction"
           },
           "id": "route-net-82ae603d9b60fcc6-10",
@@ -2315,14 +2331,14 @@
             "trunk"
           ],
           "to": {
-            "junctionId": "vdd-tap-4",
+            "junctionId": "vdd-tap2",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "junctionId": "vdd-tap-4",
+            "junctionId": "vdd-tap2",
             "kind": "junction"
           },
           "id": "route-net-82ae603d9b60fcc6-11",
@@ -2331,23 +2347,39 @@
             "trunk"
           ],
           "to": {
-            "junctionId": "vdd-tap-5",
+            "junctionId": "vdd-tap3",
             "kind": "junction"
           },
           "waypoints": []
         },
         {
           "from": {
-            "kind": "port",
-            "portId": "port-875ab2787f258a6f"
+            "junctionId": "vdd-tap3",
+            "kind": "junction"
           },
           "id": "route-net-82ae603d9b60fcc6-12",
           "netId": "net-82ae603d9b60fcc6",
           "segmentModes": [
-            "auto"
+            "trunk"
           ],
           "to": {
-            "junctionId": "vdd-tap-0",
+            "junctionId": "vdd-tap4",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vdd-tap4",
+            "kind": "junction"
+          },
+          "id": "route-net-82ae603d9b60fcc6-13",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vdd-tap5",
             "kind": "junction"
           },
           "waypoints": []
@@ -2453,6 +2485,283 @@
             "kind": "junction"
           },
           "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XRESET",
+            "kind": "terminal",
+            "pinName": "S"
+          },
+          "id": "route-net-82ef833d9b98cf34-13",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vss-j-reset",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "CDUMMY",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-net-82ef833d9b98cf34-15",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vss-j-dummy",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-57827bce9cde161d"
+          },
+          "id": "route-net-82ef833d9b98cf34-17",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vss-j-port",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU0",
+            "kind": "terminal",
+            "pinName": "bot"
+          },
+          "id": "route-net-2363ccedceb2b67c-1",
+          "netId": "net-2363ccedceb2b67c",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "C0",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU1",
+            "kind": "terminal",
+            "pinName": "bot"
+          },
+          "id": "route-net-2363cdedceb2b82f-1",
+          "netId": "net-2363cdedceb2b82f",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "C1",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU2",
+            "kind": "terminal",
+            "pinName": "bot"
+          },
+          "id": "route-net-2363ceedceb2b9e2-1",
+          "netId": "net-2363ceedceb2b9e2",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "C2",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU3",
+            "kind": "terminal",
+            "pinName": "bot"
+          },
+          "id": "route-net-2363cfedceb2bb95-1",
+          "netId": "net-2363cfedceb2bb95",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "C3",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU4",
+            "kind": "terminal",
+            "pinName": "bot"
+          },
+          "id": "route-net-2363c8edceb2afb0-1",
+          "netId": "net-2363c8edceb2afb0",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "C4",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU5",
+            "kind": "terminal",
+            "pinName": "bot"
+          },
+          "id": "route-net-2363c9edceb2b163-1",
+          "netId": "net-2363c9edceb2b163",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "C5",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-08e81d5c21afcace"
+          },
+          "id": "route-net-b9d1505a12d36a23-1",
+          "netId": "net-b9d1505a12d36a23",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "XU0",
+            "kind": "terminal",
+            "pinName": "bit"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-0b4be6134b2ba800"
+          },
+          "id": "route-net-b9d14f5a12d36870-1",
+          "netId": "net-b9d14f5a12d36870",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "XU1",
+            "kind": "terminal",
+            "pinName": "bit"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-59922b45e2cad116"
+          },
+          "id": "route-net-b9d1525a12d36d89-1",
+          "netId": "net-b9d1525a12d36d89",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "XU2",
+            "kind": "terminal",
+            "pinName": "bit"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-c093b63f60d8af6c"
+          },
+          "id": "route-net-b9d1515a12d36bd6-1",
+          "netId": "net-b9d1515a12d36bd6",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "XU3",
+            "kind": "terminal",
+            "pinName": "bit"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-35c2e7b5e158ae26"
+          },
+          "id": "route-net-b9d1545a12d370ef-1",
+          "netId": "net-b9d1545a12d370ef",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "XU4",
+            "kind": "terminal",
+            "pinName": "bit"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-bb9aba18b0111548"
+          },
+          "id": "route-net-b9d1535a12d36f3c-1",
+          "netId": "net-b9d1535a12d36f3c",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "XU5",
+            "kind": "terminal",
+            "pinName": "bit"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-d1a18d9c3aac42b7"
+          },
+          "id": "route-net-b778eaaff63d68d5-1",
+          "netId": "net-b778eaaff63d68d5",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "instanceId": "XRESET",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "waypoints": []
         }
       ],
       "sourceBinding": {
@@ -2475,7 +2784,7 @@
     }
   ],
   "id": "project-898510e0e3b15ad5",
-  "name": "SKY130 6-bit Switched-Capacitor DAC (route-graph)",
+  "name": "SKY130 6-bit Switched-Capacitor DAC (route-graph v2)",
   "schemaVersion": 1,
   "source": {
     "dialect": "spice3f5-core",
