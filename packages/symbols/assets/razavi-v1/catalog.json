@@ -97,11 +97,41 @@
         "decoderVersion": "0.1.0"
       },
       "reviewStatus": "reviewed",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-mos/nmos4.svg",
+        "converterPath": "scripts/generate-visio-mos-assets.mjs",
+        "converterVersion": 1
+      },
       "pinOrder": ["D", "G", "S", "B"],
       "palette": true,
       "automaticMappings": ["spice:M:nmos", "pdk:model-type:nmos"],
       "assetPath": "nmos.symbol.json",
-      "assetHash": "8b0a28ddc9041501287c42c3808bbf70ec7c087ee9f2404f87e95473f3b63fb3"
+      "assetHash": "2b050282019f63daef280d385b089a66e0649b70c18aa6862cd1558574b3f477"
+    },
+    {
+      "symbolId": "nmos3",
+      "name": "NMOS (3-terminal)",
+      "category": "transistor",
+      "source": {
+        "stencilHash": "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+        "masterNameU": "Nmos3.a",
+        "decoderVersion": "0.1.0"
+      },
+      "reviewStatus": "provisional",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-mos/nmos3-a.svg",
+        "converterPath": "scripts/generate-visio-mos-assets.mjs",
+        "converterVersion": 1
+      },
+      "pinOrder": ["D", "G", "S"],
+      "palette": true,
+      "automaticMappings": [],
+      "assetPath": "nmos3.symbol.json",
+      "assetHash": "9a217288110f3613fdf782aa7a4fcfb79c08e69d985b841f732221954a8a7e1b"
     },
     {
       "symbolId": "npn",
@@ -129,11 +159,18 @@
         "decoderVersion": "0.1.0"
       },
       "reviewStatus": "reviewed",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-mos/pmos4.svg",
+        "converterPath": "scripts/generate-visio-mos-assets.mjs",
+        "converterVersion": 1
+      },
       "pinOrder": ["D", "G", "S", "B"],
       "palette": true,
       "automaticMappings": ["spice:M:pmos", "pdk:model-type:pmos"],
       "assetPath": "pmos.symbol.json",
-      "assetHash": "c43daa01ca0d970ec431be2f3fe2eb074187037f42ff40978cce073859fcd1f7"
+      "assetHash": "5384c012ef81b47209924cada10246ad08ee8c5621cefc5201b6e4210f2810f0"
     },
     {
       "symbolId": "pmos3",
@@ -145,11 +182,18 @@
         "decoderVersion": "0.1.0"
       },
       "reviewStatus": "provisional",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-mos/pmos3-a.svg",
+        "converterPath": "scripts/generate-visio-mos-assets.mjs",
+        "converterVersion": 1
+      },
       "pinOrder": ["D", "G", "S"],
       "palette": true,
       "automaticMappings": [],
       "assetPath": "pmos3.symbol.json",
-      "assetHash": "e7f4281417f841c611d25c48380c6f2437613c729a1c5d4d00af2725c295deff"
+      "assetHash": "87e1bfad2835c107cac698821c61fab0f10b25a7743fd611af8f86c5e3963373"
     },
     {
       "symbolId": "pnp",

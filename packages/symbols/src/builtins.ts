@@ -1,4 +1,4 @@
-import type { SymbolDefinition, SymbolPin, SymbolPrimitive } from "./schema.js";
+import type { SymbolDefinition, SymbolPin } from "./schema.js";
 import { requireRazaviCatalogSymbol } from "./razavi-catalog.js";
 
 function pin(
@@ -14,161 +14,6 @@ function pin(
     at: { x, y },
     direction,
     presentation: { visibility: "visible", leadLength: 10 },
-  };
-}
-
-function migratedThreeTerminalMosArrow(id: "nmos3" | "pmos3"): SymbolPrimitive {
-  return {
-    kind: "polygon",
-    points:
-      id === "nmos3"
-        ? [
-            { x: 10, y: 14 },
-            { x: 2, y: 10 },
-            { x: 4, y: 19 },
-          ]
-        : [
-            { x: 2, y: -14 },
-            { x: 10, y: -10 },
-            { x: 8, y: -19 },
-          ],
-    fill: "foreground",
-    part: "source-arrow",
-  };
-}
-
-function normalizedThreeTerminalVariantArrow(
-  id: "nmos" | "pmos",
-): SymbolPrimitive {
-  const migrated = migratedThreeTerminalMosArrow(
-    id === "nmos" ? "nmos3" : "pmos3",
-  );
-  if (id === "nmos" || migrated.kind !== "polygon") return migrated;
-  return {
-    ...migrated,
-    // The reviewed four-pin PMOS keeps the canonical D-top/S-bottom pin
-    // orientation. Reflect only the migrated PMOS artwork so the existing
-    // placement transform puts its source arrow on the rendered top branch.
-    points: migrated.points.map((point) => ({ x: point.x, y: -point.y })),
-  };
-}
-
-function mosSymbol(id: "nmos" | "pmos", name: string): SymbolDefinition {
-  const thin = {
-    strokeWidth: 1.2,
-    lineCap: "round" as const,
-    lineJoin: "round" as const,
-  };
-  const thick = { ...thin, strokeWidth: 2.16 };
-  const arrow =
-    id === "nmos"
-      ? [
-          { x: -2, y: 0 },
-          { x: 7, y: -5 },
-          { x: 7, y: 5 },
-        ]
-      : [
-          { x: 16, y: 0 },
-          { x: 7, y: -5 },
-          { x: 7, y: 5 },
-        ];
-  return {
-    schemaVersion: 1,
-    id,
-    name,
-    viewBox: { x: -30, y: -30, width: 60, height: 60 },
-    pins: [
-      pin("D", "drain", 20, -30, "north"),
-      pin("G", "gate", -30, 0, "west"),
-      pin("S", "source", 20, 30, "south"),
-      pin("B", "bulk", 30, 0, "east"),
-    ],
-    primitives: [
-      {
-        kind: "line",
-        from: { x: -30, y: 0 },
-        to: { x: -17, y: 0 },
-        style: thin,
-      },
-      {
-        kind: "line",
-        from: { x: -17, y: -14 },
-        to: { x: -17, y: 14 },
-        style: thick,
-      },
-      {
-        kind: "line",
-        from: { x: -10, y: -20 },
-        to: { x: -10, y: 20 },
-        style: thick,
-      },
-      {
-        kind: "line",
-        from: { x: -10, y: -14 },
-        to: { x: 20, y: -14 },
-        style: thin,
-      },
-      {
-        kind: "line",
-        from: { x: 20, y: -30 },
-        to: { x: 20, y: -14 },
-        style: thin,
-      },
-      {
-        kind: "line",
-        from: { x: -10, y: 14 },
-        to: { x: 20, y: 14 },
-        style: thin,
-      },
-      {
-        kind: "line",
-        from: { x: 20, y: 14 },
-        to: { x: 20, y: 30 },
-        style: thin,
-      },
-      {
-        kind: "line",
-        from: { x: -10, y: 0 },
-        to: { x: 30, y: 0 },
-        part: "bulk-lead",
-        style: thin,
-      },
-      {
-        kind: "polygon",
-        points: arrow,
-        fill: "foreground",
-        part: "bulk-lead",
-      },
-    ],
-    variants: [
-      {
-        id: "textbook-3terminal",
-        hiddenPinNames: ["B"],
-        hiddenPrimitiveParts: ["bulk-lead"],
-        additionalPrimitives: [normalizedThreeTerminalVariantArrow(id)],
-      },
-    ],
-    aliases: [id === "nmos" ? "mos-n" : "mos-p"],
-  };
-}
-
-function threeTerminalMosSymbol(
-  id: "nmos3" | "pmos3",
-  name: string,
-): SymbolDefinition {
-  const isNmos = id === "nmos3";
-  const base = mosSymbol(isNmos ? "nmos" : "pmos", name);
-  const body = base.primitives.filter(
-    (primitive) => primitive.part !== "bulk-lead",
-  );
-  return {
-    ...base,
-    id,
-    name,
-    pins: base.pins.filter((candidate) => candidate.name !== "B"),
-    primitives: [...body, migratedThreeTerminalMosArrow(id)],
-    variants: [],
-    aliases: [isNmos ? "mos-n-3" : "mos-p-3"],
   };
 }
 
@@ -501,6 +346,7 @@ const catalogGround = requireRazaviCatalogSymbol("ground");
 const catalogInductor = requireRazaviCatalogSymbol("inductor");
 const catalogResistor = requireRazaviCatalogSymbol("resistor");
 const catalogNmos = requireRazaviCatalogSymbol("nmos");
+const catalogNmos3 = requireRazaviCatalogSymbol("nmos3");
 const catalogNpn = requireRazaviCatalogSymbol("npn");
 const catalogPmos = requireRazaviCatalogSymbol("pmos");
 const catalogPmos3 = requireRazaviCatalogSymbol("pmos3");
@@ -514,7 +360,7 @@ export const builtInSymbols: readonly SymbolDefinition[] = [
   catalogInductor,
   catalogNmos,
   catalogPmos,
-  threeTerminalMosSymbol("nmos3", "NMOS (3-terminal)"),
+  catalogNmos3,
   catalogPmos3,
   catalogGround,
   powerPortSymbol("vdd", "VDD Power Port"),

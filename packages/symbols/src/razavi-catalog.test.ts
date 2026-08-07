@@ -40,6 +40,7 @@ describe("Razavi symbol catalog", () => {
       ["ground", "GND", "reviewed"],
       ["inductor", "L", "reviewed"],
       ["nmos", "NMOS4", "reviewed"],
+      ["nmos3", "Nmos3.a", "provisional"],
       ["npn", "npn", "reviewed"],
       ["pmos", "PMOS4", "reviewed"],
       ["pmos3", "Pmos3.a", "provisional"],
@@ -92,7 +93,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses catalog objects in the built-in compatibility library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(13);
+    expect(razaviCatalogSymbols).toHaveLength(14);
     for (const catalogSymbol of razaviCatalogSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -102,12 +103,19 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
-  it("keeps provisional PMOS3 out of automatic mappings", () => {
-    expect(getRazaviCatalogEntry("pmos3")).toMatchObject({
-      reviewStatus: "provisional",
-      automaticMappings: [],
-      palette: true,
-    });
+  it("keeps provisional three-terminal MOS assets out of automatic mappings", () => {
+    for (const symbolId of ["nmos3", "pmos3"]) {
+      expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
+        reviewStatus: "provisional",
+        automaticMappings: [],
+        palette: true,
+        generation: {
+          kind: "vss-master-ir",
+          converterPath: "scripts/generate-visio-mos-assets.mjs",
+          converterVersion: 1,
+        },
+      });
+    }
   });
 
   it("keeps canonical MOS assets four-terminal and three-terminal mode visual-only", () => {
@@ -118,7 +126,7 @@ describe("Razavi symbol catalog", () => {
         symbol.variants.find((variant) => variant.id === "textbook-3terminal"),
       ).toMatchObject({ hiddenPinNames: ["B"] });
     }
-    expect(getRazaviCatalogEntry("nmos3")).toBeUndefined();
+    expect(getRazaviCatalogEntry("nmos3")?.reviewStatus).toBe("provisional");
   });
 
   it("classifies the VSS node as a semantic primitive, not a component", () => {

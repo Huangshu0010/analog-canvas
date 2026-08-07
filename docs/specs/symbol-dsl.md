@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.8`
+Version: `1.9`
 
 Owning phase: `Phase 0/1`
 
@@ -34,7 +34,8 @@ runtime symbols.
 Version 1 defines ID, name, integer-grid view box, electrical pins, vector
 primitives, visual variants, and aliases. A pin has name, role, anchor,
 direction, and visibility metadata. Primitives are line, polyline, polygon,
-circle, and path. A primitive may carry a stable `part`; a variant may hide
+circle, and path. Primitive geometry accepts finite decimal coordinates so a
+decoded source asset does not lose sub-unit geometry. A primitive may carry a stable `part`; a variant may hide
 parts and add reviewed presentation primitives as well as hide pin presentation
 without changing electrical pins. Polygon fill is explicitly `none` or
 `foreground`. A primitive may select semantic `strokeRole` (`normal`,
@@ -78,7 +79,7 @@ Snapshot and later audit can explain the choice.
   context-aware Net policy authorizes implicit presentation. Unknown or normal
   signal Nets therefore fail safe toward visibility.
 - Pin anchors use the canonical 10-unit electrical connection grid. Symbol
-  artwork may use arbitrary integer coordinates, but every pin anchor must be
+  artwork may use arbitrary finite decimal coordinates, but every pin anchor must be
   divisible by 10 on both axes. With grid-aligned instance placement, this
   keeps every terminal on-grid after rotation or mirroring, including
   multi-port devices whose pins cannot be aligned by translating the instance.
@@ -142,6 +143,10 @@ the JSON shape: `hiddenPinNames` is interpreted as implicit presentation by
 visible-connectivity consumers. Net-class-driven automatic selection remains
 a separate compatibility feature; Agents must not force this variant across
 all MOS instances without checking bulk connectivity.
+
+Symbol DSL 1.9 separates visual geometry precision from electrical grid
+precision. Primitive points may retain finite decimals decoded from VSS, while
+pin anchors and instance placement remain integer grid coordinates.
 
 ## Deterministic validation
 

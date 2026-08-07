@@ -16,8 +16,8 @@ describe("schematic style profiles", () => {
     expect(resolveSchematicStyleProfile("razavi-textbook-v1")).toBe(
       razaviTextbookProfile,
     );
-    expect(strokeWidthForRole(razaviTextbookProfile, "normal")).toBe(1.6);
-    expect(strokeWidthForRole(razaviTextbookProfile, "emphasis")).toBe(2.4);
+    expect(strokeWidthForRole(razaviTextbookProfile, "normal")).toBe(1.2);
+    expect(strokeWidthForRole(razaviTextbookProfile, "emphasis")).toBe(2.16);
     expect(razaviTextbookProfile.nodes).toEqual({
       junctionRadius: 3,
       portOriginRadius: 3,
@@ -33,7 +33,7 @@ describe("schematic style profiles", () => {
     });
     expect(
       resolvePrimitiveStrokeWidth(razaviTextbookProfile, undefined, 2),
-    ).toBe(2.4);
+    ).toBe(2.16);
     expect(
       resolvePrimitiveStrokeWidth(textbookMonochromeProfile, undefined, 2),
     ).toBe(2);

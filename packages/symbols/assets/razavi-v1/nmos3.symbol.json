@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "pmos3",
-  "name": "PMOS (3-terminal)",
+  "id": "nmos3",
+  "name": "NMOS (3-terminal)",
   "viewBox": {
     "x": -14,
     "y": -24,
@@ -54,7 +54,7 @@
       "kind": "line",
       "from": {
         "x": 20,
-        "y": 10.629921
+        "y": 11.338583
       },
       "to": {
         "x": 20,
@@ -69,12 +69,28 @@
     {
       "kind": "line",
       "from": {
-        "x": 11.805451,
+        "x": 4.245451,
         "y": -10.629921
       },
       "to": {
         "x": 20,
         "y": -10.629921
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 4.435784,
+        "y": 10.629921
+      },
+      "to": {
+        "x": 11,
+        "y": 10.629921
       },
       "part": "source-arrow",
       "style": {
@@ -87,37 +103,21 @@
       "kind": "polygon",
       "points": [
         {
-          "x": 4.245451,
-          "y": -10.629921
+          "x": 20,
+          "y": 10.629921
         },
         {
-          "x": 12.165451,
-          "y": -7.989921
+          "x": 11,
+          "y": 13.629921
         },
         {
-          "x": 12.165451,
-          "y": -13.269921
+          "x": 11,
+          "y": 7.629921
         }
       ],
       "fill": "foreground",
       "stroke": "none",
       "part": "source-arrow"
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 4.435784,
-        "y": 10.629921
-      },
-      "to": {
-        "x": 20,
-        "y": 10.629921
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
-      }
     },
     {
       "kind": "line",
@@ -185,5 +185,5 @@
     }
   ],
   "variants": [],
-  "aliases": ["mos-p-3"]
+  "aliases": ["mos-n-3"]
 }

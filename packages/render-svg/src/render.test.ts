@@ -78,11 +78,27 @@ describe("textbook monochrome SVG renderer", () => {
       "S",
       "B",
     ]);
-    expect(nmosBody).not.toContain('x1="-10" y1="0" x2="30" y2="0"');
-    expect(nmosBody).not.toContain('points="-2,0 7,-5 7,5"');
-    expect(nmosBody).toContain('points="10,14 2,10 4,19"');
-    expect(pmosBody).not.toContain('points="16,0 7,-5 7,5"');
-    expect(pmosBody).toContain('points="2,14 10,10 8,19"');
+    for (const [resolved, body] of [
+      [nmos, nmosBody],
+      [pmos, pmosBody],
+    ] as const) {
+      const hiddenArrow = resolved.definition.primitives.find(
+        (primitive) =>
+          primitive.kind === "polygon" && primitive.part === "bulk-lead",
+      );
+      const visibleArrow = resolved.variant?.additionalPrimitives?.find(
+        (primitive) => primitive.kind === "polygon",
+      );
+      if (hiddenArrow?.kind !== "polygon" || visibleArrow?.kind !== "polygon") {
+        throw new Error("MOS variant must replace one decoded Visio arrow");
+      }
+      const points = (primitive: {
+        points: readonly { x: number; y: number }[];
+      }) => primitive.points.map((point) => `${point.x},${point.y}`).join(" ");
+      expect(body).not.toContain(`points="${points(hiddenArrow)}"`);
+      expect(body).toContain(`points="${points(visibleArrow)}"`);
+      expect(body).toContain('fill="#000" stroke="none"');
+    }
   });
 
   it("renders upright formal port names for a rotated hierarchy symbol", () => {
@@ -152,7 +168,7 @@ describe("textbook monochrome SVG renderer", () => {
           `transform="translate(100 80) rotate(${rotation})${expectedMirror}"`,
         );
         expect(scene.formalBody).toContain(
-          `<text x="100" y="124" text-anchor="middle">M1</text>`,
+          `<text x="100" y="118" text-anchor="middle">M1</text>`,
         );
         expect(scene.viewBox.width).toBeGreaterThan(0);
         expect(scene.viewBox.height).toBeGreaterThan(0);
@@ -261,7 +277,7 @@ describe("textbook monochrome SVG renderer", () => {
 
     expect(svg).toContain('data-style-profile="razavi-textbook-v1"');
     expect(svg).toContain('stroke="#202020" stroke-width="1.6"');
-    expect(svg).toContain('stroke-width="2.4"');
+    expect(svg).toContain('stroke-width="2.16"');
     expect(svg).toContain('stroke-linecap="butt"');
     expect(svg).toContain('stroke-miterlimit="4"');
     expect(svg).toContain('r="3" fill="#202020"');
@@ -308,7 +324,7 @@ describe("textbook monochrome SVG renderer", () => {
     const widths = new Set(
       [...svg.matchAll(/stroke-width="([^"]+)"/gu)].map((match) => match[1]),
     );
-    expect([...widths].sort()).toEqual(["1.6", "1.8", "2.4"]);
+    expect([...widths].sort()).toEqual(["1.2", "1.6", "1.8", "2.16"]);
     expect(svg).not.toContain("vector-effect");
   });
 

@@ -2,6 +2,10 @@ import { PointSchema, RectSchema, StableIdSchema } from "@icm/model";
 import { z } from "zod";
 
 export const SYMBOL_CONNECTION_GRID = 10;
+const SymbolGeometryPointSchema = z.strictObject({
+  x: z.number().finite(),
+  y: z.number().finite(),
+});
 
 export const SymbolPinSchema = z.strictObject({
   name: z.string().min(1),
@@ -39,20 +43,20 @@ const SymbolPrimitiveStyleSchema = z
 export const SymbolPrimitiveSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("line"),
-    from: PointSchema,
-    to: PointSchema,
+    from: SymbolGeometryPointSchema,
+    to: SymbolGeometryPointSchema,
     part: StableIdSchema.optional(),
     style: SymbolPrimitiveStyleSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("polyline"),
-    points: z.array(PointSchema).min(2),
+    points: z.array(SymbolGeometryPointSchema).min(2),
     part: StableIdSchema.optional(),
     style: SymbolPrimitiveStyleSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("circle"),
-    center: PointSchema,
+    center: SymbolGeometryPointSchema,
     radius: z.number().positive(),
     part: StableIdSchema.optional(),
     style: SymbolPrimitiveStyleSchema.optional(),
@@ -65,8 +69,9 @@ export const SymbolPrimitiveSchema = z.discriminatedUnion("kind", [
   }),
   z.strictObject({
     kind: z.literal("polygon"),
-    points: z.array(PointSchema).min(3),
+    points: z.array(SymbolGeometryPointSchema).min(3),
     fill: z.enum(["none", "foreground"]),
+    stroke: z.enum(["none", "foreground"]).optional(),
     part: StableIdSchema.optional(),
     style: SymbolPrimitiveStyleSchema.optional(),
   }),

@@ -5,6 +5,7 @@ import { transformPoint } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
 import { builtInSymbols } from "./builtins.js";
+import { requireRazaviCatalogSymbol } from "./razavi-catalog.js";
 import { InMemorySymbolResolver } from "./resolver.js";
 import { SYMBOL_CONNECTION_GRID, SymbolDefinitionSchema } from "./schema.js";
 
@@ -107,31 +108,21 @@ describe("initial built-in Symbol Library", () => {
       "B",
     ]);
     expect(nmos?.variant?.hiddenPinNames).toEqual(["B"]);
-    expect(nmos?.variant?.hiddenPrimitiveParts).toEqual(["bulk-lead"]);
-    expect(nmos?.variant?.additionalPrimitives).toEqual([
-      {
-        kind: "polygon",
-        points: [
-          { x: 10, y: 14 },
-          { x: 2, y: 10 },
-          { x: 4, y: 19 },
-        ],
-        fill: "foreground",
-        part: "source-arrow",
-      },
+    expect(nmos?.variant?.hiddenPrimitiveParts).toEqual([
+      "bulk-lead",
+      "source-arrow-host",
     ]);
-    expect(pmos?.variant?.additionalPrimitives).toEqual([
-      {
-        kind: "polygon",
-        points: [
-          { x: 2, y: 14 },
-          { x: 10, y: 10 },
-          { x: 8, y: 19 },
-        ],
-        fill: "foreground",
-        part: "source-arrow",
-      },
-    ]);
+    for (const resolved of [nmos, pmos]) {
+      expect(resolved?.variant?.additionalPrimitives).toEqual([
+        expect.objectContaining({ kind: "line", part: "source-arrow" }),
+        expect.objectContaining({
+          kind: "polygon",
+          fill: "foreground",
+          stroke: "none",
+          part: "source-arrow",
+        }),
+      ]);
+    }
     for (const symbolId of ["nmos3", "pmos3"]) {
       const symbol = builtInSymbols.find(
         (candidate) => candidate.id === symbolId,
@@ -139,6 +130,7 @@ describe("initial built-in Symbol Library", () => {
       expect(
         symbol?.primitives.filter((primitive) => primitive.kind === "polygon"),
       ).toHaveLength(1);
+      expect(symbol).toBe(requireRazaviCatalogSymbol(symbolId));
     }
   });
 
@@ -157,12 +149,13 @@ describe("initial built-in Symbol Library", () => {
     const pmosArrow = pmos.primitives.find(
       (primitive) => primitive.kind === "polygon",
     );
-    expect(nmosArrow?.kind === "polygon" ? nmosArrow.points[0]?.x : null).toBe(
-      -2,
-    );
-    expect(pmosArrow?.kind === "polygon" ? pmosArrow.points[0]?.x : null).toBe(
-      16,
-    );
+    expect(nmosArrow?.kind === "polygon" && nmosArrow.stroke).toBe("none");
+    expect(pmosArrow?.kind === "polygon" && pmosArrow.stroke).toBe("none");
+    if (nmosArrow?.kind !== "polygon" || pmosArrow?.kind !== "polygon") {
+      throw new Error("MOS assets must contain decoded Visio arrowheads");
+    }
+    expect(nmosArrow.points[0]!.x).toBeLessThan(nmosArrow.points[1]!.x);
+    expect(pmosArrow.points[0]!.x).toBeGreaterThan(pmosArrow.points[1]!.x);
   });
 
   it("matches the reviewed electrical pins from the owned VSS manifest", () => {

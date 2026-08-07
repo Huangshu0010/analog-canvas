@@ -796,3 +796,27 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: unrelated documentation and OTA work remained
   untouched and unstaged.
 - Commit status: ready for the dedicated divider fixture commit.
+
+## 2026-08-07 - Generate MOS artwork from Visio evidence
+
+- Target: replace guessed/procedural MOS geometry with a deterministic,
+  independently auditable VSS-to-runtime path.
+- Changed areas: four normalized Visio reference SVGs, Master-IR MOS generator,
+  four generated catalog assets, generated adapter, built-in resolver,
+  finite-decimal/fill-only Symbol DSL support, exact Razavi stroke roles,
+  comparison/contact sheets, fixture routes, and SVG/PNG/PDF goldens.
+- Fidelity result: `NMOS4`, `PMOS4`, `Nmos3.a`, and `Pmos3.a` retain decoded
+  intrinsic geometry, child transforms, round caps/joins, 1.2/2.16 point
+  weights, and Visio Arrow Type 13 direction/size. The independent 50% overlay
+  visually matches the device body and arrow; only external lead length changes
+  to keep pin anchors on the 10-unit electrical grid.
+- Runtime/electrical result: all four MOS symbols now resolve to catalog
+  objects. Canonical NMOS/PMOS remain D/G/S/B; the textbook variant remains
+  presentation-only. Provisional NMOS3/PMOS3 expose no automatic mappings.
+- Validation: deterministic four-reference Visio COM check, MOS/catalog/review
+  regeneration checks, 155 tests in 37 files, typecheck, build, Phase 1/5
+  visual checks, Phase 7 export checks, PNG inspection, formatting, and
+  `git diff --check` passed.
+- Dirty-state decision: concurrent documentation, OTA, divide-by-two,
+  Agent-layout, and labeled-connectivity work remained read-only and unstaged.
+- Commit status: ready for `feat(symbols): generate MOS artwork from Visio evidence`.

@@ -69,9 +69,25 @@ review-manifest coverage, and rejects decoder diagnostics. Connection points
 remain evidence only; catalog pin names and order still come from explicit
 human review.
 
-For fidelity audits, individual Masters may also be exported from a read-only
-Visio session and compared visually with normalized SVG. Such exports are
-temporary evidence and must not be committed as runtime assets. Geometry may
-enter the migration-candidate catalog before pin review, but its manifest
-status must remain `geometry-migrated-pin-review-required` until a human
-confirms the electrical mapping.
+For MOS fidelity audits, `Export-VisioMosReferences.ps1` exports `NMOS4`,
+`PMOS4`, `Nmos3.a`, and `Pmos3.a` one at a time from a read-only stencil. Each
+isolated Visio process is terminated after its export because Visio COM does
+not reliably return from `Quit()` for this VSS. The script verifies the stencil
+hash before and after, normalizes filename-only SVG metadata, and supports a
+byte-for-byte `-Check` mode:
+
+```powershell
+pnpm symbols:visio-mos:reference
+pnpm symbols:visio-mos:reference:check
+```
+
+The checked SVGs under `fixtures/visual-reference/visio-mos/` are independent
+comparison evidence, not runtime assets. Runtime MOS JSON is generated from
+Master IR; pin names still come only from the human review manifest. The
+fidelity board embeds both the independent Visio SVG and runtime rendering so
+a self-render cannot masquerade as source comparison.
+
+Other ad hoc Master exports remain temporary evidence. Geometry may enter the
+migration-candidate catalog before pin review, but its manifest status must
+remain `geometry-migrated-pin-review-required` until a human confirms the
+electrical mapping.

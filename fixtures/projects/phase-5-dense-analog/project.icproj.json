@@ -190,16 +190,16 @@
           "netId": "net-vdd",
           "from": { "kind": "junction", "junctionId": "junction-vdd" },
           "to": { "kind": "terminal", "instanceId": "M3", "pinName": "S" },
-          "waypoints": [],
-          "segmentModes": ["trunk"]
+          "waypoints": [{ "x": 170, "y": 50 }],
+          "segmentModes": ["trunk", "trunk"]
         },
         {
           "id": "route-vdd-right",
           "netId": "net-vdd",
           "from": { "kind": "junction", "junctionId": "junction-vdd" },
           "to": { "kind": "terminal", "instanceId": "M4", "pinName": "S" },
-          "waypoints": [],
-          "segmentModes": ["trunk"]
+          "waypoints": [{ "x": 310, "y": 50 }],
+          "segmentModes": ["trunk", "trunk"]
         },
         {
           "id": "route-vss-feed",
@@ -214,16 +214,16 @@
           "netId": "net-vss",
           "from": { "kind": "terminal", "instanceId": "M1", "pinName": "S" },
           "to": { "kind": "junction", "junctionId": "junction-vss" },
-          "waypoints": [],
-          "segmentModes": ["trunk"]
+          "waypoints": [{ "x": 190, "y": 230 }],
+          "segmentModes": ["trunk", "trunk"]
         },
         {
           "id": "route-vss-right",
           "netId": "net-vss",
           "from": { "kind": "terminal", "instanceId": "M2", "pinName": "S" },
           "to": { "kind": "junction", "junctionId": "junction-vss" },
-          "waypoints": [],
-          "segmentModes": ["trunk"]
+          "waypoints": [{ "x": 290, "y": 230 }],
+          "segmentModes": ["trunk", "trunk"]
         },
         {
           "id": "route-vinp",
@@ -246,15 +246,15 @@
           "netId": "net-voutp",
           "from": { "kind": "terminal", "instanceId": "M3", "pinName": "D" },
           "to": { "kind": "junction", "junctionId": "junction-outp" },
-          "waypoints": [],
-          "segmentModes": ["manual"]
+          "waypoints": [{ "x": 170, "y": 140 }],
+          "segmentModes": ["manual", "manual"]
         },
         {
           "id": "route-outp-bottom",
           "netId": "net-voutp",
           "from": { "kind": "junction", "junctionId": "junction-outp" },
           "to": { "kind": "terminal", "instanceId": "M1", "pinName": "D" },
-          "waypoints": [{ "x": 160, "y": 170 }],
+          "waypoints": [{ "x": 160, "y": 180 }],
           "segmentModes": ["manual", "manual"]
         },
         {
@@ -270,7 +270,7 @@
           "netId": "net-voutn",
           "from": { "kind": "terminal", "instanceId": "M4", "pinName": "D" },
           "to": { "kind": "junction", "junctionId": "junction-outn" },
-          "waypoints": [{ "x": 280, "y": 110 }],
+          "waypoints": [{ "x": 310, "y": 140 }],
           "segmentModes": ["manual", "manual"]
         },
         {
@@ -278,8 +278,8 @@
           "netId": "net-voutn",
           "from": { "kind": "junction", "junctionId": "junction-outn" },
           "to": { "kind": "terminal", "instanceId": "M2", "pinName": "D" },
-          "waypoints": [],
-          "segmentModes": ["manual"]
+          "waypoints": [{ "x": 280, "y": 180 }],
+          "segmentModes": ["manual", "manual"]
         },
         {
           "id": "route-outn-port",

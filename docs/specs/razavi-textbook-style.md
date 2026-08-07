@@ -312,8 +312,9 @@ All values are scene units at `100` scene units per inch.
 | Token                |   Value | Use                                            |
 | -------------------- | ------: | ---------------------------------------------- |
 | `wireStroke`         |   `1.6` | Conductors                                     |
-| `symbolStroke`       |   `1.6` | Normal component geometry                      |
-| `emphasisStroke`     |   `2.4` | MOS gates and intentionally heavy VSS geometry |
+| `symbolStroke`       |   `1.6` | Unmigrated component compatibility geometry    |
+| `normalStroke`       |   `1.2` | Reviewed normal Visio component geometry       |
+| `emphasisStroke`     |  `2.16` | MOS gates and reviewed heavy Visio geometry    |
 | `supplyStroke`       |   `1.8` | GND/VDD/VSS bars                               |
 | `annotationStroke`   |   `1.6` | Current arrows and polarity geometry           |
 | `junctionRadius`     |   `3.0` | Explicit electrical Junction                   |
@@ -329,9 +330,11 @@ All values are scene units at `100` scene units per inch.
 | `strokeLinejoin`     | `miter` | Formal orthogonal and polygon corners          |
 | `strokeMiterLimit`   |     `4` | Formal joins                                   |
 
-Only the semantic roles above may choose line widths. Imported arbitrary VSS
-weights are clustered into `symbolStroke`, `emphasisStroke`, or
-`annotationStroke`; reviewed exceptions require a catalog note and golden.
+Only the semantic roles above may choose line widths. A source-generated asset
+maps reviewed VSS weights to exact profile roles: 1.2 point becomes `normal`
+and 2.16 point becomes `emphasis`. Unknown source weights block generation;
+they are not silently clustered. Reviewed exceptions require a catalog note
+and independent source/runtime comparison.
 Until every legacy built-in is catalog-migrated, the renderer maps a legacy
 numeric width below `1.8` to `normal` and a width at or above `1.8` to
 `emphasis` when this profile is selected. The legacy profile continues to use
@@ -367,6 +370,16 @@ connectivity data and never become formal circles.
 - MOS/BJT intrinsic arrows belong to component geometry and use the catalog's
   semantic `emphasis` or `normal` role as reviewed.
 - No arrow geometry is represented as a text glyph.
+
+### Visio-derived component fidelity
+
+Catalog assets generated from `circuit.vss` retain finite-decimal primitive
+coordinates, child transforms, line caps/joins, and explicit filled arrowhead
+polygons decoded from the source. The runtime never uses SVG marker defaults
+or a guessed MOS triangle. Electrical pin anchors remain on the 10-unit grid;
+the converter may extend or shorten only the external terminal lead along its
+axis. This normalization is shown explicitly in the independent overlay board
+and must not move intrinsic body geometry.
 
 A `voltage` annotation renders separate upright `+` and Unicode minus polarity
 marks around the annotation axis and composes its voltage label through

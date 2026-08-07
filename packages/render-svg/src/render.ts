@@ -84,7 +84,7 @@ function renderPrimitive(
     case "path":
       return `<path d="${escapeXml(primitive.data)}"${style}/>`;
     case "polygon":
-      return `<polygon points="${pointList(primitive.points)}" fill="${primitive.fill === "foreground" ? profile.foreground : "none"}"${style}/>`;
+      return `<polygon points="${pointList(primitive.points)}" fill="${primitive.fill === "foreground" ? profile.foreground : "none"}"${primitive.stroke === undefined ? "" : ` stroke="${primitive.stroke === "foreground" ? profile.foreground : "none"}"`}${style}/>`;
   }
 }
 

@@ -52,7 +52,7 @@ const primitive = (item) => {
     case "polyline":
       return `<polyline points="${points(item.points)}"${style}/>`;
     case "polygon":
-      return `<polygon points="${points(item.points)}" fill="${item.fill === "foreground" ? "#000" : "none"}"${style}/>`;
+      return `<polygon points="${points(item.points)}" fill="${item.fill === "foreground" ? "#000" : "none"}"${item.stroke === undefined ? "" : ` stroke="${item.stroke === "foreground" ? "#000" : "none"}"`}${style}/>`;
     case "circle":
       return `<circle cx="${item.center.x}" cy="${item.center.y}" r="${item.radius}"${style}/>`;
     case "path":

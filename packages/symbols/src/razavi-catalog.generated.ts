@@ -117,12 +117,46 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       decoderVersion: "0.1.0",
     },
     reviewStatus: "reviewed",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-mos/nmos4.svg",
+      converterPath: "scripts/generate-visio-mos-assets.mjs",
+      converterVersion: 1,
+    },
     pinOrder: ["D", "G", "S", "B"],
     palette: true,
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "8b0a28ddc9041501287c42c3808bbf70ec7c087ee9f2404f87e95473f3b63fb3",
+      "2b050282019f63daef280d385b089a66e0649b70c18aa6862cd1558574b3f477",
+  },
+  {
+    symbolId: "nmos3",
+    name: "NMOS (3-terminal)",
+    category: "transistor",
+    source: {
+      stencilHash:
+        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+      masterNameU: "Nmos3.a",
+      decoderVersion: "0.1.0",
+    },
+    reviewStatus: "provisional",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-mos/nmos3-a.svg",
+      converterPath: "scripts/generate-visio-mos-assets.mjs",
+      converterVersion: 1,
+    },
+    pinOrder: ["D", "G", "S"],
+    palette: true,
+    automaticMappings: [],
+    assetPath: "nmos3.symbol.json",
+    assetHash:
+      "9a217288110f3613fdf782aa7a4fcfb79c08e69d985b841f732221954a8a7e1b",
   },
   {
     symbolId: "npn",
@@ -153,12 +187,20 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       decoderVersion: "0.1.0",
     },
     reviewStatus: "reviewed",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-mos/pmos4.svg",
+      converterPath: "scripts/generate-visio-mos-assets.mjs",
+      converterVersion: 1,
+    },
     pinOrder: ["D", "G", "S", "B"],
     palette: true,
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "c43daa01ca0d970ec431be2f3fe2eb074187037f42ff40978cce073859fcd1f7",
+      "5384c012ef81b47209924cada10246ad08ee8c5621cefc5201b6e4210f2810f0",
   },
   {
     symbolId: "pmos3",
@@ -171,12 +213,20 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       decoderVersion: "0.1.0",
     },
     reviewStatus: "provisional",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-mos/pmos3-a.svg",
+      converterPath: "scripts/generate-visio-mos-assets.mjs",
+      converterVersion: 1,
+    },
     pinOrder: ["D", "G", "S"],
     palette: true,
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "e7f4281417f841c611d25c48380c6f2437613c729a1c5d4d00af2725c295deff",
+      "87e1bfad2835c107cac698821c61fab0f10b25a7743fd611af8f86c5e3963373",
   },
   {
     symbolId: "pnp",
@@ -705,18 +755,18 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "nmos",
     name: "NMOS",
     viewBox: {
-      x: -30,
-      y: -30,
-      width: 60,
-      height: 60,
+      x: -24,
+      y: -24,
+      width: 48,
+      height: 48,
     },
     pins: [
       {
         name: "D",
         role: "drain",
         at: {
-          x: 20,
-          y: -30,
+          x: 10,
+          y: -20,
         },
         direction: "north",
         presentation: {
@@ -728,7 +778,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "G",
         role: "gate",
         at: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         direction: "west",
@@ -741,8 +791,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "S",
         role: "source",
         at: {
-          x: 20,
-          y: 30,
+          x: 10,
+          y: 20,
         },
         direction: "south",
         presentation: {
@@ -754,7 +804,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "B",
         role: "bulk",
         at: {
-          x: 30,
+          x: 20,
           y: 0,
         },
         direction: "east",
@@ -768,12 +818,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -30,
-          y: 0,
+          x: -5.754549,
+          y: -10.629921,
         },
         to: {
-          x: -17,
-          y: 0,
+          x: 10,
+          y: -10.629921,
         },
         style: {
           strokeRole: "normal",
@@ -784,12 +834,29 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -17,
-          y: -14,
+          x: -5.564216,
+          y: 10.629921,
         },
         to: {
-          x: -17,
-          y: 14,
+          x: 10,
+          y: 10.629921,
+        },
+        part: "source-arrow-host",
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -5.944882,
+          y: -15.944882,
+        },
+        to: {
+          x: -5.944882,
+          y: 15.944882,
         },
         style: {
           strokeRole: "emphasis",
@@ -800,30 +867,30 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -10,
-          y: -20,
+          x: -11.259843,
+          y: -10.629921,
         },
         to: {
-          x: -10,
+          x: -11.259843,
+          y: 10.629921,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: 10.629921,
+        },
+        to: {
+          x: 10,
           y: 20,
         },
         style: {
-          strokeRole: "emphasis",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -10,
-          y: -14,
-        },
-        to: {
-          x: 20,
-          y: -14,
-        },
-        style: {
           strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
@@ -832,59 +899,43 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 20,
-          y: -30,
-        },
-        to: {
-          x: 20,
-          y: -14,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -10,
-          y: 14,
-        },
-        to: {
-          x: 20,
-          y: 14,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: 14,
-        },
-        to: {
-          x: 20,
-          y: 30,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -10,
+          x: -11.259843,
           y: 0,
         },
         to: {
-          x: 30,
+          x: -20,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: -10.913386,
+        },
+        to: {
+          x: 10,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 3.899842,
+          y: 0,
+        },
+        to: {
+          x: 20,
           y: 0,
         },
         part: "bulk-lead",
@@ -898,19 +949,20 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -2,
+            x: -4.740158,
             y: 0,
           },
           {
-            x: 7,
-            y: -5,
+            x: 4.259842,
+            y: 3,
           },
           {
-            x: 7,
-            y: 5,
+            x: 4.259842,
+            y: -3,
           },
         ],
         fill: "foreground",
+        stroke: "none",
         part: "bulk-lead",
       },
     ],
@@ -918,31 +970,238 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         id: "textbook-3terminal",
         hiddenPinNames: ["B"],
-        hiddenPrimitiveParts: ["bulk-lead"],
+        hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
         additionalPrimitives: [
+          {
+            kind: "line",
+            from: {
+              x: -5.564216,
+              y: 10.629921,
+            },
+            to: {
+              x: 1,
+              y: 10.629921,
+            },
+            part: "source-arrow",
+            style: {
+              strokeRole: "normal",
+              lineCap: "round",
+              lineJoin: "round",
+            },
+          },
           {
             kind: "polygon",
             points: [
               {
                 x: 10,
-                y: 14,
+                y: 10.629921,
               },
               {
-                x: 2,
-                y: 10,
+                x: 1,
+                y: 13.629921,
               },
               {
-                x: 4,
-                y: 19,
+                x: 1,
+                y: 7.629921,
               },
             ],
             fill: "foreground",
+            stroke: "none",
             part: "source-arrow",
           },
         ],
       },
     ],
     aliases: ["mos-n"],
+  },
+  {
+    schemaVersion: 1,
+    id: "nmos3",
+    name: "NMOS (3-terminal)",
+    viewBox: {
+      x: -14,
+      y: -24,
+      width: 38,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "D",
+        role: "drain",
+        at: {
+          x: 20,
+          y: -20,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "G",
+        role: "gate",
+        at: {
+          x: -10,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "S",
+        role: "source",
+        at: {
+          x: 20,
+          y: 20,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: 11.338583,
+        },
+        to: {
+          x: 20,
+          y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 4.245451,
+          y: -10.629921,
+        },
+        to: {
+          x: 20,
+          y: -10.629921,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 4.435784,
+          y: 10.629921,
+        },
+        to: {
+          x: 11,
+          y: 10.629921,
+        },
+        part: "source-arrow",
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 20,
+            y: 10.629921,
+          },
+          {
+            x: 11,
+            y: 13.629921,
+          },
+          {
+            x: 11,
+            y: 7.629921,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+        part: "source-arrow",
+      },
+      {
+        kind: "line",
+        from: {
+          x: 4.055118,
+          y: -15.944882,
+        },
+        to: {
+          x: 4.055118,
+          y: 15.944882,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -1.259843,
+          y: -10.629921,
+        },
+        to: {
+          x: -1.259843,
+          y: 10.629921,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: -10.771654,
+        },
+        to: {
+          x: 20,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -1.259843,
+          y: 0,
+        },
+        to: {
+          x: -10,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["mos-n-3"],
   },
   {
     schemaVersion: 1,
@@ -1089,18 +1348,18 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "pmos",
     name: "PMOS",
     viewBox: {
-      x: -30,
-      y: -30,
-      width: 60,
-      height: 60,
+      x: -24,
+      y: -24,
+      width: 48,
+      height: 48,
     },
     pins: [
       {
         name: "D",
         role: "drain",
         at: {
-          x: 20,
-          y: -30,
+          x: 10,
+          y: -20,
         },
         direction: "north",
         presentation: {
@@ -1112,7 +1371,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "G",
         role: "gate",
         at: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         direction: "west",
@@ -1125,8 +1384,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "S",
         role: "source",
         at: {
-          x: 20,
-          y: 30,
+          x: 10,
+          y: 20,
         },
         direction: "south",
         presentation: {
@@ -1138,7 +1397,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "B",
         role: "bulk",
         at: {
-          x: 30,
+          x: 20,
           y: 0,
         },
         direction: "east",
@@ -1152,149 +1411,151 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -30,
-          y: 0,
+          x: -5.754549,
+          y: -10.629921,
         },
         to: {
-          x: -17,
-          y: 0,
+          x: 10,
+          y: -10.629921,
         },
+        part: "source-arrow-host",
         style: {
-          lineCap: "round",
-          lineJoin: "round",
           strokeRole: "normal",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -17,
-          y: -14,
-        },
-        to: {
-          x: -17,
-          y: 14,
-        },
-        style: {
           lineCap: "round",
           lineJoin: "round",
-          strokeRole: "emphasis",
         },
       },
       {
         kind: "line",
         from: {
-          x: -10,
-          y: -20,
+          x: -5.564216,
+          y: 10.629921,
         },
         to: {
-          x: -10,
+          x: 10,
+          y: 10.629921,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -5.944882,
+          y: -15.944882,
+        },
+        to: {
+          x: -5.944882,
+          y: 15.944882,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -11.259843,
+          y: -10.629921,
+        },
+        to: {
+          x: -11.259843,
+          y: 10.629921,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: 10.629921,
+        },
+        to: {
+          x: 10,
           y: 20,
         },
         style: {
-          lineCap: "round",
-          lineJoin: "round",
-          strokeRole: "emphasis",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -10,
-          y: -14,
-        },
-        to: {
-          x: 20,
-          y: -14,
-        },
-        style: {
-          lineCap: "round",
-          lineJoin: "round",
           strokeRole: "normal",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: -30,
-        },
-        to: {
-          x: 20,
-          y: -14,
-        },
-        style: {
           lineCap: "round",
           lineJoin: "round",
-          strokeRole: "normal",
         },
       },
       {
         kind: "line",
         from: {
-          x: -10,
-          y: 14,
-        },
-        to: {
-          x: 20,
-          y: 14,
-        },
-        style: {
-          lineCap: "round",
-          lineJoin: "round",
-          strokeRole: "normal",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: 14,
-        },
-        to: {
-          x: 20,
-          y: 30,
-        },
-        style: {
-          lineCap: "round",
-          lineJoin: "round",
-          strokeRole: "normal",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -10,
+          x: -11.259843,
           y: 0,
         },
         to: {
-          x: 30,
+          x: -20,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: -10.913386,
+        },
+        to: {
+          x: 10,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -4.740158,
+          y: 0,
+        },
+        to: {
+          x: 11,
           y: 0,
         },
         part: "bulk-lead",
         style: {
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
-          strokeRole: "normal",
         },
       },
       {
         kind: "polygon",
         points: [
           {
-            x: 16,
+            x: 20,
             y: 0,
           },
           {
-            x: 7,
-            y: -5,
+            x: 11,
+            y: 3,
           },
           {
-            x: 7,
-            y: 5,
+            x: 11,
+            y: -3,
           },
         ],
         fill: "foreground",
+        stroke: "none",
         part: "bulk-lead",
       },
     ],
@@ -1302,25 +1563,43 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         id: "textbook-3terminal",
         hiddenPinNames: ["B"],
-        hiddenPrimitiveParts: ["bulk-lead"],
+        hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
         additionalPrimitives: [
+          {
+            kind: "line",
+            from: {
+              x: 1.805451,
+              y: -10.629921,
+            },
+            to: {
+              x: 10,
+              y: -10.629921,
+            },
+            part: "source-arrow",
+            style: {
+              strokeRole: "normal",
+              lineCap: "round",
+              lineJoin: "round",
+            },
+          },
           {
             kind: "polygon",
             points: [
               {
-                x: 2,
-                y: 14,
+                x: -5.754549,
+                y: -10.629921,
               },
               {
-                x: 10,
-                y: 10,
+                x: 2.165451,
+                y: -7.989921,
               },
               {
-                x: 8,
-                y: 19,
+                x: 2.165451,
+                y: -13.269921,
               },
             ],
             fill: "foreground",
+            stroke: "none",
             part: "source-arrow",
           },
         ],
@@ -1333,10 +1612,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "pmos3",
     name: "PMOS (3-terminal)",
     viewBox: {
-      x: -30,
-      y: -30,
-      width: 60,
-      height: 60,
+      x: -14,
+      y: -24,
+      width: 38,
+      height: 48,
     },
     pins: [
       {
@@ -1344,7 +1623,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "drain",
         at: {
           x: 20,
-          y: -30,
+          y: -20,
         },
         direction: "north",
         presentation: {
@@ -1356,7 +1635,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "G",
         role: "gate",
         at: {
-          x: -30,
+          x: -10,
           y: 0,
         },
         direction: "west",
@@ -1370,7 +1649,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "source",
         at: {
           x: 20,
-          y: 30,
+          y: 20,
         },
         direction: "south",
         presentation: {
@@ -1383,62 +1662,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -30,
-          y: 0,
+          x: 20,
+          y: 10.629921,
         },
         to: {
-          x: -17,
-          y: 0,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -17,
-          y: -14,
-        },
-        to: {
-          x: -17,
-          y: 14,
-        },
-        style: {
-          strokeRole: "emphasis",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -10,
-          y: -20,
-        },
-        to: {
-          x: -10,
+          x: 20,
           y: 20,
         },
         style: {
-          strokeRole: "emphasis",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -10,
-          y: -14,
-        },
-        to: {
-          x: 20,
-          y: -14,
-        },
-        style: {
           strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
@@ -1447,45 +1678,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 20,
-          y: -30,
+          x: 11.805451,
+          y: -10.629921,
         },
         to: {
           x: 20,
-          y: -14,
+          y: -10.629921,
         },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -10,
-          y: 14,
-        },
-        to: {
-          x: 20,
-          y: 14,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: 14,
-        },
-        to: {
-          x: 20,
-          y: 30,
-        },
+        part: "source-arrow",
         style: {
           strokeRole: "normal",
           lineCap: "round",
@@ -1496,20 +1696,101 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: 2,
-            y: -14,
+            x: 4.245451,
+            y: -10.629921,
           },
           {
-            x: 10,
-            y: -10,
+            x: 12.165451,
+            y: -7.989921,
           },
           {
-            x: 8,
-            y: -19,
+            x: 12.165451,
+            y: -13.269921,
           },
         ],
         fill: "foreground",
+        stroke: "none",
         part: "source-arrow",
+      },
+      {
+        kind: "line",
+        from: {
+          x: 4.435784,
+          y: 10.629921,
+        },
+        to: {
+          x: 20,
+          y: 10.629921,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 4.055118,
+          y: -15.944882,
+        },
+        to: {
+          x: 4.055118,
+          y: 15.944882,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -1.259843,
+          y: -10.629921,
+        },
+        to: {
+          x: -1.259843,
+          y: 10.629921,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: -10.771654,
+        },
+        to: {
+          x: 20,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -1.259843,
+          y: 0,
+        },
+        to: {
+          x: -10,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
       },
     ],
     variants: [],

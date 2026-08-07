@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.5`
+Version: `1.6`
 
 Owning phase: `Phase 1/5`
 
@@ -49,8 +49,8 @@ The proposed `razavi-textbook-v1` profile is also executable:
 foreground: "#202020"
 wireStroke: 1.6
 symbolStroke: 1.6
-normalStroke: 1.6
-emphasisStroke: 2.4
+normalStroke: 1.2
+emphasisStroke: 2.16
 supplyStroke: 1.8
 annotationStroke: 1.6
 junctionRadius: 3
@@ -83,7 +83,9 @@ Unknown persisted profile IDs are blocking render errors; the renderer never
 silently substitutes a profile. Semantic symbol roles resolve through the
 selected profile. Legacy numeric primitive widths remain literal only under
 `textbook-monochrome-v1`; Razavi output clusters them into profile-owned normal
-or emphasis widths until the source asset is explicitly migrated.
+or emphasis widths until the source asset is explicitly migrated. Migrated
+Visio assets use exact reviewed roles (`1.2` normal and `2.16` emphasis) and
+retain finite-decimal geometry.
 
 For Razavi formal output, a positioned signal Port renders as a filled origin
 circle. A Port attached to a `power-label` renders a supply bar instead of an

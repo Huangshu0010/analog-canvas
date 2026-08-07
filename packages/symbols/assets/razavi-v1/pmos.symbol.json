@@ -3,18 +3,18 @@
   "id": "pmos",
   "name": "PMOS",
   "viewBox": {
-    "x": -30,
-    "y": -30,
-    "width": 60,
-    "height": 60
+    "x": -24,
+    "y": -24,
+    "width": 48,
+    "height": 48
   },
   "pins": [
     {
       "name": "D",
       "role": "drain",
       "at": {
-        "x": 20,
-        "y": -30
+        "x": 10,
+        "y": -20
       },
       "direction": "north",
       "presentation": {
@@ -26,7 +26,7 @@
       "name": "G",
       "role": "gate",
       "at": {
-        "x": -30,
+        "x": -20,
         "y": 0
       },
       "direction": "west",
@@ -39,8 +39,8 @@
       "name": "S",
       "role": "source",
       "at": {
-        "x": 20,
-        "y": 30
+        "x": 10,
+        "y": 20
       },
       "direction": "south",
       "presentation": {
@@ -52,7 +52,7 @@
       "name": "B",
       "role": "bulk",
       "at": {
-        "x": 30,
+        "x": 20,
         "y": 0
       },
       "direction": "east",
@@ -66,149 +66,151 @@
     {
       "kind": "line",
       "from": {
-        "x": -30,
-        "y": 0
+        "x": -5.754549,
+        "y": -10.629921
       },
       "to": {
-        "x": -17,
-        "y": 0
+        "x": 10,
+        "y": -10.629921
       },
+      "part": "source-arrow-host",
       "style": {
+        "strokeRole": "normal",
         "lineCap": "round",
-        "lineJoin": "round",
-        "strokeRole": "normal"
+        "lineJoin": "round"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": -17,
-        "y": -14
+        "x": -5.564216,
+        "y": 10.629921
       },
       "to": {
-        "x": -17,
-        "y": 14
+        "x": 10,
+        "y": 10.629921
       },
       "style": {
+        "strokeRole": "normal",
         "lineCap": "round",
-        "lineJoin": "round",
-        "strokeRole": "emphasis"
+        "lineJoin": "round"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": -10,
-        "y": -20
+        "x": -5.944882,
+        "y": -15.944882
       },
       "to": {
-        "x": -10,
+        "x": -5.944882,
+        "y": 15.944882
+      },
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -11.259843,
+        "y": -10.629921
+      },
+      "to": {
+        "x": -11.259843,
+        "y": 10.629921
+      },
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 10,
+        "y": 10.629921
+      },
+      "to": {
+        "x": 10,
         "y": 20
       },
       "style": {
+        "strokeRole": "normal",
         "lineCap": "round",
-        "lineJoin": "round",
-        "strokeRole": "emphasis"
+        "lineJoin": "round"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": -10,
-        "y": -14
-      },
-      "to": {
-        "x": 20,
-        "y": -14
-      },
-      "style": {
-        "lineCap": "round",
-        "lineJoin": "round",
-        "strokeRole": "normal"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 20,
-        "y": -30
-      },
-      "to": {
-        "x": 20,
-        "y": -14
-      },
-      "style": {
-        "lineCap": "round",
-        "lineJoin": "round",
-        "strokeRole": "normal"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -10,
-        "y": 14
-      },
-      "to": {
-        "x": 20,
-        "y": 14
-      },
-      "style": {
-        "lineCap": "round",
-        "lineJoin": "round",
-        "strokeRole": "normal"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 20,
-        "y": 14
-      },
-      "to": {
-        "x": 20,
-        "y": 30
-      },
-      "style": {
-        "lineCap": "round",
-        "lineJoin": "round",
-        "strokeRole": "normal"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -10,
+        "x": -11.259843,
         "y": 0
       },
       "to": {
-        "x": 30,
+        "x": -20,
+        "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 10,
+        "y": -10.913386
+      },
+      "to": {
+        "x": 10,
+        "y": -20
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -4.740158,
+        "y": 0
+      },
+      "to": {
+        "x": 11,
         "y": 0
       },
       "part": "bulk-lead",
       "style": {
+        "strokeRole": "normal",
         "lineCap": "round",
-        "lineJoin": "round",
-        "strokeRole": "normal"
+        "lineJoin": "round"
       }
     },
     {
       "kind": "polygon",
       "points": [
         {
-          "x": 16,
+          "x": 20,
           "y": 0
         },
         {
-          "x": 7,
-          "y": -5
+          "x": 11,
+          "y": 3
         },
         {
-          "x": 7,
-          "y": 5
+          "x": 11,
+          "y": -3
         }
       ],
       "fill": "foreground",
+      "stroke": "none",
       "part": "bulk-lead"
     }
   ],
@@ -216,25 +218,43 @@
     {
       "id": "textbook-3terminal",
       "hiddenPinNames": ["B"],
-      "hiddenPrimitiveParts": ["bulk-lead"],
+      "hiddenPrimitiveParts": ["bulk-lead", "source-arrow-host"],
       "additionalPrimitives": [
+        {
+          "kind": "line",
+          "from": {
+            "x": 1.805451,
+            "y": -10.629921
+          },
+          "to": {
+            "x": 10,
+            "y": -10.629921
+          },
+          "part": "source-arrow",
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "round",
+            "lineJoin": "round"
+          }
+        },
         {
           "kind": "polygon",
           "points": [
             {
-              "x": 2,
-              "y": 14
+              "x": -5.754549,
+              "y": -10.629921
             },
             {
-              "x": 10,
-              "y": 10
+              "x": 2.165451,
+              "y": -7.989921
             },
             {
-              "x": 8,
-              "y": 19
+              "x": 2.165451,
+              "y": -13.269921
             }
           ],
           "fill": "foreground",
+          "stroke": "none",
           "part": "source-arrow"
         }
       ]
