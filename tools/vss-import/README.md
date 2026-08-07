@@ -87,6 +87,29 @@ Master IR; pin names still come only from the human review manifest. The
 fidelity board embeds both the independent Visio SVG and runtime rendering so
 a self-render cannot masquerade as source comparison.
 
+## Core non-transistor reference exports
+
+`Export-VisioCoreAnalogReferences.ps1` applies the same read-only,
+isolated-process export discipline to the reviewed high-frequency Masters
+`R`, `C`, `L`, `Diode1`, `GND`, `I/O`, `DC-V`, and `DC-I`.
+
+```powershell
+pnpm symbols:visio-core-analog:reference
+pnpm symbols:visio-core-analog
+```
+
+The runtime assets are derived from the RV-6 Master IR by
+`scripts/generate-visio-core-analog-assets.mjs`. The converter preserves
+line/circle geometry, stroke roles, Visio Arrow Type 13, and sampled
+`EllipticalArcTo` geometry; it rejects unrecognized visual constructs instead
+of approximating them silently. The checked source exports live under
+`fixtures/visual-reference/visio-core-analog/`, and the source/runtime/overlay
+board is `fixtures/visual-golden/visio-core-analog-fidelity.svg`.
+`symbols:visio-core-analog` is atomic: it updates the eight runtime assets,
+their catalog provenance and hashes, then regenerates the TypeScript runtime
+adapter. Its `:check` form rejects a stale asset, catalog, adapter, or fidelity
+board; do not run only a partial generation step.
+
 Other ad hoc Master exports remain temporary evidence. Geometry may enter the
 migration-candidate catalog before pin review, but its manifest status must
 remain `geometry-migrated-pin-review-required` until a human confirms the
