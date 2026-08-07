@@ -1,30 +1,100 @@
-// Agent-local route-tree decision and expansion types.
+// Agent-local route-graph types.
 //
 // Per ADR 0008, these types live ONLY in @icm/agent-routing. They MUST NOT
 // appear in @icm/agent-adapter request/response schemas, MUST NOT appear in
 // @icm/model project schema, MUST NOT be persisted into project.icproj.json,
 // and MUST NOT survive across sessions. They carry no select/query/region
 // capability; their input is a derived slice of an existing Snapshot.
+//
+// The Agent gives a complete local Route graph (nodes + edges with roles); the
+// helper only projects each edge onto legal coordinates. The helper never
+// decides topology, adds a missing node, switches a shape, or reroutes.
 
 import type { Point, RouteEndpoint } from "@icm/model";
 import type { SchematicEdit } from "@icm/edit-engine";
 
 /**
- * The finite, explicit set of routing-tree shapes the v1 expander accepts.
- * There is no `auto` or `best` shape; the caller must choose explicitly.
+ * A segment mode for `set_route_points` edges. Derived from the Edit Engine
+ * edit type so the helper does not take a direct zod dependency.
  */
-export type RouteTreeShape =
-  | "direct"
-  | "local-branch-tree"
-  | "shared-trunk"
-  | "labeled-islands"
-  | "ordered-bus";
+type SegmentMode = Extract<
+  SchematicEdit,
+  { kind: "set_route_points" }
+>["segmentModes"][number];
+
+export type { SegmentMode };
 
 /**
- * A resolved endpoint the expander reasons over. The caller supplies endpoint
- * IDs and the expander fills page coordinates and outward direction from the
- * Snapshot-derived input. `outward` is null for ports/junctions (no inherent
- * escape direction).
+ * The role of a node in the Route graph.
+ * - `endpoint`: binds to an existing terminal/port; no object is created.
+ * - `tap` / `junction`: created by the helper via `add_junction`.
+ * - `label-anchor`: a junction positioned where a Net label should appear.
+ */
+export type RouteGraphNodeRole =
+  "endpoint" | "tap" | "junction" | "label-anchor";
+
+/**
+ * The axis a `tap`/`junction` node shares with a referenced node.
+ * - `"x"`: same column (shares x; the perpendicular y comes from offset/other).
+ * - `"y"`: same row (shares y; the perpendicular x comes from offset/other).
+ */
+export type AlignAxis = "x" | "y";
+
+/**
+ * A node the Agent places in the Route graph. Endpoint nodes reference existing
+ * terminals/ports; tap/junction nodes are created by the helper.
+ */
+export interface RouteGraphNode {
+  id: string;
+  role: RouteGraphNodeRole;
+  /** Required for role:"endpoint": the existing terminal/port to bind to. */
+  endpoint?: RouteEndpoint;
+  /**
+   * For role:"tap"|"junction"|"label-anchor". Exactly one positioning hint:
+   *  - `at`: an explicit grid-aligned point.
+   *  - `alignWith` + `axis` + (`offset` | perpendicular-from-a-second-node):
+   *    share one coordinate with the referenced node; the perpendicular
+   *    coordinate is `offset` away from it.
+   */
+  at?: Point;
+  alignWith?: string;
+  axis?: AlignAxis;
+  offset?: number;
+}
+
+export type RouteEdgeRole = "trunk" | "escape" | "link" | "label";
+
+/**
+ * An edge in the Route graph. Each non-label edge becomes exactly one typed
+ * edit; a `label` edge becomes an `upsert_annotation` net-label.
+ */
+export interface RouteGraphEdge {
+  id: string;
+  from: string;
+  to: string;
+  role: RouteEdgeRole;
+  /** For role:"label": the label text and the object the label attaches to. */
+  label?: { text: string; attachedObjectId: string };
+  /** For role:"link"|"trunk": the segment mode (default "auto"/"trunk"). */
+  segmentMode?: SegmentMode;
+}
+
+/**
+ * Agent-local, transient Route graph for one Net. Carries the complete visual
+ * topology the Agent decided: node count, tap order, which edges are trunk vs.
+ * escape vs. link, and where labels go. The helper only resolves coordinates.
+ */
+export interface RouteGraph {
+  documentId: string;
+  revision: number;
+  netId: string;
+  nodes: RouteGraphNode[];
+  edges: RouteGraphEdge[];
+}
+
+/**
+ * A resolved endpoint the helper reads. Built by the caller from the Snapshot:
+ * page coordinate and outward escape unit vector (`null` for ports/junctions).
  */
 export interface ResolvedEndpoint {
   id: string;
@@ -32,52 +102,6 @@ export interface ResolvedEndpoint {
   point: Point;
   /** Outward escape unit vector; null for non-terminal endpoints. */
   outward: Point | null;
-}
-
-/**
- * A group of endpoints that share a branch in the tree. `attachTo` names the
- * anchor the group connects to: either another group id, a trunk anchor id,
- * or the special `"net"` to attach directly to the net's named label.
- */
-export interface EndpointGroup {
-  id: string;
-  endpointIds: string[];
-  attachTo: string;
-}
-
-export type AnchorSpec =
-  | {
-      kind: "between-groups";
-      id: string;
-      groupA: string;
-      groupB: string;
-      axis: "horizontal" | "vertical";
-    }
-  | {
-      kind: "outside-group";
-      id: string;
-      group: string;
-      side: "top" | "right" | "bottom" | "left";
-    };
-
-export interface EndpointException {
-  endpointId: string;
-  reason: string;
-  preferredSide?: "top" | "right" | "bottom" | "left";
-}
-
-/**
- * Agent-local decision for one Net's routing tree. Carries topology only —
- * no coordinates, waypoints, or segmentModes. The expander resolves geometry.
- */
-export interface RouteTreeDecision {
-  documentId: string;
-  revision: number;
-  netId: string;
-  shape: RouteTreeShape;
-  endpointGroups: EndpointGroup[];
-  anchors?: AnchorSpec[];
-  exceptions?: EndpointException[];
 }
 
 export interface ExpansionConflict {
@@ -99,12 +123,12 @@ export interface ExpansionMetrics {
 }
 
 /**
- * The expander output: typed edits ready for `transact`, the resolved geometry
- * it computed, metrics, assumptions it made, and conflicts it could not
- * resolve by geometry alone. The caller resolves conflicts by changing the
- * decision or placement — never by the expander silently switching shapes.
+ * The helper output: typed edits ready for `transact`, the resolved geometry it
+ * computed, metrics, assumptions it made, and conflicts it could not resolve by
+ * geometry alone. The caller resolves conflicts by changing the graph or
+ * placement — never by the helper inventing topology.
  */
-export interface RouteTreeExpansion {
+export interface RouteGraphExpansion {
   edits: SchematicEdit[];
   generatedObjectIds: string[];
   resolvedGeometry: ResolvedRouteGeometry[];

@@ -1103,3 +1103,32 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   CDAC regeneration, and `git diff --check` passed.
 - Commit status: ready for
   `fix(agent-routing): close the expander loop (caller, tap geometry, dry-run, multi-move)`.
+
+## 2026-08-08 - Demote expander to route-graph geometry helper
+
+- Target: correct the abstraction drift — the previous expander was a "shape
+  compiler" that decided junction count, trunk line, tap order, and hub
+  connectivity from a compressed `shape` + `endpointGroups` decision, silently
+  moving the Agent's visual-topology judgment into a weak deterministic
+  planner. Rewrote @icm/agent-routing as a route-graph geometry helper.
+- Changed areas: `packages/agent-routing/src/types.ts` (new RouteGraph
+  nodes/edges interface replacing RouteTreeDecision), `expand.ts`
+  (expandRouteGraph resolves node coordinates + projects edges to typed edits;
+  never decides topology, never reroutes), `shapes.ts` (optional graph
+  constructors: buildDirectGraph, buildSharedTrunkGraph, buildLocalBranchTree,
+  buildLabeledIslands — advisory starting points, not a closed enum),
+  `test/expand.test.ts` (10 tests), and the CDAC recipe `agent-cdac-flat.mjs`
+  rewritten to give explicit Route graphs per Net.
+- Boundary held: RouteGraph types live only in @icm/agent-routing (not in
+  agent-adapter/model schemas, not persisted). The helper resolves coordinates
+  and assembles edits; the Agent decides every node and edge. Conflicts are
+  returned (MISSING_NODE_POSITION, ESCAPE_MALFORMED), never median-guessed.
+- CDAC result: 48 routes, 19 junctions, 0 conflicts, 0 errors. Diagnostics:
+  10 ROUTE_OVERLAP (collinear escapes, evidence-only), 2 AMBIGUOUS_JUNCTION, 1
+  LABEL_OVERLAP, 2 WIRE_THROUGH. Visually much improved: explicit vdd rail,
+  segmented vout common-plate, labeled vss islands, correct schematic-math
+  labels.
+- Validation: full workspace `pnpm typecheck`, `prettier --check`, 10 tests,
+  CDAC recipe regenerated, `git diff --check` passed.
+- Commit status: ready for
+  `refactor(agent-routing): demote expander to a route-graph geometry helper`.

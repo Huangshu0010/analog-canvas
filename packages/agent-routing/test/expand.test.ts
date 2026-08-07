@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { expandRouteTree } from "../src/index.js";
-import type { RouteTreeDecision, ResolvedEndpoint } from "../src/index.js";
-import type { RouteEndpoint } from "@icm/model";
+import { expandRouteGraph } from "../src/index.js";
+import type { RouteGraph, ResolvedEndpoint } from "../src/index.js";
+import type { RouteEndpoint, Point } from "@icm/model";
 
 function endpoint(
   id: string,
   x: number,
   y: number,
-  endpoint: RouteEndpoint,
+  ep: RouteEndpoint,
 ): ResolvedEndpoint {
   return {
     id,
-    endpoint,
+    endpoint: ep,
     point: { x, y },
-    outward: endpoint.kind === "terminal" ? { x: 0, y: -1 } : null,
+    outward: ep.kind === "terminal" ? { x: 0, y: -1 } : null,
   };
 }
 
@@ -34,219 +34,225 @@ const term = (
 ): ResolvedEndpoint =>
   endpoint(id, x, y, { kind: "terminal", instanceId, pinName });
 
-const baseDecision = (
-  overrides: Partial<RouteTreeDecision>,
-): RouteTreeDecision => ({
+const baseGraph = (overrides: Partial<RouteGraph>): RouteGraph => ({
   documentId: "doc",
   revision: 0,
   netId: "net-1",
-  shape: "direct",
-  endpointGroups: [],
+  nodes: [],
+  edges: [],
   ...overrides,
 });
 
-describe("expandRouteTree", () => {
-  it("produces deterministic edits for a direct two-endpoint group", () => {
-    const decision = baseDecision({
-      shape: "direct",
-      endpointGroups: [{ id: "g1", endpointIds: ["a", "b"], attachTo: "net" }],
-    });
-    const result = expandRouteTree(
-      decision,
-      input([term("a", 100, 200, "M1", "D"), term("b", 200, 200, "M2", "S")]),
-    );
-    expect(result.conflicts).toEqual([]);
-    expect(result.edits).toHaveLength(1);
-    expect(result.edits[0]!.kind).toBe("route_orthogonal");
-    expect(result.metrics.routeCount).toBe(1);
-    expect(result.resolvedGeometry[0]!.points).toEqual([
-      { x: 100, y: 200 },
-      { x: 200, y: 200 },
-    ]);
-  });
-
-  it("rejects a direct group that does not have exactly two endpoints", () => {
-    const decision = baseDecision({
-      shape: "direct",
-      endpointGroups: [
-        { id: "g1", endpointIds: ["a", "b", "c"], attachTo: "net" },
+describe("expandRouteGraph", () => {
+  it("emits one escape edge for a direct endpoint-to-tap graph", () => {
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "a",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+        },
+        { id: "tap0", role: "tap", at: { x: 200, y: 200 } },
       ],
+      edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
     });
-    const result = expandRouteTree(
-      decision,
-      input([
-        term("a", 100, 200, "M1", "D"),
-        term("b", 200, 200, "M2", "S"),
-        term("c", 300, 200, "M3", "S"),
-      ]),
-    );
-    expect(result.edits).toEqual([]);
-    expect(result.conflicts[0]!.code).toBe("SHAPE_MISMATCH");
-  });
-
-  it("returns MISSING_ENDPOINT when a referenced endpoint is absent", () => {
-    const decision = baseDecision({
-      shape: "direct",
-      endpointGroups: [
-        { id: "g1", endpointIds: ["a", "ghost"], attachTo: "net" },
-      ],
-    });
-    const result = expandRouteTree(
-      decision,
+    const result = expandRouteGraph(
+      graph,
       input([term("a", 100, 200, "M1", "D")]),
     );
-    expect(result.edits).toEqual([]);
-    expect(result.conflicts[0]!.code).toBe("MISSING_ENDPOINT");
-    expect(result.conflicts[0]!.objectIds).toContain("ghost");
+    expect(result.conflicts).toEqual([]);
+    expect(result.edits).toHaveLength(2);
+    expect(result.edits[0]!.kind).toBe("add_junction");
+    expect(result.edits[1]!.kind).toBe("route_orthogonal");
+    expect(result.metrics.routeCount).toBe(1);
+    expect(result.metrics.junctionCount).toBe(1);
   });
 
-  it("rejects an unknown shape instead of falling back", () => {
-    const decision = baseDecision({
-      shape: "auto" as RouteTreeDecision["shape"],
-    });
-    const result = expandRouteTree(decision, input([]));
-    expect(result.edits).toEqual([]);
-    expect(result.conflicts[0]!.code).toBe("UNKNOWN_SHAPE");
-  });
-
-  it("builds a branch junction for local-branch-tree and links groups", () => {
-    const decision = baseDecision({
-      shape: "local-branch-tree",
-      endpointGroups: [
-        { id: "g1", endpointIds: ["a", "b"], attachTo: "g2" },
-        { id: "g2", endpointIds: ["c", "d"], attachTo: "g1" },
+  it("snaps tap positions to the 10-unit grid", () => {
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "a",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+        },
+        { id: "tap0", role: "tap", at: { x: 207, y: 213 } },
       ],
+      edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
     });
-    const result = expandRouteTree(
-      decision,
-      input([
-        term("a", 100, 200, "M1", "D"),
-        term("b", 100, 240, "M1", "S"),
-        term("c", 300, 200, "M2", "D"),
-        term("d", 300, 240, "M2", "S"),
-      ]),
+    const result = expandRouteGraph(
+      graph,
+      input([term("a", 100, 200, "M1", "D")]),
     );
     expect(result.conflicts).toEqual([]);
-    // 2 escape routes per group (4) + 1 inter-group link (g1->g2 deduped
-    // against g2->g1) = 5 routes; 2 junctions.
-    expect(result.metrics.routeCount).toBe(5);
-    expect(result.metrics.junctionCount).toBe(2);
-    // Junction positions are snapped to the 10-unit grid.
-    for (const edit of result.edits) {
-      if (edit.kind === "add_junction") {
-        expect(edit.position.x % 10).toBe(0);
-        expect(edit.position.y % 10).toBe(0);
-      }
-    }
+    const junction = result.edits.find((e) => e.kind === "add_junction")!;
+    if (junction.kind !== "add_junction") return;
+    expect(junction.position.x % 10).toBe(0);
+    expect(junction.position.y % 10).toBe(0);
   });
 
-  it("reports TRUNK_CORRIDOR_BLOCKED instead of rerouting when a trunk crosses an instance", () => {
-    const decision = baseDecision({
-      shape: "shared-trunk",
-      endpointGroups: [{ id: "g1", endpointIds: ["a", "b"], attachTo: "net" }],
+  it("resolves a tap aligned with an endpoint on the y axis (vertical trunk)", () => {
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "a",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+        },
+        { id: "tap0", role: "tap", alignWith: "a", axis: "y", offset: 100 },
+      ],
+      edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
     });
-    // Endpoints span x 100..300, median y ~ 200; place an instance box on y=200.
-    const result = expandRouteTree(decision, {
-      endpoints: new Map([
-        [term("a", 100, 200, "M1", "D").id, term("a", 100, 200, "M1", "D")],
-        [term("b", 300, 200, "M2", "S").id, term("b", 300, 200, "M2", "S")],
-      ]),
-      existingRoutePolylines: [],
-      instanceBoxes: [
-        { instanceId: "M3", min: { x: 180, y: 190 }, max: { x: 220, y: 210 } },
+    const result = expandRouteGraph(
+      graph,
+      input([term("a", 100, 200, "M1", "D")]),
+    );
+    expect(result.conflicts).toEqual([]);
+    const junction = result.edits.find((e) => e.kind === "add_junction")!;
+    if (junction.kind !== "add_junction") return;
+    expect(junction.position).toEqual({ x: 200, y: 200 });
+  });
+
+  it("emits a trunk edge between two taps as set_route_points with trunk mode", () => {
+    const graph = baseGraph({
+      nodes: [
+        { id: "tap0", role: "tap", at: { x: 200, y: 100 } },
+        { id: "tap1", role: "tap", at: { x: 200, y: 300 } },
+      ],
+      edges: [{ id: "trunk0", from: "tap0", to: "tap1", role: "trunk" }],
+    });
+    const result = expandRouteGraph(graph, input([]));
+    expect(result.conflicts).toEqual([]);
+    const route = result.edits.find((e) => e.kind === "set_route_points")!;
+    if (route.kind !== "set_route_points") return;
+    expect(route.segmentModes).toEqual(["trunk"]);
+    expect(route.from).toEqual({ kind: "junction", junctionId: "tap0" });
+    expect(route.to).toEqual({ kind: "junction", junctionId: "tap1" });
+  });
+
+  it("emits a label edge as a net-label annotation", () => {
+    const graph = baseGraph({
+      nodes: [{ id: "tap0", role: "tap", at: { x: 200, y: 200 } }],
+      edges: [
+        {
+          id: "lbl0",
+          from: "tap0",
+          to: "tap0",
+          role: "label",
+          label: { text: "VOUT", attachedObjectId: "port-vout" },
+        },
       ],
     });
+    const result = expandRouteGraph(graph, input([]));
+    expect(result.conflicts).toEqual([]);
+    const ann = result.edits.find((e) => e.kind === "upsert_annotation")!;
+    if (ann.kind !== "upsert_annotation") return;
+    expect(ann.annotation.kind).toBe("net-label");
+    expect(ann.annotation.text).toBe("VOUT");
+  });
+
+  it("returns MISSING_ENDPOINT when an endpoint node is absent from the input", () => {
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "ghost",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "MX", pinName: "D" },
+        },
+        { id: "tap0", role: "tap", at: { x: 200, y: 200 } },
+      ],
+      edges: [{ id: "e0", from: "ghost", to: "tap0", role: "escape" }],
+    });
+    const result = expandRouteGraph(graph, input([]));
+    expect(result.conflicts.some((c) => c.code === "MISSING_ENDPOINT")).toBe(
+      true,
+    );
+  });
+
+  it("returns MISSING_NODE_POSITION when a tap has no at/alignWith (no median guess)", () => {
+    const graph = baseGraph({
+      nodes: [{ id: "tap0", role: "tap" }],
+      edges: [],
+    });
+    const result = expandRouteGraph(graph, input([]));
     expect(
-      result.conflicts.some((c) => c.code === "TRUNK_CORRIDOR_BLOCKED"),
+      result.conflicts.some((c) => c.code === "MISSING_NODE_POSITION"),
     ).toBe(true);
-    // Still emits edits (the trunk and escapes); the conflict is advisory.
-    expect(result.metrics.routeCount).toBeGreaterThan(0);
+    expect(result.metrics.junctionCount).toBe(0);
   });
 
-  it("labeled-islands emits per-group junctions and no inter-group routes", () => {
-    const decision = baseDecision({
-      shape: "labeled-islands",
-      endpointGroups: [
-        { id: "g1", endpointIds: ["a", "b"], attachTo: "g2" },
-        { id: "g2", endpointIds: ["c", "d"], attachTo: "g1" },
+  it("returns ESCAPE_MALFORMED when an escape edge connects two endpoints", () => {
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "a",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+        },
+        {
+          id: "b",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M2", pinName: "S" },
+        },
+      ],
+      edges: [{ id: "e0", from: "a", to: "b", role: "escape" }],
+    });
+    const result = expandRouteGraph(
+      graph,
+      input([term("a", 100, 200, "M1", "D"), term("b", 200, 200, "M2", "S")]),
+    );
+    expect(result.conflicts.some((c) => c.code === "ESCAPE_MALFORMED")).toBe(
+      true,
+    );
+  });
+
+  it("resolves alignWith transitively (tap aligns with another tap)", () => {
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "a",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+        },
+        { id: "tap0", role: "tap", alignWith: "a", axis: "y", offset: 100 },
+        { id: "tap1", role: "tap", alignWith: "tap0", axis: "x", offset: 50 },
+      ],
+      edges: [
+        { id: "e0", from: "a", to: "tap0", role: "escape" },
+        { id: "t0", from: "tap0", to: "tap1", role: "trunk" },
       ],
     });
-    const result = expandRouteTree(
-      decision,
-      input([
-        term("a", 100, 200, "M1", "D"),
-        term("b", 100, 240, "M1", "S"),
-        term("c", 500, 200, "M2", "D"),
-        term("d", 500, 240, "M2", "S"),
-      ]),
+    const result = expandRouteGraph(
+      graph,
+      input([term("a", 100, 200, "M1", "D")]),
     );
     expect(result.conflicts).toEqual([]);
-    // 2 escape routes per group = 4 routes; 2 junctions; NO inter-group link.
-    expect(result.metrics.routeCount).toBe(4);
-    expect(result.metrics.junctionCount).toBe(2);
+    const junctions = result.edits.filter((e) => e.kind === "add_junction");
+    expect(junctions).toHaveLength(2);
+    const tap1 = junctions.find(
+      (e): e is Extract<typeof e, { kind: "add_junction" }> =>
+        e.kind === "add_junction" && e.junctionId === "tap1",
+    )!;
+    expect(tap1.position).toEqual({ x: 200, y: 250 });
   });
 
-  it("is deterministic: same decision + input yields identical output", () => {
-    const decision = baseDecision({
-      shape: "local-branch-tree",
-      endpointGroups: [
-        { id: "g1", endpointIds: ["a", "b"], attachTo: "g2" },
-        { id: "g2", endpointIds: ["c", "d"], attachTo: "g1" },
+  it("is deterministic: same graph + input yields identical output", () => {
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "a",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+        },
+        { id: "tap0", role: "tap", alignWith: "a", axis: "y", offset: 100 },
       ],
+      edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
     });
-    const inp = input([
-      term("a", 100, 200, "M1", "D"),
-      term("b", 100, 240, "M1", "S"),
-      term("c", 300, 200, "M2", "D"),
-      term("d", 300, 240, "M2", "S"),
-    ]);
-    const first = expandRouteTree(decision, inp);
-    const second = expandRouteTree(decision, inp);
+    const inp = input([term("a", 100, 200, "M1", "D")]);
+    const first = expandRouteGraph(graph, inp);
+    const second = expandRouteGraph(graph, inp);
     expect(second).toEqual(first);
   });
-
-  it("shared-trunk attaches each escape to a distinct tap Junction, not a trunk-end", () => {
-    const decision = baseDecision({
-      shape: "shared-trunk",
-      endpointGroups: [
-        { id: "g1", endpointIds: ["a", "b", "c"], attachTo: "net" },
-      ],
-    });
-    const result = expandRouteTree(
-      decision,
-      input([
-        term("a", 100, 200, "M1", "D"),
-        term("b", 300, 200, "M2", "D"),
-        term("c", 500, 200, "M3", "D"),
-      ]),
-    );
-    expect(result.conflicts).toEqual([]);
-    // Each escape route connects endpoint -> a tap junction whose x equals the
-    // endpoint's snapped x (not a shared trunk-end junction). Three escapes
-    // must attach to three distinct junction ids.
-    const escapeRoutes = result.edits.filter(
-      (e) => e.kind === "route_orthogonal",
-    );
-    expect(escapeRoutes).toHaveLength(3);
-    const tapTargets = new Set(
-      escapeRoutes.map((e) =>
-        e.kind === "route_orthogonal" && e.to.kind === "junction"
-          ? e.to.junctionId
-          : null,
-      ),
-    );
-    expect(tapTargets.size).toBe(3);
-    // resolvedGeometry endpoints land at each endpoint's snapped x on the trunk.
-    const escapeGeo = result.resolvedGeometry.filter((g) =>
-      escapeRoutes.some(
-        (e) => e.kind === "route_orthogonal" && e.routeId === g.routeId,
-      ),
-    );
-    expect(escapeGeo).toHaveLength(3);
-    for (const geo of escapeGeo) {
-      const last = geo.points[geo.points.length - 1]!;
-      expect(last.y).toBe(200);
-      expect(last.x % 10).toBe(0);
-    }
-  });
 });
+
+void (null as unknown as Point);
