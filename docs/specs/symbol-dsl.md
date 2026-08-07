@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.6`
+Version: `1.7`
 
 Owning phase: `Phase 0/1`
 
@@ -37,8 +37,11 @@ direction, and visibility metadata. Primitives are line, polyline, polygon,
 circle, and path. A primitive may carry a stable `part`; a variant may hide
 parts and add reviewed presentation primitives as well as hide pin presentation
 without changing electrical pins. Polygon fill is explicitly `none` or
-`foreground`. Any primitive may override stroke width, line cap, and line join
-when reviewed source geometry requires it.
+`foreground`. A primitive may select semantic `strokeRole` (`normal`,
+`emphasis`, `supply`, or `annotation`) plus an optional reviewed line cap/join.
+The renderer resolves that role through the Document's style profile. Numeric
+`strokeWidth` remains a mutually exclusive legacy compatibility field for
+assets not yet migrated to a catalog role.
 
 The reviewed production set contains resistor, capacitor, inductor, NMOS,
 PMOS, ground, port, independent voltage/current source, diode, NPN, and PNP.
@@ -74,6 +77,9 @@ Snapshot and later audit can explain the choice.
   keeps every terminal on-grid after rotation or mirroring, including
   multi-port devices whose pins cannot be aligned by translating the instance.
 - Symbol geometry contains no instance placement or net identity.
+- A primitive style cannot contain both `strokeRole` and `strokeWidth`.
+- Razavi catalog assets use semantic stroke roles; raw source weights remain
+  provenance evidence rather than final rendered widths.
 - PDK mapping never infers pin order from a symbol name alone; a rule includes
   terminal count and the complete ordered pin list.
 
@@ -115,6 +121,11 @@ Three-terminal MOS devices remain separate migration-candidate definitions.
 Their reviewed geometry may also be reused by a presentation variant of the
 canonical four-pin definition when SPICE connectivity must retain the hidden
 fourth pin.
+
+Symbol DSL 1.7 adds `strokeRole` compatibly. Existing numeric widths continue
+to render byte-identically under `textbook-monochrome-v1`. Under a semantic
+profile, remaining legacy widths are deterministically clustered into normal
+or emphasis roles until their assets receive explicit reviewed roles.
 
 ## Deterministic validation
 

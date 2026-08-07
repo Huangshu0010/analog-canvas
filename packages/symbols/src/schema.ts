@@ -14,11 +14,28 @@ export const SymbolPinSchema = z.strictObject({
     showName: z.boolean().optional(),
   }),
 });
-const SymbolPrimitiveStyleSchema = z.strictObject({
-  strokeWidth: z.number().positive().optional(),
-  lineCap: z.enum(["butt", "round", "square"]).optional(),
-  lineJoin: z.enum(["miter", "round", "bevel"]).optional(),
-});
+export const SymbolStrokeRoleSchema = z.enum([
+  "normal",
+  "emphasis",
+  "supply",
+  "annotation",
+]);
+const SymbolPrimitiveStyleSchema = z
+  .strictObject({
+    strokeRole: SymbolStrokeRoleSchema.optional(),
+    strokeWidth: z.number().positive().optional(),
+    lineCap: z.enum(["butt", "round", "square"]).optional(),
+    lineJoin: z.enum(["miter", "round", "bevel"]).optional(),
+  })
+  .superRefine((style, context) => {
+    if (style.strokeRole !== undefined && style.strokeWidth !== undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "Primitive style cannot set both strokeRole and strokeWidth",
+        path: ["strokeWidth"],
+      });
+    }
+  });
 export const SymbolPrimitiveSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("line"),
@@ -122,6 +139,7 @@ export const SymbolDefinitionJsonSchema = z.toJSONSchema(
 );
 
 export type SymbolPin = z.infer<typeof SymbolPinSchema>;
+export type SymbolStrokeRole = z.infer<typeof SymbolStrokeRoleSchema>;
 export type SymbolPrimitive = z.infer<typeof SymbolPrimitiveSchema>;
 export type SymbolVariant = z.infer<typeof SymbolVariantSchema>;
 export type SymbolDefinition = z.infer<typeof SymbolDefinitionSchema>;

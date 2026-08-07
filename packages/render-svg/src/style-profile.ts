@@ -1,0 +1,99 @@
+import type { SymbolStrokeRole } from "@icm/symbols";
+
+export interface SchematicStyleProfile {
+  readonly id: "textbook-monochrome-v1" | "razavi-textbook-v1";
+  readonly foreground: string;
+  readonly background: string;
+  readonly strokes: {
+    readonly wire: number;
+    readonly symbol: number;
+    readonly normal: number;
+    readonly emphasis: number;
+    readonly supply: number;
+    readonly annotation: number;
+  };
+  readonly nodes: {
+    readonly junctionRadius: number;
+    readonly portOriginRadius: number;
+  };
+  readonly lineCap: "butt" | "round" | "square";
+  readonly lineJoin: "miter" | "round" | "bevel";
+  readonly miterLimit: number;
+  readonly scaleFormalStrokes: boolean;
+  readonly fontFamily: string;
+  readonly fontSize: number;
+}
+
+export const textbookMonochromeProfile: SchematicStyleProfile = {
+  id: "textbook-monochrome-v1",
+  foreground: "#000",
+  background: "#fff",
+  strokes: {
+    wire: 1,
+    symbol: 1,
+    normal: 1.2,
+    emphasis: 2.16,
+    supply: 2.16,
+    annotation: 0.8,
+  },
+  nodes: { junctionRadius: 1.75, portOriginRadius: 0 },
+  lineCap: "square",
+  lineJoin: "miter",
+  miterLimit: 4,
+  scaleFormalStrokes: false,
+  fontFamily: "Georgia,'Times New Roman',serif",
+  fontSize: 12,
+};
+
+export const razaviTextbookProfile: SchematicStyleProfile = {
+  id: "razavi-textbook-v1",
+  foreground: "#202020",
+  background: "#fff",
+  strokes: {
+    wire: 1.6,
+    symbol: 1.6,
+    normal: 1.6,
+    emphasis: 2.4,
+    supply: 1.8,
+    annotation: 1.6,
+  },
+  nodes: { junctionRadius: 3, portOriginRadius: 3 },
+  lineCap: "butt",
+  lineJoin: "miter",
+  miterLimit: 4,
+  scaleFormalStrokes: true,
+  fontFamily: "Arial,'Helvetica Neue',Helvetica,sans-serif",
+  fontSize: 16,
+};
+
+const profiles = new Map<string, SchematicStyleProfile>([
+  [textbookMonochromeProfile.id, textbookMonochromeProfile],
+  [razaviTextbookProfile.id, razaviTextbookProfile],
+]);
+
+export function resolveSchematicStyleProfile(
+  profileId: string,
+): SchematicStyleProfile {
+  const profile = profiles.get(profileId);
+  if (!profile)
+    throw new Error(`Unknown schematic style profile: ${profileId}`);
+  return profile;
+}
+
+export function strokeWidthForRole(
+  profile: SchematicStyleProfile,
+  role: SymbolStrokeRole,
+): number {
+  return profile.strokes[role];
+}
+
+export function resolvePrimitiveStrokeWidth(
+  profile: SchematicStyleProfile,
+  role: SymbolStrokeRole | undefined,
+  legacyWidth: number | undefined,
+): number | undefined {
+  if (role !== undefined) return strokeWidthForRole(profile, role);
+  if (legacyWidth === undefined) return undefined;
+  if (profile.id === "textbook-monochrome-v1") return legacyWidth;
+  return legacyWidth >= 1.8 ? profile.strokes.emphasis : profile.strokes.normal;
+}

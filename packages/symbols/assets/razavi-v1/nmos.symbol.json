@@ -38,50 +38,82 @@
       "kind": "line",
       "from": { "x": -30, "y": 0 },
       "to": { "x": -17, "y": 0 },
-      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "line",
       "from": { "x": -17, "y": -14 },
       "to": { "x": -17, "y": 14 },
-      "style": { "strokeWidth": 2.16, "lineCap": "round", "lineJoin": "round" }
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "line",
       "from": { "x": -10, "y": -20 },
       "to": { "x": -10, "y": 20 },
-      "style": { "strokeWidth": 2.16, "lineCap": "round", "lineJoin": "round" }
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "line",
       "from": { "x": -10, "y": -14 },
       "to": { "x": 20, "y": -14 },
-      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "line",
       "from": { "x": 20, "y": -30 },
       "to": { "x": 20, "y": -14 },
-      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "line",
       "from": { "x": -10, "y": 14 },
       "to": { "x": 20, "y": 14 },
-      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "line",
       "from": { "x": 20, "y": 14 },
       "to": { "x": 20, "y": 30 },
-      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "line",
       "from": { "x": -10, "y": 0 },
       "to": { "x": 30, "y": 0 },
       "part": "bulk-lead",
-      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "polygon",

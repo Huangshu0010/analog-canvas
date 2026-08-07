@@ -53,6 +53,29 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
+  it("uses semantic roles instead of raw VSS widths in migrated assets", () => {
+    for (const symbol of razaviCatalogSymbols) {
+      for (const primitive of symbol.primitives) {
+        if (!primitive.style) continue;
+        expect(primitive.style.strokeWidth).toBeUndefined();
+        expect(primitive.style.strokeRole).toMatch(/^(normal|emphasis)$/u);
+      }
+    }
+
+    const invalid = SymbolDefinitionSchema.safeParse({
+      ...requireRazaviCatalogSymbol("nmos"),
+      primitives: [
+        {
+          kind: "line",
+          from: { x: 0, y: 0 },
+          to: { x: 10, y: 0 },
+          style: { strokeRole: "normal", strokeWidth: 1.2 },
+        },
+      ],
+    });
+    expect(invalid.success).toBe(false);
+  });
+
   it("uses catalog objects in the built-in compatibility library", () => {
     expect(razaviCatalogSymbols).toHaveLength(4);
     for (const catalogSymbol of razaviCatalogSymbols) {

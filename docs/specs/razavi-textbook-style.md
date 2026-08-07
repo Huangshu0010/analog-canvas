@@ -321,6 +321,10 @@ All values are scene units at `100` scene units per inch.
 Only the semantic roles above may choose line widths. Imported arbitrary VSS
 weights are clustered into `symbolStroke`, `emphasisStroke`, or
 `annotationStroke`; reviewed exceptions require a catalog note and golden.
+Until every legacy built-in is catalog-migrated, the renderer maps a legacy
+numeric width below `1.8` to `normal` and a width at or above `1.8` to
+`emphasis` when this profile is selected. The legacy profile continues to use
+the numeric value literally. New Razavi assets may not use this bridge.
 
 ### Connection-origin semantics
 

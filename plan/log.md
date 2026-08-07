@@ -615,3 +615,27 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
   untracked and untouched.
 - Commit status: ready for the dedicated RV-2 commit.
+
+## 2026-08-07 - Add Razavi RV-3 semantic stroke profile
+
+- Target: centralize formal line/node presentation under a versioned profile
+  while preserving byte-identical legacy output.
+- Changed areas: Symbol DSL semantic stroke role, first catalog asset role
+  migration and regenerated hashes/adapter, renderer profile registry and
+  profile-aware formal scene, symbol-review compatibility, tests, and visual
+  contract documentation.
+- Razavi behavior: formal foreground `#202020`; wire/symbol/normal `1.6`,
+  emphasis `2.4`, supply `1.8`, annotation `1.6`; Junction/Port radii `3`;
+  butt/miter geometry; scaling strokes; Arial-family 16-unit base text. Unknown
+  profile IDs are blocking. All Razavi formal widths come from profile tokens;
+  remaining legacy numeric overrides are deterministically clustered until
+  their assets receive explicit roles.
+- Legacy compatibility: `textbook-monochrome-v1` keeps literal numeric
+  overrides, its prior defaults, and non-scaling strokes. Existing symbol,
+  Phase 1/5, and Phase 7 goldens remained byte-identical.
+- Validation: 24 focused tests, 137 full tests in 35 files, typecheck, build,
+  formatting, catalog check, 25 symbol previews, Phase 1/5 visual goldens,
+  Phase 7 export goldens, and `git diff --check` passed.
+- Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
+  untracked and untouched.
+- Commit status: ready for the dedicated RV-3 commit.

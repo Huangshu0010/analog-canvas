@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.2`
+Version: `1.3`
 
 Owning phase: `Phase 1/5`
 
@@ -31,7 +31,7 @@ from editor-only interaction overlays.
 
 ## Data model or interface
 
-The initial profile ID is `textbook-monochrome-v1`.
+The compatibility profile ID is `textbook-monochrome-v1`.
 
 ```yaml
 background: "#ffffff"
@@ -42,6 +42,30 @@ annotationStroke: 0.8
 junctionRadius: 1.75
 fontFamily: "Georgia, Times New Roman, serif"
 ```
+
+The proposed `razavi-textbook-v1` profile is also executable:
+
+```yaml
+foreground: "#202020"
+wireStroke: 1.6
+symbolStroke: 1.6
+normalStroke: 1.6
+emphasisStroke: 2.4
+supplyStroke: 1.8
+annotationStroke: 1.6
+junctionRadius: 3
+portOriginRadius: 3
+strokeLinecap: butt
+strokeLinejoin: miter
+strokeMiterLimit: 4
+scaleFormalStrokes: true
+```
+
+Unknown persisted profile IDs are blocking render errors; the renderer never
+silently substitutes a profile. Semantic symbol roles resolve through the
+selected profile. Legacy numeric primitive widths remain literal only under
+`textbook-monochrome-v1`; Razavi output clusters them into profile-owned normal
+or emphasis widths until the source asset is explicitly migrated.
 
 Formal SVG has stable groups for routes, Junctions, symbols, and annotations.
 The editor creates its grid and interaction overlay outside the formal group.
@@ -73,6 +97,9 @@ spacing and layout-quality findings are warnings.
 - Selection, hit targets, grid, drag preview, diagnostics, and flightlines are
   absent from formal SVG export.
 - SVG is derived output and never becomes connectivity or persistence truth.
+- `textbook-monochrome-v1` keeps non-scaling formal strokes for byte
+  compatibility. `razavi-textbook-v1` scales formal geometry and strokes
+  together and emits no `vector-effect="non-scaling-stroke"`.
 - Annotation attachment moves with an edited instance while its offset and
   semantic kind remain persisted.
 - Instance-label drag is bounded around its symbol and Net-label drag is
@@ -112,6 +139,10 @@ correct.
 Phase 1 proportions are provisional. Phase 5 may calibrate artwork and tokens,
 but a changed golden requires visual review and a profile-version decision when
 the change is not backward-compatible.
+
+Adding `razavi-textbook-v1` does not change existing or newly created Project
+defaults yet. The default switch is an explicit RV-7 migration decision after
+the acceptance board and export gates pass.
 
 ## Deterministic validation
 

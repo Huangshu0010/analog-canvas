@@ -20,12 +20,22 @@ const escape = (value) =>
     .replaceAll(">", "&gt;");
 const points = (value) =>
   value.map((point) => `${point.x},${point.y}`).join(" ");
+const legacyStrokeRoles = {
+  normal: 1.2,
+  emphasis: 2.16,
+  supply: 2.16,
+  annotation: 0.8,
+};
 const primitiveStyle = (item) => {
   if (!item.style) return "";
+  const strokeWidth = item.style.strokeRole
+    ? legacyStrokeRoles[item.style.strokeRole]
+    : item.style.strokeWidth;
+  if (item.style.strokeRole && strokeWidth === undefined) {
+    throw new Error(`Unknown symbol stroke role: ${item.style.strokeRole}`);
+  }
   return [
-    item.style.strokeWidth === undefined
-      ? ""
-      : ` stroke-width="${item.style.strokeWidth}"`,
+    strokeWidth === undefined ? "" : ` stroke-width="${strokeWidth}"`,
     item.style.lineCap === undefined
       ? ""
       : ` stroke-linecap="${item.style.lineCap}"`,

@@ -11,6 +11,13 @@ import type {
   SymbolResolver,
 } from "@icm/symbols";
 
+import {
+  resolveSchematicStyleProfile,
+  resolvePrimitiveStrokeWidth,
+  textbookMonochromeProfile,
+} from "./style-profile.js";
+import type { SchematicStyleProfile } from "./style-profile.js";
+
 export interface SvgRenderOptions {
   bounds?: Rect;
   margin?: number;
@@ -34,20 +41,35 @@ function pointList(points: ReadonlyArray<{ x: number; y: number }>): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
 }
 
-function primitiveStyle(primitive: SymbolPrimitive): string {
+function profileMiterAttribute(profile: SchematicStyleProfile): string {
+  return profile.id === "textbook-monochrome-v1"
+    ? ""
+    : ` stroke-miterlimit="${profile.miterLimit}"`;
+}
+
+function primitiveStyle(
+  primitive: SymbolPrimitive,
+  profile: SchematicStyleProfile,
+): string {
   const style = primitive.style;
   if (!style) return "";
+  const strokeWidth = resolvePrimitiveStrokeWidth(
+    profile,
+    style.strokeRole,
+    style.strokeWidth,
+  );
   return [
-    style.strokeWidth === undefined
-      ? ""
-      : ` stroke-width="${style.strokeWidth}"`,
+    strokeWidth === undefined ? "" : ` stroke-width="${strokeWidth}"`,
     style.lineCap === undefined ? "" : ` stroke-linecap="${style.lineCap}"`,
     style.lineJoin === undefined ? "" : ` stroke-linejoin="${style.lineJoin}"`,
   ].join("");
 }
 
-function renderPrimitive(primitive: SymbolPrimitive): string {
-  const style = primitiveStyle(primitive);
+function renderPrimitive(
+  primitive: SymbolPrimitive,
+  profile: SchematicStyleProfile,
+): string {
+  const style = primitiveStyle(primitive, profile);
   switch (primitive.kind) {
     case "line":
       return `<line x1="${primitive.from.x}" y1="${primitive.from.y}" x2="${primitive.to.x}" y2="${primitive.to.y}"${style}/>`;
@@ -58,7 +80,7 @@ function renderPrimitive(primitive: SymbolPrimitive): string {
     case "path":
       return `<path d="${escapeXml(primitive.data)}"${style}/>`;
     case "polygon":
-      return `<polygon points="${pointList(primitive.points)}" fill="${primitive.fill === "foreground" ? "#000" : "none"}"${style}/>`;
+      return `<polygon points="${pointList(primitive.points)}" fill="${primitive.fill === "foreground" ? profile.foreground : "none"}"${style}/>`;
   }
 }
 
@@ -66,11 +88,12 @@ export function renderSymbolDefinitionBody(
   definition: SymbolDefinition,
   hiddenPrimitiveParts: readonly string[] = [],
   additionalPrimitives: readonly SymbolPrimitive[] = [],
+  profile: SchematicStyleProfile = textbookMonochromeProfile,
 ): string {
   const hidden = new Set(hiddenPrimitiveParts);
   return [...definition.primitives, ...additionalPrimitives]
     .filter((primitive) => !primitive.part || !hidden.has(primitive.part))
-    .map(renderPrimitive)
+    .map((primitive) => renderPrimitive(primitive, profile))
     .join("");
 }
 
@@ -261,6 +284,9 @@ export function buildSvgScene(
   options: SvgRenderOptions = {},
 ): SvgScene {
   const document = SchematicDocumentSchema.parse(input);
+  const profile = resolveSchematicStyleProfile(
+    document.presentation.styleProfileId,
+  );
   const margin = options.margin ?? 40;
   if (!Number.isInteger(margin) || margin < 0) {
     throw new Error("SVG margin must be a non-negative integer");
@@ -276,14 +302,14 @@ export function buildSvgScene(
       if (!polyline) {
         throw new Error(`Cannot render unresolved route: ${route.id}`);
       }
-      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter"/>`;
+      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>`;
     })
     .join("");
   const junctions = [...document.junctions]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map(
       (junction) =>
-        `<circle data-object-id="${escapeXml(junction.id)}" cx="${junction.position.x}" cy="${junction.position.y}" r="1.75" fill="#000"/>`,
+        `<circle data-object-id="${escapeXml(junction.id)}" cx="${junction.position.x}" cy="${junction.position.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`,
     )
     .join("");
   const explicitInstanceLabels = new Set(
@@ -309,6 +335,7 @@ export function buildSvgScene(
         resolved.definition,
         resolved.variant?.hiddenPrimitiveParts,
         resolved.variant?.additionalPrimitives,
+        profile,
       );
       const pinNames = renderVisiblePinNames(
         resolved.definition,
@@ -321,7 +348,7 @@ export function buildSvgScene(
       const defaultLabel = explicitInstanceLabels.has(instance.id)
         ? ""
         : `<text x="${labelX}" y="${labelY}" text-anchor="middle">${escapeXml(instance.id)}</text>`;
-      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter">${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
+      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}>${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
     })
     .join("");
   const annotations = [...document.annotations]
@@ -340,7 +367,7 @@ export function buildSvgScene(
         const textX = vertical ? x + 15 : x;
         const textY = vertical ? y + 4 : y - 7;
         const textAnchor = vertical ? "start" : annotation.alignment;
-        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="#000" stroke-width="0.8"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="#000"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}">${escapeXml(annotation.text)}</text></g>`;
+        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}">${escapeXml(annotation.text)}</text></g>`;
       }
       const emphasis =
         annotation.kind === "power-label"
@@ -364,7 +391,13 @@ export function renderDocumentSvg(
   options: SvgRenderOptions = {},
 ): string {
   const scene = buildSvgScene(document, resolver, options);
+  const profile = resolveSchematicStyleProfile(
+    document.presentation.styleProfileId,
+  );
   const title = escapeXml(options.title ?? document.name);
   const { x, y, width, height } = scene.viewBox;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" role="img" aria-labelledby="title" data-style-profile="textbook-monochrome-v1"><title id="title">${title}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" fill="#fff"/><style>text{fill:#000;font-family:Georgia,'Times New Roman',serif;font-size:12px}path,polyline,line,circle{vector-effect:non-scaling-stroke}</style>${scene.formalBody}</svg>\n`;
+  const scalingRule = profile.scaleFormalStrokes
+    ? ""
+    : "path,polyline,line,circle{vector-effect:non-scaling-stroke}";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" role="img" aria-labelledby="title" data-style-profile="${profile.id}"><title id="title">${title}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${profile.background}"/><style>text{fill:${profile.foreground};font-family:${profile.fontFamily};font-size:${profile.fontSize}px}${scalingRule}</style>${scene.formalBody}</svg>\n`;
 }

@@ -32,7 +32,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "1c73ca86585bb480e6c9892dc115d1e121d0befc0d7704bae9004b46082ebd5c",
+      "8b0a28ddc9041501287c42c3808bbf70ec7c087ee9f2404f87e95473f3b63fb3",
   },
   {
     symbolId: "pmos3",
@@ -50,7 +50,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "977322f0010fad9d14c2cfb97a3ddbc3d50725d9effaf48c6df82e56e6ae58e2",
+      "e7f4281417f841c611d25c48380c6f2437613c729a1c5d4d00af2725c295deff",
   },
   {
     symbolId: "resistor",
@@ -188,7 +188,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -204,7 +204,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 14,
         },
         style: {
-          strokeWidth: 2.16,
+          strokeRole: "emphasis",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -220,7 +220,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 20,
         },
         style: {
-          strokeWidth: 2.16,
+          strokeRole: "emphasis",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -236,7 +236,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -14,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -252,7 +252,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -14,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -268,7 +268,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 14,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -284,7 +284,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 30,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -301,7 +301,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         part: "bulk-lead",
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -419,7 +419,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -435,7 +435,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 14,
         },
         style: {
-          strokeWidth: 2.16,
+          strokeRole: "emphasis",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -451,7 +451,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 20,
         },
         style: {
-          strokeWidth: 2.16,
+          strokeRole: "emphasis",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -467,7 +467,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -14,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -483,7 +483,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -14,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -499,7 +499,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 14,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },
@@ -515,7 +515,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 30,
         },
         style: {
-          strokeWidth: 1.2,
+          strokeRole: "normal",
           lineCap: "round",
           lineJoin: "round",
         },

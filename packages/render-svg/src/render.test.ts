@@ -238,4 +238,43 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain('data-kind="figure-caption"');
     expect(svg).not.toMatch(/selection|hit-target|flightline|overlay/u);
   });
+
+  it("applies Razavi stroke roles without non-scaling formal geometry", () => {
+    const project = parseProject(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "fixtures/projects/phase-5-dense-analog/project.icproj.json",
+        ),
+        "utf8",
+      ),
+    );
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+
+    const svg = renderDocumentSvg(document, resolver, { title: "Razavi" });
+
+    expect(svg).toContain('data-style-profile="razavi-textbook-v1"');
+    expect(svg).toContain('stroke="#202020" stroke-width="1.6"');
+    expect(svg).toContain('stroke-width="2.4"');
+    expect(svg).toContain('stroke-linecap="butt"');
+    expect(svg).toContain('stroke-miterlimit="4"');
+    expect(svg).toContain('r="3" fill="#202020"');
+    expect(svg).toContain(
+      "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
+    );
+    const widths = new Set(
+      [...svg.matchAll(/stroke-width="([^"]+)"/gu)].map((match) => match[1]),
+    );
+    expect([...widths].sort()).toEqual(["1.6", "2.4"]);
+    expect(svg).not.toContain("vector-effect");
+  });
+
+  it("rejects an unknown persisted style profile", () => {
+    const project = createEmptyProject("project-style", "Unknown Style");
+    project.documents[0]!.presentation.styleProfileId = "not-installed";
+    expect(() => renderDocumentSvg(project.documents[0]!, resolver)).toThrow(
+      "Unknown schematic style profile: not-installed",
+    );
+  });
 });
