@@ -757,3 +757,20 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: concurrent OTA recipe/output work and its separate
   target plan remained untouched and will not be staged in this commit.
 - Commit status: ready for the dedicated RV-6B commit.
+
+## 2026-08-07 - Generate a headless two-stage CMOS buffer example
+
+- Target: demonstrate a fast Agent-generated circuit distinct from the CDAC
+  and OTA examples.
+- Changed areas: one deterministic typed-edit recipe and its editable Project,
+  SVG, PNG, and PDF outputs under `netlists/mixed-device-acceptance/`.
+- Electrical result: the existing `mixed_mos_cell` topology is preserved as
+  two cascaded CMOS inverters; all four D/G/S/B terminal memberships survive
+  canonical persistence, with PMOS bulk on VDD and NMOS bulk on VSS.
+- Visual result: 4 placed instances, 5 Nets, 20 Routes, 8 Junctions, 9
+  annotations, 0 flightlines, 0 crossings, and 0 visual diagnostics.
+- Validation: headless generation, canonical Project round-trip, topology and
+  bulk assertions, PNG inspection, `git diff --check`, and worktree audit.
+- Dirty-state decision: unrelated documentation and OTA work remained
+  untouched and was not staged.
+- Commit status: ready for the dedicated fixture commit.
