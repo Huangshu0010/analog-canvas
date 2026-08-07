@@ -1231,3 +1231,32 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   identical hashes, structural audit, and original-resolution PNG inspection.
 - Commit status: ready for
   `fix(agent-routing): restore atomic flat CDAC generation`.
+
+## 2026-08-08 - Route-attached current arrow, annotation editing, and hit fixes (editor layer)
+
+- Target: land the editor layer for three intertwined annotation/current-arrow
+  features whose model/renderer/derived contracts had already been committed
+  earlier in the worktree-split sequence.
+- Changed areas: `apps/editor/src/App.tsx` (Add current arrow command,
+  drag-along-segment, Reverse arrow, clipboard route-reference remap,
+  Text-panel size-scale draft/commit, padded annotation hit bounds),
+  `apps/editor/src/styles.css` (pointer-events), focused
+  `current-arrow.test.ts`, route-attached/sizeScale/labelVisibility cases in
+  `packages/render-svg/src/render.test.ts`, checked
+  `fixtures/projects/route-attached-current-arrow/` and visual-golden, plus the
+  three target plans.
+- Dirty-state decision: the lower-layer contracts (`RouteAnnotationAttachment`,
+  `routeAttachmentPlacement`, `sizeScale` renderer branches, Ground
+  `labelVisibility`) had already landed in `7a38734` / `a6eeccf` / `64eefa1` /
+  `baffb44`; this commit is the editor-layer consumer only. It is file-level
+  disjoint from the concurrent flat-CDAC agent-routing work and does not touch
+  any of its files. The three plans are committed together because they share
+  one `App.tsx` working set.
+- Validation: render-svg 15/15, editor 6/6, full vitest 194/195 (the single
+  failure is an unrelated `agent-routing/test/integration.test.ts` assertion
+  from the unpushed flat-CDAC commit, not touched by this set), typecheck,
+  prettier on owned files, `git diff --check`.
+- Commit status: committed as `a9a90e6`, not yet pushed. Note: the local
+  branch also carries unpushed flat-CDAC commits (`36279ed`, `2bb4c2b`) from a
+  concurrent worker; push order and the integration-test failure they
+  introduce need a decision before pushing.
