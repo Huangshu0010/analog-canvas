@@ -8,6 +8,7 @@ normative module contracts, concrete execution logs, and reusable experience.
 | Area | Purpose |
 |---|---|
 | [`overall-product-plan.md`](overall-product-plan.md) | Current product boundary and system architecture |
+| [`architecture-and-pipeline-review.md`](architecture-and-pipeline-review.md) | Reference walkthrough of the netlist-to-schematic pipeline, repository structure, and the Agent Razavi-layout gap assessment |
 | [`roadmap/`](roadmap/README.md) | Phase ordering, work packages, acceptance scenarios, and exit gates |
 | [`specs/`](specs/README.md) | Normative data, API, parser, rendering, and persistence contracts |
 | [`agent/`](agent/README.md) | Agent API usage and soft layout/routing guidance |
