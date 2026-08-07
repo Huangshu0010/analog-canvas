@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "resistor",
+  "name": "Resistor",
+  "viewBox": { "x": -30, "y": -15, "width": 60, "height": 30 },
+  "pins": [
+    {
+      "name": "1",
+      "role": "passive",
+      "at": { "x": -30, "y": 0 },
+      "direction": "west",
+      "presentation": { "visibility": "visible", "leadLength": 10 }
+    },
+    {
+      "name": "2",
+      "role": "passive",
+      "at": { "x": 30, "y": 0 },
+      "direction": "east",
+      "presentation": { "visibility": "visible", "leadLength": 10 }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": { "x": -30, "y": 0 },
+      "to": { "x": -20, "y": 0 }
+    },
+    {
+      "kind": "polyline",
+      "points": [
+        { "x": -20, "y": 0 },
+        { "x": -15, "y": -8 },
+        { "x": -5, "y": 8 },
+        { "x": 5, "y": -8 },
+        { "x": 15, "y": 8 },
+        { "x": 20, "y": 0 }
+      ]
+    },
+    { "kind": "line", "from": { "x": 20, "y": 0 }, "to": { "x": 30, "y": 0 } }
+  ],
+  "variants": [],
+  "aliases": []
+}

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "id": "pmos3",
+  "name": "PMOS (3-terminal)",
+  "viewBox": { "x": -30, "y": -30, "width": 60, "height": 60 },
+  "pins": [
+    {
+      "name": "D",
+      "role": "drain",
+      "at": { "x": 20, "y": -30 },
+      "direction": "north",
+      "presentation": { "visibility": "visible", "leadLength": 10 }
+    },
+    {
+      "name": "G",
+      "role": "gate",
+      "at": { "x": -30, "y": 0 },
+      "direction": "west",
+      "presentation": { "visibility": "visible", "leadLength": 10 }
+    },
+    {
+      "name": "S",
+      "role": "source",
+      "at": { "x": 20, "y": 30 },
+      "direction": "south",
+      "presentation": { "visibility": "visible", "leadLength": 10 }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": { "x": -30, "y": 0 },
+      "to": { "x": -17, "y": 0 },
+      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+    },
+    {
+      "kind": "line",
+      "from": { "x": -17, "y": -14 },
+      "to": { "x": -17, "y": 14 },
+      "style": { "strokeWidth": 2.16, "lineCap": "round", "lineJoin": "round" }
+    },
+    {
+      "kind": "line",
+      "from": { "x": -10, "y": -20 },
+      "to": { "x": -10, "y": 20 },
+      "style": { "strokeWidth": 2.16, "lineCap": "round", "lineJoin": "round" }
+    },
+    {
+      "kind": "line",
+      "from": { "x": -10, "y": -14 },
+      "to": { "x": 20, "y": -14 },
+      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+    },
+    {
+      "kind": "line",
+      "from": { "x": 20, "y": -30 },
+      "to": { "x": 20, "y": -14 },
+      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+    },
+    {
+      "kind": "line",
+      "from": { "x": -10, "y": 14 },
+      "to": { "x": 20, "y": 14 },
+      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+    },
+    {
+      "kind": "line",
+      "from": { "x": 20, "y": 14 },
+      "to": { "x": 20, "y": 30 },
+      "style": { "strokeWidth": 1.2, "lineCap": "round", "lineJoin": "round" }
+    },
+    {
+      "kind": "polygon",
+      "points": [
+        { "x": 2, "y": -14 },
+        { "x": 10, "y": -10 },
+        { "x": 8, "y": -19 }
+      ],
+      "fill": "foreground",
+      "part": "source-arrow"
+    }
+  ],
+  "variants": [],
+  "aliases": ["mos-p-3"]
+}

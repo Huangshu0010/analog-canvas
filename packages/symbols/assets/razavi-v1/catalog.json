@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "id": "razavi-symbols",
+  "version": 1,
+  "decoder": {
+    "id": "icm-vss-master-ir",
+    "version": "0.1.0"
+  },
+  "entries": [
+    {
+      "symbolId": "nmos",
+      "name": "NMOS",
+      "category": "transistor",
+      "source": {
+        "stencilHash": "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+        "masterNameU": "NMOS4",
+        "decoderVersion": "0.1.0"
+      },
+      "reviewStatus": "reviewed",
+      "pinOrder": ["D", "G", "S", "B"],
+      "palette": true,
+      "automaticMappings": ["spice:M:nmos", "pdk:model-type:nmos"],
+      "assetPath": "nmos.symbol.json",
+      "assetHash": "1c73ca86585bb480e6c9892dc115d1e121d0befc0d7704bae9004b46082ebd5c"
+    },
+    {
+      "symbolId": "pmos3",
+      "name": "PMOS (3-terminal)",
+      "category": "transistor",
+      "source": {
+        "stencilHash": "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+        "masterNameU": "Pmos3.a",
+        "decoderVersion": "0.1.0"
+      },
+      "reviewStatus": "provisional",
+      "pinOrder": ["D", "G", "S"],
+      "palette": true,
+      "automaticMappings": [],
+      "assetPath": "pmos3.symbol.json",
+      "assetHash": "977322f0010fad9d14c2cfb97a3ddbc3d50725d9effaf48c6df82e56e6ae58e2"
+    },
+    {
+      "symbolId": "resistor",
+      "name": "Resistor",
+      "category": "passive",
+      "source": {
+        "stencilHash": "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+        "masterNameU": "R",
+        "decoderVersion": "0.1.0"
+      },
+      "reviewStatus": "reviewed",
+      "pinOrder": ["1", "2"],
+      "palette": true,
+      "automaticMappings": ["spice:R"],
+      "assetPath": "resistor.symbol.json",
+      "assetHash": "503b6522cf40d53de5dd8d12e1a86a0c84fb957212458694848e0aa17a38e8da"
+    },
+    {
+      "symbolId": "voltage-source",
+      "name": "Independent Voltage Source",
+      "category": "source",
+      "source": {
+        "stencilHash": "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+        "masterNameU": "DC-V",
+        "decoderVersion": "0.1.0"
+      },
+      "reviewStatus": "reviewed",
+      "pinOrder": ["+", "-"],
+      "palette": true,
+      "automaticMappings": ["spice:V"],
+      "assetPath": "voltage-source.symbol.json",
+      "assetHash": "69f7cc7a9a0759d1ee9b712fa254d13d738e0b42bb0fec7b4eee1deaacd121f4"
+    }
+  ],
+  "semanticPrimitives": [
+    {
+      "id": "junction-dot",
+      "disposition": "semantic-primitive",
+      "source": {
+        "stencilHash": "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
+        "masterNameU": "node",
+        "decoderVersion": "0.1.0"
+      },
+      "geometry": {
+        "kind": "circle",
+        "sourceDiameterIU": 0.0787401574803157,
+        "fill": "foreground",
+        "stroke": "none"
+      },
+      "runtimeOwner": "presentation.nodes.junction"
+    }
+  ]
+}

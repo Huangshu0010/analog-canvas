@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "voltage-source",
+  "name": "Independent Voltage Source",
+  "viewBox": { "x": -18, "y": -30, "width": 36, "height": 60 },
+  "pins": [
+    {
+      "name": "+",
+      "role": "positive",
+      "at": { "x": 0, "y": -30 },
+      "direction": "north",
+      "presentation": { "visibility": "visible", "leadLength": 10 }
+    },
+    {
+      "name": "-",
+      "role": "negative",
+      "at": { "x": 0, "y": 30 },
+      "direction": "south",
+      "presentation": { "visibility": "visible", "leadLength": 10 }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": { "x": 0, "y": -30 },
+      "to": { "x": 0, "y": -15 }
+    },
+    { "kind": "circle", "center": { "x": 0, "y": 0 }, "radius": 15 },
+    { "kind": "line", "from": { "x": 0, "y": 15 }, "to": { "x": 0, "y": 30 } },
+    { "kind": "line", "from": { "x": -5, "y": -6 }, "to": { "x": 5, "y": -6 } },
+    { "kind": "line", "from": { "x": 0, "y": -11 }, "to": { "x": 0, "y": -1 } },
+    { "kind": "line", "from": { "x": -5, "y": 7 }, "to": { "x": 5, "y": 7 } }
+  ],
+  "variants": [],
+  "aliases": ["dc-voltage"]
+}

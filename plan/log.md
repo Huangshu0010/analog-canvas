@@ -587,3 +587,31 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: the user confirmed the concurrent OTA `razavi-*`
   files do not affect this target; they remained untracked and untouched.
 - Commit status: ready for the dedicated RV-1 commit.
+
+## 2026-08-07 - Establish Razavi RV-2 catalog boundary
+
+- Target: make product-owned JSON assets and their provenance the source of
+  truth for the first VSS-derived runtime components instead of leaving their
+  only definitions embedded in `builtins.ts`.
+- Changed areas: added `razavi-symbols@1` catalog/assets, a deterministic
+  generated TypeScript adapter, runtime catalog API, generator/check command,
+  focused tests, asset-directory documentation, and compatibility lookups in
+  the existing built-in library.
+- Catalog result: reviewed `nmos`/`NMOS4`, `resistor`/`R`, and
+  `voltage-source`/`DC-V`, plus provisional `pmos3`/`Pmos3.a`, now expose
+  source stencil/decoder identity, review state, exact pin order, reachability,
+  asset path, and canonical hash. Provisional PMOS3 remains palette-visible but
+  has no automatic mapping. VSS `node` is a semantic Junction primitive, not a
+  component.
+- Deterministic boundary: the checker validates canonical asset hashes,
+  generated adapter equality, RV-1 evidence, path containment, unique
+  IDs/aliases/assets/Masters, 10-unit pin grid, and catalog reachability.
+- Compatibility: `builtInSymbols` reuses the four catalog object instances;
+  ordering, IDs, aliases, variants, resolver behavior, and existing visual
+  geometry remain unchanged.
+- Validation: catalog check, 12 focused tests, 132 full tests in 34 files,
+  typecheck, build, formatting, 25 symbol previews, Phase 1/5 visual goldens,
+  and `git diff --check` passed.
+- Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
+  untracked and untouched.
+- Commit status: ready for the dedicated RV-2 commit.

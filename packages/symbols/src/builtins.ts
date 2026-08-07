@@ -1,4 +1,5 @@
 import type { SymbolDefinition, SymbolPin, SymbolPrimitive } from "./schema.js";
+import { requireRazaviCatalogSymbol } from "./razavi-catalog.js";
 
 function pin(
   name: string,
@@ -35,22 +36,6 @@ function twoTerminalSymbol(
     aliases: [],
   };
 }
-
-const resistor = twoTerminalSymbol("resistor", "Resistor", [
-  { kind: "line", from: { x: -30, y: 0 }, to: { x: -20, y: 0 } },
-  {
-    kind: "polyline",
-    points: [
-      { x: -20, y: 0 },
-      { x: -15, y: -8 },
-      { x: -5, y: 8 },
-      { x: 5, y: -8 },
-      { x: 15, y: 8 },
-      { x: 20, y: 0 },
-    ],
-  },
-  { kind: "line", from: { x: 20, y: 0 }, to: { x: 30, y: 0 } },
-]);
 
 const capacitor = twoTerminalSymbol("capacitor", "Capacitor", [
   { kind: "line", from: { x: -30, y: 0 }, to: { x: -4, y: 0 } },
@@ -689,19 +674,24 @@ function bjtSymbol(id: "npn" | "pnp", name: string): SymbolDefinition {
   };
 }
 
+const catalogResistor = requireRazaviCatalogSymbol("resistor");
+const catalogNmos = requireRazaviCatalogSymbol("nmos");
+const catalogPmos3 = requireRazaviCatalogSymbol("pmos3");
+const catalogVoltageSource = requireRazaviCatalogSymbol("voltage-source");
+
 export const builtInSymbols: readonly SymbolDefinition[] = [
-  resistor,
+  catalogResistor,
   capacitor,
   inductor,
-  mosSymbol("nmos", "NMOS"),
+  catalogNmos,
   mosSymbol("pmos", "PMOS"),
   threeTerminalMosSymbol("nmos3", "NMOS (3-terminal)"),
-  threeTerminalMosSymbol("pmos3", "PMOS (3-terminal)"),
+  catalogPmos3,
   ground,
   powerPortSymbol("vdd", "VDD Power Port"),
   powerPortSymbol("vss", "VSS Power Port"),
   port,
-  sourceSymbol("voltage-source", "Independent Voltage Source"),
+  catalogVoltageSource,
   sourceSymbol("current-source", "Independent Current Source"),
   waveformSource("ac-voltage-source", "AC Voltage Source"),
   waveformSource("pulse-voltage-source", "Pulse Voltage Source"),

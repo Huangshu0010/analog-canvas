@@ -1,0 +1,206 @@
+import { createHash } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import { format } from "prettier";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const assetRoot = resolve(root, "packages/symbols/assets/razavi-v1");
+const catalogPath = resolve(assetRoot, "catalog.json");
+const masterIrPath = resolve(
+  root,
+  "fixtures/symbols/vss-ir/razavi-rv1-master-ir.json",
+);
+const generatedPath = resolve(
+  root,
+  "packages/symbols/src/razavi-catalog.generated.ts",
+);
+const check = process.argv.includes("--check");
+
+const normalize = (value) => `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
+const hash = (value) => createHash("sha256").update(value).digest("hex");
+
+function fail(message) {
+  throw new Error(`Razavi catalog: ${message}`);
+}
+
+const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
+const masterIr = JSON.parse(await readFile(masterIrPath, "utf8"));
+if (
+  catalog.schemaVersion !== 1 ||
+  catalog.id !== "razavi-symbols" ||
+  catalog.version !== 1
+) {
+  fail("unexpected catalog identity");
+}
+if (!Array.isArray(catalog.entries) || catalog.entries.length === 0) {
+  fail("catalog must contain entries");
+}
+if (
+  masterIr.decoder.id !== catalog.decoder.id ||
+  masterIr.decoder.version !== catalog.decoder.version
+) {
+  fail("catalog decoder identity does not match RV-1 evidence");
+}
+const evidenceMasters = new Set(masterIr.masters.map((master) => master.nameU));
+
+const symbols = [];
+const ids = new Set();
+const aliases = new Set();
+const masters = new Set();
+const assetPaths = new Set();
+for (const entry of catalog.entries) {
+  if (ids.has(entry.symbolId) || aliases.has(entry.symbolId)) {
+    fail(`duplicate symbol ID ${entry.symbolId}`);
+  }
+  ids.add(entry.symbolId);
+  if (masters.has(entry.source.masterNameU)) {
+    fail(`duplicate source Master ${entry.source.masterNameU}`);
+  }
+  masters.add(entry.source.masterNameU);
+  if (
+    entry.reviewStatus !== "reviewed" &&
+    entry.reviewStatus !== "provisional"
+  ) {
+    fail(`invalid review status for ${entry.symbolId}`);
+  }
+  if (
+    !entry.palette &&
+    entry.automaticMappings.length === 0 &&
+    !entry.manualOnlyReason
+  ) {
+    fail(`${entry.symbolId} is unreachable and lacks a manual-only reason`);
+  }
+  if (
+    entry.source.stencilHash !== masterIr.source.sha256 ||
+    entry.source.decoderVersion !== catalog.decoder.version
+  ) {
+    fail(`invalid source provenance for ${entry.symbolId}`);
+  }
+  if (!evidenceMasters.has(entry.source.masterNameU)) {
+    fail(`missing RV-1 evidence for ${entry.source.masterNameU}`);
+  }
+  if (assetPaths.has(entry.assetPath)) {
+    fail(`duplicate asset path ${entry.assetPath}`);
+  }
+  assetPaths.add(entry.assetPath);
+
+  const assetPath = resolve(assetRoot, entry.assetPath);
+  if (!assetPath.startsWith(`${assetRoot}${sep}`)) {
+    fail(`asset path escapes catalog root: ${entry.assetPath}`);
+  }
+  const assetSource = normalize(await readFile(assetPath, "utf8"));
+  const symbol = JSON.parse(assetSource);
+  if (symbol.schemaVersion !== 1 || symbol.id !== entry.symbolId) {
+    fail(`asset identity mismatch for ${entry.symbolId}`);
+  }
+  const pinOrder = symbol.pins.map((pin) => pin.name);
+  if (pinOrder.join("\u0000") !== entry.pinOrder.join("\u0000")) {
+    fail(`pin order mismatch for ${entry.symbolId}`);
+  }
+  for (const pin of symbol.pins) {
+    if (pin.at.x % 10 !== 0 || pin.at.y % 10 !== 0) {
+      fail(`off-grid pin ${entry.symbolId}.${pin.name}`);
+    }
+  }
+  for (const alias of symbol.aliases) {
+    if (ids.has(alias) || aliases.has(alias)) {
+      fail(`duplicate symbol alias ${alias}`);
+    }
+    aliases.add(alias);
+  }
+  const assetHash = hash(assetSource);
+  if (check && entry.assetHash !== assetHash) {
+    fail(`asset hash mismatch for ${entry.symbolId}`);
+  }
+  entry.assetHash = assetHash;
+  symbols.push(symbol);
+}
+
+const semanticIds = new Set();
+for (const primitive of catalog.semanticPrimitives ?? []) {
+  if (semanticIds.has(primitive.id)) {
+    fail(`duplicate semantic primitive ${primitive.id}`);
+  }
+  semanticIds.add(primitive.id);
+  if (primitive.disposition !== "semantic-primitive") {
+    fail(`invalid semantic disposition for ${primitive.id}`);
+  }
+  if (
+    primitive.source.stencilHash !== masterIr.source.sha256 ||
+    primitive.source.decoderVersion !== catalog.decoder.version
+  ) {
+    fail(`invalid source provenance for ${primitive.id}`);
+  }
+  if (!evidenceMasters.has(primitive.source.masterNameU)) {
+    fail(`missing RV-1 evidence for ${primitive.source.masterNameU}`);
+  }
+  if (masters.has(primitive.source.masterNameU)) {
+    fail(`source Master used twice: ${primitive.source.masterNameU}`);
+  }
+  masters.add(primitive.source.masterNameU);
+}
+
+const catalogSource = normalize(
+  await format(JSON.stringify(catalog, null, 2), { parser: "json" }),
+);
+const generatedSource = normalize(
+  await format(
+    `
+// Generated by scripts/generate-razavi-symbol-catalog.mjs. Do not edit.
+import type { SymbolDefinition } from "./schema.js";
+import type {
+  RazaviSemanticPrimitiveEntry,
+  RazaviSymbolCatalogEntry,
+} from "./razavi-catalog.js";
+
+export const razaviSymbolCatalogIdentity = ${JSON.stringify(
+      {
+        schemaVersion: catalog.schemaVersion,
+        id: catalog.id,
+        version: catalog.version,
+        decoder: catalog.decoder,
+      },
+      null,
+      2,
+    )} as const;
+
+export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = ${JSON.stringify(
+      catalog.entries,
+      null,
+      2,
+    )};
+
+export const razaviSemanticPrimitives: readonly RazaviSemanticPrimitiveEntry[] = ${JSON.stringify(
+      catalog.semanticPrimitives ?? [],
+      null,
+      2,
+    )};
+
+export const razaviCatalogSymbols: readonly SymbolDefinition[] = ${JSON.stringify(
+      symbols,
+      null,
+      2,
+    )};
+`,
+    { parser: "typescript" },
+  ),
+);
+
+if (check) {
+  const checkedCatalog = normalize(await readFile(catalogPath, "utf8"));
+  if (checkedCatalog !== catalogSource)
+    fail("catalog formatting or hashes are stale");
+  const checkedGenerated = normalize(await readFile(generatedPath, "utf8"));
+  if (checkedGenerated !== generatedSource)
+    fail("generated runtime adapter is stale");
+  console.log(
+    `Validated ${symbols.length} Razavi symbol assets and ${semanticIds.size} semantic primitive`,
+  );
+} else {
+  await writeFile(catalogPath, catalogSource, "utf8");
+  await writeFile(generatedPath, generatedSource, "utf8");
+  console.log(
+    `Generated ${symbols.length} Razavi symbol assets and ${semanticIds.size} semantic primitive`,
+  );
+}
