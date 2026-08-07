@@ -11,15 +11,15 @@ function annotation(input) {
 }
 
 export default {
-  id: "sky130-divide-by-2-agent-v1",
+  id: "sky130-divide-by-2-agent-refined-v2",
   agentId: "codex-divide-by-2-layout",
   sourceRoot: "netlists/sky130-transistor-divide-by-2",
   sourceFiles: ["circuit.spi"],
   entry: "circuit.spi",
   documentName: "divide_by_2",
   outputDocumentName: "Rising-Edge Divide-by-Two",
-  projectName: "SKY130 Transistor Divide-by-Two",
-  outputBase: "agent-divide-by-2",
+  projectName: "SKY130 Transistor Divide-by-Two - Refined Hierarchical View",
+  outputBase: "agent-divide-by-2-refined",
   exportMargin: 30,
   exportScale: 4,
 
@@ -107,11 +107,12 @@ export default {
     });
 
     for (const [id, netName, x, y] of [
-      ["ckb", "ckb", 240, 190],
-      ["cki", "cki", 360, 210],
+      ["ckb", "ckb", 240, 160],
+      ["cki", "cki", 360, 160],
       ["qstate", "qstate", 560, 240],
-      ["d", "d", 380, 230],
-      ["qb", "qb", 740, 280],
+      ["d-fb", "d", 220, 360],
+      ["d-ff", "d", 400, 230],
+      ["qb", "qb", 740, 260],
       ["clkout", "clkout", 920, 270],
       ["reset", "reset", 820, 410],
       ["vss-cap", "vss", 600, 490],
@@ -141,22 +142,19 @@ export default {
 
     // Clock conditioning and the two complementary clock phases.
     addRoute("clk", port("clk"), terminal("XCLK0", "a"), [{ x: 70, y: 140 }]);
-    addRoute("ckb", terminal("XCLK0", "y"), junction("junction-ckb"), [
-      { x: 240, y: 160 },
-    ]);
+    addRoute("ckb", terminal("XCLK0", "y"), junction("junction-ckb"));
     addRoute("ckb", junction("junction-ckb"), terminal("XCLK1", "a"), [
       { x: 240, y: 140 },
     ]);
     addRoute("ckb", junction("junction-ckb"), terminal("XFF", "ckb"), [
-      { x: 390, y: 190 },
+      { x: 240, y: 120 },
+      { x: 390, y: 120 },
       { x: 390, y: 260 },
     ]);
-    addRoute("cki", terminal("XCLK1", "y"), junction("junction-cki"), [
-      { x: 360, y: 160 },
-    ]);
+    addRoute("cki", terminal("XCLK1", "y"), junction("junction-cki"));
     addRoute("cki", junction("junction-cki"), terminal("XFF", "cki"), [
-      { x: 390, y: 210 },
-      { x: 390, y: 280 },
+      { x: 380, y: 160 },
+      { x: 380, y: 280 },
     ]);
 
     // Divide-by-two feedback: D receives the inversion of Q.
@@ -172,18 +170,13 @@ export default {
       { x: 540, y: 320 },
       { x: 250, y: 320 },
     ]);
-    addRoute("d", terminal("XFB", "y"), junction("junction-d"), [
-      { x: 250, y: 370 },
-      { x: 250, y: 230 },
-    ]);
-    addRoute("d", junction("junction-d"), terminal("XFF", "d"), [
-      { x: 380, y: 240 },
+    addRoute("d", terminal("XFB", "y"), junction("junction-d-fb"));
+    addRoute("d", junction("junction-d-ff"), terminal("XFF", "d"), [
+      { x: 400, y: 240 },
     ]);
 
     // State buffer chain and reset pull-down at the output.
-    addRoute("qb", terminal("XBUF0", "y"), junction("junction-qb"), [
-      { x: 740, y: 260 },
-    ]);
+    addRoute("qb", terminal("XBUF0", "y"), junction("junction-qb"));
     addRoute("qb", junction("junction-qb"), terminal("XBUF1", "a"), [
       { x: 740, y: 240 },
     ]);
@@ -198,12 +191,12 @@ export default {
       "trunk",
     );
     addRoute("clkout", junction("junction-clkout"), terminal("XOUTRST", "D"), [
-      { x: 920, y: 320 },
+      { x: 920, y: 330 },
     ]);
 
     addRoute("reset", port("reset"), junction("junction-reset"), [], "trunk");
     addRoute("reset", junction("junction-reset"), terminal("XOUTRST", "G"), [
-      { x: 860, y: 410 },
+      { x: 870, y: 410 },
     ]);
     addRoute("reset", junction("junction-reset"), terminal("XFF", "reset"), [
       { x: 800, y: 410 },
@@ -224,7 +217,9 @@ export default {
       "trunk",
     );
     addRoute("vss", junction("junction-vss-cap"), terminal("CSTATE", "2"));
-    addRoute("vss", junction("junction-vss-reset"), terminal("XOUTRST", "S"));
+    addRoute("vss", junction("junction-vss-reset"), terminal("XOUTRST", "S"), [
+      { x: 900, y: 490 },
+    ]);
 
     labels.push(
       annotation({
@@ -282,6 +277,22 @@ export default {
         position: { x: 740, y: 302 },
         attachedObjectId: netId("qb"),
         alignment: "middle",
+      }),
+      annotation({
+        id: "label-d-fb",
+        kind: "net-label",
+        text: "D",
+        position: { x: 205, y: 352 },
+        attachedObjectId: "junction-d-fb",
+        alignment: "end",
+      }),
+      annotation({
+        id: "label-d-ff",
+        kind: "net-label",
+        text: "D",
+        position: { x: 395, y: 218 },
+        attachedObjectId: "junction-d-ff",
+        alignment: "end",
       }),
     );
 

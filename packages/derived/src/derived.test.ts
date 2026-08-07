@@ -192,6 +192,82 @@ describe("derived connectivity and route geometry", () => {
     ]);
   });
 
+  it("connects separated same-Net junction stubs through matching electrical labels", () => {
+    const project = createEmptyProject("project-labels", "Labels");
+    const document = project.documents[0]!;
+    document.ports = [
+      {
+        id: "port-left",
+        name: "left",
+        direction: "passive",
+        position: { x: 0, y: 100 },
+      },
+      {
+        id: "port-right",
+        name: "right",
+        direction: "passive",
+        position: { x: 200, y: 100 },
+      },
+    ];
+    document.nets = [
+      {
+        id: "net-signal",
+        name: "signal",
+        scope: "local",
+        terminals: [],
+        ports: ["port-left", "port-right"],
+      },
+    ];
+    document.junctions = [
+      { id: "junction-left", netId: "net-signal", position: { x: 40, y: 100 } },
+      {
+        id: "junction-right",
+        netId: "net-signal",
+        position: { x: 160, y: 100 },
+      },
+    ];
+    document.routes = [
+      {
+        id: "route-left",
+        netId: "net-signal",
+        from: { kind: "port", portId: "port-left" },
+        to: { kind: "junction", junctionId: "junction-left" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-right",
+        netId: "net-signal",
+        from: { kind: "junction", junctionId: "junction-right" },
+        to: { kind: "port", portId: "port-right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+    const label = (id: string, attachedObjectId: string) => ({
+      id,
+      kind: "net-label" as const,
+      text: "SIGNAL",
+      position: { x: 0, y: 0 },
+      offset: { x: 0, y: 0 },
+      rotation: 0 as const,
+      attachedObjectId,
+      alignment: "start" as const,
+      locked: false,
+    });
+    document.annotations = [
+      label("label-left", "junction-left"),
+      label("label-right", "junction-right"),
+    ];
+
+    expect(deriveFlightlines(document, resolver)).toEqual([]);
+    document.annotations[1] = {
+      ...document.annotations[1]!,
+      text: "OTHER",
+    };
+    expect(deriveFlightlines(document, resolver)).toHaveLength(1);
+  });
+
   it("normalizes duplicate/collinear points and proposes local endpoint stretch", () => {
     expect(
       normalizeRouteGeometry(

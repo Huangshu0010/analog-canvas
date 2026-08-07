@@ -93,6 +93,31 @@ export function deriveNetConnectivity(
     const to = endpointKey(route.to);
     if (nodes.has(from) && nodes.has(to)) sets.union(from, to);
   }
+  const labeledJunctions = new Map<string, string[]>();
+  for (const annotation of document.annotations) {
+    if (
+      (annotation.kind !== "net-label" && annotation.kind !== "power-label") ||
+      !annotation.attachedObjectId
+    ) {
+      continue;
+    }
+    const junction = document.junctions.find(
+      (candidate) => candidate.id === annotation.attachedObjectId,
+    );
+    if (!junction || junction.netId !== net.id) continue;
+    const key = endpointKey({ kind: "junction", junctionId: junction.id });
+    if (!nodes.has(key)) continue;
+    const label = annotation.text.trim();
+    if (label.length === 0) continue;
+    const group = labeledJunctions.get(label) ?? [];
+    group.push(key);
+    labeledJunctions.set(label, group);
+  }
+  for (const keys of labeledJunctions.values()) {
+    const first = keys[0];
+    if (!first) continue;
+    for (const key of keys.slice(1)) sets.union(first, key);
+  }
   const grouped = new Map<string, VisibleConnectivityNode[]>();
   for (const node of nodes.values()) {
     const root = sets.find(node.key);

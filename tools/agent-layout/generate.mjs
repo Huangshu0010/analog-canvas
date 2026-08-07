@@ -37,6 +37,9 @@ if (!imported.successful || !imported.project) {
 
 const project = imported.project;
 project.name = recipe.projectName ?? project.name;
+if (recipe.prepareProject) {
+  await recipe.prepareProject({ project });
+}
 let document = recipe.documentName
   ? project.documents.find(
       (candidate) => candidate.name === recipe.documentName,
