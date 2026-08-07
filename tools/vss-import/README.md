@@ -51,6 +51,24 @@ checked fixture, and verifies target ordering and feature coverage. The tool is
 Windows/Visio-only development infrastructure. Product builds and runtime do
 not read the VSS or require Visio.
 
+## Core analog migration evidence
+
+RV-6 reuses the same decoder for a separate checked fixture containing the
+union of all reviewed mappings, all provisional migration candidates, and the
+semantic `node` and `Arrow` Masters. It intentionally does not rewrite or
+expand the RV-1 proof fixture.
+
+```powershell
+.\tools\vss-import\Test-VssCoreAnalogIr.ps1
+```
+
+`razavi-rv6-core-analog-master-ir.json` currently covers 27 Masters, 175
+nested Shapes, 504 geometry rows, and 45 connection points. The checker
+re-extracts the target set, compares the complete fixture hash, validates
+review-manifest coverage, and rejects decoder diagnostics. Connection points
+remain evidence only; catalog pin names and order still come from explicit
+human review.
+
 For fidelity audits, individual Masters may also be exported from a read-only
 Visio session and compared visually with normalized SVG. Such exports are
 temporary evidence and must not be committed as runtime assets. Geometry may

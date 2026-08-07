@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0`
+Version: `1.1`
 
 Owning phase: `Phase 5`
 
@@ -27,6 +27,12 @@ maps selected `masterNameU` values to canonical Symbol DSL IDs and ordered
 electrical pin names. The extractor records all master names plus ShapeSheet
 cells and geometry formulas for reviewed masters. The review tool renders the
 normalized Symbol DSL as an SVG contact sheet.
+
+The RV-1 proof fixture stays fixed to five target Masters plus the
+coverage-only `TEXT` Master. RV-6 uses a separate core-analog fixture so
+expanding migration evidence cannot weaken or silently redefine the original
+decoder proof. The RV-6 fixture is the exact union of 12 reviewed mappings, 13
+provisional candidates, and semantic `node`/`Arrow` evidence.
 
 ## Invariants
 
@@ -77,3 +83,5 @@ an explicit review-manifest revision and compatibility analysis.
 - reviewed-master ShapeSheet capture
 - review manifest versus built-in pin tests
 - deterministic 12-family SVG contact-sheet comparison
+- deterministic RV-6 re-extraction and complete fixture SHA-256 comparison
+- exact review-manifest coverage with no decoder diagnostics

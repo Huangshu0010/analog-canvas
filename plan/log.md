@@ -684,3 +684,23 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
   untracked and untouched.
 - Commit status: ready for the dedicated RV-5 commit.
+
+## 2026-08-07 - Capture Razavi RV-6A core analog VSS evidence
+
+- Target: establish deterministic structured source evidence for all reviewed
+  and provisional Batch A/B analog Masters before further catalog migration.
+- Changed areas: dedicated 27-Master VssMasterIR fixture, deterministic
+  re-extraction checker, VSS tool documentation, and source/style contracts.
+- Evidence: 12 reviewed mappings, 13 provisional candidates, and semantic
+  `node`/`Arrow` Masters produce 175 nested Shapes, 504 geometry rows, 45
+  connection points, five recognized geometry kinds, and zero diagnostics.
+  Fixture SHA-256 is
+  `2db676bddbd0ac93dba64972eec15c40b2143161ec05c75cfe4cc467595584c0`.
+- Boundary: connection points remain review evidence only. This target changed
+  no runtime asset, pin order, palette entry, or automatic SPICE/PDK mapping.
+  The frozen RV-1 proof fixture remains independent and unchanged.
+- Validation: deterministic RV-6 re-extraction, unchanged RV-1 checker, 150
+  tests in 36 files, typecheck, formatting, and `git diff --check` passed.
+- Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
+  untracked and untouched.
+- Commit status: ready for the dedicated RV-6A commit.

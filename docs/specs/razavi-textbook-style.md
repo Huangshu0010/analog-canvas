@@ -571,6 +571,12 @@ current arrows from semantic objects with the profile tokens.
 Complete Batch A and Batch B VSS decoding/review. Wire palette and SPICE/PDK
 mapping to the catalog and expose selection provenance.
 
+RV-6 uses `razavi-rv6-core-analog-master-ir.json` as its structured migration
+evidence rather than expanding the frozen RV-1 proof. Runtime promotion still
+requires catalog conversion and the review status named in
+`circuit-vss-review.json`; presence in the RV-6 evidence file alone does not
+authorize automatic mapping.
+
 ### RV-7: Acceptance and default switch
 
 Land the six-topology board, complete fixed-scale visual review, validate
