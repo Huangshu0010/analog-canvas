@@ -211,3 +211,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Playwright flows, 65 Markdown files, no-MCP package inspection, and
   `git diff --check` passed.
 - Commit status: ready to commit as `Complete Phase 7 release hardening`.
+
+## 2026-08-07 - Plan Phase 8 interaction redesign
+
+- Target: consolidate the reviewed toolbar, shortcut, viewport, selection,
+  manual component authoring, direct wiring, automatic junction/crossing, and
+  VSS symbol-fidelity changes without rewriting the completed Phase 0-7
+  implementation history.
+- Changed areas: added a proposed editor interaction contract and a dependency-
+  ordered Phase 8 roadmap; indexed both documents and recorded the bounded
+  planning target.
+- Validation: Prettier check passed for all six changed Markdown files; local
+  Markdown links resolved, fenced code blocks balanced, and
+  `git diff --check` passed.
+- Commit status: ready to commit as `Plan Phase 8 interaction redesign`.
