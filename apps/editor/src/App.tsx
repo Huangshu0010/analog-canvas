@@ -13,6 +13,7 @@ import {
   isVisibleEndpoint,
   moveRouteSegment,
   proposeGroupMove,
+  routeAttachmentPlacement,
   routePolyline,
 } from "@icm/derived";
 import {
@@ -27,10 +28,16 @@ import type {
   CircuitProject,
   Point,
   Rect,
+  RouteAnnotationAttachment,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
-import { buildSvgScene, renderSymbolDefinitionBody } from "@icm/render-svg";
+import {
+  buildSvgScene,
+  renderSymbolDefinitionBody,
+  resolveSchematicStyleProfile,
+  schematicTextFontSize,
+} from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
 import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
@@ -392,6 +399,7 @@ export function App({ project: initialProject }: AppProps) {
   const [instanceLabelDraft, setInstanceLabelDraft] = useState("");
   const [netLabelDraft, setNetLabelDraft] = useState("");
   const [annotationTextDraft, setAnnotationTextDraft] = useState("");
+  const [annotationSizeDraft, setAnnotationSizeDraft] = useState("1");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
@@ -435,6 +443,9 @@ export function App({ project: initialProject }: AppProps) {
         (annotation) => annotation.id === selectedAnnotationId,
       )
     : undefined;
+  const styleProfile = resolveSchematicStyleProfile(
+    document.presentation.styleProfileId,
+  );
   const selectedPortId =
     selectedEndpoint?.endpoint.kind === "port"
       ? selectedEndpoint.endpoint.portId
@@ -495,12 +506,14 @@ export function App({ project: initialProject }: AppProps) {
           ]
         : [],
     ),
-    ...document.junctions.map((junction): WireSource => ({
-      endpoint: { kind: "junction", junctionId: junction.id },
-      netId: junction.netId,
-      point: junction.position,
-      preludeEdits: [],
-    })),
+    ...document.junctions
+      .filter((junction) => (junction.role ?? "branch") === "branch")
+      .map((junction): WireSource => ({
+        endpoint: { kind: "junction", junctionId: junction.id },
+        netId: junction.netId,
+        point: junction.position,
+        preludeEdits: [],
+      })),
   ];
   const routePolylines = document.routes
     .map((route) => ({
@@ -515,6 +528,162 @@ export function App({ project: initialProject }: AppProps) {
         polyline: NonNullable<ReturnType<typeof routePolyline>>;
       } => candidate.polyline !== null,
     );
+  function attachmentAtPoint(
+    candidate: Point,
+    routeId?: string,
+    normalOffset = -14,
+  ): { routeAttachment: RouteAnnotationAttachment; position: Point } | null {
+    const candidates = routePolylines
+      .filter((record) => !routeId || record.route.id === routeId)
+      .flatMap(({ route, polyline }) =>
+        polyline.points.slice(0, -1).map((from, segmentIndex) => {
+          const to = polyline.points[segmentIndex + 1]!;
+          const position = closestPointOnSegment(candidate, from, to);
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const lengthSquared = dx * dx + dy * dy;
+          const t =
+            lengthSquared === 0
+              ? 0
+              : clamp(
+                  ((position.x - from.x) * dx + (position.y - from.y) * dy) /
+                    lengthSquared,
+                  0,
+                  1,
+                );
+          return {
+            routeAttachment: {
+              routeId: route.id,
+              segmentIndex,
+              t,
+              direction: "forward" as const,
+              normalOffset,
+            },
+            position,
+            distanceSquared:
+              (position.x - candidate.x) ** 2 + (position.y - candidate.y) ** 2,
+          };
+        }),
+      )
+      .sort((left, right) => left.distanceSquared - right.distanceSquared);
+    const closest = candidates[0];
+    return closest
+      ? {
+          routeAttachment: closest.routeAttachment,
+          position: closest.position,
+        }
+      : null;
+  }
+  function annotationAnchor(annotation: Annotation): Point {
+    if (annotation.kind !== "current" || !annotation.routeAttachment) {
+      return annotation.position;
+    }
+    const record = routePolylines.find(
+      ({ route }) => route.id === annotation.routeAttachment!.routeId,
+    );
+    return (
+      (record &&
+        routeAttachmentPlacement(record.polyline, annotation.routeAttachment)
+          ?.position) ??
+      annotation.position
+    );
+  }
+
+  function annotationHitBox(annotation: Annotation, anchor: Point): Rect {
+    const sizeScale = annotation.sizeScale ?? 1;
+    const fontSize =
+      schematicTextFontSize(annotation.kind, styleProfile) * sizeScale;
+    let labelPosition = anchor;
+    let alignment = annotation.alignment;
+    let rotation = annotation.rotation;
+    let arrowBounds: Rect | null = null;
+
+    if (annotation.kind === "current") {
+      const record = annotation.routeAttachment
+        ? routePolylines.find(
+            ({ route }) => route.id === annotation.routeAttachment!.routeId,
+          )
+        : undefined;
+      const attachment =
+        record && annotation.routeAttachment
+          ? routeAttachmentPlacement(
+              record.polyline,
+              annotation.routeAttachment,
+            )
+          : null;
+      rotation = attachment?.rotation ?? annotation.rotation;
+      const vertical = rotation === 90 || rotation === 270;
+      labelPosition = attachment?.labelPosition ?? {
+        x: anchor.x + (vertical ? 15 : 0),
+        y: anchor.y + (vertical ? 4 : -7),
+      };
+      alignment = attachment
+        ? "middle"
+        : vertical
+          ? "start"
+          : annotation.alignment;
+      const arrowLength =
+        styleProfile.id === "textbook-monochrome-v1"
+          ? 24
+          : styleProfile.annotations.currentArrowLength;
+      const halfLength = arrowLength / 2;
+      arrowBounds = vertical
+        ? {
+            x: anchor.x - 6,
+            y: anchor.y - halfLength,
+            width: 12,
+            height: arrowLength,
+          }
+        : {
+            x: anchor.x - halfLength,
+            y: anchor.y - 6,
+            width: arrowLength,
+            height: 12,
+          };
+    }
+
+    const width = Math.max(
+      fontSize * 0.6,
+      annotation.text.length * fontSize * 0.6,
+    );
+    const height = fontSize * 1.35;
+    const left =
+      alignment === "start"
+        ? labelPosition.x
+        : alignment === "end"
+          ? labelPosition.x - width
+          : labelPosition.x - width / 2;
+    const textBounds =
+      rotation === 90 || rotation === 270
+        ? {
+            x: labelPosition.x - height / 2,
+            y: labelPosition.y - width / 2,
+            width: height,
+            height: width,
+          }
+        : { x: left, y: labelPosition.y - fontSize * 1.05, width, height };
+    const minimumX = Math.min(textBounds.x, arrowBounds?.x ?? textBounds.x);
+    const minimumY = Math.min(textBounds.y, arrowBounds?.y ?? textBounds.y);
+    const maximumX = Math.max(
+      textBounds.x + textBounds.width,
+      arrowBounds
+        ? arrowBounds.x + arrowBounds.width
+        : textBounds.x + textBounds.width,
+    );
+    const maximumY = Math.max(
+      textBounds.y + textBounds.height,
+      arrowBounds
+        ? arrowBounds.y + arrowBounds.height
+        : textBounds.y + textBounds.height,
+    );
+    const padding = 6;
+    return {
+      x: minimumX - padding,
+      y: minimumY - padding,
+      width: maximumX - minimumX + padding * 2,
+      height: maximumY - minimumY + padding * 2,
+    };
+  }
   const internalSelection = deriveInternalGroupSelection(document, selectedIds);
   const selectedInternalRouteIds = new Set(internalSelection.routeIds);
   const wireFixedPoints = wireSource
@@ -579,6 +748,7 @@ export function App({ project: initialProject }: AppProps) {
 
   useEffect(() => {
     setAnnotationTextDraft(selectedAnnotation?.text ?? "");
+    setAnnotationSizeDraft(String(selectedAnnotation?.sizeScale ?? 1));
   }, [selectedAnnotation]);
 
   useEffect(() => {
@@ -1088,6 +1258,15 @@ export function App({ project: initialProject }: AppProps) {
     annotation: Annotation,
     candidate: Point,
   ): Point {
+    if (annotation.kind === "current" && annotation.routeAttachment) {
+      return (
+        attachmentAtPoint(
+          candidate,
+          annotation.routeAttachment.routeId,
+          annotation.routeAttachment.normalOffset,
+        )?.position ?? annotation.position
+      );
+    }
     if (annotation.kind === "instance-label" && annotation.attachedObjectId) {
       const instance = document.instances.find(
         (item) => item.id === annotation.attachedObjectId,
@@ -1155,7 +1334,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function beginAnnotationDrag(
-    event: ReactPointerEvent<SVGCircleElement>,
+    event: ReactPointerEvent<SVGRectElement>,
     annotation: Annotation,
   ): void {
     if (event.button !== 0 || annotation.locked) return;
@@ -1180,7 +1359,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function previewAnnotationDrag(
-    event: ReactPointerEvent<SVGCircleElement>,
+    event: ReactPointerEvent<SVGRectElement>,
   ): void {
     if (annotationDragPreview?.pointerId !== event.pointerId) return;
     const pointer = pointFromClient(
@@ -1208,7 +1387,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function finishAnnotationDrag(
-    event: ReactPointerEvent<SVGCircleElement>,
+    event: ReactPointerEvent<SVGRectElement>,
   ): void {
     if (annotationDragPreview?.pointerId !== event.pointerId) return;
     event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1217,6 +1396,20 @@ export function App({ project: initialProject }: AppProps) {
     );
     if (annotation) {
       let offset = { ...annotation.offset };
+      let routeAttachment = annotation.routeAttachment;
+      if (annotation.kind === "current" && annotation.routeAttachment) {
+        const attached = attachmentAtPoint(
+          annotationDragPreview.position,
+          annotation.routeAttachment.routeId,
+          annotation.routeAttachment.normalOffset,
+        );
+        if (attached) {
+          routeAttachment = {
+            ...attached.routeAttachment,
+            direction: annotation.routeAttachment.direction,
+          };
+        }
+      }
       if (annotation.attachedObjectId) {
         const instance = document.instances.find(
           (candidate) => candidate.id === annotation.attachedObjectId,
@@ -1235,6 +1428,7 @@ export function App({ project: initialProject }: AppProps) {
             ...annotation,
             position: annotationDragPreview.position,
             offset,
+            ...(routeAttachment ? { routeAttachment } : {}),
           },
         },
       ]);
@@ -1610,6 +1804,58 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
+  function addCurrentArrow(): void {
+    if (!selectedRoute) {
+      setStatus("Select a wire segment before adding a current arrow");
+      return;
+    }
+    const segmentIndex = Math.min(
+      selectedRouteSegmentIndex ?? 0,
+      selectedRoute.segmentModes.length - 1,
+    );
+    const record = routePolylines.find(
+      ({ route }) => route.id === selectedRoute.id,
+    );
+    const from = record?.polyline.points[segmentIndex];
+    const to = record?.polyline.points[segmentIndex + 1];
+    if (!from || !to) {
+      setStatus("Selected wire segment cannot accept a current arrow");
+      return;
+    }
+    transactionCounter.current += 1;
+    const id = `current-${transactionCounter.current}`;
+    const position = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+    const result = transact([
+      {
+        kind: "upsert_annotation",
+        annotation: {
+          id,
+          kind: "current",
+          text: "I_x",
+          position,
+          routeAttachment: {
+            routeId: selectedRoute.id,
+            segmentIndex,
+            t: 0.5,
+            direction: "forward",
+            normalOffset: -14,
+          },
+          offset: { x: 0, y: 0 },
+          alignment: "middle",
+          rotation: 0,
+          locked: false,
+        },
+      },
+    ]);
+    if (result.ok) {
+      setSelectedAnnotationId(id);
+      setSelectedIds([]);
+      setSelectedRouteId(null);
+      setAnnotationTextDraft("I_x");
+      setStatus(`Added current arrow on ${selectedRoute.id}`);
+    }
+  }
+
   function applyInstanceLabel(): void {
     if (!selectedInstance?.placement) return;
     const existing = document.annotations.find(
@@ -1737,12 +1983,32 @@ export function App({ project: initialProject }: AppProps) {
       setSelectedAnnotationId(null);
       return;
     }
+    const parsedSize = Number(annotationSizeDraft);
+    const sizeScale = Number.isFinite(parsedSize)
+      ? Math.max(0.1, Math.min(10, parsedSize))
+      : (selectedAnnotation.sizeScale ?? 1);
     transact([
       {
         kind: "upsert_annotation",
-        annotation: { ...selectedAnnotation, text },
+        annotation: { ...selectedAnnotation, text, sizeScale },
       },
     ]);
+    setAnnotationSizeDraft(String(sizeScale));
+  }
+
+  function applyAnnotationSize(): void {
+    if (!selectedAnnotation) return;
+    const parsedSize = Number(annotationSizeDraft);
+    const sizeScale = Number.isFinite(parsedSize)
+      ? Math.max(0.1, Math.min(10, parsedSize))
+      : (selectedAnnotation.sizeScale ?? 1);
+    const result = transact([
+      {
+        kind: "upsert_annotation",
+        annotation: { ...selectedAnnotation, sizeScale },
+      },
+    ]);
+    if (result.ok) setAnnotationSizeDraft(String(sizeScale));
   }
 
   function deleteSelectedAnnotation(): void {
@@ -1751,6 +2017,32 @@ export function App({ project: initialProject }: AppProps) {
       { kind: "remove_annotation", annotationId: selectedAnnotation.id },
     ]);
     if (result.ok) setSelectedAnnotationId(null);
+  }
+
+  function reverseSelectedCurrentArrow(): void {
+    if (
+      selectedAnnotation?.kind !== "current" ||
+      !selectedAnnotation.routeAttachment
+    ) {
+      return;
+    }
+    const direction =
+      selectedAnnotation.routeAttachment.direction === "forward"
+        ? "reverse"
+        : "forward";
+    const result = transact([
+      {
+        kind: "upsert_annotation",
+        annotation: {
+          ...selectedAnnotation,
+          routeAttachment: {
+            ...selectedAnnotation.routeAttachment,
+            direction,
+          },
+        },
+      },
+    ]);
+    if (result.ok) setStatus(`Current arrow points ${direction}`);
   }
 
   function alignFirstLayoutGroup(): void {
@@ -2533,6 +2825,9 @@ export function App({ project: initialProject }: AppProps) {
             <button type="button" onClick={applyNetLabel}>
               Apply Net label
             </button>
+            <button type="button" onClick={addCurrentArrow}>
+              Add current arrow
+            </button>
             <button type="button" onClick={removeSelectedRouteGeometry}>
               Remove route geometry
             </button>
@@ -2549,11 +2844,49 @@ export function App({ project: initialProject }: AppProps) {
                 onChange={(event) =>
                   setAnnotationTextDraft(event.currentTarget.value)
                 }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    applyAnnotationText();
+                  }
+                }}
               />
             </label>
-            <button type="button" onClick={applyAnnotationText}>
+            <label>
+              Size scale
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="10"
+                aria-label="Selected text size scale"
+                value={annotationSizeDraft}
+                disabled={selectedAnnotation.locked}
+                onChange={(event) =>
+                  setAnnotationSizeDraft(event.currentTarget.value)
+                }
+                onBlur={applyAnnotationSize}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              disabled={selectedAnnotation.locked}
+              onClick={applyAnnotationText}
+            >
               Apply text
             </button>
+            {selectedAnnotation.kind === "current" &&
+            selectedAnnotation.routeAttachment ? (
+              <button type="button" onClick={reverseSelectedCurrentArrow}>
+                Reverse arrow
+              </button>
+            ) : null}
             <button type="button" onClick={deleteSelectedAnnotation}>
               Delete text
             </button>
@@ -2918,12 +3251,14 @@ export function App({ project: initialProject }: AppProps) {
               />
             ))}
             {document.annotations.map((annotation) => {
+              const anchor = annotationAnchor(annotation);
               const preview =
                 annotationDragPreview?.annotationId === annotation.id
                   ? annotationDragPreview.position
-                  : annotation.position;
+                  : anchor;
+              const hitBox = annotationHitBox(annotation, preview);
               return (
-                <circle
+                <rect
                   key={`annotation-hit-${annotation.id}`}
                   data-testid={`annotation-hit-${annotation.id}`}
                   className={
@@ -2931,9 +3266,7 @@ export function App({ project: initialProject }: AppProps) {
                       ? "annotation-hit selected"
                       : "annotation-hit"
                   }
-                  cx={preview.x}
-                  cy={preview.y - 4}
-                  r="10"
+                  {...hitBox}
                   onClick={(event) => event.stopPropagation()}
                   onPointerDown={(event) =>
                     beginAnnotationDrag(event, annotation)

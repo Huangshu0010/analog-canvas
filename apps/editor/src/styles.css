@@ -423,6 +423,7 @@ body {
   stroke: transparent;
   stroke-width: 8;
   cursor: move;
+  pointer-events: all;
   vector-effect: non-scaling-stroke;
 }
 

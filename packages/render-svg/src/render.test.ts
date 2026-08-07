@@ -23,6 +23,43 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("textbook monochrome SVG renderer", () => {
+  it("renders only physical branch Junctions as connection dots", () => {
+    const project = createEmptyProject("project-junction-roles", "Roles");
+    const document = project.documents[0]!;
+    document.nets.push({
+      id: "net-a",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    });
+    document.junctions.push(
+      {
+        id: "junction-branch",
+        netId: "net-a",
+        position: { x: 100, y: 100 },
+        role: "branch",
+      },
+      {
+        id: "junction-label",
+        netId: "net-a",
+        position: { x: 140, y: 100 },
+        role: "label-anchor",
+      },
+      {
+        id: "junction-route",
+        netId: "net-a",
+        position: { x: 180, y: 100 },
+        role: "route-anchor",
+      },
+    );
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain('data-object-id="junction-branch"');
+    expect(svg).not.toContain('data-object-id="junction-label"');
+    expect(svg).not.toContain('data-object-id="junction-route"');
+  });
+
   it("renders formal symbols deterministically without editor overlays", () => {
     const project = parseProject(
       readFileSync(
@@ -227,6 +264,77 @@ describe("textbook monochrome SVG renderer", () => {
     expect(razaviSvg).not.toMatch(/<circle[^>]*cx="300"[^>]*cy="300"/u);
   });
 
+  it("renders a Razavi current arrow attached to, and moving with, one wire segment", () => {
+    const project = createEmptyProject(
+      "project-current-arrow",
+      "Current arrow",
+    );
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.ports.push(
+      {
+        id: "port-left",
+        name: "LEFT",
+        direction: "passive",
+        position: { x: 40, y: 60 },
+      },
+      {
+        id: "port-right",
+        name: "RIGHT",
+        direction: "passive",
+        position: { x: 160, y: 60 },
+      },
+    );
+    document.nets.push({
+      id: "net-current",
+      scope: "local",
+      terminals: [],
+      ports: ["port-left", "port-right"],
+    });
+    document.routes.push({
+      id: "route-current",
+      netId: "net-current",
+      from: { kind: "port", portId: "port-left" },
+      to: { kind: "port", portId: "port-right" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    document.annotations.push({
+      id: "current-arrow",
+      kind: "current",
+      text: "I_x",
+      // This is a persistence fallback only. The route attachment drives the
+      // rendered position.
+      position: { x: 0, y: 0 },
+      routeAttachment: {
+        routeId: "route-current",
+        segmentIndex: 0,
+        t: 0.25,
+        direction: "reverse",
+        normalOffset: -14,
+      },
+      offset: { x: 0, y: 0 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+      sizeScale: 1.5,
+    });
+
+    const first = renderDocumentSvg(document, resolver);
+    expect(first).toContain('transform="rotate(180 70 60)"');
+    expect(first).toContain('<text x="70" y="46" text-anchor="middle"');
+    expect(first).toContain('text-anchor="middle" font-size="24"');
+    expect(first).toContain('data-role="current-arrow-head"');
+    expect(first).toContain(
+      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">I</tspan><tspan data-text-run="subscript"',
+    );
+
+    document.ports[1]!.position = { x: 280, y: 60 };
+    const stretched = renderDocumentSvg(document, resolver);
+    expect(stretched).toContain('transform="rotate(180 100 60)"');
+    expect(stretched).toContain('<text x="100" y="46" text-anchor="middle"');
+  });
+
   it("renders the original dense analog fixture without blocking visual diagnostics", () => {
     const project = parseProject(
       readFileSync(
@@ -365,5 +473,78 @@ describe("textbook monochrome SVG renderer", () => {
     expect(() => renderDocumentSvg(project.documents[0]!, resolver)).toThrow(
       "Unknown schematic style profile: not-installed",
     );
+  });
+
+  it("hides the default instance label for label-hidden symbols", () => {
+    const project = createEmptyProject("project-label-hidden", "Hidden Label");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.instances = [
+      {
+        id: "GND1",
+        symbolId: "ground",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    ];
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain('data-object-id="GND1"');
+    expect(resolver.resolve("ground")?.definition.labelVisibility).toBe(
+      "hidden",
+    );
+    expect(svg).not.toContain(">GND1</text>");
+  });
+
+  it("scales plain-text font size by annotation sizeScale", () => {
+    const project = createEmptyProject("project-text-scale", "Text Scale");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.annotations = [
+      {
+        id: "note-1",
+        kind: "plain-text",
+        text: "Note",
+        position: { x: 100, y: 100 },
+        offset: { x: 0, y: 0 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+      },
+    ];
+
+    const base = renderDocumentSvg(document, resolver);
+    document.annotations[0]!.sizeScale = 2;
+    const scaled = renderDocumentSvg(document, resolver);
+
+    expect(base).toMatch(/font-size="16"/);
+    expect(scaled).toMatch(/font-size="32"/);
+  });
+
+  it("scales annotations in the textbook-monochrome profile", () => {
+    const project = createEmptyProject("project-mono-text-scale", "Mono Text");
+    const document = project.documents[0]!;
+    document.annotations = [
+      {
+        id: "note-1",
+        kind: "plain-text",
+        text: "Note",
+        position: { x: 100, y: 100 },
+        offset: { x: 0, y: 0 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+        sizeScale: 2,
+      },
+    ];
+
+    const scene = buildSvgScene(document, resolver);
+
+    expect(scene.formalBody).toContain('font-size="24"');
   });
 });
