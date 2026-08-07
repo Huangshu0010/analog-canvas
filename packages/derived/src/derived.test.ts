@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { parseProject } from "@icm/model";
+import { createEmptyProject, parseProject, serializeProject } from "@icm/model";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
@@ -108,6 +108,88 @@ describe("derived connectivity and route geometry", () => {
       connectivity.find((net) => net.netId === "net-v")?.components,
     ).toHaveLength(1);
     expect(deriveFlightlines(document, resolver)).toHaveLength(1);
+  });
+
+  it("keeps MOS bulk electrical truth while excluding an implicit bulk from flightlines", () => {
+    const project = createEmptyProject("project-bulk", "Bulk");
+    const document = project.documents[0]!;
+    document.ports = [
+      {
+        id: "port-vss",
+        name: "VSS",
+        direction: "passive",
+        position: { x: 200, y: 100 },
+      },
+      {
+        id: "port-tail",
+        name: "tail",
+        direction: "passive",
+        position: { x: 120, y: 200 },
+      },
+    ];
+    document.instances = [
+      {
+        id: "XM1",
+        symbolId: "nmos",
+        symbolVariantId: "textbook-3terminal",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    ];
+    document.nets = [
+      {
+        id: "net-vss",
+        name: "VSS",
+        scope: "global",
+        terminals: [{ instanceId: "XM1", pinName: "B" }],
+        ports: ["port-vss"],
+      },
+      {
+        id: "net-tail",
+        name: "tail",
+        scope: "local",
+        terminals: [{ instanceId: "XM1", pinName: "S" }],
+        ports: ["port-tail"],
+      },
+    ];
+    document.routes = [
+      {
+        id: "route-tail",
+        netId: "net-tail",
+        from: { kind: "terminal", instanceId: "XM1", pinName: "S" },
+        to: { kind: "port", portId: "port-tail" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+
+    expect(deriveFlightlines(document, resolver)).toEqual([]);
+    expect(
+      document.nets.find((net) => net.id === "net-vss")?.terminals,
+    ).toEqual([{ instanceId: "XM1", pinName: "B" }]);
+    expect(
+      document.nets.find((net) => net.id === "net-tail")?.terminals,
+    ).toEqual([{ instanceId: "XM1", pinName: "S" }]);
+    const reopened = parseProject(serializeProject(project)).documents[0]!;
+    expect(
+      reopened.nets.find((net) => net.id === "net-vss")?.terminals,
+    ).toEqual([{ instanceId: "XM1", pinName: "B" }]);
+    expect(
+      reopened.nets.find((net) => net.id === "net-tail")?.terminals,
+    ).toEqual([{ instanceId: "XM1", pinName: "S" }]);
+
+    delete document.instances[0]!.symbolVariantId;
+    expect(deriveFlightlines(document, resolver)).toMatchObject([
+      {
+        netId: "net-vss",
+        from: { kind: "port", portId: "port-vss" },
+        to: { kind: "terminal", instanceId: "XM1", pinName: "B" },
+      },
+    ]);
   });
 
   it("normalizes duplicate/collinear points and proposes local endpoint stretch", () => {

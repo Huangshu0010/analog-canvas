@@ -2,7 +2,12 @@ import { deriveStableId } from "@icm/model";
 import type { Net, Point, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { endpointKey, netEndpoints, resolveEndpointPoint } from "./endpoint.js";
+import {
+  endpointKey,
+  isVisibleEndpoint,
+  netEndpoints,
+  resolveEndpointPoint,
+} from "./endpoint.js";
 
 export interface VisibleConnectivityNode {
   key: string;
@@ -63,7 +68,9 @@ export function deriveNetConnectivity(
   resolver: SymbolResolver,
   net: Net,
 ): VisibleNetConnectivity {
-  const endpoints = netEndpoints(document, net);
+  const endpoints = netEndpoints(document, net).filter((endpoint) =>
+    isVisibleEndpoint(document, resolver, endpoint),
+  );
   const nodes = new Map(
     endpoints.map((endpoint) => {
       const key = endpointKey(endpoint);

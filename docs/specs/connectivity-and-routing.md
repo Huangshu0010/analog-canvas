@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.4`
+Version: `1.5`
 
 Owning phase: `Phase 3/8`
 
@@ -33,9 +33,13 @@ coordinate. Missing coordinates are diagnostics, not guessed geometry.
 
 ## Visible connectivity graph
 
-For each logical Net, graph nodes are its terminal and port members plus its
-Junctions. A RouteBranch adds one explicit graph edge between its `from` and
-`to` endpoints. Waypoints and geometric intersections add no graph edge.
+For each logical Net, the visible graph starts from its visible terminal and
+port members plus its Junctions. A variant-hidden terminal or a base pin with
+`visibility: implicit` remains a logical Net member but is excluded from this
+visible graph. A base `conditional` pin remains visible until a context-aware
+Net policy explicitly proves hiding it is safe. A RouteBranch adds one
+explicit graph edge between its `from` and `to` endpoints. Waypoints and
+geometric intersections add no graph edge.
 
 Each terminal and port belongs to at most one logical Net within a Document.
 Multiple-Net membership is rejected because it would make endpoint ownership
@@ -61,6 +65,10 @@ exported.
 A net with zero or one positioned component has no flightline. Adding a Route
 may merge components and remove flightlines; detaching a Route may restore
 them.
+
+Flightlines never request routing for implicit terminals. Hiding a terminal
+cannot remove or rewrite its logical terminal record, merge its Net with
+another Net, or imply a device-specific short such as MOS `B=S`.
 
 ## Orthogonal route geometry
 
@@ -179,6 +187,7 @@ derived and absent from Project JSON.
 ## Deterministic validation
 
 - endpoint transform and unresolved-endpoint tests;
+- implicit MOS bulk exclusion with unchanged B/S Net membership;
 - routed-component and stable MST tests;
 - route normalization and orthogonality tests;
 - T/X crossing-without-Junction regressions;

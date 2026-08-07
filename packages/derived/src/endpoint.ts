@@ -20,6 +20,35 @@ export function endpointsEqual(
   return endpointKey(left) === endpointKey(right);
 }
 
+/**
+ * Returns whether an endpoint participates in the visible wiring graph.
+ * Electrical Net membership is intentionally not consulted or mutated here.
+ * A variant-hidden pin is an implicit presentation terminal. A base
+ * `conditional` pin stays visible until a context-aware policy explicitly
+ * proves that hiding it is safe.
+ */
+export function isVisibleEndpoint(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  endpoint: RouteEndpoint,
+): boolean {
+  if (endpoint.kind !== "terminal") return true;
+  const instance = document.instances.find(
+    (candidate) => candidate.id === endpoint.instanceId,
+  );
+  if (!instance) return false;
+  const resolved = resolver.resolve(
+    instance.symbolId,
+    instance.symbolVariantId,
+  );
+  if (!resolved) return false;
+  if (resolved.variant?.hiddenPinNames.includes(endpoint.pinName)) return false;
+  const pin = resolved.definition.pins.find(
+    (candidate) => candidate.name === endpoint.pinName,
+  );
+  return pin !== undefined && pin.presentation.visibility !== "implicit";
+}
+
 export function resolveEndpointPoint(
   document: SchematicDocument,
   resolver: SymbolResolver,

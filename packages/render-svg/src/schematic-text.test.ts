@@ -41,7 +41,7 @@ describe("Razavi schematic typography", () => {
     expect(
       renderSchematicTextContent("VIN+", "net-label", razaviTextbookProfile),
     ).toBe(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">IN</tspan><tspan data-text-run="suffix" style="font-style:normal;font-weight:400">+</tspan>',
+      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">IN</tspan><tspan data-text-run="suffix" baseline-shift="baseline" dy="0.3em" style="font-style:normal;font-weight:400">+</tspan>',
     );
     expect(
       renderSchematicTextContent(

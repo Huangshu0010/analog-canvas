@@ -10,6 +10,7 @@ import {
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
   endpointKey,
+  isVisibleEndpoint,
   moveRouteSegment,
   proposeGroupMove,
   routePolyline,
@@ -449,9 +450,14 @@ export function App({ project: initialProject }: AppProps) {
         instance.symbolVariantId,
       );
       if (!resolved) return [];
-      const hidden = new Set(resolved.variant?.hiddenPinNames ?? []);
       return resolved.definition.pins
-        .filter((pin) => !hidden.has(pin.name))
+        .filter((pin) =>
+          isVisibleEndpoint(document, resolver, {
+            kind: "terminal",
+            instanceId: instance.id,
+            pinName: pin.name,
+          }),
+        )
         .map((pin): WireSource => {
           const endpoint: RouteEndpoint = {
             kind: "terminal",

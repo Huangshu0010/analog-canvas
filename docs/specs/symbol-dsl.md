@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.7`
+Version: `1.8`
 
 Owning phase: `Phase 0/1`
 
@@ -71,6 +71,12 @@ Snapshot and later audit can explain the choice.
 - Every variant-hidden primitive part names presentation geometry only.
 - Variant-added primitives carry no electrical-pin or Net semantics.
 - Hiding a pin changes presentation only; the pin remains addressable.
+- Variant-hidden and base `implicit` pins are absent from visible connectivity,
+  flightlines, snap targets, and formal pin presentation while retaining their
+  electrical Net membership.
+- A base `conditional` pin is treated as visible unless a separate
+  context-aware Net policy authorizes implicit presentation. Unknown or normal
+  signal Nets therefore fail safe toward visibility.
 - Pin anchors use the canonical 10-unit electrical connection grid. Symbol
   artwork may use arbitrary integer coordinates, but every pin anchor must be
   divisible by 10 on both axes. With grid-aligned instance placement, this
@@ -107,6 +113,10 @@ A four-pin MOS symbol may provide a textbook variant whose bulk pin is
 implicit and whose visible source arrow reuses reviewed three-terminal artwork.
 The definition still contains D, G, S, and B.
 
+Selecting that variant never means `B=S`. For example, an NMOS may show three
+terminals while its persisted `B` belongs to VSS and its distinct `S` belongs
+to a tail-current Net.
+
 ## Rejected example
 
 A variant that hides pin `B` when the definition contains no `B` is rejected.
@@ -126,6 +136,12 @@ Symbol DSL 1.7 adds `strokeRole` compatibly. Existing numeric widths continue
 to render byte-identically under `textbook-monochrome-v1`. Under a semantic
 profile, remaining legacy widths are deterministically clustered into normal
 or emphasis roles until their assets receive explicit reviewed roles.
+
+Symbol DSL 1.8 clarifies the existing visibility contract without changing
+the JSON shape: `hiddenPinNames` is interpreted as implicit presentation by
+visible-connectivity consumers. Net-class-driven automatic selection remains
+a separate compatibility feature; Agents must not force this variant across
+all MOS instances without checking bulk connectivity.
 
 ## Deterministic validation
 

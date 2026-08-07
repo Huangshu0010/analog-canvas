@@ -704,3 +704,30 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
   untracked and untouched.
 - Commit status: ready for the dedicated RV-6A commit.
+
+## 2026-08-07 - Preserve implicit MOS bulk semantics
+
+- Target: eliminate false flightlines from three-terminal MOS presentation
+  without deleting, shorting, or rewriting the canonical D/G/S/B connectivity.
+- Changed areas: shared endpoint visibility, visible connectivity/flightline
+  derivation, editor connectable endpoints, MOS regression tests, Razavi text
+  suffix composition, OTA layout recipe, and connectivity/Symbol DSL contracts.
+- Electrical result: a variant-hidden or base `implicit` terminal stays in its
+  logical Net but is excluded from the visible graph. The regression proves
+  `XM1.B` remains on VSS, `XM1.S` remains on tail, both survive canonical
+  Project serialization, and removing the three-terminal variant restores the
+  visible B flightline.
+- Recipe/result: the Agent recipe no longer forces every MOS to
+  `textbook-3terminal`; VDD/VSS labels attach to Port IDs; its UTF-8 module
+  imports successfully. Existing generated OTA outputs were left untouched
+  because they belong to the earlier parallel run and are now stale.
+- Visual result: schematic-math suffixes use explicit baseline reset and
+  downward cursor compensation; current PNG inspection confirms normal
+  `VIN+`, `VIN-`, `VOUT+`, and `VOUT-` sign placement.
+- Deferred: Net classification, safe automatic three-/four-terminal variant
+  selection, and `HIDDEN_BULK_NON_GLOBAL_NET` remain a separate correctness
+  target rather than being guessed from names in this fix.
+- Validation: 17 focused tests, 151 full tests in 36 files, recipe import,
+  typecheck, build, formatting, Phase 1/5 visual goldens, Phase 7 export
+  goldens, visual PNG inspection, and `git diff --check` passed.
+- Commit status: ready for the dedicated correctness commit.

@@ -105,7 +105,7 @@ export function renderSchematicTextContent(
   const runStyle = `font-style:${typography.mathStyle};font-weight:${typography.mathWeight}`;
   const subscriptPercent = typography.subscriptScale * 100;
   const suffix = runs.suffix
-    ? `<tspan data-text-run="suffix" style="font-style:normal;font-weight:${typography.plainWeight}">${escapeXml(runs.suffix)}</tspan>`
+    ? `<tspan data-text-run="suffix" baseline-shift="baseline" dy="${typography.subscriptBaselineShiftEm}em" style="font-style:normal;font-weight:${typography.plainWeight}">${escapeXml(runs.suffix)}</tspan>`
     : "";
   return `<tspan data-text-run="base" style="${runStyle}">${escapeXml(runs.base)}</tspan><tspan data-text-run="subscript" font-size="${subscriptPercent}%" baseline-shift="-${typography.subscriptBaselineShiftEm}em" style="${runStyle}">${escapeXml(runs.subscript)}</tspan>${suffix}`;
 }
