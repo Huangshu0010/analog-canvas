@@ -1,5 +1,6 @@
 import type {
   Point,
+  RouteAnnotationAttachment,
   RouteBranch,
   RouteEndpoint,
   SchematicDocument,
@@ -14,6 +15,23 @@ export interface RoutePolyline {
   routeId: string;
   netId: string;
   points: Point[];
+  segmentModes: SegmentMode[];
+}
+
+export interface RouteAttachmentPlacement {
+  position: Point;
+  labelPosition: Point;
+  rotation: 0 | 90 | 180 | 270;
+}
+
+export interface RoutedEndpointGeometry {
+  point: Point;
+  outward?: Point | null;
+}
+
+export interface OrthogonalEscapeRoute {
+  points: Point[];
+  waypoints: Point[];
   segmentModes: SegmentMode[];
 }
 
@@ -43,6 +61,51 @@ export function routePolyline(
     netId: route.netId,
     points: [from, ...route.waypoints, to],
     segmentModes: [...route.segmentModes],
+  };
+}
+
+/**
+ * Resolves a visual annotation attachment against the current derived route
+ * geometry. `t` survives segment stretching; the route remains electrically
+ * untouched. An invalid segment is deliberately unresolved rather than
+ * silently moving an annotation to a different conductor.
+ */
+export function routeAttachmentPlacement(
+  polyline: RoutePolyline,
+  attachment: RouteAnnotationAttachment,
+): RouteAttachmentPlacement | null {
+  const from = polyline.points[attachment.segmentIndex];
+  const to = polyline.points[attachment.segmentIndex + 1];
+  if (!from || !to) return null;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  if (length === 0) return null;
+  const position = {
+    x: from.x + dx * attachment.t,
+    y: from.y + dy * attachment.t,
+  };
+  const normal = { x: -dy / length, y: dx / length };
+  const direction = attachment.direction === "forward" ? 1 : -1;
+  const angle = Math.round(
+    (Math.atan2(dy * direction, dx * direction) * 180) / Math.PI,
+  );
+  const rotation = ((angle % 360) + 360) % 360;
+  if (
+    rotation !== 0 &&
+    rotation !== 90 &&
+    rotation !== 180 &&
+    rotation !== 270
+  ) {
+    return null;
+  }
+  return {
+    position,
+    labelPosition: {
+      x: position.x + normal.x * attachment.normalOffset,
+      y: position.y + normal.y * attachment.normalOffset,
+    },
+    rotation,
   };
 }
 
@@ -107,6 +170,114 @@ export function normalizeRouteGeometry(
     }
   }
   return { points: normalizedPoints, segmentModes: normalizedModes };
+}
+
+function offsetPoint(point: Point, direction: Point, distance: number): Point {
+  return {
+    x: point.x + direction.x * distance,
+    y: point.y + direction.y * distance,
+  };
+}
+
+/**
+ * Builds an orthogonal path whose first/last segment leaves a terminal in the
+ * resolved outward pin direction. This is an Agent-side authoring helper; the
+ * returned waypoints remain ordinary canonical Route geometry.
+ */
+export function buildOrthogonalEscapeRoute(
+  from: RoutedEndpointGeometry,
+  to: RoutedEndpointGeometry,
+  escapeLength = 20,
+): OrthogonalEscapeRoute {
+  if (!Number.isInteger(escapeLength) || escapeLength <= 0) {
+    throw new Error("Route escape length must be a positive integer");
+  }
+  const rawPoints: Point[] = [{ ...from.point }];
+  const rawModes: SegmentMode[] = [];
+  const append = (point: Point, mode: SegmentMode) => {
+    const previous = rawPoints.at(-1)!;
+    if (previous.x === point.x && previous.y === point.y) return;
+    rawPoints.push({ ...point });
+    rawModes.push(mode);
+  };
+
+  const fromOutward = from.outward ?? null;
+  const toOutward = to.outward ?? null;
+  const fromEscape = fromOutward
+    ? offsetPoint(from.point, fromOutward, escapeLength)
+    : from.point;
+  const toEscape = toOutward
+    ? offsetPoint(to.point, toOutward, escapeLength)
+    : to.point;
+  if (fromOutward) append(fromEscape, "escape");
+
+  const current = rawPoints.at(-1)!;
+  const aligned = current.x === toEscape.x || current.y === toEscape.y;
+  const fromWouldReverse =
+    fromOutward !== null &&
+    (toEscape.x - from.point.x) * fromOutward.x +
+      (toEscape.y - from.point.y) * fromOutward.y <=
+      0;
+  const toWouldReverse =
+    toOutward !== null &&
+    (current.x - to.point.x) * toOutward.x +
+      (current.y - to.point.y) * toOutward.y <=
+      0;
+  if (
+    fromOutward &&
+    toOutward &&
+    !(aligned && !fromWouldReverse && !toWouldReverse)
+  ) {
+    if (fromOutward.x !== 0 && toOutward.x !== 0) {
+      const middleY =
+        fromEscape.y === toEscape.y
+          ? fromEscape.y + escapeLength
+          : Math.round((fromEscape.y + toEscape.y) / 2);
+      append({ x: fromEscape.x, y: middleY }, "auto");
+      append({ x: toEscape.x, y: middleY }, "auto");
+    } else if (fromOutward.y !== 0 && toOutward.y !== 0) {
+      const middleX =
+        fromEscape.x === toEscape.x
+          ? fromEscape.x + escapeLength
+          : Math.round((fromEscape.x + toEscape.x) / 2);
+      append({ x: middleX, y: fromEscape.y }, "auto");
+      append({ x: middleX, y: toEscape.y }, "auto");
+    } else if (fromOutward.x !== 0) {
+      append({ x: fromEscape.x, y: toEscape.y }, "auto");
+    } else {
+      append({ x: toEscape.x, y: fromEscape.y }, "auto");
+    }
+  } else if (aligned && (fromWouldReverse || toWouldReverse)) {
+    if (current.y === toEscape.y) {
+      const detourY = current.y + escapeLength;
+      append({ x: current.x, y: detourY }, "auto");
+      append({ x: toEscape.x, y: detourY }, "auto");
+    } else {
+      const detourX = current.x + escapeLength;
+      append({ x: detourX, y: current.y }, "auto");
+      append({ x: detourX, y: toEscape.y }, "auto");
+    }
+  } else if (!aligned) {
+    const bend = fromOutward
+      ? fromOutward.x !== 0
+        ? { x: current.x, y: toEscape.y }
+        : { x: toEscape.x, y: current.y }
+      : toOutward
+        ? toOutward.x !== 0
+          ? { x: toEscape.x, y: current.y }
+          : { x: current.x, y: toEscape.y }
+        : { x: toEscape.x, y: current.y };
+    append(bend, "auto");
+  }
+  append(toEscape, "auto");
+  if (toOutward) append(to.point, "escape");
+
+  const normalized = normalizeRouteGeometry(rawPoints, rawModes);
+  return {
+    points: normalized.points,
+    waypoints: normalized.points.slice(1, -1),
+    segmentModes: normalized.segmentModes,
+  };
 }
 
 export function moveRouteSegment(

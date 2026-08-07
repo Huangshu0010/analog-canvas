@@ -137,31 +137,61 @@ export const RouteBranchSchema = z
       });
     }
   });
+export const JunctionRoleSchema = z.enum([
+  "branch",
+  "label-anchor",
+  "route-anchor",
+]);
 export const JunctionSchema = z.strictObject({
   id: StableIdSchema,
   netId: StableIdSchema,
   position: PointSchema,
+  // Older Projects predate explicit Junction roles. Consumers must preserve
+  // their behavior by treating an omitted role as an intentional branch dot.
+  role: JunctionRoleSchema.optional(),
 });
 
-export const AnnotationSchema = z.strictObject({
-  id: StableIdSchema,
-  kind: z.enum([
-    "instance-label",
-    "net-label",
-    "power-label",
-    "plain-text",
-    "current",
-    "voltage",
-    "figure-caption",
-  ]),
-  text: z.string(),
-  position: PointSchema,
-  attachedObjectId: StableIdSchema.optional(),
-  offset: PointSchema,
-  alignment: z.enum(["start", "middle", "end"]),
-  rotation: RotationSchema,
-  locked: z.boolean(),
+export const AnnotationKindSchema = z.enum([
+  "instance-label",
+  "net-label",
+  "power-label",
+  "plain-text",
+  "current",
+  "voltage",
+  "figure-caption",
+]);
+export const RouteAnnotationAttachmentSchema = z.strictObject({
+  routeId: StableIdSchema,
+  segmentIndex: z.number().int().nonnegative(),
+  t: z.number().min(0).max(1),
+  direction: z.enum(["forward", "reverse"]),
+  // Signed distance along the route's geometric normal. Negative puts the
+  // default Razavi current label above a left-to-right wire.
+  normalOffset: z.number().finite(),
 });
+export const AnnotationSchema = z
+  .strictObject({
+    id: StableIdSchema,
+    kind: AnnotationKindSchema,
+    text: z.string(),
+    position: PointSchema,
+    attachedObjectId: StableIdSchema.optional(),
+    routeAttachment: RouteAnnotationAttachmentSchema.optional(),
+    offset: PointSchema,
+    alignment: z.enum(["start", "middle", "end"]),
+    rotation: RotationSchema,
+    locked: z.boolean(),
+    sizeScale: z.number().finite().positive().optional(),
+  })
+  .superRefine((annotation, context) => {
+    if (annotation.routeAttachment && annotation.kind !== "current") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["routeAttachment"],
+        message: "Only current annotations may attach to a route segment",
+      });
+    }
+  });
 export const PresentationIntentSchema = z.strictObject({
   styleProfileId: StableIdSchema,
   grid: z.number().int().positive(),
@@ -518,6 +548,11 @@ export type Net = z.infer<typeof NetSchema>;
 export type RouteEndpoint = z.infer<typeof RouteEndpointSchema>;
 export type RouteBranch = z.infer<typeof RouteBranchSchema>;
 export type Junction = z.infer<typeof JunctionSchema>;
+export type JunctionRole = z.infer<typeof JunctionRoleSchema>;
+export type AnnotationKind = z.infer<typeof AnnotationKindSchema>;
+export type RouteAnnotationAttachment = z.infer<
+  typeof RouteAnnotationAttachmentSchema
+>;
 export type Annotation = z.infer<typeof AnnotationSchema>;
 export type PresentationIntent = z.infer<typeof PresentationIntentSchema>;
 export type LayoutGroup = z.infer<typeof LayoutGroupSchema>;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { moveRouteSegment } from "./routes.js";
+import { moveRouteSegment, routeAttachmentPlacement } from "./routes.js";
 import type { RoutePolyline } from "./routes.js";
 
 describe("direct route segment movement", () => {
@@ -54,5 +54,33 @@ describe("direct route segment movement", () => {
         { x: 35, y: 20 },
       ),
     ).toThrow("protected");
+  });
+
+  it("keeps a current-arrow attachment at the same route fraction after a stretch", () => {
+    const attachment = {
+      routeId: "route-1",
+      segmentIndex: 0,
+      t: 0.25,
+      direction: "reverse" as const,
+      normalOffset: -14,
+    };
+    expect(
+      routeAttachmentPlacement(
+        {
+          routeId: "route-1",
+          netId: "net-1",
+          points: [
+            { x: 0, y: 20 },
+            { x: 200, y: 20 },
+          ],
+          segmentModes: ["manual"],
+        },
+        attachment,
+      ),
+    ).toEqual({
+      position: { x: 50, y: 20 },
+      labelPosition: { x: 50, y: 6 },
+      rotation: 180,
+    });
   });
 });

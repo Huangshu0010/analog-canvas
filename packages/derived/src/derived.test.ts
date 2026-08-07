@@ -6,11 +6,13 @@ import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import {
+  buildOrthogonalEscapeRoute,
   deriveCrossings,
   deriveFlightlines,
   deriveVisibleConnectivity,
   normalizeRouteGeometry,
   proposeLocalStretch,
+  resolveEndpointOutwardDirection,
   resolveEndpointPoint,
 } from "./index.js";
 
@@ -35,6 +37,35 @@ const terminal = (instanceId: string) => ({
 });
 
 describe("derived connectivity and route geometry", () => {
+  it("builds pin-aware orthogonal escape geometry", () => {
+    expect(
+      buildOrthogonalEscapeRoute(
+        { point: { x: 100, y: 100 }, outward: { x: 1, y: 0 } },
+        { point: { x: 40, y: 80 } },
+      ),
+    ).toEqual({
+      points: [
+        { x: 100, y: 100 },
+        { x: 120, y: 100 },
+        { x: 120, y: 80 },
+        { x: 40, y: 80 },
+      ],
+      waypoints: [
+        { x: 120, y: 100 },
+        { x: 120, y: 80 },
+      ],
+      segmentModes: ["escape", "auto", "auto"],
+    });
+
+    const document = documentFixture();
+    expect(
+      resolveEndpointOutwardDirection(document, resolver, terminal("A")),
+    ).toEqual({ x: -1, y: 0 });
+    expect(
+      resolveEndpointOutwardDirection(document, resolver, terminal("B")),
+    ).toEqual({ x: 1, y: 0 });
+  });
+
   it("resolves transformed Symbol pins and computes stable flightline MSTs", () => {
     const document = documentFixture();
     expect(resolveEndpointPoint(document, resolver, terminal("A"))).toEqual({

@@ -88,6 +88,30 @@ export function resolveEndpointPoint(
   }
 }
 
+export function resolveEndpointOutwardDirection(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  endpoint: RouteEndpoint,
+): Point | null {
+  if (endpoint.kind !== "terminal") return null;
+  const instance = document.instances.find(
+    (candidate) => candidate.id === endpoint.instanceId,
+  );
+  if (!instance?.placement) return null;
+  const symbol = resolver.resolve(instance.symbolId, instance.symbolVariantId);
+  const pin = symbol?.definition.pins.find(
+    (candidate) => candidate.name === endpoint.pinName,
+  );
+  if (!pin) return null;
+  const localDirection = {
+    north: { x: 0, y: -1 },
+    east: { x: 1, y: 0 },
+    south: { x: 0, y: 1 },
+    west: { x: -1, y: 0 },
+  }[pin.direction];
+  return transformPoint(localDirection, { x: 0, y: 0 }, instance.placement);
+}
+
 export function endpointBelongsToNet(
   document: SchematicDocument,
   net: Net,

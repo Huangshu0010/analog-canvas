@@ -31,6 +31,32 @@ describe("CircuitProject schema", () => {
     ).toBe(false);
   });
 
+  it("allows route attachments only on current annotations", () => {
+    const project = createEmptyProject("project-current", "Current");
+    const document = project.documents[0]!;
+    const attachment = {
+      routeId: "route-1",
+      segmentIndex: 0,
+      t: 0.5,
+      direction: "forward" as const,
+      normalOffset: -14,
+    };
+    document.annotations.push({
+      id: "current-1",
+      kind: "current",
+      text: "I_x",
+      position: { x: 20, y: 20 },
+      routeAttachment: attachment,
+      offset: { x: 0, y: 0 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+    document.annotations[0] = { ...document.annotations[0]!, kind: "voltage" };
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
+  });
+
   it("rejects terminal and port membership in multiple logical Nets", () => {
     const project = createEmptyProject("project-test", "Test Project");
     const document = project.documents[0]!;
