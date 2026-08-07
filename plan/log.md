@@ -907,3 +907,29 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   annotation hit-target radius.
 - Commit status: ready for
   `feat(editor): add text resize, default-label visibility, and annotation hit fix`.
+
+## 2026-08-07 - Bound agent-routing expander to Agent-local, non-rerouting scope
+
+- Target: write ADR 0008 before any `packages/agent-routing` code, fixing the
+  boundary that keeps a `RouteTreeDecision` and its expander inside ADR 0007's
+  accepted Snapshot-driven Agent-local model and outside the vetoed Layout
+  Intent / query-language / automatic-router space.
+- Changed areas: added `docs/adr/0008-agent-local-route-tree-expander.md`;
+  listed it in `docs/adr/README.md`.
+- Decision (two nails): (1) `RouteTreeDecision`/`RouteTreeExpansion` are
+  Agent-local and transient — types live only in `packages/agent-routing`,
+  must not enter `agent-adapter` or `model` schemas, must not persist into
+  `.icproj`, must not grow select/query/region capabilities, and add no Agent
+  API endpoint; the Skill contract may carry them, the API contract may not.
+  (2) The expander detects conflicts (crossing/overlap/wire-through-symbol/
+  off-grid) but does not auto-reroute: no silent shape fallback, no
+  `auto`/`best` shape, no rerouting to drive a counter to zero.
+- Dirty-state decision: owned paths do not overlap the ongoing editor and
+  symbol-consistency dirty work; unrelated files left untouched.
+- Validation: Markdown link resolution to 0007, agent-api.md,
+  connectivity-and-routing.md, rule-guided-layout-architecture.md,
+  razavi-style-canon.md, and the Skill manifest; fenced-code balance;
+  `git diff --check` passed. Docs-only; no typecheck/test/build run
+  (risk-proportional).
+- Commit status: ready for
+  `docs(adr): bound agent-routing expander to Agent-local, non-rerouting scope`.

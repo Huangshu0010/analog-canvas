@@ -18,8 +18,9 @@ Examples:
 ```
 
 Current Agent integration decisions include
-[`0005-agent-api-without-mcp.md`](0005-agent-api-without-mcp.md) and
-[`0007-snapshot-driven-agent-workflow.md`](0007-snapshot-driven-agent-workflow.md).
+[`0005-agent-api-without-mcp.md`](0005-agent-api-without-mcp.md),
+[`0007-snapshot-driven-agent-workflow.md`](0007-snapshot-driven-agent-workflow.md),
+and [`0008-agent-local-route-tree-expander.md`](0008-agent-local-route-tree-expander.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 
