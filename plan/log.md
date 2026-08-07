@@ -797,6 +797,32 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   untouched and unstaged.
 - Commit status: ready for the dedicated divider fixture commit.
 
+## 2026-08-07 - Refine and flatten the SKY130 divide-by-two
+
+- Target: refine the divider's hierarchical top page and produce a true
+  transistor-level flat view without modifying its source SPICE.
+- Infrastructure: added an optional pre-layout Project hook, deterministic
+  recursive Document flattening, a 30-primitive fixture assertion, and
+  electrical connectivity between same-Net junction stubs carrying identical
+  labels.
+- Electrical result: the flat view contains 15 NMOS, 14 PMOS, one capacitor,
+  16 Nets, all prefixed deep internal identities, and no hierarchical instance.
+  Matching labels change visible routing closure only; canonical Net terminal
+  membership remains unchanged.
+- Hierarchical presentation: 7 Documents, 8 placed top instances, 24 Routes,
+  0 flightlines, 3 inter-Net crossings, and 0 visual diagnostics.
+- Flat presentation: 8 Documents including the derived flat top, 30 placed
+  primitives, 104 Routes, 77 Junctions, 99 annotations, 0 flightlines, 7
+  inter-Net crossings, and 0 visual diagnostics.
+- Validation: recursive-flatten assertions, six focused derived tests, derived
+  package build, both headless generation recipes, canonical/topology/bulk
+  checks, visual inspection of both PNGs, and repository whitespace/status
+  checks.
+- Dirty-state decision: concurrent symbol-fidelity, renderer, documentation,
+  OTA, and visual-golden work remained unstaged. Final exports intentionally
+  use the current reviewed MOS runtime available in the shared workspace.
+- Commit status: ready for the dedicated refined/flat divider commit.
+
 ## 2026-08-07 - Generate MOS artwork from Visio evidence
 
 - Target: replace guessed/procedural MOS geometry with a deterministic,
@@ -820,3 +846,64 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: concurrent documentation, OTA, divide-by-two,
   Agent-layout, and labeled-connectivity work remained read-only and unstaged.
 - Commit status: ready for `feat(symbols): generate MOS artwork from Visio evidence`.
+
+## 2026-08-07 - Expose Razavi fixed-style hard canon to Skill manifest
+
+- Target: close Gap A — the Agent had no view of the Razavi fixed-style hard
+  canon (grid `10`, pin-anchor divisibility, schematic-math label rules, stroke
+  roles, node/connection-origin truth table) even though
+  `razavi-textbook-style.md` existed as a `proposed` normative spec.
+- Changed areas: added `docs/agent/knowledge/razavi-style-canon.md`; added one
+  manifest row in `skills/circuit-layout/references/manifest.md`; added the
+  fixed-style category to the `docs/agent/README.md` knowledge enumeration.
+- Boundary held: the new canon exposes only the three hardable fixed-style
+  layers (coordinate, typography, stroke/node). Routing topology, elbow/trunk
+  choice, obstacle avoidance, and composition are explicitly written out of
+  scope and deferred to the existing routing/expression/guidance authorities —
+  operationalizing the `razavi-style-aspect-boundary` memory.
+- Dirty-state decision: a large dirty set across `apps/editor`, `packages/*`,
+  `fixtures/*`, and `netlists/*` from prior uncommitted targets was confirmed
+  against owned paths; none overlap. Unrelated dirty files left untouched.
+- Validation: Markdown link resolution from the new doc and manifest row to
+  every referenced target, fenced-code balance, `git diff --check`, and
+  `git status --short --branch` passed. No typecheck/test/build run because no
+  source or runtime contract changed (docs-only, risk-proportional per
+  AGENTS.md).
+- Commit status: ready for
+  `docs(agent): expose Razavi fixed-style hard canon to Skill manifest`.
+
+## 2026-08-07 - Editor text resize, default-label visibility, and annotation hit fix
+
+- Target: fix three editor interaction defects — added plain-text cannot be
+  resized; power/ground devices always render a default instance ID label
+  (GND/VSS should default to none); selecting a note/text annotation conflicts
+  with device selection because the device hit-target covers it.
+- Changed areas: added `labelVisibility: shown|hidden` to `SymbolDefinition`
+  (optional, default shown); marked `powerPortSymbol("vdd"|"vss")` and the
+  Razavi `ground` catalog asset `labelVisibility: "hidden"`; renderer skips the
+  default instance label for hidden-default symbols while explicit
+  instance-label annotations still render; added optional `sizeScale` to
+  `AnnotationSchema` and a `sizeScale` parameter to `schematicTextSizeAttribute`
+  so `plain-text` font size scales (Razavi only; legacy profile unchanged);
+  editor Text panel gained a size-scale input and `applyAnnotationText` writes
+  `sizeScale` for plain-text; annotation hit-target radius raised from 10 to 18
+  to reduce device-circle swallowing of text selection.
+- Validation: typecheck, workspace build, Phase 5 visual check, Phase 7 export
+  check, two new focused render tests (label-hidden symbol, plain-text
+  sizeScale), formatting, and `git diff --check` passed.
+- Dirty-state decision: the worktree carries the ongoing
+  `hidden-mos-terminal-correctness` target plus pre-existing RV-6A
+  visio-core-analog work that changed several Razavi symbol JSON geometries
+  (resistor, capacitor, diode, voltage-source) without re-syncing
+  `catalog.json` hashes or dependent test/golden assertions. As a result five
+  pre-existing tests fail at this point — three in `razavi-catalog.test.ts`
+  and two in `apps/editor` (`clipboard`, `delete-selection`) that depend on
+  resistor pin geometry — none caused by this target's edits (verified: these
+  files pass at HEAD without the dirty symbol work; they fail once that work is
+  restored). `symbols:razavi:check` likewise remains red on the pre-existing
+  capacitor hash mismatch. The full catalog re-sync and those test/golden
+  updates are left to a dedicated symbol-consistency target. This target only
+  touched ground/vdd/vss label visibility, annotation sizeScale, and the
+  annotation hit-target radius.
+- Commit status: ready for
+  `feat(editor): add text resize, default-label visibility, and annotation hit fix`.

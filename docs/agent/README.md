@@ -12,7 +12,8 @@ Start with:
 - [`knowledge-and-skill-plan.md`](knowledge-and-skill-plan.md) for the
   two-part governing Skill and on-demand circuit-knowledge construction plan;
 - [`knowledge/`](knowledge/) for canonical on-demand circuit-reading,
-  expression, routing, and pattern knowledge used by `circuit-layout`;
+  expression, routing, pattern, and fixed-style canon knowledge used by
+  `circuit-layout`;
 - [`rule-guided-layout-architecture.md`](rule-guided-layout-architecture.md)
   for the complete-Snapshot workflow, typed-edit boundary, PDK
   mapping, optional helpers, hierarchy, and diagnostic feedback;
