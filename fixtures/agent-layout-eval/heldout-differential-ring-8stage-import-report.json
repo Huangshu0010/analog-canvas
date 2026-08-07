@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "status": "held-out-after-run-2-remediation-freeze",
+  "source": "netlists/phase-9-heldout-differential-ring-8stage/circuit.spi",
+  "topologyOnly": true,
+  "simulated": false,
+  "documents": [
+    {
+      "id": "document-d44e82cfd56faac2",
+      "name": "differential_delay_cell",
+      "instances": 14,
+      "nets": 11,
+      "ports": 8,
+      "snapshotBytes": 23774,
+      "topologyHash": "b6b0846dbafcdd7b551ee53a4bb0c41e4a8a367d28a1c2ad229ccfbbd968c4d7"
+    },
+    {
+      "id": "document-3a3f7dceff454138",
+      "name": "differential_ring_8stage",
+      "instances": 8,
+      "nets": 20,
+      "ports": 6,
+      "snapshotBytes": 23119,
+      "topologyHash": "879dbcbf59f7cbccf5845fdfedf27422ec3b8af61f417f9003010ca81b4f1529"
+    }
+  ],
+  "cellReferences": 8,
+  "elaboratedMosCount": 112,
+  "importDiagnostics": {},
+  "assertions": {
+    "documentCount": true,
+    "topInstances": true,
+    "cellInstances": true,
+    "cellReferences": true,
+    "topPorts": true,
+    "cellPorts": true,
+    "topNets": true,
+    "cellNets": true,
+    "genericInstances": true,
+    "elaboratedMosCount": true,
+    "importErrors": true
+  },
+  "passed": true
+}

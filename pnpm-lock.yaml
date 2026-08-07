@@ -163,6 +163,9 @@ importers:
       "@icm/model":
         specifier: workspace:*
         version: link:../model
+      "@icm/symbols":
+        specifier: workspace:*
+        version: link:../symbols
       zod:
         specifier: 4.4.3
         version: 4.4.3

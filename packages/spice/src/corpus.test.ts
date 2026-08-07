@@ -11,6 +11,9 @@ import { loadSourceBundleFromFile } from "./node-source.js";
 
 const entries = [
   "mixed-device-acceptance",
+  "phase-9-heldout-chopper-afe-8ch",
+  "phase-9-heldout-differential-ring-8stage",
+  "phase-9-heldout-flash-adc-4bit",
   "rlc-broadband-50-to-200-match",
   "rlc-rf-bandpass-100mhz",
   "sky130-ota-5t-gain40-pm60-noise50uv-pvt",
@@ -102,7 +105,7 @@ describe("current netlist corpus", () => {
         connectivitySha256: connectivityHash(ir),
       });
     }
-    expect(totalInstances).toBe(127);
+    expect(totalInstances).toBe(215);
     const golden = JSON.parse(
       await readFile(
         resolve(process.cwd(), "fixtures/spice/current-corpus-summary.json"),

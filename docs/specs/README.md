@@ -16,7 +16,7 @@ against. They describe required behavior and invariants, not task history.
 | [`connectivity-and-routing.md`](connectivity-and-routing.md) |            3 | accepted                 | Route graph, junction, crossing, flightline, locks                       |
 | [`visual-language.md`](visual-language.md)                   |          1/5 | accepted initial         | `textbook-monochrome-v1`, annotations, overlays, golden output           |
 | [`vss-development-import.md`](vss-development-import.md)     |            5 | accepted                 | Read-only VSS evidence, human pin review, runtime isolation              |
-| [`agent-api.md`](agent-api.md)                               |            6 | accepted                 | `capabilities/query/transact/render`, permissions, limits                |
+| [`agent-api.md`](agent-api.md)                               |          6/9 | accepted                 | v1 query compatibility; v2 Snapshot, typed edits, render, permissions    |
 | [`persistence-and-recovery.md`](persistence-and-recovery.md) |          0/7 | accepted boundary        | Atomic save, AppData cache/session/recovery, migrations                  |
 | [`export.md`](export.md)                                     |            7 | accepted                 | Formal SVG source and derived PNG/PDF contracts                          |
 | [`performance.md`](performance.md)                           |            7 | accepted                 | Representative workloads and release budgets                             |

@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { transformPoint } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
 import { builtInSymbols } from "./builtins.js";
 import { InMemorySymbolResolver } from "./resolver.js";
-import { SymbolDefinitionSchema } from "./schema.js";
+import { SYMBOL_CONNECTION_GRID, SymbolDefinitionSchema } from "./schema.js";
 
 describe("initial built-in Symbol Library", () => {
   it("contains the reviewed Phase 5 production families", () => {
@@ -43,9 +44,62 @@ describe("initial built-in Symbol Library", () => {
     }
   });
 
+  it("keeps every electrical pin on the canonical connection grid", () => {
+    for (const symbol of builtInSymbols) {
+      for (const pin of symbol.pins) {
+        expect(
+          {
+            symbolId: symbol.id,
+            pinName: pin.name,
+            xRemainder: Math.abs(pin.at.x % SYMBOL_CONNECTION_GRID),
+            yRemainder: Math.abs(pin.at.y % SYMBOL_CONNECTION_GRID),
+          },
+          `${symbol.id}.${pin.name} must land on the connection grid`,
+        ).toMatchObject({ xRemainder: 0, yRemainder: 0 });
+      }
+    }
+  });
+
+  it("rejects a symbol whose pin anchor is between connection-grid points", () => {
+    const resistor = builtInSymbols.find((symbol) => symbol.id === "resistor")!;
+    const parsed = SymbolDefinitionSchema.safeParse({
+      ...resistor,
+      pins: resistor.pins.map((pin, index) =>
+        index === 0 ? { ...pin, at: { ...pin.at, x: pin.at.x + 5 } } : pin,
+      ),
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues[0]?.message).toContain(
+        "10-unit connection grid",
+      );
+    }
+  });
+
+  it("keeps multi-port pins on-grid after every rotation and mirror", () => {
+    const placements = [
+      { rotation: 0 as const, mirror: "none" as const },
+      { rotation: 90 as const, mirror: "none" as const },
+      { rotation: 180 as const, mirror: "x" as const },
+      { rotation: 270 as const, mirror: "x" as const },
+    ];
+    for (const symbol of builtInSymbols.filter(
+      (candidate) => candidate.pins.length > 2,
+    )) {
+      for (const placement of placements) {
+        for (const pin of symbol.pins) {
+          const point = transformPoint(pin.at, { x: 120, y: 230 }, placement);
+          expect(Math.abs(point.x % SYMBOL_CONNECTION_GRID)).toBe(0);
+          expect(Math.abs(point.y % SYMBOL_CONNECTION_GRID)).toBe(0);
+        }
+      }
+    }
+  });
+
   it("preserves MOS electrical bulk pins in textbook variants", () => {
     const resolver = new InMemorySymbolResolver(builtInSymbols);
     const nmos = resolver.resolve("nmos", "textbook-3terminal");
+    const pmos = resolver.resolve("pmos", "textbook-3terminal");
     expect(nmos?.definition.pins.map((pin) => pin.name)).toEqual([
       "D",
       "G",
@@ -54,9 +108,41 @@ describe("initial built-in Symbol Library", () => {
     ]);
     expect(nmos?.variant?.hiddenPinNames).toEqual(["B"]);
     expect(nmos?.variant?.hiddenPrimitiveParts).toEqual(["bulk-lead"]);
+    expect(nmos?.variant?.additionalPrimitives).toEqual([
+      {
+        kind: "polygon",
+        points: [
+          { x: 10, y: 14 },
+          { x: 2, y: 10 },
+          { x: 4, y: 19 },
+        ],
+        fill: "foreground",
+        part: "source-arrow",
+      },
+    ]);
+    expect(pmos?.variant?.additionalPrimitives).toEqual([
+      {
+        kind: "polygon",
+        points: [
+          { x: 2, y: 14 },
+          { x: 10, y: 10 },
+          { x: 8, y: 19 },
+        ],
+        fill: "foreground",
+        part: "source-arrow",
+      },
+    ]);
+    for (const symbolId of ["nmos3", "pmos3"]) {
+      const symbol = builtInSymbols.find(
+        (candidate) => candidate.id === symbolId,
+      );
+      expect(
+        symbol?.primitives.filter((primitive) => primitive.kind === "polygon"),
+      ).toHaveLength(1);
+    }
   });
 
-  it("distinguishes reviewed NMOS and PMOS artwork by bulk-arrow direction", () => {
+  it("preserves reviewed NMOS and PMOS default bulk-arrow direction", () => {
     const nmos = builtInSymbols.find((symbol) => symbol.id === "nmos")!;
     const pmos = builtInSymbols.find((symbol) => symbol.id === "pmos")!;
     expect(

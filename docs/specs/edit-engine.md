@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.6`
+Version: `1.7`
 
 Owning phase: `Phase 0/1/8`
 
@@ -42,13 +42,13 @@ interface EditTransaction {
 ```
 
 The executable union contains `noop`, `add_instance`, `remove_instance`,
-`place_instance`, `move_instance`,
+`set_instance_symbol`, `place_instance`, `move_instance`,
 `rotate_instance`, `mirror_instance`, `set_route_points`, `add_junction`,
 `remove_junction`, `move_junction`, `make_flightline`, `connect_endpoints`,
 `merge_nets`, `set_net_name`, `disconnect_endpoint`, `upsert_annotation`,
 `remove_annotation`, `set_layout_group`, `remove_layout_group`,
 `set_layout_constraint`, `remove_layout_constraint`, `align_instances`,
-`undo`, and `redo`. Later phases extend the typed union and versioned schemas;
+`place_port`, `move_port`, `undo`, and `redo`. Later phases extend the typed union and versioned schemas;
 they do not create separate mutation endpoints.
 
 ## Invariants
@@ -74,6 +74,13 @@ they do not create separate mutation endpoints.
 Phase 8 topology operations have these preconditions:
 
 - `add_instance` requires a globally unused object ID and resolvable Symbol.
+- `set_instance_symbol` requires a resolvable target Symbol/variant. Every
+  connected or routed source pin must either already exist on that Symbol or be
+  covered by an explicit one-to-one `pinMap`; the edit atomically updates Net,
+  Route, and preserved `spice.pin.*` references without changing Net ownership.
+- `place_port` requires an unplaced Port; `move_port` requires a placed Port.
+  Moving a Port translates its attached annotations and preserves Route endpoint
+  identity.
 - `remove_instance` requires no Net, annotation, group, or constraint
   reference.
 - `connect_endpoints` creates a caller-named local Net when both endpoints are
@@ -96,6 +103,8 @@ Phase 8 topology operations have these preconditions:
   before removing the source Net.
 - `disconnect_endpoint` requires all route geometry that uses the endpoint to
   be removed explicitly first.
+- symbol and Port edits honor the same locked layout groups/constraints as
+  instance transforms and reject the complete transaction on conflict.
 
 ## Operations and state transitions
 

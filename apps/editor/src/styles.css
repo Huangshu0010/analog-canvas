@@ -105,6 +105,23 @@ body {
   gap: 0.35rem;
 }
 
+.document-nav {
+  display: flex;
+  gap: 0.25rem;
+  padding-right: 0.35rem;
+  border-right: 1px solid #d8d8d2;
+}
+
+.document-nav select {
+  max-width: 13rem;
+  padding: 0.3rem;
+  border: 1px solid #b8b8b0;
+  border-radius: 0.25rem;
+  background: #fff;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
 .toolbar button,
 .command-menu summary {
   padding: 0.35rem 0.55rem;
@@ -275,6 +292,15 @@ body {
   max-height: 12rem;
   overflow: auto;
   padding-left: 1.2rem;
+}
+
+.diagnostics li button {
+  width: 100%;
+  padding: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
 }
 
 .diagnostics [data-severity="error"] {

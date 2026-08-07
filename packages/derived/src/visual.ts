@@ -9,6 +9,9 @@ export interface VisualDiagnostic {
   severity: "error" | "warning" | "info";
   message: string;
   objectIds: readonly string[];
+  bounds?: Rect;
+  point?: Point;
+  parameters?: Readonly<Record<string, string | number | boolean>>;
 }
 
 export interface VisualDiagnosticOptions {
@@ -23,6 +26,24 @@ function rectanglesOverlap(left: Rect, right: Rect): boolean {
     left.y < right.y + right.height &&
     left.y + left.height > right.y
   );
+}
+
+function intersectionBounds(left: Rect, right: Rect): Rect | undefined {
+  const x = Math.max(left.x, right.x);
+  const y = Math.max(left.y, right.y);
+  const rightEdge = Math.min(left.x + left.width, right.x + right.width);
+  const bottomEdge = Math.min(left.y + left.height, right.y + right.height);
+  if (rightEdge <= x || bottomEdge <= y) return undefined;
+  return { x, y, width: rightEdge - x, height: bottomEdge - y };
+}
+
+function enclosingBounds(input: readonly Rect[]): Rect | undefined {
+  if (input.length === 0) return undefined;
+  const x = Math.min(...input.map((item) => item.x));
+  const y = Math.min(...input.map((item) => item.y));
+  const right = Math.max(...input.map((item) => item.x + item.width));
+  const bottom = Math.max(...input.map((item) => item.y + item.height));
+  return { x, y, width: right - x, height: bottom - y };
 }
 
 function pointOnSegment(point: Point, from: Point, to: Point): boolean {
@@ -161,6 +182,7 @@ export function diagnoseVisualQuality(
         severity: "warning",
         message: `Instance ${instance.id} is not placed`,
         objectIds: [instance.id],
+        parameters: { placed: false },
       });
     } else if (!resolver.resolve(instance.symbolId, instance.symbolVariantId)) {
       diagnostics.push({
@@ -168,17 +190,21 @@ export function diagnoseVisualQuality(
         severity: "error",
         message: `Instance ${instance.id} has an unresolved symbol`,
         objectIds: [instance.id],
+        point: instance.placement.position,
+        parameters: { symbolId: instance.symbolId },
       });
     }
   }
   for (const [leftIndex, left] of bounds.entries()) {
     for (const right of bounds.slice(leftIndex + 1)) {
       if (rectanglesOverlap(left.bounds, right.bounds)) {
+        const overlap = intersectionBounds(left.bounds, right.bounds);
         diagnostics.push({
           code: "VISUAL_SYMBOL_OVERLAP",
           severity: "warning",
           message: `Symbols ${left.id} and ${right.id} overlap`,
           objectIds: [left.id, right.id],
+          ...(overlap ? { bounds: overlap } : {}),
         });
       }
     }
@@ -200,11 +226,13 @@ export function diagnoseVisualQuality(
   for (const [leftIndex, left] of annotationBounds.entries()) {
     for (const right of annotationBounds.slice(leftIndex + 1)) {
       if (rectanglesOverlap(left.bounds, right.bounds)) {
+        const overlap = intersectionBounds(left.bounds, right.bounds);
         diagnostics.push({
           code: "VISUAL_LABEL_OVERLAP",
           severity: "warning",
           message: `Annotations ${left.id} and ${right.id} overlap`,
           objectIds: [left.id, right.id],
+          ...(overlap ? { bounds: overlap } : {}),
         });
       }
     }
@@ -223,6 +251,13 @@ export function diagnoseVisualQuality(
           severity: "warning",
           message: `Route ${route.id} contains a short segment`,
           objectIds: [route.id],
+          bounds: {
+            x: Math.min(from.x, to.x),
+            y: Math.min(from.y, to.y),
+            width: Math.max(1, Math.abs(to.x - from.x)),
+            height: Math.max(1, Math.abs(to.y - from.y)),
+          },
+          parameters: { segmentIndex: index - 1, length },
         });
         break;
       }
@@ -244,6 +279,11 @@ export function diagnoseVisualQuality(
           severity: "error",
           message: `Junction ${junction.id} lies on unrelated route ${route.id}`,
           objectIds: [junction.id, route.id],
+          point: junction.position,
+          parameters: {
+            junctionNetId: junction.netId,
+            routeNetId: route.netId,
+          },
         });
       }
     }
@@ -251,11 +291,19 @@ export function diagnoseVisualQuality(
 
   for (const constraint of document.constraints) {
     if (constraintViolation(document, constraint, boundsById)) {
+      const violationBounds = enclosingBounds(
+        constraint.objectIds.flatMap((id) => {
+          const item = boundsById.get(id);
+          return item ? [item] : [];
+        }),
+      );
       diagnostics.push({
         code: "VISUAL_CONSTRAINT_VIOLATION",
         severity: "warning",
         message: `Layout constraint ${constraint.id} is not satisfied`,
         objectIds: [constraint.id, ...constraint.objectIds],
+        ...(violationBounds ? { bounds: violationBounds } : {}),
+        parameters: { constraintKind: constraint.kind },
       });
     }
   }
@@ -273,6 +321,8 @@ export function diagnoseVisualQuality(
           severity: "warning",
           message: `Object ${item.id} extends outside the export page`,
           objectIds: [item.id],
+          bounds: item.bounds,
+          parameters: { pageBounds: JSON.stringify(page) },
         });
       }
     }

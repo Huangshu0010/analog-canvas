@@ -72,6 +72,242 @@ describe("Phase 8 semantic authoring", () => {
     expect(document.instances).toHaveLength(0);
   });
 
+  it("remaps a reviewed generic symbol and every persisted pin reference atomically", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "XM1",
+      symbolId: "generic-block-4",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {
+        "spice.target": "model:sky130_fd_pr__nfet_01v8",
+        "spice.pin.P1": "P1",
+        "spice.pin.P2": "P2",
+        "spice.pin.P3": "P3",
+        "spice.pin.P4": "P4",
+      },
+    });
+    document.nets.push(
+      {
+        id: "net-d",
+        scope: "local",
+        terminals: [{ instanceId: "XM1", pinName: "P1" }],
+        ports: [],
+      },
+      {
+        id: "net-g",
+        scope: "local",
+        terminals: [{ instanceId: "XM1", pinName: "P2" }],
+        ports: [],
+      },
+      {
+        id: "net-s",
+        scope: "local",
+        terminals: [{ instanceId: "XM1", pinName: "P3" }],
+        ports: [],
+      },
+      {
+        id: "net-b",
+        scope: "local",
+        terminals: [{ instanceId: "XM1", pinName: "P4" }],
+        ports: [],
+      },
+    );
+    document.junctions.push({
+      id: "junction-d",
+      netId: "net-d",
+      position: { x: 100, y: 20 },
+    });
+    document.routes.push({
+      id: "route-d",
+      netId: "net-d",
+      from: { kind: "terminal", instanceId: "XM1", pinName: "P1" },
+      to: { kind: "junction", junctionId: "junction-d" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+
+    const result = executeTransaction(
+      document,
+      transaction([
+        {
+          kind: "set_instance_symbol",
+          instanceId: "XM1",
+          symbolId: "nmos",
+          pinMap: { P1: "D", P2: "G", P3: "S", P4: "B" },
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        sourceStatus: "geometry-only-changed",
+        instances: [
+          {
+            id: "XM1",
+            symbolId: "nmos",
+            properties: {
+              "spice.target": "model:sky130_fd_pr__nfet_01v8",
+              "spice.pin.P1": "D",
+              "spice.pin.P2": "G",
+              "spice.pin.P3": "S",
+              "spice.pin.P4": "B",
+            },
+          },
+        ],
+        routes: [
+          {
+            id: "route-d",
+            from: { kind: "terminal", instanceId: "XM1", pinName: "D" },
+          },
+        ],
+      },
+      diff: {
+        changedObjectIds: [
+          "XM1",
+          "net-b",
+          "net-d",
+          "net-g",
+          "net-s",
+          "route-d",
+        ],
+      },
+    });
+    expect(
+      result.document.nets.map((net) => net.terminals[0]?.pinName),
+    ).toEqual(["D", "G", "S", "B"]);
+  });
+
+  it("rejects an incomplete symbol pin map without partial mutation", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "X1",
+      symbolId: "generic-block-4",
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-a",
+      scope: "local",
+      terminals: [{ instanceId: "X1", pinName: "P1" }],
+      ports: [],
+    });
+    const result = executeTransaction(
+      document,
+      transaction([
+        {
+          kind: "set_instance_symbol",
+          instanceId: "X1",
+          symbolId: "nmos",
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+    expect(result).toMatchObject({ ok: false, applied: false });
+    expect(result.document).toBe(document);
+    expect(document.instances[0]!.symbolId).toBe("generic-block-4");
+  });
+
+  it("places and moves a port with its attached annotation", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.ports.push({
+      id: "port-in",
+      name: "IN",
+      direction: "input",
+      position: null,
+    });
+    document.annotations.push({
+      id: "label-in",
+      kind: "net-label",
+      text: "IN",
+      position: { x: 80, y: 100 },
+      attachedObjectId: "port-in",
+      offset: { x: -20, y: 0 },
+      alignment: "end",
+      rotation: 0,
+      locked: false,
+    });
+    const placed = executeTransaction(
+      document,
+      transaction([
+        { kind: "place_port", portId: "port-in", position: { x: 100, y: 100 } },
+      ]),
+    );
+    expect(placed).toMatchObject({
+      ok: true,
+      document: { ports: [{ position: { x: 100, y: 100 } }] },
+    });
+    const moved = executeTransaction(
+      placed.document,
+      transaction(
+        [
+          {
+            kind: "move_port",
+            portId: "port-in",
+            position: { x: 140, y: 120 },
+          },
+        ],
+        1,
+      ),
+    );
+    expect(moved).toMatchObject({
+      ok: true,
+      document: {
+        ports: [{ position: { x: 140, y: 120 } }],
+        annotations: [{ position: { x: 120, y: 120 } }],
+      },
+    });
+  });
+
+  it("protects reviewed symbol and port layout with the same lock boundary", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "X1",
+      symbolId: "generic-block-4",
+      placement: null,
+      properties: {},
+    });
+    document.ports.push({
+      id: "port-in",
+      name: "IN",
+      direction: "input",
+      position: null,
+    });
+    document.layoutGroups.push({
+      id: "human-reviewed",
+      kind: "custom",
+      objectIds: ["X1", "port-in"],
+      locked: true,
+    });
+    const before = structuredClone(document);
+    const result = executeTransaction(
+      document,
+      transaction([
+        {
+          kind: "set_instance_symbol",
+          instanceId: "X1",
+          symbolId: "nmos",
+        },
+        {
+          kind: "place_port",
+          portId: "port-in",
+          position: { x: 40, y: 100 },
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: { message: expect.stringContaining("human-reviewed") },
+    });
+    expect(document).toEqual(before);
+  });
+
   it("merges complete route and junction ownership into one target Net", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push(

@@ -17,6 +17,10 @@ Examples:
 0003-agent-api-without-mcp.md
 ```
 
+Current Agent integration decisions include
+[`0005-agent-api-without-mcp.md`](0005-agent-api-without-mcp.md) and
+[`0007-snapshot-driven-agent-workflow.md`](0007-snapshot-driven-agent-workflow.md).
+
 Use [`adr.template.md`](adr.template.md) for new decisions.
 
 ## When an ADR is required

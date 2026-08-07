@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "fixture": {
+    "id": "unseen-transistor-stress-128",
+    "purpose": "name-independent, non-fixture-specific Snapshot/edit/render stress; not an analog performance model",
+    "instances": 128,
+    "nets": 138,
+    "routes": 392,
+    "ports": 18
+  },
+  "snapshotMeasurements": [
+    {
+      "instances": 128,
+      "byteLength": 289373,
+      "estimatedTokens": 72344,
+      "underByteBudget": true,
+      "underTokenBudget": true
+    },
+    {
+      "instances": 500,
+      "byteLength": 1126592,
+      "estimatedTokens": 281648,
+      "underByteBudget": true,
+      "underTokenBudget": true
+    }
+  ],
+  "workflow": {
+    "apiVersion": "2.0",
+    "queryCalls": 0,
+    "optionalHelpersEnabled": false,
+    "dryRunAccepted": true,
+    "commitAccepted": true,
+    "refreshedRevision": 1,
+    "topologyPreserved": true,
+    "finalDiagnosticCount": 0
+  },
+  "generalization": {
+    "persistedOrderInvariant": true,
+    "renamedIdsPreserveStructuralEvidence": true,
+    "deliberateAsymmetryDetected": true,
+    "unknownPdkRemainsUnresolved": true
+  },
+  "render": {
+    "svgBytes": 223048,
+    "formalLayerPresent": true,
+    "editorOverlayAbsent": true
+  },
+  "budgets": {
+    "maxSnapshotBytes": 4000000,
+    "maxEstimatedTokens": 1000000,
+    "snapshot128Milliseconds": 1000,
+    "snapshot500Milliseconds": 1500,
+    "render128Milliseconds": 2000
+  },
+  "performanceWithinBudgets": true,
+  "passed": true
+}

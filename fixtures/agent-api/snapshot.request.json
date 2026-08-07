@@ -1,0 +1,7 @@
+{
+  "apiVersion": "2.0",
+  "requestId": "snapshot-example",
+  "operation": "snapshot",
+  "documentId": "document-differential-stage",
+  "includeSourceSpans": false
+}

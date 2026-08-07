@@ -14,7 +14,7 @@
 - 连接关系来自显式电路对象，不从 SVG 像素或线段相交猜测；
 - 分支和连接交叉由 junction 小圆点明确表达，没有小圆点的交叉就是 crossing；
 - SVG 是派生视图，不是数据真值；
-- AI 主要读取局部结构化上下文，截图只用于视觉复核；
+- AI 一次读取当前 Document 的完整只读 Snapshot，在内部自行聚焦；截图只用于视觉复核；
 - `circuit.vss` 只用于开发期生成符号库，用户运行时不依赖 Visio 或 VSS；
 - 第一版默认输出统一的黑白教材式原理图风格。
 
@@ -28,7 +28,9 @@ flowchart LR
     LOAD --> MODEL["Circuit Project Model"]
 
     HUMAN["Human GUI"] --> EDIT["Schematic Edit Engine"]
-    AI["AI Adapter"] --> EDIT
+    MODEL --> SNAPSHOT["Complete Document Snapshot"]
+    SNAPSHOT --> AI["AI + thin Skill"]
+    AI --> EDIT
     EDIT --> MODEL
 
     MODEL --> DERIVED["Derived Engine"]
@@ -36,13 +38,13 @@ flowchart LR
     MODEL --> OUTPUT["Save + Export"]
 ```
 
-| 部分 | 职责 |
-|---|---|
-| Import & Load | 导入 SPICE、加载 Project、执行 schema migration |
-| Circuit Project Model | 保存逻辑 connectivity、可见几何和展示意图 |
-| Schematic Edit Engine | 安全、原子、可撤销地修改 Document |
-| Derived Engine | 派生 pin 坐标、索引、flightline、diagnostics 和 SVG |
-| Save + Export | 保存可编辑项目，导出 SVG、PNG、PDF |
+| 部分                  | 职责                                                |
+| --------------------- | --------------------------------------------------- |
+| Import & Load         | 导入 SPICE、加载 Project、执行 schema migration     |
+| Circuit Project Model | 保存逻辑 connectivity、可见几何和展示意图           |
+| Schematic Edit Engine | 安全、原子、可撤销地修改 Document                   |
+| Derived Engine        | 派生 pin 坐标、索引、flightline、diagnostics 和 SVG |
+| Save + Export         | 保存可编辑项目，导出 SVG、PNG、PDF                  |
 
 外部不需要知道 token、syntax tree、Circuit IR、MST 或 SVG layer 的内部组织。
 
@@ -113,9 +115,9 @@ models/*.lib
 
 ```typescript
 interface ImportRequest {
-  entryPath: string
-  dialect: "auto" | SpiceDialectId
-  sourcePolicy: "copy" | "reference"
+  entryPath: string;
+  dialect: "auto" | SpiceDialectId;
+  sourcePolicy: "copy" | "reference";
 }
 ```
 
@@ -191,38 +193,35 @@ CircuitProject
 
 ```typescript
 interface CircuitProject {
-  schemaVersion: number
-  id: string
-  name: string
+  schemaVersion: number;
+  id: string;
+  name: string;
 
-  source: SourceManifest
-  symbolLibrary: SymbolLibraryLock
+  source: SourceManifest;
+  symbolLibrary: SymbolLibraryLock;
 
-  topDocumentId: string
-  documents: SchematicDocument[]
+  topDocumentId: string;
+  documents: SchematicDocument[];
 }
 
 interface SchematicDocument {
-  id: string
-  name: string
-  revision: number
+  id: string;
+  name: string;
+  revision: number;
 
-  sourceBinding?: SourceBinding
-  sourceStatus:
-    | "in-sync"
-    | "geometry-only-changed"
-    | "connectivity-modified"
+  sourceBinding?: SourceBinding;
+  sourceStatus: "in-sync" | "geometry-only-changed" | "connectivity-modified";
 
-  ports: Port[]
-  instances: Instance[]
-  nets: Net[]
-  routes: RouteBranch[]
-  junctions: Junction[]
-  annotations: Annotation[]
+  ports: Port[];
+  instances: Instance[];
+  nets: Net[];
+  routes: RouteBranch[];
+  junctions: Junction[];
+  annotations: Annotation[];
 
-  presentation: PresentationIntent
-  layoutGroups: LayoutGroup[]
-  constraints: LayoutConstraint[]
+  presentation: PresentationIntent;
+  layoutGroups: LayoutGroup[];
+  constraints: LayoutConstraint[];
 }
 ```
 
@@ -230,26 +229,26 @@ interface SchematicDocument {
 
 ```typescript
 interface Instance {
-  id: string
-  symbolId: string
-  symbolVariantId?: string
-  sourceRef?: SourceSpan
+  id: string;
+  symbolId: string;
+  symbolVariantId?: string;
+  sourceRef?: SourceSpan;
 
   placement: null | {
-    position: Point
-    rotation: 0 | 90 | 180 | 270
-    mirror: "none" | "x"
-  }
+    position: Point;
+    rotation: 0 | 90 | 180 | 270;
+    mirror: "none" | "x";
+  };
 
-  properties: Record<string, string | number | boolean>
+  properties: Record<string, string | number | boolean>;
 }
 
 interface Net {
-  id: string
-  name?: string
-  scope: "local" | "global"
-  terminals: TerminalRef[]
-  ports: string[]
+  id: string;
+  name?: string;
+  scope: "local" | "global";
+  terminals: TerminalRef[];
+  ports: string[];
 }
 ```
 
@@ -259,25 +258,23 @@ interface Net {
 
 ```typescript
 type RouteEndpoint =
-  | {kind: "terminal"; instanceId: string; pinName: string}
-  | {kind: "port"; portId: string}
-  | {kind: "junction"; junctionId: string}
+  | { kind: "terminal"; instanceId: string; pinName: string }
+  | { kind: "port"; portId: string }
+  | { kind: "junction"; junctionId: string };
 
 interface RouteBranch {
-  id: string
-  netId: string
-  from: RouteEndpoint
-  to: RouteEndpoint
-  waypoints: Point[]
-  segmentModes: Array<
-    "auto" | "escape" | "manual" | "locked" | "trunk"
-  >
+  id: string;
+  netId: string;
+  from: RouteEndpoint;
+  to: RouteEndpoint;
+  waypoints: Point[];
+  segmentModes: Array<"auto" | "escape" | "manual" | "locked" | "trunk">;
 }
 
 interface Junction {
-  id: string
-  netId: string
-  position: Point
+  id: string;
+  netId: string;
+  position: Point;
 }
 ```
 
@@ -287,15 +284,15 @@ interface Junction {
 
 ### 6.1 真值边界
 
-| 数据 | 性质 | 是否持久化 |
-|---|---|---:|
-| SPICE source manifest | 输入来源与追溯 | 是 |
-| Symbol Library lock | 符号版本绑定 | 是 |
-| Logical Connectivity | 电路真值 | 是 |
-| Visible Geometry | 人工/AI 完成的画面 | 是 |
-| Presentation Intent | 风格、约束、标注布局 | 是 |
-| Selection/Viewport/Wire Draft | 临时交互状态 | 否 |
-| Flightlines/Indexes/Diagnostics/SVG | 派生状态 | 否 |
+| 数据                                | 性质                 | 是否持久化 |
+| ----------------------------------- | -------------------- | ---------: |
+| SPICE source manifest               | 输入来源与追溯       |         是 |
+| Symbol Library lock                 | 符号版本绑定         |         是 |
+| Logical Connectivity                | 电路真值             |         是 |
+| Visible Geometry                    | 人工/AI 完成的画面   |         是 |
+| Presentation Intent                 | 风格、约束、标注布局 |         是 |
+| Selection/Viewport/Wire Draft       | 临时交互状态         |         否 |
+| Flightlines/Indexes/Diagnostics/SVG | 派生状态             |         否 |
 
 导入后，`SchematicDocument` 是当前编辑真值。原始 SPICE 保留为 source snapshot，不会因移动器件或画线被隐式改写。
 
@@ -355,8 +352,8 @@ Flightline 表示同一 net 中尚未被 Route、port、供电符号或 named co
 对外只保留两个函数边界：
 
 ```typescript
-const ir = spiceFrontend.parse(sourceBundle)
-const documents = schematicImporter.import(ir, symbolLibrary)
+const ir = spiceFrontend.parse(sourceBundle);
+const documents = schematicImporter.import(ir, symbolLibrary);
 ```
 
 `SpiceFrontend` 内部负责：
@@ -377,11 +374,11 @@ Circuit IR 是 dialect 与 SchematicDocument 之间的统一内存结构：
 
 ```typescript
 interface CircuitIR {
-  dialect: SpiceDialectId
-  topCells: string[]
-  cells: CircuitCellIR[]
-  models: ModelDeclaration[]
-  unresolvedStatements: SourceReference[]
+  dialect: SpiceDialectId;
+  topCells: string[];
+  cells: CircuitCellIR[];
+  models: ModelDeclaration[];
+  unresolvedStatements: SourceReference[];
 }
 ```
 
@@ -400,10 +397,10 @@ Circuit IR 不写入用户 Project；需要 re-import 时重新生成。
 
 ```typescript
 interface OpaqueStatement {
-  kind: "opaque"
-  rawText: string
-  sourceSpan: SourceSpan
-  probableType?: "element" | "directive" | "control"
+  kind: "opaque";
+  rawText: string;
+  sourceSpan: SourceSpan;
+  probableType?: "element" | "directive" | "control";
 }
 ```
 
@@ -452,15 +449,15 @@ SPICE MOS 可能有 D/G/S/B 四个 electrical terminals，而教材式符号可�
 
 ```typescript
 interface SymbolPin {
-  name: string
-  role: string
-  at: Point
-  direction: Direction
+  name: string;
+  role: string;
+  at: Point;
+  direction: Direction;
   presentation: {
-    visibility: "visible" | "implicit" | "conditional"
-    leadLength?: number
-    showName?: boolean
-  }
+    visibility: "visible" | "implicit" | "conditional";
+    leadLength?: number;
+    showName?: boolean;
+  };
 }
 ```
 
@@ -486,12 +483,12 @@ project mapping
 
 职责分工：
 
-| GUI Tool | Schematic Edit Engine |
-|---|---|
-| 处理鼠标、键盘、hover、selection | 修改正式 Document |
-| 显示 drag/wire preview | 检查对象、revision 和 lock |
-| 判断用户想做什么 | 原子执行领域修改 |
-| 管理未提交的 Session State | 生成 revision、diff、diagnostics |
+| GUI Tool                         | Schematic Edit Engine            |
+| -------------------------------- | -------------------------------- |
+| 处理鼠标、键盘、hover、selection | 修改正式 Document                |
+| 显示 drag/wire preview           | 检查对象、revision 和 lock       |
+| 判断用户想做什么                 | 原子执行领域修改                 |
+| 管理未提交的 Session State       | 生成 revision、diff、diagnostics |
 
 ### 9.1 人工路径
 
@@ -511,7 +508,8 @@ project mapping
 ### 9.2 AI 路径
 
 ```text
-AI 请求局部结构化上下文
+宿主提供 capabilities、Project Index 和完整 Document Snapshot
+→ AI 依据完整 pin-Net/层次/几何事实自由推理
 → AI 产生 typed edits
 → AI Adapter 校验请求
 → Schematic Edit Engine
@@ -524,12 +522,12 @@ AI 请求局部结构化上下文
 
 ```typescript
 interface EditTransaction {
-  transactionId: string
-  documentId: string
-  expectedRevision: number
-  actor: {kind: "human" | "agent"; id: string}
-  dryRun?: boolean
-  edits: SchematicEdit[]
+  transactionId: string;
+  documentId: string;
+  expectedRevision: number;
+  actor: { kind: "human" | "agent"; id: string };
+  dryRun?: boolean;
+  edits: SchematicEdit[];
 }
 ```
 
@@ -572,89 +570,77 @@ W
 
 Move、Stretch 和 Detach 保持 Logical Connectivity。`make_flightline` 删除实体 Route 后，flightline 自动恢复。
 
-## 10. 外部协议压缩为七个操作
+## 10. 文件操作与 Agent API 分层
 
-大量细粒度领域操作不应变成大量 MCP endpoint。外部协议只提供：
-
-```text
-project.import
-project.open
-project.save
-canvas.query
-canvas.transact
-canvas.render
-project.export
-```
-
-本地图形界面可以直接调用内部 TypeScript 模块，不需要通过 MCP。七个操作主要服务 AI Adapter、自动化和宿主集成。
-
-### 10.1 `canvas.query`
-
-```typescript
-interface CanvasQuery {
-  documentId: string
-
-  scope:
-    | {kind: "document"}
-    | {kind: "selection"}
-    | {kind: "objects"; ids: string[]}
-    | {kind: "region"; bounds: Rect}
-    | {kind: "net"; netId: string}
-
-  include: Array<
-    | "instances"
-    | "nets"
-    | "routes"
-    | "flightlines"
-    | "neighbors"
-    | "constraints"
-    | "diagnostics"
-    | "changes"
-  >
-}
-```
-
-原来的 `get_instance`、`get_net`、`trace_net`、`describe_region` 和 `describe_selection` 都是 query 的不同参数，不再各自成为 endpoint。
-
-### 10.2 `canvas.transact`
-
-所有正式修改通过一个 transaction endpoint。内部保留细粒度 edit union：
+项目打开、导入、保存和导出属于宿主/GUI 文件工作流，不伪装成 Agent
+领域 endpoint。Agent Circuit API v2 只保留四个操作：
 
 ```text
-place_instance
-move_instance
-rotate_instance
-connect_terminals
-disconnect_terminal
-set_route_points
-add_junction
-remove_junction
-make_flightline
-align_instances
-create_trunk
-move_annotation
-undo
-redo
+capabilities
+snapshot
+transact
+render
 ```
 
-细粒度 edits 是 payload schema，不是协议端点，因此不会造成传输协议膨胀。
+它是普通 JSON/TypeScript API 和可选的 authenticated loopback HTTP adapter，
+不是 MCP，也不内置 LLM provider。GUI 直接调用内部模块；人工不接触协议。
 
-### 10.3 `canvas.render`
+### 10.1 `capabilities`
 
-Render 单独存在，因为它返回 SVG 或图片，与普通结构化 query 的响应类型不同。截图只按需获取，不在每轮 AI 操作中自动发送。
+会话开始读取一次 API/Snapshot 版本、Project Index、权限、edit kinds 和
+payload/transaction/render 上限。Skill 必须按返回能力工作，不能假设宿主支持
+未声明操作。
 
-### 10.4 AI 数据边界
+### 10.2 `snapshot`
 
-AI 默认不读取或传输：
+进入一个 Document 后一次取得完整、确定性、只读的
+`AgentSessionSnapshot`。它包含：
 
-- 完整 Project JSON；
-- 原始 SPICE 全文；
-- lossless syntax tree；
-- Circuit IR；
-- SVG XML；
-- 内部 cache。
+- 小型 Project Index 与 Document reference edges；
+- 所有 ports、instances、模型/参数、placement 和 resolved/connected pins；
+- pin→Net 与 Net→terminal 的双向完整映射；
+- Nets、Routes、Junctions、annotations、layout groups、constraints 和 locks；
+- bounds、presentation、revision 与对象可寻址的空间 diagnostics。
 
-只有明确分析网表语法时，query 才返回相关 source span。
+大规模电路由 Agent 在完整 Snapshot 内部自行聚焦；产品不要求 region query、
+topology query、Layout Intent 或分类器。v1 `query` 仅作为兼容适配器保留，不再
+扩展成查询语言。Snapshot 是派生消息，不是新的项目文件，也不能整体写回。
+
+这里的“自行聚焦”属于 Agent 临时推理，不是一层隐藏协议。功能区域、模式假设、相对
+位置、坐标草案和线段折点都可以按当前电路自由组织；除非用户明确保存为现有
+`layoutGroups`、`constraints` 或 locks，否则不持久化，也不要求转换为统一
+`LayoutIntent`。
+
+### 10.3 `transact`
+
+所有正式修改通过一个 transaction 操作。细粒度 typed edits 是 payload union，
+不是独立 endpoint，例如：
+
+```text
+place_instance / move_instance / set_instance_symbol
+place_port / move_port
+set_route_points / add_junction / remove_junction
+connect_endpoints / disconnect_endpoint / merge_nets
+upsert_annotation / set_layout_group / set_layout_constraint
+```
+
+每个 transaction 携带 `documentId`、`expectedRevision`、`transactionId` 和
+可选 `dryRun`；Edit Engine 统一执行权限、revision、lock、pin/Net、原子性和
+模型校验。Agent 不能替换整个 Project/Document/Snapshot。
+
+### 10.4 `render` 与刷新
+
+Render 按需返回 formal 或 diagnostics SVG/图片，不在每轮自动传输。切换
+Document、出现 `STALE_REVISION`、检测到外部修改或准备最终全局复查时，重新
+请求完整 Snapshot；不为增量刷新再设计 `changes` 查询语言。
+
+### 10.5 AI 数据边界
+
+AI 默认不接收完整 Project JSON、原始 SPICE 全文、lossless syntax tree、
+Circuit IR、SVG XML、cache 或 session state。Snapshot 只展开当前 Document
+所需的电气和表达事实；source spans 受显式权限控制。100/500-instance payload
+先测量，只有真正超过 host/context 上限时才考虑无语义的传输分块，不能借机引入
+region/topology 协议。
 
 ## 11. Derived Engine 与视觉输出
 
@@ -678,15 +664,15 @@ SVG scene
 
 ```typescript
 interface PresentationIntent {
-  styleProfileId: string
-  grid: number
-  compactness: "loose" | "normal" | "compact"
+  styleProfileId: string;
+  grid: number;
+  compactness: "loose" | "normal" | "compact";
   flow?: {
-    power?: "top"
-    ground?: "bottom"
-    input?: "left"
-    output?: "right"
-  }
+    power?: "top";
+    ground?: "bottom";
+    input?: "left";
+    output?: "right";
+  };
 }
 ```
 
@@ -790,9 +776,7 @@ my-circuit/
   "source": {
     "entry": "sources/circuit.spi",
     "dialect": "ngspice",
-    "files": [
-      {"path": "sources/circuit.spi", "hash": "..."}
-    ]
+    "files": [{ "path": "sources/circuit.spi", "hash": "..." }]
   },
   "symbolLibrary": {
     "id": "builtin-analog",
@@ -938,7 +922,9 @@ interactive-circuit-maker/
 - Playwright 覆盖放置、Wire、Junction、crossing、Move、Stretch 和 Detach；
 - GUI preview 不提前修改正式 Document；
 - GUI 和 AI 执行同一种 edit 得到相同 Document；
-- AI query 有界，不隐式传输完整 Project；
+- Agent Snapshot 完整、只读、可确定复现且不隐式传输完整 Project；
+- pin→Net 与 Net→terminal 双向一致，Snapshot 不能进入整体写回路径；
+- GUI 与 Agent 对 revision、lock、原子性和电气规则一致；
 - render 只在请求时产生截图。
 
 ## 15. 实施顺序
@@ -965,11 +951,14 @@ P5  Human SVG Canvas
 P6  Derived Engine
     indexes、flightlines、diagnostics、deterministic SVG
 ↓
-P7  External Protocol + AI Adapter
-    query、transact、render、diff
+P7  Agent API v1 + Export Hardening
+    capabilities、兼容 query、transact、render、diff、PNG/PDF
 ↓
-P8  Dialect Expansion + Export
-    HSPICE/PSpice/LTspice/Xyce、PNG/PDF
+P8  Direct Manipulation + Manual Authoring
+    compact UI、自由布线、框选、复制粘贴、文本和层次导航
+↓
+P9  Snapshot-Driven Agent Workflow
+    complete Snapshot v2、thin Skill、on-demand knowledge、PDK mapping、typed edits
 ```
 
 VSS extraction 可以作为 P1 的开发工具子任务，与运行时实现解耦。
@@ -987,7 +976,8 @@ VSS extraction 可以作为 P1 的开发工具子任务，与运行时实现解�
 → 人通过 Wire Tool 画实体线路
 → crossing 保持不连接
 → 显式 junction 显示小圆点并连接
-→ AI query 获取局部结构化上下文
+→ 宿主提供 capabilities、Project Index 和当前 Document 完整 Snapshot
+→ AI 按需加载 Skill 知识并在内部聚焦/推理
 → AI transact 移动或完成局部布线
 → stale revision 被拒绝
 → Edit Engine 返回 deterministic diff 和 diagnostics
@@ -998,24 +988,30 @@ VSS extraction 可以作为 P1 的开发工具子任务，与运行时实现解�
 
 ## 17. 精简决策总表
 
-| 设计项 | 最终决定 |
-|---|---|
-| Project → Document | 保留 |
-| Document → Page | MVP 移除，未来 migration 增加 |
-| CST + AST | 合并为 lossless tree + typed projections |
-| Circuit IR | 保留为 import-time 内存对象，不落盘 |
-| 每个 subckt 一个文件 | MVP 不采用，Documents 内嵌 Project JSON |
-| `source-lock.json` | 合并进 Project |
-| `symbols.lock.json` | 合并进 Project |
-| 项目 `.cache/`、`.session/` | 移到 AppData |
-| 固定 `exports/` | 删除，由用户选择导出路径 |
-| 大量 read/describe endpoints | 合并为 `canvas.query` |
-| 大量修改 endpoints | 合并为 `canvas.transact`，保留 typed edit union |
-| Command Engine 名称 | 改为 `Schematic Edit Engine`，避免误解为 CLI |
-| Human edit | GUI Tool 产生 typed edit，不要求用户接触协议 |
-| VSS | 仅构建期符号生产，不进入运行时 |
-| AI 上下文 | 局部结构化 query，截图按需，不传完整项目 |
+| 设计项                       | 最终决定                                                      |
+| ---------------------------- | ------------------------------------------------------------- |
+| Project → Document           | 保留                                                          |
+| Document → Page              | MVP 移除，未来 migration 增加                                 |
+| CST + AST                    | 合并为 lossless tree + typed projections                      |
+| Circuit IR                   | 保留为 import-time 内存对象，不落盘                           |
+| 每个 subckt 一个文件         | MVP 不采用，Documents 内嵌 Project JSON                       |
+| `source-lock.json`           | 合并进 Project                                                |
+| `symbols.lock.json`          | 合并进 Project                                                |
+| 项目 `.cache/`、`.session/`  | 移到 AppData                                                  |
+| 固定 `exports/`              | 删除，由用户选择导出路径                                      |
+| 大量 read/describe endpoints | v2 用一次完整 `snapshot` 取代；v1 query 仅兼容                |
+| 大量修改 endpoints           | 合并为 `canvas.transact`，保留 typed edit union               |
+| Command Engine 名称          | 改为 `Schematic Edit Engine`，避免误解为 CLI                  |
+| Human edit                   | GUI Tool 产生 typed edit，不要求用户接触协议                  |
+| VSS                          | 仅构建期符号生产，不进入运行时                                |
+| AI 上下文                    | 当前 Document 完整只读 Snapshot；截图按需，不传完整 Project   |
+| Agent 推理层                 | thin Skill 统领流程，电路知识按需加载，不要求 Layout Intent   |
+| 大电路                       | Project Index 选 Document；Agent 在完整 Snapshot 内部自行聚焦 |
+| 可选加速                     | 只有实测瓶颈才增加纯派生/helper；默认不存在且可关闭           |
 
 最终外部心智模型是：
 
-> 输入 SPICE 或 Project，系统在内存中维护一个 CircuitProject；人通过 GUI、AI 通过 query/transact 修改同一个 Document；系统派生 SVG、flightline 和 diagnostics；最终保存一个 Project JSON 或导出视觉文件。
+> 输入 SPICE 或 Project，系统在内存中维护一个 CircuitProject；人通过 GUI
+> 操作，AI 读取当前 Document 的完整只读 Snapshot 并通过 transact 提交 typed
+> edits；两者共享同一个 Edit Engine。系统派生 SVG、flightline 和 diagnostics；
+> 最终仍只保存一个 Project JSON 或导出视觉文件。

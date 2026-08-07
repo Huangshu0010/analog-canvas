@@ -288,3 +288,257 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   build, performance budgets, export goldens, PWA icons, release smoke,
   Markdown links/fences, and `git diff --check` passed.
 - Commit status: ready to commit as `Expand direct wire editing`.
+
+## 2026-08-07 - Record rule-guided Agent layout architecture
+
+- Target: preserve the current design discussion for scaling Agent-assisted
+  schematic expression from small examples to hierarchical 100+ transistor
+  circuits without expanding the external API or weakening electrical gates.
+- Changed areas: added a proposed Agent architecture document covering the PDK
+  symbol registry, transient Topology View and Layout Intent, composable
+  topology patterns, recursive region planning, Net-class routing, flat API
+  additions, Document navigation, persistence boundaries, package layout,
+  acceptance criteria, delivery order, and unresolved decisions; indexed it
+  from the Agent guide.
+- Validation: Prettier completed for the four owned Markdown files, local
+  Markdown links resolved, fenced code blocks balanced, and `git diff --check`
+  passed.
+- Commit status: not committed; retained as a proposed discussion record for
+  further human review.
+
+## 2026-08-07 - Flatten Agent reasoning and prepare Phase 9
+
+- Target: incorporate the architecture review by keeping circuit/layout
+  interpretation inside the Agent while supplying complete Document facts as a
+  read-only Snapshot and retaining typed transactions, rendering, actionable
+  diagnostics, and optional late-stage helpers.
+- Changed areas: replaced the formal Layout Intent/compiler proposal with an
+  adaptive Snapshot-driven Agent workflow; removed the proposed generic query
+  language; reduced Agent-facing guidance to a governing Skill plus on-demand
+  knowledge; documented large-circuit, refresh, PDK, hierarchy, file-flow, and
+  package boundaries; and reordered Phase 9 so baseline/Skill vertical trials
+  precede product-gap closure and optional acceleration.
+- Validation: Prettier completed for all seven owned Markdown files; local links
+  resolved, fenced code blocks balanced, `git diff --check` passed, and the
+  final dirty-state review confirmed unrelated editor, symbol, fixture, circuit,
+  tool, and plan work remained untouched.
+- Commit status: not committed; ready for human review before Phase 9 contract
+  work begins.
+
+## 2026-08-07 - Complete CDAC hierarchy layout
+
+- Target: complete the previously generated Razavi-style CDAC example by
+  drawing its imported `scdac_unit` hierarchy and clearing the top-level RESET
+  label/wire overlap.
+- Changed areas: extended the deterministic Agent-layout runner to transact on
+  and optionally export multiple imported Documents; added a transistor-level
+  two-stage CMOS bottom-plate driver with conventional stacked inverter
+  geometry and local source/bulk ties; moved XRESET into a separate right-side
+  vertical channel with local source/bulk tie; regenerated the editable Project
+  and top-level/unit SVG, PNG, and PDF artifacts.
+- Validation: the real SPICE import, typed dry-run/commit, Project validation,
+  and formal export chain completed in six transactions; both Documents report
+  zero unplaced instances; top-level and unit PNGs were visually inspected;
+  Prettier and final repository hygiene checks completed.
+- Commit status: not committed; retained in the ongoing CDAC/Agent-layout
+  working set.
+
+## 2026-08-07 - Render faithful hierarchical ports
+
+- Target: preserve `.subckt` interfaces exactly while replacing generic
+  positional hierarchy blocks with transient Project-derived symbols whose
+  electrical terminals and visible pin names use the formal SPICE ports.
+- Changed areas: bound subcircuit import now assigns stable hierarchy symbol
+  IDs and formal terminal names; the symbol package derives named blocks from
+  Document source bindings and ports; SVG rendering displays upright pin names;
+  editor and Agent layout use Project-aware resolvers; CDAC routes now address
+  `bit/nbit/bot/vss/vdd`; corpus and crossing goldens plus focused tests were
+  updated; main and child CDAC artifacts were regenerated.
+- Validation: formatting and TypeScript passed; workspace build passed; 110
+  unit tests passed; 13 unaffected Playwright flows passed in the full run and
+  the one updated SPICE-import flow passed on focused rerun; CDAC import,
+  six typed transactions, Project validation, and two formal exports passed;
+  both PNGs were visually inspected; the generated project has zero generic
+  instances and formal XU terminal names while `circuit.spi` remains unchanged;
+  final diff/status hygiene checks passed.
+- Commit status: not committed; retained for review with the ongoing editor,
+  symbol, and CDAC changes.
+
+## 2026-08-07 - Prototype flattened CDAC view
+
+- Target: compare the hierarchy-block presentation with an alternate top-level
+  view that expands all six `scdac_unit` instances without modifying SPICE.
+- Changed areas: added a standalone flattened CDAC recipe that retains a cloned
+  hierarchical source Document, derives 24 prefixed MOS instances into the
+  selected top Document, maps every child formal-port Net back to its parent
+  Net, lays out six repeated two-inverter cells under the capacitor array, and
+  emits a distinct editable Project plus SVG/PNG/PDF artifacts. After the first
+  compact draft was rejected visually, the repeated-cell pitch and vertical
+  bands were rebuilt, capacitor branches received independent routing channels,
+  and all MOS devices changed to the textbook three-terminal visual variant
+  while retaining their electrical bulk terminals.
+- Validation: SPICE import, six typed transactions, Project validation, and
+  formal export passed; the flattened top has 32 placed instances, 24 expanded
+  unit MOS devices, 141 routes, 64 Junctions, no XU block instances, and no
+  generic symbols; all 96 expanded child terminals match the parent hierarchy,
+  and all 25 MOS bulk terminals remain connected to their original VDD/VSS
+  Nets. Visual diagnostics report zero errors or warnings after eliminating six
+  ambiguous VDD/capacitor junctions, and the revised PNG was visually inspected;
+  formatting and final diff/status hygiene checks passed.
+- Commit status: not committed; retained as an alternate visual prototype for
+  comparison with the hierarchical CDAC output.
+
+## 2026-08-07 - Keep MOS arrow in three-terminal variant
+
+- Target: correct the textbook three-terminal MOS presentation after review
+  showed that hiding the bulk lead also removed the NMOS/PMOS direction arrow.
+- Changed areas: separated the `mos-arrow` primitive from the hideable
+  `bulk-lead`, prevented dedicated `nmos3`/`pmos3` symbols from inheriting a
+  duplicate arrow, added focused regression assertions, and regenerated the
+  flattened CDAC artifacts. Electrical `B` pins and their VDD/VSS Net bindings
+  remain present while only the bulk lead is hidden. After user clarification,
+  the arrow geometry was moved from the channel center onto the source branch:
+  rendered top PMOS arrows point left and bottom NMOS arrows point right.
+- Validation: the seven focused built-in-symbol tests passed; the symbol package
+  built; the flattened recipe completed import, six typed transactions, Project
+  validation, and formal export; the PNG was visually inspected with one visible
+  source-branch direction arrow per MOS and no duplicate arrows.
+- Commit status: not committed; retained with the current CDAC prototype for
+  user review.
+
+## 2026-08-07 - Use migrated MOS variant geometry
+
+- Target: replace the rejected hand-adjusted MOS arrow with the repository's
+  existing VSS-migrated three-terminal geometry while preserving canonical
+  four-terminal SPICE connectivity.
+- Changed areas: restored the reviewed NMOS4/PMOS4 default bulk-arrow geometry;
+  extended visual variants with presentation-only additional primitives; made
+  `textbook-3terminal` hide the bulk lead and reuse the `nmos3` source arrow plus
+  the orientation-normalized `pmos3` source arrow; added focused schema,
+  builtin, and renderer coverage; updated the Symbol DSL contract and the two
+  circuit goldens that consume the variant; regenerated the flattened CDAC
+  Project and formal exports. The VSS review manifest and both VSS contact-sheet
+  goldens were not changed.
+- Validation: 126 workspace tests passed; workspace typecheck and build passed;
+  the 12 reviewed and 13 migration-candidate symbol previews passed their
+  deterministic review check; both Phase 1/5 circuit goldens passed; the CDAC
+  import, six typed transactions, Project validation, and exports passed. All
+  25 MOS instances resolve the variant and retain 25 `B` Net terminals; all 96
+  flattened child-terminal mappings match the hierarchy; visual diagnostics
+  are empty; `circuit.spi` has no diff; and the PNG was visually inspected.
+- Commit status: not committed; retained with the current CDAC prototype for
+  user review.
+
+## 2026-08-07 - Local-power textbook CDAC layout
+
+- Target: restyle the flattened CDAC routing after the supplied Razavi examples
+  by using vertical CMOS stacks, local power symbols, short signal paths, and
+  only the electrically necessary shared VOUT rail.
+- Changed areas: added six local VDD/ground helper pairs plus dedicated grounds
+  for the dummy capacitor and reset device; bound all helpers to the existing
+  VDD/VSS Nets; removed the page-spanning VDD/VSS routes; stacked each PMOS over
+  its NMOS; separated input, inter-stage, output, and capacitor channels; moved
+  device labels beside their symbols; corrected each second-stage gate branch
+  so its external route terminates outside the MOS lead instead of overlaying
+  it; reduced cell pitch from 340 to 300 units and compacted the vertical power,
+  device, capacitor, and reset bands; regenerated the editable Project and
+  SVG/PNG/PDF exports. The source SPICE and symbol library were not changed.
+- Validation: SPICE import, five typed transactions, Project validation, and
+  formal export passed; the top has 46 placed instances including 14 resolved
+  local-power helpers, 127 routes, and 50 Junctions. All helpers bind to exactly
+  one VDD/VSS Net; no global VDD/VSS port routes remain; all 25 MOS instances
+  retain the migrated visual variant and 25 bulk terminals; all 96 expanded
+  child-terminal mappings match the hierarchy; visual diagnostics are empty;
+  `circuit.spi` has no diff; and the PNG was visually inspected.
+- Commit status: not committed; retained as the current visual prototype for
+  user review.
+
+## 2026-08-07 - Implement Snapshot-driven Agent workflow
+
+- Target: execute Phase 9 with a flat complete-Snapshot Agent boundary, a thin
+  governing Skill plus on-demand knowledge, generic typed edits, actionable
+  diagnostics, and shared human/Agent revision and lock semantics.
+- Changed areas: accepted Agent API v2/Snapshot ADR and schemas; added
+  deterministic Project Index and complete bidirectional Document Snapshot;
+  retained v1 query only for compatibility; added SKY130 and exact PDK symbol
+  mappings, atomic symbol remap and port edits, spatial diagnostics, editor
+  Document navigation/diagnostic jump/handoff, the `circuit-layout` Skill and
+  ten routed knowledge documents, checked RLC/CDAC recovery traces, and
+  128/500-instance generalization/performance evidence. Measured traces did not
+  justify a query DSL, Layout Intent, topology classifier, or optional helper.
+- Integration repair: updated four dense-analog Route/Junction coordinates and
+  regenerated Phase 5/7 goldens after the preceding MOS migration moved formal
+  pin positions; the final visual review restored orthogonal routes while
+  retaining the migrated source arrows.
+- Validation: formatting and typecheck passed; 127 tests in 33 files and all 14
+  Playwright flows passed; three Agent API artifacts, Snapshot/audit/replay,
+  Skill package/links/ownership, PDK/import, Phase 1/5/7 visual/export goldens,
+  12 reviewed plus 13 candidate symbol previews, four pinned references, and
+  both legacy and Phase 9 performance budgets passed. The 128-instance complete
+  Snapshot is 289,373 bytes and the 500-instance Snapshot is 1,126,592 bytes;
+  both flows use zero v1 queries and no helper.
+- Remaining external gate: four isolated real-Agent guidance tiers and an
+  independent blinded readability review. The repository records the protocol
+  and deterministic package/context ablation but deliberately does not invent
+  model-quality scores. A reproducible kit now generates isolated, hashed tier
+  contexts; rejects incomplete, electrically changed, lock-violating,
+  query/helper-dependent, or unrefreshed results; anonymizes renders; and
+  aggregates blind scores. Its full prepare/finalize/score path and negative
+  cases pass a temporary-directory self-test. Phase 9 roadmap status is
+  `review` until real external runs and scores complete.
+- Architecture clarification: the roadmap, final architecture, product plan,
+  knowledge plan, and execution plan now explicitly define the Agent as the
+  semantic reasoning/layout layer. Complete Snapshot is the fact-transfer
+  boundary; the two runtime document layers are the lifecycle Skill and
+  on-demand circuit knowledge. Agent-local regions, pattern hypotheses,
+  coordinates, and route plans are neither a query language nor a persisted
+  Layout Intent. Product capability expansion follows vertical-trial evidence.
+- Held-out closure: added a post-knowledge-freeze hierarchical 4-bit Flash ADC
+  with 15 comparator references, 135 elaborated MOS devices, and a 16-resistor
+  ladder. Its two Documents import with zero generic symbols or errors; the
+  dedicated generator pins Snapshot sizes/hashes and the main SPICE corpus now
+  pins its 40 direct instances and connectivity hash. Added the neutral task,
+  evidence page, and a fresh local `v2` four-tier kit whose contract requires a
+  final derived Snapshot for every Document. The older local `v1` kit is
+  explicitly non-canonical.
+- Final deterministic regression: 127 tests in 33 files, 14 Playwright flows,
+  typecheck, formatting, build/release smoke, four references, 25 symbol
+  previews, Phase 1/5/7 visual/export artifacts, API schemas, all Phase 9
+  audits/replays/performance reports, three held-out regenerations, evaluation-pipeline
+  negative tests, and Phase 9 documentation links/fences pass.
+- External-study outcome: two real isolated four-tier runs passed electrical,
+  revision, Snapshot, placement, render, and diagnostic hard checks, but the
+  guidance tiers did not reliably match the API-only Agent's blind readability.
+  A third structurally different differential-feedback fixture was frozen and
+  validated, then its model run was stopped as nonessential. The ablation kit
+  remains available for future research; it is not a product runtime layer or
+  Phase 9 exit dependency. Skill/knowledge remain optional guidance governed by
+  outcome-based rules, while complete Snapshot plus typed edits stays the flat
+  product boundary.
+- Commit status: not committed; working tree retains the preceding coordinated
+  editor, symbol, hierarchy, RLC/CDAC, and plan changes.
+
+## 2026-08-07 - Checkpoint integrated development
+
+- Target: consolidate the intentionally retained manual-editor, symbol,
+  hierarchy, visual-prototype, and Phase 9 Agent changes into one attributable
+  baseline before Razavi visual implementation begins.
+- Dirty-state decision: 52 modified tracked paths and 95 untracked paths were
+  mapped to their named plans and prior log entries. Shared implementation
+  files contain dependent changes from several targets, so a documented
+  one-time integration checkpoint is safer than reconstructing partial
+  historical commits. `lib/circuit.vss` remained unchanged. The Razavi style
+  specification and its plan were explicitly excluded for a separate commit.
+- Hygiene: the untracked set is about 2.2 MB, contains no unexpected large
+  files, and the repository credential-signature scan found no matches.
+- Concurrent-state note: an OTA `razavi-layout.mjs` appeared and changed after
+  the opening audit, followed by four matching export artifacts. They were not
+  part of the retained target inventory, so the complete OTA `razavi-*` set was
+  excluded from staging and left untouched for its owner.
+- Validation: `pnpm format:check`, `pnpm references:check`, `pnpm typecheck`,
+  127 unit tests in 33 files, workspace build, symbol review, Phase 5 visual,
+  Phase 7 export, Agent API artifact, every Phase 9 deterministic and held-out
+  check, performance baseline, release package/smoke, 14 Playwright flows,
+  and `git diff --check` passed.
+- Commit status: prepared for the integrated checkpoint commit; push status is
+  recorded by Git history and the final target handoff.

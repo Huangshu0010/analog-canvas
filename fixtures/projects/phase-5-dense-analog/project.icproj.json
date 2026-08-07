@@ -254,7 +254,7 @@
           "netId": "net-voutp",
           "from": { "kind": "junction", "junctionId": "junction-outp" },
           "to": { "kind": "terminal", "instanceId": "M1", "pinName": "D" },
-          "waypoints": [{ "x": 165, "y": 170 }],
+          "waypoints": [{ "x": 160, "y": 170 }],
           "segmentModes": ["manual", "manual"]
         },
         {
@@ -270,7 +270,7 @@
           "netId": "net-voutn",
           "from": { "kind": "terminal", "instanceId": "M4", "pinName": "D" },
           "to": { "kind": "junction", "junctionId": "junction-outn" },
-          "waypoints": [{ "x": 285, "y": 110 }],
+          "waypoints": [{ "x": 280, "y": 110 }],
           "segmentModes": ["manual", "manual"]
         },
         {
@@ -328,12 +328,12 @@
         {
           "id": "junction-outp",
           "netId": "net-voutp",
-          "position": { "x": 165, "y": 140 }
+          "position": { "x": 160, "y": 140 }
         },
         {
           "id": "junction-outn",
           "netId": "net-voutn",
-          "position": { "x": 285, "y": 140 }
+          "position": { "x": 280, "y": 140 }
         },
         {
           "id": "junction-bias",

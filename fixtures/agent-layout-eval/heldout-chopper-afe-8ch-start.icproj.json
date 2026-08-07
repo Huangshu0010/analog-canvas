@@ -1,0 +1,2239 @@
+{
+  "documents": [
+    {
+      "annotations": [],
+      "constraints": [],
+      "id": "document-aaadc9681b76738a",
+      "instances": [
+        {
+          "id": "MSWP0",
+          "placement": null,
+          "properties": {
+            "spice.name": "MSWP0",
+            "spice.param.l": "0.15u",
+            "spice.param.w": "1.2u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 62,
+              "line": 5,
+              "offset": 251
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 5,
+              "offset": 190
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MSWP1",
+          "placement": null,
+          "properties": {
+            "spice.name": "MSWP1",
+            "spice.param.l": "0.15u",
+            "spice.param.w": "1.2u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 62,
+              "line": 6,
+              "offset": 313
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 6,
+              "offset": 252
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MSWN0",
+          "placement": null,
+          "properties": {
+            "spice.name": "MSWN0",
+            "spice.param.l": "0.15u",
+            "spice.param.w": "1.2u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 62,
+              "line": 7,
+              "offset": 375
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 7,
+              "offset": 314
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MSWN1",
+          "placement": null,
+          "properties": {
+            "spice.name": "MSWN1",
+            "spice.param.l": "0.15u",
+            "spice.param.w": "1.2u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 62,
+              "line": 8,
+              "offset": 437
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 8,
+              "offset": 376
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MINP",
+          "placement": null,
+          "properties": {
+            "spice.name": "MINP",
+            "spice.param.l": "0.5u",
+            "spice.param.w": "4u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 58,
+              "line": 9,
+              "offset": 495
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 9,
+              "offset": 438
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MINN",
+          "placement": null,
+          "properties": {
+            "spice.name": "MINN",
+            "spice.param.l": "0.5u",
+            "spice.param.w": "4u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 58,
+              "line": 10,
+              "offset": 553
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 10,
+              "offset": 496
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MTAIL",
+          "placement": null,
+          "properties": {
+            "spice.name": "MTAIL",
+            "spice.param.l": "1u",
+            "spice.param.w": "8u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 59,
+              "line": 11,
+              "offset": 612
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 11,
+              "offset": 554
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MPC0",
+          "placement": null,
+          "properties": {
+            "spice.name": "MPC0",
+            "spice.param.l": "0.5u",
+            "spice.param.w": "6u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 60,
+              "line": 12,
+              "offset": 672
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 12,
+              "offset": 613
+            }
+          },
+          "symbolId": "pmos"
+        },
+        {
+          "id": "MPC1",
+          "placement": null,
+          "properties": {
+            "spice.name": "MPC1",
+            "spice.param.l": "0.5u",
+            "spice.param.w": "6u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 60,
+              "line": 13,
+              "offset": 732
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 13,
+              "offset": 673
+            }
+          },
+          "symbolId": "pmos"
+        },
+        {
+          "id": "MLOAD0",
+          "placement": null,
+          "properties": {
+            "spice.name": "MLOAD0",
+            "spice.param.l": "0.5u",
+            "spice.param.w": "6u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 57,
+              "line": 14,
+              "offset": 789
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 14,
+              "offset": 733
+            }
+          },
+          "symbolId": "pmos"
+        },
+        {
+          "id": "MLOAD1",
+          "placement": null,
+          "properties": {
+            "spice.name": "MLOAD1",
+            "spice.param.l": "0.5u",
+            "spice.param.w": "6u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 57,
+              "line": 15,
+              "offset": 846
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 15,
+              "offset": 790
+            }
+          },
+          "symbolId": "pmos"
+        },
+        {
+          "id": "MOUTP0",
+          "placement": null,
+          "properties": {
+            "spice.name": "MOUTP0",
+            "spice.param.l": "0.3u",
+            "spice.param.w": "10u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 60,
+              "line": 16,
+              "offset": 906
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 16,
+              "offset": 847
+            }
+          },
+          "symbolId": "pmos"
+        },
+        {
+          "id": "MOUTP1",
+          "placement": null,
+          "properties": {
+            "spice.name": "MOUTP1",
+            "spice.param.l": "0.3u",
+            "spice.param.w": "5u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 59,
+              "line": 17,
+              "offset": 965
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 17,
+              "offset": 907
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MOUTN0",
+          "placement": null,
+          "properties": {
+            "spice.name": "MOUTN0",
+            "spice.param.l": "0.3u",
+            "spice.param.w": "10u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 60,
+              "line": 18,
+              "offset": 1025
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 18,
+              "offset": 966
+            }
+          },
+          "symbolId": "pmos"
+        },
+        {
+          "id": "MOUTN1",
+          "placement": null,
+          "properties": {
+            "spice.name": "MOUTN1",
+            "spice.param.l": "0.3u",
+            "spice.param.w": "5u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 59,
+              "line": 19,
+              "offset": 1084
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 19,
+              "offset": 1026
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MBIASP",
+          "placement": null,
+          "properties": {
+            "spice.name": "MBIASP",
+            "spice.param.l": "1u",
+            "spice.param.w": "2u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 60,
+              "line": 20,
+              "offset": 1144
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 20,
+              "offset": 1085
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MBIASN",
+          "placement": null,
+          "properties": {
+            "spice.name": "MBIASN",
+            "spice.param.l": "1u",
+            "spice.param.w": "2u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 60,
+              "line": 21,
+              "offset": 1204
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 21,
+              "offset": 1145
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "MREF",
+          "placement": null,
+          "properties": {
+            "spice.name": "MREF",
+            "spice.param.l": "1u",
+            "spice.param.w": "2u",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 59,
+              "line": 22,
+              "offset": 1263
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 22,
+              "offset": 1205
+            }
+          },
+          "symbolId": "nmos"
+        }
+      ],
+      "junctions": [],
+      "layoutGroups": [],
+      "name": "chopper_channel",
+      "nets": [
+        {
+          "id": "net-688266e67fcada68",
+          "name": "INP",
+          "ports": [
+            "port-2c071fa5fbac8dd5"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MSWP0",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MSWN1",
+              "pinName": "S"
+            }
+          ]
+        },
+        {
+          "id": "net-688254e67fcabbd2",
+          "name": "INN",
+          "ports": [
+            "port-da418b28d419f990"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MSWP1",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MSWN0",
+              "pinName": "S"
+            }
+          ]
+        },
+        {
+          "id": "net-9ab34fe69bb6edc5",
+          "name": "CLK",
+          "ports": [
+            "port-bf670c7c265a7b82"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MSWP0",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MSWN0",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-89980ecd5e923e52",
+          "name": "CLKB",
+          "ports": [
+            "port-f16ebaa724a213d6"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MSWP1",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MSWN1",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-1e4c1575adcdde40",
+          "name": "VBIAS",
+          "ports": [
+            "port-51f2e6db0af68ec1"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MTAIL",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MPC0",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MPC1",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MBIASP",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MBIASN",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MREF",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MREF",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-ab332ba98bea2fb4",
+          "name": "OUTP",
+          "ports": [
+            "port-2c1ea8d9915dd31a"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MOUTP0",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MOUTP1",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MBIASP",
+              "pinName": "D"
+            }
+          ]
+        },
+        {
+          "id": "net-ab3311a98bea0386",
+          "name": "OUTN",
+          "ports": [
+            "port-42031a3f0e2d345b"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MOUTN0",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MOUTN1",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MBIASN",
+              "pinName": "D"
+            }
+          ]
+        },
+        {
+          "id": "net-3d1e8fe6673179b7",
+          "name": "VDD",
+          "ports": [
+            "port-30713faaa40b56e7"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MPC0",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MPC0",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MPC1",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MPC1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MLOAD0",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MLOAD1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MOUTP0",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MOUTP0",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MOUTN0",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MOUTN0",
+              "pinName": "B"
+            }
+          ]
+        },
+        {
+          "id": "net-3ceba4e6670643cd",
+          "name": "VSS",
+          "ports": [
+            "port-583635506d339c90"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MSWP0",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MSWP1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MSWN0",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MSWN1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MINP",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MINN",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MTAIL",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MTAIL",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MOUTP1",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MOUTP1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MOUTN1",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MOUTN1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MBIASP",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MBIASP",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MBIASN",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MBIASN",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "MREF",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MREF",
+              "pinName": "B"
+            }
+          ]
+        },
+        {
+          "id": "net-81b8dbe68dd9e27f",
+          "name": "NXP",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MSWP0",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MSWP1",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MINP",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-81b8f1e68dda07e1",
+          "name": "NXN",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MSWN0",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MSWN1",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MINN",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-763e9baa8e6fbf13",
+          "name": "N1",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MINP",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MLOAD0",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MLOAD0",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MLOAD1",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MOUTP0",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MOUTN1",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-f271685c1a918d9a",
+          "name": "TAIL",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MINP",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MINN",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "MTAIL",
+              "pinName": "D"
+            }
+          ]
+        },
+        {
+          "id": "net-763e9caa8e6fc0c6",
+          "name": "N2",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MINN",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MLOAD1",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MOUTP1",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "MOUTN0",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-2b0284e65cb62825",
+          "name": "PC1",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MPC0",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MLOAD0",
+              "pinName": "S"
+            }
+          ]
+        },
+        {
+          "id": "net-2b0281e65cb6230c",
+          "name": "PC2",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "MPC1",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "MLOAD1",
+              "pinName": "S"
+            }
+          ]
+        }
+      ],
+      "ports": [
+        {
+          "direction": "passive",
+          "id": "port-2c071fa5fbac8dd5",
+          "name": "INP",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-da418b28d419f990",
+          "name": "INN",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-bf670c7c265a7b82",
+          "name": "CLK",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-f16ebaa724a213d6",
+          "name": "CLKB",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-51f2e6db0af68ec1",
+          "name": "VBIAS",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-2c1ea8d9915dd31a",
+          "name": "OUTP",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-42031a3f0e2d345b",
+          "name": "OUTN",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-30713faaa40b56e7",
+          "name": "VDD",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-583635506d339c90",
+          "name": "VSS",
+          "position": null
+        }
+      ],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "textbook-monochrome-v1"
+      },
+      "revision": 0,
+      "routes": [],
+      "sourceBinding": {
+        "cellName": "chopper_channel",
+        "sourceRef": {
+          "end": {
+            "column": 22,
+            "line": 23,
+            "offset": 1285
+          },
+          "fileId": "source-648e50f6f6cd02ee",
+          "start": {
+            "column": 1,
+            "line": 4,
+            "offset": 125
+          }
+        }
+      },
+      "sourceStatus": "in-sync"
+    },
+    {
+      "annotations": [],
+      "constraints": [],
+      "id": "document-0ecfe908181e893b",
+      "instances": [
+        {
+          "id": "XCH0",
+          "placement": null,
+          "properties": {
+            "spice.name": "XCH0",
+            "spice.pin.P1": "INP",
+            "spice.pin.P2": "INN",
+            "spice.pin.P3": "CLK",
+            "spice.pin.P4": "CLKB",
+            "spice.pin.P5": "VBIAS",
+            "spice.pin.P6": "OUTP",
+            "spice.pin.P7": "OUTN",
+            "spice.pin.P8": "VDD",
+            "spice.pin.P9": "VSS",
+            "spice.target": "subcircuit:chopper_channel"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 66,
+              "line": 30,
+              "offset": 1583
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 30,
+              "offset": 1518
+            }
+          },
+          "symbolId": "hierarchical-symbol-aaadc9681b76738a"
+        },
+        {
+          "id": "XCH1",
+          "placement": null,
+          "properties": {
+            "spice.name": "XCH1",
+            "spice.pin.P1": "INP",
+            "spice.pin.P2": "INN",
+            "spice.pin.P3": "CLK",
+            "spice.pin.P4": "CLKB",
+            "spice.pin.P5": "VBIAS",
+            "spice.pin.P6": "OUTP",
+            "spice.pin.P7": "OUTN",
+            "spice.pin.P8": "VDD",
+            "spice.pin.P9": "VSS",
+            "spice.target": "subcircuit:chopper_channel"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 66,
+              "line": 31,
+              "offset": 1649
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 31,
+              "offset": 1584
+            }
+          },
+          "symbolId": "hierarchical-symbol-aaadc9681b76738a"
+        },
+        {
+          "id": "XCH2",
+          "placement": null,
+          "properties": {
+            "spice.name": "XCH2",
+            "spice.pin.P1": "INP",
+            "spice.pin.P2": "INN",
+            "spice.pin.P3": "CLK",
+            "spice.pin.P4": "CLKB",
+            "spice.pin.P5": "VBIAS",
+            "spice.pin.P6": "OUTP",
+            "spice.pin.P7": "OUTN",
+            "spice.pin.P8": "VDD",
+            "spice.pin.P9": "VSS",
+            "spice.target": "subcircuit:chopper_channel"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 66,
+              "line": 32,
+              "offset": 1715
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 32,
+              "offset": 1650
+            }
+          },
+          "symbolId": "hierarchical-symbol-aaadc9681b76738a"
+        },
+        {
+          "id": "XCH3",
+          "placement": null,
+          "properties": {
+            "spice.name": "XCH3",
+            "spice.pin.P1": "INP",
+            "spice.pin.P2": "INN",
+            "spice.pin.P3": "CLK",
+            "spice.pin.P4": "CLKB",
+            "spice.pin.P5": "VBIAS",
+            "spice.pin.P6": "OUTP",
+            "spice.pin.P7": "OUTN",
+            "spice.pin.P8": "VDD",
+            "spice.pin.P9": "VSS",
+            "spice.target": "subcircuit:chopper_channel"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 66,
+              "line": 33,
+              "offset": 1781
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 33,
+              "offset": 1716
+            }
+          },
+          "symbolId": "hierarchical-symbol-aaadc9681b76738a"
+        },
+        {
+          "id": "XCH4",
+          "placement": null,
+          "properties": {
+            "spice.name": "XCH4",
+            "spice.pin.P1": "INP",
+            "spice.pin.P2": "INN",
+            "spice.pin.P3": "CLK",
+            "spice.pin.P4": "CLKB",
+            "spice.pin.P5": "VBIAS",
+            "spice.pin.P6": "OUTP",
+            "spice.pin.P7": "OUTN",
+            "spice.pin.P8": "VDD",
+            "spice.pin.P9": "VSS",
+            "spice.target": "subcircuit:chopper_channel"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 66,
+              "line": 34,
+              "offset": 1847
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 34,
+              "offset": 1782
+            }
+          },
+          "symbolId": "hierarchical-symbol-aaadc9681b76738a"
+        },
+        {
+          "id": "XCH5",
+          "placement": null,
+          "properties": {
+            "spice.name": "XCH5",
+            "spice.pin.P1": "INP",
+            "spice.pin.P2": "INN",
+            "spice.pin.P3": "CLK",
+            "spice.pin.P4": "CLKB",
+            "spice.pin.P5": "VBIAS",
+            "spice.pin.P6": "OUTP",
+            "spice.pin.P7": "OUTN",
+            "spice.pin.P8": "VDD",
+            "spice.pin.P9": "VSS",
+            "spice.target": "subcircuit:chopper_channel"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 66,
+              "line": 35,
+              "offset": 1913
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 35,
+              "offset": 1848
+            }
+          },
+          "symbolId": "hierarchical-symbol-aaadc9681b76738a"
+        },
+        {
+          "id": "XCH6",
+          "placement": null,
+          "properties": {
+            "spice.name": "XCH6",
+            "spice.pin.P1": "INP",
+            "spice.pin.P2": "INN",
+            "spice.pin.P3": "CLK",
+            "spice.pin.P4": "CLKB",
+            "spice.pin.P5": "VBIAS",
+            "spice.pin.P6": "OUTP",
+            "spice.pin.P7": "OUTN",
+            "spice.pin.P8": "VDD",
+            "spice.pin.P9": "VSS",
+            "spice.target": "subcircuit:chopper_channel"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 66,
+              "line": 36,
+              "offset": 1979
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 36,
+              "offset": 1914
+            }
+          },
+          "symbolId": "hierarchical-symbol-aaadc9681b76738a"
+        },
+        {
+          "id": "XCH7",
+          "placement": null,
+          "properties": {
+            "spice.name": "XCH7",
+            "spice.pin.P1": "INP",
+            "spice.pin.P2": "INN",
+            "spice.pin.P3": "CLK",
+            "spice.pin.P4": "CLKB",
+            "spice.pin.P5": "VBIAS",
+            "spice.pin.P6": "OUTP",
+            "spice.pin.P7": "OUTN",
+            "spice.pin.P8": "VDD",
+            "spice.pin.P9": "VSS",
+            "spice.target": "subcircuit:chopper_channel"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 66,
+              "line": 37,
+              "offset": 2045
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 37,
+              "offset": 1980
+            }
+          },
+          "symbolId": "hierarchical-symbol-aaadc9681b76738a"
+        }
+      ],
+      "junctions": [],
+      "layoutGroups": [],
+      "name": "chopper_afe_8ch",
+      "nets": [
+        {
+          "id": "net-6be7615a238ddd24",
+          "name": "CLK",
+          "ports": [
+            "port-9aaf025d023cee11"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "CLK"
+            },
+            {
+              "instanceId": "XCH1",
+              "pinName": "CLK"
+            },
+            {
+              "instanceId": "XCH2",
+              "pinName": "CLK"
+            },
+            {
+              "instanceId": "XCH3",
+              "pinName": "CLK"
+            },
+            {
+              "instanceId": "XCH4",
+              "pinName": "CLK"
+            },
+            {
+              "instanceId": "XCH5",
+              "pinName": "CLK"
+            },
+            {
+              "instanceId": "XCH6",
+              "pinName": "CLK"
+            },
+            {
+              "instanceId": "XCH7",
+              "pinName": "CLK"
+            }
+          ]
+        },
+        {
+          "id": "net-a2dd06e65594ac65",
+          "name": "CLKB",
+          "ports": [
+            "port-0555cefada5bb447"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "CLKB"
+            },
+            {
+              "instanceId": "XCH1",
+              "pinName": "CLKB"
+            },
+            {
+              "instanceId": "XCH2",
+              "pinName": "CLKB"
+            },
+            {
+              "instanceId": "XCH3",
+              "pinName": "CLKB"
+            },
+            {
+              "instanceId": "XCH4",
+              "pinName": "CLKB"
+            },
+            {
+              "instanceId": "XCH5",
+              "pinName": "CLKB"
+            },
+            {
+              "instanceId": "XCH6",
+              "pinName": "CLKB"
+            },
+            {
+              "instanceId": "XCH7",
+              "pinName": "CLKB"
+            }
+          ]
+        },
+        {
+          "id": "net-fdc88f1454e3e7ed",
+          "name": "VBIAS",
+          "ports": [
+            "port-1fb34e2a6bb8b17e"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "VBIAS"
+            },
+            {
+              "instanceId": "XCH1",
+              "pinName": "VBIAS"
+            },
+            {
+              "instanceId": "XCH2",
+              "pinName": "VBIAS"
+            },
+            {
+              "instanceId": "XCH3",
+              "pinName": "VBIAS"
+            },
+            {
+              "instanceId": "XCH4",
+              "pinName": "VBIAS"
+            },
+            {
+              "instanceId": "XCH5",
+              "pinName": "VBIAS"
+            },
+            {
+              "instanceId": "XCH6",
+              "pinName": "VBIAS"
+            },
+            {
+              "instanceId": "XCH7",
+              "pinName": "VBIAS"
+            }
+          ]
+        },
+        {
+          "id": "net-1213915a8220aa1a",
+          "name": "VDD",
+          "ports": [
+            "port-237ba515340758b2"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "VDD"
+            },
+            {
+              "instanceId": "XCH1",
+              "pinName": "VDD"
+            },
+            {
+              "instanceId": "XCH2",
+              "pinName": "VDD"
+            },
+            {
+              "instanceId": "XCH3",
+              "pinName": "VDD"
+            },
+            {
+              "instanceId": "XCH4",
+              "pinName": "VDD"
+            },
+            {
+              "instanceId": "XCH5",
+              "pinName": "VDD"
+            },
+            {
+              "instanceId": "XCH6",
+              "pinName": "VDD"
+            },
+            {
+              "instanceId": "XCH7",
+              "pinName": "VDD"
+            }
+          ]
+        },
+        {
+          "id": "net-11cb7c5a81e2d0c8",
+          "name": "VSS",
+          "ports": [
+            "port-85b97057f72c1955"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "VSS"
+            },
+            {
+              "instanceId": "XCH1",
+              "pinName": "VSS"
+            },
+            {
+              "instanceId": "XCH2",
+              "pinName": "VSS"
+            },
+            {
+              "instanceId": "XCH3",
+              "pinName": "VSS"
+            },
+            {
+              "instanceId": "XCH4",
+              "pinName": "VSS"
+            },
+            {
+              "instanceId": "XCH5",
+              "pinName": "VSS"
+            },
+            {
+              "instanceId": "XCH6",
+              "pinName": "VSS"
+            },
+            {
+              "instanceId": "XCH7",
+              "pinName": "VSS"
+            }
+          ]
+        },
+        {
+          "id": "net-c4334cb1fb720ba8",
+          "name": "INP0",
+          "ports": [
+            "port-435a9d4239c04eee"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "INP"
+            }
+          ]
+        },
+        {
+          "id": "net-c3f5c0b1fb3d6fa6",
+          "name": "INN0",
+          "ports": [
+            "port-d1eed82ff6c609cb"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "INN"
+            }
+          ]
+        },
+        {
+          "id": "net-d2744ddf17e2ff92",
+          "name": "OUTP0",
+          "ports": [
+            "port-1dd9cb5866ae395e"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "OUTP"
+            }
+          ]
+        },
+        {
+          "id": "net-d25fc9df17d1763c",
+          "name": "OUTN0",
+          "ports": [
+            "port-99c4f6154f15fa85"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH0",
+              "pinName": "OUTN"
+            }
+          ]
+        },
+        {
+          "id": "net-c4334db1fb720d5b",
+          "name": "INP1",
+          "ports": [
+            "port-1f7d3eb985a150fd"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH1",
+              "pinName": "INP"
+            }
+          ]
+        },
+        {
+          "id": "net-c3f5c1b1fb3d7159",
+          "name": "INN1",
+          "ports": [
+            "port-f214e4a960efa688"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH1",
+              "pinName": "INN"
+            }
+          ]
+        },
+        {
+          "id": "net-d2744edf17e30145",
+          "name": "OUTP1",
+          "ports": [
+            "port-d12ae1511f127381"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH1",
+              "pinName": "OUTP"
+            }
+          ]
+        },
+        {
+          "id": "net-d25fcadf17d177ef",
+          "name": "OUTN1",
+          "ports": [
+            "port-94cfd9ee6fb92cf6"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH1",
+              "pinName": "OUTN"
+            }
+          ]
+        },
+        {
+          "id": "net-c4334eb1fb720f0e",
+          "name": "INP2",
+          "ports": [
+            "port-b020576ecf6d4658"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH2",
+              "pinName": "INP"
+            }
+          ]
+        },
+        {
+          "id": "net-c3f5beb1fb3d6c40",
+          "name": "INN2",
+          "ports": [
+            "port-94b521605b77cbdd"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH2",
+              "pinName": "INN"
+            }
+          ]
+        },
+        {
+          "id": "net-d2744bdf17e2fc2c",
+          "name": "OUTP2",
+          "ports": [
+            "port-d007d4e4c76d4724"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH2",
+              "pinName": "OUTP"
+            }
+          ]
+        },
+        {
+          "id": "net-d25fcbdf17d179a2",
+          "name": "OUTN2",
+          "ports": [
+            "port-a13e50ec0c2f8cf7"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH2",
+              "pinName": "OUTN"
+            }
+          ]
+        },
+        {
+          "id": "net-c4334fb1fb7210c1",
+          "name": "INP3",
+          "ports": [
+            "port-5ab8b3f31874785f"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH3",
+              "pinName": "INP"
+            }
+          ]
+        },
+        {
+          "id": "net-c3f5bfb1fb3d6df3",
+          "name": "INN3",
+          "ports": [
+            "port-7fb7ed713ffc7986"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH3",
+              "pinName": "INN"
+            }
+          ]
+        },
+        {
+          "id": "net-d2744cdf17e2fddf",
+          "name": "OUTP3",
+          "ports": [
+            "port-ccefa08187d7abe3"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH3",
+              "pinName": "OUTP"
+            }
+          ]
+        },
+        {
+          "id": "net-d25fccdf17d17b55",
+          "name": "OUTN3",
+          "ports": [
+            "port-458673be5d1e2be1"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH3",
+              "pinName": "OUTN"
+            }
+          ]
+        },
+        {
+          "id": "net-c43350b1fb721274",
+          "name": "INP4",
+          "ports": [
+            "port-19c7ac488483ed11"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH4",
+              "pinName": "INP"
+            }
+          ]
+        },
+        {
+          "id": "net-c3f5c4b1fb3d7672",
+          "name": "INN4",
+          "ports": [
+            "port-c71f02e351f94ea4"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH4",
+              "pinName": "INN"
+            }
+          ]
+        },
+        {
+          "id": "net-d27449df17e2f8c6",
+          "name": "OUTP4",
+          "ports": [
+            "port-a9c9a2005511de63"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH4",
+              "pinName": "OUTP"
+            }
+          ]
+        },
+        {
+          "id": "net-d25fc5df17d16f70",
+          "name": "OUTN4",
+          "ports": [
+            "port-7f00dda4c259f0e0"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH4",
+              "pinName": "OUTN"
+            }
+          ]
+        },
+        {
+          "id": "net-c43351b1fb721427",
+          "name": "INP5",
+          "ports": [
+            "port-117e7e79c9f5e63a"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH5",
+              "pinName": "INP"
+            }
+          ]
+        },
+        {
+          "id": "net-c3f5c5b1fb3d7825",
+          "name": "INN5",
+          "ports": [
+            "port-2f4f8b983c37b72b"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH5",
+              "pinName": "INN"
+            }
+          ]
+        },
+        {
+          "id": "net-d2744adf17e2fa79",
+          "name": "OUTP5",
+          "ports": [
+            "port-221d073d781bbb14"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH5",
+              "pinName": "OUTP"
+            }
+          ]
+        },
+        {
+          "id": "net-d25fc6df17d17123",
+          "name": "OUTN5",
+          "ports": [
+            "port-f8cef0468dfd0bcf"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH5",
+              "pinName": "OUTN"
+            }
+          ]
+        },
+        {
+          "id": "net-c43352b1fb7215da",
+          "name": "INP6",
+          "ports": [
+            "port-e530949431677303"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH6",
+              "pinName": "INP"
+            }
+          ]
+        },
+        {
+          "id": "net-c3f5c2b1fb3d730c",
+          "name": "INN6",
+          "ports": [
+            "port-fb28058811309b2b"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH6",
+              "pinName": "INN"
+            }
+          ]
+        },
+        {
+          "id": "net-d27447df17e2f560",
+          "name": "OUTP6",
+          "ports": [
+            "port-e7dedbc3d2276c9a"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH6",
+              "pinName": "OUTP"
+            }
+          ]
+        },
+        {
+          "id": "net-d25fc7df17d172d6",
+          "name": "OUTN6",
+          "ports": [
+            "port-ecec7c45a4fffe35"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH6",
+              "pinName": "OUTN"
+            }
+          ]
+        },
+        {
+          "id": "net-c43353b1fb72178d",
+          "name": "INP7",
+          "ports": [
+            "port-5adf361f95417e2d"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH7",
+              "pinName": "INP"
+            }
+          ]
+        },
+        {
+          "id": "net-c3f5c3b1fb3d74bf",
+          "name": "INN7",
+          "ports": [
+            "port-e4cd811a17fb9f84"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH7",
+              "pinName": "INN"
+            }
+          ]
+        },
+        {
+          "id": "net-d27448df17e2f713",
+          "name": "OUTP7",
+          "ports": [
+            "port-0287c72f00ebd939"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH7",
+              "pinName": "OUTP"
+            }
+          ]
+        },
+        {
+          "id": "net-d25fc8df17d17489",
+          "name": "OUTN7",
+          "ports": [
+            "port-08fdb2d7ebe6d836"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XCH7",
+              "pinName": "OUTN"
+            }
+          ]
+        }
+      ],
+      "ports": [
+        {
+          "direction": "passive",
+          "id": "port-9aaf025d023cee11",
+          "name": "CLK",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-0555cefada5bb447",
+          "name": "CLKB",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-1fb34e2a6bb8b17e",
+          "name": "VBIAS",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-237ba515340758b2",
+          "name": "VDD",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-85b97057f72c1955",
+          "name": "VSS",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-435a9d4239c04eee",
+          "name": "INP0",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-d1eed82ff6c609cb",
+          "name": "INN0",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-1dd9cb5866ae395e",
+          "name": "OUTP0",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-99c4f6154f15fa85",
+          "name": "OUTN0",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-1f7d3eb985a150fd",
+          "name": "INP1",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-f214e4a960efa688",
+          "name": "INN1",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-d12ae1511f127381",
+          "name": "OUTP1",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-94cfd9ee6fb92cf6",
+          "name": "OUTN1",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-b020576ecf6d4658",
+          "name": "INP2",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-94b521605b77cbdd",
+          "name": "INN2",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-d007d4e4c76d4724",
+          "name": "OUTP2",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-a13e50ec0c2f8cf7",
+          "name": "OUTN2",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-5ab8b3f31874785f",
+          "name": "INP3",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-7fb7ed713ffc7986",
+          "name": "INN3",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-ccefa08187d7abe3",
+          "name": "OUTP3",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-458673be5d1e2be1",
+          "name": "OUTN3",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-19c7ac488483ed11",
+          "name": "INP4",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-c71f02e351f94ea4",
+          "name": "INN4",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-a9c9a2005511de63",
+          "name": "OUTP4",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-7f00dda4c259f0e0",
+          "name": "OUTN4",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-117e7e79c9f5e63a",
+          "name": "INP5",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-2f4f8b983c37b72b",
+          "name": "INN5",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-221d073d781bbb14",
+          "name": "OUTP5",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-f8cef0468dfd0bcf",
+          "name": "OUTN5",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-e530949431677303",
+          "name": "INP6",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-fb28058811309b2b",
+          "name": "INN6",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-e7dedbc3d2276c9a",
+          "name": "OUTP6",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-ecec7c45a4fffe35",
+          "name": "OUTN6",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-5adf361f95417e2d",
+          "name": "INP7",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-e4cd811a17fb9f84",
+          "name": "INN7",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-0287c72f00ebd939",
+          "name": "OUTP7",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-08fdb2d7ebe6d836",
+          "name": "OUTN7",
+          "position": null
+        }
+      ],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "textbook-monochrome-v1"
+      },
+      "revision": 0,
+      "routes": [],
+      "sourceBinding": {
+        "cellName": "chopper_afe_8ch",
+        "sourceRef": {
+          "end": {
+            "column": 22,
+            "line": 38,
+            "offset": 2067
+          },
+          "fileId": "source-648e50f6f6cd02ee",
+          "start": {
+            "column": 1,
+            "line": 25,
+            "offset": 1287
+          }
+        }
+      },
+      "sourceStatus": "in-sync"
+    }
+  ],
+  "id": "project-aa1eed251f1fd397",
+  "name": "chopper_afe_8ch (SPICE Import)",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "spice3f5-core",
+    "entry": "circuit.spi",
+    "files": [
+      {
+        "hash": "sha256:23319ebc4f3a896da1d46bdb0d08722025fc976b78e12a4ef09e152de50d2a93",
+        "id": "source-648e50f6f6cd02ee",
+        "path": "circuit.spi"
+      }
+    ],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "development",
+    "id": "builtin-analog",
+    "version": "0.0.0"
+  },
+  "topDocumentId": "document-0ecfe908181e893b"
+}

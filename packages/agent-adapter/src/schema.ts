@@ -1,9 +1,26 @@
-import { RectSchema, SourceSpanSchema, StableIdSchema } from "@icm/model";
+import {
+  AnnotationSchema,
+  LayoutConstraintSchema,
+  LayoutGroupSchema,
+  PlacementSchema,
+  PointSchema,
+  PresentationIntentSchema,
+  RectSchema,
+  RouteEndpointSchema,
+  SegmentModeSchema,
+  SourceSpanSchema,
+  StableIdSchema,
+} from "@icm/model";
 import { SchematicEditSchema } from "@icm/edit-engine";
 import { z } from "zod";
 
-export const AGENT_API_VERSION = "1.0" as const;
-export const AgentApiVersionSchema = z.literal(AGENT_API_VERSION);
+export const AGENT_API_V1_VERSION = "1.0" as const;
+export const AGENT_API_VERSION = "2.0" as const;
+export const AGENT_SNAPSHOT_VERSION = "1.0" as const;
+export const AgentApiVersionSchema = z.enum([
+  AGENT_API_V1_VERSION,
+  AGENT_API_VERSION,
+]);
 
 const RequestBaseSchema = z.strictObject({
   apiVersion: AgentApiVersionSchema,
@@ -12,6 +29,7 @@ const RequestBaseSchema = z.strictObject({
 
 export const AgentPermissionsSchema = z.strictObject({
   query: z.boolean(),
+  snapshot: z.boolean().optional(),
   render: z.boolean(),
   sourceSpans: z.boolean(),
   edit: z.strictObject({
@@ -24,6 +42,7 @@ export const AgentPermissionsSchema = z.strictObject({
 export const AgentLimitsSchema = z.strictObject({
   maxQueryObjects: z.number().int().positive().max(1000),
   maxQueryBytes: z.number().int().positive().max(10_000_000),
+  maxSnapshotBytes: z.number().int().positive().max(20_000_000),
   maxTransactionEdits: z.number().int().positive().max(256),
   maxRenderBytes: z.number().int().positive().max(20_000_000),
   maxRequestBytes: z.number().int().positive().max(2_000_000),
@@ -65,10 +84,17 @@ export const AgentCapabilitiesRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("capabilities"),
 });
 export const AgentQueryRequestSchema = RequestBaseSchema.extend({
+  apiVersion: z.literal(AGENT_API_V1_VERSION),
   operation: z.literal("query"),
   documentId: StableIdSchema,
   scope: QueryScopeSchema,
   limit: z.number().int().positive().max(1000).optional(),
+  includeSourceSpans: z.boolean().optional(),
+});
+export const AgentSnapshotRequestSchema = RequestBaseSchema.extend({
+  apiVersion: z.literal(AGENT_API_VERSION),
+  operation: z.literal("snapshot"),
+  documentId: StableIdSchema,
   includeSourceSpans: z.boolean().optional(),
 });
 export const AgentTransactRequestSchema = RequestBaseSchema.extend({
@@ -89,6 +115,7 @@ export const AgentRenderRequestSchema = RequestBaseSchema.extend({
 export const AgentCircuitRequestSchema = z.discriminatedUnion("operation", [
   AgentCapabilitiesRequestSchema,
   AgentQueryRequestSchema,
+  AgentSnapshotRequestSchema,
   AgentTransactRequestSchema,
   AgentRenderRequestSchema,
 ]);
@@ -99,6 +126,15 @@ export const AgentDiagnosticSchema = z.strictObject({
   message: z.string(),
   objectIds: z.array(StableIdSchema).optional(),
   path: z.array(z.union([z.string(), z.number().int()])).optional(),
+  revision: z.number().int().nonnegative().optional(),
+  bounds: RectSchema.optional(),
+  point: PointSchema.optional(),
+  parameters: z
+    .record(
+      z.string(),
+      z.union([z.string(), z.number().finite(), z.boolean(), z.null()]),
+    )
+    .optional(),
 });
 export const AgentDiffSchema = z.strictObject({
   documentId: StableIdSchema,
@@ -132,6 +168,132 @@ export const AgentObjectDescriptorSchema = z.strictObject({
   sourceRef: SourceSpanSchema.optional(),
 });
 
+const SnapshotPrimitiveSchema = z.union([
+  z.string(),
+  z.number().finite(),
+  z.boolean(),
+]);
+
+export const AgentSnapshotPinSchema = z.strictObject({
+  name: z.string().min(1),
+  role: z.string().min(1).nullable(),
+  direction: z.enum(["north", "east", "south", "west"]).nullable(),
+  visibility: z.enum(["visible", "implicit", "conditional", "unknown"]),
+  localPosition: PointSchema.nullable(),
+  pagePosition: PointSchema.nullable(),
+  netId: StableIdSchema.nullable(),
+});
+
+export const AgentSnapshotPortSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  direction: z.enum(["input", "output", "bidirectional", "passive"]),
+  position: PointSchema.nullable(),
+  netId: StableIdSchema.nullable(),
+});
+
+export const AgentSnapshotInstanceSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  symbolId: StableIdSchema,
+  symbolVariantId: StableIdSchema.nullable(),
+  target: z.string().nullable(),
+  model: z.string().nullable(),
+  properties: z.record(z.string(), SnapshotPrimitiveSchema),
+  parameters: z.record(z.string(), SnapshotPrimitiveSchema),
+  placement: PlacementSchema.nullable(),
+  bounds: RectSchema.nullable(),
+  pins: z.array(AgentSnapshotPinSchema),
+  sourceRef: SourceSpanSchema.optional(),
+});
+
+export const AgentSnapshotNetSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1).nullable(),
+  scope: z.enum(["local", "global"]),
+  terminals: z.array(
+    z.strictObject({
+      instanceId: StableIdSchema,
+      pinName: z.string().min(1),
+    }),
+  ),
+  portIds: z.array(StableIdSchema),
+  routeIds: z.array(StableIdSchema),
+  junctionIds: z.array(StableIdSchema),
+});
+
+export const AgentSnapshotRouteSchema = z.strictObject({
+  id: StableIdSchema,
+  netId: StableIdSchema,
+  from: RouteEndpointSchema,
+  to: RouteEndpointSchema,
+  waypoints: z.array(PointSchema),
+  segmentModes: z.array(SegmentModeSchema),
+  polyline: z.array(PointSchema).min(2).nullable(),
+});
+
+export const AgentSnapshotJunctionSchema = z.strictObject({
+  id: StableIdSchema,
+  netId: StableIdSchema,
+  position: PointSchema,
+});
+
+export const AgentSnapshotDocumentSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  revision: z.number().int().nonnegative(),
+  sourceStatus: z.enum([
+    "in-sync",
+    "geometry-only-changed",
+    "connectivity-modified",
+  ]),
+  sourceBinding: z
+    .strictObject({
+      cellName: z.string().min(1),
+      sourceRef: SourceSpanSchema.optional(),
+    })
+    .optional(),
+  bounds: RectSchema.nullable(),
+  presentation: PresentationIntentSchema,
+  ports: z.array(AgentSnapshotPortSchema),
+  instances: z.array(AgentSnapshotInstanceSchema),
+  nets: z.array(AgentSnapshotNetSchema),
+  routes: z.array(AgentSnapshotRouteSchema),
+  junctions: z.array(AgentSnapshotJunctionSchema),
+  annotations: z.array(AnnotationSchema),
+  layoutGroups: z.array(LayoutGroupSchema),
+  constraints: z.array(LayoutConstraintSchema),
+  diagnostics: z.array(AgentDiagnosticSchema),
+});
+
+export const AgentProjectIndexDocumentSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  instanceCount: z.number().int().nonnegative(),
+  portCount: z.number().int().nonnegative(),
+  netCount: z.number().int().nonnegative(),
+  references: z.array(
+    z.strictObject({
+      instanceId: StableIdSchema,
+      targetName: z.string().min(1),
+      targetDocumentId: StableIdSchema.nullable(),
+    }),
+  ),
+});
+
+export const AgentSessionSnapshotSchema = z.strictObject({
+  snapshotVersion: z.literal(AGENT_SNAPSHOT_VERSION),
+  topologyHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  byteLength: z.number().int().nonnegative(),
+  project: z.strictObject({
+    id: StableIdSchema,
+    name: z.string().min(1),
+    topDocumentId: StableIdSchema,
+    documents: z.array(AgentProjectIndexDocumentSchema).min(1),
+  }),
+  document: AgentSnapshotDocumentSchema,
+});
+
 const ResponseBaseSchema = z.strictObject({
   apiVersion: AgentApiVersionSchema,
   requestId: StableIdSchema,
@@ -140,12 +302,14 @@ export const AgentCapabilitiesResponseSchema = ResponseBaseSchema.extend({
   operation: z.literal("capabilities"),
   ok: z.literal(true),
   capabilities: z.strictObject({
-    operations: z.tuple([
-      z.literal("capabilities"),
-      z.literal("query"),
-      z.literal("transact"),
-      z.literal("render"),
+    apiVersions: z.tuple([
+      z.literal(AGENT_API_V1_VERSION),
+      z.literal(AGENT_API_VERSION),
     ]),
+    snapshotVersions: z.tuple([z.literal(AGENT_SNAPSHOT_VERSION)]),
+    operations: z.array(
+      z.enum(["capabilities", "query", "snapshot", "transact", "render"]),
+    ),
     queryScopes: z.array(QueryScopeKindSchema),
     editKinds: z.array(z.string().min(1)),
     permissions: AgentPermissionsSchema,
@@ -153,6 +317,7 @@ export const AgentCapabilitiesResponseSchema = ResponseBaseSchema.extend({
   }),
 });
 export const AgentQueryResponseSchema = ResponseBaseSchema.extend({
+  apiVersion: z.literal(AGENT_API_V1_VERSION),
   operation: z.literal("query"),
   ok: z.literal(true),
   revision: z.number().int().nonnegative(),
@@ -168,6 +333,14 @@ export const AgentQueryResponseSchema = ResponseBaseSchema.extend({
   diagnostics: z.array(AgentDiagnosticSchema),
   truncated: z.boolean(),
   omittedCount: z.number().int().nonnegative(),
+});
+export const AgentSnapshotResponseSchema = ResponseBaseSchema.extend({
+  apiVersion: z.literal(AGENT_API_VERSION),
+  operation: z.literal("snapshot"),
+  ok: z.literal(true),
+  revision: z.number().int().nonnegative(),
+  snapshot: AgentSessionSnapshotSchema,
+  diagnostics: z.array(AgentDiagnosticSchema),
 });
 export const AgentTransactSuccessResponseSchema = ResponseBaseSchema.extend({
   operation: z.literal("transact"),
@@ -193,7 +366,7 @@ export const AgentRenderResponseSchema = ResponseBaseSchema.extend({
   diagnostics: z.array(AgentDiagnosticSchema),
 });
 export const AgentErrorResponseSchema = ResponseBaseSchema.extend({
-  operation: z.enum(["error", "query", "transact", "render"]),
+  operation: z.enum(["error", "query", "snapshot", "transact", "render"]),
   ok: z.literal(false),
   revision: z.number().int().nonnegative().optional(),
   error: z.strictObject({
@@ -206,6 +379,7 @@ export const AgentErrorResponseSchema = ResponseBaseSchema.extend({
 export const AgentCircuitResponseSchema = z.union([
   AgentCapabilitiesResponseSchema,
   AgentQueryResponseSchema,
+  AgentSnapshotResponseSchema,
   AgentTransactSuccessResponseSchema,
   AgentRenderResponseSchema,
   AgentErrorResponseSchema,
@@ -227,9 +401,12 @@ export type AgentCapabilitiesRequest = z.infer<
   typeof AgentCapabilitiesRequestSchema
 >;
 export type AgentQueryRequest = z.infer<typeof AgentQueryRequestSchema>;
+export type AgentSnapshotRequest = z.infer<typeof AgentSnapshotRequestSchema>;
 export type AgentTransactRequest = z.infer<typeof AgentTransactRequestSchema>;
 export type AgentRenderRequest = z.infer<typeof AgentRenderRequestSchema>;
 export type AgentCircuitResponse = z.infer<typeof AgentCircuitResponseSchema>;
 export type AgentObjectDescriptor = z.infer<typeof AgentObjectDescriptorSchema>;
 export type AgentDiagnostic = z.infer<typeof AgentDiagnosticSchema>;
 export type AgentDiff = z.infer<typeof AgentDiffSchema>;
+export type AgentSessionSnapshot = z.infer<typeof AgentSessionSnapshotSchema>;
+export type AgentSnapshotDocument = z.infer<typeof AgentSnapshotDocumentSchema>;

@@ -6,7 +6,10 @@
       "properties": {
         "apiVersion": {
           "type": "string",
-          "const": "1.0"
+          "enum": [
+            "1.0",
+            "2.0"
+          ]
         },
         "requestId": {
           "type": "string",
@@ -244,7 +247,43 @@
       "properties": {
         "apiVersion": {
           "type": "string",
-          "const": "1.0"
+          "const": "2.0"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "operation": {
+          "type": "string",
+          "const": "snapshot"
+        },
+        "documentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "includeSourceSpans": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "requestId",
+        "operation",
+        "documentId"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "type": "string",
+          "enum": [
+            "1.0",
+            "2.0"
+          ]
         },
         "requestId": {
           "type": "string",
@@ -513,6 +552,54 @@
                 "properties": {
                   "kind": {
                     "type": "string",
+                    "const": "set_instance_symbol"
+                  },
+                  "instanceId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "symbolId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "symbolVariantId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pinMap": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "instanceId",
+                  "symbolId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
                     "const": "place_instance"
                   },
                   "instanceId": {
@@ -690,6 +777,86 @@
                   "kind",
                   "instanceId",
                   "mirror"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "place_port"
+                  },
+                  "portId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "position": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "y": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "portId",
+                  "position"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "move_port"
+                  },
+                  "portId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "position": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "y": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "portId",
+                  "position"
                 ],
                 "additionalProperties": false
               },
@@ -1687,7 +1854,10 @@
       "properties": {
         "apiVersion": {
           "type": "string",
-          "const": "1.0"
+          "enum": [
+            "1.0",
+            "2.0"
+          ]
         },
         "requestId": {
           "type": "string",

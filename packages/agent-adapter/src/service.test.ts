@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { executeTransaction } from "@icm/edit-engine";
-import { parseProject } from "@icm/model";
-import type { SchematicDocument } from "@icm/model";
+import { createEmptyDocument, parseProject } from "@icm/model";
+import type { CircuitProject, SchematicDocument } from "@icm/model";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
@@ -24,8 +24,8 @@ const allPermissions: AgentPermissions = {
   edit: { geometry: true, connectivity: true, presentation: true },
 };
 
-function fixtureDocument(): SchematicDocument {
-  const project = parseProject(
+function fixtureProject(): CircuitProject {
+  return parseProject(
     readFileSync(
       resolve(
         process.cwd(),
@@ -34,14 +34,18 @@ function fixtureDocument(): SchematicDocument {
       "utf8",
     ),
   );
-  return structuredClone(project.documents[0]!);
+}
+
+function fixtureDocument(): SchematicDocument {
+  return structuredClone(fixtureProject().documents[0]!);
 }
 
 function serviceFixture(
   permissions: AgentPermissions = allPermissions,
   limits: Parameters<typeof createAgentCircuitService>[0]["limits"] = {},
 ) {
-  let document = fixtureDocument();
+  const project = fixtureProject();
+  let document = structuredClone(project.documents[0]!);
   const service = createAgentCircuitService({
     agentId: "agent-test",
     resolver,
@@ -51,7 +55,11 @@ function serviceFixture(
       getDocument: () => document,
       commitDocument: (next) => {
         document = next;
+        project.documents = project.documents.map((candidate) =>
+          candidate.id === next.id ? next : candidate,
+        );
       },
+      getProject: () => project,
     },
   });
   return { service, getDocument: () => document };
@@ -81,7 +89,13 @@ describe("Agent Circuit API v1 service", () => {
       },
     });
     expect(AgentCircuitResponseSchema.parse(response)).toEqual(response);
-    for (const name of ["capabilities", "query-region", "align", "render"]) {
+    for (const name of [
+      "capabilities",
+      "query-region",
+      "snapshot",
+      "align",
+      "render",
+    ]) {
       const request = JSON.parse(
         readFileSync(
           resolve(process.cwd(), `fixtures/agent-api/${name}.request.json`),
@@ -94,8 +108,81 @@ describe("Agent Circuit API v1 service", () => {
       $schema: "https://json-schema.org/draft/2020-12/schema",
     });
     expect(agentCircuitOpenApi.paths["/v1/circuit"].post.operationId).toBe(
-      "agentCircuitOperation",
+      "agentCircuitV1Operation",
     );
+    expect(agentCircuitOpenApi.paths["/v2/circuit"].post.operationId).toBe(
+      "agentCircuitV2Operation",
+    );
+  });
+
+  it("publishes the flat v2 Snapshot workflow and returns complete facts", () => {
+    const fixture = serviceFixture();
+    expect(
+      fixture.service.handle({
+        apiVersion: "2.0",
+        requestId: "capabilities-v2",
+        operation: "capabilities",
+      }),
+    ).toMatchObject({
+      apiVersion: "2.0",
+      ok: true,
+      capabilities: {
+        operations: ["capabilities", "snapshot", "transact", "render"],
+        snapshotVersions: ["1.0"],
+        permissions: { snapshot: true },
+      },
+    });
+
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "snapshot-v2",
+      operation: "snapshot",
+      documentId: "document-differential-stage",
+    });
+    expect(response).toMatchObject({
+      apiVersion: "2.0",
+      operation: "snapshot",
+      ok: true,
+      revision: 0,
+      snapshot: {
+        snapshotVersion: "1.0",
+        document: {
+          id: "document-differential-stage",
+          instances: expect.any(Array),
+          nets: expect.any(Array),
+          routes: expect.any(Array),
+          diagnostics: expect.any(Array),
+        },
+      },
+    });
+    if (!response.ok || response.operation !== "snapshot") return;
+    expect(
+      response.snapshot.document.instances.find((item) => item.id === "M1")
+        ?.pins,
+    ).toContainEqual(expect.objectContaining({ name: "G", netId: "net-vinp" }));
+    expect(response.snapshot.document.nets).toContainEqual(
+      expect.objectContaining({
+        id: "net-vinp",
+        terminals: expect.arrayContaining([{ instanceId: "M1", pinName: "G" }]),
+      }),
+    );
+  });
+
+  it("rejects Snapshots above the server-owned byte limit", () => {
+    const fixture = serviceFixture(allPermissions, { maxSnapshotBytes: 10 });
+    expect(
+      fixture.service.handle({
+        apiVersion: "2.0",
+        requestId: "snapshot-too-large",
+        operation: "snapshot",
+        documentId: "document-differential-stage",
+      }),
+    ).toMatchObject({
+      apiVersion: "2.0",
+      ok: false,
+      operation: "snapshot",
+      error: { code: "SNAPSHOT_TOO_LARGE" },
+    });
   });
 
   it("keeps Phase 8 instance authoring identical to direct Edit Engine execution", () => {
@@ -143,6 +230,78 @@ describe("Agent Circuit API v1 service", () => {
     expect(direct.ok).toBe(true);
     expect(fixture.getDocument()).toEqual(direct.document);
     expect(fixture.getDocument().sourceStatus).toBe("connectivity-modified");
+  });
+
+  it("keeps symbol remapping and port placement identical to direct Edit Engine execution", () => {
+    let document = createEmptyDocument("document-parity", "Parity");
+    document.instances.push({
+      id: "X1",
+      symbolId: "generic-block-4",
+      placement: null,
+      properties: {
+        "spice.target": "model:sky130_fd_pr__nfet_01v8",
+        "spice.pin.P1": "P1",
+      },
+    });
+    document.ports.push({
+      id: "port-in",
+      name: "IN",
+      direction: "input",
+      position: null,
+    });
+    document.nets.push({
+      id: "net-in",
+      scope: "local",
+      terminals: [{ instanceId: "X1", pinName: "P1" }],
+      ports: ["port-in"],
+    });
+    const service = createAgentCircuitService({
+      agentId: "agent-parity",
+      resolver,
+      permissions: allPermissions,
+      store: {
+        getDocument: () => document,
+        commitDocument: (next) => {
+          document = next;
+        },
+      },
+    });
+    const edits = [
+      {
+        kind: "set_instance_symbol" as const,
+        instanceId: "X1",
+        symbolId: "nmos",
+        pinMap: { P1: "D" },
+      },
+      {
+        kind: "place_port" as const,
+        portId: "port-in",
+        position: { x: 40, y: 100 },
+      },
+    ];
+    const direct = executeTransaction(
+      structuredClone(document),
+      {
+        transactionId: "parity-direct",
+        documentId: document.id,
+        expectedRevision: 0,
+        actor: { kind: "agent", id: "agent-parity" },
+        edits,
+      },
+      { symbolResolver: resolver },
+    );
+    const response = service.handle({
+      apiVersion: "2.0",
+      requestId: "parity-agent",
+      operation: "transact",
+      documentId: document.id,
+      transactionId: "parity-agent",
+      expectedRevision: 0,
+      edits,
+    });
+    expect(response).toMatchObject({ ok: true, revision: 1 });
+    expect(direct.ok).toBe(true);
+    expect(document).toEqual(direct.document);
   });
 
   it("bounds scoped context and never returns a whole persisted Document", () => {
@@ -194,6 +353,20 @@ describe("Agent Circuit API v1 service", () => {
     });
     expect(
       fixture.service.handle({
+        apiVersion: "2.0",
+        requestId: "snapshot-source-denied",
+        operation: "snapshot",
+        documentId: "document-differential-stage",
+        includeSourceSpans: true,
+      }),
+    ).toMatchObject({
+      apiVersion: "2.0",
+      ok: false,
+      operation: "snapshot",
+      error: { code: "PERMISSION_DENIED" },
+    });
+    expect(
+      fixture.service.handle({
         apiVersion: "1.0",
         requestId: "connectivity-denied",
         operation: "transact",
@@ -214,6 +387,25 @@ describe("Agent Circuit API v1 service", () => {
       error: { code: "PERMISSION_DENIED" },
     });
     expect(fixture.getDocument().revision).toBe(0);
+  });
+
+  it("allows Snapshot permission to be denied independently", () => {
+    const fixture = serviceFixture({
+      ...allPermissions,
+      snapshot: false,
+    });
+    expect(
+      fixture.service.handle({
+        apiVersion: "2.0",
+        requestId: "snapshot-denied",
+        operation: "snapshot",
+        documentId: "document-differential-stage",
+      }),
+    ).toMatchObject({
+      ok: false,
+      operation: "snapshot",
+      error: { code: "PERMISSION_DENIED" },
+    });
   });
 
   it("matches direct Edit Engine semantics for dry-run, apply, changes, and stale revisions", () => {

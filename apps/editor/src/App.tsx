@@ -32,7 +32,7 @@ import type {
 import { buildSvgScene, renderSymbolDefinitionBody } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
-import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
+import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
 import type { SymbolDefinition } from "@icm/symbols";
 
 import { copySelection, proposePaste } from "./clipboard";
@@ -85,8 +85,11 @@ interface WireSource {
   endpoint: RouteEndpoint;
   netId: string | null;
   point: Point;
+  preferredAxis?: OrthogonalAxis;
   preludeEdits: SchematicEdit[];
 }
+
+type OrthogonalAxis = "horizontal" | "vertical";
 
 export interface AppProps {
   project?: CircuitProject;
@@ -102,6 +105,24 @@ function replaceDocument(
       candidate.id === document.id ? document : candidate,
     ),
   });
+}
+
+function referencedDocumentId(
+  project: CircuitProject,
+  instance: SchematicDocument["instances"][number],
+): string | null {
+  const target = instance.properties["spice.target"];
+  if (typeof target !== "string" || !target.startsWith("subcircuit:")) {
+    return null;
+  }
+  const name = target.slice("subcircuit:".length).toLowerCase();
+  return (
+    project.documents.find(
+      (candidate) =>
+        candidate.name.toLowerCase() === name ||
+        candidate.sourceBinding?.cellName.toLowerCase() === name,
+    )?.id ?? null
+  );
 }
 
 function snap(value: number, grid: number): number {
@@ -126,6 +147,8 @@ function polylinePoints(points: readonly Point[]): string {
 function extendOrthogonalPath(
   points: readonly Point[],
   target: Point,
+  preferredInitialAxis: OrthogonalAxis = "horizontal",
+  preferredTargetAxis?: OrthogonalAxis,
 ): Point[] {
   const result = points.map((point) => ({ ...point }));
   const last = result.at(-1);
@@ -135,14 +158,39 @@ function extendOrthogonalPath(
     return result;
   }
   const previous = result.at(-2);
-  const previousWasVertical = previous ? previous.x === last.x : true;
-  result.push(
-    previousWasVertical
-      ? { x: target.x, y: last.y }
-      : { x: last.x, y: target.y },
-    { ...target },
-  );
+  const departureAxis: OrthogonalAxis = previous
+    ? previous.x === last.x
+      ? "horizontal"
+      : "vertical"
+    : preferredInitialAxis;
+  if (!preferredTargetAxis || departureAxis !== preferredTargetAxis) {
+    result.push(
+      departureAxis === "horizontal"
+        ? { x: target.x, y: last.y }
+        : { x: last.x, y: target.y },
+    );
+  } else if (departureAxis === "horizontal") {
+    const middleX = snap((last.x + target.x) / 2, 1);
+    result.push({ x: middleX, y: last.y }, { x: middleX, y: target.y });
+  } else {
+    const middleY = snap((last.y + target.y) / 2, 1);
+    result.push({ x: last.x, y: middleY }, { x: target.x, y: middleY });
+  }
+  result.push({ ...target });
   return result;
+}
+
+function transformedPinAxis(
+  direction: "north" | "east" | "south" | "west",
+  rotation: 0 | 90 | 180 | 270,
+): OrthogonalAxis {
+  const localAxis =
+    direction === "east" || direction === "west" ? "horizontal" : "vertical";
+  return rotation === 90 || rotation === 270
+    ? localAxis === "horizontal"
+      ? "vertical"
+      : "horizontal"
+    : localAxis;
 }
 
 function segmentAtPoint(points: readonly Point[], point: Point): number | null {
@@ -185,6 +233,28 @@ function endpointNetId(
         : net.ports.includes(endpoint.portId),
     )?.id ?? null
   );
+}
+
+function maxRoutingCounter(document: SchematicDocument): number {
+  const ids = [
+    ...document.ports.map((item) => item.id),
+    ...document.instances.map((item) => item.id),
+    ...document.nets.map((item) => item.id),
+    ...document.routes.map((item) => item.id),
+    ...document.junctions.map((item) => item.id),
+    ...document.annotations.map((item) => item.id),
+    ...document.layoutGroups.map((item) => item.id),
+    ...document.constraints.map((item) => item.id),
+  ];
+  let maximum = 0;
+  for (const id of ids) {
+    for (const match of id.matchAll(
+      /(?:route-ui|junction-ui|net-ui)-(\d+)/gu,
+    )) {
+      maximum = Math.max(maximum, Number(match[1]));
+    }
+  }
+  return maximum;
 }
 
 function normalizedRect(start: Point, end: Point): Rect {
@@ -274,10 +344,6 @@ function SymbolThumbnail({ symbol }: { symbol: SymbolDefinition }) {
 }
 
 export function App({ project: initialProject }: AppProps) {
-  const resolver = useMemo(
-    () => new InMemorySymbolResolver(builtInSymbols),
-    [],
-  );
   const [project, setProject] = useState(() =>
     CircuitProjectSchema.parse(
       structuredClone(
@@ -285,6 +351,14 @@ export function App({ project: initialProject }: AppProps) {
       ),
     ),
   );
+  const resolver = useMemo(
+    () => createProjectSymbolResolver(project, builtInSymbols),
+    [project],
+  );
+  const [activeDocumentId, setActiveDocumentId] = useState(
+    () => project.topDocumentId,
+  );
+  const [documentStack, setDocumentStack] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewBox, setViewBox] = useState<Rect>(DEFAULT_VIEWBOX);
   const [status, setStatus] = useState("Ready");
@@ -328,15 +402,25 @@ export function App({ project: initialProject }: AppProps) {
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const history = useRef(
-    new DocumentHistory(project.documents[0]!, { symbolResolver: resolver }),
+    new DocumentHistory(
+      project.documents.find(
+        (candidate) => candidate.id === project.topDocumentId,
+      )!,
+      { symbolResolver: resolver },
+    ),
   );
-  const document = project.documents.find(
-    (candidate) => candidate.id === project.topDocumentId,
-  )!;
+  const histories = useRef(new Map([[project.topDocumentId, history.current]]));
+  const documentViewBoxes = useRef(new Map<string, Rect>());
+  const document =
+    project.documents.find((candidate) => candidate.id === activeDocumentId) ??
+    project.documents.find(
+      (candidate) => candidate.id === project.topDocumentId,
+    )!;
   const scene = buildSvgScene(document, resolver, { bounds: viewBox });
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
+  const unplacedPorts = document.ports.filter((port) => port.position === null);
   const selectedId = selectedIds.at(-1) ?? null;
   const selectedInstance =
     selectedIds.length === 1
@@ -350,6 +434,10 @@ export function App({ project: initialProject }: AppProps) {
         (annotation) => annotation.id === selectedAnnotationId,
       )
     : undefined;
+  const selectedPortId =
+    selectedEndpoint?.endpoint.kind === "port"
+      ? selectedEndpoint.endpoint.portId
+      : null;
   const flightlines = deriveFlightlines(document, resolver);
   const crossings = deriveCrossings(document, resolver);
   const visualDiagnostics = diagnoseVisualQuality(document, resolver);
@@ -377,6 +465,10 @@ export function App({ project: initialProject }: AppProps) {
               pin.at,
               instance.placement!.position,
               instance.placement!,
+            ),
+            preferredAxis: transformedPinAxis(
+              pin.direction,
+              instance.placement!.rotation,
             ),
             preludeEdits: [],
           };
@@ -424,7 +516,11 @@ export function App({ project: initialProject }: AppProps) {
     : [];
   const wireDraftPoints =
     wireSource && wirePreviewPoint
-      ? extendOrthogonalPath(wireFixedPoints, wirePreviewPoint)
+      ? extendOrthogonalPath(
+          wireFixedPoints,
+          wirePreviewPoint,
+          wireSource.preferredAxis,
+        )
       : wireFixedPoints;
   const projectInstanceCount = project.documents.reduce(
     (count, candidate) => count + candidate.instances.length,
@@ -497,6 +593,131 @@ export function App({ project: initialProject }: AppProps) {
     localStorage.setItem(RECOVERY_KEY, serializeProject(nextProject));
   }
 
+  function resetInteractionState(): void {
+    setSelectedIds([]);
+    setSelectedRouteId(null);
+    setSelectedRouteSegmentIndex(null);
+    setSelectedAnnotationId(null);
+    setSelectedEndpoint(null);
+    setDragPreview(null);
+    setWireSource(null);
+    setWirePreviewPoint(null);
+    setWireWaypoints([]);
+    setTool("pointer");
+  }
+
+  function switchDocument(nextDocumentId: string): void {
+    if (nextDocumentId === document.id) return;
+    const nextDocument = project.documents.find(
+      (candidate) => candidate.id === nextDocumentId,
+    );
+    if (!nextDocument) {
+      setStatus(`Document not found: ${nextDocumentId}`);
+      return;
+    }
+    documentViewBoxes.current.set(document.id, viewBox);
+    const existingHistory = histories.current.get(nextDocument.id);
+    history.current =
+      existingHistory?.document.revision === nextDocument.revision
+        ? existingHistory
+        : new DocumentHistory(nextDocument, { symbolResolver: resolver });
+    histories.current.set(nextDocument.id, history.current);
+    setActiveDocumentId(nextDocument.id);
+    setViewBox(
+      documentViewBoxes.current.get(nextDocument.id) ?? DEFAULT_VIEWBOX,
+    );
+    resetInteractionState();
+    setStatus(`Opened Document ${nextDocument.name}`);
+  }
+
+  function enterHierarchy(instanceId: string): void {
+    const instance = document.instances.find(
+      (candidate) => candidate.id === instanceId,
+    );
+    const targetId = instance ? referencedDocumentId(project, instance) : null;
+    if (!targetId) {
+      setStatus(`${instanceId} has no resolved child Document`);
+      return;
+    }
+    setDocumentStack((current) => [...current, document.id]);
+    switchDocument(targetId);
+  }
+
+  function returnToParentDocument(): void {
+    const parentId = documentStack.at(-1);
+    if (!parentId) return;
+    setDocumentStack((current) => current.slice(0, -1));
+    switchDocument(parentId);
+  }
+
+  function returnToTopDocument(): void {
+    setDocumentStack([]);
+    switchDocument(project.topDocumentId);
+  }
+
+  function replaceActiveProject(
+    nextProject: CircuitProject,
+    nextViewBox: Rect = DEFAULT_VIEWBOX,
+  ): SchematicDocument {
+    const nextDocument = nextProject.documents.find(
+      (candidate) => candidate.id === nextProject.topDocumentId,
+    )!;
+    const nextResolver = createProjectSymbolResolver(
+      nextProject,
+      builtInSymbols,
+    );
+    history.current = new DocumentHistory(nextDocument, {
+      symbolResolver: nextResolver,
+    });
+    histories.current = new Map([[nextDocument.id, history.current]]);
+    documentViewBoxes.current = new Map();
+    setProject(nextProject);
+    setActiveDocumentId(nextDocument.id);
+    setDocumentStack([]);
+    setViewBox(nextViewBox);
+    resetInteractionState();
+    return nextDocument;
+  }
+
+  function jumpToVisualDiagnostic(
+    diagnostic: (typeof visualDiagnostics)[number],
+  ): void {
+    const ids = diagnostic.objectIds;
+    const instanceIds = ids.filter((id) =>
+      document.instances.some((instance) => instance.id === id),
+    );
+    const routeId = ids.find((id) =>
+      document.routes.some((route) => route.id === id),
+    );
+    const annotationId = ids.find((id) =>
+      document.annotations.some((annotation) => annotation.id === id),
+    );
+    setSelectedIds(instanceIds);
+    setSelectedRouteId(routeId ?? null);
+    setSelectedAnnotationId(annotationId ?? null);
+    setSelectedEndpoint(null);
+    const target =
+      diagnostic.bounds ??
+      (diagnostic.point
+        ? {
+            x: diagnostic.point.x - 60,
+            y: diagnostic.point.y - 60,
+            width: 120,
+            height: 120,
+          }
+        : null);
+    if (target) {
+      const padding = 30;
+      setViewBox({
+        x: target.x - padding,
+        y: target.y - padding,
+        width: Math.max(160, target.width + padding * 2),
+        height: Math.max(120, target.height + padding * 2),
+      });
+    }
+    setStatus(`${diagnostic.code}: ${ids.join(", ") || "Document"}`);
+  }
+
   function applyResult(result: EditTransactionResult): void {
     if (!result.ok) {
       setStatus(`${result.error.code}: ${result.error.message}`);
@@ -529,6 +750,12 @@ export function App({ project: initialProject }: AppProps) {
     return result;
   }
 
+  function nextRoutingSuffix(): number {
+    routeCounter.current =
+      Math.max(routeCounter.current, maxRoutingCounter(document)) + 1;
+    return routeCounter.current;
+  }
+
   function activateTool(nextTool: EditorTool): void {
     setTool(nextTool);
     setWireSource(null);
@@ -547,17 +774,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function loadRoutingDemo(): void {
     const demo = createRoutingDemoProject();
-    const demoDocument = demo.documents[0]!;
-    history.current.reset(demoDocument);
-    setProject(demo);
-    setSelectedIds([]);
-    setSelectedRouteId(null);
-    setDragPreview(null);
-    setWireSource(null);
-    setWirePreviewPoint(null);
-    setWireWaypoints([]);
-    setTool("pointer");
-    setViewBox(DEFAULT_VIEWBOX);
+    replaceActiveProject(demo);
     setStatus("Loaded Phase 3 routing demo");
   }
 
@@ -587,8 +804,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function commitWire(candidate: WireSource): void {
     if (!wireSource) return;
-    routeCounter.current += 1;
-    const suffix = routeCounter.current;
+    const suffix = nextRoutingSuffix();
     const edits: SchematicEdit[] = [
       ...wireSource.preludeEdits,
       ...candidate.preludeEdits,
@@ -616,6 +832,8 @@ export function App({ project: initialProject }: AppProps) {
     const routedPoints = extendOrthogonalPath(
       [wireSource.point, ...wireWaypoints],
       candidate.point,
+      wireSource.preferredAxis,
+      candidate.preferredAxis,
     );
     const waypoints = routedPoints.slice(1, -1);
     edits.push({
@@ -645,8 +863,7 @@ export function App({ project: initialProject }: AppProps) {
     netId: string,
     createNet: boolean,
   ): WireSource {
-    routeCounter.current += 1;
-    const junctionId = `junction-ui-${routeCounter.current}`;
+    const junctionId = `junction-ui-${nextRoutingSuffix()}`;
     return {
       endpoint: { kind: "junction", junctionId },
       netId,
@@ -665,8 +882,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function fixWirePoint(point: Point): void {
     if (!wireSource) {
-      routeCounter.current += 1;
-      const netId = `net-ui-${routeCounter.current}`;
+      const netId = `net-ui-${nextRoutingSuffix()}`;
       const source = freeWireAnchor(point, netId, true);
       setWireSource(source);
       setWirePreviewPoint(point);
@@ -677,6 +893,7 @@ export function App({ project: initialProject }: AppProps) {
     const fixed = extendOrthogonalPath(
       [wireSource.point, ...wireWaypoints],
       point,
+      wireSource.preferredAxis,
     );
     setWireWaypoints(fixed.slice(1));
     setWirePreviewPoint(point);
@@ -688,8 +905,7 @@ export function App({ project: initialProject }: AppProps) {
       fixWirePoint(point);
       return;
     }
-    routeCounter.current += 1;
-    const netId = wireSource.netId ?? `net-ui-${routeCounter.current}`;
+    const netId = wireSource.netId ?? `net-ui-${nextRoutingSuffix()}`;
     commitWire(freeWireAnchor(point, netId, wireSource.netId === null));
   }
 
@@ -701,8 +917,7 @@ export function App({ project: initialProject }: AppProps) {
     const route = document.routes.find(
       (candidate) => candidate.id === routeId,
     )!;
-    routeCounter.current += 1;
-    const suffix = routeCounter.current;
+    const suffix = nextRoutingSuffix();
     const junctionId = `junction-ui-${suffix}`;
     return {
       endpoint: { kind: "junction", junctionId },
@@ -1326,11 +1541,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function restoreRecovery(): void {
     if (!recoveryCandidate) return;
-    const recoveredDocument = recoveryCandidate.documents.find(
-      (candidate) => candidate.id === recoveryCandidate.topDocumentId,
-    )!;
-    history.current.reset(recoveredDocument);
-    setProject(recoveryCandidate);
+    const recoveredDocument = replaceActiveProject(recoveryCandidate);
     setRecoveryCandidate(null);
     setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
   }
@@ -1348,10 +1559,7 @@ export function App({ project: initialProject }: AppProps) {
       const openedDocument = opened.documents.find(
         (candidate) => candidate.id === opened.topDocumentId,
       )!;
-      history.current.reset(openedDocument);
-      setProject(opened);
-      setSelectedIds([]);
-      setSelectedRouteId(null);
+      replaceActiveProject(opened);
       setImportDiagnostics([]);
       localStorage.removeItem(RECOVERY_KEY);
       setRecoveryCandidate(null);
@@ -1363,14 +1571,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function loadVisualDemo(): void {
     const next = createVisualDemoProject();
-    const nextDocument = next.documents.find(
-      (candidate) => candidate.id === next.topDocumentId,
-    )!;
-    history.current.reset(nextDocument);
-    setProject(next);
-    setSelectedIds([]);
-    setSelectedRouteId(null);
-    setViewBox({ x: 20, y: -10, width: 430, height: 350 });
+    replaceActiveProject(next, { x: 20, y: -10, width: 430, height: 350 });
     setStatus("Loaded Phase 5 visual demo");
   }
 
@@ -1639,9 +1840,6 @@ export function App({ project: initialProject }: AppProps) {
         setStatus(firstError?.message ?? "SPICE import failed");
         return;
       }
-      const importedDocument = result.project.documents.find(
-        (candidate) => candidate.id === result.project!.topDocumentId,
-      )!;
       const instanceCount = result.project.documents.reduce(
         (count, candidate) => count + candidate.instances.length,
         0,
@@ -1651,12 +1849,8 @@ export function App({ project: initialProject }: AppProps) {
         .filter((instance) =>
           instance.symbolId.startsWith("generic-block-"),
         ).length;
-      history.current.reset(importedDocument);
-      setProject(result.project);
+      replaceActiveProject(result.project);
       stageRecovery(result.project);
-      setSelectedIds([]);
-      setDragPreview(null);
-      setViewBox(DEFAULT_VIEWBOX);
       setStatus(
         `Imported ${result.project.documents.length} Documents and ${instanceCount} instances; ${genericCount} generic symbols`,
       );
@@ -1669,6 +1863,24 @@ export function App({ project: initialProject }: AppProps) {
     const box = contentScene.viewBox;
     setViewBox({ ...box });
     setStatus("Fit Document");
+  }
+
+  function placePortAtViewCenter(portId: string): void {
+    const port = document.ports.find((candidate) => candidate.id === portId);
+    if (!port) return;
+    const position = {
+      x: snap(viewBox.x + viewBox.width / 2, document.presentation.grid),
+      y: snap(viewBox.y + viewBox.height / 2, document.presentation.grid),
+    };
+    const result = transact([
+      {
+        kind: port.position ? "move_port" : "place_port",
+        portId,
+        position,
+      },
+    ]);
+    if (result.ok)
+      setStatus(`${port.position ? "Moved" : "Placed"} ${port.name}`);
   }
 
   function handleWheel(event: React.WheelEvent<SVGSVGElement>): void {
@@ -1792,6 +2004,10 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function deleteSelection(): void {
+    if (selectedEndpoint?.endpoint.kind === "junction") {
+      deleteSelectedJunction();
+      return;
+    }
     if (selectedAnnotationId) {
       deleteSelectedAnnotation();
       return;
@@ -1819,6 +2035,32 @@ export function App({ project: initialProject }: AppProps) {
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Delete failed");
+    }
+  }
+
+  function deleteSelectedJunction(): void {
+    if (selectedEndpoint?.endpoint.kind !== "junction") return;
+    const junctionId = selectedEndpoint.endpoint.junctionId;
+    const attachedRouteEdits = document.routes
+      .filter(
+        (route) =>
+          (route.from.kind === "junction" &&
+            route.from.junctionId === junctionId) ||
+          (route.to.kind === "junction" && route.to.junctionId === junctionId),
+      )
+      .map((route): SchematicEdit => ({
+        kind: "make_flightline",
+        routeId: route.id,
+      }));
+    const result = transact([
+      ...attachedRouteEdits,
+      { kind: "remove_junction", junctionId },
+    ]);
+    if (result.ok) {
+      setSelectedEndpoint(null);
+      setStatus(
+        `Deleted junction and ${attachedRouteEdits.length} attached routes`,
+      );
     }
   }
 
@@ -1953,9 +2195,55 @@ export function App({ project: initialProject }: AppProps) {
       <header className="app-header">
         <div>
           <h1>Interactive Circuit Maker</h1>
-          <p>{project.name}</p>
+          <p>
+            {project.name} /{" "}
+            <span data-testid="active-document-name">{document.name}</span>
+          </p>
         </div>
         <nav className="toolbar" aria-label="Editor commands">
+          <div className="document-nav" aria-label="Document navigation">
+            <button
+              type="button"
+              onClick={returnToParentDocument}
+              disabled={documentStack.length === 0}
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={returnToTopDocument}
+              disabled={document.id === project.topDocumentId}
+            >
+              Top
+            </button>
+            <select
+              aria-label="Current Document"
+              data-testid="document-selector"
+              value={document.id}
+              onChange={(event) => {
+                setDocumentStack([]);
+                switchDocument(event.currentTarget.value);
+              }}
+            >
+              {project.documents.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() =>
+                selectedInstance && enterHierarchy(selectedInstance.id)
+              }
+              disabled={
+                !selectedInstance ||
+                referencedDocumentId(project, selectedInstance) === null
+              }
+            >
+              Enter
+            </button>
+          </div>
           <button type="button" onClick={() => setPaletteOpen(true)}>
             + Component
           </button>
@@ -2176,6 +2464,12 @@ export function App({ project: initialProject }: AppProps) {
             draggable
             data-testid={`unplaced-${instance.id}`}
             key={instance.id}
+            onClick={() => {
+              setSelectedIds([instance.id]);
+              setSelectedRouteId(null);
+              setSelectedAnnotationId(null);
+              setStatus(`Selected ${instance.id}`);
+            }}
             onDragStart={(event) => {
               event.dataTransfer.setData(
                 "application/x-icm-instance",
@@ -2185,6 +2479,17 @@ export function App({ project: initialProject }: AppProps) {
             }}
           >
             {instance.id} · {instance.symbolId}
+          </button>
+        ))}
+        {unplacedPorts.length > 0 ? <h3>Unplaced Ports</h3> : null}
+        {unplacedPorts.map((port) => (
+          <button
+            type="button"
+            data-testid={`unplaced-port-${port.id}`}
+            key={port.id}
+            onClick={() => placePortAtViewCenter(port.id)}
+          >
+            Place {port.name}
           </button>
         ))}
         {selectedInstance ? (
@@ -2263,6 +2568,22 @@ export function App({ project: initialProject }: AppProps) {
             >
               Delete connection
             </button>
+            {selectedPortId ? (
+              <button
+                type="button"
+                onClick={() => placePortAtViewCenter(selectedPortId)}
+              >
+                Move port to view center
+              </button>
+            ) : null}
+          </section>
+        ) : null}
+        {selectedEndpoint?.endpoint.kind === "junction" ? (
+          <section className="context-actions" aria-label="Junction actions">
+            <h2>Junction</h2>
+            <button type="button" onClick={deleteSelectedJunction}>
+              Delete junction and attached wires
+            </button>
           </section>
         ) : null}
         <dl className="inspector">
@@ -2282,6 +2603,12 @@ export function App({ project: initialProject }: AppProps) {
           <dd data-testid="source-status">{document.sourceStatus}</dd>
           <dt>Documents</dt>
           <dd data-testid="document-count">{project.documents.length}</dd>
+          <dt>Current Document</dt>
+          <dd data-testid="active-document-id">{document.id}</dd>
+          <dt>Document instances</dt>
+          <dd data-testid="active-instance-count">
+            {document.instances.length}
+          </dd>
           <dt>Instances</dt>
           <dd data-testid="instance-count">{projectInstanceCount}</dd>
           <dt>Nets</dt>
@@ -2321,6 +2648,29 @@ export function App({ project: initialProject }: AppProps) {
                 data-severity={diagnostic.severity}
               >
                 <strong>{diagnostic.code}</strong>: {diagnostic.message}
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section aria-label="Visual diagnostics" className="diagnostics">
+          <h2>Visual Diagnostics</h2>
+          {visualDiagnostics.length === 0 ? <p>No visual diagnostics</p> : null}
+          <ul data-testid="visual-diagnostics">
+            {visualDiagnostics.map((diagnostic, index) => (
+              <li
+                key={`${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
+                data-severity={diagnostic.severity}
+              >
+                <button
+                  type="button"
+                  data-testid={`diagnostic-${index}`}
+                  onClick={() => jumpToVisualDiagnostic(diagnostic)}
+                >
+                  <strong>{diagnostic.code}</strong>
+                  {diagnostic.objectIds.length > 0
+                    ? `: ${diagnostic.objectIds.join(", ")}`
+                    : ""}
+                </button>
               </li>
             ))}
           </ul>
@@ -2507,6 +2857,10 @@ export function App({ project: initialProject }: AppProps) {
                       event.shiftKey || event.ctrlKey,
                     );
                   }}
+                  onDoubleClick={(event) => {
+                    event.stopPropagation();
+                    enterHierarchy(instance.id);
+                  }}
                   onPointerDown={(event) => beginMove(event, instance.id)}
                   onPointerMove={previewMove}
                   onPointerUp={finishMove}
@@ -2517,7 +2871,13 @@ export function App({ project: initialProject }: AppProps) {
                 key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}
                 data-testid={endpointTestId(candidate.endpoint)}
                 className={
-                  tool === "wire" ? "endpoint-hit active" : "endpoint-hit"
+                  tool === "wire" ||
+                  (selectedEndpoint?.endpoint.kind === "junction" &&
+                    candidate.endpoint.kind === "junction" &&
+                    selectedEndpoint.endpoint.junctionId ===
+                      candidate.endpoint.junctionId)
+                    ? "endpoint-hit active"
+                    : "endpoint-hit"
                 }
                 cx={candidate.point.x}
                 cy={candidate.point.y}
@@ -2534,7 +2894,21 @@ export function App({ project: initialProject }: AppProps) {
                     `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
                   );
                 }}
-                onPointerDown={(event) => handleWireEndpoint(event, candidate)}
+                onPointerDown={(event) => {
+                  if (
+                    tool === "pointer" &&
+                    candidate.endpoint.kind === "junction"
+                  ) {
+                    event.stopPropagation();
+                    setSelectedEndpoint(candidate);
+                    setSelectedRouteId(null);
+                    setSelectedIds([]);
+                    setSelectedAnnotationId(null);
+                    setStatus(`Selected ${endpointTestId(candidate.endpoint)}`);
+                    return;
+                  }
+                  handleWireEndpoint(event, candidate);
+                }}
               />
             ))}
             {document.annotations.map((annotation) => {

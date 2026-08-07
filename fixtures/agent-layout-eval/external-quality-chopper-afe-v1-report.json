@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "status": "quality-gate-failed",
+  "fixture": "phase-9-heldout-chopper-afe-8ch",
+  "run": "heldout-chopper-afe-8ch-v1",
+  "reviewerId": "phase9-independent-blind-agent-run2-2026-08-07",
+  "qualityGateReportSha256": "11cc7ddca4b2739b3488b91245d688ae399b098381c3b21fdf387c32cc8c85a4",
+  "hardInvariantsPassed": true,
+  "endToEndEfficiencyComparable": false,
+  "readability": {
+    "A": { "mean": 4.2, "scores": [4, 4, 5, 4, 4] },
+    "B": { "mean": 4.0, "scores": [4, 4, 4, 4, 4] },
+    "C": { "mean": 2.8, "scores": [3, 3, 4, 2, 2] },
+    "D": { "mean": 3.2, "scores": [3, 3, 4, 3, 3] }
+  },
+  "primaryNonRegression": false,
+  "efficiencyOrReadabilityImprovement": false,
+  "passed": false,
+  "observedFailures": [
+    "The no-Skill baseline used functional stage headings and compact regular composition effectively.",
+    "Core guidance was interpreted as repeated local labels and a very tall one-column hierarchy, causing clutter and scanning cost.",
+    "Full guidance produced concrete shared rails but over-dense crossings and poor page utilization.",
+    "The first remediation rule was too mechanism-prescriptive and became a new constraint on Agent judgment."
+  ],
+  "requiredResponse": [
+    "Make visible port/Net relations the outcome; do not require repeated labels or a shared trunk as the mechanism.",
+    "Require removal of redundant/overlapping text after the completeness inventory.",
+    "Allow compact matrix wrapping for long repeated sequences.",
+    "State explicitly that an Agent may ignore a knowledge-card suggestion that worsens the current render."
+  ]
+}

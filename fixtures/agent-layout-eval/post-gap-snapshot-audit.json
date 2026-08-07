@@ -1,0 +1,282 @@
+{
+  "reportVersion": "1.0",
+  "apiVersion": "2.0",
+  "snapshotVersion": "1.0",
+  "helpersEnabled": false,
+  "cases": [
+    {
+      "id": "rlc-bandpass",
+      "apiOperations": [
+        "capabilities",
+        "snapshot",
+        "transact",
+        "render"
+      ],
+      "queryCalls": 0,
+      "documentCount": 1,
+      "referenceCount": 0,
+      "importWarnings": 0,
+      "documents": [
+        {
+          "id": "document-d51a751fc161cc46",
+          "name": "rlc_rf_bandpass",
+          "revision": 0,
+          "instances": 14,
+          "ports": 3,
+          "nets": 8,
+          "routes": 0,
+          "unplacedInstances": 14,
+          "unplacedPorts": 3,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 14181,
+          "topologyHash": "584c424fcbdbaca747443ebd20df8c07b3e8d8712d4632daac76cf2a35542b28",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 14
+          },
+          "renderBytes": 1522
+        }
+      ]
+    },
+    {
+      "id": "hierarchical-cdac",
+      "apiOperations": [
+        "capabilities",
+        "snapshot",
+        "transact",
+        "render"
+      ],
+      "queryCalls": 0,
+      "documentCount": 2,
+      "referenceCount": 6,
+      "importWarnings": 0,
+      "documents": [
+        {
+          "id": "document-82822626bf0850db",
+          "name": "scdac_unit",
+          "revision": 0,
+          "instances": 4,
+          "ports": 5,
+          "nets": 5,
+          "routes": 0,
+          "unplacedInstances": 4,
+          "unplacedPorts": 5,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 8273,
+          "topologyHash": "0a7644fdecfd3e6ecb7fd59a426c4fbae66850298ddd1d9aae2fa789e8c4bc3a",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 4
+          },
+          "renderBytes": 879
+        },
+        {
+          "id": "document-fb815c3c3f719ef7",
+          "name": "switched_capacitor_dac_6bit",
+          "revision": 0,
+          "instances": 14,
+          "ports": 10,
+          "nets": 22,
+          "routes": 0,
+          "unplacedInstances": 14,
+          "unplacedPorts": 10,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 22130,
+          "topologyHash": "569c7fe6b63706e535d2914c407830223ff3e3e1b7934f7a99d24932e1960d2c",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 14
+          },
+          "renderBytes": 1534
+        }
+      ]
+    },
+    {
+      "id": "unseen-ota",
+      "apiOperations": [
+        "capabilities",
+        "snapshot",
+        "transact",
+        "render"
+      ],
+      "queryCalls": 0,
+      "documentCount": 1,
+      "referenceCount": 0,
+      "importWarnings": 0,
+      "documents": [
+        {
+          "id": "document-72404fc79d737213",
+          "name": "ota_5t",
+          "revision": 0,
+          "instances": 6,
+          "ports": 6,
+          "nets": 8,
+          "routes": 0,
+          "unplacedInstances": 6,
+          "unplacedPorts": 6,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 10855,
+          "topologyHash": "a66bc5e46fb06e3a1277f0dcf140686f2c544d5db6966c9b6c2e091023d2306c",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 6
+          },
+          "renderBytes": 1001
+        }
+      ]
+    },
+    {
+      "id": "hierarchical-divide-by-two",
+      "apiOperations": [
+        "capabilities",
+        "snapshot",
+        "transact",
+        "render"
+      ],
+      "queryCalls": 0,
+      "documentCount": 7,
+      "referenceCount": 14,
+      "importWarnings": 0,
+      "documents": [
+        {
+          "id": "document-83ee47cd460e6130",
+          "name": "div2_inv",
+          "revision": 0,
+          "instances": 2,
+          "ports": 4,
+          "nets": 4,
+          "routes": 0,
+          "unplacedInstances": 2,
+          "unplacedPorts": 4,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 6437,
+          "topologyHash": "df09ec3da17d9592146a1de02cf153714e2c0e6824bc8f94f45a417fb0fe9b9d",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 2
+          },
+          "renderBytes": 749
+        },
+        {
+          "id": "document-dc4edf71a87cc575",
+          "name": "div2_nor2",
+          "revision": 0,
+          "instances": 4,
+          "ports": 5,
+          "nets": 6,
+          "routes": 0,
+          "unplacedInstances": 4,
+          "unplacedPorts": 5,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 9656,
+          "topologyHash": "5d707464cb876f98672ae02608dcfbbc3cb2391b4cf786901bb328c6b0881bdd",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 4
+          },
+          "renderBytes": 878
+        },
+        {
+          "id": "document-293a276502f60071",
+          "name": "div2_tg",
+          "revision": 0,
+          "instances": 2,
+          "ports": 6,
+          "nets": 6,
+          "routes": 0,
+          "unplacedInstances": 2,
+          "unplacedPorts": 6,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 6935,
+          "topologyHash": "0518e3f9557926cf66189c7a1e0fd7e5bec4a23a5a7379788440cbf141dfbb9c",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 2
+          },
+          "renderBytes": 748
+        },
+        {
+          "id": "document-29c3475307ca7af5",
+          "name": "div2_buf0",
+          "revision": 0,
+          "instances": 2,
+          "ports": 4,
+          "nets": 4,
+          "routes": 0,
+          "unplacedInstances": 2,
+          "unplacedPorts": 4,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 6439,
+          "topologyHash": "dc41a2ebce3fa8456bc45da7b78f638de03bf70358d5e75712164d80b8d5f334",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 2
+          },
+          "renderBytes": 750
+        },
+        {
+          "id": "document-29c3465307ca7942",
+          "name": "div2_buf1",
+          "revision": 0,
+          "instances": 2,
+          "ports": 4,
+          "nets": 4,
+          "routes": 0,
+          "unplacedInstances": 2,
+          "unplacedPorts": 4,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 6437,
+          "topologyHash": "b7a6973decabcb28b7a2785717b6af79e4ed68695d5ba6492f97490ec0785c39",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 2
+          },
+          "renderBytes": 750
+        },
+        {
+          "id": "document-19358440c2c12ec0",
+          "name": "div2_dffr",
+          "revision": 0,
+          "instances": 8,
+          "ports": 7,
+          "nets": 12,
+          "routes": 0,
+          "unplacedInstances": 8,
+          "unplacedPorts": 7,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 17555,
+          "topologyHash": "37fff3723604c559b6eec7d4477840807a591e57665da58654ad2484164b5bdd",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 8
+          },
+          "renderBytes": 1136
+        },
+        {
+          "id": "document-68a8f83dea2eb763",
+          "name": "divide_by_2",
+          "revision": 0,
+          "instances": 8,
+          "ports": 5,
+          "nets": 10,
+          "routes": 0,
+          "unplacedInstances": 8,
+          "unplacedPorts": 5,
+          "unresolvedPins": 0,
+          "genericSymbols": 0,
+          "snapshotBytes": 15505,
+          "topologyHash": "5bd10f865ac7ec4be6a36ed54a23af8d78df6e0369f972141a5af7b7d921b9f0",
+          "diagnosticCounts": {
+            "VISUAL_UNPLACED_INSTANCE": 8
+          },
+          "renderBytes": 1149
+        }
+      ]
+    }
+  ],
+  "observedGaps": {
+    "missingEditKinds": [],
+    "remainingGenericInstances": 0,
+    "unplacedPorts": 59
+  }
+}

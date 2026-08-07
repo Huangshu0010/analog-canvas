@@ -16,6 +16,7 @@ Phases are ordered by dependency and exit gates, not by calendar estimates.
 |     6 | [`Agent API`](phase-6-agent-api.md)                                                               | complete | Safe `capabilities/query/transact/render` Agent integration                |
 |     7 | [`Export and Hardening`](phase-7-export-and-hardening.md)                                         | complete | Recovery, performance, broader dialects, and production export             |
 |     8 | [`Direct Manipulation and Manual Authoring`](phase-8-direct-manipulation-and-manual-authoring.md) | complete | Compact UI, manual placement, direct wiring, and automatic junctions       |
+|     9 | [`Snapshot-Driven Agent Workflow`](phase-9-agent-reasoning-and-observability.md)                  | review   | Snapshot/Skill workflow implemented; external quality ablation remains     |
 
 ## Dependency Graph
 
@@ -34,6 +35,7 @@ flowchart LR
     P5 --> P7
     P6 --> P7
     P7 --> P8["P8 Direct Manipulation + Manual Authoring"]
+    P8 --> P9["P9 Snapshot-Driven Agent Workflow"]
 ```
 
 Phase 1 and Phase 2 may proceed in parallel after Phase 0. Phase 4 may proceed
@@ -41,6 +43,13 @@ in parallel with the later part of Phase 5. A downstream phase must not assume
 an upstream contract is stable until the upstream exit gate is recorded.
 Phase 8 is a post-v0.1 interaction redesign: it preserves the completed Phase
 0-7 baseline and extends its contracts instead of rewriting their history.
+Phase 9 implements the post-Phase-8 Agent workflow: the host supplies a complete
+read-only Document Snapshot, a thin Skill governs the lifecycle, knowledge is
+loaded on demand, and all writes remain typed transactions. It deliberately
+adds neither a query language nor a mandatory Layout Intent/compiler layer.
+Its deterministic product gates are complete; status remains `review` until an
+external Agent runner and independent reviewer finish the declared quality
+ablation/blind-readability gate.
 
 ## Phase Rules
 

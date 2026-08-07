@@ -2,154 +2,214 @@
 
 Status: `accepted`
 
-Version: `1.3`
+Version: `2.0`
 
-Owning phase: `Phase 6/8`
+Owning phase: `Phase 6/8/9`
 
 Primary owner: `packages/agent-adapter`
 
-Related ADR: [`0005-agent-api-without-mcp.md`](../adr/0005-agent-api-without-mcp.md)
+Related ADRs: [`0005-agent-api-without-mcp.md`](../adr/0005-agent-api-without-mcp.md),
+[`0007-snapshot-driven-agent-workflow.md`](../adr/0007-snapshot-driven-agent-workflow.md)
 
 ## Purpose
 
-Expose bounded circuit context, typed atomic edits, and local visual review to
-authorized Agents without exposing storage internals or creating a mutation
+Expose a complete read-only circuit view, typed atomic edits, and visual review
+to authorized Agents without exposing storage internals or creating a mutation
 path beside the Edit Engine.
 
 ## Consumers
 
-- embedded Agent hosts
-- optional desktop loopback adapter
-- Agent guidance and examples
-- GUI/Agent parity tests
+- embedded Agent hosts and `circuit-layout` Skill
+- optional authenticated desktop loopback adapter
+- Agent examples/evaluation tools
+- GUI/Agent parity and Snapshot consistency tests
 
 ## Terminology
 
-| Term          | Meaning                                                                  |
-| ------------- | ------------------------------------------------------------------------ |
-| Service       | Transport-independent handler bound to one live Document store           |
-| Scope         | Explicit bounded query selector; there is no implicit whole-Project read |
-| Artifact      | Bounded base64 image response with media type, hash, and byte length     |
-| Edit category | `geometry`, `connectivity`, or `presentation` permission group           |
+| Term              | Meaning                                                                  |
+| ----------------- | ------------------------------------------------------------------------ |
+| Project Index     | Small list of Documents and instance-reference edges                     |
+| Document Snapshot | Complete derived, read-only electrical/presentation view of one Document |
+| Snapshot refresh  | Re-read after switch, stale/external change, or global review            |
+| Artifact          | Bounded base64 SVG with media type, hash, and byte length                |
+| Legacy query      | API v1 bounded descriptor read path retained only for compatibility      |
 
-## Operation envelope
+## Versioned operation envelope
 
-Every request contains `apiVersion: "1.0"`, a stable `requestId`, and one of
-four operations:
+Every request contains a stable `requestId`, an `apiVersion`, and one operation.
 
-| Operation      | Required payload                                      | Result                                                   |
-| -------------- | ----------------------------------------------------- | -------------------------------------------------------- |
-| `capabilities` | none                                                  | versions, scopes, edit kinds, limits, permissions        |
-| `query`        | Document ID, scope, optional limits/source spans      | descriptors, diagnostics, truncation evidence            |
-| `transact`     | Document ID, revision, transaction ID, typed edits    | applied/dry-run result, diff, typed diagnostics or error |
-| `render`       | Document ID, formal/diagnostics mode, optional bounds | bounded base64 SVG artifact and diagnostics              |
+API v2 has exactly four operations:
 
-No request accepts Project JSON, whole-Document replacement, a filesystem
-path, JavaScript, or SVG input.
+| Operation      | Required payload                                      | Result                                    |
+| -------------- | ----------------------------------------------------- | ----------------------------------------- |
+| `capabilities` | none                                                  | operations, permissions, limits, versions |
+| `snapshot`     | Document ID, optional source spans                    | complete AgentSessionSnapshot             |
+| `transact`     | Document ID, revision, transaction ID, typed edits    | applied/dry-run diff and diagnostics      |
+| `render`       | Document ID, formal/diagnostics mode, optional bounds | bounded SVG artifact and diagnostics      |
 
-## Query scopes
+API v1 remains accepted with `capabilities/query/transact/render`. No new query
+planner or semantic scope is added to v1. `transact` and `render` retain their
+meaning across both versions.
 
-Version 1 supports:
+No request accepts Project JSON, a whole Snapshot/Document replacement,
+filesystem path, JavaScript, or SVG input.
 
-- `summary` — counts and presentation identity;
-- `selection` — caller-supplied selected object IDs;
-- `objects` — explicit object IDs;
-- `region` — positioned objects within an integer rectangle;
-- `net` — one Net and its members/routes/Junctions;
-- `constraints` — layout groups and constraints;
-- `diagnostics` — visual diagnostics without object payload;
-- `changes` — bounded Agent-committed diffs since a revision.
+## Snapshot contract
 
-Object descriptors are stable summaries, not persisted model records. Source
-spans require an explicit request and permission. Object count and serialized
-text budgets are both enforced; truncation returns `truncated` and
-`omittedCount`.
+The response contains:
 
-## Permissions
+```typescript
+interface AgentSessionSnapshot {
+  snapshotVersion: "1.0";
+  topologyHash: string; // lowercase SHA-256
+  byteLength: number;
+  project: {
+    id: string;
+    name: string;
+    topDocumentId: string;
+    documents: AgentProjectDocument[];
+  };
+  document: AgentDocumentSnapshot;
+}
+```
 
-One service instance receives fixed permissions for query, render, source
-spans, and the three edit categories. Connectivity permission covers route,
-Junction, endpoint, and Net operations. Geometry covers instance creation,
-removal, placement, transform, and alignment. Presentation covers
-annotation/group/constraint operations. `undo` and `redo` are not Agent API
-edit kinds.
+`AgentProjectDocument` contains `id`, `name`, `instanceCount`, and sorted
+instance-reference edges. Each edge contains the owning `instanceId`, parsed
+target cell/subcircuit name when available, and resolved `targetDocumentId` or
+`null`.
 
-Permission denial occurs before the Edit Engine runs and never changes the
-Document.
+`AgentDocumentSnapshot` contains:
+
+- `id`, `name`, `revision`, `sourceStatus`, optional `sourceBinding`, `bounds`,
+  and complete `presentation`;
+- ports with direction, position, and owning `netId | null`;
+- instances with display/source name, symbol/variant, target/model description,
+  complete primitive properties and parameters, placement, bounds, and complete
+  resolved/connected pin inventory;
+- every pin's name, role/direction when resolvable, local/page position,
+  visibility, and `netId | null`;
+- Nets with scope, complete terminal refs, port IDs, route IDs, and Junction IDs;
+- complete Route endpoints, waypoints, segment modes, and derived polyline;
+- Junctions, annotations, layout groups, and constraints with all persisted
+  fields and members;
+- spatial diagnostics valid for the returned revision.
+
+Instance-pin `netId` and Net `terminals` are bidirectional views of one validated
+Document and must agree. Arrays use deterministic ID/order rules defined by the
+generated schema tests. `topologyHash` covers the Snapshot content except
+`byteLength` and the hash itself.
+
+Snapshot is derived and never persisted by default. It cannot be supplied to
+`transact`, save, import, or recovery.
+
+## Snapshot size and permissions
+
+- Snapshot permission defaults to the existing read/query permission for
+  compatibility but is reported explicitly by v2 capabilities.
+- Source spans require the existing separate permission and explicit request.
+- Raw source text is never included.
+- `maxSnapshotBytes` is server-owned and reported by capabilities.
+- Exceeding it returns `SNAPSHOT_TOO_LARGE` with no partial semantic Snapshot.
+- Complete Document delivery is required through the measured 500-instance
+  baseline. Future deterministic transport chunking must reconstruct the same
+  complete Snapshot and requires a compatible spec revision.
+
+## Legacy v1 query
+
+Version 1 retains these scopes unchanged: `summary`, `selection`, `objects`,
+`region`, `net`, `constraints`, `diagnostics`, and `changes`. Count/text budgets,
+source permission, truncation, and descriptors retain their accepted behavior.
+The Phase 9 Skill does not use this path.
 
 ## Transaction semantics
 
-The adapter constructs `{ kind: "agent", id: configuredAgentId }`, then calls
-the shared Edit Engine. `expectedRevision`, dry run, operation limits,
-atomicity, locks, and complete Document validation retain their existing
-meaning. A successful non-dry transaction commits only the returned validated
-Document. Responses never return that whole Document.
+The adapter creates `{ kind: "agent", id: configuredAgentId }` and calls the
+shared Edit Engine. `expectedRevision`, dry run, limits, atomicity, locks, and
+complete Document validation retain their meaning. A successful non-dry
+transaction commits only the validated returned Document and reports a diff;
+it never returns or accepts a whole writable Document.
 
-Version 1.1 adds `add_instance`, `remove_instance`, `connect_endpoints`,
-`merge_nets`, and `disconnect_endpoint` to `capabilities.editKinds`. Their
-payloads are the shared Edit Engine schemas, so GUI and Agent transaction
-sequences validate against the same authoring semantics.
+Capability edit kinds are the shared Edit Engine schemas. Phase 9 adds generic
+symbol/port edits only through that shared boundary; GUI and Agent must validate
+identically.
 
-Version 1.2 adds `move_junction` and `set_net_name`. Junction movement requires
-geometry permission; Net naming requires connectivity permission. Agents use
-the same explicit same-name merge rule as the GUI and cannot connect Nets by
-placing decorative text.
+`set_instance_symbol` accepts an explicit source-to-target `pinMap` when names
+differ and rejects missing, duplicate, or unknown target pins atomically.
+`place_port` and `move_port` expose Port geometry without changing its Net.
 
-Version 1.3 adds the optional `createNet` field to `add_junction`. It remains a
-connectivity-permission operation and is validated by the shared Edit Engine;
-it does not add a separate free-wire endpoint API.
+On `STALE_REVISION`, the Agent refreshes Snapshot and re-evaluates. It must not
+blindly replay the old transaction. A successful local edit does not require an
+immediate full refresh when the Agent can safely track the returned diff.
 
-## Render semantics
+## Diagnostics and render
 
-`formal` renders the same export-safe SVG used by the GUI. `diagnostics` adds a
-separate `data-layer="agent-diagnostics"` group after formal rendering. The
-artifact is base64-encoded with SHA-256 and byte length and is rejected if it
-exceeds the configured budget. Diagnostic overlays never enter formal export
-or persistence.
+Diagnostics returned by Snapshot, transact, and render contain:
+
+- stable `code`, `severity`, and human message;
+- `revision`;
+- related `objectIds`;
+- optional `path`, `bounds`, or `point`;
+- primitive typed `parameters` for machine repair decisions.
+
+`formal` renders the same export-safe SVG used by the GUI. `diagnostics` may
+add a separate overlay group. Render data is base64 encoded and rejected above
+`maxRenderBytes`; diagnostic overlays never persist or enter formal export.
 
 ## Loopback transport
 
-The optional adapter serves `POST /v1/circuit`, accepts JSON only, sets
-`Cache-Control: no-store`, and requires `Authorization: Bearer <token>`. Token
-length is at least 32 characters. Hosts other than `127.0.0.1` and `::1` are
-rejected. Bodies exceeding the configured limit receive a typed error. The
-core service neither starts the server nor reads files.
+The optional adapter accepts JSON only, uses `Cache-Control: no-store`, requires
+a bearer token of at least 32 characters, and binds only to `127.0.0.1` or
+`::1`. It serves `/v1/circuit` for legacy requests and `/v2/circuit` for v2;
+the body version must match the path. Request bodies remain bounded and no
+filesystem route exists.
 
 ## Invariants
 
-- Exactly four capability operations exist in v1.
-- Every non-capabilities operation targets the currently bound Document ID.
-- Queries and renders are bounded by server-owned limits.
-- An Agent cannot claim human actor identity.
-- A transaction cannot bypass the Edit Engine or commit partial edits.
-- Raw Project/Document replacement and arbitrary filesystem access do not
-  exist.
-- Transport errors and domain errors use deterministic typed codes.
+- API v2 publishes exactly `capabilities/snapshot/transact/render`.
+- API v1 publishes exactly `capabilities/query/transact/render`.
+- Every non-capabilities operation explicitly targets a Document ID.
+- Snapshot is complete, deterministic, read-only, and revision identified.
+- Bidirectional pin/Net views agree.
+- An Agent cannot claim human identity or bypass Edit Engine atomicity/locks.
+- Raw Project/Snapshot replacement and arbitrary filesystem access do not exist.
+- Transport and domain errors use deterministic typed codes.
 
 ## Valid example
 
-An Agent queries a region at revision 42, dry-runs `align_instances`, commits
-the same request with `dryRun: false`, receives revision 43 and the changed IDs,
-then requests a diagnostics render of that region.
+At task start the host injects a revision-42 Snapshot. The Agent dry-runs and
+commits typed moves/routes, receives revision 43 and changed IDs, requests a
+diagnostics render, then refreshes Snapshot before final global review.
 
 ## Rejected example
 
-A transaction at expected revision 42 after a human committed revision 43
-returns `STALE_REVISION`. A caller without connectivity permission cannot add
-a Junction even if the payload is otherwise valid.
+A caller posts the returned Snapshot as a mutation or save payload. Request
+schema validation rejects it. A transaction based on revision 42 after a human
+commit returns `STALE_REVISION`; the Skill refreshes revision 43 rather than
+replaying blindly.
 
 ## Compatibility and migration
 
-Additive query scopes, edit kinds, and descriptor attributes may appear within
-an API minor version only when clients can ignore them. Removing or changing
-required fields, permission meaning, or operation semantics requires a new API
-major version.
+- v1 remains supported during Phase 9 and is covered by its existing fixtures.
+- v2 introduces the Snapshot read path and `/v2/circuit` without changing
+  persisted Projects.
+- Removing v1, changing Snapshot required fields, permission meaning, hash
+  coverage, or typed edit semantics requires a compatible version decision.
+- Additive diagnostic parameters may appear when clients can ignore them.
 
 ## Deterministic validation
 
-- request/response and generated JSON Schema validation
-- stable capabilities snapshot
-- query scope, permission, source-span, count, and byte-budget tests
-- dry-run, stale revision, atomicity, and Phase 8 authoring parity tests
-- formal/diagnostics artifact inspection
-- authenticated loopback and body-limit tests
+- v1/v2 request/response JSON Schema and OpenAPI artifacts
+- stable v1 and v2 capabilities snapshots
+- complete Snapshot fixture and rejected whole-Snapshot mutation
+- bidirectional topology, stable ordering/hash, permission, and byte-limit tests
+- 100/500-instance payload/token/generation budgets
+- dry-run, stale revision, atomicity, lock, and GUI/Edit Engine parity tests
+- spatial diagnostic and formal/overlay artifact inspection
+- authenticated `/v1/circuit` and `/v2/circuit` tests
+
+## Open decisions
+
+- v1 removal is deferred until compatibility usage is measured and a later ADR
+  accepts deprecation.
+- Deterministic transport chunks remain deferred until a real Document exceeds
+  the accepted Snapshot budget.

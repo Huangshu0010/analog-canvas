@@ -1,9 +1,11 @@
 import { SymbolDefinitionSchema } from "./schema.js";
 import type { SymbolDefinition, SymbolVariant } from "./schema.js";
+import type { CircuitProject } from "@icm/model";
 import {
   createGenericBlockSymbol,
   genericBlockPinCount,
 } from "./generic-block.js";
+import { createProjectHierarchicalSymbols } from "./hierarchical-block.js";
 
 export interface ResolvedSymbol {
   definition: SymbolDefinition;
@@ -60,4 +62,14 @@ export class InMemorySymbolResolver implements SymbolResolver {
     );
     return variant ? { definition, variant } : undefined;
   }
+}
+
+export function createProjectSymbolResolver(
+  project: Pick<CircuitProject, "documents">,
+  baseDefinitions: readonly SymbolDefinition[],
+): InMemorySymbolResolver {
+  return new InMemorySymbolResolver([
+    ...baseDefinitions,
+    ...createProjectHierarchicalSymbols(project),
+  ]);
 }

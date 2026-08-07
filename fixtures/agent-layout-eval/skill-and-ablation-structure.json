@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "purpose": "deterministic package/progressive-loading ablation; layout-quality ablation requires an external Agent runner and blinded human review",
+  "manifest": {
+    "linkedKnowledgeDocuments": 10,
+    "brokenLinks": []
+  },
+  "contractChecks": {
+    "apiV2": true,
+    "completeSnapshot": true,
+    "noLayoutIntent": true,
+    "legacyQueryOnly": true,
+    "staleRevisionRecovery": true,
+    "lockProtection": true,
+    "optionalHelpersRemainOptional": true,
+    "finalRefresh": true
+  },
+  "knowledgeOwnership": [
+    {
+      "path": "docs/agent/knowledge/circuit-reading.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/schematic-expression.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/routing-and-diagnostics.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/human-collaboration.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/hierarchy-and-large-circuits.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/pdk-and-symbols.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/patterns/arrays-and-ladders.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/patterns/current-mirror.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/patterns/differential-pair.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    },
+    {
+      "path": "docs/agent/knowledge/patterns/switching-and-sampling.md",
+      "owner": true,
+      "strength": true,
+      "trigger": true
+    }
+  ],
+  "tiers": [
+    {
+      "id": "A",
+      "guidance": "no Skill",
+      "bytes": 0,
+      "estimatedTokens": 0
+    },
+    {
+      "id": "B",
+      "guidance": "thin Skill",
+      "bytes": 6221,
+      "estimatedTokens": 1556
+    },
+    {
+      "id": "C",
+      "guidance": "thin Skill + core knowledge",
+      "bytes": 15418,
+      "estimatedTokens": 3855
+    },
+    {
+      "id": "D",
+      "guidance": "thin Skill + CDAC/large-circuit targeted knowledge",
+      "bytes": 23187,
+      "estimatedTokens": 5797
+    }
+  ],
+  "progressiveLoading": {
+    "allKnowledgeBytes": 21227,
+    "targetedTierKnowledgeBytes": 16966,
+    "targetedLoadsLessThanWholeLibrary": true
+  },
+  "hardBoundary": {
+    "sameSnapshotAndTypedEditAPIAtEveryTier": true,
+    "guidanceCannotBypassModelRevisionOrLocks": true
+  },
+  "qualityEvaluation": {
+    "automatedInThisRepository": false,
+    "blindedHumanReviewRequired": true,
+    "reason": "Static documents cannot honestly measure Agent reasoning quality or blinded schematic readability."
+  },
+  "deterministicChecksPassed": true
+}

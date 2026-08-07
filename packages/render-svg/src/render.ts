@@ -65,9 +65,10 @@ function renderPrimitive(primitive: SymbolPrimitive): string {
 export function renderSymbolDefinitionBody(
   definition: SymbolDefinition,
   hiddenPrimitiveParts: readonly string[] = [],
+  additionalPrimitives: readonly SymbolPrimitive[] = [],
 ): string {
   const hidden = new Set(hiddenPrimitiveParts);
-  return definition.primitives
+  return [...definition.primitives, ...additionalPrimitives]
     .filter((primitive) => !primitive.part || !hidden.has(primitive.part))
     .map(renderPrimitive)
     .join("");
@@ -82,6 +83,61 @@ function instanceTransform(
   }
   const mirror = placement.mirror === "x" ? " scale(-1 1)" : "";
   return `translate(${placement.position.x} ${placement.position.y}) rotate(${placement.rotation})${mirror}`;
+}
+
+function transformedDirection(
+  direction: "north" | "east" | "south" | "west",
+  placement: NonNullable<SchematicDocument["instances"][number]["placement"]>,
+): { x: number; y: number } {
+  const vectors = {
+    north: { x: 0, y: -1 },
+    east: { x: 1, y: 0 },
+    south: { x: 0, y: 1 },
+    west: { x: -1, y: 0 },
+  } as const;
+  const source = vectors[direction];
+  const mirrored = {
+    x: placement.mirror === "x" ? -source.x : source.x,
+    y: source.y,
+  };
+  switch (placement.rotation) {
+    case 0:
+      return mirrored;
+    case 90:
+      return { x: -mirrored.y, y: mirrored.x };
+    case 180:
+      return { x: -mirrored.x, y: -mirrored.y };
+    case 270:
+      return { x: mirrored.y, y: -mirrored.x };
+  }
+}
+
+function renderVisiblePinNames(
+  definition: SymbolDefinition,
+  hiddenPinNames: readonly string[],
+  instance: SchematicDocument["instances"][number],
+): string {
+  const placement = instance.placement;
+  if (!placement) return "";
+  const hidden = new Set(hiddenPinNames);
+  return definition.pins
+    .filter(
+      (pin) =>
+        pin.presentation.showName === true &&
+        pin.presentation.visibility === "visible" &&
+        !hidden.has(pin.name),
+    )
+    .map((pin) => {
+      const anchor = transformPoint(pin.at, placement.position, placement);
+      const outward = transformedDirection(pin.direction, placement);
+      const distance = (pin.presentation.leadLength ?? 0) + 4;
+      const x = anchor.x - outward.x * distance;
+      const y = anchor.y - outward.y * distance + 4;
+      const alignment =
+        outward.x < 0 ? "start" : outward.x > 0 ? "end" : "middle";
+      return `<text data-pin-name="${escapeXml(pin.name)}" x="${x}" y="${y}" text-anchor="${alignment}" style="font-size:8px">${escapeXml(pin.name)}</text>`;
+    })
+    .join("");
 }
 
 function symbolBounds(
@@ -252,6 +308,12 @@ export function buildSvgScene(
       const primitives = renderSymbolDefinitionBody(
         resolved.definition,
         resolved.variant?.hiddenPrimitiveParts,
+        resolved.variant?.additionalPrimitives,
+      );
+      const pinNames = renderVisiblePinNames(
+        resolved.definition,
+        resolved.variant?.hiddenPinNames ?? [],
+        instance,
       );
       const bounds = symbolBounds(resolved.definition, instance);
       const labelX = bounds.x + bounds.width / 2;
@@ -259,7 +321,7 @@ export function buildSvgScene(
       const defaultLabel = explicitInstanceLabels.has(instance.id)
         ? ""
         : `<text x="${labelX}" y="${labelY}" text-anchor="middle">${escapeXml(instance.id)}</text>`;
-      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter">${primitives}</g></g>${defaultLabel}</g>`;
+      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="#000" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter">${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
     })
     .join("");
   const annotations = [...document.annotations]

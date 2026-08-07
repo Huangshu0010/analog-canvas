@@ -46,6 +46,13 @@ export const RemoveInstanceEditSchema = z.strictObject({
   kind: z.literal("remove_instance"),
   instanceId: StableIdSchema,
 });
+export const SetInstanceSymbolEditSchema = z.strictObject({
+  kind: z.literal("set_instance_symbol"),
+  instanceId: StableIdSchema,
+  symbolId: StableIdSchema,
+  symbolVariantId: StableIdSchema.nullable().optional(),
+  pinMap: z.record(z.string().min(1), z.string().min(1)).optional(),
+});
 export const PlaceInstanceEditSchema = z.strictObject({
   kind: z.literal("place_instance"),
   instanceId: StableIdSchema,
@@ -65,6 +72,16 @@ export const MirrorInstanceEditSchema = z.strictObject({
   kind: z.literal("mirror_instance"),
   instanceId: StableIdSchema,
   mirror: MirrorSchema,
+});
+export const PlacePortEditSchema = z.strictObject({
+  kind: z.literal("place_port"),
+  portId: StableIdSchema,
+  position: PointSchema,
+});
+export const MovePortEditSchema = z.strictObject({
+  kind: z.literal("move_port"),
+  portId: StableIdSchema,
+  position: PointSchema,
 });
 export const SetRoutePointsEditSchema = z.strictObject({
   kind: z.literal("set_route_points"),
@@ -168,10 +185,13 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   NoopEditSchema,
   AddInstanceEditSchema,
   RemoveInstanceEditSchema,
+  SetInstanceSymbolEditSchema,
   PlaceInstanceEditSchema,
   MoveInstanceEditSchema,
   RotateInstanceEditSchema,
   MirrorInstanceEditSchema,
+  PlacePortEditSchema,
+  MovePortEditSchema,
   SetRoutePointsEditSchema,
   AddJunctionEditSchema,
   RemoveJunctionEditSchema,
@@ -635,6 +655,125 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
+      case "set_instance_symbol": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+          );
+        }
+        const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
+        if (lockOwner) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
+          );
+        }
+        const resolver = context.symbolResolver;
+        if (!resolver) {
+          return rejectTransaction(
+            document,
+            "EDIT_CONTEXT_REQUIRED",
+            "Symbol edits require a Symbol Resolver",
+          );
+        }
+        const symbolVariantId = edit.symbolVariantId ?? undefined;
+        const resolved = resolver.resolve(edit.symbolId, symbolVariantId);
+        if (!resolved) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Symbol or variant does not exist: ${edit.symbolId}${symbolVariantId ? `/${symbolVariantId}` : ""}`,
+          );
+        }
+        const targetPins = new Set(
+          resolved.definition.pins.map((pin) => pin.name),
+        );
+        const currentPins = new Set(
+          draft.nets.flatMap((net) =>
+            net.terminals
+              .filter((terminal) => terminal.instanceId === edit.instanceId)
+              .map((terminal) => terminal.pinName),
+          ),
+        );
+        for (const route of draft.routes) {
+          for (const endpoint of [route.from, route.to]) {
+            if (
+              endpoint.kind === "terminal" &&
+              endpoint.instanceId === edit.instanceId
+            ) {
+              currentPins.add(endpoint.pinName);
+            }
+          }
+        }
+        const pinMap = edit.pinMap ?? {};
+        for (const sourcePin of Object.keys(pinMap)) {
+          if (!currentPins.has(sourcePin)) {
+            return rejectTransaction(
+              document,
+              "EDIT_PRECONDITION",
+              `Pin map source is not connected or routed: ${edit.instanceId}.${sourcePin}`,
+            );
+          }
+        }
+        const mappedPins = new Map<string, string>();
+        for (const sourcePin of currentPins) {
+          const targetPin = pinMap[sourcePin] ?? sourcePin;
+          if (!targetPins.has(targetPin)) {
+            return rejectTransaction(
+              document,
+              "EDIT_PRECONDITION",
+              `Target symbol pin does not exist: ${edit.instanceId}.${targetPin}`,
+            );
+          }
+          const previousSource = mappedPins.get(targetPin);
+          if (previousSource && previousSource !== sourcePin) {
+            return rejectTransaction(
+              document,
+              "EDIT_PRECONDITION",
+              `Pin map aliases ${previousSource} and ${sourcePin} to ${targetPin}`,
+            );
+          }
+          mappedPins.set(targetPin, sourcePin);
+        }
+        for (const net of draft.nets) {
+          let changed = false;
+          for (const terminal of net.terminals) {
+            if (terminal.instanceId !== edit.instanceId) continue;
+            terminal.pinName = pinMap[terminal.pinName] ?? terminal.pinName;
+            changed = true;
+          }
+          if (changed) changedObjectIds.add(net.id);
+        }
+        for (const route of draft.routes) {
+          let changed = false;
+          for (const endpoint of [route.from, route.to]) {
+            if (
+              endpoint.kind === "terminal" &&
+              endpoint.instanceId === edit.instanceId
+            ) {
+              endpoint.pinName = pinMap[endpoint.pinName] ?? endpoint.pinName;
+              changed = true;
+            }
+          }
+          if (changed) changedObjectIds.add(route.id);
+        }
+        for (const [key, value] of Object.entries(instance.properties)) {
+          if (!key.startsWith("spice.pin.") || typeof value !== "string")
+            continue;
+          instance.properties[key] = pinMap[value] ?? value;
+        }
+        instance.symbolId = edit.symbolId;
+        if (symbolVariantId === undefined) delete instance.symbolVariantId;
+        else instance.symbolVariantId = symbolVariantId;
+        changedObjectIds.add(instance.id);
+        break;
+      }
       case "place_instance": {
         const instance = draft.instances.find(
           (candidate) => candidate.id === edit.instanceId,
@@ -756,6 +895,77 @@ export function executeTransaction(
         }
         instance.placement.mirror = edit.mirror;
         changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "place_port": {
+        const port = draft.ports.find(
+          (candidate) => candidate.id === edit.portId,
+        );
+        if (!port) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Port does not exist: ${edit.portId}`,
+          );
+        }
+        const lockOwner = lockedLayoutOwner(draft, edit.portId);
+        if (lockOwner) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Port ${edit.portId} is locked by layout intent ${lockOwner}`,
+          );
+        }
+        if (port.position !== null) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Port is already placed: ${edit.portId}`,
+          );
+        }
+        port.position = structuredClone(edit.position);
+        changedObjectIds.add(port.id);
+        break;
+      }
+      case "move_port": {
+        const port = draft.ports.find(
+          (candidate) => candidate.id === edit.portId,
+        );
+        if (!port) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Port does not exist: ${edit.portId}`,
+          );
+        }
+        const lockOwner = lockedLayoutOwner(draft, edit.portId);
+        if (lockOwner) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Port ${edit.portId} is locked by layout intent ${lockOwner}`,
+          );
+        }
+        if (port.position === null) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Port is not placed: ${edit.portId}`,
+          );
+        }
+        const delta = {
+          x: edit.position.x - port.position.x,
+          y: edit.position.y - port.position.y,
+        };
+        port.position = structuredClone(edit.position);
+        for (const annotation of draft.annotations) {
+          if (annotation.attachedObjectId === edit.portId) {
+            annotation.position.x += delta.x;
+            annotation.position.y += delta.y;
+            changedObjectIds.add(annotation.id);
+          }
+        }
+        changedObjectIds.add(port.id);
         break;
       }
       case "set_route_points": {

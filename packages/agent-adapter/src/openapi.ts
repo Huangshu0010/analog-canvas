@@ -13,7 +13,30 @@ export const agentCircuitOpenApi = {
   paths: {
     "/v1/circuit": {
       post: {
-        operationId: "agentCircuitOperation",
+        operationId: "agentCircuitV1Operation",
+        deprecated: true,
+        description: "Legacy scoped-query compatibility endpoint.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: AgentCircuitRequestJsonSchema },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Agent Circuit API response",
+            content: {
+              "application/json": { schema: AgentCircuitResponseJsonSchema },
+            },
+          },
+        },
+      },
+    },
+    "/v2/circuit": {
+      post: {
+        operationId: "agentCircuitV2Operation",
+        description: "Snapshot-driven Agent circuit workflow endpoint.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,

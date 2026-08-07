@@ -1,15 +1,24 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { parseProject } from "@icm/model";
-import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
+import { createEmptyProject, parseProject } from "@icm/model";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  hierarchicalSymbolId,
+  InMemorySymbolResolver,
+} from "@icm/symbols";
 import {
   diagnoseVisualQuality,
   hasBlockingVisualDiagnostics,
 } from "@icm/derived";
 import { describe, expect, it } from "vitest";
 
-import { buildSvgScene, renderDocumentSvg } from "./render.js";
+import {
+  buildSvgScene,
+  renderDocumentSvg,
+  renderSymbolDefinitionBody,
+} from "./render.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -47,6 +56,76 @@ describe("textbook monochrome SVG renderer", () => {
     const first = buildSvgScene(project.documents[0]!, resolver);
     const second = buildSvgScene(project.documents[0]!, resolver);
     expect(first).toEqual(second);
+  });
+
+  it("renders reviewed variant additions without changing electrical pins", () => {
+    const nmos = resolver.resolve("nmos", "textbook-3terminal")!;
+    const pmos = resolver.resolve("pmos", "textbook-3terminal")!;
+    const nmosBody = renderSymbolDefinitionBody(
+      nmos.definition,
+      nmos.variant?.hiddenPrimitiveParts,
+      nmos.variant?.additionalPrimitives,
+    );
+    const pmosBody = renderSymbolDefinitionBody(
+      pmos.definition,
+      pmos.variant?.hiddenPrimitiveParts,
+      pmos.variant?.additionalPrimitives,
+    );
+
+    expect(nmos.definition.pins.map((pin) => pin.name)).toEqual([
+      "D",
+      "G",
+      "S",
+      "B",
+    ]);
+    expect(nmosBody).not.toContain('x1="-10" y1="0" x2="30" y2="0"');
+    expect(nmosBody).not.toContain('points="-2,0 7,-5 7,5"');
+    expect(nmosBody).toContain('points="10,14 2,10 4,19"');
+    expect(pmosBody).not.toContain('points="16,0 7,-5 7,5"');
+    expect(pmosBody).toContain('points="2,14 10,10 8,19"');
+  });
+
+  it("renders upright formal port names for a rotated hierarchy symbol", () => {
+    const project = createEmptyProject("project-hierarchy", "Hierarchy");
+    const document = project.documents[0]!;
+    document.sourceBinding = {
+      cellName: "driver_cell",
+      sourceRef: {
+        fileId: "source-main",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    };
+    document.ports = ["bit", "nbit", "bot", "vss", "vdd"].map(
+      (name, index) => ({
+        id: `port-${index}`,
+        name,
+        direction: "passive",
+        position: null,
+      }),
+    );
+    document.instances = [
+      {
+        id: "XDRIVER",
+        symbolId: hierarchicalSymbolId("driver_cell"),
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 90,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    ];
+    const hierarchyResolver = createProjectSymbolResolver(
+      project,
+      builtInSymbols,
+    );
+
+    const svg = renderDocumentSvg(document, hierarchyResolver);
+    for (const pinName of ["bit", "nbit", "bot", "vss", "vdd"]) {
+      expect(svg).toContain(`data-pin-name="${pinName}"`);
+      expect(svg).toContain(`>${pinName}</text>`);
+    }
   });
 
   it("uses the model mirror-then-rotate transform for every orientation", () => {

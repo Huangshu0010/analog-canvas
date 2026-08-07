@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.3`
+Version: `1.6`
 
 Owning phase: `Phase 0/1`
 
@@ -35,9 +35,10 @@ Version 1 defines ID, name, integer-grid view box, electrical pins, vector
 primitives, visual variants, and aliases. A pin has name, role, anchor,
 direction, and visibility metadata. Primitives are line, polyline, polygon,
 circle, and path. A primitive may carry a stable `part`; a variant may hide
-parts as well as pin presentation without changing electrical pins. Polygon
-fill is explicitly `none` or `foreground`. Any primitive may override stroke
-width, line cap, and line join when reviewed source geometry requires it.
+parts and add reviewed presentation primitives as well as hide pin presentation
+without changing electrical pins. Polygon fill is explicitly `none` or
+`foreground`. Any primitive may override stroke width, line cap, and line join
+when reviewed source geometry requires it.
 
 The reviewed production set contains resistor, capacitor, inductor, NMOS,
 PMOS, ground, port, independent voltage/current source, diode, NPN, and PNP.
@@ -50,15 +51,31 @@ definitions preserve unsupported terminal counts.
 and optional variant, or `undefined`. Resolution never silently substitutes a
 different electrical pin order.
 
+The PDK registry is a separate reviewed mapping from source model name and
+terminal count to `symbolId` plus an explicit ordered pin list. Exact overrides
+take priority over PDK-scoped namespace rules. The initial reviewed rules map
+four-terminal SKY130 `sky130_fd_pr__nfet_*` and `pfet_*` models to NMOS/PMOS
+with D/G/S/B order. A namespace or terminal-count mismatch returns no mapping;
+the importer preserves the source model/parameters and uses `generic-block-N`.
+Successful mappings persist their registry ID in instance properties so a
+Snapshot and later audit can explain the choice.
+
 ## Invariants
 
 - Pin names are unique within a definition.
 - Symbol and alias IDs are unique within a library.
 - Every variant-hidden pin names an existing electrical pin.
 - Every variant-hidden primitive part names presentation geometry only.
+- Variant-added primitives carry no electrical-pin or Net semantics.
 - Hiding a pin changes presentation only; the pin remains addressable.
-- Pin anchors use the same integer coordinate convention as the model.
+- Pin anchors use the canonical 10-unit electrical connection grid. Symbol
+  artwork may use arbitrary integer coordinates, but every pin anchor must be
+  divisible by 10 on both axes. With grid-aligned instance placement, this
+  keeps every terminal on-grid after rotation or mirroring, including
+  multi-port devices whose pins cannot be aligned by translating the instance.
 - Symbol geometry contains no instance placement or net identity.
+- PDK mapping never infers pin order from a symbol name alone; a rule includes
+  terminal count and the complete ordered pin list.
 
 ## Operations and state transitions
 
@@ -81,7 +98,8 @@ external inputs referenced by the Project directory.
 ## Valid example
 
 A four-pin MOS symbol may provide a textbook variant whose bulk pin is
-implicit. The definition still contains D, G, S, and B.
+implicit and whose visible source arrow reuses reviewed three-terminal artwork.
+The definition still contains D, G, S, and B.
 
 ## Rejected example
 
@@ -93,14 +111,17 @@ Duplicate pin names and duplicate aliases are rejected.
 Phase 5 calibrated geometry against reviewed VSS masters without changing
 canonical IDs or the electrical-pin rule. Four-terminal NMOS and PMOS use
 distinct bulk-arrow direction rather than an invented PMOS gate bubble.
-Three-terminal MOS devices are separate definitions matching their source
-artwork, not presentation variants that retain a hidden fourth pin.
+Three-terminal MOS devices remain separate migration-candidate definitions.
+Their reviewed geometry may also be reused by a presentation variant of the
+canonical four-pin definition when SPICE connectivity must retain the hidden
+fourth pin.
 
 ## Deterministic validation
 
 - schema and generated JSON Schema inspection
 - pin and alias uniqueness tests
 - rotation/mirror property tests in the renderer
+- canonical connection-grid checks across every built-in pin
 - implicit-pin connectivity tests
 
 ## Open decisions

@@ -1,4 +1,6 @@
 export * from "./builtins.js";
 export * from "./generic-block.js";
+export * from "./hierarchical-block.js";
+export * from "./pdk-registry.js";
 export * from "./resolver.js";
 export * from "./schema.js";

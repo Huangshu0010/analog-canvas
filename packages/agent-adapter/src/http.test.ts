@@ -14,7 +14,7 @@ const permissions: AgentPermissions = {
 };
 
 describe("authenticated loopback Agent HTTP adapter", () => {
-  it("serves one token-protected JSON endpoint with body limits", async () => {
+  it("serves versioned token-protected JSON endpoints with body limits", async () => {
     let document = createEmptyDocument("doc-http", "HTTP test");
     const service = createAgentCircuitService({
       agentId: "agent-http",
@@ -62,6 +62,46 @@ describe("authenticated loopback Agent HTTP adapter", () => {
         operation: "capabilities",
       });
       expect(authorized.headers.get("cache-control")).toBe("no-store");
+
+      const snapshotCapabilities = await fetch(server.v2Url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          apiVersion: "2.0",
+          requestId: "snapshot-capabilities",
+          operation: "capabilities",
+        }),
+      });
+      expect(snapshotCapabilities.status).toBe(200);
+      expect(await snapshotCapabilities.json()).toMatchObject({
+        apiVersion: "2.0",
+        ok: true,
+        capabilities: {
+          operations: ["capabilities", "snapshot", "transact", "render"],
+        },
+      });
+
+      const versionMismatch = await fetch(server.v2Url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          apiVersion: "1.0",
+          requestId: "version-mismatch",
+          operation: "capabilities",
+        }),
+      });
+      expect(versionMismatch.status).toBe(400);
+      expect(await versionMismatch.json()).toMatchObject({
+        apiVersion: "2.0",
+        ok: false,
+        error: { code: "HTTP_API_VERSION_MISMATCH" },
+      });
 
       const oversized = await fetch(server.url, {
         method: "POST",

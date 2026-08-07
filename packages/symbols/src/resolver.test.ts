@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { createEmptyProject } from "@icm/model";
 
-import { InMemorySymbolResolver } from "./resolver.js";
+import { hierarchicalSymbolId } from "./hierarchical-block.js";
+import {
+  createProjectSymbolResolver,
+  InMemorySymbolResolver,
+} from "./resolver.js";
 import { SymbolDefinitionSchema } from "./schema.js";
 
 const resistor = {
@@ -70,5 +75,39 @@ describe("Symbol Resolver boundary", () => {
     ]);
     expect(resolver.resolve("generic-block-5")?.definition).toBe(generated);
     expect(resolver.resolve("generic-block-0")).toBeUndefined();
+  });
+
+  it("derives a named hierarchy symbol from the imported Document interface", () => {
+    const project = createEmptyProject("project-test", "Hierarchy Test");
+    const document = project.documents[0]!;
+    document.name = "Filter Cell";
+    document.sourceBinding = {
+      cellName: "filter_cell",
+      sourceRef: {
+        fileId: "source-main",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    };
+    document.ports = ["IN", "OUT", "VSS"].map((name, index) => ({
+      id: `port-${index}`,
+      name,
+      direction: "passive",
+      position: null,
+    }));
+
+    const resolver = createProjectSymbolResolver(project, [resistor]);
+    const definition = resolver.resolve(
+      hierarchicalSymbolId("filter_cell"),
+    )?.definition;
+    expect(definition?.name).toBe("Filter Cell");
+    expect(definition?.pins.map((pin) => pin.name)).toEqual([
+      "IN",
+      "OUT",
+      "VSS",
+    ]);
+    expect(definition?.pins.every((pin) => pin.presentation.showName)).toBe(
+      true,
+    );
   });
 });

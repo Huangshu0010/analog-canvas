@@ -4,12 +4,19 @@ import { diagnoseVisualQuality, routePolyline } from "@icm/derived";
 import { executeTransaction } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
 import { transformPoint } from "@icm/model";
-import type { Point, Rect, SchematicDocument } from "@icm/model";
+import type {
+  CircuitProject,
+  Point,
+  Rect,
+  SchematicDocument,
+} from "@icm/model";
 import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
 import {
+  AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
+  AGENT_SNAPSHOT_VERSION,
   AgentCircuitRequestSchema,
   AgentCircuitResponseSchema,
 } from "./schema.js";
@@ -24,8 +31,15 @@ import type {
   AgentRenderRequest,
   AgentTransactRequest,
 } from "./schema.js";
+import { buildAgentSessionSnapshot } from "./snapshot.js";
 
-const OPERATIONS = ["capabilities", "query", "transact", "render"] as const;
+const V1_OPERATIONS = ["capabilities", "query", "transact", "render"] as const;
+const V2_OPERATIONS = [
+  "capabilities",
+  "snapshot",
+  "transact",
+  "render",
+] as const;
 const QUERY_SCOPES = [
   "summary",
   "selection",
@@ -40,10 +54,13 @@ export const AGENT_EDIT_KINDS = [
   "noop",
   "add_instance",
   "remove_instance",
+  "set_instance_symbol",
   "place_instance",
   "move_instance",
   "rotate_instance",
   "mirror_instance",
+  "place_port",
+  "move_port",
   "set_route_points",
   "add_junction",
   "remove_junction",
@@ -65,6 +82,7 @@ export const AGENT_EDIT_KINDS = [
 export const DEFAULT_AGENT_LIMITS: AgentLimits = {
   maxQueryObjects: 200,
   maxQueryBytes: 128_000,
+  maxSnapshotBytes: 4_000_000,
   maxTransactionEdits: 64,
   maxRenderBytes: 1_000_000,
   maxRequestBytes: 256_000,
@@ -72,8 +90,9 @@ export const DEFAULT_AGENT_LIMITS: AgentLimits = {
 };
 
 export interface AgentDocumentStore {
-  getDocument(): SchematicDocument;
+  getDocument(documentId?: string): SchematicDocument;
   commitDocument(document: SchematicDocument): void;
+  getProject?(): CircuitProject;
 }
 
 export interface AgentCircuitServiceOptions {
@@ -90,15 +109,16 @@ export interface AgentCircuitService {
 }
 
 function errorResponse(
+  apiVersion: typeof AGENT_API_V1_VERSION | typeof AGENT_API_VERSION,
   requestId: string,
-  operation: "error" | "query" | "transact" | "render",
+  operation: "error" | "query" | "snapshot" | "transact" | "render",
   code: string,
   message: string,
   revision?: number,
   diagnostics: AgentDiagnostic[] = [],
 ): AgentCircuitResponse {
   return AgentCircuitResponseSchema.parse({
-    apiVersion: AGENT_API_VERSION,
+    apiVersion,
     requestId,
     operation,
     ok: false,
@@ -117,6 +137,10 @@ function visualDiagnostics(
     severity: item.severity,
     message: item.message,
     objectIds: [...item.objectIds],
+    revision: document.revision,
+    ...(item.bounds ? { bounds: item.bounds } : {}),
+    ...(item.point ? { point: item.point } : {}),
+    ...(item.parameters ? { parameters: { ...item.parameters } } : {}),
   }));
 }
 
@@ -397,10 +421,13 @@ function editCategory(
     case "noop":
     case "add_instance":
     case "remove_instance":
+    case "set_instance_symbol":
     case "place_instance":
     case "move_instance":
     case "rotate_instance":
     case "mirror_instance":
+    case "place_port":
+    case "move_port":
     case "move_junction":
     case "align_instances":
       return "geometry";
@@ -472,12 +499,20 @@ export function createAgentCircuitService(
     handle(input: unknown): AgentCircuitResponse {
       const parsed = AgentCircuitRequestSchema.safeParse(input);
       if (!parsed.success) {
-        const candidate = input as { requestId?: unknown } | null;
+        const candidate = input as {
+          apiVersion?: unknown;
+          requestId?: unknown;
+        } | null;
         const requestId =
           candidate && typeof candidate.requestId === "string"
             ? candidate.requestId
             : "invalid-request";
+        const apiVersion =
+          candidate?.apiVersion === AGENT_API_V1_VERSION
+            ? AGENT_API_V1_VERSION
+            : AGENT_API_VERSION;
         return errorResponse(
+          apiVersion,
           requestId,
           "error",
           "INVALID_REQUEST",
@@ -485,26 +520,50 @@ export function createAgentCircuitService(
         );
       }
       const request = parsed.data;
+      const fail = (
+        operation: "error" | "query" | "snapshot" | "transact" | "render",
+        code: string,
+        message: string,
+        revision?: number,
+        diagnostics: AgentDiagnostic[] = [],
+      ) =>
+        errorResponse(
+          request.apiVersion,
+          request.requestId,
+          operation,
+          code,
+          message,
+          revision,
+          diagnostics,
+        );
       if (request.operation === "capabilities") {
         return response({
-          apiVersion: AGENT_API_VERSION,
+          apiVersion: request.apiVersion,
           requestId: request.requestId,
           operation: "capabilities",
           ok: true,
           capabilities: {
-            operations: OPERATIONS,
+            apiVersions: [AGENT_API_V1_VERSION, AGENT_API_VERSION],
+            snapshotVersions: [AGENT_SNAPSHOT_VERSION],
+            operations:
+              request.apiVersion === AGENT_API_V1_VERSION
+                ? V1_OPERATIONS
+                : V2_OPERATIONS,
             queryScopes: QUERY_SCOPES,
             editKinds: AGENT_EDIT_KINDS,
-            permissions: options.permissions,
+            permissions: {
+              ...options.permissions,
+              snapshot:
+                options.permissions.snapshot ?? options.permissions.query,
+            },
             limits,
           },
         });
       }
 
-      const document = options.store.getDocument();
+      const document = options.store.getDocument(request.documentId);
       if (request.documentId !== document.id) {
-        return errorResponse(
-          request.requestId,
+        return fail(
           request.operation,
           "DOCUMENT_NOT_FOUND",
           `The service is not bound to Document ${request.documentId}`,
@@ -512,10 +571,54 @@ export function createAgentCircuitService(
         );
       }
 
+      if (request.operation === "snapshot") {
+        if (!(options.permissions.snapshot ?? options.permissions.query)) {
+          return fail(
+            "snapshot",
+            "PERMISSION_DENIED",
+            "Snapshot permission is not granted",
+            document.revision,
+          );
+        }
+        const includeSourceSpans = request.includeSourceSpans === true;
+        if (includeSourceSpans && !options.permissions.sourceSpans) {
+          return fail(
+            "snapshot",
+            "PERMISSION_DENIED",
+            "Source-span permission is not granted",
+            document.revision,
+          );
+        }
+        const snapshot = buildAgentSessionSnapshot({
+          ...(options.store.getProject
+            ? { project: options.store.getProject() }
+            : {}),
+          document,
+          resolver: options.resolver,
+          includeSourceSpans,
+        });
+        if (snapshot.byteLength > limits.maxSnapshotBytes) {
+          return fail(
+            "snapshot",
+            "SNAPSHOT_TOO_LARGE",
+            `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
+            document.revision,
+          );
+        }
+        return response({
+          apiVersion: request.apiVersion,
+          requestId: request.requestId,
+          operation: "snapshot",
+          ok: true,
+          revision: document.revision,
+          snapshot,
+          diagnostics: snapshot.document.diagnostics,
+        });
+      }
+
       if (request.operation === "query") {
         if (!options.permissions.query) {
-          return errorResponse(
-            request.requestId,
+          return fail(
             "query",
             "PERMISSION_DENIED",
             "Query permission is not granted",
@@ -524,8 +627,7 @@ export function createAgentCircuitService(
         }
         const includeSourceSpans = request.includeSourceSpans === true;
         if (includeSourceSpans && !options.permissions.sourceSpans) {
-          return errorResponse(
-            request.requestId,
+          return fail(
             "query",
             "PERMISSION_DENIED",
             "Source-span permission is not granted",
@@ -574,7 +676,7 @@ export function createAgentCircuitService(
           })),
         ];
         return response({
-          apiVersion: AGENT_API_VERSION,
+          apiVersion: request.apiVersion,
           requestId: request.requestId,
           operation: "query",
           ok: true,
@@ -609,8 +711,7 @@ export function createAgentCircuitService(
 
       if (request.operation === "transact") {
         if (request.edits.length > limits.maxTransactionEdits) {
-          return errorResponse(
-            request.requestId,
+          return fail(
             "transact",
             "LIMIT_EXCEEDED",
             `A transaction may contain at most ${limits.maxTransactionEdits} edits`,
@@ -620,17 +721,15 @@ export function createAgentCircuitService(
         for (const edit of request.edits) {
           const category = editCategory(edit);
           if (category === "unsupported") {
-            return errorResponse(
-              request.requestId,
+            return fail(
               "transact",
               "UNSUPPORTED_EDIT",
-              `Edit ${edit.kind} is not exposed by Agent Circuit API v1`,
+              `Edit ${edit.kind} is not exposed by Agent Circuit API ${request.apiVersion}`,
               document.revision,
             );
           }
           if (!options.permissions.edit[category]) {
-            return errorResponse(
-              request.requestId,
+            return fail(
               "transact",
               "PERMISSION_DENIED",
               `${category} edit permission is not granted`,
@@ -651,8 +750,7 @@ export function createAgentCircuitService(
           { symbolResolver: options.resolver },
         );
         if (!result.ok) {
-          return errorResponse(
-            request.requestId,
+          return fail(
             "transact",
             result.error.code,
             result.error.message,
@@ -675,7 +773,7 @@ export function createAgentCircuitService(
           if (history.length > limits.changeHistoryEntries) history.shift();
         }
         return response({
-          apiVersion: AGENT_API_VERSION,
+          apiVersion: request.apiVersion,
           requestId: request.requestId,
           operation: "transact",
           ok: true,
@@ -688,8 +786,7 @@ export function createAgentCircuitService(
       }
 
       if (!options.permissions.render) {
-        return errorResponse(
-          request.requestId,
+        return fail(
           "render",
           "PERMISSION_DENIED",
           "Render permission is not granted",
@@ -700,8 +797,7 @@ export function createAgentCircuitService(
         const rendered = renderArtifact(request, document, options.resolver);
         const bytes = Buffer.from(rendered.svg, "utf8");
         if (bytes.byteLength > limits.maxRenderBytes) {
-          return errorResponse(
-            request.requestId,
+          return fail(
             "render",
             "RENDER_TOO_LARGE",
             `Render artifact exceeds ${limits.maxRenderBytes} bytes`,
@@ -709,7 +805,7 @@ export function createAgentCircuitService(
           );
         }
         return response({
-          apiVersion: AGENT_API_VERSION,
+          apiVersion: request.apiVersion,
           requestId: request.requestId,
           operation: "render",
           ok: true,
@@ -725,8 +821,7 @@ export function createAgentCircuitService(
           diagnostics: rendered.diagnostics,
         });
       } catch (error) {
-        return errorResponse(
-          request.requestId,
+        return fail(
           "render",
           "RENDER_FAILED",
           error instanceof Error ? error.message : String(error),

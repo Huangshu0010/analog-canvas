@@ -177,6 +177,82 @@ test("places free wire bends and finishes at an arbitrary grid point", async ({
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
+test("leaves device pins on their natural axis and deletes a selected junction", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "nmos", { x: 300, y: 260 });
+  await placeComponent(page, "resistor", { x: 540, y: 160 });
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-M1-D").click();
+  await page.getByTestId("terminal-R2-1").click();
+
+  const terminalRoute = await readRoutePoints(page, "route-ui-1");
+  expect(terminalRoute.length).toBeGreaterThanOrEqual(3);
+  expect(terminalRoute[0]!.x).toBe(terminalRoute[1]!.x);
+  expect(terminalRoute.at(-2)!.y).toBe(terminalRoute.at(-1)!.y);
+  expect(
+    terminalRoute.every(
+      (point) => Math.abs(point.x % 10) === 0 && Math.abs(point.y % 10) === 0,
+    ),
+  ).toBe(true);
+
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-M1-G").click();
+  await page
+    .getByTestId("schematic-canvas")
+    .dblclick({ position: { x: 180, y: 390 } });
+  const junction = page.locator('[data-testid^="junction-junction-ui-"]');
+  await expect(junction).toHaveCount(1);
+
+  await junction.click();
+  await expect(
+    page.getByRole("button", { name: "Delete junction and attached wires" }),
+  ).toBeVisible();
+  await page.keyboard.press("Delete");
+  await expect(junction).toHaveCount(0);
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(page.getByTestId("status")).toContainText(
+    "Deleted junction and 1 attached routes",
+  );
+
+  await page.keyboard.press("Control+z");
+  await expect(junction).toHaveCount(1);
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(2);
+});
+
+test("connects copied multi-pin groups through a manually bent wire", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "nmos", { x: 320, y: 180 });
+  await placeComponent(page, "nmos", { x: 320, y: 360 });
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-M1-S").click();
+  await page.getByTestId("terminal-M2-D").click();
+
+  await page.keyboard.press("Control+a");
+  await page.keyboard.press("Control+c");
+  await page.keyboard.press("Control+v");
+  await expect(page.getByTestId("instance-count")).toHaveText("4");
+
+  await page.reload();
+  await openMenu(page, "File");
+  await page.getByRole("button", { name: "Restore recovery" }).click();
+  await expect(page.getByTestId("instance-count")).toHaveText("4");
+
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-M2-S").click();
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 460, y: 500 } });
+  await page.getByTestId("terminal-M2-copy-1-S").click();
+
+  await expect(page.getByTestId("status")).toContainText("Committed route");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(3);
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+});
+
 test("moves a selected wire segment and deletes a connected component safely", async ({
   page,
 }) => {
@@ -407,9 +483,9 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await clickRoute(page, "route-ui-1", 0.25);
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
-  await expect(page.getByTestId("crossing-count")).toHaveText("2");
+  await expect(page.getByTestId("crossing-count")).toHaveText("3");
 
-  await clickRoute(page, "route-ui-2");
+  await clickRoute(page, "route-ui-2", 0.25);
   const handle = page.getByTestId("route-handle-route-ui-2");
   const handleBox = await handle.boundingBox();
   if (!handleBox) throw new Error("Route handle is not measurable");
@@ -438,11 +514,42 @@ test("imports the SPICE baseline through the grouped File menu", async ({
     ]);
 
   await expect(page.getByTestId("status")).toHaveText(
-    "Imported 8 Documents and 32 instances; 17 generic symbols",
+    "Imported 8 Documents and 32 instances; 6 generic symbols",
   );
   await expect(page.getByTestId("document-count")).toHaveText("8");
   await expect(page.getByTestId("instance-count")).toHaveText("32");
   await expect(page.getByTestId("unplaced-XFILTER")).toBeVisible();
+  const topDocumentId = await page
+    .getByTestId("active-document-id")
+    .textContent();
+  expect(topDocumentId).toBeTruthy();
+  await page.getByTestId("diagnostic-0").click();
+  await expect(page.getByTestId("status")).toContainText("VISUAL_UNPLACED_");
+
+  await page.getByTestId("unplaced-XFILTER").click();
+  await page.getByRole("button", { name: "Enter", exact: true }).click();
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "mixed_passive_cell",
+  );
+  await expect(page.getByTestId("active-instance-count")).toHaveText("3");
+  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "mixed_device_acceptance",
+  );
+
+  await page
+    .getByTestId("document-selector")
+    .selectOption({ label: "mixed_diode_cell" });
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "mixed_diode_cell",
+  );
+  await page.locator('[data-testid^="unplaced-port-"]').first().click();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  const projectBytes = await downloadBytes(page, "File", "Save Project");
+  expect(JSON.parse(projectBytes.toString("utf8")).topDocumentId).toBe(
+    topDocumentId,
+  );
 });
 
 test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({

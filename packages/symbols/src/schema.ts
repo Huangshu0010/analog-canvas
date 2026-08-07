@@ -1,6 +1,8 @@
 import { PointSchema, RectSchema, StableIdSchema } from "@icm/model";
 import { z } from "zod";
 
+export const SYMBOL_CONNECTION_GRID = 10;
+
 export const SymbolPinSchema = z.strictObject({
   name: z.string().min(1),
   role: z.string().min(1),
@@ -56,6 +58,7 @@ export const SymbolVariantSchema = z.strictObject({
   id: StableIdSchema,
   hiddenPinNames: z.array(z.string().min(1)),
   hiddenPrimitiveParts: z.array(StableIdSchema).optional(),
+  additionalPrimitives: z.array(SymbolPrimitiveSchema).optional(),
 });
 export const SymbolDefinitionSchema = z
   .strictObject({
@@ -79,6 +82,15 @@ export const SymbolDefinitionSchema = z
         });
       }
       pinNames.add(pin.name);
+      for (const coordinate of ["x", "y"] as const) {
+        if (pin.at[coordinate] % SYMBOL_CONNECTION_GRID !== 0) {
+          context.addIssue({
+            code: "custom",
+            message: `Symbol pin anchors must use the ${SYMBOL_CONNECTION_GRID}-unit connection grid`,
+            path: ["pins", pinIndex, "at", coordinate],
+          });
+        }
+      }
     }
     const variantIds = new Set<string>();
     for (const [variantIndex, variant] of symbol.variants.entries()) {

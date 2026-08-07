@@ -68,6 +68,42 @@ const inductor = twoTerminalSymbol("inductor", "Inductor", [
   { kind: "line", from: { x: 20, y: 0 }, to: { x: 30, y: 0 } },
 ]);
 
+function migratedThreeTerminalMosArrow(id: "nmos3" | "pmos3"): SymbolPrimitive {
+  return {
+    kind: "polygon",
+    points:
+      id === "nmos3"
+        ? [
+            { x: 10, y: 14 },
+            { x: 2, y: 10 },
+            { x: 4, y: 19 },
+          ]
+        : [
+            { x: 2, y: -14 },
+            { x: 10, y: -10 },
+            { x: 8, y: -19 },
+          ],
+    fill: "foreground",
+    part: "source-arrow",
+  };
+}
+
+function normalizedThreeTerminalVariantArrow(
+  id: "nmos" | "pmos",
+): SymbolPrimitive {
+  const migrated = migratedThreeTerminalMosArrow(
+    id === "nmos" ? "nmos3" : "pmos3",
+  );
+  if (id === "nmos" || migrated.kind !== "polygon") return migrated;
+  return {
+    ...migrated,
+    // The reviewed four-pin PMOS keeps the canonical D-top/S-bottom pin
+    // orientation. Reflect only the migrated PMOS artwork so the existing
+    // placement transform puts its source arrow on the rendered top branch.
+    points: migrated.points.map((point) => ({ x: point.x, y: -point.y })),
+  };
+}
+
 function mosSymbol(id: "nmos" | "pmos", name: string): SymbolDefinition {
   const thin = {
     strokeWidth: 1.2,
@@ -93,9 +129,9 @@ function mosSymbol(id: "nmos" | "pmos", name: string): SymbolDefinition {
     name,
     viewBox: { x: -30, y: -30, width: 60, height: 60 },
     pins: [
-      pin("D", "drain", 15, -30, "north"),
+      pin("D", "drain", 20, -30, "north"),
       pin("G", "gate", -30, 0, "west"),
-      pin("S", "source", 15, 30, "south"),
+      pin("S", "source", 20, 30, "south"),
       pin("B", "bulk", 30, 0, "east"),
     ],
     primitives: [
@@ -120,25 +156,25 @@ function mosSymbol(id: "nmos" | "pmos", name: string): SymbolDefinition {
       {
         kind: "line",
         from: { x: -10, y: -14 },
-        to: { x: 15, y: -14 },
+        to: { x: 20, y: -14 },
         style: thin,
       },
       {
         kind: "line",
-        from: { x: 15, y: -30 },
-        to: { x: 15, y: -14 },
+        from: { x: 20, y: -30 },
+        to: { x: 20, y: -14 },
         style: thin,
       },
       {
         kind: "line",
         from: { x: -10, y: 14 },
-        to: { x: 15, y: 14 },
+        to: { x: 20, y: 14 },
         style: thin,
       },
       {
         kind: "line",
-        from: { x: 15, y: 14 },
-        to: { x: 15, y: 30 },
+        from: { x: 20, y: 14 },
+        to: { x: 20, y: 30 },
         style: thin,
       },
       {
@@ -160,6 +196,7 @@ function mosSymbol(id: "nmos" | "pmos", name: string): SymbolDefinition {
         id: "textbook-3terminal",
         hiddenPinNames: ["B"],
         hiddenPrimitiveParts: ["bulk-lead"],
+        additionalPrimitives: [normalizedThreeTerminalVariantArrow(id)],
       },
     ],
     aliases: [id === "nmos" ? "mos-n" : "mos-p"],
@@ -180,24 +217,7 @@ function threeTerminalMosSymbol(
     id,
     name,
     pins: base.pins.filter((candidate) => candidate.name !== "B"),
-    primitives: [
-      ...body,
-      {
-        kind: "polygon",
-        points: isNmos
-          ? [
-              { x: 10, y: 14 },
-              { x: 2, y: 10 },
-              { x: 4, y: 19 },
-            ]
-          : [
-              { x: 2, y: -14 },
-              { x: 10, y: -10 },
-              { x: 8, y: -19 },
-            ],
-        fill: "foreground",
-      },
-    ],
+    primitives: [...body, migratedThreeTerminalMosArrow(id)],
     variants: [],
     aliases: [isNmos ? "mos-n-3" : "mos-p-3"],
   };
@@ -207,10 +227,10 @@ const ground: SymbolDefinition = {
   schemaVersion: 1,
   id: "ground",
   name: "Ground",
-  viewBox: { x: -15, y: -5, width: 30, height: 35 },
-  pins: [pin("0", "ground", 0, -5, "north")],
+  viewBox: { x: -15, y: -10, width: 30, height: 40 },
+  pins: [pin("0", "ground", 0, -10, "north")],
   primitives: [
-    { kind: "line", from: { x: 0, y: -5 }, to: { x: 0, y: 10 } },
+    { kind: "line", from: { x: 0, y: -10 }, to: { x: 0, y: 10 } },
     { kind: "line", from: { x: -12, y: 10 }, to: { x: 12, y: 10 } },
     { kind: "line", from: { x: -8, y: 16 }, to: { x: 8, y: 16 } },
     { kind: "line", from: { x: -4, y: 22 }, to: { x: 4, y: 22 } },
@@ -226,12 +246,12 @@ function powerPortSymbol(id: "vdd" | "vss", name: string): SymbolDefinition {
     id,
     name,
     viewBox: { x: -12, y: -24, width: 24, height: 48 },
-    pins: [pin("P", "power", 0, upward ? 24 : -24, upward ? "south" : "north")],
+    pins: [pin("P", "power", 0, upward ? 20 : -20, upward ? "south" : "north")],
     primitives: upward
       ? [
           {
             kind: "line",
-            from: { x: 0, y: 24 },
+            from: { x: 0, y: 20 },
             to: { x: 0, y: -12 },
             style: { strokeWidth: 1.2, lineCap: "round" },
           },
@@ -245,7 +265,7 @@ function powerPortSymbol(id: "vdd" | "vss", name: string): SymbolDefinition {
       : [
           {
             kind: "line",
-            from: { x: 0, y: -24 },
+            from: { x: 0, y: -20 },
             to: { x: 0, y: 6 },
           },
           {
@@ -515,13 +535,13 @@ const opamp: SymbolDefinition = {
   name: "Operational Amplifier",
   viewBox: { x: -30, y: -30, width: 70, height: 60 },
   pins: [
-    pin("+", "non-inverting", -30, -12, "west"),
-    pin("-", "inverting", -30, 12, "west"),
+    pin("+", "non-inverting", -30, -10, "west"),
+    pin("-", "inverting", -30, 10, "west"),
     pin("OUT", "output", 40, 0, "east"),
   ],
   primitives: [
-    { kind: "line", from: { x: -30, y: -12 }, to: { x: -20, y: -12 } },
-    { kind: "line", from: { x: -30, y: 12 }, to: { x: -20, y: 12 } },
+    { kind: "line", from: { x: -30, y: -10 }, to: { x: -20, y: -10 } },
+    { kind: "line", from: { x: -30, y: 10 }, to: { x: -20, y: 10 } },
     {
       kind: "polygon",
       points: [
@@ -533,9 +553,9 @@ const opamp: SymbolDefinition = {
       style: { strokeWidth: 1.6, lineCap: "round", lineJoin: "round" },
     },
     { kind: "line", from: { x: 30, y: 0 }, to: { x: 40, y: 0 } },
-    { kind: "line", from: { x: -16, y: -12 }, to: { x: -10, y: -12 } },
-    { kind: "line", from: { x: -13, y: -15 }, to: { x: -13, y: -9 } },
-    { kind: "line", from: { x: -16, y: 12 }, to: { x: -10, y: 12 } },
+    { kind: "line", from: { x: -16, y: -10 }, to: { x: -10, y: -10 } },
+    { kind: "line", from: { x: -13, y: -13 }, to: { x: -13, y: -7 } },
+    { kind: "line", from: { x: -16, y: 10 }, to: { x: -10, y: 10 } },
   ],
   variants: [],
   aliases: ["op-amp"],
@@ -605,26 +625,26 @@ const transformer: SymbolDefinition = {
   schemaVersion: 1,
   id: "transformer",
   name: "Transformer",
-  viewBox: { x: -35, y: -35, width: 70, height: 70 },
+  viewBox: { x: -35, y: -40, width: 70, height: 80 },
   pins: [
-    pin("P1", "primary", -22, -35, "north"),
-    pin("P2", "primary", -22, 35, "south"),
-    pin("S1", "secondary", 22, -35, "north"),
-    pin("S2", "secondary", 22, 35, "south"),
+    pin("P1", "primary", -20, -40, "north"),
+    pin("P2", "primary", -20, 40, "south"),
+    pin("S1", "secondary", 20, -40, "north"),
+    pin("S2", "secondary", 20, 40, "south"),
   ],
   primitives: [
-    { kind: "line", from: { x: -22, y: -35 }, to: { x: -22, y: -24 } },
+    { kind: "line", from: { x: -20, y: -40 }, to: { x: -20, y: -24 } },
     {
       kind: "path",
-      data: "M -22 -24 C -8 -24 -8 -12 -22 -12 C -8 -12 -8 0 -22 0 C -8 0 -8 12 -22 12 C -8 12 -8 24 -22 24",
+      data: "M -20 -24 C -8 -24 -8 -12 -20 -12 C -8 -12 -8 0 -20 0 C -8 0 -8 12 -20 12 C -8 12 -8 24 -20 24",
     },
-    { kind: "line", from: { x: -22, y: 24 }, to: { x: -22, y: 35 } },
-    { kind: "line", from: { x: 22, y: -35 }, to: { x: 22, y: -24 } },
+    { kind: "line", from: { x: -20, y: 24 }, to: { x: -20, y: 40 } },
+    { kind: "line", from: { x: 20, y: -40 }, to: { x: 20, y: -24 } },
     {
       kind: "path",
-      data: "M 22 -24 C 8 -24 8 -12 22 -12 C 8 -12 8 0 22 0 C 8 0 8 12 22 12 C 8 12 8 24 22 24",
+      data: "M 20 -24 C 8 -24 8 -12 20 -12 C 8 -12 8 0 20 0 C 8 0 8 12 20 12 C 8 12 8 24 20 24",
     },
-    { kind: "line", from: { x: 22, y: 24 }, to: { x: 22, y: 35 } },
+    { kind: "line", from: { x: 20, y: 24 }, to: { x: 20, y: 40 } },
     { kind: "line", from: { x: -3, y: -25 }, to: { x: -3, y: 25 } },
     { kind: "line", from: { x: 3, y: -25 }, to: { x: 3, y: 25 } },
   ],
@@ -651,17 +671,17 @@ function bjtSymbol(id: "npn" | "pnp", name: string): SymbolDefinition {
     name,
     viewBox: { x: -30, y: -30, width: 60, height: 60 },
     pins: [
-      pin("C", "collector", 15, -30, "north"),
+      pin("C", "collector", 20, -30, "north"),
       pin("B", "base", -30, 0, "west"),
-      pin("E", "emitter", 15, 30, "south"),
+      pin("E", "emitter", 20, 30, "south"),
     ],
     primitives: [
       { kind: "line", from: { x: -30, y: 0 }, to: { x: -8, y: 0 } },
       { kind: "line", from: { x: -8, y: -16 }, to: { x: -8, y: 16 } },
-      { kind: "line", from: { x: -8, y: -8 }, to: { x: 15, y: -22 } },
-      { kind: "line", from: { x: 15, y: -30 }, to: { x: 15, y: -22 } },
-      { kind: "line", from: { x: -8, y: 8 }, to: { x: 15, y: 22 } },
-      { kind: "line", from: { x: 15, y: 22 }, to: { x: 15, y: 30 } },
+      { kind: "line", from: { x: -8, y: -8 }, to: { x: 20, y: -22 } },
+      { kind: "line", from: { x: 20, y: -30 }, to: { x: 20, y: -22 } },
+      { kind: "line", from: { x: -8, y: 8 }, to: { x: 20, y: 22 } },
+      { kind: "line", from: { x: 20, y: 22 }, to: { x: 20, y: 30 } },
       { kind: "polygon", points: arrowPoints, fill: "foreground" },
     ],
     variants: [],
