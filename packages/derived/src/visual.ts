@@ -323,17 +323,15 @@ function firstCollinearOverlap(
         const start = Math.max(Math.min(la.x, lb.x), Math.min(ra.x, rb.x));
         const end = Math.min(Math.max(la.x, lb.x), Math.max(ra.x, rb.x));
         if (end > start) {
-          return {
-            bounds: { x: start, y: la.y, width: end - start, height: 0 },
-          };
+          // Collinear overlap is a zero-thickness region; the diagnostic reports
+          // the overlap extent in parameters rather than a zero-area Rect.
+          return {};
         }
       } else {
         const start = Math.max(Math.min(la.y, lb.y), Math.min(ra.y, rb.y));
         const end = Math.min(Math.max(la.y, lb.y), Math.max(ra.y, rb.y));
         if (end > start) {
-          return {
-            bounds: { x: la.x, y: start, width: 0, height: end - start },
-          };
+          return {};
         }
       }
     }

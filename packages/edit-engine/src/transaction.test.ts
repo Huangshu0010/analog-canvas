@@ -60,7 +60,14 @@ describe("Edit Transaction envelope", () => {
       revision: 0,
       proposedRevision: 1,
     });
-    expect(result.document).toBe(document);
+    // dryRun returns the validated candidate geometry (so callers can inspect
+    // proposed Routes), NOT the original Document reference. The original
+    // Document must be untouched and the revision un-advanced.
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document).not.toBe(document);
+    expect(document.revision).toBe(0);
+    expect(result.document.revision).toBe(1);
   });
 
   it("rejects the complete transaction when an edit is unknown", () => {

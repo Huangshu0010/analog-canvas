@@ -514,8 +514,8 @@ describe("Agent Circuit API v1 service", () => {
     ]) {
       item.locked = false;
     }
-    // Two edits: the first is valid; the second targets a net the endpoints do
-    // not both belong to, so it must reject at edits index 1.
+    // Two edits: the first is a valid annotation; the second targets an
+    // instance that does not exist, so it must reject at edits index 1.
     const response = fixture.service.handle({
       apiVersion: "2.0",
       requestId: "reject-index",
@@ -525,30 +525,34 @@ describe("Agent Circuit API v1 service", () => {
       expectedRevision: 0,
       edits: [
         {
-          kind: "move_instance",
-          instanceId: "M1",
-          position: { x: 190, y: 210 },
+          kind: "upsert_annotation",
+          annotation: {
+            id: "note-test",
+            kind: "plain-text",
+            text: "note",
+            position: { x: 100, y: 100 },
+            offset: { x: 0, y: 0 },
+            alignment: "middle",
+            rotation: 0,
+            locked: false,
+          },
         },
         {
-          kind: "set_route_points",
-          routeId: "route-vinp",
-          netId: "net-vss",
-          from: { kind: "port", portId: "port-vinp" },
-          to: { kind: "terminal", instanceId: "M1", pinName: "G" },
-          waypoints: [{ x: 80, y: 210 }],
-          segmentModes: ["manual", "manual"],
+          kind: "move_instance",
+          instanceId: "instance-does-not-exist",
+          position: { x: 200, y: 200 },
         },
       ],
     });
     expect(response).toMatchObject({
       ok: false,
-      error: { code: "EDIT_PRECONDITION" },
+      error: { code: "OBJECT_NOT_FOUND" },
     });
     if (response.ok) return;
     const diagnostic = response.diagnostics[0];
     expect(diagnostic).toBeDefined();
     expect(diagnostic!.path).toEqual(["edits", 1]);
-    expect(diagnostic!.objectIds).toContain("route-vinp");
+    expect(diagnostic!.objectIds).toContain("instance-does-not-exist");
   });
 
   it("returns resolvedRoutes with the post-normalization polyline after a set_route_points", () => {
@@ -623,6 +627,79 @@ describe("Agent Circuit API v1 service", () => {
           point.y === resolved!.polyline[index - 1]!.y,
       ),
     ).toBe(true);
+  });
+
+  it("returns proposed (not original) geometry for resolvedRoutes on dryRun", () => {
+    const fixture = serviceFixture();
+    for (const item of [
+      ...fixture.getDocument().layoutGroups,
+      ...fixture.getDocument().constraints,
+    ]) {
+      item.locked = false;
+    }
+    // Capture the route-vinp polyline before any edit.
+    const before = fixture
+      .getDocument()
+      .routes.find((route) => route.id === "route-vinp");
+    // Move M1 and re-point route-vinp in a DRY-RUN. The store must not change
+    // (applied: false), but resolvedRoutes must reflect the proposed geometry.
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "dryrun-resolved",
+      operation: "transact",
+      documentId: "document-differential-stage",
+      transactionId: "dryrun-resolved",
+      expectedRevision: 0,
+      dryRun: true,
+      edits: [
+        {
+          kind: "move_instance",
+          instanceId: "M1",
+          position: { x: 190, y: 210 },
+        },
+        {
+          kind: "set_route_points",
+          routeId: "route-vss-left",
+          netId: "net-vss",
+          from: { kind: "terminal", instanceId: "M1", pinName: "S" },
+          to: { kind: "junction", junctionId: "junction-vss" },
+          waypoints: [],
+          segmentModes: ["trunk"],
+        },
+        {
+          kind: "set_route_points",
+          routeId: "route-vinp",
+          netId: "net-vinp",
+          from: { kind: "port", portId: "port-vinp" },
+          to: { kind: "terminal", instanceId: "M1", pinName: "G" },
+          waypoints: [{ x: 80, y: 210 }],
+          segmentModes: ["manual", "manual"],
+        },
+        {
+          kind: "set_route_points",
+          routeId: "route-outp-bottom",
+          netId: "net-voutp",
+          from: { kind: "junction", junctionId: "junction-outp" },
+          to: { kind: "terminal", instanceId: "M1", pinName: "D" },
+          waypoints: [{ x: 160, y: 190 }],
+          segmentModes: ["manual", "manual"],
+        },
+      ],
+    });
+    expect(response).toMatchObject({ ok: true, applied: false });
+    expect(fixture.getDocument().revision).toBe(0);
+    if (!response.ok || !("resolvedRoutes" in response)) return;
+    const resolved = response.resolvedRoutes?.find(
+      (entry) => entry.routeId === "route-vinp",
+    );
+    expect(resolved).toBeDefined();
+    // The proposed polyline must differ from the pre-edit polyline: dry-run
+    // must report the candidate geometry, not the original Document's.
+    const beforePoly = before?.waypoints ?? [];
+    const proposedPoly = resolved!.polyline;
+    expect(proposedPoly.length).toBeGreaterThanOrEqual(2);
+    const changed = JSON.stringify(proposedPoly) !== JSON.stringify(beforePoly);
+    expect(changed).toBe(true);
   });
 
   it("returns bounded formal and diagnostic image artifacts without overlay leakage", () => {

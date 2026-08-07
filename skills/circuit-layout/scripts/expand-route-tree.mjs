@@ -3,7 +3,7 @@
 //
 // Per ADR 0008: the Skill owns the call flow; @icm/agent-routing owns the
 // coordinate arithmetic. This script is a deterministic Node entry that reads
-// a RouteTreeDecision + Snapshot-derived input from stdin (or files) and
+// a RouteTreeDecision + a SerializedExpansionInput from stdin (or files) and
 // prints the expansion (edits, resolvedGeometry, metrics, conflicts) as JSON.
 //
 // The Skill workflow is:
@@ -14,9 +14,33 @@
 // with this caller disabled (the Agent can still emit raw set_route_points).
 // Conflicts are returned, never auto-rerouted: resolve them by changing the
 // decision or placement, not by editing this script.
+//
+// Usage:
+//   node expand-route-tree.mjs <decision.json> [input.json]
+//   node expand-route-tree.mjs < decision.json   # input via second stdin read
+// To avoid the ambiguous two-stdin-read, prefer passing both files.
 
 import { readFile } from "node:fs/promises";
-import { expandRouteTree } from "@icm/agent-routing";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname, resolve } from "node:path";
+
+// Resolve the built package dist relative to this script's location, so the
+// caller works from any CWD without relying on a hoisted node_modules link.
+// On Windows an absolute path must be a file:// URL for dynamic import.
+const here = dirname(fileURLToPath(import.meta.url));
+const distPath = resolve(
+  here,
+  "..",
+  "..",
+  "..",
+  "packages",
+  "agent-routing",
+  "dist",
+  "index.js",
+);
+const { expandRouteTree, hydrateExpansionInput } = await import(
+  pathToFileURL(distPath).href
+);
 
 async function readStdin() {
   const chunks = [];
@@ -26,13 +50,17 @@ async function readStdin() {
 
 async function main() {
   const [decisionPath, inputPath] = process.argv.slice(2);
-  const decisionText = decisionPath
-    ? await readFile(decisionPath, "utf8")
-    : await readStdin();
-  const decision = JSON.parse(decisionText);
-  const input = inputPath
-    ? JSON.parse(await readFile(inputPath, "utf8"))
-    : JSON.parse(await readStdin());
+  if (!decisionPath && !inputPath) {
+    process.stderr.write(
+      "Usage: expand-route-tree.mjs <decision.json> <input.json>\n",
+    );
+    process.exit(2);
+  }
+  const decision = JSON.parse(await readFile(decisionPath, "utf8"));
+  const serialized = JSON.parse(await readFile(inputPath, "utf8"));
+  // Serialized input arrives with endpoints as an array; hydrate to a Map so
+  // the expander's .has/.get lookups work.
+  const input = hydrateExpansionInput(serialized);
   const expansion = expandRouteTree(decision, input);
   process.stdout.write(`${JSON.stringify(expansion, null, 2)}\n`);
 }

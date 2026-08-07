@@ -127,9 +127,9 @@ describe("expandRouteTree", () => {
       ]),
     );
     expect(result.conflicts).toEqual([]);
-    // 2 escape routes per group (4) + 2 inter-group links (g1->g2 and g2->g1)
-    // = 6 routes; 2 junctions. attachTo is directional.
-    expect(result.metrics.routeCount).toBe(6);
+    // 2 escape routes per group (4) + 1 inter-group link (g1->g2 deduped
+    // against g2->g1) = 5 routes; 2 junctions.
+    expect(result.metrics.routeCount).toBe(5);
     expect(result.metrics.junctionCount).toBe(2);
     // Junction positions are snapped to the 10-unit grid.
     for (const edit of result.edits) {
@@ -203,5 +203,50 @@ describe("expandRouteTree", () => {
     const first = expandRouteTree(decision, inp);
     const second = expandRouteTree(decision, inp);
     expect(second).toEqual(first);
+  });
+
+  it("shared-trunk attaches each escape to a distinct tap Junction, not a trunk-end", () => {
+    const decision = baseDecision({
+      shape: "shared-trunk",
+      endpointGroups: [
+        { id: "g1", endpointIds: ["a", "b", "c"], attachTo: "net" },
+      ],
+    });
+    const result = expandRouteTree(
+      decision,
+      input([
+        term("a", 100, 200, "M1", "D"),
+        term("b", 300, 200, "M2", "D"),
+        term("c", 500, 200, "M3", "D"),
+      ]),
+    );
+    expect(result.conflicts).toEqual([]);
+    // Each escape route connects endpoint -> a tap junction whose x equals the
+    // endpoint's snapped x (not a shared trunk-end junction). Three escapes
+    // must attach to three distinct junction ids.
+    const escapeRoutes = result.edits.filter(
+      (e) => e.kind === "route_orthogonal",
+    );
+    expect(escapeRoutes).toHaveLength(3);
+    const tapTargets = new Set(
+      escapeRoutes.map((e) =>
+        e.kind === "route_orthogonal" && e.to.kind === "junction"
+          ? e.to.junctionId
+          : null,
+      ),
+    );
+    expect(tapTargets.size).toBe(3);
+    // resolvedGeometry endpoints land at each endpoint's snapped x on the trunk.
+    const escapeGeo = result.resolvedGeometry.filter((g) =>
+      escapeRoutes.some(
+        (e) => e.kind === "route_orthogonal" && e.routeId === g.routeId,
+      ),
+    );
+    expect(escapeGeo).toHaveLength(3);
+    for (const geo of escapeGeo) {
+      const last = geo.points[geo.points.length - 1]!;
+      expect(last.y).toBe(200);
+      expect(last.x % 10).toBe(0);
+    }
   });
 });

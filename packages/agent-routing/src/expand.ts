@@ -41,6 +41,32 @@ export interface ExpansionInput {
   instanceBoxes: ReadonlyArray<InstanceBox>;
 }
 
+/**
+ * JSON-friendly form of ExpansionInput. A `Map` cannot survive JSON.parse, so
+ * the Skill caller (and any out-of-process caller) sends `endpoints` as an
+ * array and hydrates it into a Map via `hydrateExpansionInput`.
+ */
+export interface SerializedExpansionInput {
+  endpoints: ReadonlyArray<ResolvedEndpoint>;
+  existingRoutePolylines: ReadonlyArray<{ routeId: string; points: Point[] }>;
+  instanceBoxes: ReadonlyArray<InstanceBox>;
+}
+
+/** Build an ExpansionInput from its JSON-serializable form. */
+export function hydrateExpansionInput(
+  input: SerializedExpansionInput,
+): ExpansionInput {
+  const endpoints = new Map<string, ResolvedEndpoint>();
+  for (const endpoint of input.endpoints) {
+    endpoints.set(endpoint.id, endpoint);
+  }
+  return {
+    endpoints,
+    existingRoutePolylines: input.existingRoutePolylines,
+    instanceBoxes: input.instanceBoxes,
+  };
+}
+
 const SHAPES: ReadonlySet<RouteTreeShape> = new Set([
   "direct",
   "local-branch-tree",
@@ -299,16 +325,21 @@ function expandSharedTrunk(
     for (const endpointId of group.endpointIds) {
       const endpoint = endpointOf(input, endpointId);
       if (!endpoint) continue;
+      const tapX = snap(endpoint.point.x);
+      const tapId = stableId(`${prefix}-tap`);
+      edits.push(
+        addJunctionEdit(tapId, decision.netId, { x: tapX, y: trunkY }),
+      );
       const routeId = stableId(`${prefix}-esc`);
       edits.push(
         routeOrthogonalEdit(routeId, decision.netId, endpoint.endpoint, {
           kind: "junction",
-          junctionId: endpoint.point.x < (minX + maxX) / 2 ? leftId : rightId,
+          junctionId: tapId,
         }),
       );
       resolvedGeometry.push({
         routeId,
-        points: [endpoint.point, { x: snap(endpoint.point.x), y: trunkY }],
+        points: [endpoint.point, { x: tapX, y: trunkY }],
       });
     }
   }
@@ -423,16 +454,19 @@ function expandOrderedBus(
   });
   assumptions.push(`ordered bus at x=${trunkX} ordered top-to-bottom`);
   for (const endpoint of ordered) {
+    const tapY = snap(endpoint.point.y);
+    const tapId = stableId(`${prefix}-tap`);
+    edits.push(addJunctionEdit(tapId, decision.netId, { x: trunkX, y: tapY }));
     const routeId = stableId(`${prefix}-esc`);
     edits.push(
       routeOrthogonalEdit(routeId, decision.netId, endpoint.endpoint, {
         kind: "junction",
-        junctionId: endpoint.point.y < (minY + maxY) / 2 ? topId : bottomId,
+        junctionId: tapId,
       }),
     );
     resolvedGeometry.push({
       routeId,
-      points: [endpoint.point, { x: trunkX, y: snap(endpoint.point.y) }],
+      points: [endpoint.point, { x: trunkX, y: tapY }],
     });
   }
   return assemble(edits, resolvedGeometry, assumptions, conflicts);
@@ -475,12 +509,20 @@ function appendGroupLinks(
   resolvedGeometry: RouteTreeExpansion["resolvedGeometry"],
   assumptions: string[],
 ): void {
+  // Track undirected pairs already linked so g1->g2 and g2->g1 do not emit two
+  // duplicate routes between the same junctions.
+  const linkedPairs = new Set<string>();
   for (const group of decision.endpointGroups) {
     const fromId = groupJunctions.get(group.id);
     if (!fromId) continue;
     const target = groupJunctions.get(group.attachTo);
     if (!target) continue;
     if (fromId === target) continue;
+    const pairKey = [fromId, target]
+      .sort((a, b) => a.localeCompare(b, "en"))
+      .join("|");
+    if (linkedPairs.has(pairKey)) continue;
+    linkedPairs.add(pairKey);
     const routeId = stableId(`${prefix}-link`);
     edits.push(
       setRouteEdit(

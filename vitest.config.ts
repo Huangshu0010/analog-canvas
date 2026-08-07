@@ -5,6 +5,10 @@ export default defineConfig({
     coverage: {
       enabled: false,
     },
-    include: ["apps/**/*.test.{ts,tsx}", "packages/**/*.test.{ts,tsx}"],
+    include: [
+      "apps/**/*.test.{ts,tsx}",
+      "packages/**/*.test.{ts,tsx}",
+      "skills/circuit-layout/scripts/**/*.test.{ts,mjs}",
+    ],
   },
 });

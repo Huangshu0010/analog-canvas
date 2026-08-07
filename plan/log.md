@@ -1043,3 +1043,63 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: `git diff --check`. Docs-only.
 - Commit status: ready for
   `docs(plan): defer automatic router per ADR 0008 and Phase 9 evidence`.
+
+## 2026-08-08 - Evaluate the new Agent-routing architecture on a flat CDAC
+
+- Target: generate a genuinely flattened SKY130 6-bit switched-capacitor DAC
+  through API v2 Snapshot/transact/render, with Agent-selected Net trees and
+  `@icm/agent-routing` expansion, then audit the resulting electrical and
+  visual behavior.
+- Changed areas: additive evaluation script and Project/SVG/PNG/PDF artifacts
+  under `netlists/sky130-switched-capacitor-dac-6bit-pvt/`, plus the bounded
+  target plan. Existing overlapping `agent-scdac-newarch.*` files and the dirty
+  Agent-routing source remained read-only.
+- Result: 46 placed primitive instances (12 PMOS, 13 NMOS, 7 capacitors, 14
+  local power helpers), 22 Nets, 110 Routes, 33 Junctions, no hierarchy blocks,
+  no unresolved symbols, and no error-severity diagnostics. The formal render
+  exposes correct bit order, weights, switch branches, reset, and common plate.
+- Findings: shared-trunk tap Junctions do not split the trunk and coincident
+  endpoint/tap geometry can crash route normalization; local-branch-tree makes
+  a readable rail using overlapping Routes; labeled-islands do not emit label
+  semantics and leave 14 VDD/VSS flightlines; Expander metrics do not reflect
+  Engine-resolved bends; routing dry-runs returned zero resolved Routes while
+  commits returned the actual geometry.
+- Validation: API `2.0` capabilities and Snapshot `1.0`; six successful
+  dry-run/commit batches; Project validation and formal API render; electrical
+  terminal-count audit; whole-page PNG inspection; target Prettier check,
+  structural assertions, repository-wide `git diff --check`, and final status
+  audit passed.
+- Commit status: intentionally uncommitted and unpushed because the evaluation
+  depends on a dirty shared Expander and overlapping candidate files have
+  unknown ownership.
+
+## 2026-08-08 - Close the routing closed loop (caller, tap geometry, dry-run, multi-move)
+
+- Target: address the four P0/P1 blockers the reviewer identified so the
+  Agent -> Expander -> dry-run -> transact -> diagnostics loop actually runs.
+- Changes:
+  - #2 tap geometry: shared-trunk and ordered-bus now create a real per-endpoint
+    tap Junction (not a trunk-end Junction); local-branch-tree dedups undirected
+    g1<->g2 links so a pair is never emitted twice.
+  - #1 caller: `expand-route-tree.mjs` resolves the agent-routing dist via a
+    repo-root-relative file:// URL (no hoisted node_modules needed); a
+    `SerializedExpansionInput` + `hydrateExpansionInput` turn the JSON endpoint
+    array into the Map the expander expects. Added a CLI vitest that spawns the
+    caller with fixtures.
+  - #3 dry-run geometry: `executeTransaction` dryRun now returns the validated
+    candidate (`candidate.data`) instead of the original Document, so
+    `resolvedRoutes` reports proposed polylines; the Adapter still only commits
+    on `applied`, so the store is untouched.
+  - #4 multi-instance move: `move_instance` passes the progressive `draft`
+    (not the pre-transaction Document) to `applyStretchedRoutes`, so a later
+    move in the same transaction sees earlier moves' effect on shared Routes.
+    Diagonal moves on both endpoints remain limited by proposeLocalStretch's
+    inability to insert corners (documented; axial multi-move regression added).
+  - #5 regenerated the CDAC recipe under the new architecture (22 overlaps
+    remain, all from independent route_orthogonal escapes sharing a channel —
+    the known no-obstacle-avoidance limitation, not a loop bug).
+- Validation: full workspace `pnpm typecheck`, `prettier --check`, 60 tests in
+  10 files (agent-routing, edit-engine, agent-adapter, skill caller CLI),
+  CDAC regeneration, and `git diff --check` passed.
+- Commit status: ready for
+  `fix(agent-routing): close the expander loop (caller, tap geometry, dry-run, multi-move)`.

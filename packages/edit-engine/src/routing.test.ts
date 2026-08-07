@@ -142,6 +142,60 @@ describe("routing Edit Engine", () => {
     }
   });
 
+  it("stretches a shared Route across two instance moves in one transaction (ADR 0009)", () => {
+    const document = documentFixture();
+    // Establish a direct Route between A and B.
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+    // Move both A and B along the shared Route's axis in the same transaction.
+    // The second move must see the geometry produced by the first move's
+    // stretch on route-h (the progressive draft), not the pre-transaction
+    // Document. A diagonal move on both endpoints is out of scope here: it
+    // would require corner insertion in proposeLocalStretch, tracked
+    // separately.
+    const bothMoved = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, [
+        {
+          kind: "move_instance",
+          instanceId: "A",
+          position: { x: 180, y: 300 },
+        },
+        {
+          kind: "move_instance",
+          instanceId: "B",
+          position: { x: 520, y: 300 },
+        },
+      ]),
+      context,
+    );
+    expect(bothMoved.ok).toBe(true);
+    if (!bothMoved.ok) return;
+    const stretched = bothMoved.document.routes.find(
+      (r) => r.id === "route-h",
+    )!;
+    const poly = routePolyline(bothMoved.document, resolver, stretched);
+    expect(poly?.points.length).toBeGreaterThanOrEqual(2);
+    if (poly) {
+      expect(isOrthogonal(poly.points)).toBe(true);
+    }
+  });
+
   it("gives escape segment mode an enforced outward-pin meaning", () => {
     const document = documentFixture();
     const result = executeTransaction(

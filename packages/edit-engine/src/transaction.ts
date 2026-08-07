@@ -996,16 +996,17 @@ export function executeTransaction(
             changedObjectIds.add(annotation.id);
           }
         }
-        // Stretch Routes whose terminal endpoints moved with this instance,
-        // using the original (pre-move) document so the helper computes from
-        // the prior geometry. Routes with a protected adjacent segment are
-        // skipped; the post-loop validation rejects if a skipped Route becomes
-        // non-orthogonal and the caller did not re-point it in this batch.
+        // Stretch Routes whose terminal endpoints moved with this instance.
+        // Pass the evolving draft (not the pre-transaction Document) so a
+        // later move_instance in the same transaction sees the geometry
+        // produced by earlier moves on shared Routes. proposeLocalStretch
+        // clones its input and re-moves the (already-moved) instance to
+        // newPosition, reading current waypoints from draft.routes.
         const resolver = context.symbolResolver;
         if (resolver) {
           const stretched = applyStretchedRoutes(
             draft,
-            document,
+            draft,
             resolver,
             edit.instanceId,
             edit.position,
@@ -1835,12 +1836,15 @@ export function executeTransaction(
   };
 
   if (transaction.dryRun === true) {
+    // Return the validated candidate (draft) so callers can inspect the
+    // proposed geometry, not the pre-edit Document. The caller never commits
+    // this: the Adapter only commits when `applied` is true.
     return {
       ok: true,
       applied: false,
       revision: document.revision,
       proposedRevision,
-      document,
+      document: candidate.data,
       diff,
       diagnostics: [],
     };

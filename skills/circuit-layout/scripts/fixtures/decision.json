@@ -1,0 +1,9 @@
+{
+  "documentId": "doc",
+  "revision": 0,
+  "netId": "net-1",
+  "shape": "direct",
+  "endpointGroups": [
+    { "id": "g1", "endpointIds": ["a", "b"], "attachTo": "net" }
+  ]
+}
