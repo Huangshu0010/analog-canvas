@@ -1132,3 +1132,33 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   CDAC recipe regenerated, `git diff --check` passed.
 - Commit status: ready for
   `refactor(agent-routing): demote expander to a route-graph geometry helper`.
+
+## 2026-08-08 - Migrate Visio core-analog Batch A to source-derived assets
+
+- Target: land the self-contained core-analog catalog migration as group 1 of a
+  worktree-split sequence, after the user instructed splitting the dirty
+  worktree into self-contained commit groups.
+- Changed areas: 8 razavi-v1 symbol assets (`resistor`, `capacitor`, `inductor`,
+  `diode`, `ground`, `port`, `current-source`, `voltage-source`), `catalog.json`
+  - asset README, regenerated `razavi-catalog.generated.ts`; `schema.ts`
+    (`labelVisibility`), `builtins.ts` (power-port hidden default label +
+    polyResistor) + test, `pdk-registry.ts` (sky130 high-po mapping) + test;
+    `scripts/generate-razavi-symbol-catalog.mjs` generation policies; 8 checked
+    Visio reference SVGs under `fixtures/visual-reference/visio-core-analog/`;
+    `fixtures/visual-golden/visio-core-analog-fidelity.svg`;
+    regenerated `phase-5-symbol-review.svg` and `vss-migration-candidates.svg`;
+    `fixtures/spice/current-corpus-summary.json` (fewer generic symbols after
+    improved mapping; connectivity hashes unchanged); the two target plans.
+- Dirty-state decision: group 1 has no cross-package source coupling to the
+  editor/model/renderer/derived/agent-api changes held in subsequent groups;
+  `packages/symbols/src/schema.ts` (labelVisibility) is distinct from
+  `packages/model/src/schema.ts` (annotation, group 2). No hunk-level split
+  needed.
+- Validation: `symbols:razavi:check` (14 assets + 1 primitive),
+  `symbols:visio-core-analog:check` (8 assets + fidelity board),
+  `pnpm typecheck`, symbol review (12 reviewed + 13 candidate), 26 focused
+  symbols tests, workspace build, `references:check` (4), prettier on owned
+  files, `git diff --check` — all green.
+- Commit status: committed as `7a38734` and pushed to `origin/main`
+  (group 1 of the split sequence). Group 4 (agent-routing) was already
+  committed in `e7e7aa4`..`c70a813`; it is not pending.
