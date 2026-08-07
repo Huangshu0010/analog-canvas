@@ -1210,3 +1210,24 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   the plan records intent and factual outcome only.
 - Validation: `git diff --check` passed. Docs-only.
 - Commit status: committed as `4d738eb` and pushed to `origin/main`.
+
+## 2026-08-08 - Restore atomic flat-CDAC Route-graph generation
+
+- Target: repair the regressed transistor-level CDAC experiment without
+  reintroducing a shape compiler or automatic router.
+- Changed areas: atomic `@icm/agent-routing` conflict behavior; transient bend
+  nodes folded into Route waypoints; opt-in pre-export generator completeness
+  gate; explicit full-topology CDAC Route graphs; regenerated Project, SVG, PNG
+  and PDF artifacts.
+- Dirty-state decision: pre-existing editor, renderer-test and current-arrow
+  work belonged to other targets and remained read-only. The generated visual
+  was inspected using the available renderer build.
+- Result: 32 placed primitive instances, 22 Nets, 103 Routes, 40 semantic
+  junctions, 0 helper conflicts, 0 visual errors/warnings, 0 crossings and 0
+  flightlines. All visible Nets form one connected component. No simulation
+  claim; validation is structural topology mapping and visual presentation.
+- Validation: 14 focused agent-routing tests, package build, workspace
+  typecheck, owned-file Prettier check, deterministic double generation with
+  identical hashes, structural audit, and original-resolution PNG inspection.
+- Commit status: ready for
+  `fix(agent-routing): restore atomic flat CDAC generation`.

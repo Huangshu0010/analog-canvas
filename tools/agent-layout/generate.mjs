@@ -159,34 +159,47 @@ for (const target of layoutTargets) {
       if (!dryRun.ok) throw new Error(JSON.stringify(dryRun, null, 2));
       // Report dry-run diagnostics as evidence (does not block commit).
       if (dryRun.diagnostics?.length > 0) {
-        const errorCount = dryRun.diagnostics.filter((d) => d.severity === "error").length;
-        const warnCount = dryRun.diagnostics.filter((d) => d.severity === "warning").length;
+        const errorCount = dryRun.diagnostics.filter(
+          (d) => d.severity === "error",
+        ).length;
+        const warnCount = dryRun.diagnostics.filter(
+          (d) => d.severity === "warning",
+        ).length;
         process.stderr.write(
           `  [dry-run] phase=${phase.id} txn=${transactionCount} revision=${dryRun.revision} → ${dryRun.proposedRevision} (${errorCount} errors, ${warnCount} warnings)\n`,
         );
-        for (const d of dryRun.diagnostics.filter((d) => d.severity === "error")) {
+        for (const d of dryRun.diagnostics.filter(
+          (d) => d.severity === "error",
+        )) {
           process.stderr.write(`    ERROR: ${d.code}: ${d.message}\n`);
         }
       }
       // Check resolvedRoutes if present (v2 transact response).
       if (dryRun.resolvedRoutes?.length > 0) {
-        for (const rr of dryRun.resolvedRoutes) {
-          process.stderr.write(
-            `    resolved: ${rr.routeId} pts=${rr.polyline.length}\n`,
-          );
-        }
+        const pointCounts = dryRun.resolvedRoutes.map(
+          (route) => route.polyline.length,
+        );
+        process.stderr.write(
+          `    resolved: ${dryRun.resolvedRoutes.length} routes, points=${Math.min(...pointCounts)}..${Math.max(...pointCounts)}\n`,
+        );
       }
       const committed = service.handle(request);
       if (!committed.ok) throw new Error(JSON.stringify(committed, null, 2));
       // Report committed diagnostics.
       if (committed.diagnostics?.length > 0) {
-        const errorCount = committed.diagnostics.filter((d) => d.severity === "error").length;
-        const warnCount = committed.diagnostics.filter((d) => d.severity === "warning").length;
+        const errorCount = committed.diagnostics.filter(
+          (d) => d.severity === "error",
+        ).length;
+        const warnCount = committed.diagnostics.filter(
+          (d) => d.severity === "warning",
+        ).length;
         if (errorCount > 0 || warnCount > 0) {
           process.stderr.write(
             `  [commit] phase=${phase.id} txn=${transactionCount} → rev ${committed.revision} (${errorCount} errors, ${warnCount} warnings)\n`,
           );
-          for (const d of committed.diagnostics.filter((d) => d.severity === "error")) {
+          for (const d of committed.diagnostics.filter(
+            (d) => d.severity === "error",
+          )) {
             process.stderr.write(`    ERROR: ${d.code}: ${d.message}\n`);
           }
         }
@@ -200,6 +213,89 @@ for (const target of layoutTargets) {
 }
 
 const validated = validateProject(project);
+
+// Evaluate the committed candidate before persistence/export. Logging alone is
+// not a correction loop: recipes that opt into `requireComplete` must not
+// publish an electrically disconnected or visually blocking target.
+const { diagnoseVisualQuality, deriveCrossings, deriveFlightlines } =
+  await import("../../packages/derived/dist/index.js");
+const qualityReports = validated.documents.map((doc) => {
+  const diagnostics = diagnoseVisualQuality(doc, resolver);
+  return {
+    document: doc,
+    diagnostics,
+    crossings: deriveCrossings(doc, resolver),
+    flightlines: deriveFlightlines(doc, resolver),
+  };
+});
+for (const report of qualityReports) {
+  const errorCount = report.diagnostics.filter(
+    (item) => item.severity === "error",
+  ).length;
+  const warnCount = report.diagnostics.filter(
+    (item) => item.severity === "warning",
+  ).length;
+  const infoCount = report.diagnostics.filter(
+    (item) => item.severity === "info",
+  ).length;
+  process.stderr.write(
+    `\n[visual-quality] ${report.document.name}: ${errorCount} errors, ${warnCount} warnings, ${infoCount} info, ${report.crossings.length} crossings, ${report.flightlines.length} flightlines\n`,
+  );
+  for (const item of report.diagnostics.filter(
+    (candidate) => candidate.severity !== "info",
+  )) {
+    process.stderr.write(
+      `  ${item.severity === "error" ? "ERROR" : "WARN"}: ${item.code}: ${item.message}\n`,
+    );
+  }
+  for (const flightline of report.flightlines) {
+    const net = report.document.nets.find(
+      (candidate) => candidate.id === flightline.netId,
+    );
+    process.stderr.write(
+      `  FLIGHTLINE: net=${net?.name ?? flightline.netId} from=(${flightline.fromPoint.x},${flightline.fromPoint.y}) to=(${flightline.toPoint.x},${flightline.toPoint.y})\n`,
+    );
+  }
+}
+
+if (recipe.requireComplete === true) {
+  const targetIds = new Set(layoutTargets.map((target) => target.document.id));
+  const blockingCodes = new Set(recipe.blockingVisualDiagnosticCodes ?? []);
+  const failures = [];
+  for (const report of qualityReports.filter((item) =>
+    targetIds.has(item.document.id),
+  )) {
+    const errors = report.diagnostics.filter(
+      (item) => item.severity === "error",
+    );
+    const blockedWarnings = report.diagnostics.filter((item) =>
+      blockingCodes.has(item.code),
+    );
+    if (errors.length > 0) failures.push(`${errors.length} visual errors`);
+    if (report.flightlines.length > 0) {
+      failures.push(`${report.flightlines.length} flightlines`);
+    }
+    if (
+      Number.isInteger(recipe.maxCrossings) &&
+      report.crossings.length > recipe.maxCrossings
+    ) {
+      failures.push(
+        `${report.crossings.length} crossings (max ${recipe.maxCrossings})`,
+      );
+    }
+    if (blockedWarnings.length > 0) {
+      failures.push(
+        `${blockedWarnings.length} blocking warnings (${[
+          ...new Set(blockedWarnings.map((item) => item.code)),
+        ].join(", ")})`,
+      );
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(`Completeness gate failed: ${failures.join("; ")}`);
+  }
+}
+
 const outputRoot = resolve(recipe.outputRoot ?? sourceRoot);
 const outputBase = recipe.outputBase;
 await mkdir(dirname(resolve(outputRoot, outputBase)), { recursive: true });
@@ -278,32 +374,3 @@ process.stdout.write(
     2,
   )}\n`,
 );
-
-// Post-generation visual quality evidence.
-const { diagnoseVisualQuality, deriveCrossings, deriveFlightlines } =
-  await import("../../packages/derived/dist/index.js");
-for (const doc of validated.documents) {
-  const vdiags = diagnoseVisualQuality(doc, resolver);
-  const crossings = deriveCrossings(doc, resolver);
-  const flightlines = deriveFlightlines(doc, resolver);
-  const errorCount = vdiags.filter((d) => d.severity === "error").length;
-  const warnCount = vdiags.filter((d) => d.severity === "warning").length;
-  const infoCount = vdiags.filter((d) => d.severity === "info").length;
-  process.stderr.write(
-    `\n[visual-quality] ${doc.name}: ${errorCount} errors, ${warnCount} warnings, ${infoCount} info, ${crossings.length} crossings, ${flightlines.length} flightlines\n`,
-  );
-  for (const d of vdiags.filter((d) => d.severity === "error")) {
-    process.stderr.write(`  ERROR: ${d.code}: ${d.message}\n`);
-  }
-  for (const d of vdiags.filter((d) => d.severity === "warning")) {
-    process.stderr.write(`  WARN:  ${d.code}: ${d.message}\n`);
-  }
-  if (flightlines.length > 0) {
-    for (const fl of flightlines) {
-      const net = doc.nets.find((n) => n.id === fl.netId);
-      process.stderr.write(
-        `  FLIGHTLINE: net=${net?.name ?? fl.netId} from=(${fl.fromPoint.x},${fl.fromPoint.y}) to=(${fl.toPoint.x},${fl.toPoint.y})\n`,
-      );
-    }
-  }
-}

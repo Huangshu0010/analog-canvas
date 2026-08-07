@@ -27,11 +27,12 @@ export type { SegmentMode };
 /**
  * The role of a node in the Route graph.
  * - `endpoint`: binds to an existing terminal/port; no object is created.
- * - `tap` / `junction`: created by the helper via `add_junction`.
+ * - `tap` / `junction`: created by the helper as electrical branch points.
+ * - `bend`: created as a degree-two route anchor without a connection dot.
  * - `label-anchor`: a junction positioned where a Net label should appear.
  */
 export type RouteGraphNodeRole =
-  "endpoint" | "tap" | "junction" | "label-anchor";
+  "endpoint" | "tap" | "junction" | "bend" | "label-anchor";
 
 /**
  * The axis a `tap`/`junction` node shares with a referenced node.
@@ -42,7 +43,7 @@ export type AlignAxis = "x" | "y";
 
 /**
  * A node the Agent places in the Route graph. Endpoint nodes reference existing
- * terminals/ports; tap/junction nodes are created by the helper.
+ * terminals/ports; positioned nodes are created by the helper.
  */
 export interface RouteGraphNode {
   id: string;
@@ -50,7 +51,7 @@ export interface RouteGraphNode {
   /** Required for role:"endpoint": the existing terminal/port to bind to. */
   endpoint?: RouteEndpoint;
   /**
-   * For role:"tap"|"junction"|"label-anchor". Exactly one positioning hint:
+   * For any non-endpoint role. Exactly one positioning hint:
    *  - `at`: an explicit grid-aligned point.
    *  - `alignWith` + `axis` + (`offset` | perpendicular-from-a-second-node):
    *    share one coordinate with the referenced node; the perpendicular

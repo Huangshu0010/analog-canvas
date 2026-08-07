@@ -1,28 +1,15 @@
 // Route-graph geometry helper.
 //
-// Per ADR 0008: the Agent gives a complete local Route graph (nodes + edges);
-// this helper only projects each edge onto legal coordinates (grid snap,
-// terminal escape, orthogonal geometry, trunk split, stable IDs, typed-edit
-// assembly). It NEVER decides topology, adds a missing node, switches a shape,
-// or reroutes. Conflicts are returned, never silently resolved.
-//
-// CRITICAL: the helper NEVER calls `route_orthogonal`. Every edge becomes a
-// `set_route_points` with explicit waypoints the Agent provided via graph
-// nodes. If an edge's endpoints are not axis-aligned, the helper returns a
-// MISALIGNED_EDGE conflict — it does not guess a bend. The Agent must add
-// intermediate bend nodes to the graph.
-//
-// This ensures `resolvedGeometry` always matches the geometry the Engine
-// stores, because we specify exact waypoints rather than asking the Engine to
-// compute them.
+// The Agent supplies the complete local graph. This helper snaps coordinates,
+// validates straight orthogonal segments, folds explicit degree-two bend nodes
+// into Route waypoints, and emits typed edits. It never invents topology,
+// chooses a bend, switches a shape, or calls route_orthogonal.
 
 import type { Point, RouteEndpoint } from "@icm/model";
 import type { SchematicEdit } from "@icm/edit-engine";
 import type {
-  AlignAxis,
   ExpansionConflict,
   ResolvedEndpoint,
-  RouteEdgeRole,
   RouteGraph,
   RouteGraphEdge,
   RouteGraphNode,
@@ -30,51 +17,33 @@ import type {
   SegmentMode,
 } from "./types.js";
 
-/** The fixed-style coordinate canon (see razavi-style-canon.md). */
 const GRID = 10;
 
 export interface InstanceBox {
   instanceId: string;
-  /** Inclusive bounds of the placed symbol silhouette. */
   min: Point;
   max: Point;
 }
 
-/**
- * The Snapshot-derived input slice the helper reads. Built by the caller from
- * a complete AgentSessionSnapshot; the helper never touches the Snapshot
- * schema, the Adapter, or the Model directly.
- */
 export interface ExpansionInput {
-  /** Endpoint id -> resolved page coordinate and outward direction. */
   endpoints: ReadonlyMap<string, ResolvedEndpoint>;
-  /** Existing committed Routes (for overlap/crossing detection). */
   existingRoutePolylines: ReadonlyArray<{ routeId: string; points: Point[] }>;
-  /** Placed-instance silhouettes (for wire-through-symbol detection). */
   instanceBoxes: ReadonlyArray<InstanceBox>;
 }
 
-/**
- * JSON-friendly form of ExpansionInput. A `Map` cannot survive JSON.parse, so
- * the Skill caller (and any out-of-process caller) sends `endpoints` as an
- * array and hydrates it into a Map via `hydrateExpansionInput`.
- */
 export interface SerializedExpansionInput {
   endpoints: ReadonlyArray<ResolvedEndpoint>;
   existingRoutePolylines: ReadonlyArray<{ routeId: string; points: Point[] }>;
   instanceBoxes: ReadonlyArray<InstanceBox>;
 }
 
-/** Build an ExpansionInput from its JSON-serializable form. */
 export function hydrateExpansionInput(
   input: SerializedExpansionInput,
 ): ExpansionInput {
-  const endpoints = new Map<string, ResolvedEndpoint>();
-  for (const endpoint of input.endpoints) {
-    endpoints.set(endpoint.id, endpoint);
-  }
   return {
-    endpoints,
+    endpoints: new Map(
+      input.endpoints.map((endpoint) => [endpoint.id, endpoint]),
+    ),
     existingRoutePolylines: input.existingRoutePolylines,
     instanceBoxes: input.instanceBoxes,
   };
@@ -84,49 +53,52 @@ function snap(value: number): number {
   return Math.round(value / GRID) * GRID;
 }
 
-function manhattan(a: Point, b: Point): number {
-  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+function manhattan(left: Point, right: Point): number {
+  return Math.abs(left.x - right.x) + Math.abs(left.y - right.y);
 }
 
-/** True if two points share an x or y coordinate (a straight orthogonal segment exists). */
-function isAxisAligned(a: Point, b: Point): boolean {
-  return a.x === b.x || a.y === b.y;
+function isAxisAligned(left: Point, right: Point): boolean {
+  return left.x === right.x || left.y === right.y;
 }
 
-/**
- * Check if a segment from `a` to `b` passes through any instance silhouette.
- * Returns the first hit, or undefined.
- */
+function samePoint(left: Point, right: Point): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
 function segmentHitsInstance(
-  a: Point,
-  b: Point,
+  from: Point,
+  to: Point,
   boxes: ReadonlyArray<InstanceBox>,
-  fromEndpointId?: string,
-  toEndpointId?: string,
+  fromInstanceId?: string,
+  toInstanceId?: string,
 ): InstanceBox | undefined {
-  const minX = Math.min(a.x, b.x);
-  const maxX = Math.max(a.x, b.x);
-  const minY = Math.min(a.y, b.y);
-  const maxY = Math.max(a.y, b.y);
+  const minX = Math.min(from.x, to.x);
+  const maxX = Math.max(from.x, to.x);
+  const minY = Math.min(from.y, to.y);
+  const maxY = Math.max(from.y, to.y);
   return boxes.find(
     (box) =>
       maxX > box.min.x &&
       minX < box.max.x &&
       maxY > box.min.y &&
       minY < box.max.y &&
-      // Exclude the instance that the endpoint belongs to.
-      box.instanceId !== fromEndpointId &&
-      box.instanceId !== toEndpointId,
+      box.instanceId !== fromInstanceId &&
+      box.instanceId !== toInstanceId,
   );
 }
 
-/**
- * Expand a Route graph into typed edits + resolved geometry + metrics.
- *
- * Returns a conflict (no edits) when a node's position cannot be resolved or
- * an edge references an unknown node. Never invents a node or edge, never
- * reroutes, never switches a shape, never calls route_orthogonal.
- */
+function segmentModeFor(edge: RouteGraphEdge): SegmentMode {
+  return (
+    edge.segmentMode ??
+    (edge.role === "escape"
+      ? "escape"
+      : edge.role === "trunk"
+        ? "trunk"
+        : "auto")
+  );
+}
+
+/** Expand one Agent-owned Route graph atomically. */
 export function expandRouteGraph(
   graph: RouteGraph,
   input: ExpansionInput,
@@ -135,14 +107,24 @@ export function expandRouteGraph(
   const resolvedGeometry: RouteGraphExpansion["resolvedGeometry"] = [];
   const assumptions: string[] = [];
   const conflicts: ExpansionConflict[] = [];
-
-  // 1. Resolve every node's coordinate.
   const nodeCoords = new Map<string, Point>();
   const nodeOutward = new Map<string, Point | null>();
   const endpointNodes = new Map<string, RouteEndpoint>();
   const junctionIds = new Set<string>();
+  const nodeById = new Map<string, RouteGraphNode>();
 
-  // Pass 1: endpoint nodes (their coordinate comes from the input slice).
+  for (const node of graph.nodes) {
+    if (nodeById.has(node.id)) {
+      conflicts.push({
+        code: "DUPLICATE_NODE_ID",
+        message: `Route graph contains duplicate node id ${node.id}`,
+        objectIds: [node.id],
+      });
+      continue;
+    }
+    nodeById.set(node.id, node);
+  }
+
   for (const node of graph.nodes) {
     if (node.role !== "endpoint") continue;
     if (!node.endpoint) {
@@ -167,42 +149,37 @@ export function expandRouteGraph(
     endpointNodes.set(node.id, node.endpoint);
   }
 
-  // Pass 2: positioned nodes (tap/junction/label-anchor). Resolve `at` first,
-  // then `alignWith`, so a node can align with one already resolved.
   let changed = true;
   let passes = 0;
   while (changed && passes < graph.nodes.length + 1) {
     changed = false;
     passes += 1;
     for (const node of graph.nodes) {
-      if (nodeCoords.has(node.id)) continue;
-      if (node.role === "endpoint") continue;
-      const pos = resolvePositionedNode(node, nodeCoords);
-      if (pos) {
-        const snapped = { x: snap(pos.x), y: snap(pos.y) };
-        nodeCoords.set(node.id, snapped);
-        nodeOutward.set(node.id, null);
-        junctionIds.add(node.id);
-        changed = true;
-      }
+      if (node.role === "endpoint" || nodeCoords.has(node.id)) continue;
+      const position = resolvePositionedNode(node, nodeCoords);
+      if (!position) continue;
+      const snapped = { x: snap(position.x), y: snap(position.y) };
+      nodeCoords.set(node.id, snapped);
+      nodeOutward.set(node.id, null);
+      if (node.role !== "bend") junctionIds.add(node.id);
+      changed = true;
     }
   }
 
-  // Any positioned node still unresolved is a conflict (no median guess).
   for (const node of graph.nodes) {
-    if (node.role === "endpoint") continue;
-    if (!nodeCoords.has(node.id)) {
+    if (node.role !== "endpoint" && !nodeCoords.has(node.id)) {
       conflicts.push({
         code: "MISSING_NODE_POSITION",
-        message: `Node ${node.id} (${node.role}) has no resolvable position (needs at or alignWith+axis)`,
+        message: `Node ${node.id} (${node.role}) has no resolvable position`,
         objectIds: [node.id],
       });
     }
   }
 
-  // 2. Emit add_junction for every tap/junction/label-anchor node.
+  // Only semantic branch/label nodes survive in the Project. Bend nodes are
+  // transient planning objects and become ordinary Route waypoints.
   for (const node of graph.nodes) {
-    if (node.role === "endpoint") continue;
+    if (node.role === "endpoint" || node.role === "bend") continue;
     const point = nodeCoords.get(node.id);
     if (!point) continue;
     edits.push({
@@ -210,18 +187,26 @@ export function expandRouteGraph(
       junctionId: node.id,
       netId: graph.netId,
       position: { ...point },
+      role: node.role === "label-anchor" ? "label-anchor" : "branch",
     });
     assumptions.push(
       `node ${node.id} (${node.role}) at (${point.x},${point.y})`,
     );
   }
 
-  // 3. For each edge, emit exactly one typed edit. ALL edges use
-  //    set_route_points with explicit waypoints — never route_orthogonal.
-  //    If an edge's endpoints are not axis-aligned, return MISALIGNED_EDGE.
-  let edgeIndex = 0;
+  const routableEdges: RouteGraphEdge[] = [];
+  const edgeIds = new Set<string>();
+  let labelIndex = 0;
   for (const edge of graph.edges) {
-    edgeIndex += 1;
+    if (edgeIds.has(edge.id)) {
+      conflicts.push({
+        code: "DUPLICATE_EDGE_ID",
+        message: `Route graph contains duplicate edge id ${edge.id}`,
+        objectIds: [edge.id],
+      });
+      continue;
+    }
+    edgeIds.add(edge.id);
     const from = nodeCoords.get(edge.from);
     const to = nodeCoords.get(edge.to);
     if (!from || !to) {
@@ -232,155 +217,179 @@ export function expandRouteGraph(
       });
       continue;
     }
-    const routeId = `route-${graph.netId}-${edgeIndex}`;
 
-    switch (edge.role) {
-      case "escape": {
-        // An escape edge connects a terminal endpoint to a junction/tap. It
-        // must be axis-aligned (a single straight segment). The Agent is
-        // responsible for placing the escape node so the segment is valid.
-        // If the terminal has an outward direction, validate the escape goes
-        // along it.
-        const fromEndpoint = endpointNodes.get(edge.from);
-        const toEndpoint = endpointNodes.get(edge.to);
-        const terminalNodeId = fromEndpoint ? edge.from : edge.to;
-        const junctionNodeId = fromEndpoint ? edge.to : edge.from;
+    if (edge.role === "label") {
+      labelIndex += 1;
+      edits.push({
+        kind: "upsert_annotation",
+        annotation: {
+          id: `route-${graph.netId}-label-${labelIndex}`,
+          kind: "net-label",
+          text: edge.label?.text ?? "",
+          position: { ...to },
+          attachedObjectId: edge.label?.attachedObjectId ?? edge.to,
+          offset: { x: 0, y: 0 },
+          alignment: "middle",
+          rotation: 0,
+          locked: false,
+        },
+      });
+      continue;
+    }
 
-        if (!fromEndpoint && !toEndpoint) {
-          conflicts.push({
-            code: "ESCAPE_MALFORMED",
-            message: `Escape edge ${edge.id} must connect an endpoint to a tap/junction`,
-            objectIds: [edge.id],
-          });
-          continue;
-        }
+    if (!isAxisAligned(from, to)) {
+      conflicts.push({
+        code: "MISALIGNED_EDGE",
+        message: `${edge.role} edge ${edge.id}: (${from.x},${from.y}) to (${to.x},${to.y}) is not axis-aligned; add a bend node`,
+        objectIds: [edge.id],
+      });
+      continue;
+    }
+    if (samePoint(from, to)) {
+      conflicts.push({
+        code: "ZERO_LENGTH_SEGMENT",
+        message: `${edge.role} edge ${edge.id}: from and to are at the same position (${from.x},${from.y})`,
+        objectIds: [edge.id],
+      });
+      continue;
+    }
 
-        if (!isAxisAligned(from, to)) {
-          conflicts.push({
-            code: "MISALIGNED_EDGE",
-            message: `Escape edge ${edge.id}: (${from.x},${from.y}) → (${to.x},${to.y}) is not axis-aligned; add a bend node`,
-            objectIds: [edge.id],
-          });
-          continue;
-        }
-
-        // Validate escape direction if the terminal has an outward vector.
-        const outward = nodeOutward.get(terminalNodeId);
-        if (outward) {
-          const dx = to.x - from.x;
-          const dy = to.y - from.y;
-          const alignedWithOutward =
-            (outward.x !== 0 && Math.sign(dx) === outward.x) ||
-            (outward.y !== 0 && Math.sign(dy) === outward.y);
-          if (!alignedWithOutward) {
-            conflicts.push({
-              code: "ESCAPE_DIRECTION",
-              message: `Escape edge ${edge.id} does not leave terminal along outward direction (${outward.x},${outward.y})`,
-              objectIds: [edge.id],
-            });
-            continue;
-          }
-        }
-
-        const fromEp =
-          fromEndpoint ??
-          routeEndpointFor(edge.from, endpointNodes, junctionIds);
-        const toEp =
-          toEndpoint ?? routeEndpointFor(edge.to, endpointNodes, junctionIds);
-        const mode: SegmentMode = edge.segmentMode ?? "escape";
-        edits.push(
-          setRouteEdit(routeId, graph.netId, fromEp, toEp, [], [mode]),
-        );
-        resolvedGeometry.push({ routeId, points: [from, to] });
-        break;
-      }
-      case "trunk":
-      case "link": {
-        // Both trunk and link connect two nodes with explicit waypoints.
-        // The endpoints must be axis-aligned; if not, the Agent must add
-        // intermediate bend nodes. The helper never guesses a bend.
-        if (!isAxisAligned(from, to)) {
-          conflicts.push({
-            code: "MISALIGNED_EDGE",
-            message: `${edge.role} edge ${edge.id}: (${from.x},${from.y}) to (${to.x},${to.y}) is not axis-aligned; add a bend node`,
-            objectIds: [edge.id],
-          });
-          continue;
-        }
-
-        // Zero-length segment: from === to. This happens when two taps
-        // on a trunk share the same y. The Agent must ensure taps are
-        // at distinct positions.
-        if (from.x === to.x && from.y === to.y) {
-          conflicts.push({
-            code: "ZERO_LENGTH_SEGMENT",
-            message: `${edge.role} edge ${edge.id}: from and to are at the same position (${from.x},${from.y})`,
-            objectIds: [edge.id],
-          });
-          continue;
-        }
-
-        const fromEp = routeEndpointFor(edge.from, endpointNodes, junctionIds);
-        const toEp = routeEndpointFor(edge.to, endpointNodes, junctionIds);
-        const mode: SegmentMode =
-          edge.segmentMode ?? (edge.role === "trunk" ? "trunk" : "auto");
-        edits.push(
-          setRouteEdit(routeId, graph.netId, fromEp, toEp, [], [mode]),
-        );
-        resolvedGeometry.push({ routeId, points: [from, to] });
-
-        // Wire-through-symbol detection: check if this segment crosses an
-        // instance silhouette. Exclude the instances that the edge's
-        // endpoints belong to (the edge is leaving/entering those instances).
-        const fromInstId = edge.from.includes(":")
-          ? edge.from.split(":")[1]?.split(".")[0]
-          : undefined;
-        const toInstId = edge.to.includes(":")
-          ? edge.to.split(":")[1]?.split(".")[0]
-          : undefined;
-        const hit = segmentHitsInstance(
-          from,
-          to,
-          input.instanceBoxes,
-          fromInstId,
-          toInstId,
-        );
-        if (hit) {
-          conflicts.push({
-            code: "WIRE_THROUGH_SYMBOL",
-            message: `${edge.role} edge ${edge.id} crosses instance ${hit.instanceId}`,
-            objectIds: [edge.id, hit.instanceId],
-          });
-        }
-        break;
-      }
-      case "label": {
-        const text = edge.label?.text ?? "";
-        const attachedObjectId = edge.label?.attachedObjectId ?? edge.to;
-        edits.push({
-          kind: "upsert_annotation",
-          annotation: {
-            id: routeId,
-            kind: "net-label",
-            text,
-            position: { x: to.x, y: to.y },
-            attachedObjectId,
-            offset: { x: 0, y: 0 },
-            alignment: "middle",
-            rotation: 0,
-            locked: false,
-          },
+    const fromEndpoint = endpointNodes.get(edge.from);
+    const toEndpoint = endpointNodes.get(edge.to);
+    if (edge.role === "escape") {
+      if (Boolean(fromEndpoint) === Boolean(toEndpoint)) {
+        conflicts.push({
+          code: "ESCAPE_MALFORMED",
+          message: `Escape edge ${edge.id} must connect exactly one endpoint to a positioned node`,
+          objectIds: [edge.id],
         });
-        assumptions.push(`label "${text}" at node ${edge.to}`);
-        break;
+        continue;
       }
+      const terminalNodeId = fromEndpoint ? edge.from : edge.to;
+      const terminalPoint = fromEndpoint ? from : to;
+      const otherPoint = fromEndpoint ? to : from;
+      const outward = nodeOutward.get(terminalNodeId);
+      if (outward) {
+        const dx = otherPoint.x - terminalPoint.x;
+        const dy = otherPoint.y - terminalPoint.y;
+        const alignedWithOutward =
+          (outward.x !== 0 && Math.sign(dx) === outward.x) ||
+          (outward.y !== 0 && Math.sign(dy) === outward.y);
+        if (!alignedWithOutward) {
+          conflicts.push({
+            code: "ESCAPE_DIRECTION",
+            message: `Escape edge ${edge.id} does not leave terminal along outward direction (${outward.x},${outward.y})`,
+            objectIds: [edge.id],
+          });
+          continue;
+        }
+      }
+    }
+
+    const hit = segmentHitsInstance(
+      from,
+      to,
+      input.instanceBoxes,
+      fromEndpoint?.kind === "terminal" ? fromEndpoint.instanceId : undefined,
+      toEndpoint?.kind === "terminal" ? toEndpoint.instanceId : undefined,
+    );
+    if (hit) {
+      conflicts.push({
+        code: "WIRE_THROUGH_SYMBOL",
+        message: `${edge.role} edge ${edge.id} crosses instance ${hit.instanceId}`,
+        objectIds: [edge.id, hit.instanceId],
+      });
+      continue;
+    }
+    routableEdges.push(edge);
+  }
+
+  const adjacency = new Map<string, RouteGraphEdge[]>();
+  for (const edge of routableEdges) {
+    for (const nodeId of [edge.from, edge.to]) {
+      const incident = adjacency.get(nodeId) ?? [];
+      incident.push(edge);
+      adjacency.set(nodeId, incident);
+    }
+  }
+  for (const node of graph.nodes.filter(
+    (candidate) => candidate.role === "bend",
+  )) {
+    const degree = adjacency.get(node.id)?.length ?? 0;
+    if (degree !== 2) {
+      conflicts.push({
+        code: "BEND_DEGREE",
+        message: `Bend node ${node.id} must have degree 2, got ${degree}`,
+        objectIds: [node.id],
+      });
     }
   }
 
+  if (conflicts.length > 0) return assemble([], [], assumptions, conflicts);
+
+  const visitedEdges = new Set<string>();
+  let routeIndex = 0;
+  const anchors = graph.nodes.filter((node) => node.role !== "bend");
+  for (const anchor of anchors) {
+    for (const firstEdge of adjacency.get(anchor.id) ?? []) {
+      if (visitedEdges.has(firstEdge.id)) continue;
+      const pathNodeIds = [anchor.id];
+      const modes: SegmentMode[] = [];
+      let currentNodeId = anchor.id;
+      let currentEdge = firstEdge;
+      while (true) {
+        visitedEdges.add(currentEdge.id);
+        const nextNodeId =
+          currentEdge.from === currentNodeId
+            ? currentEdge.to
+            : currentEdge.from;
+        pathNodeIds.push(nextNodeId);
+        modes.push(segmentModeFor(currentEdge));
+        const nextNode = nodeById.get(nextNodeId)!;
+        if (nextNode.role !== "bend") break;
+        const nextEdge = (adjacency.get(nextNodeId) ?? []).find(
+          (candidate) => candidate.id !== currentEdge.id,
+        );
+        if (!nextEdge) break;
+        currentNodeId = nextNodeId;
+        currentEdge = nextEdge;
+      }
+
+      const endNodeId = pathNodeIds.at(-1)!;
+      if (endNodeId === anchor.id) {
+        conflicts.push({
+          code: "ROUTE_SELF_LOOP",
+          message: `Route path from ${anchor.id} loops back to itself`,
+          objectIds: pathNodeIds,
+        });
+        continue;
+      }
+      routeIndex += 1;
+      const routeId = `route-${graph.netId}-${routeIndex}`;
+      const points = pathNodeIds.map((nodeId) => nodeCoords.get(nodeId)!);
+      edits.push(
+        setRouteEdit(
+          routeId,
+          graph.netId,
+          routeEndpointFor(anchor.id, endpointNodes, junctionIds),
+          routeEndpointFor(endNodeId, endpointNodes, junctionIds),
+          points.slice(1, -1),
+          modes,
+        ),
+      );
+      resolvedGeometry.push({ routeId, points });
+    }
+  }
+
+  if (visitedEdges.size !== routableEdges.length) {
+    conflicts.push({
+      code: "UNANCHORED_ROUTE_CYCLE",
+      message: "Route graph contains an unanchored cycle of bend nodes",
+    });
+  }
+  if (conflicts.length > 0) return assemble([], [], assumptions, conflicts);
   return assemble(edits, resolvedGeometry, assumptions, conflicts);
 }
-
-// --- node coordinate resolution ---
 
 function resolveEndpointInInput(
   endpoint: RouteEndpoint,
@@ -392,16 +401,18 @@ function resolveEndpointInInput(
   return undefined;
 }
 
-function sameEndpoint(a: RouteEndpoint, b: RouteEndpoint): boolean {
-  if (a.kind !== b.kind) return false;
-  if (a.kind === "terminal" && b.kind === "terminal") {
-    return a.instanceId === b.instanceId && a.pinName === b.pinName;
+function sameEndpoint(left: RouteEndpoint, right: RouteEndpoint): boolean {
+  if (left.kind !== right.kind) return false;
+  if (left.kind === "terminal" && right.kind === "terminal") {
+    return (
+      left.instanceId === right.instanceId && left.pinName === right.pinName
+    );
   }
-  if (a.kind === "port" && b.kind === "port") {
-    return a.portId === b.portId;
+  if (left.kind === "port" && right.kind === "port") {
+    return left.portId === right.portId;
   }
-  if (a.kind === "junction" && b.kind === "junction") {
-    return a.junctionId === b.junctionId;
+  if (left.kind === "junction" && right.kind === "junction") {
+    return left.junctionId === right.junctionId;
   }
   return false;
 }
@@ -412,26 +423,23 @@ function resolvePositionedNode(
 ): Point | undefined {
   if (node.at) return node.at;
   if (!node.alignWith || !node.axis) return undefined;
-  const ref = resolved.get(node.alignWith);
-  if (!ref) return undefined;
+  const reference = resolved.get(node.alignWith);
+  if (!reference) return undefined;
   const offset = node.offset ?? 0;
-  if (node.axis === "x") {
-    return { x: ref.x, y: ref.y + offset };
-  }
-  return { x: ref.x + offset, y: ref.y };
+  return node.axis === "x"
+    ? { x: reference.x, y: reference.y + offset }
+    : { x: reference.x + offset, y: reference.y };
 }
-
-// --- edit builders ---
 
 function routeEndpointFor(
   nodeId: string,
   endpointNodes: Map<string, RouteEndpoint>,
   junctionIds: Set<string>,
 ): RouteEndpoint {
-  const ep = endpointNodes.get(nodeId);
-  if (ep) return ep;
+  const endpoint = endpointNodes.get(nodeId);
+  if (endpoint) return endpoint;
   if (junctionIds.has(nodeId)) return { kind: "junction", junctionId: nodeId };
-  return { kind: "junction", junctionId: nodeId };
+  throw new Error(`Route path ended on transient bend node ${nodeId}`);
 }
 
 function setRouteEdit(
@@ -452,8 +460,6 @@ function setRouteEdit(
     segmentModes,
   };
 }
-
-// --- assembly ---
 
 function assemble(
   edits: SchematicEdit[],
