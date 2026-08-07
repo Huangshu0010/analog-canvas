@@ -306,7 +306,11 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
           role: "tap",
           at: {
             x: pointA.x + (outwardA?.x ?? 0) * 80,
-            y: pointA.y + (outwardA?.y ?? 0) * 200,
+            // Use an absolute vertical offset so the trunk edge has real
+            // length even when the terminal's outward direction is purely
+            // horizontal (outward.y === 0); otherwise tap0 and tap1 collapse
+            // to the same point and the trunk becomes a zero-length segment.
+            y: pointA.y + 200,
           },
         },
       ],
