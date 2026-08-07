@@ -2,6 +2,7 @@ import { transformPoint } from "@icm/model";
 import type { Point, Rect, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
+import { resolveEndpointOutwardDirection } from "./endpoint.js";
 import { routePolyline } from "./routes.js";
 
 export interface VisualDiagnostic {
@@ -164,6 +165,182 @@ function constraintViolation(
   }
 }
 
+/**
+ * Read-only routing-quality metrics. These report wire-through-symbol,
+ * same-Net route overlap, and terminal departure direction. Severity is
+ * `info` for departure (evidence) and `warning` for overlap and
+ * wire-through-symbol (likely readability defects). They never move objects
+ * and never claim good/bad — detour ratio is reported as evidence only.
+ */
+function pushRoutingQualityMetrics(
+  diagnostics: VisualDiagnostic[],
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  boundsById: Map<string, Rect>,
+): void {
+  const routePolylines = document.routes
+    .map((route) => ({
+      route,
+      polyline: routePolyline(document, resolver, route),
+    }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        route: typeof entry.route;
+        polyline: NonNullable<typeof entry.polyline>;
+      } => entry.polyline !== null,
+    );
+
+  // 1. Wire-through-symbol: a Route segment passes through an instance
+  //    silhouette that is not one of its terminal endpoints.
+  for (const { route, polyline } of routePolylines) {
+    const terminalInstances = new Set(
+      [route.from, route.to]
+        .filter(
+          (
+            endpoint,
+          ): endpoint is Extract<typeof endpoint, { kind: "terminal" }> =>
+            endpoint.kind === "terminal",
+        )
+        .map((endpoint) => endpoint.instanceId),
+    );
+    for (let index = 1; index < polyline.points.length; index += 1) {
+      const from = polyline.points[index - 1]!;
+      const to = polyline.points[index]!;
+      for (const [instanceId, box] of boundsById) {
+        if (terminalInstances.has(instanceId)) continue;
+        if (segmentIntersectsRect(from, to, box)) {
+          diagnostics.push({
+            code: "VISUAL_WIRE_THROUGH_SYMBOL",
+            severity: "warning",
+            message: `Route ${route.id} passes through instance ${instanceId}`,
+            objectIds: [route.id, instanceId],
+            bounds: box,
+            parameters: { segmentIndex: index - 1 },
+          });
+        }
+      }
+    }
+  }
+
+  // 2. Same-Net route overlap: two Routes on the same Net share a collinear
+  //    overlapping segment (not just a shared endpoint).
+  for (let leftIndex = 0; leftIndex < routePolylines.length; leftIndex += 1) {
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < routePolylines.length;
+      rightIndex += 1
+    ) {
+      const left = routePolylines[leftIndex]!;
+      const right = routePolylines[rightIndex]!;
+      if (left.route.netId !== right.route.netId) continue;
+      const overlap = firstCollinearOverlap(
+        left.polyline.points,
+        right.polyline.points,
+      );
+      if (overlap) {
+        diagnostics.push({
+          code: "VISUAL_ROUTE_OVERLAP",
+          severity: "warning",
+          message: `Routes ${left.route.id} and ${right.route.id} overlap on Net ${left.route.netId}`,
+          objectIds: [left.route.id, right.route.id],
+          ...(overlap.bounds ? { bounds: overlap.bounds } : {}),
+          parameters: { netId: left.route.netId },
+        });
+      }
+    }
+  }
+
+  // 3. Terminal departure: the first segment of a terminal-anchored Route
+  //    should leave along the pin's outward direction. Reported as evidence.
+  for (const { route, polyline } of routePolylines) {
+    if (route.from.kind !== "terminal") continue;
+    if (polyline.points.length < 2) continue;
+    const outward = resolveEndpointOutwardDirection(
+      document,
+      resolver,
+      route.from,
+    );
+    if (!outward) continue;
+    const first = polyline.points[0]!;
+    const second = polyline.points[1]!;
+    const departure = {
+      x: Math.sign(second.x - first.x),
+      y: Math.sign(second.y - first.y),
+    };
+    const aligned =
+      (outward.x !== 0 && departure.x === outward.x) ||
+      (outward.y !== 0 && departure.y === outward.y);
+    if (!aligned) {
+      diagnostics.push({
+        code: "VISUAL_TERMINAL_DEPARTURE",
+        severity: "info",
+        message: `Route ${route.id} does not leave terminal along its pin outward direction`,
+        objectIds: [route.id],
+        point: first,
+        parameters: {
+          outwardX: outward.x,
+          outwardY: outward.y,
+          departureX: departure.x,
+          departureY: departure.y,
+        },
+      });
+    }
+  }
+}
+
+function segmentIntersectsRect(from: Point, to: Point, box: Rect): boolean {
+  // Axial-aligned segment vs axis-aligned rect intersection. A segment whose
+  // endpoint lies strictly inside the box counts as passing through.
+  const minX = Math.min(from.x, to.x);
+  const maxX = Math.max(from.x, to.x);
+  const minY = Math.min(from.y, to.y);
+  const maxY = Math.max(from.y, to.y);
+  return (
+    maxX > box.x &&
+    minX < box.x + box.width &&
+    maxY > box.y &&
+    minY < box.y + box.height
+  );
+}
+
+function firstCollinearOverlap(
+  left: readonly Point[],
+  right: readonly Point[],
+): { bounds?: Rect } | undefined {
+  for (let i = 1; i < left.length; i += 1) {
+    const la = left[i - 1]!;
+    const lb = left[i]!;
+    for (let j = 1; j < right.length; j += 1) {
+      const ra = right[j - 1]!;
+      const rb = right[j]!;
+      // Both segments must be collinear on the same axis-aligned line.
+      const sameHorizontal = la.y === lb.y && ra.y === rb.y && la.y === ra.y;
+      const sameVertical = la.x === lb.x && ra.x === rb.x && la.x === ra.x;
+      if (!sameHorizontal && !sameVertical) continue;
+      if (sameHorizontal) {
+        const start = Math.max(Math.min(la.x, lb.x), Math.min(ra.x, rb.x));
+        const end = Math.min(Math.max(la.x, lb.x), Math.max(ra.x, rb.x));
+        if (end > start) {
+          return {
+            bounds: { x: start, y: la.y, width: end - start, height: 0 },
+          };
+        }
+      } else {
+        const start = Math.max(Math.min(la.y, lb.y), Math.min(ra.y, rb.y));
+        const end = Math.min(Math.max(la.y, lb.y), Math.max(ra.y, rb.y));
+        if (end > start) {
+          return {
+            bounds: { x: la.x, y: start, width: 0, height: end - start },
+          };
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
 export function diagnoseVisualQuality(
   document: SchematicDocument,
   resolver: SymbolResolver,
@@ -210,19 +387,21 @@ export function diagnoseVisualQuality(
     }
   }
 
-  const annotationBounds = document.annotations.map((annotation) => {
-    const width = Math.max(8, annotation.text.length * 7);
-    const x =
-      annotation.alignment === "middle"
-        ? annotation.position.x - width / 2
-        : annotation.alignment === "end"
-          ? annotation.position.x - width
-          : annotation.position.x;
-    return {
-      id: annotation.id,
-      bounds: { x, y: annotation.position.y - 12, width, height: 15 },
-    };
-  });
+  const annotationBounds = document.annotations
+    .filter((annotation) => annotation.text.trim().length > 0)
+    .map((annotation) => {
+      const width = Math.max(8, annotation.text.length * 7);
+      const x =
+        annotation.alignment === "middle"
+          ? annotation.position.x - width / 2
+          : annotation.alignment === "end"
+            ? annotation.position.x - width
+            : annotation.position.x;
+      return {
+        id: annotation.id,
+        bounds: { x, y: annotation.position.y - 12, width, height: 15 },
+      };
+    });
   for (const [leftIndex, left] of annotationBounds.entries()) {
     for (const right of annotationBounds.slice(leftIndex + 1)) {
       if (rectanglesOverlap(left.bounds, right.bounds)) {
@@ -327,6 +506,10 @@ export function diagnoseVisualQuality(
       }
     }
   }
+  // Read-only routing-quality metrics. These are evidence, not pass/fail
+  // judges: they report wire-through-symbol, same-Net route overlap, and
+  // terminal departure direction. They never move objects.
+  pushRoutingQualityMetrics(diagnostics, document, resolver, boundsById);
   return diagnostics.sort((left, right) =>
     `${left.code}\0${left.objectIds.join("\0")}`.localeCompare(
       `${right.code}\0${right.objectIds.join("\0")}`,

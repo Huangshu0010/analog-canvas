@@ -985,3 +985,22 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `git diff --check` passed.
 - Commit status: ready for
   `feat(agent-routing): add Agent-local route-tree expander and shape dictionary`.
+
+## 2026-08-07 - Add read-only routing-quality metrics
+
+- Target: target #4 of the routing-quality sequence — give the Agent measurable
+  routing feedback beyond structural codes, as evidence only (never pass/fail,
+  never moving objects).
+- Changed areas: `packages/derived/src/visual.ts` (new
+  `pushRoutingQualityMetrics` with VISUAL_WIRE_THROUGH_SYMBOL,
+  VISUAL_ROUTE_OVERLAP, VISUAL_TERMINAL_DEPARTURE; segmentIntersectsRect and
+  firstCollinearOverlap helpers), one focused test, and
+  `docs/agent/knowledge/routing-and-diagnostics.md` documenting the codes.
+- Boundary held: metrics are read-only derived diagnostics; terminal departure
+  is `info` evidence; overlap and wire-through-symbol are `warning`. They never
+  move objects and never claim good/bad. The VisualDiagnostic type and Agent
+  Snapshot mapping were unchanged.
+- Dirty-state decision: owned paths do not overlap the existing dirty set.
+- Validation: full workspace `pnpm typecheck`, `prettier --check`, 17 tests in
+  4 files, and `git diff --check` passed.
+- Commit status: ready for `feat(derived): add read-only routing-quality metrics`.

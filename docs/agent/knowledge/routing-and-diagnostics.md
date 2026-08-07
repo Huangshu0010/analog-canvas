@@ -51,5 +51,18 @@ simplify routing.
 - Flightline: route it or explicitly report why it must remain. Do not call an
   unrouted intended connection complete.
 
+Routing-quality metrics report evidence, not pass/fail verdicts:
+
+- `VISUAL_WIRE_THROUGH_SYMBOL`: a Route segment passes through an instance
+  silhouette that is not one of its terminal endpoints. Usually a placement or
+  tree-shape problem; move the instance or change the Route, do not retunnel
+  through the device.
+- `VISUAL_ROUTE_OVERLAP`: two Routes on the same Net share a collinear
+  overlapping segment. Collapse the duplicate or switch one branch to a label.
+- `VISUAL_TERMINAL_DEPARTURE` (info): a terminal-anchored Route's first segment
+  does not leave along the pin outward direction. Evidence only — a deliberate
+  immediate bend is sometimes clearer; decide from the render, not from the
+  counter alone.
+
 Warnings may remain only when intentional and explained with object IDs. Errors,
 stale diagnostics, and unintended electrical ambiguity block completion.
