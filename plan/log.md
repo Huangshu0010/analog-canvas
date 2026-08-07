@@ -225,3 +225,22 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   Markdown links resolved, fenced code blocks balanced, and
   `git diff --check` passed.
 - Commit status: ready to commit as `Plan Phase 8 interaction redesign`.
+
+## 2026-08-07 - Complete Phase 8 direct manipulation
+
+- Target: replace the validation toolbar with a compact direct-manipulation
+  editor that can author topology from a genuinely empty Project while keeping
+  GUI and Agent mutations on one semantic transaction boundary.
+- Changed areas: added instance/connectivity Edit Engine operations and Agent
+  schemas; atomic group stretch; an empty production workspace; searchable
+  component placement; direct selection, movement, wiring, automatic
+  Junction/Crossing behavior, dogleg manipulation and contextual deletion;
+  compact grouped menus; VDD/VSS symbols; and revised contracts/user guidance.
+- Validation: frozen install, formatting, four pinned references, TypeScript,
+  96 tests in 28 files, workspace build, three Agent API artifacts, 12 reviewed
+  symbol previews, Phase 5/7 goldens, PWA icons, performance budgets, release
+  packaging/smoke, seven Playwright flows, 1440x900 browser review, production
+  inventory/coupling inspection, Markdown checks, and `git diff --check`.
+- Known compatible follow-ups: persisted shortcut remapping, free-standing
+  wire endpoints, and general multi-elbow handles.
+- Commit status: ready to commit as `Complete Phase 8 direct manipulation`.

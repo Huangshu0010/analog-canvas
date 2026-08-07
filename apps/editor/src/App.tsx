@@ -8,15 +8,16 @@ import {
   deriveCrossings,
   deriveFlightlines,
   diagnoseVisualQuality,
-  netEndpoints,
-  proposeLocalStretch,
-  resolveEndpointPoint,
+  endpointKey,
+  proposeGroupStretch,
   routePolyline,
 } from "@icm/derived";
 import {
   CircuitProjectSchema,
+  createEmptyProject,
   parseProject,
   serializeProject,
+  transformPoint,
 } from "@icm/model";
 import type {
   CircuitProject,
@@ -30,27 +31,45 @@ import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
-import { createDemoProject } from "./demo-project";
 import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
 
-const SNAPSHOT_KEY = "icm.phase1.snapshot";
 const RECOVERY_KEY = "icm.recovery.v1";
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 
 interface DragPreview {
-  instanceId: string;
-  originalPosition: Point;
+  instanceIds: string[];
+  originalPositions: Record<string, Point>;
+  pointerStart: Point;
   position: Point;
   pointerId: number;
 }
 
-type EditorTool = "select" | "wire" | "junction";
+interface BoxPreview {
+  start: Point;
+  end: Point;
+  pointerId: number;
+}
+
+interface PanPreview {
+  clientStart: Point;
+  viewBoxStart: Rect;
+  pointerId: number;
+}
+
+interface RouteStretchPreview {
+  routeId: string;
+  point: Point;
+  pointerId: number;
+}
+
+type EditorTool = "pointer" | "wire";
 
 interface WireSource {
   endpoint: RouteEndpoint;
-  netId: string;
+  netId: string | null;
   point: Point;
+  preludeEdits: SchematicEdit[];
 }
 
 export interface AppProps {
@@ -107,6 +126,54 @@ function segmentAtPoint(points: readonly Point[], point: Point): number | null {
   return null;
 }
 
+function endpointNetId(
+  document: SchematicDocument,
+  endpoint: RouteEndpoint,
+): string | null {
+  if (endpoint.kind === "junction") {
+    return (
+      document.junctions.find((junction) => junction.id === endpoint.junctionId)
+        ?.netId ?? null
+    );
+  }
+  return (
+    document.nets.find((net) =>
+      endpoint.kind === "terminal"
+        ? net.terminals.some(
+            (terminal) =>
+              terminal.instanceId === endpoint.instanceId &&
+              terminal.pinName === endpoint.pinName,
+          )
+        : net.ports.includes(endpoint.portId),
+    )?.id ?? null
+  );
+}
+
+function normalizedRect(start: Point, end: Point): Rect {
+  return {
+    x: Math.min(start.x, end.x),
+    y: Math.min(start.y, end.y),
+    width: Math.max(1, Math.abs(end.x - start.x)),
+    height: Math.max(1, Math.abs(end.y - start.y)),
+  };
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null;
+  return Boolean(
+    element?.closest("input, textarea, select, [contenteditable='true']"),
+  );
+}
+
+function symbolCategory(symbolId: string): string {
+  if (["nmos", "pmos", "npn", "pnp"].includes(symbolId)) return "Transistors";
+  if (["resistor", "capacitor", "inductor", "diode"].includes(symbolId)) {
+    return "Passives";
+  }
+  if (["voltage-source", "current-source"].includes(symbolId)) return "Sources";
+  return "Power and Ports";
+}
+
 export function App({ project: initialProject }: AppProps) {
   const resolver = useMemo(
     () => new InMemorySymbolResolver(builtInSymbols),
@@ -114,10 +181,12 @@ export function App({ project: initialProject }: AppProps) {
   );
   const [project, setProject] = useState(() =>
     CircuitProjectSchema.parse(
-      structuredClone(initialProject ?? createDemoProject()),
+      structuredClone(
+        initialProject ?? createEmptyProject("project-main", "New Circuit"),
+      ),
     ),
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewBox, setViewBox] = useState<Rect>(DEFAULT_VIEWBOX);
   const [status, setStatus] = useState("Ready");
   const [recoveryCandidate, setRecoveryCandidate] =
@@ -126,12 +195,24 @@ export function App({ project: initialProject }: AppProps) {
     [],
   );
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
-  const [tool, setTool] = useState<EditorTool>("select");
+  const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
+  const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
+  const [routeStretchPreview, setRouteStretchPreview] =
+    useState<RouteStretchPreview | null>(null);
+  const [tool, setTool] = useState<EditorTool>("pointer");
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
   const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
+    null,
+  );
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
+  const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
   const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
+  const instanceCounter = useRef(0);
+  const projectInputRef = useRef<HTMLInputElement>(null);
   const history = useRef(
     new DocumentHistory(project.documents[0]!, { symbolResolver: resolver }),
   );
@@ -142,29 +223,61 @@ export function App({ project: initialProject }: AppProps) {
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
-  const selected = document.instances.find(
-    (instance) => instance.id === selectedId,
-  );
+  const selectedId = selectedIds.at(-1) ?? null;
   const flightlines = deriveFlightlines(document, resolver);
   const crossings = deriveCrossings(document, resolver);
   const visualDiagnostics = diagnoseVisualQuality(document, resolver);
-  const visibleEndpoints = document.nets.flatMap((net) =>
-    netEndpoints(document, net)
-      .map((endpoint) => ({
-        endpoint,
-        netId: net.id,
-        point: resolveEndpointPoint(document, resolver, endpoint),
-      }))
-      .filter(
-        (
-          candidate,
-        ): candidate is {
-          endpoint: RouteEndpoint;
-          netId: string;
-          point: Point;
-        } => candidate.point !== null,
-      ),
-  );
+  const visibleEndpoints: WireSource[] = [
+    ...document.instances.flatMap((instance) => {
+      if (!instance.placement) return [];
+      const resolved = resolver.resolve(
+        instance.symbolId,
+        instance.symbolVariantId,
+      );
+      if (!resolved) return [];
+      const hidden = new Set(resolved.variant?.hiddenPinNames ?? []);
+      return resolved.definition.pins
+        .filter((pin) => !hidden.has(pin.name))
+        .map((pin): WireSource => {
+          const endpoint: RouteEndpoint = {
+            kind: "terminal",
+            instanceId: instance.id,
+            pinName: pin.name,
+          };
+          return {
+            endpoint,
+            netId: endpointNetId(document, endpoint),
+            point: transformPoint(
+              pin.at,
+              instance.placement!.position,
+              instance.placement!,
+            ),
+            preludeEdits: [],
+          };
+        });
+    }),
+    ...document.ports.flatMap((port): WireSource[] =>
+      port.position
+        ? [
+            {
+              endpoint: { kind: "port", portId: port.id },
+              netId: endpointNetId(document, {
+                kind: "port",
+                portId: port.id,
+              }),
+              point: port.position,
+              preludeEdits: [],
+            },
+          ]
+        : [],
+    ),
+    ...document.junctions.map((junction): WireSource => ({
+      endpoint: { kind: "junction", junctionId: junction.id },
+      netId: junction.netId,
+      point: junction.position,
+      preludeEdits: [],
+    })),
+  ];
   const routePolylines = document.routes
     .map((route) => ({
       route,
@@ -193,6 +306,22 @@ export function App({ project: initialProject }: AppProps) {
     (count, candidate) => count + candidate.instances.length,
     0,
   );
+  const componentSymbols = builtInSymbols.filter(
+    (symbol) =>
+      symbol.id !== "generic-block" &&
+      `${symbol.name} ${symbol.id} ${symbol.aliases.join(" ")}`
+        .toLowerCase()
+        .includes(paletteQuery.trim().toLowerCase()),
+  );
+  const componentGroups = [
+    ...new Set(componentSymbols.map((symbol) => symbolCategory(symbol.id))),
+  ].map((category) => ({
+    category,
+    symbols: componentSymbols.filter(
+      (symbol) => symbolCategory(symbol.id) === category,
+    ),
+  }));
+  const contentScene = buildSvgScene(document, resolver);
 
   useEffect(() => {
     const serialized = localStorage.getItem(RECOVERY_KEY);
@@ -248,13 +377,11 @@ export function App({ project: initialProject }: AppProps) {
     setTool(nextTool);
     setWireSource(null);
     setWirePreviewPoint(null);
-    if (nextTool !== "select") setSelectedRouteId(null);
+    if (nextTool !== "pointer") setSelectedRouteId(null);
     setStatus(
       nextTool === "wire"
-        ? "Wire: choose a source endpoint"
-        : nextTool === "junction"
-          ? "Junction: choose a route segment"
-          : "Select tool",
+        ? "Wire: choose a pin, junction, or route segment"
+        : "Pointer ready",
     );
   }
 
@@ -263,12 +390,12 @@ export function App({ project: initialProject }: AppProps) {
     const demoDocument = demo.documents[0]!;
     history.current.reset(demoDocument);
     setProject(demo);
-    setSelectedId(null);
+    setSelectedIds([]);
     setSelectedRouteId(null);
     setDragPreview(null);
     setWireSource(null);
     setWirePreviewPoint(null);
-    setTool("select");
+    setTool("pointer");
     setViewBox(DEFAULT_VIEWBOX);
     setStatus("Loaded Phase 3 routing demo");
   }
@@ -278,54 +405,109 @@ export function App({ project: initialProject }: AppProps) {
     candidate: WireSource,
   ): void {
     event.stopPropagation();
-    if (tool !== "wire") {
-      if (candidate.endpoint.kind === "terminal") {
-        setSelectedId(candidate.endpoint.instanceId);
-      }
+    if (event.altKey) {
+      setStatus("Snap suppressed while Alt is held");
       return;
     }
+    setTool("wire");
     if (!wireSource) {
       setWireSource(candidate);
       setWirePreviewPoint(candidate.point);
       setStatus(`Wire source: ${endpointTestId(candidate.endpoint)}`);
       return;
     }
-    if (wireSource.netId !== candidate.netId) {
-      setStatus("Wire endpoints must belong to the same logical Net");
-      return;
-    }
-    if (
-      endpointTestId(wireSource.endpoint) === endpointTestId(candidate.endpoint)
-    ) {
+    if (endpointKey(wireSource.endpoint) === endpointKey(candidate.endpoint)) {
       setStatus("Choose a different endpoint");
       return;
     }
+    commitWire(candidate);
+  }
+
+  function commitWire(candidate: WireSource): void {
+    if (!wireSource) return;
     routeCounter.current += 1;
+    const suffix = routeCounter.current;
+    const edits: SchematicEdit[] = [
+      ...wireSource.preludeEdits,
+      ...candidate.preludeEdits,
+    ];
+    let netId = wireSource.netId ?? candidate.netId;
+    if (
+      wireSource.netId &&
+      candidate.netId &&
+      wireSource.netId !== candidate.netId
+    ) {
+      netId = wireSource.netId;
+      edits.push({
+        kind: "merge_nets",
+        targetNetId: wireSource.netId,
+        sourceNetId: candidate.netId,
+      });
+    }
+    if (!netId) netId = `net-ui-${suffix}`;
+    edits.push({
+      kind: "connect_endpoints",
+      from: wireSource.endpoint,
+      to: candidate.endpoint,
+      ...(!wireSource.netId && !candidate.netId ? { newNetId: netId } : {}),
+    });
     const diagonal =
       wireSource.point.x !== candidate.point.x &&
       wireSource.point.y !== candidate.point.y;
     const waypoints = diagonal
       ? [{ x: candidate.point.x, y: wireSource.point.y }]
       : [];
-    const result = transact([
-      {
-        kind: "set_route_points",
-        routeId: `route-ui-${routeCounter.current}`,
-        netId: candidate.netId,
-        from: wireSource.endpoint,
-        to: candidate.endpoint,
-        waypoints,
-        segmentModes: Array.from(
-          { length: waypoints.length + 1 },
-          () => "manual" as const,
-        ),
-      },
-    ]);
+    edits.push({
+      kind: "set_route_points",
+      routeId: `route-ui-${suffix}`,
+      netId,
+      from: wireSource.endpoint,
+      to: candidate.endpoint,
+      waypoints,
+      segmentModes: Array.from(
+        { length: waypoints.length + 1 },
+        () => "manual" as const,
+      ),
+    });
+    const result = transact(edits);
     if (result.ok) {
       setWireSource(null);
       setWirePreviewPoint(null);
+      setTool("pointer");
       setStatus(`Committed route at revision ${result.revision}`);
     }
+  }
+
+  function routeAnchor(
+    routeId: string,
+    point: Point,
+    segmentIndex: number,
+  ): WireSource {
+    const route = document.routes.find(
+      (candidate) => candidate.id === routeId,
+    )!;
+    routeCounter.current += 1;
+    const suffix = routeCounter.current;
+    const junctionId = `junction-ui-${suffix}`;
+    return {
+      endpoint: { kind: "junction", junctionId },
+      netId: route.netId,
+      point,
+      preludeEdits: [
+        {
+          kind: "add_junction",
+          junctionId,
+          netId: route.netId,
+          position: point,
+          split: {
+            routeId,
+            firstRouteId: `${routeId}-a-${suffix}`,
+            secondRouteId: `${routeId}-b-${suffix}`,
+            segmentIndex,
+          },
+        },
+      ],
+    };
   }
 
   function handleRoutePointerDown(
@@ -333,99 +515,133 @@ export function App({ project: initialProject }: AppProps) {
     routeId: string,
   ): void {
     event.stopPropagation();
+    if (event.altKey) {
+      setStatus("Snap suppressed while Alt is held");
+      return;
+    }
     const routeRecord = routePolylines.find(
       (candidate) => candidate.route.id === routeId,
     );
     if (!routeRecord) return;
-    if (tool === "select") {
-      setSelectedRouteId(routeId);
-      setSelectedId(null);
-      setStatus(`Selected route ${routeId}`);
-      return;
-    }
-    if (tool !== "junction") return;
     const point = pointFromClient(
       event.clientX,
       event.clientY,
       event.currentTarget.ownerSVGElement!,
     );
     const segmentIndex = segmentAtPoint(routeRecord.polyline.points, point);
-    if (segmentIndex === null) {
-      setStatus("Junction must be inside a route segment");
+    if (tool === "pointer") {
+      setSelectedRouteId(routeId);
+      setSelectedIds([]);
+      setStatus(`Selected route ${routeId}`);
       return;
     }
-    routeCounter.current += 1;
-    const suffix = routeCounter.current;
-    const result = transact([
-      {
-        kind: "add_junction",
-        junctionId: `junction-ui-${suffix}`,
-        netId: routeRecord.route.netId,
-        position: point,
-        split: {
-          routeId,
-          firstRouteId: `${routeId}-a-${suffix}`,
-          secondRouteId: `${routeId}-b-${suffix}`,
-          segmentIndex,
-        },
-      },
-    ]);
-    if (result.ok) {
-      setTool("select");
-      setStatus(`Committed junction at revision ${result.revision}`);
+    if (segmentIndex === null) {
+      setStatus("Wire must start or end inside a route segment");
+      return;
+    }
+    const overlappingTargets = routePolylines.filter(
+      (candidate) => segmentAtPoint(candidate.polyline.points, point) !== null,
+    );
+    if (overlappingTargets.length > 1) {
+      setStatus(
+        "Ambiguous intersection: choose one conductor away from the crossing",
+      );
+      return;
+    }
+    const anchor = routeAnchor(routeId, point, segmentIndex);
+    if (!wireSource) {
+      setWireSource(anchor);
+      setWirePreviewPoint(point);
+      setStatus(`Wire source: route ${routeId}`);
+    } else {
+      commitWire(anchor);
     }
   }
 
-  function detachSelectedRoute(): void {
+  function removeSelectedRouteGeometry(): void {
     if (!selectedRouteId) return;
     const result = transact([
       { kind: "make_flightline", routeId: selectedRouteId },
     ]);
     if (result.ok) {
       setSelectedRouteId(null);
-      setStatus(`Detached route at revision ${result.revision}`);
+      setStatus(`Removed route geometry at revision ${result.revision}`);
     }
   }
 
-  function stretchSelectedRoute(): void {
-    const selectedRoute = routePolylines.find(
-      (candidate) => candidate.route.id === selectedRouteId,
+  function beginRouteStretch(
+    event: ReactPointerEvent<SVGCircleElement>,
+    routeId: string,
+  ): void {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setRouteStretchPreview({
+      routeId,
+      pointerId: event.pointerId,
+      point: pointFromClient(
+        event.clientX,
+        event.clientY,
+        event.currentTarget.ownerSVGElement!,
+      ),
+    });
+  }
+
+  function previewRouteStretch(
+    event: ReactPointerEvent<SVGCircleElement>,
+  ): void {
+    if (routeStretchPreview?.pointerId !== event.pointerId) return;
+    setRouteStretchPreview({
+      ...routeStretchPreview,
+      point: pointFromClient(
+        event.clientX,
+        event.clientY,
+        event.currentTarget.ownerSVGElement!,
+      ),
+    });
+  }
+
+  function finishRouteStretch(
+    event: ReactPointerEvent<SVGCircleElement>,
+  ): void {
+    if (routeStretchPreview?.pointerId !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    const record = routePolylines.find(
+      (candidate) => candidate.route.id === routeStretchPreview.routeId,
     );
-    if (!selectedRoute) return;
-    const points = selectedRoute.polyline.points;
-    if (points.length !== 2) {
-      setStatus("Phase 3 demo Stretch targets a direct branch");
+    if (!record || record.polyline.points.length !== 2) {
+      setRouteStretchPreview(null);
       return;
     }
-    const [from, to] = points as [Point, Point];
-    let waypoints: Point[];
-    if (from.y === to.y) {
-      const middle = snap((from.x + to.x) / 2, document.presentation.grid);
-      waypoints = [
-        { x: middle, y: from.y },
-        { x: middle, y: from.y + 40 },
-        { x: to.x, y: from.y + 40 },
-      ];
-    } else {
-      const middle = snap((from.y + to.y) / 2, document.presentation.grid);
-      waypoints = [
-        { x: from.x, y: middle },
-        { x: from.x + 40, y: middle },
-        { x: from.x + 40, y: to.y },
-      ];
-    }
+    const [from, to] = record.polyline.points as [Point, Point];
+    const point = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+    );
+    const waypoints =
+      from.y === to.y
+        ? [
+            { x: from.x, y: point.y },
+            { x: to.x, y: point.y },
+          ]
+        : [
+            { x: point.x, y: from.y },
+            { x: point.x, y: to.y },
+          ];
     const result = transact([
       {
         kind: "set_route_points",
-        routeId: selectedRoute.route.id,
-        netId: selectedRoute.route.netId,
-        from: selectedRoute.route.from,
-        to: selectedRoute.route.to,
+        routeId: record.route.id,
+        netId: record.route.netId,
+        from: record.route.from,
+        to: record.route.to,
         waypoints,
-        segmentModes: ["manual", "manual", "manual", "manual"],
+        segmentModes: ["manual", "manual", "manual"],
       },
     ]);
-    if (result.ok) setStatus(`Stretched route at revision ${result.revision}`);
+    if (result.ok) setStatus(`Adjusted route ${record.route.id}`);
+    setRouteStretchPreview(null);
   }
 
   function pointFromClient(
@@ -479,14 +695,64 @@ export function App({ project: initialProject }: AppProps) {
         },
       },
     ]);
-    setSelectedId(instanceId);
+    setSelectedIds([instanceId]);
+  }
+
+  function placeNewComponent(symbolId: string, position: Point): void {
+    instanceCounter.current += 1;
+    const prefix: Record<string, string> = {
+      resistor: "R",
+      capacitor: "C",
+      inductor: "L",
+      nmos: "M",
+      pmos: "M",
+      npn: "Q",
+      pnp: "Q",
+      diode: "D",
+      "voltage-source": "V",
+      "current-source": "I",
+      ground: "GND",
+      port: "P",
+    };
+    let id = `${prefix[symbolId] ?? "X"}${instanceCounter.current}`;
+    while (document.instances.some((instance) => instance.id === id)) {
+      instanceCounter.current += 1;
+      id = `${prefix[symbolId] ?? "X"}${instanceCounter.current}`;
+    }
+    const result = transact([
+      {
+        kind: "add_instance",
+        instance: {
+          id,
+          symbolId,
+          placement: { position, rotation: 0, mirror: "none" },
+          properties: {},
+        },
+      },
+    ]);
+    if (result.ok) {
+      setSelectedIds([id]);
+      setPendingSymbolId(null);
+      setStatus(`Added ${id} (${symbolId})`);
+    }
+  }
+
+  function selectInstance(instanceId: string, additive: boolean): void {
+    setSelectedRouteId(null);
+    setSelectedEndpoint(null);
+    setSelectedIds((current) => {
+      if (!additive) return [instanceId];
+      return current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : [...current, instanceId];
+    });
   }
 
   function beginMove(
     event: ReactPointerEvent<SVGCircleElement>,
     instanceId: string,
   ): void {
-    if (tool !== "select") return;
+    if (tool !== "pointer" || event.button !== 0) return;
     event.stopPropagation();
     const instance = document.instances.find(
       (candidate) => candidate.id === instanceId,
@@ -495,16 +761,26 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
-    setSelectedId(instanceId);
+    const movingIds = selectedIds.includes(instanceId)
+      ? selectedIds
+      : [instanceId];
+    if (!selectedIds.includes(instanceId)) setSelectedIds([instanceId]);
+    const pointerStart = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+    );
     setDragPreview({
-      instanceId,
-      originalPosition: instance.placement.position,
-      pointerId: event.pointerId,
-      position: pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget.ownerSVGElement!,
+      instanceIds: movingIds,
+      originalPositions: Object.fromEntries(
+        movingIds.map((id) => {
+          const candidate = document.instances.find((item) => item.id === id)!;
+          return [id, { ...candidate.placement!.position }];
+        }),
       ),
+      pointerStart,
+      pointerId: event.pointerId,
+      position: pointerStart,
     });
   }
 
@@ -532,16 +808,23 @@ export function App({ project: initialProject }: AppProps) {
       event.clientY,
       event.currentTarget.ownerSVGElement!,
     );
-    if (
-      position.x !== dragPreview.originalPosition.x ||
-      position.y !== dragPreview.originalPosition.y
-    ) {
+    const delta = {
+      x: position.x - dragPreview.pointerStart.x,
+      y: position.y - dragPreview.pointerStart.y,
+    };
+    if (delta.x !== 0 || delta.y !== 0) {
       try {
-        const stretchEdits: SchematicEdit[] = proposeLocalStretch(
+        const moves = dragPreview.instanceIds.map((instanceId) => {
+          const original = dragPreview.originalPositions[instanceId]!;
+          return {
+            instanceId,
+            position: { x: original.x + delta.x, y: original.y + delta.y },
+          };
+        });
+        const stretchEdits: SchematicEdit[] = proposeGroupStretch(
           document,
           resolver,
-          dragPreview.instanceId,
-          position,
+          moves,
         ).map((proposal) => {
           const route = document.routes.find(
             (candidate) => candidate.id === proposal.routeId,
@@ -557,11 +840,10 @@ export function App({ project: initialProject }: AppProps) {
           };
         });
         transact([
-          {
+          ...moves.map((move): SchematicEdit => ({
             kind: "move_instance",
-            instanceId: dragPreview.instanceId,
-            position,
-          },
+            ...move,
+          })),
           ...stretchEdits,
         ]);
       } catch (error) {
@@ -574,30 +856,38 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function rotateSelected(): void {
-    if (!selected?.placement) {
-      return;
-    }
-    const rotation = ((selected.placement.rotation + 90) % 360) as
-      0 | 90 | 180 | 270;
-    transact([{ kind: "rotate_instance", instanceId: selected.id, rotation }]);
+    const edits = selectedIds.flatMap((id): SchematicEdit[] => {
+      const instance = document.instances.find(
+        (candidate) => candidate.id === id,
+      );
+      if (!instance?.placement) return [];
+      return [
+        {
+          kind: "rotate_instance",
+          instanceId: instance.id,
+          rotation: ((instance.placement.rotation + 90) % 360) as
+            0 | 90 | 180 | 270,
+        },
+      ];
+    });
+    if (edits.length > 0) transact(edits);
   }
 
   function mirrorSelected(): void {
-    if (!selected?.placement) {
-      return;
-    }
-    transact([
-      {
-        kind: "mirror_instance",
-        instanceId: selected.id,
-        mirror: selected.placement.mirror === "none" ? "x" : "none",
-      },
-    ]);
-  }
-
-  function saveSnapshot(): void {
-    localStorage.setItem(SNAPSHOT_KEY, serializeProject(project));
-    setStatus(`Saved revision ${document.revision}`);
+    const edits = selectedIds.flatMap((id): SchematicEdit[] => {
+      const instance = document.instances.find(
+        (candidate) => candidate.id === id,
+      );
+      if (!instance?.placement) return [];
+      return [
+        {
+          kind: "mirror_instance",
+          instanceId: instance.id,
+          mirror: instance.placement.mirror === "none" ? "x" : "none",
+        },
+      ];
+    });
+    if (edits.length > 0) transact(edits);
   }
 
   function download(
@@ -646,7 +936,7 @@ export function App({ project: initialProject }: AppProps) {
       )!;
       history.current.reset(openedDocument);
       setProject(opened);
-      setSelectedId(null);
+      setSelectedIds([]);
       setSelectedRouteId(null);
       setImportDiagnostics([]);
       localStorage.removeItem(RECOVERY_KEY);
@@ -664,7 +954,7 @@ export function App({ project: initialProject }: AppProps) {
     )!;
     history.current.reset(nextDocument);
     setProject(next);
-    setSelectedId(null);
+    setSelectedIds([]);
     setSelectedRouteId(null);
     setViewBox({ x: 20, y: -10, width: 430, height: 350 });
     setStatus("Loaded Phase 5 visual demo");
@@ -711,27 +1001,6 @@ export function App({ project: initialProject }: AppProps) {
       { kind: "align_instances", instanceIds, axis: "y" },
     ]);
     if (result.ok) setStatus(`Aligned layout group ${group.id}`);
-  }
-
-  function reopenSnapshot(): void {
-    const snapshot = localStorage.getItem(SNAPSHOT_KEY);
-    if (!snapshot) {
-      setStatus("No saved snapshot");
-      return;
-    }
-    try {
-      const reopened = parseProject(snapshot);
-      const reopenedDocument = reopened.documents.find(
-        (candidate) => candidate.id === reopened.topDocumentId,
-      )!;
-      history.current.reset(reopenedDocument);
-      setProject(reopened);
-      setSelectedId(null);
-      setDragPreview(null);
-      setStatus(`Reopened revision ${reopenedDocument.revision}`);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Reopen failed");
-    }
   }
 
   function exportSvg(): void {
@@ -823,7 +1092,7 @@ export function App({ project: initialProject }: AppProps) {
       history.current.reset(importedDocument);
       setProject(result.project);
       stageRecovery(result.project);
-      setSelectedId(null);
+      setSelectedIds([]);
       setDragPreview(null);
       setViewBox(DEFAULT_VIEWBOX);
       setStatus(
@@ -834,18 +1103,222 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
-  function zoom(factor: number): void {
+  function fitView(): void {
+    const box = contentScene.viewBox;
+    setViewBox({ ...box });
+    setStatus("Fit Document");
+  }
+
+  function handleWheel(event: React.WheelEvent<SVGSVGElement>): void {
+    if (!event.ctrlKey) return;
+    event.preventDefault();
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const ratioX = (event.clientX - bounds.left) / bounds.width;
+    const ratioY = (event.clientY - bounds.top) / bounds.height;
+    const factor = event.deltaY < 0 ? 0.88 : 1.14;
     setViewBox((current) => {
-      const width = Math.round(current.width * factor);
-      const height = Math.round(current.height * factor);
+      const width = Math.max(
+        120,
+        Math.min(5000, Math.round(current.width * factor)),
+      );
+      const height = Math.max(
+        80,
+        Math.min(3500, Math.round(current.height * factor)),
+      );
+      const cursorX = current.x + ratioX * current.width;
+      const cursorY = current.y + ratioY * current.height;
       return {
-        x: current.x + Math.round((current.width - width) / 2),
-        y: current.y + Math.round((current.height - height) / 2),
+        x: Math.round(cursorX - ratioX * width),
+        y: Math.round(cursorY - ratioY * height),
         width,
         height,
       };
     });
   }
+
+  function beginCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
+    if (event.button === 1) {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setPanPreview({
+        clientStart: { x: event.clientX, y: event.clientY },
+        viewBoxStart: viewBox,
+        pointerId: event.pointerId,
+      });
+      return;
+    }
+    if (
+      event.button !== 0 ||
+      (event.target !== event.currentTarget &&
+        (event.target as Element).tagName !== "rect")
+    )
+      return;
+    const point = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget,
+    );
+    if (pendingSymbolId) {
+      placeNewComponent(pendingSymbolId, point);
+      return;
+    }
+    if (tool === "wire") return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setBoxPreview({ start: point, end: point, pointerId: event.pointerId });
+  }
+
+  function continueCanvasGesture(
+    event: ReactPointerEvent<SVGSVGElement>,
+  ): void {
+    if (panPreview?.pointerId === event.pointerId) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const dx =
+        ((event.clientX - panPreview.clientStart.x) / bounds.width) *
+        panPreview.viewBoxStart.width;
+      const dy =
+        ((event.clientY - panPreview.clientStart.y) / bounds.height) *
+        panPreview.viewBoxStart.height;
+      setViewBox({
+        ...panPreview.viewBoxStart,
+        x: Math.round(panPreview.viewBoxStart.x - dx),
+        y: Math.round(panPreview.viewBoxStart.y - dy),
+      });
+      return;
+    }
+    const point = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget,
+    );
+    if (boxPreview?.pointerId === event.pointerId) {
+      setBoxPreview({ ...boxPreview, end: point });
+    }
+    if (tool === "wire" && wireSource) setWirePreviewPoint(point);
+  }
+
+  function finishCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
+    if (panPreview?.pointerId === event.pointerId) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+      setPanPreview(null);
+      return;
+    }
+    if (boxPreview?.pointerId !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    const rect = normalizedRect(boxPreview.start, boxPreview.end);
+    const clicked =
+      rect.width <= document.presentation.grid &&
+      rect.height <= document.presentation.grid;
+    const ids = clicked
+      ? []
+      : document.instances
+          .filter(
+            (instance) =>
+              instance.placement &&
+              instance.placement.position.x >= rect.x &&
+              instance.placement.position.x <= rect.x + rect.width &&
+              instance.placement.position.y >= rect.y &&
+              instance.placement.position.y <= rect.y + rect.height,
+          )
+          .map((instance) => instance.id);
+    setSelectedIds(ids);
+    setSelectedRouteId(null);
+    setBoxPreview(null);
+    setStatus(
+      ids.length > 0 ? `Selected ${ids.length} instances` : "Selection cleared",
+    );
+  }
+
+  function deleteSelection(): void {
+    if (selectedRouteId) {
+      removeSelectedRouteGeometry();
+      return;
+    }
+    if (selectedIds.length === 0) return;
+    const result = transact(
+      selectedIds.map((instanceId): SchematicEdit => ({
+        kind: "remove_instance",
+        instanceId,
+      })),
+    );
+    if (result.ok) setSelectedIds([]);
+  }
+
+  function disconnectSelectedEndpoint(removeRoutes: boolean): void {
+    if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
+      return;
+    }
+    const routeEdits = removeRoutes
+      ? document.routes
+          .filter(
+            (route) =>
+              endpointKey(route.from) ===
+                endpointKey(selectedEndpoint.endpoint) ||
+              endpointKey(route.to) === endpointKey(selectedEndpoint.endpoint),
+          )
+          .map((route): SchematicEdit => ({
+            kind: "make_flightline",
+            routeId: route.id,
+          }))
+      : [];
+    const result = transact([
+      ...routeEdits,
+      { kind: "disconnect_endpoint", endpoint: selectedEndpoint.endpoint },
+    ]);
+    if (result.ok) {
+      setSelectedEndpoint(null);
+      setStatus(
+        removeRoutes ? "Deleted endpoint connection" : "Disconnected endpoint",
+      );
+    }
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent): void {
+      if (isTypingTarget(event.target)) return;
+      const key = event.key.toLowerCase();
+      if (event.ctrlKey && key === "z") {
+        event.preventDefault();
+        transact([{ kind: event.shiftKey ? "redo" : "undo" }]);
+      } else if (event.ctrlKey && key === "y") {
+        event.preventDefault();
+        transact([{ kind: "redo" }]);
+      } else if (event.ctrlKey && key === "s") {
+        event.preventDefault();
+        saveProjectFile();
+      } else if (event.ctrlKey && key === "o") {
+        event.preventDefault();
+        projectInputRef.current?.click();
+      } else if (event.ctrlKey && key === "a") {
+        event.preventDefault();
+        setSelectedIds(
+          document.instances
+            .filter((instance) => instance.placement)
+            .map((instance) => instance.id),
+        );
+      } else if (!event.ctrlKey && key === "r") {
+        event.preventDefault();
+        rotateSelected();
+      } else if (!event.ctrlKey && key === "w") {
+        event.preventDefault();
+        activateTool("wire");
+      } else if (!event.ctrlKey && key === "f") {
+        event.preventDefault();
+        fitView();
+      } else if (event.key === "Escape") {
+        setTool("pointer");
+        setWireSource(null);
+        setWirePreviewPoint(null);
+        setPendingSymbolId(null);
+        setBoxPreview(null);
+        setStatus("Cancelled");
+      } else if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        deleteSelection();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   return (
     <main className="app-shell">
@@ -854,41 +1327,9 @@ export function App({ project: initialProject }: AppProps) {
           <h1>Interactive Circuit Maker</h1>
           <p>{project.name}</p>
         </div>
-        <div className="toolbar" aria-label="Edit toolbar">
-          <button
-            type="button"
-            onClick={() => transact([{ kind: "undo" }])}
-            disabled={!history.current.canUndo}
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            onClick={() => transact([{ kind: "redo" }])}
-            disabled={!history.current.canRedo}
-          >
-            Redo
-          </button>
-          <button
-            type="button"
-            onClick={rotateSelected}
-            disabled={!selected?.placement}
-          >
-            Rotate
-          </button>
-          <button
-            type="button"
-            onClick={mirrorSelected}
-            disabled={!selected?.placement}
-          >
-            Mirror
-          </button>
-          <button
-            type="button"
-            aria-pressed={tool === "select"}
-            onClick={() => activateTool("select")}
-          >
-            Select
+        <nav className="toolbar" aria-label="Editor commands">
+          <button type="button" onClick={() => setPaletteOpen(true)}>
+            + Component
           </button>
           <button
             type="button"
@@ -897,95 +1338,190 @@ export function App({ project: initialProject }: AppProps) {
           >
             Wire
           </button>
-          <button
-            type="button"
-            aria-pressed={tool === "junction"}
-            onClick={() => activateTool("junction")}
-          >
-            Junction
-          </button>
-          <button
-            type="button"
-            onClick={stretchSelectedRoute}
-            disabled={!selectedRouteId}
-          >
-            Stretch
-          </button>
-          <button
-            type="button"
-            onClick={detachSelectedRoute}
-            disabled={!selectedRouteId}
-          >
-            Detach
-          </button>
-          <button type="button" onClick={loadRoutingDemo}>
-            Routing demo
-          </button>
-          <button type="button" onClick={loadVisualDemo}>
-            Visual demo
-          </button>
-          <button type="button" onClick={addPlainText}>
-            Add note
-          </button>
-          <button type="button" onClick={alignFirstLayoutGroup}>
-            Align group
-          </button>
-          <button type="button" onClick={saveSnapshot}>
-            Save snapshot
-          </button>
-          <button type="button" onClick={reopenSnapshot}>
-            Reopen snapshot
-          </button>
-          <button type="button" onClick={saveProjectFile}>
-            Save Project
-          </button>
-          <label className="file-import">
-            Open Project
-            <input
-              data-testid="project-file"
-              type="file"
-              accept=".json,.icproj.json,application/json"
-              onChange={(event) =>
-                void openProjectFile(event.currentTarget.files?.[0] ?? null)
-              }
-            />
-          </label>
-          {recoveryCandidate ? (
-            <>
-              <button type="button" onClick={restoreRecovery}>
-                Restore recovery
+          <details className="command-menu" name="editor-command-menu">
+            <summary>File</summary>
+            <div className="command-popover">
+              <button type="button" onClick={saveProjectFile}>
+                Save Project
               </button>
-              <button type="button" onClick={discardRecovery}>
-                Discard recovery
+              <label className="file-import">
+                Open Project
+                <input
+                  ref={projectInputRef}
+                  data-testid="project-file"
+                  type="file"
+                  accept=".json,.icproj.json,application/json"
+                  onChange={(event) =>
+                    void openProjectFile(event.currentTarget.files?.[0] ?? null)
+                  }
+                />
+              </label>
+              <label className="file-import">
+                Import SPICE
+                <input
+                  data-testid="spice-files"
+                  type="file"
+                  accept=".spi,.cir,.sp,.inc,.lib"
+                  multiple
+                  onChange={(event) =>
+                    void importSpiceFiles(event.currentTarget.files)
+                  }
+                />
+              </label>
+              {recoveryCandidate ? (
+                <>
+                  <button type="button" onClick={restoreRecovery}>
+                    Restore recovery
+                  </button>
+                  <button type="button" onClick={discardRecovery}>
+                    Discard recovery
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </details>
+          <details className="command-menu" name="editor-command-menu">
+            <summary>Edit</summary>
+            <div className="command-popover">
+              <button
+                type="button"
+                onClick={() => transact([{ kind: "undo" }])}
+                disabled={!history.current.canUndo}
+              >
+                Undo
               </button>
-            </>
-          ) : null}
-          <button type="button" onClick={exportSvg}>
-            Export SVG
-          </button>
-          <button type="button" onClick={() => void exportRaster("png")}>
-            Export PNG
-          </button>
-          <button type="button" onClick={() => void exportRaster("pdf")}>
-            Export PDF
-          </button>
-          <label className="file-import">
-            Import SPICE
-            <input
-              data-testid="spice-files"
-              type="file"
-              accept=".spi,.cir,.sp,.inc,.lib"
-              multiple
-              onChange={(event) =>
-                void importSpiceFiles(event.currentTarget.files)
-              }
-            />
-          </label>
-        </div>
+              <button
+                type="button"
+                onClick={() => transact([{ kind: "redo" }])}
+                disabled={!history.current.canRedo}
+              >
+                Redo
+              </button>
+              <button
+                type="button"
+                onClick={deleteSelection}
+                disabled={!selectedRouteId && selectedIds.length === 0}
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={rotateSelected}
+                disabled={selectedIds.length === 0}
+              >
+                Rotate
+              </button>
+              <button
+                type="button"
+                onClick={mirrorSelected}
+                disabled={selectedIds.length === 0}
+              >
+                Mirror
+              </button>
+              {selectedIds.length > 1 ? (
+                <button type="button" onClick={alignFirstLayoutGroup}>
+                  Align
+                </button>
+              ) : null}
+            </div>
+          </details>
+          <details className="command-menu" name="editor-command-menu">
+            <summary>View</summary>
+            <div className="command-popover">
+              <button type="button" onClick={fitView}>
+                Fit
+              </button>
+              <span>{visualDiagnostics.length} diagnostics</span>
+            </div>
+          </details>
+          <details className="command-menu" name="editor-command-menu">
+            <summary>Export</summary>
+            <div className="command-popover">
+              <button type="button" aria-label="Export SVG" onClick={exportSvg}>
+                SVG
+              </button>
+              <button
+                type="button"
+                aria-label="Export PNG"
+                onClick={() => void exportRaster("png")}
+              >
+                PNG
+              </button>
+              <button
+                type="button"
+                aria-label="Export PDF"
+                onClick={() => void exportRaster("pdf")}
+              >
+                PDF
+              </button>
+            </div>
+          </details>
+          <details className="command-menu" name="editor-command-menu">
+            <summary>More</summary>
+            <div className="command-popover">
+              <button type="button" onClick={addPlainText}>
+                Add note
+              </button>
+              <button type="button" onClick={loadRoutingDemo}>
+                Open routing example
+              </button>
+              <button type="button" onClick={loadVisualDemo}>
+                Open visual example
+              </button>
+              <small>
+                R rotate · W wire · F fit · Ctrl+wheel zoom · middle-drag pan
+              </small>
+            </div>
+          </details>
+        </nav>
       </header>
-      <aside className="side-panel" aria-label="Unplaced instances">
-        <h2>Unplaced Instances</h2>
-        {unplaced.length === 0 ? <p>All instances placed</p> : null}
+      {paletteOpen ? (
+        <section className="component-palette" aria-label="Component palette">
+          <div className="palette-header">
+            <h2>Add Component</h2>
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(false)}
+              aria-label="Close component palette"
+            >
+              ×
+            </button>
+          </div>
+          <input
+            autoFocus
+            value={paletteQuery}
+            onChange={(event) => setPaletteQuery(event.currentTarget.value)}
+            placeholder="Search symbols"
+            aria-label="Search components"
+          />
+          {componentGroups.map((group) => (
+            <section key={group.category} className="palette-group">
+              <h3>{group.category}</h3>
+              <div className="palette-grid">
+                {group.symbols.map((symbol) => (
+                  <button
+                    type="button"
+                    key={symbol.id}
+                    data-testid={`add-component-${symbol.id}`}
+                    onClick={() => {
+                      setPendingSymbolId(symbol.id);
+                      setPaletteOpen(false);
+                      setTool("pointer");
+                      setStatus(`Place ${symbol.name} on the canvas`);
+                    }}
+                  >
+                    <strong>{symbol.name}</strong>
+                    <span>{symbol.id}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </section>
+      ) : null}
+      <aside className="side-panel" aria-label="Project inspector">
+        <h2>Project</h2>
+        {unplaced.length > 0 ? <h3>Unplaced Instances</h3> : null}
         {unplaced.map((instance) => (
           <button
             type="button"
@@ -1003,11 +1539,42 @@ export function App({ project: initialProject }: AppProps) {
             {instance.id} · {instance.symbolId}
           </button>
         ))}
+        {selectedRouteId ? (
+          <section className="context-actions" aria-label="Route actions">
+            <h2>Route</h2>
+            <button type="button" onClick={removeSelectedRouteGeometry}>
+              Remove route geometry
+            </button>
+          </section>
+        ) : null}
+        {selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction" ? (
+          <section className="context-actions" aria-label="Endpoint actions">
+            <h2>Endpoint</h2>
+            <button
+              type="button"
+              onClick={() => disconnectSelectedEndpoint(false)}
+            >
+              Disconnect endpoint
+            </button>
+            <button
+              type="button"
+              onClick={() => disconnectSelectedEndpoint(true)}
+            >
+              Delete connection
+            </button>
+          </section>
+        ) : null}
         <dl className="inspector">
           <dt>Selected</dt>
-          <dd>{selectedId ?? "None"}</dd>
+          <dd>
+            {selectedIds.length > 0
+              ? selectedIds.join(", ")
+              : (selectedRouteId ?? "None")}
+          </dd>
           <dt>Revision</dt>
           <dd data-testid="revision">{document.revision}</dd>
+          <dt>Source status</dt>
+          <dd data-testid="source-status">{document.sourceStatus}</dd>
           <dt>Documents</dt>
           <dd data-testid="document-count">{project.documents.length}</dd>
           <dt>Instances</dt>
@@ -1053,48 +1620,24 @@ export function App({ project: initialProject }: AppProps) {
         </section>
       </aside>
       <section className="canvas-panel">
-        <div className="viewport-toolbar" aria-label="Viewport toolbar">
-          <button type="button" onClick={() => zoom(0.8)} aria-label="Zoom in">
-            +
-          </button>
-          <button
-            type="button"
-            onClick={() => zoom(1.25)}
-            aria-label="Zoom out"
-          >
-            −
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setViewBox((current) => ({ ...current, x: current.x - 50 }))
-            }
-          >
-            Pan left
-          </button>
-          <button type="button" onClick={() => setViewBox(DEFAULT_VIEWBOX)}>
-            Fit
-          </button>
-        </div>
         <svg
           className="schematic-canvas"
           data-testid="schematic-canvas"
           role="img"
           aria-label="Schematic canvas"
           viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-          onClick={() => {
-            setSelectedId(null);
-            setSelectedRouteId(null);
-          }}
-          onPointerMove={(event) => {
-            if (tool === "wire" && wireSource) {
-              setWirePreviewPoint(
-                pointFromClient(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget,
-                ),
-              );
+          onWheel={handleWheel}
+          onPointerDown={beginCanvasGesture}
+          onPointerMove={continueCanvasGesture}
+          onPointerUp={finishCanvasGesture}
+          onPointerCancel={finishCanvasGesture}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            if (wireSource) {
+              setWireSource(null);
+              setWirePreviewPoint(null);
+              setTool("pointer");
+              setStatus("Wire cancelled");
             }
           }}
           onDragOver={(event) => event.preventDefault()}
@@ -1147,19 +1690,39 @@ export function App({ project: initialProject }: AppProps) {
                     : "route-hit"
                 }
                 points={polylinePoints(polyline.points)}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (tool === "select") {
-                    setSelectedRouteId(route.id);
-                    setSelectedId(null);
-                    setStatus(`Selected route ${route.id}`);
-                  }
-                }}
                 onPointerDown={(event) =>
                   handleRoutePointerDown(event, route.id)
                 }
               />
             ))}
+            {routePolylines
+              .filter(
+                ({ route, polyline }) =>
+                  route.id === selectedRouteId && polyline.points.length === 2,
+              )
+              .map(({ route, polyline }) => {
+                const from = polyline.points[0]!;
+                const to = polyline.points[1]!;
+                const preview =
+                  routeStretchPreview?.routeId === route.id
+                    ? routeStretchPreview.point
+                    : null;
+                return (
+                  <circle
+                    key={`handle-${route.id}`}
+                    data-testid={`route-handle-${route.id}`}
+                    className="route-handle"
+                    cx={preview?.x ?? (from.x + to.x) / 2}
+                    cy={preview?.y ?? (from.y + to.y) / 2}
+                    r="6"
+                    onPointerDown={(event) =>
+                      beginRouteStretch(event, route.id)
+                    }
+                    onPointerMove={previewRouteStretch}
+                    onPointerUp={finishRouteStretch}
+                  />
+                );
+              })}
             {document.instances
               .filter((instance) => instance.placement !== null)
               .map((instance) => (
@@ -1170,13 +1733,16 @@ export function App({ project: initialProject }: AppProps) {
                   cy={instance.placement!.position.y}
                   r="36"
                   className={
-                    selectedId === instance.id
+                    selectedIds.includes(instance.id)
                       ? "hit-target selected"
                       : "hit-target"
                   }
                   onClick={(event) => {
                     event.stopPropagation();
-                    setSelectedId(instance.id);
+                    selectInstance(
+                      instance.id,
+                      event.shiftKey || event.ctrlKey,
+                    );
                   }}
                   onPointerDown={(event) => beginMove(event, instance.id)}
                   onPointerMove={previewMove}
@@ -1194,15 +1760,54 @@ export function App({ project: initialProject }: AppProps) {
                 cy={candidate.point.y}
                 r="8"
                 onClick={(event) => event.stopPropagation()}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setSelectedEndpoint(candidate);
+                  setSelectedRouteId(null);
+                  setSelectedIds([]);
+                  setStatus(
+                    `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
+                  );
+                }}
                 onPointerDown={(event) => handleWireEndpoint(event, candidate)}
               />
             ))}
-            {dragPreview ? (
+            {dragPreview
+              ? dragPreview.instanceIds.map((instanceId) => {
+                  const original = dragPreview.originalPositions[instanceId]!;
+                  return (
+                    <circle
+                      key={instanceId}
+                      className="drag-preview"
+                      cx={
+                        original.x +
+                        dragPreview.position.x -
+                        dragPreview.pointerStart.x
+                      }
+                      cy={
+                        original.y +
+                        dragPreview.position.y -
+                        dragPreview.pointerStart.y
+                      }
+                      r="34"
+                    />
+                  );
+                })
+              : null}
+            {boxPreview ? (
+              <rect
+                data-testid="selection-box"
+                className="selection-box"
+                {...normalizedRect(boxPreview.start, boxPreview.end)}
+              />
+            ) : null}
+            {tool === "wire" && wirePreviewPoint ? (
               <circle
-                className="drag-preview"
-                cx={dragPreview.position.x}
-                cy={dragPreview.position.y}
-                r="34"
+                className="snap-preview"
+                cx={wirePreviewPoint.x}
+                cy={wirePreviewPoint.y}
+                r="4"
               />
             ) : null}
           </g>

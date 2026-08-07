@@ -2,9 +2,9 @@
 
 Status: `accepted`
 
-Version: `1.1`
+Version: `1.2`
 
-Owning phase: `Phase 3`
+Owning phase: `Phase 3/8`
 
 Primary owners: `packages/derived`, `packages/edit-engine`
 
@@ -15,7 +15,7 @@ visible connectivity, flightlines, crossings, and safe manual routing edits.
 
 ## Consumers
 
-- editor Wire, Junction, Move, Stretch, and Detach tools
+- editor direct Wire, Move, route-handle, and contextual removal interactions
 - Schematic Edit Engine
 - SVG renderer
 - Agent adapter in Phase 6
@@ -71,13 +71,13 @@ duplicates and collinear interior points while retaining endpoint identity.
 
 Segment modes mean:
 
-| Mode | Meaning |
-|---|---|
-| `auto` | tool-generated and freely replaceable |
-| `escape` | short terminal escape owned by local stretch |
-| `manual` | user-authored geometry |
+| Mode     | Meaning                                                         |
+| -------- | --------------------------------------------------------------- |
+| `auto`   | tool-generated and freely replaceable                           |
+| `escape` | short terminal escape owned by local stretch                    |
+| `manual` | user-authored geometry                                          |
 | `locked` | geometry cannot be changed without an explicit unlock operation |
-| `trunk` | shared manual backbone preserved by local stretch |
+| `trunk`  | shared manual backbone preserved by local stretch               |
 
 Phase 3 rejects changes to a route containing a locked segment. Trunk segments
 remain editable only through explicit route edits; local endpoint stretch does
@@ -93,9 +93,9 @@ not translate them.
 - A crossing never causes automatic Net merge, route split, or Junction repair.
 - Explicit segment targeting atomically replaces the selected branch with two
   branches meeting at a newly persisted Junction.
-- A Junction split is rejected when its position also lies on another branch;
-  drawing a dot before every participating branch is explicitly joined would
-  make the formal diagram disagree with the visible graph.
+- Explicit segment targeting splits only that branch. The editor rejects a
+  wire end that simultaneously hits multiple branches instead of guessing a
+  connected set; intersections merely passed through remain crossings.
 - A Junction referenced by any Route cannot be removed.
 
 Crossing diagnostics report geometry that may be visually ambiguous while
@@ -108,6 +108,8 @@ preserving the explicit graph unchanged.
   a specified segment into caller-named first/second branches.
 - `remove_junction` removes an unused Junction.
 - `make_flightline` deletes one RouteBranch and retains its logical Net.
+- `connect_endpoints`, `merge_nets`, and `disconnect_endpoint` author logical
+  membership independently of route geometry.
 
 All edit preconditions are evaluated on a cloned candidate. A failure rejects
 the entire transaction and returns the original Document.
@@ -124,6 +126,10 @@ derived local-stretch proposal:
 - manual interior, trunk, and unrelated routes remain unchanged;
 - locked adjacent segments reject the proposal;
 - when no waypoint exists, a deterministic elbow is introduced if needed.
+
+For an equal-delta group move, a route whose two terminal endpoints move with
+the group translates its waypoints by the same delta. A protected route or one
+whose endpoints request different deltas rejects the complete transaction.
 
 ## Valid example
 
@@ -148,6 +154,7 @@ derived and absent from Project JSON.
 - routed-component and stable MST tests;
 - route normalization and orthogonality tests;
 - T/X crossing-without-Junction regressions;
-- atomic branch split and locked replacement tests;
+- targeted crossing branch split, ambiguous-intersection UI rejection, and
+  locked replacement tests;
 - detach retaining Net membership;
 - formal SVG and Playwright routing closure.

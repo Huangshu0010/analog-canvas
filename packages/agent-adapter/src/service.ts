@@ -38,6 +38,8 @@ const QUERY_SCOPES = [
 ] as const;
 export const AGENT_EDIT_KINDS = [
   "noop",
+  "add_instance",
+  "remove_instance",
   "place_instance",
   "move_instance",
   "rotate_instance",
@@ -46,6 +48,9 @@ export const AGENT_EDIT_KINDS = [
   "add_junction",
   "remove_junction",
   "make_flightline",
+  "connect_endpoints",
+  "merge_nets",
+  "disconnect_endpoint",
   "upsert_annotation",
   "remove_annotation",
   "set_layout_group",
@@ -388,6 +393,8 @@ function editCategory(
 ): "geometry" | "connectivity" | "presentation" | "unsupported" {
   switch (edit.kind) {
     case "noop":
+    case "add_instance":
+    case "remove_instance":
     case "place_instance":
     case "move_instance":
     case "rotate_instance":
@@ -398,6 +405,9 @@ function editCategory(
     case "add_junction":
     case "remove_junction":
     case "make_flightline":
+    case "connect_endpoints":
+    case "merge_nets":
+    case "disconnect_endpoint":
       return "connectivity";
     case "upsert_annotation":
     case "remove_annotation":

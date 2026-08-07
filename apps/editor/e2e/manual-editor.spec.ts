@@ -1,19 +1,37 @@
 import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
 
-async function dragInstance(
+async function openMenu(page: Page, name: string): Promise<Locator> {
+  const summary = page.locator("summary", { hasText: name }).filter({
+    hasText: new RegExp(`^${name}$`, "u"),
+  });
+  const details = summary.locator("..");
+  if ((await details.getAttribute("open")) === null) await summary.click();
+  return details;
+}
+
+async function clickCommand(
   page: Page,
-  instanceId: string,
-  x: number,
-  y: number,
+  menu: string,
+  button: string,
 ): Promise<void> {
-  await page
-    .getByTestId(`unplaced-${instanceId}`)
-    .dragTo(page.getByTestId("schematic-canvas"), {
-      targetPosition: { x, y },
-    });
-  await expect(page.getByTestId(`hit-${instanceId}`)).toBeVisible();
+  const details = await openMenu(page, menu);
+  await details.getByRole("button", { name: button, exact: true }).click();
+}
+
+async function chooseComponent(page: Page, symbolId: string): Promise<void> {
+  await page.getByRole("button", { name: "+ Component" }).click();
+  await page.getByTestId(`add-component-${symbolId}`).click();
+}
+
+async function placeComponent(
+  page: Page,
+  symbolId: string,
+  position: { x: number; y: number },
+): Promise<void> {
+  await chooseComponent(page, symbolId);
+  await page.getByTestId("schematic-canvas").click({ position });
 }
 
 async function clickRoute(
@@ -43,99 +61,162 @@ async function clickRoute(
   await page.mouse.click(point.x, point.y);
 }
 
-async function downloadBytes(page: Page, buttonName: string): Promise<Buffer> {
+async function downloadBytes(
+  page: Page,
+  menu: string,
+  buttonName: string,
+): Promise<Buffer> {
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: buttonName }).click();
+  await clickCommand(page, menu, buttonName);
   const stream = await (await downloadPromise).createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   return Buffer.concat(chunks);
 }
 
-test("manual place, transform, history, save, reopen, and export closure", async ({
+test("authors components and connectivity manually from an empty canvas", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Interactive Circuit Maker" }),
-  ).toBeVisible();
   await expect(page.getByTestId("revision")).toHaveText("0");
 
-  await dragInstance(page, "M1", 320, 180);
-  await expect(page.getByTestId("revision")).toHaveText("1");
-  await dragInstance(page, "M2", 520, 180);
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  await placeComponent(page, "nmos", { x: 560, y: 220 });
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("hit-M2")).toBeVisible();
   await expect(page.getByTestId("revision")).toHaveText("2");
-  await dragInstance(page, "R1", 420, 360);
+  await expect(page.getByTestId("source-status")).toHaveText(
+    "connectivity-modified",
+  );
+
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-M2-G").click();
   await expect(page.getByTestId("revision")).toHaveText("3");
-  await expect(page.getByText("All instances placed")).toBeVisible();
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
 
-  await page.getByTestId("hit-R1").click();
-  await page.getByRole("button", { name: "Rotate" }).click();
-  await page.getByRole("button", { name: "Mirror" }).click();
-  await expect(page.getByTestId("revision")).toHaveText("5");
-
-  const hit = page.getByTestId("hit-M1");
-  const canvas = page.getByTestId("schematic-canvas");
-  const hitBox = await hit.boundingBox();
-  const canvasBox = await canvas.boundingBox();
-  if (!hitBox || !canvasBox) {
-    throw new Error("Editor geometry is not measurable");
-  }
-  await page.mouse.move(
-    hitBox.x + hitBox.width / 2,
-    hitBox.y + hitBox.height / 2,
+  await page.getByTestId("terminal-R1-2").click({ button: "right" });
+  await expect(
+    page.getByRole("button", { name: "Disconnect endpoint" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Delete connection" }).click();
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+  await expect(page.getByTestId("status")).toHaveText(
+    "Deleted endpoint connection",
   );
-  await page.mouse.down();
-  await page.mouse.move(canvasBox.x + 650, canvasBox.y + 300, { steps: 4 });
-  await page.mouse.up();
+
+  await page.keyboard.press("Control+z");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await page.keyboard.press("Control+z");
   await expect(page.getByTestId("revision")).toHaveText("6");
-
-  await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByTestId("revision")).toHaveText("7");
-  await page.getByRole("button", { name: "Redo" }).click();
-  await expect(page.getByTestId("revision")).toHaveText("8");
-
-  await page.getByRole("button", { name: "Save snapshot" }).click();
-  const saved = await page.evaluate(() =>
-    localStorage.getItem("icm.phase1.snapshot"),
-  );
-  expect(saved).not.toBeNull();
-  expect(saved).not.toMatch(/selection|viewport|dragPreview|editor-overlay/u);
-
-  const movedHitBox = await page.getByTestId("hit-M1").boundingBox();
-  if (!movedHitBox) {
-    throw new Error("Moved instance is not measurable");
-  }
-  await page.mouse.move(
-    movedHitBox.x + movedHitBox.width / 2,
-    movedHitBox.y + movedHitBox.height / 2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(canvasBox.x + 720, canvasBox.y + 380, { steps: 4 });
-  await page.mouse.up();
-  await expect(page.getByTestId("revision")).toHaveText("9");
-
-  await page.getByRole("button", { name: "Reopen snapshot" }).click();
-  await expect(page.getByTestId("revision")).toHaveText("8");
-  await expect(page.getByTestId("status")).toHaveText("Reopened revision 8");
-
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export SVG" }).click();
-  const download = await downloadPromise;
-  const stream = await download.createReadStream();
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.from(chunk));
-  }
-  const svg = Buffer.concat(chunks).toString("utf8");
-  expect(svg).toContain('data-layer="formal"');
-  expect(svg).not.toMatch(/selection|hit-target|editor-overlay/u);
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
 });
 
-test("imports a selected SPICE source set into unplaced Documents", async ({
+test("selects and moves multiple instances while viewport gestures stay transient", async ({
   page,
 }) => {
   await page.goto("/");
+  await placeComponent(page, "nmos", { x: 330, y: 180 });
+  await placeComponent(page, "nmos", { x: 560, y: 180 });
+  await expect(page.getByTestId("revision")).toHaveText("2");
+
+  const first = await page.getByTestId("hit-M1").boundingBox();
+  const second = await page.getByTestId("hit-M2").boundingBox();
+  if (!first || !second) throw new Error("Instances are not measurable");
+  await page.mouse.move(first.x - 15, first.y - 15);
+  await page.mouse.down();
+  await page.mouse.move(
+    second.x + second.width + 15,
+    second.y + second.height + 15,
+    {
+      steps: 5,
+    },
+  );
+  await page.mouse.up();
+  await expect(page.getByText("M1, M2", { exact: true })).toBeVisible();
+
+  await page
+    .getByTestId("hit-M1")
+    .dragTo(page.getByTestId("schematic-canvas"), {
+      targetPosition: { x: 450, y: 330 },
+    });
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  const canvas = page.getByTestId("schematic-canvas");
+  const beforeViewBox = await canvas.getAttribute("viewBox");
+  await canvas.dispatchEvent("wheel", {
+    ctrlKey: true,
+    deltaY: -120,
+    clientX: 700,
+    clientY: 350,
+  });
+  await expect(canvas).not.toHaveAttribute("viewBox", beforeViewBox!);
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  const canvasBox = await canvas.boundingBox();
+  if (!canvasBox) throw new Error("Canvas is not measurable");
+  await page.mouse.move(canvasBox.x + 700, canvasBox.y + 350);
+  await page.mouse.down({ button: "middle" });
+  await page.mouse.move(canvasBox.x + 750, canvasBox.y + 390, { steps: 3 });
+  await page.mouse.up({ button: "middle" });
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  await page.keyboard.press("r");
+  await expect(page.getByTestId("revision")).toHaveText("4");
+});
+
+test("derives crossings and creates junctions only when a wire ends on a route", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "More", "Open routing example");
+
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-A-P1").click();
+  await page.getByTestId("terminal-B-P1").click();
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-C-P1").click();
+  await page.getByTestId("terminal-D-P1").click();
+  await expect(page.getByTestId("crossing-count")).toHaveText("1");
+  await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-E-P1").click();
+  await clickRoute(page, "route-ui-1", 0.5);
+  await expect(page.getByTestId("status")).toContainText(
+    "Ambiguous intersection",
+  );
+  await expect(page.getByTestId("revision")).toHaveText("2");
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-E-P1").click();
+  await clickRoute(page, "route-ui-1", 0.25);
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
+  await expect(page.getByTestId("crossing-count")).toHaveText("2");
+
+  await clickRoute(page, "route-ui-2");
+  const handle = page.getByTestId("route-handle-route-ui-2");
+  const handleBox = await handle.boundingBox();
+  if (!handleBox) throw new Error("Route handle is not measurable");
+  await page.mouse.move(
+    handleBox.x + handleBox.width / 2,
+    handleBox.y + handleBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + 45, handleBox.y + handleBox.height / 2, {
+    steps: 3,
+  });
+  await page.mouse.up();
+  await expect(page.getByTestId("revision")).toHaveText("4");
+});
+
+test("imports the SPICE baseline through the grouped File menu", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await openMenu(page, "File");
   await page
     .getByTestId("spice-files")
     .setInputFiles([
@@ -146,226 +227,87 @@ test("imports a selected SPICE source set into unplaced Documents", async ({
   await expect(page.getByTestId("status")).toHaveText(
     "Imported 8 Documents and 32 instances; 17 generic symbols",
   );
-  await expect(
-    page.getByText("mixed_device_acceptance (SPICE Import)"),
-  ).toBeVisible();
   await expect(page.getByTestId("document-count")).toHaveText("8");
   await expect(page.getByTestId("instance-count")).toHaveText("32");
-  await expect(page.getByTestId("revision")).toHaveText("0");
   await expect(page.getByTestId("unplaced-XFILTER")).toBeVisible();
-  await expect(page.getByTestId("unplaced-XCONTROL")).toBeVisible();
-
-  await page.getByRole("button", { name: "Save snapshot" }).click();
-  const saved = await page.evaluate(() =>
-    localStorage.getItem("icm.phase1.snapshot"),
-  );
-  const project = JSON.parse(saved!);
-  expect(project.documents).toHaveLength(8);
-  expect(
-    project.source.files.map((file: { path: string }) => file.path),
-  ).toEqual(["circuit.spi", "models.inc"]);
-  expect(saved).not.toMatch(
-    /rawText|logicalLines|syntaxFiles|unresolvedStatements|diagnostics/u,
-  );
 });
 
-test("imports the ngspice 46 structural baseline through the browser", async ({
+test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
   page,
 }) => {
   await page.goto("/");
-  await page
-    .getByTestId("spice-files")
-    .setInputFiles([
-      resolve(process.cwd(), "fixtures/spice-baseline/core.cir"),
-      resolve(process.cwd(), "fixtures/spice-baseline/models.lib"),
-    ]);
-
-  await expect(page.getByTestId("status")).toHaveText(
-    "Imported 3 Documents and 27 instances; 16 generic symbols",
-  );
-  await expect(page.getByTestId("document-count")).toHaveText("3");
-  await expect(page.getByTestId("instance-count")).toHaveText("27");
-  await expect(page.getByTestId("unplaced-XTOP")).toBeVisible();
-  await expect(page.getByTestId("revision")).toHaveText("0");
-});
-
-test("routes explicit connectivity without treating crossings as joins", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Routing demo" }).click();
-
-  await expect(page.getByTestId("flightline-count")).toHaveText("3");
-  await expect(page.getByTestId("crossing-count")).toHaveText("0");
-
-  await page.getByRole("button", { name: "Wire" }).click();
-  await page.getByTestId("terminal-A-P1").click();
-  await page.getByTestId("terminal-B-P1").click();
-  await expect(page.getByTestId("revision")).toHaveText("1");
-  await expect(page.getByTestId("flightline-count")).toHaveText("2");
-
-  await page.getByTestId("terminal-C-P1").click();
-  await page.getByTestId("terminal-D-P1").click();
-  await expect(page.getByTestId("revision")).toHaveText("2");
-  await expect(page.getByTestId("flightline-count")).toHaveText("1");
-  await expect(page.getByTestId("crossing-count")).toHaveText("1");
-
-  await page.getByRole("button", { name: "Junction" }).click();
-  await clickRoute(page, "route-ui-1", 0.25);
-  await expect(page.getByTestId("revision")).toHaveText("3");
-  await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
-
-  await page.getByRole("button", { name: "Wire" }).click();
-  await page.getByTestId("terminal-E-P1").click();
-  await page.getByTestId("junction-junction-ui-3").click();
-  await expect(page.getByTestId("revision")).toHaveText("4");
-  await expect(page.getByTestId("flightline-count")).toHaveText("0");
-
-  await page.getByRole("button", { name: "Select" }).click();
-  await clickRoute(page, "route-ui-2");
-  await page.getByRole("button", { name: "Stretch" }).click();
-  await expect(page.getByTestId("revision")).toHaveText("5");
-
-  const instanceA = page.getByTestId("hit-A");
-  const canvas = page.getByTestId("schematic-canvas");
-  const instanceBox = await instanceA.boundingBox();
-  const canvasBox = await canvas.boundingBox();
-  if (!instanceBox || !canvasBox) {
-    throw new Error("Routing demo geometry is not measurable");
-  }
-  await page.mouse.move(
-    instanceBox.x + instanceBox.width / 2,
-    instanceBox.y + instanceBox.height / 2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(canvasBox.x + 180, canvasBox.y + 340, { steps: 4 });
-  await page.mouse.up();
-  await expect(page.getByTestId("revision")).toHaveText("6");
-
-  await clickRoute(page, "route-ui-4", 0.5, 1);
-  await page.getByRole("button", { name: "Detach" }).click();
-  await expect(page.getByTestId("revision")).toHaveText("7");
-  await expect(page.getByTestId("flightline-count")).toHaveText("1");
-
-  await page.getByRole("button", { name: "Save snapshot" }).click();
-  const saved = await page.evaluate(() =>
-    localStorage.getItem("icm.phase1.snapshot"),
-  );
-  expect(saved).not.toBeNull();
-  expect(saved).toContain("junction-ui-3");
-  expect(saved).not.toMatch(/flightline|crossing|wireSource/u);
-
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export SVG" }).click();
-  const download = await downloadPromise;
-  const stream = await download.createReadStream();
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.from(chunk));
-  }
-  const svg = Buffer.concat(chunks).toString("utf8");
-  expect(svg).toContain('data-layer="routes"');
-  expect(svg).toContain('data-layer="junctions"');
-  expect(svg).toContain('data-object-id="junction-ui-3"');
-  expect(svg).not.toMatch(/flightline|route-hit|editor-overlay/u);
-});
-
-test("loads and edits the reviewed textbook-monochrome visual demo", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Visual demo" }).click();
-  await expect(page.getByTestId("status")).toHaveText(
-    "Loaded Phase 5 visual demo",
-  );
-  await expect(page.getByTestId("annotation-count")).toHaveText("13");
-  await expect(page.getByTestId("crossing-count")).toHaveText("0");
+  await clickCommand(page, "More", "Open visual example");
   await expect(page.getByTestId("blocking-diagnostic-count")).toHaveText("0");
-  await expect(
-    page.locator('[data-layer="annotations"] [data-kind="current"]'),
-  ).toHaveCount(1);
-  await expect(
-    page.locator('[data-layer="annotations"] [data-kind="figure-caption"]'),
-  ).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Add note" }).click();
-  await expect(page.getByTestId("annotation-count")).toHaveText("14");
-  await expect(page.getByTestId("revision")).toHaveText("1");
-  await expect(page.getByTestId("status")).toHaveText(
-    "Added annotation note-1",
+  const projectBytes = await downloadBytes(page, "File", "Save Project");
+  expect(JSON.parse(projectBytes.toString("utf8")).topDocumentId).toBe(
+    "document-differential-stage",
   );
-});
-
-test("exports one formal scene as canonical Project, PNG, and PDF", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Visual demo" }).click();
-
-  const projectBytes = await downloadBytes(page, "Save Project");
-  const savedProject = JSON.parse(projectBytes.toString("utf8"));
-  expect(savedProject.topDocumentId).toBe("document-differential-stage");
-  expect(
-    await page.evaluate(() => localStorage.getItem("icm.recovery.v1")),
-  ).toBeNull();
-  await page.getByTestId("project-file").setInputFiles({
-    name: "saved.icproj.json",
-    mimeType: "application/json",
-    buffer: projectBytes,
-  });
-  await expect(page.getByTestId("status")).toContainText(
-    "Opened saved.icproj.json",
+  const svg = (await downloadBytes(page, "Export", "Export SVG")).toString(
+    "utf8",
   );
+  expect(svg).toContain('data-layer="formal"');
+  expect(svg).not.toMatch(/selection|route-hit|editor-overlay/u);
 
-  const png = await downloadBytes(page, "Export PNG");
+  const png = await downloadBytes(page, "Export", "Export PNG");
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
-  await expect(page.getByTestId("status")).toContainText("Exported PNG");
-
-  const pdf = await downloadBytes(page, "Export PDF");
+  const pdf = await downloadBytes(page, "Export", "Export PDF");
   expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
-  await expect(page.getByTestId("status")).toContainText("Exported PDF");
 });
 
-test("offers valid recovery after reload and rejects corrupt recovery", async ({
+test("uses automatic recovery and guards shortcuts while typing", async ({
   page,
 }) => {
   await page.goto("/");
-  await dragInstance(page, "M1", 320, 180);
+  await placeComponent(page, "resistor", { x: 360, y: 220 });
+  await expect(page.getByTestId("revision")).toHaveText("1");
   expect(
     await page.evaluate(() => localStorage.getItem("icm.recovery.v1")),
   ).toContain('"revision": 1');
 
   await page.reload();
-  await expect(
-    page.getByRole("button", { name: "Restore recovery" }),
-  ).toBeVisible();
+  await openMenu(page, "File");
   await page.getByRole("button", { name: "Restore recovery" }).click();
   await expect(page.getByTestId("revision")).toHaveText("1");
 
-  await page.evaluate(() => localStorage.setItem("icm.recovery.v1", "{broken"));
-  await page.reload();
-  await expect(page.getByTestId("status")).toContainText(
-    "Discarded corrupt recovery",
-  );
-  expect(
-    await page.evaluate(() => localStorage.getItem("icm.recovery.v1")),
-  ).toBeNull();
+  await page.getByRole("button", { name: "+ Component" }).click();
+  const search = page.getByRole("textbox", { name: "Search components" });
+  await search.fill("r");
+  await expect(page.getByTestId("revision")).toHaveText("1");
 });
 
-test("publishes installable PWA metadata and diagnostic UI", async ({
+test("keeps the production command surface compact and publishes PWA metadata", async ({
   page,
 }) => {
   await page.goto("/");
+  const toolbar = page.getByRole("navigation", { name: "Editor commands" });
+  await expect(
+    toolbar.getByRole("button", { name: "+ Component" }),
+  ).toBeVisible();
+  await expect(toolbar.getByRole("button", { name: "Wire" })).toBeVisible();
+  for (const label of ["File", "Edit", "View", "Export", "More"]) {
+    await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
+  }
+  for (const obsolete of [
+    "Select",
+    "Junction",
+    "Crossing",
+    "Stretch",
+    "Detach",
+  ]) {
+    await expect(
+      toolbar.getByRole("button", { name: obsolete, exact: true }),
+    ).toHaveCount(0);
+  }
+
   const manifest = await page
     .locator('link[rel="manifest"]')
     .getAttribute("href");
   expect(manifest).toBe("/manifest.webmanifest");
-  const response = await page.request.get("/manifest.webmanifest");
-  expect(await response.json()).toMatchObject({
+  expect(
+    await (await page.request.get("/manifest.webmanifest")).json(),
+  ).toMatchObject({
     name: "Interactive Circuit Maker",
     display: "standalone",
   });
-  await expect(
-    page.getByRole("region", { name: "Import diagnostics" }),
-  ).toContainText("No import diagnostics");
 });

@@ -16,6 +16,8 @@ describe("initial built-in Symbol Library", () => {
       "nmos",
       "pmos",
       "ground",
+      "vdd",
+      "vss",
       "port",
       "voltage-source",
       "current-source",

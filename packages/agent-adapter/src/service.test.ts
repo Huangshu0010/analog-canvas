@@ -70,6 +70,12 @@ describe("Agent Circuit API v1 service", () => {
       operation: "capabilities",
       capabilities: {
         operations: ["capabilities", "query", "transact", "render"],
+        editKinds: expect.arrayContaining([
+          "add_instance",
+          "connect_endpoints",
+          "merge_nets",
+          "disconnect_endpoint",
+        ]),
       },
     });
     expect(AgentCircuitResponseSchema.parse(response)).toEqual(response);
@@ -88,6 +94,53 @@ describe("Agent Circuit API v1 service", () => {
     expect(agentCircuitOpenApi.paths["/v1/circuit"].post.operationId).toBe(
       "agentCircuitOperation",
     );
+  });
+
+  it("keeps Phase 8 instance authoring identical to direct Edit Engine execution", () => {
+    const fixture = serviceFixture();
+    const request = {
+      apiVersion: "1.0" as const,
+      requestId: "add-instance-request",
+      operation: "transact" as const,
+      documentId: "document-differential-stage",
+      transactionId: "add-R-new",
+      expectedRevision: 0,
+      edits: [
+        {
+          kind: "add_instance" as const,
+          instance: {
+            id: "R-new",
+            symbolId: "resistor",
+            placement: {
+              position: { x: 420, y: 300 },
+              rotation: 0 as const,
+              mirror: "none" as const,
+            },
+            properties: {},
+          },
+        },
+      ],
+    };
+    const direct = executeTransaction(
+      fixture.getDocument(),
+      {
+        transactionId: request.transactionId,
+        documentId: request.documentId,
+        expectedRevision: 0,
+        actor: { kind: "agent", id: "agent-test" },
+        edits: request.edits,
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(fixture.service.handle(request)).toMatchObject({
+      ok: true,
+      applied: true,
+      revision: 1,
+    });
+    expect(direct.ok).toBe(true);
+    expect(fixture.getDocument()).toEqual(direct.document);
+    expect(fixture.getDocument().sourceStatus).toBe("connectivity-modified");
   });
 
   it("bounds scoped context and never returns a whole persisted Document", () => {
@@ -163,6 +216,12 @@ describe("Agent Circuit API v1 service", () => {
 
   it("matches direct Edit Engine semantics for dry-run, apply, changes, and stale revisions", () => {
     const fixture = serviceFixture();
+    for (const item of [
+      ...fixture.getDocument().layoutGroups,
+      ...fixture.getDocument().constraints,
+    ]) {
+      item.locked = false;
+    }
     const request = {
       apiVersion: "1.0" as const,
       requestId: "move-request",

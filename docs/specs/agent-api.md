@@ -2,9 +2,9 @@
 
 Status: `accepted`
 
-Version: `1.0`
+Version: `1.1`
 
-Owning phase: `Phase 6`
+Owning phase: `Phase 6/8`
 
 Primary owner: `packages/agent-adapter`
 
@@ -25,24 +25,24 @@ path beside the Edit Engine.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| Service | Transport-independent handler bound to one live Document store |
-| Scope | Explicit bounded query selector; there is no implicit whole-Project read |
-| Artifact | Bounded base64 image response with media type, hash, and byte length |
-| Edit category | `geometry`, `connectivity`, or `presentation` permission group |
+| Term          | Meaning                                                                  |
+| ------------- | ------------------------------------------------------------------------ |
+| Service       | Transport-independent handler bound to one live Document store           |
+| Scope         | Explicit bounded query selector; there is no implicit whole-Project read |
+| Artifact      | Bounded base64 image response with media type, hash, and byte length     |
+| Edit category | `geometry`, `connectivity`, or `presentation` permission group           |
 
 ## Operation envelope
 
 Every request contains `apiVersion: "1.0"`, a stable `requestId`, and one of
 four operations:
 
-| Operation | Required payload | Result |
-|---|---|---|
-| `capabilities` | none | versions, scopes, edit kinds, limits, permissions |
-| `query` | Document ID, scope, optional limits/source spans | descriptors, diagnostics, truncation evidence |
-| `transact` | Document ID, revision, transaction ID, typed edits | applied/dry-run result, diff, typed diagnostics or error |
-| `render` | Document ID, formal/diagnostics mode, optional bounds | bounded base64 SVG artifact and diagnostics |
+| Operation      | Required payload                                      | Result                                                   |
+| -------------- | ----------------------------------------------------- | -------------------------------------------------------- |
+| `capabilities` | none                                                  | versions, scopes, edit kinds, limits, permissions        |
+| `query`        | Document ID, scope, optional limits/source spans      | descriptors, diagnostics, truncation evidence            |
+| `transact`     | Document ID, revision, transaction ID, typed edits    | applied/dry-run result, diff, typed diagnostics or error |
+| `render`       | Document ID, formal/diagnostics mode, optional bounds | bounded base64 SVG artifact and diagnostics              |
 
 No request accepts Project JSON, whole-Document replacement, a filesystem
 path, JavaScript, or SVG input.
@@ -68,10 +68,11 @@ text budgets are both enforced; truncation returns `truncated` and
 ## Permissions
 
 One service instance receives fixed permissions for query, render, source
-spans, and the three edit categories. Connectivity permission covers route and
-Junction operations. Geometry covers placement, transform, and alignment.
-Presentation covers annotation/group/constraint operations. `undo` and `redo`
-are not Agent API edit kinds.
+spans, and the three edit categories. Connectivity permission covers route,
+Junction, endpoint, and Net operations. Geometry covers instance creation,
+removal, placement, transform, and alignment. Presentation covers
+annotation/group/constraint operations. `undo` and `redo` are not Agent API
+edit kinds.
 
 Permission denial occurs before the Edit Engine runs and never changes the
 Document.
@@ -83,6 +84,11 @@ the shared Edit Engine. `expectedRevision`, dry run, operation limits,
 atomicity, locks, and complete Document validation retain their existing
 meaning. A successful non-dry transaction commits only the returned validated
 Document. Responses never return that whole Document.
+
+Version 1.1 adds `add_instance`, `remove_instance`, `connect_endpoints`,
+`merge_nets`, and `disconnect_endpoint` to `capabilities.editKinds`. Their
+payloads are the shared Edit Engine schemas, so GUI and Agent transaction
+sequences validate against the same authoring semantics.
 
 ## Render semantics
 
@@ -135,6 +141,6 @@ major version.
 - request/response and generated JSON Schema validation
 - stable capabilities snapshot
 - query scope, permission, source-span, count, and byte-budget tests
-- dry-run, stale revision, atomicity, and direct Edit Engine parity tests
+- dry-run, stale revision, atomicity, and Phase 8 authoring parity tests
 - formal/diagnostics artifact inspection
 - authenticated loopback and body-limit tests

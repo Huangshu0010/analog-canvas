@@ -7,39 +7,53 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open the displayed loopback URL. Use **Import SPICE** to select one `.cir`,
-`.sp`, or `.spi` entry plus its local include files. Imported instances begin
-unplaced so that a human or Agent can decide the presentation.
+Open the displayed loopback URL. Open **File** and use **Import SPICE** to
+select one `.cir`, `.sp`, or `.spi` entry plus its local include files.
+Imported instances begin unplaced so that a human or Agent can decide the
+presentation. A normal launch starts with a genuinely empty `New Circuit`
+Document for palette-first manual authoring.
 
 ## Edit and connect
 
-- Drag unplaced instances onto the canvas.
-- Use **Wire** to connect endpoints that already belong to the same logical
-  Net.
-- Use **Junction** to make a visible join. A geometric crossing alone is never
-  connectivity.
-- Use **Detach** to remove route geometry while preserving the logical Net.
-- Undo, redo, transforms, alignment, annotations, and Agent transactions all
-  use the same Edit Engine and revision rules.
+- Use **+ Component** to search the categorized built-in library, choose a
+  symbol, and click the canvas to place it. Imported unplaced instances may
+  still be dragged onto the canvas.
+- Click to select, `Shift`/`Ctrl`-click to extend the selection, or drag blank
+  canvas to box-select. Dragging one selected instance moves the whole
+  selection atomically.
+- Use **Wire** or press `W`, then choose two pins, Junctions, or route segments.
+  Passing across a conductor remains a Crossing; ending on one creates a
+  Junction automatically. An exact multi-route intersection is rejected as
+  ambiguous instead of silently merging Nets.
+- Select a direct route to expose its dogleg handle. Use the contextual
+  **Remove route geometry** action to keep logical membership while deleting
+  only the drawn route.
+- Right-click an endpoint for the distinct **Disconnect endpoint** and
+  **Delete connection** actions.
+- Press `R` to rotate, `F` to fit, `Ctrl+Z` to undo, and `Ctrl+Y` or
+  `Ctrl+Shift+Z` to redo. Shortcuts do not fire while typing in a field.
+- Use `Ctrl`+mouse wheel to zoom around the cursor and middle-button drag to
+  pan. View changes do not increment the Document revision.
+- Human UI and Agent transactions use the same typed Edit Engine operations and
+  revision rules.
 
 ## Save and recover
 
-**Save Project** downloads canonical `.icproj.json`. Edits also stage an
-origin-local recovery copy. On a later start the app offers **Restore
+**File / Save Project** downloads canonical `.icproj.json`. Edits also stage
+an origin-local recovery copy. On a later start the File menu offers **Restore
 recovery** or **Discard recovery**; recovery never silently replaces a formal
 file.
 
-Use **Open Project** to validate and reopen a formal Project file. Opening an
-invalid or future-version file leaves the current Document unchanged.
-
-The older **Save snapshot** action is a session convenience kept for the v0.1
-editor demo. It is not a formal filesystem save.
+Use **File / Open Project** to validate and reopen a formal Project file.
+Opening an invalid or future-version file leaves the current Document
+unchanged. The old manual snapshot buttons have been removed; recovery is
+automatic infrastructure.
 
 ## Export
 
-SVG, PNG, and PDF contain only formal schematic layers. PNG uses 3x raster
-scale. PDF v0.1 contains that same high-resolution raster on a page matching
-the SVG viewBox.
+The **Export** menu produces SVG, PNG, and PDF containing only formal schematic
+layers. PNG uses 3x raster scale. PDF contains that same high-resolution raster
+on a page matching the SVG viewBox.
 
 ## Portable release
 

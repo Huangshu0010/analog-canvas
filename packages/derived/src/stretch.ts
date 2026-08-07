@@ -15,6 +15,11 @@ export interface RouteStretchProposal {
   segmentModes: SegmentMode[];
 }
 
+export interface InstanceMoveProposal {
+  instanceId: string;
+  position: Point;
+}
+
 export function proposeLocalStretch(
   document: SchematicDocument,
   resolver: SymbolResolver,
@@ -84,6 +89,83 @@ export function proposeLocalStretch(
     });
   }
   return proposals.sort((left, right) =>
+    left.routeId.localeCompare(right.routeId, "en"),
+  );
+}
+
+export function proposeGroupStretch(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  moves: readonly InstanceMoveProposal[],
+): RouteStretchProposal[] {
+  const moveByInstance = new Map(
+    moves.map((move) => [move.instanceId, move.position]),
+  );
+  const deltaByInstance = new Map<string, Point>();
+  for (const move of moves) {
+    const instance = document.instances.find(
+      (candidate) => candidate.id === move.instanceId,
+    );
+    if (!instance?.placement) {
+      throw new Error(`Placed instance not found: ${move.instanceId}`);
+    }
+    deltaByInstance.set(move.instanceId, {
+      x: move.position.x - instance.placement.position.x,
+      y: move.position.y - instance.placement.position.y,
+    });
+  }
+
+  const proposals = new Map<string, RouteStretchProposal>();
+  for (const route of document.routes) {
+    const fromDelta =
+      route.from.kind === "terminal"
+        ? deltaByInstance.get(route.from.instanceId)
+        : undefined;
+    const toDelta =
+      route.to.kind === "terminal"
+        ? deltaByInstance.get(route.to.instanceId)
+        : undefined;
+    if (!fromDelta && !toDelta) continue;
+
+    if (
+      fromDelta &&
+      toDelta &&
+      fromDelta.x === toDelta.x &&
+      fromDelta.y === toDelta.y
+    ) {
+      if (route.segmentModes.includes("locked")) {
+        throw new Error(`Route ${route.id} contains a locked segment`);
+      }
+      proposals.set(route.id, {
+        routeId: route.id,
+        waypoints: route.waypoints.map((point) => ({
+          x: point.x + fromDelta.x,
+          y: point.y + fromDelta.y,
+        })),
+        segmentModes: [...route.segmentModes],
+      });
+      continue;
+    }
+
+    if (fromDelta && toDelta) {
+      throw new Error(
+        `Route ${route.id} cannot stretch endpoints by different group deltas`,
+      );
+    }
+    const instanceId =
+      route.from.kind === "terminal" &&
+      moveByInstance.has(route.from.instanceId)
+        ? route.from.instanceId
+        : route.to.kind === "terminal"
+          ? route.to.instanceId
+          : null;
+    if (!instanceId) continue;
+    const position = moveByInstance.get(instanceId)!;
+    const local = proposeLocalStretch(document, resolver, instanceId, position);
+    const proposal = local.find((candidate) => candidate.routeId === route.id);
+    if (proposal) proposals.set(route.id, proposal);
+  }
+  return [...proposals.values()].sort((left, right) =>
     left.routeId.localeCompare(right.routeId, "en"),
   );
 }

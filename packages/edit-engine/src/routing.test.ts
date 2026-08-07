@@ -123,7 +123,7 @@ describe("routing Edit Engine", () => {
     });
   });
 
-  it("rejects a dot that would visually imply an uncommitted crossing join", () => {
+  it("splits only the explicitly targeted conductor at a crossing", () => {
     const document = documentFixture();
     document.routes = [
       {
@@ -164,14 +164,20 @@ describe("routing Edit Engine", () => {
     );
 
     expect(result).toMatchObject({
-      ok: false,
-      error: {
-        code: "EDIT_PRECONDITION",
-        message: expect.stringContaining("split every participating branch"),
+      ok: true,
+      document: {
+        junctions: [{ id: "ambiguous-dot", netId: "net-h" }],
       },
-      document,
     });
-    expect(document.junctions).toEqual([]);
+    if (!result.ok) throw new Error("Targeted crossing split failed");
+    expect(result.document.routes.map((route) => route.id)).toEqual([
+      "route-h-a",
+      "route-h-b",
+      "route-v",
+    ]);
+    expect(
+      result.document.routes.find((route) => route.id === "route-v"),
+    ).toEqual(document.routes[1]);
   });
 
   it("rejects diagonal, context-free, and locked route mutations atomically", () => {

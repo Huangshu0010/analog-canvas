@@ -1,8 +1,8 @@
 # Editor Interaction Contract
 
-Status: `proposed`
+Status: `accepted`
 
-Version: `0.1`
+Version: `1.0`
 
 Owning phase: `Phase 8`
 
@@ -15,8 +15,8 @@ canvas uses direct manipulation and context instead of exposing every internal
 Edit Engine operation as a permanent toolbar button. Human UI operations and
 Agent API transactions must still resolve to the same typed, atomic edits.
 
-This specification describes Phase 8 target behavior. Phase 7 remains the
-implemented baseline until the Phase 8 exit gate is met.
+Phase 8 implements this contract as a compatible extension of the Phase 7
+Project and Document baseline.
 
 ## Consumers
 
@@ -44,7 +44,7 @@ implemented baseline until the Phase 8 exit gate is met.
 The production header should expose only frequent entry points:
 
 ```text
-+ Component | Wire | File | Export | More
++ Component | Wire | File | Edit | View | Export | More
 ```
 
 The exact visual treatment may use icons, labels, or responsive grouping, but
@@ -54,7 +54,7 @@ the information architecture is normative:
 | ------ | -------------------------------------------------------------------- |
 | File   | Open, Save, Import, recent/example documents                         |
 | Edit   | Undo, Redo, Delete, and contextual Align                             |
-| Add    | Component and Text                                                   |
+| Add    | Component in the header; Text in More                                |
 | View   | Fit, Diagnostics, Grid, and presentation overlays                    |
 | Export | SVG, PNG, and PDF from one menu                                      |
 | More   | Help, shortcut reference, and development-only examples when enabled |
@@ -65,8 +65,8 @@ The following are not permanent production toolbar modes:
 - Save snapshot and Reopen snapshot; recovery is automatic infrastructure.
 - Phase/demo actions; examples belong in File/Open Example or development mode.
 
-Wire may remain visible for discoverability and continuous placement, but a
-pointer drag from a pin or conductor can start the same wire session.
+Wire remains visible for discoverability, while pointer-down on a pin or a
+selected conductor starts the same wire session.
 
 ## Keyboard contract
 
@@ -113,8 +113,9 @@ can complete the named operation safely.
 
 ### Contextual manipulation
 
-- Route segments and elbows expose drag handles when selected; there is no
-  separate Stretch tool.
+- A selected direct route segment exposes a drag handle that creates an
+  orthogonal dogleg; there is no separate Stretch tool. Additional elbow
+  handle forms are a compatible later extension.
 - Rotate and Mirror are available from shortcuts or a contextual selection
   control.
 - Alignment appears only for a compatible multi-selection.
@@ -125,9 +126,9 @@ geometry`, `Disconnect endpoint`, and `Delete connection`. These operations
 ## Manual component authoring
 
 The Add Component entry opens a searchable palette grouped by device family.
-Choosing a symbol starts placement; click places an instance and drag may place
-and immediately position it. Placement must be possible in a new empty
-Document without importing SPICE first.
+Choosing a symbol starts single-shot placement and the next canvas click places
+an instance. Placement is possible in a new empty Document without importing
+SPICE first.
 
 Phase 8 requires typed Edit Engine operations equivalent to:
 
@@ -139,14 +140,14 @@ merge_nets;
 disconnect_endpoint;
 ```
 
-The final names and payloads require a compatible Edit Engine specification
-revision. GUI operations and Agent transactions must call those same semantic
-operations; neither surface may patch Project JSON directly.
+The accepted Edit Engine revision defines these names and payloads. GUI
+operations and Agent transactions call those same semantic operations; neither
+surface patches Project JSON directly.
 
 For an imported source, any manual edit that changes electrical connectivity
 sets the active Document's `sourceStatus` to `connectivity-modified`. The
-original source and source manifest remain preserved. Phase 8 does not write modified
-connectivity back to SPICE text.
+original source and source manifest remain preserved. Phase 8 does not write
+modified connectivity back to SPICE text.
 
 ## Wire, junction, and crossing behavior
 
@@ -157,8 +158,8 @@ The core rule is:
 
 ### Starting and ending
 
-- Starting from a pin, existing junction, or blank grid point opens a wire
-  session from that endpoint.
+- Starting from a pin or existing junction opens a wire session from that
+  endpoint. Free-standing wire endpoints are deferred.
 - Starting from the interior of an existing route segment previews and, on
   commit, creates or reuses a junction atomically.
 - Releasing on a pin or existing junction connects to it.
@@ -166,9 +167,8 @@ The core rule is:
   splits the route as needed and creates or reuses a junction atomically.
 - Passing over or crossing a route without ending there creates no junction,
   no dot, and no connectivity.
-- At a geometric intersection, connection to all participating conductors is
-  allowed only when the preview clearly shows the proposed connected set and
-  the user explicitly ends the wire there.
+- A wire end that geometrically hits more than one route segment is rejected as
+  ambiguous. The user must choose one conductor away from the crossing.
 
 ### Net semantics
 
@@ -202,10 +202,10 @@ connectivity.
 
 ## Symbol fidelity boundary
 
-The component palette uses runtime-independent Symbol DSL definitions. For the
-initial analog families, those definitions should reproduce reviewed geometry
-from `lib/circuit.vss` more faithfully than the Phase 5 provisional shapes,
-while keeping human-reviewed electrical pin mappings.
+The component palette uses runtime-independent Symbol DSL definitions. The 12
+review-manifest families retain their VSS evidence and human-reviewed pin
+mappings. Phase 8 also adds project-native VDD and VSS power-port definitions;
+these do not claim an additional VSS pin review.
 
 The first fidelity set is NMOS/PMOS, NPN/PNP, resistor, capacitor, inductor,
 diode, voltage/current sources, VDD/VSS/GND, and ports. VSS remains immutable
@@ -222,8 +222,7 @@ stateDiagram-v2
     Pointer --> Wire: W or drag from endpoint/segment
     BoxSelect --> Pointer: release or cancel
     MoveSelection --> Pointer: commit or cancel
-    PlaceComponent --> PlaceComponent: place in continuous mode
-    PlaceComponent --> Pointer: finish or cancel
+    PlaceComponent --> Pointer: place or cancel
     Wire --> Wire: add orthogonal point
     Wire --> Pointer: commit endpoint or cancel
 ```
@@ -269,11 +268,9 @@ non-electrical unless an explicit wire start/end gesture commits connectivity.
 
 - Existing Phase 7 Projects remain valid; no file-format migration is required
   merely to adopt the new interaction controller.
-- New topology operations require compatible revisions of the Edit Engine,
-  Agent capability schema, and connectivity specification before acceptance.
-- The Phase 7 explicit Junction command may remain available only behind a
-  development or compatibility surface during migration. It is not part of
-  the target production toolbar.
+- New topology operations are additive revisions of the Edit Engine, Agent
+  capability schema, and connectivity specification.
+- The Phase 7 explicit Junction command is absent from the production toolbar.
 - Shortcut mappings must be discoverable and configurable in a later version;
   Phase 8 freezes only the default mapping.
 
@@ -289,16 +286,14 @@ non-electrical unless an explicit wire start/end gesture commits connectivity.
   multi-selection, middle-button pan, zoom, direct wiring, and contextual
   deletion.
 - Reviewed VSS-to-Symbol-DSL comparison artifacts and stable symbol preview
-  goldens for the initial fidelity set.
+  goldens for the 12-family review-manifest set, plus unit previews for the
+  project-native VDD/VSS power ports.
 - Production-build inspection proving demo controls are hidden and runtime code
   does not depend on Visio or `.vss` parsing.
 
 ## Open decisions
 
-- Freeze the precise electrical behavior when a wire ends at the geometric
-  intersection of more than two conductors; the preview must enumerate the
-  proposed connected set before implementation is accepted.
-- Decide whether component placement is single-shot by default or continuous
-  until `Escape`; both must use the same placement transaction.
-- Define how user-remappable shortcuts are stored after the Phase 8 default
-  keymap is accepted.
+- User-remappable shortcut persistence and free-standing wire endpoints remain
+  compatible post-Phase-8 extensions.
+- General elbow/segment handles beyond the accepted direct-segment dogleg
+  interaction remain deferred.

@@ -99,17 +99,114 @@ body {
   font-size: 0.8rem;
 }
 
-.toolbar,
-.viewport-toolbar {
+.toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
 }
 
 .toolbar button,
-.viewport-toolbar button {
+.command-menu summary {
   padding: 0.35rem 0.55rem;
   font-size: 0.8rem;
+}
+
+.command-menu {
+  position: relative;
+}
+
+.command-menu summary {
+  border: 1px solid #b8b8b0;
+  border-radius: 0.25rem;
+  background: #fff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.command-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.command-popover {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: grid;
+  min-width: 10rem;
+  gap: 0.3rem;
+  padding: 0.45rem;
+  border: 1px solid #c9c9c2;
+  border-radius: 0.35rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.command-popover button,
+.command-popover .file-import {
+  width: 100%;
+  text-align: left;
+}
+
+.component-palette {
+  position: fixed;
+  z-index: 20;
+  top: 4rem;
+  left: 15rem;
+  width: min(36rem, calc(100vw - 17rem));
+  max-height: calc(100vh - 6rem);
+  overflow: auto;
+  padding: 0.8rem;
+  border: 1px solid #b8b8b0;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 14px 40px rgb(0 0 0 / 18%);
+}
+
+.palette-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.palette-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.component-palette > input {
+  width: 100%;
+  margin: 0.65rem 0;
+  padding: 0.5rem;
+  border: 1px solid #b8b8b0;
+  border-radius: 0.3rem;
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.45rem;
+}
+
+.palette-group h3 {
+  margin: 0.75rem 0 0.35rem;
+  color: #555;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.palette-grid button {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem;
+  text-align: left;
+}
+
+.palette-grid span,
+.command-popover small {
+  color: #666;
+  font-size: 0.72rem;
 }
 
 .side-panel {
@@ -121,6 +218,12 @@ body {
 .side-panel h2 {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;
+}
+
+.side-panel > h3 {
+  margin: 0 0 0.55rem;
+  color: #555;
+  font-size: 0.78rem;
 }
 
 .side-panel > button {
@@ -178,17 +281,6 @@ body {
   min-width: 0;
   min-height: 0;
   padding: 0.9rem;
-}
-
-.viewport-toolbar {
-  position: absolute;
-  z-index: 1;
-  top: 1.4rem;
-  left: 1.4rem;
-  padding: 0.3rem;
-  border: 1px solid #cecec8;
-  border-radius: 0.35rem;
-  background: rgb(255 255 255 / 92%);
 }
 
 .schematic-canvas {
@@ -253,6 +345,14 @@ body {
   stroke-width: 14;
 }
 
+.route-handle {
+  fill: #fff;
+  stroke: #1f6feb;
+  stroke-width: 1.5;
+  cursor: move;
+  vector-effect: non-scaling-stroke;
+}
+
 .endpoint-hit {
   fill: transparent;
   stroke: transparent;
@@ -264,4 +364,32 @@ body {
   fill: #fff;
   stroke: #1f6feb;
   stroke-width: 1.5;
+}
+
+.selection-box {
+  fill: rgb(31 111 235 / 8%);
+  stroke: #1f6feb;
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.snap-preview {
+  fill: #fff;
+  stroke: #1f6feb;
+  stroke-width: 1.5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.context-actions {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #d8d8d2;
+}
+
+.context-actions button {
+  width: 100%;
+  padding: 0.45rem;
 }

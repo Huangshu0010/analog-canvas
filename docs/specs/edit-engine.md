@@ -2,9 +2,9 @@
 
 Status: `accepted`
 
-Version: `1.3`
+Version: `1.4`
 
-Owning phase: `Phase 0/1`
+Owning phase: `Phase 0/1/8`
 
 Primary owner: `packages/edit-engine`
 
@@ -22,11 +22,11 @@ including revision checks, dry runs, atomicity, results, and diagnostics.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| Transaction | One atomic ordered list of typed edits against one Document revision |
-| Dry run | Full validation and diff prediction without mutation or revision advance |
-| Preflight | Validation performed before any candidate mutation is committed |
+| Term        | Meaning                                                                  |
+| ----------- | ------------------------------------------------------------------------ |
+| Transaction | One atomic ordered list of typed edits against one Document revision     |
+| Dry run     | Full validation and diff prediction without mutation or revision advance |
+| Preflight   | Validation performed before any candidate mutation is committed          |
 
 ## Data model or interface
 
@@ -41,9 +41,11 @@ interface EditTransaction {
 }
 ```
 
-The executable union contains `noop`, `place_instance`, `move_instance`,
+The executable union contains `noop`, `add_instance`, `remove_instance`,
+`place_instance`, `move_instance`,
 `rotate_instance`, `mirror_instance`, `set_route_points`, `add_junction`,
-`remove_junction`, `make_flightline`, `upsert_annotation`,
+`remove_junction`, `make_flightline`, `connect_endpoints`, `merge_nets`,
+`disconnect_endpoint`, `upsert_annotation`,
 `remove_annotation`, `set_layout_group`, `remove_layout_group`,
 `set_layout_constraint`, `remove_layout_constraint`, `align_instances`,
 `undo`, and `redo`. Later phases extend the typed union and versioned schemas;
@@ -63,6 +65,25 @@ they do not create separate mutation endpoints.
 - Locked annotation and layout-intent records cannot be replaced or removed.
 - Moving or aligning an instance translates its attached annotations by the
   same delta in the same atomic transaction.
+- A locked layout group or constraint rejects transforms of any referenced
+  instance, so a multi-object transaction cannot move only an unlocked subset.
+- Instance/topology authoring sets `sourceStatus` to
+  `connectivity-modified`; geometry-only edits preserve the prior status
+  transition.
+
+Phase 8 topology operations have these preconditions:
+
+- `add_instance` requires a globally unused object ID and resolvable Symbol.
+- `remove_instance` requires no Net, annotation, group, or constraint
+  reference.
+- `connect_endpoints` creates a caller-named local Net when both endpoints are
+  unowned, or attaches an unowned endpoint to the other endpoint's Net.
+- Endpoints on different Nets require an explicit preceding `merge_nets` edit
+  in the same transaction.
+- `merge_nets` retargets routes, junctions, annotations, and layout references
+  before removing the source Net.
+- `disconnect_endpoint` requires all route geometry that uses the endpoint to
+  be removed explicitly first.
 
 ## Operations and state transitions
 
@@ -84,9 +105,9 @@ runtime state unless a later recovery contract explicitly snapshots them.
 
 ## Valid example
 
-A `place_instance` transaction at revision 0 assigns one previously null
-placement and commits revision 1. The same transaction with `dryRun: true`
-reports proposed revision 1 while returning the original revision 0 Document.
+One transaction adds two resistors, connects two pins into a caller-named Net,
+and adds its Route. It commits one revision and sets `sourceStatus` to
+`connectivity-modified`; failure of any later edit restores the exact input.
 
 ## Rejected example
 
@@ -104,7 +125,7 @@ adapter.
 - stale revision and Document mismatch tests
 - schema rejection before apply
 - atomic no-op and dry-run tests
-- later GUI/Agent parity tests
+- GUI/Agent parity tests for Phase 8 authoring operations
 
 ## Open decisions
 

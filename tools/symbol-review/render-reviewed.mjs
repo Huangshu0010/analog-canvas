@@ -31,9 +31,16 @@ const primitive = (item) => {
   }
 };
 
-const reviewed = builtInSymbols.filter(
-  (symbol) => symbol.id !== "generic-block",
+const reviewManifest = JSON.parse(
+  readFileSync(
+    resolve(process.cwd(), "fixtures/symbols/circuit-vss-review.json"),
+    "utf8",
+  ),
 );
+const reviewedIds = new Set(
+  reviewManifest.mappings.map((mapping) => mapping.symbolId),
+);
+const reviewed = builtInSymbols.filter((symbol) => reviewedIds.has(symbol.id));
 const cells = reviewed
   .map((symbol, index) => {
     const column = index % 4;

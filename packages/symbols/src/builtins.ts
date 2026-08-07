@@ -125,6 +125,40 @@ const ground: SymbolDefinition = {
   aliases: ["gnd"],
 };
 
+function powerPortSymbol(id: "vdd" | "vss", name: string): SymbolDefinition {
+  const upward = id === "vdd";
+  return {
+    schemaVersion: 1,
+    id,
+    name,
+    viewBox: { x: -12, y: -24, width: 24, height: 48 },
+    pins: [pin("P", "power", 0, upward ? 24 : -24, upward ? "south" : "north")],
+    primitives: [
+      {
+        kind: "line",
+        from: { x: 0, y: upward ? 24 : -24 },
+        to: { x: 0, y: upward ? -6 : 6 },
+      },
+      {
+        kind: "polyline",
+        points: upward
+          ? [
+              { x: -9, y: -6 },
+              { x: 0, y: -16 },
+              { x: 9, y: -6 },
+            ]
+          : [
+              { x: -9, y: 6 },
+              { x: 0, y: 16 },
+              { x: 9, y: 6 },
+            ],
+      },
+    ],
+    variants: [],
+    aliases: upward ? ["power", "supply"] : ["negative-supply"],
+  };
+}
+
 const port: SymbolDefinition = {
   schemaVersion: 1,
   id: "port",
@@ -288,6 +322,8 @@ export const builtInSymbols: readonly SymbolDefinition[] = [
   mosSymbol("nmos", "NMOS"),
   mosSymbol("pmos", "PMOS"),
   ground,
+  powerPortSymbol("vdd", "VDD Power Port"),
+  powerPortSymbol("vss", "VSS Power Port"),
   port,
   sourceSymbol("voltage-source", "Independent Voltage Source"),
   sourceSymbol("current-source", "Independent Current Source"),

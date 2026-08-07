@@ -15,7 +15,7 @@ Phases are ordered by dependency and exit gates, not by calendar estimates.
 |     5 | [`Symbols and Visual Quality`](phase-5-symbols-and-visual-quality.md)                             | complete | VSS-derived symbols and stable textbook-monochrome visual output           |
 |     6 | [`Agent API`](phase-6-agent-api.md)                                                               | complete | Safe `capabilities/query/transact/render` Agent integration                |
 |     7 | [`Export and Hardening`](phase-7-export-and-hardening.md)                                         | complete | Recovery, performance, broader dialects, and production export             |
-|     8 | [`Direct Manipulation and Manual Authoring`](phase-8-direct-manipulation-and-manual-authoring.md) | proposed | Compact UI, manual placement, direct wiring, and automatic junctions       |
+|     8 | [`Direct Manipulation and Manual Authoring`](phase-8-direct-manipulation-and-manual-authoring.md) | complete | Compact UI, manual placement, direct wiring, and automatic junctions       |
 
 ## Dependency Graph
 

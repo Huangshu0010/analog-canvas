@@ -1,6 +1,6 @@
 # Phase 8 - Direct Manipulation and Manual Authoring
 
-Status: `proposed`
+Status: `complete`
 
 ## Objective
 
@@ -23,13 +23,15 @@ the existing non-MCP API boundary.
 - Typed, atomic instance and topology authoring operations in the Edit Engine.
 - Agent capability and transaction parity for all new semantic operations.
 - Searchable, categorized component palette and empty-Document placement.
-- Direct selection, rectangle multi-selection, atomic group movement, route
-  segment/elbow manipulation, and contextual actions.
+- Direct selection, rectangle multi-selection, atomic group movement, direct
+  two-point-route dogleg manipulation, and contextual actions. General elbow
+  handles remain a compatible follow-up.
 - Cursor-centered zoom, middle-button pan, Fit, and transient viewport state.
 - Automatic crossing derivation and explicit start/end-on-segment junctions.
 - A reduced, grouped production command surface with examples in development
   or File/Open Example flows.
-- Higher-fidelity VSS-derived Symbol DSL shapes for the initial analog set.
+- Retention of the reviewed VSS-derived analog set plus project-native VDD and
+  VSS power-port symbols; no runtime Visio dependency.
 - Keyboard focus safety, previews, cancel behavior, undo, diagnostics, and
   visible rejection reasons.
 
@@ -48,7 +50,7 @@ the existing non-MCP API boundary.
 ## Dependencies
 
 - Completed [`Phase 7`](phase-7-export-and-hardening.md) release baseline.
-- Proposed [`Editor Interaction Contract`](../specs/editor-interaction.md).
+- Accepted [`Editor Interaction Contract`](../specs/editor-interaction.md).
 - Accepted [`Edit Engine`](../specs/edit-engine.md),
   [`Connectivity and Routing`](../specs/connectivity-and-routing.md),
   [`Symbol DSL`](../specs/symbol-dsl.md),
@@ -211,3 +213,31 @@ Production editor
 - Existing Phase 7 import, export, recovery, and performance gates remain green.
 - The phase log records test artifacts, visual review, known limitations, and
   the final command inventory before status changes from `proposed`.
+
+## Completion evidence
+
+- The editor now launches into an empty `New Circuit`, offers searchable
+  palette placement, direct/box selection, atomic group movement, `R`/`W`/`F`
+  and history shortcuts, cursor-centered zoom, middle-button pan, direct
+  wiring, automatic end-on-route Junctions, derived Crossings, and distinct
+  route/endpoint context actions.
+- The production header exposes only **+ Component** and **Wire** as permanent
+  action buttons; File, Edit, View, Export, and More are mutually exclusive
+  grouped menus. Select, Junction, Crossing, Stretch, Detach, Zoom, and Pan
+  buttons are absent.
+- The Edit Engine and Agent API share typed `add_instance`, `remove_instance`,
+  `connect_endpoints`, `merge_nets`, and `disconnect_endpoint` operations.
+  Locked group movement rejects atomically, connectivity edits mark the source
+  modified, and route/group/constraint references participate in transaction
+  diffs.
+- The 12-family VSS review manifest and its visual golden remain unchanged;
+  project-native VDD/VSS power-port symbols extend the runtime library without
+  claiming new Visio pin-review evidence or creating a runtime `.vss`
+  dependency.
+- Frozen install, formatting, four-reference validation, TypeScript, 96 tests
+  in 28 files, workspace build, Agent API artifacts, symbol review, Phase 5
+  visual golden, Phase 7 export goldens, PWA icons, performance budgets,
+  release packaging/smoke, and seven Playwright workflows passed. The empty
+  production workspace also passed a 1440x900 browser screenshot review.
+- Compatible follow-ups remain explicit: persisted shortcut remapping,
+  free-standing wire endpoints, and general multi-elbow route handles.

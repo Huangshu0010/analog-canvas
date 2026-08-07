@@ -20,7 +20,7 @@ against. They describe required behavior and invariants, not task history.
 | [`persistence-and-recovery.md`](persistence-and-recovery.md) |          0/7 | accepted boundary        | Atomic save, AppData cache/session/recovery, migrations                  |
 | [`export.md`](export.md)                                     |            7 | accepted                 | Formal SVG source and derived PNG/PDF contracts                          |
 | [`performance.md`](performance.md)                           |            7 | accepted                 | Representative workloads and release budgets                             |
-| [`editor-interaction.md`](editor-interaction.md)             |            8 | proposed                 | Direct manipulation, manual authoring, gestures, and automation boundary |
+| [`editor-interaction.md`](editor-interaction.md)             |            8 | accepted                 | Direct manipulation, manual authoring, gestures, and automation boundary |
 
 Create a specification when its owning phase begins; do not create empty files
 only to mirror this table. Start from [`spec.template.md`](spec.template.md).

@@ -1,5 +1,6 @@
 import {
   AnnotationSchema,
+  InstanceSchema,
   JunctionSchema,
   LayoutConstraintSchema,
   LayoutGroupSchema,
@@ -19,6 +20,7 @@ import type {
   SchematicDocument,
 } from "@icm/model";
 import {
+  endpointKey,
   endpointBelongsToNet,
   isOrthogonal,
   normalizeRouteGeometry,
@@ -35,6 +37,14 @@ export const EditActorSchema = z.strictObject({
 export const NoopEditSchema = z.strictObject({
   kind: z.literal("noop"),
   reason: z.string().min(1).optional(),
+});
+export const AddInstanceEditSchema = z.strictObject({
+  kind: z.literal("add_instance"),
+  instance: InstanceSchema,
+});
+export const RemoveInstanceEditSchema = z.strictObject({
+  kind: z.literal("remove_instance"),
+  instanceId: StableIdSchema,
 });
 export const PlaceInstanceEditSchema = z.strictObject({
   kind: z.literal("place_instance"),
@@ -87,6 +97,29 @@ export const MakeFlightlineEditSchema = z.strictObject({
   kind: z.literal("make_flightline"),
   routeId: StableIdSchema,
 });
+export const ConnectEndpointsEditSchema = z.strictObject({
+  kind: z.literal("connect_endpoints"),
+  from: RouteEndpointSchema,
+  to: RouteEndpointSchema,
+  newNetId: StableIdSchema.optional(),
+  newNetName: z.string().min(1).optional(),
+});
+export const MergeNetsEditSchema = z.strictObject({
+  kind: z.literal("merge_nets"),
+  targetNetId: StableIdSchema,
+  sourceNetId: StableIdSchema,
+});
+export const DisconnectEndpointEditSchema = z.strictObject({
+  kind: z.literal("disconnect_endpoint"),
+  endpoint: z.discriminatedUnion("kind", [
+    z.strictObject({
+      kind: z.literal("terminal"),
+      instanceId: StableIdSchema,
+      pinName: z.string().min(1),
+    }),
+    z.strictObject({ kind: z.literal("port"), portId: StableIdSchema }),
+  ]),
+});
 export const UpsertAnnotationEditSchema = z.strictObject({
   kind: z.literal("upsert_annotation"),
   annotation: AnnotationSchema,
@@ -122,6 +155,8 @@ export const RedoEditSchema = z.strictObject({ kind: z.literal("redo") });
 
 export const SchematicEditSchema = z.discriminatedUnion("kind", [
   NoopEditSchema,
+  AddInstanceEditSchema,
+  RemoveInstanceEditSchema,
   PlaceInstanceEditSchema,
   MoveInstanceEditSchema,
   RotateInstanceEditSchema,
@@ -130,6 +165,9 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   AddJunctionEditSchema,
   RemoveJunctionEditSchema,
   MakeFlightlineEditSchema,
+  ConnectEndpointsEditSchema,
+  MergeNetsEditSchema,
+  DisconnectEndpointEditSchema,
   UpsertAnnotationEditSchema,
   RemoveAnnotationEditSchema,
   SetLayoutGroupEditSchema,
@@ -259,30 +297,116 @@ function pointOnSegment(point: Point, from: Point, to: Point): boolean {
   return false;
 }
 
-function pointOnSegmentInclusive(
-  point: Point,
-  from: Point,
-  to: Point,
-): boolean {
-  if (from.x === to.x) {
-    return (
-      point.x === from.x &&
-      point.y >= Math.min(from.y, to.y) &&
-      point.y <= Math.max(from.y, to.y)
-    );
-  }
-  if (from.y === to.y) {
-    return (
-      point.y === from.y &&
-      point.x >= Math.min(from.x, to.x) &&
-      point.x <= Math.max(from.x, to.x)
-    );
-  }
-  return false;
-}
-
 function routeIsProtected(route: RouteBranch): boolean {
   return route.segmentModes.includes("locked");
+}
+
+function endpointOwnerNetId(
+  document: SchematicDocument,
+  endpoint: RouteEndpoint,
+): string | null {
+  switch (endpoint.kind) {
+    case "terminal":
+      return (
+        document.nets.find((net) =>
+          net.terminals.some(
+            (terminal) =>
+              terminal.instanceId === endpoint.instanceId &&
+              terminal.pinName === endpoint.pinName,
+          ),
+        )?.id ?? null
+      );
+    case "port":
+      return (
+        document.nets.find((net) => net.ports.includes(endpoint.portId))?.id ??
+        null
+      );
+    case "junction":
+      return (
+        document.junctions.find(
+          (junction) => junction.id === endpoint.junctionId,
+        )?.netId ?? null
+      );
+  }
+}
+
+function validateConnectableEndpoint(
+  document: SchematicDocument,
+  endpoint: RouteEndpoint,
+  resolver: SymbolResolver | undefined,
+): string | null {
+  switch (endpoint.kind) {
+    case "terminal": {
+      const instance = document.instances.find(
+        (candidate) => candidate.id === endpoint.instanceId,
+      );
+      if (!instance) return `Instance does not exist: ${endpoint.instanceId}`;
+      if (!resolver) return "Terminal edits require a Symbol Resolver";
+      const symbol = resolver.resolve(
+        instance.symbolId,
+        instance.symbolVariantId,
+      );
+      if (
+        !symbol?.definition.pins.some((pin) => pin.name === endpoint.pinName)
+      ) {
+        return `Symbol pin does not exist: ${endpoint.instanceId}.${endpoint.pinName}`;
+      }
+      return null;
+    }
+    case "port":
+      return document.ports.some((port) => port.id === endpoint.portId)
+        ? null
+        : `Port does not exist: ${endpoint.portId}`;
+    case "junction":
+      return document.junctions.some(
+        (junction) => junction.id === endpoint.junctionId,
+      )
+        ? null
+        : `Junction does not exist: ${endpoint.junctionId}`;
+  }
+}
+
+function addEndpointToNet(
+  document: SchematicDocument,
+  netId: string,
+  endpoint: RouteEndpoint,
+): void {
+  const net = document.nets.find((candidate) => candidate.id === netId)!;
+  if (endpoint.kind === "terminal") {
+    if (
+      !net.terminals.some(
+        (terminal) =>
+          terminal.instanceId === endpoint.instanceId &&
+          terminal.pinName === endpoint.pinName,
+      )
+    ) {
+      net.terminals.push({
+        instanceId: endpoint.instanceId,
+        pinName: endpoint.pinName,
+      });
+    }
+  } else if (endpoint.kind === "port" && !net.ports.includes(endpoint.portId)) {
+    net.ports.push(endpoint.portId);
+  }
+}
+
+function replaceLayoutReference(
+  objectIds: string[],
+  sourceId: string,
+  targetId: string,
+): string[] {
+  return [...new Set(objectIds.map((id) => (id === sourceId ? targetId : id)))];
+}
+
+function lockedLayoutOwner(
+  document: SchematicDocument,
+  objectId: string,
+): string | null {
+  return (
+    [...document.layoutGroups, ...document.constraints].find(
+      (item) => item.locked && item.objectIds.includes(objectId),
+    )?.id ?? null
+  );
 }
 
 function routeFromEdit(
@@ -416,6 +540,7 @@ export function executeTransaction(
   const draft = structuredClone(document);
   const changedObjectIds = new Set<string>();
   let geometryChanged = false;
+  let connectivityChanged = false;
 
   for (const edit of transaction.edits) {
     switch (edit.kind) {
@@ -423,6 +548,80 @@ export function executeTransaction(
       case "undo":
       case "redo":
         continue;
+      case "add_instance": {
+        const objectIdExists = [
+          ...draft.ports,
+          ...draft.instances,
+          ...draft.nets,
+          ...draft.routes,
+          ...draft.junctions,
+          ...draft.annotations,
+          ...draft.layoutGroups,
+          ...draft.constraints,
+        ].some((candidate) => candidate.id === edit.instance.id);
+        if (objectIdExists) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Object ID already exists: ${edit.instance.id}`,
+          );
+        }
+        const resolver = context.symbolResolver;
+        if (
+          !resolver?.resolve(
+            edit.instance.symbolId,
+            edit.instance.symbolVariantId,
+          )
+        ) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Symbol does not exist: ${edit.instance.symbolId}`,
+          );
+        }
+        draft.instances.push(InstanceSchema.parse(edit.instance));
+        changedObjectIds.add(edit.instance.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "remove_instance": {
+        const index = draft.instances.findIndex(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (index < 0) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+          );
+        }
+        const referenced =
+          draft.nets.some((net) =>
+            net.terminals.some(
+              (terminal) => terminal.instanceId === edit.instanceId,
+            ),
+          ) ||
+          draft.annotations.some(
+            (annotation) => annotation.attachedObjectId === edit.instanceId,
+          ) ||
+          draft.layoutGroups.some((group) =>
+            group.objectIds.includes(edit.instanceId),
+          ) ||
+          draft.constraints.some((constraint) =>
+            constraint.objectIds.includes(edit.instanceId),
+          );
+        if (referenced) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Instance is still connected or referenced: ${edit.instanceId}`,
+          );
+        }
+        draft.instances.splice(index, 1);
+        changedObjectIds.add(edit.instanceId);
+        connectivityChanged = true;
+        break;
+      }
       case "place_instance": {
         const instance = draft.instances.find(
           (candidate) => candidate.id === edit.instanceId,
@@ -454,6 +653,14 @@ export function executeTransaction(
             document,
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
+          );
+        }
+        const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
+        if (lockOwner) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
           );
         }
         if (instance.placement === null) {
@@ -489,6 +696,14 @@ export function executeTransaction(
             `Instance does not exist: ${edit.instanceId}`,
           );
         }
+        const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
+        if (lockOwner) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
+          );
+        }
         if (instance.placement === null) {
           return rejectTransaction(
             document,
@@ -509,6 +724,14 @@ export function executeTransaction(
             document,
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
+          );
+        }
+        const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
+        if (lockOwner) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
           );
         }
         if (instance.placement === null) {
@@ -618,26 +841,6 @@ export function executeTransaction(
               `Route contains a locked segment: ${route.id}`,
             );
           }
-          const conflictingRoute = draft.routes.find((candidate) => {
-            if (candidate.id === route.id) return false;
-            const polyline = routePolyline(draft, resolver, candidate);
-            return polyline?.points
-              .slice(1)
-              .some((point, index) =>
-                pointOnSegmentInclusive(
-                  edit.position,
-                  polyline.points[index]!,
-                  point,
-                ),
-              );
-          });
-          if (conflictingRoute) {
-            return rejectTransaction(
-              document,
-              "EDIT_PRECONDITION",
-              `Junction position also lies on route ${conflictingRoute.id}; split every participating branch in one explicit connection operation`,
-            );
-          }
           const split = splitRoute(
             draft,
             route,
@@ -670,6 +873,7 @@ export function executeTransaction(
           changedObjectIds.add(split.first.id);
           changedObjectIds.add(split.second.id);
         }
+        connectivityChanged = true;
         break;
       }
       case "remove_junction": {
@@ -700,6 +904,7 @@ export function executeTransaction(
         }
         draft.junctions.splice(junctionIndex, 1);
         changedObjectIds.add(edit.junctionId);
+        connectivityChanged = true;
         break;
       }
       case "make_flightline": {
@@ -723,6 +928,186 @@ export function executeTransaction(
         }
         draft.routes.splice(routeIndex, 1);
         changedObjectIds.add(edit.routeId);
+        break;
+      }
+      case "connect_endpoints": {
+        const fromError = validateConnectableEndpoint(
+          draft,
+          edit.from,
+          context.symbolResolver,
+        );
+        const toError = validateConnectableEndpoint(
+          draft,
+          edit.to,
+          context.symbolResolver,
+        );
+        if (fromError || toError) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            fromError ?? toError!,
+          );
+        }
+        const fromOwner = endpointOwnerNetId(draft, edit.from);
+        const toOwner = endpointOwnerNetId(draft, edit.to);
+        if (fromOwner && toOwner && fromOwner !== toOwner) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Endpoints belong to different Nets; merge ${fromOwner} and ${toOwner} explicitly`,
+          );
+        }
+        let netId = fromOwner ?? toOwner;
+        if (!netId) {
+          if (!edit.newNetId) {
+            return rejectTransaction(
+              document,
+              "EDIT_PRECONDITION",
+              "Two unconnected endpoints require newNetId",
+            );
+          }
+          if (draft.nets.some((net) => net.id === edit.newNetId)) {
+            return rejectTransaction(
+              document,
+              "EDIT_PRECONDITION",
+              `Net already exists: ${edit.newNetId}`,
+            );
+          }
+          netId = edit.newNetId;
+          draft.nets.push({
+            id: netId,
+            ...(edit.newNetName ? { name: edit.newNetName } : {}),
+            scope: "local",
+            terminals: [],
+            ports: [],
+          });
+          changedObjectIds.add(netId);
+        }
+        addEndpointToNet(draft, netId, edit.from);
+        addEndpointToNet(draft, netId, edit.to);
+        changedObjectIds.add(netId);
+        connectivityChanged = true;
+        break;
+      }
+      case "merge_nets": {
+        if (edit.targetNetId === edit.sourceNetId) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            "Net merge requires two different Nets",
+          );
+        }
+        const target = draft.nets.find((net) => net.id === edit.targetNetId);
+        const sourceIndex = draft.nets.findIndex(
+          (net) => net.id === edit.sourceNetId,
+        );
+        const source = draft.nets[sourceIndex];
+        if (!target || !source) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Net merge target/source does not exist: ${edit.targetNetId}, ${edit.sourceNetId}`,
+          );
+        }
+        for (const terminal of source.terminals) {
+          if (
+            !target.terminals.some(
+              (candidate) =>
+                candidate.instanceId === terminal.instanceId &&
+                candidate.pinName === terminal.pinName,
+            )
+          ) {
+            target.terminals.push(structuredClone(terminal));
+          }
+        }
+        target.ports = [...new Set([...target.ports, ...source.ports])];
+        for (const route of draft.routes) {
+          if (route.netId === source.id) {
+            route.netId = target.id;
+            changedObjectIds.add(route.id);
+          }
+        }
+        for (const junction of draft.junctions) {
+          if (junction.netId === source.id) {
+            junction.netId = target.id;
+            changedObjectIds.add(junction.id);
+          }
+        }
+        for (const annotation of draft.annotations) {
+          if (annotation.attachedObjectId === source.id) {
+            annotation.attachedObjectId = target.id;
+            changedObjectIds.add(annotation.id);
+          }
+        }
+        for (const group of draft.layoutGroups) {
+          const replaced = group.objectIds.includes(source.id);
+          group.objectIds = replaceLayoutReference(
+            group.objectIds,
+            source.id,
+            target.id,
+          );
+          if (replaced) changedObjectIds.add(group.id);
+        }
+        for (const constraint of draft.constraints) {
+          const replaced = constraint.objectIds.includes(source.id);
+          constraint.objectIds = replaceLayoutReference(
+            constraint.objectIds,
+            source.id,
+            target.id,
+          );
+          if (replaced) changedObjectIds.add(constraint.id);
+        }
+        draft.nets.splice(sourceIndex, 1);
+        changedObjectIds.add(target.id);
+        changedObjectIds.add(source.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "disconnect_endpoint": {
+        const error = validateConnectableEndpoint(
+          draft,
+          edit.endpoint,
+          context.symbolResolver,
+        );
+        if (error) {
+          return rejectTransaction(document, "EDIT_PRECONDITION", error);
+        }
+        const ownerId = endpointOwnerNetId(draft, edit.endpoint);
+        if (!ownerId) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            "Endpoint is not connected to a Net",
+          );
+        }
+        if (
+          draft.routes.some(
+            (route) =>
+              endpointKey(route.from) === endpointKey(edit.endpoint) ||
+              endpointKey(route.to) === endpointKey(edit.endpoint),
+          )
+        ) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            "Remove route geometry before disconnecting its endpoint",
+          );
+        }
+        const owner = draft.nets.find((net) => net.id === ownerId)!;
+        const endpoint = edit.endpoint;
+        if (endpoint.kind === "terminal") {
+          owner.terminals = owner.terminals.filter(
+            (terminal) =>
+              terminal.instanceId !== endpoint.instanceId ||
+              terminal.pinName !== endpoint.pinName,
+          );
+        } else {
+          owner.ports = owner.ports.filter(
+            (portId) => portId !== endpoint.portId,
+          );
+        }
+        changedObjectIds.add(owner.id);
+        connectivityChanged = true;
         break;
       }
       case "upsert_annotation": {
@@ -880,6 +1265,16 @@ export function executeTransaction(
             `Instance does not exist: ${missing}`,
           );
         }
+        const lockedInstanceId = edit.instanceIds.find((id) =>
+          lockedLayoutOwner(draft, id),
+        );
+        if (lockedInstanceId) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Instance ${lockedInstanceId} is locked by layout intent ${lockedLayoutOwner(draft, lockedInstanceId)}`,
+          );
+        }
         if (instances.some((instance) => instance!.placement === null)) {
           return rejectTransaction(
             document,
@@ -906,7 +1301,9 @@ export function executeTransaction(
     geometryChanged = true;
   }
 
-  if (geometryChanged && draft.sourceStatus === "in-sync") {
+  if (connectivityChanged) {
+    draft.sourceStatus = "connectivity-modified";
+  } else if (geometryChanged && draft.sourceStatus === "in-sync") {
     draft.sourceStatus = "geometry-only-changed";
   }
   draft.revision = proposedRevision;
