@@ -1160,5 +1160,53 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   symbols tests, workspace build, `references:check` (4), prettier on owned
   files, `git diff --check` — all green.
 - Commit status: committed as `7a38734` and pushed to `origin/main`
-  (group 1 of the split sequence). Group 4 (agent-routing) was already
-  committed in `e7e7aa4`..`c70a813`; it is not pending.
+  (group 1 of the split sequence). Correction: the agent-routing _package_ was
+  largely committed in `e7e7aa4`..`c70a813`, but one `expand.ts` wire-through-symbol
+  fix remained uncommitted in the worktree; see the group-4 entry below.
+
+## 2026-08-08 - Add netlist-to-schematic pipeline architecture review
+
+- Target: group 5 of the worktree-split sequence — land the reference
+  architecture/pipeline walkthrough and index it from the docs map.
+- Changed areas: `docs/architecture-and-pipeline-review.md` (new, 306-line
+  non-normative reference covering repository structure, the 12-stage
+  netlist-to-schematic pipeline, and the Agent Razavi-layout gap assessment);
+  one index row in `docs/README.md`.
+- Dirty-state decision: docs-only, no shared-contract or source coupling to
+  any other group; `docs/` is outside the `format:check` glob, so validation
+  was link resolution, fence balance, and content review (risk-proportional).
+- Validation: README link resolves to the new doc; fenced-code balance;
+  `git diff --check` passed.
+- Commit status: committed as `26ca479` and pushed to `origin/main`.
+
+## 2026-08-08 - Regenerate Agent API circuit schema fixtures
+
+- Target: group 6 of the worktree-split sequence — land the three checked
+  Agent API artifacts regenerated from the current `@icm/agent-adapter` schema.
+- Changed areas: `fixtures/agent-api/agent-circuit-request.schema.json`,
+  `agent-circuit-response.schema.json`, `agent-circuit.openapi.json`
+  (+918 lines).
+- Dirty-state decision: the fixtures are generated downstream of
+  `packages/agent-adapter` (and transitively `packages/model`) schema.
+  `agent-api:artifacts:check` passes against the current worktree, so the
+  fixtures are consistent with the as-yet-uncommitted model schema changes
+  (group 2/3); committing them first introduces no drift, and the model
+  source will align when group 2/3 lands.
+- Validation: `agent-api:artifacts:check` (Validated 3 Agent API artifacts);
+  `git diff --check` passed.
+- Commit status: committed as `b1de6e4` and pushed to `origin/main`.
+
+## 2026-08-08 - Record OTA redraw plan (group 7, plan-follows-code)
+
+- Target: group 7 (partial) of the worktree-split sequence — land the OTA
+  redraw plan now that its generated artifacts are settled. Per the user's
+  "plan follows code" rule, plans bound to uncommitted code groups
+  (route-attached-current-arrow, annotation-editing, editor-text-label-hit-fixes,
+  flat-cdac-new-architecture-audit) stay with their code; only this plan, whose
+  artifacts are gitignored local build outputs, lands now.
+- Changed areas: `plan/2026-08-07-redraw-ota-with-repaired-bulk-and-new-symbols/plan.md`.
+- Note: the referenced `razavi-ota-5t-redrawn.*` and `razavi-layout.mjs` are
+  gitignored under `netlists/` and are intentionally not version-controlled;
+  the plan records intent and factual outcome only.
+- Validation: `git diff --check` passed. Docs-only.
+- Commit status: committed as `4d738eb` and pushed to `origin/main`.
