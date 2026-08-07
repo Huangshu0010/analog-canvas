@@ -90,6 +90,11 @@ Phase 8 topology operations have these preconditions:
 - `move_junction` preserves topology and must be paired with any required
   `set_route_points` edits in the same transaction. Routes protected by locked
   geometry reject the move.
+- `move_instance` stretches unprotected connected Routes to keep them
+  orthogonal (ADR 0009). A Route with a locked/trunk adjacent segment is
+  skipped; if the caller does not re-point it in the same transaction, the
+  post-loop validation rejects with `INVALID_RESULT` naming the Route. The
+  touched Routes appear in the transact `resolvedRoutes` response field.
 - `add_junction` normally requires an existing Net. `createNet: true` permits
   creation of the named empty local Net in the same edit, enabling a free wire
   endpoint without a second mutation path.

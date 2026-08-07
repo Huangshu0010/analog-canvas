@@ -26,6 +26,7 @@ import {
   endpointBelongsToNet,
   isOrthogonal,
   normalizeRouteGeometry,
+  proposeLocalStretch,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
   routePolyline,
@@ -616,6 +617,59 @@ function splitRoute(
   };
 }
 
+/**
+ * Apply topology-preserving Route stretch after an instance move. Uses the
+ * original (pre-move) document with `proposeLocalStretch`, then writes the
+ * proposed waypoints/segmentModes into the draft. Returns the stretched
+ * routeIds. Routes with a protected adjacent segment are skipped (the post-loop
+ * validation rejects if a skipped Route becomes non-orthogonal and the caller
+ * did not re-point it). Per ADR 0009: move stretches, never reroutes.
+ */
+function applyStretchedRoutes(
+  draft: SchematicDocument,
+  originalDocument: SchematicDocument,
+  resolver: SymbolResolver,
+  instanceId: string,
+  newPosition: Point,
+  rejectAt: (
+    code: EditErrorCode,
+    message: string,
+    diagnostics?: readonly EditDiagnostic[],
+    objectIds?: readonly string[],
+  ) => RejectedTransaction,
+): string[] {
+  let proposals;
+  try {
+    proposals = proposeLocalStretch(
+      originalDocument,
+      resolver,
+      instanceId,
+      newPosition,
+    );
+  } catch {
+    // A Route touching this instance has a protected adjacent segment. Rather
+    // than rejecting the whole move, leave it unstretched: if the caller
+    // re-points that Route later in the same transaction the post-loop
+    // validation will pass; otherwise it rejects with INVALID_RESULT, naming
+    // the Route. This keeps the move+set_route_points pattern working.
+    return [];
+  }
+  const stretched: string[] = [];
+  for (const proposal of proposals) {
+    const route = draft.routes.find(
+      (candidate) => candidate.id === proposal.routeId,
+    );
+    if (!route) continue;
+    route.waypoints = proposal.waypoints.map((point) => ({ ...point }));
+    route.segmentModes = [...proposal.segmentModes];
+    stretched.push(route.id);
+  }
+  // The caller's rejectAt is accepted to keep the signature symmetric, but
+  // stretching never rejects here; protected segments surface as null above.
+  void rejectAt;
+  return stretched;
+}
+
 export function executeTransaction(
   document: SchematicDocument,
   input: EditTransaction | unknown,
@@ -739,6 +793,8 @@ export function executeTransaction(
           return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
           );
         }
         const referenced =
@@ -775,6 +831,8 @@ export function executeTransaction(
           return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
@@ -887,6 +945,8 @@ export function executeTransaction(
           return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
           );
         }
         if (instance.placement !== null) {
@@ -907,6 +967,8 @@ export function executeTransaction(
           return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
@@ -934,6 +996,23 @@ export function executeTransaction(
             changedObjectIds.add(annotation.id);
           }
         }
+        // Stretch Routes whose terminal endpoints moved with this instance,
+        // using the original (pre-move) document so the helper computes from
+        // the prior geometry. Routes with a protected adjacent segment are
+        // skipped; the post-loop validation rejects if a skipped Route becomes
+        // non-orthogonal and the caller did not re-point it in this batch.
+        const resolver = context.symbolResolver;
+        if (resolver) {
+          const stretched = applyStretchedRoutes(
+            draft,
+            document,
+            resolver,
+            edit.instanceId,
+            edit.position,
+            rejectAt,
+          );
+          for (const routeId of stretched) changedObjectIds.add(routeId);
+        }
         changedObjectIds.add(edit.instanceId);
         break;
       }
@@ -945,6 +1024,8 @@ export function executeTransaction(
           return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
@@ -972,6 +1053,8 @@ export function executeTransaction(
           return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.instanceId);

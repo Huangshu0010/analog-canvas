@@ -2,7 +2,7 @@
   "version": "1.0",
   "purpose": "deterministic package/progressive-loading ablation; layout-quality ablation requires an external Agent runner and blinded human review",
   "manifest": {
-    "linkedKnowledgeDocuments": 10,
+    "linkedKnowledgeDocuments": 12,
     "brokenLinks": []
   },
   "contractChecks": {
@@ -93,19 +93,19 @@
     {
       "id": "C",
       "guidance": "thin Skill + core knowledge",
-      "bytes": 15418,
-      "estimatedTokens": 3855
+      "bytes": 16142,
+      "estimatedTokens": 4036
     },
     {
       "id": "D",
       "guidance": "thin Skill + CDAC/large-circuit targeted knowledge",
-      "bytes": 23187,
-      "estimatedTokens": 5797
+      "bytes": 23911,
+      "estimatedTokens": 5978
     }
   ],
   "progressiveLoading": {
-    "allKnowledgeBytes": 21227,
-    "targetedTierKnowledgeBytes": 16966,
+    "allKnowledgeBytes": 21951,
+    "targetedTierKnowledgeBytes": 17690,
     "targetedLoadsLessThanWholeLibrary": true
   },
   "hardBoundary": {

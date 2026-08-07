@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { parseProject } from "@icm/model";
-import { deriveCrossings, deriveFlightlines } from "@icm/derived";
+import {
+  deriveCrossings,
+  deriveFlightlines,
+  isOrthogonal,
+  routePolyline,
+} from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
@@ -40,6 +45,130 @@ function transaction(documentId: string, revision: number, edits: unknown[]) {
 }
 
 describe("routing Edit Engine", () => {
+  it("lets an Agent request pin-aware orthogonal routing without waypoints", () => {
+    const document = documentFixture();
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "route_orthogonal",
+          routeId: "route-agent",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          escapeLength: 20,
+        },
+      ]),
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const route = result.document.routes[0]!;
+    expect(route.segmentModes[0]).toBe("escape");
+    expect(route.segmentModes.at(-1)).toBe("escape");
+    expect(routePolyline(result.document, resolver, route)?.points).toEqual([
+      { x: 100, y: 300 },
+      { x: 80, y: 300 },
+      { x: 80, y: 320 },
+      { x: 520, y: 320 },
+      { x: 520, y: 300 },
+      { x: 500, y: 300 },
+    ]);
+  });
+
+  it("stretches connected Routes when an instance moves (ADR 0009)", () => {
+    const document = documentFixture();
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+
+    // An axial move keeps the direct Route unchanged.
+    const axialMove = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, [
+        {
+          kind: "move_instance",
+          instanceId: "A",
+          position: { x: 150, y: 300 },
+        },
+      ]),
+      context,
+    );
+    expect(axialMove.ok).toBe(true);
+    if (axialMove.ok) {
+      expect(axialMove.diff.changedObjectIds).toContain("route-h");
+      expect(axialMove.document.routes[0]).toEqual(routed.document.routes[0]);
+    }
+
+    // A diagonal move that previously failed INVALID_RESULT now stretches the
+    // Route to stay orthogonal instead of rejecting the transaction.
+    const stretchedMove = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, [
+        {
+          kind: "move_instance",
+          instanceId: "A",
+          position: { x: 140, y: 320 },
+        },
+      ]),
+      context,
+    );
+    expect(stretchedMove.ok).toBe(true);
+    if (!stretchedMove.ok) return;
+    expect(stretchedMove.diff.changedObjectIds).toContain("route-h");
+    // The stretched Route remains orthogonal.
+    const stretched = stretchedMove.document.routes.find(
+      (r) => r.id === "route-h",
+    )!;
+    const poly = routePolyline(stretchedMove.document, resolver, stretched);
+    expect(poly?.points.length).toBeGreaterThanOrEqual(2);
+    if (poly) {
+      expect(isOrthogonal(poly.points)).toBe(true);
+    }
+  });
+
+  it("gives escape segment mode an enforced outward-pin meaning", () => {
+    const document = documentFixture();
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-bad-escape",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["escape"],
+        },
+      ]),
+      context,
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "EDIT_PRECONDITION",
+        message: expect.stringContaining("must leave A.P1 outward"),
+      },
+    });
+  });
+
   it("creates independent crossing routes without changing logical topology", () => {
     const document = documentFixture();
     const result = executeTransaction(
@@ -107,7 +236,12 @@ describe("routing Edit Engine", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.document.junctions).toEqual([
-      { id: "junction-h", netId: "net-h", position: { x: 300, y: 300 } },
+      {
+        id: "junction-h",
+        netId: "net-h",
+        position: { x: 300, y: 300 },
+        role: "branch",
+      },
     ]);
     expect(result.document.routes.map((route) => route.id)).toEqual([
       "route-h-a",

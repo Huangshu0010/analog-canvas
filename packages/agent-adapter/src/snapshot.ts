@@ -394,9 +394,18 @@ export function buildAgentSessionSnapshot(
     document: documentSnapshot(options),
   };
   const canonical = canonicalSnapshotContent(content);
+  // The topology hash intentionally excludes diagnostics: they are derived
+  // visual evidence, not topology, and must not change the identity of an
+  // electrically identical Document. Hash the content without diagnostics.
+  const { diagnostics: _diagnostics, ...topologyDocument } = content.document;
+  void _diagnostics;
+  const topologyCanonical = canonicalSnapshotContent({
+    project: content.project,
+    document: topologyDocument,
+  });
   return AgentSessionSnapshotSchema.parse({
     snapshotVersion: AGENT_SNAPSHOT_VERSION,
-    topologyHash: createHash("sha256").update(canonical).digest("hex"),
+    topologyHash: createHash("sha256").update(topologyCanonical).digest("hex"),
     byteLength: Buffer.byteLength(canonical, "utf8"),
     ...content,
   });

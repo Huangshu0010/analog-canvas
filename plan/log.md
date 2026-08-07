@@ -1004,3 +1004,28 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: full workspace `pnpm typecheck`, `prettier --check`, 17 tests in
   4 files, and `git diff --check` passed.
 - Commit status: ready for `feat(derived): add read-only routing-quality metrics`.
+
+## 2026-08-07 - Stretch connected routes on instance move (ADR 0009)
+
+- Target: target #5 of the routing-quality sequence — a device move no longer
+  drags connected Routes into an invalid state; the Agent can revise placement.
+- Changed areas: ADR 0009 (move stretches, never reroutes; scope move_instance,
+  Junction move deferred); `packages/edit-engine/src/transaction.ts`
+  (applyStretchedRoutes called from move_instance using proposeLocalStretch;
+  protected adjacent segments skipped, post-loop validation still rejects);
+  `routing.test.ts` rewritten; `packages/agent-adapter/src/snapshot.ts`
+  (topologyHash excludes diagnostics — derived evidence is not topology);
+  `scripts/phase-9-generalization.mjs` (finalDiagnosticCount counts error only);
+  `docs/specs/edit-engine.md`; and regenerated Phase-9 fixtures whose pinned
+  hashes/count assertions changed as a direct consequence of #4/#5.
+- Boundary held: stretching preserves topology and locks; it never reroutes or
+  breaks a lock. move_junction still relies on post-loop validation (deferred).
+- Dirty-state decision: owned paths do not overlap the existing editor/symbol
+  dirty set; Phase-9 fixtures regenerated because the topologyHash fix and #4
+  metrics changed their pinned values (hash/count-only diffs).
+- Validation: full workspace `pnpm typecheck`, `prettier --check`, 72 tests in
+  13 files, all Phase-9 checks (heldout flash/chopper/ring, skill,
+  generalization, snapshot audit), `agent-api:artifacts:check`, and
+  `git diff --check` passed.
+- Commit status: ready for
+  `feat(edit-engine): stretch connected routes on instance move (ADR 0009)`.

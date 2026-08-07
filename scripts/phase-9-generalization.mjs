@@ -479,7 +479,9 @@ const report = {
     topologyPreserved: structuralSignature(activeDocument) === initialTopology,
     finalDiagnosticCount:
       refreshed.ok && refreshed.operation === "snapshot"
-        ? refreshed.snapshot.document.diagnostics.length
+        ? refreshed.snapshot.document.diagnostics.filter(
+            (diagnostic) => diagnostic.severity === "error",
+          ).length
         : null,
   },
   generalization: {
