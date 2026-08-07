@@ -1029,3 +1029,17 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `git diff --check` passed.
 - Commit status: ready for
   `feat(edit-engine): stretch connected routes on instance move (ADR 0009)`.
+
+## 2026-08-07 - Defer automatic router / obstacle avoidance / auto cleanup
+
+- Target: target #6 (final) of the routing-quality sequence — evaluate whether
+  to implement A* / automatic avoidance / auto cleanup.
+- Decision: do not implement. Evidence: thermometer flat layout reached 0
+  defects via tree choice + diagnostics, not a router; ADR 0008 bounds the
+  expander to detect-not-reroute; Phase 9 measured recipe-ization as harmful;
+  ADR 0007 requires helpers be optional and the workflow complete without them;
+  and #1–#5 already closed the reason/decide/see/feedback/revise loop.
+- Changed areas: `plan/2026-08-07-defer-automatic-router/plan.md` only.
+- Validation: `git diff --check`. Docs-only.
+- Commit status: ready for
+  `docs(plan): defer automatic router per ADR 0008 and Phase 9 evidence`.
