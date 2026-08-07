@@ -302,7 +302,19 @@ export function expandRouteGraph(
         if (!isAxisAligned(from, to)) {
           conflicts.push({
             code: "MISALIGNED_EDGE",
-            message: `${edge.role} edge ${edge.id}: (${from.x},${from.y}) → (${to.x},${to.y}) is not axis-aligned; add a bend node`,
+            message: `${edge.role} edge ${edge.id}: (${from.x},${from.y}) to (${to.x},${to.y}) is not axis-aligned; add a bend node`,
+            objectIds: [edge.id],
+          });
+          continue;
+        }
+
+        // Zero-length segment: from === to. This happens when two taps
+        // on a trunk share the same y. The Agent must ensure taps are
+        // at distinct positions.
+        if (from.x === to.x && from.y === to.y) {
+          conflicts.push({
+            code: "ZERO_LENGTH_SEGMENT",
+            message: `${edge.role} edge ${edge.id}: from and to are at the same position (${from.x},${from.y})`,
             objectIds: [edge.id],
           });
           continue;

@@ -139,9 +139,9 @@ export default {
       if (pt) portPositions.reset = { x: 60, y: pt.y };
     }
     // vdd, vss, vout ports
-    portPositions.vdd = { x: 300, y: 60 };
+    portPositions.vdd = { x: 300, y: 100 };
     portPositions.vss = { x: 300, y: 1280 };
-    portPositions.vout = { x: 900, y: 680 };
+    portPositions.vout = { x: 900, y: 700 };
     for (const port of routingDocument.ports) {
       const pp = portPositions[port.name];
       if (pp) port.position = pp;
@@ -159,10 +159,18 @@ export default {
     const endpoints = new Map();
     for (const n of document.nets) {
       for (const term of n.terminals ?? []) {
-        const ep = { kind: "terminal", instanceId: term.instanceId, pinName: term.pinName };
+        const ep = {
+          kind: "terminal",
+          instanceId: term.instanceId,
+          pinName: term.pinName,
+        };
         const point = resolveEndpointPoint(routingDocument, resolver, ep);
         if (!point) continue;
-        const outward = resolveEndpointOutwardDirection(routingDocument, resolver, ep);
+        const outward = resolveEndpointOutwardDirection(
+          routingDocument,
+          resolver,
+          ep,
+        );
         endpoints.set(endpointId(n.name, term.instanceId, term.pinName), {
           id: endpointId(n.name, term.instanceId, term.pinName),
           endpoint: ep,
@@ -187,7 +195,10 @@ export default {
     const instanceBoxes = [];
     for (const instance of routingDocument.instances) {
       if (!instance.placement) continue;
-      const resolved = resolver.resolve(instance.symbolId, instance.symbolVariantId);
+      const resolved = resolver.resolve(
+        instance.symbolId,
+        instance.symbolVariantId,
+      );
       if (!resolved) continue;
       const box = resolved.definition.viewBox;
       const corners = [
@@ -195,11 +206,19 @@ export default {
         { x: box.x + box.width, y: box.y },
         { x: box.x, y: box.y + box.height },
         { x: box.x + box.width, y: box.y + box.height },
-      ].map((point) => transformPoint(point, instance.placement.position, instance.placement));
+      ].map((point) =>
+        transformPoint(point, instance.placement.position, instance.placement),
+      );
       instanceBoxes.push({
         instanceId: instance.id,
-        min: { x: Math.min(...corners.map((c) => c.x)), y: Math.min(...corners.map((c) => c.y)) },
-        max: { x: Math.max(...corners.map((c) => c.x)), y: Math.max(...corners.map((c) => c.y)) },
+        min: {
+          x: Math.min(...corners.map((c) => c.x)),
+          y: Math.min(...corners.map((c) => c.y)),
+        },
+        max: {
+          x: Math.max(...corners.map((c) => c.x)),
+          y: Math.max(...corners.map((c) => c.y)),
+        },
       });
     }
 
@@ -227,7 +246,10 @@ export default {
         );
       }
       for (const geom of expansion.resolvedGeometry) {
-        accumulatedPolylines.push({ routeId: geom.routeId, points: geom.points });
+        accumulatedPolylines.push({
+          routeId: geom.routeId,
+          points: geom.points,
+        });
       }
       routes.push(...expansion.edits);
     }
@@ -236,7 +258,9 @@ export default {
     function buildNetGraph(netName, shape) {
       const net = document.nets.find((n) => n.name === netName);
       if (!net) return null;
-      const terms = (net.terminals ?? []).map((t) => endpointId(netName, t.instanceId, t.pinName));
+      const terms = (net.terminals ?? []).map((t) =>
+        endpointId(netName, t.instanceId, t.pinName),
+      );
       const portEps = (net.ports ?? []).map((pid) => {
         const p = document.ports.find((port) => port.id === pid);
         return endpointId(netName, p.id, "");
@@ -253,7 +277,14 @@ export default {
             role: "endpoint",
             endpoint: endpoints.get(id).endpoint,
           })),
-          edges: [{ id: `${netName}-direct`, from: allEps[0], to: allEps[1], role: "link" }],
+          edges: [
+            {
+              id: `${netName}-direct`,
+              from: allEps[0],
+              to: allEps[1],
+              role: "link",
+            },
+          ],
         };
       }
 
@@ -265,17 +296,37 @@ export default {
           .map((epId) => ({ epId, y: endpoints.get(epId).point.y }))
           .sort((a, b) => a.y - b.y);
         for (const tap of taps) {
-          nodes.push({ id: tap.epId, role: "endpoint", endpoint: endpoints.get(tap.epId).endpoint });
+          nodes.push({
+            id: tap.epId,
+            role: "endpoint",
+            endpoint: endpoints.get(tap.epId).endpoint,
+          });
           const tapId = `${netName}-tap-${tap.epId}`;
           nodes.push({ id: tapId, role: "tap", at: { x: trunkX, y: tap.y } });
-          edges.push({ id: `${netName}-link-${tap.epId}`, from: tap.epId, to: tapId, role: "link" });
+          edges.push({
+            id: `${netName}-link-${tap.epId}`,
+            from: tap.epId,
+            to: tapId,
+            role: "link",
+          });
         }
         for (let i = 1; i < taps.length; i += 1) {
           const prev = `${netName}-tap-${taps[i - 1].epId}`;
           const curr = `${netName}-tap-${taps[i].epId}`;
-          edges.push({ id: `${netName}-trunk-${i - 1}`, from: prev, to: curr, role: "trunk" });
+          edges.push({
+            id: `${netName}-trunk-${i - 1}`,
+            from: prev,
+            to: curr,
+            role: "trunk",
+          });
         }
-        return { documentId: document.id, revision: 0, netId: netId(netName), nodes, edges };
+        return {
+          documentId: document.id,
+          revision: 0,
+          netId: netId(netName),
+          nodes,
+          edges,
+        };
       }
 
       if (shape === "labeled-islands") {
@@ -290,7 +341,12 @@ export default {
           const jPoint = { x: snap(ep.point.x + offset), y: snap(ep.point.y) };
           nodes.push({ id: epId, role: "endpoint", endpoint: ep.endpoint });
           nodes.push({ id: jId, role: "junction", at: jPoint });
-          edges.push({ id: `${netName}-esc-${epId}`, from: epId, to: jId, role: "link" });
+          edges.push({
+            id: `${netName}-esc-${epId}`,
+            from: epId,
+            to: jId,
+            role: "link",
+          });
           edges.push({
             id: `${netName}-label-${epId}`,
             from: jId,
@@ -299,7 +355,13 @@ export default {
             label: { text: netName.toUpperCase(), attachedObjectId: jId },
           });
         }
-        return { documentId: document.id, revision: 0, netId: netId(netName), nodes, edges };
+        return {
+          documentId: document.id,
+          revision: 0,
+          netId: netId(netName),
+          nodes,
+          edges,
+        };
       }
 
       return null;
@@ -314,7 +376,12 @@ export default {
     // --- vdd: shared-trunk at x=300 -----------------------------------
     {
       const graph = buildNetGraph("vdd", "shared-trunk");
-      if (graph) expandAndCollect(graph);
+      if (graph) {
+        for (const node of graph.nodes) {
+          if (node.role === "tap" && node.at) node.at.x = 300;
+        }
+        expandAndCollect(graph);
+      }
     }
 
     // --- vss: labeled-islands -------------------------------------------
@@ -323,13 +390,29 @@ export default {
       if (graph) expandAndCollect(graph);
     }
 
-    // --- bot0-5, b0-5, reset: direct (2-endpoint) ---------------------
-    for (const netName of [
-      "bot0", "bot1", "bot2", "bot3", "bot4", "bot5",
-      "b0", "b1", "b2", "b3", "b4", "b5",
-      "reset",
-    ]) {
+    // --- bot0-5: direct (2-endpoint) --------------------------------
+    // bot{i} connects XU{i}__XSN.D to C{i}.2 (same y).
+    for (const netName of ["bot0", "bot1", "bot2", "bot3", "bot4", "bot5"]) {
       const graph = buildNetGraph(netName, "direct");
+      if (graph) expandAndCollect(graph);
+    }
+
+    // --- b0-5: shared-trunk (3-endpoint: port + 2 MOS gates) ---------
+    // b{i} connects port → XU{i}__XDP.G + XU{i}__XDN.G.
+    for (const netName of ["b0", "b1", "b2", "b3", "b4", "b5"]) {
+      const graph = buildNetGraph(netName, "shared-trunk");
+      if (graph) {
+        // Override trunk X to 120 (between port at 60 and MOS gates at ~200).
+        for (const node of graph.nodes) {
+          if (node.role === "tap" && node.at) node.at.x = 120;
+        }
+        expandAndCollect(graph);
+      }
+    }
+
+    // --- reset: direct (2-endpoint) --------------------------------
+    {
+      const graph = buildNetGraph("reset", "direct");
       if (graph) expandAndCollect(graph);
     }
 
