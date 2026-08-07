@@ -16,6 +16,15 @@ export interface SchematicStyleProfile {
     readonly junctionRadius: number;
     readonly portOriginRadius: number;
   };
+  readonly annotations: {
+    readonly supplyBarWidth: number;
+    readonly currentArrowLength: number;
+    readonly arrowHeadLength: number;
+    readonly arrowHeadWidth: number;
+    readonly currentLabelGap: number;
+    readonly polarityOffsetX: number;
+    readonly polarityHalfGap: number;
+  };
   readonly lineCap: "butt" | "round" | "square";
   readonly lineJoin: "miter" | "round" | "bevel";
   readonly miterLimit: number;
@@ -51,6 +60,15 @@ export const textbookMonochromeProfile: SchematicStyleProfile = {
     annotation: 0.8,
   },
   nodes: { junctionRadius: 1.75, portOriginRadius: 0 },
+  annotations: {
+    supplyBarWidth: 0,
+    currentArrowLength: 24,
+    arrowHeadLength: 7,
+    arrowHeadWidth: 8,
+    currentLabelGap: 7,
+    polarityOffsetX: 0,
+    polarityHalfGap: 0,
+  },
   lineCap: "square",
   lineJoin: "miter",
   miterLimit: 4,
@@ -86,6 +104,15 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
     annotation: 1.6,
   },
   nodes: { junctionRadius: 3, portOriginRadius: 3 },
+  annotations: {
+    supplyBarWidth: 20,
+    currentArrowLength: 24,
+    arrowHeadLength: 10,
+    arrowHeadWidth: 7,
+    currentLabelGap: 7,
+    polarityOffsetX: 12,
+    polarityHalfGap: 8,
+  },
   lineCap: "butt",
   lineJoin: "miter",
   miterLimit: 4,

@@ -309,20 +309,25 @@ be generated from the same SVG scene so text composition cannot diverge.
 
 All values are scene units at `100` scene units per inch.
 
-| Token              |   Value | Use                                            |
-| ------------------ | ------: | ---------------------------------------------- |
-| `wireStroke`       |   `1.6` | Conductors                                     |
-| `symbolStroke`     |   `1.6` | Normal component geometry                      |
-| `emphasisStroke`   |   `2.4` | MOS gates and intentionally heavy VSS geometry |
-| `supplyStroke`     |   `1.8` | GND/VDD/VSS bars                               |
-| `annotationStroke` |   `1.6` | Current arrows and polarity geometry           |
-| `junctionRadius`   |   `3.0` | Explicit electrical Junction                   |
-| `portOriginRadius` |   `3.0` | Explicit placed signal Port                    |
-| `arrowHeadLength`  |    `10` | Filled current-arrow head                      |
-| `arrowHeadWidth`   |     `7` | Filled current-arrow head                      |
-| `strokeLinecap`    |  `butt` | Formal open-line ends                          |
-| `strokeLinejoin`   | `miter` | Formal orthogonal and polygon corners          |
-| `strokeMiterLimit` |     `4` | Formal joins                                   |
+| Token                |   Value | Use                                            |
+| -------------------- | ------: | ---------------------------------------------- |
+| `wireStroke`         |   `1.6` | Conductors                                     |
+| `symbolStroke`       |   `1.6` | Normal component geometry                      |
+| `emphasisStroke`     |   `2.4` | MOS gates and intentionally heavy VSS geometry |
+| `supplyStroke`       |   `1.8` | GND/VDD/VSS bars                               |
+| `annotationStroke`   |   `1.6` | Current arrows and polarity geometry           |
+| `junctionRadius`     |   `3.0` | Explicit electrical Junction                   |
+| `portOriginRadius`   |   `3.0` | Explicit placed signal Port                    |
+| `supplyBarWidth`     |    `20` | Power Port terminal bar                        |
+| `currentArrowLength` |    `24` | Current-arrow tip-to-tail extent               |
+| `arrowHeadLength`    |    `10` | Filled current-arrow head                      |
+| `arrowHeadWidth`     |     `7` | Filled current-arrow head                      |
+| `currentLabelGap`    |     `7` | Arrow-to-current-label separation              |
+| `polarityOffsetX`    |    `12` | Voltage polarity axis offset from label anchor |
+| `polarityHalfGap`    |     `8` | Half-distance between voltage polarity marks   |
+| `strokeLinecap`      |  `butt` | Formal open-line ends                          |
+| `strokeLinejoin`     | `miter` | Formal orthogonal and polygon corners          |
+| `strokeMiterLimit`   |     `4` | Formal joins                                   |
 
 Only the semantic roles above may choose line widths. Imported arbitrary VSS
 weights are clustered into `symbolStroke`, `emphasisStroke`, or
@@ -338,6 +343,7 @@ the numeric value literally. New Razavi assets may not use this bridge.
 | ----------------------------- | -------------------------------------------- |
 | Device pin anchor             | Invisible                                    |
 | Placed signal Port origin     | Filled foreground circle, radius `3.0`       |
+| Power Port with power label   | Supply bar; no overlapping Port-origin dot   |
 | Explicit Junction             | Filled foreground circle, radius `3.0`       |
 | Two-wire corner               | No extra dot                                 |
 | Non-connected geometric cross | No dot and no bridge unless profile adds one |
@@ -346,14 +352,25 @@ the numeric value literally. New Razavi assets may not use this bridge.
 Degree alone does not create a dot. Connectivity and explicit object kind are
 the authority.
 
+The renderer classifies a positioned Port as power presentation only when a
+persisted `power-label` annotation is attached to that Port ID. A null-position
+Port has no formal origin. The model's device-pin anchors remain routing and
+connectivity data and never become formal circles.
+
 ### Arrow semantics
 
 - Current direction is a semantic annotation attached to a Net or Route.
 - The arrow shaft uses `annotationStroke`; the head is a filled triangle.
+- The shaft, head, and adjacent label use the immutable annotation tokens;
+  annotation rotation changes arrow direction while its label stays upright.
 - The arrow never changes electrical connectivity.
 - MOS/BJT intrinsic arrows belong to component geometry and use the catalog's
   semantic `emphasis` or `normal` role as reviewed.
 - No arrow geometry is represented as a text glyph.
+
+A `voltage` annotation renders separate upright `+` and Unicode minus polarity
+marks around the annotation axis and composes its voltage label through
+schematic-math. Rotation changes the polarity axis, not the glyph orientation.
 
 ## Profile contract
 

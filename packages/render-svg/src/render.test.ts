@@ -204,6 +204,11 @@ describe("textbook monochrome SVG renderer", () => {
     );
     expect(svg).toContain('<g data-layer="junctions"></g>');
     expect(svg).not.toContain("flightline");
+
+    project.documents[0]!.presentation.styleProfileId = "razavi-textbook-v1";
+    const razaviSvg = renderDocumentSvg(project.documents[0]!, resolver);
+    expect(razaviSvg).toContain('<g data-layer="junctions"></g>');
+    expect(razaviSvg).not.toMatch(/<circle[^>]*cx="300"[^>]*cy="300"/u);
   });
 
   it("renders the original dense analog fixture without blocking visual diagnostics", () => {
@@ -260,6 +265,31 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain('stroke-linecap="butt"');
     expect(svg).toContain('stroke-miterlimit="4"');
     expect(svg).toContain('r="3" fill="#202020"');
+    expect(svg).toContain('<g data-layer="ports">');
+    expect([...svg.matchAll(/data-node-kind="port-origin"/gu)].length).toBe(5);
+    expect(svg).not.toContain(
+      'data-object-id="port-vdd" data-node-kind="port-origin"',
+    );
+    expect(svg).not.toContain(
+      'data-object-id="port-vss" data-node-kind="port-origin"',
+    );
+    expect(svg).toContain(
+      '<line data-role="supply-bar" x1="215" y1="20" x2="235" y2="20"',
+    );
+    expect(svg).toContain(
+      '<line data-role="supply-bar" x1="245" y1="270" x2="265" y2="270"',
+    );
+    expect(svg).toContain(
+      '<circle data-object-id="junction-bias" cx="225" cy="80" r="3" fill="#202020"/>',
+    );
+    expect(svg).not.toContain('data-node-kind="device-pin"');
+    expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
+    expect(svg).toContain(
+      '<line data-role="current-arrow-shaft" x1="243" y1="260" x2="257" y2="260"',
+    );
+    expect(svg).toContain(
+      '<polygon data-role="current-arrow-head" points="267,260 257,256.5 257,263.5"',
+    );
     expect(svg).toContain(
       "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
     );
@@ -278,8 +308,39 @@ describe("textbook monochrome SVG renderer", () => {
     const widths = new Set(
       [...svg.matchAll(/stroke-width="([^"]+)"/gu)].map((match) => match[1]),
     );
-    expect([...widths].sort()).toEqual(["1.6", "2.4"]);
+    expect([...widths].sort()).toEqual(["1.6", "1.8", "2.4"]);
     expect(svg).not.toContain("vector-effect");
+  });
+
+  it("renders Razavi voltage polarity positions while keeping glyphs upright", () => {
+    const project = createEmptyProject("project-voltage", "Voltage Polarity");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.annotations = [
+      {
+        id: "voltage-x",
+        kind: "voltage",
+        text: "V_X",
+        position: { x: 100, y: 100 },
+        offset: { x: 0, y: 0 },
+        alignment: "start",
+        rotation: 90,
+        locked: false,
+      },
+    ];
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain(
+      '<text data-role="polarity-positive" x="108" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">+</text>',
+    );
+    expect(svg).toContain(
+      '<text data-role="polarity-negative" x="92" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">−</text>',
+    );
+    expect(svg).toContain(
+      '<text x="100" y="100" text-anchor="start" font-size="16"><tspan',
+    );
+    expect(svg).not.toContain('transform="rotate(90 100 100)"><tspan');
   });
 
   it("rejects an unknown persisted style profile", () => {

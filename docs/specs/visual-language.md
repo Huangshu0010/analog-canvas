@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.4`
+Version: `1.5`
 
 Owning phase: `Phase 1/5`
 
@@ -70,6 +70,13 @@ captionFontSize: 14
 subscriptScale: 0.68
 subscriptBaselineShift: 0.30em downward
 labelGap: 6
+supplyBarWidth: 20
+currentArrowLength: 24
+arrowHeadLength: 10
+arrowHeadWidth: 7
+currentLabelGap: 7
+polarityOffsetX: 12
+polarityHalfGap: 8
 ```
 
 Unknown persisted profile IDs are blocking render errors; the renderer never
@@ -77,6 +84,13 @@ silently substitutes a profile. Semantic symbol roles resolve through the
 selected profile. Legacy numeric primitive widths remain literal only under
 `textbook-monochrome-v1`; Razavi output clusters them into profile-owned normal
 or emphasis widths until the source asset is explicitly migrated.
+
+For Razavi formal output, a positioned signal Port renders as a filled origin
+circle. A Port attached to a `power-label` renders a supply bar instead of an
+origin circle. Explicit Junctions render independently; device-pin anchors,
+ordinary corners, and geometric crossings never acquire a dot from appearance
+or degree alone. Current and voltage annotation geometry is derived from the
+annotation kind and profile tokens, not text glyphs or editor overlays.
 
 Formal SVG has stable groups for routes, Junctions, symbols, and annotations.
 The editor creates its grid and interaction overlay outside the formal group.
@@ -123,6 +137,8 @@ spacing and layout-quality findings are warnings.
   together and emits no `vector-effect="non-scaling-stroke"`.
 - Annotation attachment moves with an edited instance while its offset and
   semantic kind remain persisted.
+- Port-origin circles and supply bars are mutually exclusive presentations of
+  their attached semantic Port.
 - Instance-label drag is bounded around its symbol and Net-label drag is
   bounded around attached route geometry; free text is unconstrained.
 - Visual goldens use original project fixtures, not copied textbook artwork.

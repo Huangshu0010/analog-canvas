@@ -139,6 +139,22 @@ function transformedDirection(
   }
 }
 
+function rotateOffset(
+  offset: { x: number; y: number },
+  rotation: SchematicDocument["annotations"][number]["rotation"],
+): { x: number; y: number } {
+  switch (rotation) {
+    case 0:
+      return offset;
+    case 90:
+      return { x: -offset.y, y: offset.x };
+    case 180:
+      return { x: -offset.x, y: -offset.y };
+    case 270:
+      return { x: offset.y, y: -offset.x };
+  }
+}
+
 function renderVisiblePinNames(
   definition: SymbolDefinition,
   hiddenPinNames: readonly string[],
@@ -205,6 +221,7 @@ function deriveBounds(
   document: SchematicDocument,
   resolver: SymbolResolver,
   margin: number,
+  profile: SchematicStyleProfile,
 ): Rect {
   const bounds: Rect[] = [];
   const estimatedTextBounds = (
@@ -257,6 +274,18 @@ function deriveBounds(
       height: 0,
     });
   }
+  if (profile.nodes.portOriginRadius > 0) {
+    for (const port of document.ports) {
+      if (!port.position) continue;
+      const radius = profile.nodes.portOriginRadius;
+      bounds.push({
+        x: port.position.x - radius,
+        y: port.position.y - radius,
+        width: radius * 2,
+        height: radius * 2,
+      });
+    }
+  }
   for (const annotation of document.annotations) {
     const verticalCurrent =
       annotation.kind === "current" &&
@@ -302,7 +331,7 @@ export function buildSvgScene(
   }
   const viewBox = options.bounds
     ? RectSchema.parse(options.bounds)
-    : deriveBounds(document, resolver, margin);
+    : deriveBounds(document, resolver, margin, profile);
 
   const routes = [...document.routes]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -321,6 +350,29 @@ export function buildSvgScene(
         `<circle data-object-id="${escapeXml(junction.id)}" cx="${junction.position.x}" cy="${junction.position.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`,
     )
     .join("");
+  const powerPortIds = new Set(
+    document.annotations
+      .filter((annotation) => annotation.kind === "power-label")
+      .map((annotation) => annotation.attachedObjectId)
+      .filter((id): id is string => id !== undefined),
+  );
+  const portOrigins =
+    profile.nodes.portOriginRadius === 0
+      ? ""
+      : [...document.ports]
+          .filter(
+            (port) => port.position !== null && !powerPortIds.has(port.id),
+          )
+          .sort((left, right) => left.id.localeCompare(right.id, "en"))
+          .map(
+            (port) =>
+              `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.foreground}"/>`,
+          )
+          .join("");
+  const portLayer =
+    profile.nodes.portOriginRadius === 0
+      ? ""
+      : `<g data-layer="ports">${portOrigins}</g>`;
   const explicitInstanceLabels = new Set(
     document.annotations
       .filter(
@@ -383,7 +435,48 @@ export function buildSvgScene(
         const textX = vertical ? x + 15 : x;
         const textY = vertical ? y + 4 : y - 7;
         const textAnchor = vertical ? "start" : annotation.alignment;
+        if (profile.id !== "textbook-monochrome-v1") {
+          const arrow = profile.annotations;
+          const halfLength = arrow.currentArrowLength / 2;
+          const tipX = x + halfLength;
+          const baseX = tipX - arrow.arrowHeadLength;
+          const halfHeadWidth = arrow.arrowHeadWidth / 2;
+          const razaviTextX = vertical
+            ? x + halfLength + arrow.currentLabelGap
+            : x;
+          const razaviTextY = vertical ? y + 4 : y - arrow.currentLabelGap;
+          return `<g ${attributes}><g transform="${transform}"><line data-role="current-arrow-shaft" x1="${x - halfLength}" y1="${y}" x2="${baseX}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
+        }
         return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
+      }
+      if (
+        profile.id !== "textbook-monochrome-v1" &&
+        annotation.kind === "power-label"
+      ) {
+        const port = document.ports.find(
+          (candidate) => candidate.id === annotation.attachedObjectId,
+        );
+        const supplyBar =
+          port?.position && profile.annotations.supplyBarWidth > 0
+            ? `<line data-role="supply-bar" x1="${port.position.x - profile.annotations.supplyBarWidth / 2}" y1="${port.position.y}" x2="${port.position.x + profile.annotations.supplyBarWidth / 2}" y2="${port.position.y}" transform="rotate(${annotation.rotation} ${port.position.x} ${port.position.y})" stroke="${profile.foreground}" stroke-width="${profile.strokes.supply}" stroke-linecap="${profile.lineCap}"/>`
+            : "";
+        return `<g ${attributes}>${supplyBar}<text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile)}>${renderSchematicTextContent(annotation.text, "power-label", profile)}</text></g>`;
+      }
+      if (
+        profile.id !== "textbook-monochrome-v1" &&
+        annotation.kind === "voltage"
+      ) {
+        const polarity = profile.annotations;
+        const positiveOffset = rotateOffset(
+          { x: -polarity.polarityOffsetX, y: -polarity.polarityHalfGap },
+          annotation.rotation,
+        );
+        const negativeOffset = rotateOffset(
+          { x: -polarity.polarityOffsetX, y: polarity.polarityHalfGap },
+          annotation.rotation,
+        );
+        const polarityStyle = `font-style:normal;font-weight:${profile.typography.plainWeight}`;
+        return `<g ${attributes}><text data-role="polarity-positive" x="${annotation.position.x + positiveOffset.x}" y="${annotation.position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${annotation.position.x + negativeOffset.x}" y="${annotation.position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("voltage", profile)}>${renderSchematicTextContent(annotation.text, "voltage", profile)}</text></g>`;
       }
       const emphasis =
         profile.id === "textbook-monochrome-v1" &&
@@ -399,7 +492,7 @@ export function buildSvgScene(
 
   return {
     viewBox,
-    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}</g><g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g></g>`,
+    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g></g>`,
   };
 }
 

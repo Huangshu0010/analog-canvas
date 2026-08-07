@@ -661,3 +661,26 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
   untracked and untouched.
 - Commit status: ready for the dedicated RV-4 commit.
+
+## 2026-08-07 - Add Razavi RV-5 semantic nodes and annotations
+
+- Target: render formal connection origins and annotation geometry from
+  persisted semantic objects under `razavi-textbook-v1` while retaining
+  compatibility output.
+- Changed areas: node/annotation profile tokens, formal renderer, truth-table
+  renderer tests, and visual-language/style specifications.
+- Node behavior: positioned signal Ports render radius-3 origin dots; a Port
+  attached to a power label renders a 20-unit supply bar instead of a dot;
+  null Ports and device-pin anchors remain invisible. Explicit Junctions stay
+  authoritative, and Razavi geometric crossings do not infer dots.
+- Annotation behavior: current shaft/head dimensions and label gaps come from
+  the profile; voltage annotations render separate upright polarity glyphs;
+  rotation changes the arrow or polarity axis without rotating its label.
+- Compatibility: the legacy profile retains its prior markup and byte-exact
+  Phase 1/5 and Phase 7 goldens.
+- Validation: 12 focused tests, 150 full tests in 36 files, typecheck, build,
+  formatting, Phase 1/5 visual goldens, Phase 7 export goldens, and
+  `git diff --check` passed.
+- Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
+  untracked and untouched.
+- Commit status: ready for the dedicated RV-5 commit.
