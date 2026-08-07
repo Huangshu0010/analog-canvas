@@ -74,6 +74,44 @@ async function downloadBytes(
   return Buffer.concat(chunks);
 }
 
+async function readRoutePoints(page: Page, routeId: string) {
+  return page.getByTestId(`route-hit-${routeId}`).evaluate((element) => {
+    const polyline = element as SVGPolylineElement;
+    return Array.from(polyline.points).map((point) => ({
+      x: point.x,
+      y: point.y,
+    }));
+  });
+}
+
+test("shows faithful symbol previews and the expanded VSS-derived palette", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "+ Component" }).click();
+  for (const symbolId of [
+    "nmos",
+    "pmos",
+    "nmos3",
+    "pmos3",
+    "zener",
+    "schottky",
+    "led",
+    "opamp",
+    "transformer",
+  ]) {
+    const button = page.getByTestId(`add-component-${symbolId}`);
+    await expect(button).toBeVisible();
+    await expect(button.locator("svg.palette-symbol-preview")).toBeVisible();
+  }
+  await expect(
+    page.getByTestId("add-component-pmos").locator("circle"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("add-component-pmos").locator("polygon"),
+  ).toHaveCount(1);
+});
+
 test("authors components and connectivity manually from an empty canvas", async ({
   page,
 }) => {
@@ -110,6 +148,115 @@ test("authors components and connectivity manually from an empty canvas", async 
   await page.keyboard.press("Control+z");
   await expect(page.getByTestId("revision")).toHaveText("6");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+});
+
+test("moves internal wiring with a selected group and copies the routed subgraph", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await placeComponent(page, "resistor", { x: 520, y: 220 });
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+
+  await page.keyboard.press("Control+a");
+  await expect(page.getByTestId("selected-internal-route-count")).toHaveText(
+    "1",
+  );
+  const before = await readRoutePoints(page, "route-ui-1");
+  await page
+    .getByTestId("hit-R1")
+    .dragTo(page.getByTestId("schematic-canvas"), {
+      targetPosition: { x: 470, y: 350 },
+    });
+  const after = await readRoutePoints(page, "route-ui-1");
+  const delta = {
+    x: after[0]!.x - before[0]!.x,
+    y: after[0]!.y - before[0]!.y,
+  };
+  expect(delta).not.toEqual({ x: 0, y: 0 });
+  expect(
+    after.map((point, index) => ({
+      x: point.x - before[index]!.x,
+      y: point.y - before[index]!.y,
+    })),
+  ).toEqual(after.map(() => delta));
+
+  await page.keyboard.press("Control+c");
+  await page.keyboard.press("Control+v");
+  await expect(page.getByTestId("instance-count")).toHaveText("4");
+  await expect(page.getByTestId("net-count")).toHaveText("2");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(2);
+  await expect(page.getByTestId("selected-internal-route-count")).toHaveText(
+    "1",
+  );
+});
+
+test("edits instance, electrical Net, and free text with bounded label handles", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 280, y: 180 });
+  await placeComponent(page, "resistor", { x: 480, y: 180 });
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+
+  await page.getByTestId("hit-R1").click();
+  await page
+    .getByRole("textbox", { name: "Displayed instance name" })
+    .fill("R_LOAD");
+  await page.getByRole("button", { name: "Apply name" }).click();
+  await expect(page.locator('[data-layer="annotations"]')).toContainText(
+    "R_LOAD",
+  );
+
+  await clickRoute(page, "route-ui-1", 0.35);
+  await page
+    .getByRole("textbox", { name: "Electrical Net label" })
+    .fill("SIGNAL");
+  await page.getByRole("button", { name: "Apply Net label" }).click();
+  await expect(page.locator('[data-layer="annotations"]')).toContainText(
+    "SIGNAL",
+  );
+  await expect(
+    page.getByTestId("annotation-hit-net-label-route-ui-1"),
+  ).toBeVisible();
+
+  await placeComponent(page, "resistor", { x: 280, y: 320 });
+  await placeComponent(page, "resistor", { x: 480, y: 320 });
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-R3-2").click();
+  await page.getByTestId("terminal-R4-1").click();
+  await expect(page.getByTestId("net-count")).toHaveText("2");
+  await clickRoute(page, "route-ui-2", 0.35);
+  await page
+    .getByRole("textbox", { name: "Electrical Net label" })
+    .fill("SIGNAL");
+  await page.getByRole("button", { name: "Apply Net label" }).click();
+  await expect(page.getByTestId("net-count")).toHaveText("1");
+  await expect(page.getByTestId("status")).toHaveText(
+    "Connected Nets through label SIGNAL",
+  );
+
+  await clickCommand(page, "More", "Add text");
+  const textInput = page.getByRole("textbox", {
+    name: "Selected text content",
+  });
+  await textInput.fill("Matched pair");
+  await page.getByRole("button", { name: "Apply text" }).click();
+  await expect(page.locator('[data-layer="annotations"]')).toContainText(
+    "Matched pair",
+  );
+  const noteHandle = page.locator('[data-testid^="annotation-hit-note-"]');
+  const beforeBox = await noteHandle.boundingBox();
+  if (!beforeBox) throw new Error("Text handle is not measurable");
+  await noteHandle.dragTo(page.getByTestId("schematic-canvas"), {
+    targetPosition: { x: 700, y: 300 },
+  });
+  const afterBox = await noteHandle.boundingBox();
+  expect(afterBox?.x).not.toBe(beforeBox.x);
 });
 
 test("selects and moves multiple instances while viewport gestures stay transient", async ({

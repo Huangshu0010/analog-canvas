@@ -74,6 +74,8 @@ describe("Agent Circuit API v1 service", () => {
           "add_instance",
           "connect_endpoints",
           "merge_nets",
+          "move_junction",
+          "set_net_name",
           "disconnect_endpoint",
         ]),
       },

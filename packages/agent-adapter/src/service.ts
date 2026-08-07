@@ -47,9 +47,11 @@ export const AGENT_EDIT_KINDS = [
   "set_route_points",
   "add_junction",
   "remove_junction",
+  "move_junction",
   "make_flightline",
   "connect_endpoints",
   "merge_nets",
+  "set_net_name",
   "disconnect_endpoint",
   "upsert_annotation",
   "remove_annotation",
@@ -399,6 +401,7 @@ function editCategory(
     case "move_instance":
     case "rotate_instance":
     case "mirror_instance":
+    case "move_junction":
     case "align_instances":
       return "geometry";
     case "set_route_points":
@@ -407,6 +410,7 @@ function editCategory(
     case "make_flightline":
     case "connect_endpoints":
     case "merge_nets":
+    case "set_net_name":
     case "disconnect_endpoint":
       return "connectivity";
     case "upsert_annotation":

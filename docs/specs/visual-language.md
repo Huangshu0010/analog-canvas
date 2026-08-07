@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.1`
+Version: `1.2`
 
 Owning phase: `Phase 1/5`
 
@@ -23,11 +23,11 @@ from editor-only interaction overlays.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| Formal layer | Electrical and explanatory content included in export |
-| Overlay | Grid, selection, hit target, preview, flightline, or diagnostic UI |
-| Style profile | Versioned tokens and rendering rules selected by a Document |
+| Term          | Meaning                                                            |
+| ------------- | ------------------------------------------------------------------ |
+| Formal layer  | Electrical and explanatory content included in export              |
+| Overlay       | Grid, selection, hit target, preview, flightline, or diagnostic UI |
+| Style profile | Versioned tokens and rendering rules selected by a Document        |
 
 ## Data model or interface
 
@@ -50,6 +50,9 @@ Annotations are semantic `instance-label`, `net-label`, `power-label`,
 `plain-text`, `current`, `voltage`, and `figure-caption` objects. Current
 annotations rotate the arrow independently so their text stays upright.
 Explicit instance labels suppress only the renderer's default instance ID.
+Their text and position are editable without changing stable instance IDs.
+Net labels are formal electrical annotations tied to a logical Net; plain text
+has no electrical meaning.
 
 Derived visual diagnostics cover unplaced or unresolved symbols, symbol and
 label overlap, short route segments, ambiguous Junction dots, unsatisfied
@@ -72,6 +75,8 @@ spacing and layout-quality findings are warnings.
 - SVG is derived output and never becomes connectivity or persistence truth.
 - Annotation attachment moves with an edited instance while its offset and
   semantic kind remain persisted.
+- Instance-label drag is bounded around its symbol and Net-label drag is
+  bounded around attached route geometry; free text is unconstrained.
 - Visual goldens use original project fixtures, not copied textbook artwork.
 
 ## Operations and state transitions

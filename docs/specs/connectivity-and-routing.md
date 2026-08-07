@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.2`
+Version: `1.3`
 
 Owning phase: `Phase 3/8`
 
@@ -107,9 +107,13 @@ preserving the explicit graph unchanged.
 - `add_junction` creates a Junction and may atomically split one RouteBranch at
   a specified segment into caller-named first/second branches.
 - `remove_junction` removes an unused Junction.
+- `move_junction` changes a Junction coordinate without changing Net
+  membership; the caller includes corresponding Route replacements atomically.
 - `make_flightline` deletes one RouteBranch and retains its logical Net.
 - `connect_endpoints`, `merge_nets`, and `disconnect_endpoint` author logical
   membership independently of route geometry.
+- `set_net_name` assigns one non-empty logical Net name. Reusing a name is not
+  implicit: the UI must submit an explicit `merge_nets` transaction.
 
 All edit preconditions are evaluated on a cloned candidate. A failure rejects
 the entire transaction and returns the original Document.
@@ -127,9 +131,19 @@ derived local-stretch proposal:
 - locked adjacent segments reject the proposal;
 - when no waypoint exists, a deterministic elbow is introduced if needed.
 
-For an equal-delta group move, a route whose two terminal endpoints move with
-the group translates its waypoints by the same delta. A protected route or one
-whose endpoints request different deltas rejects the complete transaction.
+For an equal-delta group move, all Routes and Junctions wholly internal to the
+selected instances translate by the same delta, including their attached Net,
+Route, and Junction annotations. Only Routes that cross the selection boundary
+use local endpoint stretch. A protected route or one whose endpoints request
+different deltas rejects the complete transaction.
+
+## Electrical labels
+
+A visible `net-label` annotation and a logical Net name are related but
+distinct records. Applying a label names the Net. If another Net already has
+that name, the interaction must make the same-name merge explicit and atomic;
+plain text placed near a wire never changes connectivity. Moving or deleting a
+label's presentation does not move or disconnect the conductor.
 
 ## Valid example
 

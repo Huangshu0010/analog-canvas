@@ -244,3 +244,22 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Known compatible follow-ups: persisted shortcut remapping, free-standing
   wire endpoints, and general multi-elbow handles.
 - Commit status: ready to commit as `Complete Phase 8 direct manipulation`.
+
+## 2026-08-07 - Close schematic authoring fidelity gaps
+
+- Target: close the four observed gaps in VSS appearance and palette previews,
+  copy/paste, semantic text/labels, and routed multi-object movement.
+- Changed areas: normalized reviewed MOS and VDD geometry; added 13 explicitly
+  provisional VSS migration candidates and 27 palette previews; added atomic
+  routed-subgraph copy/paste, typed Junction movement and Net naming, editable
+  instance/Net/plain text, bounded label handles, and internal route/Junction
+  translation; updated Agent artifacts, visual/export goldens, specifications,
+  user guidance, and deterministic Playwright loopback proxy bypass.
+- Validation: formatting, four pinned references, TypeScript, 101 tests in 29
+  files, 10 Playwright flows, three Agent artifacts, 12 reviewed plus 13
+  candidate symbol previews, Phase 1/5/7 visual/export goldens, visual PNG
+  inspection, performance budgets, PWA icons, release packaging/smoke,
+  Markdown links/fences, runtime VSS isolation, immutable VSS hash, and
+  `git diff --check` passed.
+- Commit status: ready to commit as
+  `Close schematic authoring fidelity gaps`.

@@ -147,6 +147,68 @@ describe("Phase 8 semantic authoring", () => {
     expect(document).toEqual(before);
   });
 
+  it("names Nets uniquely and requires an explicit merge for electrical label reuse", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push(
+      { id: "net-a", name: "SIGNAL", scope: "local", terminals: [], ports: [] },
+      { id: "net-b", scope: "local", terminals: [], ports: [] },
+    );
+    const rejected = executeTransaction(
+      document,
+      transaction([{ kind: "set_net_name", netId: "net-b", name: "SIGNAL" }]),
+      { symbolResolver: resolver },
+    );
+    expect(rejected).toMatchObject({
+      ok: false,
+      error: { message: expect.stringContaining("merge explicitly") },
+    });
+
+    const merged = executeTransaction(
+      document,
+      transaction([
+        { kind: "merge_nets", targetNetId: "net-a", sourceNetId: "net-b" },
+      ]),
+      { symbolResolver: resolver },
+    );
+    expect(merged).toMatchObject({
+      ok: true,
+      document: { nets: [{ id: "net-a", name: "SIGNAL" }] },
+    });
+  });
+
+  it("moves an unlocked Junction as a typed geometry edit", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({
+      id: "net-a",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    });
+    document.junctions.push({
+      id: "junction-a",
+      netId: "net-a",
+      position: { x: 100, y: 100 },
+    });
+    const result = executeTransaction(
+      document,
+      transaction([
+        {
+          kind: "move_junction",
+          junctionId: "junction-a",
+          position: { x: 120, y: 130 },
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        sourceStatus: "geometry-only-changed",
+        junctions: [{ position: { x: 120, y: 130 } }],
+      },
+    });
+  });
+
   it("rejects an atomic group move when one member is layout-locked", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push(

@@ -34,19 +34,43 @@ function pointList(points: ReadonlyArray<{ x: number; y: number }>): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
 }
 
+function primitiveStyle(primitive: SymbolPrimitive): string {
+  const style = primitive.style;
+  if (!style) return "";
+  return [
+    style.strokeWidth === undefined
+      ? ""
+      : ` stroke-width="${style.strokeWidth}"`,
+    style.lineCap === undefined ? "" : ` stroke-linecap="${style.lineCap}"`,
+    style.lineJoin === undefined ? "" : ` stroke-linejoin="${style.lineJoin}"`,
+  ].join("");
+}
+
 function renderPrimitive(primitive: SymbolPrimitive): string {
+  const style = primitiveStyle(primitive);
   switch (primitive.kind) {
     case "line":
-      return `<line x1="${primitive.from.x}" y1="${primitive.from.y}" x2="${primitive.to.x}" y2="${primitive.to.y}"/>`;
+      return `<line x1="${primitive.from.x}" y1="${primitive.from.y}" x2="${primitive.to.x}" y2="${primitive.to.y}"${style}/>`;
     case "polyline":
-      return `<polyline points="${pointList(primitive.points)}"/>`;
+      return `<polyline points="${pointList(primitive.points)}"${style}/>`;
     case "circle":
-      return `<circle cx="${primitive.center.x}" cy="${primitive.center.y}" r="${primitive.radius}"/>`;
+      return `<circle cx="${primitive.center.x}" cy="${primitive.center.y}" r="${primitive.radius}"${style}/>`;
     case "path":
-      return `<path d="${escapeXml(primitive.data)}"/>`;
+      return `<path d="${escapeXml(primitive.data)}"${style}/>`;
     case "polygon":
-      return `<polygon points="${pointList(primitive.points)}" fill="${primitive.fill === "foreground" ? "#000" : "none"}"/>`;
+      return `<polygon points="${pointList(primitive.points)}" fill="${primitive.fill === "foreground" ? "#000" : "none"}"${style}/>`;
   }
+}
+
+export function renderSymbolDefinitionBody(
+  definition: SymbolDefinition,
+  hiddenPrimitiveParts: readonly string[] = [],
+): string {
+  const hidden = new Set(hiddenPrimitiveParts);
+  return definition.primitives
+    .filter((primitive) => !primitive.part || !hidden.has(primitive.part))
+    .map(renderPrimitive)
+    .join("");
 }
 
 function instanceTransform(
@@ -225,13 +249,10 @@ export function buildSvgScene(
       if (!resolved) {
         throw new Error(`Unresolved symbol: ${instance.symbolId}`);
       }
-      const hiddenParts = new Set(resolved.variant?.hiddenPrimitiveParts ?? []);
-      const primitives = resolved.definition.primitives
-        .filter(
-          (primitive) => !primitive.part || !hiddenParts.has(primitive.part),
-        )
-        .map(renderPrimitive)
-        .join("");
+      const primitives = renderSymbolDefinitionBody(
+        resolved.definition,
+        resolved.variant?.hiddenPrimitiveParts,
+      );
       const bounds = symbolBounds(resolved.definition, instance);
       const labelX = bounds.x + bounds.width / 2;
       const labelY = bounds.y + bounds.height + 14;

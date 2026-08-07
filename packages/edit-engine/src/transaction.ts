@@ -93,6 +93,11 @@ export const RemoveJunctionEditSchema = z.strictObject({
   kind: z.literal("remove_junction"),
   junctionId: StableIdSchema,
 });
+export const MoveJunctionEditSchema = z.strictObject({
+  kind: z.literal("move_junction"),
+  junctionId: StableIdSchema,
+  position: PointSchema,
+});
 export const MakeFlightlineEditSchema = z.strictObject({
   kind: z.literal("make_flightline"),
   routeId: StableIdSchema,
@@ -108,6 +113,11 @@ export const MergeNetsEditSchema = z.strictObject({
   kind: z.literal("merge_nets"),
   targetNetId: StableIdSchema,
   sourceNetId: StableIdSchema,
+});
+export const SetNetNameEditSchema = z.strictObject({
+  kind: z.literal("set_net_name"),
+  netId: StableIdSchema,
+  name: z.string().trim().min(1).max(256),
 });
 export const DisconnectEndpointEditSchema = z.strictObject({
   kind: z.literal("disconnect_endpoint"),
@@ -164,9 +174,11 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   SetRoutePointsEditSchema,
   AddJunctionEditSchema,
   RemoveJunctionEditSchema,
+  MoveJunctionEditSchema,
   MakeFlightlineEditSchema,
   ConnectEndpointsEditSchema,
   MergeNetsEditSchema,
+  SetNetNameEditSchema,
   DisconnectEndpointEditSchema,
   UpsertAnnotationEditSchema,
   RemoveAnnotationEditSchema,
@@ -907,6 +919,36 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
+      case "move_junction": {
+        const junction = draft.junctions.find(
+          (candidate) => candidate.id === edit.junctionId,
+        );
+        if (!junction) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Junction does not exist: ${edit.junctionId}`,
+          );
+        }
+        const protectedRoute = draft.routes.find(
+          (route) =>
+            ((route.from.kind === "junction" &&
+              route.from.junctionId === junction.id) ||
+              (route.to.kind === "junction" &&
+                route.to.junctionId === junction.id)) &&
+            routeIsProtected(route),
+        );
+        if (protectedRoute) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Junction is attached to protected Route ${protectedRoute.id}`,
+          );
+        }
+        junction.position = { ...edit.position };
+        changedObjectIds.add(junction.id);
+        break;
+      }
       case "make_flightline": {
         const routeIndex = draft.routes.findIndex(
           (route) => route.id === edit.routeId,
@@ -1060,6 +1102,31 @@ export function executeTransaction(
         draft.nets.splice(sourceIndex, 1);
         changedObjectIds.add(target.id);
         changedObjectIds.add(source.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "set_net_name": {
+        const net = draft.nets.find((candidate) => candidate.id === edit.netId);
+        if (!net) {
+          return rejectTransaction(
+            document,
+            "OBJECT_NOT_FOUND",
+            `Net does not exist: ${edit.netId}`,
+          );
+        }
+        const conflicting = draft.nets.find(
+          (candidate) =>
+            candidate.id !== net.id && candidate.name === edit.name,
+        );
+        if (conflicting) {
+          return rejectTransaction(
+            document,
+            "EDIT_PRECONDITION",
+            `Net name ${edit.name} already belongs to ${conflicting.id}; merge explicitly`,
+          );
+        }
+        net.name = edit.name;
+        changedObjectIds.add(net.id);
         connectivityChanged = true;
         break;
       }

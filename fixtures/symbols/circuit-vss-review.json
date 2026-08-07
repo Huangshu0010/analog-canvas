@@ -83,5 +83,85 @@
       "pins": ["C", "B", "E"],
       "status": "reviewed"
     }
+  ],
+  "migrationCandidates": [
+    {
+      "symbolId": "nmos3",
+      "masterNameU": "Nmos3.a",
+      "provisionalPins": ["D", "G", "S"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "pmos3",
+      "masterNameU": "Pmos3.a",
+      "provisionalPins": ["D", "G", "S"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "vdd",
+      "masterNameU": "VDD",
+      "provisionalPins": ["P"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "ac-voltage-source",
+      "masterNameU": "V_AC",
+      "provisionalPins": ["+", "-"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "pulse-voltage-source",
+      "masterNameU": "V_Pulse",
+      "provisionalPins": ["+", "-"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "zener",
+      "masterNameU": "zener",
+      "provisionalPins": ["K", "A"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "schottky",
+      "masterNameU": "schottky",
+      "provisionalPins": ["K", "A"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "led",
+      "masterNameU": "LED",
+      "provisionalPins": ["A", "K"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "opamp",
+      "masterNameU": "OP.68",
+      "provisionalPins": ["+", "-", "OUT"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "switch-open",
+      "masterNameU": "SW.off",
+      "provisionalPins": ["1", "2"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "switch-closed",
+      "masterNameU": "SW.on",
+      "provisionalPins": ["1", "2"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "crystal",
+      "masterNameU": "Crystal",
+      "provisionalPins": ["1", "2"],
+      "status": "geometry-migrated-pin-review-required"
+    },
+    {
+      "symbolId": "transformer",
+      "masterNameU": "Transform",
+      "provisionalPins": ["P1", "P2", "S1", "S2"],
+      "status": "geometry-migrated-pin-review-required"
+    }
   ]
 }

@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.1`
+Version: `1.2`
 
 Owning phase: `Phase 6/8`
 
@@ -89,6 +89,11 @@ Version 1.1 adds `add_instance`, `remove_instance`, `connect_endpoints`,
 `merge_nets`, and `disconnect_endpoint` to `capabilities.editKinds`. Their
 payloads are the shared Edit Engine schemas, so GUI and Agent transaction
 sequences validate against the same authoring semantics.
+
+Version 1.2 adds `move_junction` and `set_net_name`. Junction movement requires
+geometry permission; Net naming requires connectivity permission. Agents use
+the same explicit same-name merge rule as the GUI and cannot connect Nets by
+placing decorative text.
 
 ## Render semantics
 

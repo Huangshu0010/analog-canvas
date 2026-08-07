@@ -16,11 +16,14 @@ Document for palette-first manual authoring.
 ## Edit and connect
 
 - Use **+ Component** to search the categorized built-in library, choose a
-  symbol, and click the canvas to place it. Imported unplaced instances may
-  still be dragged onto the canvas.
+  symbol by its inline preview, and click the canvas to place it. Imported
+  unplaced instances may still be dragged onto the canvas.
 - Click to select, `Shift`/`Ctrl`-click to extend the selection, or drag blank
   canvas to box-select. Dragging one selected instance moves the whole
   selection atomically.
+- Internal wires and Junctions move with a selected component group; only
+  wires leaving the group stretch. Press `Ctrl+C` and `Ctrl+V`, or use the
+  **Edit** menu, to duplicate the selected group and its internal wiring.
 - Use **Wire** or press `W`, then choose two pins, Junctions, or route segments.
   Passing across a conductor remains a Crossing; ending on one creates a
   Junction automatically. An exact multi-route intersection is rejected as
@@ -30,6 +33,10 @@ Document for palette-first manual authoring.
   only the drawn route.
 - Right-click an endpoint for the distinct **Disconnect endpoint** and
   **Delete connection** actions.
+- Select an instance to edit its displayed name. Select a wire Route to add an
+  electrical Net label; assigning the same name to another Net explicitly
+  connects those Nets. Use **More / Add text** for non-electrical notes. Label
+  handles may be dragged near their owner, while plain text moves freely.
 - Press `R` to rotate, `F` to fit, `Ctrl+Z` to undo, and `Ctrl+Y` or
   `Ctrl+Shift+Z` to redo. Shortcuts do not fire while typing in a field.
 - Use `Ctrl`+mouse wheel to zoom around the cursor and middle-button drag to

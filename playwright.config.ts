@@ -1,5 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Keep Playwright's readiness probe on loopback even when the development
+// machine exports a system HTTP proxy.
+process.env.NO_PROXY = [process.env.NO_PROXY, "127.0.0.1", "localhost"]
+  .filter(Boolean)
+  .join(",");
+
 export default defineConfig({
   testDir: "apps/editor/e2e",
   fullyParallel: false,

@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.4`
+Version: `1.5`
 
 Owning phase: `Phase 0/1/8`
 
@@ -44,8 +44,8 @@ interface EditTransaction {
 The executable union contains `noop`, `add_instance`, `remove_instance`,
 `place_instance`, `move_instance`,
 `rotate_instance`, `mirror_instance`, `set_route_points`, `add_junction`,
-`remove_junction`, `make_flightline`, `connect_endpoints`, `merge_nets`,
-`disconnect_endpoint`, `upsert_annotation`,
+`remove_junction`, `move_junction`, `make_flightline`, `connect_endpoints`,
+`merge_nets`, `set_net_name`, `disconnect_endpoint`, `upsert_annotation`,
 `remove_annotation`, `set_layout_group`, `remove_layout_group`,
 `set_layout_constraint`, `remove_layout_constraint`, `align_instances`,
 `undo`, and `redo`. Later phases extend the typed union and versioned schemas;
@@ -78,6 +78,11 @@ Phase 8 topology operations have these preconditions:
   reference.
 - `connect_endpoints` creates a caller-named local Net when both endpoints are
   unowned, or attaches an unowned endpoint to the other endpoint's Net.
+- `set_net_name` requires a non-empty trimmed name. A name already owned by a
+  different Net is rejected; the caller must explicitly `merge_nets`.
+- `move_junction` preserves topology and must be paired with any required
+  `set_route_points` edits in the same transaction. Routes protected by locked
+  geometry reject the move.
 - Endpoints on different Nets require an explicit preceding `merge_nets` edit
   in the same transaction.
 - `merge_nets` retargets routes, junctions, annotations, and layout references

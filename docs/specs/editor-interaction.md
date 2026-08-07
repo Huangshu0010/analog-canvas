@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0`
+Version: `1.1`
 
 Owning phase: `Phase 8`
 
@@ -53,7 +53,7 @@ the information architecture is normative:
 | Group  | Commands                                                             |
 | ------ | -------------------------------------------------------------------- |
 | File   | Open, Save, Import, recent/example documents                         |
-| Edit   | Undo, Redo, Delete, and contextual Align                             |
+| Edit   | Undo, Redo, Copy, Paste, Delete, and contextual Align                |
 | Add    | Component in the header; Text in More                                |
 | View   | Fit, Diagnostics, Grid, and presentation overlays                    |
 | Export | SVG, PNG, and PDF from one menu                                      |
@@ -81,6 +81,8 @@ selected conductor starts the same wire session.
 | `Ctrl+S`                   | Save the current Project.                                                          |
 | `Ctrl+O`                   | Open a Project.                                                                    |
 | `Ctrl+A`                   | Select all selectable objects in the active Document.                              |
+| `Ctrl+C`                   | Copy selected instances plus their wholly internal routed subgraph.                |
+| `Ctrl+V`                   | Paste the internal clipboard with fresh IDs and a deterministic grid offset.       |
 | `F`                        | Fit the active Document in the viewport.                                           |
 
 Letter and editing shortcuts must not fire while focus is in a text input,
@@ -99,9 +101,12 @@ can complete the named operation safely.
   commits the selection; `Escape` restores the prior selection.
 - Dragging any selected movable object moves the whole movable selection in
   one atomic transaction.
-- An atomic multi-object move includes owned annotations and deterministic
-  local route stretch. If any member is locked or violates a constraint, the
-  whole move is rejected with a visible reason.
+- An atomic multi-object move includes Junctions, Routes, and annotations whose
+  complete electrical subgraph is internal to the selected instances. Internal
+  geometry translates by the common delta; only connections crossing the
+  selection boundary receive deterministic local stretch. If any member is
+  locked or violates a constraint, the whole move is rejected with a visible
+  reason.
 
 ### Viewport
 
@@ -119,6 +124,12 @@ can complete the named operation safely.
 - Rotate and Mirror are available from shortcuts or a contextual selection
   control.
 - Alignment appears only for a compatible multi-selection.
+- Selecting an instance exposes its displayed-name field. Selecting a Route
+  exposes its electrical Net-label field. Selecting an annotation exposes its
+  text field and delete action.
+- Instance labels remain draggable only within a bounded neighborhood of the
+  owning symbol. Net labels remain draggable only near their attached Route;
+  plain text may move freely.
 - Route or endpoint removal uses distinct context commands: `Remove route
 geometry`, `Disconnect endpoint`, and `Delete connection`. These operations
   must not be represented by one ambiguous Detach command.
@@ -126,9 +137,15 @@ geometry`, `Disconnect endpoint`, and `Delete connection`. These operations
 ## Manual component authoring
 
 The Add Component entry opens a searchable palette grouped by device family.
-Choosing a symbol starts single-shot placement and the next canvas click places
-an instance. Placement is possible in a new empty Document without importing
-SPICE first.
+Every entry includes a deterministic preview rendered from the same Symbol DSL
+definition used by the canvas. Choosing a symbol starts single-shot placement
+and the next canvas click places an instance. Placement is possible in a new
+empty Document without importing SPICE first.
+
+Copy captures selected instances and only Nets, Routes, Junctions, and attached
+annotations wholly internal to that selection. Paste creates fresh stable IDs
+and commits the duplicated subgraph atomically. A copied named Net reconnects
+to the existing same-name Net; unnamed Nets are duplicated.
 
 Phase 8 requires typed Edit Engine operations equivalent to:
 
@@ -179,6 +196,18 @@ The core rule is:
 | Endpoints on different Nets    | Explicit wire completion merges the Nets atomically after preview.  |
 | Both endpoints on the same Net | Add or adjust route geometry without changing logical connectivity. |
 
+### Text and Net-label semantics
+
+- An instance's stable ID remains its connectivity identity. Its editable
+  displayed name is an `instance-label` annotation.
+- A Route label names its logical Net and is not decorative text. Applying a
+  name uses `set_net_name`; applying an already-used name explicitly merges
+  the two Nets in the same transaction.
+- Removing the visible Net-label annotation does not disconnect endpoints or
+  erase the logical Net name. Connectivity changes require their own explicit
+  commands.
+- `plain-text` annotations carry no electrical meaning.
+
 `Alt` temporarily suppresses snapping. `Escape` or secondary-click cancels the
 uncommitted wire session. Undo restores the complete pre-transaction topology,
 route geometry, source status, and revision-visible state.
@@ -204,12 +233,15 @@ connectivity.
 
 The component palette uses runtime-independent Symbol DSL definitions. The 12
 review-manifest families retain their VSS evidence and human-reviewed pin
-mappings. Phase 8 also adds project-native VDD and VSS power-port definitions;
-these do not claim an additional VSS pin review.
+mappings. A separate migration-candidate catalog exposes additional VSS-derived
+geometry with provisional pin mappings explicitly marked for review. VDD is
+geometry-migrated from VSS; VSS remains a project-native power-port definition.
 
-The first fidelity set is NMOS/PMOS, NPN/PNP, resistor, capacitor, inductor,
-diode, voltage/current sources, VDD/VSS/GND, and ports. VSS remains immutable
-build-time evidence; the runtime must not require Visio or parse `.vss` files.
+The runtime library includes NMOS/PMOS three- and four-terminal forms, NPN/PNP,
+resistor, capacitor, inductor, diode variants, voltage/current source variants,
+op-amp, switches, crystal, transformer, VDD/VSS/GND, and ports. VSS remains
+immutable build-time evidence; the runtime must not require Visio or parse
+`.vss` files.
 
 ## Interaction state transitions
 
@@ -282,12 +314,12 @@ non-electrical unless an explicit wire start/end gesture commits connectivity.
   Documents for instance and topology edits.
 - Connectivity tests for every endpoint-state row, route splitting, junction
   reuse, crossing non-connectivity, multi-conductor previews, cancel, and undo.
-- Playwright pointer and keyboard flows for empty-Document authoring,
-  multi-selection, middle-button pan, zoom, direct wiring, and contextual
-  deletion.
+- Playwright pointer and keyboard flows for empty-Document authoring, routed
+  multi-selection movement, copy/paste, text and electrical label editing,
+  middle-button pan, zoom, direct wiring, and contextual deletion.
 - Reviewed VSS-to-Symbol-DSL comparison artifacts and stable symbol preview
-  goldens for the 12-family review-manifest set, plus unit previews for the
-  project-native VDD/VSS power ports.
+  goldens for the 12-family review-manifest set, plus a separately labeled
+  contact sheet for migration candidates whose pins still require review.
 - Production-build inspection proving demo controls are hidden and runtime code
   does not depend on Visio or `.vss` parsing.
 

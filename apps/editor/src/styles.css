@@ -198,9 +198,18 @@ body {
 
 .palette-grid button {
   display: grid;
+  grid-template-columns: 3.4rem 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
   gap: 0.2rem;
   padding: 0.65rem;
   text-align: left;
+}
+
+.palette-symbol-preview {
+  grid-row: 1 / 3;
+  width: 3rem;
+  height: 3rem;
 }
 
 .palette-grid span,
@@ -383,6 +392,27 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
+.annotation-hit {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 8;
+  cursor: move;
+  vector-effect: non-scaling-stroke;
+}
+
+.annotation-hit.selected {
+  fill: rgb(31 111 235 / 12%);
+  stroke: #1f6feb;
+  stroke-width: 1;
+}
+
+.annotation-drag-preview {
+  fill: #1f6feb;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  pointer-events: none;
+}
+
 .context-actions {
   margin-top: 0.8rem;
   padding-top: 0.8rem;
@@ -391,5 +421,22 @@ body {
 
 .context-actions button {
   width: 100%;
+  margin-top: 0.35rem;
   padding: 0.45rem;
+}
+
+.context-actions label {
+  display: grid;
+  gap: 0.25rem;
+  color: #555;
+  font-size: 0.75rem;
+}
+
+.context-actions input {
+  min-width: 0;
+  padding: 0.4rem;
+  border: 1px solid #b8b8b0;
+  border-radius: 0.25rem;
+  background: #fff;
+  color: #111;
 }

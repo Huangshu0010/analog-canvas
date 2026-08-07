@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.2`
+Version: `1.3`
 
 Owning phase: `Phase 0/1`
 
@@ -23,11 +23,11 @@ runtime symbols.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| Electrical pin | Named logical terminal that always remains in the definition |
+| Term           | Meaning                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| Electrical pin | Named logical terminal that always remains in the definition                 |
 | Visual variant | Presentation choice that may hide a lead but never delete its electrical pin |
-| Alias | Alternate symbol ID resolved to one canonical definition |
+| Alias          | Alternate symbol ID resolved to one canonical definition                     |
 
 ## Data model or interface
 
@@ -36,11 +36,15 @@ primitives, visual variants, and aliases. A pin has name, role, anchor,
 direction, and visibility metadata. Primitives are line, polyline, polygon,
 circle, and path. A primitive may carry a stable `part`; a variant may hide
 parts as well as pin presentation without changing electrical pins. Polygon
-fill is explicitly `none` or `foreground`.
+fill is explicitly `none` or `foreground`. Any primitive may override stroke
+width, line cap, and line join when reviewed source geometry requires it.
 
-The reviewed production library contains resistor, capacitor, inductor, NMOS,
+The reviewed production set contains resistor, capacitor, inductor, NMOS,
 PMOS, ground, port, independent voltage/current source, diode, NPN, and PNP.
-Procedural `generic-block-N` definitions preserve unsupported terminal counts.
+The runtime library additionally contains explicitly marked VSS migration
+candidates such as three-terminal MOS devices, diode variants, source variants,
+op-amp, switches, crystal, transformer, and VDD. Procedural `generic-block-N`
+definitions preserve unsupported terminal counts.
 
 `SymbolResolver.resolve(symbolId, variantId?)` returns one validated definition
 and optional variant, or `undefined`. Resolution never silently substitutes a
@@ -63,7 +67,9 @@ reviewed Symbol DSL → validate → compile library → resolve at runtime
 ```
 
 Raw VSS extraction must pass through the pinned source inventory and human pin
-review before it becomes Symbol DSL. See
+review before its electrical semantics become reviewed. Candidate geometry may
+ship with a provisional mapping only when the manifest and contact sheet label
+that status unambiguously. See
 [`vss-development-import.md`](vss-development-import.md).
 
 ## Persistence boundary
@@ -84,9 +90,11 @@ Duplicate pin names and duplicate aliases are rejected.
 
 ## Compatibility and migration
 
-Phase 5 calibrated provisional geometry against reviewed VSS masters without
-changing canonical IDs or the electrical-pin rule. The MOS three-terminal
-variant now hides the tagged bulk lead while retaining addressable pin `B`.
+Phase 5 calibrated geometry against reviewed VSS masters without changing
+canonical IDs or the electrical-pin rule. Four-terminal NMOS and PMOS use
+distinct bulk-arrow direction rather than an invented PMOS gate bubble.
+Three-terminal MOS devices are separate definitions matching their source
+artwork, not presentation variants that retain a hidden fourth pin.
 
 ## Deterministic validation
 

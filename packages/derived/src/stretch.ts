@@ -20,6 +20,58 @@ export interface InstanceMoveProposal {
   position: Point;
 }
 
+export interface JunctionMoveProposal {
+  junctionId: string;
+  position: Point;
+}
+
+export interface AnnotationMoveProposal {
+  annotationId: string;
+  position: Point;
+}
+
+export interface GroupMoveProposal {
+  routes: RouteStretchProposal[];
+  junctions: JunctionMoveProposal[];
+  annotations: AnnotationMoveProposal[];
+  internalNetIds: string[];
+  internalRouteIds: string[];
+}
+
+export interface InternalGroupSelection {
+  netIds: string[];
+  routeIds: string[];
+  junctionIds: string[];
+}
+
+export function deriveInternalGroupSelection(
+  document: SchematicDocument,
+  instanceIds: readonly string[],
+): InternalGroupSelection {
+  const selectedIds = new Set(instanceIds);
+  const netIds = document.nets
+    .filter(
+      (net) =>
+        net.ports.length === 0 &&
+        net.terminals.length > 0 &&
+        net.terminals.every((terminal) => selectedIds.has(terminal.instanceId)),
+    )
+    .map((net) => net.id)
+    .sort((left, right) => left.localeCompare(right, "en"));
+  const netIdSet = new Set(netIds);
+  return {
+    netIds,
+    routeIds: document.routes
+      .filter((route) => netIdSet.has(route.netId))
+      .map((route) => route.id)
+      .sort((left, right) => left.localeCompare(right, "en")),
+    junctionIds: document.junctions
+      .filter((junction) => netIdSet.has(junction.netId))
+      .map((junction) => junction.id)
+      .sort((left, right) => left.localeCompare(right, "en")),
+  };
+}
+
 export function proposeLocalStretch(
   document: SchematicDocument,
   resolver: SymbolResolver,
@@ -98,6 +150,14 @@ export function proposeGroupStretch(
   resolver: SymbolResolver,
   moves: readonly InstanceMoveProposal[],
 ): RouteStretchProposal[] {
+  return proposeGroupMove(document, resolver, moves).routes;
+}
+
+export function proposeGroupMove(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  moves: readonly InstanceMoveProposal[],
+): GroupMoveProposal {
   const moveByInstance = new Map(
     moves.map((move) => [move.instanceId, move.position]),
   );
@@ -115,6 +175,19 @@ export function proposeGroupStretch(
     });
   }
 
+  const deltas = [...deltaByInstance.values()];
+  const groupDelta = deltas[0] ?? { x: 0, y: 0 };
+  if (
+    deltas.some((delta) => delta.x !== groupDelta.x || delta.y !== groupDelta.y)
+  ) {
+    throw new Error("Group members must move by one common delta");
+  }
+  const internalSelection = deriveInternalGroupSelection(document, [
+    ...moveByInstance.keys(),
+  ]);
+  const internalNetIds = new Set(internalSelection.netIds);
+  const movableJunctionIds = new Set(internalSelection.junctionIds);
+
   const proposals = new Map<string, RouteStretchProposal>();
   for (const route of document.routes) {
     const fromDelta =
@@ -124,14 +197,22 @@ export function proposeGroupStretch(
     const toDelta =
       route.to.kind === "terminal"
         ? deltaByInstance.get(route.to.instanceId)
-        : undefined;
-    if (!fromDelta && !toDelta) continue;
+        : route.to.kind === "junction" &&
+            movableJunctionIds.has(route.to.junctionId)
+          ? groupDelta
+          : undefined;
+    const resolvedFromDelta =
+      route.from.kind === "junction" &&
+      movableJunctionIds.has(route.from.junctionId)
+        ? groupDelta
+        : fromDelta;
+    if (!resolvedFromDelta && !toDelta) continue;
 
     if (
-      fromDelta &&
+      resolvedFromDelta &&
       toDelta &&
-      fromDelta.x === toDelta.x &&
-      fromDelta.y === toDelta.y
+      resolvedFromDelta.x === toDelta.x &&
+      resolvedFromDelta.y === toDelta.y
     ) {
       if (route.segmentModes.includes("locked")) {
         throw new Error(`Route ${route.id} contains a locked segment`);
@@ -139,15 +220,15 @@ export function proposeGroupStretch(
       proposals.set(route.id, {
         routeId: route.id,
         waypoints: route.waypoints.map((point) => ({
-          x: point.x + fromDelta.x,
-          y: point.y + fromDelta.y,
+          x: point.x + resolvedFromDelta.x,
+          y: point.y + resolvedFromDelta.y,
         })),
         segmentModes: [...route.segmentModes],
       });
       continue;
     }
 
-    if (fromDelta && toDelta) {
+    if (resolvedFromDelta && toDelta) {
       throw new Error(
         `Route ${route.id} cannot stretch endpoints by different group deltas`,
       );
@@ -165,7 +246,47 @@ export function proposeGroupStretch(
     const proposal = local.find((candidate) => candidate.routeId === route.id);
     if (proposal) proposals.set(route.id, proposal);
   }
-  return [...proposals.values()].sort((left, right) =>
-    left.routeId.localeCompare(right.routeId, "en"),
-  );
+  const internalRouteIds = internalSelection.routeIds;
+  const internallyMovedObjectIds = new Set<string>([
+    ...internalNetIds,
+    ...internalRouteIds,
+    ...movableJunctionIds,
+  ]);
+  return {
+    routes: [...proposals.values()].sort((left, right) =>
+      left.routeId.localeCompare(right.routeId, "en"),
+    ),
+    junctions: document.junctions
+      .filter((junction) => movableJunctionIds.has(junction.id))
+      .map((junction) => ({
+        junctionId: junction.id,
+        position: {
+          x: junction.position.x + groupDelta.x,
+          y: junction.position.y + groupDelta.y,
+        },
+      }))
+      .sort((left, right) =>
+        left.junctionId.localeCompare(right.junctionId, "en"),
+      ),
+    annotations: document.annotations
+      .filter(
+        (annotation) =>
+          annotation.attachedObjectId !== undefined &&
+          internallyMovedObjectIds.has(annotation.attachedObjectId),
+      )
+      .map((annotation) => ({
+        annotationId: annotation.id,
+        position: {
+          x: annotation.position.x + groupDelta.x,
+          y: annotation.position.y + groupDelta.y,
+        },
+      }))
+      .sort((left, right) =>
+        left.annotationId.localeCompare(right.annotationId, "en"),
+      ),
+    internalNetIds: [...internalNetIds].sort((left, right) =>
+      left.localeCompare(right, "en"),
+    ),
+    internalRouteIds,
+  };
 }

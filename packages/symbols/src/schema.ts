@@ -12,34 +12,44 @@ export const SymbolPinSchema = z.strictObject({
     showName: z.boolean().optional(),
   }),
 });
+const SymbolPrimitiveStyleSchema = z.strictObject({
+  strokeWidth: z.number().positive().optional(),
+  lineCap: z.enum(["butt", "round", "square"]).optional(),
+  lineJoin: z.enum(["miter", "round", "bevel"]).optional(),
+});
 export const SymbolPrimitiveSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("line"),
     from: PointSchema,
     to: PointSchema,
     part: StableIdSchema.optional(),
+    style: SymbolPrimitiveStyleSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("polyline"),
     points: z.array(PointSchema).min(2),
     part: StableIdSchema.optional(),
+    style: SymbolPrimitiveStyleSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("circle"),
     center: PointSchema,
     radius: z.number().positive(),
     part: StableIdSchema.optional(),
+    style: SymbolPrimitiveStyleSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("path"),
     data: z.string().min(1),
     part: StableIdSchema.optional(),
+    style: SymbolPrimitiveStyleSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("polygon"),
     points: z.array(PointSchema).min(3),
     fill: z.enum(["none", "foreground"]),
     part: StableIdSchema.optional(),
+    style: SymbolPrimitiveStyleSchema.optional(),
   }),
 ]);
 export const SymbolVariantSchema = z.strictObject({

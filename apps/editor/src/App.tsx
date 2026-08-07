@@ -7,9 +7,10 @@ import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
 import {
   deriveCrossings,
   deriveFlightlines,
+  deriveInternalGroupSelection,
   diagnoseVisualQuality,
   endpointKey,
-  proposeGroupStretch,
+  proposeGroupMove,
   routePolyline,
 } from "@icm/derived";
 import {
@@ -20,17 +21,21 @@ import {
   transformPoint,
 } from "@icm/model";
 import type {
+  Annotation,
   CircuitProject,
   Point,
   Rect,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
-import { buildSvgScene } from "@icm/render-svg";
+import { buildSvgScene, renderSymbolDefinitionBody } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
+import type { SymbolDefinition } from "@icm/symbols";
 
+import { copySelection, proposePaste } from "./clipboard";
+import type { SchematicClipboard } from "./clipboard";
 import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
 
@@ -60,6 +65,14 @@ interface PanPreview {
 interface RouteStretchPreview {
   routeId: string;
   point: Point;
+  pointerId: number;
+}
+
+interface AnnotationDragPreview {
+  annotationId: string;
+  originalPosition: Point;
+  pointerStart: Point;
+  position: Point;
   pointerId: number;
 }
 
@@ -158,6 +171,23 @@ function normalizedRect(start: Point, end: Point): Rect {
   };
 }
 
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+function closestPointOnSegment(point: Point, from: Point, to: Point): Point {
+  if (from.x === to.x) {
+    return {
+      x: from.x,
+      y: clamp(point.y, Math.min(from.y, to.y), Math.max(from.y, to.y)),
+    };
+  }
+  return {
+    x: clamp(point.x, Math.min(from.x, to.x), Math.max(from.x, to.x)),
+    y: from.y,
+  };
+}
+
 function isTypingTarget(target: EventTarget | null): boolean {
   const element = target as HTMLElement | null;
   return Boolean(
@@ -166,12 +196,56 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function symbolCategory(symbolId: string): string {
-  if (["nmos", "pmos", "npn", "pnp"].includes(symbolId)) return "Transistors";
-  if (["resistor", "capacitor", "inductor", "diode"].includes(symbolId)) {
+  if (["nmos", "pmos", "nmos3", "pmos3", "npn", "pnp"].includes(symbolId)) {
+    return "Transistors";
+  }
+  if (
+    ["resistor", "capacitor", "inductor", "crystal", "transformer"].includes(
+      symbolId,
+    )
+  ) {
     return "Passives";
   }
-  if (["voltage-source", "current-source"].includes(symbolId)) return "Sources";
+  if (
+    [
+      "voltage-source",
+      "current-source",
+      "ac-voltage-source",
+      "pulse-voltage-source",
+    ].includes(symbolId)
+  ) {
+    return "Sources";
+  }
+  if (["diode", "zener", "schottky", "led"].includes(symbolId)) {
+    return "Diodes";
+  }
+  if (["opamp", "switch-open", "switch-closed"].includes(symbolId)) {
+    return "Functional";
+  }
   return "Power and Ports";
+}
+
+function SymbolThumbnail({ symbol }: { symbol: SymbolDefinition }) {
+  const { x, y, width, height } = symbol.viewBox;
+  const padding = Math.max(width, height) * 0.12;
+  return (
+    <svg
+      className="palette-symbol-preview"
+      viewBox={`${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`}
+      aria-hidden="true"
+    >
+      <g
+        fill="none"
+        stroke="#000"
+        strokeWidth="1"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+        dangerouslySetInnerHTML={{
+          __html: renderSymbolDefinitionBody(symbol),
+        }}
+      />
+    </svg>
+  );
 }
 
 export function App({ project: initialProject }: AppProps) {
@@ -199,6 +273,8 @@ export function App({ project: initialProject }: AppProps) {
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [routeStretchPreview, setRouteStretchPreview] =
     useState<RouteStretchPreview | null>(null);
+  const [annotationDragPreview, setAnnotationDragPreview] =
+    useState<AnnotationDragPreview | null>(null);
   const [tool, setTool] = useState<EditorTool>("pointer");
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
   const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
@@ -206,12 +282,21 @@ export function App({ project: initialProject }: AppProps) {
   const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
     null,
   );
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
+    string | null
+  >(null);
+  const [instanceLabelDraft, setInstanceLabelDraft] = useState("");
+  const [netLabelDraft, setNetLabelDraft] = useState("");
+  const [annotationTextDraft, setAnnotationTextDraft] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
   const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
   const instanceCounter = useRef(0);
+  const clipboard = useRef<SchematicClipboard | null>(null);
+  const pasteCounter = useRef(0);
+  const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const history = useRef(
     new DocumentHistory(project.documents[0]!, { symbolResolver: resolver }),
@@ -224,6 +309,18 @@ export function App({ project: initialProject }: AppProps) {
     (instance) => instance.placement === null,
   );
   const selectedId = selectedIds.at(-1) ?? null;
+  const selectedInstance =
+    selectedIds.length === 1
+      ? document.instances.find((instance) => instance.id === selectedId)
+      : undefined;
+  const selectedRoute = selectedRouteId
+    ? document.routes.find((route) => route.id === selectedRouteId)
+    : undefined;
+  const selectedAnnotation = selectedAnnotationId
+    ? document.annotations.find(
+        (annotation) => annotation.id === selectedAnnotationId,
+      )
+    : undefined;
   const flightlines = deriveFlightlines(document, resolver);
   const crossings = deriveCrossings(document, resolver);
   const visualDiagnostics = diagnoseVisualQuality(document, resolver);
@@ -291,6 +388,8 @@ export function App({ project: initialProject }: AppProps) {
         polyline: NonNullable<ReturnType<typeof routePolyline>>;
       } => candidate.polyline !== null,
     );
+  const internalSelection = deriveInternalGroupSelection(document, selectedIds);
+  const selectedInternalRouteIds = new Set(internalSelection.routeIds);
   const wireDraftPoints =
     wireSource && wirePreviewPoint
       ? wireSource.point.x === wirePreviewPoint.x ||
@@ -322,6 +421,34 @@ export function App({ project: initialProject }: AppProps) {
     ),
   }));
   const contentScene = buildSvgScene(document, resolver);
+
+  useEffect(() => {
+    if (!selectedInstance) {
+      setInstanceLabelDraft("");
+      return;
+    }
+    const label = document.annotations.find(
+      (annotation) =>
+        annotation.kind === "instance-label" &&
+        annotation.attachedObjectId === selectedInstance.id,
+    );
+    setInstanceLabelDraft(label?.text ?? selectedInstance.id);
+  }, [document.annotations, selectedInstance]);
+
+  useEffect(() => {
+    if (!selectedRoute) {
+      setNetLabelDraft("");
+      return;
+    }
+    const net = document.nets.find(
+      (candidate) => candidate.id === selectedRoute.netId,
+    );
+    setNetLabelDraft(net?.name ?? "");
+  }, [document.nets, selectedRoute]);
+
+  useEffect(() => {
+    setAnnotationTextDraft(selectedAnnotation?.text ?? "");
+  }, [selectedAnnotation]);
 
   useEffect(() => {
     const serialized = localStorage.getItem(RECOVERY_KEY);
@@ -532,6 +659,7 @@ export function App({ project: initialProject }: AppProps) {
     if (tool === "pointer") {
       setSelectedRouteId(routeId);
       setSelectedIds([]);
+      setSelectedAnnotationId(null);
       setStatus(`Selected route ${routeId}`);
       return;
     }
@@ -644,6 +772,164 @@ export function App({ project: initialProject }: AppProps) {
     setRouteStretchPreview(null);
   }
 
+  function constrainAnnotationPosition(
+    annotation: Annotation,
+    candidate: Point,
+  ): Point {
+    if (annotation.kind === "instance-label" && annotation.attachedObjectId) {
+      const instance = document.instances.find(
+        (item) => item.id === annotation.attachedObjectId,
+      );
+      if (instance?.placement) {
+        const resolved = resolver.resolve(
+          instance.symbolId,
+          instance.symbolVariantId,
+        );
+        const radius = Math.ceil(
+          Math.max(
+            resolved?.definition.viewBox.width ?? 60,
+            resolved?.definition.viewBox.height ?? 60,
+          ) /
+            2 +
+            30,
+        );
+        return {
+          x: Math.round(
+            clamp(
+              candidate.x,
+              instance.placement.position.x - radius,
+              instance.placement.position.x + radius,
+            ),
+          ),
+          y: Math.round(
+            clamp(
+              candidate.y,
+              instance.placement.position.y - radius,
+              instance.placement.position.y + radius,
+            ),
+          ),
+        };
+      }
+    }
+    if (annotation.kind === "net-label" && annotation.attachedObjectId) {
+      const candidates = routePolylines
+        .filter(({ route }) => route.netId === annotation.attachedObjectId)
+        .flatMap(({ polyline }) =>
+          polyline.points
+            .slice(0, -1)
+            .map((from, index) =>
+              closestPointOnSegment(
+                candidate,
+                from,
+                polyline.points[index + 1]!,
+              ),
+            ),
+        );
+      const closest = candidates.sort((left, right) => {
+        const leftDistance =
+          (left.x - candidate.x) ** 2 + (left.y - candidate.y) ** 2;
+        const rightDistance =
+          (right.x - candidate.x) ** 2 + (right.y - candidate.y) ** 2;
+        return leftDistance - rightDistance;
+      })[0];
+      if (closest) {
+        return {
+          x: Math.round(clamp(candidate.x, closest.x - 30, closest.x + 30)),
+          y: Math.round(clamp(candidate.y, closest.y - 30, closest.y + 30)),
+        };
+      }
+    }
+    return { x: Math.round(candidate.x), y: Math.round(candidate.y) };
+  }
+
+  function beginAnnotationDrag(
+    event: ReactPointerEvent<SVGCircleElement>,
+    annotation: Annotation,
+  ): void {
+    if (event.button !== 0 || annotation.locked) return;
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const pointerStart = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+    );
+    setSelectedAnnotationId(annotation.id);
+    setSelectedIds([]);
+    setSelectedRouteId(null);
+    setSelectedEndpoint(null);
+    setAnnotationDragPreview({
+      annotationId: annotation.id,
+      originalPosition: { ...annotation.position },
+      pointerStart,
+      position: { ...annotation.position },
+      pointerId: event.pointerId,
+    });
+  }
+
+  function previewAnnotationDrag(
+    event: ReactPointerEvent<SVGCircleElement>,
+  ): void {
+    if (annotationDragPreview?.pointerId !== event.pointerId) return;
+    const pointer = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+    );
+    const annotation = document.annotations.find(
+      (candidate) => candidate.id === annotationDragPreview.annotationId,
+    );
+    if (!annotation) return;
+    setAnnotationDragPreview({
+      ...annotationDragPreview,
+      position: constrainAnnotationPosition(annotation, {
+        x:
+          annotationDragPreview.originalPosition.x +
+          pointer.x -
+          annotationDragPreview.pointerStart.x,
+        y:
+          annotationDragPreview.originalPosition.y +
+          pointer.y -
+          annotationDragPreview.pointerStart.y,
+      }),
+    });
+  }
+
+  function finishAnnotationDrag(
+    event: ReactPointerEvent<SVGCircleElement>,
+  ): void {
+    if (annotationDragPreview?.pointerId !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    const annotation = document.annotations.find(
+      (candidate) => candidate.id === annotationDragPreview.annotationId,
+    );
+    if (annotation) {
+      let offset = { ...annotation.offset };
+      if (annotation.attachedObjectId) {
+        const instance = document.instances.find(
+          (candidate) => candidate.id === annotation.attachedObjectId,
+        );
+        if (instance?.placement) {
+          offset = {
+            x: annotationDragPreview.position.x - instance.placement.position.x,
+            y: annotationDragPreview.position.y - instance.placement.position.y,
+          };
+        }
+      }
+      transact([
+        {
+          kind: "upsert_annotation",
+          annotation: {
+            ...annotation,
+            position: annotationDragPreview.position,
+            offset,
+          },
+        },
+      ]);
+    }
+    setAnnotationDragPreview(null);
+  }
+
   function pointFromClient(
     clientX: number,
     clientY: number,
@@ -706,11 +992,23 @@ export function App({ project: initialProject }: AppProps) {
       inductor: "L",
       nmos: "M",
       pmos: "M",
+      nmos3: "M",
+      pmos3: "M",
       npn: "Q",
       pnp: "Q",
       diode: "D",
+      zener: "D",
+      schottky: "D",
+      led: "D",
       "voltage-source": "V",
       "current-source": "I",
+      "ac-voltage-source": "V",
+      "pulse-voltage-source": "V",
+      opamp: "U",
+      "switch-open": "S",
+      "switch-closed": "S",
+      crystal: "Y",
+      transformer: "T",
       ground: "GND",
       port: "P",
     };
@@ -740,6 +1038,7 @@ export function App({ project: initialProject }: AppProps) {
   function selectInstance(instanceId: string, additive: boolean): void {
     setSelectedRouteId(null);
     setSelectedEndpoint(null);
+    setSelectedAnnotationId(null);
     setSelectedIds((current) => {
       if (!additive) return [instanceId];
       return current.includes(instanceId)
@@ -761,6 +1060,7 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
+    suppressInstanceClick.current = false;
     const movingIds = selectedIds.includes(instanceId)
       ? selectedIds
       : [instanceId];
@@ -788,13 +1088,20 @@ export function App({ project: initialProject }: AppProps) {
     if (!dragPreview || dragPreview.pointerId !== event.pointerId) {
       return;
     }
+    const position = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+    );
+    if (
+      position.x !== dragPreview.pointerStart.x ||
+      position.y !== dragPreview.pointerStart.y
+    ) {
+      suppressInstanceClick.current = true;
+    }
     setDragPreview({
       ...dragPreview,
-      position: pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget.ownerSVGElement!,
-      ),
+      position,
     });
   }
 
@@ -821,30 +1128,46 @@ export function App({ project: initialProject }: AppProps) {
             position: { x: original.x + delta.x, y: original.y + delta.y },
           };
         });
-        const stretchEdits: SchematicEdit[] = proposeGroupStretch(
-          document,
-          resolver,
-          moves,
-        ).map((proposal) => {
-          const route = document.routes.find(
-            (candidate) => candidate.id === proposal.routeId,
-          )!;
-          return {
-            kind: "set_route_points" as const,
-            routeId: route.id,
-            netId: route.netId,
-            from: route.from,
-            to: route.to,
-            waypoints: proposal.waypoints,
-            segmentModes: proposal.segmentModes,
-          };
-        });
+        const groupMove = proposeGroupMove(document, resolver, moves);
+        const stretchEdits: SchematicEdit[] = groupMove.routes.map(
+          (proposal) => {
+            const route = document.routes.find(
+              (candidate) => candidate.id === proposal.routeId,
+            )!;
+            return {
+              kind: "set_route_points" as const,
+              routeId: route.id,
+              netId: route.netId,
+              from: route.from,
+              to: route.to,
+              waypoints: proposal.waypoints,
+              segmentModes: proposal.segmentModes,
+            };
+          },
+        );
         transact([
           ...moves.map((move): SchematicEdit => ({
             kind: "move_instance",
             ...move,
           })),
+          ...groupMove.junctions.map((move): SchematicEdit => ({
+            kind: "move_junction",
+            ...move,
+          })),
           ...stretchEdits,
+          ...groupMove.annotations.flatMap((move): SchematicEdit[] => {
+            const annotation = document.annotations.find(
+              (candidate) => candidate.id === move.annotationId,
+            );
+            return annotation
+              ? [
+                  {
+                    kind: "upsert_annotation",
+                    annotation: { ...annotation, position: move.position },
+                  },
+                ]
+              : [];
+          }),
         ]);
       } catch (error) {
         setStatus(
@@ -981,7 +1304,155 @@ export function App({ project: initialProject }: AppProps) {
         },
       },
     ]);
-    if (result.ok) setStatus(`Added annotation ${id}`);
+    if (result.ok) {
+      setSelectedAnnotationId(id);
+      setSelectedIds([]);
+      setSelectedRouteId(null);
+      setStatus(`Added annotation ${id}`);
+    }
+  }
+
+  function applyInstanceLabel(): void {
+    if (!selectedInstance?.placement) return;
+    const existing = document.annotations.find(
+      (annotation) =>
+        annotation.kind === "instance-label" &&
+        annotation.attachedObjectId === selectedInstance.id,
+    );
+    const text = instanceLabelDraft.trim();
+    if (!text) {
+      if (existing)
+        transact([{ kind: "remove_annotation", annotationId: existing.id }]);
+      return;
+    }
+    const resolved = resolver.resolve(
+      selectedInstance.symbolId,
+      selectedInstance.symbolVariantId,
+    );
+    const distance = Math.ceil(
+      Math.max(
+        resolved?.definition.viewBox.width ?? 60,
+        resolved?.definition.viewBox.height ?? 60,
+      ) /
+        2 +
+        14,
+    );
+    const position = existing?.position ?? {
+      x: selectedInstance.placement.position.x,
+      y: selectedInstance.placement.position.y + distance,
+    };
+    const result = transact([
+      {
+        kind: "upsert_annotation",
+        annotation: {
+          id: existing?.id ?? `instance-label-${selectedInstance.id}`,
+          kind: "instance-label",
+          text,
+          position,
+          attachedObjectId: selectedInstance.id,
+          offset: {
+            x: position.x - selectedInstance.placement.position.x,
+            y: position.y - selectedInstance.placement.position.y,
+          },
+          alignment: existing?.alignment ?? "middle",
+          rotation: existing?.rotation ?? 0,
+          locked: false,
+        },
+      },
+    ]);
+    if (result.ok) setStatus(`Renamed displayed instance label to ${text}`);
+  }
+
+  function applyNetLabel(): void {
+    if (!selectedRoute) return;
+    const net = document.nets.find(
+      (candidate) => candidate.id === selectedRoute.netId,
+    );
+    if (!net) return;
+    const labelId = `net-label-${selectedRoute.id}`;
+    const existingLabel = document.annotations.find(
+      (annotation) => annotation.id === labelId,
+    );
+    const name = netLabelDraft.trim();
+    if (!name) {
+      if (existingLabel) {
+        transact([
+          { kind: "remove_annotation", annotationId: existingLabel.id },
+        ]);
+      }
+      return;
+    }
+    const sameNameNet = document.nets.find(
+      (candidate) => candidate.id !== net.id && candidate.name === name,
+    );
+    const targetNetId = sameNameNet?.id ?? net.id;
+    const polyline = routePolyline(document, resolver, selectedRoute);
+    if (!polyline) return;
+    const segment = Math.max(0, Math.floor((polyline.points.length - 1) / 2));
+    const from = polyline.points[segment]!;
+    const to = polyline.points[segment + 1] ?? from;
+    const position = existingLabel?.position ?? {
+      x: Math.round((from.x + to.x) / 2),
+      y: Math.round((from.y + to.y) / 2 - 8),
+    };
+    const edits: SchematicEdit[] = sameNameNet
+      ? [
+          {
+            kind: "merge_nets",
+            targetNetId,
+            sourceNetId: net.id,
+          },
+        ]
+      : [{ kind: "set_net_name", netId: net.id, name }];
+    edits.push({
+      kind: "upsert_annotation",
+      annotation: {
+        id: labelId,
+        kind: "net-label",
+        text: name,
+        position,
+        attachedObjectId: targetNetId,
+        offset: { x: 0, y: -8 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+      },
+    });
+    const result = transact(edits);
+    if (result.ok) {
+      setSelectedAnnotationId(labelId);
+      setStatus(
+        sameNameNet
+          ? `Connected Nets through label ${name}`
+          : `Named Net ${name}`,
+      );
+    }
+  }
+
+  function applyAnnotationText(): void {
+    if (!selectedAnnotation) return;
+    const text = annotationTextDraft.trim();
+    if (!text) {
+      transact([
+        { kind: "remove_annotation", annotationId: selectedAnnotation.id },
+      ]);
+      setSelectedAnnotationId(null);
+      return;
+    }
+    transact([
+      {
+        kind: "upsert_annotation",
+        annotation: { ...selectedAnnotation, text },
+      },
+    ]);
+  }
+
+  function deleteSelectedAnnotation(): void {
+    if (!selectedAnnotation) return;
+    const result = transact([
+      { kind: "remove_annotation", annotationId: selectedAnnotation.id },
+    ]);
+    if (result.ok) setSelectedAnnotationId(null);
   }
 
   function alignFirstLayoutGroup(): void {
@@ -1222,6 +1693,7 @@ export function App({ project: initialProject }: AppProps) {
           .map((instance) => instance.id);
     setSelectedIds(ids);
     setSelectedRouteId(null);
+    setSelectedAnnotationId(null);
     setBoxPreview(null);
     setStatus(
       ids.length > 0 ? `Selected ${ids.length} instances` : "Selection cleared",
@@ -1229,6 +1701,10 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function deleteSelection(): void {
+    if (selectedAnnotationId) {
+      deleteSelectedAnnotation();
+      return;
+    }
     if (selectedRouteId) {
       removeSelectedRouteGeometry();
       return;
@@ -1272,6 +1748,40 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
+  function copySelected(): void {
+    const copied = copySelection(document, selectedIds);
+    if (!copied) {
+      setStatus("Select at least one component to copy");
+      return;
+    }
+    clipboard.current = copied;
+    pasteCounter.current = 0;
+    setStatus(
+      `Copied ${copied.instances.length} components and ${copied.routes.length} internal routes`,
+    );
+  }
+
+  function pasteCopied(): void {
+    if (!clipboard.current) {
+      setStatus("Clipboard is empty");
+      return;
+    }
+    pasteCounter.current += 1;
+    const distance = document.presentation.grid * 2 * pasteCounter.current;
+    const proposal = proposePaste(
+      document,
+      clipboard.current,
+      { x: distance, y: distance },
+      pasteCounter.current,
+    );
+    const result = transact(proposal.edits);
+    if (result.ok) {
+      setSelectedIds(proposal.instanceIds);
+      setSelectedRouteId(null);
+      setStatus(`Pasted ${proposal.instanceIds.length} components`);
+    }
+  }
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
       if (isTypingTarget(event.target)) return;
@@ -1282,6 +1792,12 @@ export function App({ project: initialProject }: AppProps) {
       } else if (event.ctrlKey && key === "y") {
         event.preventDefault();
         transact([{ kind: "redo" }]);
+      } else if (event.ctrlKey && key === "c") {
+        event.preventDefault();
+        copySelected();
+      } else if (event.ctrlKey && key === "v") {
+        event.preventDefault();
+        pasteCopied();
       } else if (event.ctrlKey && key === "s") {
         event.preventDefault();
         saveProjectFile();
@@ -1399,8 +1915,26 @@ export function App({ project: initialProject }: AppProps) {
               </button>
               <button
                 type="button"
+                onClick={copySelected}
+                disabled={selectedIds.length === 0}
+              >
+                Copy
+              </button>
+              <button
+                type="button"
+                onClick={pasteCopied}
+                disabled={!clipboard.current}
+              >
+                Paste
+              </button>
+              <button
+                type="button"
                 onClick={deleteSelection}
-                disabled={!selectedRouteId && selectedIds.length === 0}
+                disabled={
+                  !selectedRouteId &&
+                  !selectedAnnotationId &&
+                  selectedIds.length === 0
+                }
               >
                 Delete
               </button>
@@ -1460,7 +1994,7 @@ export function App({ project: initialProject }: AppProps) {
             <summary>More</summary>
             <div className="command-popover">
               <button type="button" onClick={addPlainText}>
-                Add note
+                Add text
               </button>
               <button type="button" onClick={loadRoutingDemo}>
                 Open routing example
@@ -1469,7 +2003,8 @@ export function App({ project: initialProject }: AppProps) {
                 Open visual example
               </button>
               <small>
-                R rotate · W wire · F fit · Ctrl+wheel zoom · middle-drag pan
+                Ctrl+C/V copy/paste · R rotate · W wire · F fit · Ctrl+wheel
+                zoom · middle-drag pan
               </small>
             </div>
           </details>
@@ -1510,6 +2045,7 @@ export function App({ project: initialProject }: AppProps) {
                       setStatus(`Place ${symbol.name} on the canvas`);
                     }}
                   >
+                    <SymbolThumbnail symbol={symbol} />
                     <strong>{symbol.name}</strong>
                     <span>{symbol.id}</span>
                   </button>
@@ -1539,11 +2075,63 @@ export function App({ project: initialProject }: AppProps) {
             {instance.id} · {instance.symbolId}
           </button>
         ))}
+        {selectedInstance ? (
+          <section className="context-actions" aria-label="Instance text">
+            <h2>Instance text</h2>
+            <label>
+              Displayed name
+              <input
+                aria-label="Displayed instance name"
+                value={instanceLabelDraft}
+                onChange={(event) =>
+                  setInstanceLabelDraft(event.currentTarget.value)
+                }
+              />
+            </label>
+            <button type="button" onClick={applyInstanceLabel}>
+              Apply name
+            </button>
+          </section>
+        ) : null}
         {selectedRouteId ? (
           <section className="context-actions" aria-label="Route actions">
             <h2>Route</h2>
+            <label>
+              Electrical Net label
+              <input
+                aria-label="Electrical Net label"
+                value={netLabelDraft}
+                onChange={(event) =>
+                  setNetLabelDraft(event.currentTarget.value)
+                }
+              />
+            </label>
+            <button type="button" onClick={applyNetLabel}>
+              Apply Net label
+            </button>
             <button type="button" onClick={removeSelectedRouteGeometry}>
               Remove route geometry
+            </button>
+          </section>
+        ) : null}
+        {selectedAnnotation ? (
+          <section className="context-actions" aria-label="Text actions">
+            <h2>Text</h2>
+            <label>
+              Content
+              <input
+                aria-label="Selected text content"
+                value={annotationTextDraft}
+                onChange={(event) =>
+                  setAnnotationTextDraft(event.currentTarget.value)
+                }
+              />
+            </label>
+            <button type="button" onClick={applyAnnotationText}>
+              Apply text
+            </button>
+            <button type="button" onClick={deleteSelectedAnnotation}>
+              Delete text
             </button>
           </section>
         ) : null}
@@ -1569,7 +2157,11 @@ export function App({ project: initialProject }: AppProps) {
           <dd>
             {selectedIds.length > 0
               ? selectedIds.join(", ")
-              : (selectedRouteId ?? "None")}
+              : (selectedRouteId ?? selectedAnnotationId ?? "None")}
+          </dd>
+          <dt>Internal routes</dt>
+          <dd data-testid="selected-internal-route-count">
+            {internalSelection.routeIds.length}
           </dd>
           <dt>Revision</dt>
           <dd data-testid="revision">{document.revision}</dd>
@@ -1579,6 +2171,8 @@ export function App({ project: initialProject }: AppProps) {
           <dd data-testid="document-count">{project.documents.length}</dd>
           <dt>Instances</dt>
           <dd data-testid="instance-count">{projectInstanceCount}</dd>
+          <dt>Nets</dt>
+          <dd data-testid="net-count">{document.nets.length}</dd>
           <dt>Tool</dt>
           <dd data-testid="active-tool">{tool}</dd>
           <dt>Flightlines</dt>
@@ -1685,7 +2279,8 @@ export function App({ project: initialProject }: AppProps) {
                 key={route.id}
                 data-testid={`route-hit-${route.id}`}
                 className={
-                  selectedRouteId === route.id
+                  selectedRouteId === route.id ||
+                  selectedInternalRouteIds.has(route.id)
                     ? "route-hit selected"
                     : "route-hit"
                 }
@@ -1739,6 +2334,10 @@ export function App({ project: initialProject }: AppProps) {
                   }
                   onClick={(event) => {
                     event.stopPropagation();
+                    if (suppressInstanceClick.current) {
+                      suppressInstanceClick.current = false;
+                      return;
+                    }
                     selectInstance(
                       instance.id,
                       event.shiftKey || event.ctrlKey,
@@ -1766,6 +2365,7 @@ export function App({ project: initialProject }: AppProps) {
                   setSelectedEndpoint(candidate);
                   setSelectedRouteId(null);
                   setSelectedIds([]);
+                  setSelectedAnnotationId(null);
                   setStatus(
                     `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
                   );
@@ -1773,6 +2373,45 @@ export function App({ project: initialProject }: AppProps) {
                 onPointerDown={(event) => handleWireEndpoint(event, candidate)}
               />
             ))}
+            {document.annotations.map((annotation) => {
+              const preview =
+                annotationDragPreview?.annotationId === annotation.id
+                  ? annotationDragPreview.position
+                  : annotation.position;
+              return (
+                <circle
+                  key={`annotation-hit-${annotation.id}`}
+                  data-testid={`annotation-hit-${annotation.id}`}
+                  className={
+                    selectedAnnotationId === annotation.id
+                      ? "annotation-hit selected"
+                      : "annotation-hit"
+                  }
+                  cx={preview.x}
+                  cy={preview.y - 4}
+                  r="10"
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) =>
+                    beginAnnotationDrag(event, annotation)
+                  }
+                  onPointerMove={previewAnnotationDrag}
+                  onPointerUp={finishAnnotationDrag}
+                />
+              );
+            })}
+            {annotationDragPreview ? (
+              <text
+                className="annotation-drag-preview"
+                x={annotationDragPreview.position.x}
+                y={annotationDragPreview.position.y}
+                textAnchor="middle"
+              >
+                {document.annotations.find(
+                  (annotation) =>
+                    annotation.id === annotationDragPreview.annotationId,
+                )?.text ?? ""}
+              </text>
+            ) : null}
             {dragPreview
               ? dragPreview.instanceIds.map((instanceId) => {
                   const original = dragPreview.originalPositions[instanceId]!;
