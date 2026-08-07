@@ -11,6 +11,7 @@ and the Agent use one source. Resolve the paths below from this repository.
 | Placement, hierarchy presentation, labels, or visual organization | [`schematic-expression.md`](../../../docs/agent/knowledge/schematic-expression.md)       |
 | Routes, crossings, Junctions, flightlines, or visual diagnostics  | [`routing-and-diagnostics.md`](../../../docs/agent/knowledge/routing-and-diagnostics.md) |
 | Placement grid, pin-anchor alignment, label math, or fixed-style tokens | [`razavi-style-canon.md`](../../../docs/agent/knowledge/razavi-style-canon.md) |
+| Multi-endpoint Net routing-tree choice (trunk, branch, label, bus) | [`route-tree-shapes.md`](../../../docs/agent/knowledge/route-tree-shapes.md) |
 | Hierarchy, shared children, or roughly 100+ devices               | [`hierarchy-and-large-circuits.md`](../../../docs/agent/knowledge/hierarchy-and-large-circuits.md) |
 | Generic/model-backed symbols or PDK pin uncertainty               | [`pdk-and-symbols.md`](../../../docs/agent/knowledge/pdk-and-symbols.md)                 |
 | Existing human work, locks, stale revisions, or handoff           | [`human-collaboration.md`](../../../docs/agent/knowledge/human-collaboration.md)         |

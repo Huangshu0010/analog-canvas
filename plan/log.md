@@ -962,3 +962,26 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `git diff --check` passed.
 - Commit status: ready for
   `feat(agent-api): localize transact failures and return resolved Route geometry`.
+
+## 2026-08-07 - Add Agent-local route-tree expander and shape dictionary
+
+- Target: target #3b of the routing-quality sequence — remove the multi-endpoint
+  Net tree-arithmetic bottleneck by expanding a topology-only RouteTreeDecision
+  into typed edits with resolved coordinates, inside the ADR 0008 boundary.
+- Changed areas: new `packages/agent-routing` package (`types.ts`, `expand.ts`,
+  `index.ts`) with `expandRouteTree` and per-shape expanders for direct /
+  local-branch-tree / shared-trunk / labeled-islands / ordered-bus; thin Skill
+  caller `skills/circuit-layout/scripts/expand-route-tree.mjs`; non-recipe shape
+  dictionary `docs/agent/knowledge/route-tree-shapes.md`; manifest row; one
+  `tsconfig.check.json` path entry; 8 focused tests.
+- Boundary held: the expander applies the grid=10 canon, returns conflicts
+  (UNKNOWN_SHAPE, MISSING_ENDPOINT, SHAPE_MISMATCH, TRUNK_CORRIDOR_BLOCKED)
+  without auto-rerouting, has no `auto`/`best` shape, and never silently
+  switches shapes. It depends on `@icm/model` and `@icm/edit-engine` types only;
+  RouteTreeDecision/Expansion do not enter the Agent API or model schemas.
+- Dirty-state decision: additive owned paths do not overlap the existing dirty
+  set; `pnpm install` re-linked the workspace without lockfile changes.
+- Validation: full workspace `pnpm typecheck`, `prettier --check`, 8 tests, and
+  `git diff --check` passed.
+- Commit status: ready for
+  `feat(agent-routing): add Agent-local route-tree expander and shape dictionary`.
