@@ -113,8 +113,18 @@ export function renderSchematicTextContent(
 export function schematicTextSizeAttribute(
   kind: SchematicTextKind,
   profile: SchematicStyleProfile,
+  sizeScale?: number,
 ): string {
-  return profile.id === "textbook-monochrome-v1"
-    ? ""
-    : ` font-size="${schematicTextFontSize(kind, profile)}"`;
+  // Keep legacy monochrome output byte-stable unless an author explicitly
+  // changes the annotation scale.  In that case monochrome must honor the
+  // persisted presentation setting just like the Razavi profile does.
+  if (profile.id === "textbook-monochrome-v1" && sizeScale === undefined) {
+    return "";
+  }
+  const base = schematicTextFontSize(kind, profile);
+  const size =
+    sizeScale !== undefined && Number.isFinite(sizeScale) && sizeScale > 0
+      ? Math.round(base * sizeScale * 100) / 100
+      : base;
+  return ` font-size="${size}"`;
 }
