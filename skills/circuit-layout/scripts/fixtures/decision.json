@@ -2,8 +2,17 @@
   "documentId": "doc",
   "revision": 0,
   "netId": "net-1",
-  "shape": "direct",
-  "endpointGroups": [
-    { "id": "g1", "endpointIds": ["a", "b"], "attachTo": "net" }
-  ]
+  "nodes": [
+    {
+      "id": "a",
+      "role": "endpoint",
+      "endpoint": { "kind": "terminal", "instanceId": "M1", "pinName": "D" }
+    },
+    {
+      "id": "b",
+      "role": "endpoint",
+      "endpoint": { "kind": "terminal", "instanceId": "M2", "pinName": "S" }
+    }
+  ],
+  "edges": [{ "id": "e1", "from": "a", "to": "b", "role": "trunk" }]
 }

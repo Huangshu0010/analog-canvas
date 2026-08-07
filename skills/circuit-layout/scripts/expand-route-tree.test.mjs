@@ -36,7 +36,8 @@ describe("expand-route-tree caller", () => {
     const expansion = JSON.parse(result.stdout);
     expect(expansion.conflicts).toEqual([]);
     expect(expansion.edits).toHaveLength(1);
-    expect(expansion.edits[0].kind).toBe("route_orthogonal");
+    expect(expansion.edits[0].kind).toBe("set_route_points");
+    expect(expansion.edits[0].segmentModes).toEqual(["trunk"]);
     expect(expansion.metrics.routeCount).toBe(1);
     expect(expansion.resolvedGeometry).toHaveLength(1);
     expect(expansion.resolvedGeometry[0].points).toEqual([

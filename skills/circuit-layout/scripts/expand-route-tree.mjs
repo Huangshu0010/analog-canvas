@@ -38,7 +38,7 @@ const distPath = resolve(
   "dist",
   "index.js",
 );
-const { expandRouteTree, hydrateExpansionInput } = await import(
+const { expandRouteGraph, hydrateExpansionInput } = await import(
   pathToFileURL(distPath).href
 );
 
@@ -56,12 +56,12 @@ async function main() {
     );
     process.exit(2);
   }
-  const decision = JSON.parse(await readFile(decisionPath, "utf8"));
+  const graph = JSON.parse(await readFile(decisionPath, "utf8"));
   const serialized = JSON.parse(await readFile(inputPath, "utf8"));
   // Serialized input arrives with endpoints as an array; hydrate to a Map so
   // the expander's .has/.get lookups work.
   const input = hydrateExpansionInput(serialized);
-  const expansion = expandRouteTree(decision, input);
+  const expansion = expandRouteGraph(graph, input);
   process.stdout.write(`${JSON.stringify(expansion, null, 2)}\n`);
 }
 
