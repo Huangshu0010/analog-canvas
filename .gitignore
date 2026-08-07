@@ -8,4 +8,3 @@ tmp/
 .reference-src/
 *.tsbuildinfo
 .vite/
-netlists/

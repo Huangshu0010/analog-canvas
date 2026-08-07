@@ -1,15 +1,12 @@
-// Agent-generated 6-bit switched-capacitor DAC, top-level hierarchical view.
+// Agent-generated 6-bit switched-capacitor DAC, FLAT transistor-level view.
 //
-// ROUTE-GRAPH HELPER: the Agent gives an explicit Route graph (nodes + edges
-// with roles) per Net; the @icm/agent-routing helper only projects each edge
-// onto legal coordinates. Every edge is a set_route_points with explicit
-// waypoints — the helper NEVER calls route_orthogonal or guesses bends. If an
-// edge is not axis-aligned, it returns MISALIGNED_EDGE; the Agent must add
-// bend nodes.
+// ROUTE-GRAPH HELPER: the Agent gives an explicit Route graph per Net;
+// the helper projects edges onto legal coordinates. Every edge is
+// set_route_points with explicit waypoints — no route_orthogonal.
 //
-// Per-Net sequencing: each Net's expansion sees the accumulated geometry from
-// all previously committed Nets, so wire-through-symbol and overlap detection
-// works across Nets.
+// The hierarchical top is flattened into individual transistor instances
+// (XU0__XDP, XU0__XDN, etc.) before routing. Port positions are aligned
+// with pin coordinates so all edges are axis-aligned.
 //
 // Per ADR 0008: the helper detects conflicts but never reroutes.
 
@@ -19,6 +16,7 @@ import {
 } from "../../packages/derived/dist/index.js";
 import { expandRouteGraph } from "../../packages/agent-routing/dist/index.js";
 import { transformPoint } from "../../packages/model/dist/index.js";
+import { appendFlattenedDocument } from "../../tools/agent-layout/flatten-project.mjs";
 
 const GRID = 10;
 const snap = (value) => Math.round(value / GRID) * GRID;
@@ -36,67 +34,73 @@ function annotation(input) {
 }
 
 export default {
-  id: "sky130-scdac-6bit-agent-route-graph-v2",
-  agentId: "codex-scdac-route-graph-v2",
+  id: "sky130-scdac-6bit-flat-transistor",
+  agentId: "codex-scdac-flat-transistor",
   sourceRoot: "netlists/sky130-switched-capacitor-dac-6bit-pvt",
   sourceFiles: ["circuit.spi"],
   entry: "circuit.spi",
-  documentName: "switched_capacitor_dac_6bit",
-  projectName: "SKY130 6-bit Switched-Capacitor DAC (route-graph v2)",
+  documentName: "Flat CDAC (transistor-level)",
+  projectName: "SKY130 6-bit Switched-Capacitor DAC (flat transistor-level)",
   outputBase: "agent-scdac-newarch",
   exportMargin: 30,
   exportScale: 3,
 
+  prepareProject({ project }) {
+    const sourceName = "switched_capacitor_dac_6bit";
+    const flatName = "Flat CDAC (transistor-level)";
+    project.documents = project.documents.filter((d) => d.name !== flatName);
+    const flat = appendFlattenedDocument(project, sourceName, flatName);
+    for (const inst of flat.instances) {
+      if (inst.symbolId === "nmos" || inst.symbolId === "pmos") {
+        inst.symbolVariantId = "textbook-3terminal";
+      }
+    }
+    project.topDocumentId = flat.id;
+  },
+
   prepareModel({ document }) {
-    // Port positions aligned with pin y-coordinates so direct edges are
-    // axis-aligned (no bend nodes needed).
-    const unitY = (i) => 200 + i * 160;
-    const portPositions = {
-      b0: { x: 60, y: unitY(0) - 20 }, // aligned with XU0.bit (180,180)
-      b1: { x: 60, y: unitY(1) - 20 },
-      b2: { x: 60, y: unitY(2) - 20 },
-      b3: { x: 60, y: unitY(3) - 20 },
-      b4: { x: 60, y: unitY(4) - 20 },
-      b5: { x: 60, y: unitY(5) - 20 },
-      reset: { x: 60, y: 640 }, // aligned with XRESET.G (760,640)
-      vdd: { x: 300, y: 60 }, // same x as vdd rail top
-      vss: { x: 300, y: 1280 },
-      vout: { x: 900, y: 680 }, // aligned with vout trunk tap
-    };
-    document.ports = document.ports.map((port) => ({
-      ...port,
-      position: portPositions[port.name] ?? port.position,
-    }));
+    // Port positions will be set in buildEditPhases after we know pin coords.
+    // For now just set the profile.
     document.presentation = {
       ...document.presentation,
       styleProfileId: "razavi-textbook-v1",
       compactness: "compact",
-      flow: {
-        power: "top",
-        ground: "bottom",
-        input: "left",
-        output: "right",
-      },
+      flow: { power: "top", ground: "bottom", input: "left", output: "right" },
     };
   },
 
-  buildEditPhases({ document, resolver, netId, port, terminal, junction }) {
+  buildEditPhases({ document, resolver, netId }) {
     const structure = [];
     const labels = [];
 
-    // --- Placement ----------------------------------------------------------
-    // Units at x=220, pitch 160. Caps at x=520 aligned so cap.2 shares y
-    // with unit.bot (enabling a straight horizontal bot wire).
-    const unitY = (i) => 200 + i * 160;
+    // --- Placement of flat transistor-level instances -------------------
+    // Each scdac_unit (XU{i}) contains 4 MOS: XDP(pmos), XDN(nmos),
+    // XSP(pmos), XSN(nmos). In the flat doc they become
+    // XU{i}__XDP, XU{i}__XDN, XU{i}__XSP, XU{i}__XSN.
+    //
+    // Layout: each unit occupies a column at x=220, pitch 160.
+    //   XDP (pmos, inverter P) at top of unit
+    //   XDN (nmos, inverter N) below XDP
+    //   XSP (pmos, switch P) below XDN
+    //   XSN (nmos, switch N) at bottom
+    // Capacitors at x=520.
+    // XRESET at x=780.
+
+    const unitX = 220;
+    const unitPitch = 160;
+    const unitY = (i) => 200 + i * unitPitch;
+    const mosPitch = 40; // vertical pitch within a unit
+
     const placements = {};
     for (let i = 0; i < 6; i += 1) {
-      placements[`XU${i}`] = [220, unitY(i), 0, "none"];
+      const baseY = unitY(i);
+      placements[`XU${i}__XDP`] = [unitX, baseY, 0, "none"];
+      placements[`XU${i}__XDN`] = [unitX, baseY + mosPitch, 0, "none"];
+      placements[`XU${i}__XSP`] = [unitX, baseY + 2 * mosPitch, 0, "none"];
+      placements[`XU${i}__XSN`] = [unitX, baseY + 3 * mosPitch, 0, "none"];
     }
-    // Caps at (520, unitY(i)) so:
-    //   cap.1 at (520, unitY-20), cap.2 at (520, unitY+20)
-    //   cap.2 shares y with unit.bot (180, unitY+20) → straight wire.
     for (let i = 0; i < 6; i += 1) {
-      placements[`C${i}`] = [520, unitY(i), 0, "none"];
+      placements[`C${i}`] = [520, unitY(i) + 20, 0, "none"];
     }
     placements.CDUMMY = [520, unitY(5) + 160, 0, "none"];
     placements.XRESET = [780, 640, 0, "none"];
@@ -104,6 +108,7 @@ export default {
     const routingDocument = structuredClone(document);
     for (const instance of document.instances) {
       const p = placements[instance.id];
+      if (!p) continue;
       const [x, y, rotation, mirror] = p;
       const planned = routingDocument.instances.find(
         (c) => c.id === instance.id,
@@ -114,15 +119,37 @@ export default {
         instanceId: instance.id,
         placement: { position: { x, y }, rotation, mirror },
       });
-      if (instance.id === "XRESET") {
-        planned.symbolVariantId = "textbook-3terminal";
-        structure.push({
-          kind: "set_instance_symbol",
-          instanceId: instance.id,
-          symbolId: instance.symbolId,
-          symbolVariantId: "textbook-3terminal",
-        });
-      }
+    }
+
+    // Set port positions aligned with the flat instance pin coordinates.
+    // We need to resolve pin positions after placement to find the right y.
+    // b0-b5 ports align with the first MOS's bit pin (which is the gate of XDN).
+    // For flat: the "bit" net connects to XU{i}__XDN.G and XU{i}__XDP.G.
+    // We'll align b{i} port with XU{i}__XDN.G pin y.
+    const portPositions = {};
+    for (let i = 0; i < 6; i += 1) {
+      const ep = { kind: "terminal", instanceId: `XU${i}__XDN`, pinName: "G" };
+      const pt = resolveEndpointPoint(routingDocument, resolver, ep);
+      if (pt) portPositions[`b${i}`] = { x: 60, y: pt.y };
+    }
+    // reset port aligns with XRESET.G
+    {
+      const ep = { kind: "terminal", instanceId: "XRESET", pinName: "G" };
+      const pt = resolveEndpointPoint(routingDocument, resolver, ep);
+      if (pt) portPositions.reset = { x: 60, y: pt.y };
+    }
+    // vdd, vss, vout ports
+    portPositions.vdd = { x: 300, y: 60 };
+    portPositions.vss = { x: 300, y: 1280 };
+    portPositions.vout = { x: 900, y: 680 };
+    for (const port of routingDocument.ports) {
+      const pp = portPositions[port.name];
+      if (pp) port.position = pp;
+    }
+    // Also apply port positions to the original document's ports for later use.
+    for (const port of document.ports) {
+      const pp = portPositions[port.name];
+      if (pp) port.position = pp;
     }
 
     // --- Resolve endpoint geometry from the placed document ----------------
@@ -177,7 +204,6 @@ export default {
     }
 
     // --- Sequential per-Net graph expansion --------------------------------
-    // Each Net sees accumulated geometry from all previously committed Nets.
     const accumulatedPolylines = [];
     const routes = [];
     let conflictCount = 0;
@@ -188,7 +214,6 @@ export default {
         existingRoutePolylines: accumulatedPolylines,
         instanceBoxes,
       });
-      // Report conflicts (do not silently ignore).
       for (const conflict of expansion.conflicts) {
         conflictCount += 1;
         labels.push(
@@ -201,189 +226,151 @@ export default {
           }),
         );
       }
-      // Collect resolved geometry for the next Net's overlap detection.
       for (const geom of expansion.resolvedGeometry) {
         accumulatedPolylines.push({ routeId: geom.routeId, points: geom.points });
       }
       routes.push(...expansion.edits);
-      return expansion;
     }
 
-    // --- vout: vertical common-plate trunk at x=600 -----------------------
-    // All cap.1 + CDUMMY.1 + XRESET.D + vout port link to taps on the trunk.
-    // Each tap is axis-aligned with its endpoint (same y).
+    // --- Helper: build a Net graph from its terminals ------------------
+    function buildNetGraph(netName, shape) {
+      const net = document.nets.find((n) => n.name === netName);
+      if (!net) return null;
+      const terms = (net.terminals ?? []).map((t) => endpointId(netName, t.instanceId, t.pinName));
+      const portEps = (net.ports ?? []).map((pid) => {
+        const p = document.ports.find((port) => port.id === pid);
+        return endpointId(netName, p.id, "");
+      });
+      const allEps = [...terms, ...portEps];
+
+      if (shape === "direct" && allEps.length === 2) {
+        return {
+          documentId: document.id,
+          revision: 0,
+          netId: netId(netName),
+          nodes: allEps.map((id) => ({
+            id,
+            role: "endpoint",
+            endpoint: endpoints.get(id).endpoint,
+          })),
+          edges: [{ id: `${netName}-direct`, from: allEps[0], to: allEps[1], role: "link" }],
+        };
+      }
+
+      if (shape === "shared-trunk" && allEps.length >= 2) {
+        const trunkX = 600;
+        const nodes = [];
+        const edges = [];
+        const taps = allEps
+          .map((epId) => ({ epId, y: endpoints.get(epId).point.y }))
+          .sort((a, b) => a.y - b.y);
+        for (const tap of taps) {
+          nodes.push({ id: tap.epId, role: "endpoint", endpoint: endpoints.get(tap.epId).endpoint });
+          const tapId = `${netName}-tap-${tap.epId}`;
+          nodes.push({ id: tapId, role: "tap", at: { x: trunkX, y: tap.y } });
+          edges.push({ id: `${netName}-link-${tap.epId}`, from: tap.epId, to: tapId, role: "link" });
+        }
+        for (let i = 1; i < taps.length; i += 1) {
+          const prev = `${netName}-tap-${taps[i - 1].epId}`;
+          const curr = `${netName}-tap-${taps[i].epId}`;
+          edges.push({ id: `${netName}-trunk-${i - 1}`, from: prev, to: curr, role: "trunk" });
+        }
+        return { documentId: document.id, revision: 0, netId: netId(netName), nodes, edges };
+      }
+
+      if (shape === "labeled-islands") {
+        const nodes = [];
+        const edges = [];
+        for (const epId of allEps) {
+          const ep = endpoints.get(epId);
+          if (!ep) continue;
+          const jId = `${netName}-j-${epId}`;
+          // Place junction near the endpoint, offset to avoid trunk.
+          const offset = netName === "vss" ? 60 : 80;
+          const jPoint = { x: snap(ep.point.x + offset), y: snap(ep.point.y) };
+          nodes.push({ id: epId, role: "endpoint", endpoint: ep.endpoint });
+          nodes.push({ id: jId, role: "junction", at: jPoint });
+          edges.push({ id: `${netName}-esc-${epId}`, from: epId, to: jId, role: "link" });
+          edges.push({
+            id: `${netName}-label-${epId}`,
+            from: jId,
+            to: jId,
+            role: "label",
+            label: { text: netName.toUpperCase(), attachedObjectId: jId },
+          });
+        }
+        return { documentId: document.id, revision: 0, netId: netId(netName), nodes, edges };
+      }
+
+      return null;
+    }
+
+    // --- vout: shared-trunk at x=600 -----------------------------------
     {
-      const voutPortId = endpointId("vout", document.ports.find((p) => p.name === "vout").id, "");
-      const capIds = [0, 1, 2, 3, 4, 5].map((i) => ({
-        epId: endpointId("vout", `C${i}`, "1"),
-        y: unitY(i) - 20,
-      }));
-      const dummyId = endpointId("vout", "CDUMMY", "1");
-      const resetDId = endpointId("vout", "XRESET", "D");
-
-      // Taps on the trunk at x=600, sorted by y.
-      const taps = [
-        ...capIds.map((c, i) => ({ id: `vout-tapC${i}`, y: c.y, epId: c.epId })),
-        { id: "vout-tapReset", y: 620, epId: resetDId }, // XRESET.D at (790,620)
-        { id: "vout-tapPort", y: 680, epId: voutPortId }, // vout port at (900,680)
-        { id: "vout-tapDummy", y: 1140, epId: dummyId }, // CDUMMY.1 at (520,1140)
-      ].sort((a, b) => a.y - b.y);
-
-      const nodes = [];
-      const edges = [];
-      // Endpoint nodes + tap nodes + link edges.
-      for (const tap of taps) {
-        nodes.push({ id: tap.epId, role: "endpoint", endpoint: endpoints.get(tap.epId).endpoint });
-        nodes.push({ id: tap.id, role: "tap", at: { x: 600, y: tap.y } });
-        // Link (not escape) — cap.1 faces north but tap is east.
-        edges.push({ id: `vout-link-${tap.id}`, from: tap.epId, to: tap.id, role: "link" });
-      }
-      // Trunk edges between consecutive taps (vertical, same x=600).
-      for (let i = 1; i < taps.length; i += 1) {
-        edges.push({ id: `vout-trunk-${i - 1}`, from: taps[i - 1].id, to: taps[i].id, role: "trunk" });
-      }
-      expandAndCollect({ documentId: document.id, revision: 0, netId: netId("vout"), nodes, edges });
+      const graph = buildNetGraph("vout", "shared-trunk");
+      if (graph) expandAndCollect(graph);
     }
 
-    // --- vdd: vertical rail at x=300 ---------------------------------------
-    // Each unit.vdd escapes east to a tap on the rail.
+    // --- vdd: shared-trunk at x=300 -----------------------------------
     {
-      const vddPortId = endpointId("vdd", document.ports.find((p) => p.name === "vdd").id, "");
-      const unitIds = [0, 1, 2, 3, 4, 5].map((i) => ({
-        epId: endpointId("vdd", `XU${i}`, "vdd"),
-        y: unitY(i),
-      }));
-
-      const nodes = [];
-      const edges = [];
-      // Port → top of rail (same x=300, vertical).
-      nodes.push({ id: vddPortId, role: "endpoint", endpoint: endpoints.get(vddPortId).endpoint });
-      nodes.push({ id: "vdd-tapPort", role: "tap", at: { x: 300, y: 100 } });
-      edges.push({ id: "vdd-link-port", from: vddPortId, to: "vdd-tapPort", role: "link" });
-
-      // Unit escapes: vdd faces east, tap is east → escape ✓.
-      for (let i = 0; i < unitIds.length; i += 1) {
-        const u = unitIds[i];
-        nodes.push({ id: u.epId, role: "endpoint", endpoint: endpoints.get(u.epId).endpoint });
-        nodes.push({ id: `vdd-tap${i}`, role: "tap", at: { x: 300, y: u.y } });
-        edges.push({ id: `vdd-esc-${i}`, from: u.epId, to: `vdd-tap${i}`, role: "escape" });
-      }
-      // Trunk: tapPort(60) → tap0(unitY0) → tap1 → ... → tap5.
-      edges.push({ id: "vdd-trunk-port", from: "vdd-tapPort", to: "vdd-tap0", role: "trunk" });
-      for (let i = 1; i < unitIds.length; i += 1) {
-        edges.push({ id: `vdd-trunk-${i - 1}`, from: `vdd-tap${i - 1}`, to: `vdd-tap${i}`, role: "trunk" });
-      }
-      expandAndCollect({ documentId: document.id, revision: 0, netId: netId("vdd"), nodes, edges });
+      const graph = buildNetGraph("vdd", "shared-trunk");
+      if (graph) expandAndCollect(graph);
     }
 
-    // --- vss: labeled islands (no cross-island wire) -----------------------
-    // Each unit.vss gets a local junction + VSS label.
-    // XRESET.S, CDUMMY.2, and vss port each get their own local junction + label.
+    // --- vss: labeled-islands -------------------------------------------
     {
-      const vssPortId = endpointId("vss", document.ports.find((p) => p.name === "vss").id, "");
-      const nodes = [];
-      const edges = [];
-      let islIdx = 0;
-
-      function addIsland(epId, junctionId, junctionPoint, useEscape) {
-        nodes.push({ id: epId, role: "endpoint", endpoint: endpoints.get(epId).endpoint });
-        nodes.push({ id: junctionId, role: "junction", at: junctionPoint });
-        edges.push({
-          id: `vss-esc-${islIdx}`,
-          from: epId,
-          to: junctionId,
-          role: useEscape ? "escape" : "link",
-        });
-        edges.push({
-          id: `vss-label-${islIdx}`,
-          from: junctionId,
-          to: junctionId,
-          role: "label",
-          label: { text: "VSS", attachedObjectId: junctionId },
-        });
-        islIdx += 1;
-      }
-
-      // Unit vss islands: vss faces east, junction east → escape ✓.
-      for (let i = 0; i < 6; i += 1) {
-        addIsland(
-          endpointId("vss", `XU${i}`, "vss"),
-          `vss-j-${i}`,
-          { x: 320, y: unitY(i) - 20 },
-          true,
-        );
-      }
-      // XRESET.S: faces south, junction south → escape ✓.
-      addIsland(endpointId("vss", "XRESET", "S"), "vss-j-reset", { x: 790, y: 680 }, true);
-      // CDUMMY.2: faces south, junction south → escape ✓.
-      addIsland(endpointId("vss", "CDUMMY", "2"), "vss-j-dummy", { x: 520, y: 1200 }, true);
-      // VSS port: no outward → use link.
-      addIsland(vssPortId, "vss-j-port", { x: 300, y: 1270 }, false);
-
-      expandAndCollect({ documentId: document.id, revision: 0, netId: netId("vss"), nodes, edges });
+      const graph = buildNetGraph("vss", "labeled-islands");
+      if (graph) expandAndCollect(graph);
     }
 
-    // --- bot0-5: unit.bot → cap.2 (straight horizontal) --------------------
-    // With caps at (520, unitY(i)):
-    //   unit.bot at (180, unitY+20), cap.2 at (520, unitY+20) → same y ✓.
+    // --- bot0-5, b0-5, reset: direct (2-endpoint) ---------------------
+    for (const netName of [
+      "bot0", "bot1", "bot2", "bot3", "bot4", "bot5",
+      "b0", "b1", "b2", "b3", "b4", "b5",
+      "reset",
+    ]) {
+      const graph = buildNetGraph(netName, "direct");
+      if (graph) expandAndCollect(graph);
+    }
+
+    // --- nb0-5: internal net labels (single terminal each) -------------
+    // These are internal to the flattened units and have only one terminal
+    // (the inverter output). They need a visible net label but no route.
     for (let i = 0; i < 6; i += 1) {
-      const aId = endpointId(`bot${i}`, `XU${i}`, "bot");
-      const bId = endpointId(`bot${i}`, `C${i}`, "2");
-      expandAndCollect({
-        documentId: document.id,
-        revision: 0,
-        netId: netId(`bot${i}`),
-        nodes: [
-          { id: aId, role: "endpoint", endpoint: endpoints.get(aId).endpoint },
-          { id: bId, role: "endpoint", endpoint: endpoints.get(bId).endpoint },
-        ],
-        edges: [{ id: `bot${i}-link`, from: aId, to: bId, role: "link" }],
+      const netName = `nb${i}`;
+      const net = document.nets.find((n) => n.name === netName);
+      if (!net) continue;
+      const terms = net.terminals ?? [];
+      if (terms.length === 0) continue;
+      const term = terms[0];
+      const point = resolveEndpointPoint(routingDocument, resolver, {
+        kind: "terminal",
+        instanceId: term.instanceId,
+        pinName: term.pinName,
       });
+      if (!point) continue;
+      labels.push(
+        annotation({
+          id: `label-${netName}`,
+          kind: "net-label",
+          text: netName.toUpperCase(),
+          position: { x: snap(point.x + 30), y: snap(point.y - 10) },
+          alignment: "start",
+        }),
+      );
     }
 
-    // --- b0-5: port → unit.bit (straight horizontal) -----------------------
-    // Port at (60, unitY-20), unit.bit at (180, unitY-20) → same y ✓.
-    for (let i = 0; i < 6; i += 1) {
-      const portEpId = endpointId(`b${i}`, document.ports.find((p) => p.name === `b${i}`).id, "");
-      const bitEpId = endpointId(`b${i}`, `XU${i}`, "bit");
-      expandAndCollect({
-        documentId: document.id,
-        revision: 0,
-        netId: netId(`b${i}`),
-        nodes: [
-          { id: portEpId, role: "endpoint", endpoint: endpoints.get(portEpId).endpoint },
-          { id: bitEpId, role: "endpoint", endpoint: endpoints.get(bitEpId).endpoint },
-        ],
-        edges: [{ id: `b${i}-link`, from: portEpId, to: bitEpId, role: "link" }],
-      });
-    }
-
-    // --- reset: port → XRESET.G (straight horizontal) ---------------------
-    // Port at (60,640), XRESET.G at (760,640) → same y ✓.
-    {
-      const portEpId = endpointId("reset", document.ports.find((p) => p.name === "reset").id, "");
-      const gEpId = endpointId("reset", "XRESET", "G");
-      expandAndCollect({
-        documentId: document.id,
-        revision: 0,
-        netId: netId("reset"),
-        nodes: [
-          { id: portEpId, role: "endpoint", endpoint: endpoints.get(portEpId).endpoint },
-          { id: gEpId, role: "endpoint", endpoint: endpoints.get(gEpId).endpoint },
-        ],
-        edges: [{ id: "reset-link", from: portEpId, to: gEpId, role: "link" }],
-      });
-    }
-
-    // --- Instance + port labels -------------------------------------------
+    // --- Instance labels ----------------------------------------------
     for (const instance of document.instances) {
+      const p = placements[instance.id];
+      if (!p) continue;
       labels.push(
         annotation({
           id: `label-${instance.id}`,
           kind: "instance-label",
           text: instance.id,
           attachedObjectId: instance.id,
-          position: { x: placements[instance.id][0], y: placements[instance.id][1] + 50 },
+          position: { x: p[0], y: p[1] + 30 },
           alignment: "middle",
         }),
       );

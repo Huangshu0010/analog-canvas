@@ -1,0 +1,1848 @@
+{
+  "documents": [
+    {
+      "annotations": [
+        {
+          "alignment": "end",
+          "attachedObjectId": "LP1",
+          "id": "instance-label-LP1",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": -10,
+            "y": -10
+          },
+          "position": {
+            "x": 90,
+            "y": 235
+          },
+          "rotation": 0,
+          "text": "LP1  7.690 nH"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "CP1",
+          "id": "instance-label-CP1",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 10,
+            "y": 13
+          },
+          "position": {
+            "x": 160,
+            "y": 258
+          },
+          "rotation": 0,
+          "text": "CP1  330.23 pF"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "LS2",
+          "id": "instance-label-LS2",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": -40
+          },
+          "position": {
+            "x": 220,
+            "y": 140
+          },
+          "rotation": 0,
+          "text": "LS2  994.43 nH"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "CS2",
+          "id": "instance-label-CS2",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": -20
+          },
+          "position": {
+            "x": 290,
+            "y": 160
+          },
+          "rotation": 0,
+          "text": "CS2  2.554 pF"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "LP3",
+          "id": "instance-label-LP3",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": -10,
+            "y": -10
+          },
+          "position": {
+            "x": 340,
+            "y": 235
+          },
+          "rotation": 0,
+          "text": "LP3  4.332 nH"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "CP3",
+          "id": "instance-label-CP3",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 10,
+            "y": 13
+          },
+          "position": {
+            "x": 410,
+            "y": 258
+          },
+          "rotation": 0,
+          "text": "CP3  586.17 pF"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "LS4",
+          "id": "instance-label-LS4",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": -40
+          },
+          "position": {
+            "x": 470,
+            "y": 140
+          },
+          "rotation": 0,
+          "text": "LS4  1.100 µH"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "CS4",
+          "id": "instance-label-CS4",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": -20
+          },
+          "position": {
+            "x": 540,
+            "y": 160
+          },
+          "rotation": 0,
+          "text": "CS4  2.309 pF"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "LP5",
+          "id": "instance-label-LP5",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": -10,
+            "y": -10
+          },
+          "position": {
+            "x": 590,
+            "y": 235
+          },
+          "rotation": 0,
+          "text": "LP5  4.332 nH"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "CP5",
+          "id": "instance-label-CP5",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 10,
+            "y": 13
+          },
+          "position": {
+            "x": 660,
+            "y": 258
+          },
+          "rotation": 0,
+          "text": "CP5  586.17 pF"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "LS6",
+          "id": "instance-label-LS6",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": -40
+          },
+          "position": {
+            "x": 720,
+            "y": 140
+          },
+          "rotation": 0,
+          "text": "LS6  994.43 nH"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "CS6",
+          "id": "instance-label-CS6",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": -20
+          },
+          "position": {
+            "x": 790,
+            "y": 160
+          },
+          "rotation": 0,
+          "text": "CS6  2.554 pF"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "LP7",
+          "id": "instance-label-LP7",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": -10,
+            "y": -10
+          },
+          "position": {
+            "x": 840,
+            "y": 235
+          },
+          "rotation": 0,
+          "text": "LP7  7.690 nH"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "CP7",
+          "id": "instance-label-CP7",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 10,
+            "y": 13
+          },
+          "position": {
+            "x": 910,
+            "y": 258
+          },
+          "rotation": 0,
+          "text": "CP7  330.23 pF"
+        },
+        {
+          "alignment": "middle",
+          "id": "title-100mhz-bandpass",
+          "kind": "plain-text",
+          "locked": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 500,
+            "y": 70
+          },
+          "rotation": 0,
+          "text": "100 MHz CHEBYSHEV LC BAND-PASS"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "net-74940a4363813f55",
+          "id": "net-label-in",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 42,
+            "y": 172
+          },
+          "rotation": 0,
+          "text": "IN"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "net-13a38793b18437b9",
+          "id": "net-label-out",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 948,
+            "y": 172
+          },
+          "rotation": 0,
+          "text": "OUT"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "net-f2b6f6939f5ad7dc",
+          "id": "net-label-com",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 500,
+            "y": 382
+          },
+          "rotation": 0,
+          "text": "COM"
+        },
+        {
+          "alignment": "middle",
+          "id": "caption-100mhz-bandpass",
+          "kind": "figure-caption",
+          "locked": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 500,
+            "y": 420
+          },
+          "rotation": 0,
+          "text": "Seventh-order 50 Ω passive band-pass; 94.31–105.77 MHz"
+        }
+      ],
+      "constraints": [],
+      "id": "document-d51a751fc161cc46",
+      "instances": [
+        {
+          "id": "LP1",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 100,
+              "y": 245
+            },
+            "rotation": 90
+          },
+          "properties": {
+            "spice.name": "LP1",
+            "spice.param.value": "7.689782n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 21,
+              "line": 5,
+              "offset": 182
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 5,
+              "offset": 162
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "CP1",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 150,
+              "y": 245
+            },
+            "rotation": 90
+          },
+          "properties": {
+            "spice.name": "CP1",
+            "spice.param.value": "330.227555p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 23,
+              "line": 6,
+              "offset": 205
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 6,
+              "offset": 183
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "LS2",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 220,
+              "y": 180
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "LS2",
+            "spice.param.value": "994.427952n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 22,
+              "line": 7,
+              "offset": 227
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 7,
+              "offset": 206
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "CS2",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 290,
+              "y": 180
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "CS2",
+            "spice.param.value": "2.553607p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 20,
+              "line": 8,
+              "offset": 247
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 8,
+              "offset": 228
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "LP3",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 350,
+              "y": 245
+            },
+            "rotation": 90
+          },
+          "properties": {
+            "spice.name": "LP3",
+            "spice.param.value": "4.332150n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 21,
+              "line": 9,
+              "offset": 268
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 9,
+              "offset": 248
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "CP3",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 400,
+              "y": 245
+            },
+            "rotation": 90
+          },
+          "properties": {
+            "spice.name": "CP3",
+            "spice.param.value": "586.170344p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 23,
+              "line": 10,
+              "offset": 291
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 10,
+              "offset": 269
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "LS4",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 470,
+              "y": 180
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "LS4",
+            "spice.param.value": "1099.679050n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 23,
+              "line": 11,
+              "offset": 314
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 11,
+              "offset": 292
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "CS4",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 540,
+              "y": 180
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "CS4",
+            "spice.param.value": "2.309199p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 20,
+              "line": 12,
+              "offset": 334
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 12,
+              "offset": 315
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "LP5",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 600,
+              "y": 245
+            },
+            "rotation": 90
+          },
+          "properties": {
+            "spice.name": "LP5",
+            "spice.param.value": "4.332150n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 21,
+              "line": 13,
+              "offset": 355
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 13,
+              "offset": 335
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "CP5",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 650,
+              "y": 245
+            },
+            "rotation": 90
+          },
+          "properties": {
+            "spice.name": "CP5",
+            "spice.param.value": "586.170344p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 23,
+              "line": 14,
+              "offset": 378
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 14,
+              "offset": 356
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "LS6",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 720,
+              "y": 180
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "LS6",
+            "spice.param.value": "994.427952n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 22,
+              "line": 15,
+              "offset": 400
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 15,
+              "offset": 379
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "CS6",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 790,
+              "y": 180
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "CS6",
+            "spice.param.value": "2.553607p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 21,
+              "line": 16,
+              "offset": 421
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 16,
+              "offset": 401
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "LP7",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 850,
+              "y": 245
+            },
+            "rotation": 90
+          },
+          "properties": {
+            "spice.name": "LP7",
+            "spice.param.value": "7.689782n",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:inductor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 22,
+              "line": 17,
+              "offset": 443
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 17,
+              "offset": 422
+            }
+          },
+          "symbolId": "inductor"
+        },
+        {
+          "id": "CP7",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 900,
+              "y": 245
+            },
+            "rotation": 90
+          },
+          "properties": {
+            "spice.name": "CP7",
+            "spice.param.value": "330.227555p",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 24,
+              "line": 18,
+              "offset": 467
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 18,
+              "offset": 444
+            }
+          },
+          "symbolId": "capacitor"
+        }
+      ],
+      "junctions": [
+        {
+          "id": "junction-com-100",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 100,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-com-150",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 150,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-com-350",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 350,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-com-400",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 400,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-com-500",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 500,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-com-600",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 600,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-com-650",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 650,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-com-850",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 850,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-com-900",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "position": {
+            "x": 900,
+            "y": 320
+          }
+        },
+        {
+          "id": "junction-in-l",
+          "netId": "net-74940a4363813f55",
+          "position": {
+            "x": 100,
+            "y": 180
+          }
+        },
+        {
+          "id": "junction-in-c",
+          "netId": "net-74940a4363813f55",
+          "position": {
+            "x": 150,
+            "y": 180
+          }
+        },
+        {
+          "id": "junction-n2-l",
+          "netId": "net-749744436383d7ba",
+          "position": {
+            "x": 350,
+            "y": 180
+          }
+        },
+        {
+          "id": "junction-n2-c",
+          "netId": "net-749744436383d7ba",
+          "position": {
+            "x": 400,
+            "y": 180
+          }
+        },
+        {
+          "id": "junction-n4-l",
+          "netId": "net-74973e436383cd88",
+          "position": {
+            "x": 600,
+            "y": 180
+          }
+        },
+        {
+          "id": "junction-n4-c",
+          "netId": "net-74973e436383cd88",
+          "position": {
+            "x": 650,
+            "y": 180
+          }
+        },
+        {
+          "id": "junction-out-l",
+          "netId": "net-13a38793b18437b9",
+          "position": {
+            "x": 850,
+            "y": 180
+          }
+        },
+        {
+          "id": "junction-out-c",
+          "netId": "net-13a38793b18437b9",
+          "position": {
+            "x": 900,
+            "y": 180
+          }
+        }
+      ],
+      "layoutGroups": [],
+      "name": "100 MHz LC Band-Pass",
+      "nets": [
+        {
+          "id": "net-74940a4363813f55",
+          "name": "IN",
+          "ports": [
+            "port-e9ea4648228e46b2"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "LP1",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "CP1",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "LS2",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-13a38793b18437b9",
+          "name": "OUT",
+          "ports": [
+            "port-08e85eb371c0cad3"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "CS6",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "LP7",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "CP7",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-f2b6f6939f5ad7dc",
+          "name": "COM",
+          "ports": [
+            "port-3dee2b3aa7967f87"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "LP1",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "CP1",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "LP3",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "CP3",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "LP5",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "CP5",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "LP7",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "CP7",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-749743436383d607",
+          "name": "N1",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "LS2",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "CS2",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-749744436383d7ba",
+          "name": "N2",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "CS2",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "LP3",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "CP3",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "LS4",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-749745436383d96d",
+          "name": "N3",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "LS4",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "CS4",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-74973e436383cd88",
+          "name": "N4",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "CS4",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "LP5",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "CP5",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "LS6",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-74973f436383cf3b",
+          "name": "N5",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "LS6",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "CS6",
+              "pinName": "1"
+            }
+          ]
+        }
+      ],
+      "ports": [
+        {
+          "direction": "passive",
+          "id": "port-e9ea4648228e46b2",
+          "name": "IN",
+          "position": {
+            "x": 50,
+            "y": 180
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-08e85eb371c0cad3",
+          "name": "OUT",
+          "position": {
+            "x": 940,
+            "y": 180
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-3dee2b3aa7967f87",
+          "name": "COM",
+          "position": {
+            "x": 500,
+            "y": 360
+          }
+        }
+      ],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "textbook-monochrome-v1"
+      },
+      "revision": 3,
+      "routes": [
+        {
+          "from": {
+            "instanceId": "LS2",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-05",
+          "netId": "net-749743436383d607",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "CS2",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "LS4",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-10",
+          "netId": "net-749745436383d96d",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "CS4",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "LS6",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-15",
+          "netId": "net-74973f436383cf3b",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "CS6",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "LP1",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-20",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-100",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "CP1",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-21",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-150",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "LP3",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-22",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-350",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "CP3",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-23",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-400",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "LP5",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-24",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-600",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "CP5",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-25",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-650",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "LP7",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-26",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-850",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "CP7",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-27",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-900",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-100",
+            "kind": "junction"
+          },
+          "id": "route-razavi-28",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-150",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-150",
+            "kind": "junction"
+          },
+          "id": "route-razavi-29",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-350",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-350",
+            "kind": "junction"
+          },
+          "id": "route-razavi-30",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-400",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-400",
+            "kind": "junction"
+          },
+          "id": "route-razavi-31",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-500",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-500",
+            "kind": "junction"
+          },
+          "id": "route-razavi-32",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-600",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-600",
+            "kind": "junction"
+          },
+          "id": "route-razavi-33",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-650",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-650",
+            "kind": "junction"
+          },
+          "id": "route-razavi-34",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-850",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-850",
+            "kind": "junction"
+          },
+          "id": "route-razavi-35",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-com-900",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-com-500",
+            "kind": "junction"
+          },
+          "id": "route-razavi-36",
+          "netId": "net-f2b6f6939f5ad7dc",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "kind": "port",
+            "portId": "port-3dee2b3aa7967f87"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-e9ea4648228e46b2"
+          },
+          "id": "route-razavi-top-01",
+          "netId": "net-74940a4363813f55",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-in-l",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-in-l",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-02",
+          "netId": "net-74940a4363813f55",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "LP1",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-in-l",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-03",
+          "netId": "net-74940a4363813f55",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-in-c",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-in-c",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-04",
+          "netId": "net-74940a4363813f55",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "CP1",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-in-c",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-05",
+          "netId": "net-74940a4363813f55",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "LS2",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "CS2",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-top-06",
+          "netId": "net-749744436383d7ba",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-n2-l",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-n2-l",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-07",
+          "netId": "net-749744436383d7ba",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "LP3",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-n2-l",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-08",
+          "netId": "net-749744436383d7ba",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-n2-c",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-n2-c",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-09",
+          "netId": "net-749744436383d7ba",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "CP3",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-n2-c",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-10",
+          "netId": "net-749744436383d7ba",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "LS4",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "CS4",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-top-11",
+          "netId": "net-74973e436383cd88",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-n4-l",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-n4-l",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-12",
+          "netId": "net-74973e436383cd88",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "LP5",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-n4-l",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-13",
+          "netId": "net-74973e436383cd88",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-n4-c",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-n4-c",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-14",
+          "netId": "net-74973e436383cd88",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "CP5",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-n4-c",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-15",
+          "netId": "net-74973e436383cd88",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "LS6",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "CS6",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-razavi-top-16",
+          "netId": "net-13a38793b18437b9",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-out-l",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-out-l",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-17",
+          "netId": "net-13a38793b18437b9",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "LP7",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-out-l",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-18",
+          "netId": "net-13a38793b18437b9",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-out-c",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-out-c",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-19",
+          "netId": "net-13a38793b18437b9",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "instanceId": "CP7",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-out-c",
+            "kind": "junction"
+          },
+          "id": "route-razavi-top-20",
+          "netId": "net-13a38793b18437b9",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "kind": "port",
+            "portId": "port-08e85eb371c0cad3"
+          },
+          "waypoints": []
+        }
+      ],
+      "sourceBinding": {
+        "cellName": "rlc_rf_bandpass",
+        "sourceRef": {
+          "end": {
+            "column": 22,
+            "line": 19,
+            "offset": 489
+          },
+          "fileId": "source-648e50f6f6cd02ee",
+          "start": {
+            "column": 1,
+            "line": 4,
+            "offset": 127
+          }
+        }
+      },
+      "sourceStatus": "connectivity-modified"
+    }
+  ],
+  "id": "project-6ce82992cc410f42",
+  "name": "100 MHz Chebyshev LC Band-Pass — Razavi Style",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "spice3f5-core",
+    "entry": "circuit.spi",
+    "files": [
+      {
+        "hash": "sha256:2fbd2a7aab4c61ad2a624720d9a09cef93f2f66388b980af0d9776218b486bd4",
+        "id": "source-648e50f6f6cd02ee",
+        "path": "circuit.spi"
+      }
+    ],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "development",
+    "id": "builtin-analog",
+    "version": "0.0.0"
+  },
+  "topDocumentId": "document-d51a751fc161cc46"
+}

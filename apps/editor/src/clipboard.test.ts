@@ -47,8 +47,8 @@ describe("schematic clipboard", () => {
       netId: "net-signal",
       from: { kind: "terminal", instanceId: "R1", pinName: "2" },
       to: { kind: "terminal", instanceId: "R2", pinName: "1" },
-      waypoints: [],
-      segmentModes: ["manual"],
+      waypoints: [{ x: 100, y: 80 }],
+      segmentModes: ["manual", "manual"],
     });
 
     const copied = copySelection(document, ["R1", "R2"]);
@@ -76,6 +76,6 @@ describe("schematic clipboard", () => {
       from: { instanceId: "R1-copy-1" },
       to: { instanceId: "R2-copy-1" },
     });
-    expect(result.document.routes[1]?.waypoints).toEqual([]);
+    expect(result.document.routes[1]?.waypoints).toEqual([{ x: 120, y: 100 }]);
   });
 });

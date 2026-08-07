@@ -46,8 +46,8 @@ describe("connected instance deletion", () => {
       netId: "net-1",
       from: { kind: "terminal", instanceId: "R1", pinName: "2" },
       to: { kind: "terminal", instanceId: "R2", pinName: "1" },
-      waypoints: [],
-      segmentModes: ["manual"],
+      waypoints: [{ x: 100, y: 80 }],
+      segmentModes: ["manual", "manual"],
     });
 
     const result = executeTransaction(
@@ -69,7 +69,7 @@ describe("connected instance deletion", () => {
         junctions: [
           {
             id: "junction-delete-1-1",
-            position: { x: 130, y: 100 },
+            position: { x: 100, y: 120 },
           },
         ],
         routes: [

@@ -1,0 +1,1264 @@
+{
+  "documents": [
+    {
+      "annotations": [
+        {
+          "alignment": "start",
+          "attachedObjectId": "port-d3cecc9f0223b259",
+          "id": "label-vdd",
+          "kind": "power-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 565,
+            "y": 92
+          },
+          "rotation": 0,
+          "text": "VDD"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "port-b48f730bb3b6f731",
+          "id": "label-vss",
+          "kind": "power-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 665,
+            "y": 462
+          },
+          "rotation": 0,
+          "text": "VSS"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "net-e8929fa76ee414ec",
+          "id": "label-vinp",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 165,
+            "y": 262
+          },
+          "rotation": 0,
+          "text": "VIN+"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "net-e892b5a76ee43a4e",
+          "id": "label-vinn",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 635,
+            "y": 262
+          },
+          "rotation": 0,
+          "text": "VIN-"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "net-b598bba7524cd981",
+          "id": "label-vout",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 635,
+            "y": 207
+          },
+          "rotation": 0,
+          "text": "VOUT"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "net-4e77f380ab0a714c",
+          "id": "label-ibias",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 695,
+            "y": 332
+          },
+          "rotation": 0,
+          "text": "IBIAS"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "net-95805a1102a08d09",
+          "id": "label-node-a",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 285,
+            "y": 207
+          },
+          "rotation": 0,
+          "text": "A"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "net-9a84cdb97e87a479",
+          "id": "label-node-p",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 385,
+            "y": 318
+          },
+          "rotation": 0,
+          "text": "P"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "XM3",
+          "id": "instance-label-XM3",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 265,
+            "y": 160
+          },
+          "rotation": 0,
+          "text": "M3"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "XM4",
+          "id": "instance-label-XM4",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 535,
+            "y": 160
+          },
+          "rotation": 0,
+          "text": "M4"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "XM1",
+          "id": "instance-label-XM1",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 315,
+            "y": 270
+          },
+          "rotation": 0,
+          "text": "M1"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "XM2",
+          "id": "instance-label-XM2",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 485,
+            "y": 270
+          },
+          "rotation": 0,
+          "text": "M2"
+        },
+        {
+          "alignment": "end",
+          "attachedObjectId": "XM5",
+          "id": "instance-label-XM5",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 365,
+            "y": 400
+          },
+          "rotation": 0,
+          "text": "M5"
+        },
+        {
+          "alignment": "start",
+          "attachedObjectId": "XM6",
+          "id": "instance-label-XM6",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 615,
+            "y": 400
+          },
+          "rotation": 0,
+          "text": "M6"
+        }
+      ],
+      "constraints": [],
+      "id": "document-72404fc79d737213",
+      "instances": [
+        {
+          "id": "XM1",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 290,
+              "y": 270
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XM1",
+            "spice.param.l": "1.0",
+            "spice.param.nf": "12",
+            "spice.param.w": "96",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 65,
+              "line": 5,
+              "offset": 328
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 5,
+              "offset": 264
+            }
+          },
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "XM2",
+          "placement": {
+            "mirror": "x",
+            "position": {
+              "x": 510,
+              "y": 270
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XM2",
+            "spice.param.l": "1.0",
+            "spice.param.nf": "12",
+            "spice.param.w": "96",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 64,
+              "line": 6,
+              "offset": 392
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 6,
+              "offset": 329
+            }
+          },
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "XM3",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 310,
+              "y": 160
+            },
+            "rotation": 180
+          },
+          "properties": {
+            "spice.name": "XM3",
+            "spice.param.l": "1.0",
+            "spice.param.nf": "8",
+            "spice.param.w": "64",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 64,
+              "line": 7,
+              "offset": 456
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 7,
+              "offset": 393
+            }
+          },
+          "symbolId": "pmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "XM4",
+          "placement": {
+            "mirror": "x",
+            "position": {
+              "x": 490,
+              "y": 160
+            },
+            "rotation": 180
+          },
+          "properties": {
+            "spice.name": "XM4",
+            "spice.param.l": "1.0",
+            "spice.param.nf": "8",
+            "spice.param.w": "64",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 63,
+              "line": 8,
+              "offset": 519
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 8,
+              "offset": 457
+            }
+          },
+          "symbolId": "pmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "XM5",
+          "placement": {
+            "mirror": "x",
+            "position": {
+              "x": 410,
+              "y": 400
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XM5",
+            "spice.param.l": "3",
+            "spice.param.nf": "18",
+            "spice.param.w": "180",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 63,
+              "line": 10,
+              "offset": 663
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 10,
+              "offset": 601
+            }
+          },
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "XM6",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 590,
+              "y": 400
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XM6",
+            "spice.param.l": "3",
+            "spice.param.nf": "6",
+            "spice.param.w": "60",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 62,
+              "line": 11,
+              "offset": 725
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 11,
+              "offset": 664
+            }
+          },
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        }
+      ],
+      "junctions": [
+        {
+          "id": "junction-vdd-left",
+          "netId": "net-b57e2280d26be232",
+          "position": {
+            "x": 300,
+            "y": 100
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-vdd-right",
+          "netId": "net-b57e2280d26be232",
+          "position": {
+            "x": 500,
+            "y": 100
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-left-node",
+          "netId": "net-95805a1102a08d09",
+          "position": {
+            "x": 300,
+            "y": 215
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-vout",
+          "netId": "net-b598bba7524cd981",
+          "position": {
+            "x": 500,
+            "y": 215
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-tail",
+          "netId": "net-9a84cdb97e87a479",
+          "position": {
+            "x": 400,
+            "y": 300
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-bias",
+          "netId": "net-4e77f380ab0a714c",
+          "position": {
+            "x": 600,
+            "y": 340
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-vss-left",
+          "netId": "net-b5372d80d22ff240",
+          "position": {
+            "x": 400,
+            "y": 470
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-vss-right",
+          "netId": "net-b5372d80d22ff240",
+          "position": {
+            "x": 600,
+            "y": 470
+          },
+          "role": "branch"
+        }
+      ],
+      "layoutGroups": [],
+      "name": "Five-Transistor OTA",
+      "nets": [
+        {
+          "id": "net-b5372d80d22ff240",
+          "name": "vss",
+          "ports": [
+            "port-b48f730bb3b6f731"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XM1",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "XM2",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "XM5",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XM5",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "XM6",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XM6",
+              "pinName": "B"
+            }
+          ]
+        },
+        {
+          "id": "net-4e77f380ab0a714c",
+          "name": "ibias",
+          "ports": [
+            "port-617f204bc42b035e"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XM5",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "XM6",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "XM6",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-b57e2280d26be232",
+          "name": "vdd",
+          "ports": [
+            "port-d3cecc9f0223b259"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XM3",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XM3",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "XM4",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XM4",
+              "pinName": "B"
+            }
+          ]
+        },
+        {
+          "id": "net-e892b5a76ee43a4e",
+          "name": "vinn",
+          "ports": [
+            "port-81ed2d99db54a186"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XM2",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-e8929fa76ee414ec",
+          "name": "vinp",
+          "ports": [
+            "port-2e9bb5154875d7af"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XM1",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-b598bba7524cd981",
+          "name": "vout",
+          "ports": [
+            "port-72ab07243ff0db7b"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XM2",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "XM4",
+              "pinName": "D"
+            }
+          ]
+        },
+        {
+          "id": "net-95805a1102a08d09",
+          "name": "nleft",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XM1",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "XM3",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "XM3",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "XM4",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-9a84cdb97e87a479",
+          "name": "tail",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XM1",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XM2",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XM5",
+              "pinName": "D"
+            }
+          ]
+        }
+      ],
+      "ports": [
+        {
+          "direction": "passive",
+          "id": "port-b48f730bb3b6f731",
+          "name": "vss",
+          "position": {
+            "x": 640,
+            "y": 470
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-617f204bc42b035e",
+          "name": "ibias",
+          "position": {
+            "x": 680,
+            "y": 340
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-d3cecc9f0223b259",
+          "name": "vdd",
+          "position": {
+            "x": 540,
+            "y": 100
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-81ed2d99db54a186",
+          "name": "vinn",
+          "position": {
+            "x": 620,
+            "y": 270
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-2e9bb5154875d7af",
+          "name": "vinp",
+          "position": {
+            "x": 180,
+            "y": 270
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-72ab07243ff0db7b",
+          "name": "vout",
+          "position": {
+            "x": 620,
+            "y": 215
+          }
+        }
+      ],
+      "presentation": {
+        "compactness": "compact",
+        "flow": {
+          "ground": "bottom",
+          "input": "left",
+          "output": "right",
+          "power": "top"
+        },
+        "grid": 10,
+        "styleProfileId": "razavi-textbook-v1"
+      },
+      "revision": 3,
+      "routes": [
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-d3cecc9f0223b259"
+          },
+          "id": "route-ota-001",
+          "netId": "net-b57e2280d26be232",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-vdd-right",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-vdd-right",
+            "kind": "junction"
+          },
+          "id": "route-ota-002",
+          "netId": "net-b57e2280d26be232",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-vdd-left",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-vdd-left",
+            "kind": "junction"
+          },
+          "id": "route-ota-003",
+          "netId": "net-b57e2280d26be232",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM3",
+            "kind": "terminal",
+            "pinName": "S"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-vdd-right",
+            "kind": "junction"
+          },
+          "id": "route-ota-004",
+          "netId": "net-b57e2280d26be232",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM4",
+            "kind": "terminal",
+            "pinName": "S"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XM3",
+            "kind": "terminal",
+            "pinName": "D"
+          },
+          "id": "route-ota-005",
+          "netId": "net-95805a1102a08d09",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "junctionId": "junction-left-node",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-left-node",
+            "kind": "junction"
+          },
+          "id": "route-ota-006",
+          "netId": "net-95805a1102a08d09",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM1",
+            "kind": "terminal",
+            "pinName": "D"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XM3",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "id": "route-ota-007",
+          "netId": "net-95805a1102a08d09",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM4",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-left-node",
+            "kind": "junction"
+          },
+          "id": "route-ota-008",
+          "netId": "net-95805a1102a08d09",
+          "segmentModes": [
+            "manual",
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM3",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "waypoints": [
+            {
+              "x": 330,
+              "y": 215
+            }
+          ]
+        },
+        {
+          "from": {
+            "instanceId": "XM4",
+            "kind": "terminal",
+            "pinName": "D"
+          },
+          "id": "route-ota-009",
+          "netId": "net-b598bba7524cd981",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "junctionId": "junction-vout",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-vout",
+            "kind": "junction"
+          },
+          "id": "route-ota-010",
+          "netId": "net-b598bba7524cd981",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM2",
+            "kind": "terminal",
+            "pinName": "D"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-vout",
+            "kind": "junction"
+          },
+          "id": "route-ota-011",
+          "netId": "net-b598bba7524cd981",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "kind": "port",
+            "portId": "port-72ab07243ff0db7b"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-2e9bb5154875d7af"
+          },
+          "id": "route-ota-012",
+          "netId": "net-e8929fa76ee414ec",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM1",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XM2",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "id": "route-ota-013",
+          "netId": "net-e892b5a76ee43a4e",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "kind": "port",
+            "portId": "port-81ed2d99db54a186"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XM1",
+            "kind": "terminal",
+            "pinName": "S"
+          },
+          "id": "route-ota-014",
+          "netId": "net-9a84cdb97e87a479",
+          "segmentModes": [
+            "manual",
+            "manual"
+          ],
+          "to": {
+            "junctionId": "junction-tail",
+            "kind": "junction"
+          },
+          "waypoints": [
+            {
+              "x": 300,
+              "y": 300
+            }
+          ]
+        },
+        {
+          "from": {
+            "instanceId": "XM2",
+            "kind": "terminal",
+            "pinName": "S"
+          },
+          "id": "route-ota-015",
+          "netId": "net-9a84cdb97e87a479",
+          "segmentModes": [
+            "manual",
+            "manual"
+          ],
+          "to": {
+            "junctionId": "junction-tail",
+            "kind": "junction"
+          },
+          "waypoints": [
+            {
+              "x": 500,
+              "y": 300
+            }
+          ]
+        },
+        {
+          "from": {
+            "junctionId": "junction-tail",
+            "kind": "junction"
+          },
+          "id": "route-ota-016",
+          "netId": "net-9a84cdb97e87a479",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM5",
+            "kind": "terminal",
+            "pinName": "D"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XM5",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "id": "route-ota-017",
+          "netId": "net-4e77f380ab0a714c",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "instanceId": "XM6",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XM6",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "id": "route-ota-018",
+          "netId": "net-4e77f380ab0a714c",
+          "segmentModes": [
+            "manual",
+            "manual"
+          ],
+          "to": {
+            "junctionId": "junction-bias",
+            "kind": "junction"
+          },
+          "waypoints": [
+            {
+              "x": 570,
+              "y": 340
+            }
+          ]
+        },
+        {
+          "from": {
+            "instanceId": "XM6",
+            "kind": "terminal",
+            "pinName": "D"
+          },
+          "id": "route-ota-019",
+          "netId": "net-4e77f380ab0a714c",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "junctionId": "junction-bias",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-bias",
+            "kind": "junction"
+          },
+          "id": "route-ota-020",
+          "netId": "net-4e77f380ab0a714c",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "kind": "port",
+            "portId": "port-617f204bc42b035e"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-b48f730bb3b6f731"
+          },
+          "id": "route-ota-021",
+          "netId": "net-b5372d80d22ff240",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-vss-right",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-vss-right",
+            "kind": "junction"
+          },
+          "id": "route-ota-022",
+          "netId": "net-b5372d80d22ff240",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "junction-vss-left",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XM5",
+            "kind": "terminal",
+            "pinName": "S"
+          },
+          "id": "route-ota-023",
+          "netId": "net-b5372d80d22ff240",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "junctionId": "junction-vss-left",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XM6",
+            "kind": "terminal",
+            "pinName": "S"
+          },
+          "id": "route-ota-024",
+          "netId": "net-b5372d80d22ff240",
+          "segmentModes": [
+            "manual"
+          ],
+          "to": {
+            "junctionId": "junction-vss-right",
+            "kind": "junction"
+          },
+          "waypoints": []
+        }
+      ],
+      "sourceBinding": {
+        "cellName": "ota_5t",
+        "sourceRef": {
+          "end": {
+            "column": 13,
+            "line": 12,
+            "offset": 738
+          },
+          "fileId": "source-648e50f6f6cd02ee",
+          "start": {
+            "column": 1,
+            "line": 4,
+            "offset": 220
+          }
+        }
+      },
+      "sourceStatus": "connectivity-modified"
+    }
+  ],
+  "id": "project-7ebbe00ae0ab7698",
+  "name": "SKY130 Five-Transistor OTA - Razavi Style",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "spice3f5-core",
+    "entry": "circuit.spi",
+    "files": [
+      {
+        "hash": "sha256:4dd60e416c086d006b14635ddbb861df2c768008594555c7f943e0600d52d1d4",
+        "id": "source-648e50f6f6cd02ee",
+        "path": "circuit.spi"
+      }
+    ],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "development",
+    "id": "builtin-analog",
+    "version": "0.0.0"
+  },
+  "topDocumentId": "document-72404fc79d737213"
+}

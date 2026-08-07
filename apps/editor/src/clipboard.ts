@@ -51,8 +51,10 @@ export function copySelection(
     ),
     annotations: document.annotations.filter(
       (annotation) =>
-        annotation.attachedObjectId !== undefined &&
-        attachedIds.has(annotation.attachedObjectId),
+        (annotation.attachedObjectId !== undefined &&
+          attachedIds.has(annotation.attachedObjectId)) ||
+        (annotation.routeAttachment !== undefined &&
+          routeIds.has(annotation.routeAttachment.routeId)),
     ),
   });
 }
@@ -239,6 +241,16 @@ export function proposePaste(
               attachedObjectId:
                 objectIds.get(annotation.attachedObjectId) ??
                 annotation.attachedObjectId,
+            }
+          : {}),
+        ...(annotation.routeAttachment
+          ? {
+              routeAttachment: {
+                ...annotation.routeAttachment,
+                routeId:
+                  routeIds.get(annotation.routeAttachment.routeId) ??
+                  annotation.routeAttachment.routeId,
+              },
             }
           : {}),
       },
