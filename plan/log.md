@@ -639,3 +639,25 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
   untracked and untouched.
 - Commit status: ready for the dedicated RV-3 commit.
+
+## 2026-08-07 - Add Razavi RV-4 schematic typography
+
+- Target: implement the frozen schematic-math and label typography contract
+  for `razavi-textbook-v1` without changing persisted text or legacy output.
+- Changed areas: profile typography tokens, schematic-text parser/composer,
+  renderer text consumers, parser/renderer tests, and visual-language/style
+  specifications.
+- Razavi behavior: instance and recognized V/I labels render as italic-bold
+  base/subscript `<tspan>` runs; explicit underscore has priority; trailing
+  `+`/`-` uses a separate upright suffix; plain notes and figure captions are
+  not implicitly parsed. Semantic kinds select their profile font sizes.
+- Transform and compatibility behavior: instance and visible pin text remains
+  outside component rotate/mirror transforms. The legacy profile emits its
+  prior plain escaped text and retained byte-identical Phase 1/5 and Phase 7
+  goldens.
+- Validation: 23 focused tests, 149 full tests in 36 files, typecheck, build,
+  formatting, Phase 1/5 visual goldens, Phase 7 export goldens, and
+  `git diff --check` passed.
+- Dirty-state decision: user-confirmed concurrent OTA `razavi-*` files remained
+  untracked and untouched.
+- Commit status: ready for the dedicated RV-4 commit.

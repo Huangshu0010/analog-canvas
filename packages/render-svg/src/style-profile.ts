@@ -20,8 +20,22 @@ export interface SchematicStyleProfile {
   readonly lineJoin: "miter" | "round" | "bevel";
   readonly miterLimit: number;
   readonly scaleFormalStrokes: boolean;
-  readonly fontFamily: string;
-  readonly fontSize: number;
+  readonly typography: {
+    readonly fontFamily: string;
+    readonly mathWeight: number;
+    readonly mathStyle: "italic";
+    readonly plainWeight: number;
+    readonly instanceFontSize: number;
+    readonly netFontSize: number;
+    readonly powerFontSize: number;
+    readonly annotationFontSize: number;
+    readonly polarityFontSize: number;
+    readonly captionFontSize: number;
+    readonly subscriptScale: number;
+    readonly subscriptBaselineShiftEm: number;
+    readonly labelGap: number;
+    readonly lineHeight: number;
+  };
 }
 
 export const textbookMonochromeProfile: SchematicStyleProfile = {
@@ -41,8 +55,22 @@ export const textbookMonochromeProfile: SchematicStyleProfile = {
   lineJoin: "miter",
   miterLimit: 4,
   scaleFormalStrokes: false,
-  fontFamily: "Georgia,'Times New Roman',serif",
-  fontSize: 12,
+  typography: {
+    fontFamily: "Georgia,'Times New Roman',serif",
+    mathWeight: 700,
+    mathStyle: "italic",
+    plainWeight: 400,
+    instanceFontSize: 12,
+    netFontSize: 12,
+    powerFontSize: 12,
+    annotationFontSize: 12,
+    polarityFontSize: 12,
+    captionFontSize: 12,
+    subscriptScale: 0.68,
+    subscriptBaselineShiftEm: 0.3,
+    labelGap: 2,
+    lineHeight: 1,
+  },
 };
 
 export const razaviTextbookProfile: SchematicStyleProfile = {
@@ -62,8 +90,22 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
   lineJoin: "miter",
   miterLimit: 4,
   scaleFormalStrokes: true,
-  fontFamily: "Arial,'Helvetica Neue',Helvetica,sans-serif",
-  fontSize: 16,
+  typography: {
+    fontFamily: "Arial,'Helvetica Neue',Helvetica,sans-serif",
+    mathWeight: 700,
+    mathStyle: "italic",
+    plainWeight: 400,
+    instanceFontSize: 16,
+    netFontSize: 16,
+    powerFontSize: 16,
+    annotationFontSize: 16,
+    polarityFontSize: 14,
+    captionFontSize: 14,
+    subscriptScale: 0.68,
+    subscriptBaselineShiftEm: 0.3,
+    labelGap: 6,
+    lineHeight: 1,
+  },
 };
 
 const profiles = new Map<string, SchematicStyleProfile>([

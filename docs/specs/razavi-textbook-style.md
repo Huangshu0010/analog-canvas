@@ -282,6 +282,12 @@ Rules:
   included in a math run.
 - Text stays upright under component rotation or mirroring.
 
+The renderer implements these rules without rewriting persisted annotation
+text. Implicit voltage/current parsing keeps a trailing `+` or `-` in a
+separate upright suffix run; an underscore makes the following content an
+explicit math run. The compatibility profile emits the original escaped text
+without `<tspan>` composition, preserving its byte goldens.
+
 SVG uses `<tspan>` runs with deterministic baseline offsets. PNG and PDF must
 be generated from the same SVG scene so text composition cannot diverge.
 

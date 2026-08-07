@@ -17,6 +17,10 @@ import {
   textbookMonochromeProfile,
 } from "./style-profile.js";
 import type { SchematicStyleProfile } from "./style-profile.js";
+import {
+  renderSchematicTextContent,
+  schematicTextSizeAttribute,
+} from "./schematic-text.js";
 
 export interface SvgRenderOptions {
   bounds?: Rect;
@@ -139,6 +143,7 @@ function renderVisiblePinNames(
   definition: SymbolDefinition,
   hiddenPinNames: readonly string[],
   instance: SchematicDocument["instances"][number],
+  profile: SchematicStyleProfile,
 ): string {
   const placement = instance.placement;
   if (!placement) return "";
@@ -158,7 +163,11 @@ function renderVisiblePinNames(
       const y = anchor.y - outward.y * distance + 4;
       const alignment =
         outward.x < 0 ? "start" : outward.x > 0 ? "end" : "middle";
-      return `<text data-pin-name="${escapeXml(pin.name)}" x="${x}" y="${y}" text-anchor="${alignment}" style="font-size:8px">${escapeXml(pin.name)}</text>`;
+      const sizeAttribute =
+        profile.id === "textbook-monochrome-v1"
+          ? ' style="font-size:8px"'
+          : schematicTextSizeAttribute("pin-name", profile);
+      return `<text data-pin-name="${escapeXml(pin.name)}" x="${x}" y="${y}" text-anchor="${alignment}"${sizeAttribute}>${renderSchematicTextContent(pin.name, "pin-name", profile)}</text>`;
     })
     .join("");
 }
@@ -341,13 +350,20 @@ export function buildSvgScene(
         resolved.definition,
         resolved.variant?.hiddenPinNames ?? [],
         instance,
+        profile,
       );
       const bounds = symbolBounds(resolved.definition, instance);
       const labelX = bounds.x + bounds.width / 2;
-      const labelY = bounds.y + bounds.height + 14;
+      const labelY =
+        profile.id === "textbook-monochrome-v1"
+          ? bounds.y + bounds.height + 14
+          : bounds.y +
+            bounds.height +
+            profile.typography.labelGap +
+            profile.typography.instanceFontSize;
       const defaultLabel = explicitInstanceLabels.has(instance.id)
         ? ""
-        : `<text x="${labelX}" y="${labelY}" text-anchor="middle">${escapeXml(instance.id)}</text>`;
+        : `<text x="${labelX}" y="${labelY}" text-anchor="middle"${schematicTextSizeAttribute("default-instance", profile)}>${renderSchematicTextContent(instance.id, "default-instance", profile)}</text>`;
       return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}>${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
     })
     .join("");
@@ -367,15 +383,17 @@ export function buildSvgScene(
         const textX = vertical ? x + 15 : x;
         const textY = vertical ? y + 4 : y - 7;
         const textAnchor = vertical ? "start" : annotation.alignment;
-        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}">${escapeXml(annotation.text)}</text></g>`;
+        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
       }
       const emphasis =
+        profile.id === "textbook-monochrome-v1" &&
         annotation.kind === "power-label"
           ? ' font-weight="bold"'
-          : annotation.kind === "figure-caption"
+          : profile.id === "textbook-monochrome-v1" &&
+              annotation.kind === "figure-caption"
             ? ' font-style="italic"'
             : "";
-      return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}>${escapeXml(annotation.text)}</text>`;
+      return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile)}>${renderSchematicTextContent(annotation.text, annotation.kind, profile)}</text>`;
     })
     .join("");
 
@@ -399,5 +417,5 @@ export function renderDocumentSvg(
   const scalingRule = profile.scaleFormalStrokes
     ? ""
     : "path,polyline,line,circle{vector-effect:non-scaling-stroke}";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" role="img" aria-labelledby="title" data-style-profile="${profile.id}"><title id="title">${title}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${profile.background}"/><style>text{fill:${profile.foreground};font-family:${profile.fontFamily};font-size:${profile.fontSize}px}${scalingRule}</style>${scene.formalBody}</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${width} ${height}" role="img" aria-labelledby="title" data-style-profile="${profile.id}"><title id="title">${title}</title><rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${profile.background}"/><style>text{fill:${profile.foreground};font-family:${profile.typography.fontFamily};font-size:${profile.typography.annotationFontSize}px}${scalingRule}</style>${scene.formalBody}</svg>\n`;
 }

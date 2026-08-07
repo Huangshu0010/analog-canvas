@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.3`
+Version: `1.4`
 
 Owning phase: `Phase 1/5`
 
@@ -59,6 +59,17 @@ strokeLinecap: butt
 strokeLinejoin: miter
 strokeMiterLimit: 4
 scaleFormalStrokes: true
+fontFamily: "Arial, Helvetica Neue, Helvetica, sans-serif"
+mathWeight: 700
+mathStyle: italic
+instanceFontSize: 16
+netFontSize: 16
+powerFontSize: 16
+annotationFontSize: 16
+captionFontSize: 14
+subscriptScale: 0.68
+subscriptBaselineShift: 0.30em downward
+labelGap: 6
 ```
 
 Unknown persisted profile IDs are blocking render errors; the renderer never
@@ -78,6 +89,14 @@ Their text and position are editable without changing stable instance IDs.
 Net labels are formal electrical annotations tied to a logical Net; plain text
 has no electrical meaning.
 
+Under `razavi-textbook-v1`, instance identifiers and recognized voltage,
+current, power, and pin labels are composed into deterministic SVG
+`<tspan>` runs. An explicit underscore selects the subscript; otherwise an
+instance designator or leading `V`/`I` is the base. Trailing `+` and `-` signs
+remain upright. Notes and figure captions are never parsed implicitly. The
+persisted annotation string remains unchanged, and the same composed formal
+SVG scene feeds SVG, PNG, and PDF export.
+
 Derived visual diagnostics cover unplaced or unresolved symbols, symbol and
 label overlap, short route segments, ambiguous Junction dots, unsatisfied
 layout constraints, and optional export-page bounds. Diagnostics never mutate
@@ -92,6 +111,8 @@ spacing and layout-quality findings are warnings.
   symbol explicitly requires another choice.
 - Instance transforms apply local x-coordinate mirror, then rotation, then
   translation, matching the model coordinate contract.
+- Instance and pin text is emitted outside component transforms, so component
+  rotation and mirroring cannot rotate or mirror its glyphs.
 - Object and layer ordering is deterministic by stable ID and fixed layer
   order.
 - Selection, hit targets, grid, drag preview, diagnostics, and flightlines are

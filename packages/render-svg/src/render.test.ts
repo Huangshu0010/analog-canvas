@@ -263,6 +263,18 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain(
       "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
     );
+    expect(svg).toContain(
+      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">M</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">1</tspan>',
+    );
+    expect(svg).toContain(
+      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">DD</tspan>',
+    );
+    expect(svg).toContain(
+      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">I</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">tail</tspan>',
+    );
+    expect(svg).toMatch(
+      /data-kind="figure-caption"[^>]*>Original matched differential stage<\/text>/u,
+    );
     const widths = new Set(
       [...svg.matchAll(/stroke-width="([^"]+)"/gu)].map((match) => match[1]),
     );
