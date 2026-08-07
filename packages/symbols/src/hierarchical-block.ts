@@ -15,6 +15,9 @@ export function createHierarchicalBlockSymbol(
   const cellName = document.sourceBinding?.cellName;
   if (!cellName || document.ports.length === 0) return null;
   const positional = createGenericBlockSymbol(document.ports.length);
+  const implicitSupplyPins = document.ports
+    .map((port) => port.name)
+    .filter((name) => /^(?:gnd|ground|vcc|vdd|vee|vss)$/iu.test(name));
   return SymbolDefinitionSchema.parse({
     ...positional,
     id: hierarchicalSymbolId(cellName),
@@ -28,6 +31,15 @@ export function createHierarchicalBlockSymbol(
         showName: true,
       },
     })),
+    variants:
+      implicitSupplyPins.length === 0
+        ? []
+        : [
+            {
+              id: "implicit-supplies",
+              hiddenPinNames: implicitSupplyPins,
+            },
+          ],
   });
 }
 

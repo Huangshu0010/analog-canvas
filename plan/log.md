@@ -774,3 +774,25 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Dirty-state decision: unrelated documentation and OTA work remained
   untouched and was not staged.
 - Commit status: ready for the dedicated fixture commit.
+
+## 2026-08-07 - Generate a headless SKY130 divide-by-two schematic
+
+- Target: turn `sky130-transistor-divide-by-2/circuit.spi` into a fast editable
+  top-level schematic while retaining its seven-Document hierarchy.
+- Changed areas: one deterministic typed-edit recipe, Project/SVG/PNG/PDF
+  outputs, and an opt-in hierarchical implicit-supply symbol variant with
+  focused tests.
+- Electrical result: all source instances, Nets, subcircuit interfaces, and
+  VDD/VSS memberships remain canonical. The top page has 8 placed instances,
+  10 Nets, 24 Routes, 9 Junctions, and 0 flightlines.
+- Presentation result: repeated hierarchical supply pins are hidden only in
+  the selected top-level presentation; the visible state capacitor and reset
+  transistor retain an explicit VSS rail. PNG inspection passed with 0 visual
+  diagnostics. Twenty derived crossing records remain in the rapid functional
+  view, including same-Net joins and visible feedback/reset crossings.
+- Validation: 2 focused hierarchical-symbol tests, symbols build, headless
+  generation, canonical/topology/visibility assertions, PNG inspection, and
+  repository whitespace/status checks.
+- Dirty-state decision: unrelated documentation and OTA work remained
+  untouched and unstaged.
+- Commit status: ready for the dedicated divider fixture commit.
