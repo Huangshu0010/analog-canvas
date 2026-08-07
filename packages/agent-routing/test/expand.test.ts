@@ -44,7 +44,8 @@ const baseGraph = (overrides: Partial<RouteGraph>): RouteGraph => ({
 });
 
 describe("expandRouteGraph", () => {
-  it("emits one escape edge for a direct endpoint-to-tap graph", () => {
+  it("emits set_route_points (not route_orthogonal) for an aligned escape edge", () => {
+    // terminal at (100,200) northward; tap at (100,100) — axis-aligned (same x).
     const graph = baseGraph({
       nodes: [
         {
@@ -52,7 +53,7 @@ describe("expandRouteGraph", () => {
           role: "endpoint",
           endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
         },
-        { id: "tap0", role: "tap", at: { x: 200, y: 200 } },
+        { id: "tap0", role: "tap", at: { x: 100, y: 100 } },
       ],
       edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
     });
@@ -61,11 +62,55 @@ describe("expandRouteGraph", () => {
       input([term("a", 100, 200, "M1", "D")]),
     );
     expect(result.conflicts).toEqual([]);
-    expect(result.edits).toHaveLength(2);
+    expect(result.edits).toHaveLength(2); // add_junction + set_route_points
     expect(result.edits[0]!.kind).toBe("add_junction");
-    expect(result.edits[1]!.kind).toBe("route_orthogonal");
+    expect(result.edits[1]!.kind).toBe("set_route_points");
     expect(result.metrics.routeCount).toBe(1);
     expect(result.metrics.junctionCount).toBe(1);
+  });
+
+  it("returns MISALIGNED_EDGE when an escape edge is not axis-aligned", () => {
+    // terminal at (100,200), tap at (200,100) — diagonal, not aligned.
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "a",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+        },
+        { id: "tap0", role: "tap", at: { x: 200, y: 100 } },
+      ],
+      edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
+    });
+    const result = expandRouteGraph(
+      graph,
+      input([term("a", 100, 200, "M1", "D")]),
+    );
+    expect(result.conflicts.some((c) => c.code === "MISALIGNED_EDGE")).toBe(
+      true,
+    );
+  });
+
+  it("returns ESCAPE_DIRECTION when escape goes against the terminal outward", () => {
+    // terminal at (100,200) outward (0,-1)=north; tap at (100,300) — south.
+    const graph = baseGraph({
+      nodes: [
+        {
+          id: "a",
+          role: "endpoint",
+          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+        },
+        { id: "tap0", role: "tap", at: { x: 100, y: 300 } },
+      ],
+      edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
+    });
+    const result = expandRouteGraph(
+      graph,
+      input([term("a", 100, 200, "M1", "D")]),
+    );
+    expect(result.conflicts.some((c) => c.code === "ESCAPE_DIRECTION")).toBe(
+      true,
+    );
   });
 
   it("snaps tap positions to the 10-unit grid", () => {
@@ -76,7 +121,7 @@ describe("expandRouteGraph", () => {
           role: "endpoint",
           endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
         },
-        { id: "tap0", role: "tap", at: { x: 207, y: 213 } },
+        { id: "tap0", role: "tap", at: { x: 100, y: 93 } },
       ],
       edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
     });
@@ -91,29 +136,7 @@ describe("expandRouteGraph", () => {
     expect(junction.position.y % 10).toBe(0);
   });
 
-  it("resolves a tap aligned with an endpoint on the y axis (vertical trunk)", () => {
-    const graph = baseGraph({
-      nodes: [
-        {
-          id: "a",
-          role: "endpoint",
-          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
-        },
-        { id: "tap0", role: "tap", alignWith: "a", axis: "y", offset: 100 },
-      ],
-      edges: [{ id: "e0", from: "a", to: "tap0", role: "escape" }],
-    });
-    const result = expandRouteGraph(
-      graph,
-      input([term("a", 100, 200, "M1", "D")]),
-    );
-    expect(result.conflicts).toEqual([]);
-    const junction = result.edits.find((e) => e.kind === "add_junction")!;
-    if (junction.kind !== "add_junction") return;
-    expect(junction.position).toEqual({ x: 200, y: 200 });
-  });
-
-  it("emits a trunk edge between two taps as set_route_points with trunk mode", () => {
+  it("emits a trunk edge as set_route_points with trunk mode when axis-aligned", () => {
     const graph = baseGraph({
       nodes: [
         { id: "tap0", role: "tap", at: { x: 200, y: 100 } },
@@ -128,6 +151,20 @@ describe("expandRouteGraph", () => {
     expect(route.segmentModes).toEqual(["trunk"]);
     expect(route.from).toEqual({ kind: "junction", junctionId: "tap0" });
     expect(route.to).toEqual({ kind: "junction", junctionId: "tap1" });
+  });
+
+  it("returns MISALIGNED_EDGE for a diagonal trunk edge", () => {
+    const graph = baseGraph({
+      nodes: [
+        { id: "tap0", role: "tap", at: { x: 100, y: 100 } },
+        { id: "tap1", role: "tap", at: { x: 200, y: 300 } },
+      ],
+      edges: [{ id: "trunk0", from: "tap0", to: "tap1", role: "trunk" }],
+    });
+    const result = expandRouteGraph(graph, input([]));
+    expect(result.conflicts.some((c) => c.code === "MISALIGNED_EDGE")).toBe(
+      true,
+    );
   });
 
   it("emits a label edge as a net-label annotation", () => {
@@ -181,59 +218,44 @@ describe("expandRouteGraph", () => {
     expect(result.metrics.junctionCount).toBe(0);
   });
 
-  it("returns ESCAPE_MALFORMED when an escape edge connects two endpoints", () => {
+  it("reports WIRE_THROUGH_SYMBOL when a segment crosses an instance box", () => {
     const graph = baseGraph({
       nodes: [
-        {
-          id: "a",
-          role: "endpoint",
-          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
-        },
-        {
-          id: "b",
-          role: "endpoint",
-          endpoint: { kind: "terminal", instanceId: "M2", pinName: "S" },
-        },
+        { id: "tap0", role: "tap", at: { x: 100, y: 100 } },
+        { id: "tap1", role: "tap", at: { x: 300, y: 100 } },
       ],
-      edges: [{ id: "e0", from: "a", to: "b", role: "escape" }],
+      edges: [{ id: "trunk0", from: "tap0", to: "tap1", role: "trunk" }],
     });
-    const result = expandRouteGraph(
-      graph,
-      input([term("a", 100, 200, "M1", "D"), term("b", 200, 200, "M2", "S")]),
-    );
-    expect(result.conflicts.some((c) => c.code === "ESCAPE_MALFORMED")).toBe(
+    const inp = {
+      endpoints: new Map(),
+      existingRoutePolylines: [],
+      instanceBoxes: [
+        { instanceId: "M1", min: { x: 180, y: 80 }, max: { x: 220, y: 120 } },
+      ],
+    };
+    const result = expandRouteGraph(graph, inp);
+    expect(result.conflicts.some((c) => c.code === "WIRE_THROUGH_SYMBOL")).toBe(
       true,
     );
   });
 
-  it("resolves alignWith transitively (tap aligns with another tap)", () => {
+  it("resolvedGeometry matches the actual polyline (no hidden bends)", () => {
+    // If the helper returns [from, to], the Engine must store exactly that —
+    // no route_orthogonal guessing extra bends.
     const graph = baseGraph({
       nodes: [
-        {
-          id: "a",
-          role: "endpoint",
-          endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
-        },
-        { id: "tap0", role: "tap", alignWith: "a", axis: "y", offset: 100 },
-        { id: "tap1", role: "tap", alignWith: "tap0", axis: "x", offset: 50 },
+        { id: "tap0", role: "tap", at: { x: 200, y: 100 } },
+        { id: "tap1", role: "tap", at: { x: 200, y: 300 } },
       ],
-      edges: [
-        { id: "e0", from: "a", to: "tap0", role: "escape" },
-        { id: "t0", from: "tap0", to: "tap1", role: "trunk" },
-      ],
+      edges: [{ id: "trunk0", from: "tap0", to: "tap1", role: "trunk" }],
     });
-    const result = expandRouteGraph(
-      graph,
-      input([term("a", 100, 200, "M1", "D")]),
-    );
+    const result = expandRouteGraph(graph, input([]));
     expect(result.conflicts).toEqual([]);
-    const junctions = result.edits.filter((e) => e.kind === "add_junction");
-    expect(junctions).toHaveLength(2);
-    const tap1 = junctions.find(
-      (e): e is Extract<typeof e, { kind: "add_junction" }> =>
-        e.kind === "add_junction" && e.junctionId === "tap1",
-    )!;
-    expect(tap1.position).toEqual({ x: 200, y: 250 });
+    expect(result.resolvedGeometry).toHaveLength(1);
+    expect(result.resolvedGeometry[0]!.points).toEqual([
+      { x: 200, y: 100 },
+      { x: 200, y: 300 },
+    ]);
   });
 
   it("is deterministic: same graph + input yields identical output", () => {

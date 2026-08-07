@@ -1,0 +1,2498 @@
+{
+  "documents": [
+    {
+      "annotations": [],
+      "constraints": [],
+      "id": "document-82822626bf0850db",
+      "instances": [
+        {
+          "id": "XDP",
+          "placement": null,
+          "properties": {
+            "spice.name": "XDP",
+            "spice.param.l": "0.15",
+            "spice.param.nf": "1",
+            "spice.param.w": "1.2",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 63,
+              "line": 4,
+              "offset": 248
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 4,
+              "offset": 186
+            }
+          },
+          "symbolId": "pmos"
+        },
+        {
+          "id": "XDN",
+          "placement": null,
+          "properties": {
+            "spice.name": "XDN",
+            "spice.param.l": "0.15",
+            "spice.param.nf": "1",
+            "spice.param.w": "0.6",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 63,
+              "line": 5,
+              "offset": 311
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 5,
+              "offset": 249
+            }
+          },
+          "symbolId": "nmos"
+        },
+        {
+          "id": "XSP",
+          "placement": null,
+          "properties": {
+            "spice.name": "XSP",
+            "spice.param.l": "0.15",
+            "spice.param.nf": "2",
+            "spice.param.w": "4",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__pfet_01v8",
+            "symbol.mapping.registry": "sky130-pfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 61,
+              "line": 6,
+              "offset": 372
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 6,
+              "offset": 312
+            }
+          },
+          "symbolId": "pmos"
+        },
+        {
+          "id": "XSN",
+          "placement": null,
+          "properties": {
+            "spice.name": "XSN",
+            "spice.param.l": "0.15",
+            "spice.param.nf": "1",
+            "spice.param.w": "2",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 61,
+              "line": 7,
+              "offset": 433
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 7,
+              "offset": 373
+            }
+          },
+          "symbolId": "nmos"
+        }
+      ],
+      "junctions": [],
+      "layoutGroups": [],
+      "name": "scdac_unit",
+      "nets": [
+        {
+          "id": "net-29fcd9625212ec13",
+          "name": "bit",
+          "ports": [
+            "port-64dc3082e52e0542"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XDP",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "XDN",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-75049abbe4dfc20a",
+          "name": "nbit",
+          "ports": [
+            "port-5f78745cc72ea958"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XDP",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "XDN",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "XSP",
+              "pinName": "G"
+            },
+            {
+              "instanceId": "XSN",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-29e8dd62520249d5",
+          "name": "bot",
+          "ports": [
+            "port-d764dfdb79d2fa66"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XSP",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "XSN",
+              "pinName": "D"
+            }
+          ]
+        },
+        {
+          "id": "net-d7191a62b4170368",
+          "name": "vss",
+          "ports": [
+            "port-a4975b2a3cd87540"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XDN",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XDN",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "XSN",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XSN",
+              "pinName": "B"
+            }
+          ]
+        },
+        {
+          "id": "net-d7602f62b45329ba",
+          "name": "vdd",
+          "ports": [
+            "port-afdd712e58af2a3f"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XDP",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XDP",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "XSP",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XSP",
+              "pinName": "B"
+            }
+          ]
+        }
+      ],
+      "ports": [
+        {
+          "direction": "passive",
+          "id": "port-64dc3082e52e0542",
+          "name": "bit",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-5f78745cc72ea958",
+          "name": "nbit",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-d764dfdb79d2fa66",
+          "name": "bot",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-a4975b2a3cd87540",
+          "name": "vss",
+          "position": null
+        },
+        {
+          "direction": "passive",
+          "id": "port-afdd712e58af2a3f",
+          "name": "vdd",
+          "position": null
+        }
+      ],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "textbook-monochrome-v1"
+      },
+      "revision": 0,
+      "routes": [],
+      "sourceBinding": {
+        "cellName": "scdac_unit",
+        "sourceRef": {
+          "end": {
+            "column": 17,
+            "line": 8,
+            "offset": 450
+          },
+          "fileId": "source-648e50f6f6cd02ee",
+          "start": {
+            "column": 1,
+            "line": 3,
+            "offset": 146
+          }
+        }
+      },
+      "sourceStatus": "in-sync"
+    },
+    {
+      "annotations": [
+        {
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-0",
+          "id": "route-net-82ef833d9b98cf34-2",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 320,
+            "y": 180
+          },
+          "rotation": 0,
+          "text": "VSS"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-1",
+          "id": "route-net-82ef833d9b98cf34-4",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 320,
+            "y": 340
+          },
+          "rotation": 0,
+          "text": "VSS"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-2",
+          "id": "route-net-82ef833d9b98cf34-6",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 320,
+            "y": 500
+          },
+          "rotation": 0,
+          "text": "VSS"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-3",
+          "id": "route-net-82ef833d9b98cf34-8",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 320,
+            "y": 660
+          },
+          "rotation": 0,
+          "text": "VSS"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-4",
+          "id": "route-net-82ef833d9b98cf34-10",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 320,
+            "y": 820
+          },
+          "rotation": 0,
+          "text": "VSS"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-5",
+          "id": "route-net-82ef833d9b98cf34-12",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 320,
+            "y": 980
+          },
+          "rotation": 0,
+          "text": "VSS"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "vss-j-reset",
+          "id": "route-net-82ef833d9b98cf34-17",
+          "kind": "net-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 320,
+            "y": 660
+          },
+          "rotation": 0,
+          "text": "VSS"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-5d241e46ea1603fd-ESCAPE_DIRECTION",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1540
+          },
+          "rotation": 0,
+          "text": "ESCAPE_DIRECTION: Escape edge vout-esc-5 does not leave terminal along outward direction (0,-1)"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-5d241e46ea1603fd-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1540
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge vout-port-link: (600,680) → (900,640) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-82ef833d9b98cf34-ESCAPE_DIRECTION",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1620
+          },
+          "rotation": 0,
+          "text": "ESCAPE_DIRECTION: Escape edge vss-esc-vss-j-reset-0 does not leave terminal along outward direction (0,1)"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-82ef833d9b98cf34-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1620
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: Escape edge vss-esc-vss-j-reset-3: (340,1280) → (320,660) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-b778eaaff63d68d5-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1640
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge reset-direct: (760,640) → (60,1180) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-b9d1505a12d36a23-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1660
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge b0-direct: (180,180) → (60,200) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-b9d14f5a12d36870-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1680
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge b1-direct: (180,340) → (60,360) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-b9d1525a12d36d89-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1700
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge b2-direct: (180,500) → (60,520) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-b9d1515a12d36bd6-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1720
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge b3-direct: (180,660) → (60,680) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-b9d1545a12d370ef-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1740
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge b4-direct: (180,820) → (60,840) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-b9d1535a12d36f3c-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1760
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge b5-direct: (180,980) → (60,1000) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-2363ccedceb2b67c-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1780
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge bot0-direct: (180,220) → (520,240) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-2363cdedceb2b82f-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1800
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge bot1-direct: (180,380) → (520,400) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-2363ceedceb2b9e2-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1820
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge bot2-direct: (180,540) → (520,560) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-2363cfedceb2bb95-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1840
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge bot3-direct: (180,700) → (520,720) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-2363c8edceb2afb0-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1860
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge bot4-direct: (180,860) → (520,880) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "start",
+          "id": "conflict-net-2363c9edceb2b163-MISALIGNED_EDGE",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 60,
+            "y": 1880
+          },
+          "rotation": 0,
+          "text": "MISALIGNED_EDGE: link edge bot5-direct: (180,1020) → (520,1040) is not axis-aligned; add a bend node"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "XU0",
+          "id": "label-XU0",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 220,
+            "y": 250
+          },
+          "rotation": 0,
+          "text": "XU0"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "XU1",
+          "id": "label-XU1",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 220,
+            "y": 410
+          },
+          "rotation": 0,
+          "text": "XU1"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "XU2",
+          "id": "label-XU2",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 220,
+            "y": 570
+          },
+          "rotation": 0,
+          "text": "XU2"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "XU3",
+          "id": "label-XU3",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 220,
+            "y": 730
+          },
+          "rotation": 0,
+          "text": "XU3"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "XU4",
+          "id": "label-XU4",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 220,
+            "y": 890
+          },
+          "rotation": 0,
+          "text": "XU4"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "XU5",
+          "id": "label-XU5",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 220,
+            "y": 1050
+          },
+          "rotation": 0,
+          "text": "XU5"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "XRESET",
+          "id": "label-XRESET",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 780,
+            "y": 690
+          },
+          "rotation": 0,
+          "text": "XRESET"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "C0",
+          "id": "label-C0",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 520,
+            "y": 270
+          },
+          "rotation": 0,
+          "text": "C0"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "C1",
+          "id": "label-C1",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 520,
+            "y": 430
+          },
+          "rotation": 0,
+          "text": "C1"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "C2",
+          "id": "label-C2",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 520,
+            "y": 590
+          },
+          "rotation": 0,
+          "text": "C2"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "C3",
+          "id": "label-C3",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 520,
+            "y": 750
+          },
+          "rotation": 0,
+          "text": "C3"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "C4",
+          "id": "label-C4",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 520,
+            "y": 910
+          },
+          "rotation": 0,
+          "text": "C4"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "C5",
+          "id": "label-C5",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 520,
+            "y": 1070
+          },
+          "rotation": 0,
+          "text": "C5"
+        },
+        {
+          "alignment": "middle",
+          "attachedObjectId": "CDUMMY",
+          "id": "label-CDUMMY",
+          "kind": "instance-label",
+          "locked": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "position": {
+            "x": 520,
+            "y": 1230
+          },
+          "rotation": 0,
+          "text": "CDUMMY"
+        }
+      ],
+      "constraints": [],
+      "id": "document-fb815c3c3f719ef7",
+      "instances": [
+        {
+          "id": "XU0",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 220,
+              "y": 200
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XU0",
+            "spice.pin.P1": "bit",
+            "spice.pin.P2": "nbit",
+            "spice.pin.P3": "bot",
+            "spice.pin.P4": "vss",
+            "spice.pin.P5": "vdd",
+            "spice.target": "subcircuit:scdac_unit"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 35,
+              "line": 11,
+              "offset": 559
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 11,
+              "offset": 525
+            }
+          },
+          "symbolId": "hierarchical-symbol-82822626bf0850db"
+        },
+        {
+          "id": "XU1",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 220,
+              "y": 360
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XU1",
+            "spice.pin.P1": "bit",
+            "spice.pin.P2": "nbit",
+            "spice.pin.P3": "bot",
+            "spice.pin.P4": "vss",
+            "spice.pin.P5": "vdd",
+            "spice.target": "subcircuit:scdac_unit"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 35,
+              "line": 12,
+              "offset": 594
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 12,
+              "offset": 560
+            }
+          },
+          "symbolId": "hierarchical-symbol-82822626bf0850db"
+        },
+        {
+          "id": "XU2",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 220,
+              "y": 520
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XU2",
+            "spice.pin.P1": "bit",
+            "spice.pin.P2": "nbit",
+            "spice.pin.P3": "bot",
+            "spice.pin.P4": "vss",
+            "spice.pin.P5": "vdd",
+            "spice.target": "subcircuit:scdac_unit"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 35,
+              "line": 13,
+              "offset": 629
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 13,
+              "offset": 595
+            }
+          },
+          "symbolId": "hierarchical-symbol-82822626bf0850db"
+        },
+        {
+          "id": "XU3",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 220,
+              "y": 680
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XU3",
+            "spice.pin.P1": "bit",
+            "spice.pin.P2": "nbit",
+            "spice.pin.P3": "bot",
+            "spice.pin.P4": "vss",
+            "spice.pin.P5": "vdd",
+            "spice.target": "subcircuit:scdac_unit"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 35,
+              "line": 14,
+              "offset": 664
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 14,
+              "offset": 630
+            }
+          },
+          "symbolId": "hierarchical-symbol-82822626bf0850db"
+        },
+        {
+          "id": "XU4",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 220,
+              "y": 840
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XU4",
+            "spice.pin.P1": "bit",
+            "spice.pin.P2": "nbit",
+            "spice.pin.P3": "bot",
+            "spice.pin.P4": "vss",
+            "spice.pin.P5": "vdd",
+            "spice.target": "subcircuit:scdac_unit"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 35,
+              "line": 15,
+              "offset": 699
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 15,
+              "offset": 665
+            }
+          },
+          "symbolId": "hierarchical-symbol-82822626bf0850db"
+        },
+        {
+          "id": "XU5",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 220,
+              "y": 1000
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XU5",
+            "spice.pin.P1": "bit",
+            "spice.pin.P2": "nbit",
+            "spice.pin.P3": "bot",
+            "spice.pin.P4": "vss",
+            "spice.pin.P5": "vdd",
+            "spice.target": "subcircuit:scdac_unit"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 35,
+              "line": 16,
+              "offset": 734
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 16,
+              "offset": 700
+            }
+          },
+          "symbolId": "hierarchical-symbol-82822626bf0850db"
+        },
+        {
+          "id": "XRESET",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 780,
+              "y": 640
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "XRESET",
+            "spice.param.l": "0.3",
+            "spice.param.nf": "2",
+            "spice.param.w": "2",
+            "spice.pin.P1": "D",
+            "spice.pin.P2": "G",
+            "spice.pin.P3": "S",
+            "spice.pin.P4": "B",
+            "spice.target": "model:sky130_fd_pr__nfet_01v8",
+            "symbol.mapping.registry": "sky130-nfet-four-terminal"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 65,
+              "line": 17,
+              "offset": 799
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 17,
+              "offset": 735
+            }
+          },
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "C0",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 520,
+              "y": 220
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "C0",
+            "spice.param.value": "16f",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 17,
+              "line": 18,
+              "offset": 816
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 18,
+              "offset": 800
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "C1",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 520,
+              "y": 380
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "C1",
+            "spice.param.value": "32f",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 17,
+              "line": 19,
+              "offset": 833
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 19,
+              "offset": 817
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "C2",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 520,
+              "y": 540
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "C2",
+            "spice.param.value": "64f",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 17,
+              "line": 20,
+              "offset": 850
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 20,
+              "offset": 834
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "C3",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 520,
+              "y": 700
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "C3",
+            "spice.param.value": "128f",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 18,
+              "line": 21,
+              "offset": 868
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 21,
+              "offset": 851
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "C4",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 520,
+              "y": 860
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "C4",
+            "spice.param.value": "256f",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 18,
+              "line": 22,
+              "offset": 886
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 22,
+              "offset": 869
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "C5",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 520,
+              "y": 1020
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "C5",
+            "spice.param.value": "512f",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 18,
+              "line": 23,
+              "offset": 904
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 23,
+              "offset": 887
+            }
+          },
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "CDUMMY",
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 520,
+              "y": 1180
+            },
+            "rotation": 0
+          },
+          "properties": {
+            "spice.name": "CDUMMY",
+            "spice.param.value": "16f",
+            "spice.pin.P1": "1",
+            "spice.pin.P2": "2",
+            "spice.target": "primitive:capacitor"
+          },
+          "sourceRef": {
+            "end": {
+              "column": 20,
+              "line": 24,
+              "offset": 924
+            },
+            "fileId": "source-648e50f6f6cd02ee",
+            "start": {
+              "column": 1,
+              "line": 24,
+              "offset": 905
+            }
+          },
+          "symbolId": "capacitor"
+        }
+      ],
+      "junctions": [
+        {
+          "id": "vout-tap-0",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 200
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vout-tap-1",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 360
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vout-tap-2",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 520
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vout-tap-3",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 680
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vout-tap-4",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 840
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vout-tap-5",
+          "netId": "net-5d241e46ea1603fd",
+          "position": {
+            "x": 600,
+            "y": 1000
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vdd-tap-0",
+          "netId": "net-82ae603d9b60fcc6",
+          "position": {
+            "x": 340,
+            "y": 200
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vdd-tap-1",
+          "netId": "net-82ae603d9b60fcc6",
+          "position": {
+            "x": 340,
+            "y": 360
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vdd-tap-2",
+          "netId": "net-82ae603d9b60fcc6",
+          "position": {
+            "x": 340,
+            "y": 520
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vdd-tap-3",
+          "netId": "net-82ae603d9b60fcc6",
+          "position": {
+            "x": 340,
+            "y": 680
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vdd-tap-4",
+          "netId": "net-82ae603d9b60fcc6",
+          "position": {
+            "x": 340,
+            "y": 840
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vdd-tap-5",
+          "netId": "net-82ae603d9b60fcc6",
+          "position": {
+            "x": 340,
+            "y": 1000
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-0",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 320,
+            "y": 180
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-1",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 320,
+            "y": 340
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-2",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 320,
+            "y": 500
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-3",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 320,
+            "y": 660
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-4",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 320,
+            "y": 820
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-5",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 320,
+            "y": 980
+          },
+          "role": "branch"
+        },
+        {
+          "id": "vss-j-reset",
+          "netId": "net-82ef833d9b98cf34",
+          "position": {
+            "x": 320,
+            "y": 660
+          },
+          "role": "branch"
+        }
+      ],
+      "layoutGroups": [],
+      "name": "switched_capacitor_dac_6bit",
+      "nets": [
+        {
+          "id": "net-82ef833d9b98cf34",
+          "name": "vss",
+          "ports": [
+            "port-57827bce9cde161d"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU0",
+              "pinName": "vss"
+            },
+            {
+              "instanceId": "XU1",
+              "pinName": "vss"
+            },
+            {
+              "instanceId": "XU2",
+              "pinName": "vss"
+            },
+            {
+              "instanceId": "XU3",
+              "pinName": "vss"
+            },
+            {
+              "instanceId": "XU4",
+              "pinName": "vss"
+            },
+            {
+              "instanceId": "XU5",
+              "pinName": "vss"
+            },
+            {
+              "instanceId": "XRESET",
+              "pinName": "S"
+            },
+            {
+              "instanceId": "XRESET",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "CDUMMY",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-b778eaaff63d68d5",
+          "name": "reset",
+          "ports": [
+            "port-d1a18d9c3aac42b7"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XRESET",
+              "pinName": "G"
+            }
+          ]
+        },
+        {
+          "id": "net-b9d1505a12d36a23",
+          "name": "b0",
+          "ports": [
+            "port-08e81d5c21afcace"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU0",
+              "pinName": "bit"
+            }
+          ]
+        },
+        {
+          "id": "net-b9d14f5a12d36870",
+          "name": "b1",
+          "ports": [
+            "port-0b4be6134b2ba800"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU1",
+              "pinName": "bit"
+            }
+          ]
+        },
+        {
+          "id": "net-b9d1525a12d36d89",
+          "name": "b2",
+          "ports": [
+            "port-59922b45e2cad116"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU2",
+              "pinName": "bit"
+            }
+          ]
+        },
+        {
+          "id": "net-b9d1515a12d36bd6",
+          "name": "b3",
+          "ports": [
+            "port-c093b63f60d8af6c"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU3",
+              "pinName": "bit"
+            }
+          ]
+        },
+        {
+          "id": "net-b9d1545a12d370ef",
+          "name": "b4",
+          "ports": [
+            "port-35c2e7b5e158ae26"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU4",
+              "pinName": "bit"
+            }
+          ]
+        },
+        {
+          "id": "net-b9d1535a12d36f3c",
+          "name": "b5",
+          "ports": [
+            "port-bb9aba18b0111548"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU5",
+              "pinName": "bit"
+            }
+          ]
+        },
+        {
+          "id": "net-82ae603d9b60fcc6",
+          "name": "vdd",
+          "ports": [
+            "port-875ab2787f258a6f"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU0",
+              "pinName": "vdd"
+            },
+            {
+              "instanceId": "XU1",
+              "pinName": "vdd"
+            },
+            {
+              "instanceId": "XU2",
+              "pinName": "vdd"
+            },
+            {
+              "instanceId": "XU3",
+              "pinName": "vdd"
+            },
+            {
+              "instanceId": "XU4",
+              "pinName": "vdd"
+            },
+            {
+              "instanceId": "XU5",
+              "pinName": "vdd"
+            }
+          ]
+        },
+        {
+          "id": "net-5d241e46ea1603fd",
+          "name": "vout",
+          "ports": [
+            "port-0d78f712a5866fb3"
+          ],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XRESET",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "C0",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "C1",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "C2",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "C3",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "C4",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "C5",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "CDUMMY",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-544c083e1298c65c",
+          "name": "nb0",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU0",
+              "pinName": "nbit"
+            }
+          ]
+        },
+        {
+          "id": "net-2363ccedceb2b67c",
+          "name": "bot0",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU0",
+              "pinName": "bot"
+            },
+            {
+              "instanceId": "C0",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-544c093e1298c80f",
+          "name": "nb1",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU1",
+              "pinName": "nbit"
+            }
+          ]
+        },
+        {
+          "id": "net-2363cdedceb2b82f",
+          "name": "bot1",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU1",
+              "pinName": "bot"
+            },
+            {
+              "instanceId": "C1",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-544c0a3e1298c9c2",
+          "name": "nb2",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU2",
+              "pinName": "nbit"
+            }
+          ]
+        },
+        {
+          "id": "net-2363ceedceb2b9e2",
+          "name": "bot2",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU2",
+              "pinName": "bot"
+            },
+            {
+              "instanceId": "C2",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-544c0b3e1298cb75",
+          "name": "nb3",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU3",
+              "pinName": "nbit"
+            }
+          ]
+        },
+        {
+          "id": "net-2363cfedceb2bb95",
+          "name": "bot3",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU3",
+              "pinName": "bot"
+            },
+            {
+              "instanceId": "C3",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-544c043e1298bf90",
+          "name": "nb4",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU4",
+              "pinName": "nbit"
+            }
+          ]
+        },
+        {
+          "id": "net-2363c8edceb2afb0",
+          "name": "bot4",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU4",
+              "pinName": "bot"
+            },
+            {
+              "instanceId": "C4",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-544c053e1298c143",
+          "name": "nb5",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU5",
+              "pinName": "nbit"
+            }
+          ]
+        },
+        {
+          "id": "net-2363c9edceb2b163",
+          "name": "bot5",
+          "ports": [],
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "XU5",
+              "pinName": "bot"
+            },
+            {
+              "instanceId": "C5",
+              "pinName": "2"
+            }
+          ]
+        }
+      ],
+      "ports": [
+        {
+          "direction": "passive",
+          "id": "port-57827bce9cde161d",
+          "name": "vss",
+          "position": {
+            "x": 340,
+            "y": 1280
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-d1a18d9c3aac42b7",
+          "name": "reset",
+          "position": {
+            "x": 60,
+            "y": 1180
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-08e81d5c21afcace",
+          "name": "b0",
+          "position": {
+            "x": 60,
+            "y": 200
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-0b4be6134b2ba800",
+          "name": "b1",
+          "position": {
+            "x": 60,
+            "y": 360
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-59922b45e2cad116",
+          "name": "b2",
+          "position": {
+            "x": 60,
+            "y": 520
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-c093b63f60d8af6c",
+          "name": "b3",
+          "position": {
+            "x": 60,
+            "y": 680
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-35c2e7b5e158ae26",
+          "name": "b4",
+          "position": {
+            "x": 60,
+            "y": 840
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-bb9aba18b0111548",
+          "name": "b5",
+          "position": {
+            "x": 60,
+            "y": 1000
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-875ab2787f258a6f",
+          "name": "vdd",
+          "position": {
+            "x": 340,
+            "y": 60
+          }
+        },
+        {
+          "direction": "passive",
+          "id": "port-0d78f712a5866fb3",
+          "name": "vout",
+          "position": {
+            "x": 900,
+            "y": 640
+          }
+        }
+      ],
+      "presentation": {
+        "compactness": "compact",
+        "flow": {
+          "ground": "bottom",
+          "input": "left",
+          "output": "right",
+          "power": "top"
+        },
+        "grid": 10,
+        "styleProfileId": "razavi-textbook-v1"
+      },
+      "revision": 3,
+      "routes": [
+        {
+          "from": {
+            "junctionId": "vout-tap-0",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-7",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tap-1",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tap-1",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-8",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tap-2",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tap-2",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-9",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tap-3",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tap-3",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-10",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tap-4",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vout-tap-4",
+            "kind": "junction"
+          },
+          "id": "route-net-5d241e46ea1603fd-11",
+          "netId": "net-5d241e46ea1603fd",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vout-tap-5",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU0",
+            "kind": "terminal",
+            "pinName": "vdd"
+          },
+          "id": "route-net-82ae603d9b60fcc6-1",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-0",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU1",
+            "kind": "terminal",
+            "pinName": "vdd"
+          },
+          "id": "route-net-82ae603d9b60fcc6-2",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-1",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU2",
+            "kind": "terminal",
+            "pinName": "vdd"
+          },
+          "id": "route-net-82ae603d9b60fcc6-3",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-2",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU3",
+            "kind": "terminal",
+            "pinName": "vdd"
+          },
+          "id": "route-net-82ae603d9b60fcc6-4",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-3",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU4",
+            "kind": "terminal",
+            "pinName": "vdd"
+          },
+          "id": "route-net-82ae603d9b60fcc6-5",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-4",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU5",
+            "kind": "terminal",
+            "pinName": "vdd"
+          },
+          "id": "route-net-82ae603d9b60fcc6-6",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-5",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vdd-tap-0",
+            "kind": "junction"
+          },
+          "id": "route-net-82ae603d9b60fcc6-7",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-1",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vdd-tap-1",
+            "kind": "junction"
+          },
+          "id": "route-net-82ae603d9b60fcc6-8",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-2",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vdd-tap-2",
+            "kind": "junction"
+          },
+          "id": "route-net-82ae603d9b60fcc6-9",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-3",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vdd-tap-3",
+            "kind": "junction"
+          },
+          "id": "route-net-82ae603d9b60fcc6-10",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-4",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "vdd-tap-4",
+            "kind": "junction"
+          },
+          "id": "route-net-82ae603d9b60fcc6-11",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "trunk"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-5",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "kind": "port",
+            "portId": "port-875ab2787f258a6f"
+          },
+          "id": "route-net-82ae603d9b60fcc6-12",
+          "netId": "net-82ae603d9b60fcc6",
+          "segmentModes": [
+            "auto"
+          ],
+          "to": {
+            "junctionId": "vdd-tap-0",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU0",
+            "kind": "terminal",
+            "pinName": "vss"
+          },
+          "id": "route-net-82ef833d9b98cf34-1",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vss-j-0",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU1",
+            "kind": "terminal",
+            "pinName": "vss"
+          },
+          "id": "route-net-82ef833d9b98cf34-3",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vss-j-1",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU2",
+            "kind": "terminal",
+            "pinName": "vss"
+          },
+          "id": "route-net-82ef833d9b98cf34-5",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vss-j-2",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU3",
+            "kind": "terminal",
+            "pinName": "vss"
+          },
+          "id": "route-net-82ef833d9b98cf34-7",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vss-j-3",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU4",
+            "kind": "terminal",
+            "pinName": "vss"
+          },
+          "id": "route-net-82ef833d9b98cf34-9",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vss-j-4",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "XU5",
+            "kind": "terminal",
+            "pinName": "vss"
+          },
+          "id": "route-net-82ef833d9b98cf34-11",
+          "netId": "net-82ef833d9b98cf34",
+          "segmentModes": [
+            "escape"
+          ],
+          "to": {
+            "junctionId": "vss-j-5",
+            "kind": "junction"
+          },
+          "waypoints": []
+        }
+      ],
+      "sourceBinding": {
+        "cellName": "switched_capacitor_dac_6bit",
+        "sourceRef": {
+          "end": {
+            "column": 34,
+            "line": 25,
+            "offset": 958
+          },
+          "fileId": "source-648e50f6f6cd02ee",
+          "start": {
+            "column": 1,
+            "line": 10,
+            "offset": 452
+          }
+        }
+      },
+      "sourceStatus": "connectivity-modified"
+    }
+  ],
+  "id": "project-898510e0e3b15ad5",
+  "name": "SKY130 6-bit Switched-Capacitor DAC (route-graph)",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "spice3f5-core",
+    "entry": "circuit.spi",
+    "files": [
+      {
+        "hash": "sha256:99950c766f41c6c293dd7e9f20aebb33b7d94a3d590a1af38a8ffa424eb81b8d",
+        "id": "source-648e50f6f6cd02ee",
+        "path": "circuit.spi"
+      }
+    ],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "development",
+    "id": "builtin-analog",
+    "version": "0.0.0"
+  },
+  "topDocumentId": "document-fb815c3c3f719ef7"
+}

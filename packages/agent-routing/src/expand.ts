@@ -5,6 +5,16 @@
 // terminal escape, orthogonal geometry, trunk split, stable IDs, typed-edit
 // assembly). It NEVER decides topology, adds a missing node, switches a shape,
 // or reroutes. Conflicts are returned, never silently resolved.
+//
+// CRITICAL: the helper NEVER calls `route_orthogonal`. Every edge becomes a
+// `set_route_points` with explicit waypoints the Agent provided via graph
+// nodes. If an edge's endpoints are not axis-aligned, the helper returns a
+// MISALIGNED_EDGE conflict — it does not guess a bend. The Agent must add
+// intermediate bend nodes to the graph.
+//
+// This ensures `resolvedGeometry` always matches the geometry the Engine
+// stores, because we specify exact waypoints rather than asking the Engine to
+// compute them.
 
 import type { Point, RouteEndpoint } from "@icm/model";
 import type { SchematicEdit } from "@icm/edit-engine";
@@ -38,9 +48,9 @@ export interface InstanceBox {
 export interface ExpansionInput {
   /** Endpoint id -> resolved page coordinate and outward direction. */
   endpoints: ReadonlyMap<string, ResolvedEndpoint>;
-  /** Existing committed Routes (for overlap/crossing detection only). */
+  /** Existing committed Routes (for overlap/crossing detection). */
   existingRoutePolylines: ReadonlyArray<{ routeId: string; points: Point[] }>;
-  /** Placed-instance silhouettes (for wire-through-symbol detection only). */
+  /** Placed-instance silhouettes (for wire-through-symbol detection). */
   instanceBoxes: ReadonlyArray<InstanceBox>;
 }
 
@@ -78,12 +88,39 @@ function manhattan(a: Point, b: Point): number {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 }
 
+/** True if two points share an x or y coordinate (a straight orthogonal segment exists). */
+function isAxisAligned(a: Point, b: Point): boolean {
+  return a.x === b.x || a.y === b.y;
+}
+
+/**
+ * Check if a segment from `a` to `b` passes through any instance silhouette.
+ * Returns the first hit, or undefined.
+ */
+function segmentHitsInstance(
+  a: Point,
+  b: Point,
+  boxes: ReadonlyArray<InstanceBox>,
+): InstanceBox | undefined {
+  const minX = Math.min(a.x, b.x);
+  const maxX = Math.max(a.x, b.x);
+  const minY = Math.min(a.y, b.y);
+  const maxY = Math.max(a.y, b.y);
+  return boxes.find(
+    (box) =>
+      maxX > box.min.x &&
+      minX < box.max.x &&
+      maxY > box.min.y &&
+      minY < box.max.y,
+  );
+}
+
 /**
  * Expand a Route graph into typed edits + resolved geometry + metrics.
  *
  * Returns a conflict (no edits) when a node's position cannot be resolved or
  * an edge references an unknown node. Never invents a node or edge, never
- * reroutes, never switches a shape.
+ * reroutes, never switches a shape, never calls route_orthogonal.
  */
 export function expandRouteGraph(
   graph: RouteGraph,
@@ -100,8 +137,6 @@ export function expandRouteGraph(
   const endpointNodes = new Map<string, RouteEndpoint>();
   const junctionIds = new Set<string>();
 
-  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
-
   // Pass 1: endpoint nodes (their coordinate comes from the input slice).
   for (const node of graph.nodes) {
     if (node.role !== "endpoint") continue;
@@ -113,8 +148,6 @@ export function expandRouteGraph(
       });
       continue;
     }
-    // The endpoint must be resolvable via the input. The caller keys endpoints
-    // by a stable id; we look up by the node's endpoint identity.
     const resolved = resolveEndpointInInput(node.endpoint, input);
     if (!resolved) {
       conflicts.push({
@@ -178,7 +211,9 @@ export function expandRouteGraph(
     );
   }
 
-  // 3. For each edge, emit exactly one typed edit.
+  // 3. For each edge, emit exactly one typed edit. ALL edges use
+  //    set_route_points with explicit waypoints — never route_orthogonal.
+  //    If an edge's endpoints are not axis-aligned, return MISALIGNED_EDGE.
   let edgeIndex = 0;
   for (const edge of graph.edges) {
     edgeIndex += 1;
@@ -192,17 +227,21 @@ export function expandRouteGraph(
       });
       continue;
     }
-    const fromEndpoint = endpointNodes.get(edge.from);
-    const toEndpoint = endpointNodes.get(edge.to);
     const routeId = `route-${graph.netId}-${edgeIndex}`;
 
     switch (edge.role) {
       case "escape": {
-        // An escape edge connects an endpoint to a junction. Use
-        // route_orthogonal so the Engine computes the pin-aware escape.
-        const terminalEndpoint = fromEndpoint ?? toEndpoint;
-        const junctionId = fromEndpoint ? edge.to : edge.from;
-        if (!terminalEndpoint || !junctionIds.has(junctionId)) {
+        // An escape edge connects a terminal endpoint to a junction/tap. It
+        // must be axis-aligned (a single straight segment). The Agent is
+        // responsible for placing the escape node so the segment is valid.
+        // If the terminal has an outward direction, validate the escape goes
+        // along it.
+        const fromEndpoint = endpointNodes.get(edge.from);
+        const toEndpoint = endpointNodes.get(edge.to);
+        const terminalNodeId = fromEndpoint ? edge.from : edge.to;
+        const junctionNodeId = fromEndpoint ? edge.to : edge.from;
+
+        if (!fromEndpoint && !toEndpoint) {
           conflicts.push({
             code: "ESCAPE_MALFORMED",
             message: `Escape edge ${edge.id} must connect an endpoint to a tap/junction`,
@@ -210,50 +249,79 @@ export function expandRouteGraph(
           });
           continue;
         }
-        edits.push({
-          kind: "route_orthogonal",
-          routeId,
-          netId: graph.netId,
-          from: terminalEndpoint,
-          to: { kind: "junction", junctionId },
-        });
-        resolvedGeometry.push({ routeId, points: [from, to] });
-        break;
-      }
-      case "trunk": {
-        if (!junctionIds.has(edge.from) || !junctionIds.has(edge.to)) {
+
+        if (!isAxisAligned(from, to)) {
           conflicts.push({
-            code: "TRUNK_MALFORMED",
-            message: `Trunk edge ${edge.id} must connect two tap/junction nodes`,
+            code: "MISALIGNED_EDGE",
+            message: `Escape edge ${edge.id}: (${from.x},${from.y}) → (${to.x},${to.y}) is not axis-aligned; add a bend node`,
             objectIds: [edge.id],
           });
           continue;
         }
+
+        // Validate escape direction if the terminal has an outward vector.
+        const outward = nodeOutward.get(terminalNodeId);
+        if (outward) {
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const alignedWithOutward =
+            (outward.x !== 0 && Math.sign(dx) === outward.x) ||
+            (outward.y !== 0 && Math.sign(dy) === outward.y);
+          if (!alignedWithOutward) {
+            conflicts.push({
+              code: "ESCAPE_DIRECTION",
+              message: `Escape edge ${edge.id} does not leave terminal along outward direction (${outward.x},${outward.y})`,
+              objectIds: [edge.id],
+            });
+            continue;
+          }
+        }
+
+        const fromEp =
+          fromEndpoint ??
+          routeEndpointFor(edge.from, endpointNodes, junctionIds);
+        const toEp =
+          toEndpoint ?? routeEndpointFor(edge.to, endpointNodes, junctionIds);
+        const mode: SegmentMode = edge.segmentMode ?? "escape";
         edits.push(
-          setRouteEdit(
-            routeId,
-            graph.netId,
-            { kind: "junction", junctionId: edge.from },
-            { kind: "junction", junctionId: edge.to },
-            [],
-            [edge.segmentMode ?? "trunk"],
-          ),
+          setRouteEdit(routeId, graph.netId, fromEp, toEp, [], [mode]),
         );
         resolvedGeometry.push({ routeId, points: [from, to] });
         break;
       }
+      case "trunk":
       case "link": {
-        // A link connects two nodes (endpoints or junctions) that may not be
-        // axis-aligned. Use route_orthogonal so the Engine computes a compliant
-        // path; segmentMode is advisory for the Agent's intent.
-        edits.push({
-          kind: "route_orthogonal",
-          routeId,
-          netId: graph.netId,
-          from: routeEndpointFor(edge.from, endpointNodes, junctionIds),
-          to: routeEndpointFor(edge.to, endpointNodes, junctionIds),
-        });
+        // Both trunk and link connect two nodes with explicit waypoints.
+        // The endpoints must be axis-aligned; if not, the Agent must add
+        // intermediate bend nodes. The helper never guesses a bend.
+        if (!isAxisAligned(from, to)) {
+          conflicts.push({
+            code: "MISALIGNED_EDGE",
+            message: `${edge.role} edge ${edge.id}: (${from.x},${from.y}) → (${to.x},${to.y}) is not axis-aligned; add a bend node`,
+            objectIds: [edge.id],
+          });
+          continue;
+        }
+
+        const fromEp = routeEndpointFor(edge.from, endpointNodes, junctionIds);
+        const toEp = routeEndpointFor(edge.to, endpointNodes, junctionIds);
+        const mode: SegmentMode =
+          edge.segmentMode ?? (edge.role === "trunk" ? "trunk" : "auto");
+        edits.push(
+          setRouteEdit(routeId, graph.netId, fromEp, toEp, [], [mode]),
+        );
         resolvedGeometry.push({ routeId, points: [from, to] });
+
+        // Wire-through-symbol detection: check if this segment crosses an
+        // instance silhouette (excluding endpoints that are on the instance).
+        const hit = segmentHitsInstance(from, to, input.instanceBoxes);
+        if (hit) {
+          conflicts.push({
+            code: "WIRE_THROUGH_SYMBOL",
+            message: `${edge.role} edge ${edge.id} crosses instance ${hit.instanceId}`,
+            objectIds: [edge.id, hit.instanceId],
+          });
+        }
         break;
       }
       case "label": {
@@ -318,10 +386,8 @@ function resolvePositionedNode(
   if (!ref) return undefined;
   const offset = node.offset ?? 0;
   if (node.axis === "x") {
-    // share x; perpendicular (y) = ref.y + offset
     return { x: ref.x, y: ref.y + offset };
   }
-  // axis === "y": share y; perpendicular (x) = ref.x + offset
   return { x: ref.x + offset, y: ref.y };
 }
 
@@ -335,7 +401,6 @@ function routeEndpointFor(
   const ep = endpointNodes.get(nodeId);
   if (ep) return ep;
   if (junctionIds.has(nodeId)) return { kind: "junction", junctionId: nodeId };
-  // Fallback: treat as junction (will surface as a conflict upstream if invalid).
   return { kind: "junction", junctionId: nodeId };
 }
 
@@ -380,8 +445,7 @@ function collectIds(edits: SchematicEdit[]): string[] {
   const ids: string[] = [];
   for (const edit of edits) {
     if (edit.kind === "add_junction") ids.push(edit.junctionId);
-    if (edit.kind === "set_route_points" || edit.kind === "route_orthogonal")
-      ids.push(edit.routeId);
+    if (edit.kind === "set_route_points") ids.push(edit.routeId);
     if (edit.kind === "upsert_annotation") ids.push(edit.annotation.id);
   }
   return ids;
@@ -403,10 +467,7 @@ function computeMetrics(
     bendCount += Math.max(0, route.points.length - 2);
   }
   return {
-    routeCount: edits.filter(
-      (edit) =>
-        edit.kind === "set_route_points" || edit.kind === "route_orthogonal",
-    ).length,
+    routeCount: edits.filter((edit) => edit.kind === "set_route_points").length,
     junctionCount: edits.filter((edit) => edit.kind === "add_junction").length,
     totalRouteLength,
     bendCount,
