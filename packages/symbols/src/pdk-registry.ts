@@ -36,6 +36,13 @@ const pdkRules: readonly PdkMappingRule[] = [
     symbolId: "pmos",
     pinNames: ["D", "G", "S", "B"],
   },
+  {
+    id: "sky130-high-po-three-terminal",
+    pattern: /^sky130_fd_pr__res_high_po$/u,
+    terminalCount: 3,
+    symbolId: "poly-resistor",
+    pinNames: ["1", "2", "B"],
+  },
 ];
 
 export function resolvePdkSymbolMapping(

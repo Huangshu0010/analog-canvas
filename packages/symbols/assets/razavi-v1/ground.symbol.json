@@ -3,10 +3,10 @@
   "id": "ground",
   "name": "Ground",
   "viewBox": {
-    "x": -15,
-    "y": -10,
-    "width": 30,
-    "height": 40
+    "x": -12,
+    "y": -14,
+    "width": 24,
+    "height": 27
   },
   "pins": [
     {
@@ -32,43 +32,80 @@
       },
       "to": {
         "x": 0,
-        "y": 10
+        "y": 1.771654
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": -12,
-        "y": 10
+        "x": -7.086614,
+        "y": 1.771654
       },
       "to": {
-        "x": 12,
-        "y": 10
+        "x": 7.086614,
+        "y": 1.771654
+      },
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": -8,
-        "y": 16
+        "x": -3.543307,
+        "y": 5.314961
       },
       "to": {
-        "x": 8,
-        "y": 16
+        "x": 3.543307,
+        "y": 5.314961
+      },
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": -4,
-        "y": 22
+        "x": -1.771654,
+        "y": 8.858268
       },
       "to": {
-        "x": 4,
-        "y": 22
+        "x": 1.771654,
+        "y": 8.858268
+      },
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": 1.771654
+      },
+      "to": {
+        "x": 0,
+        "y": -8.858268
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     }
   ],
   "variants": [],
-  "aliases": ["gnd"]
+  "aliases": ["gnd"],
+  "labelVisibility": "hidden"
 }

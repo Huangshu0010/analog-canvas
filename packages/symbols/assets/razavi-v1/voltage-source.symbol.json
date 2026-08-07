@@ -2,34 +2,134 @@
   "schemaVersion": 1,
   "id": "voltage-source",
   "name": "Independent Voltage Source",
-  "viewBox": { "x": -18, "y": -30, "width": 36, "height": 60 },
+  "viewBox": {
+    "x": -15,
+    "y": -24,
+    "width": 30,
+    "height": 48
+  },
   "pins": [
     {
       "name": "+",
       "role": "positive",
-      "at": { "x": 0, "y": -30 },
+      "at": {
+        "x": 0,
+        "y": -20
+      },
       "direction": "north",
-      "presentation": { "visibility": "visible", "leadLength": 10 }
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
     },
     {
       "name": "-",
       "role": "negative",
-      "at": { "x": 0, "y": 30 },
+      "at": {
+        "x": 0,
+        "y": 20
+      },
       "direction": "south",
-      "presentation": { "visibility": "visible", "leadLength": 10 }
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
     }
   ],
   "primitives": [
     {
-      "kind": "line",
-      "from": { "x": 0, "y": -30 },
-      "to": { "x": 0, "y": -15 }
+      "kind": "circle",
+      "center": {
+        "x": 0,
+        "y": -0.141732
+      },
+      "radius": 10.629922,
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
-    { "kind": "circle", "center": { "x": 0, "y": 0 }, "radius": 15 },
-    { "kind": "line", "from": { "x": 0, "y": 15 }, "to": { "x": 0, "y": 30 } },
-    { "kind": "line", "from": { "x": -5, "y": -6 }, "to": { "x": 5, "y": -6 } },
-    { "kind": "line", "from": { "x": 0, "y": -11 }, "to": { "x": 0, "y": -1 } },
-    { "kind": "line", "from": { "x": -5, "y": 7 }, "to": { "x": 5, "y": 7 } }
+    {
+      "kind": "line",
+      "from": {
+        "x": -2.834646,
+        "y": -4.251969
+      },
+      "to": {
+        "x": 2.834646,
+        "y": -4.251969
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": -7.086614
+      },
+      "to": {
+        "x": 0,
+        "y": -1.417323
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -2.834646,
+        "y": 4.251969
+      },
+      "to": {
+        "x": 2.834646,
+        "y": 4.251969
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": -10.771654
+      },
+      "to": {
+        "x": 0,
+        "y": -20
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": 10.488189
+      },
+      "to": {
+        "x": 0,
+        "y": 20
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    }
   ],
   "variants": [],
   "aliases": ["dc-voltage"]

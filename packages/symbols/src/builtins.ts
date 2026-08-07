@@ -57,6 +57,7 @@ function powerPortSymbol(id: "vdd" | "vss", name: string): SymbolDefinition {
         ],
     variants: [],
     aliases: upward ? ["power", "supply"] : ["negative-supply"],
+    labelVisibility: "hidden",
   };
 }
 
@@ -354,8 +355,48 @@ const catalogPnp = requireRazaviCatalogSymbol("pnp");
 const catalogPort = requireRazaviCatalogSymbol("port");
 const catalogVoltageSource = requireRazaviCatalogSymbol("voltage-source");
 
+const polyResistor: SymbolDefinition = {
+  ...catalogResistor,
+  id: "poly-resistor",
+  name: "Three-terminal Poly Resistor",
+  viewBox: { x: -10, y: -24, width: 40, height: 48 },
+  pins: [
+    ...catalogResistor.pins,
+    {
+      ...pin("B", "body", 20, 0, "east"),
+      presentation: { visibility: "conditional", leadLength: 10 },
+    },
+  ],
+  primitives: [
+    ...catalogResistor.primitives,
+    {
+      kind: "line",
+      from: { x: 9, y: -10 },
+      to: { x: 9, y: 10 },
+      part: "body-lead",
+      style: { strokeRole: "normal", lineCap: "round" },
+    },
+    {
+      kind: "line",
+      from: { x: 9, y: 0 },
+      to: { x: 20, y: 0 },
+      part: "body-lead",
+      style: { strokeRole: "normal", lineCap: "round" },
+    },
+  ],
+  variants: [
+    {
+      id: "textbook-2terminal",
+      hiddenPinNames: ["B"],
+      hiddenPrimitiveParts: ["body-lead"],
+    },
+  ],
+  aliases: ["res-high-po"],
+};
+
 export const builtInSymbols: readonly SymbolDefinition[] = [
   catalogResistor,
+  polyResistor,
   catalogCapacitor,
   catalogInductor,
   catalogNmos,

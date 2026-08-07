@@ -118,6 +118,66 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
+  it("records independent Visio evidence for the Batch A non-transistor assets", () => {
+    for (const symbolId of [
+      "resistor",
+      "capacitor",
+      "inductor",
+      "diode",
+      "ground",
+      "port",
+      "voltage-source",
+      "current-source",
+    ]) {
+      expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
+        reviewStatus: "reviewed",
+        generation: {
+          kind: "vss-master-ir",
+          evidencePath:
+            "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+          converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+          converterVersion: 1,
+        },
+      });
+    }
+  });
+
+  it("keeps the source-derived Batch A geometry and grid-pin orientation", () => {
+    const runtimeResistor = builtInSymbols.find(
+      (symbol) => symbol.id === "resistor",
+    );
+    expect(runtimeResistor).toBe(requireRazaviCatalogSymbol("resistor"));
+    expect(runtimeResistor?.pins).toMatchObject([
+      { name: "1", at: { x: 0, y: -20 }, direction: "north" },
+      { name: "2", at: { x: 0, y: 20 }, direction: "south" },
+    ]);
+    expect(requireRazaviCatalogSymbol("resistor").pins).toMatchObject([
+      { name: "1", at: { x: 0, y: -20 }, direction: "north" },
+      { name: "2", at: { x: 0, y: 20 }, direction: "south" },
+    ]);
+    expect(requireRazaviCatalogSymbol("diode").pins).toMatchObject([
+      { name: "A", direction: "west" },
+      { name: "K", direction: "east" },
+    ]);
+    expect(requireRazaviCatalogSymbol("inductor").primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "path",
+          data: expect.stringMatching(/^M /u),
+        }),
+      ]),
+    );
+    expect(requireRazaviCatalogSymbol("port").primitives).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "circle" })]),
+    );
+    expect(requireRazaviCatalogSymbol("current-source").primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "polygon", fill: "foreground" }),
+      ]),
+    );
+    expect(requireRazaviCatalogSymbol("ground").labelVisibility).toBe("hidden");
+  });
+
   it("keeps canonical MOS assets four-terminal and three-terminal mode visual-only", () => {
     for (const symbolId of ["nmos", "pmos"]) {
       const symbol = requireRazaviCatalogSymbol(symbolId);

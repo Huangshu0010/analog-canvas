@@ -9,7 +9,7 @@
     "instances": 32,
     "models": 4,
     "parameters": 3,
-    "genericSymbols": 6,
+    "genericSymbols": 5,
     "connectivitySha256": "c95ad823b012887e24a3c2e84e83d9cd42317ab70e9601ba442137313e238ea3"
   },
   {
@@ -113,7 +113,7 @@
     "instances": 25,
     "models": 0,
     "parameters": 0,
-    "genericSymbols": 2,
+    "genericSymbols": 0,
     "connectivitySha256": "d0104813e6936611a463d1e63e67ddac99e7af3c12d2e167a62e5bb30d4fcc42"
   },
   {

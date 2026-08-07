@@ -13,6 +13,7 @@ describe("initial built-in Symbol Library", () => {
   it("contains the reviewed Phase 5 production families", () => {
     expect(builtInSymbols.map((symbol) => symbol.id)).toEqual([
       "resistor",
+      "poly-resistor",
       "capacitor",
       "inductor",
       "nmos",

@@ -3,17 +3,17 @@
   "id": "port",
   "name": "Port",
   "viewBox": {
-    "x": -20,
-    "y": -10,
-    "width": 40,
-    "height": 20
+    "x": -14,
+    "y": -7,
+    "width": 28,
+    "height": 14
   },
   "pins": [
     {
       "name": "P",
       "role": "port",
       "at": {
-        "x": 20,
+        "x": 10,
         "y": 0
       },
       "direction": "east",
@@ -25,43 +25,32 @@
   ],
   "primitives": [
     {
-      "kind": "polyline",
-      "points": [
-        {
-          "x": -20,
-          "y": -8
-        },
-        {
-          "x": 8,
-          "y": -8
-        },
-        {
-          "x": 18,
-          "y": 0
-        },
-        {
-          "x": 8,
-          "y": 8
-        },
-        {
-          "x": -20,
-          "y": 8
-        },
-        {
-          "x": -20,
-          "y": -8
-        }
-      ]
+      "kind": "circle",
+      "center": {
+        "x": -7.086614,
+        "y": 0
+      },
+      "radius": 2.834646,
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
+      }
     },
     {
       "kind": "line",
       "from": {
-        "x": 18,
+        "x": 10,
         "y": 0
       },
       "to": {
-        "x": 20,
+        "x": -7.086614,
         "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
       }
     }
   ],

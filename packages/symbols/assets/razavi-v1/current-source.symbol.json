@@ -3,10 +3,10 @@
   "id": "current-source",
   "name": "Independent Current Source",
   "viewBox": {
-    "x": -18,
-    "y": -30,
-    "width": 36,
-    "height": 60
+    "x": -15,
+    "y": -24,
+    "width": 30,
+    "height": 48
   },
   "pins": [
     {
@@ -14,7 +14,7 @@
       "role": "positive",
       "at": {
         "x": 0,
-        "y": -30
+        "y": -20
       },
       "direction": "north",
       "presentation": {
@@ -27,7 +27,7 @@
       "role": "negative",
       "at": {
         "x": 0,
-        "y": 30
+        "y": 20
       },
       "direction": "south",
       "presentation": {
@@ -38,44 +38,32 @@
   ],
   "primitives": [
     {
-      "kind": "line",
-      "from": {
-        "x": 0,
-        "y": -30
-      },
-      "to": {
-        "x": 0,
-        "y": -15
-      }
-    },
-    {
       "kind": "circle",
       "center": {
         "x": 0,
-        "y": 0
+        "y": -0.141732
       },
-      "radius": 15
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 0,
-        "y": 15
-      },
-      "to": {
-        "x": 0,
-        "y": 30
+      "radius": 10.629922,
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "round",
+        "lineJoin": "round"
       }
     },
     {
       "kind": "line",
       "from": {
         "x": 0,
-        "y": 9
+        "y": -7.653543
       },
       "to": {
         "x": 0,
-        "y": -7
+        "y": -0.779528
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "round",
+        "lineJoin": "round"
       }
     },
     {
@@ -83,18 +71,51 @@
       "points": [
         {
           "x": 0,
-          "y": -10
+          "y": 8.220472
         },
         {
-          "x": -4,
-          "y": -3
+          "x": -3,
+          "y": -0.779528
         },
         {
-          "x": 4,
-          "y": -3
+          "x": 3,
+          "y": -0.779528
         }
       ],
-      "fill": "foreground"
+      "fill": "foreground",
+      "stroke": "none"
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": -10.771654
+      },
+      "to": {
+        "x": 0,
+        "y": -20
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 0,
+        "y": 10.488189
+      },
+      "to": {
+        "x": 0,
+        "y": 20
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
     }
   ],
   "variants": [],

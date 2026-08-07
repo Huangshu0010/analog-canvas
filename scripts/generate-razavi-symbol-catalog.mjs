@@ -23,6 +23,16 @@ const generatedPath = resolve(
   "packages/symbols/src/razavi-catalog.generated.ts",
 );
 const check = process.argv.includes("--check");
+const generationPolicies = new Map([
+  [
+    "scripts/generate-visio-mos-assets.mjs",
+    "fixtures/visual-reference/visio-mos/",
+  ],
+  [
+    "scripts/generate-visio-core-analog-assets.mjs",
+    "fixtures/visual-reference/visio-core-analog/",
+  ],
+]);
 
 const normalize = (value) => `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
 const hash = (value) => createHash("sha256").update(value).digest("hex");
@@ -130,15 +140,15 @@ for (const entry of catalog.entries) {
     fail(`invalid source provenance for ${entry.symbolId}`);
   }
   if (entry.generation !== undefined) {
+    const referencePrefix = generationPolicies.get(
+      entry.generation.converterPath,
+    );
     if (
       entry.generation.kind !== "vss-master-ir" ||
-      entry.generation.converterPath !==
-        "scripts/generate-visio-mos-assets.mjs" ||
+      !referencePrefix ||
       entry.generation.converterVersion !== 1 ||
       !entry.generation.evidencePath.startsWith("fixtures/symbols/vss-ir/") ||
-      !entry.generation.referencePath.startsWith(
-        "fixtures/visual-reference/visio-mos/",
-      )
+      !entry.generation.referencePath.startsWith(referencePrefix)
     ) {
       fail(`invalid generation provenance for ${entry.symbolId}`);
     }

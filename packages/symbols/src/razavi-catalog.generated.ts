@@ -32,7 +32,16 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:C"],
     assetPath: "capacitor.symbol.json",
     assetHash:
-      "ba47e0f26d3e11e5443f24edaf07f500d93c158c9fda7814a6bc64ec9554030c",
+      "6c733aa0a6c9027c1f7df75f06ee4ee9e40604f8fcd9342939eac9eccd75f782",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath:
+        "fixtures/visual-reference/visio-core-analog/capacitor.svg",
+      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+      converterVersion: 1,
+    },
   },
   {
     symbolId: "current-source",
@@ -50,7 +59,16 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:I"],
     assetPath: "current-source.symbol.json",
     assetHash:
-      "8d0afc593f567b599810d275c37b942ef9dd1f9e17728aba5af31ecc18547e05",
+      "55fcdd68f47eb8ffb24f047b9680b60735606e7ddd59f63301ecf072c0bb0ed7",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath:
+        "fixtures/visual-reference/visio-core-analog/current-source.svg",
+      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+      converterVersion: 1,
+    },
   },
   {
     symbolId: "diode",
@@ -68,7 +86,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:D"],
     assetPath: "diode.symbol.json",
     assetHash:
-      "3287f0fbca5b11a9aac4f1566e9da38012afdf4c63039787bebd4f86185859e3",
+      "00214f1176f51b1b18b216dbcb6850e750ebe2e6a4403267499002f298b214c3",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-core-analog/diode.svg",
+      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+      converterVersion: 1,
+    },
   },
   {
     symbolId: "ground",
@@ -86,7 +112,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "ground.symbol.json",
     assetHash:
-      "4ec98a07833805e2799b7a378002da1b80010c812cd0e54056ee2952c4cafb43",
+      "7c913d3903f99262f00e3406a45b59eb1c2386664e5ff4a4ce5215e345be7cbd",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-core-analog/ground.svg",
+      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+      converterVersion: 1,
+    },
   },
   {
     symbolId: "inductor",
@@ -104,7 +138,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:L"],
     assetPath: "inductor.symbol.json",
     assetHash:
-      "f66931b5536ae857032c372ad03126cc8c35552d243563b49bd8270a8f08901d",
+      "5ccd24ed9f701ce4fdb46a921a21045f1e882d2b6302ff885dea8ba2a09026f8",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-core-analog/inductor.svg",
+      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+      converterVersion: 1,
+    },
   },
   {
     symbolId: "nmos",
@@ -262,7 +304,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "port.symbol.json",
     assetHash:
-      "a68b858d3dd9d24f4de8a41d8989960d6fdb385e2daf68c8038d8f52792a9f9c",
+      "94bf9d3492cb6bce3168b85cba88c17eeb1c376e7c2a615979141f36e8f97963",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-core-analog/port.svg",
+      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+      converterVersion: 1,
+    },
   },
   {
     symbolId: "resistor",
@@ -280,7 +330,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:R"],
     assetPath: "resistor.symbol.json",
     assetHash:
-      "503b6522cf40d53de5dd8d12e1a86a0c84fb957212458694848e0aa17a38e8da",
+      "453e7b2ebcafbe388ce27cd7f6af405d74baea18e4401c1cb368241bf5cf0baf",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath: "fixtures/visual-reference/visio-core-analog/resistor.svg",
+      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+      converterVersion: 1,
+    },
   },
   {
     symbolId: "voltage-source",
@@ -298,7 +356,16 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:V"],
     assetPath: "voltage-source.symbol.json",
     assetHash:
-      "69f7cc7a9a0759d1ee9b712fa254d13d738e0b42bb0fec7b4eee1deaacd121f4",
+      "6f2131998329db57ba24be384473411251e8aad0e2e273fde67af7a127a296d3",
+    generation: {
+      kind: "vss-master-ir",
+      evidencePath:
+        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+      referencePath:
+        "fixtures/visual-reference/visio-core-analog/voltage-source.svg",
+      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+      converterVersion: 1,
+    },
   },
 ];
 
@@ -329,20 +396,20 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "capacitor",
     name: "Capacitor",
     viewBox: {
-      x: -30,
-      y: -15,
-      width: 60,
-      height: 30,
+      x: -12,
+      y: -24,
+      width: 24,
+      height: 48,
     },
     pins: [
       {
         name: "1",
         role: "passive",
         at: {
-          x: -30,
-          y: 0,
+          x: 0,
+          y: -20,
         },
-        direction: "west",
+        direction: "north",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -352,95 +419,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "2",
         role: "passive",
         at: {
-          x: 30,
-          y: 0,
-        },
-        direction: "east",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-    ],
-    primitives: [
-      {
-        kind: "line",
-        from: {
-          x: -30,
-          y: 0,
-        },
-        to: {
-          x: -4,
-          y: 0,
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -4,
-          y: -12,
-        },
-        to: {
-          x: -4,
-          y: 12,
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 4,
-          y: -12,
-        },
-        to: {
-          x: 4,
-          y: 12,
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 4,
-          y: 0,
-        },
-        to: {
-          x: 30,
-          y: 0,
-        },
-      },
-    ],
-    variants: [],
-    aliases: [],
-  },
-  {
-    schemaVersion: 1,
-    id: "current-source",
-    name: "Independent Current Source",
-    viewBox: {
-      x: -18,
-      y: -30,
-      width: 36,
-      height: 60,
-    },
-    pins: [
-      {
-        name: "+",
-        role: "positive",
-        at: {
           x: 0,
-          y: -30,
-        },
-        direction: "north",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "-",
-        role: "negative",
-        at: {
-          x: 0,
-          y: 30,
+          y: 20,
         },
         direction: "south",
         presentation: {
@@ -453,42 +433,137 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
+          x: 7.086614,
+          y: -3.11811,
+        },
+        to: {
+          x: -7.086614,
+          y: -3.11811,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 7.086614,
+          y: 3.11811,
+        },
+        to: {
+          x: -7.086614,
+          y: 3.11811,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
           x: 0,
-          y: -30,
+          y: -3.11811,
         },
         to: {
           x: 0,
-          y: -15,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 3.401575,
+        },
+        to: {
+          x: 0,
+          y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+    aliases: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "current-source",
+    name: "Independent Current Source",
+    viewBox: {
+      x: -15,
+      y: -24,
+      width: 30,
+      height: 48,
+    },
+    pins: [
+      {
+        name: "+",
+        role: "positive",
+        at: {
+          x: 0,
+          y: -20,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "-",
+        role: "negative",
+        at: {
+          x: 0,
+          y: 20,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
       {
         kind: "circle",
         center: {
           x: 0,
-          y: 0,
+          y: -0.141732,
         },
-        radius: 15,
-      },
-      {
-        kind: "line",
-        from: {
-          x: 0,
-          y: 15,
-        },
-        to: {
-          x: 0,
-          y: 30,
+        radius: 10.629922,
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
       {
         kind: "line",
         from: {
           x: 0,
-          y: 9,
+          y: -7.653543,
         },
         to: {
           x: 0,
-          y: -7,
+          y: -0.779528,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
       {
@@ -496,18 +571,51 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: 0,
-            y: -10,
+            y: 8.220472,
           },
           {
-            x: -4,
-            y: -3,
+            x: -3,
+            y: -0.779528,
           },
           {
-            x: 4,
-            y: -3,
+            x: 3,
+            y: -0.779528,
           },
         ],
         fill: "foreground",
+        stroke: "none",
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: -10.771654,
+        },
+        to: {
+          x: 0,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 10.488189,
+        },
+        to: {
+          x: 0,
+          y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
       },
     ],
     variants: [],
@@ -518,17 +626,17 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "diode",
     name: "Diode",
     viewBox: {
-      x: -30,
-      y: -16,
-      width: 60,
-      height: 32,
+      x: -14,
+      y: -12,
+      width: 28,
+      height: 24,
     },
     pins: [
       {
         name: "A",
         role: "anode",
         at: {
-          x: -30,
+          x: -10,
           y: 0,
         },
         direction: "west",
@@ -541,7 +649,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "K",
         role: "cathode",
         at: {
-          x: 30,
+          x: 10,
           y: 0,
         },
         direction: "east",
@@ -553,54 +661,60 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "line",
-        from: {
-          x: -30,
-          y: 0,
-        },
-        to: {
-          x: -12,
-          y: 0,
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -12,
-            y: -12,
-          },
-          {
-            x: -12,
-            y: 12,
-          },
-          {
-            x: 10,
-            y: 0,
-          },
-        ],
-        fill: "none",
-      },
-      {
-        kind: "line",
-        from: {
-          x: 10,
-          y: -13,
-        },
-        to: {
-          x: 10,
-          y: 13,
+        kind: "path",
+        data: "M -5.669291 7.086614 L -5.669291 -7.086614 L 5.722258 0 L -5.669291 7.086614 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
       {
         kind: "line",
         from: {
+          x: 5.669291,
+          y: 7.086614,
+        },
+        to: {
+          x: 5.669291,
+          y: -7.086614,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 5.669291,
+          y: 0.03295,
+        },
+        to: {
           x: 10,
           y: 0,
         },
-        to: {
-          x: 30,
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -5.669291,
           y: 0,
+        },
+        to: {
+          x: -10,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
     ],
@@ -612,10 +726,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "ground",
     name: "Ground",
     viewBox: {
-      x: -15,
-      y: -10,
-      width: 30,
-      height: 40,
+      x: -12,
+      y: -14,
+      width: 24,
+      height: 27,
     },
     pins: [
       {
@@ -641,65 +755,102 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         to: {
           x: 0,
-          y: 10,
+          y: 1.771654,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
       {
         kind: "line",
         from: {
-          x: -12,
-          y: 10,
+          x: -7.086614,
+          y: 1.771654,
         },
         to: {
-          x: 12,
-          y: 10,
+          x: 7.086614,
+          y: 1.771654,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: -8,
-          y: 16,
+          x: -3.543307,
+          y: 5.314961,
         },
         to: {
-          x: 8,
-          y: 16,
+          x: 3.543307,
+          y: 5.314961,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: -4,
-          y: 22,
+          x: -1.771654,
+          y: 8.858268,
         },
         to: {
-          x: 4,
-          y: 22,
+          x: 1.771654,
+          y: 8.858268,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 1.771654,
+        },
+        to: {
+          x: 0,
+          y: -8.858268,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
     ],
     variants: [],
     aliases: ["gnd"],
+    labelVisibility: "hidden",
   },
   {
     schemaVersion: 1,
     id: "inductor",
     name: "Inductor",
     viewBox: {
-      x: -30,
-      y: -15,
-      width: 60,
-      height: 30,
+      x: -12,
+      y: -24,
+      width: 24,
+      height: 48,
     },
     pins: [
       {
         name: "1",
         role: "passive",
         at: {
-          x: -30,
-          y: 0,
+          x: 0,
+          y: -20,
         },
-        direction: "west",
+        direction: "north",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -709,10 +860,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "2",
         role: "passive",
         at: {
-          x: 30,
-          y: 0,
+          x: 0,
+          y: 20,
         },
-        direction: "east",
+        direction: "south",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -721,29 +872,44 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "line",
-        from: {
-          x: -30,
-          y: 0,
-        },
-        to: {
-          x: -20,
-          y: 0,
-        },
-      },
-      {
         kind: "path",
-        data: "M -20 0 C -20 -12 -10 -12 -10 0 C -10 -12 0 -12 0 0 C 0 -12 10 -12 10 0 C 10 -12 20 -12 20 0",
+        data: "M 0.590555 14.173228 L 1.68715 14.166699 L 2.756226 14.041001 L 3.765301 13.799953 L 4.683714 13.45088 L 5.48356 13.004388 L 6.140536 12.474043 L 6.634679 11.87596 L 6.950977 11.22831 L 7.079818 10.550774 L 6.974362 9.688485 L 6.68474 8.853406 L 6.219755 8.070922 L 5.593542 7.364819 L 4.825137 6.756561 L 3.937897 6.264638 L 2.958792 5.904004 L 1.917586 5.68562 L 0.845929 5.616125 L -0.514681 5.58352 L -1.837887 5.626744 L -3.083164 5.744474 L -4.212376 5.933105 L -5.190941 6.186858 L -5.988888 6.497964 L -6.581781 6.856894 L -6.951462 7.252656 L -7.086609 7.673129 L -6.893415 8.214838 L -6.478369 8.709966 L -5.85408 9.143469 L -5.039517 9.502175 L -4.059431 9.775185 L -2.943601 9.954204 L -1.725931 10.033791 L -0.443418 10.01153 L 0.864968 9.888097 L 2.168131 9.637569 L 3.397748 9.21208 L 4.508704 8.627241 L 5.460234 7.904512 L 6.217427 7.07041 L 6.752498 6.15554 L 7.045816 5.19347 L 7.086618 4.2195 L 7.001389 3.165292 L 6.70849 2.137448 L 6.216821 1.1672 L 5.54132 0.284026 L 4.702513 -0.485237 L 3.725886 -1.117217 L 2.641114 -1.59271 L 1.481157 -1.897269 L 0.281259 -2.021641 L -0.973057 -2.063666 L -2.195695 -2.030551 L -3.348775 -1.923322 L -4.396569 -1.745303 L -5.306615 -1.502007 L -6.050715 -1.200974 L -6.605815 -0.851531 L -6.954716 -0.464504 L -7.086609 -0.051884 L -6.908373 0.450271 L -6.524071 0.908154 L -5.945385 1.307847 L -5.189904 1.637199 L -4.280593 1.886201 L -3.245093 2.047282 L -2.114879 2.115547 L -0.924307 2.088921 L 0.290434 1.968212 L 1.726104 1.660414 L 3.074518 1.171181 L 4.288265 0.517712 L 5.32467 -0.277015 L 6.147292 -1.185059 L 6.727209 -2.174492 L 7.044031 -3.210526 L 7.086618 -4.256734 L 7.004849 -5.218986 L 6.733518 -6.156286 L 6.280871 -7.040154 L 5.66066 -7.843735 L 4.891731 -8.542613 L 3.997447 -9.115551 L 3.00498 -9.545142 L 1.944486 -9.818333 L 0.848188 -9.926823 L -0.509538 -9.953351 L -1.831622 -9.898975 L -3.077101 -9.76538 L -4.207385 -9.556706 L -5.187455 -9.279417 L -5.986945 -8.942104 L -6.581084 -8.55522 L -6.951464 -8.130751 L -7.086609 -7.681848 L -6.887751 -7.113943 L -6.467834 -6.596273 L -5.839619 -6.144573 L -5.022201 -5.77257 L -4.040423 -5.491571 L -2.924124 -5.310116 L -1.707234 -5.233722 L -0.426737 -5.264709 L 0.878449 -5.402135 L 2.158666 -5.627762 L 3.367876 -6.009251 L 4.46324 -6.533086 L 5.405952 -7.180711 L 6.162614 -7.92918 L 6.706419 -8.751978 L 7.018101 -9.619955 L 7.086618 -10.50236 L 6.935725 -11.222764 L 6.602047 -11.906551 L 6.095723 -12.532942 L 5.432138 -13.082907 L 4.631454 -13.539734 L 3.717999 -13.889543 L 2.719529 -14.121705 L 1.666381 -14.229167 L 0.590555 -14.208662",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
+        },
       },
       {
         kind: "line",
         from: {
-          x: 20,
-          y: 0,
+          x: 0,
+          y: 14.173228,
         },
         to: {
-          x: 30,
-          y: 0,
+          x: 0,
+          y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: -14.173228,
+        },
+        to: {
+          x: 0,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
     ],
@@ -1941,17 +2107,17 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "port",
     name: "Port",
     viewBox: {
-      x: -20,
-      y: -10,
-      width: 40,
-      height: 20,
+      x: -14,
+      y: -7,
+      width: 28,
+      height: 14,
     },
     pins: [
       {
         name: "P",
         role: "port",
         at: {
-          x: 20,
+          x: 10,
           y: 0,
         },
         direction: "east",
@@ -1963,43 +2129,32 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "polyline",
-        points: [
-          {
-            x: -20,
-            y: -8,
-          },
-          {
-            x: 8,
-            y: -8,
-          },
-          {
-            x: 18,
-            y: 0,
-          },
-          {
-            x: 8,
-            y: 8,
-          },
-          {
-            x: -20,
-            y: 8,
-          },
-          {
-            x: -20,
-            y: -8,
-          },
-        ],
+        kind: "circle",
+        center: {
+          x: -7.086614,
+          y: 0,
+        },
+        radius: 2.834646,
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
       },
       {
         kind: "line",
         from: {
-          x: 18,
+          x: 10,
           y: 0,
         },
         to: {
-          x: 20,
+          x: -7.086614,
           y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
     ],
@@ -2011,20 +2166,20 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "resistor",
     name: "Resistor",
     viewBox: {
-      x: -30,
-      y: -15,
-      width: 60,
-      height: 30,
+      x: -10,
+      y: -24,
+      width: 20,
+      height: 48,
     },
     pins: [
       {
         name: "1",
         role: "passive",
         at: {
-          x: -30,
-          y: 0,
+          x: 0,
+          y: -20,
         },
-        direction: "west",
+        direction: "north",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -2034,10 +2189,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "2",
         role: "passive",
         at: {
-          x: 30,
-          y: 0,
+          x: 0,
+          y: 20,
         },
-        direction: "east",
+        direction: "south",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -2046,54 +2201,44 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "line",
-        from: {
-          x: -30,
-          y: 0,
+        kind: "path",
+        data: "M 0 -11.338583 L -5.669291 -9.322835 L 5.669291 -5.669291 L -5.669291 -2.015748 L 5.669291 2.015748 L -5.669291 5.669291 L 5.669291 9.322835 L 0 11.338583",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
         },
-        to: {
-          x: -20,
-          y: 0,
-        },
-      },
-      {
-        kind: "polyline",
-        points: [
-          {
-            x: -20,
-            y: 0,
-          },
-          {
-            x: -15,
-            y: -8,
-          },
-          {
-            x: -5,
-            y: 8,
-          },
-          {
-            x: 5,
-            y: -8,
-          },
-          {
-            x: 15,
-            y: 8,
-          },
-          {
-            x: 20,
-            y: 0,
-          },
-        ],
       },
       {
         kind: "line",
         from: {
-          x: 20,
-          y: 0,
+          x: 0,
+          y: -11.338583,
         },
         to: {
-          x: 30,
-          y: 0,
+          x: 0,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 11.338583,
+        },
+        to: {
+          x: 0,
+          y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
     ],
@@ -2105,10 +2250,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "voltage-source",
     name: "Independent Voltage Source",
     viewBox: {
-      x: -18,
-      y: -30,
-      width: 36,
-      height: 60,
+      x: -15,
+      y: -24,
+      width: 30,
+      height: 48,
     },
     pins: [
       {
@@ -2116,7 +2261,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "positive",
         at: {
           x: 0,
-          y: -30,
+          y: -20,
         },
         direction: "north",
         presentation: {
@@ -2129,7 +2274,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "negative",
         at: {
           x: 0,
-          y: 30,
+          y: 20,
         },
         direction: "south",
         presentation: {
@@ -2140,66 +2285,96 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "line",
-        from: {
-          x: 0,
-          y: -30,
-        },
-        to: {
-          x: 0,
-          y: -15,
-        },
-      },
-      {
         kind: "circle",
         center: {
           x: 0,
-          y: 0,
+          y: -0.141732,
         },
-        radius: 15,
-      },
-      {
-        kind: "line",
-        from: {
-          x: 0,
-          y: 15,
-        },
-        to: {
-          x: 0,
-          y: 30,
+        radius: 10.629922,
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
       {
         kind: "line",
         from: {
-          x: -5,
-          y: -6,
+          x: -2.834646,
+          y: -4.251969,
         },
         to: {
-          x: 5,
-          y: -6,
+          x: 2.834646,
+          y: -4.251969,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
       {
         kind: "line",
         from: {
           x: 0,
-          y: -11,
+          y: -7.086614,
         },
         to: {
           x: 0,
-          y: -1,
+          y: -1.417323,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
         },
       },
       {
         kind: "line",
         from: {
-          x: -5,
-          y: 7,
+          x: -2.834646,
+          y: 4.251969,
         },
         to: {
-          x: 5,
-          y: 7,
+          x: 2.834646,
+          y: 4.251969,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: -10.771654,
+        },
+        to: {
+          x: 0,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 10.488189,
+        },
+        to: {
+          x: 0,
+          y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
     ],

@@ -13,6 +13,12 @@ describe("PDK symbol mapping registry", () => {
     expect(
       resolvePdkSymbolMapping("SKY130_FD_PR__PFET_G5V0D10V5", 4),
     ).toMatchObject({ symbolId: "pmos", pinNames: ["D", "G", "S", "B"] });
+    expect(resolvePdkSymbolMapping("sky130_fd_pr__res_high_po", 3)).toEqual({
+      symbolId: "poly-resistor",
+      pinNames: ["1", "2", "B"],
+      source: "pdk-rule",
+      registryId: "sky130-high-po-three-terminal",
+    });
   });
 
   it("does not guess an unknown namespace or conflicting terminal count", () => {

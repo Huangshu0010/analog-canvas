@@ -92,6 +92,7 @@ export const SymbolDefinitionSchema = z
     primitives: z.array(SymbolPrimitiveSchema),
     variants: z.array(SymbolVariantSchema),
     aliases: z.array(StableIdSchema),
+    labelVisibility: z.enum(["shown", "hidden"]).optional(),
   })
   .superRefine((symbol, context) => {
     const pinNames = new Set<string>();

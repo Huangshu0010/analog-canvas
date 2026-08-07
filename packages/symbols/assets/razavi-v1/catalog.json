@@ -21,7 +21,14 @@
       "palette": true,
       "automaticMappings": ["spice:C"],
       "assetPath": "capacitor.symbol.json",
-      "assetHash": "ba47e0f26d3e11e5443f24edaf07f500d93c158c9fda7814a6bc64ec9554030c"
+      "assetHash": "6c733aa0a6c9027c1f7df75f06ee4ee9e40604f8fcd9342939eac9eccd75f782",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-core-analog/capacitor.svg",
+        "converterPath": "scripts/generate-visio-core-analog-assets.mjs",
+        "converterVersion": 1
+      }
     },
     {
       "symbolId": "current-source",
@@ -37,7 +44,14 @@
       "palette": true,
       "automaticMappings": ["spice:I"],
       "assetPath": "current-source.symbol.json",
-      "assetHash": "8d0afc593f567b599810d275c37b942ef9dd1f9e17728aba5af31ecc18547e05"
+      "assetHash": "55fcdd68f47eb8ffb24f047b9680b60735606e7ddd59f63301ecf072c0bb0ed7",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-core-analog/current-source.svg",
+        "converterPath": "scripts/generate-visio-core-analog-assets.mjs",
+        "converterVersion": 1
+      }
     },
     {
       "symbolId": "diode",
@@ -53,7 +67,14 @@
       "palette": true,
       "automaticMappings": ["spice:D"],
       "assetPath": "diode.symbol.json",
-      "assetHash": "3287f0fbca5b11a9aac4f1566e9da38012afdf4c63039787bebd4f86185859e3"
+      "assetHash": "00214f1176f51b1b18b216dbcb6850e750ebe2e6a4403267499002f298b214c3",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-core-analog/diode.svg",
+        "converterPath": "scripts/generate-visio-core-analog-assets.mjs",
+        "converterVersion": 1
+      }
     },
     {
       "symbolId": "ground",
@@ -69,7 +90,14 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "ground.symbol.json",
-      "assetHash": "4ec98a07833805e2799b7a378002da1b80010c812cd0e54056ee2952c4cafb43"
+      "assetHash": "7c913d3903f99262f00e3406a45b59eb1c2386664e5ff4a4ce5215e345be7cbd",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-core-analog/ground.svg",
+        "converterPath": "scripts/generate-visio-core-analog-assets.mjs",
+        "converterVersion": 1
+      }
     },
     {
       "symbolId": "inductor",
@@ -85,7 +113,14 @@
       "palette": true,
       "automaticMappings": ["spice:L"],
       "assetPath": "inductor.symbol.json",
-      "assetHash": "f66931b5536ae857032c372ad03126cc8c35552d243563b49bd8270a8f08901d"
+      "assetHash": "5ccd24ed9f701ce4fdb46a921a21045f1e882d2b6302ff885dea8ba2a09026f8",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-core-analog/inductor.svg",
+        "converterPath": "scripts/generate-visio-core-analog-assets.mjs",
+        "converterVersion": 1
+      }
     },
     {
       "symbolId": "nmos",
@@ -225,7 +260,14 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "port.symbol.json",
-      "assetHash": "a68b858d3dd9d24f4de8a41d8989960d6fdb385e2daf68c8038d8f52792a9f9c"
+      "assetHash": "94bf9d3492cb6bce3168b85cba88c17eeb1c376e7c2a615979141f36e8f97963",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-core-analog/port.svg",
+        "converterPath": "scripts/generate-visio-core-analog-assets.mjs",
+        "converterVersion": 1
+      }
     },
     {
       "symbolId": "resistor",
@@ -241,7 +283,14 @@
       "palette": true,
       "automaticMappings": ["spice:R"],
       "assetPath": "resistor.symbol.json",
-      "assetHash": "503b6522cf40d53de5dd8d12e1a86a0c84fb957212458694848e0aa17a38e8da"
+      "assetHash": "453e7b2ebcafbe388ce27cd7f6af405d74baea18e4401c1cb368241bf5cf0baf",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-core-analog/resistor.svg",
+        "converterPath": "scripts/generate-visio-core-analog-assets.mjs",
+        "converterVersion": 1
+      }
     },
     {
       "symbolId": "voltage-source",
@@ -257,7 +306,14 @@
       "palette": true,
       "automaticMappings": ["spice:V"],
       "assetPath": "voltage-source.symbol.json",
-      "assetHash": "69f7cc7a9a0759d1ee9b712fa254d13d738e0b42bb0fec7b4eee1deaacd121f4"
+      "assetHash": "6f2131998329db57ba24be384473411251e8aad0e2e273fde67af7a127a296d3",
+      "generation": {
+        "kind": "vss-master-ir",
+        "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
+        "referencePath": "fixtures/visual-reference/visio-core-analog/voltage-source.svg",
+        "converterPath": "scripts/generate-visio-core-analog-assets.mjs",
+        "converterVersion": 1
+      }
     }
   ],
   "semanticPrimitives": [
