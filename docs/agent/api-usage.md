@@ -17,6 +17,15 @@
 7. Request a fresh Snapshot before global review and handoff. On
    `STALE_REVISION`, refresh and reconsider; never blindly retry the old edit.
 
+A successful `transact` returns `resolvedRoutes`: the post-edit resolved
+polyline for each Route in `diff.changedObjectIds`. Read it to learn the actual
+stored geometry — including any normalization (e.g. `set_route_points`
+collapsing collinear waypoints) — without an immediate `snapshot`. A rejected
+`transact` localizes the failure: each diagnostic `path` points at the failing
+edit position (`["edits", index]`) or, for a Route geometry failure, at the
+Route (`["routes", routeId]`), and `objectIds` names the offending object. Read
+`path`/`objectIds` to pinpoint the failing edit rather than parsing the message.
+
 The normal v2 operation surface is intentionally flat:
 `capabilities`, `snapshot`, `transact`, and `render`. API v1 `query` remains a
 compatibility boundary, not a recommended planning language.

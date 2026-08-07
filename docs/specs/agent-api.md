@@ -141,6 +141,15 @@ On `STALE_REVISION`, the Agent refreshes Snapshot and re-evaluates. It must not
 blindly replay the old transaction. A successful local edit does not require an
 immediate full refresh when the Agent can safely track the returned diff.
 
+A successful `transact` response may include `resolvedRoutes`: the post-edit
+resolved polyline for each Route whose ID is in `diff.changedObjectIds`. This
+surfaces the actual stored geometry, including any normalization the Edit
+Engine applied (for example `set_route_points` collapsing collinear
+waypoints), so an Agent learns the real polyline without an immediate
+`snapshot`. When absent or empty, no touched Route has a resolvable polyline.
+The field is derived from the validated Document and never carries electrical
+or persisted intent beyond what `diff` already reports.
+
 ## Diagnostics and render
 
 Diagnostics returned by Snapshot, transact, and render contain:
@@ -150,6 +159,12 @@ Diagnostics returned by Snapshot, transact, and render contain:
 - related `objectIds`;
 - optional `path`, `bounds`, or `point`;
 - primitive typed `parameters` for machine repair decisions.
+
+A `transact` rejection localizes each runtime failure: its diagnostic `path`
+points at the failing edit position (`["edits", index]`) or, for a Route
+geometry failure, at the Route (`["routes", routeId]`), and `objectIds` names
+the offending Route or instance. An Agent must read `path`/`objectIds` to
+pinpoint the failing edit rather than parse the message string.
 
 `formal` renders the same export-safe SVG used by the GUI. `diagnostics` may
 add a separate overlay group. Render data is base64 encoded and rejected above

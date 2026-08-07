@@ -62,6 +62,7 @@ export const AGENT_EDIT_KINDS = [
   "place_port",
   "move_port",
   "set_route_points",
+  "route_orthogonal",
   "add_junction",
   "remove_junction",
   "move_junction",
@@ -126,6 +127,23 @@ function errorResponse(
     error: { code, message },
     diagnostics,
   });
+}
+
+function collectResolvedRoutes(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  changedObjectIds: readonly string[],
+): Array<{ routeId: string; polyline: Point[] }> {
+  const changed = new Set(changedObjectIds);
+  const result: Array<{ routeId: string; polyline: Point[] }> = [];
+  for (const route of document.routes) {
+    if (!changed.has(route.id)) continue;
+    const polyline = routePolyline(document, resolver, route)?.points ?? null;
+    if (polyline && polyline.length >= 2) {
+      result.push({ routeId: route.id, polyline: [...polyline] });
+    }
+  }
+  return result;
 }
 
 function visualDiagnostics(
@@ -270,7 +288,7 @@ function describeObjects(
       kind: "junction",
       position: junction.position,
       netIds: [junction.netId],
-      attributes: {},
+      attributes: { role: junction.role ?? "branch" },
     });
   }
   for (const annotation of document.annotations) {
@@ -432,6 +450,7 @@ function editCategory(
     case "align_instances":
       return "geometry";
     case "set_route_points":
+    case "route_orthogonal":
     case "add_junction":
     case "remove_junction":
     case "make_flightline":
@@ -759,7 +778,12 @@ export function createAgentCircuitService(
               code: item.code,
               severity: item.severity,
               message: item.message,
+              revision: result.revision,
+              ...(item.objectIds ? { objectIds: [...item.objectIds] } : {}),
               ...(item.path ? { path: [...item.path] } : {}),
+              ...(item.parameters
+                ? { parameters: { ...item.parameters } }
+                : {}),
             })),
           );
         }
@@ -772,6 +796,15 @@ export function createAgentCircuitService(
           });
           if (history.length > limits.changeHistoryEntries) history.shift();
         }
+        // Surface the actual stored geometry for Routes this transaction
+        // touched, so a caller learns the post-normalization polyline (e.g.
+        // after set_route_points collapses collinear waypoints) without a
+        // fresh Snapshot. dryRun reports the proposed geometry the same way.
+        const resolvedRoutes = collectResolvedRoutes(
+          result.document,
+          options.resolver,
+          result.diff.changedObjectIds,
+        );
         return response({
           apiVersion: request.apiVersion,
           requestId: request.requestId,
@@ -782,6 +815,7 @@ export function createAgentCircuitService(
           proposedRevision: result.proposedRevision,
           diff: result.diff,
           diagnostics: result.diagnostics,
+          ...(resolvedRoutes.length === 0 ? {} : { resolvedRoutes }),
         });
       }
 

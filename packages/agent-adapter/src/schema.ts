@@ -2,6 +2,7 @@ import {
   AnnotationSchema,
   LayoutConstraintSchema,
   LayoutGroupSchema,
+  JunctionRoleSchema,
   PlacementSchema,
   PointSchema,
   PresentationIntentSchema,
@@ -236,6 +237,7 @@ export const AgentSnapshotJunctionSchema = z.strictObject({
   id: StableIdSchema,
   netId: StableIdSchema,
   position: PointSchema,
+  role: JunctionRoleSchema.optional(),
 });
 
 export const AgentSnapshotDocumentSchema = z.strictObject({
@@ -350,6 +352,14 @@ export const AgentTransactSuccessResponseSchema = ResponseBaseSchema.extend({
   proposedRevision: z.number().int().nonnegative(),
   diff: AgentDiffSchema,
   diagnostics: z.array(AgentDiagnosticSchema),
+  resolvedRoutes: z
+    .array(
+      z.strictObject({
+        routeId: StableIdSchema,
+        polyline: z.array(PointSchema).min(2),
+      }),
+    )
+    .optional(),
 });
 export const AgentRenderResponseSchema = ResponseBaseSchema.extend({
   operation: z.literal("render"),

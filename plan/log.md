@@ -933,3 +933,32 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   (risk-proportional).
 - Commit status: ready for
   `docs(adr): bound agent-routing expander to Agent-local, non-rerouting scope`.
+
+## 2026-08-07 - Localize transact failures and return resolved Route geometry
+
+- Target: close three Agent self-consistency gaps in the `transact` path (target
+  #2 of the routing-quality sequence) so an Agent sees the consequence of its
+  own operation.
+- Changed areas: `packages/edit-engine/src/transaction.ts` (EditDiagnostic gains
+  optional objectIds/parameters; rejectTransaction gains optional path/objectIds;
+  the apply loop is indexed with a rejectAt closure binding `["edits", index]`;
+  in-loop rejections name the offending routeId; the post-loop Route geometry
+  failure carries `["routes", routeId]`), `packages/agent-adapter/src/schema.ts`
+  (optional `resolvedRoutes` on the transact success response),
+  `packages/agent-adapter/src/service.ts` (stop stripping failure diagnostics;
+  collect and return resolvedRoutes), two focused service tests, and
+  `docs/specs/agent-api.md` + `docs/agent/api-usage.md` documenting both.
+- Result: a rejected transact localizes the failing edit via `["edits", index]`
+  (or `["routes", routeId]` for a Route geometry failure) and names the object
+  in `objectIds`; a successful transact returns the post-normalization polyline
+  for each touched Route, so the Agent learns the actual stored geometry after
+  `set_route_points`/`add_junction` normalization without an immediate snapshot.
+- Dirty-state decision: owned paths do not overlap the existing editor/symbol/
+  fixture dirty set. The agent-api schema artifacts were already dirty from
+  prior uncommitted schema.ts work; regenerated to validate, but NOT staged here
+  because they bundle pre-existing schema.ts changes not authored by this target.
+- Validation: full workspace `pnpm typecheck`, `prettier --check`, 47 tests in
+  8 files (agent-adapter + edit-engine), `agent-api:artifacts:check`, and
+  `git diff --check` passed.
+- Commit status: ready for
+  `feat(agent-api): localize transact failures and return resolved Route geometry`.

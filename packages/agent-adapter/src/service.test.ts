@@ -83,6 +83,7 @@ describe("Agent Circuit API v1 service", () => {
           "connect_endpoints",
           "merge_nets",
           "move_junction",
+          "route_orthogonal",
           "set_net_name",
           "disconnect_endpoint",
         ]),
@@ -416,6 +417,7 @@ describe("Agent Circuit API v1 service", () => {
     ]) {
       item.locked = false;
     }
+    const targetPosition = { x: 190, y: 210 };
     const request = {
       apiVersion: "1.0" as const,
       requestId: "move-request",
@@ -427,7 +429,34 @@ describe("Agent Circuit API v1 service", () => {
         {
           kind: "move_instance" as const,
           instanceId: "M1",
-          position: { x: 190, y: 210 },
+          position: targetPosition,
+        },
+        {
+          kind: "set_route_points" as const,
+          routeId: "route-vss-left",
+          netId: "net-vss",
+          from: { kind: "terminal" as const, instanceId: "M1", pinName: "S" },
+          to: { kind: "junction" as const, junctionId: "junction-vss" },
+          waypoints: [],
+          segmentModes: ["trunk" as const],
+        },
+        {
+          kind: "set_route_points" as const,
+          routeId: "route-vinp",
+          netId: "net-vinp",
+          from: { kind: "port" as const, portId: "port-vinp" },
+          to: { kind: "terminal" as const, instanceId: "M1", pinName: "G" },
+          waypoints: [{ x: 80, y: 210 }],
+          segmentModes: ["manual" as const, "manual" as const],
+        },
+        {
+          kind: "set_route_points" as const,
+          routeId: "route-outp-bottom",
+          netId: "net-voutp",
+          from: { kind: "junction" as const, junctionId: "junction-outp" },
+          to: { kind: "terminal" as const, instanceId: "M1", pinName: "D" },
+          waypoints: [{ x: 160, y: 190 }],
+          segmentModes: ["manual" as const, "manual" as const],
         },
       ],
     };
@@ -475,6 +504,125 @@ describe("Agent Circuit API v1 service", () => {
       revision: 1,
     });
     expect(fixture.getDocument().revision).toBe(1);
+  });
+
+  it("localizes a transact rejection to the failing edit with a path and objectIds", () => {
+    const fixture = serviceFixture();
+    for (const item of [
+      ...fixture.getDocument().layoutGroups,
+      ...fixture.getDocument().constraints,
+    ]) {
+      item.locked = false;
+    }
+    // Two edits: the first is valid; the second targets a net the endpoints do
+    // not both belong to, so it must reject at edits index 1.
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "reject-index",
+      operation: "transact",
+      documentId: "document-differential-stage",
+      transactionId: "reject-index",
+      expectedRevision: 0,
+      edits: [
+        {
+          kind: "move_instance",
+          instanceId: "M1",
+          position: { x: 190, y: 210 },
+        },
+        {
+          kind: "set_route_points",
+          routeId: "route-vinp",
+          netId: "net-vss",
+          from: { kind: "port", portId: "port-vinp" },
+          to: { kind: "terminal", instanceId: "M1", pinName: "G" },
+          waypoints: [{ x: 80, y: 210 }],
+          segmentModes: ["manual", "manual"],
+        },
+      ],
+    });
+    expect(response).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+    if (response.ok) return;
+    const diagnostic = response.diagnostics[0];
+    expect(diagnostic).toBeDefined();
+    expect(diagnostic!.path).toEqual(["edits", 1]);
+    expect(diagnostic!.objectIds).toContain("route-vinp");
+  });
+
+  it("returns resolvedRoutes with the post-normalization polyline after a set_route_points", () => {
+    const fixture = serviceFixture();
+    for (const item of [
+      ...fixture.getDocument().layoutGroups,
+      ...fixture.getDocument().constraints,
+    ]) {
+      item.locked = false;
+    }
+    // Move M1 and re-point all three Routes that touch it (the connected
+    // Routes must be updated in the same transaction or the move makes them
+    // non-orthogonal). The response must expose the post-normalization
+    // polyline rather than the raw waypoints the Agent sent.
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "resolved",
+      operation: "transact",
+      documentId: "document-differential-stage",
+      transactionId: "resolved",
+      expectedRevision: 0,
+      edits: [
+        {
+          kind: "move_instance",
+          instanceId: "M1",
+          position: { x: 190, y: 210 },
+        },
+        {
+          kind: "set_route_points",
+          routeId: "route-vss-left",
+          netId: "net-vss",
+          from: { kind: "terminal", instanceId: "M1", pinName: "S" },
+          to: { kind: "junction", junctionId: "junction-vss" },
+          waypoints: [],
+          segmentModes: ["trunk"],
+        },
+        {
+          kind: "set_route_points",
+          routeId: "route-vinp",
+          netId: "net-vinp",
+          from: { kind: "port", portId: "port-vinp" },
+          to: { kind: "terminal", instanceId: "M1", pinName: "G" },
+          waypoints: [{ x: 80, y: 210 }],
+          segmentModes: ["manual", "manual"],
+        },
+        {
+          kind: "set_route_points",
+          routeId: "route-outp-bottom",
+          netId: "net-voutp",
+          from: { kind: "junction", junctionId: "junction-outp" },
+          to: { kind: "terminal", instanceId: "M1", pinName: "D" },
+          waypoints: [{ x: 160, y: 190 }],
+          segmentModes: ["manual", "manual"],
+        },
+      ],
+    });
+    expect(response).toMatchObject({ ok: true, applied: true });
+    if (!response.ok || !("resolvedRoutes" in response)) return;
+    const resolved = response.resolvedRoutes?.find(
+      (entry) => entry.routeId === "route-vinp",
+    );
+    expect(resolved).toBeDefined();
+    expect(resolved!.polyline.length).toBeGreaterThanOrEqual(2);
+    // The polyline is orthogonal and its endpoints match the resolved port
+    // and terminal, not necessarily the raw waypoint the Agent sent.
+    expect(
+      resolved!.polyline.every(
+        (point, index) =>
+          index === 0 ||
+          index === resolved!.polyline.length - 1 ||
+          point.x === resolved!.polyline[index - 1]!.x ||
+          point.y === resolved!.polyline[index - 1]!.y,
+      ),
+    ).toBe(true);
   });
 
   it("returns bounded formal and diagnostic image artifacts without overlay leakage", () => {

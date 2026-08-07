@@ -1,6 +1,7 @@
 import {
   AnnotationSchema,
   InstanceSchema,
+  JunctionRoleSchema,
   JunctionSchema,
   LayoutConstraintSchema,
   LayoutGroupSchema,
@@ -20,10 +21,13 @@ import type {
   SchematicDocument,
 } from "@icm/model";
 import {
+  buildOrthogonalEscapeRoute,
   endpointKey,
   endpointBelongsToNet,
   isOrthogonal,
   normalizeRouteGeometry,
+  resolveEndpointOutwardDirection,
+  resolveEndpointPoint,
   routePolyline,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
@@ -92,11 +96,20 @@ export const SetRoutePointsEditSchema = z.strictObject({
   waypoints: z.array(PointSchema),
   segmentModes: z.array(SegmentModeSchema),
 });
+export const RouteOrthogonalEditSchema = z.strictObject({
+  kind: z.literal("route_orthogonal"),
+  routeId: StableIdSchema,
+  netId: StableIdSchema,
+  from: RouteEndpointSchema,
+  to: RouteEndpointSchema,
+  escapeLength: z.number().int().positive().max(1000).optional(),
+});
 export const AddJunctionEditSchema = z.strictObject({
   kind: z.literal("add_junction"),
   junctionId: StableIdSchema,
   netId: StableIdSchema,
   position: PointSchema,
+  role: JunctionRoleSchema.optional(),
   createNet: z.boolean().optional(),
   split: z
     .strictObject({
@@ -193,6 +206,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   PlacePortEditSchema,
   MovePortEditSchema,
   SetRoutePointsEditSchema,
+  RouteOrthogonalEditSchema,
   AddJunctionEditSchema,
   RemoveJunctionEditSchema,
   MoveJunctionEditSchema,
@@ -240,7 +254,9 @@ export interface EditDiagnostic {
   code: string;
   severity: "error" | "warning" | "info";
   message: string;
+  objectIds?: readonly string[];
   path?: ReadonlyArray<string | number>;
+  parameters?: Readonly<Record<string, string | number | boolean | null>>;
 }
 
 export interface EditDiff {
@@ -284,14 +300,43 @@ export function rejectTransaction(
   code: EditErrorCode,
   message: string,
   diagnostics: readonly EditDiagnostic[] = [],
+  path?: ReadonlyArray<string | number>,
+  objectIds?: readonly string[],
 ): RejectedTransaction {
+  const finalDiagnostics =
+    path === undefined && objectIds === undefined
+      ? diagnostics
+      : diagnostics.map((diagnostic) => {
+          const next: EditDiagnostic = { ...diagnostic };
+          if (path !== undefined) {
+            next.path = diagnostic.path ? [...path, ...diagnostic.path] : path;
+          }
+          if (objectIds !== undefined && diagnostic.objectIds === undefined) {
+            next.objectIds = objectIds;
+          }
+          return next;
+        });
+  // When the caller gave no diagnostics, synthesize one so the rejection
+  // itself carries the localized path/objectIds a caller needs to pinpoint.
+  const synthesized =
+    finalDiagnostics.length > 0
+      ? finalDiagnostics
+      : [
+          {
+            code,
+            severity: "error" as const,
+            message,
+            ...(path === undefined ? {} : { path }),
+            ...(objectIds === undefined ? {} : { objectIds }),
+          },
+        ];
   return {
     ok: false,
     applied: false,
     revision: document.revision,
     document,
     error: { code, message },
-    diagnostics,
+    diagnostics: synthesized,
   };
 }
 
@@ -476,7 +521,47 @@ function validateRoute(
   if (!isOrthogonal(polyline.points)) {
     return `Route ${route.id} must contain only non-zero orthogonal segments`;
   }
+  for (const [endpoint, point, adjacent, mode] of [
+    [
+      route.from,
+      polyline.points[0]!,
+      polyline.points[1]!,
+      route.segmentModes[0],
+    ],
+    [
+      route.to,
+      polyline.points.at(-1)!,
+      polyline.points.at(-2)!,
+      route.segmentModes.at(-1),
+    ],
+  ] as const) {
+    if (endpoint.kind !== "terminal" || mode !== "escape") continue;
+    const outward = resolveEndpointOutwardDirection(
+      document,
+      resolver,
+      endpoint,
+    );
+    if (!outward) return `Route ${route.id} has an unresolved pin direction`;
+    const departure = { x: adjacent.x - point.x, y: adjacent.y - point.y };
+    if (departure.x * outward.x + departure.y * outward.y <= 0) {
+      return `Route ${route.id} escape segment must leave ${endpoint.instanceId}.${endpoint.pinName} outward`;
+    }
+  }
   return null;
+}
+
+function sameResolvedRoutePoints(
+  left: readonly Point[] | null,
+  right: readonly Point[] | null,
+): boolean {
+  if (left === null || right === null) return left === right;
+  return (
+    left.length === right.length &&
+    left.every(
+      (point, index) =>
+        point.x === right[index]!.x && point.y === right[index]!.y,
+    )
+  );
 }
 
 function splitRoute(
@@ -565,17 +650,48 @@ export function executeTransaction(
     return rejectTransaction(
       document,
       "HISTORY_CONTEXT_REQUIRED",
-      "Undo and redo require a DocumentHistory session",
+      "Undo and redo require a Document History session",
     );
   }
 
   const proposedRevision = document.revision + 1;
   const draft = structuredClone(document);
   const changedObjectIds = new Set<string>();
+  const resolver = context.symbolResolver;
+  const originalRouteStates = new Map(
+    resolver
+      ? document.routes.map((route) => [
+          route.id,
+          {
+            points: routePolyline(document, resolver, route)?.points ?? null,
+            error: validateRoute(document, route, resolver),
+          },
+        ])
+      : [],
+  );
   let geometryChanged = false;
   let connectivityChanged = false;
 
-  for (const edit of transaction.edits) {
+  for (let editIndex = 0; editIndex < transaction.edits.length; editIndex++) {
+    const edit = transaction.edits[editIndex]!;
+    // rejectAt localizes a runtime rejection to this edit's position in the
+    // transaction (`["edits", editIndex]`) so a caller can pinpoint which edit
+    // failed without parsing the message string. objectIds are forwarded so a
+    // rejection can name the offending route/instance.
+    const rejectAt = (
+      code: EditErrorCode,
+      message: string,
+      diagnostics: readonly EditDiagnostic[] = [],
+      objectIds?: readonly string[],
+    ): RejectedTransaction =>
+      rejectTransaction(
+        document,
+        code,
+        message,
+        diagnostics,
+        ["edits", editIndex],
+        objectIds,
+      );
     switch (edit.kind) {
       case "noop":
       case "undo":
@@ -593,8 +709,7 @@ export function executeTransaction(
           ...draft.constraints,
         ].some((candidate) => candidate.id === edit.instance.id);
         if (objectIdExists) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Object ID already exists: ${edit.instance.id}`,
           );
@@ -606,8 +721,7 @@ export function executeTransaction(
             edit.instance.symbolVariantId,
           )
         ) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Symbol does not exist: ${edit.instance.symbolId}`,
           );
@@ -622,8 +736,7 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.instanceId,
         );
         if (index < 0) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
           );
@@ -644,8 +757,7 @@ export function executeTransaction(
             constraint.objectIds.includes(edit.instanceId),
           );
         if (referenced) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance is still connected or referenced: ${edit.instanceId}`,
           );
@@ -660,24 +772,21 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.instanceId,
         );
         if (!instance) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
         if (lockOwner) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
           );
         }
         const resolver = context.symbolResolver;
         if (!resolver) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_CONTEXT_REQUIRED",
             "Symbol edits require a Symbol Resolver",
           );
@@ -685,8 +794,7 @@ export function executeTransaction(
         const symbolVariantId = edit.symbolVariantId ?? undefined;
         const resolved = resolver.resolve(edit.symbolId, symbolVariantId);
         if (!resolved) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Symbol or variant does not exist: ${edit.symbolId}${symbolVariantId ? `/${symbolVariantId}` : ""}`,
           );
@@ -714,8 +822,7 @@ export function executeTransaction(
         const pinMap = edit.pinMap ?? {};
         for (const sourcePin of Object.keys(pinMap)) {
           if (!currentPins.has(sourcePin)) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "EDIT_PRECONDITION",
               `Pin map source is not connected or routed: ${edit.instanceId}.${sourcePin}`,
             );
@@ -725,16 +832,14 @@ export function executeTransaction(
         for (const sourcePin of currentPins) {
           const targetPin = pinMap[sourcePin] ?? sourcePin;
           if (!targetPins.has(targetPin)) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "EDIT_PRECONDITION",
               `Target symbol pin does not exist: ${edit.instanceId}.${targetPin}`,
             );
           }
           const previousSource = mappedPins.get(targetPin);
           if (previousSource && previousSource !== sourcePin) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "EDIT_PRECONDITION",
               `Pin map aliases ${previousSource} and ${sourcePin} to ${targetPin}`,
             );
@@ -779,15 +884,13 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.instanceId,
         );
         if (!instance) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
           );
         }
         if (instance.placement !== null) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance is already placed: ${edit.instanceId}`,
           );
@@ -801,23 +904,20 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.instanceId,
         );
         if (!instance) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
         if (lockOwner) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
           );
         }
         if (instance.placement === null) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance is not placed: ${edit.instanceId}`,
           );
@@ -842,23 +942,20 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.instanceId,
         );
         if (!instance) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
         if (lockOwner) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
           );
         }
         if (instance.placement === null) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance is not placed: ${edit.instanceId}`,
           );
@@ -872,23 +969,20 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.instanceId,
         );
         if (!instance) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${edit.instanceId}`,
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.instanceId);
         if (lockOwner) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance ${edit.instanceId} is locked by layout intent ${lockOwner}`,
           );
         }
         if (instance.placement === null) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance is not placed: ${edit.instanceId}`,
           );
@@ -902,23 +996,20 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.portId,
         );
         if (!port) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Port does not exist: ${edit.portId}`,
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.portId);
         if (lockOwner) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Port ${edit.portId} is locked by layout intent ${lockOwner}`,
           );
         }
         if (port.position !== null) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Port is already placed: ${edit.portId}`,
           );
@@ -932,23 +1023,20 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.portId,
         );
         if (!port) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Port does not exist: ${edit.portId}`,
           );
         }
         const lockOwner = lockedLayoutOwner(draft, edit.portId);
         if (lockOwner) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Port ${edit.portId} is locked by layout intent ${lockOwner}`,
           );
         }
         if (port.position === null) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Port is not placed: ${edit.portId}`,
           );
@@ -971,8 +1059,7 @@ export function executeTransaction(
       case "set_route_points": {
         const resolver = context.symbolResolver;
         if (!resolver) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_CONTEXT_REQUIRED",
             "Routing edits require a Symbol Resolver",
           );
@@ -982,16 +1069,17 @@ export function executeTransaction(
         );
         const existing = draft.routes[existingIndex];
         if (existing && routeIsProtected(existing)) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Route contains a locked segment: ${edit.routeId}`,
+            [],
+            [edit.routeId],
           );
         }
         const route = routeFromEdit(edit);
         const routeError = validateRoute(draft, route, resolver);
         if (routeError) {
-          return rejectTransaction(document, "EDIT_PRECONDITION", routeError);
+          return rejectAt("EDIT_PRECONDITION", routeError, [], [edit.routeId]);
         }
         const polyline = routePolyline(draft, resolver, route)!;
         const normalized = normalizeRouteGeometry(
@@ -1005,11 +1093,72 @@ export function executeTransaction(
         changedObjectIds.add(edit.routeId);
         break;
       }
+      case "route_orthogonal": {
+        const resolver = context.symbolResolver;
+        if (!resolver) {
+          return rejectAt(
+            "EDIT_CONTEXT_REQUIRED",
+            "Orthogonal routing requires a Symbol Resolver",
+          );
+        }
+        const existingIndex = draft.routes.findIndex(
+          (candidate) => candidate.id === edit.routeId,
+        );
+        const existing = draft.routes[existingIndex];
+        if (existing && routeIsProtected(existing)) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Route contains a locked segment: ${edit.routeId}`,
+            [],
+            [edit.routeId],
+          );
+        }
+        const fromPoint = resolveEndpointPoint(draft, resolver, edit.from);
+        const toPoint = resolveEndpointPoint(draft, resolver, edit.to);
+        if (!fromPoint || !toPoint) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Route ${edit.routeId} has an unresolved endpoint`,
+            [],
+            [edit.routeId],
+          );
+        }
+        const geometry = buildOrthogonalEscapeRoute(
+          {
+            point: fromPoint,
+            outward: resolveEndpointOutwardDirection(
+              draft,
+              resolver,
+              edit.from,
+            ),
+          },
+          {
+            point: toPoint,
+            outward: resolveEndpointOutwardDirection(draft, resolver, edit.to),
+          },
+          edit.escapeLength,
+        );
+        const route: RouteBranch = {
+          id: edit.routeId,
+          netId: edit.netId,
+          from: structuredClone(edit.from),
+          to: structuredClone(edit.to),
+          waypoints: geometry.waypoints,
+          segmentModes: geometry.segmentModes,
+        };
+        const routeError = validateRoute(draft, route, resolver);
+        if (routeError) {
+          return rejectAt("EDIT_PRECONDITION", routeError);
+        }
+        if (existingIndex >= 0) draft.routes[existingIndex] = route;
+        else draft.routes.push(route);
+        changedObjectIds.add(edit.routeId);
+        break;
+      }
       case "add_junction": {
         if (!draft.nets.some((net) => net.id === edit.netId)) {
           if (!edit.createNet) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "OBJECT_NOT_FOUND",
               `Junction net does not exist: ${edit.netId}`,
             );
@@ -1025,8 +1174,7 @@ export function executeTransaction(
         if (
           draft.junctions.some((junction) => junction.id === edit.junctionId)
         ) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Junction already exists: ${edit.junctionId}`,
           );
@@ -1036,14 +1184,14 @@ export function executeTransaction(
             id: edit.junctionId,
             netId: edit.netId,
             position: edit.position,
+            role: edit.role ?? "branch",
           }),
         );
         changedObjectIds.add(edit.junctionId);
         if (edit.split) {
           const resolver = context.symbolResolver;
           if (!resolver) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "EDIT_CONTEXT_REQUIRED",
               "Route splitting requires a Symbol Resolver",
             );
@@ -1053,22 +1201,19 @@ export function executeTransaction(
           );
           const route = draft.routes[routeIndex];
           if (!route) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "OBJECT_NOT_FOUND",
               `Route does not exist: ${edit.split.routeId}`,
             );
           }
           if (route.netId !== edit.netId) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "EDIT_PRECONDITION",
               "Junction and split route must belong to the same Net",
             );
           }
           if (routeIsProtected(route)) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "EDIT_PRECONDITION",
               `Route contains a locked segment: ${route.id}`,
             );
@@ -1084,7 +1229,7 @@ export function executeTransaction(
             resolver,
           );
           if (typeof split === "string") {
-            return rejectTransaction(document, "EDIT_PRECONDITION", split);
+            return rejectAt("EDIT_PRECONDITION", split);
           }
           draft.routes.splice(routeIndex, 1, split.first, split.second);
           for (const splitRouteCandidate of [split.first, split.second]) {
@@ -1094,11 +1239,7 @@ export function executeTransaction(
               resolver,
             );
             if (routeError) {
-              return rejectTransaction(
-                document,
-                "EDIT_PRECONDITION",
-                routeError,
-              );
+              return rejectAt("EDIT_PRECONDITION", routeError);
             }
           }
           changedObjectIds.add(route.id);
@@ -1113,8 +1254,7 @@ export function executeTransaction(
           (junction) => junction.id === edit.junctionId,
         );
         if (junctionIndex < 0) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Junction does not exist: ${edit.junctionId}`,
           );
@@ -1128,8 +1268,7 @@ export function executeTransaction(
                 route.to.junctionId === edit.junctionId),
           )
         ) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Junction is still used by a Route: ${edit.junctionId}`,
           );
@@ -1144,8 +1283,7 @@ export function executeTransaction(
           (candidate) => candidate.id === edit.junctionId,
         );
         if (!junction) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Junction does not exist: ${edit.junctionId}`,
           );
@@ -1159,8 +1297,7 @@ export function executeTransaction(
             routeIsProtected(route),
         );
         if (protectedRoute) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Junction is attached to protected Route ${protectedRoute.id}`,
           );
@@ -1175,15 +1312,13 @@ export function executeTransaction(
         );
         const route = draft.routes[routeIndex];
         if (!route) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Route does not exist: ${edit.routeId}`,
           );
         }
         if (routeIsProtected(route)) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Route contains a locked segment: ${route.id}`,
           );
@@ -1204,17 +1339,12 @@ export function executeTransaction(
           context.symbolResolver,
         );
         if (fromError || toError) {
-          return rejectTransaction(
-            document,
-            "EDIT_PRECONDITION",
-            fromError ?? toError!,
-          );
+          return rejectAt("EDIT_PRECONDITION", fromError ?? toError!);
         }
         const fromOwner = endpointOwnerNetId(draft, edit.from);
         const toOwner = endpointOwnerNetId(draft, edit.to);
         if (fromOwner && toOwner && fromOwner !== toOwner) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Endpoints belong to different Nets; merge ${fromOwner} and ${toOwner} explicitly`,
           );
@@ -1222,15 +1352,13 @@ export function executeTransaction(
         let netId = fromOwner ?? toOwner;
         if (!netId) {
           if (!edit.newNetId) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "EDIT_PRECONDITION",
               "Two unconnected endpoints require newNetId",
             );
           }
           if (draft.nets.some((net) => net.id === edit.newNetId)) {
-            return rejectTransaction(
-              document,
+            return rejectAt(
               "EDIT_PRECONDITION",
               `Net already exists: ${edit.newNetId}`,
             );
@@ -1253,8 +1381,7 @@ export function executeTransaction(
       }
       case "merge_nets": {
         if (edit.targetNetId === edit.sourceNetId) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             "Net merge requires two different Nets",
           );
@@ -1265,8 +1392,7 @@ export function executeTransaction(
         );
         const source = draft.nets[sourceIndex];
         if (!target || !source) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Net merge target/source does not exist: ${edit.targetNetId}, ${edit.sourceNetId}`,
           );
@@ -1328,8 +1454,7 @@ export function executeTransaction(
       case "set_net_name": {
         const net = draft.nets.find((candidate) => candidate.id === edit.netId);
         if (!net) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Net does not exist: ${edit.netId}`,
           );
@@ -1339,8 +1464,7 @@ export function executeTransaction(
             candidate.id !== net.id && candidate.name === edit.name,
         );
         if (conflicting) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Net name ${edit.name} already belongs to ${conflicting.id}; merge explicitly`,
           );
@@ -1357,12 +1481,11 @@ export function executeTransaction(
           context.symbolResolver,
         );
         if (error) {
-          return rejectTransaction(document, "EDIT_PRECONDITION", error);
+          return rejectAt("EDIT_PRECONDITION", error);
         }
         const ownerId = endpointOwnerNetId(draft, edit.endpoint);
         if (!ownerId) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             "Endpoint is not connected to a Net",
           );
@@ -1374,8 +1497,7 @@ export function executeTransaction(
               endpointKey(route.to) === endpointKey(edit.endpoint),
           )
         ) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             "Remove route geometry before disconnecting its endpoint",
           );
@@ -1403,8 +1525,7 @@ export function executeTransaction(
         );
         const existing = draft.annotations[existingIndex];
         if (existing?.locked) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Annotation is locked: ${existing.id}`,
           );
@@ -1421,15 +1542,13 @@ export function executeTransaction(
         );
         const annotation = draft.annotations[index];
         if (!annotation) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Annotation does not exist: ${edit.annotationId}`,
           );
         }
         if (annotation.locked) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Annotation is locked: ${annotation.id}`,
           );
@@ -1439,8 +1558,7 @@ export function executeTransaction(
             item.objectIds.includes(annotation.id),
           )
         ) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Annotation is referenced by layout intent: ${annotation.id}`,
           );
@@ -1455,8 +1573,7 @@ export function executeTransaction(
         );
         const existing = draft.layoutGroups[index];
         if (existing?.locked) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Layout group is locked: ${existing.id}`,
           );
@@ -1473,15 +1590,13 @@ export function executeTransaction(
         );
         const group = draft.layoutGroups[index];
         if (!group) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Layout group does not exist: ${edit.groupId}`,
           );
         }
         if (group.locked) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Layout group is locked: ${group.id}`,
           );
@@ -1496,8 +1611,7 @@ export function executeTransaction(
         );
         const existing = draft.constraints[index];
         if (existing?.locked) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Layout constraint is locked: ${existing.id}`,
           );
@@ -1514,15 +1628,13 @@ export function executeTransaction(
         );
         const constraint = draft.constraints[index];
         if (!constraint) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Layout constraint does not exist: ${edit.constraintId}`,
           );
         }
         if (constraint.locked) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Layout constraint is locked: ${constraint.id}`,
           );
@@ -1533,8 +1645,7 @@ export function executeTransaction(
       }
       case "align_instances": {
         if (new Set(edit.instanceIds).size !== edit.instanceIds.length) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             "Alignment instance IDs must be unique",
           );
@@ -1546,8 +1657,7 @@ export function executeTransaction(
           const missing = edit.instanceIds.find(
             (id) => !draft.instances.some((instance) => instance.id === id),
           );
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "OBJECT_NOT_FOUND",
             `Instance does not exist: ${missing}`,
           );
@@ -1556,15 +1666,13 @@ export function executeTransaction(
           lockedLayoutOwner(draft, id),
         );
         if (lockedInstanceId) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             `Instance ${lockedInstanceId} is locked by layout intent ${lockedLayoutOwner(draft, lockedInstanceId)}`,
           );
         }
         if (instances.some((instance) => instance!.placement === null)) {
-          return rejectTransaction(
-            document,
+          return rejectAt(
             "EDIT_PRECONDITION",
             "Every aligned instance must be placed",
           );
@@ -1586,6 +1694,36 @@ export function executeTransaction(
       }
     }
     geometryChanged = true;
+  }
+
+  if (resolver) {
+    for (const route of draft.routes) {
+      const routeError = validateRoute(draft, route, resolver);
+      const original = originalRouteStates.get(route.id);
+      const resolvedPoints =
+        routePolyline(draft, resolver, route)?.points ?? null;
+      const resolvedGeometryChanged =
+        original === undefined ||
+        !sameResolvedRoutePoints(original.points, resolvedPoints);
+      if (routeError) {
+        const unchangedPreexistingError =
+          original !== undefined &&
+          !resolvedGeometryChanged &&
+          original.error === routeError;
+        if (!unchangedPreexistingError) {
+          return rejectTransaction(
+            document,
+            "INVALID_RESULT",
+            `Transaction leaves invalid Route geometry for ${route.id}: ${routeError}`,
+            [],
+            ["routes", route.id],
+          );
+        }
+      }
+      if (original !== undefined && resolvedGeometryChanged) {
+        changedObjectIds.add(route.id);
+      }
+    }
   }
 
   if (connectivityChanged) {
