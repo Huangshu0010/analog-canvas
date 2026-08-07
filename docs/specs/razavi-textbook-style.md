@@ -510,6 +510,9 @@ Acceptance checks at a fixed export scale:
 Decode `NMOS4`, `Pmos3.a`, `R`, `DC-V`, and `node` through COM. Cover groups,
 lines, circles, arrows, text, connection points, and line weights. Produce
 `VssMasterIR`, diagnostics, and temporary Visio SVG comparison evidence.
+Because those five source Masters contain no non-empty text run, `TEXT` is a
+coverage-only sixth extraction input for character and paragraph cells; it is
+not an RV-1 runtime symbol candidate.
 
 ### RV-2: Catalog boundary
 

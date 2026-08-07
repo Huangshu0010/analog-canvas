@@ -564,3 +564,26 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   review, fenced-code balance, and `git diff --check`.
 - Commit status: prepared for a dedicated normative-document commit; runtime
   implementation has not begun.
+
+## 2026-08-07 - Complete Razavi RV-1 VSS decoder proof
+
+- Target: replace visual/manual guessing with structured read-only ShapeSheet
+  evidence for `NMOS4`, `Pmos3.a`, `R`, `DC-V`, and `node`.
+- Changed areas: added a versioned VSS Master IR extractor, deterministic
+  checker, checked five-target fixture plus the `TEXT` coverage-only Master,
+  import-tool documentation, and factual RV-1 specification clarification.
+- Evidence: 6 Masters, 32 nested Shapes, 93 supported geometry rows, 11
+  connection points, 2 arrow-bearing Shapes, 1 text Shape, and three observed
+  line-weight levels were captured with formulas and evaluated values. No
+  electrical pin name/order was inferred, and extraction emitted zero
+  diagnostics.
+- Visual review: temporary Visio PNG/SVG exports confirmed the source NMOS4,
+  Pmos3.a, resistor, DC voltage-source, and filled node-dot appearance. The
+  exports remain temporary evidence rather than runtime assets.
+- Validation: deterministic re-extraction matched fixture SHA-256
+  `826c2ba82532de17686dae61ac1bd6c93fbe4b946d2bb60797ad726b23a94170`;
+  focused feature assertions, formatting, typecheck, 127 unit tests in 33
+  files, and `git diff --check` passed.
+- Dirty-state decision: the user confirmed the concurrent OTA `razavi-*`
+  files do not affect this target; they remained untracked and untouched.
+- Commit status: ready for the dedicated RV-1 commit.
