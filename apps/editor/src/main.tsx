@@ -16,6 +16,19 @@ createRoot(container).render(
   </StrictMode>,
 );
 
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-  void navigator.serviceWorker.register("/sw.js");
+if ("serviceWorker" in navigator) {
+  if (import.meta.env.PROD) {
+    void navigator.serviceWorker.register("/sw.js");
+  } else {
+    void navigator.serviceWorker
+      .getRegistrations()
+      .then(async (registrations) => {
+        if (registrations.length === 0) return;
+        const wasControlled = navigator.serviceWorker.controller !== null;
+        await Promise.all(
+          registrations.map((registration) => registration.unregister()),
+        );
+        if (wasControlled) window.location.reload();
+      });
+  }
 }

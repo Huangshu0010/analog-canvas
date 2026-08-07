@@ -263,3 +263,13 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   `git diff --check` passed.
 - Commit status: ready to commit as
   `Close schematic authoring fidelity gaps`.
+
+## 2026-08-07 - Prevent stale PWA cache in development
+
+- Target: prevent a previously installed production PWA worker from making a
+  fresh local Vite process appear to serve the old editor.
+- Changed areas: development startup now unregisters stale service workers and
+  reloads once when necessary; production registration is unchanged.
+- Validation: TypeScript, workspace build, 10 Playwright flows, formatting,
+  and `git diff --check` passed.
+- Commit status: ready to commit as `Prevent stale PWA cache in development`.
