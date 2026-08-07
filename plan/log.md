@@ -542,3 +542,25 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   and `git diff --check` passed.
 - Commit status: prepared for the integrated checkpoint commit; push status is
   recorded by Git history and the final target handoff.
+
+## 2026-08-07 - Define Razavi textbook visual convergence
+
+- Target: freeze the complete fixed-style contract before changing runtime
+  symbols, typography, strokes, nodes, or formal export.
+- Changed areas: proposed `razavi-textbook-v1` specification, specification
+  index, and target plan. The contract separates fixed assets into component,
+  typography, and stroke/node layers while keeping routing/layout outside the
+  style asset boundary.
+- Contract: defines structured read-only VSS decoding, all-101 Master
+  disposition, reviewed runtime catalog and provenance, semantic typography
+  and stroke tokens, Port/Junction/device-pin truth, six-topology acceptance
+  board, deterministic gates, and RV-1 through RV-8 delivery order. Existing
+  Projects retain their persisted legacy profile; only new Projects/imports
+  switch after acceptance gates pass.
+- Dirty-state decision: shared prerequisites were checkpointed and pushed as
+  `21b85fd`. Concurrent OTA `razavi-*` outputs remain untracked, read-only, and
+  outside this documentation target.
+- Validation: Markdown metadata/section inspection, specification index
+  review, fenced-code balance, and `git diff --check`.
+- Commit status: prepared for a dedicated normative-document commit; runtime
+  implementation has not begun.

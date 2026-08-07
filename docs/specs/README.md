@@ -15,6 +15,7 @@ against. They describe required behavior and invariants, not task history.
 | [`spice-frontend.md`](spice-frontend.md)                     |          2/4 | accepted current profile | Lossless syntax, dialects, includes, expressions, elaboration            |
 | [`connectivity-and-routing.md`](connectivity-and-routing.md) |            3 | accepted                 | Route graph, junction, crossing, flightline, locks                       |
 | [`visual-language.md`](visual-language.md)                   |          1/5 | accepted initial         | `textbook-monochrome-v1`, annotations, overlays, golden output           |
+| [`razavi-textbook-style.md`](razavi-textbook-style.md)       |       RV-1/8 | proposed                 | VSS-derived components, math text, stroke/node profile, acceptance gates |
 | [`vss-development-import.md`](vss-development-import.md)     |            5 | accepted                 | Read-only VSS evidence, human pin review, runtime isolation              |
 | [`agent-api.md`](agent-api.md)                               |          6/9 | accepted                 | v1 query compatibility; v2 Snapshot, typed edits, render, permissions    |
 | [`persistence-and-recovery.md`](persistence-and-recovery.md) |          0/7 | accepted boundary        | Atomic save, AppData cache/session/recovery, migrations                  |

@@ -1,0 +1,570 @@
+# Razavi Textbook Style
+
+Status: `proposed`
+
+Version: `0.1`
+
+Profile ID: `razavi-textbook-v1`
+
+Primary owners: `packages/symbols`, `packages/render-svg`, `tools/vss-import`
+
+Consumers: `apps/editor`, `packages/exporters`, `packages/spice`,
+`packages/agent-adapter`
+
+Related contracts: `symbol-dsl.md`, `visual-language.md`,
+`connectivity-and-routing.md`, `export.md`
+
+Related ADRs: none yet; RV-2 must add an ADR if the catalog boundary changes
+the accepted Symbol DSL ownership model.
+
+## Purpose
+
+Define one versioned, deterministic visual language for textbook analog
+schematics. The target is the user-approved Razavi-like reference: compact
+black-on-white devices, strong but controlled strokes, mathematical labels,
+small explicit terminal and Junction dots, and consistent formal output.
+
+The fixed style has exactly three asset layers:
+
+1. component geometry and electrical anchors;
+2. typography and schematic-math composition;
+3. stroke, node, and arrow presentation.
+
+Routing topology, automatic layout, elbow choice, obstacle avoidance, and
+interactive wire gestures are not fixed-style assets. They consume this
+profile but belong to separate routing and layout contracts.
+
+## Authority and precedence
+
+When evidence conflicts, use this precedence:
+
+1. electrical pin name, order, and meaning: human-reviewed manifest;
+2. component geometry and proportions: structured `lib/circuit.vss`
+   ShapeSheet data;
+3. typography, stroke hierarchy, node treatment, and final composition:
+   product-owned acceptance drawings calibrated against the approved visual
+   reference;
+4. raster screenshots: comparison evidence only, never runtime assets.
+
+The source stencil is immutable and hash-pinned. The application never opens
+VSS at runtime.
+
+## Coordinate and output conventions
+
+- Canonical connection grid: `10` scene units.
+- VSS conversion scale: `100` scene units per Visio internal inch.
+- Geometry may use integer scene coordinates between connection-grid points.
+- Electrical pin anchors must be divisible by `10` on both axes.
+- Component placement must preserve connection-grid alignment after rotation
+  and mirroring.
+- Formal geometry and strokes scale together with the exported scene.
+- Formal SVG must not use `vector-effect="non-scaling-stroke"`.
+- Editor hit regions and selection overlays use screen-pixel sizing and may use
+  non-scaling strokes; they never enter formal export.
+- Formal foreground is `#202020`; background is `#ffffff`.
+
+## Layer 1: component assets
+
+### Source and storage
+
+The asset pipeline is:
+
+```text
+lib/circuit.vss
+-> read-only Visio COM decoder
+-> VssMasterIR extraction evidence
+-> human electrical review
+-> normalized Symbol DSL asset
+-> versioned Razavi catalog
+-> resolver/editor/export
+```
+
+Canonical locations:
+
+```text
+lib/circuit.vss
+tools/vss-import/
+fixtures/symbols/vss-ir/
+fixtures/symbols/circuit-vss-review.json
+packages/symbols/assets/razavi-v1/catalog.json
+packages/symbols/assets/razavi-v1/<symbol-id>.symbol.json
+```
+
+`fixtures/symbols/vss-ir/` is extraction evidence. The checked-in JSON under
+`packages/symbols/assets/razavi-v1/` is the only runtime component asset set.
+`builtins.ts` must become a catalog loader/compatibility export rather than the
+place where migrated geometry is manually redrawn.
+
+### Structured VSS decoding
+
+The decoder must recursively extract every Master and child Shape into a
+versioned `VssMasterIR`. It must retain both `FormulaU` and evaluated `ResultIU`
+where available.
+
+Required identity and transform fields:
+
+- Master `NameU`, display name, source stencil hash, and master ID;
+- Shape ID, `NameU`, type, group ancestry, and z-order;
+- `PinX`, `PinY`, `Width`, `Height`, `LocPinX`, `LocPinY`;
+- `Angle`, `FlipX`, `FlipY`;
+- recursive local-to-master transform.
+
+Required geometry support:
+
+- MoveTo and LineTo;
+- ArcTo and EllipticalArcTo;
+- ellipse and circle;
+- polyline and polygon;
+- cubic Bezier;
+- NURBS converted deterministically to supported path segments;
+- closed/open Geometry sections;
+- section and row visibility;
+- grouped child geometry.
+
+Required presentation extraction:
+
+- `LineWeight`, `LineColor`, `LinePattern`;
+- line cap, join, and miter behavior;
+- begin/end arrow type and size;
+- `FillForegnd`, `FillBkgnd`, and `FillPattern`;
+- NoLine/NoFill and geometry visibility;
+- text content, Character runs, Paragraph runs, and TextBlock placement;
+- font-ID to installed font-name mapping.
+
+Required electrical evidence:
+
+- Connection Points sections and coordinates;
+- connector/glue relationships when present;
+- candidate pin direction inferred only as review assistance.
+
+Geometry must never assign pin names or pin order automatically. Unsupported
+OLE objects, embedded raster objects, theme effects, or unknown row types must
+produce explicit diagnostics containing Master and Shape identity. They may
+not be silently discarded from a reviewed runtime asset.
+
+### VSS disposition
+
+Every one of the 101 inventory Masters must have exactly one disposition:
+
+| Disposition             | Meaning                                                        |
+| ----------------------- | -------------------------------------------------------------- |
+| `reviewed-runtime`      | Geometry and electrical mapping approved for runtime use       |
+| `provisional-runtime`   | Geometry available; pin semantics still visibly review-gated   |
+| `semantic-primitive`    | Becomes a Port, node, arrow, text, or other semantic operation |
+| `deferred`              | In product scope but not yet migrated                          |
+| `excluded-layout-asset` | Layout/process artwork outside schematic scope                 |
+
+A complete migration means `101/101` Masters have a disposition, not that all
+101 appear in the component palette.
+
+### Symbol catalog entry
+
+Every runtime asset must publish:
+
+```ts
+interface RazaviSymbolCatalogEntry {
+  symbolId: string;
+  name: string;
+  category: string;
+  source: {
+    stencilHash: string;
+    masterNameU: string;
+    decoderVersion: string;
+  };
+  reviewStatus: "reviewed" | "provisional";
+  pinOrder: string[];
+  palette: boolean;
+  automaticMappings: string[];
+  assetPath: string;
+  assetHash: string;
+}
+```
+
+The component palette, Symbol Resolver, importer mapping checks, contact sheet,
+and export renderer must all consume this catalog. A component cannot exist in
+an unindexed source file.
+
+### Electrical and visual pin rules
+
+- Device electrical pin anchors are invisible in formal output.
+- Pin direction is cardinal and transformed with instance rotation/mirroring.
+- Three-terminal and four-terminal MOS devices remain electrically distinct
+  catalog entries unless a reviewed variant explicitly retains a hidden bulk
+  pin.
+- Hiding presentation never deletes an electrical pin.
+- Pin names and order must match the SPICE/PDK mapping used by an Instance.
+- Component labels are not baked into symbol geometry unless they are an
+  intrinsic mark such as polarity, switch state, or op-amp `+/-`.
+
+### Initial migration priority
+
+Batch A, required for the acceptance board:
+
+- NMOS3, PMOS3, NMOS4, PMOS4;
+- resistor, capacitor, inductor;
+- independent voltage and current sources;
+- GND, VDD, VSS;
+- signal Port/node;
+- current-direction arrow.
+
+Batch B:
+
+- diode families and LED;
+- NPN and PNP;
+- op-amp families;
+- switches, transformer, and crystal.
+
+Batch C:
+
+- digital gates, buffers, MUX, transmission gates, DFF families;
+- functional analog blocks such as filters, mixer, adder, and integrator.
+
+Layout/process and generic drawing Masters are classified separately rather
+than being mixed into the schematic component palette.
+
+## Layer 2: typography
+
+### Font tokens
+
+Version 1 uses these formal tokens:
+
+| Token                    | Value                                          |
+| ------------------------ | ---------------------------------------------- |
+| `fontFamily`             | `Arial, Helvetica Neue, Helvetica, sans-serif` |
+| `mathWeight`             | `700`                                          |
+| `mathStyle`              | `italic`                                       |
+| `plainWeight`            | `400`                                          |
+| `instanceFontSize`       | `16` scene units                               |
+| `netFontSize`            | `16` scene units                               |
+| `powerFontSize`          | `16` scene units                               |
+| `annotationFontSize`     | `16` scene units                               |
+| `polarityFontSize`       | `14` scene units                               |
+| `captionFontSize`        | `14` scene units                               |
+| `subscriptScale`         | `0.68`                                         |
+| `subscriptBaselineShift` | `0.30em` downward                              |
+| `labelGap`               | `6` scene units                                |
+| `lineHeight`             | `1.0`                                          |
+
+The first implementation must render with these values. Calibration may
+change them before the profile reaches `accepted`; after acceptance, any token
+change requires a new profile version.
+
+### Schematic-math composition
+
+Formal instance, Net, current, voltage, and supply labels use
+`schematic-math`. The persisted string remains human-readable and portable;
+the renderer composes base and subscript runs.
+
+Required examples:
+
+```text
+M1    -> italic bold M + subscript 1
+R1    -> italic bold R + subscript 1
+VDD   -> italic bold V + subscript DD
+Vb1   -> italic bold V + subscript b1
+IX    -> italic bold I + subscript X
+V_X   -> italic bold V + explicit subscript X
+```
+
+Rules:
+
+- An explicit underscore has priority: `base_subscript`.
+- For semantic instance labels, the alphabetic designator is the base and the
+  remaining identifier is the subscript.
+- For recognized voltage/current/power labels, the leading `V` or `I` is the
+  base and the remaining identifier is the subscript.
+- Plain notes and figure captions are never implicitly parsed as math.
+- `+`, `-`, parentheses, and numeric values remain upright unless explicitly
+  included in a math run.
+- Text stays upright under component rotation or mirroring.
+
+SVG uses `<tspan>` runs with deterministic baseline offsets. PNG and PDF must
+be generated from the same SVG scene so text composition cannot diverge.
+
+### Label placement
+
+- Instance labels sit outside the symbol silhouette with a minimum `labelGap`.
+- MOS instance labels prefer the open side opposite the gate lead.
+- Net labels sit beside an explicit Port origin or a straight conductor,
+  never centered on a Junction dot.
+- Power labels sit beside the supply bar and do not replace the bar.
+- Polarity marks align vertically beside voltage-source circles.
+- Current labels sit adjacent to, not on top of, their arrow.
+- Default placement is deterministic; manual offsets remain bounded and are
+  persisted separately from text content.
+
+## Layer 3: strokes, nodes, and arrows
+
+### Formal stroke tokens
+
+All values are scene units at `100` scene units per inch.
+
+| Token              |   Value | Use                                            |
+| ------------------ | ------: | ---------------------------------------------- |
+| `wireStroke`       |   `1.6` | Conductors                                     |
+| `symbolStroke`     |   `1.6` | Normal component geometry                      |
+| `emphasisStroke`   |   `2.4` | MOS gates and intentionally heavy VSS geometry |
+| `supplyStroke`     |   `1.8` | GND/VDD/VSS bars                               |
+| `annotationStroke` |   `1.6` | Current arrows and polarity geometry           |
+| `junctionRadius`   |   `3.0` | Explicit electrical Junction                   |
+| `portOriginRadius` |   `3.0` | Explicit placed signal Port                    |
+| `arrowHeadLength`  |    `10` | Filled current-arrow head                      |
+| `arrowHeadWidth`   |     `7` | Filled current-arrow head                      |
+| `strokeLinecap`    |  `butt` | Formal open-line ends                          |
+| `strokeLinejoin`   | `miter` | Formal orthogonal and polygon corners          |
+| `strokeMiterLimit` |     `4` | Formal joins                                   |
+
+Only the semantic roles above may choose line widths. Imported arbitrary VSS
+weights are clustered into `symbolStroke`, `emphasisStroke`, or
+`annotationStroke`; reviewed exceptions require a catalog note and golden.
+
+### Connection-origin semantics
+
+| Object                        | Formal appearance                            |
+| ----------------------------- | -------------------------------------------- |
+| Device pin anchor             | Invisible                                    |
+| Placed signal Port origin     | Filled foreground circle, radius `3.0`       |
+| Explicit Junction             | Filled foreground circle, radius `3.0`       |
+| Two-wire corner               | No extra dot                                 |
+| Non-connected geometric cross | No dot and no bridge unless profile adds one |
+| Editor snap candidate         | Overlay ring only; excluded from export      |
+
+Degree alone does not create a dot. Connectivity and explicit object kind are
+the authority.
+
+### Arrow semantics
+
+- Current direction is a semantic annotation attached to a Net or Route.
+- The arrow shaft uses `annotationStroke`; the head is a filled triangle.
+- The arrow never changes electrical connectivity.
+- MOS/BJT intrinsic arrows belong to component geometry and use the catalog's
+  semantic `emphasis` or `normal` role as reviewed.
+- No arrow geometry is represented as a text glyph.
+
+## Profile contract
+
+The renderer consumes one immutable profile object:
+
+```ts
+interface SchematicStyleProfile {
+  id: "razavi-textbook-v1";
+  symbolCatalogId: "razavi-symbols-v1";
+  foreground: "#202020";
+  background: "#ffffff";
+  strokes: RazaviStrokeTokens;
+  typography: RazaviTypographyTokens;
+  nodes: RazaviNodeTokens;
+  annotations: RazaviAnnotationTokens;
+}
+```
+
+Symbol geometry identifies semantic roles; it does not contain final profile
+widths or font CSS. The renderer is the single place where semantic roles
+become concrete SVG attributes.
+
+New empty Projects and new SPICE imports use:
+
+```text
+symbolLibrary.id = razavi-symbols
+symbolLibrary.version = 1
+presentation.styleProfileId = razavi-textbook-v1
+```
+
+Existing Projects retain their persisted symbol-library lock and
+`textbook-monochrome-v1` profile. Opening an old Project must not silently
+change its formal output. An explicit migration may create a new revision.
+
+### Contract examples
+
+Accepted: a new Project stores `razavi-symbols@1` and
+`razavi-textbook-v1`; its resistor geometry comes from the reviewed catalog,
+its conductor uses the profile's `conductor` role, and its visible Port dot is
+derived from a persisted Port object.
+
+Rejected: opening an existing `textbook-monochrome-v1` Project and silently
+substituting Razavi assets, drawing a dot on every device pin, or choosing a
+generic MOS symbol when an exact reviewed mapping exists. These cases must
+preserve the old profile or emit a blocking mapping/migration diagnostic.
+
+## Symbol selection and provenance
+
+Style fidelity requires the importer to choose the catalog asset, not merely
+make it available. Mapping priority is:
+
+```text
+persisted human override
+-> exact reviewed PDK model rule
+-> exact SPICE primitive rule
+-> reviewed model-type and pin-count rule
+-> hierarchy-specific subcircuit symbol
+-> generic-block fallback with diagnostic
+```
+
+Every imported Instance records or exposes:
+
+- selected canonical `symbolId`;
+- catalog ID and asset hash;
+- source VSS `masterNameU` when applicable;
+- mapping rule/registry ID;
+- reviewed or provisional status;
+- fallback reason when generic.
+
+The editor inspector and Agent snapshot must expose this provenance. A runtime
+catalog entry must be reachable from the palette, an automatic mapping, or an
+explicit documented manual-only classification.
+
+## Formal versus editor presentation
+
+Formal output contains only:
+
+- resolved component geometry;
+- conductor geometry supplied by the routing model;
+- explicit Port origins and Junctions;
+- semantic annotations and composed text;
+- white page background.
+
+It excludes:
+
+- grid;
+- endpoint hit circles;
+- hover/snap previews;
+- selected-route glow;
+- drag handles;
+- flightlines and diagnostics unless a separate debug export is requested.
+
+The editor may use larger transparent hit areas, but the visible formal scene
+must be the same scene consumed by SVG, PNG, and PDF export.
+
+## Product-owned acceptance board
+
+Create a new fixture containing six small, explicitly routed topologies
+equivalent in visual demands to the approved reference without copying its
+bitmap:
+
+1. two stacked NMOS devices with two bias Ports, VDD/GND, Junction, current
+   arrow, and voltage source;
+2. three stacked NMOS devices with three bias Ports;
+3. current source feeding a two-NMOS stack with a branch voltage source;
+4. PMOS/NMOS stack with resistor feedback;
+5. PMOS/NMOS stack with separate bias Ports;
+6. diode-connected PMOS above a biased NMOS.
+
+The fixture owns explicit placements and Route waypoints. It tests fixed style,
+not router quality.
+
+Acceptance checks at a fixed export scale:
+
+- correct catalog `data-symbol-id` and VSS provenance for every component;
+- exact tokenized stroke widths and node radii;
+- no formal device-pin dots;
+- required Port and Junction dots present;
+- math labels contain correct `<tspan>` base/subscript runs;
+- no label intersects symbol ink, conductor ink, or node dots;
+- SVG, PNG, and PDF originate from one formal scene;
+- visually inspected PNG at `1x` and `4x` scale;
+- comparison against Visio-exported master evidence has at most `1` output
+  pixel contour distance at `4x` raster for supported geometry and no missing
+  structural primitive.
+
+## Deterministic gates
+
+### VSS and catalog
+
+- source SHA-256 matches the reviewed stencil;
+- `101/101` Masters have exactly one disposition;
+- no duplicate canonical ID, alias, or VSS Master mapping;
+- every reviewed runtime asset has a decoder version and asset hash;
+- unsupported geometry produces a blocking migration diagnostic;
+- pin order in the catalog equals the human review manifest;
+- every pin remains on-grid for every rotation and mirror.
+
+### Typography
+
+- token snapshot and font-family fallback test;
+- base/subscript parser table tests;
+- upright-text transform tests;
+- deterministic SVG `<text>/<tspan>` output;
+- font availability is reported; export does not silently substitute an
+  unrelated metric-incompatible font.
+
+### Strokes and nodes
+
+- no raw numeric stroke widths outside the profile and reviewed import map;
+- formal geometry contains no editor overlay color or class;
+- Port/Junction/device-pin truth table tests;
+- formal SVG contains no non-scaling stroke;
+- arrow dimensions and fills match profile tokens.
+
+### Runtime use
+
+- palette-to-catalog reachability report;
+- SPICE corpus symbol-selection report;
+- zero unexplained generic fallbacks in the acceptance corpus;
+- inspector and Agent snapshot provenance tests;
+- Project save/reopen preserves catalog and profile identity.
+
+## Delivery plan
+
+### RV-1: VSS decoder proof
+
+Decode `NMOS4`, `Pmos3.a`, `R`, `DC-V`, and `node` through COM. Cover groups,
+lines, circles, arrows, text, connection points, and line weights. Produce
+`VssMasterIR`, diagnostics, and temporary Visio SVG comparison evidence.
+
+### RV-2: Catalog boundary
+
+Create `razavi-v1` asset storage and catalog schema, move the five decoded
+assets into generated Symbol DSL JSON, and make `builtInSymbols` a compatibility
+view over catalog assets. Add provenance and reachability reports.
+
+### RV-3: Stroke profile
+
+Introduce semantic primitive roles, implement the versioned profile, remove
+hard-coded renderer/symbol widths, and enforce formal/overlay separation.
+
+### RV-4: Typography
+
+Implement schematic-math parsing and `<tspan>` composition, font tokens,
+upright text, default label anchors, and export parity.
+
+### RV-5: Nodes and annotations
+
+Render explicit Port origins, Junctions, source polarity, supply bars, and
+current arrows from semantic objects with the profile tokens.
+
+### RV-6: Core analog migration
+
+Complete Batch A and Batch B VSS decoding/review. Wire palette and SPICE/PDK
+mapping to the catalog and expose selection provenance.
+
+### RV-7: Acceptance and default switch
+
+Land the six-topology board, complete fixed-scale visual review, validate
+SVG/PNG/PDF, and change only new-Project/new-import defaults to
+`razavi-textbook-v1` after all gates pass.
+
+### RV-8: Remaining stencil disposition
+
+Classify all remaining Masters and migrate approved Batch C families without
+weakening the accepted profile or silently adding drawing/layout assets to the
+schematic palette.
+
+## Completion criteria
+
+The profile is complete when:
+
+```text
+VSS Masters accounted for: 101 / 101
+reviewed runtime assets: all acceptance assets reviewed
+runtime assets with provenance: 100%
+catalog assets reachable or documented manual-only: 100%
+unexplained generic fallbacks in acceptance corpus: 0
+hard-coded formal stroke widths outside profile: 0
+formal device-pin dots: 0
+required Port/Junction dots: 100%
+schematic-math golden cases: 100%
+SVG/PNG/PDF scene parity: passed
+six-topology visual acceptance: passed
+```
+
+No routing-quality claim follows from acceptance of this fixed-style profile.
