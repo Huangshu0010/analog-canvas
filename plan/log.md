@@ -273,3 +273,18 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Validation: TypeScript, workspace build, 10 Playwright flows, formatting,
   and `git diff --check` passed.
 - Commit status: ready to commit as `Prevent stale PWA cache in development`.
+
+## 2026-08-07 - Expand direct wire editing
+
+- Target: add custom-IC-style free wire termination, per-segment movement, and
+  safe deletion of connected components.
+- Changed areas: added transient multi-bend Wire sessions and free Junction
+  endpoints; selectable perpendicular Route-segment stretch; composed
+  connected-instance deletion that preserves dangling wires; additive
+  `add_junction.createNet` engine/Agent schema support; and revised interaction,
+  routing, engine, Agent, and user contracts.
+- Validation: formatting, four pinned references, three Agent artifacts,
+  TypeScript, 105 tests in 31 files, 12 Playwright flows, workspace/release
+  build, performance budgets, export goldens, PWA icons, release smoke,
+  Markdown links/fences, and `git diff --check` passed.
+- Commit status: ready to commit as `Expand direct wire editing`.

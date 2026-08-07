@@ -927,6 +927,9 @@
                     ],
                     "additionalProperties": false
                   },
+                  "createNet": {
+                    "type": "boolean"
+                  },
                   "split": {
                     "type": "object",
                     "properties": {

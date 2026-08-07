@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.5`
+Version: `1.6`
 
 Owning phase: `Phase 0/1/8`
 
@@ -83,6 +83,13 @@ Phase 8 topology operations have these preconditions:
 - `move_junction` preserves topology and must be paired with any required
   `set_route_points` edits in the same transaction. Routes protected by locked
   geometry reject the move.
+- `add_junction` normally requires an existing Net. `createNet: true` permits
+  creation of the named empty local Net in the same edit, enabling a free wire
+  endpoint without a second mutation path.
+- Connected-instance deletion remains a composed transaction rather than a
+  destructive `remove_instance` flag: Routes are first repointed to replacement
+  Junctions, terminals and annotations are removed explicitly, and only then is
+  the unreferenced instance removed.
 - Endpoints on different Nets require an explicit preceding `merge_nets` edit
   in the same transaction.
 - `merge_nets` retargets routes, junctions, annotations, and layout references

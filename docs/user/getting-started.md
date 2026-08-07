@@ -28,11 +28,18 @@ Document for palette-first manual authoring.
   Passing across a conductor remains a Crossing; ending on one creates a
   Junction automatically. An exact multi-route intersection is rejected as
   ambiguous instead of silently merging Nets.
-- Select a direct route to expose its dogleg handle. Use the contextual
+- While wiring, click blank canvas to fix bends; double-click blank canvas or
+  press `Enter` to finish at any grid point. `Backspace` removes the latest
+  uncommitted bend and `Escape` cancels the session.
+- Select any route segment to expose its movement handle. Drag the handle
+  perpendicular to that segment to stretch adjacent geometry without rerouting
+  the rest of the wire. Use the contextual
   **Remove route geometry** action to keep logical membership while deleting
   only the drawn route.
 - Right-click an endpoint for the distinct **Disconnect endpoint** and
   **Delete connection** actions.
+- `Delete` on a connected component now removes the component while preserving
+  its wires as dangling Junction endpoints at the former pin positions.
 - Select an instance to edit its displayed name. Select a wire Route to add an
   electrical Net label; assigning the same name to another Net explicitly
   connects those Nets. Use **More / Add text** for non-electrical notes. Label

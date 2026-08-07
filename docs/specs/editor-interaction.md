@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.1`
+Version: `1.2`
 
 Owning phase: `Phase 8`
 
@@ -119,8 +119,9 @@ can complete the named operation safely.
 ### Contextual manipulation
 
 - A selected direct route segment exposes a drag handle that creates an
-  orthogonal dogleg; there is no separate Stretch tool. Additional elbow
-  handle forms are a compatible later extension.
+  orthogonal dogleg; selecting any segment exposes the same handle. Dragging
+  moves that segment perpendicular to itself while its neighboring vertices
+  rubber-band orthogonally. There is no separate Stretch tool.
 - Rotate and Mirror are available from shortcuts or a contextual selection
   control.
 - Alignment appears only for a compatible multi-selection.
@@ -175,8 +176,12 @@ The core rule is:
 
 ### Starting and ending
 
-- Starting from a pin or existing junction opens a wire session from that
-  endpoint. Free-standing wire endpoints are deferred.
+- Starting from a pin, existing Junction, Route segment, or blank grid point
+  opens a wire session. A blank-grid source creates no Document records until
+  the session commits.
+- A blank-canvas click fixes an orthogonal bend. Double-click or `Enter`
+  terminates at the current grid point as a dangling Junction. `Backspace`
+  removes the latest uncommitted bend.
 - Starting from the interior of an existing route segment previews and, on
   commit, creates or reuses a junction atomically.
 - Releasing on a pin or existing junction connects to it.
@@ -186,6 +191,10 @@ The core rule is:
   no dot, and no connectivity.
 - A wire end that geometrically hits more than one route segment is rejected as
   ambiguous. The user must choose one conductor away from the crossing.
+- Deleting a connected instance converts each routed pin endpoint into a
+  Junction at the former pin coordinate, removes that terminal from its Net,
+  and removes the instance atomically. Remaining Route geometry and Net
+  identity are preserved as dangling wiring.
 
 ### Net semantics
 
@@ -325,7 +334,7 @@ non-electrical unless an explicit wire start/end gesture commits connectivity.
 
 ## Open decisions
 
-- User-remappable shortcut persistence and free-standing wire endpoints remain
-  compatible post-Phase-8 extensions.
-- General elbow/segment handles beyond the accepted direct-segment dogleg
-  interaction remain deferred.
+- User-remappable shortcut persistence remains a compatible post-Phase-8
+  extension.
+- Diagonal/any-angle drawing modes and whole-Net selection remain deferred;
+  the accepted editor is orthogonal and segment-selective.

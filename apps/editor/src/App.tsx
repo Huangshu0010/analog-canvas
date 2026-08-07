@@ -10,6 +10,7 @@ import {
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
   endpointKey,
+  moveRouteSegment,
   proposeGroupMove,
   routePolyline,
 } from "@icm/derived";
@@ -36,6 +37,7 @@ import type { SymbolDefinition } from "@icm/symbols";
 
 import { copySelection, proposePaste } from "./clipboard";
 import type { SchematicClipboard } from "./clipboard";
+import { proposeConnectedInstanceDeletion } from "./delete-selection";
 import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
 
@@ -64,6 +66,7 @@ interface PanPreview {
 
 interface RouteStretchPreview {
   routeId: string;
+  segmentIndex: number;
   point: Point;
   pointerId: number;
 }
@@ -120,6 +123,28 @@ function polylinePoints(points: readonly Point[]): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
 }
 
+function extendOrthogonalPath(
+  points: readonly Point[],
+  target: Point,
+): Point[] {
+  const result = points.map((point) => ({ ...point }));
+  const last = result.at(-1);
+  if (!last) return [{ ...target }];
+  if (last.x === target.x || last.y === target.y) {
+    if (last.x !== target.x || last.y !== target.y) result.push({ ...target });
+    return result;
+  }
+  const previous = result.at(-2);
+  const previousWasVertical = previous ? previous.x === last.x : true;
+  result.push(
+    previousWasVertical
+      ? { x: target.x, y: last.y }
+      : { x: last.x, y: target.y },
+    { ...target },
+  );
+  return result;
+}
+
 function segmentAtPoint(points: readonly Point[], point: Point): number | null {
   for (let index = 0; index < points.length - 1; index += 1) {
     const from = points[index]!;
@@ -127,13 +152,13 @@ function segmentAtPoint(points: readonly Point[], point: Point): number | null {
     const onVertical =
       from.x === to.x &&
       point.x === from.x &&
-      point.y > Math.min(from.y, to.y) &&
-      point.y < Math.max(from.y, to.y);
+      point.y >= Math.min(from.y, to.y) &&
+      point.y <= Math.max(from.y, to.y);
     const onHorizontal =
       from.y === to.y &&
       point.y === from.y &&
-      point.x > Math.min(from.x, to.x) &&
-      point.x < Math.max(from.x, to.x);
+      point.x >= Math.min(from.x, to.x) &&
+      point.x <= Math.max(from.x, to.x);
     if (onVertical || onHorizontal) return index;
   }
   return null;
@@ -278,7 +303,11 @@ export function App({ project: initialProject }: AppProps) {
   const [tool, setTool] = useState<EditorTool>("pointer");
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
   const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
+  const [wireWaypoints, setWireWaypoints] = useState<Point[]>([]);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [selectedRouteSegmentIndex, setSelectedRouteSegmentIndex] = useState<
+    number | null
+  >(null);
   const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
     null,
   );
@@ -390,17 +419,13 @@ export function App({ project: initialProject }: AppProps) {
     );
   const internalSelection = deriveInternalGroupSelection(document, selectedIds);
   const selectedInternalRouteIds = new Set(internalSelection.routeIds);
+  const wireFixedPoints = wireSource
+    ? [wireSource.point, ...wireWaypoints]
+    : [];
   const wireDraftPoints =
     wireSource && wirePreviewPoint
-      ? wireSource.point.x === wirePreviewPoint.x ||
-        wireSource.point.y === wirePreviewPoint.y
-        ? [wireSource.point, wirePreviewPoint]
-        : [
-            wireSource.point,
-            { x: wirePreviewPoint.x, y: wireSource.point.y },
-            wirePreviewPoint,
-          ]
-      : [];
+      ? extendOrthogonalPath(wireFixedPoints, wirePreviewPoint)
+      : wireFixedPoints;
   const projectInstanceCount = project.documents.reduce(
     (count, candidate) => count + candidate.instances.length,
     0,
@@ -421,6 +446,10 @@ export function App({ project: initialProject }: AppProps) {
     ),
   }));
   const contentScene = buildSvgScene(document, resolver);
+
+  useEffect(() => {
+    if (!selectedRouteId) setSelectedRouteSegmentIndex(null);
+  }, [selectedRouteId]);
 
   useEffect(() => {
     if (!selectedInstance) {
@@ -504,10 +533,14 @@ export function App({ project: initialProject }: AppProps) {
     setTool(nextTool);
     setWireSource(null);
     setWirePreviewPoint(null);
-    if (nextTool !== "pointer") setSelectedRouteId(null);
+    setWireWaypoints([]);
+    if (nextTool !== "pointer") {
+      setSelectedRouteId(null);
+      setSelectedRouteSegmentIndex(null);
+    }
     setStatus(
       nextTool === "wire"
-        ? "Wire: choose a pin, junction, or route segment"
+        ? "Wire: choose a pin, junction, route segment, or blank grid point"
         : "Pointer ready",
     );
   }
@@ -522,6 +555,7 @@ export function App({ project: initialProject }: AppProps) {
     setDragPreview(null);
     setWireSource(null);
     setWirePreviewPoint(null);
+    setWireWaypoints([]);
     setTool("pointer");
     setViewBox(DEFAULT_VIEWBOX);
     setStatus("Loaded Phase 3 routing demo");
@@ -540,6 +574,7 @@ export function App({ project: initialProject }: AppProps) {
     if (!wireSource) {
       setWireSource(candidate);
       setWirePreviewPoint(candidate.point);
+      setWireWaypoints([]);
       setStatus(`Wire source: ${endpointTestId(candidate.endpoint)}`);
       return;
     }
@@ -578,12 +613,11 @@ export function App({ project: initialProject }: AppProps) {
       to: candidate.endpoint,
       ...(!wireSource.netId && !candidate.netId ? { newNetId: netId } : {}),
     });
-    const diagonal =
-      wireSource.point.x !== candidate.point.x &&
-      wireSource.point.y !== candidate.point.y;
-    const waypoints = diagonal
-      ? [{ x: candidate.point.x, y: wireSource.point.y }]
-      : [];
+    const routedPoints = extendOrthogonalPath(
+      [wireSource.point, ...wireWaypoints],
+      candidate.point,
+    );
+    const waypoints = routedPoints.slice(1, -1);
     edits.push({
       kind: "set_route_points",
       routeId: `route-ui-${suffix}`,
@@ -600,9 +634,63 @@ export function App({ project: initialProject }: AppProps) {
     if (result.ok) {
       setWireSource(null);
       setWirePreviewPoint(null);
+      setWireWaypoints([]);
       setTool("pointer");
       setStatus(`Committed route at revision ${result.revision}`);
     }
+  }
+
+  function freeWireAnchor(
+    point: Point,
+    netId: string,
+    createNet: boolean,
+  ): WireSource {
+    routeCounter.current += 1;
+    const junctionId = `junction-ui-${routeCounter.current}`;
+    return {
+      endpoint: { kind: "junction", junctionId },
+      netId,
+      point,
+      preludeEdits: [
+        {
+          kind: "add_junction",
+          junctionId,
+          netId,
+          position: point,
+          ...(createNet ? { createNet: true } : {}),
+        },
+      ],
+    };
+  }
+
+  function fixWirePoint(point: Point): void {
+    if (!wireSource) {
+      routeCounter.current += 1;
+      const netId = `net-ui-${routeCounter.current}`;
+      const source = freeWireAnchor(point, netId, true);
+      setWireSource(source);
+      setWirePreviewPoint(point);
+      setWireWaypoints([]);
+      setStatus("Wire source: free grid point");
+      return;
+    }
+    const fixed = extendOrthogonalPath(
+      [wireSource.point, ...wireWaypoints],
+      point,
+    );
+    setWireWaypoints(fixed.slice(1));
+    setWirePreviewPoint(point);
+    setStatus(`Wire bend ${fixed.length - 1}; double-click or Enter to finish`);
+  }
+
+  function finishWireAtPoint(point: Point): void {
+    if (!wireSource) {
+      fixWirePoint(point);
+      return;
+    }
+    routeCounter.current += 1;
+    const netId = wireSource.netId ?? `net-ui-${routeCounter.current}`;
+    commitWire(freeWireAnchor(point, netId, wireSource.netId === null));
   }
 
   function routeAnchor(
@@ -658,9 +746,12 @@ export function App({ project: initialProject }: AppProps) {
     const segmentIndex = segmentAtPoint(routeRecord.polyline.points, point);
     if (tool === "pointer") {
       setSelectedRouteId(routeId);
+      setSelectedRouteSegmentIndex(segmentIndex ?? 0);
       setSelectedIds([]);
       setSelectedAnnotationId(null);
-      setStatus(`Selected route ${routeId}`);
+      setStatus(
+        `Selected route ${routeId}, segment ${(segmentIndex ?? 0) + 1}`,
+      );
       return;
     }
     if (segmentIndex === null) {
@@ -680,6 +771,7 @@ export function App({ project: initialProject }: AppProps) {
     if (!wireSource) {
       setWireSource(anchor);
       setWirePreviewPoint(point);
+      setWireWaypoints([]);
       setStatus(`Wire source: route ${routeId}`);
     } else {
       commitWire(anchor);
@@ -700,12 +792,14 @@ export function App({ project: initialProject }: AppProps) {
   function beginRouteStretch(
     event: ReactPointerEvent<SVGCircleElement>,
     routeId: string,
+    segmentIndex: number,
   ): void {
     if (event.button !== 0) return;
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
     setRouteStretchPreview({
       routeId,
+      segmentIndex,
       pointerId: event.pointerId,
       point: pointFromClient(
         event.clientX,
@@ -737,38 +831,35 @@ export function App({ project: initialProject }: AppProps) {
     const record = routePolylines.find(
       (candidate) => candidate.route.id === routeStretchPreview.routeId,
     );
-    if (!record || record.polyline.points.length !== 2) {
+    if (!record) {
       setRouteStretchPreview(null);
       return;
     }
-    const [from, to] = record.polyline.points as [Point, Point];
     const point = pointFromClient(
       event.clientX,
       event.clientY,
       event.currentTarget.ownerSVGElement!,
     );
-    const waypoints =
-      from.y === to.y
-        ? [
-            { x: from.x, y: point.y },
-            { x: to.x, y: point.y },
-          ]
-        : [
-            { x: point.x, y: from.y },
-            { x: point.x, y: to.y },
-          ];
-    const result = transact([
-      {
-        kind: "set_route_points",
-        routeId: record.route.id,
-        netId: record.route.netId,
-        from: record.route.from,
-        to: record.route.to,
-        waypoints,
-        segmentModes: ["manual", "manual", "manual"],
-      },
-    ]);
-    if (result.ok) setStatus(`Adjusted route ${record.route.id}`);
+    try {
+      const proposal = moveRouteSegment(
+        record.polyline,
+        routeStretchPreview.segmentIndex,
+        point,
+      );
+      const result = transact([
+        {
+          kind: "set_route_points",
+          routeId: record.route.id,
+          netId: record.route.netId,
+          from: record.route.from,
+          to: record.route.to,
+          ...proposal,
+        },
+      ]);
+      if (result.ok) setStatus(`Moved route segment ${record.route.id}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Route move failed");
+    }
     setRouteStretchPreview(null);
   }
 
@@ -1710,13 +1801,25 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     if (selectedIds.length === 0) return;
-    const result = transact(
-      selectedIds.map((instanceId): SchematicEdit => ({
-        kind: "remove_instance",
-        instanceId,
-      })),
-    );
-    if (result.ok) setSelectedIds([]);
+    transactionCounter.current += 1;
+    try {
+      const result = transact(
+        proposeConnectedInstanceDeletion(
+          document,
+          resolver,
+          selectedIds,
+          transactionCounter.current,
+        ),
+      );
+      if (result.ok) {
+        setSelectedIds([]);
+        setStatus(
+          "Deleted component selection; connected wires remain dangling",
+        );
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Delete failed");
+    }
   }
 
   function disconnectSelectedEndpoint(removeRoutes: boolean): void {
@@ -1820,16 +1923,25 @@ export function App({ project: initialProject }: AppProps) {
       } else if (!event.ctrlKey && key === "f") {
         event.preventDefault();
         fitView();
+      } else if (event.key === "Enter" && wireSource && wirePreviewPoint) {
+        event.preventDefault();
+        finishWireAtPoint(wirePreviewPoint);
       } else if (event.key === "Escape") {
         setTool("pointer");
         setWireSource(null);
         setWirePreviewPoint(null);
+        setWireWaypoints([]);
         setPendingSymbolId(null);
         setBoxPreview(null);
         setStatus("Cancelled");
       } else if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
-        deleteSelection();
+        if (wireSource && wireWaypoints.length > 0) {
+          setWireWaypoints(wireWaypoints.slice(0, -1));
+          setStatus("Removed last wire bend");
+        } else {
+          deleteSelection();
+        }
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -2004,7 +2116,7 @@ export function App({ project: initialProject }: AppProps) {
               </button>
               <small>
                 Ctrl+C/V copy/paste · R rotate · W wire · F fit · Ctrl+wheel
-                zoom · middle-drag pan
+                zoom · middle-drag pan · wire click=bend · Enter=finish
               </small>
             </div>
           </details>
@@ -2096,6 +2208,7 @@ export function App({ project: initialProject }: AppProps) {
         {selectedRouteId ? (
           <section className="context-actions" aria-label="Route actions">
             <h2>Route</h2>
+            <p>Segment {(selectedRouteSegmentIndex ?? 0) + 1} selected</p>
             <label>
               Electrical Net label
               <input
@@ -2225,11 +2338,53 @@ export function App({ project: initialProject }: AppProps) {
           onPointerMove={continueCanvasGesture}
           onPointerUp={finishCanvasGesture}
           onPointerCancel={finishCanvasGesture}
+          onClick={(event) => {
+            const target = event.target as Element;
+            if (
+              tool !== "wire" ||
+              event.detail !== 1 ||
+              (target !== event.currentTarget && target.tagName !== "rect")
+            )
+              return;
+            fixWirePoint(
+              pointFromClient(
+                event.clientX,
+                event.clientY,
+                event.currentTarget,
+              ),
+            );
+          }}
+          onDoubleClick={(event) => {
+            const target = event.target as Element;
+            if (
+              tool !== "wire" ||
+              (target !== event.currentTarget && target.tagName !== "rect")
+            )
+              return;
+            const point = pointFromClient(
+              event.clientX,
+              event.clientY,
+              event.currentTarget,
+            );
+            if (
+              wireSource?.endpoint.kind === "junction" &&
+              wireSource.preludeEdits.some(
+                (edit) => edit.kind === "add_junction" && edit.createNet,
+              ) &&
+              wireSource.point.x === point.x &&
+              wireSource.point.y === point.y
+            ) {
+              setStatus("Choose a different point to finish the wire");
+              return;
+            }
+            finishWireAtPoint(point);
+          }}
           onContextMenu={(event) => {
             event.preventDefault();
             if (wireSource) {
               setWireSource(null);
               setWirePreviewPoint(null);
+              setWireWaypoints([]);
               setTool("pointer");
               setStatus("Wire cancelled");
             }
@@ -2291,13 +2446,14 @@ export function App({ project: initialProject }: AppProps) {
               />
             ))}
             {routePolylines
-              .filter(
-                ({ route, polyline }) =>
-                  route.id === selectedRouteId && polyline.points.length === 2,
-              )
+              .filter(({ route }) => route.id === selectedRouteId)
               .map(({ route, polyline }) => {
-                const from = polyline.points[0]!;
-                const to = polyline.points[1]!;
+                const segmentIndex = Math.min(
+                  selectedRouteSegmentIndex ?? 0,
+                  polyline.points.length - 2,
+                );
+                const from = polyline.points[segmentIndex]!;
+                const to = polyline.points[segmentIndex + 1]!;
                 const preview =
                   routeStretchPreview?.routeId === route.id
                     ? routeStretchPreview.point
@@ -2307,11 +2463,19 @@ export function App({ project: initialProject }: AppProps) {
                     key={`handle-${route.id}`}
                     data-testid={`route-handle-${route.id}`}
                     className="route-handle"
-                    cx={preview?.x ?? (from.x + to.x) / 2}
-                    cy={preview?.y ?? (from.y + to.y) / 2}
+                    cx={
+                      from.y === to.y
+                        ? (from.x + to.x) / 2
+                        : (preview?.x ?? (from.x + to.x) / 2)
+                    }
+                    cy={
+                      from.x === to.x
+                        ? (from.y + to.y) / 2
+                        : (preview?.y ?? (from.y + to.y) / 2)
+                    }
                     r="6"
                     onPointerDown={(event) =>
-                      beginRouteStretch(event, route.id)
+                      beginRouteStretch(event, route.id, segmentIndex)
                     }
                     onPointerMove={previewRouteStretch}
                     onPointerUp={finishRouteStretch}

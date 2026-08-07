@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.2`
+Version: `1.3`
 
 Owning phase: `Phase 6/8`
 
@@ -94,6 +94,10 @@ Version 1.2 adds `move_junction` and `set_net_name`. Junction movement requires
 geometry permission; Net naming requires connectivity permission. Agents use
 the same explicit same-name merge rule as the GUI and cannot connect Nets by
 placing decorative text.
+
+Version 1.3 adds the optional `createNet` field to `add_junction`. It remains a
+connectivity-permission operation and is validated by the shared Edit Engine;
+it does not add a separate free-wire endpoint API.
 
 ## Render semantics
 

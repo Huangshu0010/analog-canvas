@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.3`
+Version: `1.4`
 
 Owning phase: `Phase 3/8`
 
@@ -105,7 +105,9 @@ preserving the explicit graph unchanged.
 
 - `set_route_points` creates or replaces one complete RouteBranch.
 - `add_junction` creates a Junction and may atomically split one RouteBranch at
-  a specified segment into caller-named first/second branches.
+  a specified segment into caller-named first/second branches. With explicit
+  `createNet: true`, it may also create the caller-named empty local Net needed
+  for a free wire endpoint.
 - `remove_junction` removes an unused Junction.
 - `move_junction` changes a Junction coordinate without changing Net
   membership; the caller includes corresponding Route replacements atomically.
@@ -136,6 +138,18 @@ selected instances translate by the same delta, including their attached Net,
 Route, and Junction annotations. Only Routes that cross the selection boundary
 use local endpoint stretch. A protected route or one whose endpoints request
 different deltas rejects the complete transaction.
+
+Direct segment movement keeps both Route endpoints fixed. The selected segment
+moves only perpendicular to its orientation; adjacent vertices stretch or a
+deterministic dogleg is introduced. Interior, manual geometry outside the
+neighboring segments remains unchanged. A locked or trunk selected/neighboring
+segment rejects the complete edit.
+
+Deleting a connected instance is expressed as one transaction: add replacement
+Junctions at routed terminal coordinates, repoint affected Routes, disconnect
+the terminals, remove attached instance annotations, then remove the instance.
+This preserves intentional wiring and never leaves a Route referencing a
+missing terminal.
 
 ## Electrical labels
 

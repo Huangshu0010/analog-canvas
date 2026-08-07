@@ -109,6 +109,90 @@ export function normalizeRouteGeometry(
   return { points: normalizedPoints, segmentModes: normalizedModes };
 }
 
+export function moveRouteSegment(
+  polyline: RoutePolyline,
+  segmentIndex: number,
+  target: Point,
+): { waypoints: Point[]; segmentModes: SegmentMode[] } {
+  if (segmentIndex < 0 || segmentIndex >= polyline.points.length - 1) {
+    throw new Error(`Route segment index is out of range: ${segmentIndex}`);
+  }
+  const affectedModes = [
+    polyline.segmentModes[segmentIndex - 1],
+    polyline.segmentModes[segmentIndex],
+    polyline.segmentModes[segmentIndex + 1],
+  ].filter((mode): mode is SegmentMode => mode !== undefined);
+  if (affectedModes.some((mode) => mode === "locked" || mode === "trunk")) {
+    throw new Error("Route segment or its neighbor is protected");
+  }
+
+  const points = polyline.points.map((point) => ({ ...point }));
+  const modes = [...polyline.segmentModes];
+  const from = points[segmentIndex]!;
+  const to = points[segmentIndex + 1]!;
+  const horizontal = from.y === to.y;
+  const lastSegmentIndex = points.length - 2;
+
+  if (points.length === 2) {
+    const moved = horizontal
+      ? [
+          points[0]!,
+          { x: points[0]!.x, y: target.y },
+          { x: points[1]!.x, y: target.y },
+          points[1]!,
+        ]
+      : [
+          points[0]!,
+          { x: target.x, y: points[0]!.y },
+          { x: target.x, y: points[1]!.y },
+          points[1]!,
+        ];
+    const mode = modes[0] ?? "manual";
+    const normalized = normalizeRouteGeometry(moved, [mode, mode, mode]);
+    return {
+      waypoints: normalized.points.slice(1, -1),
+      segmentModes: normalized.segmentModes,
+    };
+  }
+
+  if (segmentIndex === 0) {
+    const fixedEndpoint = points[0]!;
+    if (horizontal) {
+      points[1]!.y = target.y;
+      points.splice(1, 0, { x: fixedEndpoint.x, y: target.y });
+    } else {
+      points[1]!.x = target.x;
+      points.splice(1, 0, { x: target.x, y: fixedEndpoint.y });
+    }
+    modes.splice(0, 1, modes[0]!, modes[0]!);
+  } else if (segmentIndex === lastSegmentIndex) {
+    const fixedEndpoint = points.at(-1)!;
+    if (horizontal) {
+      points[segmentIndex]!.y = target.y;
+      points.splice(-1, 0, { x: fixedEndpoint.x, y: target.y });
+    } else {
+      points[segmentIndex]!.x = target.x;
+      points.splice(-1, 0, { x: target.x, y: fixedEndpoint.y });
+    }
+    modes.splice(segmentIndex, 1, modes[segmentIndex]!, modes[segmentIndex]!);
+  } else if (horizontal) {
+    points[segmentIndex]!.y = target.y;
+    points[segmentIndex + 1]!.y = target.y;
+  } else {
+    points[segmentIndex]!.x = target.x;
+    points[segmentIndex + 1]!.x = target.x;
+  }
+
+  const normalized = normalizeRouteGeometry(points, modes);
+  if (!isOrthogonal(normalized.points)) {
+    throw new Error("Route segment move would make geometry non-orthogonal");
+  }
+  return {
+    waypoints: normalized.points.slice(1, -1),
+    segmentModes: normalized.segmentModes,
+  };
+}
+
 function sharedExplicitEndpoint(
   left: RouteBranch,
   right: RouteBranch,

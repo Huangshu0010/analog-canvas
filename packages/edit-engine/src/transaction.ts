@@ -80,6 +80,7 @@ export const AddJunctionEditSchema = z.strictObject({
   junctionId: StableIdSchema,
   netId: StableIdSchema,
   position: PointSchema,
+  createNet: z.boolean().optional(),
   split: z
     .strictObject({
       routeId: StableIdSchema,
@@ -796,11 +797,20 @@ export function executeTransaction(
       }
       case "add_junction": {
         if (!draft.nets.some((net) => net.id === edit.netId)) {
-          return rejectTransaction(
-            document,
-            "OBJECT_NOT_FOUND",
-            `Junction net does not exist: ${edit.netId}`,
-          );
+          if (!edit.createNet) {
+            return rejectTransaction(
+              document,
+              "OBJECT_NOT_FOUND",
+              `Junction net does not exist: ${edit.netId}`,
+            );
+          }
+          draft.nets.push({
+            id: edit.netId,
+            scope: "local",
+            terminals: [],
+            ports: [],
+          });
+          changedObjectIds.add(edit.netId);
         }
         if (
           draft.junctions.some((junction) => junction.id === edit.junctionId)

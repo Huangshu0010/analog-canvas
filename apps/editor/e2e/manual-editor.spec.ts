@@ -150,6 +150,72 @@ test("authors components and connectivity manually from an empty canvas", async 
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
 });
 
+test("places free wire bends and finishes at an arbitrary grid point", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 300, y: 200 });
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-R1-2").click();
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 500, y: 260 } });
+  await expect(page.getByTestId("wire-preview")).toBeVisible();
+  await canvas.dblclick({ position: { x: 650, y: 340 } });
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(
+    page.locator('[data-testid^="junction-junction-ui-"]'),
+  ).toHaveCount(1);
+  const points = await page
+    .locator('[data-testid^="route-hit-"]')
+    .evaluate((element) =>
+      Array.from((element as SVGPolylineElement).points).map((point) => ({
+        x: point.x,
+        y: point.y,
+      })),
+    );
+  expect(points.length).toBeGreaterThanOrEqual(4);
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+});
+
+test("moves a selected wire segment and deletes a connected component safely", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await placeComponent(page, "resistor", { x: 520, y: 220 });
+  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+
+  await clickRoute(page, "route-ui-1");
+  const handle = page.getByTestId("route-handle-route-ui-1");
+  const handleBox = await handle.boundingBox();
+  if (!handleBox) throw new Error("Route handle is not measurable");
+  await page.mouse.move(
+    handleBox.x + handleBox.width / 2,
+    handleBox.y + handleBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    handleBox.x + handleBox.width / 2,
+    handleBox.y + handleBox.height / 2 + 80,
+  );
+  await page.mouse.up();
+  await expect(page.getByTestId("status")).toContainText("Moved route segment");
+  expect((await readRoutePoints(page, "route-ui-1")).length).toBe(4);
+
+  await page.getByTestId("hit-R1").click();
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("instance-count")).toHaveText("1");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(
+    page.locator('[data-testid^="junction-junction-delete-"]'),
+  ).toHaveCount(1);
+  await expect(page.getByTestId("status")).toContainText(
+    "connected wires remain dangling",
+  );
+});
+
 test("moves internal wiring with a selected group and copies the routed subgraph", async ({
   page,
 }) => {
