@@ -24,10 +24,10 @@ describe("schematic style profiles", () => {
     });
     expect(razaviTextbookProfile.annotations).toEqual({
       supplyBarWidth: 20,
-      currentArrowLength: 28,
-      arrowHeadLength: 14,
-      arrowHeadWidth: 9,
-      currentLabelGap: 7,
+      currentArrowLength: 27.906977,
+      arrowHeadLength: 11.627907,
+      arrowHeadWidth: 6.976744,
+      currentLabelGap: 6.976744,
       polarityOffsetX: 12,
       polarityHalfGap: 8,
     });

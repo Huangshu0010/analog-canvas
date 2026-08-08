@@ -178,10 +178,7 @@ describe("Razavi symbol catalog", () => {
       "capacitor",
       "inductor",
       "diode",
-      "ground",
       "port",
-      "voltage-source",
-      "current-source",
     ]) {
       expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
         reviewStatus: "reviewed",
@@ -190,6 +187,20 @@ describe("Razavi symbol catalog", () => {
           evidencePath:
             "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
           converterPath: "scripts/generate-visio-core-analog-assets.mjs",
+          converterVersion: 1,
+        },
+      });
+    }
+  });
+
+  it("uses the sole Razavi raster for peripheral presentation assets", () => {
+    for (const symbolId of ["ground", "voltage-source", "current-source"]) {
+      expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
+        generation: {
+          kind: "razavi-raster-reference",
+          referenceManifestPath:
+            "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+          converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
           converterVersion: 1,
         },
       });
@@ -309,18 +320,18 @@ describe("Razavi symbol catalog", () => {
       expect.arrayContaining([
         expect.objectContaining({
           kind: "line",
-          from: { x: -7.086614, y: 3.890552 },
-          to: { x: 7.086614, y: 3.890552 },
+          from: { x: -6.395349, y: 0 },
+          to: { x: 6.395349, y: 0 },
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -3.543307, y: 8.071654 },
-          to: { x: 3.543307, y: 8.071654 },
+          from: { x: -4.069767, y: 5.813953 },
+          to: { x: 4.069767, y: 5.813953 },
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -1.771654, y: 12.252756 },
-          to: { x: 1.771654, y: 12.252756 },
+          from: { x: -2.325581, y: 11.046512 },
+          to: { x: 2.325581, y: 11.046512 },
         }),
       ]),
     );
@@ -333,18 +344,18 @@ describe("Razavi symbol catalog", () => {
       expect.arrayContaining([
         expect.objectContaining({
           kind: "line",
-          from: { x: -19.129922, y: -13.271654 },
-          to: { x: -11.129922, y: -13.271654 },
+          from: { x: -20.058139, y: -13.953488 },
+          to: { x: -11.918605, y: -13.953488 },
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -15.129922, y: -17.271654 },
-          to: { x: -15.129922, y: -9.271654 },
+          from: { x: -15.988372, y: -18.023255 },
+          to: { x: -15.988372, y: -9.883721 },
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -19.129922, y: 12.98819 },
-          to: { x: -11.129922, y: 12.98819 },
+          from: { x: -20.058139, y: 13.953488 },
+          to: { x: -11.918605, y: 13.953488 },
         }),
       ]),
     );
@@ -387,15 +398,15 @@ describe("Razavi symbol catalog", () => {
       expect.arrayContaining([
         expect.objectContaining({
           kind: "line",
-          from: { x: 0, y: -5.456693 },
-          to: { x: 0, y: 0.608268 },
+          from: { x: 0, y: -6.976744 },
+          to: { x: 0, y: -2.325581 },
         }),
         expect.objectContaining({
           kind: "polygon",
           points: [
-            { x: 0, y: 10.946753 },
-            { x: -5.134252, y: 0.608268 },
-            { x: 5.134252, y: 0.608268 },
+            { x: 0, y: 6.976744 },
+            { x: -4.651163, y: -2.325581 },
+            { x: 4.651163, y: -2.325581 },
           ],
           fill: "foreground",
           stroke: "none",

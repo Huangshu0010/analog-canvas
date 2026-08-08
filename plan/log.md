@@ -2439,3 +2439,18 @@ Editing System work.
   PMOS; temporary UI instances undone.
 - Commit status: ready for
   `fix(razavi): generate MOS geometry solely from pixel map`.
+
+## 2026-08-08 - Razavi peripheral assets and four-terminal MOS
+
+- Target: rapidly apply the sole-reference pixel-map workflow to voltage and
+  current sources, ground, route current arrows, and repair four-terminal MOS
+  bulk-arrow support lines.
+- Changed areas: added a hash-bound peripheral geometry map and generator;
+  moved three peripheral catalog entries from Visio to raster provenance;
+  protected them from Visio regeneration; generated route-arrow style metrics;
+  shortened NMOS/PMOS bulk support lines to their arrow bases.
+- Validation: per user request, no browser or visual-regression pass; asset and
+  catalog generation completed; `git diff --check` and status inspection used
+  as the close-out checks.
+- Commit status: ready for
+  `fix(razavi): align peripheral assets and four-terminal MOS`.

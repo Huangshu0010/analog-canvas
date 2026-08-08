@@ -33,6 +33,10 @@ const generationPolicies = new Map([
     "fixtures/visual-reference/razavi-reference-v1/",
   ],
   [
+    "scripts/generate-razavi-peripheral-assets.mjs",
+    "fixtures/visual-reference/razavi-reference-v1/",
+  ],
+  [
     "scripts/generate-visio-core-analog-assets.mjs",
     "fixtures/visual-reference/visio-core-analog/",
   ],
@@ -152,7 +156,9 @@ for (const entry of catalog.entries) {
     }
     if (entry.generation.kind === "vss-master-ir") {
       if (
-        !entry.generation.evidencePath?.startsWith("fixtures/symbols/vss-ir/") ||
+        !entry.generation.evidencePath?.startsWith(
+          "fixtures/symbols/vss-ir/",
+        ) ||
         !entry.generation.referencePath.startsWith(referencePrefix)
       ) {
         fail(`invalid VSS generation provenance for ${entry.symbolId}`);
@@ -166,12 +172,18 @@ for (const entry of catalog.entries) {
         fail(`invalid raster generation provenance for ${entry.symbolId}`);
       }
       const manifest = JSON.parse(
-        await readFile(resolve(root, entry.generation.referenceManifestPath), "utf8"),
+        await readFile(
+          resolve(root, entry.generation.referenceManifestPath),
+          "utf8",
+        ),
       );
       if (
         manifest.visualAuthority !== "sole" ||
         resolve(root, entry.generation.referencePath) !==
-          resolve(dirname(resolve(root, entry.generation.referenceManifestPath)), manifest.assetPath)
+          resolve(
+            dirname(resolve(root, entry.generation.referenceManifestPath)),
+            manifest.assetPath,
+          )
       ) {
         fail(`invalid raster authority for ${entry.symbolId}`);
       }

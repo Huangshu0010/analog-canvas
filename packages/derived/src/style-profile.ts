@@ -1,5 +1,7 @@
 import type { SymbolStrokeRole } from "@icm/symbols";
 
+import { razaviPeripheralGeometry } from "./razavi-peripheral-geometry.generated.js";
+
 export interface SchematicStyleProfile {
   readonly id: "textbook-monochrome-v1" | "razavi-textbook-v1";
   readonly foreground: string;
@@ -106,10 +108,7 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
   nodes: { junctionRadius: 3, portOriginRadius: 3 },
   annotations: {
     supplyBarWidth: 20,
-    currentArrowLength: 28,
-    arrowHeadLength: 14,
-    arrowHeadWidth: 9,
-    currentLabelGap: 7,
+    ...razaviPeripheralGeometry,
     polarityOffsetX: 12,
     polarityHalfGap: 8,
   },
