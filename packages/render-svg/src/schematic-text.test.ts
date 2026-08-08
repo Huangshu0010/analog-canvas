@@ -12,15 +12,23 @@ import {
 
 describe("Razavi schematic typography", () => {
   it.each([
-    ["M1", "instance-label", { base: "M", subscript: "1" }],
-    ["R1", "instance-label", { base: "R", subscript: "1" }],
-    ["VDD", "power-label", { base: "V", subscript: "DD" }],
-    ["Vb1", "net-label", { base: "V", subscript: "b1" }],
-    ["IX", "current", { base: "I", subscript: "X" }],
-    ["V_X", "voltage", { base: "V", subscript: "X" }],
-    ["VIN+", "net-label", { base: "V", subscript: "IN", suffix: "+" }],
-    ["VIN-", "net-label", { base: "V", subscript: "IN", suffix: "-" }],
-    ["XM12", "default-instance", { base: "XM", subscript: "12" }],
+    ["M1", "instance-label", { base: "M", subscript: "1", style: "math" }],
+    ["R1", "instance-label", { base: "R", subscript: "1", style: "math" }],
+    ["VDD", "power-label", { base: "V", subscript: "DD", style: "math" }],
+    ["Vb1", "net-label", { base: "V", subscript: "b1", style: "math" }],
+    ["IX", "current", { base: "I", subscript: "X", style: "math" }],
+    ["V_X", "voltage", { base: "V", subscript: "X", style: "math" }],
+    [
+      "VIN+",
+      "net-label",
+      { base: "V", subscript: "IN", suffix: "+", style: "math" },
+    ],
+    [
+      "VIN-",
+      "net-label",
+      { base: "V", subscript: "IN", suffix: "-", style: "math" },
+    ],
+    ["XM12", "default-instance", { base: "XM", subscript: "12", style: "math" }],
   ] as const)("parses %s by %s semantics", (text, kind, expected) => {
     expect(parseSchematicMath(text, kind)).toEqual(expected);
   });

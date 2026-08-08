@@ -334,6 +334,23 @@ body {
   stroke: transparent;
   stroke-width: 2;
   cursor: move;
+  pointer-events: all;
+}
+
+.text-format-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.text-format-tools button {
+  min-width: auto;
+  padding: 0.2rem 0.45rem;
+}
+
+.text-format-tools small {
+  color: #5b5b57;
 }
 
 .hit-target.selected {

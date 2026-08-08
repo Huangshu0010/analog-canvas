@@ -410,6 +410,7 @@ export function App({ project: initialProject }: AppProps) {
   const pasteCounter = useRef(0);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const annotationTextInputRef = useRef<HTMLInputElement>(null);
   const history = useRef(
     new DocumentHistory(
       project.documents.find(
@@ -684,6 +685,37 @@ export function App({ project: initialProject }: AppProps) {
       height: maximumY - minimumY + padding * 2,
     };
   }
+
+  function instanceHitBox(
+    instance: SchematicDocument["instances"][number],
+  ): Rect | null {
+    if (!instance.placement) return null;
+    const resolved = resolver.resolve(
+      instance.symbolId,
+      instance.symbolVariantId,
+    );
+    if (!resolved) return null;
+    const viewBox = resolved.definition.viewBox;
+    const corners = [
+      { x: viewBox.x, y: viewBox.y },
+      { x: viewBox.x + viewBox.width, y: viewBox.y },
+      { x: viewBox.x, y: viewBox.y + viewBox.height },
+      { x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
+    ].map((point) =>
+      transformPoint(point, instance.placement!.position, instance.placement!),
+    );
+    const xs = corners.map((point) => point.x);
+    const ys = corners.map((point) => point.y);
+    const padding = 3;
+    const x = Math.min(...xs) - padding;
+    const y = Math.min(...ys) - padding;
+    return {
+      x,
+      y,
+      width: Math.max(...xs) - x + padding,
+      height: Math.max(...ys) - y + padding,
+    };
+  }
   const internalSelection = deriveInternalGroupSelection(document, selectedIds);
   const selectedInternalRouteIds = new Set(internalSelection.routeIds);
   const wireFixedPoints = wireSource
@@ -946,6 +978,22 @@ export function App({ project: initialProject }: AppProps) {
         ? "Wire: choose a pin, junction, route segment, or blank grid point"
         : "Pointer ready",
     );
+  }
+
+  function setPresentationStyle(
+    styleProfileId: "textbook-monochrome-v1" | "razavi-textbook-v1",
+  ): void {
+    if (document.presentation.styleProfileId === styleProfileId) return;
+    const result = transact([
+      { kind: "set_presentation_style", styleProfileId },
+    ]);
+    if (result.ok) {
+      setStatus(
+        styleProfileId === "razavi-textbook-v1"
+          ? "Applied Razavi textbook style to this Document"
+          : "Applied monochrome compatibility style to this Document",
+      );
+    }
   }
 
   function loadRoutingDemo(): void {
@@ -1554,7 +1602,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function beginMove(
-    event: ReactPointerEvent<SVGCircleElement>,
+    event: ReactPointerEvent<SVGRectElement>,
     instanceId: string,
   ): void {
     if (tool !== "pointer" || event.button !== 0) return;
@@ -1590,7 +1638,7 @@ export function App({ project: initialProject }: AppProps) {
     });
   }
 
-  function previewMove(event: ReactPointerEvent<SVGCircleElement>): void {
+  function previewMove(event: ReactPointerEvent<SVGRectElement>): void {
     if (!dragPreview || dragPreview.pointerId !== event.pointerId) {
       return;
     }
@@ -1611,7 +1659,7 @@ export function App({ project: initialProject }: AppProps) {
     });
   }
 
-  function finishMove(event: ReactPointerEvent<SVGCircleElement>): void {
+  function finishMove(event: ReactPointerEvent<SVGRectElement>): void {
     if (!dragPreview || dragPreview.pointerId !== event.pointerId) {
       return;
     }
@@ -1994,6 +2042,23 @@ export function App({ project: initialProject }: AppProps) {
       },
     ]);
     setAnnotationSizeDraft(String(sizeScale));
+  }
+
+  function insertAnnotationMarkup(kind: "subscript" | "italic"): void {
+    const input = annotationTextInputRef.current;
+    const start = input?.selectionStart ?? annotationTextDraft.length;
+    const end = input?.selectionEnd ?? start;
+    const selected = annotationTextDraft.slice(start, end);
+    const prefix = kind === "subscript" ? "_{" : "\\it{";
+    const insertion = `${prefix}${selected}}`;
+    const next = `${annotationTextDraft.slice(0, start)}${insertion}${annotationTextDraft.slice(end)}`;
+    const caret =
+      selected.length > 0 ? start + insertion.length : start + prefix.length;
+    setAnnotationTextDraft(next);
+    requestAnimationFrame(() => {
+      input?.focus();
+      input?.setSelectionRange(caret, caret);
+    });
   }
 
   function applyAnnotationSize(): void {
@@ -2667,6 +2732,31 @@ export function App({ project: initialProject }: AppProps) {
             </div>
           </details>
           <details className="command-menu" name="editor-command-menu">
+            <summary>Style</summary>
+            <div className="command-popover">
+              <button
+                type="button"
+                aria-pressed={
+                  document.presentation.styleProfileId === "razavi-textbook-v1"
+                }
+                onClick={() => setPresentationStyle("razavi-textbook-v1")}
+              >
+                Razavi textbook
+              </button>
+              <button
+                type="button"
+                aria-pressed={
+                  document.presentation.styleProfileId ===
+                  "textbook-monochrome-v1"
+                }
+                onClick={() => setPresentationStyle("textbook-monochrome-v1")}
+              >
+                Monochrome compatibility
+              </button>
+              <small>Changes the active Document and can be undone.</small>
+            </div>
+          </details>
+          <details className="command-menu" name="editor-command-menu">
             <summary>Export</summary>
             <div className="command-popover">
               <button type="button" aria-label="Export SVG" onClick={exportSvg}>
@@ -2839,6 +2929,7 @@ export function App({ project: initialProject }: AppProps) {
             <label>
               Content
               <input
+                ref={annotationTextInputRef}
                 aria-label="Selected text content"
                 value={annotationTextDraft}
                 onChange={(event) =>
@@ -2852,6 +2943,25 @@ export function App({ project: initialProject }: AppProps) {
                 }}
               />
             </label>
+            <div className="text-format-tools" aria-label="Text formatting">
+              <button
+                type="button"
+                aria-label="Insert subscript markup"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => insertAnnotationMarkup("subscript")}
+              >
+                xₐ
+              </button>
+              <button
+                type="button"
+                aria-label="Insert italic markup"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => insertAnnotationMarkup("italic")}
+              >
+                <em>Italic</em>
+              </button>
+              <small>Example: V_&#123;DD&#125;, M_&#123;1&#125;</small>
+            </div>
             <label>
               Size scale
               <input
@@ -3173,38 +3283,40 @@ export function App({ project: initialProject }: AppProps) {
               })}
             {document.instances
               .filter((instance) => instance.placement !== null)
-              .map((instance) => (
-                <circle
-                  key={instance.id}
-                  data-testid={`hit-${instance.id}`}
-                  cx={instance.placement!.position.x}
-                  cy={instance.placement!.position.y}
-                  r="36"
-                  className={
-                    selectedIds.includes(instance.id)
-                      ? "hit-target selected"
-                      : "hit-target"
-                  }
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    if (suppressInstanceClick.current) {
-                      suppressInstanceClick.current = false;
-                      return;
+              .map((instance) => {
+                const hitBox = instanceHitBox(instance);
+                if (!hitBox) return null;
+                return (
+                  <rect
+                    key={instance.id}
+                    data-testid={`hit-${instance.id}`}
+                    {...hitBox}
+                    className={
+                      selectedIds.includes(instance.id)
+                        ? "hit-target selected"
+                        : "hit-target"
                     }
-                    selectInstance(
-                      instance.id,
-                      event.shiftKey || event.ctrlKey,
-                    );
-                  }}
-                  onDoubleClick={(event) => {
-                    event.stopPropagation();
-                    enterHierarchy(instance.id);
-                  }}
-                  onPointerDown={(event) => beginMove(event, instance.id)}
-                  onPointerMove={previewMove}
-                  onPointerUp={finishMove}
-                />
-              ))}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (suppressInstanceClick.current) {
+                        suppressInstanceClick.current = false;
+                        return;
+                      }
+                      selectInstance(
+                        instance.id,
+                        event.shiftKey || event.ctrlKey,
+                      );
+                    }}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      enterHierarchy(instance.id);
+                    }}
+                    onPointerDown={(event) => beginMove(event, instance.id)}
+                    onPointerMove={previewMove}
+                    onPointerUp={finishMove}
+                  />
+                );
+              })}
             {visibleEndpoints.map((candidate) => (
               <circle
                 key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}

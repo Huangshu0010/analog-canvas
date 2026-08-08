@@ -13,8 +13,9 @@ export type SchematicTextKind =
 
 export interface SchematicMathRuns {
   base: string;
-  subscript: string;
+  subscript?: string;
   suffix?: string;
+  style?: "math" | "italic";
 }
 
 function escapeXml(value: string): string {
@@ -33,6 +34,21 @@ export function parseSchematicMath(
   text: string,
   kind: SchematicTextKind,
 ): SchematicMathRuns | null {
+  const explicit = /^(?:\\it\{([^{}]+)\}|([^{}_]+))_\{([^{}]+)\}([+-])?$/u.exec(
+    text,
+  );
+  if (explicit) {
+    return {
+      base: explicit[1] ?? explicit[2]!,
+      subscript: explicit[3]!,
+      ...(explicit[4] ? { suffix: explicit[4] } : {}),
+      style: explicit[1] ? "italic" : "math",
+    };
+  }
+  const explicitItalic = /^\\it\{([^{}]+)\}$/u.exec(text);
+  if (explicitItalic) {
+    return { base: explicitItalic[1]!, style: "italic" };
+  }
   if (!permitsImplicitMath(kind)) return null;
 
   const underscore = text.indexOf("_");
@@ -40,12 +56,15 @@ export function parseSchematicMath(
     return {
       base: text.slice(0, underscore),
       subscript: text.slice(underscore + 1),
+      style: "math",
     };
   }
 
   if (kind === "default-instance" || kind === "instance-label") {
     const match = /^([A-Za-z]+)(.+)$/u.exec(text);
-    return match ? { base: match[1]!, subscript: match[2]! } : null;
+    return match
+      ? { base: match[1]!, subscript: match[2]!, style: "math" }
+      : null;
   }
 
   if (
@@ -61,6 +80,7 @@ export function parseSchematicMath(
           base: match[1]!,
           subscript: match[2]!,
           ...(match[3] ? { suffix: match[3] } : {}),
+          style: "math",
         }
       : null;
   }
@@ -102,12 +122,18 @@ export function renderSchematicTextContent(
   if (!runs) return escapeXml(text);
 
   const typography = profile.typography;
-  const runStyle = `font-style:${typography.mathStyle};font-weight:${typography.mathWeight}`;
+  const runStyle =
+    runs.style === "italic"
+      ? `font-style:italic;font-weight:${typography.plainWeight}`
+      : `font-style:${typography.mathStyle};font-weight:${typography.mathWeight}`;
   const subscriptPercent = typography.subscriptScale * 100;
+  const subscript = runs.subscript
+    ? `<tspan data-text-run="subscript" font-size="${subscriptPercent}%" baseline-shift="-${typography.subscriptBaselineShiftEm}em" style="${runStyle}">${escapeXml(runs.subscript)}</tspan>`
+    : "";
   const suffix = runs.suffix
     ? `<tspan data-text-run="suffix" baseline-shift="baseline" dy="${typography.subscriptBaselineShiftEm}em" style="font-style:normal;font-weight:${typography.plainWeight}">${escapeXml(runs.suffix)}</tspan>`
     : "";
-  return `<tspan data-text-run="base" style="${runStyle}">${escapeXml(runs.base)}</tspan><tspan data-text-run="subscript" font-size="${subscriptPercent}%" baseline-shift="-${typography.subscriptBaselineShiftEm}em" style="${runStyle}">${escapeXml(runs.subscript)}</tspan>${suffix}`;
+  return `<tspan data-text-run="base" style="${runStyle}">${escapeXml(runs.base)}</tspan>${subscript}${suffix}`;
 }
 
 export function schematicTextSizeAttribute(
