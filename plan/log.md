@@ -1895,3 +1895,17 @@ Editing System work.
   252/252; workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `chore(fixtures): regenerate Agent API and phase-9 artifacts after hash rename (WP-A5 regression)`.
+## 2026-08-08 - Markup parser: nested braces in command bodies
+
+- Target: fix the markup parser so fraction/italic/bold/subscript/superscript
+  bodies may contain one nested `{...}` group (e.g. `\frac{V_{DD}}{2}`), which
+  the roadmap acceptance scenario for `V_{in}^{+} = \frac{V_{DD}}{2}` requires.
+- Changed areas: render-svg markup-parser.ts command regexes now match a body
+  of plain text or one nested brace group; added a test for a fraction whose
+  numerator contains a subscript.
+- Verified end-to-end: `V_{in}^{+} = \frac{V_{DD}}{2}` parses to an AST and
+  renders subscript, superscript, fraction, numerator, and denominator tspans.
+- Validation: full suite 253/253; workspace typecheck clean; `git diff --check`
+  clean.
+- Commit status: ready for
+  `fix(render): parse nested braces inside markup command bodies`.

@@ -72,4 +72,26 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
     const doc = parseMarkup("M_{1} = \\frac{g_m}{r_o}");
     expect(flattenMarkup(doc)).toBe("M1 = g_m/r_o");
   });
+
+  it("parses a fraction whose parameters contain nested subscripts", () => {
+    const doc = parseMarkup("\\frac{V_{DD}}{2}");
+    expect(doc).toEqual({
+      runs: [
+        {
+          kind: "fraction",
+          numerator: {
+            runs: [
+              { kind: "text", value: "V" },
+              {
+                kind: "span",
+                style: "subscript",
+                children: [{ kind: "text", value: "DD" }],
+              },
+            ],
+          },
+          denominator: { runs: [{ kind: "text", value: "2" }] },
+        },
+      ],
+    });
+  });
 });

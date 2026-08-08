@@ -20,11 +20,17 @@ export interface MarkupDocument {
   runs: MarkupRun[];
 }
 
-const SUBSCRIPT_RE = /^_{([^{}]*)}/;
-const SUPERSCRIPT_RE = /^\^{([^{}]*)}/;
-const ITALIC_RE = /^\\it\{([^{}]*)\}/;
-const BOLD_RE = /^\\bf\{([^{}]*)\}/;
-const FRACTION_RE = /^\\frac\{([^{}]*)\}\{([^{}]*)\}/;
+// Command bodies may contain one level of braces (e.g. V_{DD} inside
+// \it{...} or a fraction parameter), so the body matches plain text or one
+// nested {...} group.
+const NESTED_BODY = "(?:[^{}]|\\{[^{}]*\\})*";
+const SUBSCRIPT_RE = new RegExp(`^_{(${NESTED_BODY})}`);
+const SUPERSCRIPT_RE = new RegExp(`^\\^\\{(${NESTED_BODY})\\}`);
+const ITALIC_RE = new RegExp(`^\\\\it\\{(${NESTED_BODY})\\}`);
+const BOLD_RE = new RegExp(`^\\\\bf\\{(${NESTED_BODY})\\}`);
+const FRACTION_RE = new RegExp(
+  `^\\\\frac\\{(${NESTED_BODY})\\}\\{(${NESTED_BODY})\\}`,
+);
 const LINEBREAK_RE = /^\\\\/;
 
 /**
