@@ -144,11 +144,18 @@ function viewBoxFor(symbol) {
   const minimumY = Math.min(...points.map((point) => point.y)) - 4;
   const maximumX = Math.max(...points.map((point) => point.x)) + 4;
   const maximumY = Math.max(...points.map((point) => point.y)) + 4;
+  // Symbol DSL viewBoxes are integer scene rectangles. Visual seam overlap
+  // can introduce fractional pixel-mapped extrema, so expand outward rather
+  // than rounding inward and risking a clipped stroke or invalid asset.
+  const x = Math.floor(minimumX);
+  const y = Math.floor(minimumY);
+  const right = Math.ceil(maximumX);
+  const bottom = Math.ceil(maximumY);
   return {
-    x: rounded(minimumX),
-    y: rounded(minimumY),
-    width: rounded(maximumX - minimumX),
-    height: rounded(maximumY - minimumY),
+    x,
+    y,
+    width: right - x,
+    height: bottom - y,
   };
 }
 

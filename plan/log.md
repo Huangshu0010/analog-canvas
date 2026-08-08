@@ -2526,3 +2526,18 @@ Editing System work.
   the initial difference map.
 - Commit status: ready for
   `fix(razavi): align voltage source to raster reference`.
+
+## 2026-08-09 - Razavi MOS join continuity
+
+- Target: remove visual raster seams at three-terminal NMOS/PMOS channel-to-
+  lead joins and refine their source arrows without disturbing electrical pins.
+- Changed areas: extended channel/support visual primitives one reference
+  pixel through their vertical joins; widened both source-arrow heads and
+  extended the NMOS tip/support one pixel; made pixel-derived MOS viewBoxes
+  expand to valid integer bounds; regenerated MOS assets and catalog.
+- Validation: NMOS diff improved from 0.7389 to 0.7523 binary IoU and from
+  0.6246 to 0.6406 soft IoU; PMOS improved slightly while its residual showed
+  a +1/+1-pixel registration preference; source/catalog generation, focused
+  catalog tests, build, and diff checks passed.
+- Commit status: ready for
+  `fix(razavi): close MOS joins and align route arrows`.
