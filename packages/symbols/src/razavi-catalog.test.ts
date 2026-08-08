@@ -110,8 +110,8 @@ describe("Razavi symbol catalog", () => {
         automaticMappings: [],
         palette: true,
         generation: {
-          kind: "vss-master-ir",
-          converterPath: "scripts/generate-visio-mos-assets.mjs",
+          kind: "razavi-raster-reference",
+          converterPath: "scripts/generate-razavi-mos-assets.mjs",
           converterVersion: 1,
         },
       });
@@ -195,7 +195,7 @@ describe("Razavi symbol catalog", () => {
     expect(getRazaviCatalogEntry("nmos3")?.reviewStatus).toBe("provisional");
   });
 
-  it("calibrates Razavi MOS bodies to the reference proportions without moving electrical pin anchors", () => {
+  it("uses raster-authored Razavi MOS bodies without moving electrical pin anchors", () => {
     const nmos = requireRazaviCatalogSymbol("nmos");
     expect(nmos.pins).toMatchObject([
       { name: "D", at: { x: 10, y: -20 } },
@@ -219,8 +219,13 @@ describe("Razavi symbol catalog", () => {
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -8.117731, y: -8.13189 },
+          from: { x: -6.716614, y: -8.13189 },
           to: { x: 10, y: -8.13189 },
+          style: {
+            strokeRole: "normal",
+            lineCap: "butt",
+            lineJoin: "miter",
+          },
         }),
       ]),
     );
@@ -276,7 +281,7 @@ describe("Razavi symbol catalog", () => {
     );
 
     for (const [symbolId, supportFrom, supportTo] of [
-      ["nmos", { x: -7.898848, y: 8.13189 }, { x: 2.55811, y: 8.13189 }],
+      ["nmos", { x: -6.716614, y: 8.13189 }, { x: 2.55811, y: 8.13189 }],
       [
         "pmos",
         { x: -0.675841, y: -8.13189 },
@@ -316,7 +321,7 @@ describe("Razavi symbol catalog", () => {
           points: [
             { x: 10, y: 8.13189 },
             { x: 1.86811, y: 11.90741 },
-            { x: 1.86811, y: 4.356369 },
+            { x: 1.86811, y: 4.35637 },
           ],
           fill: "foreground",
           stroke: "none",
@@ -331,7 +336,7 @@ describe("Razavi symbol catalog", () => {
           kind: "polygon",
           points: [
             { x: -8.117731, y: -8.13189 },
-            { x: 0.014159, y: -4.356369 },
+            { x: 0.014159, y: -4.35637 },
             { x: 0.014159, y: -11.90741 },
           ],
           fill: "foreground",
@@ -407,7 +412,7 @@ describe("Razavi symbol catalog", () => {
     const pmos = textbookArrowMetrics("pmos");
     for (const metrics of [nmos, pmos]) {
       expect(metrics.length).toBeCloseTo(8.13189, 6);
-      expect(metrics.halfWidth).toBeCloseTo(3.7755205, 6);
+      expect(metrics.halfWidth).toBeCloseTo(3.77552, 6);
       expect(metrics.overlap).toBeCloseTo(0.69, 6);
     }
     expect(pmos.length).toBeCloseTo(nmos.length, 6);

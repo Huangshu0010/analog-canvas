@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "razavi-reference-v1",
+  "visualAuthority": "sole",
+  "assetPath": "razavi-six-panel.png",
+  "sha256": "08c89f54345c835324528a63c7519dc3aeda17169febc20134e33056bc85790b",
+  "pixels": {
+    "width": 1204,
+    "height": 794
+  },
+  "scope": [
+    "MOS geometry",
+    "arrow geometry",
+    "line width and cap treatment",
+    "textbook annotation typography",
+    "ground, supply, port, and source presentation"
+  ],
+  "notes": [
+    "This raster is the only visual authority for Razavi style v1.",
+    "Visio/VSS may establish legacy pin semantics but must not determine visual geometry."
+  ]
+}

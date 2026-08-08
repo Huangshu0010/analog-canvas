@@ -2389,6 +2389,21 @@ Editing System work.
 - Commit status: ready for
   `docs(plan): record Razavi UI raster-diff baseline`.
 
+## 2026-08-08 - Raster-authoritative Razavi MOS assets
+
+- Target: make the accepted six-panel Razavi screenshot the sole visual source
+  for MOS symbols and stop deriving their presentation geometry from Visio.
+- Changed areas: archived the 1204x794 source image and hash manifest; added a
+  direct-final-coordinate MOS generator; migrated all four MOS catalog entries
+  to `razavi-raster-reference` provenance; preserved D/G/S/B pin semantics;
+  and froze visual authority plus fixed-rendering/diff rules in the main
+  product plan.
+- Validation: raster MOS generator and catalog checks pass; Razavi catalog
+  tests 13/13; symbols and editor production builds pass; `git diff --check`
+  clean.
+- Commit status: ready for
+  `feat(razavi): make screenshot the MOS visual authority`.
+
 ## 2026-08-08 - Drafting runtime final repair
 
 - Target: close the second-audit gaps that survived the first Drafting Runtime

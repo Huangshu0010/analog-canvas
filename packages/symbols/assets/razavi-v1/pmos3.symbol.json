@@ -3,9 +3,9 @@
   "id": "pmos3",
   "name": "PMOS (3-terminal)",
   "viewBox": {
-    "x": -14,
+    "x": -24,
     "y": -24,
-    "width": 38,
+    "width": 48,
     "height": 48
   },
   "pins": [
@@ -13,7 +13,7 @@
       "name": "D",
       "role": "drain",
       "at": {
-        "x": 20,
+        "x": 10,
         "y": -20
       },
       "direction": "north",
@@ -26,7 +26,7 @@
       "name": "G",
       "role": "gate",
       "at": {
-        "x": -10,
+        "x": -20,
         "y": 0
       },
       "direction": "west",
@@ -39,7 +39,7 @@
       "name": "S",
       "role": "source",
       "at": {
-        "x": 20,
+        "x": 10,
         "y": 20
       },
       "direction": "south",
@@ -53,151 +53,168 @@
     {
       "kind": "line",
       "from": {
-        "x": 20,
-        "y": 8.13189
+        "x": -6.716614,
+        "y": -8.13189
       },
       "to": {
-        "x": 20,
-        "y": 20
+        "x": 10,
+        "y": -8.13189
       },
+      "part": "source-arrow-host",
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": 9.324159,
+        "x": -6.716614,
+        "y": 8.13189
+      },
+      "to": {
+        "x": 10,
+        "y": 8.13189
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "polygon",
+      "points": [
+        {
+          "x": -9.956614,
+          "y": -12.197835
+        },
+        {
+          "x": -9.956614,
+          "y": 12.197835
+        },
+        {
+          "x": -6.716614,
+          "y": 12.197835
+        },
+        {
+          "x": -6.716614,
+          "y": -12.197835
+        }
+      ],
+      "fill": "foreground",
+      "stroke": "none",
+      "part": "gate-bar"
+    },
+    {
+      "kind": "polygon",
+      "points": [
+        {
+          "x": -16.068819,
+          "y": -8.13189
+        },
+        {
+          "x": -16.068819,
+          "y": 8.13189
+        },
+        {
+          "x": -12.828819,
+          "y": 8.13189
+        },
+        {
+          "x": -12.828819,
+          "y": -8.13189
+        }
+      ],
+      "fill": "foreground",
+      "stroke": "none",
+      "part": "gate-bar"
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 10,
+        "y": 8.13189
+      },
+      "to": {
+        "x": 10,
+        "y": 20
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -14.448819,
+        "y": 0
+      },
+      "to": {
+        "x": -20,
+        "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 10,
         "y": -8.13189
       },
       "to": {
-        "x": 20,
+        "x": 10,
+        "y": -20
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -0.675841,
+        "y": -8.13189
+      },
+      "to": {
+        "x": 10,
         "y": -8.13189
       },
       "part": "source-arrow",
       "style": {
         "strokeRole": "normal",
         "lineCap": "butt",
-        "lineJoin": "round"
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "polygon",
       "points": [
         {
-          "x": 1.882269,
+          "x": -8.117731,
           "y": -8.13189
         },
         {
-          "x": 10.014159,
-          "y": -4.356369
+          "x": 0.014159,
+          "y": -4.35637
         },
         {
-          "x": 10.014159,
+          "x": 0.014159,
           "y": -11.90741
         }
       ],
       "fill": "foreground",
       "stroke": "none",
       "part": "source-arrow"
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 2.101152,
-        "y": 8.13189
-      },
-      "to": {
-        "x": 20,
-        "y": 8.13189
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
-      }
-    },
-    {
-      "kind": "polygon",
-      "points": [
-        {
-          "x": 0.043386,
-          "y": -12.197835
-        },
-        {
-          "x": 0.043386,
-          "y": 12.197835
-        },
-        {
-          "x": 3.283386,
-          "y": 12.197835
-        },
-        {
-          "x": 3.283386,
-          "y": -12.197835
-        }
-      ],
-      "fill": "foreground",
-      "stroke": "none",
-      "part": "gate-bar"
-    },
-    {
-      "kind": "polygon",
-      "points": [
-        {
-          "x": -6.068819,
-          "y": -8.13189
-        },
-        {
-          "x": -6.068819,
-          "y": 8.13189
-        },
-        {
-          "x": -2.828819,
-          "y": 8.13189
-        },
-        {
-          "x": -2.828819,
-          "y": -8.13189
-        }
-      ],
-      "fill": "foreground",
-      "stroke": "none",
-      "part": "gate-bar"
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 20,
-        "y": -8.240315
-      },
-      "to": {
-        "x": 20,
-        "y": -20
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -4.448819,
-        "y": 0
-      },
-      "to": {
-        "x": -10,
-        "y": 0
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
-      }
     }
   ],
   "variants": [],

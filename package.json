@@ -34,6 +34,8 @@
     "symbols:review:check": "pnpm --filter @icm/symbols build && node tools/symbol-review/render-reviewed.mjs --check",
     "symbols:razavi": "node scripts/generate-razavi-symbol-catalog.mjs",
     "symbols:razavi:check": "node scripts/generate-razavi-symbol-catalog.mjs --check",
+    "symbols:razavi-mos": "node scripts/generate-razavi-mos-assets.mjs",
+    "symbols:razavi-mos:check": "node scripts/generate-razavi-mos-assets.mjs --check",
     "symbols:visio-mos": "node scripts/generate-visio-mos-assets.mjs",
     "symbols:visio-mos:check": "node scripts/generate-visio-mos-assets.mjs --check",
     "symbols:visio-mos:reference": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/vss-import/Export-VisioMosReferences.ps1",

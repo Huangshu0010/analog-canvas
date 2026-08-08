@@ -29,6 +29,10 @@ const generationPolicies = new Map([
     "fixtures/visual-reference/visio-mos/",
   ],
   [
+    "scripts/generate-razavi-mos-assets.mjs",
+    "fixtures/visual-reference/razavi-reference-v1/",
+  ],
+  [
     "scripts/generate-visio-core-analog-assets.mjs",
     "fixtures/visual-reference/visio-core-analog/",
   ],
@@ -143,16 +147,37 @@ for (const entry of catalog.entries) {
     const referencePrefix = generationPolicies.get(
       entry.generation.converterPath,
     );
-    if (
-      entry.generation.kind !== "vss-master-ir" ||
-      !referencePrefix ||
-      entry.generation.converterVersion !== 1 ||
-      !entry.generation.evidencePath.startsWith("fixtures/symbols/vss-ir/") ||
-      !entry.generation.referencePath.startsWith(referencePrefix)
-    ) {
+    if (!referencePrefix || entry.generation.converterVersion !== 1) {
       fail(`invalid generation provenance for ${entry.symbolId}`);
     }
-    await readFile(resolve(root, entry.generation.evidencePath), "utf8");
+    if (entry.generation.kind === "vss-master-ir") {
+      if (
+        !entry.generation.evidencePath?.startsWith("fixtures/symbols/vss-ir/") ||
+        !entry.generation.referencePath.startsWith(referencePrefix)
+      ) {
+        fail(`invalid VSS generation provenance for ${entry.symbolId}`);
+      }
+      await readFile(resolve(root, entry.generation.evidencePath), "utf8");
+    } else if (entry.generation.kind === "razavi-raster-reference") {
+      if (
+        !entry.generation.referenceManifestPath?.startsWith(referencePrefix) ||
+        !entry.generation.referencePath.startsWith(referencePrefix)
+      ) {
+        fail(`invalid raster generation provenance for ${entry.symbolId}`);
+      }
+      const manifest = JSON.parse(
+        await readFile(resolve(root, entry.generation.referenceManifestPath), "utf8"),
+      );
+      if (
+        manifest.visualAuthority !== "sole" ||
+        resolve(root, entry.generation.referencePath) !==
+          resolve(dirname(resolve(root, entry.generation.referenceManifestPath)), manifest.assetPath)
+      ) {
+        fail(`invalid raster authority for ${entry.symbolId}`);
+      }
+    } else {
+      fail(`unknown generation provenance for ${entry.symbolId}`);
+    }
     await readFile(resolve(root, entry.generation.referencePath), "utf8");
     await readFile(resolve(root, entry.generation.converterPath), "utf8");
   }

@@ -16,13 +16,21 @@ export interface RazaviSymbolCatalogEntry {
     decoderVersion: string;
   };
   reviewStatus: "reviewed" | "provisional";
-  generation?: {
-    kind: "vss-master-ir";
-    evidencePath: string;
-    referencePath: string;
-    converterPath: string;
-    converterVersion: number;
-  };
+  generation?:
+    | {
+        kind: "vss-master-ir";
+        evidencePath: string;
+        referencePath: string;
+        converterPath: string;
+        converterVersion: number;
+      }
+    | {
+        kind: "razavi-raster-reference";
+        referencePath: string;
+        referenceManifestPath: string;
+        converterPath: string;
+        converterVersion: number;
+      };
   pinOrder: string[];
   palette: boolean;
   automaticMappings: string[];

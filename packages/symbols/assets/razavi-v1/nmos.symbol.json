@@ -66,7 +66,7 @@
     {
       "kind": "line",
       "from": {
-        "x": -8.117731,
+        "x": -6.716614,
         "y": -8.13189
       },
       "to": {
@@ -75,14 +75,14 @@
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": -7.898848,
+        "x": -6.716614,
         "y": 8.13189
       },
       "to": {
@@ -92,8 +92,8 @@
       "part": "source-arrow-host",
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
@@ -156,8 +156,8 @@
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
@@ -172,15 +172,15 @@
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
         "x": 10,
-        "y": -8.34874
+        "y": -8.13189
       },
       "to": {
         "x": 10,
@@ -188,14 +188,14 @@
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": 2.984818,
+        "x": 2,
         "y": 0
       },
       "to": {
@@ -205,24 +205,24 @@
       "part": "bulk-lead",
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "polygon",
       "points": [
         {
-          "x": -6.951182,
+          "x": -6.13,
           "y": 0
         },
         {
-          "x": 1.328818,
-          "y": 3.78675
+          "x": 2.15,
+          "y": 3.77552
         },
         {
-          "x": 1.328818,
-          "y": -3.78675
+          "x": 2.15,
+          "y": -3.77552
         }
       ],
       "fill": "foreground",
@@ -239,7 +239,7 @@
         {
           "kind": "line",
           "from": {
-            "x": -7.898848,
+            "x": -6.716614,
             "y": 8.13189
           },
           "to": {
@@ -250,7 +250,7 @@
           "style": {
             "strokeRole": "normal",
             "lineCap": "butt",
-            "lineJoin": "round"
+            "lineJoin": "miter"
           }
         },
         {
@@ -266,7 +266,7 @@
             },
             {
               "x": 1.86811,
-              "y": 4.356369
+              "y": 4.35637
             }
           ],
           "fill": "foreground",

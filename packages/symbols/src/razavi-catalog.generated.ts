@@ -160,11 +160,12 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
     reviewStatus: "reviewed",
     generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath: "fixtures/visual-reference/visio-mos/nmos4.svg",
-      converterPath: "scripts/generate-visio-mos-assets.mjs",
+      kind: "razavi-raster-reference",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      converterPath: "scripts/generate-razavi-mos-assets.mjs",
       converterVersion: 1,
     },
     pinOrder: ["D", "G", "S", "B"],
@@ -172,7 +173,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "a259b4e0bb170ad193c25809a10c78930a39c7b6893212fa8b6071c27dbf586e",
+      "7ba99d978ceafd77bfe56b1174037db8f45da734d6946ed02e0780c5fcb691ef",
   },
   {
     symbolId: "nmos3",
@@ -186,11 +187,12 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
     reviewStatus: "provisional",
     generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath: "fixtures/visual-reference/visio-mos/nmos3-a.svg",
-      converterPath: "scripts/generate-visio-mos-assets.mjs",
+      kind: "razavi-raster-reference",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      converterPath: "scripts/generate-razavi-mos-assets.mjs",
       converterVersion: 1,
     },
     pinOrder: ["D", "G", "S"],
@@ -198,7 +200,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "nmos3.symbol.json",
     assetHash:
-      "d6806fa2fcea95c0e79db20c3fca46c43beee74f3ce424d4f41edd08eb84b9d2",
+      "d63cd98582f05d2d72c4603ae4a33aab672f9d08a5c2729a436502e2d6dc36ef",
   },
   {
     symbolId: "npn",
@@ -230,11 +232,12 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
     reviewStatus: "reviewed",
     generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath: "fixtures/visual-reference/visio-mos/pmos4.svg",
-      converterPath: "scripts/generate-visio-mos-assets.mjs",
+      kind: "razavi-raster-reference",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      converterPath: "scripts/generate-razavi-mos-assets.mjs",
       converterVersion: 1,
     },
     pinOrder: ["D", "G", "S", "B"],
@@ -242,7 +245,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "c0c9026cc8335a28d3be91344ca97d015eb746a9073adf0aa063cc012fd624b9",
+      "c72f686d17c249b6e6b29af42e6f6c224f6b75a96ff7a267feab41e04217e4cf",
   },
   {
     symbolId: "pmos3",
@@ -256,11 +259,12 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
     reviewStatus: "provisional",
     generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath: "fixtures/visual-reference/visio-mos/pmos3-a.svg",
-      converterPath: "scripts/generate-visio-mos-assets.mjs",
+      kind: "razavi-raster-reference",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      converterPath: "scripts/generate-razavi-mos-assets.mjs",
       converterVersion: 1,
     },
     pinOrder: ["D", "G", "S"],
@@ -268,7 +272,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "20a62b43a569a493c5208904f975c262f2c3007133a26392cba9f4b72b83dd82",
+      "ea5a5b35b615380c673e9e311c82b0f8e21860f90d0cb7e08fab3d3aaa9f8844",
   },
   {
     symbolId: "pnp",
@@ -984,7 +988,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -8.117731,
+          x: -6.716614,
           y: -8.13189,
         },
         to: {
@@ -993,14 +997,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: -7.898848,
+          x: -6.716614,
           y: 8.13189,
         },
         to: {
@@ -1010,8 +1014,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         part: "source-arrow-host",
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
@@ -1074,8 +1078,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
@@ -1090,15 +1094,15 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
           x: 10,
-          y: -8.34874,
+          y: -8.13189,
         },
         to: {
           x: 10,
@@ -1106,14 +1110,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: 2.984818,
+          x: 2,
           y: 0,
         },
         to: {
@@ -1123,24 +1127,24 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         part: "bulk-lead",
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "polygon",
         points: [
           {
-            x: -6.951182,
+            x: -6.13,
             y: 0,
           },
           {
-            x: 1.328818,
-            y: 3.78675,
+            x: 2.15,
+            y: 3.77552,
           },
           {
-            x: 1.328818,
-            y: -3.78675,
+            x: 2.15,
+            y: -3.77552,
           },
         ],
         fill: "foreground",
@@ -1157,7 +1161,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           {
             kind: "line",
             from: {
-              x: -7.898848,
+              x: -6.716614,
               y: 8.13189,
             },
             to: {
@@ -1168,7 +1172,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
             style: {
               strokeRole: "normal",
               lineCap: "butt",
-              lineJoin: "round",
+              lineJoin: "miter",
             },
           },
           {
@@ -1184,7 +1188,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
               },
               {
                 x: 1.86811,
-                y: 4.356369,
+                y: 4.35637,
               },
             ],
             fill: "foreground",
@@ -1201,9 +1205,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "nmos3",
     name: "NMOS (3-terminal)",
     viewBox: {
-      x: -14,
+      x: -24,
       y: -24,
-      width: 38,
+      width: 48,
       height: 48,
     },
     pins: [
@@ -1211,7 +1215,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "D",
         role: "drain",
         at: {
-          x: 20,
+          x: 10,
           y: -20,
         },
         direction: "north",
@@ -1224,7 +1228,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "G",
         role: "gate",
         at: {
-          x: -10,
+          x: -20,
           y: 0,
         },
         direction: "west",
@@ -1237,7 +1241,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "S",
         role: "source",
         at: {
-          x: 20,
+          x: 10,
           y: 20,
         },
         direction: "south",
@@ -1251,151 +1255,168 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 20,
-          y: 8.674016,
+          x: -6.716614,
+          y: -8.13189,
         },
         to: {
-          x: 20,
+          x: 10,
+          y: -8.13189,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -6.716614,
+          y: 8.13189,
+        },
+        to: {
+          x: 10,
+          y: 8.13189,
+        },
+        part: "source-arrow-host",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -9.956614,
+            y: -12.197835,
+          },
+          {
+            x: -9.956614,
+            y: 12.197835,
+          },
+          {
+            x: -6.716614,
+            y: 12.197835,
+          },
+          {
+            x: -6.716614,
+            y: -12.197835,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+        part: "gate-bar",
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -16.068819,
+            y: -8.13189,
+          },
+          {
+            x: -16.068819,
+            y: 8.13189,
+          },
+          {
+            x: -12.828819,
+            y: 8.13189,
+          },
+          {
+            x: -12.828819,
+            y: -8.13189,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+        part: "gate-bar",
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: 8.13189,
+        },
+        to: {
+          x: 10,
           y: 20,
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: 1.882269,
-          y: -8.13189,
+          x: -14.448819,
+          y: 0,
         },
         to: {
-          x: 20,
-          y: -8.13189,
+          x: -20,
+          y: 0,
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: 2.101152,
+          x: 10,
+          y: -8.13189,
+        },
+        to: {
+          x: 10,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -6.716614,
           y: 8.13189,
         },
         to: {
-          x: 12.55811,
+          x: 2.55811,
           y: 8.13189,
         },
         part: "source-arrow",
         style: {
           strokeRole: "normal",
           lineCap: "butt",
-          lineJoin: "round",
+          lineJoin: "miter",
         },
       },
       {
         kind: "polygon",
         points: [
           {
-            x: 20,
+            x: 10,
             y: 8.13189,
           },
           {
-            x: 11.86811,
+            x: 1.86811,
             y: 11.90741,
           },
           {
-            x: 11.86811,
-            y: 4.356369,
+            x: 1.86811,
+            y: 4.35637,
           },
         ],
         fill: "foreground",
         stroke: "none",
         part: "source-arrow",
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: 0.043386,
-            y: -12.197835,
-          },
-          {
-            x: 0.043386,
-            y: 12.197835,
-          },
-          {
-            x: 3.283386,
-            y: 12.197835,
-          },
-          {
-            x: 3.283386,
-            y: -12.197835,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "gate-bar",
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -6.068819,
-            y: -8.13189,
-          },
-          {
-            x: -6.068819,
-            y: 8.13189,
-          },
-          {
-            x: -2.828819,
-            y: 8.13189,
-          },
-          {
-            x: -2.828819,
-            y: -8.13189,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "gate-bar",
-      },
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: -8.240315,
-        },
-        to: {
-          x: 20,
-          y: -20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -4.448819,
-          y: 0,
-        },
-        to: {
-          x: -10,
-          y: 0,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
       },
     ],
     variants: [],
@@ -1609,7 +1630,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -8.117731,
+          x: -6.716614,
           y: -8.13189,
         },
         to: {
@@ -1619,14 +1640,14 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         part: "source-arrow-host",
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: -7.898848,
+          x: -6.716614,
           y: 8.13189,
         },
         to: {
@@ -1635,8 +1656,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
@@ -1699,8 +1720,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
@@ -1715,15 +1736,15 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
           x: 10,
-          y: -8.34874,
+          y: -8.13189,
         },
         to: {
           x: 10,
@@ -1731,25 +1752,25 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: -6.951182,
+          x: -6.13,
           y: 0,
         },
         to: {
-          x: 11.15,
+          x: 12,
           y: 0,
         },
         part: "bulk-lead",
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
@@ -1760,12 +1781,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
             y: 0,
           },
           {
-            x: 12.090909,
-            y: 4.303125,
+            x: 11.87,
+            y: 3.77552,
           },
           {
-            x: 12.090909,
-            y: -4.303125,
+            x: 11.87,
+            y: -3.77552,
           },
         ],
         fill: "foreground",
@@ -1793,7 +1814,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
             style: {
               strokeRole: "normal",
               lineCap: "butt",
-              lineJoin: "round",
+              lineJoin: "miter",
             },
           },
           {
@@ -1805,7 +1826,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
               },
               {
                 x: 0.014159,
-                y: -4.356369,
+                y: -4.35637,
               },
               {
                 x: 0.014159,
@@ -1826,9 +1847,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "pmos3",
     name: "PMOS (3-terminal)",
     viewBox: {
-      x: -14,
+      x: -24,
       y: -24,
-      width: 38,
+      width: 48,
       height: 48,
     },
     pins: [
@@ -1836,7 +1857,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "D",
         role: "drain",
         at: {
-          x: 20,
+          x: 10,
           y: -20,
         },
         direction: "north",
@@ -1849,7 +1870,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "G",
         role: "gate",
         at: {
-          x: -10,
+          x: -20,
           y: 0,
         },
         direction: "west",
@@ -1862,7 +1883,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "S",
         role: "source",
         at: {
-          x: 20,
+          x: 10,
           y: 20,
         },
         direction: "south",
@@ -1876,151 +1897,168 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 20,
-          y: 8.13189,
+          x: -6.716614,
+          y: -8.13189,
         },
         to: {
-          x: 20,
-          y: 20,
+          x: 10,
+          y: -8.13189,
         },
+        part: "source-arrow-host",
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
-          x: 9.324159,
+          x: -6.716614,
+          y: 8.13189,
+        },
+        to: {
+          x: 10,
+          y: 8.13189,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -9.956614,
+            y: -12.197835,
+          },
+          {
+            x: -9.956614,
+            y: 12.197835,
+          },
+          {
+            x: -6.716614,
+            y: 12.197835,
+          },
+          {
+            x: -6.716614,
+            y: -12.197835,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+        part: "gate-bar",
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -16.068819,
+            y: -8.13189,
+          },
+          {
+            x: -16.068819,
+            y: 8.13189,
+          },
+          {
+            x: -12.828819,
+            y: 8.13189,
+          },
+          {
+            x: -12.828819,
+            y: -8.13189,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+        part: "gate-bar",
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: 8.13189,
+        },
+        to: {
+          x: 10,
+          y: 20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -14.448819,
+          y: 0,
+        },
+        to: {
+          x: -20,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
           y: -8.13189,
         },
         to: {
-          x: 20,
+          x: 10,
+          y: -20,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -0.675841,
+          y: -8.13189,
+        },
+        to: {
+          x: 10,
           y: -8.13189,
         },
         part: "source-arrow",
         style: {
           strokeRole: "normal",
           lineCap: "butt",
-          lineJoin: "round",
+          lineJoin: "miter",
         },
       },
       {
         kind: "polygon",
         points: [
           {
-            x: 1.882269,
+            x: -8.117731,
             y: -8.13189,
           },
           {
-            x: 10.014159,
-            y: -4.356369,
+            x: 0.014159,
+            y: -4.35637,
           },
           {
-            x: 10.014159,
+            x: 0.014159,
             y: -11.90741,
           },
         ],
         fill: "foreground",
         stroke: "none",
         part: "source-arrow",
-      },
-      {
-        kind: "line",
-        from: {
-          x: 2.101152,
-          y: 8.13189,
-        },
-        to: {
-          x: 20,
-          y: 8.13189,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: 0.043386,
-            y: -12.197835,
-          },
-          {
-            x: 0.043386,
-            y: 12.197835,
-          },
-          {
-            x: 3.283386,
-            y: 12.197835,
-          },
-          {
-            x: 3.283386,
-            y: -12.197835,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "gate-bar",
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -6.068819,
-            y: -8.13189,
-          },
-          {
-            x: -6.068819,
-            y: 8.13189,
-          },
-          {
-            x: -2.828819,
-            y: 8.13189,
-          },
-          {
-            x: -2.828819,
-            y: -8.13189,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "gate-bar",
-      },
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: -8.240315,
-        },
-        to: {
-          x: 20,
-          y: -20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -4.448819,
-          y: 0,
-        },
-        to: {
-          x: -10,
-          y: 0,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
       },
     ],
     variants: [],
