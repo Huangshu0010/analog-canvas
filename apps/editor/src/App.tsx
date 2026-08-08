@@ -333,7 +333,29 @@ function symbolCategory(symbolId: string): string {
   return "Power and Ports";
 }
 
+const RAZAVI_DEFAULT_SYMBOL_VARIANTS: Readonly<Record<string, string>> = {
+  nmos: "textbook-3terminal",
+  pmos: "textbook-3terminal",
+};
+
+const RAZAVI_RETIRED_PALETTE_SYMBOL_IDS = new Set(["nmos3", "pmos3"]);
+
+/**
+ * Razavi is the sole current presentation family. Canonical MOS definitions
+ * retain D/G/S/B electrically, while the textbook variant controls the
+ * approved visible three-terminal body and source arrow.
+ */
+export function defaultRazaviSymbolVariantId(
+  symbolId: string,
+): string | undefined {
+  return RAZAVI_DEFAULT_SYMBOL_VARIANTS[symbolId];
+}
+
 function SymbolThumbnail({ symbol }: { symbol: SymbolDefinition }) {
+  const variantId = defaultRazaviSymbolVariantId(symbol.id);
+  const variant = symbol.variants.find(
+    (candidate) => candidate.id === variantId,
+  );
   const { x, y, width, height } = symbol.viewBox;
   const padding = Math.max(width, height) * 0.12;
   return (
@@ -349,7 +371,11 @@ function SymbolThumbnail({ symbol }: { symbol: SymbolDefinition }) {
         strokeLinecap="square"
         strokeLinejoin="miter"
         dangerouslySetInnerHTML={{
-          __html: renderSymbolDefinitionBody(symbol),
+          __html: renderSymbolDefinitionBody(
+            symbol,
+            variant?.hiddenPrimitiveParts,
+            variant?.additionalPrimitives,
+          ),
         }}
       />
     </svg>
@@ -793,6 +819,7 @@ export function App({ project: initialProject }: AppProps) {
   const componentSymbols = builtInSymbols.filter(
     (symbol) =>
       symbol.id !== "generic-block" &&
+      !RAZAVI_RETIRED_PALETTE_SYMBOL_IDS.has(symbol.id) &&
       `${symbol.name} ${symbol.id} ${symbol.aliases.join(" ")}`
         .toLowerCase()
         .includes(paletteQuery.trim().toLowerCase()),
@@ -1643,12 +1670,14 @@ export function App({ project: initialProject }: AppProps) {
       instanceCounter.current += 1;
       id = `${prefix[symbolId] ?? "X"}${instanceCounter.current}`;
     }
+    const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
     const result = transact([
       {
         kind: "add_instance",
         instance: {
           id,
           symbolId,
+          ...(symbolVariantId ? { symbolVariantId } : {}),
           placement: { position, rotation: 0, mirror: "none" },
           properties: {},
         },
