@@ -1568,3 +1568,49 @@ Editing System work.
   `git diff --check` clean as a no-code-edit guard.
 - Commit status: ready for
   `docs(specs): re-freeze text/annotation contracts with fallback, hash, and sequencing fixes (WP-A0.1)`.
+## 2026-08-08 - WP-A1a: v2 model types, migration, anchor resolver, typed edits
+
+- Target: land the schema-2 model foundation, versioned migration, general
+  VisualAnchor resolver, electricalTopologyHash, and the six typed Edit Engine
+  edits as an additive A1a step. CURRENT_PROJECT_SCHEMA_VERSION stays 1; the
+  integration gate (separate commit, after A1b) flips it to 2.
+- Changed areas:
+  - model: schema.ts adds RichTextDocument/Run (four node kinds, span four
+    styles, bounds depth 4 / 64 runs / 256 chars / non-empty fraction),
+    VisualAnchor (free|object|route with fallbackPosition), Guide,
+    DraftingObject union (text/arrow/leader/callout/construction-line/
+    floating-symbol), DraftingLayer; optional `drafting` on SchematicDocument;
+    RouteMarkerKindSchema and optional markerKind field (route-marker enum
+    entry deferred to the gate so renderer/editor typecheck unchanged);
+    factories createEmptyDocument emits an empty drafting layer; new
+    migration-v1-to-v2.ts (deterministic voltage rule, idempotent, migration
+    diagnostics) + 7 tests; index exports.
+  - derived: new anchor.ts resolveVisualAnchor (generalizes
+    routeAttachmentPlacement; fallback + diagnostic, never silent re-attach;
+    object anchors target Instance/Port/Junction only); new topology-hash.ts
+    electricalTopologyHash (instances/ports/Nets/hierarchy only); tsconfig
+    adds node types; index exports; 8 tests.
+  - edit-engine: transaction.ts adds upsert/remove_schematic_annotation,
+    upsert/remove_drafting_object, set/remove_guide (additive union members)
+    with lock checks and a Symbol-Resolver-validated floating-symbol (rejected
+    until a terminal-free decorative catalog exists); 7 tests.
+  - agent-adapter: service.ts editCategory classifies the six new edits.
+- Dirty-state decision: a concurrent worker (user-confirmed) has uncommitted
+  symbol/style-profile/visio-script changes that leave render.test.ts,
+  style-profile.test.ts, and razavi-catalog.test.ts red from stale
+  goldens/expectations. Those failures are not owned by this target and are
+  not caused by it; the four packages this target touches (model, edit-engine,
+  derived, agent-adapter) are fully green (111/111), the workspace typecheck
+  is clean (proving renderer/editor/agent-adapter need no edits), and the
+  worker's files are never staged here.
+- Validation: model + edit-engine + derived + agent-adapter suites 111/111
+  pass; workspace `tsc -p tsconfig.check.json --noEmit` clean; migration
+  idempotent and topology-hash-stable; anchor resolver returns fallback +
+  diagnostic on deleted route/object; floating-symbol rejected without a
+  resolver; `git diff --check` clean.
+- Note: route-marker is intentionally absent from AnnotationKindSchema in A1a;
+  the migration produces route-marker records that are schema-validated only
+  at the integration gate. expected-schema2.json fixtures document the target
+  shape.
+- Commit status: ready for
+  `feat(model): v2 drafting types, schema-1->2 migration, and VisualAnchor resolver (WP-A1a)`.

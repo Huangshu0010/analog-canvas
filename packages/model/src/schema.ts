@@ -159,7 +159,13 @@ export const AnnotationKindSchema = z.enum([
   "current",
   "voltage",
   "figure-caption",
+  // ADR 0010 adds route-marker at the integration gate (schema 2). In A1a it
+  // is intentionally absent from the enum so renderer/editor/agent-adapter
+  // typecheck unchanged; the migration produces route-marker records that are
+  // schema-validated only once the constant flips.
 ]);
+// ADR 0010 SchematicAnnotation marker kinds (used at the integration gate).
+export const RouteMarkerKindSchema = z.enum(["current", "voltage"]);
 export const RouteAnnotationAttachmentSchema = z.strictObject({
   routeId: StableIdSchema,
   segmentIndex: z.number().int().nonnegative(),
@@ -182,6 +188,8 @@ export const AnnotationSchema = z
     rotation: RotationSchema,
     locked: z.boolean(),
     sizeScale: z.number().finite().positive().optional(),
+    // SchematicAnnotation route-marker discriminator; validated at the gate.
+    markerKind: RouteMarkerKindSchema.optional(),
   })
   .superRefine((annotation, context) => {
     if (annotation.routeAttachment && annotation.kind !== "current") {
@@ -191,7 +199,171 @@ export const AnnotationSchema = z
         message: "Only current annotations may attach to a route segment",
       });
     }
+    if (annotation.markerKind) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["markerKind"],
+        message: "markerKind is not accepted until the schema-2 gate",
+      });
+    }
   });
+
+// --- Text & Peripheral Editing System (ADR 0010) schema-2 types ----------
+//
+// A1a accepts these alongside the legacy annotation kinds; the schema-1
+// constant is unchanged. Resource bounds are part of the frozen contract:
+// nesting depth <= 4, <= 64 runs per document, <= 256 chars per text run,
+// and a fraction numerator/denominator must each be non-empty.
+
+const RICH_TEXT_MAX_DEPTH = 4;
+const RICH_TEXT_MAX_RUNS = 64;
+const RICH_TEXT_MAX_TEXT_LENGTH = 256;
+
+function richTextRunSchema(depth: number): z.ZodTypeAny {
+  const text = z.strictObject({
+    kind: z.literal("text"),
+    value: z.string().min(1).max(RICH_TEXT_MAX_TEXT_LENGTH),
+  });
+  const lineBreak = z.strictObject({ kind: z.literal("line-break") });
+  if (depth >= RICH_TEXT_MAX_DEPTH) {
+    // Leaf-only: deeper nesting is rejected by the bound, not by omitting the
+    // fields, so the deepest level may still carry text and line-break runs.
+    return z.union([text, lineBreak]);
+  }
+  const span = z.strictObject({
+    kind: z.literal("span"),
+    style: z.enum(["italic", "bold", "subscript", "superscript"]),
+    children: z
+      .array(richTextRunSchema(depth + 1))
+      .min(1)
+      .max(RICH_TEXT_MAX_RUNS),
+  });
+  const fraction = z.strictObject({
+    kind: z.literal("fraction"),
+    numerator: richTextDocumentSchema(depth + 1),
+    denominator: richTextDocumentSchema(depth + 1),
+  });
+  return z.union([text, lineBreak, span, fraction]);
+}
+
+function richTextDocumentSchema(depth: number): z.ZodTypeAny {
+  return z.strictObject({
+    runs: z.array(richTextRunSchema(depth)).min(1).max(RICH_TEXT_MAX_RUNS),
+  });
+}
+
+export const RichTextDocumentSchema = richTextDocumentSchema(0) as z.ZodType<{
+  runs: unknown[];
+}>;
+export const RichTextRunSchema = richTextRunSchema(0);
+
+export const VisualAnchorSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("free"),
+    position: PointSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("object"),
+    objectId: StableIdSchema,
+    localOffset: PointSchema,
+    fallbackPosition: PointSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("route"),
+    routeId: StableIdSchema,
+    segmentIndex: z.number().int().nonnegative(),
+    t: z.number().min(0).max(1),
+    normalOffset: z.number().finite(),
+    direction: z.enum(["forward", "reverse"]),
+    orientation: z.enum(["follow", "horizontal"]),
+    fallbackPosition: PointSchema,
+  }),
+]);
+
+export const GuideSchema = z.strictObject({
+  id: StableIdSchema,
+  axis: z.enum(["horizontal", "vertical"]),
+  coordinate: z.number().finite(),
+  locked: z.boolean(),
+  visible: z.boolean(),
+});
+
+// DraftingObject union (ADR 0010). Each member shares id/locked/zIndex, an
+// optional styleOverride, and a VisualAnchor. A1a ships the minimal set with
+// text fully populated; arrow/leader/callout/construction-line/floating-symbol
+// carry their discriminator and anchor so the Edit Engine can route them, with
+// kind-specific fields added as their tooling lands (WP-A2/A4).
+const DraftingObjectBaseSchema = z.strictObject({
+  id: StableIdSchema,
+  locked: z.boolean(),
+  zIndex: z.number().int().nonnegative(),
+  anchor: VisualAnchorSchema,
+  styleOverride: z
+    .strictObject({
+      sizeScale: z.number().finite().positive().optional(),
+      weight: z.enum(["normal", "bold"]).optional(),
+      italic: z.boolean().optional(),
+      lineStyle: z.enum(["solid", "dashed", "dotted"]).optional(),
+      arrowHead: z.enum(["none", "filled", "open"]).optional(),
+    })
+    .optional(),
+});
+
+export const DraftTextSchema = DraftingObjectBaseSchema.extend({
+  kind: z.literal("text"),
+  content: RichTextDocumentSchema,
+  alignment: z.enum(["start", "middle", "end"]),
+  rotation: RotationSchema,
+  typographyToken: z.enum(["caption", "body", "label"]).optional(),
+});
+
+export const DraftArrowSchema = DraftingObjectBaseSchema.extend({
+  kind: z.literal("arrow"),
+  from: VisualAnchorSchema,
+  to: VisualAnchorSchema,
+});
+
+export const DraftLeaderSchema = DraftingObjectBaseSchema.extend({
+  kind: z.literal("leader"),
+  target: VisualAnchorSchema,
+});
+
+export const DraftCalloutSchema = DraftingObjectBaseSchema.extend({
+  kind: z.literal("callout"),
+  content: RichTextDocumentSchema,
+  alignment: z.enum(["start", "middle", "end"]),
+  rotation: RotationSchema,
+  typographyToken: z.enum(["caption", "body", "label"]).optional(),
+  target: VisualAnchorSchema,
+});
+
+export const DraftConstructionLineSchema = DraftingObjectBaseSchema.extend({
+  kind: z.literal("construction-line"),
+  points: z.array(PointSchema).min(2),
+  lineStyle: z.enum(["solid", "dashed", "dotted"]),
+});
+
+export const DraftFloatingSymbolSchema = DraftingObjectBaseSchema.extend({
+  kind: z.literal("floating-symbol"),
+  symbolId: StableIdSchema,
+  // Decorative-only: enforced by the Edit Engine via the Symbol Resolver, not
+  // by this schema (ADR 0010).
+  transform: OrientationSchema,
+});
+
+export const DraftingObjectSchema = z.discriminatedUnion("kind", [
+  DraftTextSchema,
+  DraftArrowSchema,
+  DraftLeaderSchema,
+  DraftCalloutSchema,
+  DraftConstructionLineSchema,
+  DraftFloatingSymbolSchema,
+]);
+
+export const DraftingLayerSchema = z.strictObject({
+  objects: z.array(DraftingObjectSchema),
+  guides: z.array(GuideSchema),
+});
 export const PresentationIntentSchema = z.strictObject({
   styleProfileId: StableIdSchema,
   grid: z.number().int().positive(),
@@ -252,6 +424,10 @@ const SchematicDocumentBaseSchema = z.strictObject({
   presentation: PresentationIntentSchema,
   layoutGroups: z.array(LayoutGroupSchema),
   constraints: z.array(LayoutConstraintSchema),
+  // ADR 0010 drafting layer. Optional in A1a so schema-1 Projects (which have
+  // no drafting container) still validate; the integration gate makes it
+  // required and the migration backfills it for all loaded Projects.
+  drafting: DraftingLayerSchema.optional(),
 });
 
 function reportDuplicateIds(
@@ -283,6 +459,8 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       ...document.annotations,
       ...document.layoutGroups,
       ...document.constraints,
+      ...(document.drafting?.objects ?? []),
+      ...(document.drafting?.guides ?? []),
     ];
     reportDuplicateIds(objectCollections, "objects", context);
 
@@ -550,10 +728,23 @@ export type RouteBranch = z.infer<typeof RouteBranchSchema>;
 export type Junction = z.infer<typeof JunctionSchema>;
 export type JunctionRole = z.infer<typeof JunctionRoleSchema>;
 export type AnnotationKind = z.infer<typeof AnnotationKindSchema>;
+export type RouteMarkerKind = z.infer<typeof RouteMarkerKindSchema>;
 export type RouteAnnotationAttachment = z.infer<
   typeof RouteAnnotationAttachmentSchema
 >;
 export type Annotation = z.infer<typeof AnnotationSchema>;
+export type RichTextDocument = z.infer<typeof RichTextDocumentSchema>;
+export type RichTextRun = z.infer<typeof RichTextRunSchema>;
+export type VisualAnchor = z.infer<typeof VisualAnchorSchema>;
+export type Guide = z.infer<typeof GuideSchema>;
+export type DraftText = z.infer<typeof DraftTextSchema>;
+export type DraftArrow = z.infer<typeof DraftArrowSchema>;
+export type DraftLeader = z.infer<typeof DraftLeaderSchema>;
+export type DraftCallout = z.infer<typeof DraftCalloutSchema>;
+export type DraftConstructionLine = z.infer<typeof DraftConstructionLineSchema>;
+export type DraftFloatingSymbol = z.infer<typeof DraftFloatingSymbolSchema>;
+export type DraftingObject = z.infer<typeof DraftingObjectSchema>;
+export type DraftingLayer = z.infer<typeof DraftingLayerSchema>;
 export type PresentationIntent = z.infer<typeof PresentationIntentSchema>;
 export type LayoutGroup = z.infer<typeof LayoutGroupSchema>;
 export type LayoutConstraint = z.infer<typeof LayoutConstraintSchema>;

@@ -1,5 +1,7 @@
 import {
   AnnotationSchema,
+  DraftingObjectSchema,
+  GuideSchema,
   InstanceSchema,
   JunctionRoleSchema,
   JunctionSchema,
@@ -174,6 +176,34 @@ export const SetPresentationStyleEditSchema = z.strictObject({
   kind: z.literal("set_presentation_style"),
   styleProfileId: StableIdSchema,
 });
+// ADR 0010 Text & Peripheral Editing System edits (WP-A1a). These are
+// additive members of the union; the legacy upsert/remove_annotation remain.
+// SchematicAnnotation uses the explicit names; floating-symbol decorative
+// validation runs at execute time via the Symbol Resolver.
+export const UpsertSchematicAnnotationEditSchema = z.strictObject({
+  kind: z.literal("upsert_schematic_annotation"),
+  annotation: AnnotationSchema,
+});
+export const RemoveSchematicAnnotationEditSchema = z.strictObject({
+  kind: z.literal("remove_schematic_annotation"),
+  annotationId: StableIdSchema,
+});
+export const UpsertDraftingObjectEditSchema = z.strictObject({
+  kind: z.literal("upsert_drafting_object"),
+  object: DraftingObjectSchema,
+});
+export const RemoveDraftingObjectEditSchema = z.strictObject({
+  kind: z.literal("remove_drafting_object"),
+  objectId: StableIdSchema,
+});
+export const SetGuideEditSchema = z.strictObject({
+  kind: z.literal("set_guide"),
+  guide: GuideSchema,
+});
+export const RemoveGuideEditSchema = z.strictObject({
+  kind: z.literal("remove_guide"),
+  guideId: StableIdSchema,
+});
 export const SetLayoutGroupEditSchema = z.strictObject({
   kind: z.literal("set_layout_group"),
   group: LayoutGroupSchema,
@@ -223,6 +253,12 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   UpsertAnnotationEditSchema,
   RemoveAnnotationEditSchema,
   SetPresentationStyleEditSchema,
+  UpsertSchematicAnnotationEditSchema,
+  RemoveSchematicAnnotationEditSchema,
+  UpsertDraftingObjectEditSchema,
+  RemoveDraftingObjectEditSchema,
+  SetGuideEditSchema,
+  RemoveGuideEditSchema,
   SetLayoutGroupEditSchema,
   RemoveLayoutGroupEditSchema,
   SetLayoutConstraintEditSchema,
@@ -673,6 +709,17 @@ function applyStretchedRoutes(
   // stretching never rejects here; protected segments surface as null above.
   void rejectAt;
   return stretched;
+}
+
+/**
+ * Ensure the ADR 0010 drafting layer exists on a draft Document. It is
+ * optional in the schema so legacy Projects still validate; edits that touch
+ * drafting initialize an empty container first.
+ */
+function ensureDraftingLayer(draft: SchematicDocument): void {
+  if (!draft.drafting) {
+    draft.drafting = { objects: [], guides: [] };
+  }
 }
 
 export function executeTransaction(
@@ -1659,6 +1706,147 @@ export function executeTransaction(
       case "set_presentation_style": {
         draft.presentation.styleProfileId = edit.styleProfileId;
         changedObjectIds.add(draft.id);
+        break;
+      }
+      case "upsert_schematic_annotation": {
+        const existingIndex = draft.annotations.findIndex(
+          (annotation) => annotation.id === edit.annotation.id,
+        );
+        const existing = draft.annotations[existingIndex];
+        if (existing?.locked) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Annotation is locked: ${existing.id}`,
+          );
+        }
+        const annotation = AnnotationSchema.parse(edit.annotation);
+        if (existingIndex >= 0) draft.annotations[existingIndex] = annotation;
+        else draft.annotations.push(annotation);
+        changedObjectIds.add(annotation.id);
+        break;
+      }
+      case "remove_schematic_annotation": {
+        const index = draft.annotations.findIndex(
+          (annotation) => annotation.id === edit.annotationId,
+        );
+        const annotation = draft.annotations[index];
+        if (!annotation) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Annotation does not exist: ${edit.annotationId}`,
+          );
+        }
+        if (annotation.locked) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Annotation is locked: ${annotation.id}`,
+          );
+        }
+        draft.annotations.splice(index, 1);
+        changedObjectIds.add(annotation.id);
+        break;
+      }
+      case "upsert_drafting_object": {
+        ensureDraftingLayer(draft);
+        const objects = draft.drafting!.objects;
+        const existingIndex = objects.findIndex(
+          (item) => item.id === edit.object.id,
+        );
+        const existing = objects[existingIndex];
+        if (existing?.locked) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Drafting object is locked: ${existing.id}`,
+          );
+        }
+        if (edit.object.kind === "floating-symbol") {
+          if (!resolver) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `A Symbol Resolver is required to validate a floating symbol: ${edit.object.symbolId}`,
+            );
+          }
+          const resolved = resolver.resolve(edit.object.symbolId);
+          if (!resolved) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Unknown floating symbol: ${edit.object.symbolId}`,
+            );
+          }
+          // ADR 0010: a floating symbol must be decorative (terminal-free) and
+          // whitelisted. The `decorative` catalog flag lands in WP-A4; until
+          // then every Symbol carries >= 1 pin, so any floating symbol is
+          // rejected here, enforcing the no-terminal half of the invariant.
+          if (resolved.definition.pins.length > 0) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Floating symbol must be decorative (terminal-free): ${edit.object.symbolId}`,
+            );
+          }
+        }
+        const parsed = DraftingObjectSchema.parse(edit.object);
+        if (existingIndex >= 0) objects[existingIndex] = parsed;
+        else objects.push(parsed);
+        changedObjectIds.add(parsed.id);
+        break;
+      }
+      case "remove_drafting_object": {
+        ensureDraftingLayer(draft);
+        const objects = draft.drafting!.objects;
+        const index = objects.findIndex((item) => item.id === edit.objectId);
+        const object = objects[index];
+        if (!object) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Drafting object does not exist: ${edit.objectId}`,
+          );
+        }
+        if (object.locked) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Drafting object is locked: ${object.id}`,
+          );
+        }
+        objects.splice(index, 1);
+        changedObjectIds.add(object.id);
+        break;
+      }
+      case "set_guide": {
+        ensureDraftingLayer(draft);
+        const guides = draft.drafting!.guides;
+        const parsed = GuideSchema.parse(edit.guide);
+        const existingIndex = guides.findIndex((item) => item.id === parsed.id);
+        const existing = guides[existingIndex];
+        if (existing?.locked) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Guide is locked: ${existing.id}`,
+          );
+        }
+        if (existingIndex >= 0) guides[existingIndex] = parsed;
+        else guides.push(parsed);
+        changedObjectIds.add(parsed.id);
+        break;
+      }
+      case "remove_guide": {
+        ensureDraftingLayer(draft);
+        const guides = draft.drafting!.guides;
+        const index = guides.findIndex((item) => item.id === edit.guideId);
+        const guide = guides[index];
+        if (!guide) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Guide does not exist: ${edit.guideId}`,
+          );
+        }
+        if (guide.locked) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Guide is locked: ${guide.id}`,
+          );
+        }
+        guides.splice(index, 1);
+        changedObjectIds.add(guide.id);
         break;
       }
       case "set_layout_group": {

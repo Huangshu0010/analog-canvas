@@ -461,6 +461,12 @@ function editCategory(
       return "connectivity";
     case "upsert_annotation":
     case "remove_annotation":
+    case "upsert_schematic_annotation":
+    case "remove_schematic_annotation":
+    case "upsert_drafting_object":
+    case "remove_drafting_object":
+    case "set_guide":
+    case "remove_guide":
     case "set_presentation_style":
     case "set_layout_group":
     case "remove_layout_group":
