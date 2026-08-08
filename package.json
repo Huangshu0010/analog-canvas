@@ -48,6 +48,8 @@
     "visual:current-arrow:check": "pnpm build && node scripts/route-attached-current-arrow-golden.mjs --check",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:production-smoke": "pnpm --filter @icm/editor build && node scripts/editor-production-smoke.mjs",
+    "test:production-smoke:check": "pnpm --filter @icm/editor build && node scripts/editor-production-smoke.mjs --check",
     "typecheck": "tsc -p tsconfig.check.json --noEmit"
   },
   "devDependencies": {

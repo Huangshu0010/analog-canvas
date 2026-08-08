@@ -2318,3 +2318,18 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): no-op drafting click; add key-scenario E2E (P1 scenarios)`.
+## 2026-08-08 - P1: real production preview smoke
+
+- Target: fix the review P1 that the "production build mounts" E2E actually ran
+  the vite dev server, so it never exercised the production bundle.
+- Changed areas: scripts/editor-production-smoke.mjs builds the editor, serves
+  the dist with vite preview on 127.0.0.1:4174, opens it in a real Chrome
+  browser, asserts the schematic canvas mounts, and fails on any console/page
+  error or on "node:crypto has been externalized". Adds
+  test:production-smoke / :check scripts and a committed report fixture
+  (fixtures/editor-production-smoke/report.json) with --check idempotency.
+- Validation: production smoke passes (mounted, 0 console errors, no
+  node:crypto externalization); drafting E2E 9/9; full suite 274/274;
+  workspace typecheck clean; `git diff --check` clean.
+- Commit status: ready for
+  `test(editor): production preview smoke against the built bundle (P1 smoke)`.
