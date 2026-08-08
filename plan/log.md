@@ -1864,3 +1864,20 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): construction-line, free arrow, and floating-symbol commands (WP-A4 commands)`.
+## 2026-08-08 - WP-A5: strict Snapshot drafting schema and GUI/Agent parity
+
+- Target: tighten the Agent Snapshot drafting schema and prove GUI/Agent
+  parity for drafting edits (same object, same anchor, same SVG).
+- Changed areas:
+  - agent-adapter schema.ts: drafting.objects now validates against the shared
+    DraftingObjectSchema (canonical RichText AST + VisualAnchor) instead of
+    z.unknown(); guide summaries keep id/visible/locked.
+  - New parity.test.ts: (1) the same typed drafting edits (route-marker,
+    drafting text, guide) submitted through the Agent service `transact` and
+    through the shared Edit Engine produce the identical persisted Project,
+    identical Document, and identical rendered SVG; (2) adding drafting leaves
+    the electrical identity unchanged.
+- Validation: full suite 252/252; workspace typecheck clean; `git diff --check`
+  clean.
+- Commit status: ready for
+  `feat(agent-api): strict drafting Snapshot schema and GUI/Agent parity (WP-A5)`.
