@@ -70,7 +70,9 @@ function rectangleFromPixels(measurement, rectangle, part) {
 
 function arrowFromPixels(measurement, arrow, part) {
   return [
-    lineFromPixels(measurement, arrow.support, part),
+    ...(arrow.supports ?? [arrow.support]).map((support) =>
+      lineFromPixels(measurement, support, part),
+    ),
     {
       kind: "polygon",
       points: [

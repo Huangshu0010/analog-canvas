@@ -195,6 +195,23 @@
     {
       "kind": "line",
       "from": {
+        "x": -3.662791,
+        "y": 0
+      },
+      "to": {
+        "x": 10,
+        "y": 0
+      },
+      "part": "bulk-lead",
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
         "x": 16.395349,
         "y": 0
       },

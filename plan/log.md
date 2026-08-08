@@ -2454,3 +2454,15 @@ Editing System work.
   as the close-out checks.
 - Commit status: ready for
   `fix(razavi): align peripheral assets and four-terminal MOS`.
+
+## 2026-08-08 - Four-terminal MOS bulk-arrow continuity
+
+- Target: connect four-terminal NMOS/PMOS bulk arrows visibly to the inner
+  gate-side horizontal bar.
+- Changed areas: bulk pixel geometry now supports multiple non-overlapping
+  line segments; NMOS uses bar-to-tip plus base-to-B; PMOS uses bar-to-base
+  plus the outward filled head.
+- Validation: MOS/catalog generation succeeded; three-terminal NMOS and PMOS
+  SHA-256 hashes remained unchanged; `git diff --check` and status inspected.
+- Commit status: ready for
+  `fix(razavi): connect four-terminal bulk arrows to gate bars`.

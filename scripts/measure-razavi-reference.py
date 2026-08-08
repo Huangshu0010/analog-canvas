@@ -190,7 +190,10 @@ def build_mos_geometry(core: np.ndarray, reference_hash: str) -> dict[str, objec
                     "baseBottom": point(nmos_arrow["left"] + 1, nmos_arrow["bottom"] + 0.5),
                 },
                 "bulkExtensionPx": {
-                    "support": segment(nmos_channel_x + 11, nmos_gate_y, nmos_pins["B"]["x"], nmos_pins["B"]["y"]),
+                    "supports": [
+                        segment(nmos_inner["right"], nmos_gate_y, nmos_channel_x, nmos_gate_y),
+                        segment(nmos_channel_x + 11, nmos_gate_y, nmos_pins["B"]["x"], nmos_pins["B"]["y"]),
+                    ],
                     "tip": point(nmos_channel_x, nmos_gate_y),
                     "baseTop": point(nmos_channel_x + 11, nmos_gate_y - 6),
                     "baseBottom": point(nmos_channel_x + 11, nmos_gate_y + 6),
@@ -218,7 +221,9 @@ def build_mos_geometry(core: np.ndarray, reference_hash: str) -> dict[str, objec
                     "baseBottom": point(pmos_arrow["right"] - 1, pmos_arrow["bottom"] + 0.5),
                 },
                 "bulkExtensionPx": {
-                    "support": segment(pmos_channel_x, pmos_gate_y, pmos_pins["B"]["x"] - 11, pmos_pins["B"]["y"]),
+                    "supports": [
+                        segment(pmos_inner["right"], pmos_gate_y, pmos_pins["B"]["x"] - 11, pmos_pins["B"]["y"]),
+                    ],
                     "tip": point(pmos_pins["B"]["x"], pmos_gate_y),
                     "baseTop": point(pmos_pins["B"]["x"] - 11, pmos_gate_y - 6.5),
                     "baseBottom": point(pmos_pins["B"]["x"] - 11, pmos_gate_y + 6.5),

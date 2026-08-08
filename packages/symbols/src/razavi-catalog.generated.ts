@@ -174,7 +174,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "ada7e51ea802eec13bb2903bd90ffaff04493bf20ac56b1726d8239d9e25d262",
+      "b5e83ba53a37f5a9a120bbd5757eb3c21de8ada1db9b6397692ebd6a37e6fc20",
   },
   {
     symbolId: "nmos3",
@@ -246,7 +246,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "d83273dade5373819b2cb60f11d288620a952d63887b86916ca2edbe561244a1",
+      "ec4b2b379b3fab806a9588045bc3fc130dcf021db0994966713c303c247b865d",
   },
   {
     symbolId: "pmos3",
@@ -1102,6 +1102,23 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
+          x: -3.662791,
+          y: 0,
+        },
+        to: {
+          x: 10,
+          y: 0,
+        },
+        part: "bulk-lead",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
           x: 16.395349,
           y: 0,
         },
@@ -1744,7 +1761,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 10,
+          x: -3.662791,
           y: 0,
         },
         to: {
