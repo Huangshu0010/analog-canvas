@@ -16,8 +16,8 @@
         "B": { "x": 196.2, "y": 217.5 }
       },
       "gateBarsPx": [
-        { "left": 141.5, "top": 200.5, "right": 146.5, "bottom": 233.5 },
-        { "left": 150.5, "top": 195.5, "right": 155.5, "bottom": 238.5 }
+        { "left": 141.5, "top": 201, "right": 146.5, "bottom": 234 },
+        { "left": 150.5, "top": 196, "right": 155.5, "bottom": 239 }
       ],
       "channelsPx": {
         "upper": {
@@ -79,8 +79,8 @@
         "B": { "x": 561.2, "y": 82.75 }
       },
       "gateBarsPx": [
-        { "left": 506.5, "top": 67.5, "right": 510.5, "bottom": 99.5 },
-        { "left": 515.5, "top": 62.5, "right": 520.5, "bottom": 104.5 }
+        { "left": 506.5, "top": 66.75, "right": 510.5, "bottom": 98.75 },
+        { "left": 515.5, "top": 61.75, "right": 520.5, "bottom": 103.75 }
       ],
       "channelsPx": {
         "upper": {
