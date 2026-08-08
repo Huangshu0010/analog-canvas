@@ -232,10 +232,10 @@
           <line
             x1="2.101152"
             y1="8.13189"
-            x2="9.65"
+            x2="11.72"
             y2="8.13189"
             stroke-width="1.2"
-            stroke-linecap="round"
+            stroke-linecap="butt"
             stroke-linejoin="round"
           />
           <polygon
@@ -308,10 +308,10 @@
           <line
             x1="2.101152"
             y1="8.13189"
-            x2="9.65"
+            x2="11.72"
             y2="8.13189"
             stroke-width="1.2"
-            stroke-linecap="round"
+            stroke-linecap="butt"
             stroke-linejoin="round"
           />
           <polygon
@@ -553,12 +553,12 @@
             stroke-linejoin="round"
           />
           <line
-            x1="10.576269"
+            x1="9.168669"
             y1="-8.13189"
             x2="20"
             y2="-8.13189"
             stroke-width="1.2"
-            stroke-linecap="round"
+            stroke-linecap="butt"
             stroke-linejoin="round"
           />
           <polygon
@@ -629,12 +629,12 @@
             stroke-linejoin="round"
           />
           <line
-            x1="10.576269"
+            x1="9.168669"
             y1="-8.13189"
             x2="20"
             y2="-8.13189"
             stroke-width="1.2"
-            stroke-linecap="round"
+            stroke-linecap="butt"
             stroke-linejoin="round"
           />
           <polygon

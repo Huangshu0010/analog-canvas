@@ -69,7 +69,7 @@
     {
       "kind": "line",
       "from": {
-        "x": 10.576269,
+        "x": 9.168669,
         "y": -8.13189
       },
       "to": {
@@ -79,7 +79,7 @@
       "part": "source-arrow",
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
+        "lineCap": "butt",
         "lineJoin": "round"
       }
     },

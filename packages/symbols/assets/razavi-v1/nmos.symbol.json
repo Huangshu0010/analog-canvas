@@ -243,13 +243,13 @@
             "y": 8.13189
           },
           "to": {
-            "x": -0.35,
+            "x": 1.72,
             "y": 8.13189
           },
           "part": "source-arrow",
           "style": {
             "strokeRole": "normal",
-            "lineCap": "round",
+            "lineCap": "butt",
             "lineJoin": "round"
           }
         },

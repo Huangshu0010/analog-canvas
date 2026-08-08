@@ -89,13 +89,13 @@
         "y": 8.13189
       },
       "to": {
-        "x": 9.65,
+        "x": 11.72,
         "y": 8.13189
       },
       "part": "source-arrow",
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
+        "lineCap": "butt",
         "lineJoin": "round"
       }
     },

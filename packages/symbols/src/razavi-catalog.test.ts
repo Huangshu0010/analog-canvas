@@ -279,6 +279,12 @@ describe("Razavi symbol catalog", () => {
     expect(nmos.variants[0]?.additionalPrimitives).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          kind: "line",
+          from: { x: -7.898848, y: 8.13189 },
+          to: { x: 1.72, y: 8.13189 },
+          style: expect.objectContaining({ lineCap: "butt" }),
+        }),
+        expect.objectContaining({
           kind: "polygon",
           points: [
             { x: 10, y: 8.13189 },

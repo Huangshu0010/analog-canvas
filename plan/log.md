@@ -2110,3 +2110,20 @@ Editing System work.
   route-attached/text golden --check; release:package; git diff --check.
 - Commit status: ready for
   `test(editor): drafting E2E, parity rename, and formatting (WP-R6)`.
+
+## 2026-08-08 - Razavi unified MOS presentation
+
+- Target: make Razavi a single, consistent manual MOS presentation instead of
+  allowing raw three-terminal stencil assets and the canonical four-terminal
+  arrow to leak into the editor palette.
+- Changed areas: standard NMOS/PMOS palette placement persists the canonical
+  `textbook-3terminal` visual variant while retaining D/G/S/B electrically;
+  thumbnails resolve that same variant; raw `nmos3`/`pmos3` imports remain in
+  the catalog as provenance but are no longer palette choices; calibrated
+  source-arrow support lines meet their triangle base with a butt cap, while
+  base four-terminal bulk primitives are unchanged. Regenerated the MOS
+  assets, Razavi catalog, and fidelity board.
+- Tests: 16 focused editor/symbol Vitest tests; editor production build; 2
+  relevant browser E2E scenarios; both MOS and Razavi generated-asset checks;
+  `git diff --check` clean.
+- Commit status: ready for `fix(razavi): unify default MOS presentation`.

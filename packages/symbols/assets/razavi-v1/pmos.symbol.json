@@ -239,7 +239,7 @@
         {
           "kind": "line",
           "from": {
-            "x": 0.576269,
+            "x": -0.831331,
             "y": -8.13189
           },
           "to": {
@@ -249,7 +249,7 @@
           "part": "source-arrow",
           "style": {
             "strokeRole": "normal",
-            "lineCap": "round",
+            "lineCap": "butt",
             "lineJoin": "round"
           }
         },

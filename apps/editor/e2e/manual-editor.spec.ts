@@ -92,8 +92,6 @@ test("shows faithful symbol previews and the expanded VSS-derived palette", asyn
   for (const symbolId of [
     "nmos",
     "pmos",
-    "nmos3",
-    "pmos3",
     "zener",
     "schottky",
     "led",
@@ -109,7 +107,9 @@ test("shows faithful symbol previews and the expanded VSS-derived palette", asyn
   ).toHaveCount(0);
   await expect(
     page.getByTestId("add-component-pmos").locator("polygon"),
-  ).toHaveCount(1);
+  ).toHaveCount(3);
+  await expect(page.getByTestId("add-component-nmos3")).toHaveCount(0);
+  await expect(page.getByTestId("add-component-pmos3")).toHaveCount(0);
 });
 
 test("authors components and connectivity manually from an empty canvas", async ({
@@ -122,6 +122,7 @@ test("authors components and connectivity manually from an empty canvas", async 
   await placeComponent(page, "nmos", { x: 560, y: 220 });
   await expect(page.getByTestId("hit-R1")).toBeVisible();
   await expect(page.getByTestId("hit-M2")).toBeVisible();
+  await expect(page.getByTestId("terminal-M2-B")).toHaveCount(0);
   await expect(page.getByTestId("revision")).toHaveText("2");
   await expect(page.getByTestId("source-status")).toHaveText(
     "connectivity-modified",

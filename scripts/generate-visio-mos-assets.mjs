@@ -271,22 +271,30 @@ function arrowPrimitives(shape, segment, style, marker, part) {
         x: tip.x - direction.x * arrowLength,
         y: tip.y - direction.y * arrowLength,
       };
+  const usesRazaviSourceArrow = part === "source-arrow";
   const line = {
     kind: "line",
+    // The support conductor meets the measured triangle base exactly. The
+    // old Visio marker setback belonged to the pre-calibration marker and
+    // produced a visible gap after the Razavi arrowhead was resized.
     from: beginArrow
-      ? roundedPoint({
-          x: segment.from.x + direction.x * setback,
-          y: segment.from.y + direction.y * setback,
-        })
+      ? usesRazaviSourceArrow
+        ? roundedPoint(baseCenter)
+        : roundedPoint({
+            x: segment.from.x + direction.x * setback,
+            y: segment.from.y + direction.y * setback,
+          })
       : segment.from,
     to: endArrow
-      ? roundedPoint({
-          x: segment.to.x - direction.x * setback,
-          y: segment.to.y - direction.y * setback,
-        })
+      ? usesRazaviSourceArrow
+        ? roundedPoint(baseCenter)
+        : roundedPoint({
+            x: segment.to.x - direction.x * setback,
+            y: segment.to.y - direction.y * setback,
+          })
       : segment.to,
     ...(part ? { part } : {}),
-    style,
+    style: usesRazaviSourceArrow ? { ...style, lineCap: "butt" } : style,
   };
   const polygon = {
     kind: "polygon",
