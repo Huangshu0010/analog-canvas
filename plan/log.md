@@ -1614,3 +1614,24 @@ Editing System work.
   shape.
 - Commit status: ready for
   `feat(model): v2 drafting types, schema-1->2 migration, and VisualAnchor resolver (WP-A1a)`.
+## 2026-08-08 - Unblock renderer + WP-A1b: drafting consumption
+
+- Target: land the concurrent arrowhead calibration (its symbol geometry,
+  goldens, and expectations together) so the renderer is green, then add the
+  minimal A1b drafting consumption in the renderer and Agent Snapshot.
+- Unblock commit (`style(razavi): finalize arrowhead calibration...`):
+  regenerated phase-1/phase-5/route-attached/visio-mos/visio-core-analog/text-*
+  goldens and updated style-profile (annotation tokens) and razavi-catalog
+  (nmos source-arrow and current-source head geometry) expectations against the
+  current symbol assets. Full suite 225/225; all six generation/golden --check
+  scripts pass; typecheck clean.
+- A1b: render-svg renders DraftText objects in a data-layer="drafting" group
+  stacked above annotations (flat text projection; full RichText tspan renderer
+  is WP-A2), escapes XML, omits the group when empty, and never renders guides.
+  Agent Snapshot exposes drafting.objects (canonical shape) and a guide summary
+  (id/visible/locked only); drafting is excluded from topologyHash (renamed to
+  electricalTopologyHash at the gate).
+- Validation: full suite 229/229 (adds 4 drafting-render tests); workspace
+  typecheck clean; agent-adapter typecheck clean.
+- Commit status: ready for
+  `feat(render): minimal drafting consumption in renderer and Snapshot (WP-A1b)`.

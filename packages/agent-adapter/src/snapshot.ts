@@ -376,6 +376,18 @@ function documentSnapshot(
     annotations: [...document.annotations]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
       .map((annotation) => structuredClone(annotation)),
+    // ADR 0010 WP-A1b: drafting objects (non-electrical, canonical RichText
+    // AST) are exposed in the Snapshot; they never affect topologyHash. Guides
+    // expose only count + per-guide visible/locked by default; coordinates
+    // require an explicit includeEditorGuides option (gate).
+    drafting: {
+      objects: [...(document.drafting?.objects ?? [])]
+        .sort((left, right) => left.id.localeCompare(right.id, "en"))
+        .map((object) => structuredClone(object)),
+      guides: [...(document.drafting?.guides ?? [])]
+        .sort((left, right) => left.id.localeCompare(right.id, "en"))
+        .map((guide) => ({ id: guide.id, visible: guide.visible, locked: guide.locked })),
+    },
     layoutGroups: [...document.layoutGroups]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
       .map((group) => structuredClone(group)),
@@ -394,11 +406,14 @@ export function buildAgentSessionSnapshot(
     document: documentSnapshot(options),
   };
   const canonical = canonicalSnapshotContent(content);
-  // The topology hash intentionally excludes diagnostics: they are derived
-  // visual evidence, not topology, and must not change the identity of an
-  // electrically identical Document. Hash the content without diagnostics.
-  const { diagnostics: _diagnostics, ...topologyDocument } = content.document;
+  // The topology hash intentionally excludes derived visual evidence and the
+  // ADR 0010 drafting layer (non-electrical text/markers/guides): they must
+  // not change the identity of an electrically identical Document. The
+  // integration gate narrows and renames this to electricalTopologyHash.
+  const { diagnostics: _diagnostics, drafting: _drafting, ...topologyDocument } =
+    content.document;
   void _diagnostics;
+  void _drafting;
   const topologyCanonical = canonicalSnapshotContent({
     project: content.project,
     document: topologyDocument,

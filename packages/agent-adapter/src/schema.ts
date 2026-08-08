@@ -263,6 +263,18 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
   routes: z.array(AgentSnapshotRouteSchema),
   junctions: z.array(AgentSnapshotJunctionSchema),
   annotations: z.array(AnnotationSchema),
+  // ADR 0010 WP-A1b: drafting layer in the Agent Snapshot. Objects carry their
+  // canonical shape; guides expose only id/visible/locked by default.
+  drafting: z.strictObject({
+    objects: z.array(z.unknown()),
+    guides: z.array(
+      z.strictObject({
+        id: StableIdSchema,
+        visible: z.boolean(),
+        locked: z.boolean(),
+      }),
+    ),
+  }),
   layoutGroups: z.array(LayoutGroupSchema),
   constraints: z.array(LayoutConstraintSchema),
   diagnostics: z.array(AgentDiagnosticSchema),

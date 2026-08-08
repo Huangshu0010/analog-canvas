@@ -550,8 +550,65 @@ export function buildSvgScene(
 
   return {
     viewBox,
-    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g></g>`,
+    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, profile)}</g>`,
   };
+}
+
+// ADR 0010 WP-A1b minimal drafting consumption. Only DraftText is rendered
+// here, as escaped plain text in a data-layer="drafting" group stacked above
+// annotations per the frozen layering. The full RichText AST -> tspan renderer
+// (subscript/superscript/italic/bold/fraction) lands in WP-A2 and will replace
+// the flat textJoin here. Guides never render in formal output.
+function renderDraftingLayer(
+  document: SchematicDocument,
+  profile: SchematicStyleProfile,
+): string {
+  const objects = document.drafting?.objects ?? [];
+  if (objects.length === 0) return "";
+  const sorted = [...objects].sort((left, right) => left.zIndex - right.zIndex);
+  const body = sorted
+    .filter((object): object is Extract<typeof object, { kind: "text" }> => object.kind === "text")
+    .map((object) => {
+      const anchor = object.anchor;
+      const position = anchor.kind === "free" ? anchor.position : anchor.fallbackPosition;
+      const text = textFromRichText(object.content.runs);
+      const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
+      return `<text data-object-id="${object.id}" data-kind="draft-text" x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${position.x} ${position.y})" font-size="${fontSize}">${escapeXmlText(text)}</text>`;
+    })
+    .join("");
+  return `<g data-layer="drafting">${body}</g>`;
+}
+
+function textFromRichText(runs: readonly unknown[]): string {
+  // Minimal WP-A1b projection: concatenate text runs; span/fraction/line-break
+  // structure is preserved by WP-A2's tspan renderer.
+  let result = "";
+  for (const run of runs) {
+    if (typeof run !== "object" || run === null) continue;
+    const kind = (run as { kind?: string }).kind;
+    if (kind === "text") {
+      const value = (run as { value?: string }).value;
+      if (typeof value === "string") result += value;
+    } else if (kind === "line-break") {
+      result += " ";
+    }
+  }
+  return result;
+}
+
+function typographyFontSize(
+  token: "caption" | "body" | "label",
+  profile: SchematicStyleProfile,
+): number {
+  if (token === "caption") return profile.typography.captionFontSize;
+  return profile.typography.annotationFontSize;
+}
+
+function escapeXmlText(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 export function renderDocumentSvg(
