@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  flattenMarkup,
+  flattenRichText,
+  normalizeRichText,
   parseMarkup,
   serializeMarkup,
-} from "./markup-parser.js";
+} from "./rich-text-markup.js";
+import type { MarkupDocument } from "./rich-text-markup.js";
 
 describe("parseMarkup (ADR 0010 import shorthand)", () => {
   it("parses a plain string as a single text run", () => {
@@ -62,19 +64,20 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
     });
   });
 
-  it("parses a line break", () => {
-    const doc = parseMarkup("line1\\\\line2");
+  it("parses a line break from backslash-n", () => {
+    const doc = parseMarkup("line1\\nline2");
     expect(doc.runs[1]).toEqual({ kind: "line-break" });
   });
 
-  it("preserves unparseable input as literal text, never dropping it", () => {
+  it("preserves unknown backslash sequences and unclosed commands as literal text", () => {
     const doc = parseMarkup("x^{unclosed + \\unknown");
-    expect(flattenMarkup(doc)).toBe("x^{unclosed + \\unknown");
+    expect(flattenRichText(doc)).toBe("x^{unclosed + \\unknown");
+    expect(flattenRichText(parseMarkup("\\Omega"))).toBe("\\Omega");
   });
 
   it("flattens a parsed document back to its literal text", () => {
     const doc = parseMarkup("M_{1} = \\frac{g_m}{r_o}");
-    expect(flattenMarkup(doc)).toBe("M1 = g_m/r_o");
+    expect(flattenRichText(doc)).toBe("M1 = g_m/r_o");
   });
 
   it("parses a fraction whose parameters contain nested subscripts", () => {
@@ -99,33 +102,75 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
     });
   });
 
-  it("round-trips parseMarkup(serializeMarkup(ast)) for every required scenario (WP-R3)", () => {
-    const bs = String.fromCharCode(92);
+  it("round-trips parseMarkup(serializeMarkup(ast)) for every required scenario", () => {
     const scenarios = [
       "V_{in}^{+}",
       "\\frac{V_{DD}}{2}",
       "\\it{gain}",
       "\\bf{RESET}",
-      `line1${bs}${bs}line2`, // line break
-      "\\it{V_{in}}", // nested span
-      "\\it{}", // empty span
-      "a\\it{b}c", // consecutive text runs
-      "V_{in} 中文", // Unicode
+      "line1\\nline2",
+      "\\it{V_{in}}",
+      "\\it{}",
+      "a\\it{b}c",
+      "V_{in} 中文",
     ];
     for (const input of scenarios) {
       const ast = parseMarkup(input);
-      const serialized = serializeMarkup(ast);
-      const back = parseMarkup(serialized);
-      expect(back).toEqual(ast);
+      expect(parseMarkup(serializeMarkup(ast))).toEqual(ast);
     }
   });
 
-  it("serializes a line break and preserves it through round trip (WP-R3)", () => {
-    const bs = String.fromCharCode(92);
-    const input = `line1${bs}${bs}line2`;
-    const ast = parseMarkup(input);
-    expect(ast.runs[1]).toEqual({ kind: "line-break" });
-    const serialized = serializeMarkup(ast);
-    expect(parseMarkup(serialized)).toEqual(ast);
+  it("round-trips ANY valid AST, including literal markup-like text (P0-1)", () => {
+    const cases: MarkupDocument[] = [
+      { runs: [{ kind: "text", value: "V_{in}" }] },
+      { runs: [{ kind: "text", value: "\\frac{1}{2}" }] },
+      { runs: [{ kind: "text", value: "a\\b{c}" }] },
+      {
+        runs: [
+          { kind: "text", value: "x" },
+          { kind: "line-break" },
+          { kind: "text", value: "y_{z}^{w}" },
+        ],
+      },
+      {
+        runs: [
+          {
+            kind: "fraction",
+            numerator: { runs: [{ kind: "text", value: "V_{DD}" }] },
+            denominator: { runs: [{ kind: "text", value: "2" }] },
+          },
+        ],
+      },
+      {
+        runs: [
+          {
+            kind: "span",
+            style: "italic",
+            children: [{ kind: "text", value: "a_{b}" }],
+          },
+        ],
+      },
+    ];
+    for (const ast of cases) {
+      const serialized = serializeMarkup(ast);
+      const back = parseMarkup(serialized);
+      // parseMarkup may coalesce a literal; use normalization for equality.
+      expect(normalizeRichText(back)).toEqual(normalizeRichText(ast));
+    }
+  });
+
+  it("normalizes adjacent text runs and drops empty ones", () => {
+    const doc = parseMarkup("a\\it{b}c");
+    expect(normalizeRichText(doc)).toEqual({
+      runs: [
+        { kind: "text", value: "a" },
+        {
+          kind: "span",
+          style: "italic",
+          children: [{ kind: "text", value: "b" }],
+        },
+        { kind: "text", value: "c" },
+      ],
+    });
   });
 });
