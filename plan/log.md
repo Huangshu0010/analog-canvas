@@ -1446,12 +1446,29 @@ Editing System work.
   `--check` all pass; workspace typecheck clean.
 - Commit: `feat(symbols): Visio-exact MOS and core-analog proportion calibration`.
 
+- Target: arrowhead-proportion-calibration (fourth concurrent target,
+  surfaced during landing).
+- Changed areas: regenerated `fixtures/visual-golden/phase-1-manual.svg`,
+  `phase-5-dense-analog.svg`, and `route-attached-current-arrow.svg` against
+  the widened MOS source arrow geometry. The symbol-asset geometry and the
+  `razavi-catalog.test.ts` regression assertion had already landed with the
+  symbol-proportion commit.
+- Result: formal rendering matches the committed symbol assets.
+- Note: the three goldens were stale relative to the committed symbols; the
+  in-repo `dist` used by the golden `--check` script was also stale, which had
+  masked the mismatch until `dist` was rebuilt.
+- Validation: `phase-5-golden`, `route-attached-current-arrow-golden`, and all
+  catalog/asset generation `--check` scripts pass; full suite 203/203;
+  workspace typecheck clean.
+- Commit: `style(razavi): calibrate MOS and current-source arrowheads`.
+
 - Coordination target: coord-land-concurrent-razavi-targets. It owned only
-  the three stale-expected-value/classifier fixes that made the in-flight
-  work internally consistent (`agent-adapter/service.ts` `set_presentation_style`
+  the stale-expected-value/classifier fixes that made the in-flight work
+  internally consistent (`agent-adapter/service.ts` `set_presentation_style`
   case, `schematic-text.test.ts` `style` field, `style-profile.test.ts`
-  1.2->1.6), plus this log entry. It staged and committed the three targets'
-  full file sets. `apps/editor/src/App.tsx`, shared by the style and hit-text
-  targets, landed with the hit-text commit per that workstream's plan.
+  1.2->1.6) plus the rebuilt `dist` and regenerated goldens, and this log
+  entry. It staged and committed the four targets' full file sets.
+  `apps/editor/src/App.tsx`, shared by the style and hit-text targets, landed
+  with the hit-text commit per that workstream's plan.
 - Commit status: all four commits landed on `main`; worktree now clean of the
   concurrent Razavi work.
