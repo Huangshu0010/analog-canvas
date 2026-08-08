@@ -15,6 +15,20 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-08 - Apply second-pass Razavi arrowhead scaling
+
+- Target: apply the user's relative second pass: MOS arrowhead width +30% from
+  the already +20% state, and independent-current-source arrowhead length +30%
+  from the already +30% state.
+- Changed areas: the two generator sources; regenerated Razavi MOS/current
+  source assets, catalog, and fidelity boards; exact geometry regression test.
+- Result: MOS total head-width scale is 1.56× Visio baseline. The independent
+  current-source head is 1.69× baseline length, has unchanged 1.15× baseline
+  width, and retains its shaft/base endpoint at `y=0.608268`.
+- Validation: MOS/core-analog/Razavi generator checks and 20 focused symbol
+  tests passed; `git diff --check` passed.
+- Commit status: pending.
+
 ## 2026-08-08 - Calibrate MOS and independent-current-source arrowheads
 
 - Target: widen the Razavi MOS source-arrow heads by 20%, and lengthen/widen

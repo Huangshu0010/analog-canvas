@@ -282,8 +282,8 @@ describe("Razavi symbol catalog", () => {
           kind: "polygon",
           points: [
             { x: 10, y: 8.13189 },
-            { x: -0.35, y: 10.88589 },
-            { x: -0.35, y: 5.37789 },
+            { x: -0.35, y: 11.71209 },
+            { x: -0.35, y: 4.55169 },
           ],
           fill: "foreground",
           stroke: "none",
@@ -302,7 +302,7 @@ describe("Razavi symbol catalog", () => {
         expect.objectContaining({
           kind: "polygon",
           points: [
-            { x: 0, y: 8.753741 },
+            { x: 0, y: 11.197383 },
             { x: -5.134252, y: 0.608268 },
             { x: 5.134252, y: 0.608268 },
           ],

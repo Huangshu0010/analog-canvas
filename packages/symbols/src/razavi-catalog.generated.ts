@@ -59,7 +59,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:I"],
     assetPath: "current-source.symbol.json",
     assetHash:
-      "0cba0c3d1c2d27456a7967a4882f66eb7de8254b0c03b40765a1ea22fbd509d7",
+      "4a07529d3de55dd5c8f91aef03eed21e08104b6b837dc0754ab43af0474db1a3",
     generation: {
       kind: "vss-master-ir",
       evidencePath:
@@ -172,7 +172,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "ccd8c1453e86ffa07e7141d3cc6bf123a7b33a941118239759033cc1c8867a14",
+      "ff915693f8ce52b7dbfa7c75e73e8fb64e4ee08798d57a930458389b1f23868b",
   },
   {
     symbolId: "nmos3",
@@ -198,7 +198,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "nmos3.symbol.json",
     assetHash:
-      "41f15a207e3cb12fa268b45928ac685fd3bbc3d314c1fa863f141e51d332ee36",
+      "9504e0b52f20ab6ef37c997f8acbccc69619aaef7fa1c6d0deec67f35f9130bf",
   },
   {
     symbolId: "npn",
@@ -242,7 +242,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "9b42c1983fac96811ab679a8ae7aedd7fe10f65f747a76c7736810aa0389400c",
+      "ef483c214de91f025b7debde2a22aec28d8a381fc7e956eec85935d05106e3d3",
   },
   {
     symbolId: "pmos3",
@@ -268,7 +268,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "a29e2b8b5ede121fc48ddede13721aa93d90dcbc06adba00e2f06e9b580d820d",
+      "e34ce6140995235de1501b2aee5ae0115e00bec97f6b991e09bdb106bd8fae8c",
   },
   {
     symbolId: "pnp",
@@ -571,7 +571,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: 0,
-            y: 8.753741,
+            y: 11.197383,
           },
           {
             x: -5.134252,
@@ -1136,11 +1136,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           },
           {
             x: 3.398818,
-            y: 2.754,
+            y: 3.5802,
           },
           {
             x: 3.398818,
-            y: -2.754,
+            y: -3.5802,
           },
         ],
         fill: "foreground",
@@ -1180,11 +1180,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
               },
               {
                 x: -0.35,
-                y: 10.88589,
+                y: 11.71209,
               },
               {
                 x: -0.35,
-                y: 5.37789,
+                y: 4.55169,
               },
             ],
             fill: "foreground",
@@ -1306,11 +1306,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           },
           {
             x: 9.65,
-            y: 10.88589,
+            y: 11.71209,
           },
           {
             x: 9.65,
-            y: 5.37789,
+            y: 4.55169,
           },
         ],
         fill: "foreground",
@@ -1761,11 +1761,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           },
           {
             x: 11.15,
-            y: 2.754,
+            y: 3.5802,
           },
           {
             x: 11.15,
-            y: -2.754,
+            y: -3.5802,
           },
         ],
         fill: "foreground",
@@ -1805,11 +1805,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
               },
               {
                 x: 0.990269,
-                y: -5.70837,
+                y: -4.981314,
               },
               {
                 x: 0.990269,
-                y: -10.55541,
+                y: -11.282466,
               },
             ],
             fill: "foreground",
@@ -1915,11 +1915,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           },
           {
             x: 10.990269,
-            y: -5.70837,
+            y: -4.981314,
           },
           {
             x: 10.990269,
-            y: -10.55541,
+            y: -11.282466,
           },
         ],
         fill: "foreground",

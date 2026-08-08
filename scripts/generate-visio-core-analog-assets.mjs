@@ -546,7 +546,7 @@ function presentIndependentSource(config, pins, primitives) {
     const referenceHeadLength = circle.center.y + circle.radius * 0.66 - baseY;
     const tip = {
       x: circle.center.x,
-      y: baseY + referenceHeadLength * 1.3,
+      y: baseY + referenceHeadLength * 1.69,
     };
     const halfWidth = circle.radius * 0.42 * 1.15;
     const shaft = {
