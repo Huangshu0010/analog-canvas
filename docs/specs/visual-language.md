@@ -53,8 +53,8 @@ normalStroke: 1.2
 emphasisStroke: 2.16
 supplyStroke: 1.8
 annotationStroke: 1.6
-junctionRadius: 3
-portOriginRadius: 3
+junctionRadius: 3.779070
+portOriginRadius: 3.779070
 strokeLinecap: butt
 strokeLinejoin: miter
 strokeMiterLimit: 4
@@ -71,10 +71,10 @@ subscriptScale: 0.68
 subscriptBaselineShift: 0.30em downward
 labelGap: 6
 supplyBarWidth: 20
-currentArrowLength: 24
-arrowHeadLength: 10
-arrowHeadWidth: 7
-currentLabelGap: 7
+currentArrowLength: 46.511628
+arrowHeadLength: 15.116279
+arrowHeadWidth: 8.720930
+currentLabelGap: 6.976744
 polarityOffsetX: 12
 polarityHalfGap: 8
 ```

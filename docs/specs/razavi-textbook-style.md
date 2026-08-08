@@ -317,13 +317,13 @@ All values are scene units at `100` scene units per inch.
 | `emphasisStroke`     |  `2.16` | MOS gates and reviewed heavy Visio geometry    |
 | `supplyStroke`       |   `1.8` | GND/VDD/VSS bars                               |
 | `annotationStroke`   |   `1.6` | Current arrows and polarity geometry           |
-| `junctionRadius`     |   `3.0` | Explicit electrical Junction                   |
-| `portOriginRadius`   |   `3.0` | Explicit placed signal Port                    |
+| `junctionRadius`     |  `3.78` | Explicit electrical Junction                   |
+| `portOriginRadius`   |  `3.78` | Explicit placed signal Port                    |
 | `supplyBarWidth`     |    `20` | Power Port terminal bar                        |
-| `currentArrowLength` |    `24` | Current-arrow tip-to-tail extent               |
-| `arrowHeadLength`    |    `10` | Filled current-arrow head                      |
-| `arrowHeadWidth`     |     `7` | Filled current-arrow head                      |
-| `currentLabelGap`    |     `7` | Arrow-to-current-label separation              |
+| `currentArrowLength` | `46.51` | Current-arrow tip-to-tail extent               |
+| `arrowHeadLength`    | `15.12` | Filled current-arrow head                      |
+| `arrowHeadWidth`     |  `8.72` | Filled current-arrow head                      |
+| `currentLabelGap`    |  `6.98` | Arrow-to-current-label separation              |
 | `polarityOffsetX`    |    `12` | Voltage polarity axis offset from label anchor |
 | `polarityHalfGap`    |     `8` | Half-distance between voltage polarity marks   |
 | `strokeLinecap`      |  `butt` | Formal open-line ends                          |

@@ -1969,6 +1969,7 @@ Editing System work.
   or errors; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): keep topology hashing browser compatible`.
+
 ## 2026-08-08 - WP-R0 + WP-R1: drafting runtime completion (contract + unified geometry)
 
 - Target: start the Drafting Runtime Completion project per the review: freeze
@@ -2003,6 +2004,7 @@ Editing System work.
 - Commit status: ready for
   `docs(drafting): freeze runtime completion contract and capability matrix (WP-R0)`
   and `feat(derived): resolve drafting object geometry (WP-R1)`.
+
 ## 2026-08-08 - WP-R2: renderer consumes unified drafting geometry + bounds
 
 - Target: make the formal SVG renderer and export bounds consume the single
@@ -2022,6 +2024,7 @@ Editing System work.
   scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `fix(render): consume unified drafting geometry and include drafting bounds (WP-R2)`.
+
 ## 2026-08-08 - WP-R3: lossless rich-text editing
 
 - Target: eliminate the flatten->parse->overwrite corruption path in editing.
@@ -2041,6 +2044,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): preserve rich text through lossless markup editing (WP-R3)`.
+
 ## 2026-08-08 - WP-R4: Agent Snapshot exposes resolved drafting geometry
 
 - Target: let the Agent read the derived visual facts (resolved position/
@@ -2059,6 +2063,7 @@ Editing System work.
   typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(agent-api): expose resolved drafting geometry and includeEditorGuides (WP-R4)`.
+
 ## 2026-08-08 - WP-R5 (part 1): drafting selection, drag, and delete
 
 - Target: fix the drafting selection bug called out in review and give drafting
@@ -2075,6 +2080,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): drafting selection, drag, and delete (WP-R5 part 1)`.
+
 ## 2026-08-08 - WP-R5 (part 2): select/delete all drafting kinds via shared geometry
 
 - Target: give every DraftingObject kind a selectable/deletable hit box derived
@@ -2089,6 +2095,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): select/delete all drafting kinds via shared geometry (WP-R5 part 2)`.
+
 ## 2026-08-08 - WP-R6: parity rename, real browser E2E, and full exit gate
 
 - Target: complete the Drafting Runtime Completion project with a truthful
@@ -2185,6 +2192,7 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): expose MOS three and four terminal views`.
+
 ## 2026-08-08 - P0-2: drafting drag uses preview and commits one transaction
 
 - Target: fix the review P0 that a drafting drag committed one transaction per
@@ -2203,6 +2211,7 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): drafting drag preview with single atomic commit (P0-2)`.
+
 ## 2026-08-08 - P1: freeze final-rotation semantics (geometry is the single truth)
 
 - Target: fix the review P1 that derived geometry reported anchor rotation
@@ -2221,6 +2230,7 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): freeze composed rotation as the single geometry truth (P1 rotation)`.
+
 ## 2026-08-08 - P1: accurate floating-symbol and multi-line text bounds
 
 - Target: fix the review P1 that floating-symbol bounds ignored viewBox x/y,
@@ -2240,6 +2250,7 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): accurate floating-symbol and multi-line text bounds (P1 bounds)`.
+
 ## 2026-08-08 - P1: strict Snapshot geometry schema (no z.unknown, no duplicate bounds)
 
 - Target: fix the review P1 that Snapshot resolvedGeometry/diagnostics were
@@ -2255,6 +2266,7 @@ Editing System work.
   typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(agent-api): strict drafting geometry schema in Snapshot (P1 typed)`.
+
 ## 2026-08-08 - P1: canvas drag-create for construction line and arrow
 
 - Target: replace the fixed viewport-center insert for construction lines and
@@ -2273,6 +2285,7 @@ Editing System work.
   source and dist symbol geometry; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): canvas drag-create for construction line and arrow (P1 tools)`.
+
 ## 2026-08-08 - P2: distinguish invalid route segment diagnostics
 
 - Target: fix the review P2 that DRAFTING_ROUTE_SEGMENT_INVALID was declared but
@@ -2290,6 +2303,7 @@ Editing System work.
   artifacts regenerated; `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): return precise invalid-route-segment diagnostics (P2)`.
+
 ## 2026-08-08 - P1: shape-based drafting hit targets
 
 - Target: fix the review P1 that every drafting object used a full bounding-rect
@@ -2305,6 +2319,7 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): shape-based drafting hit targets (P1 hit)`.
+
 ## 2026-08-08 - P1: key-scenario E2E coverage + click-without-move fix
 
 - Target: add the review-required E2E scenarios (unedited Apply no revision,
@@ -2318,6 +2333,7 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): no-op drafting click; add key-scenario E2E (P1 scenarios)`.
+
 ## 2026-08-08 - P1: real production preview smoke
 
 - Target: fix the review P1 that the "production build mounts" E2E actually ran
@@ -2333,6 +2349,7 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `test(editor): production preview smoke against the built bundle (P1 smoke)`.
+
 ## 2026-08-08 - Final exit gate + formatting normalization
 
 - Target: run the full Drafting Runtime Completion exit gate and normalize
@@ -2345,6 +2362,7 @@ Editing System work.
   release:package; git diff --check.
 - Commit status: ready for
   `chore: format normalization after Drafting Runtime Completion (exit gate)`.
+
 ## 2026-08-08 - Roadmap status revision (honest completion)
 
 - Target: record the actual Drafting Runtime Completion state in the roadmap
@@ -2481,3 +2499,16 @@ Editing System work.
   check; and `git diff --check` all pass.
 - Commit status: ready for
   `refactor(diagnostics): separate structural gates from visual observations`.
+
+## 2026-08-08 - Razavi current-arrow and node alignment
+
+- Target: rapidly align route-attached current arrows and solid electrical
+  nodes with the accepted Razavi raster using the existing pixel-map pipeline.
+- Changed areas: corrected the current-arrow map to its full visible extent;
+  added a measured solid-node radius; generated junction, Port-origin, and
+  arrow profile tokens from the shared map; and refreshed normative values.
+- Validation: per user instruction, no visual or automated validation was
+  performed; `git diff --check` and final status inspection were retained as
+  repository hygiene checks.
+- Commit status: ready for
+  `fix(razavi): align current arrows and solid nodes`.

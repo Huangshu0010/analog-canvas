@@ -105,10 +105,16 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
     supply: 1.8,
     annotation: 1.6,
   },
-  nodes: { junctionRadius: 3, portOriginRadius: 3 },
+  nodes: {
+    junctionRadius: razaviPeripheralGeometry.solidNodeRadius,
+    portOriginRadius: razaviPeripheralGeometry.solidNodeRadius,
+  },
   annotations: {
     supplyBarWidth: 20,
-    ...razaviPeripheralGeometry,
+    currentArrowLength: razaviPeripheralGeometry.currentArrowLength,
+    arrowHeadLength: razaviPeripheralGeometry.arrowHeadLength,
+    arrowHeadWidth: razaviPeripheralGeometry.arrowHeadWidth,
+    currentLabelGap: razaviPeripheralGeometry.currentLabelGap,
     polarityOffsetX: 12,
     polarityHalfGap: 8,
   },

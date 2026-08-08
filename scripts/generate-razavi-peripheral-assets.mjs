@@ -203,6 +203,9 @@ const currentArrow = geometry.annotations.currentArrow;
 const styleGeometrySource = await format(
   `export const razaviPeripheralGeometry = ${JSON.stringify(
     {
+      solidNodeRadius: rounded(
+        geometry.annotations.solidNodeRadiusPx / geometry.pixelsPerLogical,
+      ),
       currentArrowLength: rounded(
         currentArrow.totalLengthPx / geometry.pixelsPerLogical,
       ),

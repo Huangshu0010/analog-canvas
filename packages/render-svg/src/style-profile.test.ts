@@ -19,14 +19,14 @@ describe("schematic style profiles", () => {
     expect(strokeWidthForRole(razaviTextbookProfile, "normal")).toBe(1.6);
     expect(strokeWidthForRole(razaviTextbookProfile, "emphasis")).toBe(2.16);
     expect(razaviTextbookProfile.nodes).toEqual({
-      junctionRadius: 3,
-      portOriginRadius: 3,
+      junctionRadius: 3.77907,
+      portOriginRadius: 3.77907,
     });
     expect(razaviTextbookProfile.annotations).toEqual({
       supplyBarWidth: 20,
-      currentArrowLength: 27.906977,
-      arrowHeadLength: 11.627907,
-      arrowHeadWidth: 6.976744,
+      currentArrowLength: 46.511628,
+      arrowHeadLength: 15.116279,
+      arrowHeadWidth: 8.72093,
       currentLabelGap: 6.976744,
       polarityOffsetX: 12,
       polarityHalfGap: 8,

@@ -39,11 +39,12 @@
     }
   },
   "annotations": {
+    "solidNodeRadiusPx": 6.5,
     "currentArrow": {
       "evidencePanel": "b-Ix",
-      "totalLengthPx": 48,
-      "headLengthPx": 20,
-      "headWidthPx": 12,
+      "totalLengthPx": 80,
+      "headLengthPx": 26,
+      "headWidthPx": 15,
       "labelGapPx": 12
     }
   }
