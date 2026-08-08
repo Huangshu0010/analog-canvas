@@ -2086,11 +2086,12 @@ export function App({ project: initialProject }: AppProps) {
 
     const up = (): void => {
       // Commit exactly once from the ref (state updaters must not have side
-      // effects; React may invoke them twice in Strict Mode).
+      // effects; React may invoke them twice in Strict Mode). A click without
+      // movement does not commit, so selection does not add a revision.
       const position = draftingDragPositionRef.current;
       draftingDragPositionRef.current = null;
       setDraftingDragPreview(null);
-      if (position) {
+      if (position && (position.x !== original.x || position.y !== original.y)) {
         const latest = document.drafting?.objects.find(
           (item) => item.id === object.id,
         );

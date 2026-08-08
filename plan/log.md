@@ -2305,3 +2305,16 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): shape-based drafting hit targets (P1 hit)`.
+## 2026-08-08 - P1: key-scenario E2E coverage + click-without-move fix
+
+- Target: add the review-required E2E scenarios (unedited Apply no revision,
+  drag atomic undo, anchor persistence) and fix the discovered bug that
+  clicking a drafting text to select it committed a no-op revision.
+- Changed areas: apps/editor beginDraftingDrag commits only when the pointer
+  actually moved (click-without-move just selects, no revision); drafting.spec
+  adds: unedited Apply keeps revision, drag-create commits one revision and one
+  Ctrl+Z undoes it, drafting anchor survives save/recovery.
+- Validation: drafting E2E 9/9; full suite 274/274; editor build succeeds;
+  workspace typecheck clean; `git diff --check` clean.
+- Commit status: ready for
+  `fix(editor): no-op drafting click; add key-scenario E2E (P1 scenarios)`.
