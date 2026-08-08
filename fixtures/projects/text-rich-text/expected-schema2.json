@@ -1,0 +1,19 @@
+{
+  "$comment": "Authoritative post-migration (schema 1 -> 2) expectation for the text-rich-text fixture. WP-A1a migrateV1ToV2 must produce exactly this shape (modulo stable IDs that already exist). instance-label M_{1}/M_{2} and power-label V_{DD} are preserved as SchematicAnnotation; the plain-text \\it{gain} note migrates to a free DraftText whose content is a single text run. Per ADR 0010 the import shorthand is NOT expanded at migration time — the literal string is preserved as one text run and re-parsed on render. electricalTopologyHash is unchanged vs the schema-1 fixture.",
+  "annotations": [
+    { "id": "label-m1", "kind": "instance-label", "text": "M_{1}", "attachedObjectId": "M1" },
+    { "id": "label-m2", "kind": "instance-label", "text": "M_{2}", "attachedObjectId": "M2" },
+    { "id": "label-vdd", "kind": "power-label", "text": "V_{DD}" }
+  ],
+  "drafting": {
+    "objects": [
+      {
+        "id": "note-gain",
+        "kind": "text",
+        "content": { "runs": [{ "kind": "text", "value": "\\it{gain}" }] },
+        "anchor": { "kind": "free", "position": { "x": 270, "y": 250 } }
+      }
+    ],
+    "guides": []
+  }
+}

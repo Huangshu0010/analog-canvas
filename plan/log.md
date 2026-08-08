@@ -1529,3 +1529,42 @@ Editing System work.
   clean. The two red tests are owned by the concurrent worker.
 - Commit status: ready for
   `docs(specs): freeze text, annotation, and peripheral editing contracts (WP-A0)`.
+## 2026-08-08 - WP-A0.1: contract revision for six review findings
+
+- Target: re-freeze the WP-A0 contracts before any WP-A1 code, fixing six P0
+  gaps that would have caused rework in fallback, delete semantics, hash
+  identity, and consumer compatibility.
+- Changed areas: ADR 0010 revised to `accepted` (six fixes); schematic-model,
+  edit-engine, and agent-api specs updated to match; WP-A1 plan restructured
+  into A1a / A1b / integration-gate stages; three `expected-schema2.json`
+  post-migration expectation fixtures added; WP-A0 plan Guide-Snapshot wording
+  corrected to the ADR/API version.
+- The six frozen fixes:
+  1. `VisualAnchor` now persists `fallbackPosition` on `object`/`route`;
+     warning state is a derived diagnostic, not a persisted boolean; V1
+     `object` anchors target only Instance/Port/Junction (no drafting-to-
+     drafting cycles).
+  2. Anchor-target delete is non-cascading and non-rejecting: same transaction
+     writes `fallbackPosition`, anchor becomes unresolved; content locks do not
+     block fallback maintenance.
+  3. `electricalTopologyHash` replaces the over-broad `topologyHash` (current
+     impl covers the whole Snapshot minus diagnostics, per snapshot.ts:397);
+     it covers only instances/ports/Nets/hierarchy, so the migration invariant
+     actually holds.
+  4. WP-A1 staged A1a (v2 types + migration + resolver, constant stays 1) ->
+     A1b/WP-A2 (renderer/Snapshot consumption) -> integration gate (flip
+     constant, rename hash, remove old kinds); `main` never sits in a
+     "migrates but text/markers vanish" state.
+  5. RichText restated as four node kinds with `span` four styles, plus frozen
+     resource bounds (depth 4, 64 runs, 256 chars/run, non-empty fraction).
+  6. `voltage` migration is a deterministic rule: resolvable `attachedObjectId`
+     -> object-anchor route-marker/voltage; else free DraftText + migration
+     diagnostic; never guess Route/segmentIndex/t. Review signal is a migration
+     diagnostic, not a scattered field.
+- Plus P1: floating-symbol `decorative` validation is Edit-Engine-resolver-
+  enforced (not model Zod); WP-A0 fixtures get schema-2 expectation JSON.
+- Validation: documentation + deterministic-expectation fixtures only; no
+  runtime code changed. `npx tsc -p tsconfig.check.json --noEmit` clean and
+  `git diff --check` clean as a no-code-edit guard.
+- Commit status: ready for
+  `docs(specs): re-freeze text/annotation contracts with fallback, hash, and sequencing fixes (WP-A0.1)`.

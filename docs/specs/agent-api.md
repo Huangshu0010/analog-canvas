@@ -61,7 +61,7 @@ The response contains:
 ```typescript
 interface AgentSessionSnapshot {
   snapshotVersion: "1.0";
-  topologyHash: string; // lowercase SHA-256
+  electricalTopologyHash: string; // lowercase SHA-256, electrical facts only
   byteLength: number;
   project: {
     id: string;
@@ -105,7 +105,7 @@ RichText AST and resolved `VisualAnchor`. An Agent may request "create a
 Razavi-style current arrow attached to Route X at 60% of segment 2", but
 `transact` still accepts only the typed edit union — never raw paths, SVG,
 CSS, HTML, arbitrary LaTeX, or a whole Document. Drafting objects are
-non-electrical: they never affect `topologyHash`, Net membership, or
+non-electrical: they never affect `electricalTopologyHash`, Net membership, or
 flightline. Guides are editor aids: they are counted in the default Snapshot
 but their coordinates are returned only with an explicit
 `includeEditorGuides: true`, so editor noise is not mistaken for circuit
@@ -113,8 +113,12 @@ content.
 
 Instance-pin `netId` and Net `terminals` are bidirectional views of one validated
 Document and must agree. Arrays use deterministic ID/order rules defined by the
-generated schema tests. `topologyHash` covers the Snapshot content except
-`byteLength` and the hash itself.
+generated schema tests. `electricalTopologyHash` covers only electrical facts
+(instances and pin inventory, ports, Nets and their terminal/port membership,
+hierarchical instance-reference edges); it excludes placement/rotation/mirror,
+Route geometry, Junction placement, annotations, drafting objects, guides, and
+diagnostics. It is the migration-identity hash: a schema-1 Project's
+`electricalTopologyHash` equals its migrated schema-2 form's.
 
 Snapshot is derived and never persisted by default. It cannot be supplied to
 `transact`, save, import, or recovery.
@@ -205,7 +209,7 @@ filesystem route exists.
 - An Agent cannot claim human identity or bypass Edit Engine atomicity/locks.
 - Raw Project/Snapshot replacement and arbitrary filesystem access do not exist.
 - Drafting and guide edits are non-electrical; they never change
-  `topologyHash`, Net/Route/Junction membership, or flightline.
+  `electricalTopologyHash`, Net/Route/Junction membership, or flightline.
 - No request accepts SVG, CSS, HTML, arbitrary LaTeX, or a script/path payload;
   rich text is submitted only as the canonical RichText AST.
 - Transport and domain errors use deterministic typed codes.

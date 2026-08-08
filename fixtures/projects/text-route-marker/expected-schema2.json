@@ -1,0 +1,37 @@
+{
+  "$comment": "Authoritative post-migration (schema 1 -> 2) expectation for the text-route-marker fixture. current I_x migrates to route-marker/current preserving its routeAttachment; instance-label M_{1} and net-label V_{out} are preserved. The voltage V_x has no attachedObjectId, so per the deterministic voltage rule it migrates to a free DraftText (no Route/segmentIndex/t guessed) and emits a migration diagnostic. electricalTopologyHash unchanged.",
+  "annotations": [
+    {
+      "id": "current-ix",
+      "kind": "route-marker",
+      "markerKind": "current",
+      "text": "I_x",
+      "anchor": {
+        "kind": "route",
+        "routeId": "route-output",
+        "segmentIndex": 0,
+        "t": 0.56,
+        "normalOffset": -16,
+        "direction": "forward",
+        "orientation": "follow",
+        "fallbackPosition": { "x": 260, "y": 144 }
+      }
+    },
+    { "id": "label-m1", "kind": "instance-label", "text": "M_{1}", "attachedObjectId": "M1" },
+    { "id": "label-vout", "kind": "net-label", "text": "V_{out}", "attachedObjectId": "net-output" }
+  ],
+  "drafting": {
+    "objects": [
+      {
+        "id": "voltage-vx",
+        "kind": "text",
+        "content": { "runs": [{ "kind": "text", "value": "V_x" }] },
+        "anchor": { "kind": "free", "position": { "x": 332, "y": 150 } },
+        "migrationDiagnostics": [
+          { "code": "voltage-no-attachment", "sourceAnnotationId": "voltage-vx", "message": "Free-positioned voltage marker migrated to free text; review its placement." }
+        ]
+      }
+    ],
+    "guides": []
+  }
+}

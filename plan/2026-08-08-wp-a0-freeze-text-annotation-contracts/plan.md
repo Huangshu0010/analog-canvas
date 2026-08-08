@@ -18,8 +18,9 @@ Frozen decisions (per user, adopting roadmap defaults):
    (`instance-label | net-label | power-label | route-marker`); `plain-text`
    and `figure-caption` migrate into the new `drafting` container per the
    roadmap migration table.
-3. Guides persist for collaboration but are always `export: false` and absent
-   from the default Snapshot (explicit `includeEditorGuides` only).
+3. Guides persist for collaboration but are always `export: false`. The
+   default Snapshot returns guide count and per-guide `visible`/`locked` state;
+   guide coordinates require an explicit `includeEditorGuides: true` option.
 4. `floating-symbol.symbolId` may only reference Symbol Catalog entries marked
    `decorative: true`; their definitions must contain no terminal.
 5. Schema major version bump (`schemaVersion` 1 -> 2) with a versioned,

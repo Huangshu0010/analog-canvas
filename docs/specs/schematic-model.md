@@ -61,7 +61,7 @@ interface DraftingLayer {
 ```
 
 RichText is a structured document, not an executable formula. V1 supports
-exactly six nodes:
+exactly four `RichTextRun` node kinds; `span` has four styles:
 
 ```typescript
 type RichTextRun =
@@ -72,28 +72,48 @@ type RichTextRun =
   | { kind: "fraction"; numerator: RichTextDocument; denominator: RichTextDocument };
 ```
 
-A restricted import shorthand (`M_{1}`, `V_{DD}`, `\it{...}`, `\frac{a}{b}`) is
-parsed to the AST on submit and is never persisted; unparseable shorthand is
-stored as plain text with a visible prompt and never dropped. Old single-string
-annotations migrate to a single `text` run.
+Resource bounds are part of the contract: maximum nesting depth 4, maximum 64
+runs per document, maximum 256 characters per `text` run, and a
+`fraction` numerator/denominator must each be non-empty. A restricted import
+shorthand (`M_{1}`, `V_{DD}`, `\it{...}`, `\frac{a}{b}`) is parsed to the AST
+on submit and is never persisted; unparseable shorthand is stored as plain text
+with a visible prompt and never dropped. Old single-string annotations migrate
+to a single `text` run.
 
-Every attachable drafting object and route marker shares one `VisualAnchor`:
+Every attachable drafting object and route marker shares one `VisualAnchor`.
+The `object` and `route` variants persist a `fallbackPosition` (last-known
+resolved point):
 
 ```typescript
 type VisualAnchor =
   | { kind: "free"; position: Point }
-  | { kind: "object"; objectId: StableId; localOffset: Point }
+  | { kind: "object"; objectId: StableId; localOffset: Point;
+      fallbackPosition: Point }
   | { kind: "route"; routeId: StableId; segmentIndex: number; t: number;
       normalOffset: number; direction: "forward" | "reverse";
-      orientation: "follow" | "horizontal" };
+      orientation: "follow" | "horizontal"; fallbackPosition: Point };
 ```
 
 This generalizes the existing `RouteAnnotationAttachment`. Anchor resolution
-reads derived Route geometry only and never mutates a Route or Net. An
+reads derived Route/object geometry only and never mutates a Route or Net. An
 unresolved anchor (deleted Route/object, removed segment, non-orthogonal
-segment) preserves a last-known `fallbackPosition`, renders as a visible
-warning, and offers re-attach / convert-to-free / delete. It never silently
-re-attaches to another conductor.
+segment) renders at `fallbackPosition` as a visible warning, and offers
+re-attach / convert-to-free / delete. "Warning state" is a **derived
+diagnostic** computed by the resolver, not a persisted boolean. It never
+silently re-attaches to another conductor.
+
+In V1, an `object` anchor may target only an Instance, Port, or Junction. A
+DraftingObject may not anchor to another DraftingObject (no drafting-to-drafting
+attachment, no cycles); a Route target uses the `route` variant.
+
+Anchor-target deletion is non-cascading and non-rejecting: deleting a Route or
+an Instance/Port/Junction that an anchor targets does not delete the attached
+DraftingObject/route-marker and does not reject the delete. The same
+transaction writes the object's last resolved position into `fallbackPosition`,
+then the anchor becomes unresolved. Content locks do not block this fallback
+maintenance (`locked: true` objects still receive `fallbackPosition` updates
+and unresolved diagnostics); deleting the target itself remains governed by the
+target's own lock.
 
 ```typescript
 type DraftingObject =
@@ -144,9 +164,15 @@ derived from terminals, ports, or Junction objects.
   modify a Net, Route, Junction, flightline, Pin, or SPICE instance.
 - A `route-marker` or drafting `VisualAnchor` of kind `route`/`object` references
   an existing Route/object; an unresolved anchor keeps `fallbackPosition` and a
-  warning state rather than silently re-attaching.
+  resolver-emitted warning diagnostic rather than silently re-attaching. An
+  `object` anchor targets only an Instance, Port, or Junction; never another
+  DraftingObject.
+- Deleting an anchor target neither cascades to the attached object nor rejects
+  the delete; the same transaction updates `fallbackPosition` and the anchor
+  becomes unresolved. Content locks do not block fallback maintenance.
 - A `DraftFloatingSymbol.symbolId` references only a `decorative: true` catalog
-  entry whose definition has no terminal.
+  entry whose definition has no terminal; this is enforced by the Edit Engine
+  via the Symbol Resolver, not by the model Zod schema.
 - A Guide is always `export: false`; it never appears in formal SVG/PNG/PDF.
 
 ## Operations and state transitions
@@ -182,12 +208,17 @@ major version `1` -> `2`. The migration is idempotent, applied on read, narrows
 `annotations` to SchematicAnnotation, and moves `plain-text`/`figure-caption`
 into `drafting.objects` as `DraftText` (string becomes a single `text`
 RichText run; caption typography token and alignment are preserved). `current`
-migrates to `route-marker/current` with its Route attachment preserved;
-`voltage` becomes `route-marker/voltage` when a reliable Route/object
-attachment exists, otherwise free `DraftText` with a review prompt. The
-migration does not change Net/Route/Junction/instance and does not rewrite
-original SPICE; the electrical topology hash is unchanged. Write-back never
-regenerates the old `plain-text` shape.
+migrates to `route-marker/current` with its Route attachment preserved.
+`voltage` migration is a deterministic rule: if it has a resolvable
+`attachedObjectId` it becomes `route-marker/voltage` with an `object` anchor;
+otherwise it becomes free `DraftText` preserving position/offset/rotation/
+alignment plus a migration diagnostic. The migration never guesses a Route,
+`segmentIndex`, or `t` from proximity. The migration does not change
+Net/Route/Junction/instance and does not rewrite original SPICE. Migration
+identity is measured with `electricalTopologyHash` (instances/ports/Nets/
+hierarchy only; excludes placement, Route geometry, Junction placement,
+annotations, drafting, guides), which is unchanged across migration. Write-back
+never regenerates the old `plain-text` shape.
 
 ## Deterministic validation
 

@@ -68,8 +68,18 @@ floating-symbol) with the shared `VisualAnchor`. `set_guide` / `remove_guide`
 manage `Guide` records. None of these edits creates or modifies a Net, Route,
 Junction, flightline, Pin, or SPICE instance. A `transact` dry run returns:
 resolved anchors, invalid/unresolved attachments, possible overlaps with
-electrical objects, and the actual changed IDs. Locked drafting objects and
-guides reject replacement or removal, matching the existing lock discipline.
+electrical objects, and the actual changed IDs.
+
+Deleting an anchor target is non-cascading and non-rejecting: the same
+transaction that removes a Route or Instance/Port/Junction updates each
+attached object's `fallbackPosition` and marks its anchor unresolved, but does
+not delete the attached object and does not reject the delete. Content locks do
+not block this fallback maintenance. `upsert_drafting_object` for a
+floating-symbol validates `symbolId` against the Symbol Resolver and rejects a
+non-`decorative` entry or a `decorative` entry whose definition contains a
+terminal, mirroring `add_instance` Symbol validation. Locked drafting objects
+and guides reject user replacement or removal, matching the existing lock
+discipline.
 
 ## Invariants
 
