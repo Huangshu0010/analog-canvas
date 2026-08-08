@@ -10,6 +10,14 @@ describe("CircuitProject schema", () => {
     expect(CircuitProjectJsonSchema).toMatchObject({ type: "object" });
   });
 
+  it("uses Razavi textbook presentation for a new Project", () => {
+    const project = createEmptyProject("project-style", "Style");
+
+    expect(project.documents[0]!.presentation.styleProfileId).toBe(
+      "razavi-textbook-v1",
+    );
+  });
+
   it("rejects a missing top Document", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>

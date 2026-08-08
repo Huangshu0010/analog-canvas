@@ -1,19 +1,49 @@
 import { createEmptyDocument } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
+import { DocumentHistory } from "./history.js";
 import { executeTransaction } from "./transaction.js";
 
-function transaction(documentId: string, edits: unknown[]) {
+function transaction(
+  documentId: string,
+  edits: unknown[],
+  expectedRevision = 0,
+) {
   return {
     transactionId: "presentation-edit",
     documentId,
-    expectedRevision: 0,
+    expectedRevision,
     actor: { kind: "human", id: "reviewer" },
     edits,
   };
 }
 
 describe("presentation and layout edits", () => {
+  it("changes the persisted style through undoable document history", () => {
+    const document = createEmptyDocument("doc", "Presentation");
+    document.presentation.styleProfileId = "textbook-monochrome-v1";
+    const history = new DocumentHistory(document);
+
+    const applied = history.transact(
+      transaction("doc", [
+        {
+          kind: "set_presentation_style",
+          styleProfileId: "razavi-textbook-v1",
+        },
+      ]),
+    );
+    expect(applied).toMatchObject({ ok: true, applied: true });
+    expect(history.document.presentation.styleProfileId).toBe(
+      "razavi-textbook-v1",
+    );
+
+    const undone = history.transact(transaction("doc", [{ kind: "undo" }], 1));
+    expect(undone).toMatchObject({ ok: true, applied: true });
+    expect(history.document.presentation.styleProfileId).toBe(
+      "textbook-monochrome-v1",
+    );
+  });
+
   it("moves attached labels with an aligned instance atomically", () => {
     const document = createEmptyDocument("doc", "Presentation");
     document.instances = ["M1", "M2"].map((id, index) => ({

@@ -20,7 +20,7 @@ export function createEmptyDocument(
     junctions: [],
     annotations: [],
     presentation: {
-      styleProfileId: "textbook-monochrome-v1",
+      styleProfileId: "razavi-textbook-v1",
       grid: 10,
       compactness: "normal",
     },

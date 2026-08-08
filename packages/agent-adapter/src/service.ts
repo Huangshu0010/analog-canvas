@@ -461,6 +461,7 @@ function editCategory(
       return "connectivity";
     case "upsert_annotation":
     case "remove_annotation":
+    case "set_presentation_style":
     case "set_layout_group":
     case "remove_layout_group":
     case "set_layout_constraint":

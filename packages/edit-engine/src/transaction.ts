@@ -170,6 +170,10 @@ export const RemoveAnnotationEditSchema = z.strictObject({
   kind: z.literal("remove_annotation"),
   annotationId: StableIdSchema,
 });
+export const SetPresentationStyleEditSchema = z.strictObject({
+  kind: z.literal("set_presentation_style"),
+  styleProfileId: StableIdSchema,
+});
 export const SetLayoutGroupEditSchema = z.strictObject({
   kind: z.literal("set_layout_group"),
   group: LayoutGroupSchema,
@@ -218,6 +222,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   DisconnectEndpointEditSchema,
   UpsertAnnotationEditSchema,
   RemoveAnnotationEditSchema,
+  SetPresentationStyleEditSchema,
   SetLayoutGroupEditSchema,
   RemoveLayoutGroupEditSchema,
   SetLayoutConstraintEditSchema,
@@ -1649,6 +1654,11 @@ export function executeTransaction(
         }
         draft.annotations.splice(index, 1);
         changedObjectIds.add(annotation.id);
+        break;
+      }
+      case "set_presentation_style": {
+        draft.presentation.styleProfileId = edit.styleProfileId;
+        changedObjectIds.add(draft.id);
         break;
       }
       case "set_layout_group": {
