@@ -164,7 +164,13 @@ function resolveText(
   const follow =
     object.anchor.kind === "route" && object.anchor.orientation === "follow";
   const rotation = composeRotation(resolved.rotation, object.rotation, follow);
-  const bounds = textBounds(position, object.alignment, rotation, object.content);
+  const bounds = textBounds(
+    position,
+    object.alignment,
+    rotation,
+    object.content,
+    typographyFontSize(object.typographyToken),
+  );
   return {
     kind: "text" as const,
     position,
@@ -172,6 +178,14 @@ function resolveText(
     bounds,
     diagnostics,
   };
+}
+
+// P1: per-token font sizes for bounds estimation, mirroring the Razavi profile
+// (caption 14, body/label 16). Derived cannot import the renderer profile.
+function typographyFontSize(
+  token: "caption" | "body" | "label" | undefined,
+): number {
+  return token === "caption" ? 14 : 16;
 }
 
 function resolveArrow(
@@ -261,7 +275,13 @@ function resolveCallout(
   const follow =
     object.anchor.kind === "route" && object.anchor.orientation === "follow";
   const rotation = composeRotation(anchor.anchor.rotation, object.rotation, follow);
-  const textBox = textBounds(textPos, object.alignment, rotation, object.content);
+  const textBox = textBounds(
+    textPos,
+    object.alignment,
+    rotation,
+    object.content,
+    typographyFontSize(object.typographyToken),
+  );
   const leaderBox = paddedBounds(
     unionBounds([textPos, targetPoint]),
     STROKE_PADDING,
@@ -321,17 +341,19 @@ function resolveFloatingSymbol(
     height: 24,
   };
   if (viewBox) {
-    const mirrorX = object.transform.mirror === "x" ? -1 : 1;
-    const w = viewBox.width;
-    const h = viewBox.height;
-    const x = position.x - (w / 2) * mirrorX;
-    const y = position.y - h / 2;
-    bounds = {
-      x: Math.round(x),
-      y: Math.round(y),
-      width: Math.round(w),
-      height: Math.round(h),
-    };
+    // P1: apply the same transform the SVG renderer uses
+    // (translate(position) rotate(rotation) scale(-1 1) when mirror=x) to all
+    // four viewBox corners and take the AABB, so the bounds match the rendered
+    // symbol for any rotation/mirror combination.
+    const corners: Point[] = [
+      { x: viewBox.x, y: viewBox.y },
+      { x: viewBox.x + viewBox.width, y: viewBox.y },
+      { x: viewBox.x, y: viewBox.y + viewBox.height },
+      { x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
+    ].map((corner) =>
+      transformSymbolCorner(corner, position, rotation, object.transform.mirror),
+    );
+    bounds = unionBounds(corners);
   }
   return {
     kind: "floating-symbol" as const,
@@ -339,6 +361,25 @@ function resolveFloatingSymbol(
     rotation,
     bounds,
     diagnostics,
+  };
+}
+
+// Mirrors the SVG transform order in render.ts: translate(position), then
+// rotate(rotation) about the origin, then scale(-1 1) for mirror-x.
+function transformSymbolCorner(
+  corner: Point,
+  position: Point,
+  rotation: 0 | 90 | 180 | 270,
+  mirror: "none" | "x",
+): Point {
+  const rad = (rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const rx = mirror === "x" ? -corner.x : corner.x;
+  const ry = corner.y;
+  return {
+    x: position.x + rx * cos - ry * sin,
+    y: position.y + rx * sin + ry * cos,
   };
 }
 
@@ -374,23 +415,27 @@ function unionRects(rects: Rect[]): Rect {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
-// Approximate rich-text layout bounds: per line, count text runs; the
-// alignment anchors the box horizontally.
+// P1: rich-text layout bounds approximated from the document structure and a
+// per-token font size (the caller passes the size; derived cannot depend on the
+// renderer's style profile). Line breaks split the text into lines, so
+// multi-line content gets its full height, and nested spans/fractions are
+// flattened recursively rather than as a fixed "XX".
 function textBounds(
   position: Point,
   alignment: "start" | "middle" | "end",
   rotation: 0 | 90 | 180 | 270,
   content: RichTextDocument,
+  fontSize: number,
 ): Rect {
-  const width = estimateTextWidth(content) + TEXT_PADDING_X * 2;
-  const height = TEXT_PADDING_Y * 2 + 16;
+  const { width, lineCount } = measureRichText(content, fontSize);
+  const height = lineCount * fontSize * 1.35 + TEXT_PADDING_Y * 2;
   const left =
     alignment === "start"
       ? position.x - TEXT_PADDING_X
       : alignment === "end"
         ? position.x - width + TEXT_PADDING_X
         : position.x - width / 2;
-  const top = position.y - TEXT_PADDING_Y - 12;
+  const top = position.y - height / 2;
   const box: Rect = { x: left, y: top, width, height };
   if (rotation === 90 || rotation === 270) {
     return {
@@ -403,28 +448,39 @@ function textBounds(
   return box;
 }
 
-function estimateTextWidth(content: RichTextDocument): number {
-  const text = content.runs
-    .map((run) => {
-      if (typeof run === "object" && run !== null) {
-        const node = run as {
-          kind?: string;
-          value?: string;
-          children?: unknown[];
-        };
-        if (node.kind === "text") return node.value ?? "";
-        if (node.kind === "fraction") return "XX";
-        if (node.children)
-          return node.children
-            .map((child) => {
-              const c = child as { value?: string };
-              return c.value ?? "";
-            })
-            .join("");
-      }
-      return "";
-    })
-    .join("");
-  // 0.6em average advance approximates the renderer's 0.6em-per-char estimate.
-  return text.length * 9.6;
+// Approximate the rendered width (0.6em advance per character, sub/superscripts
+// at reduced width) and the number of lines introduced by line-break runs.
+function measureRichText(
+  content: RichTextDocument,
+  fontSize: number,
+): { width: number; lineCount: number } {
+  let width = 0;
+  let lineCount = 1;
+  const advance = fontSize * 0.6;
+  for (const run of content.runs) {
+    if (typeof run !== "object" || run === null) continue;
+    const node = run as {
+      kind?: string;
+      value?: string;
+      children?: unknown[];
+      numerator?: { runs: unknown[] };
+      denominator?: { runs: unknown[] };
+    };
+    if (node.kind === "text") {
+      width += (node.value ?? "").length * advance;
+    } else if (node.kind === "line-break") {
+      lineCount += 1;
+    } else if (node.kind === "fraction") {
+      // A fraction occupies roughly three characters of horizontal space.
+      width += advance * 3;
+    } else if (node.kind === "span" && node.children) {
+      const child = measureRichText(
+        { runs: node.children as RichTextDocument["runs"] },
+        fontSize * 0.7,
+      );
+      width += child.width;
+      lineCount += child.lineCount - 1;
+    }
+  }
+  return { width, lineCount };
 }

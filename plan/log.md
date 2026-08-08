@@ -2179,3 +2179,22 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): freeze composed rotation as the single geometry truth (P1 rotation)`.
+## 2026-08-08 - P1: accurate floating-symbol and multi-line text bounds
+
+- Target: fix the review P1 that floating-symbol bounds ignored viewBox x/y,
+  put mirror-x on the wrong side, did not swap width/height on 90/270, and
+  never applied the SVG transform; and that text bounds used a fixed height and
+  did not read typographyToken or count lines.
+- Changed areas: derived drafting-geometry.ts transformSymbolCorner applies the
+  exact SVG transform (translate(position) rotate(rotation) scale(-1 1) for
+  mirror-x) to all four viewBox corners and takes the AABB; textBounds now
+  takes a per-token font size (caption 14, body/label 16), measures lines from
+  line-break runs, and flattens nested spans/fractions recursively instead of a
+  fixed "XX". Renderer and Snapshot consume the same geometry.
+- Tests: drafting-geometry adds floating-symbol rotate/mirror AABB and
+  multi-line text height/width cases.
+- Validation: full suite 273/273; goldens regenerated (text bounds changed the
+  export viewBox); workspace typecheck clean; all golden --check pass;
+  `git diff --check` clean.
+- Commit status: ready for
+  `fix(derived): accurate floating-symbol and multi-line text bounds (P1 bounds)`.
