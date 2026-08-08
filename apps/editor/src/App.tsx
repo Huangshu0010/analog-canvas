@@ -26,6 +26,7 @@ import {
 import type {
   Annotation,
   CircuitProject,
+  DraftingObject,
   Point,
   Rect,
   RouteAnnotationAttachment,
@@ -1891,6 +1892,82 @@ export function App({ project: initialProject }: AppProps) {
     setStatus("Loaded Phase 5 visual demo");
   }
 
+  // WP-R5: single entry point for selecting a drafting object. It clears every
+  // other selection kind and, for a drafting text, initializes the edit draft
+  // from the reversible markup serialization of the AST.
+  function selectDraftingObject(id: string): void {
+    setSelectedDraftingId(id);
+    setSelectedAnnotationId(null);
+    setSelectedRouteId(null);
+    setSelectedIds([]);
+    const object = document.drafting?.objects.find(
+      (candidate) => candidate.id === id,
+    );
+    if (object?.kind === "text") {
+      setDraftingTextDraft(
+        serializeMarkup(
+          object.content as unknown as Parameters<typeof serializeMarkup>[0],
+        ),
+      );
+    }
+  }
+
+  // WP-R5: drag a drafting object by its free anchor. Object/route anchors move
+  // with their target by construction; only a free anchor's position changes,
+  // and the persisted update goes through a typed edit.
+  function beginDraftingDrag(
+    event: ReactPointerEvent<SVGRectElement>,
+    object: Extract<DraftingObject, { kind: "text" }>,
+  ): void {
+    if (event.button !== 0 || object.locked) return;
+    if (object.anchor.kind !== "free") {
+      selectDraftingObject(object.id);
+      return;
+    }
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const start = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+    );
+    const original = { ...object.anchor.position };
+    selectDraftingObject(object.id);
+    const move = (moveEvent: PointerEvent): void => {
+      const point = pointFromClient(
+        moveEvent.clientX,
+        moveEvent.clientY,
+        event.currentTarget.ownerSVGElement!,
+      );
+      const dx = point.x - start.x;
+      const dy = point.y - start.y;
+      const candidate = {
+        x: Math.round(original.x + dx),
+        y: Math.round(original.y + dy),
+      };
+      const current = document.drafting?.objects.find(
+        (item) => item.id === object.id,
+      );
+      if (current?.kind === "text" && current.anchor.kind === "free") {
+        transact([
+          {
+            kind: "upsert_drafting_object",
+            object: {
+              ...current,
+              anchor: { kind: "free", position: candidate },
+            },
+          },
+        ]);
+      }
+    };
+    const up = (): void => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
+
   function addPlainText(): void {
     transactionCounter.current += 1;
     const id = `note-${transactionCounter.current}`;
@@ -1914,9 +1991,7 @@ export function App({ project: initialProject }: AppProps) {
       },
     ]);
     if (result.ok) {
-      setSelectedAnnotationId(id);
-      setSelectedIds([]);
-      setSelectedRouteId(null);
+      selectDraftingObject(id);
       setStatus(`Added drafting text ${id}`);
     }
   }
@@ -2681,6 +2756,23 @@ export function App({ project: initialProject }: AppProps) {
     }
     if (selectedAnnotationId) {
       deleteSelectedAnnotation();
+      return;
+    }
+    if (selectedDraftingId) {
+      const object = document.drafting?.objects.find(
+        (candidate) => candidate.id === selectedDraftingId,
+      );
+      if (object?.locked) {
+        setStatus("Drafting object is locked; unlock it before deleting");
+        return;
+      }
+      const result = transact([
+        { kind: "remove_drafting_object", objectId: selectedDraftingId },
+      ]);
+      if (result.ok) {
+        setSelectedDraftingId(null);
+        setStatus(`Deleted drafting object ${selectedDraftingId}`);
+      }
       return;
     }
     if (selectedRouteId) {
@@ -3829,23 +3921,9 @@ export function App({ project: initialProject }: AppProps) {
                     y={position.y - fontSize * 1.05}
                     width={width}
                     height={height}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedAnnotationId(null);
-                      setSelectedRouteId(null);
-                      setSelectedDraftingId(object.id);
-                      // WP-R3: editing initializes from the reversible markup
-                      // serialization of the AST, never from the lossy flat
-                      // projection, so subscripts/fractions survive an
-                      // unedited Apply.
-                      setDraftingTextDraft(
-                        serializeMarkup(
-                          object.content as unknown as Parameters<
-                            typeof serializeMarkup
-                          >[0],
-                        ),
-                      );
-                    }}
+                    onPointerDown={(event) =>
+                      beginDraftingDrag(event, object)
+                    }
                   />
                 );
               })}

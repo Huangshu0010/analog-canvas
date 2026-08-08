@@ -2036,3 +2036,19 @@ Editing System work.
   typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(agent-api): expose resolved drafting geometry and includeEditorGuides (WP-R4)`.
+## 2026-08-08 - WP-R5 (part 1): drafting selection, drag, and delete
+
+- Target: fix the drafting selection bug called out in review and give drafting
+  objects real selection/drag/delete interactions.
+- Changed areas: apps/editor adds selectDraftingObject(id) as the single
+  selection entry (clears annotation/route/instance selection, initializes the
+  edit draft from serializeMarkup for text); addPlainText now calls it instead
+  of the wrong setSelectedAnnotationId; beginDraftingDrag moves a free-anchored
+  text via upsert_drafting_object (locked objects are not draggable;
+  object/route anchors follow their target by construction and only select);
+  deleteSelection removes the selected drafting object via remove_drafting_object
+  (rejecting locked objects).
+- Validation: full suite 267/267; editor build succeeds; workspace typecheck
+  clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(editor): drafting selection, drag, and delete (WP-R5 part 1)`.
