@@ -17,9 +17,26 @@ function documentWithRoute(): SchematicDocument {
     name: "Doc",
     revision: 0,
     sourceStatus: "in-sync",
-    ports: [{ id: "port-out", name: "OUT", direction: "output", position: { x: 200, y: 100 } }],
+    ports: [
+      {
+        id: "port-out",
+        name: "OUT",
+        direction: "output",
+        position: { x: 200, y: 100 },
+      },
+    ],
     instances: [
-      { id: "M1", symbolId: "nmos", symbolVariantId: "v", properties: {}, placement: { position: { x: 100, y: 100 }, rotation: 0, mirror: "none" } },
+      {
+        id: "M1",
+        symbolId: "nmos",
+        symbolVariantId: "v",
+        properties: {},
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+      },
     ],
     nets: [{ id: "n1", scope: "local", terminals: [], ports: ["port-out"] }],
     routes: [
@@ -34,7 +51,11 @@ function documentWithRoute(): SchematicDocument {
     ],
     junctions: [{ id: "j1", netId: "n1", position: { x: 100, y: 100 } }],
     annotations: [],
-    presentation: { styleProfileId: "razavi-textbook-v1", grid: 10, compactness: "normal" },
+    presentation: {
+      styleProfileId: "razavi-textbook-v1",
+      grid: 10,
+      compactness: "normal",
+    },
     layoutGroups: [],
     constraints: [],
     drafting: { objects: [], guides: [] },
@@ -44,8 +65,16 @@ function documentWithRoute(): SchematicDocument {
 describe("resolveVisualAnchor", () => {
   it("resolves a free anchor to its own position", () => {
     const anchor: VisualAnchor = { kind: "free", position: { x: 50, y: 60 } };
-    const resolved = resolveVisualAnchor(documentWithRoute(), stubResolver, anchor);
-    expect(resolved).toEqual({ position: { x: 50, y: 60 }, rotation: 0, resolved: true });
+    const resolved = resolveVisualAnchor(
+      documentWithRoute(),
+      stubResolver,
+      anchor,
+    );
+    expect(resolved).toEqual({
+      position: { x: 50, y: 60 },
+      rotation: 0,
+      resolved: true,
+    });
   });
 
   it("resolves an object anchor to the target placement plus localOffset", () => {
@@ -55,7 +84,11 @@ describe("resolveVisualAnchor", () => {
       localOffset: { x: 10, y: 0 },
       fallbackPosition: { x: 0, y: 0 },
     };
-    const resolved = resolveVisualAnchor(documentWithRoute(), stubResolver, anchor);
+    const resolved = resolveVisualAnchor(
+      documentWithRoute(),
+      stubResolver,
+      anchor,
+    );
     expect(resolved.resolved).toBe(true);
     expect(resolved.position).toEqual({ x: 110, y: 100 });
   });
@@ -67,7 +100,11 @@ describe("resolveVisualAnchor", () => {
       localOffset: { x: 0, y: 0 },
       fallbackPosition: { x: 7, y: 8 },
     };
-    const resolved = resolveVisualAnchor(documentWithRoute(), stubResolver, anchor);
+    const resolved = resolveVisualAnchor(
+      documentWithRoute(),
+      stubResolver,
+      anchor,
+    );
     expect(resolved.resolved).toBe(false);
     expect(resolved.position).toEqual({ x: 7, y: 8 });
     expect(resolved.diagnostic?.code).toBe("anchor-target-missing");
@@ -84,7 +121,11 @@ describe("resolveVisualAnchor", () => {
       orientation: "follow",
       fallbackPosition: { x: 0, y: 0 },
     };
-    const resolved = resolveVisualAnchor(documentWithRoute(), stubResolver, anchor);
+    const resolved = resolveVisualAnchor(
+      documentWithRoute(),
+      stubResolver,
+      anchor,
+    );
     expect(resolved.resolved).toBe(true);
     // Midpoint of (100,100)-(200,100), normalOffset 0.
     expect(resolved.position).toEqual({ x: 150, y: 100 });
@@ -101,7 +142,11 @@ describe("resolveVisualAnchor", () => {
       orientation: "follow",
       fallbackPosition: { x: 9, y: 9 },
     };
-    const resolved = resolveVisualAnchor(documentWithRoute(), stubResolver, anchor);
+    const resolved = resolveVisualAnchor(
+      documentWithRoute(),
+      stubResolver,
+      anchor,
+    );
     expect(resolved.resolved).toBe(false);
     expect(resolved.position).toEqual({ x: 9, y: 9 });
     expect(resolved.diagnostic?.code).toBe("anchor-target-missing");

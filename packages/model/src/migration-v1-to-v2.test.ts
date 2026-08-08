@@ -25,7 +25,8 @@ function baseAnnotation(
 
 function topDocument(record: Record<string, unknown>): Record<string, unknown> {
   const documents = (record.documents as Array<Record<string, unknown>>).filter(
-    (document): document is Record<string, unknown> => typeof document === "object",
+    (document): document is Record<string, unknown> =>
+      typeof document === "object",
   );
   return documents[0]!;
 }
@@ -54,11 +55,24 @@ describe("migrateV1ToV2", () => {
 
   it("preserves instance/net/power labels as SchematicAnnotation", () => {
     const annotations = [
-      baseAnnotation({ id: "l1", kind: "instance-label", text: "M_{1}", attachedObjectId: "M1" }),
-      baseAnnotation({ id: "l2", kind: "net-label", text: "V_b", attachedObjectId: "n1" }),
+      baseAnnotation({
+        id: "l1",
+        kind: "instance-label",
+        text: "M_{1}",
+        attachedObjectId: "M1",
+      }),
+      baseAnnotation({
+        id: "l2",
+        kind: "net-label",
+        text: "V_b",
+        attachedObjectId: "n1",
+      }),
       baseAnnotation({ id: "l3", kind: "power-label", text: "V_{DD}" }),
     ];
-    const result = migrateV1ToV2({ schemaVersion: 1, documents: [{ id: "doc", annotations }] });
+    const result = migrateV1ToV2({
+      schemaVersion: 1,
+      documents: [{ id: "doc", annotations }],
+    });
     const document = topDocument(result.project);
     expect(document.annotations).toEqual(annotations);
   });
@@ -76,8 +90,13 @@ describe("migrateV1ToV2", () => {
         normalOffset: -16,
       },
     });
-    const result = migrateV1ToV2({ schemaVersion: 1, documents: [{ id: "doc", annotations: [annotation] }] });
-    const annotationOut = (topDocument(result.project).annotations as Array<Record<string, unknown>>)[0]!;
+    const result = migrateV1ToV2({
+      schemaVersion: 1,
+      documents: [{ id: "doc", annotations: [annotation] }],
+    });
+    const annotationOut = (
+      topDocument(result.project).annotations as Array<Record<string, unknown>>
+    )[0]!;
     expect(annotationOut.kind).toBe("route-marker");
     expect(annotationOut.markerKind).toBe("current");
     expect(annotationOut.anchor).toMatchObject({
@@ -100,9 +119,14 @@ describe("migrateV1ToV2", () => {
       attachedObjectId: "M1",
       offset: { x: 8, y: 0 },
     });
-    const result = migrateV1ToV2({ schemaVersion: 1, documents: [{ id: "doc", annotations: [annotation] }] });
+    const result = migrateV1ToV2({
+      schemaVersion: 1,
+      documents: [{ id: "doc", annotations: [annotation] }],
+    });
     expect(result.diagnostics).toEqual([]);
-    const annotationOut = (topDocument(result.project).annotations as Array<Record<string, unknown>>)[0]!;
+    const annotationOut = (
+      topDocument(result.project).annotations as Array<Record<string, unknown>>
+    )[0]!;
     expect(annotationOut.kind).toBe("route-marker");
     expect(annotationOut.markerKind).toBe("voltage");
     expect(annotationOut.anchor).toMatchObject({
@@ -121,17 +145,22 @@ describe("migrateV1ToV2", () => {
       position: { x: 320, y: 160 },
       alignment: "middle",
     });
-    const result = migrateV1ToV2({ schemaVersion: 1, documents: [{ id: "doc", annotations: [annotation] }] });
+    const result = migrateV1ToV2({
+      schemaVersion: 1,
+      documents: [{ id: "doc", annotations: [annotation] }],
+    });
     expect(result.diagnostics).toEqual([
       {
         code: "voltage-no-attachment",
         sourceAnnotationId: "vx",
-        message: "Free-positioned voltage marker migrated to free text; review its placement.",
+        message:
+          "Free-positioned voltage marker migrated to free text; review its placement.",
       },
     ]);
     const document = topDocument(result.project);
     expect(document.annotations).toEqual([]);
-    const draft = (document.drafting as Record<string, unknown>).objects as Array<Record<string, unknown>>;
+    const draft = (document.drafting as Record<string, unknown>)
+      .objects as Array<Record<string, unknown>>;
     expect(draft[0]).toMatchObject({
       id: "vx",
       kind: "text",
@@ -146,12 +175,21 @@ describe("migrateV1ToV2", () => {
   it("migrates plain-text and figure-caption to drafting text, preserving the caption token", () => {
     const annotations = [
       baseAnnotation({ id: "n1", kind: "plain-text", text: "feedback" }),
-      baseAnnotation({ id: "c1", kind: "figure-caption", text: "Fig. 1", alignment: "middle" }),
+      baseAnnotation({
+        id: "c1",
+        kind: "figure-caption",
+        text: "Fig. 1",
+        alignment: "middle",
+      }),
     ];
-    const result = migrateV1ToV2({ schemaVersion: 1, documents: [{ id: "doc", annotations }] });
+    const result = migrateV1ToV2({
+      schemaVersion: 1,
+      documents: [{ id: "doc", annotations }],
+    });
     const document = topDocument(result.project);
     expect(document.annotations).toEqual([]);
-    const objects = (document.drafting as Record<string, unknown>).objects as Array<Record<string, unknown>>;
+    const objects = (document.drafting as Record<string, unknown>)
+      .objects as Array<Record<string, unknown>>;
     expect(objects).toHaveLength(2);
     expect(objects[0]).toMatchObject({
       id: "n1",
@@ -176,7 +214,18 @@ describe("migrateV1ToV2", () => {
           id: "doc",
           annotations: [
             baseAnnotation({ id: "n1", kind: "plain-text", text: "note" }),
-            baseAnnotation({ id: "ix", kind: "current", text: "I_x", routeAttachment: { routeId: "r1", segmentIndex: 0, t: 0.5, direction: "forward", normalOffset: -1 } }),
+            baseAnnotation({
+              id: "ix",
+              kind: "current",
+              text: "I_x",
+              routeAttachment: {
+                routeId: "r1",
+                segmentIndex: 0,
+                t: 0.5,
+                direction: "forward",
+                normalOffset: -1,
+              },
+            }),
             baseAnnotation({ id: "vx", kind: "voltage", text: "V_x" }),
           ],
         },

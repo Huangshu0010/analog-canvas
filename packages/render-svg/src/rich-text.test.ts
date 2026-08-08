@@ -16,8 +16,16 @@ describe("renderRichTextDocument (WP-A2)", () => {
     const svg = renderRichTextDocument(
       {
         runs: [
-          { kind: "span", style: "italic", children: [{ kind: "text", value: "I" }] },
-          { kind: "span", style: "bold", children: [{ kind: "text", value: "B" }] },
+          {
+            kind: "span",
+            style: "italic",
+            children: [{ kind: "text", value: "I" }],
+          },
+          {
+            kind: "span",
+            style: "bold",
+            children: [{ kind: "text", value: "B" }],
+          },
         ],
       },
       razaviTextbookProfile,
@@ -32,8 +40,16 @@ describe("renderRichTextDocument (WP-A2)", () => {
       {
         runs: [
           { kind: "text", value: "V" },
-          { kind: "span", style: "subscript", children: [{ kind: "text", value: "in" }] },
-          { kind: "span", style: "superscript", children: [{ kind: "text", value: "+" }] },
+          {
+            kind: "span",
+            style: "subscript",
+            children: [{ kind: "text", value: "in" }],
+          },
+          {
+            kind: "span",
+            style: "superscript",
+            children: [{ kind: "text", value: "+" }],
+          },
         ],
       },
       razaviTextbookProfile,

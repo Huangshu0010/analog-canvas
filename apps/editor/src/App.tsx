@@ -598,7 +598,10 @@ export function App({ project: initialProject }: AppProps) {
     annotation: Annotation,
   ): RouteAnnotationAttachment | null {
     if (annotation.routeAttachment) return annotation.routeAttachment;
-    if (annotation.kind === "route-marker" && annotation.anchor?.kind === "route") {
+    if (
+      annotation.kind === "route-marker" &&
+      annotation.anchor?.kind === "route"
+    ) {
       const anchor = annotation.anchor;
       return {
         routeId: anchor.routeId,
@@ -613,8 +616,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function isRoutedMarker(annotation: Annotation): boolean {
     return (
-      annotation.kind === "route-marker" &&
-      annotation.markerKind === "current"
+      annotation.kind === "route-marker" && annotation.markerKind === "current"
     );
   }
 
@@ -2272,7 +2274,10 @@ export function App({ project: initialProject }: AppProps) {
     setAnnotationSizeDraft(String(sizeScale));
   }
 
-  function richTextEqual(left: { runs: unknown[] }, right: { runs: unknown[] }): boolean {
+  function richTextEqual(
+    left: { runs: unknown[] },
+    right: { runs: unknown[] },
+  ): boolean {
     return JSON.stringify(left) === JSON.stringify(right);
   }
 
@@ -3463,7 +3468,10 @@ export function App({ project: initialProject }: AppProps) {
           </section>
         ) : null}
         {selectedDrafting?.kind === "text" ? (
-          <section className="context-actions" aria-label="Drafting text actions">
+          <section
+            className="context-actions"
+            aria-label="Drafting text actions"
+          >
             <h2>Drafting text</h2>
             <label>
               Content (markup: subscripts, superscripts, italic, fractions)
@@ -3490,7 +3498,10 @@ export function App({ project: initialProject }: AppProps) {
               type="button"
               onClick={() => {
                 transact([
-                  { kind: "remove_drafting_object", objectId: selectedDrafting.id },
+                  {
+                    kind: "remove_drafting_object",
+                    objectId: selectedDrafting.id,
+                  },
                 ]);
                 setSelectedDraftingId(null);
               }}
@@ -3724,7 +3735,9 @@ export function App({ project: initialProject }: AppProps) {
                   data-testid={`guide-${guide.id}`}
                   className={guide.locked ? "guide guide-locked" : "guide"}
                   x1={guide.axis === "vertical" ? guide.coordinate : viewBox.x}
-                  y1={guide.axis === "horizontal" ? guide.coordinate : viewBox.y}
+                  y1={
+                    guide.axis === "horizontal" ? guide.coordinate : viewBox.y
+                  }
                   x2={
                     guide.axis === "vertical"
                       ? guide.coordinate

@@ -566,7 +566,11 @@ describe("textbook monochrome SVG renderer", () => {
           content: {
             runs: [
               { kind: "text", value: "M" },
-              { kind: "span", style: "subscript", children: [{ kind: "text", value: "1" }] },
+              {
+                kind: "span",
+                style: "subscript",
+                children: [{ kind: "text", value: "1" }],
+              },
             ],
           },
           alignment: "start",
@@ -580,7 +584,11 @@ describe("textbook monochrome SVG renderer", () => {
           anchor: { kind: "free", position: { x: 80, y: 110 } },
           content: {
             runs: [
-              { kind: "span", style: "italic", children: [{ kind: "text", value: "gain" }] },
+              {
+                kind: "span",
+                style: "italic",
+                children: [{ kind: "text", value: "gain" }],
+              },
             ],
           },
           alignment: "start",

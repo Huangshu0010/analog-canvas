@@ -14,7 +14,12 @@ function documentWithRoute(): SchematicDocument {
     revision: 0,
     sourceStatus: "in-sync",
     ports: [
-      { id: "port-out", name: "OUT", direction: "output", position: { x: 200, y: 100 } },
+      {
+        id: "port-out",
+        name: "OUT",
+        direction: "output",
+        position: { x: 200, y: 100 },
+      },
     ],
     instances: [
       {
@@ -22,7 +27,11 @@ function documentWithRoute(): SchematicDocument {
         symbolId: "nmos",
         symbolVariantId: "textbook-3terminal",
         properties: {},
-        placement: { position: { x: 100, y: 100 }, rotation: 0, mirror: "none" },
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
       },
     ],
     nets: [{ id: "n1", scope: "local", terminals: [], ports: ["port-out"] }],
@@ -38,7 +47,11 @@ function documentWithRoute(): SchematicDocument {
     ],
     junctions: [{ id: "j1", netId: "n1", position: { x: 100, y: 100 } }],
     annotations: [],
-    presentation: { styleProfileId: "razavi-textbook-v1", grid: 10, compactness: "normal" },
+    presentation: {
+      styleProfileId: "razavi-textbook-v1",
+      grid: 10,
+      compactness: "normal",
+    },
     layoutGroups: [],
     constraints: [],
     drafting: { objects: [], guides: [] },
@@ -113,7 +126,9 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     expect(geometry.kind).toBe("text");
     if (geometry.kind !== "text") return;
     expect(geometry.position).toEqual({ x: 7, y: 8 });
-    expect(geometry.diagnostics[0]?.code).toBe("DRAFTING_ANCHOR_TARGET_MISSING");
+    expect(geometry.diagnostics[0]?.code).toBe(
+      "DRAFTING_ANCHOR_TARGET_MISSING",
+    );
     expect(geometry.diagnostics[0]?.anchorRole).toBe("anchor");
   });
 
@@ -155,8 +170,22 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
       locked: false,
       zIndex: 0,
       anchor: { kind: "free", position: { x: 0, y: 0 } },
-      from: { kind: "object", objectId: "M1", localOffset: { x: 0, y: 0 }, fallbackPosition: { x: 0, y: 0 } },
-      to: { kind: "route", routeId: "r1", segmentIndex: 0, t: 1, normalOffset: 0, direction: "forward", orientation: "follow", fallbackPosition: { x: 0, y: 0 } },
+      from: {
+        kind: "object",
+        objectId: "M1",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 0, y: 0 },
+      },
+      to: {
+        kind: "route",
+        routeId: "r1",
+        segmentIndex: 0,
+        t: 1,
+        normalOffset: 0,
+        direction: "forward",
+        orientation: "follow",
+        fallbackPosition: { x: 0, y: 0 },
+      },
     };
     const geometry = resolveDraftingObjectGeometry(document, resolver, object);
     expect(geometry.kind).toBe("arrow");
@@ -187,7 +216,12 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     );
     expect(geometry.kind).toBe("construction-line");
     if (geometry.kind !== "construction-line") return;
-    expect(geometry.bounds).toMatchObject({ x: -6, y: -6, width: 112, height: 52 });
+    expect(geometry.bounds).toMatchObject({
+      x: -6,
+      y: -6,
+      width: 112,
+      height: 52,
+    });
     expect(geometry.diagnostics).toEqual([]);
   });
 
@@ -212,7 +246,12 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
   it("is deterministic: the same input resolves identically", () => {
     const document = documentWithRoute();
     const object = textObject({
-      anchor: { kind: "object", objectId: "M1", localOffset: { x: 5, y: -5 }, fallbackPosition: { x: 0, y: 0 } },
+      anchor: {
+        kind: "object",
+        objectId: "M1",
+        localOffset: { x: 5, y: -5 },
+        fallbackPosition: { x: 0, y: 0 },
+      },
     });
     const first = resolveDraftingObjectGeometry(document, resolver, object);
     const second = resolveDraftingObjectGeometry(document, resolver, object);

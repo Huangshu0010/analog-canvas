@@ -2066,3 +2066,24 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): select/delete all drafting kinds via shared geometry (WP-R5 part 2)`.
+## 2026-08-08 - WP-R6: parity rename, real browser E2E, and full exit gate
+
+- Target: complete the Drafting Runtime Completion project with a truthful
+  parity test name, real browser coverage of drafting workflows, and the full
+  exit gate.
+- Changed areas:
+  - parity.test.ts renamed "GUI/Agent drafting parity" to "Agent/Edit Engine
+    drafting parity" and clarified it exercises typed-edit semantics, not the
+    GUI.
+  - New apps/editor/e2e/drafting.spec.ts with three browser scenarios:
+    (A) add drafting text with rich markup V_{in}^{+} = \frac{V_{DD}}{2}, assert
+    the canonical AST is persisted (fraction + span runs) and undo/redo
+    restores it; (E) export bounds include drafting and guides never appear in
+    the exported SVG; (F) the production build mounts with no console errors.
+  - Prettier formatting normalized 21 files (including files from earlier WP-R
+    commits that did not match the repo style gate).
+- Exit gate (all pass): format:check; typecheck; vitest 267/267; pnpm build
+  (12 packages); playwright test 10/10; agent-api-artifacts --check; phase-5/
+  route-attached/text golden --check; release:package; git diff --check.
+- Commit status: ready for
+  `test(editor): drafting E2E, parity rename, and formatting (WP-R6)`.

@@ -8,10 +8,7 @@ import type {
 } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import {
-  resolveVisualAnchor,
-  type ResolvedAnchor,
-} from "./anchor.js";
+import { resolveVisualAnchor, type ResolvedAnchor } from "./anchor.js";
 
 // ADR 0010 / WP-R1: the single derived-geometry entry for DraftingObjects.
 // Renderer, Editor overlay, and Agent Snapshot consume ONLY this result; no
@@ -220,7 +217,10 @@ function resolveLeader(
     kind: "leader" as const,
     anchor: anchorPoint,
     target: targetPoint,
-    bounds: paddedBounds(unionBounds([anchorPoint, targetPoint]), STROKE_PADDING),
+    bounds: paddedBounds(
+      unionBounds([anchorPoint, targetPoint]),
+      STROKE_PADDING,
+    ),
     diagnostics: [...anchor.diagnostics, ...target.diagnostics],
   };
 }
@@ -304,14 +304,24 @@ function resolveFloatingSymbol(
   const position = anchor.anchor.position;
   const rotation = object.transform.rotation;
   const viewBox = resolvedSymbol?.definition.viewBox;
-  let bounds: Rect = { x: position.x - 12, y: position.y - 12, width: 24, height: 24 };
+  let bounds: Rect = {
+    x: position.x - 12,
+    y: position.y - 12,
+    width: 24,
+    height: 24,
+  };
   if (viewBox) {
     const mirrorX = object.transform.mirror === "x" ? -1 : 1;
     const w = viewBox.width;
     const h = viewBox.height;
     const x = position.x - (w / 2) * mirrorX;
     const y = position.y - h / 2;
-    bounds = { x: Math.round(x), y: Math.round(y), width: Math.round(w), height: Math.round(h) };
+    bounds = {
+      x: Math.round(x),
+      y: Math.round(y),
+      width: Math.round(w),
+      height: Math.round(h),
+    };
   }
   return {
     kind: "floating-symbol" as const,
@@ -345,9 +355,7 @@ function paddedBounds(bounds: Rect, padding: number): Rect {
 }
 
 function unionRects(rects: Rect[]): Rect {
-  const nonEmpty = rects.filter(
-    (rect) => rect.width > 0 || rect.height > 0,
-  );
+  const nonEmpty = rects.filter((rect) => rect.width > 0 || rect.height > 0);
   if (nonEmpty.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
   const minX = Math.min(...nonEmpty.map((rect) => rect.x));
   const minY = Math.min(...nonEmpty.map((rect) => rect.y));
@@ -375,7 +383,12 @@ function textBounds(
   const top = position.y - TEXT_PADDING_Y - 12;
   const box: Rect = { x: left, y: top, width, height };
   if (rotation === 90 || rotation === 270) {
-    return { x: position.x - height / 2, y: position.y - width / 2, width: height, height: width };
+    return {
+      x: position.x - height / 2,
+      y: position.y - width / 2,
+      width: height,
+      height: width,
+    };
   }
   return box;
 }
@@ -384,15 +397,20 @@ function estimateTextWidth(content: RichTextDocument): number {
   const text = content.runs
     .map((run) => {
       if (typeof run === "object" && run !== null) {
-        const node = run as { kind?: string; value?: string; children?: unknown[] };
+        const node = run as {
+          kind?: string;
+          value?: string;
+          children?: unknown[];
+        };
         if (node.kind === "text") return node.value ?? "";
         if (node.kind === "fraction") return "XX";
-        if (node.children) return node.children
-          .map((child) => {
-            const c = child as { value?: string };
-            return c.value ?? "";
-          })
-          .join("");
+        if (node.children)
+          return node.children
+            .map((child) => {
+              const c = child as { value?: string };
+              return c.value ?? "";
+            })
+            .join("");
       }
       return "";
     })

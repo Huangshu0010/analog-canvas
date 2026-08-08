@@ -30,9 +30,10 @@ function fixtureProject() {
   );
 }
 
-// The same typed drafting edits an Agent and the GUI both submit; they resolve
-// to the shared Edit Engine, so both paths must produce the identical Document
-// and identical SVG (ADR 0010 GUI/Agent parity).
+// The same typed drafting edits submitted through the Agent service and the
+// shared Edit Engine must produce the identical Document and identical SVG.
+// This proves typed-edit semantic parity; it does not exercise the GUI
+// (renamed from "GUI/Agent parity" per WP-R6).
 const draftingEdits = [
   {
     kind: "upsert_schematic_annotation",
@@ -69,7 +70,11 @@ const draftingEdits = [
       content: {
         runs: [
           { kind: "text", value: "V" },
-          { kind: "span", style: "subscript", children: [{ kind: "text", value: "in" }] },
+          {
+            kind: "span",
+            style: "subscript",
+            children: [{ kind: "text", value: "in" }],
+          },
         ],
       },
       alignment: "start",
@@ -88,7 +93,7 @@ const draftingEdits = [
   },
 ] as const;
 
-describe("GUI/Agent drafting parity (WP-A5)", () => {
+describe("Agent/Edit Engine drafting parity (WP-R6)", () => {
   it("produces the same Document and SVG through the Agent service and the shared Edit Engine", () => {
     // Agent path: typed edits through the service.
     const project = fixtureProject();

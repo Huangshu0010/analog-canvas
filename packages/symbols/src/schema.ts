@@ -104,8 +104,7 @@ export const SymbolDefinitionSchema = z
       context.addIssue({
         code: "custom",
         path: ["pins"],
-        message:
-          "A decorative symbol must contain no terminals (pins)",
+        message: "A decorative symbol must contain no terminals (pins)",
       });
     }
     if (!symbol.decorative && symbol.pins.length === 0) {

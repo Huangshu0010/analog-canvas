@@ -193,7 +193,13 @@ describe("Agent Document Snapshot", () => {
         },
       ],
       guides: [
-        { id: "g1", axis: "vertical", coordinate: 42, locked: false, visible: true },
+        {
+          id: "g1",
+          axis: "vertical",
+          coordinate: 42,
+          locked: false,
+          visible: true,
+        },
       ],
     };
     const after = buildAgentSessionSnapshot({
@@ -273,7 +279,13 @@ describe("Agent Document Snapshot", () => {
     document.drafting = {
       objects: [],
       guides: [
-        { id: "g1", axis: "vertical", coordinate: 120, locked: false, visible: true },
+        {
+          id: "g1",
+          axis: "vertical",
+          coordinate: 120,
+          locked: false,
+          visible: true,
+        },
       ],
     };
     const defaultSnapshot = buildAgentSessionSnapshot({

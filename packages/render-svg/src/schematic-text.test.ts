@@ -28,7 +28,11 @@ describe("Razavi schematic typography", () => {
       "net-label",
       { base: "V", subscript: "IN", suffix: "-", style: "math" },
     ],
-    ["XM12", "default-instance", { base: "XM", subscript: "12", style: "math" }],
+    [
+      "XM12",
+      "default-instance",
+      { base: "XM", subscript: "12", style: "math" },
+    ],
   ] as const)("parses %s by %s semantics", (text, kind, expected) => {
     expect(parseSchematicMath(text, kind)).toEqual(expected);
   });

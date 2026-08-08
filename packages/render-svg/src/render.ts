@@ -317,8 +317,8 @@ function deriveBounds(
     const annotationPosition =
       attachmentPlacement?.position ?? annotation.position;
     const verticalCurrent =
-      ((attachmentPlacement?.rotation ?? annotation.rotation) === 90 ||
-        (attachmentPlacement?.rotation ?? annotation.rotation) === 270);
+      (attachmentPlacement?.rotation ?? annotation.rotation) === 90 ||
+      (attachmentPlacement?.rotation ?? annotation.rotation) === 270;
     const textPosition = attachmentPlacement
       ? attachmentPlacement.labelPosition
       : {
@@ -497,27 +497,49 @@ export function buildSvgScene(
       const routeMarkerPlacement =
         annotation.kind === "route-marker" && routeMarkerAnchor
           ? routeMarkerAnchor.kind === "free"
-            ? { position: routeMarkerAnchor.position, labelPosition: routeMarkerAnchor.position, rotation: 0 as const }
+            ? {
+                position: routeMarkerAnchor.position,
+                labelPosition: routeMarkerAnchor.position,
+                rotation: 0 as const,
+              }
             : routeMarkerAnchor.kind === "object"
-              ? { position: routeMarkerAnchor.fallbackPosition, labelPosition: routeMarkerAnchor.fallbackPosition, rotation: 0 as const }
-              : resolveRouteMarkerPlacement(document, resolver, routeMarkerAnchor)
+              ? {
+                  position: routeMarkerAnchor.fallbackPosition,
+                  labelPosition: routeMarkerAnchor.fallbackPosition,
+                  rotation: 0 as const,
+                }
+              : resolveRouteMarkerPlacement(
+                  document,
+                  resolver,
+                  routeMarkerAnchor,
+                )
           : null;
-      const position = routeMarkerPlacement?.position ?? attachmentPlacement?.position ?? annotation.position;
-      const rotation = routeMarkerPlacement?.rotation ?? attachmentPlacement?.rotation ?? annotation.rotation;
+      const position =
+        routeMarkerPlacement?.position ??
+        attachmentPlacement?.position ??
+        annotation.position;
+      const rotation =
+        routeMarkerPlacement?.rotation ??
+        attachmentPlacement?.rotation ??
+        annotation.rotation;
       const transform = `rotate(${rotation} ${position.x} ${position.y})`;
       const attributes = `data-object-id="${escapeXml(annotation.id)}" data-kind="${annotation.kind}"${attachment}`;
-      if (annotation.kind === "route-marker" && annotation.markerKind === "current") {
+      if (
+        annotation.kind === "route-marker" &&
+        annotation.markerKind === "current"
+      ) {
         const x = position.x;
         const y = position.y;
         const vertical = rotation === 90 || rotation === 270;
         const label = routeMarkerPlacement?.labelPosition;
         const textX = vertical ? x + 15 : x;
         const textY = vertical ? y + 4 : y - 7;
-        const textAnchor = routeMarkerPlacement || attachmentPlacement
-          ? "middle"
-          : vertical
-            ? "start"
-            : annotation.alignment;
+        const textAnchor =
+          routeMarkerPlacement || attachmentPlacement
+            ? "middle"
+            : vertical
+              ? "start"
+              : annotation.alignment;
         if (profile.id !== "textbook-monochrome-v1") {
           const arrow = profile.annotations;
           const halfLength = arrow.currentArrowLength / 2;
@@ -593,12 +615,31 @@ export function buildSvgScene(
 function resolveRouteMarkerPlacement(
   document: SchematicDocument,
   resolver: SymbolResolver,
-  anchor: Extract<SchematicDocument["annotations"][number]["anchor"], { kind: "route" }>,
-): { position: Point; labelPosition: Point; rotation: 0 | 90 | 180 | 270 } | null {
-  const route = document.routes.find((candidate) => candidate.id === anchor.routeId);
-  if (!route) return { position: anchor.fallbackPosition, labelPosition: anchor.fallbackPosition, rotation: 0 };
+  anchor: Extract<
+    SchematicDocument["annotations"][number]["anchor"],
+    { kind: "route" }
+  >,
+): {
+  position: Point;
+  labelPosition: Point;
+  rotation: 0 | 90 | 180 | 270;
+} | null {
+  const route = document.routes.find(
+    (candidate) => candidate.id === anchor.routeId,
+  );
+  if (!route)
+    return {
+      position: anchor.fallbackPosition,
+      labelPosition: anchor.fallbackPosition,
+      rotation: 0,
+    };
   const polyline = routePolyline(document, resolver, route);
-  if (!polyline) return { position: anchor.fallbackPosition, labelPosition: anchor.fallbackPosition, rotation: 0 };
+  if (!polyline)
+    return {
+      position: anchor.fallbackPosition,
+      labelPosition: anchor.fallbackPosition,
+      rotation: 0,
+    };
   const placement = routeAttachmentPlacement(polyline, {
     routeId: anchor.routeId,
     segmentIndex: anchor.segmentIndex,
@@ -606,13 +647,21 @@ function resolveRouteMarkerPlacement(
     normalOffset: anchor.normalOffset,
     direction: anchor.direction,
   });
-  if (!placement) return { position: anchor.fallbackPosition, labelPosition: anchor.fallbackPosition, rotation: 0 };
+  if (!placement)
+    return {
+      position: anchor.fallbackPosition,
+      labelPosition: anchor.fallbackPosition,
+      rotation: 0,
+    };
   // The arrow (and its rotation center) sits on the conductor at the route
   // attachment point; the label rides on the normal offset. This mirrors the
   // legacy current-arrow rendering exactly.
   return {
     position: placement.position,
-    labelPosition: anchor.orientation === "horizontal" ? placement.position : placement.labelPosition,
+    labelPosition:
+      anchor.orientation === "horizontal"
+        ? placement.position
+        : placement.labelPosition,
     rotation: anchor.orientation === "horizontal" ? 0 : placement.rotation,
   };
 }
@@ -629,52 +678,60 @@ function renderDraftingLayer(
   const objects = document.drafting?.objects ?? [];
   if (objects.length === 0) return "";
   const sorted = [...objects].sort((left, right) => left.zIndex - right.zIndex);
-  const body = sorted.map((object) => {
-    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
-    const unresolved = geometry.diagnostics.length > 0
-      ? ' data-anchor-resolved="false"'
-      : "";
-    switch (object.kind) {
-      case "text":
-        return renderDraftText(
-          object,
-          geometry as Extract<ResolvedDraftingGeometry, { kind: "text" }>,
-          profile,
-          unresolved,
-        );
-      case "construction-line":
-        return renderConstructionLine(object, profile);
-      case "arrow":
-        return renderDraftArrow(
-          object,
-          geometry as Extract<ResolvedDraftingGeometry, { kind: "arrow" }>,
-          profile,
-          unresolved,
-        );
-      case "leader":
-        return renderDraftLeader(
-          object,
-          geometry as Extract<ResolvedDraftingGeometry, { kind: "leader" }>,
-          profile,
-          unresolved,
-        );
-      case "callout":
-        return renderDraftCallout(
-          object,
-          geometry as Extract<ResolvedDraftingGeometry, { kind: "callout" }>,
-          profile,
-          unresolved,
-        );
-      case "floating-symbol":
-        return renderFloatingSymbol(
-          object,
-          geometry as Extract<ResolvedDraftingGeometry, { kind: "floating-symbol" }>,
-          resolver,
-          profile,
-          unresolved,
-        );
-    }
-  }).join("");
+  const body = sorted
+    .map((object) => {
+      const geometry = resolveDraftingObjectGeometry(
+        document,
+        resolver,
+        object,
+      );
+      const unresolved =
+        geometry.diagnostics.length > 0 ? ' data-anchor-resolved="false"' : "";
+      switch (object.kind) {
+        case "text":
+          return renderDraftText(
+            object,
+            geometry as Extract<ResolvedDraftingGeometry, { kind: "text" }>,
+            profile,
+            unresolved,
+          );
+        case "construction-line":
+          return renderConstructionLine(object, profile);
+        case "arrow":
+          return renderDraftArrow(
+            object,
+            geometry as Extract<ResolvedDraftingGeometry, { kind: "arrow" }>,
+            profile,
+            unresolved,
+          );
+        case "leader":
+          return renderDraftLeader(
+            object,
+            geometry as Extract<ResolvedDraftingGeometry, { kind: "leader" }>,
+            profile,
+            unresolved,
+          );
+        case "callout":
+          return renderDraftCallout(
+            object,
+            geometry as Extract<ResolvedDraftingGeometry, { kind: "callout" }>,
+            profile,
+            unresolved,
+          );
+        case "floating-symbol":
+          return renderFloatingSymbol(
+            object,
+            geometry as Extract<
+              ResolvedDraftingGeometry,
+              { kind: "floating-symbol" }
+            >,
+            resolver,
+            profile,
+            unresolved,
+          );
+      }
+    })
+    .join("");
   return `<g data-layer="drafting">${body}</g>`;
 }
 
@@ -685,7 +742,10 @@ function renderDraftText(
   unresolved: string,
 ): string {
   const { position } = geometry;
-  const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
+  const fontSize = typographyFontSize(
+    object.typographyToken ?? "body",
+    profile,
+  );
   const content =
     profile.id === "textbook-monochrome-v1"
       ? escapeXmlText(flatText(object.content.runs as unknown[]))
@@ -700,8 +760,15 @@ function renderConstructionLine(
   object: Extract<DraftingObject, { kind: "construction-line" }>,
   profile: SchematicStyleProfile,
 ): string {
-  const points = object.points.map((point) => `${point.x},${point.y}`).join(" ");
-  const dash = object.lineStyle === "dashed" ? ' stroke-dasharray="6 4"' : object.lineStyle === "dotted" ? ' stroke-dasharray="2 3"' : "";
+  const points = object.points
+    .map((point) => `${point.x},${point.y}`)
+    .join(" ");
+  const dash =
+    object.lineStyle === "dashed"
+      ? ' stroke-dasharray="6 4"'
+      : object.lineStyle === "dotted"
+        ? ' stroke-dasharray="2 3"'
+        : "";
   return `<polyline data-object-id="${object.id}" data-kind="construction-line" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"${dash}/>`;
 }
 
@@ -744,7 +811,10 @@ function renderDraftCallout(
 ): string {
   const { textPosition, target } = geometry;
   const leader = `<line x1="${textPosition.x}" y1="${textPosition.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
-  const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
+  const fontSize = typographyFontSize(
+    object.typographyToken ?? "body",
+    profile,
+  );
   const content =
     profile.id === "textbook-monochrome-v1"
       ? escapeXmlText(flatText(object.content.runs as unknown[]))

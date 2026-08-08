@@ -1,4 +1,7 @@
-import { CURRENT_PROJECT_SCHEMA_VERSION, CircuitProjectSchema } from "@icm/model";
+import {
+  CURRENT_PROJECT_SCHEMA_VERSION,
+  CircuitProjectSchema,
+} from "@icm/model";
 import type { CircuitProject, Instance } from "@icm/model";
 
 function instance(

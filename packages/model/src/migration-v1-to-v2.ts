@@ -57,7 +57,11 @@ export function migrateV1ToV2(input: unknown): MigrationResult {
   );
 
   return {
-    project: { ...input, schemaVersion: TARGET_SCHEMA_VERSION, documents: migratedDocuments },
+    project: {
+      ...input,
+      schemaVersion: TARGET_SCHEMA_VERSION,
+      documents: migratedDocuments,
+    },
     diagnostics,
   };
 }
@@ -80,7 +84,11 @@ function migrateDocument(
       keptAnnotations.push(annotation);
       continue;
     }
-    if (kind === "instance-label" || kind === "net-label" || kind === "power-label") {
+    if (
+      kind === "instance-label" ||
+      kind === "net-label" ||
+      kind === "power-label"
+    ) {
       keptAnnotations.push(annotation);
       continue;
     }
@@ -109,11 +117,17 @@ function migrateDocument(
   return {
     ...document,
     annotations: keptAnnotations,
-    drafting: { objects: draftingObjects, guides: asArray(existingDrafting.guides) },
+    drafting: {
+      objects: draftingObjects,
+      guides: asArray(existingDrafting.guides),
+    },
   };
 }
 
-function toRouteMarker(annotation: Record_, markerKind: "current" | "voltage"): Record_ {
+function toRouteMarker(
+  annotation: Record_,
+  markerKind: "current" | "voltage",
+): Record_ {
   const { kind: _kind, routeAttachment, ...rest } = annotation;
   void _kind;
   const fallback = fallbackPoint(annotation);
@@ -214,14 +228,24 @@ function toDraftText(annotation: Record_): Record_ {
 }
 
 function fallbackPoint(annotation: Record_): { x: number; y: number } {
-  const position = isRecord(annotation.position) ? annotation.position : undefined;
+  const position = isRecord(annotation.position)
+    ? annotation.position
+    : undefined;
   const x = typeof position?.x === "number" ? position.x : 0;
   const y = typeof position?.y === "number" ? position.y : 0;
   return { x, y };
 }
 
 function preservePlacement(rest: Record_): Record_ {
-  const { position, offset, alignment, rotation, locked, sizeScale, ...remaining } = rest;
+  const {
+    position,
+    offset,
+    alignment,
+    rotation,
+    locked,
+    sizeScale,
+    ...remaining
+  } = rest;
   void position;
   void offset;
   void alignment;

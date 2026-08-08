@@ -10,13 +10,21 @@ describe("route-attached current arrows", () => {
       {
         id: "R1",
         symbolId: "resistor",
-        placement: { position: { x: 100, y: 100 }, rotation: 0, mirror: "none" },
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
         properties: {},
       },
       {
         id: "R2",
         symbolId: "resistor",
-        placement: { position: { x: 220, y: 100 }, rotation: 0, mirror: "none" },
+        placement: {
+          position: { x: 220, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
         properties: {},
       },
     );

@@ -66,7 +66,13 @@ describe("drafting layer rendering (WP-A1b)", () => {
     document.drafting = {
       objects: [],
       guides: [
-        { id: "g1", axis: "vertical", coordinate: 100, locked: false, visible: true },
+        {
+          id: "g1",
+          axis: "vertical",
+          coordinate: 100,
+          locked: false,
+          visible: true,
+        },
       ],
     };
     const svg = renderDocumentSvg(document, resolver);
@@ -161,7 +167,9 @@ describe("drafting layer rendering (WP-A1b)", () => {
     };
     const svg = renderDocumentSvg(document, resolver);
     // viewBox must cover the line's padded bounds.
-    const viewBox = svg.match(/viewBox="([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+)"/);
+    const viewBox = svg.match(
+      /viewBox="([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+)"/,
+    );
     expect(viewBox).toBeTruthy();
     const numbers = viewBox!.slice(1).map(Number);
     const [x, y, width, height] = numbers as [number, number, number, number];

@@ -1,8 +1,4 @@
-import type {
-  Point,
-  SchematicDocument,
-  VisualAnchor,
-} from "@icm/model";
+import type { Point, SchematicDocument, VisualAnchor } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { routeAttachmentPlacement, routePolyline } from "./routes.js";
@@ -84,13 +80,21 @@ function resolveRouteAnchor(
   resolver: SymbolResolver,
   anchor: Extract<VisualAnchor, { kind: "route" }>,
 ): ResolvedAnchor {
-  const route = document.routes.find((candidate) => candidate.id === anchor.routeId);
+  const route = document.routes.find(
+    (candidate) => candidate.id === anchor.routeId,
+  );
   if (!route) {
-    return unresolvedRoute(anchor, `Route ${anchor.routeId} is missing; using fallback position.`);
+    return unresolvedRoute(
+      anchor,
+      `Route ${anchor.routeId} is missing; using fallback position.`,
+    );
   }
   const polyline = routePolyline(document, resolver, route);
   if (!polyline) {
-    return unresolvedRoute(anchor, `Route ${anchor.routeId} has no resolvable polyline; using fallback position.`);
+    return unresolvedRoute(
+      anchor,
+      `Route ${anchor.routeId} has no resolvable polyline; using fallback position.`,
+    );
   }
   const placement = routeAttachmentPlacement(polyline, {
     routeId: anchor.routeId,
@@ -106,7 +110,10 @@ function resolveRouteAnchor(
     );
   }
   return {
-    position: anchor.orientation === "horizontal" ? placement.position : placement.labelPosition,
+    position:
+      anchor.orientation === "horizontal"
+        ? placement.position
+        : placement.labelPosition,
     rotation: anchor.orientation === "horizontal" ? 0 : placement.rotation,
     resolved: true,
   };
@@ -133,12 +140,19 @@ function unresolvedRoute(
  * Junction. A DraftingObject is intentionally not a valid V1 anchor target
  * (ADR 0010: no drafting-to-drafting attachment).
  */
-function findObjectPlacement(document: SchematicDocument, objectId: string): Point | null {
-  const instance = document.instances.find((candidate) => candidate.id === objectId);
+function findObjectPlacement(
+  document: SchematicDocument,
+  objectId: string,
+): Point | null {
+  const instance = document.instances.find(
+    (candidate) => candidate.id === objectId,
+  );
   if (instance?.placement) return instance.placement.position;
   const port = document.ports.find((candidate) => candidate.id === objectId);
   if (port) return port.position;
-  const junction = document.junctions.find((candidate) => candidate.id === objectId);
+  const junction = document.junctions.find(
+    (candidate) => candidate.id === objectId,
+  );
   if (junction) return junction.position;
   return null;
 }

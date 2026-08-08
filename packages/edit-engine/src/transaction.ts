@@ -1845,10 +1845,7 @@ export function executeTransaction(
           );
         }
         if (guide.locked) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Guide is locked: ${guide.id}`,
-          );
+          return rejectAt("EDIT_PRECONDITION", `Guide is locked: ${guide.id}`);
         }
         guides.splice(index, 1);
         changedObjectIds.add(guide.id);
