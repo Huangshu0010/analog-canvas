@@ -319,7 +319,12 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     const unrotated = resolveDraftingObjectGeometry(document, resolver, base);
     if (unrotated.kind !== "floating-symbol") return;
     // decorative-note-box viewBox is {x:-30,y:-14,width:60,height:28}.
-    expect(unrotated.bounds).toMatchObject({ x: -30, y: -14, width: 60, height: 28 });
+    expect(unrotated.bounds).toMatchObject({
+      x: -30,
+      y: -14,
+      width: 60,
+      height: 28,
+    });
 
     // Rotated 90 swaps width/height around the anchor.
     const rotated = resolveDraftingObjectGeometry(document, resolver, {
@@ -336,7 +341,12 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
       transform: { rotation: 0, mirror: "x" },
     });
     if (mirrored.kind !== "floating-symbol") return;
-    expect(mirrored.bounds).toMatchObject({ x: -30, y: -14, width: 60, height: 28 });
+    expect(mirrored.bounds).toMatchObject({
+      x: -30,
+      y: -14,
+      width: 60,
+      height: 28,
+    });
   });
 
   it("measures multi-line text bounds with per-line height (P1)", () => {
@@ -367,41 +377,39 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
   });
 });
 
-  it("distinguishes an invalid route segment from a missing target (P2)", () => {
-    const document = documentWithRoute();
-    const object = textObject({
-      anchor: {
-        kind: "route",
-        routeId: "r1",
-        segmentIndex: 99,
-        t: 0.5,
-        normalOffset: 0,
-        direction: "forward",
-        orientation: "follow",
-        fallbackPosition: { x: 0, y: 0 },
-      },
-    });
-    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
-    expect(geometry.kind).toBe("text");
-    if (geometry.kind !== "text") return;
-    expect(geometry.diagnostics[0]?.code).toBe(
-      "DRAFTING_ROUTE_SEGMENT_INVALID",
-    );
-
-    // A missing route is a different, actionable failure.
-    const missing = textObject({
-      anchor: {
-        kind: "route",
-        routeId: "gone",
-        segmentIndex: 0,
-        t: 0.5,
-        normalOffset: 0,
-        direction: "forward",
-        orientation: "follow",
-        fallbackPosition: { x: 1, y: 1 },
-      },
-    });
-    const mg = resolveDraftingObjectGeometry(document, resolver, missing);
-    if (mg.kind !== "text") return;
-    expect(mg.diagnostics[0]?.code).toBe("DRAFTING_ANCHOR_TARGET_MISSING");
+it("distinguishes an invalid route segment from a missing target (P2)", () => {
+  const document = documentWithRoute();
+  const object = textObject({
+    anchor: {
+      kind: "route",
+      routeId: "r1",
+      segmentIndex: 99,
+      t: 0.5,
+      normalOffset: 0,
+      direction: "forward",
+      orientation: "follow",
+      fallbackPosition: { x: 0, y: 0 },
+    },
   });
+  const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+  expect(geometry.kind).toBe("text");
+  if (geometry.kind !== "text") return;
+  expect(geometry.diagnostics[0]?.code).toBe("DRAFTING_ROUTE_SEGMENT_INVALID");
+
+  // A missing route is a different, actionable failure.
+  const missing = textObject({
+    anchor: {
+      kind: "route",
+      routeId: "gone",
+      segmentIndex: 0,
+      t: 0.5,
+      normalOffset: 0,
+      direction: "forward",
+      orientation: "follow",
+      fallbackPosition: { x: 1, y: 1 },
+    },
+  });
+  const mg = resolveDraftingObjectGeometry(document, resolver, missing);
+  if (mg.kind !== "text") return;
+  expect(mg.diagnostics[0]?.code).toBe("DRAFTING_ANCHOR_TARGET_MISSING");
+});

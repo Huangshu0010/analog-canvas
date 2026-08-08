@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-import {
-  PointSchema,
-  RotationSchema,
-  StableIdSchema,
-} from "./schema.js";
+import { PointSchema, RotationSchema, StableIdSchema } from "./schema.js";
 
 // ADR 0010 WP-R4/P1: strict Zod schemas for the derived drafting geometry and
 // its diagnostics, shared by the Agent Snapshot (which must not use z.unknown)

@@ -237,7 +237,10 @@ export function normalizeRichText(document: MarkupDocument): MarkupDocument {
       continue;
     }
     if (run.kind === "span") {
-      normalized.push({ ...run, children: normalizeRichText({ runs: run.children ?? [] }).runs });
+      normalized.push({
+        ...run,
+        children: normalizeRichText({ runs: run.children ?? [] }).runs,
+      });
       continue;
     }
     normalized.push(run);

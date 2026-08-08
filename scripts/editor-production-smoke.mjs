@@ -66,7 +66,9 @@ async function main() {
     );
   }
   if (report.nodeCryptoExternalized) {
-    throw new Error("node:crypto has been externalized in the production build");
+    throw new Error(
+      "node:crypto has been externalized in the production build",
+    );
   }
   console.log("Editor production smoke passed");
 }

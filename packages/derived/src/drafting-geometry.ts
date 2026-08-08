@@ -142,7 +142,7 @@ function composeRotation(
 ): 0 | 90 | 180 | 270 {
   if (!follow) return objectRotation;
   const composed = (anchorRotation + objectRotation) % 360;
-  return ((composed % 360) + 360) % 360 as 0 | 90 | 180 | 270;
+  return (((composed % 360) + 360) % 360) as 0 | 90 | 180 | 270;
 }
 
 function resolveText(
@@ -284,7 +284,11 @@ function resolveCallout(
   const targetPoint = target.anchor.position;
   const follow =
     object.anchor.kind === "route" && object.anchor.orientation === "follow";
-  const rotation = composeRotation(anchor.anchor.rotation, object.rotation, follow);
+  const rotation = composeRotation(
+    anchor.anchor.rotation,
+    object.rotation,
+    follow,
+  );
   const textBox = textBounds(
     textPos,
     object.alignment,
@@ -361,7 +365,12 @@ function resolveFloatingSymbol(
       { x: viewBox.x, y: viewBox.y + viewBox.height },
       { x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
     ].map((corner) =>
-      transformSymbolCorner(corner, position, rotation, object.transform.mirror),
+      transformSymbolCorner(
+        corner,
+        position,
+        rotation,
+        object.transform.mirror,
+      ),
     );
     bounds = unionBounds(corners);
   }

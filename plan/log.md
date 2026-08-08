@@ -2333,3 +2333,15 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `test(editor): production preview smoke against the built bundle (P1 smoke)`.
+## 2026-08-08 - Final exit gate + formatting normalization
+
+- Target: run the full Drafting Runtime Completion exit gate and normalize
+  formatting so the workspace is clean.
+- Changed areas: prettier --write normalized 8 files (drafting geometry/anchor,
+  markup, editor App/e2e, smoke script, visio generator); full exit gate runs.
+- Validation (all pass): format:check; typecheck; vitest 274/274; pnpm build
+  (12 packages); playwright 19/19 (manual-editor 10 + drafting 9);
+  editor-production-smoke --check; agent-api-artifacts --check; golden --check;
+  release:package; git diff --check.
+- Commit status: ready for
+  `chore: format normalization after Drafting Runtime Completion (exit gate)`.

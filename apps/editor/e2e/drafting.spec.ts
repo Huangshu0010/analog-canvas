@@ -87,9 +87,7 @@ test("adds drafting text with rich markup and undo/redo restores it", async ({
     (object: { kind: string }) => object.kind === "text",
   );
   expect(textObject).toBeTruthy();
-  const runs = textObject.content.runs.map(
-    (run: { kind: string }) => run.kind,
-  );
+  const runs = textObject.content.runs.map((run: { kind: string }) => run.kind);
   expect(runs).toContain("fraction");
   expect(runs).toContain("span");
 

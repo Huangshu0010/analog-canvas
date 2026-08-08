@@ -2091,7 +2091,10 @@ export function App({ project: initialProject }: AppProps) {
       const position = draftingDragPositionRef.current;
       draftingDragPositionRef.current = null;
       setDraftingDragPreview(null);
-      if (position && (position.x !== original.x || position.y !== original.y)) {
+      if (
+        position &&
+        (position.x !== original.x || position.y !== original.y)
+      ) {
         const latest = document.drafting?.objects.find(
           (item) => item.id === object.id,
         );
@@ -4207,12 +4210,14 @@ export function App({ project: initialProject }: AppProps) {
               const isText = object.kind === "text";
               const draggableText =
                 isText && object.anchor.kind === "free" && !object.locked;
-              const drag = draftingDragPreview?.objectId === object.id
-                ? draftingDragPreview
-                : null;
-              const selected = selectedDraftingId === object.id
-                ? "annotation-hit selected"
-                : "annotation-hit";
+              const drag =
+                draftingDragPreview?.objectId === object.id
+                  ? draftingDragPreview
+                  : null;
+              const selected =
+                selectedDraftingId === object.id
+                  ? "annotation-hit selected"
+                  : "annotation-hit";
               const onDown = (event: ReactPointerEvent<SVGElement>): void => {
                 if (draggableText) {
                   beginDraftingDrag(

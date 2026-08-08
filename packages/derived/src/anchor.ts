@@ -22,8 +22,7 @@ export interface ResolvedAnchor {
 }
 
 export type AnchorDiagnosticCode =
-  | "anchor-target-missing"
-  | "DRAFTING_ROUTE_SEGMENT_INVALID";
+  "anchor-target-missing" | "DRAFTING_ROUTE_SEGMENT_INVALID";
 
 export interface AnchorDiagnostic {
   code: AnchorDiagnosticCode;
@@ -138,9 +137,10 @@ function unresolvedRoute(
     rotation: 0,
     resolved: false,
     diagnostic: {
-      code: code === "DRAFTING_ROUTE_SEGMENT_INVALID"
-        ? "DRAFTING_ROUTE_SEGMENT_INVALID"
-        : "anchor-target-missing",
+      code:
+        code === "DRAFTING_ROUTE_SEGMENT_INVALID"
+          ? "DRAFTING_ROUTE_SEGMENT_INVALID"
+          : "anchor-target-missing",
       message,
       objectId: anchor.routeId,
     },

@@ -262,9 +262,16 @@ function arrowPrimitives(config, shape, segment, style, marker, part) {
   // to share the NMOS-calibrated Razavi length and width.
   const metricScale = config.sourceArrowMetricScale ?? 1;
   const arrowLength =
-    3 * marker.scale * strokeWidth * MOS_SOURCE_ARROW_LENGTH_SCALE * metricScale;
+    3 *
+    marker.scale *
+    strokeWidth *
+    MOS_SOURCE_ARROW_LENGTH_SCALE *
+    metricScale;
   const halfWidth =
-    marker.scale * strokeWidth * MOS_SOURCE_ARROW_HALF_WIDTH_SCALE * metricScale;
+    marker.scale *
+    strokeWidth *
+    MOS_SOURCE_ARROW_HALF_WIDTH_SCALE *
+    metricScale;
   const hostOverlap = strokeWidth * MOS_SOURCE_ARROW_HOST_OVERLAP_IN_STROKES;
   const setback = Math.abs(marker.refX) * strokeWidth;
   const tip = beginArrow ? segment.from : segment.to;
