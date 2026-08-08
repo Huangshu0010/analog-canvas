@@ -2373,3 +2373,18 @@ Editing System work.
   Razavi catalog vitest (13/13), and `git diff --check` pass.
 - Commit status: ready for
   `fix(razavi): derive MOS arrows from canonical geometry`.
+
+## 2026-08-08 - Razavi UI MOS raster-diff baseline
+
+- Target: inspect the actual editor SVG rather than infer visual state from
+  generator coordinates, and compare the three-terminal MOS arrow against the
+  supplied reference.
+- Findings: UI rendered the current three-terminal NMOS source head at 8.28 by
+  7.5735 logical units with a 0.69 logical support overlap. The supplied PNG
+  does not share a fixed viewport/DPR/crop with the inspected fit-to-canvas UI,
+  so absolute pixel difference is invalid; no geometry edit was evidenced.
+  The temporary inspection placement was undone.
+- Validation: fixed browser SVG inspection; restored zero-instance document;
+  `git diff --check` clean.
+- Commit status: ready for
+  `docs(plan): record Razavi UI raster-diff baseline`.
