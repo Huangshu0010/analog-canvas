@@ -375,6 +375,47 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     expect(geometry.bounds.height).toBeGreaterThan(40);
     expect(geometry.bounds.width).toBeGreaterThan(8 * 16 * 0.6);
   });
+
+  it("uses the selected profile and style size for bounds", () => {
+    const razavi = documentWithRoute();
+    const textbook = documentWithRoute();
+    textbook.presentation.styleProfileId = "textbook-monochrome-v1";
+    const object = textObject({
+      typographyToken: "caption",
+      styleOverride: { sizeScale: 2 },
+    });
+    const large = resolveDraftingObjectGeometry(razavi, resolver, object);
+    const small = resolveDraftingObjectGeometry(textbook, resolver, {
+      ...object,
+      styleOverride: undefined,
+    });
+    expect(large.bounds.width).toBeGreaterThan(small.bounds.width * 1.5);
+  });
+
+  it("reports a callout text hit box separately from its leader", () => {
+    const object: Extract<DraftingObject, { kind: "callout" }> = {
+      id: "callout-1",
+      kind: "callout",
+      locked: false,
+      zIndex: 0,
+      anchor: { kind: "free", position: { x: 50, y: 50 } },
+      target: { kind: "free", position: { x: 200, y: 100 } },
+      content: { runs: [{ kind: "text", value: "Inspect this node" }] },
+      alignment: "start",
+      rotation: 0,
+    };
+    const geometry = resolveDraftingObjectGeometry(
+      documentWithRoute(),
+      resolver,
+      object,
+    );
+    expect(geometry.kind).toBe("callout");
+    if (geometry.kind !== "callout") return;
+    expect(geometry.textBounds.width).toBeGreaterThan(100);
+    expect(geometry.bounds.width).toBeGreaterThanOrEqual(
+      geometry.textBounds.width,
+    );
+  });
 });
 
 it("distinguishes an invalid route segment from a missing target (P2)", () => {

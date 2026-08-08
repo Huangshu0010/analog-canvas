@@ -5,6 +5,10 @@ import { DocumentHistory } from "@icm/edit-engine";
 import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
 import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
 import {
+  exportFormalArtifactsInBrowser,
+  rasterizeFormalSvgInBrowser,
+} from "@icm/exporters/browser";
+import {
   deriveCrossings,
   deriveFlightlines,
   deriveInternalGroupSelection,
@@ -20,8 +24,10 @@ import {
 import {
   CircuitProjectSchema,
   createEmptyProject,
+  parseMarkup,
   parseProject,
   serializeProject,
+  serializeMarkup,
   transformPoint,
 } from "@icm/model";
 import type {
@@ -36,12 +42,9 @@ import type {
 } from "@icm/model";
 import {
   buildSvgScene,
-  flattenMarkup,
-  parseMarkup,
   renderSymbolDefinitionBody,
   resolveSchematicStyleProfile,
   schematicTextFontSize,
-  serializeMarkup,
 } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
@@ -98,6 +101,10 @@ interface DraftingDragPreview {
   pointerStart: Point;
   position: Point;
   pointerId: number;
+}
+
+interface DraftingDragSession {
+  cancel: () => void;
 }
 
 type EditorTool = "pointer" | "wire" | "guide" | "construction-line" | "arrow";
@@ -513,6 +520,7 @@ export function App({ project: initialProject }: AppProps) {
   // P0-2: live position of an in-progress drafting drag; read in pointerup so
   // the commit runs exactly once (state updaters must stay side-effect free).
   const draftingDragPositionRef = useRef<Point | null>(null);
+  const draftingDragSessionRef = useRef<DraftingDragSession | null>(null);
   const instanceCounter = useRef(0);
   const clipboard = useRef<SchematicClipboard | null>(null);
   const pasteCounter = useRef(0);
@@ -2041,11 +2049,13 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
+    draftingDragSessionRef.current?.cancel();
+    const hitTarget = event.currentTarget;
+    hitTarget.setPointerCapture(event.pointerId);
     const start = pointFromClient(
       event.clientX,
       event.clientY,
-      event.currentTarget.ownerSVGElement!,
+      hitTarget.ownerSVGElement!,
     );
     const original = { ...object.anchor.position };
     draftingDragPositionRef.current = original;
@@ -2062,7 +2072,7 @@ export function App({ project: initialProject }: AppProps) {
       const point = pointFromClient(
         moveEvent.clientX,
         moveEvent.clientY,
-        event.currentTarget.ownerSVGElement!,
+        hitTarget.ownerSVGElement!,
       );
       const dx = point.x - start.x;
       const dy = point.y - start.y;
@@ -2079,6 +2089,10 @@ export function App({ project: initialProject }: AppProps) {
     const cancel = (): void => {
       draftingDragPositionRef.current = null;
       setDraftingDragPreview(null);
+      draftingDragSessionRef.current = null;
+      if (hitTarget.hasPointerCapture(event.pointerId)) {
+        hitTarget.releasePointerCapture(event.pointerId);
+      }
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", cancel);
@@ -2091,6 +2105,7 @@ export function App({ project: initialProject }: AppProps) {
       const position = draftingDragPositionRef.current;
       draftingDragPositionRef.current = null;
       setDraftingDragPreview(null);
+      draftingDragSessionRef.current = null;
       if (
         position &&
         (position.x !== original.x || position.y !== original.y)
@@ -2115,6 +2130,7 @@ export function App({ project: initialProject }: AppProps) {
       window.removeEventListener("pointercancel", cancel);
     };
 
+    draftingDragSessionRef.current = { cancel };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", cancel);
@@ -2694,13 +2710,9 @@ export function App({ project: initialProject }: AppProps) {
         title: project.name,
       });
       if (format === "png") {
-        const { rasterizeFormalSvgInBrowser } =
-          await import("@icm/exporters/browser");
         const png = await rasterizeFormalSvgInBrowser(source);
         download(png.bytes as BlobPart, png.mediaType, "png");
       } else {
-        const { exportFormalArtifactsInBrowser } =
-          await import("@icm/exporters/browser");
         const { pdf } = await exportFormalArtifactsInBrowser(source);
         download(pdf as BlobPart, "application/pdf", "pdf");
       }
@@ -3207,8 +3219,8 @@ export function App({ project: initialProject }: AppProps) {
         setPendingSymbolId(null);
         setBoxPreview(null);
         // P0-2: Escape cancels an in-progress drafting drag without committing.
-        if (draftingDragPreview) {
-          setDraftingDragPreview(null);
+        if (draftingDragSessionRef.current) {
+          draftingDragSessionRef.current.cancel();
           setStatus("Cancelled drafting drag");
           return;
         }
@@ -4274,16 +4286,20 @@ export function App({ project: initialProject }: AppProps) {
               }
               if (object.kind === "callout" && geometry.kind === "callout") {
                 return (
-                  <line
+                  <g
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
-                    className={selected}
-                    x1={geometry.textPosition.x}
-                    y1={geometry.textPosition.y}
-                    x2={geometry.target.x}
-                    y2={geometry.target.y}
                     onPointerDown={onDown}
-                  />
+                  >
+                    <line
+                      className={selected}
+                      x1={geometry.textPosition.x}
+                      y1={geometry.textPosition.y}
+                      x2={geometry.target.x}
+                      y2={geometry.target.y}
+                    />
+                    <rect className={selected} {...geometry.textBounds} />
+                  </g>
                 );
               }
               const hitBounds = drag

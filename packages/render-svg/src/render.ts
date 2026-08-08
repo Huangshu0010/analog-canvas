@@ -742,20 +742,19 @@ function renderDraftText(
   unresolved: string,
 ): string {
   const { position, rotation } = geometry;
-  const fontSize = typographyFontSize(
-    object.typographyToken ?? "body",
+  const fontSize =
+    typographyFontSize(object.typographyToken ?? "body", profile) *
+    (object.styleOverride?.sizeScale ?? 1);
+  const content = renderRichTextDocument(
+    object.content as unknown as RichTextDocumentInput,
     profile,
+    { lineOriginX: position.x },
   );
-  const content =
-    profile.id === "textbook-monochrome-v1"
-      ? escapeXmlText(flatText(object.content.runs as unknown[]))
-      : renderRichTextDocument(
-          object.content as unknown as RichTextDocumentInput,
-          profile,
-        );
+  const weight = object.styleOverride?.weight === "bold" ? "bold" : "normal";
+  const italic = object.styleOverride?.italic === true ? "italic" : "normal";
   // P1: the renderer consumes geometry.rotation (the single rotation truth),
   // not the raw persisted object rotation.
-  return `<text data-object-id="${object.id}" data-kind="draft-text"${unresolved} x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${rotation} ${position.x} ${position.y})" font-size="${fontSize}">${content}</text>`;
+  return `<text data-object-id="${object.id}" data-kind="draft-text"${unresolved} x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${rotation} ${position.x} ${position.y})" font-size="${fontSize}" font-weight="${weight}" font-style="${italic}">${content}</text>`;
 }
 
 function renderConstructionLine(
@@ -813,19 +812,18 @@ function renderDraftCallout(
 ): string {
   const { textPosition, target, rotation } = geometry;
   const leader = `<line x1="${textPosition.x}" y1="${textPosition.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
-  const fontSize = typographyFontSize(
-    object.typographyToken ?? "body",
+  const fontSize =
+    typographyFontSize(object.typographyToken ?? "body", profile) *
+    (object.styleOverride?.sizeScale ?? 1);
+  const content = renderRichTextDocument(
+    object.content as unknown as RichTextDocumentInput,
     profile,
+    { lineOriginX: textPosition.x },
   );
-  const content =
-    profile.id === "textbook-monochrome-v1"
-      ? escapeXmlText(flatText(object.content.runs as unknown[]))
-      : renderRichTextDocument(
-          object.content as unknown as RichTextDocumentInput,
-          profile,
-        );
+  const weight = object.styleOverride?.weight === "bold" ? "bold" : "normal";
+  const italic = object.styleOverride?.italic === true ? "italic" : "normal";
   // P1: renderer consumes geometry.rotation (the single rotation truth).
-  return `<g data-object-id="${object.id}" data-kind="draft-callout"${unresolved}>${leader}<text x="${textPosition.x}" y="${textPosition.y}" text-anchor="${object.alignment}" transform="rotate(${rotation} ${textPosition.x} ${textPosition.y})" font-size="${fontSize}">${content}</text></g>`;
+  return `<g data-object-id="${object.id}" data-kind="draft-callout"${unresolved}>${leader}<text x="${textPosition.x}" y="${textPosition.y}" text-anchor="${object.alignment}" transform="rotate(${rotation} ${textPosition.x} ${textPosition.y})" font-size="${fontSize}" font-weight="${weight}" font-style="${italic}">${content}</text></g>`;
 }
 
 function renderFloatingSymbol(
@@ -851,35 +849,12 @@ function renderFloatingSymbol(
   return `<g data-object-id="${object.id}" data-kind="draft-floating-symbol"${unresolved} data-symbol-id="${escapeXml(object.symbolId)}"><g transform="translate(${position.x} ${position.y}) rotate(${rotation})${mirror}">${body}</g></g>`;
 }
 
-function flatText(runs: unknown[]): string {
-  let result = "";
-  for (const run of runs) {
-    if (typeof run !== "object" || run === null) continue;
-    const node = run as { kind?: string; value?: string; children?: unknown[] };
-    if (node.kind === "text" && typeof node.value === "string") {
-      result += node.value;
-    } else if (node.kind === "line-break") {
-      result += " ";
-    } else if (node.children) {
-      result += flatText(node.children);
-    }
-  }
-  return result;
-}
-
 function typographyFontSize(
   token: "caption" | "body" | "label",
   profile: SchematicStyleProfile,
 ): number {
   if (token === "caption") return profile.typography.captionFontSize;
   return profile.typography.annotationFontSize;
-}
-
-function escapeXmlText(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
 }
 
 export function renderDocumentSvg(

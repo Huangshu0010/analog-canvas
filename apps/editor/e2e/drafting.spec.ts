@@ -59,6 +59,21 @@ async function dragCreate(
   });
 }
 
+async function dragLocator(
+  locator: Locator,
+  delta: { x: number; y: number },
+): Promise<void> {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("Drafting hit target is not measurable");
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await locator.page().mouse.move(start.x, start.y);
+  await locator.page().mouse.down();
+  await locator.page().mouse.move(start.x + delta.x, start.y + delta.y, {
+    steps: 12,
+  });
+  await locator.page().mouse.up();
+}
+
 // WP-R6 scenario A: add drafting text with rich markup, verify the canonical
 // AST is persisted and undo/redo restores it.
 test("adds drafting text with rich markup and undo/redo restores it", async ({
@@ -134,29 +149,53 @@ test("editor mounts without console errors", async ({ page }) => {
   expect(consoleErrors).toEqual([]);
 });
 
-// P0-2: a drafting drag (the drag-create gesture) commits exactly one
-// transaction, so one Ctrl+Z fully undoes it.
-test("drag-create commits one revision and undoes atomically (P0-2)", async ({
+// P0-2: moving an existing drafting object commits exactly one transaction,
+// so one Ctrl+Z restores its original persisted anchor.
+test("existing text drag commits once and undoes atomically (P0-2)", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Construction line tool (drag)");
-  await expect(page.getByTestId("active-tool")).toHaveText("construction-line");
-  await dragCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
+  await clickCommand(page, "More", "Add text");
   await expect(page.getByTestId("revision")).toHaveText("1");
-  await expect(
-    page.locator(
-      '[data-layer="drafting"] polyline[data-kind="construction-line"]',
-    ),
-  ).toHaveCount(1);
+
+  const before = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ).documents[0].drafting.objects[0].anchor.position;
+  await dragLocator(page.getByTestId(/^drafting-hit-note-/), {
+    x: 70,
+    y: -45,
+  });
+  await expect(page.getByTestId("revision")).toHaveText("2");
+  const moved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ).documents[0].drafting.objects[0].anchor.position;
+  expect(moved).not.toEqual(before);
 
   await page.keyboard.press("Control+z");
-  await expect(page.getByTestId("revision")).toHaveText("2");
-  await expect(
-    page.locator(
-      '[data-layer="drafting"] polyline[data-kind="construction-line"]',
-    ),
-  ).toHaveCount(0);
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  const undone = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ).documents[0].drafting.objects[0].anchor.position;
+  expect(undone).toEqual(before);
+});
+
+test("Escape cancels an existing text drag without a revision", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "More", "Add text");
+  const hit = page.getByTestId(/^drafting-hit-note-/);
+  const box = await hit.boundingBox();
+  if (!box) throw new Error("Drafting hit target is not measurable");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 80, y - 30, { steps: 8 });
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByText("Cancelled drafting drag")).toBeVisible();
 });
 
 // P1: drag-creating a construction line commits one object.
@@ -230,8 +269,9 @@ test("unedited Apply does not add a revision (WP-R3)", async ({ page }) => {
   await expect(page.getByTestId("revision")).toHaveText("2");
 });
 
-// WP-R3/P1: a saved project preserves drafting anchors across recovery.
-test("drafting anchor survives save and recovery (P1 persistence)", async ({
+// WP-R3/P1: a saved project is actually reopened through the file input and
+// preserves both its canonical rich-text AST and anchor.
+test("drafting content and anchor survive save and reopen (P1 persistence)", async ({
   page,
 }) => {
   await page.goto("/");
@@ -239,7 +279,7 @@ test("drafting anchor survives save and recovery (P1 persistence)", async ({
   const draftInput = page.getByRole("textbox", {
     name: "Drafting text content",
   });
-  await draftInput.fill("V_{in}");
+  await draftInput.fill("\\it{V_{in}} = \\frac{V_{DD}}{2}");
   await page.getByRole("button", { name: "Apply text" }).click();
   await expect(page.getByTestId("revision")).toHaveText("2");
 
@@ -251,17 +291,23 @@ test("drafting anchor survives save and recovery (P1 persistence)", async ({
   expect(textObject).toBeTruthy();
   expect(textObject.anchor).toMatchObject({ kind: "free" });
   expect(typeof textObject.anchor.position.x).toBe("number");
+  await clickCommand(page, "More", "Add text");
+  await expect(page.locator('[data-kind="draft-text"]')).toHaveCount(2);
 
-  // Recovery data is written on commit; if present it must round-trip the
-  // drafting anchor (defensive, not the primary assertion).
-  const recovery = await page.evaluate(() =>
-    localStorage.getItem("icm.recovery.v1"),
+  await page.getByTestId("project-file").setInputFiles({
+    name: "saved-drafting.icproj.json",
+    mimeType: "application/json",
+    buffer: projectBytes,
+  });
+  await expect(
+    page.getByText(/Opened saved-drafting\.icproj\.json/),
+  ).toBeVisible();
+  await expect(page.locator('[data-kind="draft-text"]')).toHaveCount(1);
+  const reopenedBytes = await downloadBytes(page, "File", "Save Project");
+  const reopened = JSON.parse(reopenedBytes.toString("utf8"));
+  const reopenedText = reopened.documents[0].drafting.objects.find(
+    (object: { kind: string }) => object.kind === "text",
   );
-  if (recovery) {
-    const recovered = JSON.parse(recovery);
-    const recoveredText = recovered.documents[0].drafting.objects.find(
-      (object: { kind: string }) => object.kind === "text",
-    );
-    expect(recoveredText?.anchor).toEqual(textObject.anchor);
-  }
+  expect(reopenedText.anchor).toEqual(textObject.anchor);
+  expect(reopenedText.content).toEqual(textObject.content);
 });

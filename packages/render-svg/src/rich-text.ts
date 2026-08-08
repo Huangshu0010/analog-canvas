@@ -28,6 +28,7 @@ interface RenderContext {
   profile: SchematicStyleProfile;
   inheritedStyle: string;
   dy: number;
+  lineOriginX: number;
 }
 
 function escapeXml(value: string): string {
@@ -52,17 +53,31 @@ function runStyle(
 export function renderRichTextDocument(
   document: RichTextDocumentInput,
   profile: SchematicStyleProfile,
+  options: { lineOriginX?: number } = {},
 ): string {
   const ctx: RenderContext = {
     profile,
     inheritedStyle: runStyle(profile, false, false),
     dy: 0,
+    lineOriginX: options.lineOriginX ?? 0,
   };
   return renderRuns(document.runs, ctx);
 }
 
 function renderRuns(runs: RichTextNode[], ctx: RenderContext): string {
-  return runs.map((run) => renderRun(run, ctx)).join("");
+  let output = "";
+  let lineOpen = false;
+  for (const run of runs) {
+    if (run.kind === "line-break") {
+      if (lineOpen) output += "</tspan>";
+      output += `<tspan data-text-run="line-break" x="${ctx.lineOriginX}" dy="${ctx.profile.typography.lineHeight}em">`;
+      lineOpen = true;
+      continue;
+    }
+    output += renderRun(run, ctx);
+  }
+  if (lineOpen) output += "</tspan>";
+  return output;
 }
 
 function renderRun(node: RichTextNode, ctx: RenderContext): string {
@@ -70,7 +85,7 @@ function renderRun(node: RichTextNode, ctx: RenderContext): string {
     case "text":
       return escapeXml(node.value ?? "");
     case "line-break":
-      return `<tspan data-text-run="line-break" x="0" dy="${ctx.profile.typography.lineHeight}em"></tspan>`;
+      return "";
     case "span":
       return renderSpan(node, ctx);
     case "fraction":

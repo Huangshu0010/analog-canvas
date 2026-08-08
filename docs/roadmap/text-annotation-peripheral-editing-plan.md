@@ -368,3 +368,31 @@ P1-rotation/bounds/typed-snapshot/tools/hit/scenarios/smoke, P2).
 - Selection of non-text drafting kinds is click-select/delete only; no box
   select, copy/paste, or drag for arrow/leader/callout yet.
 - These are tracked as follow-up interaction work, not claimed complete.
+
+### Final runtime repair (2026-08-08)
+
+The second audit found that several statements above were supported only by
+shallow or mislabeled tests. The final repair closes those gaps:
+
+- Rich-text markup now uses a bounded recursive parser through the full model
+  depth; nested spans/fractions, literal command-like text, and empty malformed
+  commands are covered by schema-valid round-trip tests.
+- Style profiles and rich-text measurement live at the derived presentation
+  boundary. Bounds use the active profile, typography token, size override,
+  longest line, and actual fraction operands; SVG line breaks reset to the
+  text object's real x origin.
+- Existing free-text drag is verified as one transaction, one undo, with a
+  shared Escape/pointer-cancel path that removes listeners and drops preview
+  state. Callout hit testing includes both its leader and text box.
+- Persistence coverage performs a real Save Project -> Open Project cycle and
+  compares the reopened canonical AST and anchor instead of conditionally
+  inspecting recovery storage.
+- Production smoke uses Vite's preview server, guarantees browser/server
+  cleanup, and `--check` reads the committed report without rewriting it. It is
+  part of `release:verify`.
+- The visual example command now migrates its checked-in legacy fixture through
+  `parseProject`; browser PNG/PDF exporters are bound at build time, avoiding a
+  stale runtime module fetch in the GUI.
+
+The interaction items listed under **Remaining** are still deliberate future
+scope; this repair does not relabel them as completed.

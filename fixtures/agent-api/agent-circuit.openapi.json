@@ -39076,6 +39076,30 @@
                                                       }
                                                     ]
                                                   },
+                                                  "textBounds": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                      "x": {
+                                                        "type": "number"
+                                                      },
+                                                      "y": {
+                                                        "type": "number"
+                                                      },
+                                                      "width": {
+                                                        "type": "number"
+                                                      },
+                                                      "height": {
+                                                        "type": "number"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "x",
+                                                      "y",
+                                                      "width",
+                                                      "height"
+                                                    ],
+                                                    "additionalProperties": false
+                                                  },
                                                   "bounds": {
                                                     "type": "object",
                                                     "properties": {
@@ -39184,6 +39208,7 @@
                                                   "textPosition",
                                                   "target",
                                                   "rotation",
+                                                  "textBounds",
                                                   "bounds",
                                                   "diagnostics"
                                                 ],
@@ -79757,6 +79782,30 @@
                                                       }
                                                     ]
                                                   },
+                                                  "textBounds": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                      "x": {
+                                                        "type": "number"
+                                                      },
+                                                      "y": {
+                                                        "type": "number"
+                                                      },
+                                                      "width": {
+                                                        "type": "number"
+                                                      },
+                                                      "height": {
+                                                        "type": "number"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "x",
+                                                      "y",
+                                                      "width",
+                                                      "height"
+                                                    ],
+                                                    "additionalProperties": false
+                                                  },
                                                   "bounds": {
                                                     "type": "object",
                                                     "properties": {
@@ -79865,6 +79914,7 @@
                                                   "textPosition",
                                                   "target",
                                                   "rotation",
+                                                  "textBounds",
                                                   "bounds",
                                                   "diagnostics"
                                                 ],

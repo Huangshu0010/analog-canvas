@@ -2388,3 +2388,23 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `docs(plan): record Razavi UI raster-diff baseline`.
+
+## 2026-08-08 - Drafting runtime final repair
+
+- Target: close the second-audit gaps that survived the first Drafting Runtime
+  Completion pass and verify the real GUI/file/export paths.
+- Changed areas: recursive reversible rich-text parser; derived-owned style
+  profiles and shared rich-text measurement; profile/fraction/multiline-aware
+  drafting bounds; nonzero SVG line origins; cancellable atomic text drag;
+  callout text-plus-leader hits; real Save -> Open tests; read-only production
+  preview smoke in the release gate; migration-aware visual demo loading; and
+  build-time browser exporter binding.
+- Full-gate findings: six manual-editor assertions were stale after symbol and
+  schematic-math changes, and the visual-demo command directly rejected its
+  legacy fixture. A Vite process left on port 4173 since 07:23 also caused
+  Playwright to reuse an old module graph; the verified workspace process was
+  stopped and the complete suite was rerun on a fresh server.
+- Validation: focused tests passed; full unit suite 283/283; full Playwright
+  26/26; typecheck; 12-package build; production preview smoke `--check`;
+  Agent API artifact check; release package; and `git diff --check` all pass.
+- Commit status: ready for `fix(drafting): close runtime and GUI verification gaps`.

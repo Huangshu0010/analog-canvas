@@ -90,7 +90,11 @@ describe("renderRichTextDocument (WP-A2)", () => {
         ],
       },
       razaviTextbookProfile,
+      { lineOriginX: 240 },
     );
     expect(svg).toContain('data-text-run="line-break"');
+    expect(svg).toContain('x="240"');
+    expect(svg).not.toContain('x="0"');
+    expect(svg).toContain('dy="1em">line2</tspan>');
   });
 });

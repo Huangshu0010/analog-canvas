@@ -9,6 +9,11 @@ import type {
 import type { SymbolResolver } from "@icm/symbols";
 
 import { resolveVisualAnchor, type ResolvedAnchor } from "./anchor.js";
+import {
+  measureRichTextDocument,
+  richTextMetrics,
+} from "./rich-text-layout.js";
+import { resolveSchematicStyleProfile } from "./style-profile.js";
 
 // ADR 0010 / WP-R1: the single derived-geometry entry for DraftingObjects.
 // Renderer, Editor overlay, and Agent Snapshot consume ONLY this result; no
@@ -58,6 +63,7 @@ export type ResolvedDraftingGeometry =
       textPosition: Point;
       target: Point;
       rotation: 0 | 90 | 180 | 270;
+      textBounds: Rect;
       bounds: Rect;
       diagnostics: DraftingDiagnostic[];
     }
@@ -179,7 +185,11 @@ function resolveText(
     object.alignment,
     rotation,
     object.content,
-    typographyFontSize(object.typographyToken),
+    richTextMetrics(
+      resolveSchematicStyleProfile(document.presentation.styleProfileId),
+      object.typographyToken,
+      object.styleOverride?.sizeScale,
+    ),
   );
   return {
     kind: "text" as const,
@@ -188,14 +198,6 @@ function resolveText(
     bounds,
     diagnostics,
   };
-}
-
-// P1: per-token font sizes for bounds estimation, mirroring the Razavi profile
-// (caption 14, body/label 16). Derived cannot import the renderer profile.
-function typographyFontSize(
-  token: "caption" | "body" | "label" | undefined,
-): number {
-  return token === "caption" ? 14 : 16;
 }
 
 function resolveArrow(
@@ -294,7 +296,11 @@ function resolveCallout(
     object.alignment,
     rotation,
     object.content,
-    typographyFontSize(object.typographyToken),
+    richTextMetrics(
+      resolveSchematicStyleProfile(document.presentation.styleProfileId),
+      object.typographyToken,
+      object.styleOverride?.sizeScale,
+    ),
   );
   const leaderBox = paddedBounds(
     unionBounds([textPos, targetPoint]),
@@ -305,6 +311,7 @@ function resolveCallout(
     textPosition: textPos,
     target: targetPoint,
     rotation,
+    textBounds: textBox,
     bounds: unionRects([textBox, leaderBox]),
     diagnostics: [...anchor.diagnostics, ...target.diagnostics],
   };
@@ -444,10 +451,11 @@ function textBounds(
   alignment: "start" | "middle" | "end",
   rotation: 0 | 90 | 180 | 270,
   content: RichTextDocument,
-  fontSize: number,
+  metrics: ReturnType<typeof richTextMetrics>,
 ): Rect {
-  const { width, lineCount } = measureRichText(content, fontSize);
-  const height = lineCount * fontSize * 1.35 + TEXT_PADDING_Y * 2;
+  const layout = measureRichTextDocument(content, metrics);
+  const width = layout.width + TEXT_PADDING_X * 2;
+  const height = layout.height + TEXT_PADDING_Y * 2;
   const left =
     alignment === "start"
       ? position.x - TEXT_PADDING_X
@@ -456,50 +464,31 @@ function textBounds(
         : position.x - width / 2;
   const top = position.y - height / 2;
   const box: Rect = { x: left, y: top, width, height };
-  if (rotation === 90 || rotation === 270) {
-    return {
-      x: position.x - height / 2,
-      y: position.y - width / 2,
-      width: height,
-      height: width,
-    };
-  }
-  return box;
+  if (rotation === 0) return box;
+  return rotatedRectBounds(box, position, rotation);
 }
 
-// Approximate the rendered width (0.6em advance per character, sub/superscripts
-// at reduced width) and the number of lines introduced by line-break runs.
-function measureRichText(
-  content: RichTextDocument,
-  fontSize: number,
-): { width: number; lineCount: number } {
-  let width = 0;
-  let lineCount = 1;
-  const advance = fontSize * 0.6;
-  for (const run of content.runs) {
-    if (typeof run !== "object" || run === null) continue;
-    const node = run as {
-      kind?: string;
-      value?: string;
-      children?: unknown[];
-      numerator?: { runs: unknown[] };
-      denominator?: { runs: unknown[] };
-    };
-    if (node.kind === "text") {
-      width += (node.value ?? "").length * advance;
-    } else if (node.kind === "line-break") {
-      lineCount += 1;
-    } else if (node.kind === "fraction") {
-      // A fraction occupies roughly three characters of horizontal space.
-      width += advance * 3;
-    } else if (node.kind === "span" && node.children) {
-      const child = measureRichText(
-        { runs: node.children as RichTextDocument["runs"] },
-        fontSize * 0.7,
-      );
-      width += child.width;
-      lineCount += child.lineCount - 1;
-    }
-  }
-  return { width, lineCount };
+function rotatedRectBounds(
+  rect: Rect,
+  origin: Point,
+  rotation: 90 | 180 | 270,
+): Rect {
+  const radians = (rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return unionBounds(
+    [
+      { x: rect.x, y: rect.y },
+      { x: rect.x + rect.width, y: rect.y },
+      { x: rect.x, y: rect.y + rect.height },
+      { x: rect.x + rect.width, y: rect.y + rect.height },
+    ].map((point) => {
+      const dx = point.x - origin.x;
+      const dy = point.y - origin.y;
+      return {
+        x: origin.x + dx * cos - dy * sin,
+        y: origin.y + dx * sin + dy * cos,
+      };
+    }),
+  );
 }

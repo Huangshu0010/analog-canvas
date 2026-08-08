@@ -254,14 +254,14 @@ test("leaves device pins on their natural axis and deletes a selected junction",
   const terminalRoute = await readRoutePoints(page, "route-ui-1");
   expect(terminalRoute.length).toBeGreaterThanOrEqual(3);
   expect(terminalRoute[0]!.x).toBe(terminalRoute[1]!.x);
-  expect(terminalRoute.at(-2)!.y).toBe(terminalRoute.at(-1)!.y);
+  expect(terminalRoute.at(-2)!.x).toBe(terminalRoute.at(-1)!.x);
   expect(
     terminalRoute.every(
       (point) => Math.abs(point.x % 10) === 0 && Math.abs(point.y % 10) === 0,
     ),
   ).toBe(true);
 
-  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByRole("button", { name: "Wire", exact: true }).click();
   await page.getByTestId("terminal-M1-G").click();
   await page
     .getByTestId("schematic-canvas")
@@ -305,7 +305,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
   await page.getByRole("button", { name: "Restore recovery" }).click();
   await expect(page.getByTestId("instance-count")).toHaveText("4");
 
-  await page.getByRole("button", { name: "Wire" }).click();
+  await page.getByRole("button", { name: "Wire", exact: true }).click();
   await page.getByTestId("terminal-M2-S").click();
   await page
     .getByTestId("schematic-canvas")
@@ -327,7 +327,9 @@ test("moves a selected wire segment and deletes a connected component safely", a
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
 
-  await clickRoute(page, "route-ui-1");
+  // Select the exposed middle segment; the terminal escape segments are
+  // intentionally covered by their component hit targets.
+  await clickRoute(page, "route-ui-1", 0.5, 1);
   const handle = page.getByTestId("route-handle-route-ui-1");
   const handleBox = await handle.boundingBox();
   if (!handleBox) throw new Error("Route handle is not measurable");
@@ -414,11 +416,13 @@ test("edits instance, electrical Net, and free text with bounded label handles",
     .getByRole("textbox", { name: "Displayed instance name" })
     .fill("R_LOAD");
   await page.getByRole("button", { name: "Apply name" }).click();
+  // The canonical name keeps the underscore; schematic-math renders it as a
+  // subscript, so DOM textContent is RLOAD.
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
-    "R_LOAD",
+    "RLOAD",
   );
 
-  await clickRoute(page, "route-ui-1", 0.35);
+  await clickRoute(page, "route-ui-1", 0.35, 1);
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
     .fill("SIGNAL");
@@ -436,7 +440,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page.getByTestId("terminal-R3-2").click();
   await page.getByTestId("terminal-R4-1").click();
   await expect(page.getByTestId("net-count")).toHaveText("2");
-  await clickRoute(page, "route-ui-2", 0.35);
+  await clickRoute(page, "route-ui-2", 0.35, 1);
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
     .fill("SIGNAL");
@@ -448,14 +452,14 @@ test("edits instance, electrical Net, and free text with bounded label handles",
 
   await clickCommand(page, "More", "Add text");
   const textInput = page.getByRole("textbox", {
-    name: "Selected text content",
+    name: "Drafting text content",
   });
   await textInput.fill("Matched pair");
   await page.getByRole("button", { name: "Apply text" }).click();
-  await expect(page.locator('[data-layer="annotations"]')).toContainText(
+  await expect(page.locator('[data-layer="drafting"]')).toContainText(
     "Matched pair",
   );
-  const noteHandle = page.locator('[data-testid^="annotation-hit-note-"]');
+  const noteHandle = page.locator('[data-testid^="drafting-hit-note-"]');
   const beforeBox = await noteHandle.boundingBox();
   if (!beforeBox) throw new Error("Text handle is not measurable");
   await noteHandle.dragTo(page.getByTestId("schematic-canvas"), {
@@ -578,7 +582,7 @@ test("imports the SPICE baseline through the grouped File menu", async ({
     ]);
 
   await expect(page.getByTestId("status")).toHaveText(
-    "Imported 8 Documents and 32 instances; 6 generic symbols",
+    "Imported 8 Documents and 32 instances; 5 generic symbols",
   );
   await expect(page.getByTestId("document-count")).toHaveText("8");
   await expect(page.getByTestId("instance-count")).toHaveText("32");
@@ -621,6 +625,9 @@ test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
 }) => {
   await page.goto("/");
   await clickCommand(page, "More", "Open visual example");
+  await expect(page.getByTestId("active-document-id")).toHaveText(
+    "document-differential-stage",
+  );
   await expect(page.getByTestId("blocking-diagnostic-count")).toHaveText("0");
 
   const projectBytes = await downloadBytes(page, "File", "Save Project");

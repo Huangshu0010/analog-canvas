@@ -58,6 +58,7 @@ export const ResolvedDraftingGeometrySchema = z.discriminatedUnion("kind", [
     textPosition: PointSchema,
     target: PointSchema,
     rotation: RotationSchema,
+    textBounds: FloatRectSchema,
     bounds: FloatRectSchema,
     diagnostics: z.array(DraftingDiagnosticSchema),
   }),

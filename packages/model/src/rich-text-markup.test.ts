@@ -7,6 +7,7 @@ import {
   serializeMarkup,
 } from "./rich-text-markup.js";
 import type { MarkupDocument } from "./rich-text-markup.js";
+import { RichTextDocumentSchema } from "./schema.js";
 
 describe("parseMarkup (ADR 0010 import shorthand)", () => {
   it("parses a plain string as a single text run", () => {
@@ -37,8 +38,14 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
     const superscript = doc.runs.find(
       (run) => run.kind === "span" && run.style === "superscript",
     );
-    expect(subscript?.children).toEqual([{ kind: "text", value: "in" }]);
-    expect(superscript?.children).toEqual([{ kind: "text", value: "+" }]);
+    expect(subscript).toMatchObject({
+      kind: "span",
+      children: [{ kind: "text", value: "in" }],
+    });
+    expect(superscript).toMatchObject({
+      kind: "span",
+      children: [{ kind: "text", value: "+" }],
+    });
   });
 
   it("parses italic and bold spans", () => {
@@ -67,6 +74,12 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
   it("parses a line break from backslash-n", () => {
     const doc = parseMarkup("line1\\nline2");
     expect(doc.runs[1]).toEqual({ kind: "line-break" });
+  });
+
+  it("preserves the documented double-backslash literal", () => {
+    expect(parseMarkup("a\\\\b")).toEqual({
+      runs: [{ kind: "text", value: "a\\b" }],
+    });
   });
 
   it("preserves unknown backslash sequences and unclosed commands as literal text", () => {
@@ -146,7 +159,22 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
           {
             kind: "span",
             style: "italic",
-            children: [{ kind: "text", value: "a_{b}" }],
+            children: [
+              {
+                kind: "fraction",
+                numerator: {
+                  runs: [
+                    { kind: "text", value: "V" },
+                    {
+                      kind: "span",
+                      style: "subscript",
+                      children: [{ kind: "text", value: "DD" }],
+                    },
+                  ],
+                },
+                denominator: { runs: [{ kind: "text", value: "2" }] },
+              },
+            ],
           },
         ],
       },
@@ -156,6 +184,46 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
       const back = parseMarkup(serialized);
       // parseMarkup may coalesce a literal; use normalization for equality.
       expect(normalizeRichText(back)).toEqual(normalizeRichText(ast));
+    }
+  });
+
+  it("round-trips the deepest nesting accepted by the model schema", () => {
+    const ast: MarkupDocument = {
+      runs: [
+        {
+          kind: "span",
+          style: "italic",
+          children: [
+            {
+              kind: "span",
+              style: "bold",
+              children: [
+                {
+                  kind: "span",
+                  style: "subscript",
+                  children: [
+                    {
+                      kind: "span",
+                      style: "superscript",
+                      children: [{ kind: "text", value: "deep" }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(RichTextDocumentSchema.safeParse(ast).success).toBe(true);
+    expect(parseMarkup(serializeMarkup(ast))).toEqual(ast);
+  });
+
+  it("keeps empty commands literal so parsing never creates a schema-invalid span", () => {
+    for (const source of ["\\it{}", "\\bf{}", "_{}", "^{}", "\\frac{}{2}"]) {
+      const parsed = parseMarkup(source);
+      expect(parsed).toEqual({ runs: [{ kind: "text", value: source }] });
+      expect(RichTextDocumentSchema.safeParse(parsed).success).toBe(true);
     }
   });
 
