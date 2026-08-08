@@ -1834,3 +1834,20 @@ Editing System work.
   typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(render): render construction-line, arrow, leader, callout, floating-symbol (WP-A4 rendering)`.
+## 2026-08-08 - WP-A4 decorative symbol capability
+
+- Target: give the Symbol Catalog a decorative capability so DraftFloatingSymbol
+  can reference a terminal-free whitelist entry (ADR 0010).
+- Changed areas: symbols schema adds optional `decorative` to SymbolDefinition
+  and allows zero pins with a refine (decorative -> no terminals;
+  non-decorative -> at least one pin); builtins adds `decorative-note-box`
+  (a terminal-free dashed rectangle) and registers it first; edit-engine
+  floating-symbol validation now requires `definition.decorative` and zero
+  pins via the Symbol Resolver.
+- Tests: edit-engine drafting.test proves decorative-note-box is accepted and
+  nmos (terminal-bearing) is rejected when a resolver is present; builtins.test
+  updated for the new symbol id.
+- Validation: full suite 250/250; workspace typecheck clean; `git diff --check`
+  clean.
+- Commit status: ready for
+  `feat(symbols): decorative symbol capability for floating symbols (WP-A4 decorative)`.

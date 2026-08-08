@@ -1773,14 +1773,19 @@ export function executeTransaction(
               `Unknown floating symbol: ${edit.object.symbolId}`,
             );
           }
-          // ADR 0010: a floating symbol must be decorative (terminal-free) and
-          // whitelisted. The `decorative` catalog flag lands in WP-A4; until
-          // then every Symbol carries >= 1 pin, so any floating symbol is
-          // rejected here, enforcing the no-terminal half of the invariant.
+          // ADR 0010: a floating symbol must reference a `decorative: true`
+          // catalog entry whose definition contains no terminal, enforced here
+          // via the Symbol Resolver (the model schema cannot check the catalog).
+          if (!resolved.definition.decorative) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Floating symbol must be decorative: ${edit.object.symbolId}`,
+            );
+          }
           if (resolved.definition.pins.length > 0) {
             return rejectAt(
               "EDIT_PRECONDITION",
-              `Floating symbol must be decorative (terminal-free): ${edit.object.symbolId}`,
+              `Floating symbol must be terminal-free: ${edit.object.symbolId}`,
             );
           }
         }

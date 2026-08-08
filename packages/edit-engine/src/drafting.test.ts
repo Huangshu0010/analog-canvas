@@ -1,4 +1,5 @@
 import { createEmptyDocument } from "@icm/model";
+import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { executeTransaction } from "./transaction.js";
@@ -148,5 +149,43 @@ describe("drafting and guide edits", () => {
       },
     ]));
     expect(result.ok).toBe(false);
+  });
+
+  it("accepts a decorative floating symbol and rejects a terminal-bearing one (WP-A4)", () => {
+    const resolver = new InMemorySymbolResolver(builtInSymbols);
+    const document = createEmptyDocument("doc", "Floating");
+    const decorative = executeTransaction(
+      document,
+      transaction("doc", [
+        {
+          kind: "upsert_drafting_object",
+          object: {
+            id: "f1", kind: "floating-symbol", locked: false, zIndex: 0,
+            anchor: { kind: "free", position: { x: 0, y: 0 } },
+            symbolId: "decorative-note-box",
+            transform: { rotation: 0, mirror: "none" },
+          },
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+    expect(decorative.ok).toBe(true);
+
+    const terminal = executeTransaction(
+      document,
+      transaction("doc", [
+        {
+          kind: "upsert_drafting_object",
+          object: {
+            id: "f2", kind: "floating-symbol", locked: false, zIndex: 0,
+            anchor: { kind: "free", position: { x: 0, y: 0 } },
+            symbolId: "nmos",
+            transform: { rotation: 0, mirror: "none" },
+          },
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+    expect(terminal.ok).toBe(false);
   });
 });

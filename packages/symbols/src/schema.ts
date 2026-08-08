@@ -90,13 +90,32 @@ export const SymbolDefinitionSchema = z
     id: StableIdSchema,
     name: z.string().min(1),
     viewBox: RectSchema,
-    pins: z.array(SymbolPinSchema).min(1),
+    pins: z.array(SymbolPinSchema).min(0),
     primitives: z.array(SymbolPrimitiveSchema),
     variants: z.array(SymbolVariantSchema),
     aliases: z.array(StableIdSchema),
     labelVisibility: z.enum(["shown", "hidden"]).optional(),
+    // ADR 0010: a decorative symbol is a non-electrical catalog entry usable
+    // only as a DraftFloatingSymbol. It must carry no terminals (pins).
+    decorative: z.boolean().optional(),
   })
   .superRefine((symbol, context) => {
+    if (symbol.decorative && symbol.pins.length > 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["pins"],
+        message:
+          "A decorative symbol must contain no terminals (pins)",
+      });
+    }
+    if (!symbol.decorative && symbol.pins.length === 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["pins"],
+        message:
+          "A non-decorative symbol must contain at least one terminal (pin)",
+      });
+    }
     const pinNames = new Set<string>();
     for (const [pinIndex, pin] of symbol.pins.entries()) {
       if (pinNames.has(pin.name)) {

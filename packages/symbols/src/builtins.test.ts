@@ -12,6 +12,7 @@ import { SYMBOL_CONNECTION_GRID, SymbolDefinitionSchema } from "./schema.js";
 describe("initial built-in Symbol Library", () => {
   it("contains the reviewed Phase 5 production families", () => {
     expect(builtInSymbols.map((symbol) => symbol.id)).toEqual([
+      "decorative-note-box",
       "resistor",
       "poly-resistor",
       "capacitor",

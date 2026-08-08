@@ -399,7 +399,37 @@ const polyResistor: SymbolDefinition = {
   aliases: ["res-high-po"],
 };
 
+// ADR 0010 decorative symbol: a non-electrical, terminal-free catalog entry
+// usable only as a DraftFloatingSymbol (textbook note box). It never creates a
+// Pin, Net, flightline, Junction, or SPICE instance.
+function decorativeNoteBoxSymbol(): SymbolDefinition {
+  return {
+    schemaVersion: 1,
+    id: "decorative-note-box",
+    name: "Note Box (decorative)",
+    viewBox: { x: -30, y: -14, width: 60, height: 28 },
+    pins: [],
+    primitives: [
+      {
+        kind: "polyline",
+        points: [
+          { x: -30, y: -14 },
+          { x: 30, y: -14 },
+          { x: 30, y: 14 },
+          { x: -30, y: 14 },
+          { x: -30, y: -14 },
+        ],
+        style: { strokeRole: "normal" },
+      },
+    ],
+    variants: [],
+    aliases: [],
+    decorative: true,
+  };
+}
+
 export const builtInSymbols: readonly SymbolDefinition[] = [
+  decorativeNoteBoxSymbol(),
   catalogResistor,
   polyResistor,
   catalogCapacitor,
