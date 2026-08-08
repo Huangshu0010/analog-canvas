@@ -366,3 +366,42 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     expect(geometry.bounds.width).toBeGreaterThan(8 * 16 * 0.6);
   });
 });
+
+  it("distinguishes an invalid route segment from a missing target (P2)", () => {
+    const document = documentWithRoute();
+    const object = textObject({
+      anchor: {
+        kind: "route",
+        routeId: "r1",
+        segmentIndex: 99,
+        t: 0.5,
+        normalOffset: 0,
+        direction: "forward",
+        orientation: "follow",
+        fallbackPosition: { x: 0, y: 0 },
+      },
+    });
+    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+    expect(geometry.kind).toBe("text");
+    if (geometry.kind !== "text") return;
+    expect(geometry.diagnostics[0]?.code).toBe(
+      "DRAFTING_ROUTE_SEGMENT_INVALID",
+    );
+
+    // A missing route is a different, actionable failure.
+    const missing = textObject({
+      anchor: {
+        kind: "route",
+        routeId: "gone",
+        segmentIndex: 0,
+        t: 0.5,
+        normalOffset: 0,
+        direction: "forward",
+        orientation: "follow",
+        fallbackPosition: { x: 1, y: 1 },
+      },
+    });
+    const mg = resolveDraftingObjectGeometry(document, resolver, missing);
+    if (mg.kind !== "text") return;
+    expect(mg.diagnostics[0]?.code).toBe("DRAFTING_ANCHOR_TARGET_MISSING");
+  });

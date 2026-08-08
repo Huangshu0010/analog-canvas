@@ -111,8 +111,14 @@ function resolveAnchorWithRole(
   const resolved = resolveVisualAnchor(document, resolver, anchor);
   const diagnostics: DraftingDiagnostic[] = [];
   if (!resolved.resolved && resolved.diagnostic) {
+    // P2: propagate the precise code (missing target vs invalid route segment)
+    // instead of collapsing every failure into one.
+    const code =
+      resolved.diagnostic.code === "DRAFTING_ROUTE_SEGMENT_INVALID"
+        ? "DRAFTING_ROUTE_SEGMENT_INVALID"
+        : "DRAFTING_ANCHOR_TARGET_MISSING";
     diagnostics.push({
-      code: "DRAFTING_ANCHOR_TARGET_MISSING",
+      code,
       severity: "warning",
       draftingObjectId,
       anchorRole,
@@ -149,8 +155,12 @@ function resolveText(
   const resolved = resolveVisualAnchor(document, resolver, object.anchor);
   const diagnostics: DraftingDiagnostic[] = [];
   if (!resolved.resolved && resolved.diagnostic) {
+    const code =
+      resolved.diagnostic.code === "DRAFTING_ROUTE_SEGMENT_INVALID"
+        ? "DRAFTING_ROUTE_SEGMENT_INVALID"
+        : "DRAFTING_ANCHOR_TARGET_MISSING";
     diagnostics.push({
-      code: "DRAFTING_ANCHOR_TARGET_MISSING",
+      code,
       severity: "warning",
       draftingObjectId: object.id,
       anchorRole: "anchor",

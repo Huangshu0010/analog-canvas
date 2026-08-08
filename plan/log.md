@@ -2273,3 +2273,20 @@ Editing System work.
   source and dist symbol geometry; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): canvas drag-create for construction line and arrow (P1 tools)`.
+## 2026-08-08 - P2: distinguish invalid route segment diagnostics
+
+- Target: fix the review P2 that DRAFTING_ROUTE_SEGMENT_INVALID was declared but
+  never returned (route missing / polyline failure / segment out of range all
+  collapsed into DRAFTING_ANCHOR_TARGET_MISSING).
+- Changed areas: derived anchor.ts AnchorDiagnostic.code is now a precise
+  union; resolveRouteAnchor returns DRAFTING_ROUTE_SEGMENT_INVALID when the
+  route exists but its segment is invalid, and DRAFTING_ANCHOR_TARGET_MISSING
+  for a missing route/unresolvable polyline; drafting-geometry propagates the
+  precise code for both text and object anchors.
+- Tests: drafting-geometry adds a case proving an out-of-range segmentIndex
+  yields DRAFTING_ROUTE_SEGMENT_INVALID and a missing route yields
+  DRAFTING_ANCHOR_TARGET_MISSING.
+- Validation: full suite 274/274; workspace typecheck clean; agent-api
+  artifacts regenerated; `git diff --check` clean.
+- Commit status: ready for
+  `fix(derived): return precise invalid-route-segment diagnostics (P2)`.

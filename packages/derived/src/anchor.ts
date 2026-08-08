@@ -21,8 +21,12 @@ export interface ResolvedAnchor {
   diagnostic?: AnchorDiagnostic;
 }
 
+export type AnchorDiagnosticCode =
+  | "anchor-target-missing"
+  | "DRAFTING_ROUTE_SEGMENT_INVALID";
+
 export interface AnchorDiagnostic {
-  code: string;
+  code: AnchorDiagnosticCode;
   message: string;
   objectId?: string;
 }
@@ -86,6 +90,7 @@ function resolveRouteAnchor(
   if (!route) {
     return unresolvedRoute(
       anchor,
+      "DRAFTING_ANCHOR_TARGET_MISSING",
       `Route ${anchor.routeId} is missing; using fallback position.`,
     );
   }
@@ -93,6 +98,7 @@ function resolveRouteAnchor(
   if (!polyline) {
     return unresolvedRoute(
       anchor,
+      "DRAFTING_ANCHOR_TARGET_MISSING",
       `Route ${anchor.routeId} has no resolvable polyline; using fallback position.`,
     );
   }
@@ -104,8 +110,11 @@ function resolveRouteAnchor(
     direction: anchor.direction,
   });
   if (!placement) {
+    // P2: a valid route whose segment is gone/out-of-range is a distinct,
+    // actionable failure (re-select the segment), not a missing target.
     return unresolvedRoute(
       anchor,
+      "DRAFTING_ROUTE_SEGMENT_INVALID",
       `Route ${anchor.routeId} segment ${anchor.segmentIndex} is no longer valid; using fallback position.`,
     );
   }
@@ -121,6 +130,7 @@ function resolveRouteAnchor(
 
 function unresolvedRoute(
   anchor: Extract<VisualAnchor, { kind: "route" }>,
+  code: "DRAFTING_ANCHOR_TARGET_MISSING" | "DRAFTING_ROUTE_SEGMENT_INVALID",
   message: string,
 ): ResolvedAnchor {
   return {
@@ -128,7 +138,9 @@ function unresolvedRoute(
     rotation: 0,
     resolved: false,
     diagnostic: {
-      code: "anchor-target-missing",
+      code: code === "DRAFTING_ROUTE_SEGMENT_INVALID"
+        ? "DRAFTING_ROUTE_SEGMENT_INVALID"
+        : "anchor-target-missing",
       message,
       objectId: anchor.routeId,
     },
