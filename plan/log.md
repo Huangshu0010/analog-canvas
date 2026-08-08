@@ -2578,3 +2578,15 @@ Editing System work.
   `git diff --check` passed. No visual inspection was performed.
 - Commit status: ready for
   `fix(razavi): join PMOS arrow to gate bar`.
+## 2026-08-09 - Razavi route-current arrow length
+
+- Target: correct the route-attached current arrow after comparison with the
+  sole Razavi reference showed the prior full length was short.
+- Changed areas: increased the pixel-map full arrow extent from 80 px to 92
+  px while preserving its 26 px by 15 px head and 12 px label gap; regenerated
+  the profile token and updated its contract test and normative documentation.
+- Validation: peripheral generator and stale-output check passed; focused
+  profile test 2/2 passed; `@icm/render-svg` build and `git diff --check`
+  passed. The raster harness does not yet cover route markers, so no visual
+  diff was claimed.
+- Commit status: ready for `fix(razavi): lengthen route current arrow`.

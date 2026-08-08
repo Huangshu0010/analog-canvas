@@ -320,7 +320,7 @@ All values are scene units at `100` scene units per inch.
 | `junctionRadius`     |  `3.78` | Explicit electrical Junction                   |
 | `portOriginRadius`   |  `3.78` | Explicit placed signal Port                    |
 | `supplyBarWidth`     |    `20` | Power Port terminal bar                        |
-| `currentArrowLength` | `46.51` | Current-arrow tip-to-tail extent               |
+| `currentArrowLength` | `53.49` | Current-arrow tip-to-tail extent               |
 | `arrowHeadLength`    | `15.12` | Filled current-arrow head                      |
 | `arrowHeadWidth`     |  `8.72` | Filled current-arrow head                      |
 | `currentLabelGap`    |  `6.98` | Arrow-to-current-label separation              |

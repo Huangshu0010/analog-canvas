@@ -71,7 +71,7 @@ subscriptScale: 0.68
 subscriptBaselineShift: 0.30em downward
 labelGap: 6
 supplyBarWidth: 20
-currentArrowLength: 46.511628
+currentArrowLength: 53.488372
 arrowHeadLength: 15.116279
 arrowHeadWidth: 8.720930
 currentLabelGap: 6.976744
