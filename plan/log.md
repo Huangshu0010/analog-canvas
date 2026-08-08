@@ -2143,3 +2143,21 @@ Editing System work.
   relevant browser tests passed; `git diff --check` clean.
 - Commit status: ready for
   `fix(razavi): migrate eligible existing MOS to textbook view`.
+## 2026-08-08 - P0-2: drafting drag uses preview and commits one transaction
+
+- Target: fix the review P0 that a drafting drag committed one transaction per
+  pointermove (dozens of revisions, undo per mouse sample, history bloat).
+- Changed areas: apps/editor beginDraftingDrag now records a live position in
+  draftingDragPositionRef and a draftingDragPreview state during pointermove
+  (no transact); pointerup reads the ref and commits ONE upsert_drafting_object;
+  Escape/pointercancel discard the preview. The drafting hit box follows the
+  preview during the drag so the object appears to move without committing.
+  Transact is never called from a React state updater (Strict Mode would run it
+  twice); also fixed a worker-introduced typecheck break in setPresentationStyle
+  (kind literal narrowing).
+- E2E: drafting drag commits one revision and undoes atomically (long 12-step
+  drag -> revision 3, one Ctrl+Z -> revision 4 and position restored).
+- Validation: full suite 270/270; drafting E2E 4/4; editor build succeeds;
+  workspace typecheck clean; `git diff --check` clean.
+- Commit status: ready for
+  `fix(editor): drafting drag preview with single atomic commit (P0-2)`.

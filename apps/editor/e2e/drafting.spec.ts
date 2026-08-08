@@ -114,3 +114,48 @@ test("production build mounts without console errors", async ({ page }) => {
   await expect(page.getByTestId("schematic-canvas")).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });
+
+// P0-2: a long drafting drag commits exactly one transaction, so one Ctrl+Z
+// fully returns to the pre-drag position.
+test("drafting drag commits one revision and undoes atomically (P0-2)", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "More", "Add text");
+  const draftInput = page.getByRole("textbox", {
+    name: "Drafting text content",
+  });
+  await draftInput.fill("note");
+  await page.getByRole("button", { name: "Apply text" }).click();
+  await expect(page.getByTestId("revision")).toHaveText("2");
+
+  const handle = page.getByTestId(/^drafting-hit-note-/);
+  await expect(handle).toBeVisible();
+  const before = await handle.boundingBox();
+  if (!before) throw new Error("Drafting handle is not measurable");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  await page.mouse.move(
+    before.x + before.width / 2,
+    before.y + before.height / 2,
+  );
+  await page.mouse.down();
+  // A long multi-step drag.
+  await page.mouse.move(
+    before.x + before.width / 2 + 120,
+    before.y + before.height / 2 + 60,
+    { steps: 12 },
+  );
+  await page.mouse.up();
+
+  // Exactly one new revision for the whole drag.
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  // One Ctrl+Z returns fully to the pre-drag position.
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("revision")).toHaveText("4");
+  const after = await handle.boundingBox();
+  if (!after) throw new Error("Drafting handle disappeared");
+  expect(after.x).toBeCloseTo(before.x, 0);
+  expect(after.y).toBeCloseTo(before.y, 0);
+});

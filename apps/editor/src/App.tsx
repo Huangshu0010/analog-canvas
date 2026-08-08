@@ -92,6 +92,14 @@ interface AnnotationDragPreview {
   pointerId: number;
 }
 
+interface DraftingDragPreview {
+  objectId: string;
+  originalPosition: Point;
+  pointerStart: Point;
+  position: Point;
+  pointerId: number;
+}
+
 type EditorTool = "pointer" | "wire" | "guide";
 
 interface WireSource {
@@ -468,6 +476,8 @@ export function App({ project: initialProject }: AppProps) {
     useState<RouteStretchPreview | null>(null);
   const [annotationDragPreview, setAnnotationDragPreview] =
     useState<AnnotationDragPreview | null>(null);
+  const [draftingDragPreview, setDraftingDragPreview] =
+    useState<DraftingDragPreview | null>(null);
   const [tool, setTool] = useState<EditorTool>("pointer");
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
   const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
@@ -495,6 +505,9 @@ export function App({ project: initialProject }: AppProps) {
   const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
   const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
+  // P0-2: live position of an in-progress drafting drag; read in pointerup so
+  // the commit runs exactly once (state updaters must stay side-effect free).
+  const draftingDragPositionRef = useRef<Point | null>(null);
   const instanceCounter = useRef(0);
   const clipboard = useRef<SchematicClipboard | null>(null);
   const pasteCounter = useRef(0);
@@ -1122,14 +1135,22 @@ export function App({ project: initialProject }: AppProps) {
   function setPresentationStyle(
     styleProfileId: "textbook-monochrome-v1" | "razavi-textbook-v1",
   ): void {
-    if (document.presentation.styleProfileId === styleProfileId) return;
-    const result = transact([
-      { kind: "set_presentation_style", styleProfileId },
-    ]);
+    const mosEdits =
+      styleProfileId === "razavi-textbook-v1"
+        ? razaviMosPresentationEdits(document)
+        : [];
+    const edits: SchematicEdit[] = [
+      ...(document.presentation.styleProfileId === styleProfileId
+        ? []
+        : [{ kind: "set_presentation_style" as const, styleProfileId }]),
+      ...mosEdits,
+    ];
+    if (edits.length === 0) return;
+    const result = transact(edits);
     if (result.ok) {
       setStatus(
         styleProfileId === "razavi-textbook-v1"
-          ? "Applied Razavi textbook style to this Document"
+          ? `Applied Razavi textbook style; migrated ${mosEdits.length} MOS view${mosEdits.length === 1 ? "" : "s"}`
           : "Applied monochrome compatibility style to this Document",
       );
     }
@@ -2002,6 +2023,9 @@ export function App({ project: initialProject }: AppProps) {
   // WP-R5: drag a drafting object by its free anchor. Object/route anchors move
   // with their target by construction; only a free anchor's position changes,
   // and the persisted update goes through a typed edit.
+  // P0-2: dragging a drafting object uses a preview and commits ONE typed
+  // transaction on pointerup, so a long drag is a single undoable revision
+  // (not one revision per mouse sample). Escape/pointercancel discards it.
   function beginDraftingDrag(
     event: ReactPointerEvent<SVGRectElement>,
     object: Extract<DraftingObject, { kind: "text" }>,
@@ -2019,7 +2043,16 @@ export function App({ project: initialProject }: AppProps) {
       event.currentTarget.ownerSVGElement!,
     );
     const original = { ...object.anchor.position };
+    draftingDragPositionRef.current = original;
     selectDraftingObject(object.id);
+    setDraftingDragPreview({
+      objectId: object.id,
+      originalPosition: original,
+      pointerStart: start,
+      position: original,
+      pointerId: event.pointerId,
+    });
+
     const move = (moveEvent: PointerEvent): void => {
       const point = pointFromClient(
         moveEvent.clientX,
@@ -2028,31 +2061,54 @@ export function App({ project: initialProject }: AppProps) {
       );
       const dx = point.x - start.x;
       const dy = point.y - start.y;
-      const candidate = {
+      const position = {
         x: Math.round(original.x + dx),
         y: Math.round(original.y + dy),
       };
-      const current = document.drafting?.objects.find(
-        (item) => item.id === object.id,
+      draftingDragPositionRef.current = position;
+      setDraftingDragPreview((current) =>
+        current ? { ...current, position } : current,
       );
-      if (current?.kind === "text" && current.anchor.kind === "free") {
-        transact([
-          {
-            kind: "upsert_drafting_object",
-            object: {
-              ...current,
-              anchor: { kind: "free", position: candidate },
-            },
-          },
-        ]);
-      }
     };
-    const up = (): void => {
+
+    const cancel = (): void => {
+      draftingDragPositionRef.current = null;
+      setDraftingDragPreview(null);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
     };
+
+    const up = (): void => {
+      // Commit exactly once from the ref (state updaters must not have side
+      // effects; React may invoke them twice in Strict Mode).
+      const position = draftingDragPositionRef.current;
+      draftingDragPositionRef.current = null;
+      setDraftingDragPreview(null);
+      if (position) {
+        const latest = document.drafting?.objects.find(
+          (item) => item.id === object.id,
+        );
+        if (latest?.kind === "text" && latest.anchor.kind === "free") {
+          transact([
+            {
+              kind: "upsert_drafting_object",
+              object: {
+                ...latest,
+                anchor: { kind: "free", position },
+              },
+            },
+          ]);
+        }
+      }
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+    };
+
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
   }
 
   function addPlainText(): void {
@@ -3031,6 +3087,12 @@ export function App({ project: initialProject }: AppProps) {
         setWireWaypoints([]);
         setPendingSymbolId(null);
         setBoxPreview(null);
+        // P0-2: Escape cancels an in-progress drafting drag without committing.
+        if (draftingDragPreview) {
+          setDraftingDragPreview(null);
+          setStatus("Cancelled drafting drag");
+          return;
+        }
         setStatus("Cancelled");
       } else if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
@@ -3999,6 +4061,18 @@ export function App({ project: initialProject }: AppProps) {
               const isText = object.kind === "text";
               const draggableText =
                 isText && object.anchor.kind === "free" && !object.locked;
+              // P0-2: while dragging, the hit box follows the live preview so
+              // the object appears to move without committing any revision.
+              const drag = draftingDragPreview?.objectId === object.id
+                ? draftingDragPreview
+                : null;
+              const hitBounds = drag
+                ? {
+                    ...geometry.bounds,
+                    x: geometry.bounds.x + (drag.position.x - drag.originalPosition.x),
+                    y: geometry.bounds.y + (drag.position.y - drag.originalPosition.y),
+                  }
+                : geometry.bounds;
               return (
                 <rect
                   key={`drafting-hit-${object.id}`}
@@ -4008,7 +4082,7 @@ export function App({ project: initialProject }: AppProps) {
                       ? "annotation-hit selected"
                       : "annotation-hit"
                   }
-                  {...geometry.bounds}
+                  {...hitBounds}
                   onPointerDown={(event) => {
                     if (draggableText) {
                       beginDraftingDrag(
