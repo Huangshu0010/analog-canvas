@@ -343,19 +343,24 @@ describe("Razavi symbol catalog", () => {
     expect(voltage.primitives).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: "line",
-          from: { x: -20.058139, y: -13.953488 },
-          to: { x: -11.918605, y: -13.953488 },
+          kind: "circle",
+          radius: 10.755814,
+          style: expect.objectContaining({ strokeRole: "normal" }),
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -15.988372, y: -18.023255 },
-          to: { x: -15.988372, y: -9.883721 },
+          from: { x: -20.058139, y: -14.534884 },
+          to: { x: -11.918605, y: -14.534884 },
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -20.058139, y: 13.953488 },
-          to: { x: -11.918605, y: 13.953488 },
+          from: { x: -15.988372, y: -18.604651 },
+          to: { x: -15.988372, y: -10.465117 },
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -20.058139, y: 13.372093 },
+          to: { x: -11.918605, y: 13.372093 },
         }),
       ]),
     );

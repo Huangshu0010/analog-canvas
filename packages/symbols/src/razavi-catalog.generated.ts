@@ -361,7 +361,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:V"],
     assetPath: "voltage-source.symbol.json",
     assetHash:
-      "f0010b280734357bf5cd59367534d90801c5a4043167a40f5248998ac3279635",
+      "33082df048526fd6520fe5c69ef9b7f4e6ef04dce29528688b5753a90e621590",
     generation: {
       kind: "razavi-raster-reference",
       referenceManifestPath:
@@ -2398,7 +2398,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         radius: 10.755814,
         style: {
-          strokeRole: "emphasis",
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -2407,11 +2407,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: -20.058139,
-          y: -13.953488,
+          y: -14.534884,
         },
         to: {
           x: -11.918605,
-          y: -13.953488,
+          y: -14.534884,
         },
         style: {
           strokeRole: "normal",
@@ -2423,11 +2423,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: -15.988372,
-          y: -18.023255,
+          y: -18.604651,
         },
         to: {
           x: -15.988372,
-          y: -9.883721,
+          y: -10.465117,
         },
         style: {
           strokeRole: "normal",
@@ -2439,11 +2439,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: -20.058139,
-          y: 13.953488,
+          y: 13.372093,
         },
         to: {
           x: -11.918605,
-          y: 13.953488,
+          y: 13.372093,
         },
         style: {
           strokeRole: "normal",

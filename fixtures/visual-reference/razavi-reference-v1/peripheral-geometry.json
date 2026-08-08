@@ -7,10 +7,10 @@
   "symbols": {
     "voltage-source": {
       "evidencePanel": "a-Vx",
-      "originPx": { "x": 275, "y": 219 },
+      "originPx": { "x": 276, "y": 220 },
       "circleRadiusPx": 18.5,
       "polarityPx": {
-        "x": 247.5,
+        "x": 248.5,
         "plusY": 195,
         "minusY": 243,
         "halfWidth": 7,

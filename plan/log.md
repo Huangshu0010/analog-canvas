@@ -2512,3 +2512,17 @@ Editing System work.
   repository hygiene checks.
 - Commit status: ready for
   `fix(razavi): align current arrows and solid nodes`.
+
+## 2026-08-08 - Voltage-source raster alignment
+
+- Target: use the read-only Razavi raster-diff harness to make the smallest
+  evidence-backed correction to the voltage-source presentation.
+- Changed areas: changed the voltage-source circle from emphasis to normal
+  stroke; corrected the source origin and polarity-axis pixel registration;
+  regenerated its raster-owned symbol and catalog.
+- Validation: peripheral-asset and catalog checks passed; Symbols build
+  passed; voltage-source binary IoU improved from 0.5621 to 0.6565 and soft
+  IoU from 0.4419 to 0.5595; no additional visual inspection was used after
+  the initial difference map.
+- Commit status: ready for
+  `fix(razavi): align voltage source to raster reference`.

@@ -76,7 +76,10 @@ function voltageSource(measurement) {
     viewBox: { x: -24, y: -24, width: 39, height: 48 },
     pins: sourcePins(),
     primitives: [
-      { kind: "circle", center: { x: 0, y: 0 }, radius, style: emphasis },
+      // The Razavi reference uses the same fine outline for the voltage-source
+      // circle as its terminal leads; only source glyphs such as GND bars use
+      // the heavier emphasis role.
+      { kind: "circle", center: { x: 0, y: 0 }, radius, style: normal },
       line(
         { x: plus.x - halfWidth, y: plus.y },
         { x: plus.x + halfWidth, y: plus.y },

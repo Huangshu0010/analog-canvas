@@ -306,7 +306,7 @@
       "palette": true,
       "automaticMappings": ["spice:V"],
       "assetPath": "voltage-source.symbol.json",
-      "assetHash": "f0010b280734357bf5cd59367534d90801c5a4043167a40f5248998ac3279635",
+      "assetHash": "33082df048526fd6520fe5c69ef9b7f4e6ef04dce29528688b5753a90e621590",
       "generation": {
         "kind": "razavi-raster-reference",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
