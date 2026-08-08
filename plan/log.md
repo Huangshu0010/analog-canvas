@@ -1401,6 +1401,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   link check passed for eight entry files; `git diff --check` passed.
 - Commit status: ready for
   `docs(agent): establish four-layer layout guidance`.
+
 ## 2026-08-08 - Text, annotation, and peripheral editing system plan
 
 - Target: define an execution-ready, non-electrical drafting layer for rich
@@ -1420,6 +1421,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   No runtime code or circuit assets changed.
 - Commit status: not committed; repository contains concurrent dirty work
   outside this documentation target.
+
 ## 2026-08-08 - Land concurrent Razavi editor/style/symbol targets
 
 Three coordinated but uncommitted targets, left green and landed as separate
@@ -1486,6 +1488,7 @@ Editing System work.
   with the hit-text commit per that workstream's plan.
 - Commit status: all four commits landed on `main`; worktree now clean of the
   concurrent Razavi work.
+
 ## 2026-08-08 - WP-A0: freeze text, annotation, and peripheral editing contracts
 
 - Target: freeze the four shared-contract specs, the V1 syntax/object scope,
@@ -1529,6 +1532,7 @@ Editing System work.
   clean. The two red tests are owned by the concurrent worker.
 - Commit status: ready for
   `docs(specs): freeze text, annotation, and peripheral editing contracts (WP-A0)`.
+
 ## 2026-08-08 - WP-A0.1: contract revision for six review findings
 
 - Target: re-freeze the WP-A0 contracts before any WP-A1 code, fixing six P0
@@ -1568,6 +1572,7 @@ Editing System work.
   `git diff --check` clean as a no-code-edit guard.
 - Commit status: ready for
   `docs(specs): re-freeze text/annotation contracts with fallback, hash, and sequencing fixes (WP-A0.1)`.
+
 ## 2026-08-08 - WP-A1a: v2 model types, migration, anchor resolver, typed edits
 
 - Target: land the schema-2 model foundation, versioned migration, general
@@ -1614,6 +1619,7 @@ Editing System work.
   shape.
 - Commit status: ready for
   `feat(model): v2 drafting types, schema-1->2 migration, and VisualAnchor resolver (WP-A1a)`.
+
 ## 2026-08-08 - Unblock renderer + WP-A1b: drafting consumption
 
 - Target: land the concurrent arrowhead calibration (its symbol geometry,
@@ -1635,6 +1641,7 @@ Editing System work.
   typecheck clean; agent-adapter typecheck clean.
 - Commit status: ready for
   `feat(render): minimal drafting consumption in renderer and Snapshot (WP-A1b)`.
+
 ## 2026-08-08 - WP-A1 integration gate: schema 2 live
 
 - Target: flip CURRENT_PROJECT_SCHEMA_VERSION to 2, register the idempotent
@@ -1665,6 +1672,7 @@ Editing System work.
   generation/golden --check scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `feat(model): switch to schema 2 with idempotent migration and route-marker (WP-A1 gate)`.
+
 ## 2026-08-08 - WP-A2: unified RichText renderer and route-marker rendering
 
 - Target: build the single RichText AST -> tspan renderer (subscript/superscript/
@@ -1694,6 +1702,7 @@ Editing System work.
   generation/golden --check scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `feat(render): unified RichText renderer and route-marker rendering (WP-A2)`.
+
 ## 2026-08-08 - WP-A3 step: editor authors drafting text and route-marker
 
 - Target: convert the editor's "add text" and "add current arrow" commands
@@ -1715,6 +1724,7 @@ Editing System work.
   clean.
 - Commit status: ready for
   `feat(editor): author drafting text and route-marker (WP-A3 step)`.
+
 ## 2026-08-08 - WP-A3 read-side: unified hit-test/bounds/drag/panel for route-marker
 
 - Target: make the editor's read-side geometry (anchor resolution, hit box,
@@ -1735,6 +1745,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): unified route-marker hit-test, drag, and clipboard (WP-A3 read-side)`.
+
 ## 2026-08-08 - WP-A3 legacy-kind removal: plain-text/current/voltage/figure-caption
 
 - Target: remove the four legacy annotation kinds now that route-marker and
@@ -1761,6 +1772,7 @@ Editing System work.
   generation/golden --check scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `feat(model): remove legacy annotation kinds (WP-A3 legacy-kind removal)`.
+
 ## 2026-08-08 - Agent Snapshot electricalTopologyHash rename
 
 - Target: complete the ADR 0010 hash work deferred at the WP-A1 gate — rename
@@ -1779,6 +1791,7 @@ Editing System work.
   clean.
 - Commit status: ready for
   `feat(agent-api): rename Snapshot identity hash to electricalTopologyHash`.
+
 ## 2026-08-08 - WP-A3 rich-text editor: markup parser and drafting text editing
 
 - Target: deliver the parse-on-submit markup path and make drafting text
@@ -1803,6 +1816,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): markup-rich text editing for drafting objects (WP-A3 rich text)`.
+
 ## 2026-08-08 - WP-A4: Guide tool
 
 - Target: implement the editor Guide tool per the roadmap (add/move/lock/delete
@@ -1818,6 +1832,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): Guide tool with add/move/lock/delete (WP-A4 guides)`.
+
 ## 2026-08-08 - WP-A4 drafting object rendering
 
 - Target: render the remaining DraftingObject kinds so the editor and exports
@@ -1834,6 +1849,7 @@ Editing System work.
   typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(render): render construction-line, arrow, leader, callout, floating-symbol (WP-A4 rendering)`.
+
 ## 2026-08-08 - WP-A4 decorative symbol capability
 
 - Target: give the Symbol Catalog a decorative capability so DraftFloatingSymbol
@@ -1851,6 +1867,7 @@ Editing System work.
   clean.
 - Commit status: ready for
   `feat(symbols): decorative symbol capability for floating symbols (WP-A4 decorative)`.
+
 ## 2026-08-08 - WP-A4 editor drafting creation commands
 
 - Target: let the editor create construction lines, free arrows, and floating
@@ -1864,6 +1881,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): construction-line, free arrow, and floating-symbol commands (WP-A4 commands)`.
+
 ## 2026-08-08 - WP-A5: strict Snapshot drafting schema and GUI/Agent parity
 
 - Target: tighten the Agent Snapshot drafting schema and prove GUI/Agent
@@ -1881,6 +1899,7 @@ Editing System work.
   clean.
 - Commit status: ready for
   `feat(agent-api): strict drafting Snapshot schema and GUI/Agent parity (WP-A5)`.
+
 ## 2026-08-08 - WP-A5 regression: regenerate Agent API and phase-9 artifacts
 
 - Target: bring every generated artifact back in sync after the
@@ -1895,6 +1914,7 @@ Editing System work.
   252/252; workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `chore(fixtures): regenerate Agent API and phase-9 artifacts after hash rename (WP-A5 regression)`.
+
 ## 2026-08-08 - Markup parser: nested braces in command bodies
 
 - Target: fix the markup parser so fraction/italic/bold/subscript/superscript
@@ -1909,3 +1929,20 @@ Editing System work.
   clean.
 - Commit status: ready for
   `fix(render): parse nested braces inside markup command bodies`.
+
+## 2026-08-08 - Restore browser-compatible editor startup
+
+- Target: restore the GUI after the new electrical topology hash caused the
+  browser application to fail during module evaluation.
+- Root cause: `packages/derived/src/topology-hash.ts` imported Node-only
+  `node:crypto`; Vite externalized it and the editor threw before React could
+  mount.
+- Changed areas: replaced the Node dependency with a synchronous
+  browser/Node-compatible SHA-256 implementation and added an exact digest
+  assertion so the public hash contract cannot silently change.
+- Validation: focused topology-hash tests 3/3; workspace typecheck; derived
+  build followed by editor production build; fresh live browser load at
+  `http://localhost:5173/` with the editor DOM present and no console warnings
+  or errors; `git diff --check` clean.
+- Commit status: ready for
+  `fix(editor): keep topology hashing browser compatible`.
