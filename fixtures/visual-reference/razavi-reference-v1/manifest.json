@@ -7,7 +7,7 @@
   "mosGeometryPath": "mos-geometry.json",
   "mosGeometrySha256": "0e61e355ca658dcde5ac127a729fd9893bf58dd07547de8a061a952f3772d195",
   "peripheralGeometryPath": "peripheral-geometry.json",
-  "peripheralGeometrySha256": "0bf64a62890a1d52f4990f8d8a3ae97cb70e786a3f730a87c4cd0d314aa0abac",
+  "peripheralGeometrySha256": "0a2e4e0a351d634a84832cd6e21b922bd803edf8f45155cf89087282316456ff",
   "pixels": {
     "width": 1204,
     "height": 794

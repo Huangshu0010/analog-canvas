@@ -21,6 +21,7 @@ const styleGeometryPath = resolve(
 const check = process.argv.includes("--check");
 const normal = { strokeRole: "normal", lineCap: "butt", lineJoin: "miter" };
 const emphasis = { strokeRole: "emphasis", lineCap: "butt", lineJoin: "miter" };
+const groundBar = { strokeRole: "ground", lineCap: "butt", lineJoin: "miter" };
 const normalize = (value) => `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const rounded = (value) => Math.round(value * 1_000_000) / 1_000_000;
@@ -125,7 +126,7 @@ function currentSource(measurement) {
     viewBox: { x: -15, y: -24, width: 30, height: 48 },
     pins: sourcePins(),
     primitives: [
-      { kind: "circle", center: { x: 0, y: 0 }, radius, style: emphasis },
+      { kind: "circle", center: { x: 0, y: 0 }, radius, style: normal },
       line(shaftStart, base),
       {
         kind: "polygon",
@@ -170,7 +171,7 @@ function ground(measurement) {
         line(
           { x: -bar.halfWidth, y: bar.y },
           { x: bar.halfWidth, y: bar.y },
-          emphasis,
+          groundBar,
         ),
       ),
     ],
@@ -208,6 +209,9 @@ const styleGeometrySource = await format(
     {
       solidNodeRadius: rounded(
         geometry.annotations.solidNodeRadiusPx / geometry.pixelsPerLogical,
+      ),
+      groundBarStroke: rounded(
+        geometry.symbols.ground.barStrokePx / geometry.pixelsPerLogical,
       ),
       currentArrowLength: rounded(
         currentArrow.totalLengthPx / geometry.pixelsPerLogical,

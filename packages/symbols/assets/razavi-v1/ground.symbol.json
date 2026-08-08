@@ -51,7 +51,7 @@
         "y": 0
       },
       "style": {
-        "strokeRole": "emphasis",
+        "strokeRole": "ground",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -67,7 +67,7 @@
         "y": 5.813953
       },
       "style": {
-        "strokeRole": "emphasis",
+        "strokeRole": "ground",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -83,7 +83,7 @@
         "y": 11.046512
       },
       "style": {
-        "strokeRole": "emphasis",
+        "strokeRole": "ground",
         "lineCap": "butt",
         "lineJoin": "miter"
       }

@@ -49,8 +49,9 @@ The proposed `razavi-textbook-v1` profile is also executable:
 foreground: "#202020"
 wireStroke: 1.6
 symbolStroke: 1.6
-normalStroke: 1.2
+normalStroke: 1.6
 emphasisStroke: 2.16
+groundBarStroke: 2.906977
 supplyStroke: 1.8
 annotationStroke: 1.6
 junctionRadius: 3.779070

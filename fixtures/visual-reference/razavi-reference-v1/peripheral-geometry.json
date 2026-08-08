@@ -31,6 +31,7 @@
     "ground": {
       "evidencePanel": "a-ground",
       "originPx": { "x": 179, "y": 262 },
+      "barStrokePx": 5,
       "barsPx": [
         { "y": 262, "halfWidth": 11 },
         { "y": 272, "halfWidth": 7 },

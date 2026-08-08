@@ -128,7 +128,9 @@ describe("Razavi symbol catalog", () => {
       for (const primitive of primitives) {
         if (!primitive.style) continue;
         expect(primitive.style.strokeWidth).toBeUndefined();
-        expect(primitive.style.strokeRole).toMatch(/^(normal|emphasis)$/u);
+        expect(primitive.style.strokeRole).toMatch(
+          /^(normal|emphasis|ground)$/u,
+        );
       }
     }
 

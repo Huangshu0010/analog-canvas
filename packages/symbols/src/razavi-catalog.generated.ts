@@ -59,7 +59,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:I"],
     assetPath: "current-source.symbol.json",
     assetHash:
-      "3dddd53aca7882f808ceea72faa9cda226aebb674a84711a8bb06f18a2317783",
+      "26427f16b5e60f7100d80c086747b2ce832a869e551dac5249f13ccb43722673",
     generation: {
       kind: "razavi-raster-reference",
       referenceManifestPath:
@@ -112,7 +112,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "ground.symbol.json",
     assetHash:
-      "bcf6fd8c548e4653735b3aa00a84fc540b8913339b3f8a7a59f22504379642ff",
+      "8aa38b7c438675e1dcb161b57be65d62609fe544e9ba19fc411e19f6c56a43e8",
     generation: {
       kind: "razavi-raster-reference",
       referenceManifestPath:
@@ -550,7 +550,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         radius: 10.755814,
         style: {
-          strokeRole: "emphasis",
+          strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -779,7 +779,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         style: {
-          strokeRole: "emphasis",
+          strokeRole: "ground",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -795,7 +795,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 5.813953,
         },
         style: {
-          strokeRole: "emphasis",
+          strokeRole: "ground",
           lineCap: "butt",
           lineJoin: "miter",
         },
@@ -811,7 +811,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 11.046512,
         },
         style: {
-          strokeRole: "emphasis",
+          strokeRole: "ground",
           lineCap: "butt",
           lineJoin: "miter",
         },

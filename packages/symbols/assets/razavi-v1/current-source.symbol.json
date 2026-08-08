@@ -45,7 +45,7 @@
       },
       "radius": 10.755814,
       "style": {
-        "strokeRole": "emphasis",
+        "strokeRole": "normal",
         "lineCap": "butt",
         "lineJoin": "miter"
       }

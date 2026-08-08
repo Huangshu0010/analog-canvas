@@ -2590,3 +2590,20 @@ Editing System work.
   passed. The raster harness does not yet cover route markers, so no visual
   diff was claimed.
 - Commit status: ready for `fix(razavi): lengthen route current arrow`.
+## 2026-08-09 - Razavi peripheral fidelity
+
+- Target: refine GND bars and independent current-source outline against the
+  sole visual reference, and determine whether Port origins required a radius
+  change.
+- Changed areas: introduced a screenshot-mapped 5 px GND-bar role without
+  changing global emphasis; changed current-source circle to normal; retained
+  the common 6.5 px Port/Junction radius; documented the synchronized tokens.
+- Finding: Port apparent-size difference is the editor's blue/white active
+  endpoint overlay, not formal output. No interaction overlay behavior changed.
+- Validation: peripheral/catalog generation and stale checks, Symbols/Derived/
+  Render-SVG builds, focused catalog/profile tests passed. Ground IoU/soft-IoU
+  improved `0.7698/0.6337 -> 0.7810/0.6940`; current-source became
+  `0.6413/0.6200` after the explicitly requested normal outline. Three
+  broader render SVG golden failures remain from earlier MOS geometry commits;
+  unrelated goldens were intentionally not updated.
+- Commit status: ready for `fix(razavi): refine peripheral reference fidelity`.

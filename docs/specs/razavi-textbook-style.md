@@ -313,9 +313,10 @@ All values are scene units at `100` scene units per inch.
 | -------------------- | ------: | ---------------------------------------------- |
 | `wireStroke`         |   `1.6` | Conductors                                     |
 | `symbolStroke`       |   `1.6` | Unmigrated component compatibility geometry    |
-| `normalStroke`       |   `1.2` | Reviewed normal Visio component geometry       |
+| `normalStroke`       |   `1.6` | Reviewed normal component geometry             |
 | `emphasisStroke`     |  `2.16` | MOS gates and reviewed heavy Visio geometry    |
-| `supplyStroke`       |   `1.8` | GND/VDD/VSS bars                               |
+| `groundBarStroke`    |  `2.91` | Screenshot-mapped GND bars                     |
+| `supplyStroke`       |   `1.8` | VDD/VSS bars                                   |
 | `annotationStroke`   |   `1.6` | Current arrows and polarity geometry           |
 | `junctionRadius`     |  `3.78` | Explicit electrical Junction                   |
 | `portOriginRadius`   |  `3.78` | Explicit placed signal Port                    |

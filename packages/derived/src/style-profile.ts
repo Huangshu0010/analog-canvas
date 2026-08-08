@@ -11,6 +11,7 @@ export interface SchematicStyleProfile {
     readonly symbol: number;
     readonly normal: number;
     readonly emphasis: number;
+    readonly ground: number;
     readonly supply: number;
     readonly annotation: number;
   };
@@ -58,6 +59,7 @@ export const textbookMonochromeProfile: SchematicStyleProfile = {
     symbol: 1,
     normal: 1.2,
     emphasis: 2.16,
+    ground: 2.16,
     supply: 2.16,
     annotation: 0.8,
   },
@@ -102,6 +104,7 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
     symbol: 1.6,
     normal: 1.6,
     emphasis: 2.16,
+    ground: razaviPeripheralGeometry.groundBarStroke,
     supply: 1.8,
     annotation: 1.6,
   },
