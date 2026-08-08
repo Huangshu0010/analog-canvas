@@ -15,6 +15,29 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-08 - Calibrate Razavi geometry from supplied reference pixels
+
+- Target: use the supplied 1204x794 six-panel Razavi reference, rather than
+  visual approximation, to calibrate symbols, route-current markers, strokes,
+  and typography.
+- Changed areas: new `scripts/measure-razavi-reference.py`; MOS and
+  independent-current generators with regenerated catalog/fidelity assets;
+  Razavi route-marker token and focused catalog/style tests; Phase 1/5 and
+  route-marker SVG goldens.
+- Evidence: the script records reference SHA-256
+  `e43454e7ff17d9df1818973e1a78c5cda71f34a5e26c4ce7ee0ba6806b81dd81` and
+  measures a 3px wire, 6px VDD/gate bars, 42px MOS gate span, 14x13px MOS
+  head, 20x20px independent-source head, and 23x15px route-marker head. The
+  42px gate maps to 24.39567 logical units (1.7216 px/unit).
+- Result: MOS arrowhead is 8.13x7.55 logical units; independent-current head
+  is approximately 10.37x10.37; route-marker head is 14x9. Existing
+  wire/gate ratios, GND bars, port dot, and 16px Arial bold-italic typography
+  with 0.68 subscript scale already matched the reference and were retained.
+- Validation: measurement script, 31 focused symbol/render tests, all three
+  symbol generator checks, route-marker golden check, Phase 1/5 golden check,
+  render-svg dependency build, and `git diff --check` passed.
+- Commit status: pending.
+
 ## 2026-08-08 - Apply second-pass Razavi arrowhead scaling
 
 - Target: apply the user's relative second pass: MOS arrowhead width +30% from

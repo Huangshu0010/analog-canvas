@@ -22,6 +22,8 @@ const POINTS_PER_INCH = 72;
 const CONNECTION_GRID = 10;
 const EPSILON = 1e-6;
 const GATE_BAR_THICKNESS = 3.24;
+const MOS_SOURCE_ARROW_LENGTH_SCALE = 0.8;
+const MOS_SOURCE_ARROW_HALF_WIDTH_SCALE = 1.65;
 
 const configs = [
   {
@@ -252,10 +254,12 @@ function arrowPrimitives(shape, segment, style, marker, part) {
     shape.line.LineWeight,
     `${shape.nameU}.LineWeight`,
   );
-  const arrowLength = 3 * marker.scale * strokeWidth * 1.2;
+  const arrowLength =
+    3 * marker.scale * strokeWidth * MOS_SOURCE_ARROW_LENGTH_SCALE;
   // Razavi calibration: preserve the Visio-derived tip, host, and electrical
-  // anchors while making only the filled MOS arrowhead 56% wider in total.
-  const halfWidth = marker.scale * strokeWidth * 2.2;
+  // anchors while matching the supplied Razavi reference's filled MOS head.
+  const halfWidth =
+    marker.scale * strokeWidth * MOS_SOURCE_ARROW_HALF_WIDTH_SCALE;
   const setback = Math.abs(marker.refX) * strokeWidth;
   const tip = beginArrow ? segment.from : segment.to;
   const baseCenter = beginArrow
