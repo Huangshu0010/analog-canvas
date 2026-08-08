@@ -127,6 +127,44 @@ export function parseMarkup(markup: string): MarkupDocument {
   return { runs };
 }
 
+/**
+ * Serialize an AST back to reversible markup (WP-R3). For any document
+ * produced by parseMarkup, parseMarkup(serializeMarkup(doc)) is structurally
+ * equal after normalization. Text runs are emitted verbatim: parseMarkup only
+ * ever emits a text run for input it could not consume as a command, so the
+ * verbatim text is not re-consumed as a command (except for line-breaks, which
+ * are emitted as `\\`).
+ */
+export function serializeMarkup(document: MarkupDocument): string {
+  return document.runs.map(serializeRun).join("");
+}
+
+function serializeRun(run: MarkupRun): string {
+  switch (run.kind) {
+    case "text":
+      return run.value ?? "";
+    case "line-break":
+      return "\\\\";
+    case "fraction":
+      return `\\frac{${serializeMarkup(run.numerator!)}}{${serializeMarkup(run.denominator!)}}`;
+    case "span": {
+      const children = serializeMarkup({ runs: run.children ?? [] });
+      switch (run.style) {
+        case "italic":
+          return `\\it{${children}}`;
+        case "bold":
+          return `\\bf{${children}}`;
+        case "subscript":
+          return `_{${children}}`;
+        case "superscript":
+          return `^{${children}}`;
+        default:
+          return children;
+      }
+    }
+  }
+}
+
 /** Flatten an AST back to a plain string (used by the single-line text input). */
 export function flattenMarkup(document: MarkupDocument): string {
   return document.runs.map(flattenRun).join("");

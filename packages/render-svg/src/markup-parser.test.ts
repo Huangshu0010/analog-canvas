@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { flattenMarkup, parseMarkup } from "./markup-parser.js";
+import {
+  flattenMarkup,
+  parseMarkup,
+  serializeMarkup,
+} from "./markup-parser.js";
 
 describe("parseMarkup (ADR 0010 import shorthand)", () => {
   it("parses a plain string as a single text run", () => {
@@ -93,5 +97,35 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
         },
       ],
     });
+  });
+
+  it("round-trips parseMarkup(serializeMarkup(ast)) for every required scenario (WP-R3)", () => {
+    const bs = String.fromCharCode(92);
+    const scenarios = [
+      "V_{in}^{+}",
+      "\\frac{V_{DD}}{2}",
+      "\\it{gain}",
+      "\\bf{RESET}",
+      `line1${bs}${bs}line2`, // line break
+      "\\it{V_{in}}", // nested span
+      "\\it{}", // empty span
+      "a\\it{b}c", // consecutive text runs
+      "V_{in} 中文", // Unicode
+    ];
+    for (const input of scenarios) {
+      const ast = parseMarkup(input);
+      const serialized = serializeMarkup(ast);
+      const back = parseMarkup(serialized);
+      expect(back).toEqual(ast);
+    }
+  });
+
+  it("serializes a line break and preserves it through round trip (WP-R3)", () => {
+    const bs = String.fromCharCode(92);
+    const input = `line1${bs}${bs}line2`;
+    const ast = parseMarkup(input);
+    expect(ast.runs[1]).toEqual({ kind: "line-break" });
+    const serialized = serializeMarkup(ast);
+    expect(parseMarkup(serialized)).toEqual(ast);
   });
 });

@@ -39,6 +39,7 @@ import {
   renderSymbolDefinitionBody,
   resolveSchematicStyleProfile,
   schematicTextFontSize,
+  serializeMarkup,
 } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
@@ -2195,6 +2196,10 @@ export function App({ project: initialProject }: AppProps) {
     setAnnotationSizeDraft(String(sizeScale));
   }
 
+  function richTextEqual(left: { runs: unknown[] }, right: { runs: unknown[] }): boolean {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+
   function applyDraftingText(): void {
     if (!selectedDrafting || selectedDrafting.kind !== "text") return;
     const markup = draftingTextDraft;
@@ -2205,9 +2210,11 @@ export function App({ project: initialProject }: AppProps) {
       setSelectedDraftingId(null);
       return;
     }
-    // ADR 0010: the markup string is a parse-on-submit convenience; the
-    // persisted truth is the canonical RichText AST.
+    // WP-R3: editing is lossless — the markup string round-trips through
+    // parseMarkup(serializeMarkup(ast)). If the parsed AST equals the stored
+    // AST, do not generate a revision.
     const content = parseMarkup(markup);
+    if (richTextEqual(content, selectedDrafting.content)) return;
     transact([
       {
         kind: "upsert_drafting_object",
@@ -3367,14 +3374,16 @@ export function App({ project: initialProject }: AppProps) {
             <h2>Drafting text</h2>
             <label>
               Content (markup: subscripts, superscripts, italic, fractions)
-              <input
+              <textarea
                 aria-label="Drafting text content"
+                rows={3}
                 value={draftingTextDraft}
                 onChange={(event) =>
                   setDraftingTextDraft(event.currentTarget.value)
                 }
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") {
+                  // Enter inserts a line break; Ctrl+Enter commits (WP-R3).
+                  if (event.key === "Enter" && event.ctrlKey) {
                     event.preventDefault();
                     applyDraftingText();
                   }
@@ -3825,10 +3834,14 @@ export function App({ project: initialProject }: AppProps) {
                       setSelectedAnnotationId(null);
                       setSelectedRouteId(null);
                       setSelectedDraftingId(object.id);
+                      // WP-R3: editing initializes from the reversible markup
+                      // serialization of the AST, never from the lossy flat
+                      // projection, so subscripts/fractions survive an
+                      // unedited Apply.
                       setDraftingTextDraft(
-                        flattenMarkup(
+                        serializeMarkup(
                           object.content as unknown as Parameters<
-                            typeof flattenMarkup
+                            typeof serializeMarkup
                           >[0],
                         ),
                       );

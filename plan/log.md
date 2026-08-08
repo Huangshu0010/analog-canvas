@@ -1999,3 +1999,22 @@ Editing System work.
   scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `fix(render): consume unified drafting geometry and include drafting bounds (WP-R2)`.
+## 2026-08-08 - WP-R3: lossless rich-text editing
+
+- Target: eliminate the flatten->parse->overwrite corruption path in editing.
+- Changed areas: render-svg markup-parser.ts adds serializeMarkup (AST ->
+  reversible markup: text verbatim, line-break `\`, span styles `_{}`/`^{}`/
+  `\it{}`/`\bf{}`, fraction `\frac{}{}`); editor App.tsx initializes the
+  drafting-text draft from serializeMarkup (never flattenMarkup), commits
+  parseMarkup -> upsert_drafting_object only when the parsed AST differs from
+  the stored AST (no revision for an unedited Apply), and the text control is a
+  multi-line textarea (Enter inserts a line break, Ctrl+Enter commits).
+- Tests: markup-parser adds round-trip scenarios (V_{in}^{+},
+  \frac{V_{DD}}{2}, \it{gain}, \bf{RESET}, line break, nested span, empty span,
+  consecutive text runs, Unicode) asserting
+  parseMarkup(serializeMarkup(ast)) equals ast, plus a dedicated line-break
+  round trip.
+- Validation: full suite 265/265; editor build succeeds; workspace typecheck
+  clean; `git diff --check` clean.
+- Commit status: ready for
+  `fix(editor): preserve rich text through lossless markup editing (WP-R3)`.
