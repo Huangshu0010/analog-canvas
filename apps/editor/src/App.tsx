@@ -13,6 +13,7 @@ import {
   isVisibleEndpoint,
   moveRouteSegment,
   proposeGroupMove,
+  resolveDraftingObjectGeometry,
   routeAttachmentPlacement,
   routePolyline,
 } from "@icm/derived";
@@ -3889,44 +3890,42 @@ export function App({ project: initialProject }: AppProps) {
                 />
               );
             })}
-            {(document.drafting?.objects ?? [])
-              .filter(
-                (object): object is Extract<typeof object, { kind: "text" }> =>
-                  object.kind === "text",
-              )
-              .map((object) => {
-                const position =
-                  object.anchor.kind === "free"
-                    ? object.anchor.position
-                    : object.anchor.fallbackPosition;
-                const fontSize =
-                  object.typographyToken === "caption"
-                    ? styleProfile.typography.captionFontSize
-                    : styleProfile.typography.annotationFontSize;
-                const text = flattenMarkup(
-                  object.content as unknown as Parameters<typeof flattenMarkup>[0],
-                );
-                const width = Math.max(fontSize * 0.6, text.length * fontSize * 0.6);
-                const height = fontSize * 1.35;
-                return (
-                  <rect
-                    key={`drafting-hit-${object.id}`}
-                    data-testid={`drafting-hit-${object.id}`}
-                    className={
-                      selectedDraftingId === object.id
-                        ? "annotation-hit selected"
-                        : "annotation-hit"
+            {(document.drafting?.objects ?? []).map((object) => {
+              // WP-R5: every drafting object gets a selectable/deletable hit
+              // box derived from the shared geometry; text is additionally
+              // draggable by its free anchor.
+              const geometry = resolveDraftingObjectGeometry(
+                document,
+                resolver,
+                object,
+              );
+              const isText = object.kind === "text";
+              const draggableText =
+                isText && object.anchor.kind === "free" && !object.locked;
+              return (
+                <rect
+                  key={`drafting-hit-${object.id}`}
+                  data-testid={`drafting-hit-${object.id}`}
+                  className={
+                    selectedDraftingId === object.id
+                      ? "annotation-hit selected"
+                      : "annotation-hit"
+                  }
+                  {...geometry.bounds}
+                  onPointerDown={(event) => {
+                    if (draggableText) {
+                      beginDraftingDrag(
+                        event,
+                        object as Extract<DraftingObject, { kind: "text" }>,
+                      );
+                    } else {
+                      event.stopPropagation();
+                      selectDraftingObject(object.id);
                     }
-                    x={position.x - width / 2}
-                    y={position.y - fontSize * 1.05}
-                    width={width}
-                    height={height}
-                    onPointerDown={(event) =>
-                      beginDraftingDrag(event, object)
-                    }
-                  />
-                );
-              })}
+                  }}
+                />
+              );
+            })}
             {annotationDragPreview ? (
               <text
                 className="annotation-drag-preview"

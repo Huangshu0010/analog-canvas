@@ -2052,3 +2052,17 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): drafting selection, drag, and delete (WP-R5 part 1)`.
+## 2026-08-08 - WP-R5 (part 2): select/delete all drafting kinds via shared geometry
+
+- Target: give every DraftingObject kind a selectable/deletable hit box derived
+  from the shared resolveDraftingObjectGeometry bounds (previously only text
+  had one).
+- Changed areas: apps/editor drafting hit-box rendering now maps every
+  drafting object to a rect spread from geometry.bounds (not a text-only
+  estimate); free-anchored unlocked text drags via beginDraftingDrag, all other
+  kinds select via selectDraftingObject; the shared geometry bounds replace the
+  flattenMarkup width estimate.
+- Validation: full suite 267/267; editor build succeeds; workspace typecheck
+  clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(editor): select/delete all drafting kinds via shared geometry (WP-R5 part 2)`.
