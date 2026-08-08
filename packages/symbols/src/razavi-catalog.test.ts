@@ -252,7 +252,7 @@ describe("Razavi symbol catalog", () => {
     );
   });
 
-  it("uses external voltage polarity marks and a compact wide current arrow", () => {
+  it("uses calibrated MOS and source arrowheads with external voltage polarity marks", () => {
     const voltage = requireRazaviCatalogSymbol("voltage-source");
     expect(voltage.viewBox).toEqual({ x: -24, y: -24, width: 39, height: 48 });
     expect(voltage.primitives).toEqual(
@@ -275,6 +275,22 @@ describe("Razavi symbol catalog", () => {
       ]),
     );
 
+    const nmos = requireRazaviCatalogSymbol("nmos");
+    expect(nmos.variants[0]?.additionalPrimitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "polygon",
+          points: [
+            { x: 10, y: 8.13189 },
+            { x: -0.35, y: 10.88589 },
+            { x: -0.35, y: 5.37789 },
+          ],
+          fill: "foreground",
+          stroke: "none",
+        }),
+      ]),
+    );
+
     const current = requireRazaviCatalogSymbol("current-source");
     expect(current.primitives).toEqual(
       expect.arrayContaining([
@@ -286,9 +302,9 @@ describe("Razavi symbol catalog", () => {
         expect.objectContaining({
           kind: "polygon",
           points: [
-            { x: 0, y: 6.874017 },
-            { x: -4.464567, y: 0.608268 },
-            { x: 4.464567, y: 0.608268 },
+            { x: 0, y: 8.753741 },
+            { x: -5.134252, y: 0.608268 },
+            { x: 5.134252, y: 0.608268 },
           ],
           fill: "foreground",
           stroke: "none",

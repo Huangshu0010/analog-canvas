@@ -15,6 +15,21 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-08 - Calibrate MOS and independent-current-source arrowheads
+
+- Target: widen the Razavi MOS source-arrow heads by 20%, and lengthen/widen
+  only the independent-current-source filled arrowhead by 30%/15%.
+- Changed areas: generator-owned Razavi MOS/current-source assets and catalog
+  output (committed concurrently in `16ed903`), plus the exact catalog
+  regression assertion.
+- Result: MOS arrow heads retain their source/tip/host geometry but have
+  1.20× half-width. The independent-current source retains its arrow shaft and
+  base at `y=0.608268`; its head is now 8.145473 units long and 10.268504 units
+  wide, versus 6.265749 and 8.929134 before calibration.
+- Validation: MOS, core-analog, and Razavi generator checks passed; focused
+  symbols tests passed (20/20); `git diff --check` passed.
+- Commit status: pending the standalone regression/plan record commit.
+
 ## 2026-08-06 - Bootstrap repository workflow
 
 - Target: initialize the circuit asset project as a GitHub repository and
