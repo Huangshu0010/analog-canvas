@@ -8,3 +8,6 @@ tmp/
 .reference-src/
 *.tsbuildinfo
 .vite/
+
+# Razavi fidelity diff generated output
+fixtures/visual-reference/razavi-reference-v1/diff/
