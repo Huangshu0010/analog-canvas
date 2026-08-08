@@ -329,3 +329,42 @@ Agent 可以请求“创建 Razavi 风格的电流箭头并贴在 Route X 第 2 
 先 A0/A1，再 A2，最后才接 UI 和 Agent。不能先在 `App.tsx` 加按钮；那会再次制造只在浏览器可用、模型/API/导出不一致的功能。每个工作包须单独建立 `plan/<date>-.../plan.md`，在 dirty worktree 中声明所有权；模型和 schema 是共享合同，必须在其实现前协调其他并行修改。
 
 最关键的审阅点是：富文本 AST 的最小范围、`drafting` 与 `annotations` 的迁移、Guide 是否进入协作持久化，以及 floating symbol 白名单。四项冻结后，其余工作可按上述顺序独立、可测试地推进。
+
+## Drafting Runtime Completion status (2026-08-08 revision)
+
+After the WP-A0..A6 implementation, a review found the drafting system was
+"runtime-incomplete": the schema, Edit Engine, and a basic renderer existed,
+but the editor and exporters did not consume a single derived-geometry source
+of truth, and several claimed-complete items were not. This revision records
+the actual state after the Drafting Runtime Completion fixes (P0-1..P0-2,
+P1-rotation/bounds/typed-snapshot/tools/hit/scenarios/smoke, P2).
+
+### Now true
+
+- Reversible rich-text markup: `parseMarkup(serializeMarkup(ast))` equals ast
+  for any valid AST (literal `V_{in}` text survives), moved to `packages/model`.
+- Single derived geometry entry `resolveDraftingObjectGeometry`; the renderer,
+  export bounds, and Agent Snapshot consume it (no per-consumer anchor math).
+- Rotation semantics frozen: `geometry.rotation` is the single truth
+  (`anchor.orientation === "follow"` composes anchor + object rotation).
+- Drafting bounds accurate for rotated/mirrored floating symbols and
+  multi-line text; export viewBox includes them; Guides never export.
+- Drafting drags commit exactly one transaction (preview + pointerup), so one
+  undo undoes a whole drag; a click without movement does not commit.
+- Canvas drag-create tools for construction lines and arrows; shape-based hit
+  targets (stroke polyline/line) instead of blocking bounding rects.
+- Agent Snapshot exposes strict typed `ResolvedDraftingGeometrySchema` /
+  `DraftingDiagnosticSchema` (no `z.unknown`), and distinct
+  `DRAFTING_ROUTE_SEGMENT_INVALID` diagnostics.
+- Real production-preview smoke (build -> vite preview -> browser, 0 console
+  errors, no node:crypto externalization), plus E2E for rich-text AST,
+  unedited-Apply no-revision, atomic drag, anchor persistence, drag-create, and
+  shape hit.
+
+### Remaining (explicitly not complete)
+
+- Leader/Callout creation commands and per-object endpoint handles; detach-to-
+  free and object-anchor offset adjustment in the GUI are not implemented.
+- Selection of non-text drafting kinds is click-select/delete only; no box
+  select, copy/paste, or drag for arrow/leader/callout yet.
+- These are tracked as follow-up interaction work, not claimed complete.

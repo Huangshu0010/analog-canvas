@@ -2345,3 +2345,16 @@ Editing System work.
   release:package; git diff --check.
 - Commit status: ready for
   `chore: format normalization after Drafting Runtime Completion (exit gate)`.
+## 2026-08-08 - Roadmap status revision (honest completion)
+
+- Target: record the actual Drafting Runtime Completion state in the roadmap
+  after the review, per the "do not claim complete" principle.
+- Changed areas: docs/roadmap/text-annotation-peripheral-editing-plan.md gains
+  a "Drafting Runtime Completion status" section listing what is now true
+  (reversible markup, single geometry entry, frozen rotation, accurate bounds,
+  atomic drags, drag-create tools, shape hits, typed Snapshot schema, distinct
+  route-segment diagnostics, production smoke) and what remains explicitly
+  incomplete (leader/callout commands, endpoint handles, detach-to-free,
+  box-select/copy-paste for non-text kinds).
+- Commit status: ready for
+  `docs(roadmap): record honest Drafting Runtime Completion status`.
