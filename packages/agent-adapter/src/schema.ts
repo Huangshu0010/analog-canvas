@@ -297,7 +297,7 @@ export const AgentProjectIndexDocumentSchema = z.strictObject({
 
 export const AgentSessionSnapshotSchema = z.strictObject({
   snapshotVersion: z.literal(AGENT_SNAPSHOT_VERSION),
-  topologyHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  electricalTopologyHash: z.string().regex(/^[a-f0-9]{64}$/u),
   byteLength: z.number().int().nonnegative(),
   project: z.strictObject({
     id: StableIdSchema,

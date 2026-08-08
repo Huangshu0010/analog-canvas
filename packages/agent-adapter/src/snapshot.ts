@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 
-import { diagnoseVisualQuality, routePolyline } from "@icm/derived";
+import {
+  diagnoseVisualQuality,
+  electricalTopologyHash,
+  routePolyline,
+} from "@icm/derived";
 import { transformPoint } from "@icm/model";
 import type {
   CircuitProject,
@@ -406,21 +410,25 @@ export function buildAgentSessionSnapshot(
     document: documentSnapshot(options),
   };
   const canonical = canonicalSnapshotContent(content);
-  // The topology hash intentionally excludes derived visual evidence and the
-  // ADR 0010 drafting layer (non-electrical text/markers/guides): they must
-  // not change the identity of an electrically identical Document. The
-  // integration gate narrows and renames this to electricalTopologyHash.
-  const { diagnostics: _diagnostics, drafting: _drafting, ...topologyDocument } =
-    content.document;
-  void _diagnostics;
-  void _drafting;
-  const topologyCanonical = canonicalSnapshotContent({
-    project: content.project,
-    document: topologyDocument,
-  });
+  // ADR 0010: the Snapshot identity hash covers only electrical facts
+  // (instances and pin inventory, ports, Nets and their membership,
+  // hierarchical edges). Placement, route geometry, Junction placement,
+  // annotations, drafting objects, guides, and diagnostics never change it, so
+  // an electrically identical Document hashes identically across the schema-2
+  // migration. When only a single Document is available (no Project view), the
+  // hash is computed over that one Document's electrical projection.
+  const projectView: Pick<
+    CircuitProject,
+    "id" | "topDocumentId" | "documents"
+  > = options.project ?? {
+    id: "anonymous",
+    topDocumentId: options.document.id,
+    documents: [options.document],
+  };
+  const topologyHash = electricalTopologyHash(projectView);
   return AgentSessionSnapshotSchema.parse({
     snapshotVersion: AGENT_SNAPSHOT_VERSION,
-    topologyHash: createHash("sha256").update(topologyCanonical).digest("hex"),
+    electricalTopologyHash: topologyHash,
     byteLength: Buffer.byteLength(canonical, "utf8"),
     ...content,
   });

@@ -1761,3 +1761,21 @@ Editing System work.
   generation/golden --check scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `feat(model): remove legacy annotation kinds (WP-A3 legacy-kind removal)`.
+## 2026-08-08 - Agent Snapshot electricalTopologyHash rename
+
+- Target: complete the ADR 0010 hash work deferred at the WP-A1 gate — rename
+  the Snapshot identity field to electricalTopologyHash and compute it from
+  electrical facts only.
+- Changed areas: agent-adapter schema.ts renames the Snapshot field to
+  electricalTopologyHash; snapshot.ts computes it via the shared
+  @icm/derived electricalTopologyHash over the Project view (falling back to a
+  single-document view when no Project is available); derived topology-hash.ts
+  parameter type widened to Pick<CircuitProject, id|topDocumentId|documents>;
+  all six phase-9 scripts read the renamed field.
+- New tests: snapshot.test.ts proves electricalTopologyHash is stable across
+  instance placement, annotation text, and drafting/guide edits, and changes
+  when Net terminal membership changes.
+- Validation: full suite 237/237; workspace typecheck clean; `git diff --check`
+  clean.
+- Commit status: ready for
+  `feat(agent-api): rename Snapshot identity hash to electricalTopologyHash`.

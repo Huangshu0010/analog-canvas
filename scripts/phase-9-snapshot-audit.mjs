@@ -175,7 +175,7 @@ for (const definition of cases) {
         instance.symbolId.startsWith("generic-block-"),
       ).length,
       snapshotBytes: snapshot.byteLength,
-      topologyHash: snapshot.topologyHash,
+      electricalTopologyHash: snapshot.electricalTopologyHash,
       diagnosticCounts,
       renderBytes: render.artifact.byteLength,
     });

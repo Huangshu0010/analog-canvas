@@ -486,7 +486,7 @@ const report = {
   },
   generalization: {
     persistedOrderInvariant:
-      reorderedSnapshot.topologyHash === snapshot128.result.topologyHash,
+      reorderedSnapshot.electricalTopologyHash === snapshot128.result.electricalTopologyHash,
     renamedIdsPreserveStructuralEvidence:
       structuralSignature(renamed.documents[0]) === initialTopology,
     deliberateAsymmetryDetected:

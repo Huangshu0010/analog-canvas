@@ -90,7 +90,7 @@ describe("Agent Document Snapshot", () => {
       document: snapshot.document,
     });
     expect(snapshot.byteLength).toBe(Buffer.byteLength(canonical, "utf8"));
-    expect(snapshot.topologyHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(snapshot.electricalTopologyHash).toMatch(/^[a-f0-9]{64}$/u);
   });
 
   it("is deterministic across persisted collection order and resolves references", () => {
@@ -130,7 +130,7 @@ describe("Agent Document Snapshot", () => {
       resolver,
     });
 
-    expect(second.topologyHash).toBe(first.topologyHash);
+    expect(second.electricalTopologyHash).toBe(first.electricalTopologyHash);
     expect(
       first.project.documents.find((document) => document.id === parent.id)
         ?.references,
@@ -159,5 +159,67 @@ describe("Agent Document Snapshot", () => {
         snapshot,
       }).success,
     ).toBe(false);
+  });
+
+  it("keeps electricalTopologyHash stable across non-electrical edits", () => {
+    const project = fixtureProject();
+    const base = buildAgentSessionSnapshot({
+      project,
+      document: project.documents[0]!,
+      resolver,
+    });
+
+    // Move an instance, change an annotation, and add drafting/guides: none of
+    // these are electrical facts, so the hash must not change (ADR 0010).
+    const edited = structuredClone(project);
+    const document = edited.documents[0]!;
+    document.instances[0]!.placement = {
+      position: { x: 999, y: 999 },
+      rotation: 90,
+      mirror: "x",
+    };
+    document.annotations[0]!.text = "changed";
+    document.drafting = {
+      objects: [
+        {
+          id: "d1",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 1, y: 1 } },
+          content: { runs: [{ kind: "text", value: "note" }] },
+          alignment: "start",
+          rotation: 0,
+        },
+      ],
+      guides: [
+        { id: "g1", axis: "vertical", coordinate: 42, locked: false, visible: true },
+      ],
+    };
+    const after = buildAgentSessionSnapshot({
+      project: edited,
+      document,
+      resolver,
+    });
+    expect(after.electricalTopologyHash).toBe(base.electricalTopologyHash);
+  });
+
+  it("changes electricalTopologyHash when Net membership changes", () => {
+    const project = fixtureProject();
+    const base = buildAgentSessionSnapshot({
+      project,
+      document: project.documents[0]!,
+      resolver,
+    });
+    const edited = structuredClone(project);
+    const document = edited.documents[0]!;
+    // Remove a terminal from a Net: an electrical fact.
+    document.nets[0]!.terminals.pop();
+    const after = buildAgentSessionSnapshot({
+      project: edited,
+      document,
+      resolver,
+    });
+    expect(after.electricalTopologyHash).not.toBe(base.electricalTopologyHash);
   });
 });

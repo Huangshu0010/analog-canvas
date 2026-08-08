@@ -86,7 +86,7 @@ const report = {
     nets: snapshot.document.nets.length,
     ports: snapshot.document.ports.length,
     snapshotBytes: snapshot.byteLength,
-    topologyHash: snapshot.topologyHash,
+    electricalTopologyHash: snapshot.electricalTopologyHash,
   })),
   cellReferences: references.length,
   elaboratedMosCount: references.length * cell.instances.length,

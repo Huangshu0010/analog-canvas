@@ -80,7 +80,7 @@ const report = {
     nets: snapshot.document.nets.length,
     ports: snapshot.document.ports.length,
     snapshotBytes: snapshot.byteLength,
-    topologyHash: snapshot.topologyHash,
+    electricalTopologyHash: snapshot.electricalTopologyHash,
   })),
   comparatorReferences: references.length,
   elaboratedMosCount: references.length * comparator.instances.length,

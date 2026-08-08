@@ -45,7 +45,9 @@ function electricalProjection(document: SchematicDocument): unknown {
  * membership, document identity) produce the same hash regardless of
  * placement, routing geometry, annotations, or drafting.
  */
-export function electricalTopologyHash(project: CircuitProject): string {
+export function electricalTopologyHash(
+  project: Pick<CircuitProject, "id" | "topDocumentId" | "documents">,
+): string {
   const documents = [...project.documents]
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((document) => ({

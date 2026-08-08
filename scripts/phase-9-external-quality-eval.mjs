@@ -434,7 +434,7 @@ async function validateTier(root, tier, initialProject, manifest) {
           trace.finalSnapshotHashes?.[snapshot.document.id] ?? "",
         ) ||
         trace.finalSnapshotHashes[snapshot.document.id] !==
-          snapshot.topologyHash,
+          snapshot.electricalTopologyHash,
     )
   )
     throw new Error(`Tier ${tier} lacks a valid final Snapshot refresh`);
@@ -788,7 +788,7 @@ async function selfTest() {
     const finalSnapshotHashes = Object.fromEntries(
       finalSnapshots.map((snapshot) => [
         snapshot.document.id,
-        snapshot.topologyHash,
+        snapshot.electricalTopologyHash,
       ]),
     );
     const svg = await readFile(
