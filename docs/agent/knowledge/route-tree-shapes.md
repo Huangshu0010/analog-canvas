@@ -1,127 +1,93 @@
-# Route-tree shapes
+# Route-tree shape vocabulary
 
-Owner: Agent reasoning for choosing a shape; `@icm/agent-routing` for the
-deterministic expansion. Strength: **guidance** — a shape menu, not a recipe.
-Trigger: a multi-endpoint Net that needs a routing-tree decision before
-`route_orthogonal` / `set_route_points` can lay out compliant geometry.
+Owner: Agent reasoning for choosing and specifying the visible topology;
+`@icm/agent-routing` only for deterministic geometry expansion. Strength:
+guidance. Trigger: a multi-endpoint Net that needs a deliberate branch, trunk,
+rail, tap, or label structure.
 
-This is a dictionary of the finite shape vocabulary the
-`@icm/agent-routing` expander accepts. Each shape describes what it is, when it
-may fit, what it expresses well, how it commonly fails, and when it does not
-fit. Choose a shape from circuit evidence; do not apply a global priority order.
-There is no `auto` or `best` shape, and the expander never silently switches
-shapes — if a chosen shape cannot be laid out, it returns a conflict and you
-reconsider the decision or placement.
+These shapes are a visual vocabulary, not RouteGraph enums, constructors, or a
+priority-ordered recipe. The current helper accepts a complete graph of nodes
+and edges. It never chooses a shape, adds a missing branch/bend, or reroutes.
 
-## How to use this menu
+## Use the vocabulary
 
-- Read the Snapshot first. Decide which endpoints share a branch, where a trunk
-  could sit, and whether the Net should be drawn end-to-end or expressed partly
-  by label.
-- Pick a shape that matches the evidence. Record one line of rationale per Net
-  (e.g. "16 repeated units across the matrix; a continuous trunk would cross
-  it; chose labeled-islands").
-- Submit a `RouteTreeDecision` to the expander. It computes coordinates; you do
-  not.
-- If the expander returns a conflict, change the shape, the grouping, or the
-  placement. Do not hand-edit coordinates to defeat the conflict.
+1. Read every endpoint and its functional context from the complete Snapshot.
+2. Decide what shared relationship the reader should see.
+3. Check available corridors, symbol escapes, labels, crossings, and locks.
+4. Choose or combine useful shapes below.
+5. Encode the result explicitly as RouteGraph `endpoint`, `bend`, real branch,
+   and label-anchor nodes plus axis-aligned edges.
+6. Revise the graph if expansion conflicts or the formal render is confusing.
 
-## Shapes
+The same Net may use a local branch in one region and labeled islands between
+regions. Names describe the result; they do not limit Agent reasoning.
 
-### direct
+## Direct connection
 
-Shape: one route per endpoint pair, no Junctions.
+Shape: one Route between two endpoints, with dot-free bends if needed.
 
-May fit:
-- exactly two endpoints on the same Net;
-- endpoints already roughly aligned on one axis.
+Useful when endpoints are close and the visible wire directly communicates the
+relationship. It becomes poor when a long L-shaped wire cuts through unrelated
+functional regions.
 
-Expresses well: the simplest, lowest-clutter connection.
+## Local branch tree
 
-Common failure: endpoints on neither shared axis produce a long L that may
-cross other geometry; a `local-branch-tree` would be clearer.
+Shape: nearby endpoints escape to one or a few real branch Junctions connected
+by short links.
 
-Does not fit: three or more endpoints; a Net that spans functional regions.
+Useful for a CMOS drain node, shared gate, differential tail node, or compact
+local cluster. Prefer one Junction when the reader should perceive one node.
+Too many nearby Junctions create bumps, boxes, and false stage boundaries.
 
-### local-branch-tree
+## Shared trunk or rail
 
-Shape: each group of endpoints escapes to a shared branch Junction; groups link
-to each other by short routes.
+Shape: a horizontal or vertical conductor with real taps to ordered consumers.
 
-May fit:
-- a small cluster of endpoints that share a local connection point;
-- groups that have a natural neighbor to attach to.
+Useful for a clear supply, bias, common control, output plate, or other
+distributed relationship when an unobstructed corridor exists. A trunk is poor
+when it crosses device bodies, dominates the signal path, or requires many
+detours. The Agent positions every trunk/tap node; the helper does not calculate
+a median or choose a corridor.
 
-Expresses well: local connectivity with short, readable escapes.
+## Labeled islands
 
-Common failure: the branch Junction lands on or near an instance silhouette;
-too many groups produce a long chain of links.
+Shape: local connected branches carry the same attached Net label instead of a
+page-spanning wire.
 
-Does not fit: a Net shared across many widely separated regions (use
-labeled-islands); a Net with a clear common rail (use shared-trunk).
+Useful for distant supply, bias, clock, or repeated-cell regions where a drawn
+trunk adds clutter. Each island must contain an actual endpoint/branch relation
+and a visible attached label. An unlabeled stub plus a caption is not an island.
 
-### shared-trunk
+## Ordered repeated taps
 
-Shape: one horizontal trunk spans the leftmost-to-rightmost anchor; each
-endpoint escapes to the nearest trunk point.
+Shape: repeated local branches attach to a deliberately ordered trunk/rail or
+to consistently placed labeled islands.
 
-May fit:
-- one Net distributed across several ordered device groups;
-- branches with similar escape directions;
-- a clear horizontal corridor between groups.
+Useful for capacitor arrays, resistor ladders, bit slices, and staged logic.
+Order should come from bit weight, tap sequence, or signal flow—not just current
+coordinates. Preserve local exceptions rather than forcing a false regularity.
 
-Expresses well: a common control, supply, or bus relationship; reduces repeated
-long wires.
+## Feedback loop
 
-Common failure: the trunk corridor crosses an instance silhouette — the
-expander returns `TRUNK_CORRIDOR_BLOCKED` rather than rerouting; parallel
-trunks of different Nets become hard to distinguish.
+Shape: a visible return path around, above, or below a forward path, sometimes
+bridged by paired local labels.
 
-Does not fit: endpoints concentrated in a small area; hierarchy expressed more
-clearly by local Net labels; a trunk that would cross multiple functional
-regions.
+Useful when feedback or cross-coupling is central to understanding the circuit.
+Keep direction and attachment points distinguishable. Avoid bundling opposing
+feedback paths so tightly that a reader cannot tell which node drives which.
 
-### labeled-islands
+## Selection questions
 
-Shape: each group forms a local branch Junction; cross-island connectivity is
-expressed by the shared Net name, not drawn wire.
+Before committing an important Net, answer:
 
-May fit:
-- a Net shared across widely separated regions where a drawn trunk would add
-  clutter;
-- repeated cells that each have a local copy of the same supply/control.
+- Which endpoints form local functional nodes?
+- Which nodes are real branches and which are only bends?
+- Does a continuous wire communicate function or only add distance?
+- Is there an obstacle-free corridor for a trunk?
+- Would labels clarify hierarchy/locality or hide the relation?
+- Does the proposed graph create duplicate nearby dots, tiny boxes, reversals,
+  or wire-through-symbol paths?
+- Can the choice survive a formal-render review without a prose explanation?
 
-Expresses well: locality without a distracting page-spanning wire.
-
-Common failure: the Net label is not visible at every island — connectivity
-becomes implicit and hard to audit; an island with a single endpoint needs no
-Junction.
-
-Does not fit: a Net whose endpoints are close enough to draw directly; a Net
-where the drawn connection itself carries meaning (e.g. a feedback path).
-
-### ordered-bus
-
-Shape: a vertical trunk ordered top-to-bottom by endpoint position; each
-endpoint attaches at its trunk height.
-
-May fit:
-- an ordered set of taps (e.g. a resistive ladder, a DAC tap bus);
-- endpoints that have a meaningful vertical order.
-
-Expresses well: ordering and equal spacing along a shared axis.
-
-Common failure: the vertical corridor crosses an instance; ordering is
-ambiguous when two endpoints share a height.
-
-Does not fit: endpoints with no meaningful order; a Net better drawn as a short
-local branch.
-
-## Choosing evidence over rule
-
-The same topology often has several legitimate expressions. A quality gate must
-accept any shape that is electrically correct, unambiguous, and within metric
-bounds — not a single golden recipe. When two shapes both fit, pick the one
-that makes the circuit easier to read at a glance, and record the one-line
-rationale. If you cannot justify a shape against this menu, reconsider the
-topology rather than adding more wire.
+Choose the clearest defensible expression. A quality gate must accept multiple
+valid shapes; it must not require one golden recipe.

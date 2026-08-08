@@ -1275,3 +1275,25 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   branch also carries unpushed flat-CDAC commits (`36279ed`, `2bb4c2b`) from a
   concurrent worker; push order and the integration-test failure they
   introduce need a decision before pushing.
+
+## 2026-08-08 - Establish four-layer Agent schematic guidance
+
+- Target: make Agent layout work repeatable through separate workflow,
+  tool-behavior, response-semantics, and circuit/style knowledge layers.
+- Changed areas: four canonical Agent guidance pages; thin `circuit-layout`
+  Skill and progressive-loading manifest; Agent documentation navigation;
+  corrected RouteGraph shape vocabulary; refreshed Phase 9 Skill-structure
+  report.
+- Dirty-state decision: concurrent editor, model, renderer, test, plans, and
+  two prior `plan/log.md` entries belonged to other targets and were preserved.
+  This target is staged independently from those changes.
+- Result: the Skill now requires both structural and semantic visual completion
+  gates, documents real API/RouteGraph/generator behavior and result codes, and
+  teaches junction/bend/crossing, bump repair, common transistor structures,
+  labels, and render review without reintroducing Layout Intent or a shape
+  compiler.
+- Validation: Skill Creator validation passed; Phase 9 Skill check passed with
+  16 valid manifest links and all contract checks true; direct local Markdown
+  link check passed for eight entry files; `git diff --check` passed.
+- Commit status: ready for
+  `docs(agent): establish four-layer layout guidance`.

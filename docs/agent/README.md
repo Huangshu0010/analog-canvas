@@ -6,11 +6,19 @@ a regular JSON/TypeScript API, not MCP, and it does not bundle an LLM provider.
 
 Start with:
 
-- [`api-usage.md`](api-usage.md) for the request lifecycle and permissions;
-- [`layout-guidance.md`](layout-guidance.md) for judgment that remains outside
-  hard validators;
-- [`knowledge-and-skill-plan.md`](knowledge-and-skill-plan.md) for the
-  two-part governing Skill and on-demand circuit-knowledge construction plan;
+- [`workflow.md`](workflow.md) for the required end-to-end execution and visual
+  review loop;
+- [`tool-behavior.md`](tool-behavior.md) for the actual API, Edit Engine,
+  RouteGraph helper, movement, renderer, and generator behavior;
+- [`response-semantics.md`](response-semantics.md) for interpreting conflicts,
+  errors, diagnostics, resolved Routes, crossings, flightlines, and artifacts;
+- [`circuit-style-knowledge.md`](circuit-style-knowledge.md) for evidence-first
+  circuit understanding and textbook/Razavi-style expression;
+- [`api-usage.md`](api-usage.md) for request payload examples and permissions;
+- [`layout-guidance.md`](layout-guidance.md) for the earlier compact layout
+  heuristics retained for compatibility;
+- [`knowledge-and-skill-plan.md`](knowledge-and-skill-plan.md) for the earlier
+  rationale behind Agent reasoning and on-demand knowledge construction;
 - [`knowledge/`](knowledge/) for canonical on-demand circuit-reading,
   expression, routing, pattern, and fixed-style canon knowledge used by
   `circuit-layout`;
@@ -38,6 +46,11 @@ derived diagnostics
 Agent guides
   describe preferred but non-mandatory layout judgment
 ```
+
+The four primary Agent layers deliberately separate process, runtime facts,
+result interpretation, and visual/electrical reasoning. Normative schemas remain
+in `docs/specs/`; detailed pattern cards remain under `knowledge/` and load only
+when Snapshot evidence makes them relevant.
 
 Explicit Junction semantics, Net consistency, and locked-object protection
 never depend on an Agent following prose instructions.

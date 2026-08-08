@@ -1,110 +1,104 @@
 ---
 name: circuit-layout
-description: Reason about, lay out, route, and refine transistor-level or passive circuit schematics through the Interactive Circuit Maker Agent Circuit API. Use for Snapshot-driven circuit reading, schematic placement, wiring, hierarchy work, visual cleanup, diagnostics repair, or human/Agent handoff while preserving electrical correctness.
+description: Reason about, lay out, route, generate, inspect, and refine transistor-level or passive circuit schematics through Interactive Circuit Maker. Use for complete-Snapshot circuit reading, typed Agent API edits, RouteGraph expansion, repository layout recipes, hierarchy or flat views, visual diagnostics, textbook/Razavi-style cleanup, or human/Agent handoff while preserving electrical topology.
 ---
 
-# Circuit Layout
+# Circuit layout
 
 Use the complete read-only circuit Snapshot as evidence, reason freely about the
-current circuit, and mutate it only through revision-safe typed transactions.
-Do not produce or require a fixed Layout Intent object.
+circuit and its visual expression, and mutate it only through revision-safe
+typed transactions. Do not produce or require a fixed Layout Intent object.
+
+## Load the four layers
+
+Read [references/manifest.md](references/manifest.md) and load guidance in this
+order:
+
+1. Always read the workflow before executing a layout target.
+2. Read tool behavior before constructing an unfamiliar API request, typed
+   edit, RouteGraph, movement, render, or repository recipe.
+3. Read response semantics whenever interpreting a helper/API/generator result.
+4. Read circuit/style knowledge before placement, routing, visual refinement,
+   or accepting a formal render.
+
+Load detailed pattern, hierarchy, PDK, and collaboration cards only when task or
+Snapshot evidence makes them relevant. A card name is not circuit evidence.
 
 ## Establish the contract
 
 1. Require API `2.0`, Snapshot `1.0`, and the operations
-   `capabilities/snapshot/transact/render`.
-2. Check `permissions`, edit kinds, transaction/render/Snapshot limits, selected
-   `documentId`, and `revision` before planning edits.
-3. Require the complete selected Document: ports, every instance and resolved or
-   connected pin, Nets and terminals, Routes, Junctions, annotations, groups,
-   constraints, bounds, presentation, and diagnostics.
-4. Treat the Snapshot as read-only evidence. Never return it as a replacement
+   `capabilities/snapshot/transact/render` for live product work.
+2. Check permissions, edit kinds, limits, `documentId`, and `revision` before
+   planning edits.
+3. Require one complete selected Document: ports, every instance and resolved
+   or connected pin, Nets and terminals, Routes, Junctions, annotations, groups,
+   constraints, bounds, presentation, hierarchy context, and diagnostics.
+4. Treat Snapshot as read-only evidence. Never return it as a replacement
    Document or Project.
 5. Use v1 `query` only for an explicitly requested legacy-compatibility task.
-   Never build the primary workflow around query scopes.
 
-Stop and report the missing capability or fact when the contract is incomplete.
-Never infer an unavailable pin mapping, hidden connection, or model semantic.
+Stop when pin mapping, bulk connection, model semantics, hierarchy binding, or
+the authority to change topology is unavailable. Never fill an electrical fact
+gap with a drawing convention.
 
-## Load only the needed knowledge
+## Reason, edit, and review
 
-Read [references/manifest.md](references/manifest.md) to select the smallest
-relevant knowledge set. Always load circuit reading for an unfamiliar circuit.
-Load expression or routing guidance only when placing, routing, or repairing a
-view. Load a pattern card only after the Snapshot supplies supporting evidence;
-the card name is not evidence.
+1. Establish electrical facts and counterevidence before functional hypotheses.
+2. Choose a coherent placement and reserve route/label corridors.
+3. Decide the complete visible topology of each active Net: endpoints, real
+   branches, dot-free bends, trunks/rails, and attached labels.
+4. Use the optional RouteGraph helper only to project the Agent's complete graph
+   onto legal geometry and typed edits. The Agent—not the helper—owns topology.
+5. Dry-run risky edits and commit against the exact current revision.
+6. Read structured response fields and `resolvedRoutes`, then inspect
+   diagnostics, crossings, flightlines, and a formal render.
+7. Repair the smallest responsible area and repeat until both the structural
+   and semantic visual gates pass.
 
-## Run the reasoning and edit loop
-
-1. Select the working Document from the Project Index. Prefer a meaningful child
-   Document over flattening a large hierarchy without cause.
-2. Establish boundaries, device semantics, Net roles, signal/bias/feedback paths,
-   repeated or symmetric structures, and counterevidence from the Snapshot.
-   Track uncertainty internally; no planning-object schema is required.
-3. Choose one coherent local improvement. Preserve user locks and already clear
-   work. Prefer placement before detailed routing and main signal expression
-   before bias, control, and power cleanup.
-4. Express the change as supported generic typed edits. Keep each transaction at
-   or below `maxTransactionEdits`; do not invent circuit-specific endpoints.
-5. Dry-run risky connectivity, destructive, multi-object, or large routing
-   changes. Commit against the exact current revision only after the dry run is
-   acceptable.
-6. Inspect returned diagnostics and a formal or diagnostic render. Repair the
-   smallest responsible area, then continue.
-7. Refresh the complete Snapshot after switching Documents, a stale revision,
-   external changes, uncertain accumulated state, or before final global review.
-
-On `STALE_REVISION`, discard the old transaction assumptions, refresh, and
-reason again. On a limit error, split only the edit batch—not the electrical
-interpretation. On a lock conflict, preserve the human result and find another
-layout or ask for a decision. On an unresolved symbol/pin mapping, preserve the
-source facts and request or add an explicit mapping.
+On `STALE_REVISION`, discard stale assumptions, Refresh the Snapshot, and reason
+again. On a lock conflict, preserve the human result and find another layout or
+ask for a decision. When a transaction exceeds a limit, split only the edit
+batch—not the circuit interpretation.
 
 ## Obey hard boundaries
 
-- MUST preserve electrical topology unless the user explicitly asks to change
-  the circuit.
-- MUST use the current revision and the shared Edit Engine.
-- MUST preserve locked groups, constraints, annotations, Routes, and human-owned
-  layout.
-- MUST NOT merge Nets, create Junctions, or alter terminal membership merely to
-  make a drawing easier.
-- MUST NOT treat a wire crossing as connected without an explicit Junction.
-- MUST NOT guess pin order, bulk connection, PDK mapping, or hierarchy target.
-- MUST make every Document port visually discoverable at its placed port,
-  connected Route, rail, or an attached local Net label. A heading, prose
-  caption, or claimed "named-rail convention" is not connectivity expression.
-- SHOULD choose among a connected trunk/rail, boundary port, or attached local
-  label according to which is clearest in this render. Do not mechanically
-  repeat labels or construct long shared rails when either creates more clutter
-  than it resolves.
-- SHOULD keep intentional crossings when they are clearer than a detour; crossing
-  count alone is not a completion failure.
-- MAY use an optional helper only as reviewable evidence or typed-edit expansion.
-  The workflow must remain complete with every helper disabled.
+- MUST preserve electrical topology unless the user explicitly requests a
+  circuit change.
+- MUST use the shared Edit Engine, current revision, and advertised edit kinds.
+- MUST preserve locks and clear human-owned layout.
+- MUST NOT merge Nets, change terminal membership, or add a Junction merely to
+  make routing easier.
+- MUST NOT treat a geometric crossing as connected without an explicit same-Net
+  Junction.
+- MUST NOT guess PDK pin order, hidden bulk mapping, or hierarchy target.
+- MUST make every intended visible endpoint relation discoverable through a
+  Route, real branch, placed port, rail, or attached local Net label.
+- SHOULD retain a clear intentional crossing rather than add a confusing
+  detour.
+- MAY use helpers as deterministic scaffolding, but the workflow and judgment
+  must remain valid with every helper disabled.
 
-## Complete the task
+## Complete only after both gates
 
-Before declaring completion:
+Structural gate:
 
-1. Refresh the Snapshot and verify its revision matches the last committed edit.
-2. Confirm every connected pin agrees with its Net terminal, no unintended Net
-   membership changed, and no lock was bypassed.
-3. Resolve all blocking diagnostics and all unintended flightlines, ambiguous
-   Junctions, overlaps, off-page objects, or unresolved symbols.
-4. Inventory every Document port and every label-based shared Net against the
-   formal render. Confirm a reader can identify the relation through a compact
-   trunk, boundary convention, or local label; do not rely on prose to fill a
-   missing connection, and do not require one label at every device pin.
-5. Review the formal render for signal flow, readable labels, distinguishable
-   crossings/Junctions, useful hierarchy, and stable whitespace. Verify every
-   annotation glyph rendered correctly; prefer plain ASCII punctuation in
-   generated captions unless the renderer's font/encoding support was checked.
-6. State any intentional warning or remaining uncertainty with affected object
-   IDs. Do not hide it behind a successful render.
+- final revision is current;
+- bidirectional pin/Net facts agree;
+- intended endpoint coverage is complete;
+- blocking diagnostics and unintended flightlines are resolved;
+- no lock or mutation boundary was bypassed.
 
-Knowledge pages are suggestions, not a checklist. Ignore or adapt a card when
-its proposed mechanism makes the current formal render taller, denser, more
-crossed, or more repetitive without improving comprehension. The completion
-test is the visible result plus hard electrical invariants, not how many guidance
-items were implemented.
+Semantic visual gate:
+
+- formal render communicates signal flow, functional grouping, matching,
+  hierarchy, and repetition;
+- real Junctions, bends, and crossings are visually distinct;
+- labels avoid active route/symbol corridors;
+- no unexplained bump, hook, duplicate dot, tiny box, or wire reversal remains;
+- shared device nodes such as CMOS gates/drains read as one functional relation
+  when the electrical facts support it.
+
+Zero diagnostics is not a visual acceptance result. Inspect the rendered image
+and revise confusing but structurally valid topology. Report any intentional
+warning or unresolved uncertainty with object IDs. Do not claim electrical
+correctness without simulation evidence appropriate to the circuit.
