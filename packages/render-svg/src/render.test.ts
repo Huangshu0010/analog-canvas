@@ -427,10 +427,8 @@ describe("textbook monochrome SVG renderer", () => {
     );
     expect(svg).not.toContain('data-node-kind="device-pin"');
     expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
-    // After migration the legacy current marker renders as route-marker text
-    // (plain text; full route-marker arrow rendering lands in WP-A2), so the
-    // current-arrow shaft/head are absent.
-    expect(svg).not.toContain('data-role="current-arrow-shaft"');
+    // WP-A2: the migrated route-marker renders a full current arrow again.
+    expect(svg).toContain('data-role="current-arrow-shaft"');
     expect(svg).toContain('data-kind="route-marker"');
     expect(svg).toContain(
       "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
@@ -441,7 +439,7 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain(
       '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">DD</tspan>',
     );
-    // The migrated route-marker still parses I_tail into Razavi tspans.
+    // The migrated route-marker (current) renders I_tail into Razavi tspans.
     expect(svg).toContain(
       '<tspan data-text-run="base" style="font-style:italic;font-weight:700">I</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">tail</tspan>',
     );

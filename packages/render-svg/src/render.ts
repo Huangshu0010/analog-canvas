@@ -4,7 +4,7 @@ import {
   transformPoint,
 } from "@icm/model";
 import { routeAttachmentPlacement, routePolyline } from "@icm/derived";
-import type { Rect, SchematicDocument } from "@icm/model";
+import type { Point, Rect, SchematicDocument } from "@icm/model";
 import type {
   SymbolDefinition,
   SymbolPrimitive,
@@ -21,6 +21,8 @@ import {
   renderSchematicTextContent,
   schematicTextSizeAttribute,
 } from "./schematic-text.js";
+import { renderRichTextDocument } from "./rich-text.js";
+import type { RichTextDocumentInput } from "./rich-text.js";
 
 export interface SvgRenderOptions {
   bounds?: Rect;
@@ -472,11 +474,23 @@ export function buildSvgScene(
               )
             : null
           : null;
-      const position = attachmentPlacement?.position ?? annotation.position;
-      const rotation = attachmentPlacement?.rotation ?? annotation.rotation;
+      // A route-marker resolves its VisualAnchor to a position/rotation for
+      // rendering. A free anchor uses fallbackPosition; a route anchor reuses
+      // the legacy routeAttachment math when its route is present.
+      const routeMarkerAnchor = annotation.anchor;
+      const routeMarkerPlacement =
+        annotation.kind === "route-marker" && routeMarkerAnchor
+          ? routeMarkerAnchor.kind === "free"
+            ? { position: routeMarkerAnchor.position, rotation: 0 as const }
+            : routeMarkerAnchor.kind === "object"
+              ? { position: routeMarkerAnchor.fallbackPosition, rotation: 0 as const }
+              : resolveRouteMarkerPlacement(document, resolver, routeMarkerAnchor)
+          : null;
+      const position = routeMarkerPlacement?.position ?? attachmentPlacement?.position ?? annotation.position;
+      const rotation = routeMarkerPlacement?.rotation ?? attachmentPlacement?.rotation ?? annotation.rotation;
       const transform = `rotate(${rotation} ${position.x} ${position.y})`;
       const attributes = `data-object-id="${escapeXml(annotation.id)}" data-kind="${annotation.kind}"${attachment}`;
-      if (annotation.kind === "current") {
+      if (annotation.kind === "current" || (annotation.kind === "route-marker" && annotation.markerKind === "current")) {
         const x = position.x;
         const y = position.y;
         const vertical = rotation === 90 || rotation === 270;
@@ -522,7 +536,8 @@ export function buildSvgScene(
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
-        annotation.kind === "voltage"
+        (annotation.kind === "voltage" ||
+          (annotation.kind === "route-marker" && annotation.markerKind === "voltage"))
       ) {
         const polarity = profile.annotations;
         const positiveOffset = rotateOffset(
@@ -554,6 +569,32 @@ export function buildSvgScene(
   };
 }
 
+// Resolve a route-marker route VisualAnchor to a render position/rotation,
+// reusing the legacy routeAttachmentPlacement math so a migrated current
+// marker renders identically to its pre-migration form.
+function resolveRouteMarkerPlacement(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  anchor: Extract<SchematicDocument["annotations"][number]["anchor"], { kind: "route" }>,
+): { position: Point; rotation: 0 | 90 | 180 | 270 } | null {
+  const route = document.routes.find((candidate) => candidate.id === anchor.routeId);
+  if (!route) return { position: anchor.fallbackPosition, rotation: 0 };
+  const polyline = routePolyline(document, resolver, route);
+  if (!polyline) return { position: anchor.fallbackPosition, rotation: 0 };
+  const placement = routeAttachmentPlacement(polyline, {
+    routeId: anchor.routeId,
+    segmentIndex: anchor.segmentIndex,
+    t: anchor.t,
+    normalOffset: anchor.normalOffset,
+    direction: anchor.direction,
+  });
+  if (!placement) return { position: anchor.fallbackPosition, rotation: 0 };
+  return {
+    position: anchor.orientation === "horizontal" ? placement.position : placement.labelPosition,
+    rotation: anchor.orientation === "horizontal" ? 0 : placement.rotation,
+  };
+}
+
 // ADR 0010 WP-A1b minimal drafting consumption. Only DraftText is rendered
 // here, as escaped plain text in a data-layer="drafting" group stacked above
 // annotations per the frozen layering. The full RichText AST -> tspan renderer
@@ -571,26 +612,33 @@ function renderDraftingLayer(
     .map((object) => {
       const anchor = object.anchor;
       const position = anchor.kind === "free" ? anchor.position : anchor.fallbackPosition;
-      const text = textFromRichText(object.content.runs);
       const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
-      return `<text data-object-id="${object.id}" data-kind="draft-text" x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${position.x} ${position.y})" font-size="${fontSize}">${escapeXmlText(text)}</text>`;
+      // Monochrome renders rich text as flat escaped text to stay byte-stable;
+      // Razavi uses the unified tspan renderer.
+      const content =
+        profile.id === "textbook-monochrome-v1"
+          ? escapeXmlText(flatText(object.content.runs as unknown[]))
+          : renderRichTextDocument(
+              object.content as unknown as RichTextDocumentInput,
+              profile,
+            );
+      return `<text data-object-id="${object.id}" data-kind="draft-text" x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${position.x} ${position.y})" font-size="${fontSize}">${content}</text>`;
     })
     .join("");
   return `<g data-layer="drafting">${body}</g>`;
 }
 
-function textFromRichText(runs: readonly unknown[]): string {
-  // Minimal WP-A1b projection: concatenate text runs; span/fraction/line-break
-  // structure is preserved by WP-A2's tspan renderer.
+function flatText(runs: unknown[]): string {
   let result = "";
   for (const run of runs) {
     if (typeof run !== "object" || run === null) continue;
-    const kind = (run as { kind?: string }).kind;
-    if (kind === "text") {
-      const value = (run as { value?: string }).value;
-      if (typeof value === "string") result += value;
-    } else if (kind === "line-break") {
+    const node = run as { kind?: string; value?: string; children?: unknown[] };
+    if (node.kind === "text" && typeof node.value === "string") {
+      result += node.value;
+    } else if (node.kind === "line-break") {
       result += " ";
+    } else if (node.children) {
+      result += flatText(node.children);
     }
   }
   return result;

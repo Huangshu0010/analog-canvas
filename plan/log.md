@@ -1665,3 +1665,32 @@ Editing System work.
   generation/golden --check scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `feat(model): switch to schema 2 with idempotent migration and route-marker (WP-A1 gate)`.
+## 2026-08-08 - WP-A2: unified RichText renderer and route-marker rendering
+
+- Target: build the single RichText AST -> tspan renderer (subscript/superscript/
+  italic/bold/fraction) shared by canvas/formal SVG/PNG/PDF, and render
+  route-markers fully (current arrow + voltage polarity via the VisualAnchor).
+- Changed areas:
+  - render-svg: new `rich-text.ts` `renderRichTextDocument` renders the four
+    node kinds into tspans honoring the style profile tokens (math weight/style,
+    subscript scale + baseline shift reused for superscript, fraction stack);
+    drafting text now uses it (monochrome stays byte-stable via flat escape);
+    route-marker renders through the existing current/voltage branches by
+    resolving its VisualAnchor (`resolveRouteMarkerPlacement` reuses the legacy
+    routeAttachmentPlacement math so a migrated current marker renders
+    identically to its pre-migration form); `schematic-text.ts` adds route-marker
+    to SchematicTextKind and the font-size switch.
+  - tests: new `rich-text.test.ts` (5 tests) covering text escape, italic/bold
+    spans, sub/superscript, fraction, line-break; render.test assertions updated
+    for restored route-marker arrow rendering; drafting-render.test for rich text.
+  - goldens: phase-5-dense-analog, route-attached-current-arrow, and text-*
+    regenerated.
+- Scope decision: removing the legacy plain-text/current/voltage/figure-caption
+  annotation kinds is deferred to WP-A3. The editor creates those kinds
+  interactively; removing them without the WP-A3 editor rewrite would leave the
+  editor unable to author annotations. WP-A3 rebuilds the editor to author
+  drafting text / route-markers and removes the legacy kinds together.
+- Validation: full suite 234/234; workspace typecheck clean; all six
+  generation/golden --check scripts pass; `git diff --check` clean.
+- Commit status: ready for
+  `feat(render): unified RichText renderer and route-marker rendering (WP-A2)`.
