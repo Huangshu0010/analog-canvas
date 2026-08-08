@@ -252,10 +252,10 @@ function arrowPrimitives(shape, segment, style, marker, part) {
     shape.line.LineWeight,
     `${shape.nameU}.LineWeight`,
   );
-  const arrowLength = 3 * marker.scale * strokeWidth;
+  const arrowLength = 3 * marker.scale * strokeWidth * 1.2;
   // Razavi calibration: preserve the Visio-derived tip, host, and electrical
   // anchors while making only the filled MOS arrowhead 56% wider in total.
-  const halfWidth = marker.scale * strokeWidth * 1.56;
+  const halfWidth = marker.scale * strokeWidth * 2.2;
   const setback = Math.abs(marker.refX) * strokeWidth;
   const tip = beginArrow ? segment.from : segment.to;
   const baseCenter = beginArrow

@@ -24,9 +24,9 @@ describe("schematic style profiles", () => {
     });
     expect(razaviTextbookProfile.annotations).toEqual({
       supplyBarWidth: 20,
-      currentArrowLength: 24,
-      arrowHeadLength: 10,
-      arrowHeadWidth: 7,
+      currentArrowLength: 28,
+      arrowHeadLength: 18,
+      arrowHeadWidth: 9,
       currentLabelGap: 7,
       polarityOffsetX: 12,
       polarityHalfGap: 8,

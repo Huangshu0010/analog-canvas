@@ -44,7 +44,7 @@
       "palette": true,
       "automaticMappings": ["spice:I"],
       "assetPath": "current-source.symbol.json",
-      "assetHash": "4a07529d3de55dd5c8f91aef03eed21e08104b6b837dc0754ab43af0474db1a3",
+      "assetHash": "5ad8dc60b23394081e7430d6d6cda1b86558a2384b8630ff51bdff3893b1586e",
       "generation": {
         "kind": "vss-master-ir",
         "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
@@ -143,7 +143,7 @@
       "palette": true,
       "automaticMappings": ["spice:M:nmos", "pdk:model-type:nmos"],
       "assetPath": "nmos.symbol.json",
-      "assetHash": "ff915693f8ce52b7dbfa7c75e73e8fb64e4ee08798d57a930458389b1f23868b"
+      "assetHash": "89999915795be607197969dc8b466f11df6049504401e9b08dc4adca03d28ec3"
     },
     {
       "symbolId": "nmos3",
@@ -166,7 +166,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "nmos3.symbol.json",
-      "assetHash": "9504e0b52f20ab6ef37c997f8acbccc69619aaef7fa1c6d0deec67f35f9130bf"
+      "assetHash": "7dd90e56a29e7ae92a2bc2918ee547d56fdf9e82c09ff229160e7fb9e3512258"
     },
     {
       "symbolId": "npn",
@@ -205,7 +205,7 @@
       "palette": true,
       "automaticMappings": ["spice:M:pmos", "pdk:model-type:pmos"],
       "assetPath": "pmos.symbol.json",
-      "assetHash": "ef483c214de91f025b7debde2a22aec28d8a381fc7e956eec85935d05106e3d3"
+      "assetHash": "6845547d607cd3b8c188997ac44d310197a3ec5de186c81be2b57c036fe1d068"
     },
     {
       "symbolId": "pmos3",
@@ -228,7 +228,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "pmos3.symbol.json",
-      "assetHash": "e34ce6140995235de1501b2aee5ae0115e00bec97f6b991e09bdb106bd8fae8c"
+      "assetHash": "4b3401450e1265ba7dcf4ca0f068193ed675cb4bba35065d02e12f7a08b8933a"
     },
     {
       "symbolId": "pnp",

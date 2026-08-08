@@ -106,9 +106,9 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
   nodes: { junctionRadius: 3, portOriginRadius: 3 },
   annotations: {
     supplyBarWidth: 20,
-    currentArrowLength: 24,
-    arrowHeadLength: 10,
-    arrowHeadWidth: 7,
+    currentArrowLength: 28,
+    arrowHeadLength: 18,
+    arrowHeadWidth: 9,
     currentLabelGap: 7,
     polarityOffsetX: 12,
     polarityHalfGap: 8,

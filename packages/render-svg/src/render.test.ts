@@ -426,10 +426,10 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).not.toContain('data-node-kind="device-pin"');
     expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
     expect(svg).toContain(
-      '<line data-role="current-arrow-shaft" x1="243" y1="260" x2="257" y2="260"',
+      '<line data-role="current-arrow-shaft" x1="241" y1="260" x2="251" y2="260"',
     );
     expect(svg).toContain(
-      '<polygon data-role="current-arrow-head" points="267,260 257,256.5 257,263.5"',
+      '<polygon data-role="current-arrow-head" points="269,260 251,255.5 251,264.5"',
     );
     expect(svg).toContain(
       "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
