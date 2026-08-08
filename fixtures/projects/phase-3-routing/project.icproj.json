@@ -125,7 +125,7 @@
   ],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": {
     "dialect": "none",
     "entry": null,

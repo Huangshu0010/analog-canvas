@@ -3,6 +3,10 @@
     {
       "annotations": [],
       "constraints": [],
+      "drafting": {
+        "guides": [],
+        "objects": []
+      },
       "id": "document-main",
       "instances": [],
       "junctions": [],
@@ -22,7 +26,7 @@
   ],
   "id": "project-minimal",
   "name": "Minimal Project",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": {
     "dialect": "none",
     "entry": null,

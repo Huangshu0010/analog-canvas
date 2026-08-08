@@ -229,7 +229,7 @@
   ],
   "id": "project-2fc8b4f9fef6921b",
   "name": "rlc_broadband_match (SPICE Import)",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": {
     "dialect": "spice3f5-core",
     "entry": "circuit.spi",

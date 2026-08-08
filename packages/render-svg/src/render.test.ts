@@ -378,8 +378,10 @@ describe("textbook monochrome SVG renderer", () => {
         "utf8",
       ),
     );
-    expect(svg).toContain('data-kind="current"');
-    expect(svg).toContain('data-kind="figure-caption"');
+    // After the schema-2 migration the phase-5 fixture's legacy current marker
+    // and figure caption render as route-marker / draft-text respectively.
+    expect(svg).toContain('data-kind="route-marker"');
+    expect(svg).toContain('data-kind="draft-text"');
     expect(svg).not.toMatch(/selection|hit-target|flightline|overlay/u);
   });
 
@@ -425,12 +427,11 @@ describe("textbook monochrome SVG renderer", () => {
     );
     expect(svg).not.toContain('data-node-kind="device-pin"');
     expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
-    expect(svg).toContain(
-      '<line data-role="current-arrow-shaft" x1="241" y1="260" x2="251" y2="260"',
-    );
-    expect(svg).toContain(
-      '<polygon data-role="current-arrow-head" points="269,260 251,255.5 251,264.5"',
-    );
+    // After migration the legacy current marker renders as route-marker text
+    // (plain text; full route-marker arrow rendering lands in WP-A2), so the
+    // current-arrow shaft/head are absent.
+    expect(svg).not.toContain('data-role="current-arrow-shaft"');
+    expect(svg).toContain('data-kind="route-marker"');
     expect(svg).toContain(
       "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
     );
@@ -440,11 +441,12 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain(
       '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">DD</tspan>',
     );
+    // The migrated route-marker still parses I_tail into Razavi tspans.
     expect(svg).toContain(
       '<tspan data-text-run="base" style="font-style:italic;font-weight:700">I</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">tail</tspan>',
     );
     expect(svg).toMatch(
-      /data-kind="figure-caption"[^>]*>Original matched differential stage<\/text>/u,
+      /data-kind="draft-text"[^>]*>Original matched differential stage<\/text>/u,
     );
     const widths = new Set(
       [...svg.matchAll(/stroke-width="([^"]+)"/gu)].map((match) => match[1]),

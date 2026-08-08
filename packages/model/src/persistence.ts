@@ -3,6 +3,7 @@ import {
   CircuitProjectSchema,
 } from "./schema.js";
 import type { CircuitProject } from "./schema.js";
+import { migrateV1ToV2 } from "./migration-v1-to-v2.js";
 
 export interface ProjectDiagnostic {
   code: "INVALID_JSON" | "INVALID_PROJECT" | "UNSUPPORTED_SCHEMA_VERSION";
@@ -99,6 +100,9 @@ export class ProjectMigrationRegistry {
 }
 
 export const defaultProjectMigrations = new ProjectMigrationRegistry();
+// ADR 0010 schema 1 -> 2 migration (integration gate). Auto-applied on read so
+// legacy Projects upgrade to the single new truth; idempotent.
+defaultProjectMigrations.register(1, (input) => migrateV1ToV2(input).project);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

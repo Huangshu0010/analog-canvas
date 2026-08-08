@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 1;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 2;
 
 export const StableIdSchema = z.string().min(1).max(256);
 export const PointSchema = z.strictObject({
@@ -159,12 +159,12 @@ export const AnnotationKindSchema = z.enum([
   "current",
   "voltage",
   "figure-caption",
-  // ADR 0010 adds route-marker at the integration gate (schema 2). In A1a it
-  // is intentionally absent from the enum so renderer/editor/agent-adapter
-  // typecheck unchanged; the migration produces route-marker records that are
-  // schema-validated only once the constant flips.
+  // ADR 0010 SchematicAnnotation route-marker (accepted at the schema-2 gate).
+  // The legacy plain-text/current/voltage/figure-caption kinds remain accepted
+  // until WP-A2 builds full route-marker rendering and removes them.
+  "route-marker",
 ]);
-// ADR 0010 SchematicAnnotation marker kinds (used at the integration gate).
+// ADR 0010 SchematicAnnotation marker kinds.
 export const RouteMarkerKindSchema = z.enum(["current", "voltage"]);
 export const RouteAnnotationAttachmentSchema = z.strictObject({
   routeId: StableIdSchema,
@@ -188,8 +188,11 @@ export const AnnotationSchema = z
     rotation: RotationSchema,
     locked: z.boolean(),
     sizeScale: z.number().finite().positive().optional(),
-    // SchematicAnnotation route-marker discriminator; validated at the gate.
+    // SchematicAnnotation route-marker discriminator (ADR 0010).
     markerKind: RouteMarkerKindSchema.optional(),
+    // ADR 0010 VisualAnchor for route-marker annotations. Declared lazily so the
+    // schema can reference VisualAnchorSchema, which is defined below.
+    anchor: z.lazy(() => VisualAnchorSchema).optional(),
   })
   .superRefine((annotation, context) => {
     if (annotation.routeAttachment && annotation.kind !== "current") {
@@ -199,11 +202,11 @@ export const AnnotationSchema = z
         message: "Only current annotations may attach to a route segment",
       });
     }
-    if (annotation.markerKind) {
+    if (annotation.markerKind && annotation.kind !== "route-marker") {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["markerKind"],
-        message: "markerKind is not accepted until the schema-2 gate",
+        message: "markerKind is only valid on a route-marker annotation",
       });
     }
   });

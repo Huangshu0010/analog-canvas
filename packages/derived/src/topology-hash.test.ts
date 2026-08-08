@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { CURRENT_PROJECT_SCHEMA_VERSION } from "@icm/model";
 import type { CircuitProject } from "@icm/model";
 
 import { electricalTopologyHash } from "./topology-hash.js";
 
 function project(documents: CircuitProject["documents"]): CircuitProject {
   return {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
     id: "p",
     name: "P",
     source: { entry: null, dialect: "none", sourcePolicy: "copy", files: [] },

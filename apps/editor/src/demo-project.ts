@@ -1,8 +1,8 @@
-import { CircuitProjectSchema } from "@icm/model";
+import { CURRENT_PROJECT_SCHEMA_VERSION, CircuitProjectSchema } from "@icm/model";
 import type { CircuitProject } from "@icm/model";
 
 const demoProject = CircuitProjectSchema.parse({
-  schemaVersion: 1,
+  schemaVersion: CURRENT_PROJECT_SCHEMA_VERSION,
   id: "project-phase-1-manual",
   name: "Phase 1 Manual Editor",
   source: {

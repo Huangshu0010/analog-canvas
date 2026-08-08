@@ -9,7 +9,10 @@ export type SchematicTextKind =
   | "current"
   | "voltage"
   | "figure-caption"
-  | "pin-name";
+  | "pin-name"
+  // ADR 0010 SchematicAnnotation route-marker. Renders as text; the full
+  // route-marker arrow/polarity rendering lands in WP-A2.
+  | "route-marker";
 
 export interface SchematicMathRuns {
   base: string;
@@ -107,6 +110,7 @@ export function schematicTextFontSize(
     case "plain-text":
     case "current":
     case "voltage":
+    case "route-marker":
       return typography.annotationFontSize;
   }
 }

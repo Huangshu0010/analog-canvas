@@ -1635,3 +1635,33 @@ Editing System work.
   typecheck clean; agent-adapter typecheck clean.
 - Commit status: ready for
   `feat(render): minimal drafting consumption in renderer and Snapshot (WP-A1b)`.
+## 2026-08-08 - WP-A1 integration gate: schema 2 live
+
+- Target: flip CURRENT_PROJECT_SCHEMA_VERSION to 2, register the idempotent
+  schema-1->2 migration, accept route-marker as a SchematicAnnotation, and
+  update every consumer and fixture so the whole workspace is green on the
+  single new truth.
+- Changed areas:
+  - model: CURRENT_PROJECT_SCHEMA_VERSION = 2; route-marker added to
+    AnnotationKindSchema with markerKind/anchor (VisualAnchor) validated on
+    route-marker; migration registered in defaultProjectMigrations so legacy
+    Projects auto-upgrade on read; persistence/schema tests updated.
+  - render-svg: route-marker added to SchematicTextKind and the font-size
+    switch; migration means current/voltage/figure-caption now render as
+    route-marker text / draft-text until WP-A2 builds full marker rendering;
+    render.test assertions updated.
+  - editor: demo-project.ts and routing-demo.ts use CURRENT_PROJECT_SCHEMA_VERSION.
+  - fixtures: minimal, phase-1-manual, phase-2-imported-rlc, phase-3-routing
+    Projects upgraded to schema 2; phase-5-dense-analog,
+    route-attached-current-arrow, and text-* visual goldens regenerated.
+- The migration is idempotent and does not change Net/Route/Junction/instance
+  or rewrite SPICE; current -> route-marker/current, voltage -> object-anchor
+  route-marker/voltage or free DraftText + migration diagnostic, plain-text/
+  figure-caption -> drafting text.
+- Note: the topologyHash -> electricalTopologyHash Snapshot field rename is
+  deferred to a focused API step (it touches the phase-9 evaluation scripts and
+  their fixtures); drafting is already excluded from the hash computation.
+- Validation: full suite 229/229; workspace typecheck clean; all six
+  generation/golden --check scripts pass; `git diff --check` clean.
+- Commit status: ready for
+  `feat(model): switch to schema 2 with idempotent migration and route-marker (WP-A1 gate)`.
