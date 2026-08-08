@@ -257,4 +257,51 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     const second = resolveDraftingObjectGeometry(document, resolver, object);
     expect(second).toEqual(first);
   });
+
+  it("freezes rotation semantics: follow route anchor composes anchor+object rotation (P1)", () => {
+    const document = documentWithRoute();
+    // A follow-anchored text with object rotation 90 reports 90 (route is
+    // horizontal at 0), the single truth the renderer must use.
+    const object = textObject({
+      rotation: 90,
+      anchor: {
+        kind: "route",
+        routeId: "r1",
+        segmentIndex: 0,
+        t: 0.5,
+        normalOffset: 0,
+        direction: "forward",
+        orientation: "follow",
+        fallbackPosition: { x: 0, y: 0 },
+      },
+    });
+    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+    expect(geometry.kind).toBe("text");
+    if (geometry.kind !== "text") return;
+    expect(geometry.rotation).toBe(90);
+
+    // A non-follow route anchor keeps the object rotation unchanged.
+    const horizontal = textObject({
+      rotation: 90,
+      anchor: {
+        kind: "route",
+        routeId: "r1",
+        segmentIndex: 0,
+        t: 0.5,
+        normalOffset: 0,
+        direction: "forward",
+        orientation: "horizontal",
+        fallbackPosition: { x: 0, y: 0 },
+      },
+    });
+    const hg = resolveDraftingObjectGeometry(document, resolver, horizontal);
+    if (hg.kind !== "text") return;
+    expect(hg.rotation).toBe(90);
+
+    // A free anchor reports exactly the object rotation.
+    const free = textObject({ rotation: 90 });
+    const fg = resolveDraftingObjectGeometry(document, resolver, free);
+    if (fg.kind !== "text") return;
+    expect(fg.rotation).toBe(90);
+  });
 });

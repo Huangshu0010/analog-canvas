@@ -2161,3 +2161,21 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): drafting drag preview with single atomic commit (P0-2)`.
+## 2026-08-08 - P1: freeze final-rotation semantics (geometry is the single truth)
+
+- Target: fix the review P1 that derived geometry reported anchor rotation
+  while the renderer used the raw persisted object rotation, so bounds and SVG
+  disagreed.
+- Changed areas: derived drafting-geometry.ts adds composeRotation with the
+  frozen rule finalRotation = anchor.orientation === "follow"
+  ? normalize(anchorRotation + object.rotation) : object.rotation, applied to
+  text and callout; render-svg render.ts text/callout now consume
+  geometry.rotation instead of object.rotation, so renderer, export bounds, and
+  Snapshot all report the same rotation.
+- Tests: drafting-geometry adds a rotation-semantics case (follow route anchor
+  composes 0+90 -> 90; horizontal/non-follow and free anchors keep object
+  rotation).
+- Validation: full suite 271/271; workspace typecheck clean; goldens stable;
+  `git diff --check` clean.
+- Commit status: ready for
+  `fix(derived): freeze composed rotation as the single geometry truth (P1 rotation)`.

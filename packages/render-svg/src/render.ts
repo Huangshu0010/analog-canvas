@@ -741,7 +741,7 @@ function renderDraftText(
   profile: SchematicStyleProfile,
   unresolved: string,
 ): string {
-  const { position } = geometry;
+  const { position, rotation } = geometry;
   const fontSize = typographyFontSize(
     object.typographyToken ?? "body",
     profile,
@@ -753,7 +753,9 @@ function renderDraftText(
           object.content as unknown as RichTextDocumentInput,
           profile,
         );
-  return `<text data-object-id="${object.id}" data-kind="draft-text"${unresolved} x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${position.x} ${position.y})" font-size="${fontSize}">${content}</text>`;
+  // P1: the renderer consumes geometry.rotation (the single rotation truth),
+  // not the raw persisted object rotation.
+  return `<text data-object-id="${object.id}" data-kind="draft-text"${unresolved} x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${rotation} ${position.x} ${position.y})" font-size="${fontSize}">${content}</text>`;
 }
 
 function renderConstructionLine(
@@ -809,7 +811,7 @@ function renderDraftCallout(
   profile: SchematicStyleProfile,
   unresolved: string,
 ): string {
-  const { textPosition, target } = geometry;
+  const { textPosition, target, rotation } = geometry;
   const leader = `<line x1="${textPosition.x}" y1="${textPosition.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
   const fontSize = typographyFontSize(
     object.typographyToken ?? "body",
@@ -822,7 +824,8 @@ function renderDraftCallout(
           object.content as unknown as RichTextDocumentInput,
           profile,
         );
-  return `<g data-object-id="${object.id}" data-kind="draft-callout"${unresolved}>${leader}<text x="${textPosition.x}" y="${textPosition.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${textPosition.x} ${textPosition.y})" font-size="${fontSize}">${content}</text></g>`;
+  // P1: renderer consumes geometry.rotation (the single rotation truth).
+  return `<g data-object-id="${object.id}" data-kind="draft-callout"${unresolved}>${leader}<text x="${textPosition.x}" y="${textPosition.y}" text-anchor="${object.alignment}" transform="rotate(${rotation} ${textPosition.x} ${textPosition.y})" font-size="${fontSize}">${content}</text></g>`;
 }
 
 function renderFloatingSymbol(

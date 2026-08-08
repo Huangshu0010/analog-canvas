@@ -125,6 +125,20 @@ function resolveAnchorWithRole(
   return { anchor: resolved, diagnostics };
 }
 
+// P1: frozen final-rotation semantics. The renderer, export bounds, and
+// Snapshot all use the geometry.rotation reported here. For a "follow" route
+// anchor the anchor's own rotation composes with the object's persisted
+// rotation; for free/object anchors the object rotation stands alone.
+function composeRotation(
+  anchorRotation: 0 | 90 | 180 | 270,
+  objectRotation: 0 | 90 | 180 | 270,
+  follow: boolean,
+): 0 | 90 | 180 | 270 {
+  if (!follow) return objectRotation;
+  const composed = (anchorRotation + objectRotation) % 360;
+  return ((composed % 360) + 360) % 360 as 0 | 90 | 180 | 270;
+}
+
 function resolveText(
   document: SchematicDocument,
   resolver: SymbolResolver,
@@ -147,16 +161,14 @@ function resolveText(
     });
   }
   const position = resolved.position;
-  const bounds = textBounds(
-    position,
-    object.alignment,
-    object.rotation,
-    object.content,
-  );
+  const follow =
+    object.anchor.kind === "route" && object.anchor.orientation === "follow";
+  const rotation = composeRotation(resolved.rotation, object.rotation, follow);
+  const bounds = textBounds(position, object.alignment, rotation, object.content);
   return {
     kind: "text" as const,
     position,
-    rotation: resolved.rotation,
+    rotation,
     bounds,
     diagnostics,
   };
@@ -246,12 +258,10 @@ function resolveCallout(
   );
   const textPos = anchor.anchor.position;
   const targetPoint = target.anchor.position;
-  const textBox = textBounds(
-    textPos,
-    object.alignment,
-    object.rotation,
-    object.content,
-  );
+  const follow =
+    object.anchor.kind === "route" && object.anchor.orientation === "follow";
+  const rotation = composeRotation(anchor.anchor.rotation, object.rotation, follow);
+  const textBox = textBounds(textPos, object.alignment, rotation, object.content);
   const leaderBox = paddedBounds(
     unionBounds([textPos, targetPoint]),
     STROKE_PADDING,
@@ -260,7 +270,7 @@ function resolveCallout(
     kind: "callout" as const,
     textPosition: textPos,
     target: targetPoint,
-    rotation: anchor.anchor.rotation,
+    rotation,
     bounds: unionRects([textBox, leaderBox]),
     diagnostics: [...anchor.diagnostics, ...target.diagnostics],
   };
