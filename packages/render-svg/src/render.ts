@@ -4,7 +4,12 @@ import {
   transformPoint,
 } from "@icm/model";
 import { routeAttachmentPlacement, routePolyline } from "@icm/derived";
-import type { Point, Rect, SchematicDocument } from "@icm/model";
+import type {
+  DraftingObject,
+  Point,
+  Rect,
+  SchematicDocument,
+} from "@icm/model";
 import type {
   SymbolDefinition,
   SymbolPrimitive,
@@ -566,7 +571,7 @@ export function buildSvgScene(
 
   return {
     viewBox,
-    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, profile)}</g>`,
+    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
   };
 }
 
@@ -607,30 +612,128 @@ function resolveRouteMarkerPlacement(
 // the flat textJoin here. Guides never render in formal output.
 function renderDraftingLayer(
   document: SchematicDocument,
+  resolver: SymbolResolver,
   profile: SchematicStyleProfile,
 ): string {
   const objects = document.drafting?.objects ?? [];
   if (objects.length === 0) return "";
   const sorted = [...objects].sort((left, right) => left.zIndex - right.zIndex);
-  const body = sorted
-    .filter((object): object is Extract<typeof object, { kind: "text" }> => object.kind === "text")
-    .map((object) => {
-      const anchor = object.anchor;
-      const position = anchor.kind === "free" ? anchor.position : anchor.fallbackPosition;
-      const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
-      // Monochrome renders rich text as flat escaped text to stay byte-stable;
-      // Razavi uses the unified tspan renderer.
-      const content =
-        profile.id === "textbook-monochrome-v1"
-          ? escapeXmlText(flatText(object.content.runs as unknown[]))
-          : renderRichTextDocument(
-              object.content as unknown as RichTextDocumentInput,
-              profile,
-            );
-      return `<text data-object-id="${object.id}" data-kind="draft-text" x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${position.x} ${position.y})" font-size="${fontSize}">${content}</text>`;
-    })
-    .join("");
+  const body = sorted.map((object) => {
+    switch (object.kind) {
+      case "text":
+        return renderDraftText(object, profile);
+      case "construction-line":
+        return renderConstructionLine(object, profile);
+      case "arrow":
+        return renderDraftArrow(object, profile);
+      case "leader":
+        return renderDraftLeader(object, profile);
+      case "callout":
+        return renderDraftCallout(object, profile);
+      case "floating-symbol":
+        return renderFloatingSymbol(object, resolver, profile);
+    }
+  }).join("");
   return `<g data-layer="drafting">${body}</g>`;
+}
+
+function draftObjectPosition(
+  anchor: Extract<SchematicDocument["drafting"], { objects: unknown[] }>["objects"][number]["anchor"],
+): Point {
+  if (anchor.kind === "free") return anchor.position;
+  return anchor.fallbackPosition;
+}
+
+function renderDraftText(
+  object: Extract<DraftingObject, { kind: "text" }>,
+  profile: SchematicStyleProfile,
+): string {
+  const position = draftObjectPosition(object.anchor);
+  const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
+  const content =
+    profile.id === "textbook-monochrome-v1"
+      ? escapeXmlText(flatText(object.content.runs as unknown[]))
+      : renderRichTextDocument(
+          object.content as unknown as RichTextDocumentInput,
+          profile,
+        );
+  return `<text data-object-id="${object.id}" data-kind="draft-text" x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${position.x} ${position.y})" font-size="${fontSize}">${content}</text>`;
+}
+
+function renderConstructionLine(
+  object: Extract<DraftingObject, { kind: "construction-line" }>,
+  profile: SchematicStyleProfile,
+): string {
+  const points = object.points.map((point) => `${point.x},${point.y}`).join(" ");
+  const dash = object.lineStyle === "dashed" ? ' stroke-dasharray="6 4"' : object.lineStyle === "dotted" ? ' stroke-dasharray="2 3"' : "";
+  return `<polyline data-object-id="${object.id}" data-kind="construction-line" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"${dash}/>`;
+}
+
+function renderDraftArrow(
+  object: Extract<DraftingObject, { kind: "arrow" }>,
+  profile: SchematicStyleProfile,
+): string {
+  const from = draftObjectPosition(object.from);
+  const to = draftObjectPosition(object.to);
+  const tipX = to.x;
+  const tipY = to.y;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const head = 10;
+  const nx = (-dy / length) * 4;
+  const ny = (dx / length) * 4;
+  const baseX = tipX - (dx / length) * head;
+  const baseY = tipY - (dy / length) * head;
+  return `<g data-object-id="${object.id}" data-kind="draft-arrow"><line x1="${from.x}" y1="${from.y}" x2="${tipX}" y2="${tipY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" fill="${profile.foreground}"/></g>`;
+}
+
+function renderDraftLeader(
+  object: Extract<DraftingObject, { kind: "leader" }>,
+  profile: SchematicStyleProfile,
+): string {
+  const target = draftObjectPosition(object.target);
+  const origin = draftObjectPosition(object.anchor);
+  return `<line data-object-id="${object.id}" data-kind="draft-leader" x1="${origin.x}" y1="${origin.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
+}
+
+function renderDraftCallout(
+  object: Extract<DraftingObject, { kind: "callout" }>,
+  profile: SchematicStyleProfile,
+): string {
+  const target = draftObjectPosition(object.target);
+  const textPos = draftObjectPosition(object.anchor);
+  const leader = `<line x1="${textPos.x}" y1="${textPos.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
+  const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
+  const content =
+    profile.id === "textbook-monochrome-v1"
+      ? escapeXmlText(flatText(object.content.runs as unknown[]))
+      : renderRichTextDocument(
+          object.content as unknown as RichTextDocumentInput,
+          profile,
+        );
+  return `<g data-object-id="${object.id}" data-kind="draft-callout">${leader}<text x="${textPos.x}" y="${textPos.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${textPos.x} ${textPos.y})" font-size="${fontSize}">${content}</text></g>`;
+}
+
+function renderFloatingSymbol(
+  object: Extract<DraftingObject, { kind: "floating-symbol" }>,
+  resolver: SymbolResolver,
+  profile: SchematicStyleProfile,
+): string {
+  const resolved = resolver.resolve(object.symbolId);
+  if (!resolved) return "";
+  const position = draftObjectPosition(object.anchor);
+  const rotation = object.transform.rotation;
+  const mirror = object.transform.mirror === "x" ? " scale(-1 1)" : "";
+  const hidden = resolved.variant?.hiddenPinNames ?? [];
+  const additional = resolved.variant?.additionalPrimitives ?? [];
+  const body = renderSymbolDefinitionBody(
+    resolved.definition,
+    hidden,
+    additional,
+    profile,
+  );
+  return `<g data-object-id="${object.id}" data-kind="draft-floating-symbol" data-symbol-id="${escapeXml(object.symbolId)}"><g transform="translate(${position.x} ${position.y}) rotate(${rotation})${mirror}">${body}</g></g>`;
 }
 
 function flatText(runs: unknown[]): string {

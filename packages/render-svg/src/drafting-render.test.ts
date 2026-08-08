@@ -73,4 +73,70 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(svg).not.toContain('data-object-id="g1"');
     expect(svg).not.toContain('data-kind="guide"');
   });
+
+  it("renders a construction-line with dashed style (WP-A4)", () => {
+    const document = createEmptyDocument("doc", "Drafting");
+    document.drafting = {
+      objects: [
+        {
+          id: "cl-1",
+          kind: "construction-line",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 0, y: 0 } },
+          points: [
+            { x: 0, y: 0 },
+            { x: 100, y: 0 },
+          ],
+          lineStyle: "dashed",
+        },
+      ],
+      guides: [],
+    };
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('data-kind="construction-line"');
+    expect(svg).toContain("stroke-dasharray");
+  });
+
+  it("renders a draft arrow with a head (WP-A4)", () => {
+    const document = createEmptyDocument("doc", "Drafting");
+    document.drafting = {
+      objects: [
+        {
+          id: "ar-1",
+          kind: "arrow",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 0, y: 0 } },
+          from: { kind: "free", position: { x: 0, y: 0 } },
+          to: { kind: "free", position: { x: 100, y: 0 } },
+        },
+      ],
+      guides: [],
+    };
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('data-kind="draft-arrow"');
+    expect(svg).toContain("<polygon");
+  });
+
+  it("renders a floating symbol with its primitives (WP-A4)", () => {
+    const document = createEmptyDocument("doc", "Drafting");
+    document.drafting = {
+      objects: [
+        {
+          id: "fs-1",
+          kind: "floating-symbol",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 50, y: 50 } },
+          symbolId: "resistor",
+          transform: { rotation: 0, mirror: "none" },
+        },
+      ],
+      guides: [],
+    };
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('data-kind="draft-floating-symbol"');
+    expect(svg).toContain('data-symbol-id="resistor"');
+  });
 });

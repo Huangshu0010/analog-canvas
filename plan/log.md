@@ -1818,3 +1818,19 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): Guide tool with add/move/lock/delete (WP-A4 guides)`.
+## 2026-08-08 - WP-A4 drafting object rendering
+
+- Target: render the remaining DraftingObject kinds so the editor and exports
+  show construction lines, arrows, leaders, callouts, and floating symbols.
+- Changed areas: render-svg renderDraftingLayer now renders every DraftingObject
+  kind: text (existing), construction-line (dashed/dotted per lineStyle), arrow
+  (shaft + head), leader (origin-target line), callout (leader + rich text),
+  and floating-symbol (resolves the symbol and renders its definition +
+  variant primitives, transformed by anchor/rotation/mirror). The layer takes
+  the SymbolResolver for floating symbols.
+- Tests: drafting-render.test adds construction-line (dashed), draft arrow
+  (head polygon), and floating-symbol (primitives + symbol id) cases.
+- Validation: full suite 249/249; all golden --check scripts stable; workspace
+  typecheck clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(render): render construction-line, arrow, leader, callout, floating-symbol (WP-A4 rendering)`.
