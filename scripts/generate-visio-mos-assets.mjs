@@ -28,10 +28,10 @@ const GATE_BAR_THICKNESS = 3.24;
 // arrow markers (25 vs. 22), while the textbook drawing uses one arrow family.
 // VSS still supplies the source conductor direction and electrical anchor.
 // The shared body calibration below scales this local arrow by 1.15 in x and
-// 0.765 in y. These source values therefore render as 8.28 by 7.5735 logical
-// units with a visible 0.69-unit conductor overlap.
-const RAZAVI_SOURCE_ARROW_LENGTH = 7.2;
-const RAZAVI_SOURCE_ARROW_HALF_WIDTH = 4.95;
+// 0.765 in y. These source values therefore render as the measured 8.13189 by
+// 7.551041 logical pixels from the accepted 1204x794 raster reference.
+const RAZAVI_SOURCE_ARROW_LENGTH = 7.071209;
+const RAZAVI_SOURCE_ARROW_HALF_WIDTH = 4.935321;
 const RAZAVI_SOURCE_ARROW_HOST_OVERLAP = 0.6;
 const MOS_SOURCE_ARROW_LENGTH_SCALE = 0.8;
 const MOS_SOURCE_ARROW_HALF_WIDTH_SCALE = 1.65;

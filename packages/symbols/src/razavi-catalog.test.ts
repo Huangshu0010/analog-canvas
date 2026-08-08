@@ -276,8 +276,12 @@ describe("Razavi symbol catalog", () => {
     );
 
     for (const [symbolId, supportFrom, supportTo] of [
-      ["nmos", { x: -7.898848, y: 8.13189 }, { x: 2.41, y: 8.13189 }],
-      ["pmos", { x: -0.527731, y: -8.13189 }, { x: 10, y: -8.13189 }],
+      ["nmos", { x: -7.898848, y: 8.13189 }, { x: 2.55811, y: 8.13189 }],
+      [
+        "pmos",
+        { x: -0.675841, y: -8.13189 },
+        { x: 10, y: -8.13189 },
+      ],
     ] as const) {
       const mos = requireRazaviCatalogSymbol(symbolId);
       const variant = mos.variants.find(
@@ -311,8 +315,8 @@ describe("Razavi symbol catalog", () => {
           kind: "polygon",
           points: [
             { x: 10, y: 8.13189 },
-            { x: 1.72, y: 11.91864 },
-            { x: 1.72, y: 4.34514 },
+            { x: 1.86811, y: 11.90741 },
+            { x: 1.86811, y: 4.356369 },
           ],
           fill: "foreground",
           stroke: "none",
@@ -327,8 +331,8 @@ describe("Razavi symbol catalog", () => {
           kind: "polygon",
           points: [
             { x: -8.117731, y: -8.13189 },
-            { x: 0.162269, y: -4.34514 },
-            { x: 0.162269, y: -11.91864 },
+            { x: 0.014159, y: -4.356369 },
+            { x: 0.014159, y: -11.90741 },
           ],
           fill: "foreground",
           stroke: "none",
@@ -402,8 +406,8 @@ describe("Razavi symbol catalog", () => {
     const nmos = textbookArrowMetrics("nmos");
     const pmos = textbookArrowMetrics("pmos");
     for (const metrics of [nmos, pmos]) {
-      expect(metrics.length).toBeCloseTo(8.28, 6);
-      expect(metrics.halfWidth).toBeCloseTo(3.78675, 6);
+      expect(metrics.length).toBeCloseTo(8.13189, 6);
+      expect(metrics.halfWidth).toBeCloseTo(3.7755205, 6);
       expect(metrics.overlap).toBeCloseTo(0.69, 6);
     }
     expect(pmos.length).toBeCloseTo(nmos.length, 6);

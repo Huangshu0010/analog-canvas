@@ -172,7 +172,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "13d75782aecd0c12f78356986486d1712e573c5577716f49ea4553b75d89fe7a",
+      "a259b4e0bb170ad193c25809a10c78930a39c7b6893212fa8b6071c27dbf586e",
   },
   {
     symbolId: "nmos3",
@@ -198,7 +198,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "nmos3.symbol.json",
     assetHash:
-      "05bb6bc8c8d06dde8a4803c952e6bf844cf2981f419c37e2eb1d1a64d10ee139",
+      "d6806fa2fcea95c0e79db20c3fca46c43beee74f3ce424d4f41edd08eb84b9d2",
   },
   {
     symbolId: "npn",
@@ -242,7 +242,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "17179f7b951da707955237f6f7ec31cc660f28a20e60e0fdd9f5d2972837afe5",
+      "c0c9026cc8335a28d3be91344ca97d015eb746a9073adf0aa063cc012fd624b9",
   },
   {
     symbolId: "pmos3",
@@ -268,7 +268,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "4a588babb9a4113fd77a7093e3c92ac117da64bd1552b59843c5120cc988ba47",
+      "20a62b43a569a493c5208904f975c262f2c3007133a26392cba9f4b72b83dd82",
   },
   {
     symbolId: "pnp",
@@ -1161,7 +1161,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
               y: 8.13189,
             },
             to: {
-              x: 2.41,
+              x: 2.55811,
               y: 8.13189,
             },
             part: "source-arrow",
@@ -1179,12 +1179,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
                 y: 8.13189,
               },
               {
-                x: 1.72,
-                y: 11.91864,
+                x: 1.86811,
+                y: 11.90741,
               },
               {
-                x: 1.72,
-                y: 4.34514,
+                x: 1.86811,
+                y: 4.356369,
               },
             ],
             fill: "foreground",
@@ -1287,7 +1287,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 8.13189,
         },
         to: {
-          x: 12.41,
+          x: 12.55811,
           y: 8.13189,
         },
         part: "source-arrow",
@@ -1305,12 +1305,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
             y: 8.13189,
           },
           {
-            x: 11.72,
-            y: 11.91864,
+            x: 11.86811,
+            y: 11.90741,
           },
           {
-            x: 11.72,
-            y: 4.34514,
+            x: 11.86811,
+            y: 4.356369,
           },
         ],
         fill: "foreground",
@@ -1782,7 +1782,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           {
             kind: "line",
             from: {
-              x: -0.527731,
+              x: -0.675841,
               y: -8.13189,
             },
             to: {
@@ -1804,12 +1804,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
                 y: -8.13189,
               },
               {
-                x: 0.162269,
-                y: -4.34514,
+                x: 0.014159,
+                y: -4.356369,
               },
               {
-                x: 0.162269,
-                y: -11.91864,
+                x: 0.014159,
+                y: -11.90741,
               },
             ],
             fill: "foreground",
@@ -1892,7 +1892,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 9.472269,
+          x: 9.324159,
           y: -8.13189,
         },
         to: {
@@ -1914,12 +1914,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
             y: -8.13189,
           },
           {
-            x: 10.162269,
-            y: -4.34514,
+            x: 10.014159,
+            y: -4.356369,
           },
           {
-            x: 10.162269,
-            y: -11.91864,
+            x: 10.014159,
+            y: -11.90741,
           },
         ],
         fill: "foreground",
