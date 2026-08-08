@@ -1881,3 +1881,17 @@ Editing System work.
   clean.
 - Commit status: ready for
   `feat(agent-api): strict drafting Snapshot schema and GUI/Agent parity (WP-A5)`.
+## 2026-08-08 - WP-A5 regression: regenerate Agent API and phase-9 artifacts
+
+- Target: bring every generated artifact back in sync after the
+  electricalTopologyHash rename and the strict drafting Snapshot schema.
+- Changed areas: regenerated fixtures/agent-api (request/response schemas and
+  OpenAPI, now carrying electricalTopologyHash and the strict drafting object
+  schema) and all five phase-9 layout-eval artifacts (generalization report,
+  heldout import reports and start projects, snapshot audit, 128-transistor
+  render) after the Snapshot field rename.
+- Validation: agent-api-artifacts --check passes; all six generation/golden
+  --check scripts pass; all five phase-9 --check scripts pass; full suite
+  252/252; workspace typecheck clean; `git diff --check` clean.
+- Commit status: ready for
+  `chore(fixtures): regenerate Agent API and phase-9 artifacts after hash rename (WP-A5 regression)`.

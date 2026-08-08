@@ -1565,7 +1565,7 @@
   ],
   "id": "project-096a1e29f1b2c44e",
   "name": "differential_ring_8stage (SPICE Import)",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": {
     "dialect": "spice3f5-core",
     "entry": "circuit.spi",

@@ -11,15 +11,15 @@
   "snapshotMeasurements": [
     {
       "instances": 128,
-      "byteLength": 324217,
-      "estimatedTokens": 81055,
+      "byteLength": 324251,
+      "estimatedTokens": 81063,
       "underByteBudget": true,
       "underTokenBudget": true
     },
     {
       "instances": 500,
-      "byteLength": 1266997,
-      "estimatedTokens": 316750,
+      "byteLength": 1267031,
+      "estimatedTokens": 316758,
       "underByteBudget": true,
       "underTokenBudget": true
     }
@@ -41,7 +41,7 @@
     "unknownPdkRemainsUnresolved": true
   },
   "render": {
-    "svgBytes": 241792,
+    "svgBytes": 282498,
     "formalLayerPresent": true,
     "editorOverlayAbsent": true
   },

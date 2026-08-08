@@ -11,8 +11,8 @@
       "instances": 14,
       "nets": 11,
       "ports": 8,
-      "snapshotBytes": 23774,
-      "topologyHash": "1eded3263426b5b39c93a57cc84db50fc2b2e40e6c0ab77552f2b0df4471d0ee"
+      "snapshotBytes": 23812,
+      "electricalTopologyHash": "d19032be16f382b62788c1d8cb06489655132921cae9ab0d06c41ac3dadf508e"
     },
     {
       "id": "document-3a3f7dceff454138",
@@ -20,8 +20,8 @@
       "instances": 8,
       "nets": 20,
       "ports": 6,
-      "snapshotBytes": 23119,
-      "topologyHash": "dacf94dbd59bfe8198b2f2a4e05d41bca2fab0d9a09257800ed19e54620191e9"
+      "snapshotBytes": 23157,
+      "electricalTopologyHash": "d19032be16f382b62788c1d8cb06489655132921cae9ab0d06c41ac3dadf508e"
     }
   ],
   "cellReferences": 8,

@@ -2385,7 +2385,7 @@
   ],
   "id": "project-023a5bad581479ba",
   "name": "flash_adc_4bit (SPICE Import)",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": {
     "dialect": "spice3f5-core",
     "entry": "circuit.spi",

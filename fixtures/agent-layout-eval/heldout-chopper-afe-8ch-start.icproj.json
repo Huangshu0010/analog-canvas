@@ -2217,7 +2217,7 @@
   ],
   "id": "project-aa1eed251f1fd397",
   "name": "chopper_afe_8ch (SPICE Import)",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": {
     "dialect": "spice3f5-core",
     "entry": "circuit.spi",

@@ -29,8 +29,8 @@
           "unplacedPorts": 3,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 14209,
-          "topologyHash": "fab8d6a31fb41854a96b92a5bf6912e104cf0e4a4c24c1160266726b4a067a29",
+          "snapshotBytes": 14247,
+          "electricalTopologyHash": "993473fc624c59a8f4d6748cc912c47fe6b233d87adf42e0fee53fb3a8623395",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 14
           },
@@ -63,8 +63,8 @@
           "unplacedPorts": 5,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 8273,
-          "topologyHash": "1fe920ac5c9289569dc63a65ae9a9f11849879040aec713ffbc6e1340f489a34",
+          "snapshotBytes": 8311,
+          "electricalTopologyHash": "bbad30650b6b4bb6ec57fc967185cdec55d1c68fbc4207bfb22c90095a6fe4fb",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 4
           },
@@ -82,8 +82,8 @@
           "unplacedPorts": 10,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 22144,
-          "topologyHash": "91bc9b4d82d682796a546b34cfb42e1a8906f224091bc75e794fb1b71a91d0a6",
+          "snapshotBytes": 22182,
+          "electricalTopologyHash": "bbad30650b6b4bb6ec57fc967185cdec55d1c68fbc4207bfb22c90095a6fe4fb",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 14
           },
@@ -116,8 +116,8 @@
           "unplacedPorts": 6,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 10855,
-          "topologyHash": "8727dca22ce57e03390d0a391758e2548c5666b3cf8269ed0aa0e2aabfe0ce80",
+          "snapshotBytes": 10893,
+          "electricalTopologyHash": "0455781e8382e262a78d9a229509fe51a691d29e1e8f61c32dd36856b6f165f0",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 6
           },
@@ -150,8 +150,8 @@
           "unplacedPorts": 4,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 6437,
-          "topologyHash": "2921c9d9534a5271a9b656255d4f86bcb9a350fdf413b26e21e6751957452ab5",
+          "snapshotBytes": 6475,
+          "electricalTopologyHash": "798077f1b2db7dc6cd363f97801ed68e62ec8f7ba1174a5557bf9781e7513f83",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 2
           },
@@ -169,8 +169,8 @@
           "unplacedPorts": 5,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 9656,
-          "topologyHash": "7fbb38d8472542cdde210efcdd754de8efe7e959864be43e296f5a9df54a38f5",
+          "snapshotBytes": 9694,
+          "electricalTopologyHash": "798077f1b2db7dc6cd363f97801ed68e62ec8f7ba1174a5557bf9781e7513f83",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 4
           },
@@ -188,8 +188,8 @@
           "unplacedPorts": 6,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 6935,
-          "topologyHash": "5e91143adb3cdb29078ca580993da0f9272363950857fd7f38bf2b624a477566",
+          "snapshotBytes": 6973,
+          "electricalTopologyHash": "798077f1b2db7dc6cd363f97801ed68e62ec8f7ba1174a5557bf9781e7513f83",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 2
           },
@@ -207,8 +207,8 @@
           "unplacedPorts": 4,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 6439,
-          "topologyHash": "26356ce49c3bbaf133e2c19b02213988bf779cf3459e3a90e156537da2807bb0",
+          "snapshotBytes": 6477,
+          "electricalTopologyHash": "798077f1b2db7dc6cd363f97801ed68e62ec8f7ba1174a5557bf9781e7513f83",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 2
           },
@@ -226,8 +226,8 @@
           "unplacedPorts": 4,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 6437,
-          "topologyHash": "1cb861a9208356997907c042e09031ac40432a71b909519cfcea675267c7b1ad",
+          "snapshotBytes": 6475,
+          "electricalTopologyHash": "798077f1b2db7dc6cd363f97801ed68e62ec8f7ba1174a5557bf9781e7513f83",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 2
           },
@@ -245,8 +245,8 @@
           "unplacedPorts": 7,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 17555,
-          "topologyHash": "9e440d4dfd51302adbcaff3d2064f00642844e31c5b2d4048ffe04a4109a73c2",
+          "snapshotBytes": 17593,
+          "electricalTopologyHash": "798077f1b2db7dc6cd363f97801ed68e62ec8f7ba1174a5557bf9781e7513f83",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 8
           },
@@ -264,8 +264,8 @@
           "unplacedPorts": 5,
           "unresolvedPins": 0,
           "genericSymbols": 0,
-          "snapshotBytes": 15507,
-          "topologyHash": "a908e5ca2f4fd5f8dfc68899472f4ad6a89064cf15fc8c1ecdbbc43fd6f3f9bc",
+          "snapshotBytes": 15545,
+          "electricalTopologyHash": "798077f1b2db7dc6cd363f97801ed68e62ec8f7ba1174a5557bf9781e7513f83",
           "diagnosticCounts": {
             "VISUAL_UNPLACED_INSTANCE": 8
           },
