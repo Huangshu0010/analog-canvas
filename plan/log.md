@@ -2157,6 +2157,19 @@ Editing System work.
   checks, and browser palette E2E passed; `git diff --check` clean.
 - Commit status: ready for
   `fix(razavi): close MOS arrow seams and verify PMOS variant`.
+
+## 2026-08-08 - Razavi MOS arrow family unification
+
+- Target: ensure PMOS and NMOS use the same visible Razavi source-arrow
+  proportions, allowing only their physical arrow direction to differ.
+- Changed areas: decoded PMOS / PMOS3 VSS source markers are 22/25 of NMOS
+  after symbol transforms. The generator compensates their arrow-only metrics
+  by 25/22, so both polarity families have visible length 8.28 and half-width
+  3.78675. Four-terminal pin geometry and topology remain intact.
+- Validation: focused 12-test catalog test, MOS and catalog generation checks,
+  palette browser E2E, and `git diff --check` passed.
+- Commit status: ready for
+  `fix(razavi): unify PMOS and NMOS arrow proportions`.
 ## 2026-08-08 - P0-2: drafting drag uses preview and commits one transaction
 
 - Target: fix the review P0 that a drafting drag committed one transaction per

@@ -242,7 +242,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "b9976bcdc976096b3a5c2f0b4dc62977b0e5f0c0a8825d90b192d05748567f89",
+      "17179f7b951da707955237f6f7ec31cc660f28a20e60e0fdd9f5d2972837afe5",
   },
   {
     symbolId: "pmos3",
@@ -268,7 +268,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "902e85e5b3b1ec3d1c1e191b68254caf45fa5aef0ee8de69f7570cc4b4f3276e",
+      "4a588babb9a4113fd77a7093e3c92ac117da64bd1552b59843c5120cc988ba47",
   },
   {
     symbolId: "pnp",
@@ -1760,12 +1760,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
             y: 0,
           },
           {
-            x: 13.22,
-            y: 3.78675,
+            x: 12.090909,
+            y: 4.303125,
           },
           {
-            x: 13.22,
-            y: -3.78675,
+            x: 12.090909,
+            y: -4.303125,
           },
         ],
         fill: "foreground",
@@ -1782,7 +1782,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           {
             kind: "line",
             from: {
-              x: -1.521331,
+              x: -0.527731,
               y: -8.13189,
             },
             to: {
@@ -1804,12 +1804,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
                 y: -8.13189,
               },
               {
-                x: -0.831331,
-                y: -4.79955,
+                x: 0.162269,
+                y: -4.34514,
               },
               {
-                x: -0.831331,
-                y: -11.46423,
+                x: 0.162269,
+                y: -11.91864,
               },
             ],
             fill: "foreground",
@@ -1892,7 +1892,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 8.478669,
+          x: 9.472269,
           y: -8.13189,
         },
         to: {
@@ -1914,12 +1914,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
             y: -8.13189,
           },
           {
-            x: 9.168669,
-            y: -4.79955,
+            x: 10.162269,
+            y: -4.34514,
           },
           {
-            x: 9.168669,
-            y: -11.46423,
+            x: 10.162269,
+            y: -11.91864,
           },
         ],
         fill: "foreground",

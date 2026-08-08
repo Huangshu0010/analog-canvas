@@ -277,7 +277,7 @@ describe("Razavi symbol catalog", () => {
 
     for (const [symbolId, supportFrom, supportTo] of [
       ["nmos", { x: -7.898848, y: 8.13189 }, { x: 2.41, y: 8.13189 }],
-      ["pmos", { x: -1.521331, y: -8.13189 }, { x: 10, y: -8.13189 }],
+      ["pmos", { x: -0.527731, y: -8.13189 }, { x: 10, y: -8.13189 }],
     ] as const) {
       const mos = requireRazaviCatalogSymbol(symbolId);
       const variant = mos.variants.find(
@@ -313,6 +313,22 @@ describe("Razavi symbol catalog", () => {
             { x: 10, y: 8.13189 },
             { x: 1.72, y: 11.91864 },
             { x: 1.72, y: 4.34514 },
+          ],
+          fill: "foreground",
+          stroke: "none",
+        }),
+      ]),
+    );
+
+    const pmos = requireRazaviCatalogSymbol("pmos");
+    expect(pmos.variants[0]?.additionalPrimitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "polygon",
+          points: [
+            { x: -8.117731, y: -8.13189 },
+            { x: 0.162269, y: -4.34514 },
+            { x: 0.162269, y: -11.91864 },
           ],
           fill: "foreground",
           stroke: "none",
