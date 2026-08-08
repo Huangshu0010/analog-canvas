@@ -3,9 +3,9 @@
   "id": "voltage-source",
   "name": "Independent Voltage Source",
   "viewBox": {
-    "x": -15,
+    "x": -24,
     "y": -24,
-    "width": 30,
+    "width": 39,
     "height": 48
   },
   "pins": [
@@ -53,49 +53,49 @@
     {
       "kind": "line",
       "from": {
-        "x": -2.834646,
-        "y": -4.251969
+        "x": -19.129922,
+        "y": -13.271654
       },
       "to": {
-        "x": 2.834646,
-        "y": -4.251969
+        "x": -11.129922,
+        "y": -13.271654
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": 0,
-        "y": -7.086614
+        "x": -15.129922,
+        "y": -17.271654
       },
       "to": {
-        "x": 0,
-        "y": -1.417323
+        "x": -15.129922,
+        "y": -9.271654
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": -2.834646,
-        "y": 4.251969
+        "x": -19.129922,
+        "y": 12.98819
       },
       "to": {
-        "x": 2.834646,
-        "y": 4.251969
+        "x": -11.129922,
+        "y": 12.98819
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {

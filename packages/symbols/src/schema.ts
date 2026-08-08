@@ -58,6 +58,8 @@ export const SymbolPrimitiveSchema = z.discriminatedUnion("kind", [
     kind: z.literal("circle"),
     center: SymbolGeometryPointSchema,
     radius: z.number().positive(),
+    fill: z.enum(["none", "foreground"]).optional(),
+    stroke: z.enum(["none", "foreground"]).optional(),
     part: StableIdSchema.optional(),
     style: SymbolPrimitiveStyleSchema.optional(),
   }),

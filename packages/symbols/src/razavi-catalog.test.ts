@@ -168,7 +168,13 @@ describe("Razavi symbol catalog", () => {
       ]),
     );
     expect(requireRazaviCatalogSymbol("port").primitives).toEqual(
-      expect.arrayContaining([expect.objectContaining({ kind: "circle" })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "circle",
+          fill: "foreground",
+          stroke: "none",
+        }),
+      ]),
     );
     expect(requireRazaviCatalogSymbol("current-source").primitives).toEqual(
       expect.arrayContaining([
@@ -187,6 +193,108 @@ describe("Razavi symbol catalog", () => {
       ).toMatchObject({ hiddenPinNames: ["B"] });
     }
     expect(getRazaviCatalogEntry("nmos3")?.reviewStatus).toBe("provisional");
+  });
+
+  it("calibrates Razavi MOS bodies to the reference proportions without moving electrical pin anchors", () => {
+    const nmos = requireRazaviCatalogSymbol("nmos");
+    expect(nmos.pins).toMatchObject([
+      { name: "D", at: { x: 10, y: -20 } },
+      { name: "G", at: { x: -20, y: 0 } },
+      { name: "S", at: { x: 10, y: 20 } },
+      { name: "B", at: { x: 20, y: 0 } },
+    ]);
+    expect(nmos.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "polygon",
+          points: [
+            { x: -16.068819, y: -8.13189 },
+            { x: -16.068819, y: 8.13189 },
+            { x: -12.828819, y: 8.13189 },
+            { x: -12.828819, y: -8.13189 },
+          ],
+          fill: "foreground",
+          stroke: "none",
+          part: "gate-bar",
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -8.117731, y: -8.13189 },
+          to: { x: 10, y: -8.13189 },
+        }),
+      ]),
+    );
+  });
+
+  it("keeps the Razavi ground mark compact and lead-aligned", () => {
+    const ground = requireRazaviCatalogSymbol("ground");
+    expect(ground.pins).toMatchObject([
+      { name: "0", at: { x: 0, y: -10 }, direction: "north" },
+    ]);
+    expect(ground.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -7.086614, y: 3.890552 },
+          to: { x: 7.086614, y: 3.890552 },
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -3.543307, y: 8.071654 },
+          to: { x: 3.543307, y: 8.071654 },
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -1.771654, y: 12.252756 },
+          to: { x: 1.771654, y: 12.252756 },
+        }),
+      ]),
+    );
+  });
+
+  it("uses external voltage polarity marks and a compact wide current arrow", () => {
+    const voltage = requireRazaviCatalogSymbol("voltage-source");
+    expect(voltage.viewBox).toEqual({ x: -24, y: -24, width: 39, height: 48 });
+    expect(voltage.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -19.129922, y: -13.271654 },
+          to: { x: -11.129922, y: -13.271654 },
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -15.129922, y: -17.271654 },
+          to: { x: -15.129922, y: -9.271654 },
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -19.129922, y: 12.98819 },
+          to: { x: -11.129922, y: 12.98819 },
+        }),
+      ]),
+    );
+
+    const current = requireRazaviCatalogSymbol("current-source");
+    expect(current.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "line",
+          from: { x: 0, y: -5.456693 },
+          to: { x: 0, y: 0.608268 },
+        }),
+        expect.objectContaining({
+          kind: "polygon",
+          points: [
+            { x: 0, y: 6.874017 },
+            { x: -4.464567, y: 0.608268 },
+            { x: 4.464567, y: 0.608268 },
+          ],
+          fill: "foreground",
+          stroke: "none",
+        }),
+      ]),
+    );
   });
 
   it("classifies the VSS node as a semantic primitive, not a component", () => {

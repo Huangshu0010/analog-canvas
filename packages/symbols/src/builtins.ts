@@ -23,21 +23,26 @@ function powerPortSymbol(id: "vdd" | "vss", name: string): SymbolDefinition {
     schemaVersion: 1,
     id,
     name,
-    viewBox: { x: -12, y: -24, width: 24, height: 48 },
+    viewBox: { x: -12, y: -2, width: 24, height: 26 },
     pins: [pin("P", "power", 0, upward ? 20 : -20, upward ? "south" : "north")],
     primitives: upward
       ? [
           {
             kind: "line",
             from: { x: 0, y: 20 },
-            to: { x: 0, y: -12 },
+            to: { x: 0, y: 2.5 },
             style: { strokeWidth: 1.2, lineCap: "round" },
           },
           {
-            kind: "line",
-            from: { x: -10, y: -12 },
-            to: { x: 10, y: -12 },
-            style: { strokeWidth: 2.16, lineCap: "round" },
+            kind: "polygon",
+            points: [
+              { x: -10, y: 0.88 },
+              { x: 10, y: 0.88 },
+              { x: 10, y: 4.12 },
+              { x: -10, y: 4.12 },
+            ],
+            fill: "foreground",
+            stroke: "none",
           },
         ]
       : [

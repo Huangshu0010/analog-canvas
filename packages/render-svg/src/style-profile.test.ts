@@ -16,7 +16,7 @@ describe("schematic style profiles", () => {
     expect(resolveSchematicStyleProfile("razavi-textbook-v1")).toBe(
       razaviTextbookProfile,
     );
-    expect(strokeWidthForRole(razaviTextbookProfile, "normal")).toBe(1.2);
+    expect(strokeWidthForRole(razaviTextbookProfile, "normal")).toBe(1.6);
     expect(strokeWidthForRole(razaviTextbookProfile, "emphasis")).toBe(2.16);
     expect(razaviTextbookProfile.nodes).toEqual({
       junctionRadius: 3,

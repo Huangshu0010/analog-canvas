@@ -88,6 +88,7 @@ const configs = [
     reference: "ground.svg",
     aliases: ["gnd"],
     labelVisibility: "hidden",
+    leadAxisScale: 1.18,
     pins: [["0", "ground", "north", 6, "start"]],
   },
   {
@@ -97,6 +98,7 @@ const configs = [
     reference: "port.svg",
     aliases: [],
     referenceOrigin: { x: 283.464567, y: 430.866142 },
+    circlePresentation: { fill: "foreground", stroke: "none" },
     pins: [["P", "port", "east", 7, "start"]],
   },
   {
@@ -109,6 +111,7 @@ const configs = [
       ["+", "positive", "north", 11, "end"],
       ["-", "negative", "south", 12, "end"],
     ],
+    sourcePresentation: "outside-polarity",
   },
   {
     symbolId: "current-source",
@@ -120,6 +123,7 @@ const configs = [
       ["+", "positive", "north", 9, "end"],
       ["-", "negative", "south", 10, "end"],
     ],
+    sourcePresentation: "wide-arrow",
   },
 ];
 
@@ -469,6 +473,106 @@ function arrowPrimitives(shape, segment, style, marker) {
   ];
 }
 
+function sourceLeadPrimitives(primitives, pins) {
+  return primitives.filter(
+    (primitive) =>
+      primitive.kind === "line" &&
+      pins.some(
+        (pin) =>
+          samePoint(primitive.from, pin.at) || samePoint(primitive.to, pin.at),
+      ),
+  );
+}
+
+function presentIndependentSource(config, pins, primitives) {
+  if (!config.sourcePresentation) {
+    return { primitives, extraPoints: [] };
+  }
+  const circle = primitives.find((primitive) => primitive.kind === "circle");
+  if (!circle || circle.kind !== "circle") {
+    fail(`${config.symbolId} source presentation requires a circle`);
+  }
+  const leads = sourceLeadPrimitives(primitives, pins);
+  const normalStyle = {
+    strokeRole: "normal",
+    lineCap: "butt",
+    lineJoin: "miter",
+  };
+  if (config.sourcePresentation === "outside-polarity") {
+    const markerX = circle.center.x - circle.radius - 4.5;
+    const plusY = circle.center.y - circle.radius - 2.5;
+    const minusY = circle.center.y + circle.radius + 2.5;
+    const halfMark = 4;
+    const polarity = [
+      {
+        kind: "line",
+        from: { x: markerX - halfMark, y: plusY },
+        to: { x: markerX + halfMark, y: plusY },
+        style: normalStyle,
+      },
+      {
+        kind: "line",
+        from: { x: markerX, y: plusY - halfMark },
+        to: { x: markerX, y: plusY + halfMark },
+        style: normalStyle,
+      },
+      {
+        kind: "line",
+        from: { x: markerX - halfMark, y: minusY },
+        to: { x: markerX + halfMark, y: minusY },
+        style: normalStyle,
+      },
+    ].map((primitive) => ({
+      ...primitive,
+      from: roundedPoint(primitive.from),
+      to: roundedPoint(primitive.to),
+    }));
+    return {
+      primitives: [circle, ...polarity, ...leads],
+      extraPoints: polarity.flatMap((primitive) => [
+        primitive.from,
+        primitive.to,
+      ]),
+    };
+  }
+  if (config.sourcePresentation === "wide-arrow") {
+    const shaftStart = {
+      x: circle.center.x,
+      y: circle.center.y - circle.radius * 0.5,
+    };
+    const baseY = circle.center.y + 0.75;
+    // The current-source shaft intentionally still ends on this base.  The
+    // requested calibration affects only the filled arrowhead.
+    const referenceHeadLength = circle.center.y + circle.radius * 0.66 - baseY;
+    const tip = {
+      x: circle.center.x,
+      y: baseY + referenceHeadLength * 1.3,
+    };
+    const halfWidth = circle.radius * 0.42 * 1.15;
+    const shaft = {
+      kind: "line",
+      from: roundedPoint(shaftStart),
+      to: roundedPoint({ x: circle.center.x, y: baseY }),
+      style: { ...normalStyle, lineCap: "round", lineJoin: "round" },
+    };
+    const head = {
+      kind: "polygon",
+      points: [
+        roundedPoint(tip),
+        roundedPoint({ x: circle.center.x - halfWidth, y: baseY }),
+        roundedPoint({ x: circle.center.x + halfWidth, y: baseY }),
+      ],
+      fill: "foreground",
+      stroke: "none",
+    };
+    return {
+      primitives: [circle, shaft, head, ...leads],
+      extraPoints: [shaft.from, shaft.to, ...head.points],
+    };
+  }
+  fail(`${config.symbolId} has unknown source presentation`);
+}
+
 function viewBoxFor(symbol, points) {
   const allPoints = [...points, ...symbol.pins.map((pin) => pin.at)];
   const minX = Math.floor(Math.min(...allPoints.map((point) => point.x)) - 4);
@@ -499,7 +603,7 @@ function renderPrimitive(primitive) {
     return `<line x1="${primitive.from.x}" y1="${primitive.from.y}" x2="${primitive.to.x}" y2="${primitive.to.y}"${styleAttributes}/>`;
   }
   if (primitive.kind === "circle") {
-    return `<circle cx="${primitive.center.x}" cy="${primitive.center.y}" r="${primitive.radius}" fill="none"${styleAttributes}/>`;
+    return `<circle cx="${primitive.center.x}" cy="${primitive.center.y}" r="${primitive.radius}" fill="${primitive.fill === "foreground" ? "#000" : "none"}"${primitive.stroke === undefined ? "" : ` stroke="${primitive.stroke === "foreground" ? "#000" : "none"}"`}${styleAttributes}/>`;
   }
   if (primitive.kind === "path")
     return `<path d="${primitive.data}" fill="none"${styleAttributes}/>`;
@@ -636,9 +740,38 @@ for (const config of configs) {
   );
   const primitives = [];
   const primitivePoints = [];
+  const calibratedPoint = (point) => {
+    if (!config.leadAxisScale) return point;
+    if (pins.some((pin) => samePoint(point, pin.at))) return point;
+    const anchor = pins[0]?.at;
+    if (!anchor) fail(`${config.symbolId} needs a pin for lead calibration`);
+    return roundedPoint({
+      x: point.x,
+      y: anchor.y + (point.y - anchor.y) * config.leadAxisScale,
+    });
+  };
+  const calibratePrimitive = (primitive) => {
+    if (!config.leadAxisScale) return primitive;
+    if (primitive.kind === "line") {
+      return {
+        ...primitive,
+        from: calibratedPoint(primitive.from),
+        to: calibratedPoint(primitive.to),
+      };
+    }
+    if (primitive.kind === "polygon" || primitive.kind === "polyline") {
+      return {
+        ...primitive,
+        points: primitive.points.map(calibratedPoint),
+      };
+    }
+    fail(
+      `${config.symbolId} lead calibration does not support ${primitive.kind}`,
+    );
+  };
   const pushPrimitive = (primitive, points) => {
-    primitives.push(primitive);
-    primitivePoints.push(...points);
+    primitives.push(calibratePrimitive(primitive));
+    primitivePoints.push(...points.map(calibratedPoint));
   };
 
   for (const shape of shapes) {
@@ -686,7 +819,13 @@ for (const config of configs) {
         const adjustedCenter = applyDelta(center, masterDelta);
         const radius = rounded((radiusX + radiusY) / 2);
         pushPrimitive(
-          { kind: "circle", center: adjustedCenter, radius, style },
+          {
+            kind: "circle",
+            center: adjustedCenter,
+            radius,
+            ...(config.circlePresentation ?? {}),
+            style,
+          },
           [
             { x: adjustedCenter.x - radius, y: adjustedCenter.y - radius },
             { x: adjustedCenter.x + radius, y: adjustedCenter.y + radius },
@@ -776,6 +915,10 @@ for (const config of configs) {
       flushPath();
     }
   }
+
+  const presented = presentIndependentSource(config, pins, primitives);
+  primitives.splice(0, primitives.length, ...presented.primitives);
+  primitivePoints.push(...presented.extraPoints);
 
   const symbol = {
     schemaVersion: 1,

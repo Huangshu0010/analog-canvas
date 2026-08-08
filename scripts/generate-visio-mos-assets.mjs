@@ -21,6 +21,7 @@ const check = process.argv.includes("--check");
 const POINTS_PER_INCH = 72;
 const CONNECTION_GRID = 10;
 const EPSILON = 1e-6;
+const GATE_BAR_THICKNESS = 3.24;
 
 const configs = [
   {
@@ -38,6 +39,9 @@ const configs = [
     bulkShapeId: 13,
     variantSourceId: "nmos3",
     variantHostShapeId: 7,
+    gateBarShapeIds: [8, 9],
+    gateAxisScale: 1.15,
+    sourceDrainAxisScale: 0.765,
   },
   {
     symbolId: "nmos3",
@@ -50,6 +54,9 @@ const configs = [
       ["G", "gate", "west", 12, "end"],
       ["S", "source", "south", 6, "end"],
     ],
+    gateBarShapeIds: [9, 10],
+    gateAxisScale: 1.15,
+    sourceDrainAxisScale: 0.765,
   },
   {
     symbolId: "pmos",
@@ -66,6 +73,9 @@ const configs = [
     bulkShapeId: 13,
     variantSourceId: "pmos3",
     variantHostShapeId: 6,
+    gateBarShapeIds: [8, 9],
+    gateAxisScale: 1.15,
+    sourceDrainAxisScale: 0.765,
   },
   {
     symbolId: "pmos3",
@@ -78,6 +88,9 @@ const configs = [
       ["G", "gate", "west", 12, "end"],
       ["S", "source", "south", 6, "end"],
     ],
+    gateBarShapeIds: [9, 10],
+    gateAxisScale: 1.15,
+    sourceDrainAxisScale: 0.765,
   },
 ];
 
@@ -240,7 +253,9 @@ function arrowPrimitives(shape, segment, style, marker, part) {
     `${shape.nameU}.LineWeight`,
   );
   const arrowLength = 3 * marker.scale * strokeWidth;
-  const halfWidth = marker.scale * strokeWidth;
+  // Razavi calibration: preserve the Visio-derived tip, host, and electrical
+  // anchors while making only the filled MOS arrowhead 20% wider.
+  const halfWidth = marker.scale * strokeWidth * 1.2;
   const setback = Math.abs(marker.refX) * strokeWidth;
   const tip = beginArrow ? segment.from : segment.to;
   const baseCenter = beginArrow
@@ -324,6 +339,105 @@ function translatePrimitive(primitive, delta) {
     case "path":
       fail("path translation is not implemented for MOS generation");
   }
+}
+
+function scalePrimitiveAlongGateAxis(primitive, pins, scale) {
+  if (scale === undefined) return primitive;
+  const drain = pins.find((pin) => pin.name === "D");
+  if (!drain) fail("gate-axis calibration requires a drain pin");
+  const transform = (point) => {
+    if (
+      pins.some(
+        (pin) =>
+          Math.abs(pin.at.x - point.x) < EPSILON &&
+          Math.abs(pin.at.y - point.y) < EPSILON,
+      )
+    ) {
+      return point;
+    }
+    return roundedPoint({
+      x: drain.at.x + (point.x - drain.at.x) * scale,
+      y: point.y,
+    });
+  };
+  switch (primitive.kind) {
+    case "line":
+      return {
+        ...primitive,
+        from: transform(primitive.from),
+        to: transform(primitive.to),
+      };
+    case "polygon":
+    case "polyline":
+      return { ...primitive, points: primitive.points.map(transform) };
+    case "circle":
+    case "path":
+      fail(`gate-axis calibration does not support ${primitive.kind}`);
+  }
+}
+
+function scalePrimitiveAlongSourceDrainAxis(primitive, pins, scale) {
+  if (scale === undefined) return primitive;
+  const drain = pins.find((pin) => pin.name === "D");
+  const source = pins.find((pin) => pin.name === "S");
+  if (!drain || !source) fail("S/D-axis calibration requires D and S pins");
+  const centerY = (drain.at.y + source.at.y) / 2;
+  const transform = (point) => {
+    if (
+      pins.some(
+        (pin) =>
+          Math.abs(pin.at.x - point.x) < EPSILON &&
+          Math.abs(pin.at.y - point.y) < EPSILON,
+      )
+    ) {
+      return point;
+    }
+    return roundedPoint({
+      x: point.x,
+      y: centerY + (point.y - centerY) * scale,
+    });
+  };
+  switch (primitive.kind) {
+    case "line":
+      return {
+        ...primitive,
+        from: transform(primitive.from),
+        to: transform(primitive.to),
+      };
+    case "polygon":
+    case "polyline":
+      return { ...primitive, points: primitive.points.map(transform) };
+    case "circle":
+    case "path":
+      fail(`S/D-axis calibration does not support ${primitive.kind}`);
+  }
+}
+
+function gateBarPrimitive(primitive) {
+  if (primitive.kind !== "line" || primitive.part !== "gate-bar") {
+    return primitive;
+  }
+  const dx = primitive.to.x - primitive.from.x;
+  const dy = primitive.to.y - primitive.from.y;
+  const length = Math.hypot(dx, dy);
+  if (length < EPSILON) fail("gate-bar conversion requires a non-zero line");
+  const halfThickness = GATE_BAR_THICKNESS / 2;
+  const normal = {
+    x: (-dy / length) * halfThickness,
+    y: (dx / length) * halfThickness,
+  };
+  return {
+    kind: "polygon",
+    points: [
+      { x: primitive.from.x + normal.x, y: primitive.from.y + normal.y },
+      { x: primitive.to.x + normal.x, y: primitive.to.y + normal.y },
+      { x: primitive.to.x - normal.x, y: primitive.to.y - normal.y },
+      { x: primitive.from.x - normal.x, y: primitive.from.y - normal.y },
+    ].map(roundedPoint),
+    fill: "foreground",
+    stroke: "none",
+    part: "gate-bar",
+  };
 }
 
 function primitivePoints(primitive) {
@@ -547,6 +661,7 @@ for (const config of configs) {
     }
     let part;
     if (shape.id === config.bulkShapeId) part = "bulk-lead";
+    else if (config.gateBarShapeIds?.includes(shape.id)) part = "gate-bar";
     else if (shape.id === config.variantHostShapeId) part = "source-arrow-host";
     else if (hasArrow) part = "source-arrow";
     const style = shapeStrokeStyle(shape);
@@ -587,13 +702,22 @@ for (const config of configs) {
     }
   }
 
+  const calibratedPrimitives = primitives.map((primitive) =>
+    gateBarPrimitive(
+      scalePrimitiveAlongSourceDrainAxis(
+        scalePrimitiveAlongGateAxis(primitive, pins, config.gateAxisScale),
+        pins,
+        config.sourceDrainAxisScale,
+      ),
+    ),
+  );
   const symbol = {
     schemaVersion: 1,
     id: config.symbolId,
     name: config.name,
     viewBox: { x: 0, y: 0, width: 1, height: 1 },
     pins,
-    primitives,
+    primitives: calibratedPrimitives,
     variants: [],
     aliases: config.aliases,
   };

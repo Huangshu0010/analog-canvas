@@ -19,10 +19,25 @@ import {
   renderDocumentSvg,
   renderSymbolDefinitionBody,
 } from "./render.js";
+import { razaviTextbookProfile } from "./style-profile.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("textbook monochrome SVG renderer", () => {
+  it("renders the Razavi palette port as a solid dot", () => {
+    const port = builtInSymbols.find((symbol) => symbol.id === "port");
+    expect(port).toBeDefined();
+
+    const body = renderSymbolDefinitionBody(
+      port!,
+      [],
+      [],
+      razaviTextbookProfile,
+    );
+
+    expect(body).toContain('fill="#202020" stroke="none"');
+  });
+
   it("renders only physical branch Junctions as connection dots", () => {
     const project = createEmptyProject("project-junction-roles", "Roles");
     const document = project.documents[0]!;
@@ -385,7 +400,9 @@ describe("textbook monochrome SVG renderer", () => {
 
     expect(svg).toContain('data-style-profile="razavi-textbook-v1"');
     expect(svg).toContain('stroke="#202020" stroke-width="1.6"');
-    expect(svg).toContain('stroke-width="2.16"');
+    expect(svg).toContain(
+      '<polygon points="-9.956614,-12.197835 -9.956614,12.197835 -6.716614,12.197835 -6.716614,-12.197835" fill="#202020" stroke="none"/>',
+    );
     expect(svg).toContain('stroke-linecap="butt"');
     expect(svg).toContain('stroke-miterlimit="4"');
     expect(svg).toContain('r="3" fill="#202020"');
@@ -432,7 +449,7 @@ describe("textbook monochrome SVG renderer", () => {
     const widths = new Set(
       [...svg.matchAll(/stroke-width="([^"]+)"/gu)].map((match) => match[1]),
     );
-    expect([...widths].sort()).toEqual(["1.2", "1.6", "1.8", "2.16"]);
+    expect([...widths].sort()).toEqual(["1.6", "1.8"]);
     expect(svg).not.toContain("vector-effect");
   });
 
@@ -526,9 +543,46 @@ describe("textbook monochrome SVG renderer", () => {
     expect(scaled).toMatch(/font-size="32"/);
   });
 
+  it("renders explicit subscript and italic markup in plain text", () => {
+    const project = createEmptyProject("project-markup", "Text Markup");
+    const document = project.documents[0]!;
+    document.annotations = [
+      {
+        id: "math-note",
+        kind: "plain-text",
+        text: "M_{1}",
+        position: { x: 80, y: 80 },
+        offset: { x: 0, y: 0 },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "italic-note",
+        kind: "plain-text",
+        text: "\\it{gain}",
+        position: { x: 80, y: 110 },
+        offset: { x: 0, y: 0 },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
+    ];
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain(
+      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">M</tspan><tspan data-text-run="subscript"',
+    );
+    expect(svg).toContain(
+      '<tspan data-text-run="base" style="font-style:italic;font-weight:400">gain</tspan>',
+    );
+  });
+
   it("scales annotations in the textbook-monochrome profile", () => {
     const project = createEmptyProject("project-mono-text-scale", "Mono Text");
     const document = project.documents[0]!;
+    document.presentation.styleProfileId = "textbook-monochrome-v1";
     document.annotations = [
       {
         id: "note-1",

@@ -37,44 +37,36 @@
       >
         <g fill="none" stroke="#000">
           <line
-            x1="-5.754549"
-            y1="-10.629921"
+            x1="-8.117731"
+            y1="-8.13189"
             x2="10"
-            y2="-10.629921"
+            y2="-8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <line
-            x1="-5.564216"
-            y1="10.629921"
+            x1="-7.898848"
+            y1="8.13189"
             x2="10"
-            y2="10.629921"
+            y2="8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-          <line
-            x1="-5.944882"
-            y1="-15.944882"
-            x2="-5.944882"
-            y2="15.944882"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-9.956614,-12.197835 -9.956614,12.197835 -6.716614,12.197835 -6.716614,-12.197835"
+            fill="#000"
+            stroke="none"
           />
-          <line
-            x1="-11.259843"
-            y1="-10.629921"
-            x2="-11.259843"
-            y2="10.629921"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-16.068819,-8.13189 -16.068819,8.13189 -12.828819,8.13189 -12.828819,-8.13189"
+            fill="#000"
+            stroke="none"
           />
           <line
             x1="10"
-            y1="10.629921"
+            y1="8.13189"
             x2="10"
             y2="20"
             stroke-width="1.2"
@@ -82,7 +74,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-11.259843"
+            x1="-14.448819"
             y1="0"
             x2="-20"
             y2="0"
@@ -92,7 +84,7 @@
           />
           <line
             x1="10"
-            y1="-10.913386"
+            y1="-8.34874"
             x2="10"
             y2="-20"
             stroke-width="1.2"
@@ -100,7 +92,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="3.899842"
+            x1="2.984818"
             y1="0"
             x2="20"
             y2="0"
@@ -109,7 +101,7 @@
             stroke-linejoin="round"
           />
           <polygon
-            points="-4.740158,0 4.259842,3 4.259842,-3"
+            points="-6.951182,0 3.398818,2.754 3.398818,-2.754"
             fill="#000"
             stroke="none"
           />
@@ -130,44 +122,36 @@
       >
         <g fill="none" stroke="#000">
           <line
-            x1="-5.754549"
-            y1="-10.629921"
+            x1="-8.117731"
+            y1="-8.13189"
             x2="10"
-            y2="-10.629921"
+            y2="-8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <line
-            x1="-5.564216"
-            y1="10.629921"
+            x1="-7.898848"
+            y1="8.13189"
             x2="10"
-            y2="10.629921"
+            y2="8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-          <line
-            x1="-5.944882"
-            y1="-15.944882"
-            x2="-5.944882"
-            y2="15.944882"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-9.956614,-12.197835 -9.956614,12.197835 -6.716614,12.197835 -6.716614,-12.197835"
+            fill="#000"
+            stroke="none"
           />
-          <line
-            x1="-11.259843"
-            y1="-10.629921"
-            x2="-11.259843"
-            y2="10.629921"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-16.068819,-8.13189 -16.068819,8.13189 -12.828819,8.13189 -12.828819,-8.13189"
+            fill="#000"
+            stroke="none"
           />
           <line
             x1="10"
-            y1="10.629921"
+            y1="8.13189"
             x2="10"
             y2="20"
             stroke-width="1.2"
@@ -175,7 +159,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-11.259843"
+            x1="-14.448819"
             y1="0"
             x2="-20"
             y2="0"
@@ -185,7 +169,7 @@
           />
           <line
             x1="10"
-            y1="-10.913386"
+            y1="-8.34874"
             x2="10"
             y2="-20"
             stroke-width="1.2"
@@ -193,7 +177,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="3.899842"
+            x1="2.984818"
             y1="0"
             x2="20"
             y2="0"
@@ -202,7 +186,7 @@
             stroke-linejoin="round"
           />
           <polygon
-            points="-4.740158,0 4.259842,3 4.259842,-3"
+            points="-6.951182,0 3.398818,2.754 3.398818,-2.754"
             fill="#000"
             stroke="none"
           />
@@ -229,7 +213,7 @@
         <g fill="none" stroke="#000">
           <line
             x1="20"
-            y1="11.338583"
+            y1="8.674016"
             x2="20"
             y2="20"
             stroke-width="1.2"
@@ -237,49 +221,41 @@
             stroke-linejoin="round"
           />
           <line
-            x1="4.245451"
-            y1="-10.629921"
+            x1="1.882269"
+            y1="-8.13189"
             x2="20"
-            y2="-10.629921"
+            y2="-8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <line
-            x1="4.435784"
-            y1="10.629921"
-            x2="11"
-            y2="10.629921"
+            x1="2.101152"
+            y1="8.13189"
+            x2="9.65"
+            y2="8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <polygon
-            points="20,10.629921 11,13.629921 11,7.629921"
+            points="20,8.13189 9.65,10.88589 9.65,5.37789"
+            fill="#000"
+            stroke="none"
+          />
+          <polygon
+            points="0.043386,-12.197835 0.043386,12.197835 3.283386,12.197835 3.283386,-12.197835"
+            fill="#000"
+            stroke="none"
+          />
+          <polygon
+            points="-6.068819,-8.13189 -6.068819,8.13189 -2.828819,8.13189 -2.828819,-8.13189"
             fill="#000"
             stroke="none"
           />
           <line
-            x1="4.055118"
-            y1="-15.944882"
-            x2="4.055118"
-            y2="15.944882"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <line
-            x1="-1.259843"
-            y1="-10.629921"
-            x2="-1.259843"
-            y2="10.629921"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <line
             x1="20"
-            y1="-10.771654"
+            y1="-8.240315"
             x2="20"
             y2="-20"
             stroke-width="1.2"
@@ -287,7 +263,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-1.259843"
+            x1="-4.448819"
             y1="0"
             x2="-10"
             y2="0"
@@ -313,7 +289,7 @@
         <g fill="none" stroke="#000">
           <line
             x1="20"
-            y1="11.338583"
+            y1="8.674016"
             x2="20"
             y2="20"
             stroke-width="1.2"
@@ -321,49 +297,41 @@
             stroke-linejoin="round"
           />
           <line
-            x1="4.245451"
-            y1="-10.629921"
+            x1="1.882269"
+            y1="-8.13189"
             x2="20"
-            y2="-10.629921"
+            y2="-8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <line
-            x1="4.435784"
-            y1="10.629921"
-            x2="11"
-            y2="10.629921"
+            x1="2.101152"
+            y1="8.13189"
+            x2="9.65"
+            y2="8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <polygon
-            points="20,10.629921 11,13.629921 11,7.629921"
+            points="20,8.13189 9.65,10.88589 9.65,5.37789"
+            fill="#000"
+            stroke="none"
+          />
+          <polygon
+            points="0.043386,-12.197835 0.043386,12.197835 3.283386,12.197835 3.283386,-12.197835"
+            fill="#000"
+            stroke="none"
+          />
+          <polygon
+            points="-6.068819,-8.13189 -6.068819,8.13189 -2.828819,8.13189 -2.828819,-8.13189"
             fill="#000"
             stroke="none"
           />
           <line
-            x1="4.055118"
-            y1="-15.944882"
-            x2="4.055118"
-            y2="15.944882"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <line
-            x1="-1.259843"
-            y1="-10.629921"
-            x2="-1.259843"
-            y2="10.629921"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <line
             x1="20"
-            y1="-10.771654"
+            y1="-8.240315"
             x2="20"
             y2="-20"
             stroke-width="1.2"
@@ -371,7 +339,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-1.259843"
+            x1="-4.448819"
             y1="0"
             x2="-10"
             y2="0"
@@ -401,44 +369,36 @@
       >
         <g fill="none" stroke="#000">
           <line
-            x1="-5.754549"
-            y1="-10.629921"
+            x1="-8.117731"
+            y1="-8.13189"
             x2="10"
-            y2="-10.629921"
+            y2="-8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <line
-            x1="-5.564216"
-            y1="10.629921"
+            x1="-7.898848"
+            y1="8.13189"
             x2="10"
-            y2="10.629921"
+            y2="8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-          <line
-            x1="-5.944882"
-            y1="-15.944882"
-            x2="-5.944882"
-            y2="15.944882"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-9.956614,-12.197835 -9.956614,12.197835 -6.716614,12.197835 -6.716614,-12.197835"
+            fill="#000"
+            stroke="none"
           />
-          <line
-            x1="-11.259843"
-            y1="-10.629921"
-            x2="-11.259843"
-            y2="10.629921"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-16.068819,-8.13189 -16.068819,8.13189 -12.828819,8.13189 -12.828819,-8.13189"
+            fill="#000"
+            stroke="none"
           />
           <line
             x1="10"
-            y1="10.629921"
+            y1="8.13189"
             x2="10"
             y2="20"
             stroke-width="1.2"
@@ -446,7 +406,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-11.259843"
+            x1="-14.448819"
             y1="0"
             x2="-20"
             y2="0"
@@ -456,7 +416,7 @@
           />
           <line
             x1="10"
-            y1="-10.913386"
+            y1="-8.34874"
             x2="10"
             y2="-20"
             stroke-width="1.2"
@@ -464,15 +424,19 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-4.740158"
+            x1="-6.951182"
             y1="0"
-            x2="11"
+            x2="11.15"
             y2="0"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-          <polygon points="20,0 11,3 11,-3" fill="#000" stroke="none" />
+          <polygon
+            points="20,0 11.15,2.754 11.15,-2.754"
+            fill="#000"
+            stroke="none"
+          />
         </g>
       </svg>
     </g>
@@ -490,44 +454,36 @@
       >
         <g fill="none" stroke="#000">
           <line
-            x1="-5.754549"
-            y1="-10.629921"
+            x1="-8.117731"
+            y1="-8.13189"
             x2="10"
-            y2="-10.629921"
+            y2="-8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <line
-            x1="-5.564216"
-            y1="10.629921"
+            x1="-7.898848"
+            y1="8.13189"
             x2="10"
-            y2="10.629921"
+            y2="8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-          <line
-            x1="-5.944882"
-            y1="-15.944882"
-            x2="-5.944882"
-            y2="15.944882"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-9.956614,-12.197835 -9.956614,12.197835 -6.716614,12.197835 -6.716614,-12.197835"
+            fill="#000"
+            stroke="none"
           />
-          <line
-            x1="-11.259843"
-            y1="-10.629921"
-            x2="-11.259843"
-            y2="10.629921"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-16.068819,-8.13189 -16.068819,8.13189 -12.828819,8.13189 -12.828819,-8.13189"
+            fill="#000"
+            stroke="none"
           />
           <line
             x1="10"
-            y1="10.629921"
+            y1="8.13189"
             x2="10"
             y2="20"
             stroke-width="1.2"
@@ -535,7 +491,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-11.259843"
+            x1="-14.448819"
             y1="0"
             x2="-20"
             y2="0"
@@ -545,7 +501,7 @@
           />
           <line
             x1="10"
-            y1="-10.913386"
+            y1="-8.34874"
             x2="10"
             y2="-20"
             stroke-width="1.2"
@@ -553,15 +509,19 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-4.740158"
+            x1="-6.951182"
             y1="0"
-            x2="11"
+            x2="11.15"
             y2="0"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-          <polygon points="20,0 11,3 11,-3" fill="#000" stroke="none" />
+          <polygon
+            points="20,0 11.15,2.754 11.15,-2.754"
+            fill="#000"
+            stroke="none"
+          />
         </g>
       </svg>
     </g>
@@ -585,7 +545,7 @@
         <g fill="none" stroke="#000">
           <line
             x1="20"
-            y1="10.629921"
+            y1="8.13189"
             x2="20"
             y2="20"
             stroke-width="1.2"
@@ -593,49 +553,41 @@
             stroke-linejoin="round"
           />
           <line
-            x1="11.805451"
-            y1="-10.629921"
+            x1="10.576269"
+            y1="-8.13189"
             x2="20"
-            y2="-10.629921"
+            y2="-8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <polygon
-            points="4.245451,-10.629921 12.165451,-7.989921 12.165451,-13.269921"
+            points="1.882269,-8.13189 10.990269,-5.70837 10.990269,-10.55541"
             fill="#000"
             stroke="none"
           />
           <line
-            x1="4.435784"
-            y1="10.629921"
+            x1="2.101152"
+            y1="8.13189"
             x2="20"
-            y2="10.629921"
+            y2="8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-          <line
-            x1="4.055118"
-            y1="-15.944882"
-            x2="4.055118"
-            y2="15.944882"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="0.043386,-12.197835 0.043386,12.197835 3.283386,12.197835 3.283386,-12.197835"
+            fill="#000"
+            stroke="none"
           />
-          <line
-            x1="-1.259843"
-            y1="-10.629921"
-            x2="-1.259843"
-            y2="10.629921"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-6.068819,-8.13189 -6.068819,8.13189 -2.828819,8.13189 -2.828819,-8.13189"
+            fill="#000"
+            stroke="none"
           />
           <line
             x1="20"
-            y1="-10.771654"
+            y1="-8.240315"
             x2="20"
             y2="-20"
             stroke-width="1.2"
@@ -643,7 +595,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-1.259843"
+            x1="-4.448819"
             y1="0"
             x2="-10"
             y2="0"
@@ -669,7 +621,7 @@
         <g fill="none" stroke="#000">
           <line
             x1="20"
-            y1="10.629921"
+            y1="8.13189"
             x2="20"
             y2="20"
             stroke-width="1.2"
@@ -677,49 +629,41 @@
             stroke-linejoin="round"
           />
           <line
-            x1="11.805451"
-            y1="-10.629921"
+            x1="10.576269"
+            y1="-8.13189"
             x2="20"
-            y2="-10.629921"
+            y2="-8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
           <polygon
-            points="4.245451,-10.629921 12.165451,-7.989921 12.165451,-13.269921"
+            points="1.882269,-8.13189 10.990269,-5.70837 10.990269,-10.55541"
             fill="#000"
             stroke="none"
           />
           <line
-            x1="4.435784"
-            y1="10.629921"
+            x1="2.101152"
+            y1="8.13189"
             x2="20"
-            y2="10.629921"
+            y2="8.13189"
             stroke-width="1.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-          <line
-            x1="4.055118"
-            y1="-15.944882"
-            x2="4.055118"
-            y2="15.944882"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="0.043386,-12.197835 0.043386,12.197835 3.283386,12.197835 3.283386,-12.197835"
+            fill="#000"
+            stroke="none"
           />
-          <line
-            x1="-1.259843"
-            y1="-10.629921"
-            x2="-1.259843"
-            y2="10.629921"
-            stroke-width="2.16"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <polygon
+            points="-6.068819,-8.13189 -6.068819,8.13189 -2.828819,8.13189 -2.828819,-8.13189"
+            fill="#000"
+            stroke="none"
           />
           <line
             x1="20"
-            y1="-10.771654"
+            y1="-8.240315"
             x2="20"
             y2="-20"
             stroke-width="1.2"
@@ -727,7 +671,7 @@
             stroke-linejoin="round"
           />
           <line
-            x1="-1.259843"
+            x1="-4.448819"
             y1="0"
             x2="-10"
             y2="0"

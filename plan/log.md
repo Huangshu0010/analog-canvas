@@ -1276,6 +1276,81 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   concurrent worker; push order and the integration-test failure they
   introduce need a decision before pushing.
 
+## 2026-08-08 - Make Razavi the new-canvas default and expose style selection
+
+- Target: ensure manual drawing uses the approved Razavi typography by default
+  while retaining an explicit compatibility choice for existing Documents.
+- Changed areas: model factory default; typed, undoable
+  `set_presentation_style` Edit Engine operation; editor `Style` command menu;
+  focused default and history tests.
+- Result: newly created Documents persist `razavi-textbook-v1`. An existing
+  Document remains unchanged until the user chooses `Style > Razavi textbook`;
+  the selection can be undone.
+- Validation: focused tests (9/9), model/edit-engine package builds, editor
+  production build, and `git diff --check` passed. Workspace typecheck and
+  recursive build are blocked by a concurrent missing-return error in
+  `packages/agent-adapter/src/service.ts:437`, outside this target.
+- Commit status: uncommitted.
+
+## 2026-08-08 - Tighten device hit targets and make text markup authorable
+
+- Target: stop oversized device selection regions from masking nearby wiring
+  interactions and expose usable subscript/italic entry for annotations.
+- Changed areas: editor Symbol-viewBox hit rectangles; selection-aware Text
+  panel formatting buttons; explicit Razavi text markup parser; focused render
+  coverage.
+- Result: device targets follow each transformed symbol's real bounds rather
+  than a fixed 36-unit circle. `M_{1}` and `V_{DD}` render mathematical
+  subscripts; `\\it{gain}` renders italic text, including in plain annotations.
+- Validation: renderer/model/edit-engine suites (25/25), editor build, render
+  package build and `git diff --check` passed. Full typecheck is blocked only
+  by the concurrent `packages/agent-adapter/src/service.ts:437` missing return.
+- Commit status: uncommitted.
+
+## 2026-08-08 - Calibrate Razavi symbol proportions and strokes
+
+- Target: make the fixed Razavi assets closer to the supplied reference while
+  preserving the electrical connection grid.
+- Changed areas: Visio-derived MOS/core-analog generators and regenerated
+  assets/catalog/fidelity boards; Symbol DSL circle presentation; Razavi SVG
+  style tokens and formal SVG goldens.
+- Result: MOS internal geometry is 10% narrower along its gate axis while
+  D/G/S/B anchors remain unchanged; Ground artwork is 18% longer along its
+  lead axis; standard component strokes use the 1.6-unit wire width; VDD/VSS
+  bars are 16 units; and the palette Port endpoint is a filled, stroke-free
+  dot. Source-derived output stays generator-owned rather than hand-edited.
+- Validation: MOS/core-analog/catalog generator checks; 27 focused symbol and
+  renderer tests; dependency-aware render-svg build; Phase 1/5 formal-golden
+  regeneration; editor production build; and `git diff --check` passed.
+- Commit status: uncommitted.
+
+## 2026-08-08 - Align Razavi MOS and Ground geometry to reference
+
+- Target: replace approximate fixed-asset scaling with the supplied Razavi
+  reference's MOS and Ground proportions.
+- Changed areas: Visio MOS source generator, regenerated MOS catalog assets
+  and visual/fidelity baselines, focused catalog coverage, and dependent
+  formal SVG goldens.
+- Result: three-terminal MOS retains the reference-calibrated 1.15 gate-axis
+  scale; the MOS body is additionally contracted symmetrically to 76.5% along
+  the S/D axis. Drain/source spans, arrow shafts, and vertical leads retain
+  their original stroke presentation. Only the two semantic gate bars are
+  sharp-cornered, filled 3.24-unit rectangles, independent of instance
+  rotation. The attempted PMOS arrow normalization was rolled back because it
+  hid a required visible S branch. Ground retains the reference 1 : 0.5 : 0.25
+  bar progression and 1.18 lead-axis length. The built-in VDD symbol has a
+  connected 17.5-unit stem (formerly 32; 25 before this refinement) and a
+  sharp-cornered, filled 3.24-unit horizontal bar. Four-terminal electrical
+  pin anchors and hidden-bulk semantics are unchanged. The DC voltage source
+  now draws fixed, external left-side `+`/`−` marks at an 8-unit span (about
+  half the 16-unit Razavi text size); the DC current source has a shorter shaft
+  and an 8.93-unit-wide triangular arrowhead while retaining its Visio-derived
+  circle and pin anchors.
+- Validation: regenerated MOS/formal SVG baselines; MOS/core-analog/catalog
+  generator checks; 36 focused symbols/renderer tests; render-svg dependency
+  build; editor production build; and `git diff --check` passed.
+- Commit status: uncommitted.
+
 ## 2026-08-08 - Establish four-layer Agent schematic guidance
 
 - Target: make Agent layout work repeatable through separate workflow,
@@ -1297,3 +1372,71 @@ Keep reusable lessons in `docs/experience/`, not in this log.
   link check passed for eight entry files; `git diff --check` passed.
 - Commit status: ready for
   `docs(agent): establish four-layer layout guidance`.
+## 2026-08-08 - Text, annotation, and peripheral editing system plan
+
+- Target: define an execution-ready, non-electrical drafting layer for rich
+  text, route markers, arrows, leaders, callouts, construction lines, floating
+  symbols, and editor-only guides.
+- Changed areas: added
+  `docs/roadmap/text-annotation-peripheral-editing-plan.md`; created the
+  associated bounded target plan.
+- Evidence: audited the current model annotation schema, shared Edit Engine
+  annotation operations, route attachment resolver, SVG text/current-arrow
+  renderer, editor commands, and accepted Editor Interaction/Schematic Model/
+  Agent API contracts. The plan deliberately preserves existing electrical
+  label semantics while separating exportable drafting from non-exported
+  guides.
+- Validation: cross-referenced the current schemas, engine operations,
+  renderer/editor behavior, and accepted contracts; `git diff --check` passed.
+  No runtime code or circuit assets changed.
+- Commit status: not committed; repository contains concurrent dirty work
+  outside this documentation target.
+## 2026-08-08 - Land concurrent Razavi editor/style/symbol targets
+
+Three coordinated but uncommitted targets, left green and landed as separate
+commits by a coordination target before starting the Text & Peripheral
+Editing System work.
+
+- Target: razavi-default-and-style-switch.
+- Changed areas: model factory default + schema test; edit-engine
+  `set_presentation_style` typed edit + presentation history test;
+  agent-adapter `editCategory` classification of the new edit.
+- Result: new Documents persist `razavi-textbook-v1`; style selection is
+  revisioned with Undo; opening an existing monochrome Project does not
+  migrate it.
+- Validation: focused model/edit-engine tests; full suite 203/203; workspace
+  typecheck clean; editor build succeeds.
+- Commit: `feat(editor): default Razavi style and undoable style switch`.
+
+- Target: precise-hit-targets-and-text-markup.
+- Changed areas: render-svg schematic-text explicit `M_{1}`/`V_{DD}`/`\it{}`
+  parsing with per-run style discriminator + updated test expectations;
+  editor App.tsx transformed-Symbol-bounds hit targets, Text-panel subscript
+  and italic buttons, and styles.css.
+- Result: device selection no longer masks nearby routing; explicit markup
+  renders across all annotation kinds including plain text.
+- Validation: focused render tests; full suite 203/203; editor build
+  succeeds.
+- Commit: `fix(render): precise hit targets and explicit text markup`.
+
+- Target: razavi-symbol-proportion-and-stroke-calibration.
+- Changed areas: regenerated Visio-derived MOS and core-analog geometry and
+  fidelity goldens; both generator scripts; symbols schema/builtins/catalog
+  tests and generated catalog; render-svg `style-profile` Razavi `normal`
+  stroke 1.2->1.6 + updated test, and render/render.test.
+- Result: Visio-exact MOS and core-analog proportions; Razavi normal stroke
+  aligns with wire/symbol stroke.
+- Validation: full suite 203/203; `generate-razavi-symbol-catalog`,
+  `generate-visio-mos-assets`, and `generate-visio-core-analog-assets`
+  `--check` all pass; workspace typecheck clean.
+- Commit: `feat(symbols): Visio-exact MOS and core-analog proportion calibration`.
+
+- Coordination target: coord-land-concurrent-razavi-targets. It owned only
+  the three stale-expected-value/classifier fixes that made the in-flight
+  work internally consistent (`agent-adapter/service.ts` `set_presentation_style`
+  case, `schematic-text.test.ts` `style` field, `style-profile.test.ts`
+  1.2->1.6), plus this log entry. It staged and committed the three targets'
+  full file sets. `apps/editor/src/App.tsx`, shared by the style and hit-text
+  targets, landed with the hit-text commit per that workstream's plan.
+- Commit status: all four commits landed on `main`; worktree now clean of the
+  concurrent Razavi work.

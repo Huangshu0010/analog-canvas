@@ -80,7 +80,7 @@ function renderPrimitive(
     case "polyline":
       return `<polyline points="${pointList(primitive.points)}"${style}/>`;
     case "circle":
-      return `<circle cx="${primitive.center.x}" cy="${primitive.center.y}" r="${primitive.radius}"${style}/>`;
+      return `<circle cx="${primitive.center.x}" cy="${primitive.center.y}" r="${primitive.radius}"${primitive.fill === undefined ? "" : ` fill="${primitive.fill === "foreground" ? profile.foreground : "none"}"`}${primitive.stroke === undefined ? "" : ` stroke="${primitive.stroke === "foreground" ? profile.foreground : "none"}"`}${style}/>`;
     case "path":
       return `<path d="${escapeXml(primitive.data)}"${style}/>`;
     case "polygon":

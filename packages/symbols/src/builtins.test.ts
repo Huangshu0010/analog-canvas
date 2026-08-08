@@ -62,6 +62,34 @@ describe("initial built-in Symbol Library", () => {
     }
   });
 
+  it("uses the shortened vertical stem for the VDD power symbol", () => {
+    const vdd = builtInSymbols.find((symbol) => symbol.id === "vdd");
+    expect(vdd?.viewBox).toEqual({ x: -12, y: -2, width: 24, height: 26 });
+    expect(vdd?.pins).toMatchObject([
+      { name: "P", at: { x: 0, y: 20 }, direction: "south" },
+    ]);
+    expect(vdd?.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "line",
+          from: { x: 0, y: 20 },
+          to: { x: 0, y: 2.5 },
+        }),
+        expect.objectContaining({
+          kind: "polygon",
+          points: [
+            { x: -10, y: 0.88 },
+            { x: 10, y: 0.88 },
+            { x: 10, y: 4.12 },
+            { x: -10, y: 4.12 },
+          ],
+          fill: "foreground",
+          stroke: "none",
+        }),
+      ]),
+    );
+  });
+
   it("rejects a symbol whose pin anchor is between connection-grid points", () => {
     const resistor = builtInSymbols.find((symbol) => symbol.id === "resistor")!;
     const parsed = SymbolDefinitionSchema.safeParse({
@@ -129,7 +157,10 @@ describe("initial built-in Symbol Library", () => {
         (candidate) => candidate.id === symbolId,
       );
       expect(
-        symbol?.primitives.filter((primitive) => primitive.kind === "polygon"),
+        symbol?.primitives.filter(
+          (primitive) =>
+            primitive.kind === "polygon" && primitive.part === "source-arrow",
+        ),
       ).toHaveLength(1);
       expect(symbol).toBe(requireRazaviCatalogSymbol(symbolId));
     }
@@ -145,10 +176,12 @@ describe("initial built-in Symbol Library", () => {
       pmos.primitives.some((primitive) => primitive.kind === "circle"),
     ).toBe(false);
     const nmosArrow = nmos.primitives.find(
-      (primitive) => primitive.kind === "polygon",
+      (primitive) =>
+        primitive.kind === "polygon" && primitive.part === "bulk-lead",
     );
     const pmosArrow = pmos.primitives.find(
-      (primitive) => primitive.kind === "polygon",
+      (primitive) =>
+        primitive.kind === "polygon" && primitive.part === "bulk-lead",
     );
     expect(nmosArrow?.kind === "polygon" && nmosArrow.stroke).toBe("none");
     expect(pmosArrow?.kind === "polygon" && pmosArrow.stroke).toBe("none");
