@@ -1851,3 +1851,16 @@ Editing System work.
   clean.
 - Commit status: ready for
   `feat(symbols): decorative symbol capability for floating symbols (WP-A4 decorative)`.
+## 2026-08-08 - WP-A4 editor drafting creation commands
+
+- Target: let the editor create construction lines, free arrows, and floating
+  symbols from the More menu.
+- Changed areas: apps/editor adds addConstructionLine (dashed horizontal line),
+  addFreeArrow (horizontal arrow), and addFloatingSymbol (decorative-note-box
+  via the whitelist); the More menu gains a Markup group with the three
+  commands. The DocumentHistory context already carries the SymbolResolver, so
+  floating-symbol validation runs through the Edit Engine.
+- Validation: full suite 250/250; editor build succeeds; workspace typecheck
+  clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(editor): construction-line, free arrow, and floating-symbol commands (WP-A4 commands)`.

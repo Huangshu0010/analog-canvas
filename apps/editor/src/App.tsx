@@ -1920,6 +1920,85 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
+  function addConstructionLine(): void {
+    transactionCounter.current += 1;
+    const id = `construction-${transactionCounter.current}`;
+    const center = {
+      x: Math.round(viewBox.x + viewBox.width / 2),
+      y: Math.round(viewBox.y + viewBox.height / 2),
+    };
+    const result = transact([
+      {
+        kind: "upsert_drafting_object",
+        object: {
+          id,
+          kind: "construction-line",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: center },
+          points: [
+            { x: center.x - 80, y: center.y },
+            { x: center.x + 80, y: center.y },
+          ],
+          lineStyle: "dashed",
+        },
+      },
+    ]);
+    if (result.ok) setStatus(`Added construction line ${id}`);
+  }
+
+  function addFreeArrow(): void {
+    transactionCounter.current += 1;
+    const id = `arrow-${transactionCounter.current}`;
+    const center = {
+      x: Math.round(viewBox.x + viewBox.width / 2),
+      y: Math.round(viewBox.y + viewBox.height / 2),
+    };
+    const result = transact([
+      {
+        kind: "upsert_drafting_object",
+        object: {
+          id,
+          kind: "arrow",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: center },
+          from: { kind: "free", position: { x: center.x - 60, y: center.y } },
+          to: { kind: "free", position: { x: center.x + 60, y: center.y } },
+        },
+      },
+    ]);
+    if (result.ok) setStatus(`Added free arrow ${id}`);
+  }
+
+  function addFloatingSymbol(): void {
+    transactionCounter.current += 1;
+    const id = `floating-${transactionCounter.current}`;
+    const position = {
+      x: Math.round(viewBox.x + viewBox.width / 2),
+      y: Math.round(viewBox.y + viewBox.height / 2),
+    };
+    const result = transact([
+      {
+        kind: "upsert_drafting_object",
+        object: {
+          id,
+          kind: "floating-symbol",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position },
+          symbolId: "decorative-note-box",
+          transform: { rotation: 0, mirror: "none" },
+        },
+      },
+    ]);
+    if (result.ok) {
+      setStatus(`Added floating symbol ${id}`);
+    } else {
+      setStatus("Floating symbol requires a decorative catalog entry");
+    }
+  }
+
   function addCurrentArrow(): void {
     if (!selectedRoute) {
       setStatus("Select a wire segment before adding a current arrow");
@@ -3011,6 +3090,16 @@ export function App({ project: initialProject }: AppProps) {
               </button>
               <button type="button" onClick={addCurrentArrow}>
                 Add current arrow
+              </button>
+              <span className="command-group-label">Markup</span>
+              <button type="button" onClick={addConstructionLine}>
+                Add construction line
+              </button>
+              <button type="button" onClick={addFreeArrow}>
+                Add free arrow
+              </button>
+              <button type="button" onClick={addFloatingSymbol}>
+                Add floating symbol
               </button>
               <span className="command-group-label">Guides</span>
               <button type="button" onClick={() => addGuide("vertical")}>
