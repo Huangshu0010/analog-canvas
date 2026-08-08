@@ -3,7 +3,12 @@ import {
   SchematicDocumentSchema,
   transformPoint,
 } from "@icm/model";
-import { routeAttachmentPlacement, routePolyline } from "@icm/derived";
+import {
+  resolveDraftingObjectGeometry,
+  routeAttachmentPlacement,
+  routePolyline,
+} from "@icm/derived";
+import type { ResolvedDraftingGeometry } from "@icm/derived";
 import type {
   DraftingObject,
   Point,
@@ -334,6 +339,13 @@ function deriveBounds(
       ),
     );
   }
+  // ADR 0010 WP-R2: drafting objects extend the formal export bounds so
+  // callouts and floating symbols outside the circuit are not clipped. Guides
+  // are editor-only and never affect bounds. Resolved geometry is derived.
+  for (const object of document.drafting?.objects ?? []) {
+    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+    bounds.push(geometry.bounds);
+  }
   if (bounds.length === 0) {
     return { x: 0, y: 0, width: 960, height: 640 };
   }
@@ -605,11 +617,10 @@ function resolveRouteMarkerPlacement(
   };
 }
 
-// ADR 0010 WP-A1b minimal drafting consumption. Only DraftText is rendered
-// here, as escaped plain text in a data-layer="drafting" group stacked above
-// annotations per the frozen layering. The full RichText AST -> tspan renderer
-// (subscript/superscript/italic/bold/fraction) lands in WP-A2 and will replace
-// the flat textJoin here. Guides never render in formal output.
+// ADR 0010 WP-R2: the drafting layer renders every DraftingObject kind by
+// consuming the single derived-geometry entry. Guides never render in formal
+// output. An unresolved anchor still exports using its fallback position and
+// carries a data-anchor-resolved="false" attribute for diagnostics.
 function renderDraftingLayer(
   document: SchematicDocument,
   resolver: SymbolResolver,
@@ -619,36 +630,61 @@ function renderDraftingLayer(
   if (objects.length === 0) return "";
   const sorted = [...objects].sort((left, right) => left.zIndex - right.zIndex);
   const body = sorted.map((object) => {
+    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+    const unresolved = geometry.diagnostics.length > 0
+      ? ' data-anchor-resolved="false"'
+      : "";
     switch (object.kind) {
       case "text":
-        return renderDraftText(object, profile);
+        return renderDraftText(
+          object,
+          geometry as Extract<ResolvedDraftingGeometry, { kind: "text" }>,
+          profile,
+          unresolved,
+        );
       case "construction-line":
         return renderConstructionLine(object, profile);
       case "arrow":
-        return renderDraftArrow(object, profile);
+        return renderDraftArrow(
+          object,
+          geometry as Extract<ResolvedDraftingGeometry, { kind: "arrow" }>,
+          profile,
+          unresolved,
+        );
       case "leader":
-        return renderDraftLeader(object, profile);
+        return renderDraftLeader(
+          object,
+          geometry as Extract<ResolvedDraftingGeometry, { kind: "leader" }>,
+          profile,
+          unresolved,
+        );
       case "callout":
-        return renderDraftCallout(object, profile);
+        return renderDraftCallout(
+          object,
+          geometry as Extract<ResolvedDraftingGeometry, { kind: "callout" }>,
+          profile,
+          unresolved,
+        );
       case "floating-symbol":
-        return renderFloatingSymbol(object, resolver, profile);
+        return renderFloatingSymbol(
+          object,
+          geometry as Extract<ResolvedDraftingGeometry, { kind: "floating-symbol" }>,
+          resolver,
+          profile,
+          unresolved,
+        );
     }
   }).join("");
   return `<g data-layer="drafting">${body}</g>`;
 }
 
-function draftObjectPosition(
-  anchor: Extract<SchematicDocument["drafting"], { objects: unknown[] }>["objects"][number]["anchor"],
-): Point {
-  if (anchor.kind === "free") return anchor.position;
-  return anchor.fallbackPosition;
-}
-
 function renderDraftText(
   object: Extract<DraftingObject, { kind: "text" }>,
+  geometry: Extract<ResolvedDraftingGeometry, { kind: "text" }>,
   profile: SchematicStyleProfile,
+  unresolved: string,
 ): string {
-  const position = draftObjectPosition(object.anchor);
+  const { position } = geometry;
   const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
   const content =
     profile.id === "textbook-monochrome-v1"
@@ -657,7 +693,7 @@ function renderDraftText(
           object.content as unknown as RichTextDocumentInput,
           profile,
         );
-  return `<text data-object-id="${object.id}" data-kind="draft-text" x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${position.x} ${position.y})" font-size="${fontSize}">${content}</text>`;
+  return `<text data-object-id="${object.id}" data-kind="draft-text"${unresolved} x="${position.x}" y="${position.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${position.x} ${position.y})" font-size="${fontSize}">${content}</text>`;
 }
 
 function renderConstructionLine(
@@ -671,10 +707,12 @@ function renderConstructionLine(
 
 function renderDraftArrow(
   object: Extract<DraftingObject, { kind: "arrow" }>,
+  geometry: Extract<ResolvedDraftingGeometry, { kind: "arrow" }>,
   profile: SchematicStyleProfile,
+  unresolved: string,
 ): string {
-  const from = draftObjectPosition(object.from);
-  const to = draftObjectPosition(object.to);
+  const from = geometry.from;
+  const to = geometry.to;
   const tipX = to.x;
   const tipY = to.y;
   const dx = to.x - from.x;
@@ -685,25 +723,27 @@ function renderDraftArrow(
   const ny = (dx / length) * 4;
   const baseX = tipX - (dx / length) * head;
   const baseY = tipY - (dy / length) * head;
-  return `<g data-object-id="${object.id}" data-kind="draft-arrow"><line x1="${from.x}" y1="${from.y}" x2="${tipX}" y2="${tipY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" fill="${profile.foreground}"/></g>`;
+  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${tipX}" y2="${tipY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" fill="${profile.foreground}"/></g>`;
 }
 
 function renderDraftLeader(
   object: Extract<DraftingObject, { kind: "leader" }>,
+  geometry: Extract<ResolvedDraftingGeometry, { kind: "leader" }>,
   profile: SchematicStyleProfile,
+  unresolved: string,
 ): string {
-  const target = draftObjectPosition(object.target);
-  const origin = draftObjectPosition(object.anchor);
-  return `<line data-object-id="${object.id}" data-kind="draft-leader" x1="${origin.x}" y1="${origin.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
+  const { anchor, target } = geometry;
+  return `<line data-object-id="${object.id}" data-kind="draft-leader"${unresolved} x1="${anchor.x}" y1="${anchor.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
 }
 
 function renderDraftCallout(
   object: Extract<DraftingObject, { kind: "callout" }>,
+  geometry: Extract<ResolvedDraftingGeometry, { kind: "callout" }>,
   profile: SchematicStyleProfile,
+  unresolved: string,
 ): string {
-  const target = draftObjectPosition(object.target);
-  const textPos = draftObjectPosition(object.anchor);
-  const leader = `<line x1="${textPos.x}" y1="${textPos.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
+  const { textPosition, target } = geometry;
+  const leader = `<line x1="${textPosition.x}" y1="${textPosition.y}" x2="${target.x}" y2="${target.y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>`;
   const fontSize = typographyFontSize(object.typographyToken ?? "body", profile);
   const content =
     profile.id === "textbook-monochrome-v1"
@@ -712,17 +752,19 @@ function renderDraftCallout(
           object.content as unknown as RichTextDocumentInput,
           profile,
         );
-  return `<g data-object-id="${object.id}" data-kind="draft-callout">${leader}<text x="${textPos.x}" y="${textPos.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${textPos.x} ${textPos.y})" font-size="${fontSize}">${content}</text></g>`;
+  return `<g data-object-id="${object.id}" data-kind="draft-callout"${unresolved}>${leader}<text x="${textPosition.x}" y="${textPosition.y}" text-anchor="${object.alignment}" transform="rotate(${object.rotation} ${textPosition.x} ${textPosition.y})" font-size="${fontSize}">${content}</text></g>`;
 }
 
 function renderFloatingSymbol(
   object: Extract<DraftingObject, { kind: "floating-symbol" }>,
+  geometry: Extract<ResolvedDraftingGeometry, { kind: "floating-symbol" }>,
   resolver: SymbolResolver,
   profile: SchematicStyleProfile,
+  unresolved: string,
 ): string {
   const resolved = resolver.resolve(object.symbolId);
   if (!resolved) return "";
-  const position = draftObjectPosition(object.anchor);
+  const position = geometry.position;
   const rotation = object.transform.rotation;
   const mirror = object.transform.mirror === "x" ? " scale(-1 1)" : "";
   const hidden = resolved.variant?.hiddenPinNames ?? [];
@@ -733,7 +775,7 @@ function renderFloatingSymbol(
     additional,
     profile,
   );
-  return `<g data-object-id="${object.id}" data-kind="draft-floating-symbol" data-symbol-id="${escapeXml(object.symbolId)}"><g transform="translate(${position.x} ${position.y}) rotate(${rotation})${mirror}">${body}</g></g>`;
+  return `<g data-object-id="${object.id}" data-kind="draft-floating-symbol"${unresolved} data-symbol-id="${escapeXml(object.symbolId)}"><g transform="translate(${position.x} ${position.y}) rotate(${rotation})${mirror}">${body}</g></g>`;
 }
 
 function flatText(runs: unknown[]): string {

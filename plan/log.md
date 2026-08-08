@@ -1980,3 +1980,22 @@ Editing System work.
 - Commit status: ready for
   `docs(drafting): freeze runtime completion contract and capability matrix (WP-R0)`
   and `feat(derived): resolve drafting object geometry (WP-R1)`.
+## 2026-08-08 - WP-R2: renderer consumes unified drafting geometry + bounds
+
+- Target: make the formal SVG renderer and export bounds consume the single
+  resolveDraftingObjectGeometry entry, and include drafting bounds so callouts
+  and floating symbols outside the circuit are not clipped.
+- Changed areas: render-svg render.ts renderDraftingLayer now resolves each
+  object's geometry once and passes it to kind-specific renderers; the
+  draftObjectPosition helper (which branched on free/fallback) is removed;
+  deriveBounds pushes every drafting object's resolved bounds into the export
+  viewBox; unresolved anchors still export using the fallback and carry
+  data-anchor-resolved="false" without changing the visual style; guides never
+  enter formal output or bounds.
+- Tests: drafting-render.test adds drafting-bounds-in-viewBox and
+  fallback-export-with-diagnostic cases; phase-5/route-attached/text goldens
+  regenerated (viewBox now covers drafting content).
+- Validation: full suite 263/263; workspace typecheck clean; all golden --check
+  scripts pass; `git diff --check` clean.
+- Commit status: ready for
+  `fix(render): consume unified drafting geometry and include drafting bounds (WP-R2)`.

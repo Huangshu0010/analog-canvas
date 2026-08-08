@@ -139,4 +139,62 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(svg).toContain('data-kind="draft-floating-symbol"');
     expect(svg).toContain('data-symbol-id="resistor"');
   });
+
+  it("includes drafting bounds in the export viewBox (WP-R2)", () => {
+    const document = createEmptyDocument("doc", "Bounds");
+    document.drafting = {
+      objects: [
+        {
+          id: "cl-1",
+          kind: "construction-line",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 0, y: 0 } },
+          points: [
+            { x: 50, y: 50 },
+            { x: 500, y: 300 },
+          ],
+          lineStyle: "dashed",
+        },
+      ],
+      guides: [],
+    };
+    const svg = renderDocumentSvg(document, resolver);
+    // viewBox must cover the line's padded bounds.
+    const viewBox = svg.match(/viewBox="([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+)"/);
+    expect(viewBox).toBeTruthy();
+    const numbers = viewBox!.slice(1).map(Number);
+    const [x, y, width, height] = numbers as [number, number, number, number];
+    expect(x).toBeLessThanOrEqual(44);
+    expect(y).toBeLessThanOrEqual(44);
+    expect(x + width).toBeGreaterThanOrEqual(512);
+    expect(y + height).toBeGreaterThanOrEqual(312);
+  });
+
+  it("exports a fallback-anchored object with data-anchor-resolved=false (WP-R2)", () => {
+    const document = createEmptyDocument("doc", "Fallback");
+    document.drafting = {
+      objects: [
+        {
+          id: "t1",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: {
+            kind: "object",
+            objectId: "missing",
+            localOffset: { x: 0, y: 0 },
+            fallbackPosition: { x: 40, y: 40 },
+          },
+          content: { runs: [{ kind: "text", value: "lost" }] },
+          alignment: "start",
+          rotation: 0,
+        },
+      ],
+      guides: [],
+    };
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('data-anchor-resolved="false"');
+    expect(svg).toContain(">lost</text>");
+  });
 });
