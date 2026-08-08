@@ -1,5 +1,6 @@
 export * from "./anchor.js";
 export * from "./connectivity.js";
+export * from "./drafting-geometry.js";
 export * from "./endpoint.js";
 export * from "./routes.js";
 export * from "./stretch.js";
