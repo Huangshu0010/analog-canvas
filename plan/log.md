@@ -2127,3 +2127,19 @@ Editing System work.
   relevant browser E2E scenarios; both MOS and Razavi generated-asset checks;
   `git diff --check` clean.
 - Commit status: ready for `fix(razavi): unify default MOS presentation`.
+
+## 2026-08-08 - Razavi existing MOS presentation migration
+
+- Target: apply the Razavi visual contract to eligible legacy MOS instances,
+  not just newly placed components.
+- Changed areas: applying (or reapplying) Razavi now batches canonical
+  NMOS/PMOS visual-variant edits in the same undoable transaction. An absent
+  bulk net or supply bulk (`0`, GND, VSS, VDD, VDDA, VSSA, VGND, VPWR) is shown
+  in the three-terminal textbook view; an independent body-bias net remains
+  four-terminal and electrically visible.
+- Tests: focused App test validates the classifier; browser E2E opens a legacy
+  project, applies Razavi, saves it, and proves an eligible PMOS migrated while
+  an NMOS on local Vbody did not. Focused 5-test Vitest, editor build, and 3
+  relevant browser tests passed; `git diff --check` clean.
+- Commit status: ready for
+  `fix(razavi): migrate eligible existing MOS to textbook view`.

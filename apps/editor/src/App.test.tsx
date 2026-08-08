@@ -6,7 +6,11 @@ import { serializeProject } from "@icm/model";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { App, defaultRazaviSymbolVariantId } from "./App";
+import {
+  App,
+  defaultRazaviSymbolVariantId,
+  razaviMosPresentationEdits,
+} from "./App";
 import { createDemoProject } from "./demo-project";
 import { createRoutingDemoProject } from "./routing-demo";
 
@@ -15,6 +19,62 @@ describe("editor shell", () => {
     expect(defaultRazaviSymbolVariantId("nmos")).toBe("textbook-3terminal");
     expect(defaultRazaviSymbolVariantId("pmos")).toBe("textbook-3terminal");
     expect(defaultRazaviSymbolVariantId("resistor")).toBeUndefined();
+  });
+
+  it("migrates only implicit-bulk MOS into the Razavi textbook view", () => {
+    const document = createEmptyProject("razavi-migration", "Razavi")
+      .documents[0]!;
+    document.instances.push(
+      {
+        id: "Mimplicit",
+        symbolId: "nmos",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "Msupply",
+        symbolId: "pmos",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "MbodyBias",
+        symbolId: "nmos",
+        placement: null,
+        properties: {},
+      },
+    );
+    document.nets.push(
+      {
+        id: "net-vdd",
+        name: "VDD",
+        scope: "global",
+        terminals: [{ instanceId: "Msupply", pinName: "B" }],
+        ports: [],
+      },
+      {
+        id: "net-body-bias",
+        name: "Vbody",
+        scope: "local",
+        terminals: [{ instanceId: "MbodyBias", pinName: "B" }],
+        ports: [],
+      },
+    );
+
+    expect(razaviMosPresentationEdits(document)).toEqual([
+      {
+        kind: "set_instance_symbol",
+        instanceId: "Mimplicit",
+        symbolId: "nmos",
+        symbolVariantId: "textbook-3terminal",
+      },
+      {
+        kind: "set_instance_symbol",
+        instanceId: "Msupply",
+        symbolId: "pmos",
+        symbolVariantId: "textbook-3terminal",
+      },
+    ]);
   });
 
   it("renders an empty project without owning model state", () => {

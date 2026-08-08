@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
@@ -149,6 +150,54 @@ test("authors components and connectivity manually from an empty canvas", async 
   await page.keyboard.press("Control+z");
   await expect(page.getByTestId("revision")).toHaveText("6");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+});
+
+test("migrates only eligible existing MOS when Razavi is applied", async ({
+  page,
+}) => {
+  const project = JSON.parse(
+    readFileSync(
+      resolve(
+        process.cwd(),
+        "fixtures/projects/phase-1-manual/project.icproj.json",
+      ),
+      "utf8",
+    ),
+  ) as {
+    documents: Array<{
+      instances: Array<{ id: string; symbolVariantId?: string }>;
+      nets: Array<unknown>;
+    }>;
+  };
+  const document = project.documents[0]!;
+  for (const instance of document.instances) delete instance.symbolVariantId;
+  document.nets.push({
+    id: "net-body-bias",
+    name: "Vbody",
+    scope: "local",
+    terminals: [{ instanceId: "M1", pinName: "B" }],
+    ports: [],
+  });
+
+  await page.goto("/");
+  await openMenu(page, "File");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "legacy-mos.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "Manual Editor Demo",
+  );
+  await clickCommand(page, "Style", "Razavi textbook");
+
+  const projectBytes = await downloadBytes(page, "File", "Save Project");
+  const saved = JSON.parse(projectBytes.toString("utf8")) as typeof project;
+  const instances = new Map(
+    saved.documents[0]!.instances.map((instance) => [instance.id, instance]),
+  );
+  expect(instances.get("M1")?.symbolVariantId).toBeUndefined();
+  expect(instances.get("M2")?.symbolVariantId).toBe("textbook-3terminal");
 });
 
 test("places free wire bends and finishes at an arbitrary grid point", async ({

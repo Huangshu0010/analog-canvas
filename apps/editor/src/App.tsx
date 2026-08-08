@@ -339,6 +339,16 @@ const RAZAVI_DEFAULT_SYMBOL_VARIANTS: Readonly<Record<string, string>> = {
 };
 
 const RAZAVI_RETIRED_PALETTE_SYMBOL_IDS = new Set(["nmos3", "pmos3"]);
+const RAZAVI_IMPLICIT_BULK_NET_NAMES = new Set([
+  "0",
+  "gnd",
+  "vss",
+  "vdd",
+  "vssa",
+  "vdda",
+  "vgnd",
+  "vpwr",
+]);
 
 /**
  * Razavi is the sole current presentation family. Canonical MOS definitions
@@ -349,6 +359,51 @@ export function defaultRazaviSymbolVariantId(
   symbolId: string,
 ): string | undefined {
   return RAZAVI_DEFAULT_SYMBOL_VARIANTS[symbolId];
+}
+
+function isRazaviImplicitBulkNet(
+  document: SchematicDocument,
+  instanceId: string,
+) {
+  const bulkNet = document.nets.find((net) =>
+    net.terminals.some(
+      (terminal) =>
+        terminal.instanceId === instanceId && terminal.pinName === "B",
+    ),
+  );
+  if (!bulkNet) return true;
+  return [bulkNet.name, bulkNet.id]
+    .filter((name): name is string => Boolean(name))
+    .map((name) => name.toLowerCase().replaceAll(/[^a-z0-9]/gu, ""))
+    .some((name) => RAZAVI_IMPLICIT_BULK_NET_NAMES.has(name));
+}
+
+/**
+ * A style application is also a controlled visual migration. Only an absent
+ * bulk connection or an explicitly recognized supply connection is implicit;
+ * independent body-bias remains visible as a four-terminal MOS.
+ */
+export function razaviMosPresentationEdits(
+  document: SchematicDocument,
+): SchematicEdit[] {
+  return document.instances.flatMap((instance) => {
+    const symbolVariantId = defaultRazaviSymbolVariantId(instance.symbolId);
+    if (
+      !symbolVariantId ||
+      instance.symbolVariantId !== undefined ||
+      !isRazaviImplicitBulkNet(document, instance.id)
+    ) {
+      return [];
+    }
+    return [
+      {
+        kind: "set_instance_symbol",
+        instanceId: instance.id,
+        symbolId: instance.symbolId,
+        symbolVariantId,
+      },
+    ];
+  });
 }
 
 function SymbolThumbnail({ symbol }: { symbol: SymbolDefinition }) {
