@@ -111,6 +111,17 @@ but their coordinates are returned only with an explicit
 `includeEditorGuides: true`, so editor noise is not mistaken for circuit
 content.
 
+Resolved drafting geometry (position, rotation, endpoints, bounds, and anchor
+diagnostics) is derived at Snapshot time from the single
+`resolveDraftingObjectGeometry` entry in `@icm/derived`; it is never persisted
+and never mixed into the DraftingObject schema. The `snapshot` request accepts
+`includeEditorGuides?: boolean` (default `false`); when `true`, each guide's
+`axis` and `coordinate` are included alongside its `id`/`visible`/`locked`.
+Guides never enter formal render/export and never affect the topology hash.
+NOTE: the `includeEditorGuides` request option and the resolved-geometry fields
+in the drafting response are implemented by WP-R4 of the Drafting Runtime
+Completion work; until then the response carries raw drafting objects only.
+
 Instance-pin `netId` and Net `terminals` are bidirectional views of one validated
 Document and must agree. Arrays use deterministic ID/order rules defined by the
 generated schema tests. `electricalTopologyHash` covers only electrical facts

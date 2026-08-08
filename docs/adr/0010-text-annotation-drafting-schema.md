@@ -266,6 +266,61 @@ floating symbol referencing a non-`decorative` entry, or a `decorative` entry
 whose definition contains a terminal, is rejected by the Edit Engine, not by
 the model schema.
 
+## Runtime completion status (WP-R0)
+
+This section records the honest runtime status of the drafting system and the
+single derived-geometry contract, per the Drafting Runtime Completion review.
+It supersedes any earlier implication that "the editor tools are complete".
+
+### Resolved geometry is derived-only
+
+A `SchematicDocument` persists only anchor references, `fallbackPosition`,
+`localOffset`, route segment/t/normal offset, and DraftingObject content. The
+following are **always runtime-computed** and never serialized back to the
+Project: actual position, rotation, endpoints, bounds, anchor-invalid status,
+and anchor diagnostics. Writing resolved positions back would create a second
+truth after the target moves. `electricalTopologyHash` is unchanged by drafting.
+
+### Single geometry entry
+
+All consumers resolve DraftingObject geometry through ONE entry:
+
+```text
+resolveDraftingObjectGeometry(document, symbolResolver, draftingObject)
+  -> ResolvedDraftingGeometry   // in @icm/derived
+```
+
+Renderer, editor overlay, and Agent Snapshot consume only this result. No
+consumer re-implements anchor math, and no consumer may branch on
+`anchor.kind === "free" ? anchor.position : anchor.fallbackPosition` in
+production code. `resolveVisualAnchor` remains the shared per-anchor primitive
+that the drafting resolver composes.
+
+### Per-object capability matrix
+
+| Object | Rendered | Selected | Created | Moved | Endpoint-adjusted | Deleted | Anchor | Snapshot | Export bounds |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| text | yes | yes | yes | yes | N/A | yes | yes | yes | pending R2 |
+| construction-line | yes | partial | yes | no | no | partial | N/A | yes | pending R2 |
+| arrow | yes | no | yes | no | no | no | yes | yes | pending R2 |
+| leader | yes | no | no | no | no | no | yes | yes | pending R2 |
+| callout | yes | no | no | no | no | no | yes | yes | pending R2 |
+| floating-symbol | yes | no | yes | no | N/A | no | yes | yes | pending R2 |
+| guide | editor-only | yes | yes | yes | N/A | yes | N/A | opt-in | never |
+
+Legend: `yes` = complete, `partial` = command exists but interaction is
+incomplete, `no` = not implemented, `N/A` = not applicable, `pending R2` =
+export bounds for drafting objects are implemented in WP-R2.
+
+### Honest status
+
+- Model: **complete** (schema-2, no further kind expansion).
+- Edit Engine typed transactions: **complete**.
+- Basic renderer: **complete** (all six kinds emit SVG).
+- Runtime / editor interaction: **incomplete** — several kinds can be created
+  by command but cannot yet be selected, moved, or endpoint-adjusted; that is
+  the Drafting Runtime Completion work (WP-R2..WP-R6), not a finished GUI.
+
 ## Validation
 
 - An old (schema 1) Project migrates deterministically to schema 2; re-running

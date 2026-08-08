@@ -1946,3 +1946,37 @@ Editing System work.
   or errors; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): keep topology hashing browser compatible`.
+## 2026-08-08 - WP-R0 + WP-R1: drafting runtime completion (contract + unified geometry)
+
+- Target: start the Drafting Runtime Completion project per the review: freeze
+  the derived-only geometry contract and add the single
+  resolveDraftingObjectGeometry entry, so renderer/editor/Snapshot stop each
+  re-implementing anchor math.
+- WP-R0: ADR 0010 gains a "Runtime completion status" section with the
+  per-object capability matrix (honest: model/Edit Engine/basic renderer
+  complete; runtime/editor interaction incomplete) and the derived-only
+  geometry rule; agent-api spec documents includeEditorGuides (default false)
+  and notes the resolved-geometry fields land in WP-R4.
+- WP-R1: packages/derived/src/drafting-geometry.ts adds DraftingDiagnostic
+  (code/severity/anchorRole/targetObjectIds), ResolvedDraftingGeometry (a
+  discriminated union per kind with position(s)/bounds/diagnostics), and
+  resolveDraftingObjectGeometry(document, resolver, object) reusing
+  resolveVisualAnchor for every anchor field (text->anchor, arrow->from+to,
+  leader/callout->anchor+target, floating-symbol->anchor,
+  construction-line->points). Invalid anchors use fallbackPosition, emit a
+  warning, never guess a new route, never mutate the Document. Bounds rules per
+  kind with stroke/arrowhead padding; floating-symbol bounds from the resolved
+  symbol viewBox.
+- Tests: 8 drafting-geometry tests (free text, object-anchor follow on instance
+  move, missing target fallback+diagnostic, route stretch follow + invalid
+  segment fallback, arrow dual-anchor, construction-line bounds, unresolved
+  floating symbol, determinism).
+- Dirty-state note: a concurrent worker committed
+  `fix(editor): keep topology hashing browser compatible` (topology-hash.ts)
+  while this target ran; it does not overlap drafting-geometry.ts or the owned
+  docs. This target's changes are staged independently.
+- Validation: full suite 261/261; workspace typecheck clean; `git diff --check`
+  clean.
+- Commit status: ready for
+  `docs(drafting): freeze runtime completion contract and capability matrix (WP-R0)`
+  and `feat(derived): resolve drafting object geometry (WP-R1)`.
