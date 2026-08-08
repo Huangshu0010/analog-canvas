@@ -400,7 +400,6 @@ function documentSnapshot(
           return {
             object: structuredClone(object),
             resolvedGeometry: geometry,
-            bounds: geometry.bounds,
             diagnostics: geometry.diagnostics,
           };
         }),

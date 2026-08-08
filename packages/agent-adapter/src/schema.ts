@@ -1,11 +1,13 @@
 import {
   AnnotationSchema,
+  DraftingDiagnosticSchema,
   DraftingObjectSchema,
   LayoutConstraintSchema,
   LayoutGroupSchema,
   JunctionRoleSchema,
   PlacementSchema,
   PointSchema,
+  ResolvedDraftingGeometrySchema,
   PresentationIntentSchema,
   RectSchema,
   RouteEndpointSchema,
@@ -276,16 +278,12 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
     objects: z.array(
       z.strictObject({
         object: DraftingObjectSchema,
-        resolvedGeometry: z.unknown(),
-        // Derived bounds may be fractional (e.g. rich-text layout estimates);
-        // use a float-tolerant rect rather than the integer RectSchema.
-        bounds: z.strictObject({
-          x: z.number(),
-          y: z.number(),
-          width: z.number(),
-          height: z.number(),
-        }),
-        diagnostics: z.array(z.unknown()),
+        // P1: strict typed contract — no z.unknown. The derived geometry and
+        // its diagnostics are validated by the shared model schemas; the entry
+        // carries only resolvedGeometry (which includes bounds), not a
+        // duplicate top-level bounds.
+        resolvedGeometry: ResolvedDraftingGeometrySchema,
+        diagnostics: z.array(DraftingDiagnosticSchema),
       }),
     ),
     guides: z.array(

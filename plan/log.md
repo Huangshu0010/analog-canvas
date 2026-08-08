@@ -2198,3 +2198,18 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): accurate floating-symbol and multi-line text bounds (P1 bounds)`.
+## 2026-08-08 - P1: strict Snapshot geometry schema (no z.unknown, no duplicate bounds)
+
+- Target: fix the review P1 that Snapshot resolvedGeometry/diagnostics were
+  z.unknown and bounds appeared both at entry level and inside resolvedGeometry.
+- Changed areas: packages/model/src/drafting-geometry-schema.ts defines and
+  exports ResolvedDraftingGeometrySchema (a discriminated union per kind with
+  typed position/rotation/bounds/diagnostics) and DraftingDiagnosticSchema
+  (typed code/severity/anchorRole/targetObjectIds); agent-adapter schema.ts
+  references them and drops the redundant top-level bounds (resolvedGeometry
+  carries bounds); snapshot.ts no longer emits entry.bounds. OpenAPI/JSON
+  artifacts regenerated with a typed resolvedGeometry.
+- Validation: full suite 273/273; agent-api-artifacts --check passes; workspace
+  typecheck clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(agent-api): strict drafting geometry schema in Snapshot (P1 typed)`.
