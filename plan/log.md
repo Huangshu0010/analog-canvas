@@ -2554,3 +2554,16 @@ Editing System work.
   iteration request.
 - Commit status: ready for
   `fix(razavi): trim PMOS source arrow support`.
+
+## 2026-08-09 - PMOS arrow mirrors NMOS
+
+- Target: replace the inconsistent PMOS source-arrow construction with the
+  mirrored NMOS arrow geometry while preserving PMOS placement and pins.
+- Changed areas: PMOS arrow now has NMOS's 16 px length and 14 px base width;
+  its support begins at the arrow tip and never extends beyond it.
+- Validation: MOS/catalog generation and Symbols build passed. PMOS diff was
+  0.6493 binary IoU and 0.6052 soft IoU. The score declined because the old
+  reference crop favors the previously rejected geometry; visual direction was
+  explicitly selected by the user and takes precedence.
+- Commit status: ready for
+  `fix(razavi): mirror PMOS arrow from NMOS`.

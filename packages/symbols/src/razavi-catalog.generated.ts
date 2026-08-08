@@ -246,7 +246,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "fa1684552f32bdcfb36d9acc11a08d82a37278b8dbee66df152e1d8b3aee0e0f",
+      "17cfff009afc6978d712fce222e9d7694a9fa3fbab3eded73efa676813ffdaf1",
   },
   {
     symbolId: "pmos3",
@@ -273,7 +273,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "e2ce65c12414cebb71068d925903e3ff099d5ea29a03c18c020942a7149d389a",
+      "eed4bb9335774577088642c3979c8821645bac41e3075dac40667fb664a853e1",
   },
   {
     symbolId: "pnp",
@@ -1805,7 +1805,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           {
             kind: "line",
             from: {
-              x: 4.186047,
+              x: -2.790698,
               y: -7.122093,
             },
             to: {
@@ -1827,12 +1827,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
                 y: -7.122093,
               },
               {
-                x: 4.186047,
+                x: 6.511628,
                 y: -11.19186,
               },
               {
-                x: 4.186047,
-                y: -2.47093,
+                x: 6.511628,
+                y: -3.052326,
               },
             ],
             fill: "foreground",
@@ -2028,7 +2028,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 4.186047,
+          x: -2.790698,
           y: -7.122093,
         },
         to: {
@@ -2050,12 +2050,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
             y: -7.122093,
           },
           {
-            x: 4.186047,
+            x: 6.511628,
             y: -11.19186,
           },
           {
-            x: 4.186047,
-            y: -2.47093,
+            x: 6.511628,
+            y: -3.052326,
           },
         ],
         fill: "foreground",
