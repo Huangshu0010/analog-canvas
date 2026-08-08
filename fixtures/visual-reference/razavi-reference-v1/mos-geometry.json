@@ -105,12 +105,12 @@
       },
       "sourceArrowPx": {
         "support": {
-          "from": { "x": 522, "y": 70.5 },
+          "from": { "x": 536.5, "y": 70.5 },
           "to": { "x": 545, "y": 70.5 }
         },
-        "tip": { "x": 522, "y": 70.5 },
-        "baseTop": { "x": 538, "y": 63.5 },
-        "baseBottom": { "x": 538, "y": 77.5 }
+        "tip": { "x": 520.5, "y": 70.5 },
+        "baseTop": { "x": 536.5, "y": 63.5 },
+        "baseBottom": { "x": 536.5, "y": 77.5 }
       },
       "bulkExtensionPx": {
         "supports": [

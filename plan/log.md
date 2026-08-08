@@ -2567,3 +2567,14 @@ Editing System work.
   explicitly selected by the user and takes precedence.
 - Commit status: ready for
   `fix(razavi): mirror PMOS arrow from NMOS`.
+
+## 2026-08-09 - PMOS arrow gate contact
+
+- Target: make the PMOS triangle tip touch its Gate bar while confining the
+  support segment to the arrow-tail/channel side.
+- Changed areas: set tip to the Gate bar edge; retained the NMOS-matched 16 px
+  arrow length and 14 px base; moved support to begin at the tail.
+- Validation: MOS/catalog generation checks, Symbols build, and
+  `git diff --check` passed. No visual inspection was performed.
+- Commit status: ready for
+  `fix(razavi): join PMOS arrow to gate bar`.
