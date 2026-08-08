@@ -2032,7 +2032,7 @@ export function App({ project: initialProject }: AppProps) {
   // transaction on pointerup, so a long drag is a single undoable revision
   // (not one revision per mouse sample). Escape/pointercancel discards it.
   function beginDraftingDrag(
-    event: ReactPointerEvent<SVGRectElement>,
+    event: ReactPointerEvent<SVGElement>,
     object: Extract<DraftingObject, { kind: "text" }>,
   ): void {
     if (event.button !== 0 || object.locked) return;
@@ -4193,9 +4193,11 @@ export function App({ project: initialProject }: AppProps) {
               );
             })}
             {(document.drafting?.objects ?? []).map((object) => {
-              // WP-R5: every drafting object gets a selectable/deletable hit
-              // box derived from the shared geometry; text is additionally
-              // draggable by its free anchor.
+              // WP-R5/P1: every drafting object gets a selectable/deletable hit
+              // shape derived from the shared geometry. P1: use the object's
+              // actual shape (stroke polyline/line for lines and arrows) instead
+              // of a full bounding rect, so large leader/callout boxes do not
+              // block the canvas underneath.
               const geometry = resolveDraftingObjectGeometry(
                 document,
                 resolver,
@@ -4204,12 +4206,80 @@ export function App({ project: initialProject }: AppProps) {
               const isText = object.kind === "text";
               const draggableText =
                 isText && object.anchor.kind === "free" && !object.locked;
-              // P0-2: while dragging, the hit box follows the live preview so
-              // the object appears to move without committing any revision.
-              const drag =
-                draftingDragPreview?.objectId === object.id
-                  ? draftingDragPreview
-                  : null;
+              const drag = draftingDragPreview?.objectId === object.id
+                ? draftingDragPreview
+                : null;
+              const selected = selectedDraftingId === object.id
+                ? "annotation-hit selected"
+                : "annotation-hit";
+              const onDown = (event: ReactPointerEvent<SVGElement>): void => {
+                if (draggableText) {
+                  beginDraftingDrag(
+                    event,
+                    object as Extract<DraftingObject, { kind: "text" }>,
+                  );
+                } else {
+                  event.stopPropagation();
+                  selectDraftingObject(object.id);
+                }
+              };
+              if (object.kind === "construction-line") {
+                const points = object.points
+                  .map((point) => `${point.x},${point.y}`)
+                  .join(" ");
+                return (
+                  <polyline
+                    key={`drafting-hit-${object.id}`}
+                    data-testid={`drafting-hit-${object.id}`}
+                    className={selected}
+                    points={points}
+                    fill="none"
+                    onPointerDown={onDown}
+                  />
+                );
+              }
+              if (object.kind === "arrow" && geometry.kind === "arrow") {
+                return (
+                  <line
+                    key={`drafting-hit-${object.id}`}
+                    data-testid={`drafting-hit-${object.id}`}
+                    className={selected}
+                    x1={geometry.from.x}
+                    y1={geometry.from.y}
+                    x2={geometry.to.x}
+                    y2={geometry.to.y}
+                    onPointerDown={onDown}
+                  />
+                );
+              }
+              if (object.kind === "leader" && geometry.kind === "leader") {
+                return (
+                  <line
+                    key={`drafting-hit-${object.id}`}
+                    data-testid={`drafting-hit-${object.id}`}
+                    className={selected}
+                    x1={geometry.anchor.x}
+                    y1={geometry.anchor.y}
+                    x2={geometry.target.x}
+                    y2={geometry.target.y}
+                    onPointerDown={onDown}
+                  />
+                );
+              }
+              if (object.kind === "callout" && geometry.kind === "callout") {
+                return (
+                  <line
+                    key={`drafting-hit-${object.id}`}
+                    data-testid={`drafting-hit-${object.id}`}
+                    className={selected}
+                    x1={geometry.textPosition.x}
+                    y1={geometry.textPosition.y}
+                    x2={geometry.target.x}
+                    y2={geometry.target.y}
+                    onPointerDown={onDown}
+                  />
+                );
+              }
               const hitBounds = drag
                 ? {
                     ...geometry.bounds,
@@ -4225,23 +4295,9 @@ export function App({ project: initialProject }: AppProps) {
                 <rect
                   key={`drafting-hit-${object.id}`}
                   data-testid={`drafting-hit-${object.id}`}
-                  className={
-                    selectedDraftingId === object.id
-                      ? "annotation-hit selected"
-                      : "annotation-hit"
-                  }
+                  className={selected}
                   {...hitBounds}
-                  onPointerDown={(event) => {
-                    if (draggableText) {
-                      beginDraftingDrag(
-                        event,
-                        object as Extract<DraftingObject, { kind: "text" }>,
-                      );
-                    } else {
-                      event.stopPropagation();
-                      selectDraftingObject(object.id);
-                    }
-                  }}
+                  onPointerDown={onDown}
                 />
               );
             })}

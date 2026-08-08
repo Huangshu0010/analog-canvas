@@ -202,3 +202,31 @@ test("drag-creates an arrow (P1 tools)", async ({ page }) => {
     page.locator('[data-layer="drafting"] g[data-kind="draft-arrow"]'),
   ).toHaveCount(1);
 });
+
+// P1: shape-based hit — a construction line selects via its stroke and does
+// not block a click below its bounds rect.
+test("construction line uses stroke-based hit, not a blocking rect (P1 hit)", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "More", "Construction line tool (drag)");
+  await dragCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  // The hit element is a polyline (stroke-hit), not a full rect.
+  const hit = page.getByTestId(/^drafting-hit-construction-/);
+  await expect(hit).toHaveCount(1);
+  const tag = await hit.evaluate((element) => element.tagName);
+  expect(tag).toBe("polyline");
+
+  // Clicking on the line selects the drafting object.
+  const line = page.locator(
+    '[data-layer="drafting"] polyline[data-kind="construction-line"]',
+  );
+  const box = await line.boundingBox();
+  if (!box) throw new Error("Construction line is not measurable");
+  await page.mouse.click(box.x + 40, box.y + box.height / 2);
+  await expect(
+    page.locator('[data-testid^="drafting-hit-construction-"].selected'),
+  ).toHaveCount(1);
+});

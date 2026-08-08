@@ -2290,3 +2290,18 @@ Editing System work.
   artifacts regenerated; `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): return precise invalid-route-segment diagnostics (P2)`.
+## 2026-08-08 - P1: shape-based drafting hit targets
+
+- Target: fix the review P1 that every drafting object used a full bounding-rect
+  hit area (pointer-events all), blocking canvas clicks under long
+  leader/callout/arrow boxes.
+- Changed areas: apps/editor drafting hit rendering now uses the object's
+  actual shape: stroke polyline for construction lines, stroke line for
+  arrows/leaders/callouts (shaft), and a rect only for text/floating-symbol
+  (whose natural hit is a box). beginDraftingDrag accepts any SVG element.
+- E2E: a new test proves a construction line selects via a polyline stroke hit
+  and the element tag is polyline, not rect.
+- Validation: full suite 274/274; drafting E2E 7/7; editor build succeeds;
+  workspace typecheck clean; `git diff --check` clean.
+- Commit status: ready for
+  `fix(editor): shape-based drafting hit targets (P1 hit)`.
