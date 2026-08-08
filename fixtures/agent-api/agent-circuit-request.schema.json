@@ -265,6 +265,9 @@
         },
         "includeSourceSpans": {
           "type": "boolean"
+        },
+        "includeEditorGuides": {
+          "type": "boolean"
         }
       },
       "required": [

@@ -2018,3 +2018,21 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): preserve rich text through lossless markup editing (WP-R3)`.
+## 2026-08-08 - WP-R4: Agent Snapshot exposes resolved drafting geometry
+
+- Target: let the Agent read the derived visual facts (resolved position/
+  bounds/diagnostics) instead of re-deriving anchors, and support
+  includeEditorGuides per the agent-api spec.
+- Changed areas: agent-adapter schema.ts adds includeEditorGuides to the
+  snapshot request (default false) and wraps each drafting object in
+  { object, resolvedGeometry, bounds, diagnostics } (float-tolerant bounds;
+  guides gain optional axis/coordinate); snapshot.ts computes resolvedGeometry
+  via the single resolveDraftingObjectGeometry entry and includes guide
+  coordinates only when the request opts in; service.ts forwards
+  includeEditorGuides; Agent API artifacts regenerated.
+- Tests: snapshot.test adds resolved-geometry-matches-persisted-anchor and
+  guide-coordinates-hidden-by-default / opt-in cases.
+- Validation: full suite 267/267; agent-api-artifacts --check passes; workspace
+  typecheck clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(agent-api): expose resolved drafting geometry and includeEditorGuides (WP-R4)`.

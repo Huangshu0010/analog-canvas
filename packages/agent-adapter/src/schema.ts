@@ -98,6 +98,9 @@ export const AgentSnapshotRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("snapshot"),
   documentId: StableIdSchema,
   includeSourceSpans: z.boolean().optional(),
+  // ADR 0010 WP-R4: include guide axis/coordinate in the response. Default
+  // false so editor noise is not mistaken for circuit content.
+  includeEditorGuides: z.boolean().optional(),
 });
 export const AgentTransactRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("transact"),
@@ -264,17 +267,34 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
   routes: z.array(AgentSnapshotRouteSchema),
   junctions: z.array(AgentSnapshotJunctionSchema),
   annotations: z.array(AnnotationSchema),
-  // ADR 0010: drafting layer in the Agent Snapshot. Objects carry their
-  // canonical RichText AST and VisualAnchor via the shared DraftingObject
-  // schema; guides expose only id/visible/locked by default (coordinates are
-  // opt-in via includeEditorGuides, which is not exposed in v2.0).
+  // ADR 0010 WP-R4: each drafting object carries its canonical shape plus the
+  // derived resolved geometry (position(s)/bounds/diagnostics) computed from
+  // the single resolveDraftingObjectGeometry entry. Guides expose
+  // id/visible/locked by default; axis/coordinate are included only when the
+  // request sets includeEditorGuides.
   drafting: z.strictObject({
-    objects: z.array(DraftingObjectSchema),
+    objects: z.array(
+      z.strictObject({
+        object: DraftingObjectSchema,
+        resolvedGeometry: z.unknown(),
+        // Derived bounds may be fractional (e.g. rich-text layout estimates);
+        // use a float-tolerant rect rather than the integer RectSchema.
+        bounds: z.strictObject({
+          x: z.number(),
+          y: z.number(),
+          width: z.number(),
+          height: z.number(),
+        }),
+        diagnostics: z.array(z.unknown()),
+      }),
+    ),
     guides: z.array(
       z.strictObject({
         id: StableIdSchema,
         visible: z.boolean(),
         locked: z.boolean(),
+        axis: z.enum(["horizontal", "vertical"]).optional(),
+        coordinate: z.number().optional(),
       }),
     ),
   }),

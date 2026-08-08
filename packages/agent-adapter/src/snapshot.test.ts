@@ -222,4 +222,83 @@ describe("Agent Document Snapshot", () => {
     });
     expect(after.electricalTopologyHash).not.toBe(base.electricalTopologyHash);
   });
+
+  it("exposes resolved drafting geometry matching the persisted anchor (WP-R4)", () => {
+    const project = fixtureProject();
+    const document = project.documents[0]!;
+    document.drafting = {
+      objects: [
+        {
+          id: "d1",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: {
+            kind: "object",
+            objectId: document.instances[0]!.id,
+            localOffset: { x: 10, y: 5 },
+            fallbackPosition: { x: 0, y: 0 },
+          },
+          content: { runs: [{ kind: "text", value: "note" }] },
+          alignment: "start",
+          rotation: 0,
+        },
+      ],
+      guides: [],
+    };
+    const snapshot = buildAgentSessionSnapshot({ project, document, resolver });
+    const entry = snapshot.document.drafting.objects[0]!;
+    expect(entry.object.id).toBe("d1");
+    const geometry = entry.resolvedGeometry as {
+      kind: string;
+      position?: { x: number; y: number };
+    };
+    expect(geometry.kind).toBe("text");
+    // The resolved position = instance placement + localOffset.
+    const instance = document.instances[0]!.placement!.position;
+    expect(geometry.position).toEqual({
+      x: instance.x + 10,
+      y: instance.y + 5,
+    });
+    // The persisted anchor is unchanged (still references the instance).
+    expect(entry.object.anchor).toMatchObject({
+      kind: "object",
+      objectId: document.instances[0]!.id,
+    });
+  });
+
+  it("hides guide coordinates by default and includes them on includeEditorGuides (WP-R4)", () => {
+    const project = fixtureProject();
+    const document = project.documents[0]!;
+    document.drafting = {
+      objects: [],
+      guides: [
+        { id: "g1", axis: "vertical", coordinate: 120, locked: false, visible: true },
+      ],
+    };
+    const defaultSnapshot = buildAgentSessionSnapshot({
+      project,
+      document,
+      resolver,
+    });
+    expect(defaultSnapshot.document.drafting.guides[0]).toEqual({
+      id: "g1",
+      visible: true,
+      locked: false,
+    });
+
+    const optIn = buildAgentSessionSnapshot({
+      project,
+      document,
+      resolver,
+      includeEditorGuides: true,
+    });
+    expect(optIn.document.drafting.guides[0]).toEqual({
+      id: "g1",
+      visible: true,
+      locked: false,
+      axis: "vertical",
+      coordinate: 120,
+    });
+  });
 });

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
   diagnoseVisualQuality,
   electricalTopologyHash,
+  resolveDraftingObjectGeometry,
   routePolyline,
 } from "@icm/derived";
 import { transformPoint } from "@icm/model";
@@ -34,6 +35,8 @@ export interface BuildAgentSessionSnapshotOptions {
   document: SchematicDocument;
   resolver: SymbolResolver;
   includeSourceSpans?: boolean;
+  // ADR 0010 WP-R4: include guide axis/coordinate in the response.
+  includeEditorGuides?: boolean;
 }
 
 function stableValue(input: unknown): unknown {
@@ -380,17 +383,37 @@ function documentSnapshot(
     annotations: [...document.annotations]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
       .map((annotation) => structuredClone(annotation)),
-    // ADR 0010 WP-A1b: drafting objects (non-electrical, canonical RichText
-    // AST) are exposed in the Snapshot; they never affect topologyHash. Guides
-    // expose only count + per-guide visible/locked by default; coordinates
-    // require an explicit includeEditorGuides option (gate).
+    // ADR 0010 WP-R4: each drafting object carries its canonical shape plus the
+    // derived resolved geometry (position(s)/bounds/diagnostics) from the
+    // single resolveDraftingObjectGeometry entry; the Document's anchor JSON is
+    // unchanged. Guides expose id/visible/locked by default; axis/coordinate
+    // are included only when the request sets includeEditorGuides.
     drafting: {
       objects: [...(document.drafting?.objects ?? [])]
         .sort((left, right) => left.id.localeCompare(right.id, "en"))
-        .map((object) => structuredClone(object)),
+        .map((object) => {
+          const geometry = resolveDraftingObjectGeometry(
+            document,
+            resolver,
+            object,
+          );
+          return {
+            object: structuredClone(object),
+            resolvedGeometry: geometry,
+            bounds: geometry.bounds,
+            diagnostics: geometry.diagnostics,
+          };
+        }),
       guides: [...(document.drafting?.guides ?? [])]
         .sort((left, right) => left.id.localeCompare(right.id, "en"))
-        .map((guide) => ({ id: guide.id, visible: guide.visible, locked: guide.locked })),
+        .map((guide) => ({
+          id: guide.id,
+          visible: guide.visible,
+          locked: guide.locked,
+          ...(options.includeEditorGuides
+            ? { axis: guide.axis, coordinate: guide.coordinate }
+            : {}),
+        })),
     },
     layoutGroups: [...document.layoutGroups]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))

@@ -622,6 +622,7 @@ export function createAgentCircuitService(
           document,
           resolver: options.resolver,
           includeSourceSpans,
+          includeEditorGuides: request.includeEditorGuides === true,
         });
         if (snapshot.byteLength > limits.maxSnapshotBytes) {
           return fail(
