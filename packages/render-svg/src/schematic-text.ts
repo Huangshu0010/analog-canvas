@@ -5,13 +5,9 @@ export type SchematicTextKind =
   | "instance-label"
   | "net-label"
   | "power-label"
-  | "plain-text"
-  | "current"
-  | "voltage"
-  | "figure-caption"
   | "pin-name"
-  // ADR 0010 SchematicAnnotation route-marker. Renders as text; the full
-  // route-marker arrow/polarity rendering lands in WP-A2.
+  // ADR 0010 SchematicAnnotation route-marker. Renders as text; arrow/polarity
+  // rendering is handled by the annotation layer in render.ts.
   | "route-marker";
 
 export interface SchematicMathRuns {
@@ -29,8 +25,10 @@ function escapeXml(value: string): string {
     .replaceAll(">", "&gt;");
 }
 
-function permitsImplicitMath(kind: SchematicTextKind): boolean {
-  return kind !== "plain-text" && kind !== "figure-caption";
+function permitsImplicitMath(_kind: SchematicTextKind): boolean {
+  // All remaining SchematicTextKinds permit implicit math; legacy
+  // plain-text/figure-caption kinds were removed with WP-A3.
+  return true;
 }
 
 export function parseSchematicMath(
@@ -73,8 +71,7 @@ export function parseSchematicMath(
   if (
     kind === "net-label" ||
     kind === "power-label" ||
-    kind === "current" ||
-    kind === "voltage" ||
+    kind === "route-marker" ||
     kind === "pin-name"
   ) {
     const match = /^([VI])(.+?)([+-])?$/u.exec(text);
@@ -105,11 +102,6 @@ export function schematicTextFontSize(
       return typography.netFontSize;
     case "power-label":
       return typography.powerFontSize;
-    case "figure-caption":
-      return typography.captionFontSize;
-    case "plain-text":
-    case "current":
-    case "voltage":
     case "route-marker":
       return typography.annotationFontSize;
   }

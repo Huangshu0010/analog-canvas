@@ -1735,3 +1735,29 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): unified route-marker hit-test, drag, and clipboard (WP-A3 read-side)`.
+## 2026-08-08 - WP-A3 legacy-kind removal: plain-text/current/voltage/figure-caption
+
+- Target: remove the four legacy annotation kinds now that route-marker and
+  drafting text carry their content, leaving the single schema-2 truth.
+- Changed areas:
+  - model: AnnotationKindSchema narrows to instance-label | net-label |
+    power-label | route-marker; the routeAttachment-only-on-current refine is
+    gone (routeAttachment remains as a migration-era legacy field);
+    migration-v1-to-v2 still reads the removed kinds on its v1 input side
+    (tests widened to loose records).
+  - render-svg: SchematicTextKind drops the legacy kinds; render.ts route-marker
+    branch renders current arrows (shaft + head) and voltage polarity via the
+    route VisualAnchor, with the arrow on the conductor and the label riding the
+    normal offset (resolveRouteMarkerPlacement returns position + labelPosition);
+    figure-caption/plain-text emphasis branches removed; drafting text is the
+    single text path.
+  - edit-engine/editor/agent-adapter tests updated to route-marker; editor
+    reverse-arrow no longer branches on the removed current kind.
+  - Goldens regenerated (phase-5, route-attached-current-arrow, text-*).
+- The migration contract is unchanged: schema-1 Projects still upgrade on read,
+  mapping current -> route-marker/current, voltage -> object-anchor or free
+  DraftText + diagnostic, plain-text/figure-caption -> drafting text.
+- Validation: full suite 235/235; workspace typecheck clean; all
+  generation/golden --check scripts pass; `git diff --check` clean.
+- Commit status: ready for
+  `feat(model): remove legacy annotation kinds (WP-A3 legacy-kind removal)`.

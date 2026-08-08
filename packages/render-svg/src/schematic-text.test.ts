@@ -16,8 +16,8 @@ describe("Razavi schematic typography", () => {
     ["R1", "instance-label", { base: "R", subscript: "1", style: "math" }],
     ["VDD", "power-label", { base: "V", subscript: "DD", style: "math" }],
     ["Vb1", "net-label", { base: "V", subscript: "b1", style: "math" }],
-    ["IX", "current", { base: "I", subscript: "X", style: "math" }],
-    ["V_X", "voltage", { base: "V", subscript: "X", style: "math" }],
+    ["IX", "route-marker", { base: "I", subscript: "X", style: "math" }],
+    ["V_X", "route-marker", { base: "V", subscript: "X", style: "math" }],
     [
       "VIN+",
       "net-label",
@@ -33,11 +33,9 @@ describe("Razavi schematic typography", () => {
     expect(parseSchematicMath(text, kind)).toEqual(expected);
   });
 
-  it("does not implicitly parse notes, captions, signs, or numeric values", () => {
-    expect(parseSchematicMath("VDD", "plain-text")).toBeNull();
-    expect(parseSchematicMath("M1", "figure-caption")).toBeNull();
-    expect(parseSchematicMath("+", "voltage")).toBeNull();
-    expect(parseSchematicMath("1.2 V", "voltage")).toBeNull();
+  it("does not implicitly parse bare signs or numeric values", () => {
+    expect(parseSchematicMath("+", "route-marker")).toBeNull();
+    expect(parseSchematicMath("1.2 V", "route-marker")).toBeNull();
   });
 
   it("escapes text and emits deterministic Razavi tspan runs", () => {
@@ -64,8 +62,8 @@ describe("Razavi schematic typography", () => {
     expect(schematicTextFontSize("instance-label", razaviTextbookProfile)).toBe(
       16,
     );
-    expect(schematicTextFontSize("figure-caption", razaviTextbookProfile)).toBe(
-      14,
+    expect(schematicTextFontSize("route-marker", razaviTextbookProfile)).toBe(
+      16,
     );
   });
 });

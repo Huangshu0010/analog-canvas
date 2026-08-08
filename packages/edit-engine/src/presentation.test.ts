@@ -91,10 +91,12 @@ describe("presentation and layout edits", () => {
   it("does not replace or remove locked semantic annotations", () => {
     const document = createEmptyDocument("doc", "Locked label");
     document.annotations.push({
-      id: "caption",
-      kind: "figure-caption",
-      text: "Original",
+      id: "marker",
+      kind: "route-marker",
+      markerKind: "current",
+      text: "I_x",
       position: { x: 0, y: 0 },
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
       offset: { x: 0, y: 0 },
       alignment: "start",
       rotation: 0,
@@ -103,10 +105,10 @@ describe("presentation and layout edits", () => {
     const result = executeTransaction(
       document,
       transaction("doc", [
-        { kind: "remove_annotation", annotationId: "caption" },
+        { kind: "remove_annotation", annotationId: "marker" },
       ]),
     );
     expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
-    expect(result.document.annotations[0]!.text).toBe("Original");
+    expect(result.document.annotations[0]!.text).toBe("I_x");
   });
 });

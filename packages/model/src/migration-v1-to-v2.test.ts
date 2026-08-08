@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import type { Annotation } from "./schema.js";
 import { migrateV1ToV2 } from "./migration-v1-to-v2.js";
 
 // Helpers build minimal schema-1 annotation records with the fields the
-// migration reads, so the tests stay focused on migration behavior.
+// migration reads, so the tests stay focused on migration behavior. The
+// overrides intentionally include legacy v1 kinds (current/voltage/plain-text)
+// that are no longer valid in the schema-2 union, so the parameter type is a
+// loose record rather than the narrowed Annotation type.
 
-function baseAnnotation(overrides: Partial<Annotation> & { id: string }): Record<string, unknown> {
+function baseAnnotation(
+  overrides: Record<string, unknown> & { id: string },
+): Record<string, unknown> {
   return {
     alignment: "start",
     kind: "plain-text",

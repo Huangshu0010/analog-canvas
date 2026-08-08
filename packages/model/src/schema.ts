@@ -155,13 +155,6 @@ export const AnnotationKindSchema = z.enum([
   "instance-label",
   "net-label",
   "power-label",
-  "plain-text",
-  "current",
-  "voltage",
-  "figure-caption",
-  // ADR 0010 SchematicAnnotation route-marker (accepted at the schema-2 gate).
-  // The legacy plain-text/current/voltage/figure-caption kinds remain accepted
-  // until WP-A2 builds full route-marker rendering and removes them.
   "route-marker",
 ]);
 // ADR 0010 SchematicAnnotation marker kinds.
@@ -195,13 +188,6 @@ export const AnnotationSchema = z
     anchor: z.lazy(() => VisualAnchorSchema).optional(),
   })
   .superRefine((annotation, context) => {
-    if (annotation.routeAttachment && annotation.kind !== "current") {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["routeAttachment"],
-        message: "Only current annotations may attach to a route segment",
-      });
-    }
     if (annotation.markerKind && annotation.kind !== "route-marker") {
       context.addIssue({
         code: z.ZodIssueCode.custom,

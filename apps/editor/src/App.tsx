@@ -599,9 +599,8 @@ export function App({ project: initialProject }: AppProps) {
 
   function isRoutedMarker(annotation: Annotation): boolean {
     return (
-      annotation.kind === "current" ||
-      (annotation.kind === "route-marker" &&
-        annotation.markerKind === "current")
+      annotation.kind === "route-marker" &&
+      annotation.markerKind === "current"
     );
   }
 
@@ -2154,23 +2153,17 @@ export function App({ project: initialProject }: AppProps) {
     if (!attachment) return;
     const direction: "forward" | "reverse" =
       attachment.direction === "forward" ? "reverse" : "forward";
-    // A route-marker stores direction on its route VisualAnchor; the legacy
-    // current kind stores it on routeAttachment.
+    // A route-marker stores direction on its route VisualAnchor.
     const anchor =
       selectedAnnotation.kind === "route-marker" &&
       selectedAnnotation.anchor?.kind === "route"
         ? { ...selectedAnnotation.anchor, direction }
         : selectedAnnotation.anchor;
-    const routeAttachment =
-      selectedAnnotation.kind === "current"
-        ? { ...selectedAnnotation.routeAttachment!, direction }
-        : selectedAnnotation.routeAttachment;
     const result = transact([
       {
         kind: "upsert_annotation",
         annotation: {
           ...selectedAnnotation,
-          ...(routeAttachment ? { routeAttachment } : {}),
           ...(anchor ? { anchor } : {}),
         },
       },

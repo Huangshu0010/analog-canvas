@@ -316,17 +316,21 @@ describe("textbook monochrome SVG renderer", () => {
     });
     document.annotations.push({
       id: "current-arrow",
-      kind: "current",
+      kind: "route-marker",
+      markerKind: "current",
       text: "I_x",
-      // This is a persistence fallback only. The route attachment drives the
+      // This is a persistence fallback only. The route anchor drives the
       // rendered position.
       position: { x: 0, y: 0 },
-      routeAttachment: {
+      anchor: {
+        kind: "route",
         routeId: "route-current",
         segmentIndex: 0,
         t: 0.25,
         direction: "reverse",
         normalOffset: -14,
+        orientation: "follow",
+        fallbackPosition: { x: 0, y: 0 },
       },
       offset: { x: 0, y: 0 },
       alignment: "middle",
@@ -460,9 +464,14 @@ describe("textbook monochrome SVG renderer", () => {
     document.annotations = [
       {
         id: "voltage-x",
-        kind: "voltage",
+        kind: "route-marker",
+        markerKind: "voltage",
         text: "V_X",
         position: { x: 100, y: 100 },
+        anchor: {
+          kind: "free",
+          position: { x: 100, y: 100 },
+        },
         offset: { x: 0, y: 0 },
         alignment: "start",
         rotation: 90,
@@ -518,87 +527,98 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).not.toContain(">GND1</text>");
   });
 
-  it("scales plain-text font size by annotation sizeScale", () => {
+  it("renders drafting text at its typography-token size", () => {
     const project = createEmptyProject("project-text-scale", "Text Scale");
     const document = project.documents[0]!;
     document.presentation.styleProfileId = "razavi-textbook-v1";
-    document.annotations = [
-      {
-        id: "note-1",
-        kind: "plain-text",
-        text: "Note",
-        position: { x: 100, y: 100 },
-        offset: { x: 0, y: 0 },
-        alignment: "middle",
-        rotation: 0,
-        locked: false,
-      },
-    ];
+    document.drafting = {
+      objects: [
+        {
+          id: "note-1",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 100, y: 100 } },
+          content: { runs: [{ kind: "text", value: "Note" }] },
+          alignment: "middle",
+          rotation: 0,
+          typographyToken: "caption",
+        },
+      ],
+      guides: [],
+    };
 
-    const base = renderDocumentSvg(document, resolver);
-    document.annotations[0]!.sizeScale = 2;
-    const scaled = renderDocumentSvg(document, resolver);
-
-    expect(base).toMatch(/font-size="16"/);
-    expect(scaled).toMatch(/font-size="32"/);
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toMatch(/data-kind="draft-text"[^>]*font-size="14"/);
   });
 
-  it("renders explicit subscript and italic markup in plain text", () => {
+  it("renders explicit subscript and italic markup as drafting rich text", () => {
     const project = createEmptyProject("project-markup", "Text Markup");
     const document = project.documents[0]!;
-    document.annotations = [
-      {
-        id: "math-note",
-        kind: "plain-text",
-        text: "M_{1}",
-        position: { x: 80, y: 80 },
-        offset: { x: 0, y: 0 },
-        alignment: "start",
-        rotation: 0,
-        locked: false,
-      },
-      {
-        id: "italic-note",
-        kind: "plain-text",
-        text: "\\it{gain}",
-        position: { x: 80, y: 110 },
-        offset: { x: 0, y: 0 },
-        alignment: "start",
-        rotation: 0,
-        locked: false,
-      },
-    ];
+    document.drafting = {
+      objects: [
+        {
+          id: "math-note",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 80, y: 80 } },
+          content: {
+            runs: [
+              { kind: "text", value: "M" },
+              { kind: "span", style: "subscript", children: [{ kind: "text", value: "1" }] },
+            ],
+          },
+          alignment: "start",
+          rotation: 0,
+        },
+        {
+          id: "italic-note",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 80, y: 110 } },
+          content: {
+            runs: [
+              { kind: "span", style: "italic", children: [{ kind: "text", value: "gain" }] },
+            ],
+          },
+          alignment: "start",
+          rotation: 0,
+        },
+      ],
+      guides: [],
+    };
 
     const svg = renderDocumentSvg(document, resolver);
 
-    expect(svg).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">M</tspan><tspan data-text-run="subscript"',
-    );
-    expect(svg).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:400">gain</tspan>',
-    );
+    expect(svg).toContain('data-text-run="subscript"');
+    expect(svg).toContain("font-style:italic");
   });
 
-  it("scales annotations in the textbook-monochrome profile", () => {
+  it("renders drafting text as flat escaped text in the textbook-monochrome profile", () => {
     const project = createEmptyProject("project-mono-text-scale", "Mono Text");
     const document = project.documents[0]!;
     document.presentation.styleProfileId = "textbook-monochrome-v1";
-    document.annotations = [
-      {
-        id: "note-1",
-        kind: "plain-text",
-        text: "Note",
-        position: { x: 100, y: 100 },
-        offset: { x: 0, y: 0 },
-        alignment: "middle",
-        rotation: 0,
-        locked: false,
-        sizeScale: 2,
-      },
-    ];
+    document.drafting = {
+      objects: [
+        {
+          id: "note-1",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 100, y: 100 } },
+          content: { runs: [{ kind: "text", value: "Note" }] },
+          alignment: "middle",
+          rotation: 0,
+        },
+      ],
+      guides: [],
+    };
 
     const scene = buildSvgScene(document, resolver);
 
-    expect(scene.formalBody).toContain('font-size="24"');
+    expect(scene.formalBody).toContain(">Note</text>");
+    expect(scene.formalBody).toContain('data-layer="drafting"');
   });
 });

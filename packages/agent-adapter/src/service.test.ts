@@ -525,12 +525,17 @@ describe("Agent Circuit API v1 service", () => {
       expectedRevision: 0,
       edits: [
         {
-          kind: "upsert_annotation",
+          kind: "upsert_schematic_annotation",
           annotation: {
             id: "note-test",
-            kind: "plain-text",
-            text: "note",
+            kind: "route-marker",
+            markerKind: "current",
+            text: "I_x",
             position: { x: 100, y: 100 },
+            anchor: {
+              kind: "free",
+              position: { x: 100, y: 100 },
+            },
             offset: { x: 0, y: 0 },
             alignment: "middle",
             rotation: 0,

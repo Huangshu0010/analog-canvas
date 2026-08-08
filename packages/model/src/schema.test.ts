@@ -39,29 +39,36 @@ describe("CircuitProject schema", () => {
     ).toBe(false);
   });
 
-  it("allows route attachments only on current annotations", () => {
-    const project = createEmptyProject("project-current", "Current");
+  it("validates route-marker annotations with a markerKind and route VisualAnchor", () => {
+    const project = createEmptyProject("project-marker", "Marker");
     const document = project.documents[0]!;
-    const attachment = {
-      routeId: "route-1",
-      segmentIndex: 0,
-      t: 0.5,
-      direction: "forward" as const,
-      normalOffset: -14,
-    };
     document.annotations.push({
-      id: "current-1",
-      kind: "current",
+      id: "marker-1",
+      kind: "route-marker",
+      markerKind: "current",
       text: "I_x",
       position: { x: 20, y: 20 },
-      routeAttachment: attachment,
+      anchor: {
+        kind: "route",
+        routeId: "route-1",
+        segmentIndex: 0,
+        t: 0.5,
+        normalOffset: -14,
+        direction: "forward",
+        orientation: "follow",
+        fallbackPosition: { x: 20, y: 20 },
+      },
       offset: { x: 0, y: 0 },
       alignment: "middle",
       rotation: 0,
       locked: false,
     });
     expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
-    document.annotations[0] = { ...document.annotations[0]!, kind: "voltage" };
+    // markerKind is only valid on a route-marker annotation.
+    document.annotations[0] = {
+      ...document.annotations[0]!,
+      kind: "instance-label",
+    };
     expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
   });
 

@@ -307,7 +307,6 @@ function deriveBounds(
     const annotationPosition =
       attachmentPlacement?.position ?? annotation.position;
     const verticalCurrent =
-      annotation.kind === "current" &&
       ((attachmentPlacement?.rotation ?? annotation.rotation) === 90 ||
         (attachmentPlacement?.rotation ?? annotation.rotation) === 270);
     const textPosition = attachmentPlacement
@@ -481,22 +480,23 @@ export function buildSvgScene(
       const routeMarkerPlacement =
         annotation.kind === "route-marker" && routeMarkerAnchor
           ? routeMarkerAnchor.kind === "free"
-            ? { position: routeMarkerAnchor.position, rotation: 0 as const }
+            ? { position: routeMarkerAnchor.position, labelPosition: routeMarkerAnchor.position, rotation: 0 as const }
             : routeMarkerAnchor.kind === "object"
-              ? { position: routeMarkerAnchor.fallbackPosition, rotation: 0 as const }
+              ? { position: routeMarkerAnchor.fallbackPosition, labelPosition: routeMarkerAnchor.fallbackPosition, rotation: 0 as const }
               : resolveRouteMarkerPlacement(document, resolver, routeMarkerAnchor)
           : null;
       const position = routeMarkerPlacement?.position ?? attachmentPlacement?.position ?? annotation.position;
       const rotation = routeMarkerPlacement?.rotation ?? attachmentPlacement?.rotation ?? annotation.rotation;
       const transform = `rotate(${rotation} ${position.x} ${position.y})`;
       const attributes = `data-object-id="${escapeXml(annotation.id)}" data-kind="${annotation.kind}"${attachment}`;
-      if (annotation.kind === "current" || (annotation.kind === "route-marker" && annotation.markerKind === "current")) {
+      if (annotation.kind === "route-marker" && annotation.markerKind === "current") {
         const x = position.x;
         const y = position.y;
         const vertical = rotation === 90 || rotation === 270;
+        const label = routeMarkerPlacement?.labelPosition;
         const textX = vertical ? x + 15 : x;
         const textY = vertical ? y + 4 : y - 7;
-        const textAnchor = attachmentPlacement
+        const textAnchor = routeMarkerPlacement || attachmentPlacement
           ? "middle"
           : vertical
             ? "start"
@@ -507,19 +507,23 @@ export function buildSvgScene(
           const tipX = x + halfLength;
           const baseX = tipX - arrow.arrowHeadLength;
           const halfHeadWidth = arrow.arrowHeadWidth / 2;
-          const razaviTextX = attachmentPlacement
-            ? attachmentPlacement.labelPosition.x
-            : vertical
-              ? x + halfLength + arrow.currentLabelGap
-              : x;
-          const razaviTextY = attachmentPlacement
-            ? attachmentPlacement.labelPosition.y
-            : vertical
-              ? y + 4
-              : y - arrow.currentLabelGap;
-          return `<g ${attributes}><g transform="${transform}"><line data-role="current-arrow-shaft" x1="${x - halfLength}" y1="${y}" x2="${baseX}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
+          const razaviTextX = label
+            ? label.x
+            : attachmentPlacement
+              ? attachmentPlacement.labelPosition.x
+              : vertical
+                ? x + halfLength + arrow.currentLabelGap
+                : x;
+          const razaviTextY = label
+            ? label.y
+            : attachmentPlacement
+              ? attachmentPlacement.labelPosition.y
+              : vertical
+                ? y + 4
+                : y - arrow.currentLabelGap;
+          return `<g ${attributes}><g transform="${transform}"><line data-role="current-arrow-shaft" x1="${x - halfLength}" y1="${y}" x2="${baseX}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "route-marker", profile)}</text></g>`;
         }
-        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("current", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "current", profile)}</text></g>`;
+        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "route-marker", profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
@@ -536,8 +540,8 @@ export function buildSvgScene(
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
-        (annotation.kind === "voltage" ||
-          (annotation.kind === "route-marker" && annotation.markerKind === "voltage"))
+        annotation.kind === "route-marker" &&
+        annotation.markerKind === "voltage"
       ) {
         const polarity = profile.annotations;
         const positiveOffset = rotateOffset(
@@ -549,16 +553,13 @@ export function buildSvgScene(
           annotation.rotation,
         );
         const polarityStyle = `font-style:normal;font-weight:${profile.typography.plainWeight}`;
-        return `<g ${attributes}><text data-role="polarity-positive" x="${annotation.position.x + positiveOffset.x}" y="${annotation.position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${annotation.position.x + negativeOffset.x}" y="${annotation.position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("voltage", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "voltage", profile)}</text></g>`;
+        return `<g ${attributes}><text data-role="polarity-positive" x="${annotation.position.x + positiveOffset.x}" y="${annotation.position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${annotation.position.x + negativeOffset.x}" y="${annotation.position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "route-marker", profile)}</text></g>`;
       }
       const emphasis =
         profile.id === "textbook-monochrome-v1" &&
         annotation.kind === "power-label"
           ? ' font-weight="bold"'
-          : profile.id === "textbook-monochrome-v1" &&
-              annotation.kind === "figure-caption"
-            ? ' font-style="italic"'
-            : "";
+          : "";
       return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, annotation.kind, profile)}</text>`;
     })
     .join("");
@@ -576,11 +577,11 @@ function resolveRouteMarkerPlacement(
   document: SchematicDocument,
   resolver: SymbolResolver,
   anchor: Extract<SchematicDocument["annotations"][number]["anchor"], { kind: "route" }>,
-): { position: Point; rotation: 0 | 90 | 180 | 270 } | null {
+): { position: Point; labelPosition: Point; rotation: 0 | 90 | 180 | 270 } | null {
   const route = document.routes.find((candidate) => candidate.id === anchor.routeId);
-  if (!route) return { position: anchor.fallbackPosition, rotation: 0 };
+  if (!route) return { position: anchor.fallbackPosition, labelPosition: anchor.fallbackPosition, rotation: 0 };
   const polyline = routePolyline(document, resolver, route);
-  if (!polyline) return { position: anchor.fallbackPosition, rotation: 0 };
+  if (!polyline) return { position: anchor.fallbackPosition, labelPosition: anchor.fallbackPosition, rotation: 0 };
   const placement = routeAttachmentPlacement(polyline, {
     routeId: anchor.routeId,
     segmentIndex: anchor.segmentIndex,
@@ -588,9 +589,13 @@ function resolveRouteMarkerPlacement(
     normalOffset: anchor.normalOffset,
     direction: anchor.direction,
   });
-  if (!placement) return { position: anchor.fallbackPosition, rotation: 0 };
+  if (!placement) return { position: anchor.fallbackPosition, labelPosition: anchor.fallbackPosition, rotation: 0 };
+  // The arrow (and its rotation center) sits on the conductor at the route
+  // attachment point; the label rides on the normal offset. This mirrors the
+  // legacy current-arrow rendering exactly.
   return {
-    position: anchor.orientation === "horizontal" ? placement.position : placement.labelPosition,
+    position: placement.position,
+    labelPosition: anchor.orientation === "horizontal" ? placement.position : placement.labelPosition,
     rotation: anchor.orientation === "horizontal" ? 0 : placement.rotation,
   };
 }

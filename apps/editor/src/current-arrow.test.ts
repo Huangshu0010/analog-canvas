@@ -120,15 +120,19 @@ describe("route-attached current arrows", () => {
     });
     document.annotations.push({
       id: "current-1",
-      kind: "current",
+      kind: "route-marker",
+      markerKind: "current",
       text: "I_x",
       position: { x: 160, y: 100 },
-      routeAttachment: {
+      anchor: {
+        kind: "route",
         routeId: "route-signal",
         segmentIndex: 0,
         t: 0.5,
-        direction: "forward",
         normalOffset: -14,
+        direction: "forward",
+        orientation: "follow",
+        fallbackPosition: { x: 160, y: 100 },
       },
       offset: { x: 0, y: 0 },
       alignment: "middle",
@@ -148,7 +152,7 @@ describe("route-attached current arrows", () => {
       annotation: {
         id: "current-1-copy-1",
         position: { x: 180, y: 120 },
-        routeAttachment: { routeId: "route-signal-copy-1" },
+        anchor: { routeId: "route-signal-copy-1" },
       },
     });
   });
