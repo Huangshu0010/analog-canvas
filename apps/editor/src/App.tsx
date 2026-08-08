@@ -575,17 +575,61 @@ export function App({ project: initialProject }: AppProps) {
         }
       : null;
   }
+  // ADR 0010 WP-A3 read-side unification. A route-marker carries its route
+  // attachment as a VisualAnchor (kind "route"); the legacy current kind
+  // carries it as routeAttachment. This helper returns the legacy
+  // RouteAnnotationAttachment shape for either form so the existing geometry
+  // code (anchor, hit box, drag, panel) handles both uniformly.
+  function effectiveRouteAttachment(
+    annotation: Annotation,
+  ): RouteAnnotationAttachment | null {
+    if (annotation.routeAttachment) return annotation.routeAttachment;
+    if (annotation.kind === "route-marker" && annotation.anchor?.kind === "route") {
+      const anchor = annotation.anchor;
+      return {
+        routeId: anchor.routeId,
+        segmentIndex: anchor.segmentIndex,
+        t: anchor.t,
+        direction: anchor.direction,
+        normalOffset: anchor.normalOffset,
+      };
+    }
+    return null;
+  }
+
+  function isRoutedMarker(annotation: Annotation): boolean {
+    return (
+      annotation.kind === "current" ||
+      (annotation.kind === "route-marker" &&
+        annotation.markerKind === "current")
+    );
+  }
+
   function annotationAnchor(annotation: Annotation): Point {
-    if (annotation.kind !== "current" || !annotation.routeAttachment) {
+    const attachment = effectiveRouteAttachment(annotation);
+    if (!isRoutedMarker(annotation) || !attachment) {
+      // A route-marker/voltage with a free or object anchor resolves to its
+      // fallbackPosition; otherwise the persisted position.
+      if (
+        annotation.kind === "route-marker" &&
+        annotation.anchor?.kind === "object"
+      ) {
+        return annotation.anchor.fallbackPosition;
+      }
+      if (
+        annotation.kind === "route-marker" &&
+        annotation.anchor?.kind === "route"
+      ) {
+        return annotation.anchor.fallbackPosition;
+      }
       return annotation.position;
     }
     const record = routePolylines.find(
-      ({ route }) => route.id === annotation.routeAttachment!.routeId,
+      ({ route }) => route.id === attachment.routeId,
     );
     return (
       (record &&
-        routeAttachmentPlacement(record.polyline, annotation.routeAttachment)
-          ?.position) ??
+        routeAttachmentPlacement(record.polyline, attachment)?.position) ??
       annotation.position
     );
   }
@@ -599,18 +643,16 @@ export function App({ project: initialProject }: AppProps) {
     let rotation = annotation.rotation;
     let arrowBounds: Rect | null = null;
 
-    if (annotation.kind === "current") {
-      const record = annotation.routeAttachment
+    if (isRoutedMarker(annotation)) {
+      const routeAttachment = effectiveRouteAttachment(annotation);
+      const record = routeAttachment
         ? routePolylines.find(
-            ({ route }) => route.id === annotation.routeAttachment!.routeId,
+            ({ route }) => route.id === routeAttachment.routeId,
           )
         : undefined;
       const attachment =
-        record && annotation.routeAttachment
-          ? routeAttachmentPlacement(
-              record.polyline,
-              annotation.routeAttachment,
-            )
+        record && routeAttachment
+          ? routeAttachmentPlacement(record.polyline, routeAttachment)
           : null;
       rotation = attachment?.rotation ?? annotation.rotation;
       const vertical = rotation === 90 || rotation === 270;
@@ -1306,12 +1348,13 @@ export function App({ project: initialProject }: AppProps) {
     annotation: Annotation,
     candidate: Point,
   ): Point {
-    if (annotation.kind === "current" && annotation.routeAttachment) {
+    const routeAttachment = effectiveRouteAttachment(annotation);
+    if (isRoutedMarker(annotation) && routeAttachment) {
       return (
         attachmentAtPoint(
           candidate,
-          annotation.routeAttachment.routeId,
-          annotation.routeAttachment.normalOffset,
+          routeAttachment.routeId,
+          routeAttachment.normalOffset,
         )?.position ?? annotation.position
       );
     }
@@ -1445,17 +1488,30 @@ export function App({ project: initialProject }: AppProps) {
     if (annotation) {
       let offset = { ...annotation.offset };
       let routeAttachment = annotation.routeAttachment;
-      if (annotation.kind === "current" && annotation.routeAttachment) {
+      // For a route-marker the route attachment lives on its VisualAnchor; the
+      // drag re-resolves segmentIndex/t while preserving direction/offset.
+      let anchor = annotation.anchor;
+      const currentAttachment = effectiveRouteAttachment(annotation);
+      if (isRoutedMarker(annotation) && currentAttachment) {
         const attached = attachmentAtPoint(
           annotationDragPreview.position,
-          annotation.routeAttachment.routeId,
-          annotation.routeAttachment.normalOffset,
+          currentAttachment.routeId,
+          currentAttachment.normalOffset,
         );
         if (attached) {
-          routeAttachment = {
-            ...attached.routeAttachment,
-            direction: annotation.routeAttachment.direction,
-          };
+          if (annotation.kind === "route-marker" && anchor?.kind === "route") {
+            anchor = {
+              ...anchor,
+              segmentIndex: attached.routeAttachment.segmentIndex,
+              t: attached.routeAttachment.t,
+              fallbackPosition: annotationDragPreview.position,
+            };
+          } else {
+            routeAttachment = {
+              ...attached.routeAttachment,
+              direction: currentAttachment.direction,
+            };
+          }
         }
       }
       if (annotation.attachedObjectId) {
@@ -1477,6 +1533,7 @@ export function App({ project: initialProject }: AppProps) {
             position: annotationDragPreview.position,
             offset,
             ...(routeAttachment ? { routeAttachment } : {}),
+            ...(anchor ? { anchor } : {}),
           },
         },
       ]);
@@ -2090,25 +2147,31 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function reverseSelectedCurrentArrow(): void {
-    if (
-      selectedAnnotation?.kind !== "current" ||
-      !selectedAnnotation.routeAttachment
-    ) {
+    if (!selectedAnnotation || !isRoutedMarker(selectedAnnotation)) {
       return;
     }
-    const direction =
-      selectedAnnotation.routeAttachment.direction === "forward"
-        ? "reverse"
-        : "forward";
+    const attachment = effectiveRouteAttachment(selectedAnnotation);
+    if (!attachment) return;
+    const direction: "forward" | "reverse" =
+      attachment.direction === "forward" ? "reverse" : "forward";
+    // A route-marker stores direction on its route VisualAnchor; the legacy
+    // current kind stores it on routeAttachment.
+    const anchor =
+      selectedAnnotation.kind === "route-marker" &&
+      selectedAnnotation.anchor?.kind === "route"
+        ? { ...selectedAnnotation.anchor, direction }
+        : selectedAnnotation.anchor;
+    const routeAttachment =
+      selectedAnnotation.kind === "current"
+        ? { ...selectedAnnotation.routeAttachment!, direction }
+        : selectedAnnotation.routeAttachment;
     const result = transact([
       {
         kind: "upsert_annotation",
         annotation: {
           ...selectedAnnotation,
-          routeAttachment: {
-            ...selectedAnnotation.routeAttachment,
-            direction,
-          },
+          ...(routeAttachment ? { routeAttachment } : {}),
+          ...(anchor ? { anchor } : {}),
         },
       },
     ]);
@@ -2996,8 +3059,9 @@ export function App({ project: initialProject }: AppProps) {
             >
               Apply text
             </button>
-            {selectedAnnotation.kind === "current" &&
-            selectedAnnotation.routeAttachment ? (
+            {selectedAnnotation &&
+            isRoutedMarker(selectedAnnotation) &&
+            effectiveRouteAttachment(selectedAnnotation) ? (
               <button type="button" onClick={reverseSelectedCurrentArrow}>
                 Reverse arrow
               </button>

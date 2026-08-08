@@ -1715,3 +1715,23 @@ Editing System work.
   clean.
 - Commit status: ready for
   `feat(editor): author drafting text and route-marker (WP-A3 step)`.
+## 2026-08-08 - WP-A3 read-side: unified hit-test/bounds/drag/panel for route-marker
+
+- Target: make the editor's read-side geometry (anchor resolution, hit box,
+  drag constrain/commit, reverse-arrow, panel) handle the migrated route-marker
+  annotation whose route association lives on its VisualAnchor, alongside the
+  legacy current kind.
+- Changed areas: apps/editor App.tsx adds effectiveRouteAttachment() (projects
+  a route-marker route VisualAnchor onto the legacy RouteAnnotationAttachment
+  shape) and isRoutedMarker(); annotationAnchor, annotationHitBox,
+  constrainAnnotationPosition, the drag-commit path, reverseSelectedCurrentArrow,
+  and the panel button now route through these helpers, so a migrated
+  route-marker is selectable, hit-testable, draggable along its route, and
+  reversable. apps/editor clipboard.ts copies route-marker annotations by their
+  route VisualAnchor and re-maps the routeId on paste.
+- Tests: current-arrow.test.ts adds a route-marker copy/paste case proving the
+  route VisualAnchor is preserved and re-mapped.
+- Validation: full suite 235/235; editor build succeeds; workspace typecheck
+  clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(editor): unified route-marker hit-test, drag, and clipboard (WP-A3 read-side)`.

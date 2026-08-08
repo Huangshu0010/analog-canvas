@@ -54,7 +54,9 @@ export function copySelection(
         (annotation.attachedObjectId !== undefined &&
           attachedIds.has(annotation.attachedObjectId)) ||
         (annotation.routeAttachment !== undefined &&
-          routeIds.has(annotation.routeAttachment.routeId)),
+          routeIds.has(annotation.routeAttachment.routeId)) ||
+        (annotation.anchor?.kind === "route" &&
+          routeIds.has(annotation.anchor.routeId)),
     ),
   });
 }
@@ -250,6 +252,17 @@ export function proposePaste(
                 routeId:
                   routeIds.get(annotation.routeAttachment.routeId) ??
                   annotation.routeAttachment.routeId,
+              },
+            }
+          : {}),
+        // ADR 0010: a route-marker's route association lives on its VisualAnchor.
+        ...(annotation.anchor?.kind === "route"
+          ? {
+              anchor: {
+                ...annotation.anchor,
+                routeId:
+                  routeIds.get(annotation.anchor.routeId) ??
+                  annotation.anchor.routeId,
               },
             }
           : {}),
