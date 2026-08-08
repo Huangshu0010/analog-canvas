@@ -2541,3 +2541,16 @@ Editing System work.
   catalog tests, build, and diff checks passed.
 - Commit status: ready for
   `fix(razavi): close MOS joins and align route arrows`.
+
+## 2026-08-09 - PMOS source-arrow tail
+
+- Target: remove the PMOS arrow support segment that visibly protruded through
+  the arrow tip while keeping the channel, arrowhead, and electrical pins
+  intact.
+- Changed areas: shortened the PMOS source-arrow support to start at its
+  existing triangle base; regenerated MOS assets and catalog metadata.
+- Validation: MOS and catalog generation checks, Symbols build, and
+  `git diff --check` passed. No visual inspection was performed per the rapid
+  iteration request.
+- Commit status: ready for
+  `fix(razavi): trim PMOS source arrow support`.
