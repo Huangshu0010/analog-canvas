@@ -2255,3 +2255,21 @@ Editing System work.
   typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(agent-api): strict drafting geometry schema in Snapshot (P1 typed)`.
+## 2026-08-08 - P1: canvas drag-create for construction line and arrow
+
+- Target: replace the fixed viewport-center insert for construction lines and
+  arrows with real canvas drag gestures (press start, drag, release end) per
+  the review P1.
+- Changed areas: apps/editor EditorTool gains construction-line and arrow;
+  beginCanvasGesture starts a draftingCreatePreview on pointerdown, move
+  updates the end point, finishCanvasGesture commits one typed edit via
+  commitDraftingCreate; a dashed drafting-create-preview line renders during
+  the drag; the More Markup menu activates the tools instead of the old fixed
+  insert. addFloatingSymbol stays a click-place.
+- E2E: two new tests drag-create a construction line and an arrow, each
+  committing exactly one revision.
+- Validation: full suite 273/273; drafting E2E 6/6; editor build succeeds;
+  workspace typecheck clean; goldens regenerated after a rebuild aligned
+  source and dist symbol geometry; `git diff --check` clean.
+- Commit status: ready for
+  `feat(editor): canvas drag-create for construction line and arrow (P1 tools)`.

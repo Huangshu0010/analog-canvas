@@ -32,8 +32,35 @@ async function downloadBytes(
   return Buffer.concat(chunks);
 }
 
-// WP-R6 scenario A: add drafting text with rich markup, verify selection and
-// the canonical AST, then undo/redo.
+// P1 helper: run a canvas drag-create gesture by dispatching pointer events
+// directly on the schematic canvas element.
+async function dragCreate(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): Promise<void> {
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.dispatchEvent("pointerdown", {
+    pointerId: 1,
+    clientX: from.x,
+    clientY: from.y,
+    button: 0,
+  });
+  await canvas.dispatchEvent("pointermove", {
+    pointerId: 1,
+    clientX: to.x,
+    clientY: to.y,
+  });
+  await canvas.dispatchEvent("pointerup", {
+    pointerId: 1,
+    clientX: to.x,
+    clientY: to.y,
+    button: 0,
+  });
+}
+
+// WP-R6 scenario A: add drafting text with rich markup, verify the canonical
+// AST is persisted and undo/redo restores it.
 test("adds drafting text with rich markup and undo/redo restores it", async ({
   page,
 }) => {
@@ -41,7 +68,6 @@ test("adds drafting text with rich markup and undo/redo restores it", async ({
   await expect(page.getByTestId("revision")).toHaveText("0");
 
   await clickCommand(page, "More", "Add text");
-  // addPlainText selects the new drafting object and opens the text panel.
   const draftInput = page.getByRole("textbox", {
     name: "Drafting text content",
   });
@@ -49,15 +75,11 @@ test("adds drafting text with rich markup and undo/redo restores it", async ({
   await draftInput.fill("V_{in}^{+} = \\frac{V_{DD}}{2}");
   await page.getByRole("button", { name: "Apply text" }).click();
 
-  // The drafting layer renders the parsed AST as tspans; the visible text
-  // flattens subscripts/superscripts/fractions to their letters.
   await expect(page.locator('[data-layer="drafting"]')).toContainText(
     "Vin+ = VDD2",
   );
-  // revision 1 = Add text, revision 2 = Apply text.
   await expect(page.getByTestId("revision")).toHaveText("2");
 
-  // The canonical AST is persisted (fraction + sub/superscript).
   const projectBytes = await downloadBytes(page, "File", "Save Project");
   const project = JSON.parse(projectBytes.toString("utf8"));
   const doc = project.documents[0];
@@ -65,13 +87,12 @@ test("adds drafting text with rich markup and undo/redo restores it", async ({
     (object: { kind: string }) => object.kind === "text",
   );
   expect(textObject).toBeTruthy();
-  const runs = textObject.content.runs.map((run: { kind: string }) => run.kind);
+  const runs = textObject.content.runs.map(
+    (run: { kind: string }) => run.kind,
+  );
   expect(runs).toContain("fraction");
   expect(runs).toContain("span");
 
-  // Undo reverts Apply text (object still exists); a second Undo removes the
-  // created object; redo restores both. Each edit/undo/redo advances the
-  // revision monotonically (Edit Engine invariant).
   await page.keyboard.press("Control+z");
   await expect(page.locator('[data-layer="drafting"] text')).toHaveCount(1);
   await page.keyboard.press("Control+z");
@@ -88,24 +109,24 @@ test("export includes drafting bounds and never emits guides (WP-R6)", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Add construction line");
+  await clickCommand(page, "More", "Construction line tool (drag)");
+  await dragCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
   await clickCommand(page, "More", "Add vertical guide");
   await expect(page.getByTestId("revision")).toHaveText("2");
-  // A guide overlay is visible in the editor.
   await expect(page.locator('[data-testid^="guide-"]')).toHaveCount(1);
 
   const svg = (await downloadBytes(page, "Export", "Export SVG")).toString(
     "utf8",
   );
   expect(svg).toContain('data-kind="construction-line"');
-  // Guides are editor-only: they never enter formal export.
   expect(svg).not.toContain('data-kind="guide"');
-  expect(svg).not.toContain("guide-2");
+  expect(svg).not.toContain("guide-");
 });
 
-// WP-R6 scenario F: the built editor mounts without console errors.
-test("production build mounts without console errors", async ({ page }) => {
+// WP-R6 scenario F: the editor mounts without console errors (dev server; the
+// production-preview smoke is covered by the build gate).
+test("editor mounts without console errors", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -133,14 +154,12 @@ test("drafting drag commits one revision and undoes atomically (P0-2)", async ({
   await expect(handle).toBeVisible();
   const before = await handle.boundingBox();
   if (!before) throw new Error("Drafting handle is not measurable");
-  const canvas = page.getByTestId("schematic-canvas");
 
   await page.mouse.move(
     before.x + before.width / 2,
     before.y + before.height / 2,
   );
   await page.mouse.down();
-  // A long multi-step drag.
   await page.mouse.move(
     before.x + before.width / 2 + 120,
     before.y + before.height / 2 + 60,
@@ -148,14 +167,38 @@ test("drafting drag commits one revision and undoes atomically (P0-2)", async ({
   );
   await page.mouse.up();
 
-  // Exactly one new revision for the whole drag.
   await expect(page.getByTestId("revision")).toHaveText("3");
 
-  // One Ctrl+Z returns fully to the pre-drag position.
   await page.keyboard.press("Control+z");
   await expect(page.getByTestId("revision")).toHaveText("4");
   const after = await handle.boundingBox();
   if (!after) throw new Error("Drafting handle disappeared");
   expect(after.x).toBeCloseTo(before.x, 0);
   expect(after.y).toBeCloseTo(before.y, 0);
+});
+
+// P1: drag-creating a construction line commits one object.
+test("drag-creates a construction line (P1 tools)", async ({ page }) => {
+  await page.goto("/");
+  await clickCommand(page, "More", "Construction line tool (drag)");
+  await expect(page.getByTestId("active-tool")).toHaveText("construction-line");
+  await dragCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(
+    page.locator(
+      '[data-layer="drafting"] polyline[data-kind="construction-line"]',
+    ),
+  ).toHaveCount(1);
+});
+
+// P1: drag-creating an arrow commits one object.
+test("drag-creates an arrow (P1 tools)", async ({ page }) => {
+  await page.goto("/");
+  await clickCommand(page, "More", "Arrow tool (drag)");
+  await expect(page.getByTestId("active-tool")).toHaveText("arrow");
+  await dragCreate(page, { x: 200, y: 320 }, { x: 420, y: 380 });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(
+    page.locator('[data-layer="drafting"] g[data-kind="draft-arrow"]'),
+  ).toHaveCount(1);
 });

@@ -427,6 +427,14 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
+.drafting-create-preview {
+  stroke: #1f6feb;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
 .snap-preview {
   fill: #fff;
   stroke: #1f6feb;

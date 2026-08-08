@@ -100,7 +100,7 @@ interface DraftingDragPreview {
   pointerId: number;
 }
 
-type EditorTool = "pointer" | "wire" | "guide";
+type EditorTool = "pointer" | "wire" | "guide" | "construction-line" | "arrow";
 
 interface WireSource {
   endpoint: RouteEndpoint;
@@ -478,6 +478,11 @@ export function App({ project: initialProject }: AppProps) {
     useState<AnnotationDragPreview | null>(null);
   const [draftingDragPreview, setDraftingDragPreview] =
     useState<DraftingDragPreview | null>(null);
+  const [draftingCreatePreview, setDraftingCreatePreview] = useState<{
+    start: Point;
+    end: Point;
+    pointerId: number;
+  } | null>(null);
   const [tool, setTool] = useState<EditorTool>("pointer");
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
   const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
@@ -2864,6 +2869,17 @@ export function App({ project: initialProject }: AppProps) {
       }
       return;
     }
+    if (tool === "construction-line" || tool === "arrow") {
+      // P1: drag from the start point to the end point to create the object.
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setDraftingCreatePreview({
+        start: point,
+        end: point,
+        pointerId: event.pointerId,
+      });
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     setBoxPreview({ start: point, end: point, pointerId: event.pointerId });
   }
@@ -2894,6 +2910,9 @@ export function App({ project: initialProject }: AppProps) {
     if (boxPreview?.pointerId === event.pointerId) {
       setBoxPreview({ ...boxPreview, end: point });
     }
+    if (draftingCreatePreview?.pointerId === event.pointerId) {
+      setDraftingCreatePreview({ ...draftingCreatePreview, end: point });
+    }
     if (tool === "wire" && wireSource) setWirePreviewPoint(point);
   }
 
@@ -2901,6 +2920,13 @@ export function App({ project: initialProject }: AppProps) {
     if (panPreview?.pointerId === event.pointerId) {
       event.currentTarget.releasePointerCapture(event.pointerId);
       setPanPreview(null);
+      return;
+    }
+    if (draftingCreatePreview?.pointerId === event.pointerId) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+      const { start, end } = draftingCreatePreview;
+      setDraftingCreatePreview(null);
+      commitDraftingCreate(tool, start, end);
       return;
     }
     if (boxPreview?.pointerId !== event.pointerId) return;
@@ -2928,6 +2954,60 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(
       ids.length > 0 ? `Selected ${ids.length} instances` : "Selection cleared",
     );
+  }
+
+  // P1: commit a drag-created drafting object at the final end point.
+  function commitDraftingCreate(
+    activeTool: EditorTool,
+    start: Point,
+    end: Point,
+  ): void {
+    transactionCounter.current += 1;
+    if (activeTool === "construction-line") {
+      const id = `construction-${transactionCounter.current}`;
+      const result = transact([
+        {
+          kind: "upsert_drafting_object",
+          object: {
+            id,
+            kind: "construction-line",
+            locked: false,
+            zIndex: 0,
+            anchor: { kind: "free", position: start },
+            points: [
+              { x: Math.round(start.x), y: Math.round(start.y) },
+              { x: Math.round(end.x), y: Math.round(end.y) },
+            ],
+            lineStyle: "dashed",
+          },
+        },
+      ]);
+      if (result.ok) setStatus(`Added construction line ${id}`);
+    } else if (activeTool === "arrow") {
+      const id = `arrow-${transactionCounter.current}`;
+      const result = transact([
+        {
+          kind: "upsert_drafting_object",
+          object: {
+            id,
+            kind: "arrow",
+            locked: false,
+            zIndex: 0,
+            anchor: { kind: "free", position: start },
+            from: {
+              kind: "free",
+              position: { x: Math.round(start.x), y: Math.round(start.y) },
+            },
+            to: {
+              kind: "free",
+              position: { x: Math.round(end.x), y: Math.round(end.y) },
+            },
+          },
+        },
+      ]);
+      if (result.ok) setStatus(`Added free arrow ${id}`);
+    }
+    setTool("pointer");
   }
 
   function deleteSelection(): void {
@@ -3378,11 +3458,14 @@ export function App({ project: initialProject }: AppProps) {
                 Add current arrow
               </button>
               <span className="command-group-label">Markup</span>
-              <button type="button" onClick={addConstructionLine}>
-                Add construction line
+              <button
+                type="button"
+                onClick={() => activateTool("construction-line")}
+              >
+                Construction line tool (drag)
               </button>
-              <button type="button" onClick={addFreeArrow}>
-                Add free arrow
+              <button type="button" onClick={() => activateTool("arrow")}>
+                Arrow tool (drag)
               </button>
               <button type="button" onClick={addFloatingSymbol}>
                 Add floating symbol
@@ -4123,14 +4206,19 @@ export function App({ project: initialProject }: AppProps) {
                 isText && object.anchor.kind === "free" && !object.locked;
               // P0-2: while dragging, the hit box follows the live preview so
               // the object appears to move without committing any revision.
-              const drag = draftingDragPreview?.objectId === object.id
-                ? draftingDragPreview
-                : null;
+              const drag =
+                draftingDragPreview?.objectId === object.id
+                  ? draftingDragPreview
+                  : null;
               const hitBounds = drag
                 ? {
                     ...geometry.bounds,
-                    x: geometry.bounds.x + (drag.position.x - drag.originalPosition.x),
-                    y: geometry.bounds.y + (drag.position.y - drag.originalPosition.y),
+                    x:
+                      geometry.bounds.x +
+                      (drag.position.x - drag.originalPosition.x),
+                    y:
+                      geometry.bounds.y +
+                      (drag.position.y - drag.originalPosition.y),
                   }
                 : geometry.bounds;
               return (
@@ -4197,6 +4285,16 @@ export function App({ project: initialProject }: AppProps) {
                 data-testid="selection-box"
                 className="selection-box"
                 {...normalizedRect(boxPreview.start, boxPreview.end)}
+              />
+            ) : null}
+            {draftingCreatePreview ? (
+              <line
+                data-testid="drafting-create-preview"
+                className="drafting-create-preview"
+                x1={draftingCreatePreview.start.x}
+                y1={draftingCreatePreview.start.y}
+                x2={draftingCreatePreview.end.x}
+                y2={draftingCreatePreview.end.y}
               />
             ) : null}
             {tool === "wire" && wirePreviewPoint ? (
