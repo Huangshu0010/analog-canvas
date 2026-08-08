@@ -172,7 +172,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "7354e6a56f38af5bb1da2f9e97ff36a9193ba532bc4fd3144e1b6f6fdf4020a2",
+      "13d75782aecd0c12f78356986486d1712e573c5577716f49ea4553b75d89fe7a",
   },
   {
     symbolId: "nmos3",
@@ -198,7 +198,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "nmos3.symbol.json",
     assetHash:
-      "8c9f0d9eebd0870567127d367d9f9d7ee43d1cca37044be9cc96abadc1b3bb4b",
+      "05bb6bc8c8d06dde8a4803c952e6bf844cf2981f419c37e2eb1d1a64d10ee139",
   },
   {
     symbolId: "npn",
@@ -242,7 +242,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "c8d954d977f3ce6fb892a8ad66ceb6ad9f2c042f3fd20deb1ba85c820c64bf68",
+      "b9976bcdc976096b3a5c2f0b4dc62977b0e5f0c0a8825d90b192d05748567f89",
   },
   {
     symbolId: "pmos3",
@@ -268,7 +268,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "3e4b88a1fe57ab839f936b09da7399e9d84ab5cd75d23106057b9f8248076e42",
+      "902e85e5b3b1ec3d1c1e191b68254caf45fa5aef0ee8de69f7570cc4b4f3276e",
   },
   {
     symbolId: "pnp",
@@ -1161,7 +1161,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
               y: 8.13189,
             },
             to: {
-              x: 1.72,
+              x: 2.41,
               y: 8.13189,
             },
             part: "source-arrow",
@@ -1287,7 +1287,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 8.13189,
         },
         to: {
-          x: 11.72,
+          x: 12.41,
           y: 8.13189,
         },
         part: "source-arrow",
@@ -1782,7 +1782,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           {
             kind: "line",
             from: {
-              x: -0.831331,
+              x: -1.521331,
               y: -8.13189,
             },
             to: {
@@ -1892,7 +1892,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 9.168669,
+          x: 8.478669,
           y: -8.13189,
         },
         to: {

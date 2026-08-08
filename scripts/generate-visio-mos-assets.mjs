@@ -24,6 +24,7 @@ const EPSILON = 1e-6;
 const GATE_BAR_THICKNESS = 3.24;
 const MOS_SOURCE_ARROW_LENGTH_SCALE = 0.8;
 const MOS_SOURCE_ARROW_HALF_WIDTH_SCALE = 1.65;
+const MOS_SOURCE_ARROW_HOST_OVERLAP_IN_STROKES = 0.5;
 
 const configs = [
   {
@@ -260,6 +261,7 @@ function arrowPrimitives(shape, segment, style, marker, part) {
   // anchors while matching the supplied Razavi reference's filled MOS head.
   const halfWidth =
     marker.scale * strokeWidth * MOS_SOURCE_ARROW_HALF_WIDTH_SCALE;
+  const hostOverlap = strokeWidth * MOS_SOURCE_ARROW_HOST_OVERLAP_IN_STROKES;
   const setback = Math.abs(marker.refX) * strokeWidth;
   const tip = beginArrow ? segment.from : segment.to;
   const baseCenter = beginArrow
@@ -274,12 +276,16 @@ function arrowPrimitives(shape, segment, style, marker, part) {
   const usesRazaviSourceArrow = part === "source-arrow";
   const line = {
     kind: "line",
-    // The support conductor meets the measured triangle base exactly. The
-    // old Visio marker setback belonged to the pre-calibration marker and
-    // produced a visible gap after the Razavi arrowhead was resized.
+    // Overlap the support conductor under the filled triangle by half a stroke.
+    // An exact butt-to-polygon join can leave a one-pixel anti-alias seam even
+    // when their logical coordinates agree; the later polygon fully hides the
+    // overlap without changing the visible triangle or electrical anchors.
     from: beginArrow
       ? usesRazaviSourceArrow
-        ? roundedPoint(baseCenter)
+        ? roundedPoint({
+            x: baseCenter.x - direction.x * hostOverlap,
+            y: baseCenter.y - direction.y * hostOverlap,
+          })
         : roundedPoint({
             x: segment.from.x + direction.x * setback,
             y: segment.from.y + direction.y * setback,
@@ -287,7 +293,10 @@ function arrowPrimitives(shape, segment, style, marker, part) {
       : segment.from,
     to: endArrow
       ? usesRazaviSourceArrow
-        ? roundedPoint(baseCenter)
+        ? roundedPoint({
+            x: baseCenter.x + direction.x * hostOverlap,
+            y: baseCenter.y + direction.y * hostOverlap,
+          })
         : roundedPoint({
             x: segment.to.x - direction.x * setback,
             y: segment.to.y - direction.y * setback,

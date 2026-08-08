@@ -2143,6 +2143,20 @@ Editing System work.
   relevant browser tests passed; `git diff --check` clean.
 - Commit status: ready for
   `fix(razavi): migrate eligible existing MOS to textbook view`.
+
+## 2026-08-08 - Razavi MOS arrow seam and PMOS parity
+
+- Target: remove visible gaps at the MOS source arrow and verify PMOS receives
+  the same three-terminal presentation contract as NMOS.
+- Changed areas: the VSS-derived source-arrow support now extends under its
+  later-rendered filled triangle by half a source-shape stroke; triangle and
+  electrical coordinates remain unchanged. Catalog tests verify both NMOS and
+  PMOS hide `bulk-lead` / `source-arrow-host` and expose a filled source arrow
+  with the calibrated, overlapping support line.
+- Validation: focused 17-test symbol/editor Vitest, both generated-asset
+  checks, and browser palette E2E passed; `git diff --check` clean.
+- Commit status: ready for
+  `fix(razavi): close MOS arrow seams and verify PMOS variant`.
 ## 2026-08-08 - P0-2: drafting drag uses preview and commits one transaction
 
 - Target: fix the review P0 that a drafting drag committed one transaction per

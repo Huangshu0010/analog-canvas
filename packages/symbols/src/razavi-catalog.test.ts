@@ -275,15 +275,38 @@ describe("Razavi symbol catalog", () => {
       ]),
     );
 
+    for (const [symbolId, supportFrom, supportTo] of [
+      ["nmos", { x: -7.898848, y: 8.13189 }, { x: 2.41, y: 8.13189 }],
+      ["pmos", { x: -1.521331, y: -8.13189 }, { x: 10, y: -8.13189 }],
+    ] as const) {
+      const mos = requireRazaviCatalogSymbol(symbolId);
+      const variant = mos.variants.find(
+        (candidate) => candidate.id === "textbook-3terminal",
+      );
+      expect(variant?.hiddenPrimitiveParts).toEqual([
+        "bulk-lead",
+        "source-arrow-host",
+      ]);
+      expect(variant?.additionalPrimitives).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "line",
+            from: supportFrom,
+            to: supportTo,
+            style: expect.objectContaining({ lineCap: "butt" }),
+          }),
+          expect.objectContaining({
+            kind: "polygon",
+            part: "source-arrow",
+            fill: "foreground",
+          }),
+        ]),
+      );
+    }
+
     const nmos = requireRazaviCatalogSymbol("nmos");
     expect(nmos.variants[0]?.additionalPrimitives).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          kind: "line",
-          from: { x: -7.898848, y: 8.13189 },
-          to: { x: 1.72, y: 8.13189 },
-          style: expect.objectContaining({ lineCap: "butt" }),
-        }),
         expect.objectContaining({
           kind: "polygon",
           points: [
