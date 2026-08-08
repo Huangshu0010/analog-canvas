@@ -1803,3 +1803,18 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): markup-rich text editing for drafting objects (WP-A3 rich text)`.
+## 2026-08-08 - WP-A4: Guide tool
+
+- Target: implement the editor Guide tool per the roadmap (add/move/lock/delete
+  guides; Guides are editor aids, never exported, never electrical).
+- Changed areas: apps/editor adds a "guide" EditorTool and `G` shortcut; the
+  Guide tool click adds a vertical guide at the click x; guides render as a
+  dashed blue overlay (locked = grey, not draggable) with drag-to-move,
+  double-click-to-lock, and Delete-to-remove; the More menu gains a Guides
+  group (add vertical/horizontal, show/hide, clear unlocked, Guide tool);
+  styles.css adds .guide / .guide-locked / .command-group-label.
+- edit-engine: drafting.test adds a locked-guide replacement-rejection test.
+- Validation: full suite 246/246; editor build succeeds; workspace typecheck
+  clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(editor): Guide tool with add/move/lock/delete (WP-A4 guides)`.

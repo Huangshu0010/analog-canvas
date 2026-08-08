@@ -450,6 +450,31 @@ body {
   stroke-width: 1;
 }
 
+/* ADR 0010 editor-only Guide overlay: dashed, non-exported, never electrical. */
+.guide {
+  stroke: rgb(31 111 235 / 55%);
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+  cursor: move;
+  pointer-events: stroke;
+  vector-effect: non-scaling-stroke;
+}
+
+.guide.guide-locked {
+  stroke: rgb(110 118 129 / 60%);
+  cursor: not-allowed;
+}
+
+.command-group-label {
+  display: block;
+  margin: 0.5rem 0 0.125rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
 .annotation-drag-preview {
   fill: #1f6feb;
   font-family: Georgia, "Times New Roman", serif;

@@ -89,7 +89,7 @@ interface AnnotationDragPreview {
   pointerId: number;
 }
 
-type EditorTool = "pointer" | "wire";
+type EditorTool = "pointer" | "wire" | "guide";
 
 interface WireSource {
   endpoint: RouteEndpoint;
@@ -2154,6 +2154,112 @@ export function App({ project: initialProject }: AppProps) {
     });
   }
 
+  // --- ADR 0010 Guide tool ------------------------------------------------
+  function addGuide(axis: "horizontal" | "vertical"): void {
+    const coordinate =
+      axis === "vertical"
+        ? Math.round(viewBox.x + viewBox.width / 2)
+        : Math.round(viewBox.y + viewBox.height / 2);
+    const id = `guide-${++transactionCounter.current}`;
+    const result = transact([
+      {
+        kind: "set_guide",
+        guide: {
+          id,
+          axis,
+          coordinate,
+          locked: false,
+          visible: true,
+        },
+      },
+    ]);
+    if (result.ok) setStatus(`Added ${axis} guide ${id}`);
+  }
+
+  function toggleGuideLock(guideId: string): void {
+    const guide = document.drafting?.guides.find(
+      (candidate) => candidate.id === guideId,
+    );
+    if (!guide) return;
+    transact([
+      {
+        kind: "set_guide",
+        guide: { ...guide, locked: !guide.locked },
+      },
+    ]);
+  }
+
+  function deleteGuide(guideId: string): void {
+    const guide = document.drafting?.guides.find(
+      (candidate) => candidate.id === guideId,
+    );
+    if (guide?.locked) {
+      setStatus("Guide is locked; unlock it before deleting");
+      return;
+    }
+    transact([{ kind: "remove_guide", guideId }]);
+  }
+
+  function toggleGuidesVisible(): void {
+    const guides = document.drafting?.guides ?? [];
+    const allVisible = guides.every((guide) => guide.visible);
+    const edits = guides.map((guide): SchematicEdit => ({
+      kind: "set_guide",
+      guide: { ...guide, visible: !allVisible },
+    }));
+    if (edits.length > 0) transact(edits);
+  }
+
+  function clearUnlockedGuides(): void {
+    const guides = document.drafting?.guides ?? [];
+    const edits = guides
+      .filter((guide) => !guide.locked)
+      .map((guide): SchematicEdit => ({
+        kind: "remove_guide",
+        guideId: guide.id,
+      }));
+    if (edits.length > 0) transact(edits);
+  }
+
+  function beginGuideDrag(
+    event: ReactPointerEvent<SVGLineElement>,
+    guide: { id: string; axis: "horizontal" | "vertical"; locked: boolean },
+  ): void {
+    if (guide.locked) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const element = event.currentTarget.ownerSVGElement;
+    if (!element) return;
+    const move = (moveEvent: PointerEvent): void => {
+      const point = pointFromClient(
+        moveEvent.clientX,
+        moveEvent.clientY,
+        element,
+      );
+      const current = document.drafting?.guides.find(
+        (candidate) => candidate.id === guide.id,
+      );
+      if (!current) return;
+      transact([
+        {
+          kind: "set_guide",
+          guide: {
+            ...current,
+            coordinate: Math.round(
+              guide.axis === "vertical" ? point.x : point.y,
+            ),
+          },
+        },
+      ]);
+    };
+    const up = (): void => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
+
   function applyAnnotationSize(): void {
     if (!selectedAnnotation) return;
     const parsedSize = Number(annotationSizeDraft);
@@ -2393,6 +2499,29 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     if (tool === "wire") return;
+    if (tool === "guide") {
+      // ADR 0010: clicking with the Guide tool adds a vertical guide at the
+      // click x (the toolbar offers horizontal/vertical and clear/lock
+      // actions). Guides are editor aids; they never enter formal export.
+      const id = `guide-${++transactionCounter.current}`;
+      const result = transact([
+        {
+          kind: "set_guide",
+          guide: {
+            id,
+            axis: "vertical",
+            coordinate: Math.round(point.x),
+            locked: false,
+            visible: true,
+          },
+        },
+      ]);
+      if (result.ok) {
+        setTool("pointer");
+        setStatus(`Added guide ${id}`);
+      }
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     setBoxPreview({ start: point, end: point, pointerId: event.pointerId });
   }
@@ -2618,6 +2747,9 @@ export function App({ project: initialProject }: AppProps) {
       } else if (!event.ctrlKey && key === "w") {
         event.preventDefault();
         activateTool("wire");
+      } else if (!event.ctrlKey && key === "g") {
+        event.preventDefault();
+        activateTool("guide");
       } else if (!event.ctrlKey && key === "f") {
         event.preventDefault();
         fitView();
@@ -2877,6 +3009,25 @@ export function App({ project: initialProject }: AppProps) {
               <button type="button" onClick={addPlainText}>
                 Add text
               </button>
+              <button type="button" onClick={addCurrentArrow}>
+                Add current arrow
+              </button>
+              <span className="command-group-label">Guides</span>
+              <button type="button" onClick={() => addGuide("vertical")}>
+                Add vertical guide
+              </button>
+              <button type="button" onClick={() => addGuide("horizontal")}>
+                Add horizontal guide
+              </button>
+              <button type="button" onClick={toggleGuidesVisible}>
+                Show/hide guides
+              </button>
+              <button type="button" onClick={clearUnlockedGuides}>
+                Clear unlocked guides
+              </button>
+              <button type="button" onClick={() => activateTool("guide")}>
+                Guide tool (G)
+              </button>
               <button type="button" onClick={loadRoutingDemo}>
                 Open routing example
               </button>
@@ -2884,8 +3035,9 @@ export function App({ project: initialProject }: AppProps) {
                 Open visual example
               </button>
               <small>
-                Ctrl+C/V copy/paste · R rotate · W wire · F fit · Ctrl+wheel
-                zoom · middle-drag pan · wire click=bend · Enter=finish
+                Ctrl+C/V copy/paste · R rotate · W wire · G guide · F fit ·
+                Ctrl+wheel zoom · middle-drag pan · wire click=bend ·
+                Enter=finish
               </small>
             </div>
           </details>
@@ -3373,6 +3525,36 @@ export function App({ project: initialProject }: AppProps) {
                 }
               />
             ))}
+            {(document.drafting?.guides ?? [])
+              .filter((guide) => guide.visible)
+              .map((guide) => (
+                <line
+                  key={guide.id}
+                  data-testid={`guide-${guide.id}`}
+                  className={guide.locked ? "guide guide-locked" : "guide"}
+                  x1={guide.axis === "vertical" ? guide.coordinate : viewBox.x}
+                  y1={guide.axis === "horizontal" ? guide.coordinate : viewBox.y}
+                  x2={
+                    guide.axis === "vertical"
+                      ? guide.coordinate
+                      : viewBox.x + viewBox.width
+                  }
+                  y2={
+                    guide.axis === "horizontal"
+                      ? guide.coordinate
+                      : viewBox.y + viewBox.height
+                  }
+                  onPointerDown={(event) => beginGuideDrag(event, guide)}
+                  onDoubleClick={() => toggleGuideLock(guide.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Delete" || event.key === "Backspace") {
+                      event.stopPropagation();
+                      deleteGuide(guide.id);
+                    }
+                  }}
+                  tabIndex={0}
+                />
+              ))}
             {routePolylines
               .filter(({ route }) => route.id === selectedRouteId)
               .map(({ route, polyline }) => {
