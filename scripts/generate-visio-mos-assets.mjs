@@ -22,6 +22,17 @@ const POINTS_PER_INCH = 72;
 const CONNECTION_GRID = 10;
 const EPSILON = 1e-6;
 const GATE_BAR_THICKNESS = 3.24;
+// These are the calibrated visible dimensions from the accepted Razavi
+// reference, in logical Symbol DSL units.  They deliberately do not come from
+// an individual VSS master: NMOS3 and PMOS3 use differently scaled Visio
+// arrow markers (25 vs. 22), while the textbook drawing uses one arrow family.
+// VSS still supplies the source conductor direction and electrical anchor.
+// The shared body calibration below scales this local arrow by 1.15 in x and
+// 0.765 in y. These source values therefore render as 8.28 by 7.5735 logical
+// units with a visible 0.69-unit conductor overlap.
+const RAZAVI_SOURCE_ARROW_LENGTH = 7.2;
+const RAZAVI_SOURCE_ARROW_HALF_WIDTH = 4.95;
+const RAZAVI_SOURCE_ARROW_HOST_OVERLAP = 0.6;
 const MOS_SOURCE_ARROW_LENGTH_SCALE = 0.8;
 const MOS_SOURCE_ARROW_HALF_WIDTH_SCALE = 1.65;
 const MOS_SOURCE_ARROW_HOST_OVERLAP_IN_STROKES = 0.5;
@@ -79,7 +90,7 @@ const configs = [
     gateBarShapeIds: [8, 9],
     gateAxisScale: 1.15,
     sourceDrainAxisScale: 0.765,
-    sourceArrowMetricScale: 25 / 22,
+    nativeArrowMetricScale: 25 / 22,
   },
   {
     symbolId: "pmos3",
@@ -95,7 +106,7 @@ const configs = [
     gateBarShapeIds: [9, 10],
     gateAxisScale: 1.15,
     sourceDrainAxisScale: 0.765,
-    sourceArrowMetricScale: 25 / 22,
+    nativeArrowMetricScale: 25 / 22,
   },
 ];
 
@@ -257,22 +268,30 @@ function arrowPrimitives(config, shape, segment, style, marker, part) {
     shape.line.LineWeight,
     `${shape.nameU}.LineWeight`,
   );
-  // Preserve the decoded direction and electrical anchors. PMOS VSS masters
-  // use a 22/25 smaller native marker, so compensate only its arrow metrics
-  // to share the NMOS-calibrated Razavi length and width.
-  const metricScale = config.sourceArrowMetricScale ?? 1;
-  const arrowLength =
-    3 *
-    marker.scale *
-    strokeWidth *
-    MOS_SOURCE_ARROW_LENGTH_SCALE *
-    metricScale;
-  const halfWidth =
-    marker.scale *
-    strokeWidth *
-    MOS_SOURCE_ARROW_HALF_WIDTH_SCALE *
-    metricScale;
-  const hostOverlap = strokeWidth * MOS_SOURCE_ARROW_HOST_OVERLAP_IN_STROKES;
+  // The textbook three-terminal arrow is sourced from the dedicated NMOS3 /
+  // PMOS3 masters. A four-terminal master retains its decoded explicit-body
+  // geometry; it is not silently substituted by a presentation-only marker.
+  const usesRazaviSourceArrow =
+    part === "source-arrow" && config.symbolId.endsWith("3");
+  // A source arrow is a presentation primitive, so its visible size comes
+  // from the canonical Razavi measurement.  This prevents PMOS from inheriting
+  // the smaller native VSS marker while retaining the decoded direction.
+  const arrowLength = usesRazaviSourceArrow
+    ? RAZAVI_SOURCE_ARROW_LENGTH
+    : 3 *
+      marker.scale *
+      strokeWidth *
+      MOS_SOURCE_ARROW_LENGTH_SCALE *
+      (config.nativeArrowMetricScale ?? 1);
+  const halfWidth = usesRazaviSourceArrow
+    ? RAZAVI_SOURCE_ARROW_HALF_WIDTH
+    : marker.scale *
+      strokeWidth *
+      MOS_SOURCE_ARROW_HALF_WIDTH_SCALE *
+      (config.nativeArrowMetricScale ?? 1);
+  const hostOverlap = usesRazaviSourceArrow
+    ? RAZAVI_SOURCE_ARROW_HOST_OVERLAP
+    : strokeWidth * MOS_SOURCE_ARROW_HOST_OVERLAP_IN_STROKES;
   const setback = Math.abs(marker.refX) * strokeWidth;
   const tip = beginArrow ? segment.from : segment.to;
   const baseCenter = beginArrow
@@ -284,7 +303,6 @@ function arrowPrimitives(config, shape, segment, style, marker, part) {
         x: tip.x - direction.x * arrowLength,
         y: tip.y - direction.y * arrowLength,
       };
-  const usesRazaviSourceArrow = part === "source-arrow";
   const line = {
     kind: "line",
     // Overlap the support conductor under the filled triangle by half a stroke.

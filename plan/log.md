@@ -2358,3 +2358,18 @@ Editing System work.
   box-select/copy-paste for non-text kinds).
 - Commit status: ready for
   `docs(roadmap): record honest Drafting Runtime Completion status`.
+
+## 2026-08-08 - Razavi MOS canonical source-arrow geometry
+
+- Target: eliminate divergent NMOS/PMOS three-terminal source-arrow sizing by
+  deriving both from one calibrated visible geometry contract, while keeping
+  the four-terminal explicit-body symbol source-derived.
+- Changed areas: `generate-visio-mos-assets.mjs` now uses one local source
+  arrow metric record (compensated for calibrated body scaling) for `nmos3`
+  and `pmos3`; the four-terminal masters retain native explicit-body geometry.
+  `razavi-catalog.test.ts` verifies the generated variants share 8.28 logical
+  length, 7.5735 logical width, and 0.69 logical support-line overlap.
+- Validation: `symbols:visio-mos:check`, `symbols:razavi:check`, focused
+  Razavi catalog vitest (13/13), and `git diff --check` pass.
+- Commit status: ready for
+  `fix(razavi): derive MOS arrows from canonical geometry`.

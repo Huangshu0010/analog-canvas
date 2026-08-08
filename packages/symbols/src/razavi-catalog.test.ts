@@ -358,6 +358,59 @@ describe("Razavi symbol catalog", () => {
     );
   });
 
+  it("derives textbook NMOS and PMOS arrows from one visible geometry contract", () => {
+    const textbookArrowMetrics = (symbolId: "nmos" | "pmos") => {
+      const variant = requireRazaviCatalogSymbol(symbolId).variants.find(
+        (candidate) => candidate.id === "textbook-3terminal",
+      );
+      const support = variant?.additionalPrimitives?.find(
+        (primitive) =>
+          primitive.kind === "line" && primitive.part === "source-arrow",
+      );
+      const head = variant?.additionalPrimitives?.find(
+        (primitive) =>
+          primitive.kind === "polygon" && primitive.part === "source-arrow",
+      );
+      expect(support).toMatchObject({ kind: "line" });
+      expect(head).toMatchObject({ kind: "polygon" });
+      if (support?.kind !== "line" || head?.kind !== "polygon") {
+        throw new Error(`${symbolId} has no textbook source arrow`);
+      }
+      const [tip, firstBase, secondBase] = head.points;
+      if (!tip || !firstBase || !secondBase) {
+        throw new Error(`${symbolId} source arrow must be a triangle`);
+      }
+      const baseCenter = {
+        x: (firstBase.x + secondBase.x) / 2,
+        y: (firstBase.y + secondBase.y) / 2,
+      };
+      return {
+        length: Math.hypot(tip.x - baseCenter.x, tip.y - baseCenter.y),
+        halfWidth:
+          Math.hypot(firstBase.x - secondBase.x, firstBase.y - secondBase.y) /
+          2,
+        overlap: Math.min(
+          Math.hypot(
+            support.from.x - baseCenter.x,
+            support.from.y - baseCenter.y,
+          ),
+          Math.hypot(support.to.x - baseCenter.x, support.to.y - baseCenter.y),
+        ),
+      };
+    };
+
+    const nmos = textbookArrowMetrics("nmos");
+    const pmos = textbookArrowMetrics("pmos");
+    for (const metrics of [nmos, pmos]) {
+      expect(metrics.length).toBeCloseTo(8.28, 6);
+      expect(metrics.halfWidth).toBeCloseTo(3.78675, 6);
+      expect(metrics.overlap).toBeCloseTo(0.69, 6);
+    }
+    expect(pmos.length).toBeCloseTo(nmos.length, 6);
+    expect(pmos.halfWidth).toBeCloseTo(nmos.halfWidth, 6);
+    expect(pmos.overlap).toBeCloseTo(nmos.overlap, 6);
+  });
+
   it("classifies the VSS node as a semantic primitive, not a component", () => {
     expect(razaviSemanticPrimitives).toEqual([
       expect.objectContaining({
