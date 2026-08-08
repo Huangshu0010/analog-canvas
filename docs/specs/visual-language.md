@@ -117,7 +117,15 @@ Derived visual diagnostics cover unplaced or unresolved symbols, symbol and
 label overlap, short route segments, ambiguous Junction dots, unsatisfied
 layout constraints, and optional export-page bounds. Diagnostics never mutate
 geometry. Unresolved symbols and ambiguous Junction dots are blocking errors;
-spacing and layout-quality findings are warnings.
+spacing and layout-quality findings are observations.
+
+Every finding declares `category`, `confidence`, and `gateEligible`.
+Structural findings describe high-confidence model, topology, or explicit
+constraint conditions. Visual observations describe heuristic geometry and
+require inspection of the formal render. A gate-ineligible observation must
+never become an automatic layout objective merely because a recipe lists its
+code. Where deterministic primitive bounds exist, overlap analysis uses the
+active symbol variant's visible geometry and clusters repeated overlaps.
 
 ## Invariants
 

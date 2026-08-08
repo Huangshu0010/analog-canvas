@@ -187,10 +187,17 @@ or persisted intent beyond what `diff` already reports.
 Diagnostics returned by Snapshot, transact, and render contain:
 
 - stable `code`, `severity`, and human message;
+- optional policy metadata: `category` (`structural` or `observation`),
+  `confidence`, and `gateEligible`;
 - `revision`;
 - related `objectIds`;
 - optional `path`, `bounds`, or `point`;
 - primitive typed `parameters` for machine repair decisions.
+
+All diagnostics produced by `diagnoseVisualQuality` include the policy
+metadata. Other API/runtime diagnostics may omit it. Clients must never promote
+`gateEligible: false` observations into automatic repair or completion gates;
+they require inspection of the formal render.
 
 A `transact` rejection localizes each runtime failure: its diagnostic `path`
 points at the failing edit position (`["edits", index]`) or, for a Route

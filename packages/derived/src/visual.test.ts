@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   diagnoseVisualQuality,
   hasBlockingVisualDiagnostics,
+  isVisualDiagnosticGateFailure,
 } from "./visual.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
@@ -41,13 +42,28 @@ describe("visual quality diagnostics", () => {
       objectIds: ["R1", "R2"],
       locked: false,
     });
-    expect(
-      diagnoseVisualQuality(document, resolver).map((item) => item.code),
-    ).toEqual([
+    const diagnostics = diagnoseVisualQuality(document, resolver);
+    expect(diagnostics.map((item) => item.code)).toEqual([
       "VISUAL_CONSTRAINT_VIOLATION",
       "VISUAL_SYMBOL_OVERLAP",
       "VISUAL_UNPLACED_INSTANCE",
     ]);
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "VISUAL_SYMBOL_OVERLAP",
+          category: "observation",
+          confidence: "low",
+          gateEligible: false,
+        }),
+        expect.objectContaining({
+          code: "VISUAL_UNPLACED_INSTANCE",
+          category: "structural",
+          confidence: "high",
+          gateEligible: true,
+        }),
+      ]),
+    );
   });
 
   it("treats unresolved symbols as blocking without moving user geometry", () => {
@@ -76,6 +92,35 @@ describe("visual quality diagnostics", () => {
       locked: false,
     }));
     expect(diagnoseVisualQuality(document, resolver)).toEqual([]);
+  });
+
+  it("uses visible variant geometry instead of a hidden canonical bulk view", () => {
+    const document = createEmptyDocument("doc", "Visible MOS bounds");
+    document.instances = [0, 40].map((x, index) => ({
+      id: `M${index + 1}`,
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: {
+        position: { x, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    }));
+    expect(
+      diagnoseVisualQuality(document, resolver).filter(
+        (item) => item.code === "VISUAL_SYMBOL_OVERLAP",
+      ),
+    ).toEqual([]);
+
+    document.instances = document.instances.map(
+      ({ symbolVariantId: _symbolVariantId, ...instance }) => instance,
+    );
+    expect(
+      diagnoseVisualQuality(document, resolver).filter(
+        (item) => item.code === "VISUAL_SYMBOL_OVERLAP",
+      ),
+    ).toHaveLength(1);
   });
 
   it("reports wire-through-symbol, same-Net overlap, and terminal departure as evidence", () => {
@@ -132,6 +177,24 @@ describe("visual quality diagnostics", () => {
     );
     expect(codes).toContain("VISUAL_WIRE_THROUGH_SYMBOL");
     expect(codes).toContain("VISUAL_ROUTE_OVERLAP");
+    expect(
+      diagnoseVisualQuality(document, resolver).find(
+        (item) => item.code === "VISUAL_ROUTE_OVERLAP",
+      ),
+    ).toMatchObject({
+      category: "observation",
+      confidence: "medium",
+      gateEligible: false,
+    });
+    const routeOverlap = diagnoseVisualQuality(document, resolver).find(
+      (item) => item.code === "VISUAL_ROUTE_OVERLAP",
+    )!;
+    expect(
+      isVisualDiagnosticGateFailure(
+        routeOverlap,
+        new Set(["VISUAL_ROUTE_OVERLAP"]),
+      ),
+    ).toBe(false);
     // Metrics never move objects.
     expect(document.routes).toHaveLength(2);
   });

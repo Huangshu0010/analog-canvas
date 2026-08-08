@@ -217,8 +217,12 @@ const validated = validateProject(project);
 // Evaluate the committed candidate before persistence/export. Logging alone is
 // not a correction loop: recipes that opt into `requireComplete` must not
 // publish an electrically disconnected or visually blocking target.
-const { diagnoseVisualQuality, deriveCrossings, deriveFlightlines } =
-  await import("../../packages/derived/dist/index.js");
+const {
+  diagnoseVisualQuality,
+  deriveCrossings,
+  deriveFlightlines,
+  isVisualDiagnosticGateFailure,
+} = await import("../../packages/derived/dist/index.js");
 const qualityReports = validated.documents.map((doc) => {
   const diagnostics = diagnoseVisualQuality(doc, resolver);
   return {
@@ -266,11 +270,24 @@ if (recipe.requireComplete === true) {
     targetIds.has(item.document.id),
   )) {
     const errors = report.diagnostics.filter(
-      (item) => item.severity === "error",
+      (item) =>
+        item.severity === "error" && isVisualDiagnosticGateFailure(item),
     );
-    const blockedWarnings = report.diagnostics.filter((item) =>
-      blockingCodes.has(item.code),
+    const blockedWarnings = report.diagnostics.filter(
+      (item) =>
+        item.severity === "warning" &&
+        isVisualDiagnosticGateFailure(item, blockingCodes),
     );
+    const ineligibleConfiguredObservations = report.diagnostics.filter(
+      (item) => item.gateEligible === false && blockingCodes.has(item.code),
+    );
+    if (ineligibleConfiguredObservations.length > 0) {
+      process.stderr.write(
+        `  NOTE: ignored ${ineligibleConfiguredObservations.length} configured visual observations as completeness gates (${[
+          ...new Set(ineligibleConfiguredObservations.map((item) => item.code)),
+        ].join(", ")})\n`,
+      );
+    }
     if (errors.length > 0) failures.push(`${errors.length} visual errors`);
     if (report.flightlines.length > 0) {
       failures.push(`${report.flightlines.length} flightlines`);

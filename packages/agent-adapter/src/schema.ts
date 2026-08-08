@@ -130,6 +130,9 @@ export const AgentCircuitRequestSchema = z.discriminatedUnion("operation", [
 export const AgentDiagnosticSchema = z.strictObject({
   code: z.string().min(1),
   severity: z.enum(["error", "warning", "info"]),
+  category: z.enum(["structural", "observation"]).optional(),
+  confidence: z.enum(["high", "medium", "low"]).optional(),
+  gateEligible: z.boolean().optional(),
   message: z.string(),
   objectIds: z.array(StableIdSchema).optional(),
   path: z.array(z.union([z.string(), z.number().int()])).optional(),

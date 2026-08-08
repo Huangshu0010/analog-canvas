@@ -2466,3 +2466,18 @@ Editing System work.
   SHA-256 hashes remained unchanged; `git diff --check` and status inspected.
 - Commit status: ready for
   `fix(razavi): connect four-terminal bulk arrows to gate bars`.
+
+## 2026-08-08 - Diagnostic policy separation
+
+- Target: stop heuristic visual diagnostics from misleading or blocking Agent
+  layout automation while retaining useful review evidence.
+- Changed areas: introduced structural/observation categories, confidence,
+  and gate eligibility; centralized completeness-gate policy; measured visible
+  symbol variants and rich text; clustered repeated overlaps; separated the
+  editor presentation and Agent response contract; regenerated API artifacts;
+  and documented the consumption rules.
+- Validation: derived and Agent-adapter tests 29/29; manual editor Playwright
+  tests 16/16; derived, Agent-adapter, and editor builds; Agent API artifact
+  check; and `git diff --check` all pass.
+- Commit status: ready for
+  `refactor(diagnostics): separate structural gates from visual observations`.

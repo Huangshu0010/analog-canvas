@@ -20103,6 +20103,24 @@
                                   "info"
                                 ]
                               },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
+                              },
                               "message": {
                                 "type": "string"
                               },
@@ -39745,6 +39763,24 @@
                                           "info"
                                         ]
                                       },
+                                      "category": {
+                                        "type": "string",
+                                        "enum": [
+                                          "structural",
+                                          "observation"
+                                        ]
+                                      },
+                                      "confidence": {
+                                        "type": "string",
+                                        "enum": [
+                                          "high",
+                                          "medium",
+                                          "low"
+                                        ]
+                                      },
+                                      "gateEligible": {
+                                        "type": "boolean"
+                                      },
                                       "message": {
                                         "type": "string"
                                       },
@@ -39906,6 +39942,24 @@
                                   "warning",
                                   "info"
                                 ]
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
                               },
                               "message": {
                                 "type": "string"
@@ -40128,6 +40182,24 @@
                                   "warning",
                                   "info"
                                 ]
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
                               },
                               "message": {
                                 "type": "string"
@@ -40385,6 +40457,24 @@
                                   "info"
                                 ]
                               },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
+                              },
                               "message": {
                                 "type": "string"
                               },
@@ -40578,6 +40668,24 @@
                                   "warning",
                                   "info"
                                 ]
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
                               },
                               "message": {
                                 "type": "string"
@@ -60809,6 +60917,24 @@
                                   "info"
                                 ]
                               },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
+                              },
                               "message": {
                                 "type": "string"
                               },
@@ -80451,6 +80577,24 @@
                                           "info"
                                         ]
                                       },
+                                      "category": {
+                                        "type": "string",
+                                        "enum": [
+                                          "structural",
+                                          "observation"
+                                        ]
+                                      },
+                                      "confidence": {
+                                        "type": "string",
+                                        "enum": [
+                                          "high",
+                                          "medium",
+                                          "low"
+                                        ]
+                                      },
+                                      "gateEligible": {
+                                        "type": "boolean"
+                                      },
                                       "message": {
                                         "type": "string"
                                       },
@@ -80612,6 +80756,24 @@
                                   "warning",
                                   "info"
                                 ]
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
                               },
                               "message": {
                                 "type": "string"
@@ -80834,6 +80996,24 @@
                                   "warning",
                                   "info"
                                 ]
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
                               },
                               "message": {
                                 "type": "string"
@@ -81091,6 +81271,24 @@
                                   "info"
                                 ]
                               },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
+                              },
                               "message": {
                                 "type": "string"
                               },
@@ -81284,6 +81482,24 @@
                                   "warning",
                                   "info"
                                 ]
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "structural",
+                                  "observation"
+                                ]
+                              },
+                              "confidence": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              "gateEligible": {
+                                "type": "boolean"
                               },
                               "message": {
                                 "type": "string"

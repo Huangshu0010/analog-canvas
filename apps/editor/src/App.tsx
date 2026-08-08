@@ -14,6 +14,7 @@ import {
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
   endpointKey,
+  hasBlockingVisualDiagnostics,
   isVisibleEndpoint,
   moveRouteSegment,
   proposeGroupMove,
@@ -575,6 +576,12 @@ export function App({ project: initialProject }: AppProps) {
   const flightlines = deriveFlightlines(document, resolver);
   const crossings = deriveCrossings(document, resolver);
   const visualDiagnostics = diagnoseVisualQuality(document, resolver);
+  const structuralDiagnostics = visualDiagnostics.filter(
+    (diagnostic) => diagnostic.category === "structural",
+  );
+  const visualObservations = visualDiagnostics.filter(
+    (diagnostic) => diagnostic.category === "observation",
+  );
   const visibleEndpoints: WireSource[] = [
     ...document.instances.flatMap((instance) => {
       if (!instance.placement) return [];
@@ -3414,7 +3421,10 @@ export function App({ project: initialProject }: AppProps) {
               <button type="button" onClick={fitView}>
                 Fit
               </button>
-              <span>{visualDiagnostics.length} diagnostics</span>
+              <span>
+                {structuralDiagnostics.length} structural,{" "}
+                {visualObservations.length} observations
+              </span>
             </div>
           </details>
           <details className="command-menu" name="editor-command-menu">
@@ -3858,15 +3868,19 @@ export function App({ project: initialProject }: AppProps) {
           <dd data-testid="crossing-count">{crossings.length}</dd>
           <dt>Annotations</dt>
           <dd data-testid="annotation-count">{document.annotations.length}</dd>
-          <dt>Visual diagnostics</dt>
+          <dt>Structural diagnostics</dt>
+          <dd data-testid="structural-diagnostic-count">
+            {structuralDiagnostics.length}
+          </dd>
+          <dt>Visual observations</dt>
           <dd data-testid="visual-diagnostic-count">
-            {visualDiagnostics.length}
+            {visualObservations.length}
           </dd>
           <dt>Blocking diagnostics</dt>
           <dd data-testid="blocking-diagnostic-count">
             {
-              visualDiagnostics.filter(
-                (diagnostic) => diagnostic.severity === "error",
+              visualDiagnostics.filter((diagnostic) =>
+                hasBlockingVisualDiagnostics([diagnostic]),
               ).length
             }
           </dd>
@@ -3890,13 +3904,17 @@ export function App({ project: initialProject }: AppProps) {
           </ul>
         </section>
         <section aria-label="Visual diagnostics" className="diagnostics">
-          <h2>Visual Diagnostics</h2>
+          <h2>Diagnostics</h2>
           {visualDiagnostics.length === 0 ? <p>No visual diagnostics</p> : null}
+          {structuralDiagnostics.length > 0 ? <h3>Structural issues</h3> : null}
           <ul data-testid="visual-diagnostics">
             {visualDiagnostics.map((diagnostic, index) => (
               <li
                 key={`${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
                 data-severity={diagnostic.severity}
+                data-category={diagnostic.category}
+                data-confidence={diagnostic.confidence}
+                hidden={diagnostic.category !== "structural"}
               >
                 <button
                   type="button"
@@ -3907,6 +3925,30 @@ export function App({ project: initialProject }: AppProps) {
                   {diagnostic.objectIds.length > 0
                     ? `: ${diagnostic.objectIds.join(", ")}`
                     : ""}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {visualObservations.length > 0 ? <h3>Visual observations</h3> : null}
+          <ul data-testid="visual-observations">
+            {visualDiagnostics.map((diagnostic, index) => (
+              <li
+                key={`observation-${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
+                data-severity={diagnostic.severity}
+                data-category={diagnostic.category}
+                data-confidence={diagnostic.confidence}
+                hidden={diagnostic.category !== "observation"}
+              >
+                <button
+                  type="button"
+                  data-testid={`observation-${index}`}
+                  onClick={() => jumpToVisualDiagnostic(diagnostic)}
+                >
+                  <strong>{diagnostic.code}</strong>
+                  {diagnostic.objectIds.length > 0
+                    ? `: ${diagnostic.objectIds.join(", ")}`
+                    : ""}
+                  {` (${diagnostic.confidence} confidence)`}
                 </button>
               </li>
             ))}
