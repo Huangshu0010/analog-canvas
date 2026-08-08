@@ -34,6 +34,8 @@ import type {
 } from "@icm/model";
 import {
   buildSvgScene,
+  flattenMarkup,
+  parseMarkup,
   renderSymbolDefinitionBody,
   resolveSchematicStyleProfile,
   schematicTextFontSize,
@@ -396,10 +398,14 @@ export function App({ project: initialProject }: AppProps) {
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<
     string | null
   >(null);
+  const [selectedDraftingId, setSelectedDraftingId] = useState<string | null>(
+    null,
+  );
   const [instanceLabelDraft, setInstanceLabelDraft] = useState("");
   const [netLabelDraft, setNetLabelDraft] = useState("");
   const [annotationTextDraft, setAnnotationTextDraft] = useState("");
   const [annotationSizeDraft, setAnnotationSizeDraft] = useState("1");
+  const [draftingTextDraft, setDraftingTextDraft] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
@@ -442,6 +448,11 @@ export function App({ project: initialProject }: AppProps) {
   const selectedAnnotation = selectedAnnotationId
     ? document.annotations.find(
         (annotation) => annotation.id === selectedAnnotationId,
+      )
+    : undefined;
+  const selectedDrafting = selectedDraftingId
+    ? document.drafting?.objects.find(
+        (object) => object.id === selectedDraftingId,
       )
     : undefined;
   const styleProfile = resolveSchematicStyleProfile(
@@ -2105,6 +2116,27 @@ export function App({ project: initialProject }: AppProps) {
     setAnnotationSizeDraft(String(sizeScale));
   }
 
+  function applyDraftingText(): void {
+    if (!selectedDrafting || selectedDrafting.kind !== "text") return;
+    const markup = draftingTextDraft;
+    if (!markup.trim()) {
+      transact([
+        { kind: "remove_drafting_object", objectId: selectedDrafting.id },
+      ]);
+      setSelectedDraftingId(null);
+      return;
+    }
+    // ADR 0010: the markup string is a parse-on-submit convenience; the
+    // persisted truth is the canonical RichText AST.
+    const content = parseMarkup(markup);
+    transact([
+      {
+        kind: "upsert_drafting_object",
+        object: { ...selectedDrafting, content },
+      },
+    ]);
+  }
+
   function insertAnnotationMarkup(kind: "subscript" | "italic"): void {
     const input = annotationTextInputRef.current;
     const start = input?.selectionStart ?? annotationTextDraft.length;
@@ -3089,6 +3121,41 @@ export function App({ project: initialProject }: AppProps) {
             ) : null}
           </section>
         ) : null}
+        {selectedDrafting?.kind === "text" ? (
+          <section className="context-actions" aria-label="Drafting text actions">
+            <h2>Drafting text</h2>
+            <label>
+              Content (markup: subscripts, superscripts, italic, fractions)
+              <input
+                aria-label="Drafting text content"
+                value={draftingTextDraft}
+                onChange={(event) =>
+                  setDraftingTextDraft(event.currentTarget.value)
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    applyDraftingText();
+                  }
+                }}
+              />
+            </label>
+            <button type="button" onClick={applyDraftingText}>
+              Apply text
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                transact([
+                  { kind: "remove_drafting_object", objectId: selectedDrafting.id },
+                ]);
+                setSelectedDraftingId(null);
+              }}
+            >
+              Delete
+            </button>
+          </section>
+        ) : null}
         {selectedEndpoint?.endpoint.kind === "junction" ? (
           <section className="context-actions" aria-label="Junction actions">
             <h2>Junction</h2>
@@ -3450,6 +3517,54 @@ export function App({ project: initialProject }: AppProps) {
                 />
               );
             })}
+            {(document.drafting?.objects ?? [])
+              .filter(
+                (object): object is Extract<typeof object, { kind: "text" }> =>
+                  object.kind === "text",
+              )
+              .map((object) => {
+                const position =
+                  object.anchor.kind === "free"
+                    ? object.anchor.position
+                    : object.anchor.fallbackPosition;
+                const fontSize =
+                  object.typographyToken === "caption"
+                    ? styleProfile.typography.captionFontSize
+                    : styleProfile.typography.annotationFontSize;
+                const text = flattenMarkup(
+                  object.content as unknown as Parameters<typeof flattenMarkup>[0],
+                );
+                const width = Math.max(fontSize * 0.6, text.length * fontSize * 0.6);
+                const height = fontSize * 1.35;
+                return (
+                  <rect
+                    key={`drafting-hit-${object.id}`}
+                    data-testid={`drafting-hit-${object.id}`}
+                    className={
+                      selectedDraftingId === object.id
+                        ? "annotation-hit selected"
+                        : "annotation-hit"
+                    }
+                    x={position.x - width / 2}
+                    y={position.y - fontSize * 1.05}
+                    width={width}
+                    height={height}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedAnnotationId(null);
+                      setSelectedRouteId(null);
+                      setSelectedDraftingId(object.id);
+                      setDraftingTextDraft(
+                        flattenMarkup(
+                          object.content as unknown as Parameters<
+                            typeof flattenMarkup
+                          >[0],
+                        ),
+                      );
+                    }}
+                  />
+                );
+              })}
             {annotationDragPreview ? (
               <text
                 className="annotation-drag-preview"

@@ -1779,3 +1779,27 @@ Editing System work.
   clean.
 - Commit status: ready for
   `feat(agent-api): rename Snapshot identity hash to electricalTopologyHash`.
+## 2026-08-08 - WP-A3 rich-text editor: markup parser and drafting text editing
+
+- Target: deliver the parse-on-submit markup path and make drafting text
+  objects selectable and editable in the editor (the core of the in-place
+  rich-text editor without a full contenteditable widget).
+- Changed areas:
+  - render-svg: new `markup-parser.ts` parseMarkup / flattenMarkup converting
+    the restricted import shorthand (subscripts `_{...}`, superscripts
+    `^{...}`, `\it{...}`, `\bf{...}`, `\frac{num}{den}`, line breaks `\\`) to
+    the canonical RichText AST; unparseable input is preserved as literal text,
+    never dropped. Exported from the package index.
+  - editor: drafting text objects now render hit boxes, are selectable, and a
+    "Drafting text" panel edits their content as markup and commits
+    parseMarkup -> upsert_drafting_object, so the editor authors the AST while
+    the user types shorthand.
+- Verified end-to-end: parseMarkup(\`V_{in}^{+} = \frac{g_m}{r_o}\`) -> AST ->
+  renderRichTextDocument emits subscript, superscript, fraction, and numerator
+  tspans.
+- Tests: 8 markup-parser tests (plain text, subscript, superscript, italic,
+  bold, fraction, line break, unparseable-preservation, flatten).
+- Validation: full suite 245/245; editor build succeeds; workspace typecheck
+  clean; `git diff --check` clean.
+- Commit status: ready for
+  `feat(editor): markup-rich text editing for drafting objects (WP-A3 rich text)`.
