@@ -1826,21 +1826,22 @@ export function App({ project: initialProject }: AppProps) {
   function addPlainText(): void {
     transactionCounter.current += 1;
     const id = `note-${transactionCounter.current}`;
+    const position = {
+      x: Math.round(viewBox.x + viewBox.width / 2),
+      y: Math.round(viewBox.y + viewBox.height - 20),
+    };
     const result = transact([
       {
-        kind: "upsert_annotation",
-        annotation: {
+        kind: "upsert_drafting_object",
+        object: {
           id,
-          kind: "plain-text",
-          text: "Design note",
-          position: {
-            x: Math.round(viewBox.x + viewBox.width / 2),
-            y: Math.round(viewBox.y + viewBox.height - 20),
-          },
-          offset: { x: 0, y: 0 },
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position },
+          content: { runs: [{ kind: "text", value: "Design note" }] },
           alignment: "middle",
           rotation: 0,
-          locked: false,
         },
       },
     ]);
@@ -1848,7 +1849,7 @@ export function App({ project: initialProject }: AppProps) {
       setSelectedAnnotationId(id);
       setSelectedIds([]);
       setSelectedRouteId(null);
-      setStatus(`Added annotation ${id}`);
+      setStatus(`Added drafting text ${id}`);
     }
   }
 
@@ -1872,21 +1873,25 @@ export function App({ project: initialProject }: AppProps) {
     }
     transactionCounter.current += 1;
     const id = `current-${transactionCounter.current}`;
-    const position = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+    const fallbackPosition = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
     const result = transact([
       {
-        kind: "upsert_annotation",
+        kind: "upsert_schematic_annotation",
         annotation: {
           id,
-          kind: "current",
+          kind: "route-marker",
+          markerKind: "current",
           text: "I_x",
-          position,
-          routeAttachment: {
+          position: fallbackPosition,
+          anchor: {
+            kind: "route",
             routeId: selectedRoute.id,
             segmentIndex,
             t: 0.5,
-            direction: "forward",
             normalOffset: -14,
+            direction: "forward",
+            orientation: "follow",
+            fallbackPosition,
           },
           offset: { x: 0, y: 0 },
           alignment: "middle",

@@ -1694,3 +1694,24 @@ Editing System work.
   generation/golden --check scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `feat(render): unified RichText renderer and route-marker rendering (WP-A2)`.
+## 2026-08-08 - WP-A3 step: editor authors drafting text and route-marker
+
+- Target: convert the editor's "add text" and "add current arrow" commands
+  from the legacy plain-text/current annotation kinds to the ADR 0010 drafting
+  text and route-marker edits, so the editor authors the new types and the
+  legacy kinds can be retired.
+- Changed areas: apps/editor App.tsx addPlainText now commits
+  upsert_drafting_object (DraftText, free anchor, single text run), and
+  addCurrentArrow now commits upsert_schematic_annotation with a route-marker
+  carrying a route VisualAnchor (routeId/segmentIndex/t/normalOffset/direction/
+  orientation + fallbackPosition) instead of the legacy current routeAttachment.
+- Remaining WP-A3 work (not in this step): the read-side hit-test/bounds/panel
+  code still keys on the legacy current kind, so migrated route-marker
+  annotations are not yet selectable/editable in the editor; the in-place
+  rich-text editor and the unified hit-test/drag/Alt-cycle/box-select redo are
+  still pending. Removing the legacy kinds from the model waits for those so
+  the editor stays functional.
+- Validation: full suite 234/234; editor typecheck clean; `git diff --check`
+  clean.
+- Commit status: ready for
+  `feat(editor): author drafting text and route-marker (WP-A3 step)`.
