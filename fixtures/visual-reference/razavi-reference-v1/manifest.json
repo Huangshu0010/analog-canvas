@@ -4,6 +4,8 @@
   "visualAuthority": "sole",
   "assetPath": "razavi-six-panel.png",
   "sha256": "08c89f54345c835324528a63c7519dc3aeda17169febc20134e33056bc85790b",
+  "mosGeometryPath": "mos-geometry.json",
+  "mosGeometrySha256": "1c16d5f2e1ad6040207cce51c9845ea7a09f3bf607b8c66e80a04848f6ef423e",
   "pixels": {
     "width": 1204,
     "height": 794

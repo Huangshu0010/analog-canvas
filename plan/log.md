@@ -2423,3 +2423,19 @@ Editing System work.
   26/26; typecheck; 12-package build; production preview smoke `--check`;
   Agent API artifact check; release package; and `git diff --check` all pass.
 - Commit status: ready for `fix(drafting): close runtime and GUI verification gaps`.
+
+## 2026-08-08 - Complete screenshot-driven Razavi MOS pixel map
+
+- Target: remove the legacy-coordinate skeleton from Razavi MOS generation
+  and prove that the running UI consumes geometry measured from the sole
+  reference screenshot.
+- Changed areas: added a hash-bound NMOS/PMOS pixel map; expanded the raster
+  measurement script; changed the MOS generator to consume only that map plus
+  fixed electrical pin anchors; regenerated four MOS assets and the catalog;
+  replaced old numeric expectations with independent pixel-map assertions.
+- Validation: pixel-map regeneration check; MOS generator and catalog
+  idempotency checks; focused catalog tests 13/13; symbols TypeScript build;
+  editor production build; running-editor SVG inspection for both NMOS and
+  PMOS; temporary UI instances undone.
+- Commit status: ready for
+  `fix(razavi): generate MOS geometry solely from pixel map`.

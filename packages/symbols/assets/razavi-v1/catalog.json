@@ -143,7 +143,7 @@
       "palette": true,
       "automaticMappings": ["spice:M:nmos", "pdk:model-type:nmos"],
       "assetPath": "nmos.symbol.json",
-      "assetHash": "7ba99d978ceafd77bfe56b1174037db8f45da734d6946ed02e0780c5fcb691ef"
+      "assetHash": "40eba6ca94d0160edd4c7c6d7b5c242dafef520a4fefe878718aa07d4c9dba46"
     },
     {
       "symbolId": "nmos3",
@@ -166,7 +166,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "nmos3.symbol.json",
-      "assetHash": "d63cd98582f05d2d72c4603ae4a33aab672f9d08a5c2729a436502e2d6dc36ef"
+      "assetHash": "30d68c6b524f3b36f83e1071d9e609a0010f10fec5eaccac18c8946d4f3eb0de"
     },
     {
       "symbolId": "npn",
@@ -205,7 +205,7 @@
       "palette": true,
       "automaticMappings": ["spice:M:pmos", "pdk:model-type:pmos"],
       "assetPath": "pmos.symbol.json",
-      "assetHash": "c72f686d17c249b6e6b29af42e6f6c224f6b75a96ff7a267feab41e04217e4cf"
+      "assetHash": "78443244fa3a0f0713e1da040f29138b650950fe213e7516f0948390ec4999ad"
     },
     {
       "symbolId": "pmos3",
@@ -228,7 +228,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "pmos3.symbol.json",
-      "assetHash": "ea5a5b35b615380c673e9e311c82b0f8e21860f90d0cb7e08fab3d3aaa9f8844"
+      "assetHash": "4563c7dc776e6429ab25de73f70534f3c3da2827ddb522b1ae064edf8656a5ca"
     },
     {
       "symbolId": "pnp",

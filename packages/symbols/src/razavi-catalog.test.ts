@@ -16,8 +16,62 @@ import {
 import { SymbolDefinitionSchema } from "./schema.js";
 
 const assetRoot = resolve(process.cwd(), "packages/symbols/assets/razavi-v1");
+const mosGeometry = JSON.parse(
+  readFileSync(
+    resolve(
+      process.cwd(),
+      "fixtures/visual-reference/razavi-reference-v1/mos-geometry.json",
+    ),
+    "utf8",
+  ),
+) as {
+  symbols: Record<
+    "nmos" | "pmos",
+    {
+      pixelsPerLogical: number;
+      originPx: { x: number; y: number };
+      gateBarsPx: Array<{
+        left: number;
+        top: number;
+        right: number;
+        bottom: number;
+      }>;
+      channelsPx: Record<
+        "upper" | "lower",
+        {
+          from: { x: number; y: number };
+          to: { x: number; y: number };
+        }
+      >;
+      sourceArrowPx: {
+        support: {
+          from: { x: number; y: number };
+          to: { x: number; y: number };
+        };
+        tip: { x: number; y: number };
+        baseTop: { x: number; y: number };
+        baseBottom: { x: number; y: number };
+      };
+    }
+  >;
+};
 const normalize = (value: string) =>
   `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
+const logicalPoint = (
+  measurement: (typeof mosGeometry.symbols)["nmos"],
+  point: { x: number; y: number },
+) => ({
+  x:
+    Math.round(
+      ((point.x - measurement.originPx.x) / measurement.pixelsPerLogical) *
+        1_000_000,
+    ) / 1_000_000,
+  y:
+    Math.round(
+      ((point.y - measurement.originPx.y) / measurement.pixelsPerLogical) *
+        1_000_000,
+    ) / 1_000_000,
+});
 
 describe("Razavi symbol catalog", () => {
   it("publishes the versioned catalog identity and source provenance", () => {
@@ -197,6 +251,9 @@ describe("Razavi symbol catalog", () => {
 
   it("uses raster-authored Razavi MOS bodies without moving electrical pin anchors", () => {
     const nmos = requireRazaviCatalogSymbol("nmos");
+    const measurement = mosGeometry.symbols.nmos;
+    const outerGate = measurement.gateBarsPx[0]!;
+    const upperChannel = measurement.channelsPx.upper;
     expect(nmos.pins).toMatchObject([
       { name: "D", at: { x: 10, y: -20 } },
       { name: "G", at: { x: -20, y: 0 } },
@@ -208,10 +265,22 @@ describe("Razavi symbol catalog", () => {
         expect.objectContaining({
           kind: "polygon",
           points: [
-            { x: -16.068819, y: -8.13189 },
-            { x: -16.068819, y: 8.13189 },
-            { x: -12.828819, y: 8.13189 },
-            { x: -12.828819, y: -8.13189 },
+            logicalPoint(measurement, {
+              x: outerGate.left,
+              y: outerGate.top,
+            }),
+            logicalPoint(measurement, {
+              x: outerGate.left,
+              y: outerGate.bottom,
+            }),
+            logicalPoint(measurement, {
+              x: outerGate.right,
+              y: outerGate.bottom,
+            }),
+            logicalPoint(measurement, {
+              x: outerGate.right,
+              y: outerGate.top,
+            }),
           ],
           fill: "foreground",
           stroke: "none",
@@ -219,8 +288,8 @@ describe("Razavi symbol catalog", () => {
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -6.716614, y: -8.13189 },
-          to: { x: 10, y: -8.13189 },
+          from: logicalPoint(measurement, upperChannel.from),
+          to: logicalPoint(measurement, upperChannel.to),
           style: {
             strokeRole: "normal",
             lineCap: "butt",
@@ -280,15 +349,10 @@ describe("Razavi symbol catalog", () => {
       ]),
     );
 
-    for (const [symbolId, supportFrom, supportTo] of [
-      ["nmos", { x: -6.716614, y: 8.13189 }, { x: 2.55811, y: 8.13189 }],
-      [
-        "pmos",
-        { x: -0.675841, y: -8.13189 },
-        { x: 10, y: -8.13189 },
-      ],
-    ] as const) {
+    for (const symbolId of ["nmos", "pmos"] as const) {
       const mos = requireRazaviCatalogSymbol(symbolId);
+      const measurement = mosGeometry.symbols[symbolId];
+      const arrow = measurement.sourceArrowPx;
       const variant = mos.variants.find(
         (candidate) => candidate.id === "textbook-3terminal",
       );
@@ -300,50 +364,23 @@ describe("Razavi symbol catalog", () => {
         expect.arrayContaining([
           expect.objectContaining({
             kind: "line",
-            from: supportFrom,
-            to: supportTo,
+            from: logicalPoint(measurement, arrow.support.from),
+            to: logicalPoint(measurement, arrow.support.to),
             style: expect.objectContaining({ lineCap: "butt" }),
           }),
           expect.objectContaining({
             kind: "polygon",
+            points: [
+              logicalPoint(measurement, arrow.tip),
+              logicalPoint(measurement, arrow.baseTop),
+              logicalPoint(measurement, arrow.baseBottom),
+            ],
             part: "source-arrow",
             fill: "foreground",
           }),
         ]),
       );
     }
-
-    const nmos = requireRazaviCatalogSymbol("nmos");
-    expect(nmos.variants[0]?.additionalPrimitives).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "polygon",
-          points: [
-            { x: 10, y: 8.13189 },
-            { x: 1.86811, y: 11.90741 },
-            { x: 1.86811, y: 4.35637 },
-          ],
-          fill: "foreground",
-          stroke: "none",
-        }),
-      ]),
-    );
-
-    const pmos = requireRazaviCatalogSymbol("pmos");
-    expect(pmos.variants[0]?.additionalPrimitives).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "polygon",
-          points: [
-            { x: -8.117731, y: -8.13189 },
-            { x: 0.014159, y: -4.35637 },
-            { x: 0.014159, y: -11.90741 },
-          ],
-          fill: "foreground",
-          stroke: "none",
-        }),
-      ]),
-    );
 
     const current = requireRazaviCatalogSymbol("current-source");
     expect(current.primitives).toEqual(
@@ -367,11 +404,13 @@ describe("Razavi symbol catalog", () => {
     );
   });
 
-  it("derives textbook NMOS and PMOS arrows from one visible geometry contract", () => {
-    const textbookArrowMetrics = (symbolId: "nmos" | "pmos") => {
+  it("derives each textbook MOS arrow from its screenshot pixel map", () => {
+    for (const symbolId of ["nmos", "pmos"] as const) {
       const variant = requireRazaviCatalogSymbol(symbolId).variants.find(
         (candidate) => candidate.id === "textbook-3terminal",
       );
+      const measurement = mosGeometry.symbols[symbolId];
+      const arrow = measurement.sourceArrowPx;
       const support = variant?.additionalPrimitives?.find(
         (primitive) =>
           primitive.kind === "line" && primitive.part === "source-arrow",
@@ -385,39 +424,18 @@ describe("Razavi symbol catalog", () => {
       if (support?.kind !== "line" || head?.kind !== "polygon") {
         throw new Error(`${symbolId} has no textbook source arrow`);
       }
-      const [tip, firstBase, secondBase] = head.points;
-      if (!tip || !firstBase || !secondBase) {
-        throw new Error(`${symbolId} source arrow must be a triangle`);
-      }
-      const baseCenter = {
-        x: (firstBase.x + secondBase.x) / 2,
-        y: (firstBase.y + secondBase.y) / 2,
-      };
-      return {
-        length: Math.hypot(tip.x - baseCenter.x, tip.y - baseCenter.y),
-        halfWidth:
-          Math.hypot(firstBase.x - secondBase.x, firstBase.y - secondBase.y) /
-          2,
-        overlap: Math.min(
-          Math.hypot(
-            support.from.x - baseCenter.x,
-            support.from.y - baseCenter.y,
-          ),
-          Math.hypot(support.to.x - baseCenter.x, support.to.y - baseCenter.y),
-        ),
-      };
-    };
-
-    const nmos = textbookArrowMetrics("nmos");
-    const pmos = textbookArrowMetrics("pmos");
-    for (const metrics of [nmos, pmos]) {
-      expect(metrics.length).toBeCloseTo(8.13189, 6);
-      expect(metrics.halfWidth).toBeCloseTo(3.77552, 6);
-      expect(metrics.overlap).toBeCloseTo(0.69, 6);
+      expect(support).toMatchObject({
+        from: logicalPoint(measurement, arrow.support.from),
+        to: logicalPoint(measurement, arrow.support.to),
+      });
+      expect(head).toMatchObject({
+        points: [
+          logicalPoint(measurement, arrow.tip),
+          logicalPoint(measurement, arrow.baseTop),
+          logicalPoint(measurement, arrow.baseBottom),
+        ],
+      });
     }
-    expect(pmos.length).toBeCloseTo(nmos.length, 6);
-    expect(pmos.halfWidth).toBeCloseTo(nmos.halfWidth, 6);
-    expect(pmos.overlap).toBeCloseTo(nmos.overlap, 6);
   });
 
   it("classifies the VSS node as a semantic primitive, not a component", () => {
