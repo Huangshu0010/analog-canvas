@@ -21,7 +21,8 @@ Current Agent integration decisions include
 [`0005-agent-api-without-mcp.md`](0005-agent-api-without-mcp.md),
 [`0007-snapshot-driven-agent-workflow.md`](0007-snapshot-driven-agent-workflow.md),
 [`0008-agent-local-route-tree-expander.md`](0008-agent-local-route-tree-expander.md),
-and [`0009-move-stretches-connected-routes.md`](0009-move-stretches-connected-routes.md).
+[`0009-move-stretches-connected-routes.md`](0009-move-stretches-connected-routes.md),
+and [`0010-text-annotation-drafting-schema.md`](0010-text-annotation-drafting-schema.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

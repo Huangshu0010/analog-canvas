@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.7`
+Version: `1.8`
 
 Owning phase: `Phase 0/1/8`
 
@@ -50,6 +50,26 @@ The executable union contains `noop`, `add_instance`, `remove_instance`,
 `set_layout_constraint`, `remove_layout_constraint`, `align_instances`,
 `place_port`, `move_port`, `undo`, and `redo`. Later phases extend the typed union and versioned schemas;
 they do not create separate mutation endpoints.
+
+The Text & Peripheral Editing System (ADR 0010) adds six edit kinds, all
+strict-JSON-Schema validated members of the same union:
+
+```text
+upsert_schematic_annotation | remove_schematic_annotation
+upsert_drafting_object     | remove_drafting_object
+set_guide                  | remove_guide
+```
+
+`upsert_schematic_annotation` / `remove_schematic_annotation` replace the
+narrowed SchematicAnnotation set (`instance-label | net-label | power-label |
+route-marker`). `upsert_drafting_object` / `remove_drafting_object` accept the
+`DraftingObject` union (text, arrow, leader, callout, construction-line,
+floating-symbol) with the shared `VisualAnchor`. `set_guide` / `remove_guide`
+manage `Guide` records. None of these edits creates or modifies a Net, Route,
+Junction, flightline, Pin, or SPICE instance. A `transact` dry run returns:
+resolved anchors, invalid/unresolved attachments, possible overlaps with
+electrical objects, and the actual changed IDs. Locked drafting objects and
+guides reject replacement or removal, matching the existing lock discipline.
 
 ## Invariants
 
@@ -145,6 +165,13 @@ A transaction with `expectedRevision: 8` against revision 9 returns
 New edit kinds are additive within a versioned union. Changing the meaning of
 an existing kind requires a new API/schema version or explicit compatibility
 adapter.
+
+ADR 0010 adds the six drafting/annotation/guide edit kinds additively and
+migrates persisted Projects to schema 2 on read. `upsert_annotation` /
+`remove_annotation` remain accepted as the deprecated aliases of
+`upsert_schematic_annotation` / `remove_schematic_annotation` for the duration
+of migration; new callers use the explicit names. The migration does not
+change electrical topology or rewrite SPICE.
 
 ## Deterministic validation
 

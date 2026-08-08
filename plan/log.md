@@ -1486,3 +1486,46 @@ Editing System work.
   with the hit-text commit per that workstream's plan.
 - Commit status: all four commits landed on `main`; worktree now clean of the
   concurrent Razavi work.
+## 2026-08-08 - WP-A0: freeze text, annotation, and peripheral editing contracts
+
+- Target: freeze the four shared-contract specs, the V1 syntax/object scope,
+  and an ADR for the schema major version bump, plus three fixture Projects
+  and their formal SVG goldens, before any runtime implementation (WP-A1).
+- Changed areas: new ADR 0010 (schema 1->2, four frozen decisions);
+  `docs/specs/schematic-model.md` 1.1->1.2 (DraftingLayer, RichText AST,
+  VisualAnchor, DraftingObject/Guide, narrowed SchematicAnnotation, migration,
+  invariants); `docs/specs/edit-engine.md` 1.7->1.8 (six new edit kinds,
+  dry-run anchor/overlap diagnostics, lock discipline);
+  `docs/specs/agent-api.md` 2.0->2.1 (Snapshot drafting objects with canonical
+  RichText AST, resolved anchors, default-off guide coordinates with
+  `includeEditorGuides`, no-injection invariant);
+  `docs/specs/editor-interaction.md` 1.2->1.3 (Text/Markup/Guides groups,
+  Ctrl+K palette, T/A/G shortcuts, in-place rich-text editor, unified
+  hit-test/stacking, construction-line vs guide); ADR README index.
+- New fixtures: `fixtures/projects/text-rich-text`,
+  `text-route-marker`, `text-callout-guide`, and their
+  `fixtures/visual-golden/text-*.svg` goldens, plus
+  `scripts/text-annotation-wp-a0-golden.mjs`. Fixtures are expressed with the
+  current schema-1 annotation model; WP-A1 reinterprets/enriches them into the
+  drafting container. The callout-guide golden contains no Guide bytes (Guides
+  never export).
+- Frozen decisions (per user, roadmap defaults): RichText V1 six nodes;
+  annotations narrow to SchematicAnnotation with plain-text/figure-caption ->
+  drafting; Guides persist but always export:false and default-off in
+  Snapshot; floating-symbol decorative-only whitelist; schema 1->2 with
+  idempotent migration and ADR.
+- Dirty-state decision: one concurrent symbol/arrowhead worker (user-confirmed)
+  is iterating a third pass on `packages/symbols/**` and
+  `scripts/generate-visio-*.mjs`, leaving `render.test.ts` and
+  `razavi-catalog.test.ts` red from stale goldens/expectations. That work does
+  not overlap this target's owned paths (specs, new fixtures, goldens, plan,
+  log); WP-A0 wrote no runtime code, so it cannot affect those failures. The
+  three WP-A0 goldens were regenerated against the current source.
+- Validation: the three fixtures parse against schema 1 and their goldens are
+  idempotent under `text-annotation-wp-a0-golden.mjs --check`; the rich-text
+  golden renders subscripts and italic runs, the route-marker golden renders
+  the attached current arrow, and the callout-guide golden has zero Guide
+  bytes; `npx tsc -p tsconfig.check.json --noEmit` clean; `git diff --check`
+  clean. The two red tests are owned by the concurrent worker.
+- Commit status: ready for
+  `docs(specs): freeze text, annotation, and peripheral editing contracts (WP-A0)`.

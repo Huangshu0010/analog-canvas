@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `2.0`
+Version: `2.1`
 
 Owning phase: `Phase 6/8/9`
 
@@ -92,7 +92,24 @@ target cell/subcircuit name when available, and resolved `targetDocumentId` or
 - complete Route endpoints, waypoints, segment modes, and derived polyline;
 - Junctions, annotations, layout groups, and constraints with all persisted
   fields and members;
+- drafting objects with canonical RichText AST, resolved anchor, bounds,
+  `locked`, and `zIndex`, plus any invalid-anchor diagnostics;
+- guide count and per-guide `visible`/`locked` state; guide coordinates are
+  omitted unless the request sets `includeEditorGuides: true`;
 - spatial diagnostics valid for the returned revision.
+
+The Text & Peripheral Editing System (ADR 0010) extends the Snapshot with the
+drafting layer. `annotations` reports the narrowed SchematicAnnotation set;
+`drafting.objects` reports exportable `DraftObject`s with their canonical
+RichText AST and resolved `VisualAnchor`. An Agent may request "create a
+Razavi-style current arrow attached to Route X at 60% of segment 2", but
+`transact` still accepts only the typed edit union — never raw paths, SVG,
+CSS, HTML, arbitrary LaTeX, or a whole Document. Drafting objects are
+non-electrical: they never affect `topologyHash`, Net membership, or
+flightline. Guides are editor aids: they are counted in the default Snapshot
+but their coordinates are returned only with an explicit
+`includeEditorGuides: true`, so editor noise is not mistaken for circuit
+content.
 
 Instance-pin `netId` and Net `terminals` are bidirectional views of one validated
 Document and must agree. Arrays use deterministic ID/order rules defined by the
@@ -187,6 +204,10 @@ filesystem route exists.
 - Bidirectional pin/Net views agree.
 - An Agent cannot claim human identity or bypass Edit Engine atomicity/locks.
 - Raw Project/Snapshot replacement and arbitrary filesystem access do not exist.
+- Drafting and guide edits are non-electrical; they never change
+  `topologyHash`, Net/Route/Junction membership, or flightline.
+- No request accepts SVG, CSS, HTML, arbitrary LaTeX, or a script/path payload;
+  rich text is submitted only as the canonical RichText AST.
 - Transport and domain errors use deterministic typed codes.
 
 ## Valid example

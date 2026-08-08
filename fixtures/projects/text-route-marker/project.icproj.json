@@ -1,0 +1,135 @@
+{
+  "documents": [
+    {
+      "annotations": [
+        {
+          "alignment": "middle",
+          "id": "current-ix",
+          "kind": "current",
+          "locked": false,
+          "offset": { "x": 0, "y": 0 },
+          "position": { "x": 260, "y": 144 },
+          "rotation": 0,
+          "routeAttachment": {
+            "direction": "forward",
+            "normalOffset": -16,
+            "routeId": "route-output",
+            "segmentIndex": 0,
+            "t": 0.56
+          },
+          "text": "I_x"
+        },
+        {
+          "alignment": "middle",
+          "id": "label-m1",
+          "kind": "instance-label",
+          "locked": false,
+          "attachedObjectId": "M1",
+          "offset": { "x": 24, "y": 0 },
+          "position": { "x": 224, "y": 190 },
+          "rotation": 0,
+          "text": "M_{1}"
+        },
+        {
+          "alignment": "start",
+          "id": "label-vout",
+          "kind": "net-label",
+          "locked": false,
+          "attachedObjectId": "net-output",
+          "offset": { "x": 0, "y": -8 },
+          "position": { "x": 300, "y": 152 },
+          "rotation": 0,
+          "text": "V_{out}"
+        },
+        {
+          "alignment": "start",
+          "id": "voltage-vx",
+          "kind": "voltage",
+          "locked": false,
+          "offset": { "x": 8, "y": 0 },
+          "position": { "x": 332, "y": 150 },
+          "rotation": 0,
+          "text": "V_x"
+        }
+      ],
+      "constraints": [],
+      "id": "document-main",
+      "instances": [
+        {
+          "id": "M1",
+          "placement": {
+            "mirror": "none",
+            "position": { "x": 200, "y": 200 },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        }
+      ],
+      "junctions": [
+        {
+          "id": "junction-output",
+          "netId": "net-output",
+          "position": { "x": 200, "y": 150 }
+        }
+      ],
+      "layoutGroups": [],
+      "name": "Route Markers",
+      "nets": [
+        {
+          "id": "net-output",
+          "ports": ["port-output"],
+          "scope": "local",
+          "terminals": [{ "instanceId": "M1", "pinName": "D" }]
+        },
+        {
+          "id": "net-ground",
+          "ports": [],
+          "scope": "global",
+          "terminals": [{ "instanceId": "M1", "pinName": "S" }]
+        }
+      ],
+      "ports": [
+        {
+          "direction": "output",
+          "id": "port-output",
+          "name": "VOUT",
+          "position": { "x": 360, "y": 150 }
+        }
+      ],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "razavi-textbook-v1"
+      },
+      "revision": 0,
+      "routes": [
+        {
+          "from": { "kind": "junction", "junctionId": "junction-output" },
+          "id": "route-output",
+          "netId": "net-output",
+          "segmentModes": ["manual"],
+          "to": { "kind": "port", "portId": "port-output" },
+          "waypoints": []
+        }
+      ],
+      "sourceStatus": "geometry-only-changed"
+    }
+  ],
+  "id": "project-text-route-marker",
+  "name": "Route Markers",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "none",
+    "entry": null,
+    "files": [],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "razavi-v1",
+    "id": "builtin-analog",
+    "version": "0.1.0"
+  },
+  "topDocumentId": "document-main"
+}

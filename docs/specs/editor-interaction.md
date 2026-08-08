@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.2`
+Version: `1.3`
 
 Owning phase: `Phase 8`
 
@@ -67,6 +67,55 @@ The following are not permanent production toolbar modes:
 
 Wire remains visible for discoverability, while pointer-down on a pin or a
 selected conductor starts the same wire session.
+
+## Text, markup, and peripheral editing
+
+This section is `proposed` (ADR 0010); interaction lands in WP-A3/A4. It
+freezes the V1 tool surface and command mapping.
+
+`More` gains three folded groups and a command palette, instead of a permanent
+toolbar row:
+
+| Group   | Contents                                                        | Shortcut |
+| ------- | --------------------------------------------------------------- | -------- |
+| Text    | text, caption, format tools                                     | `T` text placement |
+| Markup  | route arrow, free arrow, leader, callout, construction line, floating symbol | `A` last-used markup tool |
+| Guides  | add horizontal/vertical guide, show/hide, lock, clear unlocked  | `G` guide tool |
+| Palette | search all low-frequency commands                               | `Ctrl+K` |
+
+`R`, `W`, undo/redo, and the existing keyboard contract are unchanged. Canvas
+shortcuts must not fire while a rich-text editor, input, or search field has
+focus.
+
+Rich text is edited in place: selecting `Text` and clicking canvas/Route/object
+shows a free/route/object anchor preview, then an inline editor. `Enter` breaks
+the line, `Ctrl+Enter` commits, `Escape` cancels or exits. A floating format
+bar acts on the selection: italic `Ctrl+I`, bold `Ctrl+B`, subscript
+`Ctrl+=`, superscript `Ctrl+Shift+=`, and a fraction button. Font size uses a
+token dropdown (caption/body/label) plus +/- levels, never an unbounded numeric
+field. The import shorthand (`M_{1}`, `\it{...}`, `\frac{a}{b}`) is parse-on-
+submit input convenience only; the persisted truth is the canonical RichText
+AST.
+
+Route markers, arrows, leaders, and callouts use the shared `VisualAnchor`: a
+current marker dragged along a Route updates `segmentIndex/t`, a normal drag
+updates `normalOffset`, and a reverse button toggles `direction`. A leader/
+callout is first pointed at the explained object/node, then dragged to the
+explanation; its text and leader select, move, copy, and delete as one object.
+A construction line is visually distinct from Wire (dashed/lighter preview) and
+never shows an electrical snap/junction preview.
+
+Guides are dragged from a ruler (or `G` then click for touch). Drag moves the
+guide, double-click locks it, `Delete` removes an unlocked guide. Snap priority
+for object editing is Grid, Guide, object bounds/anchor, and selected
+DraftingObject endpoints only; Pin/Junction/Route snap belongs to Wire
+sessions. Copy/paste uses fresh IDs and remaps internal object/route anchors in
+the same Document; external target anchors become free anchors with a prompt.
+
+Hit testing uses a screen-pixel tolerance, not a large document-coordinate
+circle: text box/handle first, then DraftingObject, then Symbol/Route. `Alt`
+cycles candidates at the same point, so text hidden behind a device remains
+selectable without enlarging pin selection circles.
 
 ## Keyboard contract
 
@@ -274,12 +323,16 @@ Document revision. Previews and cancelled gestures are transient.
 ## Persistence boundary
 
 - Persisted: committed instances, annotations, logical Nets, endpoints,
-  junctions, route geometry, source status, and user-facing presentation state
-  already covered by the Project and Document specifications.
+  junctions, route geometry, source status, user-facing presentation state, and
+  the `drafting` layer (objects and guides) already covered by the Project and
+  Document specifications.
 - Session-local: current selection, open menu, palette query, active gesture,
-  snap candidate, drag rectangle, context handles, and viewport transform.
-- Derived: crossings, flightlines, diagnostics, hover affordances, and snap
-  overlays.
+  snap candidate, drag rectangle, context handles, in-progress rich-text draft,
+  and viewport transform.
+- Derived: crossings, flightlines, diagnostics, hover affordances, snap
+  overlays, and resolved drafting anchors/bounds.
+- Never exported: Guides are persisted for collaboration but are always
+  `export: false`; they never appear in formal SVG/PNG/PDF.
 - External build-time evidence: VSS inventories, reviewed pin mapping, and
   geometry comparison artifacts.
 

@@ -1,0 +1,129 @@
+{
+  "documents": [
+    {
+      "annotations": [
+        {
+          "alignment": "middle",
+          "id": "label-m1",
+          "kind": "instance-label",
+          "locked": false,
+          "attachedObjectId": "M1",
+          "offset": { "x": 24, "y": 0 },
+          "position": { "x": 224, "y": 190 },
+          "rotation": 0,
+          "text": "M_{1}"
+        },
+        {
+          "alignment": "middle",
+          "id": "label-m2",
+          "kind": "instance-label",
+          "locked": false,
+          "attachedObjectId": "M2",
+          "offset": { "x": 24, "y": 0 },
+          "position": { "x": 324, "y": 190 },
+          "rotation": 0,
+          "text": "M_{2}"
+        },
+        {
+          "alignment": "middle",
+          "id": "label-vdd",
+          "kind": "power-label",
+          "locked": false,
+          "offset": { "x": 0, "y": -10 },
+          "position": { "x": 270, "y": 110 },
+          "rotation": 0,
+          "text": "V_{DD}"
+        },
+        {
+          "alignment": "middle",
+          "id": "note-gain",
+          "kind": "plain-text",
+          "locked": false,
+          "offset": { "x": 0, "y": 0 },
+          "position": { "x": 270, "y": 250 },
+          "rotation": 0,
+          "text": "\\it{gain}"
+        }
+      ],
+      "constraints": [],
+      "id": "document-main",
+      "instances": [
+        {
+          "id": "M1",
+          "placement": {
+            "mirror": "none",
+            "position": { "x": 200, "y": 200 },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "M2",
+          "placement": {
+            "mirror": "none",
+            "position": { "x": 300, "y": 200 },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        }
+      ],
+      "junctions": [
+        {
+          "id": "junction-vdd",
+          "netId": "net-vdd",
+          "position": { "x": 250, "y": 150 }
+        }
+      ],
+      "layoutGroups": [],
+      "name": "Rich Text Labels",
+      "nets": [
+        {
+          "id": "net-vdd",
+          "ports": [],
+          "scope": "global",
+          "terminals": [
+            { "instanceId": "M1", "pinName": "D" },
+            { "instanceId": "M2", "pinName": "D" }
+          ]
+        },
+        {
+          "id": "net-ground",
+          "ports": [],
+          "scope": "global",
+          "terminals": [
+            { "instanceId": "M1", "pinName": "S" },
+            { "instanceId": "M2", "pinName": "S" }
+          ]
+        }
+      ],
+      "ports": [],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "razavi-textbook-v1"
+      },
+      "revision": 0,
+      "routes": [],
+      "sourceStatus": "geometry-only-changed"
+    }
+  ],
+  "id": "project-text-rich-text",
+  "name": "Rich Text Labels",
+  "schemaVersion": 1,
+  "source": {
+    "dialect": "none",
+    "entry": null,
+    "files": [],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "razavi-v1",
+    "id": "builtin-analog",
+    "version": "0.1.0"
+  },
+  "topDocumentId": "document-main"
+}
