@@ -2325,6 +2325,41 @@ export function App({ project: initialProject }: AppProps) {
     if (result.ok) setStatus(`Renamed displayed instance label to ${text}`);
   }
 
+  function setSelectedMosTerminalPresentation(
+    presentation: "three-terminal" | "four-terminal",
+  ): void {
+    if (!selectedInstance) return;
+    const textbookVariantId = defaultRazaviSymbolVariantId(
+      selectedInstance.symbolId,
+    );
+    if (!textbookVariantId) return;
+    const symbolVariantId =
+      presentation === "three-terminal" ? textbookVariantId : null;
+    if (
+      (presentation === "three-terminal" &&
+        selectedInstance.symbolVariantId === textbookVariantId) ||
+      (presentation === "four-terminal" &&
+        selectedInstance.symbolVariantId === undefined)
+    ) {
+      return;
+    }
+    const result = transact([
+      {
+        kind: "set_instance_symbol",
+        instanceId: selectedInstance.id,
+        symbolId: selectedInstance.symbolId,
+        symbolVariantId,
+      },
+    ]);
+    if (result.ok) {
+      setStatus(
+        presentation === "three-terminal"
+          ? `Set ${selectedInstance.id} to Razavi three-terminal view`
+          : `Set ${selectedInstance.id} to four-terminal Bulk-visible view`,
+      );
+    }
+  }
+
   function applyNetLabel(): void {
     if (!selectedRoute) return;
     const net = document.nets.find(
@@ -3481,6 +3516,31 @@ export function App({ project: initialProject }: AppProps) {
             <button type="button" onClick={applyInstanceLabel}>
               Apply name
             </button>
+            {defaultRazaviSymbolVariantId(selectedInstance.symbolId) ? (
+              <fieldset className="mos-terminal-presentation">
+                <legend>MOS terminal view</legend>
+                <button
+                  type="button"
+                  aria-pressed={
+                    selectedInstance.symbolVariantId === "textbook-3terminal"
+                  }
+                  onClick={() =>
+                    setSelectedMosTerminalPresentation("three-terminal")
+                  }
+                >
+                  Textbook 3-terminal
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={selectedInstance.symbolVariantId === undefined}
+                  onClick={() =>
+                    setSelectedMosTerminalPresentation("four-terminal")
+                  }
+                >
+                  Show Bulk (4-terminal)
+                </button>
+              </fieldset>
+            ) : null}
           </section>
         ) : null}
         {selectedRouteId ? (

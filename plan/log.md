@@ -2170,6 +2170,21 @@ Editing System work.
   palette browser E2E, and `git diff --check` passed.
 - Commit status: ready for
   `fix(razavi): unify PMOS and NMOS arrow proportions`.
+
+## 2026-08-08 - MOS terminal presentation control
+
+- Target: make the preserved four-terminal MOS view explicitly usable in the
+  editor, rather than leaving it as an unexposed base symbol.
+- Changed areas: selected canonical NMOS/PMOS has inspector actions for
+  textbook three-terminal and Bulk-visible four-terminal presentation. The
+  switch is a typed, undoable `set_instance_symbol` edit; it retains the same
+  symbol ID and D/G/S/B electrical terminals while changing only the visual
+  variant.
+- Validation: editor build and a PMOS browser E2E prove B appears when the
+  four-terminal view is selected and disappears when textbook view returns;
+  `git diff --check` clean.
+- Commit status: ready for
+  `feat(editor): expose MOS three and four terminal views`.
 ## 2026-08-08 - P0-2: drafting drag uses preview and commits one transaction
 
 - Target: fix the review P0 that a drafting drag committed one transaction per

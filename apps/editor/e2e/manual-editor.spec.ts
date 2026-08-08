@@ -152,6 +152,20 @@ test("authors components and connectivity manually from an empty canvas", async 
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
 });
 
+test("switches a selected MOS between Razavi three- and four-terminal views", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "pmos", { x: 420, y: 260 });
+  await expect(page.getByTestId("terminal-M1-B")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Show Bulk (4-terminal)" }).click();
+  await expect(page.getByTestId("terminal-M1-B")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Textbook 3-terminal" }).click();
+  await expect(page.getByTestId("terminal-M1-B")).toHaveCount(0);
+});
+
 test("migrates only eligible existing MOS when Razavi is applied", async ({
   page,
 }) => {
