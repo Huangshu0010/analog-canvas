@@ -3012,3 +3012,15 @@ formatting`.
 - Validation: regenerated catalog, focused catalog Vitest 16/16, Symbols build,
   Editor production build, and `git diff --check` passed.
 - Commit status: ready for `feat(razavi): add filled port symbol`.
+
+## 2026-08-09 - PMOS source-arrow support clipping
+
+- Target: remove the squared residual line that crossed the PMOS source-arrow
+  head in three-terminal display mode.
+- Result: the shared MOS generator now creates source-arrow support from the
+  measured tail to the measured external lead, then draws the filled head.
+  The PMOS support starts at the arrow tail rather than under its tip; the same
+  rule restores the exact measured NMOS support start.
+- Validation: regenerated four MOS assets and catalog, focused catalog Vitest
+  16/16, Symbols build, Editor production build, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): clip PMOS source-arrow support`.

@@ -105,6 +105,9 @@ fidelity harness, raster authority, or MOS catalog assets.
   edit, stage, or revert.
 - Validation completed: catalog generation, focused catalog Vitest (16 tests),
   Symbols TypeScript build, Editor production build, and `git diff --check`.
+- PMOS source-arrow support now starts at the measured arrow tail and proceeds
+  to the external lead before the filled head is painted; it cannot cross the
+  arrow tip or leave a squared-off residual through the triangle.
 
 - Added `formal-route-wire`, a real formal-route crop from the archived
   `current-port-reference.png`; the harness now prints the actual reference

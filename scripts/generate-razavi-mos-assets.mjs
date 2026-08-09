@@ -117,14 +117,19 @@ function arrowFromPixels(measurement, arrow, part) {
 }
 
 function sourceArrowPrimitives(measurement, polarity) {
-  const sourceChannel = polarity === "nmos" ? "lower" : "upper";
   const arrow = measurement.sourceArrowPx;
+  const sourcePin = polarity === "nmos" ? "S" : "D";
   return [
-    channelLeadPolylineFromPixels(
-      measurement,
-      measurement.channelsPx[sourceChannel],
-      "source-arrow",
-    ),
+    {
+      kind: "polyline",
+      points: [
+        logicalPoint(measurement, arrow.support.from),
+        logicalPoint(measurement, arrow.support.to),
+        logicalPoint(measurement, measurement.pinsPx[sourcePin]),
+      ],
+      part: "source-arrow",
+      style: normal,
+    },
     {
       kind: "polygon",
       points: [

@@ -433,27 +433,9 @@ describe("Razavi symbol catalog", () => {
           expect.objectContaining({
             kind: "polyline",
             points: [
-              logicalPoint(measurement, {
-                ...measurement.channelsPx[
-                  symbolId === "nmos" ? "lower" : "upper"
-                ].from,
-                x:
-                  measurement.channelsPx[
-                    symbolId === "nmos" ? "lower" : "upper"
-                  ].from.x - 1,
-              }),
-              logicalPoint(
-                measurement,
-                measurement.leadsPx[
-                  symbolId === "nmos" ? "S" : "D"
-                ].from,
-              ),
-              logicalPoint(
-                measurement,
-                measurement.leadsPx[
-                  symbolId === "nmos" ? "S" : "D"
-                ].to,
-              ),
+              logicalPoint(measurement, arrow.support.from),
+              logicalPoint(measurement, arrow.support.to),
+              logicalPoint(measurement, measurement.pinsPx[symbolId === "nmos" ? "S" : "D"]),
             ],
             style: expect.objectContaining({ lineCap: "butt" }),
           }),
@@ -515,23 +497,9 @@ describe("Razavi symbol catalog", () => {
       }
       expect(support).toMatchObject({
         points: [
-          logicalPoint(measurement, {
-            ...measurement.channelsPx[
-              symbolId === "nmos" ? "lower" : "upper"
-            ].from,
-            x:
-              measurement.channelsPx[
-                symbolId === "nmos" ? "lower" : "upper"
-              ].from.x - 1,
-          }),
-          logicalPoint(
-            measurement,
-            measurement.leadsPx[symbolId === "nmos" ? "S" : "D"].from,
-          ),
-          logicalPoint(
-            measurement,
-            measurement.leadsPx[symbolId === "nmos" ? "S" : "D"].to,
-          ),
+          logicalPoint(measurement, arrow.support.from),
+          logicalPoint(measurement, arrow.support.to),
+          logicalPoint(measurement, measurement.pinsPx[symbolId === "nmos" ? "S" : "D"]),
         ],
       });
       expect(head).toMatchObject({
