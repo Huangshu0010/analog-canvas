@@ -567,7 +567,6 @@ export function App({ project: initialProject }: AppProps) {
   const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
     null,
   );
-  const [instanceLabelDraft, setInstanceLabelDraft] = useState("");
   const [netLabelDraft, setNetLabelDraft] = useState("");
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
@@ -1090,19 +1089,6 @@ export function App({ project: initialProject }: AppProps) {
   useEffect(() => {
     if (!selectedRouteId) setSelectedRouteSegmentIndex(null);
   }, [selectedRouteId]);
-
-  useEffect(() => {
-    if (!selectedInstance) {
-      setInstanceLabelDraft("");
-      return;
-    }
-    const label = document.annotations.find(
-      (annotation) =>
-        annotation.kind === "instance-label" &&
-        annotation.attachedObjectId === selectedInstance.id,
-    );
-    setInstanceLabelDraft(label?.text ?? selectedInstance.id);
-  }, [document.annotations, selectedInstance]);
 
   useEffect(() => {
     if (!selectedRoute) {
@@ -2595,57 +2581,6 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
-  function applyInstanceLabel(): void {
-    if (!selectedInstance?.placement) return;
-    const existing = document.annotations.find(
-      (annotation) =>
-        annotation.kind === "instance-label" &&
-        annotation.attachedObjectId === selectedInstance.id,
-    );
-    const text = instanceLabelDraft.trim();
-    if (!text) {
-      if (existing)
-        transact([{ kind: "remove_annotation", annotationId: existing.id }]);
-      return;
-    }
-    const resolved = resolver.resolve(
-      selectedInstance.symbolId,
-      selectedInstance.symbolVariantId,
-    );
-    const distance = Math.ceil(
-      Math.max(
-        resolved?.definition.viewBox.width ?? 60,
-        resolved?.definition.viewBox.height ?? 60,
-      ) /
-        2 +
-        14,
-    );
-    const position = existing?.position ?? {
-      x: selectedInstance.placement.position.x,
-      y: selectedInstance.placement.position.y + distance,
-    };
-    const result = transact([
-      {
-        kind: "upsert_annotation",
-        annotation: {
-          id: existing?.id ?? `instance-label-${selectedInstance.id}`,
-          kind: "instance-label",
-          text,
-          position,
-          attachedObjectId: selectedInstance.id,
-          offset: {
-            x: position.x - selectedInstance.placement.position.x,
-            y: position.y - selectedInstance.placement.position.y,
-          },
-          alignment: existing?.alignment ?? "middle",
-          rotation: existing?.rotation ?? 0,
-          locked: false,
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Renamed displayed instance label to ${text}`);
-  }
-
   function setSelectedMosTerminalPresentation(
     presentation: "three-terminal" | "four-terminal",
   ): void {
@@ -3005,12 +2940,16 @@ export function App({ project: initialProject }: AppProps) {
       selectedAnnotation.anchor?.kind === "route"
         ? { ...selectedAnnotation.anchor, direction }
         : selectedAnnotation.anchor;
+    const routeAttachment = selectedAnnotation.routeAttachment
+      ? { ...selectedAnnotation.routeAttachment, direction }
+      : undefined;
     const result = transact([
       {
         kind: "upsert_annotation",
         annotation: {
           ...selectedAnnotation,
           ...(anchor ? { anchor } : {}),
+          ...(routeAttachment ? { routeAttachment } : {}),
         },
       },
     ]);
@@ -4144,21 +4083,11 @@ export function App({ project: initialProject }: AppProps) {
           </button>
         ))}
         {selectedInstance ? (
-          <section className="context-actions" aria-label="Instance text">
-            <h2>Instance text</h2>
-            <label>
-              Displayed name
-              <input
-                aria-label="Displayed instance name"
-                value={instanceLabelDraft}
-                onChange={(event) =>
-                  setInstanceLabelDraft(event.currentTarget.value)
-                }
-              />
-            </label>
-            <button type="button" onClick={applyInstanceLabel}>
-              Apply name
-            </button>
+          <section
+            className="context-actions"
+            aria-label="Instance presentation"
+          >
+            <h2>Instance</h2>
             {defaultRazaviSymbolVariantId(selectedInstance.symbolId) ? (
               <fieldset className="mos-terminal-presentation">
                 <legend>MOS terminal view</legend>
@@ -4208,6 +4137,17 @@ export function App({ project: initialProject }: AppProps) {
             </button>
             <button type="button" onClick={removeSelectedRouteGeometry}>
               Remove route geometry
+            </button>
+          </section>
+        ) : null}
+        {selectedAnnotation && isRoutedMarker(selectedAnnotation) ? (
+          <section
+            className="context-actions"
+            aria-label="Current arrow actions"
+          >
+            <h2>Current arrow</h2>
+            <button type="button" onClick={reverseSelectedCurrentArrow}>
+              Reverse arrow
             </button>
           </section>
         ) : null}

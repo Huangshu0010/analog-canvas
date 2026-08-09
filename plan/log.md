@@ -2820,3 +2820,19 @@ Editing System work.
   10/10, and `git diff --check` passed.
 - Commit status: ready for `refactor(editor): normalize visual selection
   protocol`.
+
+## 2026-08-09 - Text-entry and current-arrow repair
+
+- Target: eliminate duplicate instance-text editing, preserve RichText
+  multi-character selection through toolbar commands, and restore accessible
+  current-arrow reversal.
+- Changed areas: editor Property panel and route-marker action; floating
+  RichText editor range handling.
+- Result: instance text no longer has a Property-panel mutation path; the
+  contenteditable range is restored before bold/italic/subscript/superscript;
+  selected current arrows have a direct Reverse action and update both anchor
+  representations.
+- Validation: workspace typecheck, editor production build, focused Vitest
+  10/10, and `git diff --check` passed.
+- Commit status: ready for `fix(editor): unify text entry and current arrow
+  controls`.

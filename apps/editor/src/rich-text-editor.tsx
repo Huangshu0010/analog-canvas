@@ -136,6 +136,7 @@ export function RichTextEditor({
   onReverseCurrentArrow,
 }: RichTextEditorProps) {
   const editableRef = useRef<HTMLDivElement>(null);
+  const selectionRangeRef = useRef<Range | null>(null);
 
   useEffect(() => {
     if (editableRef.current) {
@@ -150,10 +151,35 @@ export function RichTextEditor({
     if (editableRef.current) onChange(editableDocument(editableRef.current));
   };
 
+  const rememberSelection = (): void => {
+    const editable = editableRef.current;
+    const selection = window.getSelection();
+    if (
+      !editable ||
+      !selection ||
+      selection.rangeCount === 0 ||
+      !editable.contains(selection.anchorNode) ||
+      !editable.contains(selection.focusNode)
+    ) {
+      return;
+    }
+    selectionRangeRef.current = selection.getRangeAt(0).cloneRange();
+  };
+
+  const restoreSelection = (): void => {
+    const range = selectionRangeRef.current;
+    const selection = window.getSelection();
+    if (!range || !selection) return;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  };
+
   const command = (name: "bold" | "italic" | "subscript" | "superscript") => {
     if (disabled || !editableRef.current) return;
     editableRef.current.focus();
+    restoreSelection();
     document.execCommand(name);
+    rememberSelection();
     sync();
   };
 
@@ -285,6 +311,9 @@ export function RichTextEditor({
         aria-label="Canvas text editor"
         aria-multiline="true"
         onInput={sync}
+        onSelect={rememberSelection}
+        onKeyUp={rememberSelection}
+        onPointerUp={rememberSelection}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             event.preventDefault();
