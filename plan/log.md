@@ -3145,4 +3145,4 @@ formatting`.
   Workspace typecheck reaches only unrelated Razavi catalog fixture errors
   (`leadsPx`); the concurrent drafting handoff's App type errors were repaired
   separately but are intentionally not part of this commit.
-- Commit status: ready for `fix(editor): scope hierarchy UI to imported cells`.
+- Commit status: committed locally; push pending transient remote retry.
