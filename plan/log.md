@@ -3035,3 +3035,17 @@ formatting`.
 - Validation: focused Derived/Render-SVG Vitest 8/8, Derived build, Render-SVG
   build, Editor production build, and `git diff --check` passed.
 - Commit status: ready for `style(razavi): calibrate compact Arial typography`.
+
+## 2026-08-09 - MOS source-arrow orthogonal elbow regression
+
+- Target: restore the electrical D/S lead's strict 90-degree continuation next
+  to the MOS source-arrow head.
+- Root cause: the previous clipping pass used a reference-raster overlap point
+  as the vector elbow, although its x-coordinate is deliberately offset from
+  the electrical lead.
+- Result: arrow support begins at the measured arrow tail but turns only at the
+  exact D/S lead point. A focused regression asserts the final segment is
+  vertical, preventing future diagonal or disconnected external wiring.
+- Validation: regenerated MOS assets/catalog, focused catalog Vitest 16/16,
+  Symbols build, Editor production build, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): restore MOS arrow elbow`.

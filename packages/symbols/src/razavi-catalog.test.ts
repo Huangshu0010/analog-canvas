@@ -434,8 +434,14 @@ describe("Razavi symbol catalog", () => {
             kind: "polyline",
             points: [
               logicalPoint(measurement, arrow.support.from),
-              logicalPoint(measurement, arrow.support.to),
-              logicalPoint(measurement, measurement.pinsPx[symbolId === "nmos" ? "S" : "D"]),
+              logicalPoint(
+                measurement,
+                measurement.leadsPx[symbolId === "nmos" ? "S" : "D"].from,
+              ),
+              logicalPoint(
+                measurement,
+                measurement.leadsPx[symbolId === "nmos" ? "S" : "D"].to,
+              ),
             ],
             style: expect.objectContaining({ lineCap: "butt" }),
           }),
@@ -498,10 +504,20 @@ describe("Razavi symbol catalog", () => {
       expect(support).toMatchObject({
         points: [
           logicalPoint(measurement, arrow.support.from),
-          logicalPoint(measurement, arrow.support.to),
-          logicalPoint(measurement, measurement.pinsPx[symbolId === "nmos" ? "S" : "D"]),
+          logicalPoint(
+            measurement,
+            measurement.leadsPx[symbolId === "nmos" ? "S" : "D"].from,
+          ),
+          logicalPoint(
+            measurement,
+            measurement.leadsPx[symbolId === "nmos" ? "S" : "D"].to,
+          ),
         ],
       });
+      const elbow = support.points[1]!;
+      const pin = support.points[2]!;
+      expect(elbow.x).toBe(pin.x);
+      expect(elbow.y).not.toBe(pin.y);
       expect(head).toMatchObject({
         points: [
           logicalPoint(measurement, arrow.tip),

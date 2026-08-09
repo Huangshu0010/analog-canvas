@@ -124,8 +124,8 @@ function sourceArrowPrimitives(measurement, polarity) {
       kind: "polyline",
       points: [
         logicalPoint(measurement, arrow.support.from),
-        logicalPoint(measurement, arrow.support.to),
-        logicalPoint(measurement, measurement.pinsPx[sourcePin]),
+        logicalPoint(measurement, measurement.leadsPx[sourcePin].from),
+        logicalPoint(measurement, measurement.leadsPx[sourcePin].to),
       ],
       part: "source-arrow",
       style: normal,
