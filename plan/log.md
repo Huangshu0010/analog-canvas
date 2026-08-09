@@ -15,6 +15,18 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-09 - Pages workspace dependency build repair
+
+- Target: repair Pages run `31311029301`, whose fresh runner could not resolve
+  `@icm/edit-engine` while building only the editor package.
+- Changed areas: Pages workflow now builds the editor dependency closure using
+  pnpm's trailing-ellipsis filter.
+- Validation: `pnpm install --frozen-lockfile` and the base-path Pages build
+  passed after model, symbols, derived, SPICE, edit-engine, render-svg,
+  exporters, and editor packages built in dependency order; `git diff --check`
+  passed.
+- Commit status: ready to commit, merge, and rerun Pages.
+
 ## 2026-08-09 - GitHub Pages release preparation
 
 - Target: publish the GUI-only, local-first editor as a static GitHub Pages
