@@ -3225,6 +3225,21 @@ formatting`.
   `git diff --check` passed.
 - Commit status: ready for `fix(razavi): join resistor body and leads`.
 
+## 2026-08-09 - Razavi resistor acute corners
+
+- Target: remove the remaining bevelled tips from the continuous Razavi
+  resistor while leaving the global drafting miter limit unchanged.
+- Result: `SymbolPrimitive.style` now permits a per-primitive `miterLimit`;
+  the resistor declares 12 and the SVG renderer emits it. The reviewed
+  reference crop confirms sharp peaks, while the generated SVG no longer
+  inherits its bevel-clipping limit from the profile.
+- Validation: focused SVG miter-limit Vitest 1/1, Razavi catalog Vitest 17/17,
+  Symbols and Editor builds, fidelity crop generation, and `git diff --check`
+  passed. The complete renderer file retains eight unrelated failing golden
+  assertions caused by pre-existing global pure-black, typography, and MOS
+  changes; the resistor-specific test passes.
+- Commit status: ready for `fix(razavi): preserve resistor acute corners`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next

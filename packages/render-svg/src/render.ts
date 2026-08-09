@@ -95,6 +95,9 @@ function primitiveStyle(
     strokeWidth === undefined ? "" : ` stroke-width="${strokeWidth}"`,
     style.lineCap === undefined ? "" : ` stroke-linecap="${style.lineCap}"`,
     style.lineJoin === undefined ? "" : ` stroke-linejoin="${style.lineJoin}"`,
+    style.miterLimit === undefined
+      ? ""
+      : ` stroke-miterlimit="${style.miterLimit}"`,
   ].join("");
 }
 
