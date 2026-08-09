@@ -2622,3 +2622,13 @@ Editing System work.
 - Evidence boundary: the six-panel authority has no capacitor; no capacitor
   asset change was made pending a capacitor-containing approved crop.
 - Commit status: ready for `test(razavi): add passive reference crop baseline`.
+## 2026-08-09 - Razavi capacitor reference archive
+
+- Target: preserve the user-supplied capacitor screenshot as evidence within
+  the existing sole Razavi visual authority.
+- Changed areas: archived the original PNG; hash-pinned it and a capacitor
+  geometry map in the authority manifest; recorded C1 vertical and C2
+  horizontal crop anchors; corrected the style contract's prior absence claim.
+- Validation: image and geometry SHA-256 links matched manifest values, both
+  evidence IDs were present, JSON parsed, and `git diff --check` passed.
+- Commit status: ready for `docs(razavi): archive capacitor reference evidence`.
