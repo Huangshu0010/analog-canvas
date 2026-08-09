@@ -5,18 +5,18 @@ Phases are ordered by dependency and exit gates, not by calendar estimates.
 
 ## Phase Index
 
-| Phase | Plan                                                                                              | Status   | Primary outcome                                                            |
-| ----: | ------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------- |
-|     0 | [`Contracts and Scaffold`](phase-0-contracts-and-scaffold.md)                                     | complete | Stable Project, Document, coordinate, Symbol, edit, and IR boundaries      |
-|     1 | [`Core Editor Slice`](phase-1-core-editor-slice.md)                                               | complete | Manually place, move, save, reopen, and render a small schematic           |
-|     2 | [`SPICE Import`](phase-2-spice-import.md)                                                         | complete | Import current fixtures into Documents without losing connectivity         |
-|     3 | [`Connectivity and Routing`](phase-3-connectivity-and-routing.md)                                 | complete | Wire, explicit junction, crossing, flightline, stretch, and detach closure |
-|     4 | [`Full SPICE Baseline`](phase-4-full-spice-baseline.md)                                           | complete | Complete SPICE3/ngspice structural compatibility and lossless round-trip   |
-|     5 | [`Symbols and Visual Quality`](phase-5-symbols-and-visual-quality.md)                             | complete | VSS-derived symbols and stable textbook-monochrome visual output           |
-|     6 | [`Agent API`](phase-6-agent-api.md)                                                               | complete | Safe `capabilities/query/transact/render` Agent integration                |
-|     7 | [`Export and Hardening`](phase-7-export-and-hardening.md)                                         | complete | Recovery, performance, broader dialects, and production export             |
-|     8 | [`Direct Manipulation and Manual Authoring`](phase-8-direct-manipulation-and-manual-authoring.md) | complete | Compact UI, manual placement, direct wiring, and automatic junctions       |
-|     9 | [`Snapshot-Driven Agent Workflow`](phase-9-agent-reasoning-and-observability.md)                  | review   | Snapshot/Skill workflow implemented; external quality ablation remains     |
+| Phase | Plan                                                                                              | Status     | Primary outcome                                                             |
+| ----: | ------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
+|     0 | [`Contracts and Scaffold`](phase-0-contracts-and-scaffold.md)                                     | complete   | Stable Project, Document, coordinate, Symbol, edit, and IR boundaries       |
+|     1 | [`Core Editor Slice`](phase-1-core-editor-slice.md)                                               | complete   | Manually place, move, save, reopen, and render a small schematic            |
+|     2 | [`SPICE Import`](phase-2-spice-import.md)                                                         | complete   | Import current fixtures into Documents without losing connectivity          |
+|     3 | [`Connectivity and Routing`](phase-3-connectivity-and-routing.md)                                 | complete   | Wire, explicit junction, crossing, flightline, stretch, and detach closure  |
+|     4 | [`Full SPICE Baseline`](phase-4-full-spice-baseline.md)                                           | complete   | Complete SPICE3/ngspice structural compatibility and lossless round-trip    |
+|     5 | [`Symbols and Visual Quality`](phase-5-symbols-and-visual-quality.md)                             | superseded | Archived VSS-era record; current visual work uses the Razavi extension spec |
+|     6 | [`Agent API`](phase-6-agent-api.md)                                                               | complete   | Safe `capabilities/query/transact/render` Agent integration                 |
+|     7 | [`Export and Hardening`](phase-7-export-and-hardening.md)                                         | complete   | Recovery, performance, broader dialects, and production export              |
+|     8 | [`Direct Manipulation and Manual Authoring`](phase-8-direct-manipulation-and-manual-authoring.md) | complete   | Compact UI, manual placement, direct wiring, and automatic junctions        |
+|     9 | [`Snapshot-Driven Agent Workflow`](phase-9-agent-reasoning-and-observability.md)                  | review     | Snapshot/Skill workflow implemented; external quality ablation remains      |
 
 ## Dependency Graph
 

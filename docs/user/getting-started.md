@@ -9,9 +9,9 @@ pnpm dev
 
 Open the displayed loopback URL. Open **File** and use **Import SPICE** to
 select one `.cir`, `.sp`, or `.spi` entry plus its local include files.
-Imported instances begin unplaced so that a human or Agent can decide the
-presentation. A normal launch starts with a genuinely empty `New Circuit`
-Document for palette-first manual authoring.
+Imported instances begin unplaced so that the user can decide the presentation.
+A normal launch starts with a genuinely empty `New Circuit` Document for
+palette-first manual authoring; no Project file needs to be opened first.
 
 ## Edit and connect
 
@@ -44,24 +44,30 @@ Document for palette-first manual authoring.
   electrical Net label; assigning the same name to another Net explicitly
   connects those Nets. Use **More / Add text** for non-electrical notes. Label
   handles may be dragged near their owner, while plain text moves freely.
-- Press `R` to rotate, `F` to fit, `Ctrl+Z` to undo, and `Ctrl+Y` or
-  `Ctrl+Shift+Z` to redo. Shortcuts do not fire while typing in a field.
+- Press `R` to rotate, `F` to fit, `X` to reverse a selected current arrow,
+  `Ctrl+Z` to undo, and `Ctrl+Y` or `Ctrl+Shift+Z` to redo. Shortcuts do not
+  fire while typing in a field.
 - Use `Ctrl`+mouse wheel to zoom around the cursor and middle-button drag to
   pan. View changes do not increment the Document revision.
-- Human UI and Agent transactions use the same typed Edit Engine operations and
-  revision rules.
 
 ## Save and recover
 
-**File / Save Project** downloads canonical `.icproj.json`. Edits also stage
-an origin-local recovery copy. On a later start the File menu offers **Restore
-recovery** or **Discard recovery**; recovery never silently replaces a formal
-file.
+**File / Save Project** creates a canonical `.icproj.json` formal Project
+file. In browsers without an explicitly authorised file handle, this is a
+download; keep the downloaded file as your authoritative Project. Edits also
+stage an origin-local recovery copy. A recovery copy is not a formal save and
+can be lost if browser site data is cleared. On a later start the File menu
+offers recovery choices; recovery never silently replaces a formal file.
 
 Use **File / Open Project** to validate and reopen a formal Project file.
 Opening an invalid or future-version file leaves the current Document
 unchanged. The old manual snapshot buttons have been removed; recovery is
 automatic infrastructure.
+
+SPICE files are import inputs, not embedded source attachments. Saving an
+imported Project preserves the editable schematic and source provenance, but
+does not preserve `.spi`, `.lib`, or `.inc` contents; keep those original files
+when you need to import them again.
 
 ## Export
 
@@ -80,3 +86,27 @@ node output/release/interactive-circuit-maker-v0.1.0/start.mjs
 
 Open `http://127.0.0.1:4173`. Chromium can install the app from its browser
 install action. The server accepts only loopback connections.
+
+## GitHub Pages release
+
+The public Pages build is a static, local-first editor. GitHub Pages serves
+the application files; it does not receive, store, or synchronize Projects.
+The editor has no public Agent API, account system, or backend endpoint. Keep
+downloaded `.icproj.json` files as the authoritative copy of your work; the
+browser recovery copy is specific to one browser profile and may disappear
+when site data is cleared.
+
+Repository administrators enable **Settings / Pages / Build and deployment /
+Source: GitHub Actions** once. The included `Deploy GitHub Pages` workflow
+then publishes every push to `main` at:
+
+```text
+https://<GitHub-account>.github.io/interactive-circuit-maker/
+```
+
+It also supports a manual run from the Actions tab. The workflow builds with
+the repository path prefix, so it is intended for this project-site URL. A
+custom domain is an administrator decision: configure its DNS and Pages custom
+domain setting before advertising it. Before a public release, verify opening,
+refreshing, importing/exporting, browser recovery, and PWA installation at the
+deployed URL.

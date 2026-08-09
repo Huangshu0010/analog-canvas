@@ -41,29 +41,29 @@
       "kind": "circle",
       "center": {
         "x": 0,
-        "y": -0.141732
+        "y": 0
       },
-      "radius": 10.629922,
+      "radius": 10.755814,
       "style": {
-        "strokeRole": "emphasis",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
         "x": 0,
-        "y": -5.456693
+        "y": -6.976744
       },
       "to": {
         "x": 0,
-        "y": 0.608268
+        "y": -2.325581
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
@@ -71,15 +71,15 @@
       "points": [
         {
           "x": 0,
-          "y": 10.946753
+          "y": 6.976744
         },
         {
-          "x": -5.134252,
-          "y": 0.608268
+          "x": -4.651163,
+          "y": -2.325581
         },
         {
-          "x": 5.134252,
-          "y": 0.608268
+          "x": 4.651163,
+          "y": -2.325581
         }
       ],
       "fill": "foreground",
@@ -89,7 +89,7 @@
       "kind": "line",
       "from": {
         "x": 0,
-        "y": -10.771654
+        "y": -10.755814
       },
       "to": {
         "x": 0,
@@ -105,7 +105,7 @@
       "kind": "line",
       "from": {
         "x": 0,
-        "y": 10.488189
+        "y": 10.755814
       },
       "to": {
         "x": 0,

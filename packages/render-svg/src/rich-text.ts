@@ -1,19 +1,15 @@
 import type { SchematicStyleProfile } from "./style-profile.js";
 
-// Unified RichText AST -> SVG tspan renderer (ADR 0010 / WP-A2). The canvas,
-// formal SVG, PNG, and PDF exports all use this single implementation. Input
-// is the model's RichTextDocument AST (four node kinds; span has four styles).
-// Output is a string of <tspan> elements safe to embed in a <text>.
-//
-// The renderer honors the style profile's typography tokens (math weight/style,
-// subscript scale and baseline shift) and reuses the subscript scale with a
-// positive baseline shift for superscript. A fraction stacks numerator over
-// denominator with a horizontal rule approximated by a baseline shift; both
-// parts are rendered at reduced size so the fraction reads at label height.
+// Canonical RichText AST -> SVG tspan renderer. Schematic annotations and
+// drafting text both terminate here; callers may choose different default
+// content, but not a different glyph/style implementation.
 
 interface RichTextNode {
   kind: string;
   value?: string;
+  // Compatibility roles are adapter-only metadata for legacy schematic labels.
+  // They never enter the RichText Project schema.
+  role?: "legacy-base" | "legacy-subscript" | "legacy-suffix";
   style?: string;
   children?: RichTextNode[];
   numerator?: { runs: RichTextNode[] };
@@ -26,8 +22,8 @@ export interface RichTextDocumentInput {
 
 interface RenderContext {
   profile: SchematicStyleProfile;
-  inheritedStyle: string;
-  dy: number;
+  italic: boolean;
+  bold: boolean;
   lineOriginX: number;
 }
 
@@ -38,30 +34,25 @@ function escapeXml(value: string): string {
     .replaceAll(">", "&gt;");
 }
 
-function runStyle(
-  profile: SchematicStyleProfile,
-  italic: boolean,
-  bold: boolean,
-): string {
-  const fontStyle = italic ? "italic" : "normal";
-  const weight = bold
-    ? profile.typography.mathWeight
-    : profile.typography.plainWeight;
-  return `font-style:${fontStyle};font-weight:${weight}`;
+function styleAttribute(ctx: RenderContext): string {
+  return `font-style:${ctx.italic ? "italic" : "normal"};font-weight:${ctx.bold ? ctx.profile.typography.mathWeight : ctx.profile.typography.plainWeight}`;
 }
 
 export function renderRichTextDocument(
   document: RichTextDocumentInput,
   profile: SchematicStyleProfile,
-  options: { lineOriginX?: number } = {},
+  options: {
+    lineOriginX?: number;
+    defaultItalic?: boolean;
+    defaultBold?: boolean;
+  } = {},
 ): string {
-  const ctx: RenderContext = {
+  return renderRuns(document.runs, {
     profile,
-    inheritedStyle: runStyle(profile, false, false),
-    dy: 0,
+    italic: options.defaultItalic ?? false,
+    bold: options.defaultBold ?? false,
     lineOriginX: options.lineOriginX ?? 0,
-  };
-  return renderRuns(document.runs, ctx);
+  });
 }
 
 function renderRuns(runs: RichTextNode[], ctx: RenderContext): string {
@@ -83,9 +74,7 @@ function renderRuns(runs: RichTextNode[], ctx: RenderContext): string {
 function renderRun(node: RichTextNode, ctx: RenderContext): string {
   switch (node.kind) {
     case "text":
-      return escapeXml(node.value ?? "");
-    case "line-break":
-      return "";
+      return renderText(node, ctx);
     case "span":
       return renderSpan(node, ctx);
     case "fraction":
@@ -95,29 +84,42 @@ function renderRun(node: RichTextNode, ctx: RenderContext): string {
   }
 }
 
+function renderText(node: RichTextNode, ctx: RenderContext): string {
+  const value = escapeXml(node.value ?? "");
+  if (node.role === "legacy-base") {
+    return `<tspan data-text-run="base" style="${styleAttribute(ctx)}">${value}</tspan>`;
+  }
+  if (node.role === "legacy-suffix") {
+    return `<tspan data-text-run="suffix" baseline-shift="baseline" dy="${ctx.profile.typography.subscriptBaselineShiftEm}em" style="font-style:normal;font-weight:${ctx.profile.typography.plainWeight}">${value}</tspan>`;
+  }
+  return value;
+}
+
 function renderSpan(node: RichTextNode, ctx: RenderContext): string {
-  const style = node.style;
-  const typography = ctx.profile.typography;
-  if (style === "italic" || style === "bold") {
+  if (node.style === "italic" || node.style === "bold") {
     const childCtx: RenderContext = {
       ...ctx,
-      inheritedStyle: runStyle(
-        ctx.profile,
-        style === "italic",
-        style === "bold",
-      ),
+      italic: ctx.italic || node.style === "italic",
+      bold: ctx.bold || node.style === "bold",
     };
     const children = node.children ? renderRuns(node.children, childCtx) : "";
-    return `<tspan data-text-run="span" style="${childCtx.inheritedStyle}">${children}</tspan>`;
+    return `<tspan data-text-run="span" style="${styleAttribute(childCtx)}">${children}</tspan>`;
   }
-  if (style === "subscript" || style === "superscript") {
+  if (node.style === "subscript" || node.style === "superscript") {
+    const typography = ctx.profile.typography;
     const percent = Math.round(typography.subscriptScale * 100);
-    const shift = typography.subscriptBaselineShiftEm;
-    const dy = style === "subscript" ? shift : -shift;
-    const childCtx: RenderContext = { ...ctx, dy: ctx.dy + dy };
-    const children = node.children ? renderRuns(node.children, childCtx) : "";
-    const restoreDy = style === "subscript" ? -shift : shift;
-    return `<tspan data-text-run="${style}" font-size="${percent}%" baseline-shift="${dy < 0 ? "super" : "sub"}" style="${ctx.inheritedStyle}">${children}</tspan><tspan dy="${restoreDy / 2}em" style="${ctx.inheritedStyle}"></tspan>`;
+    const shift =
+      node.style === "subscript"
+        ? -typography.subscriptBaselineShiftEm
+        : typography.subscriptBaselineShiftEm;
+    const children = node.children ? renderRuns(node.children, ctx) : "";
+    const dx =
+      node.style === "subscript" ? typography.subscriptHorizontalGapEm : 0;
+    const style =
+      node.role === "legacy-subscript"
+        ? `font-style:normal;font-weight:${typography.mathWeight}`
+        : styleAttribute(ctx);
+    return `<tspan data-text-run="${node.style}" dx="${dx}em" font-size="${percent}%" baseline-shift="${shift}em" style="${style}">${children}</tspan>`;
   }
   return node.children ? renderRuns(node.children, ctx) : "";
 }
@@ -130,6 +132,5 @@ function renderFraction(node: RichTextNode, ctx: RenderContext): string {
   const denominator = node.denominator
     ? renderRuns(node.denominator.runs, ctx)
     : "";
-  // Numerator shifted up, denominator shifted down past the rule line.
-  return `<tspan data-text-run="fraction" style="${ctx.inheritedStyle}"><tspan data-text-run="numerator" font-size="${percent}%" dy="${-halfLine}em">${numerator}</tspan><tspan data-text-run="denominator" font-size="${percent}%" dy="${typography.lineHeight}em">${denominator}</tspan><tspan dy="${-halfLine}em" style="${ctx.inheritedStyle}"></tspan></tspan>`;
+  return `<tspan data-text-run="fraction" style="${styleAttribute(ctx)}"><tspan data-text-run="numerator" font-size="${percent}%" dy="${-halfLine}em">${numerator}</tspan><tspan data-text-run="denominator" font-size="${percent}%" dy="${typography.lineHeight}em">${denominator}</tspan><tspan dy="${-halfLine}em" style="${styleAttribute(ctx)}"></tspan></tspan>`;
 }

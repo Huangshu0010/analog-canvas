@@ -193,6 +193,7 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     // from = M1 placement, to = route endpoint (port-out at 200,100).
     expect(geometry.from).toEqual({ x: 100, y: 100 });
     expect(geometry.to).toEqual({ x: 200, y: 100 });
+    expect(geometry.center).toEqual({ x: 150, y: 100 });
     expect(geometry.bounds.width).toBeGreaterThan(0);
   });
 
@@ -222,6 +223,10 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
       width: 112,
       height: 52,
     });
+    expect(geometry.vertices).toEqual([
+      { x: 0, y: 0 },
+      { x: 100, y: 40 },
+    ]);
     expect(geometry.diagnostics).toEqual([]);
   });
 

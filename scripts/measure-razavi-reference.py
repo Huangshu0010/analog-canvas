@@ -25,6 +25,7 @@ import numpy as np
 
 EXPECTED_SIZE = (1204, 794)  # width, height
 INK_THRESHOLD = 200
+CORE_THRESHOLD = 160
 
 
 def bounds(mask: np.ndarray, left: int, top: int, right: int, bottom: int) -> dict[str, int]:
@@ -76,9 +77,167 @@ def horizontal_run_at(mask: np.ndarray, y: int, left: int, right: int) -> int:
     return max(runs, default=0)
 
 
+def rectangle_edges(box: dict[str, int]) -> dict[str, float]:
+    """Convert inclusive core-pixel bounds to vector edges."""
+    return {
+        "left": box["left"] - 0.5,
+        "top": box["top"] - 0.5,
+        "right": box["right"] + 0.5,
+        "bottom": box["bottom"] + 0.5,
+    }
+
+
+def longest_row_center(
+    mask: np.ndarray, left: int, top: int, right: int, bottom: int
+) -> float:
+    lengths = np.count_nonzero(mask[top:bottom, left:right], axis=1)
+    maximum = int(lengths.max())
+    rows = np.where(lengths == maximum)[0] + top
+    return round(float(rows.mean()), 4)
+
+
+def vertical_core_bounds(
+    mask: np.ndarray, left: int, top: int, right: int, bottom: int
+) -> dict[str, int]:
+    """Bounds of persistent vertical ink, excluding short crossing leads."""
+    roi = mask[top:bottom, left:right]
+    counts = np.count_nonzero(roi, axis=0)
+    maximum = int(counts.max())
+    columns = np.where(counts >= maximum * 0.8)[0] + left
+    selected = mask[top:bottom, columns]
+    rows = np.where(np.any(selected, axis=1))[0] + top
+    return {
+        "left": int(columns.min()),
+        "top": int(rows.min()),
+        "right": int(columns.max()),
+        "bottom": int(rows.max()),
+        "width": int(columns.max() - columns.min() + 1),
+        "height": int(rows.max() - rows.min() + 1),
+    }
+
+
+def point(x: float, y: float) -> dict[str, float]:
+    return {"x": round(float(x), 4), "y": round(float(y), 4)}
+
+
+def segment(x1: float, y1: float, x2: float, y2: float) -> dict[str, dict[str, float]]:
+    return {"from": point(x1, y1), "to": point(x2, y2)}
+
+
+def build_mos_geometry(core: np.ndarray, reference_hash: str) -> dict[str, object]:
+    """Extract the complete final MOS presentation map from fixed semantic ROIs."""
+    pixels_per_logical = 1.72
+
+    nmos_outer = rectangle_edges(vertical_core_bounds(core, 140, 190, 149, 245))
+    nmos_inner = rectangle_edges(vertical_core_bounds(core, 149, 190, 157, 245))
+    nmos_channel = vertical_core_bounds(core, 177, 180, 182, 252)
+    nmos_channel_x = (nmos_channel["left"] + nmos_channel["right"]) / 2
+    nmos_upper_y = longest_row_center(core, 156, 202, 182, 210)
+    nmos_lower_y = longest_row_center(core, 156, 224, 182, 234)
+    nmos_origin_y = (nmos_upper_y + nmos_lower_y) / 2
+    nmos_origin_x = nmos_channel_x - 10 * pixels_per_logical
+    nmos_arrow = bounds(core, 163, 223, 178, 237)
+
+    pmos_outer = rectangle_edges(vertical_core_bounds(core, 504, 55, 513, 110))
+    pmos_inner = rectangle_edges(vertical_core_bounds(core, 514, 55, 522, 112))
+    pmos_channel = vertical_core_bounds(core, 542, 45, 547, 118)
+    pmos_channel_x = (pmos_channel["left"] + pmos_channel["right"]) / 2
+    pmos_upper_y = longest_row_center(core, 521, 64, 547, 78)
+    pmos_lower_y = longest_row_center(core, 521, 90, 547, 102)
+    pmos_origin_y = (pmos_upper_y + pmos_lower_y) / 2
+    pmos_origin_x = pmos_channel_x - 10 * pixels_per_logical
+    pmos_arrow = bounds(core, 521, 63, 536, 79)
+
+    def pins(origin_x: float, origin_y: float) -> dict[str, dict[str, float]]:
+        return {
+            "D": point(origin_x + 10 * pixels_per_logical, origin_y - 20 * pixels_per_logical),
+            "G": point(origin_x - 20 * pixels_per_logical, origin_y),
+            "S": point(origin_x + 10 * pixels_per_logical, origin_y + 20 * pixels_per_logical),
+            "B": point(origin_x + 20 * pixels_per_logical, origin_y),
+        }
+
+    nmos_pins = pins(nmos_origin_x, nmos_origin_y)
+    pmos_pins = pins(pmos_origin_x, pmos_origin_y)
+    nmos_gate_y = nmos_origin_y
+    pmos_gate_y = pmos_origin_y
+
+    return {
+        "schemaVersion": 1,
+        "referenceId": "razavi-reference-v1",
+        "referenceSha256": reference_hash,
+        "coordinateSystem": "reference-raster-pixels",
+        "pixelThreshold": CORE_THRESHOLD,
+        "symbols": {
+            "nmos": {
+                "evidencePanel": "a-lower-M2",
+                "pixelsPerLogical": pixels_per_logical,
+                "originPx": point(nmos_origin_x, nmos_origin_y),
+                "pinsPx": nmos_pins,
+                "gateBarsPx": [nmos_outer, nmos_inner],
+                "channelsPx": {
+                    "upper": segment(nmos_inner["right"], nmos_upper_y, nmos_channel_x, nmos_upper_y),
+                    "lower": segment(nmos_inner["right"], nmos_lower_y, nmos_channel_x, nmos_lower_y),
+                },
+                "leadsPx": {
+                    "D": segment(nmos_channel_x, nmos_upper_y, nmos_pins["D"]["x"], nmos_pins["D"]["y"]),
+                    "G": segment(nmos_outer["right"], nmos_gate_y, nmos_pins["G"]["x"], nmos_pins["G"]["y"]),
+                    "S": segment(nmos_channel_x, nmos_lower_y, nmos_pins["S"]["x"], nmos_pins["S"]["y"]),
+                },
+                "sourceArrowPx": {
+                    "support": segment(nmos_inner["right"], nmos_lower_y, nmos_channel_x, nmos_lower_y),
+                    "tip": point(nmos_channel_x, nmos_lower_y),
+                    "baseTop": point(nmos_arrow["left"] + 1, nmos_arrow["top"] - 0.5),
+                    "baseBottom": point(nmos_arrow["left"] + 1, nmos_arrow["bottom"] + 0.5),
+                },
+                "bulkExtensionPx": {
+                    "supports": [
+                        segment(nmos_inner["right"], nmos_gate_y, nmos_channel_x, nmos_gate_y),
+                        segment(nmos_channel_x + 11, nmos_gate_y, nmos_pins["B"]["x"], nmos_pins["B"]["y"]),
+                    ],
+                    "tip": point(nmos_channel_x, nmos_gate_y),
+                    "baseTop": point(nmos_channel_x + 11, nmos_gate_y - 6),
+                    "baseBottom": point(nmos_channel_x + 11, nmos_gate_y + 6),
+                },
+            },
+            "pmos": {
+                "evidencePanel": "b-upper-M3",
+                "pixelsPerLogical": pixels_per_logical,
+                "originPx": point(pmos_origin_x, pmos_origin_y),
+                "pinsPx": pmos_pins,
+                "gateBarsPx": [pmos_outer, pmos_inner],
+                "channelsPx": {
+                    "upper": segment(pmos_inner["right"], pmos_upper_y, pmos_channel_x, pmos_upper_y),
+                    "lower": segment(pmos_inner["right"], pmos_lower_y, pmos_channel_x, pmos_lower_y),
+                },
+                "leadsPx": {
+                    "D": segment(pmos_channel_x, pmos_upper_y, pmos_pins["D"]["x"], pmos_pins["D"]["y"]),
+                    "G": segment(pmos_outer["right"], pmos_gate_y, pmos_pins["G"]["x"], pmos_pins["G"]["y"]),
+                    "S": segment(pmos_channel_x, pmos_lower_y, pmos_pins["S"]["x"], pmos_pins["S"]["y"]),
+                },
+                "sourceArrowPx": {
+                    "support": segment(pmos_inner["right"], pmos_upper_y, pmos_channel_x, pmos_upper_y),
+                    "tip": point(pmos_arrow["left"] + 1, pmos_upper_y),
+                    "baseTop": point(pmos_arrow["right"] - 1, pmos_arrow["top"] - 0.5),
+                    "baseBottom": point(pmos_arrow["right"] - 1, pmos_arrow["bottom"] + 0.5),
+                },
+                "bulkExtensionPx": {
+                    "supports": [
+                        segment(pmos_inner["right"], pmos_gate_y, pmos_pins["B"]["x"] - 11, pmos_pins["B"]["y"]),
+                    ],
+                    "tip": point(pmos_pins["B"]["x"], pmos_gate_y),
+                    "baseTop": point(pmos_pins["B"]["x"] - 11, pmos_gate_y - 6.5),
+                    "baseBottom": point(pmos_pins["B"]["x"] - 11, pmos_gate_y + 6.5),
+                },
+            },
+        },
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("reference", type=Path)
+    parser.add_argument("--check-mos-geometry", type=Path)
+    parser.add_argument("--mos-geometry-only", action="store_true")
     args = parser.parse_args()
     raw = args.reference.read_bytes()
     image = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_GRAYSCALE)
@@ -90,6 +249,18 @@ def main() -> None:
             f"reference must be {EXPECTED_SIZE[0]}x{EXPECTED_SIZE[1]} pixels; got {width}x{height}"
         )
     ink = image < INK_THRESHOLD
+    core = image < CORE_THRESHOLD
+    reference_hash = hashlib.sha256(raw).hexdigest()
+    mos_geometry = build_mos_geometry(core, reference_hash)
+
+    if args.mos_geometry_only:
+        print(json.dumps(mos_geometry, indent=2))
+        return
+
+    if args.check_mos_geometry is not None:
+        checked = json.loads(args.check_mos_geometry.read_text(encoding="utf-8"))
+        if checked != mos_geometry:
+            raise SystemExit(f"MOS geometry is stale: {args.check_mos_geometry}")
 
     # Panel (a) has the cleanest MOS, VDD, wire, and route-marker examples.
     vdd_bar = {
@@ -129,7 +300,7 @@ def main() -> None:
     report = {
         "reference": {
             "path": str(args.reference),
-            "sha256": hashlib.sha256(raw).hexdigest(),
+            "sha256": reference_hash,
             "pixels": {"width": width, "height": height},
             "inkThreshold": INK_THRESHOLD,
         },
@@ -170,6 +341,7 @@ def main() -> None:
                 "Arial bold-italic 16px text with 0.68 subscript scale",
             ],
         },
+        "mosGeometry": mos_geometry,
     }
     print(json.dumps(report, indent=2))
 

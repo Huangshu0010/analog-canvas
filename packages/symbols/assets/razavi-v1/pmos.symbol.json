@@ -64,56 +64,68 @@
   ],
   "primitives": [
     {
-      "kind": "line",
-      "from": {
-        "x": -8.117731,
-        "y": -8.13189
-      },
-      "to": {
-        "x": 10,
-        "y": -8.13189
-      },
+      "kind": "polyline",
+      "points": [
+        {
+          "x": -4.244186,
+          "y": 7.122093
+        },
+        {
+          "x": 10,
+          "y": 7.122093
+        },
+        {
+          "x": 10,
+          "y": 20
+        }
+      ],
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "polyline",
+      "points": [
+        {
+          "x": -4.244186,
+          "y": -7.122093
+        },
+        {
+          "x": 10,
+          "y": -7.122093
+        },
+        {
+          "x": 10,
+          "y": -20
+        }
+      ],
       "part": "source-arrow-host",
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -7.898848,
-        "y": 8.13189
-      },
-      "to": {
-        "x": 10,
-        "y": 8.13189
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "polygon",
       "points": [
         {
-          "x": -9.956614,
-          "y": -12.197835
+          "x": -11.802326,
+          "y": -9.302326
         },
         {
-          "x": -9.956614,
-          "y": 12.197835
+          "x": -11.802326,
+          "y": 9.302326
         },
         {
-          "x": -6.716614,
-          "y": 12.197835
+          "x": -9.476744,
+          "y": 9.302326
         },
         {
-          "x": -6.716614,
-          "y": -12.197835
+          "x": -9.476744,
+          "y": -9.302326
         }
       ],
       "fill": "foreground",
@@ -124,20 +136,20 @@
       "kind": "polygon",
       "points": [
         {
-          "x": -16.068819,
-          "y": -8.13189
+          "x": -6.569767,
+          "y": -12.209302
         },
         {
-          "x": -16.068819,
-          "y": 8.13189
+          "x": -6.569767,
+          "y": 12.209302
         },
         {
-          "x": -12.828819,
-          "y": 8.13189
+          "x": -3.662791,
+          "y": 12.209302
         },
         {
-          "x": -12.828819,
-          "y": -8.13189
+          "x": -3.662791,
+          "y": -12.209302
         }
       ],
       "fill": "foreground",
@@ -147,23 +159,7 @@
     {
       "kind": "line",
       "from": {
-        "x": 10,
-        "y": 8.13189
-      },
-      "to": {
-        "x": 10,
-        "y": 20
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -14.448819,
+        "x": -9.476744,
         "y": 0
       },
       "to": {
@@ -172,41 +168,25 @@
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
       "kind": "line",
       "from": {
-        "x": 10,
-        "y": -8.34874
-      },
-      "to": {
-        "x": 10,
-        "y": -20
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -6.951182,
+        "x": -3.662791,
         "y": 0
       },
       "to": {
-        "x": 11.15,
+        "x": 13.604651,
         "y": 0
       },
       "part": "bulk-lead",
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
+        "lineCap": "butt",
+        "lineJoin": "miter"
       }
     },
     {
@@ -217,12 +197,12 @@
           "y": 0
         },
         {
-          "x": 12.090909,
-          "y": 4.303125
+          "x": 13.604651,
+          "y": -3.77907
         },
         {
-          "x": 12.090909,
-          "y": -4.303125
+          "x": 13.604651,
+          "y": 3.77907
         }
       ],
       "fill": "foreground",
@@ -237,36 +217,42 @@
       "hiddenPrimitiveParts": ["bulk-lead", "source-arrow-host"],
       "additionalPrimitives": [
         {
-          "kind": "line",
-          "from": {
-            "x": -0.675841,
-            "y": -8.13189
-          },
-          "to": {
-            "x": 10,
-            "y": -8.13189
-          },
+          "kind": "polyline",
+          "points": [
+            {
+              "x": 5.639535,
+              "y": -7.122093
+            },
+            {
+              "x": 10,
+              "y": -7.122093
+            },
+            {
+              "x": 10,
+              "y": -20
+            }
+          ],
           "part": "source-arrow",
           "style": {
             "strokeRole": "normal",
             "lineCap": "butt",
-            "lineJoin": "round"
+            "lineJoin": "miter"
           }
         },
         {
           "kind": "polygon",
           "points": [
             {
-              "x": -8.117731,
-              "y": -8.13189
+              "x": -3.662791,
+              "y": -7.122093
             },
             {
-              "x": 0.014159,
-              "y": -4.356369
+              "x": 5.639535,
+              "y": -11.19186
             },
             {
-              "x": 0.014159,
-              "y": -11.90741
+              "x": 5.639535,
+              "y": -3.052326
             }
           ],
           "fill": "foreground",

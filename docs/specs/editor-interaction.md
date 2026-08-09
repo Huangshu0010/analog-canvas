@@ -41,23 +41,25 @@ Project and Document baseline.
 
 ## Command surface
 
-The production header should expose only frequent entry points:
+The production header exposes document/navigation and high-frequency document
+commands. Component placement and drawing tools live in the left Library dock,
+not in a modal palette or a permanent toolbar row:
 
 ```text
-+ Component | Wire | File | Edit | View | Export | More
+File | Edit | View | Export | More
 ```
 
 The exact visual treatment may use icons, labels, or responsive grouping, but
 the information architecture is normative:
 
-| Group  | Commands                                                             |
-| ------ | -------------------------------------------------------------------- |
-| File   | Open, Save, Import, recent/example documents                         |
-| Edit   | Undo, Redo, Copy, Paste, Delete, and contextual Align                |
-| Add    | Component in the header; Text in More                                |
-| View   | Fit, Diagnostics, Grid, and presentation overlays                    |
-| Export | SVG, PNG, and PDF from one menu                                      |
-| More   | Help, shortcut reference, and development-only examples when enabled |
+| Group   | Commands                                                                            |
+| ------- | ----------------------------------------------------------------------------------- |
+| File    | Open, Save, Import, recent/example documents                                        |
+| Edit    | Undo, Redo, Copy, Paste, Delete, and contextual Align                               |
+| Library | searchable/collapsible component families; Wire, Text, Arrow, and Construction line |
+| View    | Fit, Diagnostics, Grid, and presentation overlays                                   |
+| Export  | SVG, PNG, and PDF from one menu                                                     |
+| More    | route-attached current arrow, Guides, help, and shortcut reference                  |
 
 The following are not permanent production toolbar modes:
 
@@ -65,23 +67,24 @@ The following are not permanent production toolbar modes:
 - Save snapshot and Reopen snapshot; recovery is automatic infrastructure.
 - Phase/demo actions; examples belong in File/Open Example or development mode.
 
-Wire remains visible for discoverability, while pointer-down on a pin or a
-selected conductor starts the same wire session.
+The left dock is collapsible. Choosing a component starts single-shot
+placement; choosing a drawing tool starts the named canvas gesture. Demo and
+diagnostic actions do not appear on the production command surface.
 
 ## Text, markup, and peripheral editing
 
 This section is `proposed` (ADR 0010); interaction lands in WP-A3/A4. It
 freezes the V1 tool surface and command mapping.
 
-`More` gains three folded groups and a command palette, instead of a permanent
-toolbar row:
+The left Library owns Text and free drawing tools. `More` retains only
+route-attached annotation and Guide commands:
 
-| Group   | Contents                                                        | Shortcut |
-| ------- | --------------------------------------------------------------- | -------- |
-| Text    | text, caption, format tools                                     | `T` text placement |
-| Markup  | route arrow, free arrow, leader, callout, construction line, floating symbol | `A` last-used markup tool |
-| Guides  | add horizontal/vertical guide, show/hide, lock, clear unlocked  | `G` guide tool |
-| Palette | search all low-frequency commands                               | `Ctrl+K` |
+| Group   | Contents                                                                          | Shortcut           |
+| ------- | --------------------------------------------------------------------------------- | ------------------ |
+| Text    | text, caption, format tools                                                       | `T` text placement |
+| Markup  | free arrow and construction line from the Library; route arrow remains contextual | `A` arrow          |
+| Guides  | add horizontal/vertical guide, show/hide, lock, clear unlocked                    | `G` guide tool     |
+| Palette | search all low-frequency commands                                                 | `Ctrl+K`           |
 
 `R`, `W`, undo/redo, and the existing keyboard contract are unchanged. Canvas
 shortcuts must not fire while a rich-text editor, input, or search field has
@@ -159,11 +162,31 @@ can complete the named operation safely.
 
 ### Viewport
 
-- `Ctrl` plus mouse wheel zooms around the cursor position.
+- An unmodified mouse wheel over the canvas zooms around the cursor position.
+- `Ctrl`/`Command` plus mouse wheel remains a browser-reserved page-zoom
+  gesture and must not be intercepted by the editor.
 - Middle-button drag pans the viewport.
 - Viewport changes never modify the Document revision or enter undo history.
 - Normal wheel behavior remains available to the host page when the canvas
   does not own focus or the zoom modifier is absent.
+
+### Selection and layout stability
+
+- The canvas occupies a fixed grid column. Selecting, deselecting, or switching
+  the inspected object must not change the canvas column count, width, or
+  viewport. The app shell is a stable two-column grid (left dock + canvas); no
+  selection state adds or removes a column.
+- Components and drawing tools are the permanent, independently scrollable main
+  region of the left dock. Selecting or placing an object must never hide,
+  replace, collapse, or move this region.
+- Object inspection lives in a fixed, bottom `Selection` shelf in that same
+  dock. Selection updates only its short summary and indicator; the shelf is
+  collapsed by default and expands only after an explicit user action. When
+  open, its details scroll independently and may reduce only the library's
+  visible scroll height, never its top position or the canvas geometry.
+- In-place rich-text editing is unchanged: double-clicking editable text on the
+  canvas opens the existing canvas RichText editor. The `Inspect` tab does not
+  replace in-place text editing.
 
 ### Contextual manipulation
 
@@ -287,6 +310,45 @@ The editor must keep ambiguous or destructive logical intent explicit:
 All inferred edits require a deterministic preview when they would change
 connectivity.
 
+## Mutation lifecycle
+
+Every circuit change to the current Document follows one path. The editor does
+not maintain a second command engine, event bus, or JSON-patch protocol beside
+this one:
+
+```text
+gesture / menu / shortcut
+  → proposal (optional; a domain helper may throw a recoverable error)
+  → transact(typed edits)
+  → applyResult(result)
+  → Project update + recovery schedule + default status
+  → success-time local UI convergence (selection / preview / tool)
+```
+
+Normative constraints:
+
+1. A persisted circuit edit to the current Document may only be applied through
+   `transact(edits)`. Handlers do not patch Project JSON directly and do not
+   write recovery directly.
+2. `applyResult()` is the only point that schedules recovery from a successful
+   transaction. It also renders an `EditTransactionResult` failure as a
+   structured status; it is the sole owner of both outcomes.
+3. The proposal layer (group move, route stretch, connected deletion) may throw
+   a recoverable domain error. The catch nearest the gesture converts it to a
+   status and always converges the temporary preview. Reducing the number of
+   catches is not a quality goal; a catch that protects a throwing domain
+   helper or an external boundary must stay.
+4. Whole-project replacement (Open, Import, Restore, demo load) is not a
+   transaction. It goes through the project replacement entry point, which
+   cancels any pending recovery write for the outgoing Project first.
+5. Selection, viewport, active tool, and drag preview are editor-local
+   transient state. They never enter the Project, the Agent API, or the
+   recovery file.
+6. This lifecycle is not extended with a `CommandEngine`, an `executeCommand`
+   enumeration, an event bus, a second request/response schema, or any Agent
+   API surface. "Unified" here means converging the existing call chain, not
+   adding another layer.
+
 ## Symbol fidelity boundary
 
 The component palette uses runtime-independent Symbol DSL definitions. The 12
@@ -335,6 +397,34 @@ Document revision. Previews and cancelled gestures are transient.
   `export: false`; they never appear in formal SVG/PNG/PDF.
 - External build-time evidence: VSS inventories, reviewed pin mapping, and
   geometry comparison artifacts.
+
+### Recovery persistence lifecycle
+
+Unsaved work is recoverable through a coalesced write to a single recovery
+slot. The lifecycle is owned by one scheduler and three operations:
+
+- `schedule(project)` — the only write path from a successful transaction. It
+  arms a short coalescing timer that keeps only the latest Project, so a burst
+  of edits becomes one serialize-and-write instead of one per edit. A burst of
+  revisions must never produce more than one recovery write of the newest
+  Project.
+- `flush()` — writes the pending Project immediately and clears the timer. It
+  runs on `visibilitychange` (transition to `hidden`) and `pagehide`, so the
+  last edit is never lost to a timer that did not fire. It is idempotent when
+  nothing is pending.
+- `cancel()` — drops a pending write without writing. It runs before any
+  whole-project replacement (Save, Discard, Open, Import, Restore, and demo
+  load) and on component unmount, so a stale pending write for an outgoing
+  Project cannot revive after the user has moved on.
+
+The `applyResult()` of a successful transaction is the only point that schedules
+recovery from a typed edit. Handlers never write recovery directly and never
+serialize the Project outside this scheduler. Whole-project replacements
+(Open/Import/Restore/demo) are not transactions; they go through the project
+replacement entry point, which cancels first.
+
+The recovery key, file format, and migration are unchanged; only the write
+timing and ordering are specified here.
 
 ## Valid example
 

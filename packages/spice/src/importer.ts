@@ -252,6 +252,43 @@ function importDocument(
   };
 }
 
+/**
+ * Records a stable document link for an imported `X` instance. `spice.target`
+ * remains the source-fidelity description; the ID is solely the imported
+ * Project's navigation reference and avoids resolving hierarchy by a mutable
+ * cell name at runtime.
+ */
+function bindImportedChildDocuments(
+  documents: readonly SchematicDocument[],
+): SchematicDocument[] {
+  const documentIdByCellName = new Map(
+    documents.flatMap((document) => {
+      const cellName = document.sourceBinding?.cellName;
+      return cellName ? [[cellName.toLowerCase(), document.id] as const] : [];
+    }),
+  );
+  return documents.map((document) => ({
+    ...document,
+    instances: document.instances.map((instance) => {
+      const target = instance.properties["spice.target"];
+      if (typeof target !== "string" || !target.startsWith("subcircuit:")) {
+        return instance;
+      }
+      const childDocumentId = documentIdByCellName.get(
+        target.slice("subcircuit:".length).toLowerCase(),
+      );
+      if (!childDocumentId) return instance;
+      return {
+        ...instance,
+        properties: {
+          ...instance.properties,
+          "spice.childDocumentId": childDocumentId,
+        },
+      };
+    }),
+  }));
+}
+
 function sourceProjectName(bundle: SourceBundle): string {
   const filename = bundle.entryPath.split("/").at(-1) ?? bundle.entryPath;
   return filename.replace(/\.[^.]+$/u, "") || "Imported SPICE";
@@ -270,7 +307,7 @@ export function importCircuitIR(
       model.modelType.toLowerCase(),
     ]),
   );
-  const documents = ir.cells.map((cell) =>
+  const importedDocuments = ir.cells.map((cell) =>
     importDocument(
       cell,
       diagnostics,
@@ -278,6 +315,7 @@ export function importCircuitIR(
       options.symbolMappings ?? [],
     ),
   );
+  const documents = bindImportedChildDocuments(importedDocuments);
   const topCell = ir.topCells[0] ?? ir.cells[0]?.name;
   const topDocument = documents.find(
     (document) =>

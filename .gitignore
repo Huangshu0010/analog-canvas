@@ -8,3 +8,16 @@ tmp/
 .reference-src/
 *.tsbuildinfo
 .vite/
+
+# Razavi fidelity diff generated output
+fixtures/visual-reference/razavi-reference-v1/diff/
+fixtures/visual-reference/razavi-reference-v1/text-diff/
+
+# Local Agent-tooling scratch and generated layout exports
+.zcode/
+probe-conflicts.mjs
+netlists/*/agent-*-layout.icproj.json
+netlists/*/agent-*-layout.mjs
+netlists/*/agent-*-layout.pdf
+netlists/*/agent-*-layout.png
+netlists/*/agent-*-layout.svg

@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.1-implemented`
+Version: `2.0-page-v1`
 
 Owning phase: `Phase 0/7`
 
@@ -22,11 +22,11 @@ an interruption cannot silently corrupt a valid Project file.
 
 ## Terminology
 
-| Term              | Meaning                                                         |
-| ----------------- | --------------------------------------------------------------- |
-| Formal Project    | User-selected `project.icproj.json`                             |
-| Atomic write      | Temporary write, flush where supported, and same-volume replace |
-| Recovery snapshot | Validated AppData copy offered after interrupted work           |
+| Term           | Meaning                                                                 |
+| -------------- | ----------------------------------------------------------------------- |
+| Formal Project | User-owned `<project-name>.icproj.json`, the only authoritative Project |
+| Atomic write   | Temporary write, flush where supported, and same-volume replace         |
+| Recovery copy  | Validated origin-local browser copy offered after interrupted work      |
 
 ## Data model or interface
 
@@ -39,13 +39,16 @@ interface ProjectStorage {
 }
 ```
 
-Platform adapters implement filesystem or browser capabilities. They must not
-expose partial writes as successful saves.
+Platform adapters implement filesystem or browser capabilities. A native
+filesystem adapter may provide an atomic replacement. A baseline browser cannot
+replace an arbitrary user file: formal browser save is an explicit canonical
+download, with File System Access write-back only as an optional enhancement.
 
 ## Invariants
 
 - Validate before serialization and writing.
-- Formal saves use canonical JSON and atomic replacement.
+- Formal saves use canonical JSON. Native adapters use atomic replacement;
+  baseline browser saves are explicit downloads.
 - Autosave never overwrites the formal Project directly.
 - Cache, session, and recovery data remain outside the user project directory.
 - A recovery snapshot is validated before it is offered or promoted.
@@ -60,9 +63,12 @@ browser restoration UI.
 
 ## Persistence boundary
 
-Formal data belongs in `project.icproj.json` and copied `sources/` or custom
-`symbols/`. Viewport, selection, caches, thumbnails, and recovery snapshots
-belong under the platform application-data location.
+Formal data belongs in one `.icproj.json`. The Page release does not create a
+hidden project directory, copy source files, or persist custom symbol files
+next to it. Viewport, selection, caches, thumbnails, File System Access
+handles, and recovery copies remain outside the Project file. Browser recovery
+is stored in IndexedDB when available, is keyed by Project ID, and can be lost
+when the user clears site data or the browser evicts storage.
 
 ## Valid example
 
@@ -89,10 +95,12 @@ through Phase 7.
 
 ## Platform decisions
 
-- The v0.1 Node adapter uses `%LOCALAPPDATA%/InteractiveCircuitMaker` on
+- The Node adapter uses `%LOCALAPPDATA%/InteractiveCircuitMaker` on
   Windows, the standard Application Support directory on macOS, and
   `$XDG_STATE_HOME` (or `~/.local/state`) on Linux.
-- Browser recovery uses origin-local application data. Formal browser save is
-  an explicit canonical file download.
+- Browser recovery uses origin-local IndexedDB application data. It is not
+  "autosave" and never overwrites a formal Project file.
+- The static Page build has no backend, no server-side Project storage, and no
+  Agent API surface.
 - Native-shell storage integration is deferred by ADR 0006 without changing
   this contract.

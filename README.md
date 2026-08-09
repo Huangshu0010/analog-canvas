@@ -7,7 +7,9 @@ commit through the same Schematic Edit Engine.
 
 ## Repository Layout
 
-- `lib/circuit.vss`: binary Microsoft Visio stencil containing circuit symbols.
+- `lib/circuit.vss`: retired Visio/VSS archive; it is not a product, style, or
+  symbol-generation input. See
+  [`docs/adr/0011-retire-visio-vss-as-visual-authority.md`](docs/adr/0011-retire-visio-vss-as-visual-authority.md).
 - `netlists/`: SPICE fixtures and local model declarations, grouped by circuit.
 - `apps/editor/`: React editor application and native SVG canvas shell.
 - `apps/local-host/`: loopback-only production host for the installable PWA.
@@ -73,5 +75,9 @@ For netlist changes, also verify:
 - instance pin order and referenced model or subcircuit names are intentional;
 - simulator checks are run when the target depends on electrical behavior.
 
-Treat `lib/circuit.vss` as a binary source asset. Review it in Visio or a
-compatible tool when changed; text diffs are not meaningful.
+`lib/circuit.vss`, `tools/vss-import/`, and the `generate-visio-*` scripts are
+historical archive material. Do not run, extend, or use them to derive symbol
+geometry or style. The raster reference manifest under
+`fixtures/visual-reference/razavi-reference-v1/` is the only visual authority.
+The VSS archive remains immutable while legacy provenance is retired from the
+catalog; it must never be rewritten or interpreted as text.

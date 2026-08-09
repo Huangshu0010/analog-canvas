@@ -12,9 +12,9 @@ planning schema, router, or second mutation path.
 
 Use one path for a target and do not mix their state implicitly.
 
-| Path | Use | Source of truth | Mutation path |
-| --- | --- | --- | --- |
-| Live product | An editor/host session already owns the Project | API v2 complete Snapshot | API v2 typed `transact` |
+| Path                  | Use                                                  | Source of truth                    | Mutation path                                                    |
+| --------------------- | ---------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------- |
+| Live product          | An editor/host session already owns the Project      | API v2 complete Snapshot           | API v2 typed `transact`                                          |
 | Repository generation | Reproducible fixture, experiment, or formal artifact | imported SPICE plus checked recipe | `tools/agent-layout/generate.mjs` through the shared Edit Engine |
 
 The GUI is for human direct manipulation and visual handoff. An Agent should
@@ -124,7 +124,8 @@ Read response fields in this order:
 2. failing edit `path` and `objectIds`;
 3. returned revision and diff;
 4. `resolvedRoutes` actual polylines;
-5. diagnostics with location and parameters;
+5. structural diagnostics first, then visual observations with confidence and
+   gate eligibility;
 6. crossings and flightlines from the final committed Document.
 
 Use [response-semantics.md](response-semantics.md) instead of rediscovering the
@@ -145,7 +146,7 @@ At minimum inspect:
 - instance and Net label placement;
 - repeated-unit rhythm, whitespace, and hierarchy boundaries.
 
-Zero errors, warnings, crossings, or flightlines does not prove readability.
+Zero structural issues, observations, crossings, or flightlines does not prove readability.
 If the image is confusing, revise the Agent's placement or graph even when all
 implemented diagnostics pass.
 
@@ -155,8 +156,9 @@ Refresh the Snapshot or re-open the generated Project and verify:
 
 - connected pins and Net terminals still agree;
 - all intended visible endpoints are represented;
-- no unintended flightline, ambiguous Junction, overlap, or unresolved symbol
-  remains;
+- no unintended flightline, ambiguous Junction, or unresolved symbol remains;
+- every visual observation was checked against the formal render rather than
+  mechanically cleared;
 - formal artifacts came from the final committed revision;
 - a second generation produces the same artifacts when determinism matters.
 

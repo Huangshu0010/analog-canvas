@@ -49,12 +49,13 @@ The proposed `razavi-textbook-v1` profile is also executable:
 foreground: "#202020"
 wireStroke: 1.6
 symbolStroke: 1.6
-normalStroke: 1.2
+normalStroke: 1.6
 emphasisStroke: 2.16
+groundBarStroke: 2.906977
 supplyStroke: 1.8
 annotationStroke: 1.6
-junctionRadius: 3
-portOriginRadius: 3
+junctionRadius: 3.779070
+portOriginRadius: 3.779070
 strokeLinecap: butt
 strokeLinejoin: miter
 strokeMiterLimit: 4
@@ -62,19 +63,19 @@ scaleFormalStrokes: true
 fontFamily: "Arial, Helvetica Neue, Helvetica, sans-serif"
 mathWeight: 700
 mathStyle: italic
-instanceFontSize: 16
-netFontSize: 16
-powerFontSize: 16
-annotationFontSize: 16
+instanceFontSize: 18
+netFontSize: 18
+powerFontSize: 18
+annotationFontSize: 18
 captionFontSize: 14
-subscriptScale: 0.68
-subscriptBaselineShift: 0.30em downward
+subscriptScale: 0.84
+subscriptBaselineShift: 0.28em downward
 labelGap: 6
 supplyBarWidth: 20
-currentArrowLength: 24
-arrowHeadLength: 10
-arrowHeadWidth: 7
-currentLabelGap: 7
+currentArrowLength: 53.488372
+arrowHeadLength: 15.116279
+arrowHeadWidth: 8.720930
+currentLabelGap: 6.976744
 polarityOffsetX: 12
 polarityHalfGap: 8
 ```
@@ -117,7 +118,15 @@ Derived visual diagnostics cover unplaced or unresolved symbols, symbol and
 label overlap, short route segments, ambiguous Junction dots, unsatisfied
 layout constraints, and optional export-page bounds. Diagnostics never mutate
 geometry. Unresolved symbols and ambiguous Junction dots are blocking errors;
-spacing and layout-quality findings are warnings.
+spacing and layout-quality findings are observations.
+
+Every finding declares `category`, `confidence`, and `gateEligible`.
+Structural findings describe high-confidence model, topology, or explicit
+constraint conditions. Visual observations describe heuristic geometry and
+require inspection of the formal render. A gate-ineligible observation must
+never become an automatic layout objective merely because a recipe lists its
+code. Where deterministic primitive bounds exist, overlap analysis uses the
+active symbol variant's visible geometry and clusters repeated overlaps.
 
 ## Invariants
 

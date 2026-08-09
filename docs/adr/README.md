@@ -23,6 +23,8 @@ Current Agent integration decisions include
 [`0008-agent-local-route-tree-expander.md`](0008-agent-local-route-tree-expander.md),
 [`0009-move-stretches-connected-routes.md`](0009-move-stretches-connected-routes.md),
 and [`0010-text-annotation-drafting-schema.md`](0010-text-annotation-drafting-schema.md).
+The active visual-authority decision is
+[`0011-retire-visio-vss-as-visual-authority.md`](0011-retire-visio-vss-as-visual-authority.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

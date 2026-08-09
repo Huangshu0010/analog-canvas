@@ -45,6 +45,23 @@ export interface SvgScene {
   formalBody: string;
 }
 
+function renderAnnotationText(
+  annotation: SchematicDocument["annotations"][number],
+  profile: SchematicStyleProfile,
+): string {
+  // A new semantic label has no RichText payload and receives canonical Razavi
+  // composition from its electrical string. Once a human explicitly formats
+  // it in the canvas editor, that persisted AST is the visual source of truth;
+  // flattening it back through `text` loses selected multi-character spans.
+  if (annotation.content) {
+    return renderRichTextDocument(
+      annotation.content as unknown as RichTextDocumentInput,
+      profile,
+    );
+  }
+  return renderSchematicTextContent(annotation.text, annotation.kind, profile);
+}
+
 function escapeXml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -412,9 +429,10 @@ export function buildSvgScene(
             (port) => port.position !== null && !powerPortIds.has(port.id),
           )
           .sort((left, right) => left.id.localeCompare(right.id, "en"))
-          .map(
-            (port) =>
-              `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.foreground}"/>`,
+          .map((port) =>
+            profile.id === "razavi-textbook-v1"
+              ? `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.background}" stroke="${profile.foreground}" stroke-width="${profile.strokes.normal}"/>`
+              : `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.foreground}"/>`,
           )
           .join("");
   const portLayer =
@@ -542,16 +560,18 @@ export function buildSvgScene(
               : annotation.alignment;
         if (profile.id !== "textbook-monochrome-v1") {
           const arrow = profile.annotations;
-          const halfLength = arrow.currentArrowLength / 2;
-          const tipX = x + halfLength;
-          const baseX = tipX - arrow.arrowHeadLength;
+          // A route-marker is mounted on an existing route, so that route is
+          // the arrow shaft.  Draw only the triangular head; a separate fixed
+          // shaft leaves visible stubs on short/vertical wires.
+          const tipX = x + arrow.arrowHeadLength / 2;
+          const baseX = x - arrow.arrowHeadLength / 2;
           const halfHeadWidth = arrow.arrowHeadWidth / 2;
           const razaviTextX = label
             ? label.x
             : attachmentPlacement
               ? attachmentPlacement.labelPosition.x
               : vertical
-                ? x + halfLength + arrow.currentLabelGap
+                ? x + arrow.arrowHeadLength / 2 + arrow.currentLabelGap
                 : x;
           const razaviTextY = label
             ? label.y
@@ -560,9 +580,9 @@ export function buildSvgScene(
               : vertical
                 ? y + 4
                 : y - arrow.currentLabelGap;
-          return `<g ${attributes}><g transform="${transform}"><line data-role="current-arrow-shaft" x1="${x - halfLength}" y1="${y}" x2="${baseX}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "route-marker", profile)}</text></g>`;
+          return `<g ${attributes}><g transform="${transform}"><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
         }
-        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "route-marker", profile)}</text></g>`;
+        return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
@@ -575,7 +595,7 @@ export function buildSvgScene(
           port?.position && profile.annotations.supplyBarWidth > 0
             ? `<line data-role="supply-bar" x1="${port.position.x - profile.annotations.supplyBarWidth / 2}" y1="${port.position.y}" x2="${port.position.x + profile.annotations.supplyBarWidth / 2}" y2="${port.position.y}" transform="rotate(${annotation.rotation} ${port.position.x} ${port.position.y})" stroke="${profile.foreground}" stroke-width="${profile.strokes.supply}" stroke-linecap="${profile.lineCap}"/>`
             : "";
-        return `<g ${attributes}>${supplyBar}<text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "power-label", profile)}</text></g>`;
+        return `<g ${attributes}>${supplyBar}<text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
@@ -592,14 +612,14 @@ export function buildSvgScene(
           annotation.rotation,
         );
         const polarityStyle = `font-style:normal;font-weight:${profile.typography.plainWeight}`;
-        return `<g ${attributes}><text data-role="polarity-positive" x="${annotation.position.x + positiveOffset.x}" y="${annotation.position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${annotation.position.x + negativeOffset.x}" y="${annotation.position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, "route-marker", profile)}</text></g>`;
+        return `<g ${attributes}><text data-role="polarity-positive" x="${annotation.position.x + positiveOffset.x}" y="${annotation.position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${annotation.position.x + negativeOffset.x}" y="${annotation.position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
       }
       const emphasis =
         profile.id === "textbook-monochrome-v1" &&
         annotation.kind === "power-label"
           ? ' font-weight="bold"'
           : "";
-      return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderSchematicTextContent(annotation.text, annotation.kind, profile)}</text>`;
+      return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text>`;
     })
     .join("");
 
@@ -764,13 +784,16 @@ function renderConstructionLine(
   const points = object.points
     .map((point) => `${point.x},${point.y}`)
     .join(" ");
+  const lineStyle = object.styleOverride?.lineStyle ?? object.lineStyle;
   const dash =
-    object.lineStyle === "dashed"
+    lineStyle === "dashed"
       ? ' stroke-dasharray="6 4"'
-      : object.lineStyle === "dotted"
+      : lineStyle === "dotted"
         ? ' stroke-dasharray="2 3"'
         : "";
-  return `<polyline data-object-id="${object.id}" data-kind="construction-line" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"${dash}/>`;
+  const strokeScale = object.styleOverride?.strokeScale ?? 1;
+  const strokeWidth = profile.strokes.annotation * strokeScale;
+  return `<polyline data-object-id="${object.id}" data-kind="construction-line" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"${dash}/>`;
 }
 
 function renderDraftArrow(
@@ -786,12 +809,39 @@ function renderDraftArrow(
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
-  const head = 10;
-  const nx = (-dy / length) * 4;
-  const ny = (dx / length) * 4;
+  // strokeScale widens/narrows the shaft; arrowHeadScale grows/shrinks the head
+  // independently. Both multiply the Razavi profile baseline so formal export
+  // and the editor canvas share one visual parameter (no raw px in objects).
+  const strokeScale = object.styleOverride?.strokeScale ?? 1;
+  const headScale = object.styleOverride?.arrowHeadScale ?? 1;
+  const strokeWidth = profile.strokes.annotation * strokeScale;
+  // Free arrows and route-mounted current arrows intentionally share the
+  // profile-owned head proportions. They differ only in shaft ownership: a
+  // route marker reuses its conductor, while a free arrow draws its own.
+  const head = profile.annotations.arrowHeadLength * headScale;
+  const halfHeadWidth = (profile.annotations.arrowHeadWidth * headScale) / 2;
+  const nx = (-dy / length) * halfHeadWidth;
+  const ny = (dx / length) * halfHeadWidth;
   const baseX = tipX - (dx / length) * head;
   const baseY = tipY - (dy / length) * head;
-  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${tipX}" y2="${tipY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" fill="${profile.foreground}"/></g>`;
+  const arrowHead = object.styleOverride?.arrowHead ?? "filled";
+  const lineStyle = object.styleOverride?.lineStyle ?? "solid";
+  const dash =
+    lineStyle === "dashed"
+      ? ' stroke-dasharray="6 4"'
+      : lineStyle === "dotted"
+        ? ' stroke-dasharray="2 3"'
+        : "";
+  const headBody =
+    arrowHead === "none"
+      ? ""
+      : `<polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" ${arrowHead === "open" ? `fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}"` : `fill="${profile.foreground}"`}/>`;
+  // The shaft terminates on the arrow head's base plane, not underneath its
+  // tip. This preserves the clean triangular point of Razavi-style arrows at
+  // every angle and head scale. A headless arrow remains a complete line.
+  const shaftEndX = arrowHead === "none" ? tipX : baseX;
+  const shaftEndY = arrowHead === "none" ? tipY : baseY;
+  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${shaftEndX}" y2="${shaftEndY}" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"${dash}/>${headBody}</g>`;
 }
 
 function renderDraftLeader(

@@ -21,6 +21,7 @@ export const SymbolPinSchema = z.strictObject({
 export const SymbolStrokeRoleSchema = z.enum([
   "normal",
   "emphasis",
+  "ground",
   "supply",
   "annotation",
 ]);

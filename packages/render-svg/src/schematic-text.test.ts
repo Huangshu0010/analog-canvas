@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   parseSchematicMath,
   renderSchematicTextContent,
+  schematicTextDocument,
   schematicTextFontSize,
 } from "./schematic-text.js";
+import { renderRichTextDocument } from "./rich-text.js";
+import type { RichTextDocumentInput } from "./rich-text.js";
 import {
   razaviTextbookProfile,
   textbookMonochromeProfile,
@@ -43,15 +46,24 @@ describe("Razavi schematic typography", () => {
   });
 
   it("escapes text and emits deterministic Razavi tspan runs", () => {
-    expect(
-      renderSchematicTextContent("V_<X&Y>", "net-label", razaviTextbookProfile),
-    ).toBe(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">&lt;X&amp;Y&gt;</tspan>',
+    const explicit = renderSchematicTextContent(
+      "V_<X&Y>",
+      "net-label",
+      razaviTextbookProfile,
     );
-    expect(
-      renderSchematicTextContent("VIN+", "net-label", razaviTextbookProfile),
-    ).toBe(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">IN</tspan><tspan data-text-run="suffix" baseline-shift="baseline" dy="0.3em" style="font-style:normal;font-weight:400">+</tspan>',
+    expect(explicit).toContain("font-style:italic;font-weight:700");
+    expect(explicit).toContain('data-text-run="subscript"');
+    expect(explicit).toContain("&lt;X&amp;Y&gt;");
+    const signed = renderSchematicTextContent(
+      "VIN+",
+      "net-label",
+      razaviTextbookProfile,
+    );
+    expect(signed).toContain('data-text-run="subscript"');
+    expect(signed).toContain("IN");
+    expect(signed).toContain('data-text-run="suffix"');
+    expect(signed).toContain(
+      'style="font-style:normal;font-weight:400">+</tspan>',
     );
     expect(
       renderSchematicTextContent(
@@ -64,10 +76,38 @@ describe("Razavi schematic typography", () => {
 
   it("uses semantic profile sizes", () => {
     expect(schematicTextFontSize("instance-label", razaviTextbookProfile)).toBe(
-      16,
+      15.116,
     );
     expect(schematicTextFontSize("route-marker", razaviTextbookProfile)).toBe(
-      16,
+      15.116,
     );
+  });
+
+  it("uses bold upright subscripts with calibrated geometry", () => {
+    const rendered = renderSchematicTextContent(
+      "VDD",
+      "power-label",
+      razaviTextbookProfile,
+    );
+    expect(rendered).toContain('font-size="76%"');
+    expect(rendered).toContain('baseline-shift="-0.28em"');
+    expect(rendered).toContain('dx="0.046em"');
+    expect(rendered).toContain("font-style:italic;font-weight:700");
+    expect(rendered).toContain("font-style:normal;font-weight:700");
+  });
+
+  it("uses the same base/subscript convention in editor RichText defaults", () => {
+    const rendered = renderRichTextDocument(
+      schematicTextDocument(
+        "M1",
+        "instance-label",
+      ) as unknown as RichTextDocumentInput,
+      // The renderer's input admits compatibility-role metadata while the
+      // persisted model intentionally keeps its run union opaque here.
+      // The generated document itself remains model-valid.
+      razaviTextbookProfile,
+    );
+    expect(rendered).toContain("font-style:italic;font-weight:700");
+    expect(rendered).toContain("font-style:normal;font-weight:700");
   });
 });

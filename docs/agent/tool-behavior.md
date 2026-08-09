@@ -12,12 +12,12 @@ validation win if this page drifts.
 
 The normal surface has four operations:
 
-| Operation | Behavior |
-| --- | --- |
-| `capabilities` | Reports versions, permissions, edit kinds, and server-owned limits. |
-| `snapshot` | Returns one complete read-only Document plus a compact Project index. |
-| `transact` | Dry-runs or atomically commits generic typed edits against an exact revision. |
-| `render` | Returns bounded base64 SVG in `formal` or `diagnostics` mode. |
+| Operation      | Behavior                                                                      |
+| -------------- | ----------------------------------------------------------------------------- |
+| `capabilities` | Reports versions, permissions, edit kinds, and server-owned limits.           |
+| `snapshot`     | Returns one complete read-only Document plus a compact Project index.         |
+| `transact`     | Dry-runs or atomically commits generic typed edits against an exact revision. |
+| `render`       | Returns bounded base64 SVG in `formal` or `diagnostics` mode.                 |
 
 API v1 `query` is compatibility-only. API v2 intentionally has no region,
 topology-classifier, layout-intent, or circuit-specific edit endpoint.
@@ -83,13 +83,13 @@ placement, or reroutes around a conflict.
 
 ### Node roles
 
-| Role | Persisted result | Meaning |
-| --- | --- | --- |
-| `endpoint` | none | Bind an existing terminal or port and use its resolved page coordinate. |
-| `bend` | Route waypoint | Degree-two, dot-free change of direction. |
-| `tap` | branch Junction | Real electrical branch point. |
-| `junction` | branch Junction | Real electrical branch point. |
-| `label-anchor` | label-anchor Junction | Electrical anchor for an attached local Net label. |
+| Role           | Persisted result      | Meaning                                                                 |
+| -------------- | --------------------- | ----------------------------------------------------------------------- |
+| `endpoint`     | none                  | Bind an existing terminal or port and use its resolved page coordinate. |
+| `bend`         | Route waypoint        | Degree-two, dot-free change of direction.                               |
+| `tap`          | branch Junction       | Real electrical branch point.                                           |
+| `junction`     | branch Junction       | Real electrical branch point.                                           |
+| `label-anchor` | label-anchor Junction | Electrical anchor for an attached local Net label.                      |
 
 Non-endpoint nodes use either explicit `at` or relative
 `alignWith + axis + offset` positioning. The helper snaps positioned nodes to
@@ -98,12 +98,12 @@ the offset in y; `axis: "y"` preserves y and offsets x.
 
 ### Edge roles
 
-| Role | Behavior |
-| --- | --- |
+| Role     | Behavior                                                                                             |
+| -------- | ---------------------------------------------------------------------------------------------------- |
 | `escape` | Must connect exactly one endpoint to a positioned node and honor a known terminal outward direction. |
-| `trunk` | Produces a Route segment marked `trunk`; it does not decide where the trunk belongs. |
-| `link` | Produces an ordinary Route segment. |
-| `label` | Produces an attached `net-label` annotation instead of a Route. |
+| `trunk`  | Produces a Route segment marked `trunk`; it does not decide where the trunk belongs.                 |
+| `link`   | Produces an ordinary Route segment.                                                                  |
+| `label`  | Produces an attached `net-label` annotation instead of a Route.                                      |
 
 All non-label edges must already be axis-aligned. To turn a corner, the Agent
 must add a degree-two `bend`. The helper folds consecutive bend nodes into one
@@ -151,7 +151,9 @@ not the public Agent API and not an automatic layout engine. A recipe owns
 topology recognition and edit construction. The runner owns SPICE import,
 batching, dry-run/commit, validation, reporting, and export.
 
-`requireComplete` blocks publication on visual errors and flightlines, plus
-configured warning codes and crossing limits. It cannot judge whether a valid
+`requireComplete` blocks publication on gate-eligible structural errors and
+flightlines, plus explicitly configured gate-eligible warning codes and
+crossing limits. Visual observations with `gateEligible: false` remain
+non-blocking even when an older recipe lists their code. It cannot judge whether a valid
 CMOS gate, differential stage, or bus is visually expressed in the clearest
 way. The Agent must inspect the render.

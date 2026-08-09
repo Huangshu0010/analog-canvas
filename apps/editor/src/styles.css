@@ -1,6 +1,29 @@
 :root {
-  color: #151515;
-  background: #ecece7;
+  /* Editor chrome design tokens. These cover panels, controls, selection
+     state, diagnostics and editor-only SVG overlays ONLY. The white canvas
+     background (`.schematic-canvas`), the SVG grid-dot fill, and the injected
+     `scene.formalBody` are deliberately NOT tokenized so formal SVG/PNG/PDF
+     export output stays visually stable and decoupled from chrome restyling. */
+  --icm-chrome-bg: #ecece7;
+  --icm-surface: #ffffff;
+  --icm-surface-muted: #f8f8f4;
+  --icm-surface-hover: #f7f7f2;
+  --icm-border: #d8d8d2;
+  --icm-border-strong: #b8b8b0;
+  --icm-border-hover: #60605a;
+  --icm-text: #151515;
+  --icm-text-muted: #5f5f5a;
+  --icm-text-disabled: #aaa;
+  --icm-accent: #1f6feb;
+  --icm-accent-rgb: 31 111 235;
+  --icm-accent-soft: rgb(31 111 235 / 8%);
+  --icm-accent-selection: rgb(31 111 235 / 12%);
+  --icm-accent-tint: #eef5ff;
+  --icm-error: #9b1c1c;
+  --icm-warning: #7a5200;
+
+  color: var(--icm-text);
+  background: var(--icm-chrome-bg);
   font-family: Inter, system-ui, sans-serif;
 }
 
@@ -9,30 +32,30 @@
 }
 
 button {
-  border: 1px solid #b8b8b0;
+  border: 1px solid var(--icm-border-strong);
   border-radius: 0.25rem;
-  color: #202020;
-  background: #fff;
+  color: var(--icm-text);
+  background: var(--icm-surface);
   cursor: pointer;
   font: inherit;
 }
 
 .file-import {
   padding: 0.35rem 0.55rem;
-  border: 1px solid #b8b8b0;
+  border: 1px solid var(--icm-border-strong);
   border-radius: 0.25rem;
-  background: #fff;
+  background: var(--icm-surface);
   cursor: pointer;
   font-size: 0.8rem;
 }
 
 .file-import:hover {
-  border-color: #60605a;
-  background: #f7f7f2;
+  border-color: var(--icm-border-hover);
+  background: var(--icm-surface-hover);
 }
 
 .file-import:focus-within {
-  outline: 2px solid #1f6feb;
+  outline: 2px solid var(--icm-accent);
   outline-offset: 2px;
 }
 
@@ -47,18 +70,18 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: #60605a;
-  background: #f7f7f2;
+  border-color: var(--icm-border-hover);
+  background: var(--icm-surface-hover);
 }
 
 button:disabled {
-  color: #aaa;
+  color: var(--icm-text-disabled);
   cursor: not-allowed;
 }
 
 button[aria-pressed="true"] {
-  border-color: #1f6feb;
-  background: #eef5ff;
+  border-color: var(--icm-accent);
+  background: var(--icm-accent-tint);
 }
 
 body {
@@ -69,7 +92,9 @@ body {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 14rem minmax(0, 1fr);
+  /* Fixed two columns: left dock + canvas. Selection no longer adds a third
+     column, so canvas column count and width never change on selection. */
+  grid-template-columns: 17rem minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 100vh;
 }
@@ -81,8 +106,8 @@ body {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.65rem 0.85rem;
-  border-bottom: 1px solid #c9c9c2;
-  background: #fff;
+  border-bottom: 1px solid var(--icm-border-strong);
+  background: var(--icm-surface);
 }
 
 .app-header h1,
@@ -95,8 +120,17 @@ body {
 }
 
 .app-header p {
-  color: #666;
+  color: var(--icm-text-muted);
   font-size: 0.8rem;
+}
+
+.editor-status {
+  max-width: 16rem;
+  overflow: hidden;
+  color: var(--icm-text-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar {
@@ -109,15 +143,15 @@ body {
   display: flex;
   gap: 0.25rem;
   padding-right: 0.35rem;
-  border-right: 1px solid #d8d8d2;
+  border-right: 1px solid var(--icm-border);
 }
 
 .document-nav select {
   max-width: 13rem;
   padding: 0.3rem;
-  border: 1px solid #b8b8b0;
+  border: 1px solid var(--icm-border-strong);
   border-radius: 0.25rem;
-  background: #fff;
+  background: var(--icm-surface);
   font: inherit;
   font-size: 0.8rem;
 }
@@ -133,9 +167,9 @@ body {
 }
 
 .command-menu summary {
-  border: 1px solid #b8b8b0;
+  border: 1px solid var(--icm-border-strong);
   border-radius: 0.25rem;
-  background: #fff;
+  background: var(--icm-surface);
   cursor: pointer;
   list-style: none;
 }
@@ -153,9 +187,9 @@ body {
   min-width: 10rem;
   gap: 0.3rem;
   padding: 0.45rem;
-  border: 1px solid #c9c9c2;
+  border: 1px solid var(--icm-border-strong);
   border-radius: 0.35rem;
-  background: #fff;
+  background: var(--icm-surface);
   box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
@@ -163,6 +197,153 @@ body {
 .command-popover .file-import {
   width: 100%;
   text-align: left;
+}
+
+.help-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(21 21 21 / 36%);
+}
+
+.help-dialog {
+  width: min(42rem, 100%);
+  max-height: min(44rem, calc(100vh - 2.5rem));
+  overflow: auto;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: 0.55rem;
+  background: var(--icm-surface);
+  box-shadow: 0 20px 48px rgb(0 0 0 / 24%);
+}
+
+.help-dialog-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem 0.8rem;
+  border-bottom: 1px solid var(--icm-border);
+  background: var(--icm-surface);
+}
+
+.help-dialog-header h2,
+.help-dialog-header p,
+.help-dialog-content h3,
+.help-dialog-content p {
+  margin: 0;
+}
+
+.help-kicker {
+  color: var(--icm-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.help-dialog-header h2 {
+  margin-top: 0.2rem;
+  font-size: 1.2rem;
+}
+
+.help-dialog-content {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.1rem;
+  line-height: 1.55;
+}
+
+.help-dialog-content h3 {
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.help-dialog-content p {
+  color: var(--icm-text-muted);
+  font-size: 0.88rem;
+}
+
+.help-dialog-content strong {
+  color: var(--icm-text);
+}
+
+.help-section-label {
+  color: var(--icm-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.help-introduction {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.help-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--icm-border);
+  border-bottom: 1px solid var(--icm-border);
+  font-size: 0.8rem;
+}
+
+.help-index a {
+  color: var(--icm-accent);
+}
+
+.help-handbook,
+.help-shortcuts {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.help-shortcuts dl {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.help-shortcuts dl > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.help-shortcuts dt {
+  color: var(--icm-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.help-shortcuts dd {
+  margin: 0;
+  color: var(--icm-text-muted);
+  font-size: 0.84rem;
+}
+
+.help-dialog-content kbd {
+  padding: 0.05rem 0.25rem;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: 0.2rem;
+  color: var(--icm-text);
+  background: var(--icm-surface-muted);
+  font: inherit;
+  font-size: 0.8em;
+}
+
+.help-data-note {
+  padding: 0.8rem;
+  border: 1px solid var(--icm-border);
+  border-radius: 0.35rem;
+  background: var(--icm-surface-muted);
 }
 
 .component-palette {
@@ -174,10 +355,108 @@ body {
   max-height: calc(100vh - 6rem);
   overflow: auto;
   padding: 0.8rem;
-  border: 1px solid #b8b8b0;
+  border: 1px solid var(--icm-border-strong);
   border-radius: 0.5rem;
-  background: #fff;
+  background: var(--icm-surface);
   box-shadow: 0 14px 40px rgb(0 0 0 / 18%);
+}
+
+.dock {
+  display: flex;
+  flex-direction: column;
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  max-height: calc(100vh - 4.5rem);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  border-right: 1px solid var(--icm-border-strong);
+  background: var(--icm-surface-muted);
+}
+
+.library-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem;
+}
+
+.library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.library-heading h2 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.library-panel > input {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0.7rem 0;
+  padding: 0.45rem;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: 0.3rem;
+}
+
+.library-components {
+  margin-top: 0.85rem;
+}
+
+.library-components > summary {
+  cursor: pointer;
+  color: var(--icm-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.library-components-content > details {
+  border-top: 1px solid var(--icm-border-strong);
+  padding-top: 0.4rem;
+}
+
+.library-components-content > details > summary {
+  cursor: pointer;
+  color: var(--icm-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.library-component-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.library-component-grid button {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  min-height: 3.1rem;
+  padding: 0.3rem;
+  text-align: left;
+}
+
+.library-component-grid .palette-symbol-preview {
+  width: 2rem;
+  height: 2rem;
+}
+
+.library-component-grid span {
+  overflow: hidden;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
 }
 
 .palette-header {
@@ -195,7 +474,7 @@ body {
   width: 100%;
   margin: 0.65rem 0;
   padding: 0.5rem;
-  border: 1px solid #b8b8b0;
+  border: 1px solid var(--icm-border-strong);
   border-radius: 0.3rem;
 }
 
@@ -207,7 +486,7 @@ body {
 
 .palette-group h3 {
   margin: 0.75rem 0 0.35rem;
-  color: #555;
+  color: var(--icm-text-muted);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -231,28 +510,76 @@ body {
 
 .palette-grid span,
 .command-popover small {
-  color: #666;
+  color: var(--icm-text-muted);
   font-size: 0.72rem;
 }
 
-.side-panel {
-  padding: 0.9rem;
-  border-right: 1px solid #c9c9c2;
-  background: #f8f8f4;
-}
-
-.side-panel h2 {
+.selection-panel h2 {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;
 }
 
-.side-panel > h3 {
-  margin: 0 0 0.55rem;
-  color: #555;
+.selection-shelf {
+  display: flex;
+  flex: 0 0 min(42%, 20rem);
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid var(--icm-border-strong);
+  background: var(--icm-surface);
+}
+
+.selection-shelf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.4rem;
+  padding: 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.selection-shelf-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 11rem;
+  color: var(--icm-text-muted);
+  font-size: 0.74rem;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selection-shelf-indicator {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--icm-accent);
+}
+
+.selection-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem;
+}
+
+.inspect-empty {
+  margin: 0.5rem 0;
+  color: var(--icm-text-muted);
   font-size: 0.78rem;
 }
 
-.side-panel > button {
+.selection-panel > h3 {
+  margin: 0 0 0.55rem;
+  color: var(--icm-text-muted);
+  font-size: 0.78rem;
+}
+
+.selection-panel > button {
   display: block;
   width: 100%;
   margin-bottom: 0.45rem;
@@ -261,7 +588,7 @@ body {
 }
 
 .inspector {
-  display: grid;
+  display: none;
   grid-template-columns: auto 1fr;
   gap: 0.35rem 0.6rem;
   margin-top: 1.5rem;
@@ -269,7 +596,7 @@ body {
 }
 
 .inspector dt {
-  color: #666;
+  color: var(--icm-text-muted);
 }
 
 .inspector dd {
@@ -278,8 +605,9 @@ body {
 }
 
 .diagnostics {
+  display: none;
   margin-top: 1rem;
-  border-top: 1px solid #d8d8d2;
+  border-top: 1px solid var(--icm-border);
   padding-top: 0.75rem;
   font-size: 0.75rem;
 }
@@ -304,14 +632,16 @@ body {
 }
 
 .diagnostics [data-severity="error"] {
-  color: #9b1c1c;
+  color: var(--icm-error);
 }
 
 .diagnostics [data-severity="warning"] {
-  color: #7a5200;
+  color: var(--icm-warning);
 }
 
 .canvas-panel {
+  grid-column: 2;
+  grid-row: 2;
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -323,7 +653,7 @@ body {
   width: 100%;
   height: calc(100vh - 5.5rem);
   min-height: 560px;
-  border: 1px solid #c4c4bd;
+  border: 1px solid var(--icm-border-strong);
   background: #fff;
   box-shadow: 0 2px 10px rgb(0 0 0 / 6%);
   touch-action: none;
@@ -350,24 +680,24 @@ body {
 }
 
 .text-format-tools small {
-  color: #5b5b57;
+  color: var(--icm-text-muted);
 }
 
 .hit-target.selected {
-  stroke: #1f6feb;
+  stroke: var(--icm-accent);
   stroke-dasharray: 6 4;
 }
 
 .drag-preview {
-  fill: rgb(31 111 235 / 8%);
-  stroke: #1f6feb;
+  fill: var(--icm-accent-soft);
+  stroke: var(--icm-accent);
   stroke-width: 1.5;
   stroke-dasharray: 5 4;
   pointer-events: none;
 }
 
 .flightline {
-  stroke: #888;
+  stroke: var(--icm-text-muted);
   stroke-width: 1;
   stroke-dasharray: 5 4;
   pointer-events: none;
@@ -376,16 +706,37 @@ body {
 
 .wire-preview {
   fill: none;
-  stroke: #1f6feb;
+  stroke: var(--icm-accent);
   stroke-width: 1.5;
   stroke-dasharray: 5 4;
   pointer-events: none;
   vector-effect: non-scaling-stroke;
 }
 
+/* Wire mode owns the canvas input surface. It sits above formal symbols/text
+   but below endpoint and route targets, so labels never steal a wiring click. */
+.wire-input-plane {
+  fill: transparent;
+  cursor: crosshair;
+  pointer-events: all;
+}
+
+/* CSS rules on the selection overlays have higher precedence than the SVG
+   presentation attributes. Disable those overlays at the canvas level while
+   wiring, leaving only endpoint and route hit targets above the input plane. */
+.schematic-canvas.wire-mode .hit-target,
+.schematic-canvas.wire-mode .annotation-hit,
+.schematic-canvas.wire-mode .guide,
+.schematic-canvas.wire-mode .route-handle {
+  pointer-events: none;
+}
+
 .route-hit {
   fill: none;
-  stroke: transparent;
+  /* A fully transparent SVG stroke is not consistently targetable by browser
+     hit testing. The near-zero alpha keeps it visually absent while preserving
+     the 14px screen-space route hit band. */
+  stroke: rgb(0 0 0 / 0.1%);
   stroke-width: 14;
   cursor: pointer;
   pointer-events: stroke;
@@ -393,13 +744,13 @@ body {
 }
 
 .route-hit.selected {
-  stroke: rgb(31 111 235 / 24%);
+  stroke: var(--icm-accent-selection);
   stroke-width: 14;
 }
 
 .route-handle {
-  fill: #fff;
-  stroke: #1f6feb;
+  fill: var(--icm-surface);
+  stroke: var(--icm-accent);
   stroke-width: 1.5;
   cursor: move;
   vector-effect: non-scaling-stroke;
@@ -413,14 +764,14 @@ body {
 }
 
 .endpoint-hit.active {
-  fill: #fff;
-  stroke: #1f6feb;
+  fill: var(--icm-surface);
+  stroke: var(--icm-accent);
   stroke-width: 1.5;
 }
 
 .selection-box {
-  fill: rgb(31 111 235 / 8%);
-  stroke: #1f6feb;
+  fill: var(--icm-accent-soft);
+  stroke: var(--icm-accent);
   stroke-width: 1;
   stroke-dasharray: 5 4;
   pointer-events: none;
@@ -428,16 +779,69 @@ body {
 }
 
 .drafting-create-preview {
-  stroke: #1f6feb;
+  stroke: var(--icm-accent);
   stroke-width: 1.5;
   stroke-dasharray: 6 4;
   pointer-events: none;
   vector-effect: non-scaling-stroke;
 }
 
+/* Two-phase drafting creation anchors + arrow head + snap marker + readout.
+   Editor overlay only; never appears in formal SVG/PNG/PDF export. */
+.drafting-create-anchor {
+  fill: var(--icm-accent);
+  stroke: var(--icm-accent);
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.draft-create-anchor-end {
+  fill: var(--icm-surface);
+}
+
+.draft-create-anchor-vx {
+  fill: var(--icm-surface);
+}
+
+.drafting-create-head {
+  fill: var(--icm-accent);
+  stroke: var(--icm-accent);
+  pointer-events: none;
+}
+
+.drafting-create-snap {
+  fill: none;
+  stroke: var(--icm-accent);
+  stroke-width: 1.5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.drafting-create-readout {
+  fill: var(--icm-text-muted);
+  font-size: 10px;
+  paint-order: stroke;
+  stroke: var(--icm-surface);
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+/* Selection handles for a selected drafting object (editor overlay only).
+   Endpoint/vertex/center markers showing where geometry can be edited. */
+.draft-handle {
+  fill: var(--icm-surface);
+  stroke: var(--icm-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.draft-handle-center {
+  fill: var(--icm-accent);
+}
+
 .snap-preview {
-  fill: #fff;
-  stroke: #1f6feb;
+  fill: var(--icm-surface);
+  stroke: var(--icm-accent);
   stroke-width: 1.5;
   pointer-events: none;
   vector-effect: non-scaling-stroke;
@@ -446,21 +850,92 @@ body {
 .annotation-hit {
   fill: transparent;
   stroke: transparent;
-  stroke-width: 8;
+  /* Fixed screen-pixel hit tolerance (vector-effect: non-scaling-stroke makes
+     stroke-width screen-space, not logical). Matches route-hit width so thin
+     drafting lines/arrows are as easy to select as wires at any zoom. This wide
+     transparent stroke IS the hit band — keep it for both unselected and
+     selected, otherwise a selected thin line becomes unclickable. */
+  stroke-width: 14;
   cursor: move;
   pointer-events: all;
   vector-effect: non-scaling-stroke;
 }
 
 .annotation-hit.selected {
-  fill: rgb(31 111 235 / 12%);
-  stroke: #1f6feb;
-  stroke-width: 1;
+  fill: var(--icm-accent-selection);
+  /* Selection highlight rides on the SAME wide transparent hit stroke; do NOT
+     narrow stroke-width here — that would shrink the hit band to 1px and make
+     a selected thin arrow/construction line nearly impossible to re-grab. */
+  stroke: rgb(var(--icm-accent-rgb) / 45%);
+}
+
+/* Editor-only HTML inside the SVG foreignObject. It is deliberately separate
+   from formal SVG/export, but uses the same RichText AST as formal rendering. */
+.rich-text-editor-shell {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 16rem;
+  color: var(--icm-text);
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.rich-text-floating-toolbar {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  gap: 0.1rem;
+  padding: 0.2rem;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: 0.35rem;
+  background: var(--icm-surface);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 16%);
+}
+
+.rich-text-floating-toolbar button {
+  min-width: 1.75rem;
+  min-height: 1.65rem;
+  padding: 0.1rem 0.3rem;
+  border: 0;
+  background: transparent;
+  font-size: 0.74rem;
+}
+
+.rich-text-floating-toolbar button:hover:not(:disabled) {
+  background: var(--icm-accent-tint);
+}
+
+.rich-text-toolbar-separator {
+  width: 1px;
+  height: 1.2rem;
+  margin: 0 0.1rem;
+  background: var(--icm-border-strong);
+}
+
+.rich-text-editable {
+  min-height: 1.55rem;
+  padding: 0.18rem 0.35rem;
+  border: 1px solid var(--icm-accent);
+  border-radius: 0.2rem;
+  outline: 0;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 1px 5px rgb(var(--icm-accent-rgb) / 16%);
+  font: inherit;
+  line-height: 1.15;
+  white-space: pre-wrap;
+}
+
+.rich-text-editable:focus {
+  box-shadow: 0 0 0 2px rgb(var(--icm-accent-rgb) / 25%);
+}
+
+.rich-text-fraction-rule {
+  padding: 0 0.08em;
 }
 
 /* ADR 0010 editor-only Guide overlay: dashed, non-exported, never electrical. */
 .guide {
-  stroke: rgb(31 111 235 / 55%);
+  stroke: rgb(var(--icm-accent-rgb) / 55%);
   stroke-width: 1;
   stroke-dasharray: 6 4;
   cursor: move;
@@ -484,7 +959,7 @@ body {
 }
 
 .annotation-drag-preview {
-  fill: #1f6feb;
+  fill: var(--icm-accent);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 12px;
   pointer-events: none;
@@ -493,7 +968,7 @@ body {
 .context-actions {
   margin-top: 0.8rem;
   padding-top: 0.8rem;
-  border-top: 1px solid #d8d8d2;
+  border-top: 1px solid var(--icm-border);
 }
 
 .context-actions button {
@@ -505,15 +980,15 @@ body {
 .context-actions label {
   display: grid;
   gap: 0.25rem;
-  color: #555;
+  color: var(--icm-text-muted);
   font-size: 0.75rem;
 }
 
 .context-actions input {
   min-width: 0;
   padding: 0.4rem;
-  border: 1px solid #b8b8b0;
+  border: 1px solid var(--icm-border-strong);
   border-radius: 0.25rem;
-  background: #fff;
-  color: #111;
+  background: var(--icm-surface);
+  color: var(--icm-text);
 }

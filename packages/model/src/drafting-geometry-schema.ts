@@ -43,6 +43,7 @@ export const ResolvedDraftingGeometrySchema = z.discriminatedUnion("kind", [
     kind: z.literal("arrow"),
     from: PointSchema,
     to: PointSchema,
+    center: PointSchema,
     bounds: FloatRectSchema,
     diagnostics: z.array(DraftingDiagnosticSchema),
   }),
@@ -65,6 +66,7 @@ export const ResolvedDraftingGeometrySchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("construction-line"),
     points: z.array(PointSchema),
+    vertices: z.array(PointSchema),
     bounds: FloatRectSchema,
     diagnostics: z.array(DraftingDiagnosticSchema),
   }),

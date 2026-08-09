@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "razavi-reference-v1",
+  "visualAuthority": "sole",
+  "assetPath": "razavi-six-panel.png",
+  "sha256": "08c89f54345c835324528a63c7519dc3aeda17169febc20134e33056bc85790b",
+  "supplementalAssets": [
+    {
+      "path": "capacitor-reference.png",
+      "sha256": "e2b13a01eed7e7565080bc9d0d7c98bc8dc6714ceed3c7159096c8b5deb3dcbc",
+      "scope": ["capacitor geometry", "capacitor stroke treatment"]
+    },
+    {
+      "path": "current-port-reference.png",
+      "sha256": "09b2cc33652e29b6b5fe784397bceb514db1c07f0772bb04e54a96d8927140e5",
+      "scope": [
+        "route current-arrow treatment",
+        "current-source geometry",
+        "hollow port origin"
+      ]
+    },
+    {
+      "path": "vdd-reference.png",
+      "sha256": "fae2ed83a534e62bfdb9f0f7cef97892ef46fa8630be481ad1d8a83611361f84",
+      "scope": ["VDD supply marker geometry"]
+    }
+  ],
+  "mosGeometryPath": "mos-geometry.json",
+  "mosGeometrySha256": "0e61e355ca658dcde5ac127a729fd9893bf58dd07547de8a061a952f3772d195",
+  "peripheralGeometryPath": "peripheral-geometry.json",
+  "peripheralGeometrySha256": "5bb3f3cbd8b08035040aeb4cf018be80853edf9c323426fe975a2bdb7ccb65e9",
+  "passiveGeometryPath": "passive-geometry.json",
+  "passiveGeometrySha256": "ebdbbcd9641c4a11aac4934eddf9c44b6865e69aa79d159c2d4c7db90082ff15",
+  "capacitorGeometryPath": "capacitor-geometry.json",
+  "capacitorGeometrySha256": "9137e7a492c6a5e66ae0476618942f099899260a09e80f47b3d5ebe57c97cf6a",
+  "currentPortGeometryPath": "current-port-geometry.json",
+  "currentPortGeometrySha256": "182bc62fdec937cec49051ba5ad1ff802b8d23a576ff2695f8fdce02b0fa66fd",
+  "vddGeometryPath": "vdd-geometry.json",
+  "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
+  "pixels": {
+    "width": 1204,
+    "height": 794
+  },
+  "scope": [
+    "MOS geometry",
+    "arrow geometry",
+    "line width and cap treatment",
+    "textbook annotation typography",
+    "ground, supply, port, and source presentation",
+    "capacitor geometry and stroke treatment",
+    "route current-arrow treatment, current-source geometry, and hollow port origin",
+    "VDD supply marker geometry"
+  ],
+  "notes": [
+    "This raster is the only visual authority for Razavi style v1.",
+    "Supplemental rasters are user-supplied evidence within this same sole authority.",
+    "Visio/VSS may establish legacy pin semantics but must not determine visual geometry."
+  ]
+}

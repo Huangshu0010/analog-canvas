@@ -126,6 +126,11 @@ const configs = [
     sourcePresentation: "wide-arrow",
   },
 ];
+const rasterOwnedSymbolIds = new Set([
+  "ground",
+  "voltage-source",
+  "current-source",
+]);
 
 function fail(message) {
   throw new Error(`Visio core-analog generation: ${message}`);
@@ -943,6 +948,7 @@ for (const { symbol } of generated.values()) {
     parser: "json",
   });
   assetSources.set(symbol.id, normalize(source));
+  if (rasterOwnedSymbolIds.has(symbol.id)) continue;
   const target = resolve(assetRoot, `${symbol.id}.symbol.json`);
   if (!target.startsWith(`${assetRoot}${sep}`))
     fail(`invalid output path ${target}`);
@@ -961,6 +967,7 @@ const entriesById = new Map(
   catalog.entries.map((entry) => [entry.symbolId, entry]),
 );
 for (const config of configs) {
+  if (rasterOwnedSymbolIds.has(config.symbolId)) continue;
   const entry = entriesById.get(config.symbolId);
   const source = assetSources.get(config.symbolId);
   if (!entry || !source) fail(`missing catalog entry for ${config.symbolId}`);

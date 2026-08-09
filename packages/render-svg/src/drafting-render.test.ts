@@ -1,4 +1,5 @@
 import { createEmptyDocument } from "@icm/model";
+import { resolveSchematicStyleProfile } from "@icm/derived";
 import { describe, expect, it } from "vitest";
 
 import { renderDocumentSvg } from "./render.js";
@@ -123,6 +124,39 @@ describe("drafting layer rendering (WP-A1b)", () => {
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-kind="draft-arrow"');
     expect(svg).toContain("<polygon");
+    const profile = resolveSchematicStyleProfile(
+      document.presentation.styleProfileId,
+    );
+    expect(svg).toContain(
+      `${100 - profile.annotations.arrowHeadLength},${
+        -profile.annotations.arrowHeadWidth / 2
+      }`,
+    );
+    expect(svg).toContain(
+      `x1="0" y1="0" x2="${100 - profile.annotations.arrowHeadLength}" y2="0"`,
+    );
+  });
+
+  it("honors the constrained arrow-head override", () => {
+    const document = createEmptyDocument("doc", "Drafting");
+    document.drafting = {
+      objects: [
+        {
+          id: "shaft-only",
+          kind: "arrow",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 0, y: 0 } },
+          from: { kind: "free", position: { x: 0, y: 0 } },
+          to: { kind: "free", position: { x: 100, y: 0 } },
+          styleOverride: { arrowHead: "none" },
+        },
+      ],
+      guides: [],
+    };
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('data-kind="draft-arrow"');
+    expect(svg).not.toContain("<polygon");
   });
 
   it("renders a floating symbol with its primitives (WP-A4)", () => {

@@ -24,7 +24,58 @@ import { razaviTextbookProfile } from "./style-profile.js";
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("textbook monochrome SVG renderer", () => {
-  it("renders the Razavi palette port as a solid dot", () => {
+  it("preserves a manually formatted multi-character semantic subscript", () => {
+    const document = createEmptyProject("project-rich-label", "Rich label")
+      .documents[0]!;
+    document.annotations.push({
+      id: "label-vin",
+      kind: "net-label",
+      text: "VOUT",
+      content: {
+        runs: [
+          {
+            kind: "span",
+            style: "italic",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "V" }],
+              },
+            ],
+          },
+          {
+            kind: "span",
+            style: "subscript",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "out" }],
+              },
+            ],
+          },
+        ],
+      },
+      position: { x: 100, y: 100 },
+      offset: { x: 0, y: 0 },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain('data-object-id="label-vin"');
+    expect(svg).toContain('data-text-run="subscript"');
+    expect(svg).toContain(">out</tspan>");
+    expect(svg).not.toContain(">OUT</tspan>");
+    expect(svg).toContain("font-style:italic;font-weight:700");
+    expect(svg).toContain("font-style:normal;font-weight:700");
+  });
+
+  it("renders the Razavi palette port as a hollow endpoint", () => {
     const port = builtInSymbols.find((symbol) => symbol.id === "port");
     expect(port).toBeDefined();
 
@@ -35,7 +86,10 @@ describe("textbook monochrome SVG renderer", () => {
       razaviTextbookProfile,
     );
 
-    expect(body).toContain('fill="#202020" stroke="none"');
+    expect(body).toContain(
+      'r="2.47907" fill="none" stroke="#202020" stroke-width="1.6"',
+    );
+    expect(body).toContain('x2="-4.607544"');
   });
 
   it("renders only physical branch Junctions as connection dots", () => {
@@ -342,16 +396,35 @@ describe("textbook monochrome SVG renderer", () => {
     const first = renderDocumentSvg(document, resolver);
     expect(first).toContain('transform="rotate(180 70 60)"');
     expect(first).toContain('<text x="70" y="46" text-anchor="middle"');
-    expect(first).toContain('text-anchor="middle" font-size="24"');
+    expect(first).toContain('text-anchor="middle" font-size="27"');
     expect(first).toContain('data-role="current-arrow-head"');
+    expect(first).not.toContain('data-role="current-arrow-shaft"');
+    expect(first).toContain('data-text-run="subscript"');
     expect(first).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">I</tspan><tspan data-text-run="subscript"',
+      'style="font-style:normal;font-weight:700">x</tspan>',
     );
 
     document.ports[1]!.position = { x: 280, y: 60 };
     const stretched = renderDocumentSvg(document, resolver);
     expect(stretched).toContain('transform="rotate(180 100 60)"');
     expect(stretched).toContain('<text x="100" y="46" text-anchor="middle"');
+  });
+
+  it("renders a Razavi formal Port as a hollow node with a junction-sized outside radius", () => {
+    const project = createEmptyProject("project-hollow-port", "Hollow port");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.ports.push({
+      id: "port-vin",
+      name: "Vin",
+      direction: "passive",
+      position: { x: 40, y: 60 },
+    });
+
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain(
+      '<circle data-object-id="port-vin" data-node-kind="port-origin" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#202020" stroke-width="1.6"/>',
+    );
   });
 
   it("renders the original dense analog fixture without blocking visual diagnostics", () => {
@@ -411,7 +484,10 @@ describe("textbook monochrome SVG renderer", () => {
     );
     expect(svg).toContain('stroke-linecap="butt"');
     expect(svg).toContain('stroke-miterlimit="4"');
-    expect(svg).toContain('r="3" fill="#202020"');
+    expect(svg).toContain('data-node-kind="port-origin"');
+    expect(svg).toContain(
+      'r="2.47907" fill="#fff" stroke="#202020" stroke-width="1.6"',
+    );
     expect(svg).toContain('<g data-layer="ports">');
     expect([...svg.matchAll(/data-node-kind="port-origin"/gu)].length).toBe(5);
     expect(svg).not.toContain(
@@ -431,21 +507,22 @@ describe("textbook monochrome SVG renderer", () => {
     );
     expect(svg).not.toContain('data-node-kind="device-pin"');
     expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
-    // WP-A2: the migrated route-marker renders a full current arrow again.
-    expect(svg).toContain('data-role="current-arrow-shaft"');
+    // A route-marker contributes a head; its attached route remains the shaft.
+    expect(svg).not.toContain('data-role="current-arrow-shaft"');
     expect(svg).toContain('data-kind="route-marker"');
     expect(svg).toContain(
       "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
     );
+    expect(svg).toContain('data-text-run="subscript"');
     expect(svg).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">M</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">1</tspan>',
+      'style="font-style:italic;font-weight:700">1</tspan>',
     );
     expect(svg).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">DD</tspan>',
+      'style="font-style:italic;font-weight:700">DD</tspan>',
     );
     // The migrated route-marker (current) renders I_tail into Razavi tspans.
     expect(svg).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">I</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">tail</tspan>',
+      'style="font-style:italic;font-weight:700">tail</tspan>',
     );
     expect(svg).toMatch(
       /data-kind="draft-text"[^>]*>Original matched differential stage<\/text>/u,
@@ -488,7 +565,7 @@ describe("textbook monochrome SVG renderer", () => {
       '<text data-role="polarity-negative" x="92" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">−</text>',
     );
     expect(svg).toContain(
-      '<text x="100" y="100" text-anchor="start" font-size="16"><tspan',
+      '<text x="100" y="100" text-anchor="start" font-size="18"><tspan',
     );
     expect(svg).not.toContain('transform="rotate(90 100 100)"><tspan');
   });
@@ -525,6 +602,45 @@ describe("textbook monochrome SVG renderer", () => {
       "hidden",
     );
     expect(svg).not.toContain(">GND1</text>");
+  });
+
+  it("renders VDD through the shared semantic power-label typography", () => {
+    const project = createEmptyProject("project-vdd-label", "VDD Label");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.instances = [
+      {
+        id: "VDD1",
+        symbolId: "vdd",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    ];
+    document.annotations = [
+      {
+        id: "label-VDD1",
+        kind: "power-label",
+        text: "VDD",
+        position: { x: 114, y: 105 },
+        attachedObjectId: "VDD1",
+        offset: { x: 14, y: 5 },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
+    ];
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(resolver.resolve("vdd")?.definition.labelVisibility).toBe("hidden");
+    expect(svg).toContain('data-object-id="label-VDD1"');
+    expect(svg).toContain('data-text-run="subscript"');
+    expect(svg).toContain(">DD</tspan>");
+    expect(svg).not.toContain(">VDD1</text>");
   });
 
   it("renders drafting text at its typography-token size", () => {

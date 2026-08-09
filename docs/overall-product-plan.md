@@ -1015,3 +1015,62 @@ VSS extraction 可以作为 P1 的开发工具子任务，与运行时实现解�
 > 操作，AI 读取当前 Document 的完整只读 Snapshot 并通过 transact 提交 typed
 > edits；两者共享同一个 Edit Engine。系统派生 SVG、flightline 和 diagnostics；
 > 最终仍只保存一个 Project JSON 或导出视觉文件。
+
+## Razavi 视觉权威与资产生成（冻结）
+
+`fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png` 是
+Razavi v1 的唯一视觉权威。其 SHA-256、像素尺寸和适用范围由同目录
+`manifest.json` 冻结；任何风格变更都必须以这张图的裁图和渲染 diff 为准。
+
+这项规则的优先级高于 Visio/VSS、旧 SVG、既有 Symbol DSL 坐标，以及
+Agent 对“类似教材风格”的主观判断。
+
+```text
+Razavi reference raster
+→ measured final presentation geometry
+→ direct Symbol DSL assets
+→ fixed SVG/PNG renderer
+→ visual diff against the same raster
+```
+
+对于 Razavi 器件，禁止下面的视觉派生链：
+
+```text
+VSS master / marker
+→ affine body scaling or marker compensation
+→ Symbol DSL presentation geometry
+```
+
+VSS 只可作为旧库器件的 pin 名称、pin 顺序和电气语义证据；不得决定
+Razavi MOS、箭头、Gate bar、GND、VDD、Port、独立源、线宽、字体或文字
+下标的视觉坐标。
+
+MOS 资产必须直接在最终渲染坐标系定义：D/G/S/B 保持网格 pin 锚点，
+但器件主体、填充三角箭头、矩形 Gate bar 和四端 Bulk 图元都是独立的
+最终图元。不得先生成箭头再经过非等比缩放。三端显示模式仅隐藏 B 的
+视觉图元与端点；它不改变四端电气 connectivity。
+
+视觉验收固定 Chromium、DPR、viewport、字体、前景色、线宽、line cap 和
+line join；先对单器件裁图 diff，再对完整教材式电路板 diff。不同缩放下
+的浏览器截图不得作为“像素不一致”的证据。
+
+# Supersession notice (2026-08-09)
+
+All statements in this document that describe `circuit.vss`, Visio extraction,
+or VSS-derived symbol geometry as an active product or development route are
+superseded by [ADR 0011](adr/0011-retire-visio-vss-as-visual-authority.md).
+The approved Razavi raster reference is the only visual authority.
+
+# Static Page v1 file-system supersession (2026-08-09)
+
+For the first static Page release, the product is a GUI-only editor with no
+backend storage and no exposed Agent, MCP, or HTTP editing interface. The
+single authoritative user artifact is `<project-name>.icproj.json` at schema
+version 2. The Page does not create the historical `sources/` or `symbols/`
+directory layout, and it does not embed source SPICE text in the Project file.
+
+Users may open the Page directly into an editable Untitled Project. Browser
+IndexedDB recovery copies and optional browser file handles are convenience
+state only: they are not formal Projects, are not cloud-synchronised, and may
+be lost with browser site data. SVG, PNG, and PDF are derived exports, not
+Project saves.

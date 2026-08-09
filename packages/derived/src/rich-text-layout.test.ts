@@ -59,6 +59,26 @@ describe("shared rich-text layout", () => {
       content,
       richTextMetrics(razaviTextbookProfile, "caption", 2),
     );
-    expect(razaviScaled.width).toBeGreaterThan(textbook.width * 2);
+    expect(razaviScaled.width).toBe(textbook.width * 2);
+  });
+
+  it("uses the profile baseline shift when reserving subscript bounds", () => {
+    const metrics = richTextMetrics(razaviTextbookProfile);
+    const content = {
+      runs: [
+        {
+          kind: "span",
+          style: "subscript",
+          children: [{ kind: "text", value: "DD" }],
+        },
+      ],
+    } as RichTextDocument;
+    const layout = measureRichTextDocument(content, metrics);
+    expect(metrics.subscriptScale).toBe(0.8);
+    expect(metrics.subscriptBaselineShiftEm).toBe(0.28);
+    expect(layout.height).toBeCloseTo(
+      metrics.fontSize *
+        (metrics.subscriptScale + metrics.subscriptBaselineShiftEm),
+    );
   });
 });

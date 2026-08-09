@@ -3,12 +3,14 @@ import { resolve } from "node:path";
 
 import { createEmptyProject } from "@icm/model";
 import { serializeProject } from "@icm/model";
+import { EditTransactionSchema } from "@icm/edit-engine";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
   App,
   defaultRazaviSymbolVariantId,
+  razaviHiddenBulkRisk,
   razaviMosPresentationEdits,
 } from "./App";
 import { createDemoProject } from "./demo-project";
@@ -21,7 +23,7 @@ describe("editor shell", () => {
     expect(defaultRazaviSymbolVariantId("resistor")).toBeUndefined();
   });
 
-  it("migrates only implicit-bulk MOS into the Razavi textbook view", () => {
+  it("fixes every canonical MOS to Razavi three-terminal display", () => {
     const document = createEmptyProject("razavi-migration", "Razavi")
       .documents[0]!;
     document.instances.push(
@@ -74,7 +76,18 @@ describe("editor shell", () => {
         symbolId: "pmos",
         symbolVariantId: "textbook-3terminal",
       },
+      {
+        kind: "set_instance_symbol",
+        instanceId: "MbodyBias",
+        symbolId: "nmos",
+        symbolVariantId: "textbook-3terminal",
+      },
     ]);
+    expect(razaviHiddenBulkRisk(document, "Mimplicit")).toBeUndefined();
+    expect(razaviHiddenBulkRisk(document, "Msupply")).toBeUndefined();
+    expect(razaviHiddenBulkRisk(document, "MbodyBias")?.id).toBe(
+      "net-body-bias",
+    );
   });
 
   it("renders an empty project without owning model state", () => {
@@ -82,6 +95,132 @@ describe("editor shell", () => {
     const markup = renderToStaticMarkup(<App project={project} />);
     expect(markup).toContain("Smoke Project");
     expect(markup).toContain("Schematic canvas");
+    expect(markup).not.toContain('data-testid="cell-navigation"');
+  });
+
+  it("only exposes cell navigation for a resolvable imported subcircuit", () => {
+    const project = createEmptyProject("imported-hierarchy", "Imported");
+    const topDocument = project.documents[0]!;
+    const childDocument = {
+      ...topDocument,
+      id: "document-child",
+      name: "child",
+      instances: [],
+      nets: [],
+      ports: [],
+      routes: [],
+      junctions: [],
+      annotations: [],
+    };
+    topDocument.instances.push({
+      id: "X1",
+      symbolId: "generic-block-2",
+      placement: null,
+      properties: {
+        "spice.target": "subcircuit:child",
+        "spice.childDocumentId": childDocument.id,
+      },
+    });
+    project.documents.push(childDocument);
+
+    const markup = renderToStaticMarkup(<App project={project} />);
+    expect(markup).toContain('data-testid="cell-navigation"');
+    expect(markup).toContain("Enter Cell");
+    expect(markup).toContain("Main (top)");
+  });
+
+  it("provides a local-editor quick-start help entry without rendering it by default", () => {
+    const project = createEmptyProject("help-tutorial", "Help Tutorial");
+    const markup = renderToStaticMarkup(<App project={project} />);
+
+    expect(markup).toContain('aria-haspopup="dialog"');
+    expect(markup).toContain(">Help</button>");
+    expect(markup).not.toContain('role="dialog"');
+    expect(markup).not.toContain("Agent");
+  });
+
+  it("keeps Selection as a persistent bottom shelf", () => {
+    const project = createEmptyProject("selection-shelf", "Selection Shelf");
+    const markup = renderToStaticMarkup(<App project={project} />);
+
+    expect(markup).toContain(
+      '<section class="selection-shelf" aria-label="Selection">',
+    );
+    expect(markup).toContain('data-testid="selection-shelf"');
+    expect(markup).not.toContain('<details class="selection-shelf"');
+  });
+
+  it("gives an implicit instance label its own selection surface", () => {
+    const project = createEmptyProject("implicit-label", "Implicit label");
+    project.documents[0]!.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: {
+        position: { x: 160, y: 160 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+
+    const markup = renderToStaticMarkup(<App project={project} />);
+    expect(markup).toContain('data-testid="default-label-hit-M1"');
+  });
+
+  it("uses the compact four-unit endpoint hit target", () => {
+    const project = createEmptyProject("endpoint-hit", "Endpoint Hit");
+    project.documents[0]!.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: {
+        position: { x: 160, y: 160 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+
+    const markup = renderToStaticMarkup(<App project={project} />);
+    expect(markup).toMatch(/data-testid="terminal-M1-D"[^>]*r="4"/u);
+  });
+
+  it("accepts a voltage source and its canonical label in one transaction", () => {
+    const result = EditTransactionSchema.safeParse({
+      transactionId: "place-voltage-source",
+      documentId: "document-main",
+      expectedRevision: 0,
+      actor: { kind: "human", id: "test" },
+      edits: [
+        {
+          kind: "add_instance",
+          instance: {
+            id: "V1",
+            symbolId: "voltage-source",
+            placement: {
+              position: { x: 100, y: 100 },
+              rotation: 0,
+              mirror: "none",
+            },
+            properties: {},
+          },
+        },
+        {
+          kind: "upsert_annotation",
+          annotation: {
+            id: "instance-label-V1",
+            kind: "instance-label",
+            text: "V1",
+            position: { x: 100, y: 148 },
+            attachedObjectId: "V1",
+            offset: { x: 0, y: 48 },
+            alignment: "middle",
+            rotation: 0,
+            locked: false,
+          },
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
   });
 
   it("keeps the bundled demo equal to the canonical Project fixture", () => {

@@ -358,6 +358,8 @@ const catalogPmos = requireRazaviCatalogSymbol("pmos");
 const catalogPmos3 = requireRazaviCatalogSymbol("pmos3");
 const catalogPnp = requireRazaviCatalogSymbol("pnp");
 const catalogPort = requireRazaviCatalogSymbol("port");
+const catalogPortFilled = requireRazaviCatalogSymbol("port-filled");
+const catalogVdd = requireRazaviCatalogSymbol("vdd");
 const catalogVoltageSource = requireRazaviCatalogSymbol("voltage-source");
 
 const polyResistor: SymbolDefinition = {
@@ -439,9 +441,10 @@ export const builtInSymbols: readonly SymbolDefinition[] = [
   catalogNmos3,
   catalogPmos3,
   catalogGround,
-  powerPortSymbol("vdd", "VDD Power Port"),
+  catalogVdd,
   powerPortSymbol("vss", "VSS Power Port"),
   catalogPort,
+  catalogPortFilled,
   catalogVoltageSource,
   catalogCurrentSource,
   waveformSource("ac-voltage-source", "AC Voltage Source"),

@@ -172,6 +172,11 @@ export const AnnotationSchema = z
   .strictObject({
     id: StableIdSchema,
     kind: AnnotationKindSchema,
+    // Optional explicit RichText presentation saved by the canvas editor.
+    // `text` remains the canonical semantic/electrical identity. When this is
+    // absent, formal rendering derives standardized appearance from `text`;
+    // when present, it preserves the user's explicit formatting.
+    content: z.lazy(() => RichTextDocumentSchema).optional(),
     text: z.string(),
     position: PointSchema,
     attachedObjectId: StableIdSchema.optional(),
@@ -294,6 +299,15 @@ const DraftingObjectBaseSchema = z.strictObject({
       italic: z.boolean().optional(),
       lineStyle: z.enum(["solid", "dashed", "dotted"]).optional(),
       arrowHead: z.enum(["none", "filled", "open"]).optional(),
+      // Bounded ratios against the Razavi profile baseline — never raw px. The
+      // renderer multiplies profile.strokes.annotation / arrow head geometry so
+      // formal SVG/PNG/PDF and the editor canvas share one visual parameter.
+      strokeScale: z
+        .union([z.literal(0.75), z.literal(1), z.literal(1.5), z.literal(2)])
+        .optional(),
+      arrowHeadScale: z
+        .union([z.literal(0.75), z.literal(1), z.literal(1.25), z.literal(1.5)])
+        .optional(),
     })
     .optional(),
 });

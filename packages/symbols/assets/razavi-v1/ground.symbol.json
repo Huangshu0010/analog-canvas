@@ -32,26 +32,10 @@
       },
       "to": {
         "x": 0,
-        "y": 3.890552
+        "y": 0
       },
       "style": {
         "strokeRole": "normal",
-        "lineCap": "round",
-        "lineJoin": "round"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -7.086614,
-        "y": 3.890552
-      },
-      "to": {
-        "x": 7.086614,
-        "y": 3.890552
-      },
-      "style": {
-        "strokeRole": "emphasis",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -59,15 +43,15 @@
     {
       "kind": "line",
       "from": {
-        "x": -3.543307,
-        "y": 8.071654
+        "x": -6.395349,
+        "y": 0
       },
       "to": {
-        "x": 3.543307,
-        "y": 8.071654
+        "x": 6.395349,
+        "y": 0
       },
       "style": {
-        "strokeRole": "emphasis",
+        "strokeRole": "ground",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -75,15 +59,15 @@
     {
       "kind": "line",
       "from": {
-        "x": -1.771654,
-        "y": 12.252756
+        "x": -4.069767,
+        "y": 5.813953
       },
       "to": {
-        "x": 1.771654,
-        "y": 12.252756
+        "x": 4.069767,
+        "y": 5.813953
       },
       "style": {
-        "strokeRole": "emphasis",
+        "strokeRole": "ground",
         "lineCap": "butt",
         "lineJoin": "miter"
       }
@@ -91,15 +75,15 @@
     {
       "kind": "line",
       "from": {
-        "x": 0,
-        "y": 3.890552
+        "x": -2.325581,
+        "y": 11.046512
       },
       "to": {
-        "x": 0,
-        "y": -8.652756
+        "x": 2.325581,
+        "y": 11.046512
       },
       "style": {
-        "strokeRole": "normal",
+        "strokeRole": "ground",
         "lineCap": "butt",
         "lineJoin": "miter"
       }

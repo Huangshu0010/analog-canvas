@@ -18,7 +18,11 @@ createRoot(container).render(
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    void navigator.serviceWorker.register("/sw.js");
+    // Keep the worker inside Vite's base path so a repository Pages deployment
+    // never installs a root-origin worker belonging to another site.
+    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
+      scope: import.meta.env.BASE_URL,
+    });
   } else {
     void navigator.serviceWorker
       .getRegistrations()

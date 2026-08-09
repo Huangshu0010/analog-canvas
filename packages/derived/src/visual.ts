@@ -1,13 +1,25 @@
-import { transformPoint } from "@icm/model";
+import { parseMarkup, transformPoint } from "@icm/model";
 import type { Point, Rect, SchematicDocument } from "@icm/model";
-import type { SymbolResolver } from "@icm/symbols";
+import type {
+  ResolvedSymbol,
+  SymbolPrimitive,
+  SymbolResolver,
+} from "@icm/symbols";
 
 import { resolveEndpointOutwardDirection } from "./endpoint.js";
+import {
+  measureRichTextDocument,
+  richTextMetrics,
+} from "./rich-text-layout.js";
 import { routePolyline } from "./routes.js";
+import { resolveSchematicStyleProfile } from "./style-profile.js";
 
 export interface VisualDiagnostic {
   code: string;
   severity: "error" | "warning" | "info";
+  category: "structural" | "observation";
+  confidence: "high" | "medium" | "low";
+  gateEligible: boolean;
   message: string;
   objectIds: readonly string[];
   bounds?: Rect;
@@ -29,21 +41,92 @@ function rectanglesOverlap(left: Rect, right: Rect): boolean {
   );
 }
 
-function intersectionBounds(left: Rect, right: Rect): Rect | undefined {
-  const x = Math.max(left.x, right.x);
-  const y = Math.max(left.y, right.y);
-  const rightEdge = Math.min(left.x + left.width, right.x + right.width);
-  const bottomEdge = Math.min(left.y + left.height, right.y + right.height);
-  if (rightEdge <= x || bottomEdge <= y) return undefined;
-  return { x, y, width: rightEdge - x, height: bottomEdge - y };
-}
-
 function enclosingBounds(input: readonly Rect[]): Rect | undefined {
   if (input.length === 0) return undefined;
   const x = Math.min(...input.map((item) => item.x));
   const y = Math.min(...input.map((item) => item.y));
   const right = Math.max(...input.map((item) => item.x + item.width));
   const bottom = Math.max(...input.map((item) => item.y + item.height));
+  return { x, y, width: right - x, height: bottom - y };
+}
+
+function overlappingClusters<T extends { id: string; bounds: Rect }>(
+  items: readonly T[],
+): T[][] {
+  const parents = items.map((_, index) => index);
+  const find = (index: number): number => {
+    while (parents[index] !== index) {
+      parents[index] = parents[parents[index]!]!;
+      index = parents[index]!;
+    }
+    return index;
+  };
+  const join = (left: number, right: number): void => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot !== rightRoot) parents[rightRoot] = leftRoot;
+  };
+  for (let left = 0; left < items.length; left += 1) {
+    for (let right = left + 1; right < items.length; right += 1) {
+      if (rectanglesOverlap(items[left]!.bounds, items[right]!.bounds)) {
+        join(left, right);
+      }
+    }
+  }
+  const groups = new Map<number, T[]>();
+  items.forEach((item, index) => {
+    const root = find(index);
+    groups.set(root, [...(groups.get(root) ?? []), item]);
+  });
+  return [...groups.values()].filter((group) => group.length > 1);
+}
+
+function primitivePoints(primitive: SymbolPrimitive): Point[] | null {
+  switch (primitive.kind) {
+    case "line":
+      return [primitive.from, primitive.to];
+    case "polyline":
+    case "polygon":
+      return [...primitive.points];
+    case "circle":
+      return [
+        {
+          x: primitive.center.x - primitive.radius,
+          y: primitive.center.y - primitive.radius,
+        },
+        {
+          x: primitive.center.x + primitive.radius,
+          y: primitive.center.y + primitive.radius,
+        },
+      ];
+    case "path":
+      return null;
+  }
+}
+
+function visibleLocalBounds(resolved: ResolvedSymbol): Rect {
+  const hiddenParts = new Set(resolved.variant?.hiddenPrimitiveParts ?? []);
+  const hiddenPins = new Set(resolved.variant?.hiddenPinNames ?? []);
+  const primitives = [
+    ...resolved.definition.primitives,
+    ...(resolved.variant?.additionalPrimitives ?? []),
+  ].filter((primitive) => !primitive.part || !hiddenParts.has(primitive.part));
+  const primitivePointSets = primitives.map(primitivePoints);
+  if (primitivePointSets.some((points) => points === null)) {
+    return resolved.definition.viewBox;
+  }
+  const points = [
+    ...primitivePointSets.flatMap((entry) => entry ?? []),
+    ...resolved.definition.pins
+      .filter((pin) => !hiddenPins.has(pin.name))
+      .map((pin) => pin.at),
+  ];
+  if (points.length === 0) return resolved.definition.viewBox;
+  const padding = 1;
+  const x = Math.min(...points.map((point) => point.x)) - padding;
+  const y = Math.min(...points.map((point) => point.y)) - padding;
+  const right = Math.max(...points.map((point) => point.x)) + padding;
+  const bottom = Math.max(...points.map((point) => point.y)) + padding;
   return { x, y, width: right - x, height: bottom - y };
 }
 
@@ -71,7 +154,7 @@ function instanceBounds(
       instance.symbolVariantId,
     );
     if (!resolved) return [];
-    const box = resolved.definition.viewBox;
+    const box = visibleLocalBounds(resolved);
     const corners = [
       { x: box.x, y: box.y },
       { x: box.x + box.width, y: box.y },
@@ -214,6 +297,9 @@ function pushRoutingQualityMetrics(
           diagnostics.push({
             code: "VISUAL_WIRE_THROUGH_SYMBOL",
             severity: "warning",
+            category: "observation",
+            confidence: "low",
+            gateEligible: false,
             message: `Route ${route.id} passes through instance ${instanceId}`,
             objectIds: [route.id, instanceId],
             bounds: box,
@@ -226,6 +312,7 @@ function pushRoutingQualityMetrics(
 
   // 2. Same-Net route overlap: two Routes on the same Net share a collinear
   //    overlapping segment (not just a shared endpoint).
+  const overlappingRouteIdsByNet = new Map<string, Set<string>>();
   for (let leftIndex = 0; leftIndex < routePolylines.length; leftIndex += 1) {
     for (
       let rightIndex = leftIndex + 1;
@@ -240,16 +327,27 @@ function pushRoutingQualityMetrics(
         right.polyline.points,
       );
       if (overlap) {
-        diagnostics.push({
-          code: "VISUAL_ROUTE_OVERLAP",
-          severity: "warning",
-          message: `Routes ${left.route.id} and ${right.route.id} overlap on Net ${left.route.netId}`,
-          objectIds: [left.route.id, right.route.id],
-          ...(overlap.bounds ? { bounds: overlap.bounds } : {}),
-          parameters: { netId: left.route.netId },
-        });
+        const ids = overlappingRouteIdsByNet.get(left.route.netId) ?? new Set();
+        ids.add(left.route.id);
+        ids.add(right.route.id);
+        overlappingRouteIdsByNet.set(left.route.netId, ids);
       }
     }
+  }
+  for (const [netId, routeIds] of overlappingRouteIdsByNet) {
+    const objectIds = [...routeIds].sort((left, right) =>
+      left.localeCompare(right, "en"),
+    );
+    diagnostics.push({
+      code: "VISUAL_ROUTE_OVERLAP",
+      severity: "warning",
+      category: "observation",
+      confidence: "medium",
+      gateEligible: false,
+      message: `${objectIds.length} Routes share collinear geometry on Net ${netId}`,
+      objectIds,
+      parameters: { netId, routeCount: objectIds.length },
+    });
   }
 
   // 3. Terminal departure: the first segment of a terminal-anchored Route
@@ -276,6 +374,9 @@ function pushRoutingQualityMetrics(
       diagnostics.push({
         code: "VISUAL_TERMINAL_DEPARTURE",
         severity: "info",
+        category: "observation",
+        confidence: "low",
+        gateEligible: false,
         message: `Route ${route.id} does not leave terminal along its pin outward direction`,
         objectIds: [route.id],
         point: first,
@@ -355,6 +456,9 @@ export function diagnoseVisualQuality(
       diagnostics.push({
         code: "VISUAL_UNPLACED_INSTANCE",
         severity: "warning",
+        category: "structural",
+        confidence: "high",
+        gateEligible: true,
         message: `Instance ${instance.id} is not placed`,
         objectIds: [instance.id],
         parameters: { placed: false },
@@ -363,6 +467,9 @@ export function diagnoseVisualQuality(
       diagnostics.push({
         code: "VISUAL_UNRESOLVED_SYMBOL",
         severity: "error",
+        category: "structural",
+        confidence: "high",
+        gateEligible: true,
         message: `Instance ${instance.id} has an unresolved symbol`,
         objectIds: [instance.id],
         point: instance.placement.position,
@@ -370,25 +477,36 @@ export function diagnoseVisualQuality(
       });
     }
   }
-  for (const [leftIndex, left] of bounds.entries()) {
-    for (const right of bounds.slice(leftIndex + 1)) {
-      if (rectanglesOverlap(left.bounds, right.bounds)) {
-        const overlap = intersectionBounds(left.bounds, right.bounds);
-        diagnostics.push({
-          code: "VISUAL_SYMBOL_OVERLAP",
-          severity: "warning",
-          message: `Symbols ${left.id} and ${right.id} overlap`,
-          objectIds: [left.id, right.id],
-          ...(overlap ? { bounds: overlap } : {}),
-        });
-      }
-    }
+  for (const cluster of overlappingClusters(bounds)) {
+    const objectIds = cluster
+      .map((item) => item.id)
+      .sort((left, right) => left.localeCompare(right, "en"));
+    diagnostics.push({
+      code: "VISUAL_SYMBOL_OVERLAP",
+      severity: "warning",
+      category: "observation",
+      confidence: "low",
+      gateEligible: false,
+      message: `${objectIds.length} visible symbol bounds overlap`,
+      objectIds,
+      bounds: enclosingBounds(cluster.map((item) => item.bounds))!,
+      parameters: { clusteredObjectCount: objectIds.length },
+    });
   }
 
+  const styleProfile = resolveSchematicStyleProfile(
+    document.presentation.styleProfileId,
+  );
   const annotationBounds = document.annotations
     .filter((annotation) => annotation.text.trim().length > 0)
     .map((annotation) => {
-      const width = Math.max(8, annotation.text.length * 7);
+      const measured = measureRichTextDocument(
+        parseMarkup(annotation.text),
+        richTextMetrics(styleProfile, "label", annotation.sizeScale ?? 1),
+      );
+      const rotated = annotation.rotation === 90 || annotation.rotation === 270;
+      const width = Math.max(1, rotated ? measured.height : measured.width);
+      const height = Math.max(1, rotated ? measured.width : measured.height);
       const x =
         annotation.alignment === "middle"
           ? annotation.position.x - width / 2
@@ -397,22 +515,24 @@ export function diagnoseVisualQuality(
             : annotation.position.x;
       return {
         id: annotation.id,
-        bounds: { x, y: annotation.position.y - 12, width, height: 15 },
+        bounds: { x, y: annotation.position.y - height, width, height },
       };
     });
-  for (const [leftIndex, left] of annotationBounds.entries()) {
-    for (const right of annotationBounds.slice(leftIndex + 1)) {
-      if (rectanglesOverlap(left.bounds, right.bounds)) {
-        const overlap = intersectionBounds(left.bounds, right.bounds);
-        diagnostics.push({
-          code: "VISUAL_LABEL_OVERLAP",
-          severity: "warning",
-          message: `Annotations ${left.id} and ${right.id} overlap`,
-          objectIds: [left.id, right.id],
-          ...(overlap ? { bounds: overlap } : {}),
-        });
-      }
-    }
+  for (const cluster of overlappingClusters(annotationBounds)) {
+    const objectIds = cluster
+      .map((item) => item.id)
+      .sort((left, right) => left.localeCompare(right, "en"));
+    diagnostics.push({
+      code: "VISUAL_LABEL_OVERLAP",
+      severity: "warning",
+      category: "observation",
+      confidence: "low",
+      gateEligible: false,
+      message: `${objectIds.length} measured annotation bounds overlap`,
+      objectIds,
+      bounds: enclosingBounds(cluster.map((item) => item.bounds))!,
+      parameters: { clusteredObjectCount: objectIds.length },
+    });
   }
 
   for (const route of document.routes) {
@@ -426,6 +546,9 @@ export function diagnoseVisualQuality(
         diagnostics.push({
           code: "VISUAL_SHORT_SEGMENT",
           severity: "warning",
+          category: "observation",
+          confidence: "medium",
+          gateEligible: false,
           message: `Route ${route.id} contains a short segment`,
           objectIds: [route.id],
           bounds: {
@@ -454,6 +577,9 @@ export function diagnoseVisualQuality(
         diagnostics.push({
           code: "VISUAL_AMBIGUOUS_JUNCTION",
           severity: "error",
+          category: "structural",
+          confidence: "high",
+          gateEligible: true,
           message: `Junction ${junction.id} lies on unrelated route ${route.id}`,
           objectIds: [junction.id, route.id],
           point: junction.position,
@@ -477,6 +603,9 @@ export function diagnoseVisualQuality(
       diagnostics.push({
         code: "VISUAL_CONSTRAINT_VIOLATION",
         severity: "warning",
+        category: "structural",
+        confidence: "high",
+        gateEligible: true,
         message: `Layout constraint ${constraint.id} is not satisfied`,
         objectIds: [constraint.id, ...constraint.objectIds],
         ...(violationBounds ? { bounds: violationBounds } : {}),
@@ -496,6 +625,9 @@ export function diagnoseVisualQuality(
         diagnostics.push({
           code: "VISUAL_OUTSIDE_PAGE",
           severity: "warning",
+          category: "observation",
+          confidence: "high",
+          gateEligible: false,
           message: `Object ${item.id} extends outside the export page`,
           objectIds: [item.id],
           bounds: item.bounds,
@@ -519,5 +651,19 @@ export function diagnoseVisualQuality(
 export function hasBlockingVisualDiagnostics(
   diagnostics: readonly VisualDiagnostic[],
 ): boolean {
-  return diagnostics.some((diagnostic) => diagnostic.severity === "error");
+  return diagnostics.some((diagnostic) =>
+    isVisualDiagnosticGateFailure(diagnostic),
+  );
+}
+
+export function isVisualDiagnosticGateFailure(
+  diagnostic: VisualDiagnostic,
+  configuredCodes: ReadonlySet<string> = new Set(),
+): boolean {
+  if (diagnostic.category !== "structural" || !diagnostic.gateEligible) {
+    return false;
+  }
+  return (
+    diagnostic.severity === "error" || configuredCodes.has(diagnostic.code)
+  );
 }

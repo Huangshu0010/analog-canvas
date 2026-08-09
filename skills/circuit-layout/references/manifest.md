@@ -25,7 +25,7 @@ large prompt or persist their reasoning as Layout Intent.
 | Unfamiliar circuit, uncertain topology, or 100+ devices | [`circuit-reading.md`](../../../docs/agent/knowledge/circuit-reading.md) |
 | Whole-page composition, hierarchy presentation, or labels | [`schematic-expression.md`](../../../docs/agent/knowledge/schematic-expression.md) |
 | Route repair, crossings, Junctions, flightlines, or metrics | [`routing-and-diagnostics.md`](../../../docs/agent/knowledge/routing-and-diagnostics.md) |
-| Fixed grid, typography, strokes, node rendering, or Razavi profile | [`razavi-style-canon.md`](../../../docs/agent/knowledge/razavi-style-canon.md) |
+| Fixed grid, typography, strokes, node rendering, or Razavi profile | [`razavi-textbook-style.md`](../../../docs/specs/razavi-textbook-style.md) |
 | Choosing a multi-endpoint visible Net topology | [`route-tree-shapes.md`](../../../docs/agent/knowledge/route-tree-shapes.md) |
 | Hierarchy, shared children, or roughly 100+ devices | [`hierarchy-and-large-circuits.md`](../../../docs/agent/knowledge/hierarchy-and-large-circuits.md) |
 | Generic/model-backed symbols or PDK pin uncertainty | [`pdk-and-symbols.md`](../../../docs/agent/knowledge/pdk-and-symbols.md) |

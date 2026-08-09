@@ -103,7 +103,7 @@ describe("drafting and guide edits", () => {
     expect(removed.document.drafting?.objects).toEqual([]);
   });
 
-  it("rejects removing a locked drafting object", () => {
+  it("removes a locked drafting object because Delete has priority", () => {
     const document = createEmptyDocument("doc", "Drafting");
     const created = executeTransaction(
       document,
@@ -132,7 +132,72 @@ describe("drafting and guide edits", () => {
         1,
       ),
     );
-    expect(removed.ok).toBe(false);
+    expect(removed.ok).toBe(true);
+    if (!removed.ok) return;
+    expect(removed.document.drafting?.objects).toEqual([]);
+  });
+
+  it("allows only a pure unlock while a locked drafting object exists", () => {
+    const document = createEmptyDocument("doc", "Drafting");
+    const lockedText = {
+      id: "t1",
+      kind: "text" as const,
+      locked: true,
+      zIndex: 0,
+      anchor: { kind: "free" as const, position: { x: 0, y: 0 } },
+      content: { runs: [{ kind: "text" as const, value: "x" }] },
+      alignment: "start" as const,
+      rotation: 0 as const,
+    };
+    const created = executeTransaction(
+      document,
+      transaction("doc", [
+        { kind: "upsert_drafting_object", object: lockedText },
+      ]),
+    );
+    if (!created.ok) throw new Error("setup failed");
+
+    const altered = executeTransaction(
+      created.document,
+      transaction(
+        "doc",
+        [
+          {
+            kind: "upsert_drafting_object",
+            object: { ...lockedText, locked: false, zIndex: 1 },
+          },
+        ],
+        1,
+      ),
+    );
+    expect(altered.ok).toBe(false);
+
+    const unlocked = executeTransaction(
+      created.document,
+      transaction(
+        "doc",
+        [
+          {
+            kind: "upsert_drafting_object",
+            object: { ...lockedText, locked: false },
+          },
+        ],
+        1,
+      ),
+    );
+    expect(unlocked.ok).toBe(true);
+    if (!unlocked.ok) return;
+    expect(unlocked.document.drafting?.objects[0]?.locked).toBe(false);
+
+    const removed = executeTransaction(
+      unlocked.document,
+      transaction(
+        "doc",
+        [{ kind: "remove_drafting_object", objectId: "t1" }],
+        2,
+      ),
+    );
+    expect(removed.ok).toBe(true);
   });
 
   it("upserts and removes a guide", () => {

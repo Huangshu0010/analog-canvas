@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0`
+Version: `2.0`
 
 Owning phase: `Phase 0`
 
@@ -23,20 +23,21 @@ its validation, canonical serialization, and migration behavior.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| Project file | `project.icproj.json`, containing the complete persisted Project |
-| Canonical JSON | UTF-8 JSON with recursively sorted object keys, two-space indentation, preserved array order, and one trailing newline |
-| Migration | An explicit function that advances one older integer schema version |
+| Term                  | Meaning                                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Project file          | `<project-name>.icproj.json`, containing the complete persisted Project                                                |
+| Canonical JSON        | UTF-8 JSON with recursively sorted object keys, two-space indentation, preserved array order, and one trailing newline |
+| Migration             | An explicit function that advances one older integer schema version                                                    |
+| Browser recovery copy | Origin-local, non-authoritative crash-recovery data; never a Project file                                              |
 
 ## Data model or interface
 
 The authoritative runtime contract is `CircuitProjectSchema` in
-`packages/model`. Version 1 contains:
+`packages/model`. The current released version is 2:
 
 ```typescript
 interface CircuitProject {
-  schemaVersion: 1;
+  schemaVersion: 2;
   id: string;
   name: string;
   source: SourceManifest;
@@ -46,14 +47,17 @@ interface CircuitProject {
 }
 ```
 
-`SourceManifest` owns entry path, dialect, copy/reference policy, and source
-file IDs, paths, and hashes. `SymbolLibraryLock` owns library ID, version, and
-content hash. Documents are embedded; version 1 has no separate document,
-source-lock, symbol-lock, cache, session, or export files.
+`SourceManifest` records imported-source provenance: entry path, dialect,
+declared policy, and selected source file IDs, paths, and hashes. In the Page
+release it does **not** mean that SPICE source text was copied into the Project
+file or a browser-created `sources/` directory. `SymbolLibraryLock` owns
+library ID, version, and content hash. Documents are embedded; version 2 has
+no separate document, source-lock, symbol-lock, cache, session, recovery, or
+export files.
 
 ## Invariants
 
-- `schemaVersion` is exactly `1` after migration.
+- `schemaVersion` is exactly `2` after migration.
 - At least one Document exists and `topDocumentId` resolves to it.
 - Document IDs are unique.
 - Unknown object fields are rejected.
@@ -91,8 +95,9 @@ A Project whose `topDocumentId` is not present in `documents` is rejected with
 ## Compatibility and migration
 
 Readers accept only the current version plus explicitly registered older
-versions. Writers always emit the current version. Adding a Page layer or
-splitting Documents into files requires a new schema version and ADR.
+versions. Writers always emit the current version. The static Page layer does
+not change this file contract. Splitting Documents into files or embedding a
+source bundle requires a new schema version and ADR.
 
 ## Deterministic validation
 

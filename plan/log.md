@@ -15,6 +15,259 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-09 - GitHub Pages release preparation
+
+- Target: publish the GUI-only, local-first editor as a static GitHub Pages
+  site without exposing an Agent API, backend, account system, or server-side
+  Project storage.
+- Changed areas: added a least-privilege Pages workflow and user-facing
+  release/data-boundary documentation.
+- Validation: the editor production build passed with
+  `ICM_PAGE_BASE_PATH=interactive-circuit-maker`; built asset paths use that
+  prefix and the manifest remains relative scoped. Focused source audit found
+  no Agent/MCP/credential/authentication/backend request surface; only the
+  Service Worker fetches same-origin static assets. New workflow/docs/plan
+  formatting and `git diff --check` passed.
+- Commit status: ready to commit; repository Pages must be enabled by an
+  administrator once before the first `main` deployment.
+
+## 2026-08-09 - First-version local-first editor baseline
+
+- Target: consolidate the human-reviewed first-version editor implementation
+  before beginning the separate GitHub Pages publishing target. The product
+  remains GUI-only: no Agent API, account system, backend, or server-side
+  Project storage is included.
+- Changed areas: staged completed editor interaction, drafting/routing,
+  browser-persistence foundation, Pages/PWA base-path, documentation, and
+  target-plan work; added narrow ignore rules for local diagnostic and
+  generated layout outputs without deleting them.
+- Validation: focused platform-web, edit-engine, derived, and render Vitest
+  tests passed (50 tests); platform-web and editor production builds passed;
+  `git diff --check` passed. Workspace `pnpm typecheck` remains blocked by six
+  pre-existing `leadsPx` errors in `packages/symbols/src/razavi-catalog.test.ts`.
+  The combined drafting/manual Playwright run exceeded the 120-second command
+  budget and is not recorded as passing.
+- Commit status: ready to commit as one first-version baseline, then reconcile
+  the patch-equivalent remote hierarchy commit.
+
+## 2026-08-09 - Drafting edit paradigm: two-phase creation, hit layer, rotation
+
+- Target: per `plan/2026-08-09-drafting-edit-paradigm/plan.md`, convert Arrow /
+  Construction line from drag-once-commit to a Wire-style two-phase
+  click→hover→click creation model with snap/preview, harden the hit layer to a
+  fixed screen-pixel tolerance, and add drafting rotation (R/Shift+R) plus
+  selection handle markers. Stages 4 (styleOverride scale fields), 5 (route
+  current marker), 6 (full regression set) deferred to independent targets.
+- Coordination: App.tsx/styles.css/App.test.tsx arrived dirty (help-tutorial +
+  later editor/SPICE work). Agent committed the complete, self-contained
+  help-tutorial feature as `c3a46bd` to free a clean App.tsx/styles.css before
+  drafting edits. Remaining dirty (App.test.tsx, manual-editor.spec.ts,
+  packages/spice/*) belongs to other parallel targets and was not touched.
+- Changed areas:
+  - `packages/derived/src/drafting-geometry.ts` — arrow gained `center`
+    (from/to midpoint); construction-line gained `vertices` (editable handle
+    set). ResolvedDraftingGeometry union + resolvers updated.
+  - `packages/model/src/drafting-geometry-schema.ts` — mirror Zod strictObject
+    synchronized (required: agent snapshot validation rejects unsynced fields).
+  - `packages/derived/src/drafting-geometry.test.ts` — center/vertices
+    assertions added.
+  - `apps/editor/src/App.tsx` — replaced `draftingCreatePreview` (drag) with
+    `draftingSource`/`draftingHover`/`draftingWaypoints`/`draftingSnapPoint`
+    (two-phase, mirrors wire); `beginCanvasGesture` short-circuits
+    arrow/construction-line; SVG onClick/onDoubleClick/onContextMenu handle
+    click→commit and right-click cancel; `snapDraftingPoint` (grid +
+    visibleEndpoints pin/port/junction, Alt suppress, Shift 45° lock);
+    `DraftingCreatePreview` component (anchors, polyline, arrow-head preview,
+    snap marker, length/angle readout); Enter/Esc tiered cancel;
+    `rotateSelected(deltaDegrees)` extended to rotate drafting (arrow about
+    center, construction-line about bounds center); `rotatePoint`/
+    `centerOfBounds` helpers; selected drafting objects render handle markers;
+    `SchematicStyleProfile` + `VisualAnchor` type imports added.
+  - `apps/editor/src/styles.css` — `.annotation-hit` stroke-width 8→14 (matches
+    route-hit fixed screen tolerance); `.drafting-create-*` / `.draft-handle`
+    visual classes.
+  - `apps/editor/e2e/drafting.spec.ts` — `dragCreate` removed; `clickCreate`
+    (click→move→click) added; 4 creation tests rewritten (Draw-button
+    activation + clickCreate); new regression "arrow rotates 90° via R key and
+    shows selection handles".
+- Validation: static verification done in-session — App.tsx parens 2148/2148,
+  braces 1299/1299; drafting.spec.ts 340/340, 74/74; CSS braces 122/122;
+  geometry schema double-sync confirmed (center + vertices in both derived and
+  model mirror); no leftover `draftingCreatePreview`; `git diff --check` clean.
+- Deferred (explicit, not claimed): handle **drag** (endpoint/vertex drag-edit);
+  construction-line vertex insert (dblclick)/delete; `V` vertex mode;
+  route-segment and drafting-vertex snap. These need new pointer-drag sessions
+  and belong to a follow-up Stage 3 completion target. **(2026-08-09 更新：全部
+  已实施——见下方完整条目)**
+- Toolchain note: node/pnpm/tsc/vitest/playwright not on PATH in this session's
+  Git Bash; build/typecheck/vitest/e2e could NOT be run here and MUST be run by
+  a human before commit. Key checks: drafting.spec.ts test 8 (construction-line
+  hit `<polyline>`) unbroken; drafting-geometry.test.ts assertions pass;
+  manual-editor MOS rotation (instance branch) unbroken.
+- Commit status: ready to commit as
+  `feat(editor): drafting two-phase creation, hit layer, and rotation` once the
+  blocked toolchain validation passes. Stage only the 6 drafting files; do not
+  touch the parallel App.test.tsx/manual-editor.spec.ts/spice dirty work.
+
+## 2026-08-09 - Drafting edit paradigm completion: stages 3-6
+
+- Target: complete the remaining drafting-edit-paradigm stages — endpoint/vertex
+  handle drag, construction-line vertex insert/delete, route+vertex snap,
+  bounded style fields (strokeScale/arrowHeadScale) with render + shelf +
+  shortcuts, route current marker offset/reverse, and regressions. Also fix the
+  "still hard to select" defect reported after the first pass.
+- Changed areas (additional to the entry above):
+  - `apps/editor/src/styles.css` — **selection-hit fix**: `.annotation-hit.selected`
+    no longer narrows stroke-width to 1 (which shrank the hit band after
+    selection, making a selected thin line nearly unclickable); now keeps the
+    14px hit band and renders selection via a translucent accent stroke,
+    matching route-hit.selected.
+  - `packages/model/src/schema.ts` — `styleOverride` gained optional
+    `strokeScale` (0.75/1/1.5/2) and `arrowHeadScale` (0.75/1/1.25/1.5). Optional
+    fields, no schemaVersion bump, no migration.
+  - `packages/render-svg/src/render.ts` — `renderConstructionLine` and
+    `renderDraftArrow` apply strokeScale (shaft + open-head stroke) and
+    arrowHeadScale (head length/width) against the profile baseline, so formal
+    SVG/PNG/PDF and the editor canvas share one visual parameter.
+  - `apps/editor/src/App.tsx` — `beginDraftingHandleDrag` (per-endpoint/vertex
+    drag session, one upsert on pointerup); `insertConstructionVertex` (dblclick
+    nearest segment) + `deleteConstructionVertex` (dblclick vertex, <2 refuse);
+    handles made clickable (arrow from/to, construction vertices; center
+    decorative); `setDraftingStyle` (bounded style patch → upsert); Drawing
+    shelf section (line-style/stroke-width/arrow-head/head-size + Rotate/
+    Reverse/Lock); `[`/`]` and `Shift+[`/`]` shortcuts via `stepScale`;
+    `snapDraftingPoint` extended to also snap to route-segment closest points
+    and existing drafting vertices; `stepCurrentArrowOffset` + Current-arrow
+    context section (Reverse/Move closer/Move away/Delete).
+  - `apps/editor/e2e/drafting.spec.ts` — regressions for endpoint handle drag,
+    vertex insert via dblclick, bracket stroke-width shortcuts, Drawing shelf
+    line-style.
+- Validation: static — App.tsx parens 2354/2354, braces 1446/1446;
+  drafting.spec.ts 411/411, 96/96; `git diff --check` clean; geometry schema
+  double-sync intact. Toolchain (build/typecheck/vitest/e2e) blocked in this
+  session — must be run by a human; note render-svg drafting-render tests
+  (strokeScale defaults to 1, existing fixtures unaffected) and agent-api
+  fixtures (styleOverride new optional fields enter OpenAPI) should be checked.
+- Commit status: ready to commit alongside the prior drafting entry as
+  `feat(editor): drafting handle editing, bounded styles, route marker` once
+  the blocked toolchain validation passes.
+
+## 2026-08-09 - GUI modernization: inspector moved into left dock
+
+- Target: per `plan/2026-08-09-gui-modernization/plan.md` work package E,
+  eliminate the right-hand Properties column that appeared/disappeared on
+  selection, by moving its contents into a left-dock `Inspect` tab. The canvas
+  becomes a fixed two-column grid (left dock + canvas), so selecting an object
+  no longer changes canvas column count or width.
+- Decision (human-confirmed): selecting an inspectable object auto-switches the
+  dock to the `Inspect` tab (preserving the legacy "selection reveals
+  properties" behavior that e2e `manual-editor.spec.ts:188/277/353/436` depend
+  on; the 436 test `.fill()`s a textbox after selecting). The no-reflow goal is
+  met by removing the right column (column count constant at 2), not by
+  freezing the within-dock tab. Default tab is Symbols & Tools; clearing
+  inspectable selection falls back to it. Both dock panels stay mounted (HTML
+  `hidden` toggles visibility) so post-selection inputs are immediately
+  interactable.
+- Changed areas:
+  - `apps/editor/src/App.tsx` — replaced `propertiesCollapsed` state with
+    `dockTab`; replaced `propertiesVisible` with `hasInspectableSelection`; added
+    a `useEffect` that switches the dock tab on selection change; root `<main>`
+    className fixed to `app-shell`; the `<aside className="library-panel">` and
+    `<aside className="side-panel">` became a single `<aside className="dock"
+role="complementary">` containing a tablist and two always-mounted panels
+    (`.library-panel`, `.inspect-panel`); migrated all Properties content
+    (unplaced instances/ports, instance/route/endpoint/junction context-actions,
+    inspector `<dl>`, import/visual diagnostics) into the inspect panel with an
+    empty-state; removed 4 `setPropertiesCollapsed(false)` call sites and the
+    properties close button.
+  - `apps/editor/src/styles.css` — removed `.app-shell.properties-open` (fixed
+    2-col grid); `.library-panel` grid-column rule became `.dock`; added
+    `.dock-tabs`/`.dock-tab`/`.dock-tab[aria-selected]`/`.dock-tab-indicator`/
+    `.dock-panel`/`.inspect-panel` rules; removed `.side-panel` and
+    `.properties-heading`. Canvas `#fff` background and grid-dot fill unchanged.
+  - `apps/editor/e2e/manual-editor.spec.ts` — added one regression test
+    "selecting an object does not change canvas width" (boundingBox width
+    before/after placeComponent). Existing 4 tests untouched.
+  - `docs/specs/editor-interaction.md` — added "Selection and layout stability"
+    subsection under Pointer/viewport contract.
+  - `plan/2026-08-09-gui-modernization/plan.md` — recorded the auto-switch
+    decision override and the stale dirty-state correction.
+- Validation: static verification done in-session — aside/div/section/fieldset
+  balanced (perl/awk), parens 1952/1952, braces 1182/1182, CSS braces 104/104,
+  `git diff --check` clean, no stale `side-panel`/`properties-*` references,
+  `role="complementary"` + "Symbols and drawing tools" name preserved,
+  `library-component-*` testid preserved, canvas `#fff` preserved.
+- Toolchain note: `node`/`pnpm`/`tsc`/`vitest`/`playwright` still not on PATH in
+  this session's Git Bash, so build/typecheck/vitest/e2e could NOT be executed
+  here and MUST be run by a human before commit — especially `pnpm test:e2e`
+  (the 4 existing selection-reveals-properties tests + the new width test).
+- Commit status: superseded before commit by the later fixed-library decision;
+  its auto-switch interaction did not land.
+
+## 2026-08-09 - GUI modernization: fixed library with Selection shelf
+
+- Target: correct the uncommitted left-dock Inspector attempt after review found
+  that placing a component selected it and automatically hid the component
+  library. Keep the successful fixed two-column canvas layout, but preserve a
+  stable placement surface.
+- Result: Components and Draw are an always-visible, independently scrollable
+  main area. The bottom `Selection` shelf is a permanent one-line child section
+  that summarizes the current selection without opening; it expands only when
+  the user clicks it. Its detailed properties and diagnostics scroll inside the
+  shelf and never change canvas geometry or move the library's top position.
+- Changed areas: `App.tsx` removes dock tab state/effect and uses native
+  `details/summary` for the shelf; `styles.css` makes the dock a fixed flex
+  column with separate library and shelf scroll regions; editor interaction
+  specification records the explicit-expansion contract; focused Playwright
+  tests explicitly open Selection for property actions and verify library/canvas
+  stability. Two stale test expectations were aligned with the existing `Wire
+  tool` accessible name and normalized deletion status.
+- Validation: editor build passed; scheduler Vitest 9/9 passed; focused
+  Playwright 3/3 passed (MOS presentation, junction deletion, fixed library);
+  Prettier and `git diff --check` passed. Browser visual verification placed
+  R1 while the full library remained visible and Selection stayed collapsed.
+  Workspace `pnpm typecheck` remains blocked by unrelated committed/parallel
+  Razavi fixture expectations for missing `leadsPx` in
+  `packages/symbols/src/razavi-catalog.test.ts`; no target file participates in
+  those errors.
+- Commit status: pending intentional scoped commit; unrelated generated assets,
+  Razavi-fidelity work, and other plans remain unstaged.
+
+## 2026-08-09 - GUI modernization: chrome tokens and recovery scheduling
+
+- Target: per `plan/2026-08-09-gui-modernization/plan.md`, modernize editor
+  chrome colors via CSS design tokens, replace synchronous per-transaction
+  recovery writes with a coalesced + flush-on-hide + cancel-on-replace
+  scheduler, and record the GUI mutation lifecycle and try/catch audit. White
+  canvas, grid dot, and formal SVG/export output unchanged.
+- Changed areas:
+  - `apps/editor/src/styles.css` — added `:root` `--icm-*` chrome tokens;
+    replaced 13 hardcoded `#1f6feb` and scattered panel/border/diagnostic
+    colors with tokens. `.schematic-canvas { background:#fff }` left literal.
+  - `apps/editor/src/recovery-scheduler.ts` (new) — injectable scheduler with
+    `schedule/flush/cancel` and `isPending`; owns no React state.
+  - `apps/editor/src/recovery-scheduler.test.ts` (new) — fake-timer coverage of
+    coalescing, flush idempotency, cancel, reschedule, delay.
+  - `apps/editor/src/App.tsx` — `stageRecovery` now schedules; added
+    `cancelRecovery`/`flushRecovery`; `visibilitychange`/`pagehide` flush
+    effect with cancel-on-unmount; `cancelRecovery` before
+    `replaceActiveProject`, `saveProjectFile`, `discardRecovery`. `applyResult`
+    remains the sole transaction→recovery scheduling site.
+  - `docs/specs/editor-interaction.md` — added "Mutation lifecycle" section and
+    "Recovery persistence lifecycle" subsection.
+  - `plan/2026-08-09-gui-modernization/plan.md` — appended C try/catch audit
+    conclusion (8/8 catch retained, no code change).
+- Validation: static verification preserved the white canvas literal, grid-dot,
+  and formal body boundary. Actual checks passed: recovery scheduler Vitest
+  9/9; recovery Playwright scenarios 3/3 (coalesced restore, Save/Open stale
+  timer cancellation, Discard); workspace `pnpm typecheck`; editor production
+  build; Prettier for all changed target files; and `git diff --check`.
+- C audit conclusion: all 8 try/catch blocks in App.tsx wrap a throwing domain
+  helper or an external boundary; none is strictly `transact()`-only, so none
+  is removed. Recorded in the plan's C section.
+- Commit status: target validation complete; pending an intentional, scoped
+  commit. Unrelated concurrent Razavi-fidelity changes remain unstaged.
+
 ## 2026-08-08 - Calibrate Razavi geometry from supplied reference pixels
 
 - Target: use the supplied 1204x794 six-panel Razavi reference, rather than
@@ -1969,6 +2222,7 @@ Editing System work.
   or errors; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): keep topology hashing browser compatible`.
+
 ## 2026-08-08 - WP-R0 + WP-R1: drafting runtime completion (contract + unified geometry)
 
 - Target: start the Drafting Runtime Completion project per the review: freeze
@@ -2003,6 +2257,7 @@ Editing System work.
 - Commit status: ready for
   `docs(drafting): freeze runtime completion contract and capability matrix (WP-R0)`
   and `feat(derived): resolve drafting object geometry (WP-R1)`.
+
 ## 2026-08-08 - WP-R2: renderer consumes unified drafting geometry + bounds
 
 - Target: make the formal SVG renderer and export bounds consume the single
@@ -2022,6 +2277,7 @@ Editing System work.
   scripts pass; `git diff --check` clean.
 - Commit status: ready for
   `fix(render): consume unified drafting geometry and include drafting bounds (WP-R2)`.
+
 ## 2026-08-08 - WP-R3: lossless rich-text editing
 
 - Target: eliminate the flatten->parse->overwrite corruption path in editing.
@@ -2041,6 +2297,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): preserve rich text through lossless markup editing (WP-R3)`.
+
 ## 2026-08-08 - WP-R4: Agent Snapshot exposes resolved drafting geometry
 
 - Target: let the Agent read the derived visual facts (resolved position/
@@ -2059,6 +2316,7 @@ Editing System work.
   typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(agent-api): expose resolved drafting geometry and includeEditorGuides (WP-R4)`.
+
 ## 2026-08-08 - WP-R5 (part 1): drafting selection, drag, and delete
 
 - Target: fix the drafting selection bug called out in review and give drafting
@@ -2075,6 +2333,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): drafting selection, drag, and delete (WP-R5 part 1)`.
+
 ## 2026-08-08 - WP-R5 (part 2): select/delete all drafting kinds via shared geometry
 
 - Target: give every DraftingObject kind a selectable/deletable hit box derived
@@ -2089,6 +2348,7 @@ Editing System work.
   clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): select/delete all drafting kinds via shared geometry (WP-R5 part 2)`.
+
 ## 2026-08-08 - WP-R6: parity rename, real browser E2E, and full exit gate
 
 - Target: complete the Drafting Runtime Completion project with a truthful
@@ -2185,6 +2445,7 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): expose MOS three and four terminal views`.
+
 ## 2026-08-08 - P0-2: drafting drag uses preview and commits one transaction
 
 - Target: fix the review P0 that a drafting drag committed one transaction per
@@ -2203,6 +2464,7 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): drafting drag preview with single atomic commit (P0-2)`.
+
 ## 2026-08-08 - P1: freeze final-rotation semantics (geometry is the single truth)
 
 - Target: fix the review P1 that derived geometry reported anchor rotation
@@ -2221,6 +2483,7 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): freeze composed rotation as the single geometry truth (P1 rotation)`.
+
 ## 2026-08-08 - P1: accurate floating-symbol and multi-line text bounds
 
 - Target: fix the review P1 that floating-symbol bounds ignored viewBox x/y,
@@ -2240,6 +2503,7 @@ Editing System work.
   `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): accurate floating-symbol and multi-line text bounds (P1 bounds)`.
+
 ## 2026-08-08 - P1: strict Snapshot geometry schema (no z.unknown, no duplicate bounds)
 
 - Target: fix the review P1 that Snapshot resolvedGeometry/diagnostics were
@@ -2255,6 +2519,7 @@ Editing System work.
   typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `feat(agent-api): strict drafting geometry schema in Snapshot (P1 typed)`.
+
 ## 2026-08-08 - P1: canvas drag-create for construction line and arrow
 
 - Target: replace the fixed viewport-center insert for construction lines and
@@ -2273,6 +2538,7 @@ Editing System work.
   source and dist symbol geometry; `git diff --check` clean.
 - Commit status: ready for
   `feat(editor): canvas drag-create for construction line and arrow (P1 tools)`.
+
 ## 2026-08-08 - P2: distinguish invalid route segment diagnostics
 
 - Target: fix the review P2 that DRAFTING_ROUTE_SEGMENT_INVALID was declared but
@@ -2290,6 +2556,7 @@ Editing System work.
   artifacts regenerated; `git diff --check` clean.
 - Commit status: ready for
   `fix(derived): return precise invalid-route-segment diagnostics (P2)`.
+
 ## 2026-08-08 - P1: shape-based drafting hit targets
 
 - Target: fix the review P1 that every drafting object used a full bounding-rect
@@ -2305,6 +2572,7 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): shape-based drafting hit targets (P1 hit)`.
+
 ## 2026-08-08 - P1: key-scenario E2E coverage + click-without-move fix
 
 - Target: add the review-required E2E scenarios (unedited Apply no revision,
@@ -2318,6 +2586,7 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `fix(editor): no-op drafting click; add key-scenario E2E (P1 scenarios)`.
+
 ## 2026-08-08 - P1: real production preview smoke
 
 - Target: fix the review P1 that the "production build mounts" E2E actually ran
@@ -2333,6 +2602,7 @@ Editing System work.
   workspace typecheck clean; `git diff --check` clean.
 - Commit status: ready for
   `test(editor): production preview smoke against the built bundle (P1 smoke)`.
+
 ## 2026-08-08 - Final exit gate + formatting normalization
 
 - Target: run the full Drafting Runtime Completion exit gate and normalize
@@ -2345,6 +2615,7 @@ Editing System work.
   release:package; git diff --check.
 - Commit status: ready for
   `chore: format normalization after Drafting Runtime Completion (exit gate)`.
+
 ## 2026-08-08 - Roadmap status revision (honest completion)
 
 - Target: record the actual Drafting Runtime Completion state in the roadmap
@@ -2389,6 +2660,21 @@ Editing System work.
 - Commit status: ready for
   `docs(plan): record Razavi UI raster-diff baseline`.
 
+## 2026-08-08 - Raster-authoritative Razavi MOS assets
+
+- Target: make the accepted six-panel Razavi screenshot the sole visual source
+  for MOS symbols and stop deriving their presentation geometry from Visio.
+- Changed areas: archived the 1204x794 source image and hash manifest; added a
+  direct-final-coordinate MOS generator; migrated all four MOS catalog entries
+  to `razavi-raster-reference` provenance; preserved D/G/S/B pin semantics;
+  and froze visual authority plus fixed-rendering/diff rules in the main
+  product plan.
+- Validation: raster MOS generator and catalog checks pass; Razavi catalog
+  tests 13/13; symbols and editor production builds pass; `git diff --check`
+  clean.
+- Commit status: ready for
+  `feat(razavi): make screenshot the MOS visual authority`.
+
 ## 2026-08-08 - Drafting runtime final repair
 
 - Target: close the second-audit gaps that survived the first Drafting Runtime
@@ -2408,3 +2694,644 @@ Editing System work.
   26/26; typecheck; 12-package build; production preview smoke `--check`;
   Agent API artifact check; release package; and `git diff --check` all pass.
 - Commit status: ready for `fix(drafting): close runtime and GUI verification gaps`.
+
+## 2026-08-08 - Complete screenshot-driven Razavi MOS pixel map
+
+- Target: remove the legacy-coordinate skeleton from Razavi MOS generation
+  and prove that the running UI consumes geometry measured from the sole
+  reference screenshot.
+- Changed areas: added a hash-bound NMOS/PMOS pixel map; expanded the raster
+  measurement script; changed the MOS generator to consume only that map plus
+  fixed electrical pin anchors; regenerated four MOS assets and the catalog;
+  replaced old numeric expectations with independent pixel-map assertions.
+- Validation: pixel-map regeneration check; MOS generator and catalog
+  idempotency checks; focused catalog tests 13/13; symbols TypeScript build;
+  editor production build; running-editor SVG inspection for both NMOS and
+  PMOS; temporary UI instances undone.
+- Commit status: ready for
+  `fix(razavi): generate MOS geometry solely from pixel map`.
+
+## 2026-08-08 - Razavi peripheral assets and four-terminal MOS
+
+- Target: rapidly apply the sole-reference pixel-map workflow to voltage and
+  current sources, ground, route current arrows, and repair four-terminal MOS
+  bulk-arrow support lines.
+- Changed areas: added a hash-bound peripheral geometry map and generator;
+  moved three peripheral catalog entries from Visio to raster provenance;
+  protected them from Visio regeneration; generated route-arrow style metrics;
+  shortened NMOS/PMOS bulk support lines to their arrow bases.
+- Validation: per user request, no browser or visual-regression pass; asset and
+  catalog generation completed; `git diff --check` and status inspection used
+  as the close-out checks.
+- Commit status: ready for
+  `fix(razavi): align peripheral assets and four-terminal MOS`.
+
+## 2026-08-08 - Four-terminal MOS bulk-arrow continuity
+
+- Target: connect four-terminal NMOS/PMOS bulk arrows visibly to the inner
+  gate-side horizontal bar.
+- Changed areas: bulk pixel geometry now supports multiple non-overlapping
+  line segments; NMOS uses bar-to-tip plus base-to-B; PMOS uses bar-to-base
+  plus the outward filled head.
+- Validation: MOS/catalog generation succeeded; three-terminal NMOS and PMOS
+  SHA-256 hashes remained unchanged; `git diff --check` and status inspected.
+- Commit status: ready for
+  `fix(razavi): connect four-terminal bulk arrows to gate bars`.
+
+## 2026-08-08 - Diagnostic policy separation
+
+- Target: stop heuristic visual diagnostics from misleading or blocking Agent
+  layout automation while retaining useful review evidence.
+- Changed areas: introduced structural/observation categories, confidence,
+  and gate eligibility; centralized completeness-gate policy; measured visible
+  symbol variants and rich text; clustered repeated overlaps; separated the
+  editor presentation and Agent response contract; regenerated API artifacts;
+  and documented the consumption rules.
+- Validation: derived and Agent-adapter tests 29/29; manual editor Playwright
+  tests 16/16; derived, Agent-adapter, and editor builds; Agent API artifact
+  check; and `git diff --check` all pass.
+- Commit status: ready for
+  `refactor(diagnostics): separate structural gates from visual observations`.
+
+## 2026-08-08 - Razavi current-arrow and node alignment
+
+- Target: rapidly align route-attached current arrows and solid electrical
+  nodes with the accepted Razavi raster using the existing pixel-map pipeline.
+- Changed areas: corrected the current-arrow map to its full visible extent;
+  added a measured solid-node radius; generated junction, Port-origin, and
+  arrow profile tokens from the shared map; and refreshed normative values.
+- Validation: per user instruction, no visual or automated validation was
+  performed; `git diff --check` and final status inspection were retained as
+  repository hygiene checks.
+- Commit status: ready for
+  `fix(razavi): align current arrows and solid nodes`.
+
+## 2026-08-08 - Voltage-source raster alignment
+
+- Target: use the read-only Razavi raster-diff harness to make the smallest
+  evidence-backed correction to the voltage-source presentation.
+- Changed areas: changed the voltage-source circle from emphasis to normal
+  stroke; corrected the source origin and polarity-axis pixel registration;
+  regenerated its raster-owned symbol and catalog.
+- Validation: peripheral-asset and catalog checks passed; Symbols build
+  passed; voltage-source binary IoU improved from 0.5621 to 0.6565 and soft
+  IoU from 0.4419 to 0.5595; no additional visual inspection was used after
+  the initial difference map.
+- Commit status: ready for
+  `fix(razavi): align voltage source to raster reference`.
+
+## 2026-08-09 - Razavi MOS join continuity
+
+- Target: remove visual raster seams at three-terminal NMOS/PMOS channel-to-
+  lead joins and refine their source arrows without disturbing electrical pins.
+- Changed areas: extended channel/support visual primitives one reference
+  pixel through their vertical joins; widened both source-arrow heads and
+  extended the NMOS tip/support one pixel; made pixel-derived MOS viewBoxes
+  expand to valid integer bounds; regenerated MOS assets and catalog.
+- Validation: NMOS diff improved from 0.7389 to 0.7523 binary IoU and from
+  0.6246 to 0.6406 soft IoU; PMOS improved slightly while its residual showed
+  a +1/+1-pixel registration preference; source/catalog generation, focused
+  catalog tests, build, and diff checks passed.
+- Commit status: ready for
+  `fix(razavi): close MOS joins and align route arrows`.
+
+## 2026-08-09 - PMOS source-arrow tail
+
+- Target: remove the PMOS arrow support segment that visibly protruded through
+  the arrow tip while keeping the channel, arrowhead, and electrical pins
+  intact.
+- Changed areas: shortened the PMOS source-arrow support to start at its
+  existing triangle base; regenerated MOS assets and catalog metadata.
+- Validation: MOS and catalog generation checks, Symbols build, and
+  `git diff --check` passed. No visual inspection was performed per the rapid
+  iteration request.
+- Commit status: ready for
+  `fix(razavi): trim PMOS source arrow support`.
+
+## 2026-08-09 - PMOS arrow mirrors NMOS
+
+- Target: replace the inconsistent PMOS source-arrow construction with the
+  mirrored NMOS arrow geometry while preserving PMOS placement and pins.
+- Changed areas: PMOS arrow now has NMOS's 16 px length and 14 px base width;
+  its support begins at the arrow tip and never extends beyond it.
+- Validation: MOS/catalog generation and Symbols build passed. PMOS diff was
+  0.6493 binary IoU and 0.6052 soft IoU. The score declined because the old
+  reference crop favors the previously rejected geometry; visual direction was
+  explicitly selected by the user and takes precedence.
+- Commit status: ready for
+  `fix(razavi): mirror PMOS arrow from NMOS`.
+
+## 2026-08-09 - PMOS arrow gate contact
+
+- Target: make the PMOS triangle tip touch its Gate bar while confining the
+  support segment to the arrow-tail/channel side.
+- Changed areas: set tip to the Gate bar edge; retained the NMOS-matched 16 px
+  arrow length and 14 px base; moved support to begin at the tail.
+- Validation: MOS/catalog generation checks, Symbols build, and
+  `git diff --check` passed. No visual inspection was performed.
+- Commit status: ready for
+  `fix(razavi): join PMOS arrow to gate bar`.
+
+## 2026-08-09 - Razavi route-current arrow length
+
+- Target: correct the route-attached current arrow after comparison with the
+  sole Razavi reference showed the prior full length was short.
+- Changed areas: increased the pixel-map full arrow extent from 80 px to 92
+  px while preserving its 26 px by 15 px head and 12 px label gap; regenerated
+  the profile token and updated its contract test and normative documentation.
+- Validation: peripheral generator and stale-output check passed; focused
+  profile test 2/2 passed; `@icm/render-svg` build and `git diff --check`
+  passed. The raster harness does not yet cover route markers, so no visual
+  diff was claimed.
+- Commit status: ready for `fix(razavi): lengthen route current arrow`.
+
+## 2026-08-09 - Razavi peripheral fidelity
+
+- Target: refine GND bars and independent current-source outline against the
+  sole visual reference, and determine whether Port origins required a radius
+  change.
+- Changed areas: introduced a screenshot-mapped 5 px GND-bar role without
+  changing global emphasis; changed current-source circle to normal; retained
+  the common 6.5 px Port/Junction radius; documented the synchronized tokens.
+- Finding: Port apparent-size difference is the editor's blue/white active
+  endpoint overlay, not formal output. No interaction overlay behavior changed.
+- Validation: peripheral/catalog generation and stale checks, Symbols/Derived/
+  Render-SVG builds, focused catalog/profile tests passed. Ground IoU/soft-IoU
+  improved `0.7698/0.6337 -> 0.7810/0.6940`; current-source became
+  `0.6413/0.6200` after the explicitly requested normal outline. Three
+  broader render SVG golden failures remain from earlier MOS geometry commits;
+  unrelated goldens were intentionally not updated.
+- Commit status: ready for `fix(razavi): refine peripheral reference fidelity`.
+
+## 2026-08-09 - Razavi passive reference crop baseline
+
+- Target: record and compare the resistor in the sole Razavi reference without
+  inventing capacitor evidence.
+- Changed areas: added a hash-pinned passive geometry map for panel (d) R1;
+  extended fidelity rasterization to support quarter-turn symbols; registered a
+  resistor comparison target; replaced its round Visio body with the measured
+  sharp, normal-stroke zigzag and aligned its lead joins.
+- Validation: resistor binary/soft IoU improved `0.2360/0.1779 ->
+0.6597/0.6068`; registration lift is zero. Symbols/Derived/Render-SVG builds,
+  catalog generation and stale check, and focused tests 17/17 passed. The
+  CLI correctly rejects unrecorded `capacitor`.
+- Evidence boundary: the six-panel authority has no capacitor; no capacitor
+  asset change was made pending a capacitor-containing approved crop.
+- Commit status: ready for `test(razavi): add passive reference crop baseline`.
+
+## 2026-08-09 - Razavi capacitor reference archive
+
+- Target: preserve the user-supplied capacitor screenshot as evidence within
+  the existing sole Razavi visual authority.
+- Changed areas: archived the original PNG; hash-pinned it and a capacitor
+  geometry map in the authority manifest; recorded C1 vertical and C2
+  horizontal crop anchors; corrected the style contract's prior absence claim.
+- Validation: image and geometry SHA-256 links matched manifest values, both
+  evidence IDs were present, JSON parsed, and `git diff --check` passed.
+- Commit status: ready for `docs(razavi): archive capacitor reference evidence`.
+
+## 2026-08-09 - Razavi capacitor dual-orientation calibration
+
+- Target: calibrate the capacitor using archived C1 vertical and C2 horizontal
+  reference evidence.
+- Changed areas: registered both supplemental-raster targets in the fidelity
+  CLI and corrected their origin anchors. The harness now reads a target's own
+  reference asset rather than assuming every target belongs to the six-panel
+  PNG.
+- Evidence: C1 improved `0.3037/0.2116 -> 0.5860/0.6240`; C2 improved
+  `0.4732/0.3510 -> 0.6982/0.6085`. A shorter normal-stroke capacitor was
+  tested and rejected because it worsened both-orientation evidence; no
+  capacitor asset change remains.
+- Validation: Symbols/Derived/Render-SVG builds, catalog generation and stale
+  check, focused tests 17/17, both pixel reports, and `git diff --check`
+  passed.
+- Commit status: ready for `test(razavi): add capacitor reference calibration`.
+
+## 2026-08-09 - Current documentation index and VSS archive
+
+- Target: remove retired VSS guidance from the default documentation and Agent
+  reading path without deleting its historical record.
+- Changed areas: adds `docs/current/` and `docs/archive/` boundaries; archives
+  the VSS development specification and VSS-derived Agent Razavi canon; leaves
+  ADR-linked redirect stubs at their former paths; updates specification,
+  roadmap, documentation, and Skill navigation away from VSS visual authority.
+- Validation: routing guard confirms the Skill no longer loads the archived
+  canon, the specs index has no active VSS entry, all archive/current targets
+  exist, and `git diff --check` is clean.
+- Commit status: ready for
+  `docs: separate current guidance from VSS archive`.
+
+## 2026-08-09 - Unified canvas rich-text editing
+
+- Target: replace the separate Annotation and Drafting Text authoring panels
+  with one canvas-local RichText editing session.
+- Changed areas: added optional presentation `content` to semantic
+  annotations; unified their RichText SVG path with Drafting Text; replaced
+  raw-markup side panels with a floating canvas toolbar for bold, italic,
+  subscript, superscript, fraction insertion, size, apply, and delete; added
+  double-click editing for both text kinds while preserving electrical-net
+  semantics. Existing route-current reversal remains available only for its
+  relevant marker in that toolbar.
+- Validation: workspace typecheck, editor production build, focused model and
+  renderer tests (39 assertions), and 26 Playwright editor workflows passed.
+  The 3 whole-render golden failures remain component-only mismatches from
+  already committed Razavi calibration against stale goldens; targeted text
+  rendering tests pass. Workspace-wide `format:check` remains blocked by
+  existing component/fidelity helper and lockfile formatting outside this
+  target; every owned source and test file was individually formatted and
+  checked.
+- Commit status: ready for `feat(text): unify rich-text editing surface`.
+
+## 2026-08-09 - Razavi current, source, and Port reference calibration
+
+- Target: archive the supplied compact current-reference raster and align the
+  route current marker, current source, and Port origin to its evidence.
+- Changed areas: hash-pinned the 326 x 254 supplemental raster and measured
+  map; made Razavi formal Ports hollow while preserving their junction-sized
+  outside radius; made attached route markers head-only so the route is their
+  shaft; tuned the head to the recorded proportions.
+- Evidence: a compact-current-source arrow extension was tested and rejected:
+  IoU/soft-IoU regressed `0.6087/0.5597 -> 0.5897/0.5262`. The retained
+  `0.6087/0.5597` score is anti-alias-sensitive with +0.220 registration lift,
+  so no blind source geometry change remains.
+- Validation: peripheral and catalog generation, Symbols/Derived/Render-SVG
+  builds, the focused 2-test current-arrow/hollow-Port renderer run, current
+  source fidelity report, and `git diff --check` passed. The three existing
+  whole-render golden failures remain stale MOS-fixture mismatches outside this
+  target.
+- Commit status: ready for `fix(razavi): calibrate current markers and ports`.
+
+### Actual-render scoring completion
+
+- Added formal-SVG raster targets for the hollow Port and attached route-current
+  arrow. This closes their prior pixel-comparison gap.
+- Port tuning improved binary/soft IoU `0.6232/0.5245 -> 0.6393/0.6013`; the
+  next smaller candidate was rejected at `0.5238/0.5155`.
+- The route-current arrow scored `0.5947/0.6199`; a longer head regressed to
+  `0.5679/0.5683` and was rejected.
+
+## 2026-08-09 - Razavi semantic subscript face correction
+
+- Target: apply the user's visual correction that automatic schematic
+  subscripts are upright while `V`/`I`/`R`/`M` bases remain bold italic.
+- Changed areas: semantic-label renderer and generated editor RichText split;
+  constrained text comparison option; Razavi text specification and focused
+  renderer test.
+- Evidence: constrained Chrome/Arial search retained `18` / `0.76` /
+  `0.34em`, with an upright-bold clean-crop mean IoU of `0.5509`. This is below
+  the unconstrained italic score (`0.5822`), but the supplied reference's
+  observed glyph convention and explicit human review take precedence.
+- Validation: focused renderer tests `19/19`, Render-SVG build, workspace
+  typecheck, Prettier check, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): use upright semantic subscripts`.
+
+## 2026-08-09 - Razavi default text typography calibration
+
+- Target: calibrate the default Razavi label typography against the
+  user-supplied OTA raster without changing any symbol or route geometry.
+- Changed areas: added a Chrome/Arial text-only calibration CLI; set semantic
+  label sizes to `18`, subscript scale to `0.76`, and baseline shift to
+  `0.34em`; routed the same baseline token into derived rich-text bounds; and
+  updated the two active style specifications and focused renderer tests.
+- Evidence: clean-crop mean binary IoU for `V_DD`, `R_D`, `M_1`, and `M_2`
+  improved `0.3654 -> 0.5822`. `V_out` remains a diagnostic-only crop because
+  the source includes a node and polarity marker. Mathematical bases and
+  subscripts remained bold italic; signs stay upright by the existing rule.
+- Validation: focused tests `23/23`, Derived/Render-SVG builds, workspace
+  typecheck, editor production build, owned-file Prettier check, and
+  `git diff --check` passed. Unrelated peripheral Port worktree hunks were
+  intentionally left unstaged.
+- Commit status: ready for `fix(razavi): calibrate default schematic typography`.
+
+## 2026-08-09 - Razavi unified subscript proportion and attachment
+
+- Target: correct the undersized, overly detached default subscript using the
+  supplied `I_X`/`V_X` Razavi reference.
+- Changed areas: text comparator now supports this second reference and a
+  relative attachment sweep; Razavi typography profile, derived bounds,
+  renderer expectations, and active specifications use the calibrated values.
+- Evidence: at the reference's own fitted 42px base scale, the selected
+  relative geometry is `0.84` scale and `0.28em` down. A horizontal sweep
+  selected `0em`; negative tracking worsened the match.
+- Validation: focused tests `24/24`, Derived/Render-SVG builds, workspace
+  typecheck, Prettier check, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): refine unified subscript geometry`.
+
+## 2026-08-09 - Global semantic annotation typography
+
+- Target: make existing as well as newly edited electrical annotations consume
+  the active Razavi typography profile.
+- Changed areas: formal renderer and editor session initialization now derive
+  semantic annotations from canonical `text`; schema and style contract clarify
+  that stored annotation `content` is not a visual style override; regression
+  covers a stale legacy RichText payload.
+- Result: `V/I/R/M` base styling, upright subscript face, `0.84` scale, and
+  `0.28em` baseline apply immediately to all semantic labels without modifying
+  individual project files. DraftText remains independent RichText.
+- Validation: 36 of 39 focused renderer/text checks passed; the three failures
+  are existing component-symbol goldens. Render-SVG/editor builds, workspace
+  typecheck, formatting, and `git diff --check` passed.
+- Commit status: ready for `fix(text): normalize semantic annotation typography`.
+
+## 2026-08-09 - Editor label selection and mixed deletion
+
+- Target: make render-only default instance labels movable without a preceding
+  text edit, and repair marquee deletion when both an instance and its attached
+  label are selected.
+- Changed areas: editor default-label interaction overlay and RichText-aware
+  annotation hit geometry; deletion edit de-duplication; focused editor and
+  deletion regressions.
+- Result: pointer-down on an implicit instance ID materializes the equivalent
+  semantic `instance-label` then uses the standard label drag path; framing an
+  implicit label selects its instance; duplicate attached-label removal is
+  removed from mixed transactions.
+- Validation: focused Vitest 8/8 passed, editor production build passed, and
+  `git diff --check` passed. Workspace typecheck is blocked by an unrelated
+  retained VDD worktree hunk whose rotation literal is inferred as `number`.
+- Commit status: committed as `0415765 fix(editor): unify instance label
+selection and deletion`.
+
+## 2026-08-09 - VDD label transaction type repair
+
+- Target: restore typecheck after the VDD placement target introduced a
+  power-label annotation with a widened rotation number.
+- Changed areas: one literal type assertion in the editor VDD placement edit.
+- Validation: workspace typecheck, editor production build, and `git diff
+--check` passed.
+- Commit status: ready for `fix(editor): type VDD label rotation literal`.
+
+## 2026-08-09 - Editor visual-selection normalization
+
+- Target: make editor selection an explicit, normalized protocol rather than a
+  combination of instance state, singular object IDs, and supplemental arrays.
+- Changed areas: editor selection state and gesture bridge; new pure
+  `VisualSelection` module and tests.
+- Result: marquee, primary object selection, junction selection, delete
+  eligibility, and mixed deletion all consume one deduplicated selection value.
+  Existing Annotation and DraftingObject persistence contracts remain separate.
+- Validation: workspace typecheck, editor production build, focused Vitest
+  10/10, and `git diff --check` passed.
+- Commit status: committed as `940b854 refactor(editor): normalize visual
+selection protocol`.
+
+## 2026-08-09 - Text-entry and current-arrow repair
+
+- Target: eliminate duplicate instance-text editing, preserve RichText
+  multi-character selection through toolbar commands, and restore accessible
+  current-arrow reversal.
+- Changed areas: editor Property panel and route-marker action; floating
+  RichText editor range handling.
+- Result: instance text no longer has a Property-panel mutation path; the
+  contenteditable range is restored before bold/italic/subscript/superscript;
+  selected current arrows have a direct Reverse action and update both anchor
+  representations.
+- Validation: workspace typecheck, editor production build, focused Vitest
+  10/10, and `git diff --check` passed.
+- Commit status: committed as `9337c8d fix(editor): unify text entry and
+current arrow controls`.
+
+## 2026-08-09 - Canonical instance-label authoring
+
+- Target: prevent newly placed visible components from using renderer-only
+  default labels that cannot enter the RichText editing protocol.
+- Changed areas: editor component placement transaction.
+- Result: visible new components, including independent voltage sources,
+  receive an attached semantic `instance-label` in the same transaction as the
+  instance. The default renderer label is legacy read compatibility only.
+- Validation: workspace typecheck, editor production build, focused editor
+  tests 6/6, and `git diff --check` passed.
+- Commit status: committed as `1629b29 fix(editor): create canonical labels
+with placed components`.
+
+## 2026-08-09 - Voltage-source canonical label integer position
+
+- Target: repair voltage-source placement after canonical label authoring
+  exposed the integer-coordinate requirement of persisted annotations.
+- Root cause: the asymmetric Razavi voltage-source viewBox produced a half-unit
+  label center. The renderer tolerated it, but the typed transaction rejected
+  the Annotation `Point` as non-integer.
+- Result: the shared label factory rounds persisted label coordinates and
+  transaction failure status now includes its first diagnostic. Browser
+  verification placed `V1` successfully with one explicit annotation hit and
+  no default-label hit.
+- Validation: workspace typecheck, editor production build, focused Vitest
+  11/11, and `git diff --check` passed.
+- Commit status: ready for `fix(editor): round canonical label positions`.
+
+## 2026-08-09 - Explicit semantic RichText rendering
+
+- Target: preserve user-selected RichText spans in semantic annotations,
+  especially multi-character subscripts, after the floating editor commits.
+- Root cause: the editor correctly persisted `Annotation.content`, but formal
+  rendering and label hit geometry discarded it and rebuilt formatting only
+  from flattened `Annotation.text`. That made the default Razavi parser erase
+  a user-selected subscript range.
+- Changed areas: formal annotation renderer, editor session initialization and
+  hit geometry, plus the shared schema contract comment and a direct renderer
+  regression for `V` with an explicit `out` subscript.
+- Result: no-content annotations keep the active Razavi default; annotations
+  with saved RichText retain their exact span structure. `text` remains the
+  semantic/electrical plain-text identity for connectivity and search.
+- Validation: targeted RichText renderer test passed; workspace typecheck,
+  Render-SVG build, editor production build, Prettier, and `git diff --check`
+  passed. The unfiltered Render-SVG file has four pre-existing golden failures
+  caused by old monochrome/geometry expectations versus current Razavi assets.
+- Commit status: ready for `fix(text): preserve explicit semantic rich text
+formatting`.
+
+## 2026-08-09 - Explicit filled Port palette symbol
+
+- Target: add a manual-only solid-endpoint Port without changing the existing
+  hollow Port's appearance or electrical contract.
+- Result: `port-filled` is a reviewed Razavi interface palette asset with the
+  exact same pin anchor, lead, viewBox, radius, and stroke role as `port`; only
+  the endpoint circle uses foreground fill. It has no automatic SPICE mapping.
+- Validation: regenerated catalog, focused catalog Vitest 16/16, Symbols build,
+  Editor production build, and `git diff --check` passed.
+- Commit status: ready for `feat(razavi): add filled port symbol`.
+
+## 2026-08-09 - PMOS source-arrow support clipping
+
+- Target: remove the squared residual line that crossed the PMOS source-arrow
+  head in three-terminal display mode.
+- Result: the shared MOS generator now creates source-arrow support from the
+  measured tail to the measured external lead, then draws the filled head.
+  The PMOS support starts at the arrow tail rather than under its tip; the same
+  rule restores the exact measured NMOS support start.
+- Validation: regenerated four MOS assets and catalog, focused catalog Vitest
+  16/16, Symbols build, Editor production build, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): clip PMOS source-arrow support`.
+
+## 2026-08-09 - Authority-calibrated compact typography
+
+- Target: correct the visually over-wide numeric glyphs in Razavi labels.
+- Result: a repeatable four-label authority search selected Arial (0.7321)
+  over DejaVu Sans (0.6149), Arial Narrow (0.5591), and Calibri (0.6384).
+  Shared label metrics are now Arial, 17.44186 logical units, 76% subscripts,
+  and 0.20em baseline shift.
+- Validation: focused Derived/Render-SVG Vitest 8/8, Derived build, Render-SVG
+  build, Editor production build, and `git diff --check` passed.
+- Commit status: ready for `style(razavi): calibrate compact Arial typography`.
+
+## 2026-08-09 - Correct semantic subscript proportions
+
+- Target: correct the typography regression identified against the supplied
+  694 x 446 Razavi reference, especially tall/attached numeric subscripts.
+- Root cause: the earlier pass misread “flat” as horizontal condensation,
+  increased all semantic text by about 15%, and retained an AST override that
+  forced math subscripts upright.
+- Result: restored DejaVu Sans and the 15.116 logical font size; semantic and
+  editor-default subscripts now inherit bold italic math style, render at 76%,
+  shift down 0.28em, and use a 0.04em positive attachment gap. The fidelity
+  harness now accepts this reference size and searches positive gaps.
+- Validation: supplied-reference candidate search, temporary GUI placement and
+  undo, focused typography Vitest 22/22, Derived/Render-SVG/Editor builds, and
+  `git diff --check` passed.
+- Commit status: ready for `fix(text): restore Razavi subscript proportions`.
+
+## 2026-08-09 - Bold upright subscript adjustment
+
+- Target: apply human-reviewed bold upright subscripts and increase horizontal
+  separation by approximately 15%.
+- Result: semantic and editor-default subscripts use upright weight 700; the
+  shared attachment gap changes from 0.040em to 0.046em. The 76% size and
+  0.28em vertical shift remain unchanged.
+- Validation: formatting check, focused typography tests, Derived/Render-SVG/
+  Editor builds, and `git diff --check` passed. The broad Render-SVG file still
+  has eight unrelated stale golden/color/size assertions already documented by
+  the active fidelity work.
+- Commit status: ready for `style(text): widen upright Razavi subscripts`.
+
+## 2026-08-09 - MOS source-arrow orthogonal elbow regression
+
+- Target: restore the electrical D/S lead's strict 90-degree continuation next
+  to the MOS source-arrow head.
+- Root cause: the previous clipping pass used a reference-raster overlap point
+  as the vector elbow, although its x-coordinate is deliberately offset from
+  the electrical lead.
+- Result: arrow support begins at the measured arrow tail but turns only at the
+  exact D/S lead point. A focused regression asserts the final segment is
+  vertical, preventing future diagonal or disconnected external wiring.
+- Validation: regenerated MOS assets/catalog, focused catalog Vitest 16/16,
+  Symbols build, Editor production build, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): restore MOS arrow elbow`.
+
+## 2026-08-09 - Compact endpoint hit testing and direct pin connection
+
+- Target: prevent oversized endpoint hit areas from blocking manual routing and
+  make visually adjacent component pins electrically meaningful.
+- Result: endpoint hit testing and direct-pin snapping share a four-logical-unit
+  radius. A component drag snaps a visible pin to a stationary visible endpoint
+  and commits a wire-free `connect_endpoints` edit. The operation is limited to
+  unconnected endpoints or endpoints already on the same Net; different Nets
+  are not auto-shorted.
+- Validation: focused editor shell Vitest 8/8, Editor production build, and
+  `git diff --check` passed.
+- Commit status: ready for `feat(editor): snap and directly connect pins`.
+
+## 2026-08-09 - Fixed Razavi MOS display and compact selection actions
+
+- Target: remove non-Razavi four-terminal MOS controls from the manual editor
+  while preserving full SPICE bulk connectivity, and simplify current-arrow
+  actions.
+- Result: all canonical MOS style migrations select the three-terminal visual
+  variant. A B connection to a non-supply Net remains electrically intact and
+  produces a selected-MOS hidden-bulk warning rather than a four-terminal
+  drawing. The selection-shelf reverse-arrow action is replaced with `X`; the
+  in-place text-editor control remains as a discoverable alternative.
+- Validation: focused editor/catalog Vitest 24/24, Editor production build,
+  and `git diff --check` passed.
+- Commit status: ready for `feat(razavi): fix MOS display to textbook mode`.
+
+## 2026-08-09 - Persistent Selection shelf
+
+- Target: keep important selection context permanently available without
+  allowing its contents to shift the component library as selection changes.
+- Result: replaced the collapsible shelf with a fixed-height bottom-left
+  section, a passive header, and an internally scrollable content region.
+  Updated end-to-end coverage for the permanent shelf and current fixed
+  three-terminal MOS behavior.
+- Validation: editor Vitest 9/9, production build, focused Playwright 2/2,
+  and `git diff --check` passed.
+- Commit status: ready for `feat(editor): keep selection shelf persistent`.
+
+## 2026-08-09 - Compact editor command hierarchy
+
+- Target: simplify the browser command surface without changing export,
+  drawing, or document-style data contracts.
+- Result: Draw moved from the dock to the top command bar; File now contains
+  SVG/PNG/PDF exports; Style and the duplicate global current-arrow command
+  are removed from the browser UI. Route selection remains the sole place to
+  add a line-attached current arrow.
+- Validation: editor Vitest 10/10, production build, focused Playwright 3/3,
+  and `git diff --check` passed.
+- Commit status: ready for `feat(editor): simplify command hierarchy`.
+
+## 2026-08-09 - Manual wire interaction P0
+
+- Target: make manual wire taps reliable at routes and bends, keep Wire mode
+  clear of visual-selection overlays, and distinguish deleting an isolated
+  electrical connection from merely removing its visible route geometry.
+- Result: route hit resolution is screen-tolerant and projects to a real route
+  point, preferring an internal bend exactly. The edit engine now splits an
+  existing waypoint without introducing a zero-length segment. Wire mode owns
+  an input plane and disables selection overlays; route hit priority is above
+  component boxes while endpoints and annotations remain higher. Delete clears
+  an isolated terminal/port connection; Unroute intentionally keeps its Net
+  and exposes flightlines. Branched/shared deletion is safely rejected pending
+  persistent connection-edge provenance in the model.
+- Validation: focused Playwright P0 3/3, routing engine Vitest 10/10, editor
+  production build, focused Prettier, and `git diff --check` passed. Workspace
+  typecheck/SSR and one old routing-demo browser case remain blocked by
+  parallel hierarchy/Razavi/command-menu work outside this target.
+- Commit status: pending intentional hunk staging.
+
+## 2026-08-09 - Drafting Selection shelf and reversible lock repair
+
+- Target: make Selection-shelf drawing controls visibly effective and make
+  drafting locks reversible while preserving edit protection.
+- Result: construction lines and free arrows render the persisted style
+  override; Lock changes to Unlock, disables other drawing edits while locked,
+  and explains the protection state. The edit engine permits only a
+  payload-identical pure unlock. Delete has higher priority and removes a
+  locked drafting object immediately. Numeric scale fields use a Zod
+  numeric-literal union (not an invalid numeric enum), so stroke and arrow-head
+  scale values survive transactions and reach SVG rendering. Free-arrow shafts
+  terminate at their arrowhead base plane instead of continuing to the tip.
+- Validation: editor build, drafting edit-engine Vitest 10/10, focused
+  Drawing-shelf Playwright 4/4, source/target-plan Prettier, and
+  `git diff --check` passed. The shared dirty log has a pre-existing Markdown
+  Prettier warning. The full drafting Playwright file exceeded the local 120 s
+  command budget and is not recorded as passing.
+- Local runtime: replaced duplicate Vite processes with one rebuilt editor
+  server at `http://localhost:5173`.
+- Commit status: pending intentional hunk staging because the shared editor and
+  drafting files retain unrelated uncommitted work from the completed drafting
+  and parallel targets.
+
+## 2026-08-09 - Imported hierarchy release scope
+
+- Target: limit this release to browsing SPICE-imported subcircuits, without
+  implying manual Cell authoring or symbol encapsulation.
+- Result: new imports store `spice.childDocumentId` as a stable child-document
+  link while retaining `spice.target` for source fidelity. The editor uses that
+  link first (with legacy name-resolution fallback), hides hierarchy controls
+  in a one-document project, and labels imported navigation `Cells`, `Up`,
+  `Top`, and `Enter Cell`. Only a resolvable child instance accepts double-click
+  navigation.
+- Validation: importer/editor Vitest 17/17, imported-SPICE Playwright flow
+  1/1, editor production build, Prettier, and `git diff --check` passed.
+  Workspace typecheck reaches only unrelated Razavi catalog fixture errors
+  (`leadsPx`); the concurrent drafting handoff's App type errors were repaired
+  separately but are intentionally not part of this commit.
+- Commit status: committed locally; push pending transient remote retry.
+
+## 2026-08-09 - Command menu dismissal
+
+- Target: remove persistent header command popovers that obstruct the canvas.
+- Result: only open `.command-menu` popovers close on an outside pointer-down;
+  Escape closes an open command menu before it reaches wire, drafting, or
+  selection cancellation. Library details remain independent.
+- Validation: focused Playwright 1/1, editor production build, Prettier, and
+  `git diff --check` passed.
+- Commit status: ready for `fix(editor): dismiss command menus outside the toolbar`.

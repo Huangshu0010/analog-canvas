@@ -194,6 +194,9 @@ function diagnosticSnapshot(
   return diagnoseVisualQuality(document, resolver).map((item) => ({
     code: item.code,
     severity: item.severity,
+    category: item.category,
+    confidence: item.confidence,
+    gateEligible: item.gateEligible,
     message: item.message,
     objectIds: [...item.objectIds],
     revision: document.revision,
