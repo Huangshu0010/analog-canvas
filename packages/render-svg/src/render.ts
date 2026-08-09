@@ -7,6 +7,7 @@ import {
   resolveDraftingObjectGeometry,
   routeAttachmentPlacement,
   routePolyline,
+  resolveEndpointOutwardDirection,
 } from "@icm/derived";
 import type { ResolvedDraftingGeometry } from "@icm/derived";
 import type {
@@ -72,6 +73,57 @@ function escapeXml(value: string): string {
 
 function pointList(points: ReadonlyArray<{ x: number; y: number }>): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
+}
+
+/**
+ * Route topology always terminates at the exact electrical pin origin. For a
+ * terminal escape segment, draw a short, same-width overlap underneath the
+ * symbol. This removes a butt-cap anti-alias seam without moving the main SVG
+ * route coordinates or applying a visible dot/collar to every device pin.
+ */
+function renderTerminalJoinOverlaps(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  route: SchematicDocument["routes"][number],
+  points: readonly Point[],
+  profile: SchematicStyleProfile,
+): string {
+  if (points.length < 2) return "";
+  const overlap = Math.max(profile.strokes.wire, profile.strokes.symbol) * 0.75;
+  const overlaps: string[] = [];
+  const renderOverlap = (point: Point, outward: Point) =>
+    `<line data-role="terminal-overlap" data-route-id="${escapeXml(route.id)}" x1="${point.x - outward.x * overlap}" y1="${point.y - outward.y * overlap}" x2="${point.x + outward.x * overlap}" y2="${point.y + outward.y * overlap}" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}"/>`;
+  const fromOutward = resolveEndpointOutwardDirection(
+    document,
+    resolver,
+    route.from,
+  );
+  const first = points[0]!;
+  const next = points[1]!;
+  if (
+    route.segmentModes[0] === "escape" &&
+    fromOutward &&
+    (next.x - first.x) * fromOutward.x + (next.y - first.y) * fromOutward.y > 0
+  ) {
+    overlaps.push(renderOverlap(first, fromOutward));
+  }
+
+  const toOutward = resolveEndpointOutwardDirection(
+    document,
+    resolver,
+    route.to,
+  );
+  const previous = points.at(-2)!;
+  const last = points.at(-1)!;
+  if (
+    route.segmentModes.at(-1) === "escape" &&
+    toOutward &&
+    (last.x - previous.x) * toOutward.x + (last.y - previous.y) * toOutward.y <
+      0
+  ) {
+    overlaps.push(renderOverlap(last, toOutward));
+  }
+  return overlaps.join("");
 }
 
 function profileMiterAttribute(profile: SchematicStyleProfile): string {
@@ -404,7 +456,14 @@ export function buildSvgScene(
       if (!polyline) {
         throw new Error(`Cannot render unresolved route: ${route.id}`);
       }
-      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>`;
+      const terminalOverlaps = renderTerminalJoinOverlaps(
+        document,
+        resolver,
+        route,
+        polyline.points,
+        profile,
+      );
+      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalOverlaps}`;
     })
     .join("");
   const junctions = [...document.junctions]

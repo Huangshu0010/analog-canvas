@@ -66,6 +66,27 @@ describe("derived connectivity and route geometry", () => {
     ).toEqual({ x: 1, y: 0 });
   });
 
+  it("snaps escape-router midpoints to the document connection grid", () => {
+    const route = buildOrthogonalEscapeRoute(
+      { point: { x: 300, y: 240 }, outward: { x: 0, y: -1 } },
+      { point: { x: 530, y: 140 }, outward: { x: 0, y: -1 } },
+      10,
+      10,
+    );
+
+    expect(route.points).toEqual([
+      { x: 300, y: 240 },
+      { x: 300, y: 230 },
+      { x: 420, y: 230 },
+      { x: 420, y: 130 },
+      { x: 530, y: 130 },
+      { x: 530, y: 140 },
+    ]);
+    expect(
+      route.points.every((point) => point.x % 10 === 0 && point.y % 10 === 0),
+    ).toBe(true);
+  });
+
   it("resolves transformed Symbol pins and computes stable flightline MSTs", () => {
     const document = documentFixture();
     expect(resolveEndpointPoint(document, resolver, terminal("A"))).toEqual({

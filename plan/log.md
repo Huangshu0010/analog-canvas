@@ -3424,3 +3424,18 @@ formatting`.
   resistor fidelity IoU 0.6613 with zero registration lift and anti-alias-only
   residual, plus `git diff --check` passed.
 - Commit status: ready for `fix(razavi): join resistor body and leads`.
+## 2026-08-09 - Terminal escape routing and seamless joins
+
+- Target: prevent right-angle manual wires from leaving component terminals
+  sideways or showing a butt-cap seam at the terminal.
+- Result: GUI candidates now retain transformed signed pin directions and use
+  the shared escape router. Direct terminal wiring exits and enters along pin
+  direction; router midpoints snap to the document connection grid. Formal SVG
+  retains exact route coordinates and adds a same-width, under-symbol overlap
+  only for correctly oriented terminal escape segments.
+- Validation: focused wire-path/derived/render Vitest 7/7, focused manual
+  editor Playwright 1/1, editor production build, Prettier, and
+  `git diff --check` passed. The complete renderer test file retains unrelated
+  pre-existing style-baseline failures.
+- Commit status: committed as `fix(editor): escape component terminals before
+  orthogonal turns`.

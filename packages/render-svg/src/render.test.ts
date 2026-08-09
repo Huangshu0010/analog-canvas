@@ -428,6 +428,64 @@ describe("textbook monochrome SVG renderer", () => {
     );
   });
 
+  it("overlaps terminal escape routes beneath component leads without moving topology", () => {
+    const project = createEmptyProject("project-terminal-overlap", "Overlap");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.nets.push({
+      id: "net-supply",
+      scope: "local",
+      terminals: [
+        { instanceId: "VDD1", pinName: "P" },
+        { instanceId: "GND1", pinName: "0" },
+      ],
+      ports: [],
+    });
+    document.instances.push(
+      {
+        id: "VDD1",
+        symbolId: "vdd",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+      {
+        id: "GND1",
+        symbolId: "ground",
+        placement: {
+          position: { x: 100, y: 200 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    );
+    document.routes.push({
+      id: "route-supply",
+      netId: "net-supply",
+      from: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+      to: { kind: "terminal", instanceId: "GND1", pinName: "0" },
+      waypoints: [{ x: 100, y: 130 }],
+      segmentModes: ["escape", "escape"],
+    });
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain(
+      'data-object-id="route-supply" data-net-id="net-supply" points="100,120 100,130 100,190"',
+    );
+    expect(svg).toContain(
+      'data-role="terminal-overlap" data-route-id="route-supply" x1="100" y1="118.8" x2="100" y2="121.2"',
+    );
+    expect(svg).toContain(
+      'data-role="terminal-overlap" data-route-id="route-supply" x1="100" y1="191.2" x2="100" y2="188.8"',
+    );
+    expect(document.routes[0]!.waypoints).toEqual([{ x: 100, y: 130 }]);
+  });
+
   it("renders the original dense analog fixture without blocking visual diagnostics", () => {
     const project = parseProject(
       readFileSync(

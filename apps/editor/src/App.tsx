@@ -80,6 +80,7 @@ import type { VisualSelection, VisualSelectionKind } from "./visual-selection";
 import { createRecoveryScheduler } from "./recovery-scheduler";
 import type { RecoveryScheduler } from "./recovery-scheduler";
 import { RichTextEditor } from "./rich-text-editor";
+import { buildManualWirePath } from "./wire-path";
 
 const RECOVERY_KEY = "icm.recovery.v1";
 // Coalesce bursts of edits into one recovery write so a large schematic does
@@ -162,11 +163,9 @@ interface WireSource {
   endpoint: RouteEndpoint;
   netId: string | null;
   point: Point;
-  preferredAxis?: OrthogonalAxis;
+  outward?: Point;
   preludeEdits: SchematicEdit[];
 }
-
-type OrthogonalAxis = "horizontal" | "vertical";
 
 export interface AppProps {
   project?: CircuitProject;
@@ -244,53 +243,17 @@ function polylinePoints(points: readonly Point[]): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
 }
 
-function extendOrthogonalPath(
-  points: readonly Point[],
-  target: Point,
-  preferredInitialAxis: OrthogonalAxis = "horizontal",
-  preferredTargetAxis?: OrthogonalAxis,
-): Point[] {
-  const result = points.map((point) => ({ ...point }));
-  const last = result.at(-1);
-  if (!last) return [{ ...target }];
-  if (last.x === target.x || last.y === target.y) {
-    if (last.x !== target.x || last.y !== target.y) result.push({ ...target });
-    return result;
-  }
-  const previous = result.at(-2);
-  const departureAxis: OrthogonalAxis = previous
-    ? previous.x === last.x
-      ? "horizontal"
-      : "vertical"
-    : preferredInitialAxis;
-  if (!preferredTargetAxis || departureAxis !== preferredTargetAxis) {
-    result.push(
-      departureAxis === "horizontal"
-        ? { x: target.x, y: last.y }
-        : { x: last.x, y: target.y },
-    );
-  } else if (departureAxis === "horizontal") {
-    const middleX = snap((last.x + target.x) / 2, 1);
-    result.push({ x: middleX, y: last.y }, { x: middleX, y: target.y });
-  } else {
-    const middleY = snap((last.y + target.y) / 2, 1);
-    result.push({ x: last.x, y: middleY }, { x: target.x, y: middleY });
-  }
-  result.push({ ...target });
-  return result;
-}
-
-function transformedPinAxis(
+function transformedPinOutward(
   direction: "north" | "east" | "south" | "west",
-  rotation: 0 | 90 | 180 | 270,
-): OrthogonalAxis {
-  const localAxis =
-    direction === "east" || direction === "west" ? "horizontal" : "vertical";
-  return rotation === 90 || rotation === 270
-    ? localAxis === "horizontal"
-      ? "vertical"
-      : "horizontal"
-    : localAxis;
+  placement: { rotation: 0 | 90 | 180 | 270; mirror: "none" | "x" },
+): Point {
+  const local = {
+    north: { x: 0, y: -1 },
+    east: { x: 1, y: 0 },
+    south: { x: 0, y: 1 },
+    west: { x: -1, y: 0 },
+  }[direction];
+  return transformPoint(local, { x: 0, y: 0 }, placement);
 }
 
 interface RouteTap {
@@ -948,10 +911,7 @@ export function App({ project: initialProject }: AppProps) {
               instance.placement!.position,
               instance.placement!,
             ),
-            preferredAxis: transformedPinAxis(
-              pin.direction,
-              instance.placement!.rotation,
-            ),
+            outward: transformedPinOutward(pin.direction, instance.placement!),
             preludeEdits: [],
           };
         });
@@ -1033,7 +993,7 @@ export function App({ project: initialProject }: AppProps) {
             pinName: pin.name,
           }),
           point: transformPoint(pin.at, move.position, placement),
-          preferredAxis: transformedPinAxis(pin.direction, placement.rotation),
+          outward: transformedPinOutward(pin.direction, placement),
           preludeEdits: [],
         }));
     });
@@ -1402,11 +1362,12 @@ export function App({ project: initialProject }: AppProps) {
     : [];
   const wireDraftPoints =
     wireSource && wirePreviewPoint
-      ? extendOrthogonalPath(
-          wireFixedPoints,
-          wirePreviewPoint,
-          wireSource.preferredAxis,
-        )
+      ? buildManualWirePath(
+          wireSource,
+          { point: wirePreviewPoint },
+          wireWaypoints,
+          document.presentation.grid,
+        ).points
       : wireFixedPoints;
   const projectInstanceCount = project.documents.reduce(
     (count, candidate) => count + candidate.instances.length,
@@ -1795,24 +1756,20 @@ export function App({ project: initialProject }: AppProps) {
       to: candidate.endpoint,
       ...(!wireSource.netId && !candidate.netId ? { newNetId: netId } : {}),
     });
-    const routedPoints = extendOrthogonalPath(
-      [wireSource.point, ...wireWaypoints],
-      candidate.point,
-      wireSource.preferredAxis,
-      candidate.preferredAxis,
+    const routed = buildManualWirePath(
+      wireSource,
+      candidate,
+      wireWaypoints,
+      document.presentation.grid,
     );
-    const waypoints = routedPoints.slice(1, -1);
     edits.push({
       kind: "set_route_points",
       routeId: `route-ui-${suffix}`,
       netId,
       from: wireSource.endpoint,
       to: candidate.endpoint,
-      waypoints,
-      segmentModes: Array.from(
-        { length: waypoints.length + 1 },
-        () => "manual" as const,
-      ),
+      waypoints: routed.waypoints,
+      segmentModes: routed.segmentModes,
     });
     const result = transact(edits);
     if (result.ok) {
@@ -1856,14 +1813,20 @@ export function App({ project: initialProject }: AppProps) {
       setStatus("Wire source: free grid point");
       return;
     }
-    const fixed = extendOrthogonalPath(
-      [wireSource.point, ...wireWaypoints],
-      point,
-      wireSource.preferredAxis,
+    const fixed = buildManualWirePath(
+      wireSource,
+      { point },
+      wireWaypoints,
+      document.presentation.grid,
     );
-    setWireWaypoints(fixed.slice(1));
+    // Keep the clicked point as an in-progress waypoint. The path builder
+    // treats it as a fixed bend on the next click while retaining the source
+    // terminal's escape segment.
+    setWireWaypoints(fixed.points.slice(1));
     setWirePreviewPoint(point);
-    setStatus(`Wire bend ${fixed.length - 1}; double-click or Enter to finish`);
+    setStatus(
+      `Wire bend ${fixed.points.length - 1}; double-click or Enter to finish`,
+    );
   }
 
   function finishWireAtPoint(point: Point): void {
