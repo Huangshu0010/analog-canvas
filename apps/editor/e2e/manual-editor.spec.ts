@@ -383,6 +383,26 @@ test("places free wire bends and finishes at an arbitrary grid point", async ({
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
+test("reuses a free wire endpoint as a later wire source", async ({ page }) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 300, y: 200 });
+  await placeComponent(page, "resistor", { x: 600, y: 300 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page
+    .getByTestId("schematic-canvas")
+    .dblclick({ position: { x: 450, y: 320 } });
+
+  const freeEnd = page.locator('[data-testid^="junction-junction-ui-"]');
+  await expect(freeEnd).toHaveCount(1);
+  await clickCommand(page, "Draw", "Wire (W)");
+  await freeEnd.click();
+  await page.getByTestId("terminal-R2-1").click();
+
+  await expect(page.locator('[data-testid^="route-hit-"]')).toHaveCount(2);
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+});
+
 test("moves an isolated free wire as one route", async ({ page }) => {
   await page.goto("/");
   const canvas = page.getByTestId("schematic-canvas");

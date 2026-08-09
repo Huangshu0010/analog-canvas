@@ -559,6 +559,64 @@ describe("textbook monochrome SVG renderer", () => {
     ]);
   });
 
+  it("bridges a reconnected dotless route-anchor without changing route endpoints", () => {
+    const project = createEmptyProject("project-route-anchor", "Route anchor");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.nets.push({
+      id: "net-anchor",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    });
+    document.junctions.push(
+      {
+        id: "anchor",
+        netId: "net-anchor",
+        position: { x: 100, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "left",
+        netId: "net-anchor",
+        position: { x: 60, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "down",
+        netId: "net-anchor",
+        position: { x: 100, y: 140 },
+        role: "route-anchor",
+      },
+    );
+    document.routes.push(
+      {
+        id: "route-left",
+        netId: "net-anchor",
+        from: { kind: "junction", junctionId: "anchor" },
+        to: { kind: "junction", junctionId: "left" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-down",
+        netId: "net-anchor",
+        from: { kind: "junction", junctionId: "anchor" },
+        to: { kind: "junction", junctionId: "down" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain(
+      'data-role="route-anchor-miter-bridge" data-junction-id="anchor" d="M 98.8 100 L 100 100 L 100 101.2"',
+    );
+    expect(svg).not.toContain('data-object-id="anchor"');
+    expect(document.routes.map((route) => route.waypoints)).toEqual([[], []]);
+  });
+
   it("renders the original dense analog fixture without blocking visual diagnostics", () => {
     const project = parseProject(
       readFileSync(

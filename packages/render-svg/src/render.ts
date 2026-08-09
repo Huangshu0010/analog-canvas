@@ -124,6 +124,55 @@ function renderTerminalMiterBridges(
   return bridges.join("");
 }
 
+/**
+ * A free wire end is a `route-anchor` Junction. Once a second route is joined
+ * to it, preserve the dotless EDA appearance while rendering both route ends
+ * as one sharp path. A real branch Junction owns its dot instead.
+ */
+function renderRouteAnchorMiterBridges(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  profile: SchematicStyleProfile,
+): string {
+  const anchors = new Map<string, { point: Point; directions: Point[] }>();
+  for (const junction of document.junctions) {
+    if (junction.role === "route-anchor") {
+      anchors.set(junction.id, { point: junction.position, directions: [] });
+    }
+  }
+  const addEndpoint = (
+    endpoint: SchematicDocument["routes"][number]["from"],
+    point: Point,
+    neighbor: Point,
+  ) => {
+    if (endpoint.kind !== "junction") return;
+    const anchor = anchors.get(endpoint.junctionId);
+    if (!anchor) return;
+    const dx = neighbor.x - point.x;
+    const dy = neighbor.y - point.y;
+    if (dx !== 0 && dy === 0) {
+      anchor.directions.push({ x: Math.sign(dx), y: 0 });
+    } else if (dx === 0 && dy !== 0) {
+      anchor.directions.push({ x: 0, y: Math.sign(dy) });
+    }
+  };
+  for (const route of document.routes) {
+    const polyline = routePolyline(document, resolver, route);
+    if (!polyline || polyline.points.length < 2) continue;
+    addEndpoint(route.from, polyline.points[0]!, polyline.points[1]!);
+    addEndpoint(route.to, polyline.points.at(-1)!, polyline.points.at(-2)!);
+  }
+  const overlap = Math.max(profile.strokes.wire, profile.strokes.symbol) * 0.75;
+  return [...anchors.entries()]
+    .filter(([, anchor]) => anchor.directions.length === 2)
+    .sort(([left], [right]) => left.localeCompare(right, "en"))
+    .map(([junctionId, anchor]) => {
+      const [first, second] = anchor.directions;
+      return `<path data-role="route-anchor-miter-bridge" data-junction-id="${escapeXml(junctionId)}" d="M ${anchor.point.x + first!.x * overlap} ${anchor.point.y + first!.y * overlap} L ${anchor.point.x} ${anchor.point.y} L ${anchor.point.x + second!.x * overlap} ${anchor.point.y + second!.y * overlap}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="miter"${profileMiterAttribute(profile)}/>`;
+    })
+    .join("");
+}
+
 function profileMiterAttribute(profile: SchematicStyleProfile): string {
   return profile.id === "textbook-monochrome-v1"
     ? ""
@@ -467,6 +516,11 @@ export function buildSvgScene(
       return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalBridges}`;
     })
     .join("");
+  const routeAnchorBridges = renderRouteAnchorMiterBridges(
+    document,
+    resolver,
+    profile,
+  );
   const junctionDegrees = new Map(
     document.junctions.map((junction) => [junction.id, 0]),
   );
@@ -701,7 +755,7 @@ export function buildSvgScene(
 
   return {
     viewBox,
-    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
+    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}${routeAnchorBridges}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
   };
 }
 

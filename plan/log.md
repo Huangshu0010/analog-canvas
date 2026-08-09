@@ -3607,3 +3607,14 @@ terminal wiring`.
 - Commit status: not committed. A concurrent precise-selection target modified
   the same `App.tsx`/`styles.css` files during this work; its untracked helper
   files and plan were deliberately not staged or included.
+## 2026-08-10 - Reusable wire endpoints and route-anchor joins
+
+- Target: allow a dangling manual wire endpoint to start a later wire, without
+  leaving a visual seam when that endpoint becomes a dotless corner.
+- Changed areas: browser coverage now reconnects a free endpoint to a component
+  terminal. The SVG renderer overlays a sharp, render-only miter bridge for
+  exactly two routes meeting at a `route-anchor`; route coordinates, endpoints,
+  and electrical topology are unchanged.
+- Validation: focused renderer Vitest 1/1, focused manual-editor Playwright
+  1/1, editor production build, and `git diff --check` passed.
+- Commit status: pending.
