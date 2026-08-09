@@ -48,8 +48,11 @@ fidelity harness, raster authority, or MOS catalog assets.
   catalog field must be represented in its public generated-entry contract
 - `packages/render-svg/src/{render.ts,schematic-text.ts}` and focused tests,
   only if rendering cannot express the measured contract through existing DSL
-- `apps/editor/src/App.tsx` and focused editor tests for endpoint hit radius and
-  direct-pin snap/connect behavior during a component drag
+- `apps/editor/src/{App.tsx,styles.css}` and focused editor tests for endpoint
+  hit radius, direct-pin snap/connect behavior during a component drag, and a
+  persistent bottom Selection shelf
+- `apps/editor/e2e/manual-editor.spec.ts` for the Selection shelf layout
+  contract
 - `docs/user/getting-started.md` for the current-arrow reverse shortcut
 - `plan/log.md` for this target's factual completion record
 
@@ -129,6 +132,14 @@ fidelity harness, raster authority, or MOS catalog assets.
   editor control retained for discoverability).
 - Validation completed: focused editor and catalog Vitest (24 tests), Editor
   production build, and `git diff --check`.
+- Human review keeps Selection important but rejects a collapsed-by-default
+  interaction. The shelf will remain a fixed-height permanent bottom-left
+  region with a non-interactive header and independently scrollable contents;
+  the component library above retains its existing stable scroll/layout
+  contract as the selection changes.
+- Completed: the native `<details>` interaction is replaced by an always-open
+  section. Focused editor tests, the production build, and the two Playwright
+  checks for persistent Selection and fixed three-terminal MOS display pass.
 - The earlier four-label crop favored Arial only under the prior crop set and
   led to an incorrect 15% global size increase. The new supplied typography
   reference selects DejaVu Sans bold italic at 0.6957 and exposes the AST

@@ -395,23 +395,22 @@ body {
 }
 
 .selection-shelf {
-  flex: 0 0 auto;
-  max-height: min(42%, 20rem);
+  display: flex;
+  flex: 0 0 min(42%, 20rem);
+  flex-direction: column;
   overflow: hidden;
   border-top: 1px solid var(--icm-border-strong);
   background: var(--icm-surface);
 }
 
-.selection-shelf > summary {
+.selection-shelf-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-height: 2.4rem;
   padding: 0 0.75rem;
-  cursor: pointer;
   font-size: 0.8rem;
   font-weight: 700;
-  user-select: none;
 }
 
 .selection-shelf-summary {
@@ -436,7 +435,8 @@ body {
 }
 
 .selection-panel {
-  max-height: min(18rem, 36vh);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0.75rem;

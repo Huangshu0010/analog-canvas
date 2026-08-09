@@ -3105,3 +3105,15 @@ formatting`.
 - Validation: focused editor/catalog Vitest 24/24, Editor production build,
   and `git diff --check` passed.
 - Commit status: ready for `feat(razavi): fix MOS display to textbook mode`.
+
+## 2026-08-09 - Persistent Selection shelf
+
+- Target: keep important selection context permanently available without
+  allowing its contents to shift the component library as selection changes.
+- Result: replaced the collapsible shelf with a fixed-height bottom-left
+  section, a passive header, and an internally scrollable content region.
+  Updated end-to-end coverage for the permanent shelf and current fixed
+  three-terminal MOS behavior.
+- Validation: editor Vitest 9/9, production build, focused Playwright 2/2,
+  and `git diff --check` passed.
+- Commit status: ready for `feat(editor): keep selection shelf persistent`.

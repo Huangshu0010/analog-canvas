@@ -97,6 +97,17 @@ describe("editor shell", () => {
     expect(markup).toContain("Schematic canvas");
   });
 
+  it("keeps Selection as a persistent bottom shelf", () => {
+    const project = createEmptyProject("selection-shelf", "Selection Shelf");
+    const markup = renderToStaticMarkup(<App project={project} />);
+
+    expect(markup).toContain(
+      '<section class="selection-shelf" aria-label="Selection">',
+    );
+    expect(markup).toContain('data-testid="selection-shelf"');
+    expect(markup).not.toContain('<details class="selection-shelf"');
+  });
+
   it("gives an implicit instance label its own selection surface", () => {
     const project = createEmptyProject("implicit-label", "Implicit label");
     project.documents[0]!.instances.push({

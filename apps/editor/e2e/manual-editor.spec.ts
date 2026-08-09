@@ -43,9 +43,7 @@ async function placeComponent(
 }
 
 async function openSelectionShelf(page: Page): Promise<void> {
-  const summary = page.getByTestId("selection-shelf");
-  const shelf = summary.locator("..");
-  if ((await shelf.getAttribute("open")) === null) await summary.click();
+  await expect(page.getByTestId("selection-shelf")).toBeVisible();
 }
 
 async function clickRoute(
@@ -191,7 +189,7 @@ test("authors components and connectivity manually from an empty canvas", async 
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
 });
 
-test("switches a selected MOS between Razavi three- and four-terminal views", async ({
+test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
   page,
 }) => {
   await page.goto("/");
@@ -199,12 +197,9 @@ test("switches a selected MOS between Razavi three- and four-terminal views", as
   await expect(page.getByTestId("terminal-M1-B")).toHaveCount(0);
 
   await openSelectionShelf(page);
-
-  await page.getByRole("button", { name: "Show Bulk (4-terminal)" }).click();
-  await expect(page.getByTestId("terminal-M1-B")).toHaveCount(1);
-
-  await page.getByRole("button", { name: "Textbook 3-terminal" }).click();
-  await expect(page.getByTestId("terminal-M1-B")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Show Bulk (4-terminal)" }),
+  ).toHaveCount(0);
 });
 
 test("migrates only eligible existing MOS when Razavi is applied", async ({
@@ -722,7 +717,7 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
   await expect(page.getByTestId("revision")).toHaveText("1");
 });
 
-test("keeps the component library stable while Selection stays collapsed", async ({
+test("keeps the component library stable while Selection remains persistent", async ({
   page,
 }) => {
   await page.goto("/");
@@ -746,16 +741,13 @@ test("keeps the component library stable while Selection stays collapsed", async
   await canvas.click({ position: { x: 420, y: 260 } });
 
   await expect(search).toBeVisible();
-  expect(await shelf.getAttribute("open")).toBeNull();
+  await expect(shelf).toHaveAttribute("aria-label", "Selection");
   const afterSearchOffset = await searchOffsetWithinDock();
   const afterCanvas = await canvas.boundingBox();
   expect(afterSearchOffset).toBe(beforePlaceSearchOffset);
   expect(afterCanvas?.width).toBe(beforePlaceCanvas.width);
 
-  await openSelectionShelf(page);
-  await expect(
-    page.getByRole("button", { name: "Show Bulk (4-terminal)" }),
-  ).toBeVisible();
+  await expect(page.getByTestId("selection-shelf")).toContainText("M1");
 });
 
 test("cancels pending recovery before save or project replacement", async ({

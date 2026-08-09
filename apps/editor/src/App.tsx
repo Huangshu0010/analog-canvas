@@ -4199,8 +4199,11 @@ export function App({ project: initialProject }: AppProps) {
             </>
           ) : null}
         </div>
-        <details className="selection-shelf">
-          <summary data-testid="selection-shelf">
+        <section className="selection-shelf" aria-label="Selection">
+          <header
+            className="selection-shelf-header"
+            data-testid="selection-shelf"
+          >
             <span>Selection</span>
             <span className="selection-shelf-summary">
               {selectedIds.length > 0
@@ -4216,7 +4219,7 @@ export function App({ project: initialProject }: AppProps) {
                 />
               ) : null}
             </span>
-          </summary>
+          </header>
           <div className="selection-panel">
             {!hasInspectableSelection ? (
               <p className="inspect-empty">Select an object to inspect.</p>
@@ -4464,7 +4467,7 @@ export function App({ project: initialProject }: AppProps) {
               </ul>
             </section>
           </div>
-        </details>
+        </section>
       </aside>
       <section className="canvas-panel">
         <svg
