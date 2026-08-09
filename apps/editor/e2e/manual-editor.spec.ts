@@ -764,6 +764,23 @@ test("keeps the production command surface compact and publishes PWA metadata", 
   });
 });
 
+test("dismisses a command menu on outside click or Escape", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const fileMenu = await openMenu(page, "File");
+  await expect(fileMenu).toHaveAttribute("open", "");
+
+  await page
+    .getByRole("heading", { name: "Interactive Circuit Maker" })
+    .click();
+  await expect(fileMenu).not.toHaveAttribute("open", "");
+
+  await openMenu(page, "File");
+  await page.keyboard.press("Escape");
+  await expect(fileMenu).not.toHaveAttribute("open", "");
+});
+
 test("selecting an object does not change canvas width", async ({ page }) => {
   await page.goto("/");
   const canvas = page.getByTestId("schematic-canvas");

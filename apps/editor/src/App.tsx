@@ -213,6 +213,16 @@ function snap(value: number, grid: number): number {
   return Math.round(value / grid) * grid;
 }
 
+function dismissOpenCommandMenus(): boolean {
+  const openMenus = Array.from(
+    globalThis.document.querySelectorAll<HTMLDetailsElement>(
+      ".command-menu[open]",
+    ),
+  );
+  for (const menu of openMenus) menu.open = false;
+  return openMenus.length > 0;
+}
+
 function endpointTestId(endpoint: RouteEndpoint): string {
   switch (endpoint.kind) {
     case "terminal":
@@ -3742,7 +3752,40 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   useEffect(() => {
+    function dismissOnOutsidePointerDown(event: PointerEvent): void {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      const openMenus = Array.from(
+        globalThis.document.querySelectorAll<HTMLDetailsElement>(
+          ".command-menu[open]",
+        ),
+      );
+      if (
+        openMenus.length > 0 &&
+        !openMenus.some((menu) => menu.contains(target))
+      ) {
+        dismissOpenCommandMenus();
+      }
+    }
+    globalThis.document.addEventListener(
+      "pointerdown",
+      dismissOnOutsidePointerDown,
+      true,
+    );
+    return () =>
+      globalThis.document.removeEventListener(
+        "pointerdown",
+        dismissOnOutsidePointerDown,
+        true,
+      );
+  }, []);
+
+  useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape" && dismissOpenCommandMenus()) {
+        event.preventDefault();
+        return;
+      }
       if (isTypingTarget(event.target)) return;
       const key = event.key.toLowerCase();
       if (event.ctrlKey && key === "z") {

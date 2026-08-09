@@ -3146,3 +3146,13 @@ formatting`.
   (`leadsPx`); the concurrent drafting handoff's App type errors were repaired
   separately but are intentionally not part of this commit.
 - Commit status: committed locally; push pending transient remote retry.
+
+## 2026-08-09 - Command menu dismissal
+
+- Target: remove persistent header command popovers that obstruct the canvas.
+- Result: only open `.command-menu` popovers close on an outside pointer-down;
+  Escape closes an open command menu before it reaches wire, drafting, or
+  selection cancellation. Library details remain independent.
+- Validation: focused Playwright 1/1, editor production build, Prettier, and
+  `git diff --check` passed.
+- Commit status: committed locally; remote integration pending.
