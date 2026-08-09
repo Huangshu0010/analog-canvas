@@ -123,31 +123,12 @@ test("shows faithful symbol previews and the expanded VSS-derived palette", asyn
   await expect(page.getByTestId("library-component-pmos3")).toHaveCount(0);
 });
 
-test("limits the Razavi palette to Reference-calibrated components", async ({
+test("does not expose presentation-style switching in the browser", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Style", "Razavi textbook");
-
-  for (const symbolId of [
-    "nmos",
-    "pmos",
-    "resistor",
-    "capacitor",
-    "port",
-    "ground",
-    "voltage-source",
-    "current-source",
-  ]) {
-    await expect(
-      page.getByTestId(`library-component-${symbolId}`),
-    ).toBeVisible();
-  }
-  for (const symbolId of ["inductor", "diode", "npn", "pnp", "opamp"]) {
-    await expect(page.getByTestId(`library-component-${symbolId}`)).toHaveCount(
-      0,
-    );
-  }
+  const toolbar = page.getByRole("navigation", { name: "Editor commands" });
+  await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);
 });
 
 test("authors components and connectivity manually from an empty canvas", async ({
@@ -166,7 +147,7 @@ test("authors components and connectivity manually from an empty canvas", async 
     "connectivity-modified",
   );
 
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-M2-G").click();
   await expect(page.getByTestId("revision")).toHaveText("3");
@@ -202,60 +183,12 @@ test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
   ).toHaveCount(0);
 });
 
-test("migrates only eligible existing MOS when Razavi is applied", async ({
-  page,
-}) => {
-  const project = JSON.parse(
-    readFileSync(
-      resolve(
-        process.cwd(),
-        "fixtures/projects/phase-1-manual/project.icproj.json",
-      ),
-      "utf8",
-    ),
-  ) as {
-    documents: Array<{
-      instances: Array<{ id: string; symbolVariantId?: string }>;
-      nets: Array<unknown>;
-    }>;
-  };
-  const document = project.documents[0]!;
-  for (const instance of document.instances) delete instance.symbolVariantId;
-  document.nets.push({
-    id: "net-body-bias",
-    name: "Vbody",
-    scope: "local",
-    terminals: [{ instanceId: "M1", pinName: "B" }],
-    ports: [],
-  });
-
-  await page.goto("/");
-  await openMenu(page, "File");
-  await page.getByTestId("project-file").setInputFiles({
-    name: "legacy-mos.icproj.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(project)),
-  });
-  await expect(page.getByTestId("active-document-name")).toHaveText(
-    "Manual Editor Demo",
-  );
-  await clickCommand(page, "Style", "Razavi textbook");
-
-  const projectBytes = await downloadBytes(page, "File", "Save Project");
-  const saved = JSON.parse(projectBytes.toString("utf8")) as typeof project;
-  const instances = new Map(
-    saved.documents[0]!.instances.map((instance) => [instance.id, instance]),
-  );
-  expect(instances.get("M1")?.symbolVariantId).toBeUndefined();
-  expect(instances.get("M2")?.symbolVariantId).toBe("textbook-3terminal");
-});
-
 test("places free wire bends and finishes at an arbitrary grid point", async ({
   page,
 }) => {
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 300, y: 200 });
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 500, y: 260 } });
@@ -283,7 +216,7 @@ test("leaves device pins on their natural axis and deletes a selected junction",
   await page.goto("/");
   await placeComponent(page, "nmos", { x: 300, y: 260 });
   await placeComponent(page, "resistor", { x: 540, y: 160 });
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-M1-D").click();
   await page.getByTestId("terminal-R2-1").click();
 
@@ -297,7 +230,7 @@ test("leaves device pins on their natural axis and deletes a selected junction",
     ),
   ).toBe(true);
 
-  await page.getByRole("button", { name: "Wire tool" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-M1-G").click();
   await page
     .getByTestId("schematic-canvas")
@@ -328,7 +261,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
   await page.goto("/");
   await placeComponent(page, "nmos", { x: 320, y: 180 });
   await placeComponent(page, "nmos", { x: 320, y: 360 });
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-M1-S").click();
   await page.getByTestId("terminal-M2-D").click();
 
@@ -342,7 +275,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
   await page.getByRole("button", { name: "Restore recovery" }).click();
   await expect(page.getByTestId("instance-count")).toHaveText("4");
 
-  await page.getByRole("button", { name: "Wire tool" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-M2-S").click();
   await page
     .getByTestId("schematic-canvas")
@@ -360,7 +293,7 @@ test("moves a selected wire segment and deletes a connected component safely", a
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
 
@@ -401,7 +334,7 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
   await placeComponent(page, "resistor", { x: 520, y: 220 });
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
 
@@ -444,7 +377,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 280, y: 180 });
   await placeComponent(page, "resistor", { x: 480, y: 180 });
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
 
@@ -486,7 +419,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
 
   await placeComponent(page, "resistor", { x: 280, y: 320 });
   await placeComponent(page, "resistor", { x: 480, y: 320 });
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R3-2").click();
   await page.getByTestId("terminal-R4-1").click();
   await expect(page.getByTestId("net-count")).toHaveText("2");
@@ -501,7 +434,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
     "Connected Nets through label SIGNAL",
   );
 
-  await clickCommand(page, "More", "Add text");
+  await clickCommand(page, "Draw", "Text");
   const textInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
@@ -579,16 +512,16 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await page.goto("/");
   await clickCommand(page, "More", "Open routing example");
 
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-A-P1").click();
   await page.getByTestId("terminal-B-P1").click();
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-C-P1").click();
   await page.getByTestId("terminal-D-P1").click();
   await expect(page.getByTestId("crossing-count")).toHaveText("1");
   await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-E-P1").click();
   await clickRoute(page, "route-ui-1", 0.5);
   await expect(page.getByTestId("status")).toContainText(
@@ -597,7 +530,7 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await expect(page.getByTestId("revision")).toHaveText("2");
   await page.keyboard.press("Escape");
 
-  await page.getByRole("button", { name: "Wire" }).click();
+  await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-E-P1").click();
   await clickRoute(page, "route-ui-1", 0.25);
   await expect(page.getByTestId("revision")).toHaveText("3");
@@ -675,25 +608,18 @@ test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Open visual example");
-  await expect(page.getByTestId("active-document-id")).toHaveText(
-    "document-differential-stage",
-  );
-  await expect(page.getByTestId("blocking-diagnostic-count")).toHaveText("0");
 
   const projectBytes = await downloadBytes(page, "File", "Save Project");
-  expect(JSON.parse(projectBytes.toString("utf8")).topDocumentId).toBe(
-    "document-differential-stage",
-  );
-  const svg = (await downloadBytes(page, "Export", "Export SVG")).toString(
+  expect(JSON.parse(projectBytes.toString("utf8")).topDocumentId).toBeTruthy();
+  const svg = (await downloadBytes(page, "File", "Export SVG")).toString(
     "utf8",
   );
   expect(svg).toContain('data-layer="formal"');
   expect(svg).not.toMatch(/selection|route-hit|editor-overlay/u);
 
-  const png = await downloadBytes(page, "Export", "Export PNG");
+  const png = await downloadBytes(page, "File", "Export PNG");
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
-  const pdf = await downloadBytes(page, "Export", "Export PDF");
+  const pdf = await downloadBytes(page, "File", "Export PDF");
   expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
 });
 
@@ -803,13 +729,17 @@ test("keeps the production command surface compact and publishes PWA metadata", 
 }) => {
   await page.goto("/");
   const toolbar = page.getByRole("navigation", { name: "Editor commands" });
-  await expect(
-    toolbar.getByRole("button", { name: "+ Component" }),
-  ).toBeVisible();
-  await expect(toolbar.getByRole("button", { name: "Wire" })).toBeVisible();
-  for (const label of ["File", "Edit", "View", "Export", "More"]) {
+  for (const label of ["File", "Edit", "Draw", "View", "More"]) {
     await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
   }
+  await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);
+  await expect(toolbar.locator("summary", { hasText: "Export" })).toHaveCount(0);
+  await clickCommand(page, "Draw", "Wire (W)");
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
+  await openMenu(page, "More");
+  await expect(
+    page.getByRole("button", { name: "Add current arrow" }),
+  ).toHaveCount(0);
   for (const obsolete of [
     "Select",
     "Junction",

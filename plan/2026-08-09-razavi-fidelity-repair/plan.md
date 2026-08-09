@@ -140,6 +140,16 @@ fidelity harness, raster authority, or MOS catalog assets.
 - Completed: the native `<details>` interaction is replaced by an always-open
   section. Focused editor tests, the production build, and the two Playwright
   checks for persistent Selection and fixed three-terminal MOS display pass.
+- Current UI refinement: move Draw from the component dock into the top command
+  bar, merge formal export actions into File, remove the duplicate global
+  current-arrow command, and remove the browser Style switcher. Presentation
+  profile data remains a document/Agent compatibility contract, not a browser
+  preference.
+- Completed: Draw now owns Wire, Text, Arrow, and Construction line in the top
+  command bar; the left dock is component-only. File contains project I/O and
+  SVG/PNG/PDF export. More has no global current-arrow action, because route
+  selection owns that contextual command. Focused editor tests, build, and
+  browser command/export checks pass.
 - The earlier four-label crop favored Arial only under the prior crop set and
   led to an incorrect 15% global size increase. The new supplied typography
   reference selects DejaVu Sans bold italic at 0.6957 and exposes the AST

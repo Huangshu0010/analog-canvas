@@ -1493,30 +1493,6 @@ export function App({ project: initialProject }: AppProps) {
     );
   }
 
-  function setPresentationStyle(
-    styleProfileId: "textbook-monochrome-v1" | "razavi-textbook-v1",
-  ): void {
-    const mosEdits =
-      styleProfileId === "razavi-textbook-v1"
-        ? razaviMosPresentationEdits(document)
-        : [];
-    const edits: SchematicEdit[] = [
-      ...(document.presentation.styleProfileId === styleProfileId
-        ? []
-        : [{ kind: "set_presentation_style" as const, styleProfileId }]),
-      ...mosEdits,
-    ];
-    if (edits.length === 0) return;
-    const result = transact(edits);
-    if (result.ok) {
-      setStatus(
-        styleProfileId === "razavi-textbook-v1"
-          ? `Applied Razavi textbook style; migrated ${mosEdits.length} MOS view${mosEdits.length === 1 ? "" : "s"}`
-          : "Applied monochrome compatibility style to this Document",
-      );
-    }
-  }
-
   function loadRoutingDemo(): void {
     const demo = createRoutingDemoProject();
     replaceActiveProject(demo);
@@ -3874,6 +3850,35 @@ export function App({ project: initialProject }: AppProps) {
             </button>
           </div>
           <details className="command-menu" name="editor-command-menu">
+            <summary>Draw</summary>
+            <div className="command-popover">
+              <button
+                type="button"
+                aria-pressed={tool === "wire"}
+                onClick={() => activateTool("wire")}
+              >
+                Wire (W)
+              </button>
+              <button type="button" onClick={addPlainText}>
+                Text
+              </button>
+              <button
+                type="button"
+                aria-pressed={tool === "arrow"}
+                onClick={() => activateTool("arrow")}
+              >
+                Arrow (A)
+              </button>
+              <button
+                type="button"
+                aria-pressed={tool === "construction-line"}
+                onClick={() => activateTool("construction-line")}
+              >
+                Construction line (L)
+              </button>
+            </div>
+          </details>
+          <details className="command-menu" name="editor-command-menu">
             <summary>File</summary>
             <div className="command-popover">
               <button type="button" onClick={saveProjectFile}>
@@ -3903,6 +3908,24 @@ export function App({ project: initialProject }: AppProps) {
                   }
                 />
               </label>
+              <span className="command-group-label">Export</span>
+              <button type="button" aria-label="Export SVG" onClick={exportSvg}>
+                SVG
+              </button>
+              <button
+                type="button"
+                aria-label="Export PNG"
+                onClick={() => void exportRaster("png")}
+              >
+                PNG
+              </button>
+              <button
+                type="button"
+                aria-label="Export PDF"
+                onClick={() => void exportRaster("pdf")}
+              >
+                PDF
+              </button>
               {recoveryCandidate ? (
                 <>
                   <button type="button" onClick={restoreRecovery}>
@@ -3989,58 +4012,8 @@ export function App({ project: initialProject }: AppProps) {
             </div>
           </details>
           <details className="command-menu" name="editor-command-menu">
-            <summary>Style</summary>
-            <div className="command-popover">
-              <button
-                type="button"
-                aria-pressed={
-                  document.presentation.styleProfileId === "razavi-textbook-v1"
-                }
-                onClick={() => setPresentationStyle("razavi-textbook-v1")}
-              >
-                Razavi textbook
-              </button>
-              <button
-                type="button"
-                aria-pressed={
-                  document.presentation.styleProfileId ===
-                  "textbook-monochrome-v1"
-                }
-                onClick={() => setPresentationStyle("textbook-monochrome-v1")}
-              >
-                Monochrome compatibility
-              </button>
-              <small>Changes the active Document and can be undone.</small>
-            </div>
-          </details>
-          <details className="command-menu" name="editor-command-menu">
-            <summary>Export</summary>
-            <div className="command-popover">
-              <button type="button" aria-label="Export SVG" onClick={exportSvg}>
-                SVG
-              </button>
-              <button
-                type="button"
-                aria-label="Export PNG"
-                onClick={() => void exportRaster("png")}
-              >
-                PNG
-              </button>
-              <button
-                type="button"
-                aria-label="Export PDF"
-                onClick={() => void exportRaster("pdf")}
-              >
-                PDF
-              </button>
-            </div>
-          </details>
-          <details className="command-menu" name="editor-command-menu">
             <summary>More</summary>
             <div className="command-popover">
-              <button type="button" onClick={addCurrentArrow}>
-                Add current arrow
-              </button>
               <span className="command-group-label">Guides</span>
               <button type="button" onClick={() => addGuide("vertical")}>
                 Add vertical guide
@@ -4138,36 +4111,6 @@ export function App({ project: initialProject }: AppProps) {
                 placeholder="Search components"
                 aria-label="Search components"
               />
-              <details className="library-tools" open>
-                <summary>Draw</summary>
-                <div className="library-tool-grid" aria-label="Drawing tools">
-                  <button
-                    type="button"
-                    aria-label="Wire tool"
-                    aria-pressed={tool === "wire"}
-                    onClick={() => activateTool("wire")}
-                  >
-                    Wire <kbd>W</kbd>
-                  </button>
-                  <button type="button" onClick={addPlainText}>
-                    Text
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={tool === "arrow"}
-                    onClick={() => activateTool("arrow")}
-                  >
-                    Arrow <kbd>A</kbd>
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={tool === "construction-line"}
-                    onClick={() => activateTool("construction-line")}
-                  >
-                    Construction line <kbd>L</kbd>
-                  </button>
-                </div>
-              </details>
               <details className="library-components" open>
                 <summary>Components</summary>
                 <div className="library-components-content">

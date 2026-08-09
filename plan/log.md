@@ -3117,3 +3117,15 @@ formatting`.
 - Validation: editor Vitest 9/9, production build, focused Playwright 2/2,
   and `git diff --check` passed.
 - Commit status: ready for `feat(editor): keep selection shelf persistent`.
+
+## 2026-08-09 - Compact editor command hierarchy
+
+- Target: simplify the browser command surface without changing export,
+  drawing, or document-style data contracts.
+- Result: Draw moved from the dock to the top command bar; File now contains
+  SVG/PNG/PDF exports; Style and the duplicate global current-arrow command
+  are removed from the browser UI. Route selection remains the sole place to
+  add a line-attached current arrow.
+- Validation: editor Vitest 10/10, production build, focused Playwright 3/3,
+  and `git diff --check` passed.
+- Commit status: ready for `feat(editor): simplify command hierarchy`.
