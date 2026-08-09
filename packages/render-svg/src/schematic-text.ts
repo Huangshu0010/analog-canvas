@@ -106,7 +106,6 @@ function legacySchematicMathDocument(
     document.runs.push({
       kind: "span",
       style: "subscript",
-      role: "legacy-subscript",
       children: [{ kind: "text", value: runs.subscript }],
     });
   }
@@ -140,18 +139,7 @@ export function schematicTextDocument(
         {
           kind: "span" as const,
           style: "subscript" as const,
-          children:
-            runs.style === "math"
-              ? [
-                  {
-                    kind: "span" as const,
-                    style: "bold" as const,
-                    children: [
-                      { kind: "text" as const, value: runs.subscript },
-                    ],
-                  },
-                ]
-              : [{ kind: "text" as const, value: runs.subscript }],
+          children: [math([{ kind: "text", value: runs.subscript }])],
         },
       ]
     : [];

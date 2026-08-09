@@ -67,11 +67,31 @@ const REFERENCE_TARGETS = {
   "1204x794": [
     // Panel (b): these isolated instance labels have no adjacent node/route
     // ink inside their crop windows, unlike the crowded labels in panel (a).
-    { id: "m3", crop: { x: 550, y: 67, width: 54, height: 35 }, base: "M", sub: "3" },
-    { id: "m2", crop: { x: 550, y: 150, width: 54, height: 35 }, base: "M", sub: "2" },
-    { id: "m1", crop: { x: 550, y: 237, width: 54, height: 35 }, base: "M", sub: "1" },
+    {
+      id: "m3",
+      crop: { x: 550, y: 67, width: 54, height: 35 },
+      base: "M",
+      sub: "3",
+    },
+    {
+      id: "m2",
+      crop: { x: 550, y: 150, width: 54, height: 35 },
+      base: "M",
+      sub: "2",
+    },
+    {
+      id: "m1",
+      crop: { x: 550, y: 237, width: 54, height: 35 },
+      base: "M",
+      sub: "1",
+    },
     // Panel (b) supply title exercises the same power-label semantic parser.
-    { id: "vdd", crop: { x: 561, y: 7, width: 66, height: 38 }, base: "V", sub: "DD" },
+    {
+      id: "vdd",
+      crop: { x: 561, y: 7, width: 66, height: 38 },
+      base: "V",
+      sub: "DD",
+    },
   ],
   "237x273": [
     {
@@ -157,6 +177,44 @@ const REFERENCE_TARGETS = {
       crop: { x: 255, y: 351, width: 67, height: 48 },
       base: "M",
       sub: "1",
+    },
+  ],
+  "694x446": [
+    {
+      id: "vdd",
+      crop: { x: 294, y: 56, width: 70, height: 39 },
+      base: "V",
+      sub: "DD",
+    },
+    {
+      id: "vin",
+      crop: { x: 103, y: 127, width: 58, height: 36 },
+      base: "V",
+      sub: "in",
+    },
+    {
+      id: "m1",
+      crop: { x: 272, y: 134, width: 52, height: 39 },
+      base: "M",
+      sub: "1",
+    },
+    {
+      id: "m2",
+      crop: { x: 343, y: 207, width: 53, height: 39 },
+      base: "M",
+      sub: "2",
+    },
+    {
+      id: "m3",
+      crop: { x: 274, y: 303, width: 51, height: 39 },
+      base: "M",
+      sub: "3",
+    },
+    {
+      id: "rout",
+      crop: { x: 508, y: 83, width: 76, height: 39 },
+      base: "R",
+      sub: "out",
     },
   ],
 };
@@ -407,10 +465,12 @@ best = await choose(
 );
 best = await choose(
   reference,
-  [-0.16, -0.12, -0.08, -0.04, 0].map((subscriptHorizontalOffsetEm) => ({
-    ...best,
-    subscriptHorizontalOffsetEm,
-  })),
+  [-0.08, -0.04, 0, 0.04, 0.08, 0.12, 0.16].map(
+    (subscriptHorizontalOffsetEm) => ({
+      ...best,
+      subscriptHorizontalOffsetEm,
+    }),
+  ),
   "subscript attachment",
 );
 

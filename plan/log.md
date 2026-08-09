@@ -3036,6 +3036,22 @@ formatting`.
   build, Editor production build, and `git diff --check` passed.
 - Commit status: ready for `style(razavi): calibrate compact Arial typography`.
 
+## 2026-08-09 - Correct semantic subscript proportions
+
+- Target: correct the typography regression identified against the supplied
+  694 x 446 Razavi reference, especially tall/attached numeric subscripts.
+- Root cause: the earlier pass misread “flat” as horizontal condensation,
+  increased all semantic text by about 15%, and retained an AST override that
+  forced math subscripts upright.
+- Result: restored DejaVu Sans and the 15.116 logical font size; semantic and
+  editor-default subscripts now inherit bold italic math style, render at 76%,
+  shift down 0.28em, and use a 0.04em positive attachment gap. The fidelity
+  harness now accepts this reference size and searches positive gaps.
+- Validation: supplied-reference candidate search, temporary GUI placement and
+  undo, focused typography Vitest 22/22, Derived/Render-SVG/Editor builds, and
+  `git diff --check` passed.
+- Commit status: ready for `fix(text): restore Razavi subscript proportions`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next

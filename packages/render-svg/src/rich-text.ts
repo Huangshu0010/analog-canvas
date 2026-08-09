@@ -9,7 +9,7 @@ interface RichTextNode {
   value?: string;
   // Compatibility roles are adapter-only metadata for legacy schematic labels.
   // They never enter the RichText Project schema.
-  role?: "legacy-base" | "legacy-subscript" | "legacy-suffix";
+  role?: "legacy-base" | "legacy-suffix";
   style?: string;
   children?: RichTextNode[];
   numerator?: { runs: RichTextNode[] };
@@ -113,11 +113,9 @@ function renderSpan(node: RichTextNode, ctx: RenderContext): string {
         ? -typography.subscriptBaselineShiftEm
         : typography.subscriptBaselineShiftEm;
     const children = node.children ? renderRuns(node.children, ctx) : "";
-    const style =
-      node.role === "legacy-subscript"
-        ? `font-style:normal;font-weight:${typography.mathWeight}`
-        : styleAttribute(ctx);
-    return `<tspan data-text-run="${node.style}" font-size="${percent}%" baseline-shift="${shift}em" style="${style}">${children}</tspan>`;
+    const dx =
+      node.style === "subscript" ? typography.subscriptHorizontalGapEm : 0;
+    return `<tspan data-text-run="${node.style}" dx="${dx}em" font-size="${percent}%" baseline-shift="${shift}em" style="${styleAttribute(ctx)}">${children}</tspan>`;
   }
   return node.children ? renderRuns(node.children, ctx) : "";
 }

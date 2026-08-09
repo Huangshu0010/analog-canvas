@@ -83,16 +83,17 @@ describe("Razavi schematic typography", () => {
     );
   });
 
-  it("uses upright bold semantic subscripts with calibrated geometry", () => {
+  it("uses inherited bold italic subscripts with calibrated geometry", () => {
     const rendered = renderSchematicTextContent(
       "VDD",
       "power-label",
       razaviTextbookProfile,
     );
-    expect(rendered).toContain('font-size="80%"');
+    expect(rendered).toContain('font-size="76%"');
     expect(rendered).toContain('baseline-shift="-0.28em"');
+    expect(rendered).toContain('dx="0.04em"');
     expect(rendered).toContain("font-style:italic;font-weight:700");
-    expect(rendered).toContain("font-style:normal;font-weight:700");
+    expect(rendered).not.toContain("font-style:normal;font-weight:700");
   });
 
   it("uses the same base/subscript convention in editor RichText defaults", () => {
@@ -107,6 +108,6 @@ describe("Razavi schematic typography", () => {
       razaviTextbookProfile,
     );
     expect(rendered).toContain("font-style:italic;font-weight:700");
-    expect(rendered).toContain("font-style:normal;font-weight:700");
+    expect(rendered).not.toContain("font-style:normal;font-weight:700");
   });
 });

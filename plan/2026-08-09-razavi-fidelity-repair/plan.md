@@ -112,11 +112,21 @@ fidelity harness, raster authority, or MOS catalog assets.
   electrical lead x-coordinate. It must not become the polyline elbow. The
   generator now uses the exact D/S lead `from` and `to` points as the shared
   90-degree corner; the support begins at the measured arrow tail only.
-- A fresh four-label raster search against the authority found Arial to score
-  0.7321 versus the current DejaVu Sans score of 0.6149. Arial Narrow and
-  Calibri scored 0.5591 and 0.6384 respectively. The shared typography will
-  therefore use Arial, 30 px at the 1.72 px/logical calibration (17.44186
-  logical units), 0.76 subscript scale, and 0.20em subscript shift.
+- The earlier four-label crop favored Arial only under the prior crop set and
+  led to an incorrect 15% global size increase. The new supplied typography
+  reference selects DejaVu Sans bold italic at 0.6957 and exposes the AST
+  regression that forced semantic subscripts upright. Production returns to
+  15.116 logical units, retains 0.76 subscript scale, restores 0.28em vertical
+  shift, and adds a visually requested 0.04em positive attachment gap.
+- Human review clarified that “flatter” means reduced Y-height, especially for
+  numeric subscripts, not a horizontally condensed font. The new 694 x 446
+  reference is evaluated separately. The harness must search positive
+  base-to-subscript spacing; its former `[-0.16, 0]` range could only tighten
+  attachment and therefore could not represent the requested style.
+- Browser verification used temporary `M1` and `VDD` placements after reload;
+  the new AST output showed the smaller, lower italic subscript and the objects
+  were immediately undone. Focused typography tests pass 22/22, followed by
+  Derived, Render-SVG, and Editor builds plus `git diff --check`.
 
 - Added `formal-route-wire`, a real formal-route crop from the archived
   `current-port-reference.png`; the harness now prints the actual reference
@@ -200,8 +210,8 @@ measured raster tolerance; part-level diffs show only anti-alias shells.
    the export runtime; choose one family by measured aggregate score, not by
    browser fallback appearance.
 3. Tune shared typography tokens only: main size, math/plain weight, subscript
-   scale, and baseline shift. Keep parsing semantics unchanged: `VDD` means
-   italic math `V` plus upright subscript `DD`; numbers follow the existing
+   scale, baseline shift, and attachment gap. Keep parsing semantics unchanged:
+   `VDD` means bold italic math `V` plus bold italic subscript `DD`; numbers follow the existing
    instance-label rule.
 4. Add SVG assertions for generated `tspan` classes and a raster regression for
    baseline separation. Do not use absolute coordinates tied to a particular

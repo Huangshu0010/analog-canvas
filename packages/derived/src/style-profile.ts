@@ -48,24 +48,26 @@ export interface SchematicTypography {
   readonly captionFontSize: number;
   readonly subscriptScale: number;
   readonly subscriptBaselineShiftEm: number;
+  readonly subscriptHorizontalGapEm: number;
   readonly labelGap: number;
   readonly lineHeight: number;
 }
 
 /** The one typography system shared by all presentation profiles. */
 export const globalSchematicTypography: SchematicTypography = {
-  fontFamily: "Arial,'Helvetica Neue',Helvetica,sans-serif",
+  fontFamily: "'DejaVu Sans',Arial,'Helvetica Neue',Helvetica,sans-serif",
   mathWeight: 700,
   mathStyle: "italic",
   plainWeight: 400,
-  instanceFontSize: 17.44186,
-  netFontSize: 17.44186,
-  powerFontSize: 17.44186,
-  annotationFontSize: 17.44186,
+  instanceFontSize: 15.116,
+  netFontSize: 15.116,
+  powerFontSize: 15.116,
+  annotationFontSize: 15.116,
   polarityFontSize: 14,
   captionFontSize: 14,
   subscriptScale: 0.76,
-  subscriptBaselineShiftEm: 0.2,
+  subscriptBaselineShiftEm: 0.28,
+  subscriptHorizontalGapEm: 0.04,
   labelGap: 6,
   lineHeight: 1,
 };

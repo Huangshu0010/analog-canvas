@@ -81,9 +81,10 @@ describe("renderRichTextDocument (WP-A2)", () => {
     );
     expect(svg).toContain('data-text-run="subscript"');
     expect(svg).toContain('data-text-run="superscript"');
-    // Authority-calibrated Arial subscript scale 0.76 -> 76%.
+    // Authority-calibrated subscript scale and attachment.
     expect(svg).toContain('font-size="76%"');
-    expect(svg).toContain('baseline-shift="-0.2em"');
+    expect(svg).toContain('baseline-shift="-0.28em"');
+    expect(svg).toContain('dx="0.04em"');
   });
 
   it("renders a fraction with numerator and denominator tspans", () => {
