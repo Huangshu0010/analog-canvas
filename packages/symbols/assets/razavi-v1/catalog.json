@@ -283,7 +283,7 @@
       "palette": true,
       "automaticMappings": ["spice:R"],
       "assetPath": "resistor.symbol.json",
-      "assetHash": "453e7b2ebcafbe388ce27cd7f6af405d74baea18e4401c1cb368241bf5cf0baf",
+      "assetHash": "b26b5d990c670cf52f39177fb21675f3db17e5faf35fffdd48f57b9fd74e7cf5",
       "generation": {
         "kind": "vss-master-ir",
         "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",

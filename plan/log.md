@@ -2607,3 +2607,18 @@ Editing System work.
   broader render SVG golden failures remain from earlier MOS geometry commits;
   unrelated goldens were intentionally not updated.
 - Commit status: ready for `fix(razavi): refine peripheral reference fidelity`.
+## 2026-08-09 - Razavi passive reference crop baseline
+
+- Target: record and compare the resistor in the sole Razavi reference without
+  inventing capacitor evidence.
+- Changed areas: added a hash-pinned passive geometry map for panel (d) R1;
+  extended fidelity rasterization to support quarter-turn symbols; registered a
+  resistor comparison target; replaced its round Visio body with the measured
+  sharp, normal-stroke zigzag and aligned its lead joins.
+- Validation: resistor binary/soft IoU improved `0.2360/0.1779 ->
+  0.6597/0.6068`; registration lift is zero. Symbols/Derived/Render-SVG builds,
+  catalog generation and stale check, and focused tests 17/17 passed. The
+  CLI correctly rejects unrecorded `capacitor`.
+- Evidence boundary: the six-panel authority has no capacitor; no capacitor
+  asset change was made pending a capacitor-containing approved crop.
+- Commit status: ready for `test(razavi): add passive reference crop baseline`.

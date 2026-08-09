@@ -339,6 +339,19 @@ describe("Razavi symbol catalog", () => {
     );
   });
 
+  it("uses the screenshot-authored sharp Razavi resistor body", () => {
+    const resistor = requireRazaviCatalogSymbol("resistor");
+    expect(resistor.primitives[0]).toMatchObject({
+      kind: "path",
+      data: "M 0 -8.72093 L 8.139535 -6.395349 L -6.976744 -4.069767 L 8.139535 -1.162791 L -7.55814 1.744186 L 8.139535 4.651163 L -6.976744 7.55814 L 0 8.72093",
+      style: {
+        strokeRole: "normal",
+        lineCap: "butt",
+        lineJoin: "miter",
+      },
+    });
+  });
+
   it("uses calibrated MOS and source arrowheads with external voltage polarity marks", () => {
     const voltage = requireRazaviCatalogSymbol("voltage-source");
     expect(voltage.viewBox).toEqual({ x: -24, y: -24, width: 39, height: 48 });

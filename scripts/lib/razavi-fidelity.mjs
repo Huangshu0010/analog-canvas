@@ -236,6 +236,7 @@ export async function compareDevice(spec, referenceRaster, definition) {
     spec.pixelsPerLogical,
     spec.useVariant ?? false,
     originInWindow,
+    spec.rotation ?? 0,
   );
 
   // Guard: footprints must match for a meaningful pixel diff.

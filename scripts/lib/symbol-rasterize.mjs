@@ -47,6 +47,7 @@ export function buildSymbolSvg(
   pixelsPerLogical,
   useVariant = false,
   originInWindow,
+  rotation = 0,
 ) {
   const profile = razaviTextbookProfile;
   const pixelWidth = window.width;
@@ -74,7 +75,9 @@ export function buildSymbolSvg(
   // Wrap exactly like render.ts:470: <g fill none stroke fg stroke-width=symbol
   // linecap linejoin miterlimit>...primitives...</g>
   const miterAttr = ` stroke-miterlimit="${profile.miterLimit}"`;
-  const group = `<g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${miterAttr}>${body}</g>`;
+  const transformedBody =
+    rotation === 0 ? body : `<g transform="rotate(${rotation})">${body}</g>`;
+  const group = `<g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${miterAttr}>${transformedBody}</g>`;
 
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxX} ${viewBoxY} ${logicalWidth} ${logicalHeight}" ` +
@@ -106,6 +109,7 @@ export async function rasterizeSymbol(
   pixelsPerLogical,
   useVariant = false,
   originInWindow,
+  rotation = 0,
 ) {
   const { svg, pixelWidth } = buildSymbolSvg(
     definition,
@@ -113,6 +117,7 @@ export async function rasterizeSymbol(
     pixelsPerLogical,
     useVariant,
     originInWindow,
+    rotation,
   );
   const pngBytes = rasterizeSvgBytes(svg, pixelWidth);
   return decodePng(pngBytes);

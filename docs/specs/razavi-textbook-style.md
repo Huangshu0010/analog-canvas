@@ -211,6 +211,11 @@ Batch A, required for the acceptance board:
 - signal Port/node;
 - current-direction arrow.
 
+The sole `razavi-reference-v1` raster includes a resistor crop (panel (d)) and
+therefore supports deterministic resistor comparison. It contains no capacitor;
+the capacitor remains a runtime asset but must not receive screenshot-derived
+calibration until a capacitor-containing crop is accepted into that reference.
+
 Batch B:
 
 - diode families and LED;

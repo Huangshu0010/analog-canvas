@@ -335,7 +335,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:R"],
     assetPath: "resistor.symbol.json",
     assetHash:
-      "453e7b2ebcafbe388ce27cd7f6af405d74baea18e4401c1cb368241bf5cf0baf",
+      "b26b5d990c670cf52f39177fb21675f3db17e5faf35fffdd48f57b9fd74e7cf5",
     generation: {
       kind: "vss-master-ir",
       evidencePath:
@@ -2308,18 +2308,18 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     primitives: [
       {
         kind: "path",
-        data: "M 0 -11.338583 L -5.669291 -9.322835 L 5.669291 -5.669291 L -5.669291 -2.015748 L 5.669291 2.015748 L -5.669291 5.669291 L 5.669291 9.322835 L 0 11.338583",
+        data: "M 0 -8.72093 L 8.139535 -6.395349 L -6.976744 -4.069767 L 8.139535 -1.162791 L -7.55814 1.744186 L 8.139535 4.651163 L -6.976744 7.55814 L 0 8.72093",
         style: {
-          strokeRole: "emphasis",
-          lineCap: "round",
-          lineJoin: "round",
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
         kind: "line",
         from: {
           x: 0,
-          y: -11.338583,
+          y: -8.72093,
         },
         to: {
           x: 0,
@@ -2335,7 +2335,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: 11.338583,
+          y: 8.72093,
         },
         to: {
           x: 0,

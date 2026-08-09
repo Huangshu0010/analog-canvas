@@ -8,7 +8,7 @@
 // Usage:
 //   node scripts/razavi-fidelity-diff.mjs [device...] [--threshold 160] [--out dir]
 //
-//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | ground
+//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | ground | resistor
 //           (default: all raster-owned devices)
 //
 // This tool is read-only: it never edits source configs. Use its report to
@@ -63,6 +63,11 @@ const DEVICE_GEOMETRY = {
   ground: {
     file: "peripheral-geometry.json",
     key: "ground",
+    useVariant: false,
+  },
+  resistor: {
+    file: "passive-geometry.json",
+    key: "resistor",
     useVariant: false,
   },
 };
@@ -136,6 +141,8 @@ for (const deviceId of targets) {
     originPx: measurement.originPx,
     threshold: resolvedThreshold,
     useVariant: meta.useVariant,
+    rotation: measurement.rotation ?? 0,
+    window: measurement.cropWindowPx,
   };
 
   const report = await compareDevice(spec, referenceRaster, definition);

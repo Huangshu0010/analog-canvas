@@ -8,6 +8,8 @@
   "mosGeometrySha256": "0e61e355ca658dcde5ac127a729fd9893bf58dd07547de8a061a952f3772d195",
   "peripheralGeometryPath": "peripheral-geometry.json",
   "peripheralGeometrySha256": "0a2e4e0a351d634a84832cd6e21b922bd803edf8f45155cf89087282316456ff",
+  "passiveGeometryPath": "passive-geometry.json",
+  "passiveGeometrySha256": "ebdbbcd9641c4a11aac4934eddf9c44b6865e69aa79d159c2d4c7db90082ff15",
   "pixels": {
     "width": 1204,
     "height": 794
