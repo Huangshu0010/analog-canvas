@@ -99,9 +99,10 @@ fidelity harness, raster authority, or MOS catalog assets.
   path used per device.
 - The reference Vin lead has two thresholded core rows. At its locked 1.39
   pixels/logical scale, the prior 1.6 wire token produced three rows; 1.25
-  produced one. The 1.28 candidate preserves a two-pixel perceived core with
-  only edge-shell disagreement. It is a measured provisional baseline, not a
-  conclusion about symbol `normal` strokes.
+  produced one. A 1.28 candidate was tested but rejected by human GUI review:
+  it looked thinner than the reference in the actual editor. The production
+  token is restored to 1.6. Future wire calibration must compare a recorded
+  browser/editor capture at the relevant zoom as well as formal SVG output.
 - Baseline reports show the voltage/current source currently contain more
   thresholded ink than their reference crops, so the reported visually-small
   circle must be separated into radius, stroke, and GUI scale diagnostics
