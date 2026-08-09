@@ -2648,3 +2648,17 @@ Editing System work.
   check, focused tests 17/17, both pixel reports, and `git diff --check`
   passed.
 - Commit status: ready for `test(razavi): add capacitor reference calibration`.
+
+## 2026-08-09 - Current documentation index and VSS archive
+
+- Target: remove retired VSS guidance from the default documentation and Agent
+  reading path without deleting its historical record.
+- Changed areas: adds `docs/current/` and `docs/archive/` boundaries; archives
+  the VSS development specification and VSS-derived Agent Razavi canon; leaves
+  ADR-linked redirect stubs at their former paths; updates specification,
+  roadmap, documentation, and Skill navigation away from VSS visual authority.
+- Validation: routing guard confirms the Skill no longer loads the archived
+  canon, the specs index has no active VSS entry, all archive/current targets
+  exist, and `git diff --check` is clean.
+- Commit status: ready for
+  `docs: separate current guidance from VSS archive`.

@@ -2,6 +2,11 @@
 
 Status: `complete`
 
+> Historical completion record. References below to Visio/VSS-faithful
+> components or VSS review are superseded by
+> [ADR 0011](../adr/0011-retire-visio-vss-as-visual-authority.md). They remain
+> only as evidence of the completed interaction work, not current style rules.
+
 ## Objective
 
 Replace the Phase 0-7 validation-oriented editor controls with a compact,
