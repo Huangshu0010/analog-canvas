@@ -233,7 +233,7 @@ role="complementary">` containing a tablist and two always-mounted panels
   specification records the explicit-expansion contract; focused Playwright
   tests explicitly open Selection for property actions and verify library/canvas
   stability. Two stale test expectations were aligned with the existing `Wire
-  tool` accessible name and normalized deletion status.
+tool` accessible name and normalized deletion status.
 - Validation: editor build passed; scheduler Vitest 9/9 passed; focused
   Playwright 3/3 passed (MOS presentation, junction deletion, fixed library);
   Prettier and `git diff --check` passed. Browser visual verification placed
@@ -3424,6 +3424,7 @@ formatting`.
   resistor fidelity IoU 0.6613 with zero registration lift and anti-alias-only
   residual, plus `git diff --check` passed.
 - Commit status: ready for `fix(razavi): join resistor body and leads`.
+
 ## 2026-08-09 - Terminal escape routing and seamless joins
 
 - Target: prevent right-angle manual wires from leaving component terminals
@@ -3438,4 +3439,21 @@ formatting`.
   `git diff --check` passed. The complete renderer test file retains unrelated
   pre-existing style-baseline failures.
 - Commit status: committed as `fix(editor): escape component terminals before
-  orthogonal turns`.
+orthogonal turns`.
+
+## 2026-08-09 - Unified visual deletion
+
+- Target: make Ctrl+A and Delete operate on every visible editable object, and
+  make junction-connected route deletion a single, coherent operation.
+- Result: Ctrl+A now selects placed instances, routes, junctions, annotations,
+  and drafting objects. Route/junction deletion first computes a closure: a
+  deleted junction removes each attached route; a junction whose attached
+  routes are all deleted is removed too. This handles a route ending at a
+  one-terminal junction without a second delete, while preserving junctions
+  that still connect remaining routes.
+- Validation: focused deletion-helper Vitest 2/2, editor production build,
+  Prettier, and `git diff --check` passed.
+- Commit status: implementation is intentionally left uncommitted because
+  `App.tsx` and this log already contain staged, separately owned terminal-
+  escape-routing work in the shared worktree; the changes must be integrated
+  with that target rather than committing either target's partial index.

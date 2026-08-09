@@ -64,6 +64,7 @@ import type { SymbolDefinition } from "@icm/symbols";
 import { copySelection, proposePaste } from "./clipboard";
 import type { SchematicClipboard } from "./clipboard";
 import {
+  collectVisualRouteDeletion,
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
 } from "./delete-selection";
@@ -4228,7 +4229,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function deleteSelection(): void {
-    const selectedRouteIds = new Set(visualSelection.routeIds);
+    const initialRouteIds = new Set(visualSelection.routeIds);
     const selectedAnnotationIds = new Set(visualSelection.annotationIds);
     const selectedDraftingIds = new Set(visualSelection.draftingIds);
     const selectedJunctionIds = new Set([
@@ -4238,32 +4239,31 @@ export function App({ project: initialProject }: AppProps) {
         : []),
     ]);
     const hasMixedSelection =
-      selectedRouteIds.size > 0 ||
+      initialRouteIds.size > 0 ||
       selectedAnnotationIds.size > 0 ||
       selectedDraftingIds.size > 0 ||
       selectedJunctionIds.size > 0;
     if (
-      selectedRouteIds.size === 1 &&
+      initialRouteIds.size === 1 &&
       selectedAnnotationIds.size === 0 &&
       selectedDraftingIds.size === 0 &&
       selectedJunctionIds.size === 0 &&
-      selectedIds.length === 0
+      selectedIds.length === 0 &&
+      !document.routes.some(
+        (route) =>
+          initialRouteIds.has(route.id) &&
+          (route.from.kind === "junction" || route.to.kind === "junction"),
+      )
     ) {
       deleteSelectedRouteConnection();
       return;
     }
     if (hasMixedSelection) {
-      for (const junctionId of selectedJunctionIds) {
-        for (const route of document.routes) {
-          if (
-            (route.from.kind === "junction" &&
-              route.from.junctionId === junctionId) ||
-            (route.to.kind === "junction" && route.to.junctionId === junctionId)
-          ) {
-            selectedRouteIds.add(route.id);
-          }
-        }
-      }
+      const visualRouteDeletion = collectVisualRouteDeletion(
+        document,
+        [...initialRouteIds],
+        [...selectedJunctionIds],
+      );
       transactionCounter.current += 1;
       try {
         const instanceEdits =
@@ -4275,6 +4275,14 @@ export function App({ project: initialProject }: AppProps) {
                 transactionCounter.current,
               )
             : [];
+        const removesEveryRoute =
+          document.routes.length > 0 &&
+          visualRouteDeletion.routeIds.length === document.routes.length;
+        const temporaryJunctionIds = removesEveryRoute
+          ? instanceEdits.flatMap((edit) =>
+              edit.kind === "add_junction" ? [edit.junctionId] : [],
+            )
+          : [];
         // Instance deletion already removes every annotation attached to the
         // instance. A marquee can select both visual objects, but emitting the
         // same remove_annotation edit twice makes the second operation fail
@@ -4286,11 +4294,16 @@ export function App({ project: initialProject }: AppProps) {
         );
         const result = transact([
           ...instanceEdits,
-          ...[...selectedRouteIds].map((routeId): SchematicEdit => ({
+          ...visualRouteDeletion.routeIds.map((routeId): SchematicEdit => ({
             kind: "make_flightline",
             routeId,
           })),
-          ...[...selectedJunctionIds].map((junctionId): SchematicEdit => ({
+          ...[
+            ...new Set([
+              ...visualRouteDeletion.junctionIds,
+              ...temporaryJunctionIds,
+            ]),
+          ].map((junctionId): SchematicEdit => ({
             kind: "remove_junction",
             junctionId,
           })),
@@ -4503,11 +4516,20 @@ export function App({ project: initialProject }: AppProps) {
         projectInputRef.current?.click();
       } else if (event.ctrlKey && key === "a") {
         event.preventDefault();
-        setSelectedIds(
-          document.instances
+        setVisualSelection({
+          instanceIds: document.instances
             .filter((instance) => instance.placement)
             .map((instance) => instance.id),
-        );
+          routeIds: document.routes.map((route) => route.id),
+          junctionIds: document.junctions.map((junction) => junction.id),
+          annotationIds: document.annotations.map(
+            (annotation) => annotation.id,
+          ),
+          draftingIds: (document.drafting?.objects ?? []).map(
+            (object) => object.id,
+          ),
+        });
+        setSelectedEndpoint(null);
       } else if (
         !event.ctrlKey &&
         key === "x" &&
