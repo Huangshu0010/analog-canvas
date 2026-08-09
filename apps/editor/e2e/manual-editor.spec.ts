@@ -119,6 +119,33 @@ test("shows faithful symbol previews and the expanded VSS-derived palette", asyn
   await expect(page.getByTestId("library-component-pmos3")).toHaveCount(0);
 });
 
+test("limits the Razavi palette to Reference-calibrated components", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "Style", "Razavi textbook");
+
+  for (const symbolId of [
+    "nmos",
+    "pmos",
+    "resistor",
+    "capacitor",
+    "port",
+    "ground",
+    "voltage-source",
+    "current-source",
+  ]) {
+    await expect(
+      page.getByTestId(`library-component-${symbolId}`),
+    ).toBeVisible();
+  }
+  for (const symbolId of ["inductor", "diode", "npn", "pnp", "opamp"]) {
+    await expect(page.getByTestId(`library-component-${symbolId}`)).toHaveCount(
+      0,
+    );
+  }
+});
+
 test("authors components and connectivity manually from an empty canvas", async ({
   page,
 }) => {

@@ -29,10 +29,9 @@ Start state from `git status --short --branch`:
 ?? probe-conflicts.mjs
 ```
 
-Those paths are concurrent editor, renderer, plan-log, and fixture work. They
-are read-only for this target. The editor palette integration must consume the
-new catalog API in its owning target; this target does not overwrite its dirty
-file.
+The only remaining tracked dirty path is `plan/log.md`, owned by another
+target. It remains read-only. The editor and its manual test are now clean, so
+this target expands to integrate the already-committed catalog selector.
 
 ## Owned Files
 
@@ -43,11 +42,12 @@ file.
 - `packages/symbols/src/razavi-catalog.test.ts`
 - `scripts/generate-razavi-symbol-catalog.mjs`
 - `docs/specs/razavi-textbook-style.md`
+- `apps/editor/src/App.tsx`
+- `apps/editor/e2e/manual-editor.spec.ts`
 - `plan/2026-08-09-razavi-visual-authority-contract/plan.md`
 
 ## Read-Only Files
 
-- `apps/editor/src/App.tsx` and `apps/editor/src/styles.css`
 - `packages/render-svg/src/render.ts`
 - `plan/log.md`
 - `lib/circuit.vss`, `tools/vss-import/`, and `generate-visio-*` scripts
@@ -73,10 +73,9 @@ file.
 ## Outcome
 
 Completed the catalog, generated adapter, selector, and global typography
-contract. The dirty editor owner must replace its direct `builtInSymbols`
-palette source with `razaviReferencePaletteSymbols` when
-`styleProfileId === "razavi-textbook-v1"`; that single integration is
-intentionally not made in this target.
+contract. The editor palette integration is now in scope: it must replace its
+direct `builtInSymbols` palette source with `razaviReferencePaletteSymbols`
+when `styleProfileId === "razavi-textbook-v1"`.
 
 ## Validation
 

@@ -50,7 +50,11 @@ import {
 } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
-import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
+import {
+  builtInSymbols,
+  createProjectSymbolResolver,
+  razaviReferencePaletteSymbols,
+} from "@icm/symbols";
 import type { SymbolDefinition } from "@icm/symbols";
 
 import { copySelection, proposePaste } from "./clipboard";
@@ -989,7 +993,11 @@ export function App({ project: initialProject }: AppProps) {
     (count, candidate) => count + candidate.instances.length,
     0,
   );
-  const componentSymbols = builtInSymbols.filter(
+  const paletteSource =
+    document.presentation.styleProfileId === "razavi-textbook-v1"
+      ? razaviReferencePaletteSymbols
+      : builtInSymbols;
+  const componentSymbols = paletteSource.filter(
     (symbol) =>
       symbol.id !== "generic-block" &&
       !RAZAVI_RETIRED_PALETTE_SYMBOL_IDS.has(symbol.id) &&
