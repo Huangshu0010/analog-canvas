@@ -53,6 +53,22 @@ function lineFromPixels(measurement, pixelSegment, part) {
   };
 }
 
+// Channel strokes meet separately rendered gate rectangles and D/S lead
+// strokes. Butt caps can leave a one-pixel white notch at those nominally
+// coincident vector joins after rasterization. Extend only under the adjacent
+// opaque/stroked geometry; pin anchors and the visible outer footprint stay
+// unchanged.
+function channelLineFromPixels(measurement, pixelSegment, part) {
+  return lineFromPixels(
+    measurement,
+    {
+      from: { ...pixelSegment.from, x: pixelSegment.from.x - 1 },
+      to: { ...pixelSegment.to, x: pixelSegment.to.x + 1 },
+    },
+    part,
+  );
+}
+
 function rectangleFromPixels(measurement, rectangle, part) {
   return {
     kind: "polygon",
@@ -111,8 +127,8 @@ function basePrimitives(measurement, polarity) {
   const sourceChannel = polarity === "nmos" ? "lower" : "upper";
   const otherChannel = polarity === "nmos" ? "upper" : "lower";
   return [
-    lineFromPixels(measurement, measurement.channelsPx[otherChannel]),
-    lineFromPixels(
+    channelLineFromPixels(measurement, measurement.channelsPx[otherChannel]),
+    channelLineFromPixels(
       measurement,
       measurement.channelsPx[sourceChannel],
       "source-arrow-host",

@@ -317,8 +317,14 @@ describe("Razavi symbol catalog", () => {
         }),
         expect.objectContaining({
           kind: "line",
-          from: logicalPoint(measurement, upperChannel.from),
-          to: logicalPoint(measurement, upperChannel.to),
+          from: logicalPoint(measurement, {
+            ...upperChannel.from,
+            x: upperChannel.from.x - 1,
+          }),
+          to: logicalPoint(measurement, {
+            ...upperChannel.to,
+            x: upperChannel.to.x + 1,
+          }),
           style: {
             strokeRole: "normal",
             lineCap: "butt",

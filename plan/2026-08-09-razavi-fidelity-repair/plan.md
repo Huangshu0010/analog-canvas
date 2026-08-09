@@ -111,6 +111,10 @@ fidelity harness, raster authority, or MOS catalog assets.
   `foreground` token is changed from `#202020` to `#000`; it intentionally
   covers routes, symbols, nodes, and semantic text together, while retaining
   white background and editor-only overlay colors.
+- With the shared `normal` role already equal to the approved `wire: 1.6`, the
+  MOS generator now closes channel-to-gate and channel-to-D/S seams by one
+  reference pixel under adjoining opaque/stroked geometry. This is not a pin
+  move or an externally visible channel-length increase.
 
 ### 1. Establish the common render-scale, then fit the wire baseline
 
