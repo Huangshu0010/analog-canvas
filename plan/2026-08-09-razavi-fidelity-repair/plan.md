@@ -41,10 +41,14 @@ fidelity harness, raster authority, or MOS catalog assets.
 - `scripts/lib/symbol-rasterize.mjs` and new focused fidelity helpers/tests
 - `packages/derived/src/style-profile.ts` and its focused tests
 - `packages/symbols/assets/razavi-v1/{nmos,pmos,nmos3,pmos3,voltage-source,current-source}.symbol.json`, their source generators when applicable, catalog hashes, and generated catalog output
+- `packages/symbols/assets/razavi-v1/{port,port-filled}.symbol.json`, catalog
+  registration, generated catalog output, and focused catalog tests for an
+  explicit endpoint-fill variant; the existing hollow `port` remains unchanged
 - `packages/symbols/src/razavi-catalog.ts`, if an existing generator-owned
   catalog field must be represented in its public generated-entry contract
 - `packages/render-svg/src/{render.ts,schematic-text.ts}` and focused tests,
   only if rendering cannot express the measured contract through existing DSL
+- `plan/log.md` for this target's factual completion record
 
 ## Read-Only Files
 
@@ -93,6 +97,14 @@ fidelity harness, raster authority, or MOS catalog assets.
 ## Expected Work
 
 ## Progress (2026-08-09)
+
+- The current request adds a manual-only `port-filled` palette asset. It shares
+  the hollow Port's pin anchor, lead, view box, stroke role, and radius exactly;
+  only the endpoint circle uses foreground fill. The clean tracked worktree has
+  unrelated untracked layout/plan/tool artifacts, which this target will not
+  edit, stage, or revert.
+- Validation completed: catalog generation, focused catalog Vitest (16 tests),
+  Symbols TypeScript build, Editor production build, and `git diff --check`.
 
 - Added `formal-route-wire`, a real formal-route crop from the archived
   `current-port-reference.png`; the harness now prints the actual reference

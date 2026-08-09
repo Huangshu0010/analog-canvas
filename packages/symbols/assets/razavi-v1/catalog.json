@@ -230,6 +230,26 @@
       }
     },
     {
+      "symbolId": "port-filled",
+      "name": "Filled Port",
+      "category": "interface",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Explicit solid endpoint style; no automatic SPICE mapping.",
+      "assetPath": "port-filled.symbol.json",
+      "assetHash": "6cff46d6e2fd79df4c5915d49001f18bb3735a7fbe8930e621a491eaaa91b07c",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/current-port-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/current-port-geometry.json"
+      }
+    },
+    {
       "symbolId": "resistor",
       "name": "Resistor",
       "category": "passive",

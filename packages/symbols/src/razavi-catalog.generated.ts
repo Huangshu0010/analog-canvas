@@ -275,6 +275,30 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
   },
   {
+    symbolId: "port-filled",
+    name: "Filled Port",
+    category: "interface",
+    reviewStatus: "reviewed",
+    pinOrder: ["P"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Explicit solid endpoint style; no automatic SPICE mapping.",
+    assetPath: "port-filled.symbol.json",
+    assetHash:
+      "6cff46d6e2fd79df4c5915d49001f18bb3735a7fbe8930e621a491eaaa91b07c",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/current-port-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/current-port-geometry.json",
+    },
+  },
+  {
     symbolId: "resistor",
     name: "Resistor",
     category: "passive",
@@ -2135,6 +2159,67 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "port-filled",
+    name: "Filled Port",
+    viewBox: {
+      x: -14,
+      y: -7,
+      width: 28,
+      height: 14,
+    },
+    pins: [
+      {
+        name: "P",
+        role: "port",
+        at: {
+          x: 10,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "circle",
+        center: {
+          x: -7.086614,
+          y: 0,
+        },
+        radius: 2.47907,
+        fill: "foreground",
+        stroke: "foreground",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 10,
+          y: 0,
+        },
+        to: {
+          x: -4.607544,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["solid-port"],
   },
   {
     schemaVersion: 1,

@@ -101,6 +101,7 @@ describe("Razavi symbol catalog", () => {
       ["pmos3", "provisional", "razavi-reference-v1"],
       ["pnp", "reviewed", "legacy-compatibility"],
       ["port", "reviewed", "razavi-reference-v1"],
+      ["port-filled", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
       ["voltage-source", "reviewed", "razavi-reference-v1"],
       ["vdd", "reviewed", "razavi-reference-v1"],
@@ -151,7 +152,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses catalog objects in the built-in compatibility library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(15);
+    expect(razaviCatalogSymbols).toHaveLength(16);
     for (const catalogSymbol of razaviCatalogSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -169,6 +170,7 @@ describe("Razavi symbol catalog", () => {
       "nmos",
       "pmos",
       "port",
+      "port-filled",
       "resistor",
       "voltage-source",
       "vdd",
@@ -211,6 +213,7 @@ describe("Razavi symbol catalog", () => {
       "resistor",
       "capacitor",
       "port",
+      "port-filled",
       "ground",
       "voltage-source",
       "current-source",
@@ -259,6 +262,18 @@ describe("Razavi symbol catalog", () => {
         }),
       ]),
     );
+    const hollowPort = requireRazaviCatalogSymbol("port");
+    const filledPort = requireRazaviCatalogSymbol("port-filled");
+    expect(filledPort.pins).toEqual(hollowPort.pins);
+    expect(filledPort.viewBox).toEqual(hollowPort.viewBox);
+    expect(filledPort.primitives[1]).toEqual(hollowPort.primitives[1]);
+    expect(filledPort.primitives[0]).toMatchObject({
+      kind: "circle",
+      center: { x: -7.086614, y: 0 },
+      radius: 2.47907,
+      fill: "foreground",
+      stroke: "foreground",
+    });
     expect(requireRazaviCatalogSymbol("current-source").primitives).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ kind: "polygon", fill: "foreground" }),

@@ -3001,3 +3001,14 @@ with placed components`.
   caused by old monochrome/geometry expectations versus current Razavi assets.
 - Commit status: ready for `fix(text): preserve explicit semantic rich text
 formatting`.
+
+## 2026-08-09 - Explicit filled Port palette symbol
+
+- Target: add a manual-only solid-endpoint Port without changing the existing
+  hollow Port's appearance or electrical contract.
+- Result: `port-filled` is a reviewed Razavi interface palette asset with the
+  exact same pin anchor, lead, viewBox, radius, and stroke role as `port`; only
+  the endpoint circle uses foreground fill. It has no automatic SPICE mapping.
+- Validation: regenerated catalog, focused catalog Vitest 16/16, Symbols build,
+  Editor production build, and `git diff --check` passed.
+- Commit status: ready for `feat(razavi): add filled port symbol`.
