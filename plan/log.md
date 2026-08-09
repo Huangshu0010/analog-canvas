@@ -3347,3 +3347,16 @@ formatting`.
 - Validation: focused Playwright 1/1, editor production build, Prettier, and
   `git diff --check` passed.
 - Commit status: ready for `fix(editor): dismiss command menus outside the toolbar`.
+
+## 2026-08-09 - PMOS gate-bar width
+
+- Target: align the PMOS outer gate-bar width with NMOS while preserving the
+  PMOS gate-lead attachment and electrical pin anchors.
+- Result: the raster measurement remains unchanged; the MOS asset generator
+  reuses the NMOS outer-bar width when generating PMOS and PMOS3. Generated
+  assets and catalog integrity data were refreshed, with a focused regression
+  assertion for the shared logical width.
+- Validation: Razavi catalog Vitest 17/17, MOS and catalog generated-artifact
+  checks, target-file Prettier, and `git diff --check` passed. Full workspace
+  formatting remains blocked by seven unrelated pre-existing files on `main`.
+- Commit status: pending intentional staging.

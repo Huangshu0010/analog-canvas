@@ -174,7 +174,7 @@
       "palette": true,
       "automaticMappings": ["spice:M:pmos", "pdk:model-type:pmos"],
       "assetPath": "pmos.symbol.json",
-      "assetHash": "325ae5d2551ba9abca22f17f46c80b9faa8a1bae3c452794c1ce470430c34eb4"
+      "assetHash": "27885e21c0b88466fa5807bdd2608a0a90c24c012127739cb90192a0ba504f64"
     },
     {
       "symbolId": "pmos3",
@@ -193,7 +193,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "pmos3.symbol.json",
-      "assetHash": "cdef7f623cdac375db3efbb00143311e442c9ab464211c77a468fb40e7d299c4"
+      "assetHash": "2e5b714aed7553e187d4f593d9bc90f4b9ac5b4229af73f1046f55f5aa63abe7"
     },
     {
       "symbolId": "pnp",

@@ -75,6 +75,14 @@ const logicalPoint = (
     ) / 1_000_000,
 });
 
+const gateBarWidths = (symbolId: "nmos" | "pmos") =>
+  requireRazaviCatalogSymbol(symbolId)
+    .primitives.filter(
+      (primitive) =>
+        primitive.kind === "polygon" && primitive.part === "gate-bar",
+    )
+    .map((primitive) => primitive.points[2]!.x - primitive.points[1]!.x);
+
 describe("Razavi symbol catalog", () => {
   it("publishes the versioned catalog identity and visual authority", () => {
     expect(razaviSymbolCatalogIdentity).toMatchObject({
@@ -348,6 +356,10 @@ describe("Razavi symbol catalog", () => {
         }),
       ]),
     );
+  });
+
+  it("uses the NMOS outer gate-bar width for PMOS", () => {
+    expect(gateBarWidths("pmos")[0]).toBeCloseTo(gateBarWidths("nmos")[0]!, 6);
   });
 
   it("keeps the Razavi ground mark compact and lead-aligned", () => {
