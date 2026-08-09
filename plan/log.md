@@ -2796,7 +2796,7 @@ Editing System work.
   `git diff --check` passed. Workspace typecheck is blocked by an unrelated
   retained VDD worktree hunk whose rotation literal is inferred as `number`.
 - Commit status: committed as `0415765 fix(editor): unify instance label
-  selection and deletion`.
+selection and deletion`.
 
 ## 2026-08-09 - VDD label transaction type repair
 
@@ -2804,7 +2804,7 @@ Editing System work.
   power-label annotation with a widened rotation number.
 - Changed areas: one literal type assertion in the editor VDD placement edit.
 - Validation: workspace typecheck, editor production build, and `git diff
-  --check` passed.
+--check` passed.
 - Commit status: ready for `fix(editor): type VDD label rotation literal`.
 
 ## 2026-08-09 - Editor visual-selection normalization
@@ -2819,7 +2819,7 @@ Editing System work.
 - Validation: workspace typecheck, editor production build, focused Vitest
   10/10, and `git diff --check` passed.
 - Commit status: committed as `940b854 refactor(editor): normalize visual
-  selection protocol`.
+selection protocol`.
 
 ## 2026-08-09 - Text-entry and current-arrow repair
 
@@ -2835,7 +2835,7 @@ Editing System work.
 - Validation: workspace typecheck, editor production build, focused Vitest
   10/10, and `git diff --check` passed.
 - Commit status: committed as `9337c8d fix(editor): unify text entry and
-  current arrow controls`.
+current arrow controls`.
 
 ## 2026-08-09 - Canonical instance-label authoring
 
@@ -2847,5 +2847,20 @@ Editing System work.
   instance. The default renderer label is legacy read compatibility only.
 - Validation: workspace typecheck, editor production build, focused editor
   tests 6/6, and `git diff --check` passed.
-- Commit status: ready for `fix(editor): create canonical labels with placed
-  components`.
+- Commit status: committed as `1629b29 fix(editor): create canonical labels
+with placed components`.
+
+## 2026-08-09 - Voltage-source canonical label integer position
+
+- Target: repair voltage-source placement after canonical label authoring
+  exposed the integer-coordinate requirement of persisted annotations.
+- Root cause: the asymmetric Razavi voltage-source viewBox produced a half-unit
+  label center. The renderer tolerated it, but the typed transaction rejected
+  the Annotation `Point` as non-integer.
+- Result: the shared label factory rounds persisted label coordinates and
+  transaction failure status now includes its first diagnostic. Browser
+  verification placed `V1` successfully with one explicit annotation hit and
+  no default-label hit.
+- Validation: workspace typecheck, editor production build, focused Vitest
+  11/11, and `git diff --check` passed.
+- Commit status: ready for `fix(editor): round canonical label positions`.

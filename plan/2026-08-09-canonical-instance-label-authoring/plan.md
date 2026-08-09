@@ -48,6 +48,11 @@ untouched.
   annotation behavior is unchanged.
 - The formal renderer's default-label branch remains only as a read-compatibility
   fallback for historical Projects. It is no longer an authoring output path.
+- The voltage-source viewBox has a half-unit visual center. The shared label
+  factory now rounds its computed position before creating the persisted
+  Annotation, satisfying the integer Point contract. Rejection status now
+  includes the first transaction diagnostic to make this class of failure
+  inspectable.
 
 ## Validation
 

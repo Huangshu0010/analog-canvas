@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 import { createEmptyProject } from "@icm/model";
 import { serializeProject } from "@icm/model";
+import { EditTransactionSchema } from "@icm/edit-engine";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -99,6 +100,45 @@ describe("editor shell", () => {
 
     const markup = renderToStaticMarkup(<App project={project} />);
     expect(markup).toContain('data-testid="default-label-hit-M1"');
+  });
+
+  it("accepts a voltage source and its canonical label in one transaction", () => {
+    const result = EditTransactionSchema.safeParse({
+      transactionId: "place-voltage-source",
+      documentId: "document-main",
+      expectedRevision: 0,
+      actor: { kind: "human", id: "test" },
+      edits: [
+        {
+          kind: "add_instance",
+          instance: {
+            id: "V1",
+            symbolId: "voltage-source",
+            placement: {
+              position: { x: 100, y: 100 },
+              rotation: 0,
+              mirror: "none",
+            },
+            properties: {},
+          },
+        },
+        {
+          kind: "upsert_annotation",
+          annotation: {
+            id: "instance-label-V1",
+            kind: "instance-label",
+            text: "V1",
+            position: { x: 100, y: 148 },
+            attachedObjectId: "V1",
+            offset: { x: 0, y: 48 },
+            alignment: "middle",
+            rotation: 0,
+            locked: false,
+          },
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
   });
 
   it("keeps the bundled demo equal to the canonical Project fixture", () => {

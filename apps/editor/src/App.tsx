@@ -1024,13 +1024,14 @@ export function App({ project: initialProject }: AppProps) {
     const maximumX = Math.max(...corners.map((point) => point.x));
     const maximumY = Math.max(...corners.map((point) => point.y));
     const position = {
-      x: (minimumX + maximumX) / 2,
-      y:
+      x: Math.round((minimumX + maximumX) / 2),
+      y: Math.round(
         document.presentation.styleProfileId === "textbook-monochrome-v1"
           ? maximumY + 14
           : maximumY +
-            styleProfile.typography.labelGap +
-            styleProfile.typography.instanceFontSize,
+              styleProfile.typography.labelGap +
+              styleProfile.typography.instanceFontSize,
+      ),
     };
     return {
       id: `instance-label-${instance.id}`,
@@ -1298,7 +1299,12 @@ export function App({ project: initialProject }: AppProps) {
 
   function applyResult(result: EditTransactionResult): void {
     if (!result.ok) {
-      setStatus(`${result.error.code}: ${result.error.message}`);
+      const detail = result.diagnostics[0]?.message;
+      setStatus(
+        detail && detail !== result.error.message
+          ? `${result.error.code}: ${result.error.message} — ${detail}`
+          : `${result.error.code}: ${result.error.message}`,
+      );
       return;
     }
     if (result.applied) {
