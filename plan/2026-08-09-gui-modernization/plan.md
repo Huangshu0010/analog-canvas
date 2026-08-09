@@ -257,19 +257,29 @@ canvas RichText 编辑会话，不以 Inspector 取代原位文本编辑。
 Diagnostics 保持独立于属性 Inspector：它是状态/问题入口，不随普通选择自动弹出，也不
 与选中对象的编辑表单混在一起。
 
+#### 实施决策修订（2026-08-09，人确认）
+
+上方“**不得**自动切换到 `Inspect`”一项被**推翻**。实施前发现现有 e2e
+（`manual-editor.spec.ts:188/277/353/436`）依赖“选中即出现属性”，其中 436 在选中后
+`.fill()` 输入框（Playwright 要求可交互）。经人确认为二选一后，采用：
+
+- **选中可检查对象时自动切到 `Inspect` tab**（保留“选中即出现属性”语义，4 个 e2e
+  零改动）。
+- 核心目标“选择不触发画布跳变”改由**删除右列、画布列数恒为 2** 满足，而非“tab 不变”。
+  左 dock 内部 tab 切换不影响画布几何。
+- 无选择时默认 `Symbols & Tools`；清空可检查选择时回落 library。
+- 两个 panel 始终 mounted（用 `hidden` 属性切换），保证选中后输入框立即可 `fill()`。
+
+下方第 305 行“不改变当前标签”与第 315 行“不会自动跳转标签”据此修订理解：不再适用。
+
 ### 前置协调
 
-开始 E 的实现前，必须重新审计工作树。当前观察到以下重叠路径：
+开始 E 的实现前，必须重新审计工作树。~~当前观察到以下重叠路径：~~（2026-08-09 复核：
+该快照已过时——`App.tsx`/`rich-text-editor.tsx`/text-entry 目录均不在当前工作树。）
 
-```text
-M apps/editor/src/App.tsx
-M apps/editor/src/rich-text-editor.tsx
-?? plan/2026-08-09-text-entry-and-current-arrow-repair/
-```
-
-它们属于未交接的 text-entry/current-arrow target，而 E 也需要改动 `App.tsx`。因此 E
-在该目标提交、交接或拥有者明确允许整合前不得修改 `App.tsx`；可先做只读审计和本计划
-维护。`rich-text-editor.tsx` 不属于 E 的默认所有权，绝不搭车修改。
+实施前 `git status` 复核：`App.tsx`、`styles.css` clean（A–D 已于 `cc0b087`/`e0ad2b2`
+提交），现存 dirty 全是无关的 Razavi-fidelity/生成物。E 安全开始。
+`rich-text-editor.tsx` 不属于 E 的默认所有权，绝不搭车修改。
 
 ### E 的所有权与依赖
 
@@ -332,6 +342,55 @@ feat(editor): move inspector into the left dock
 
 此提交不包括 CSS token/recovery/mutation-lifecycle 的独立工作；若 E 需要其未完成内容，
 先更新本计划的依赖和提交拆分，而不是把几个 GUI 目标合并成一个不可审查的提交。
+
+## G. E 的交互修正：固定器件库与底部 Selection shelf
+
+### 审查结论与用户决策
+
+E 当前未提交实现正确移除了右侧列、将画布固定为两列，但它以
+`hasInspectableSelection → dockTab = "inspect"` 自动替换左栏内容。由于放置器件本身
+会选中新实例，连续放置时 Components/Draw 列表会在首次放置后消失；这虽然不改变 canvas
+宽度，仍破坏器件库的空间稳定性。
+
+**本轮人确认的产品决策覆盖 E 的 tab auto-switch 记录：**
+
+```text
+左 dock（固定）
+├─ Symbols & Tools / Components     ← 始终可见、唯一放置入口、独立滚动
+└─ Selection ▸                      ← 底部固定子栏目；默认折叠
+   └─ 仅在用户显式展开后显示选中对象的属性与操作
+```
+
+选中或放置器件只更新底部 `Selection` 一行的对象摘要/状态点；不得切换、隐藏、折叠或重排
+Components 区域。Selection shelf 始终占据相同的单行高度；展开动作由用户显式触发。展开后
+只压缩上方库的**可滚动可见高度**，不移动其顶部或改变画布几何。双击文本继续画布原位编辑。
+
+旧 e2e 的“放置后直接看见 Properties”假设不是产品合同；改为显式展开 Selection shelf 后
+再操作属性。不能为避免修改测试而重新引入自动面板跳变。
+
+### Dirty-state 与所有权
+
+本轮开始时 `App.tsx`、`styles.css`、`manual-editor.spec.ts`、交互规范、计划和日志均是
+同一 GUI-modernization/E 未提交实现，用户已明确授权审查并在这些文件上修正，故继续由本
+目标拥有。其余 Razavi-fidelity、`.zcode/`、netlist 生成物和其他 plan 保持不动。
+
+本轮不修改 model、edit-engine、Agent API、recovery 或 `rich-text-editor.tsx`。
+
+### 实施与验收
+
+1. 删除 `dockTab`、其选择副作用、tablist 和 `hidden` panel 切换；保留单一 `.dock`。
+2. Components/Draw 区成为 flex 主区域，永久可见且自有滚动；放置不会改变其内容或顶部位置。
+3. 所有旧 Inspect 内容迁入 dock 底部的原生/可访问折叠 `Selection` shelf：无选中时显示简短
+   空状态，选中时标题显示对象摘要或状态点；仅用户展开时显示详情。
+4. shelf 展开区限制最大高度并独立滚动，避免长 diagnostics/unplaced 列表挤走器件库或引发
+   浏览器滚动条；collapsed 高度固定。
+5. 更新 e2e helper，以明确点击 `Selection` 后再执行属性操作；新增回归验证：放置后
+   Components 搜索框仍可见、其 top position 与 canvas width 均不变；验证 Selection 默认
+   折叠、显式展开后属性可操作。
+6. 更新交互规范和维护日志，以本决策替代 auto-switch 描述；日志仅在真实验证通过后写入。
+
+验证：editor-focused Playwright（放置/属性/文本/Selection shelf）、`pnpm typecheck`、
+editor build、Prettier、`git diff --check`。完成后独立提交，不携带无关 dirty 文件。
 
 ## F. 审计修复：Recovery 实施闭环（2026-08-09）
 

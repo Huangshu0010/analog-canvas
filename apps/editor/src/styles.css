@@ -92,13 +92,11 @@ body {
 
 .app-shell {
   display: grid;
+  /* Fixed two columns: left dock + canvas. Selection no longer adds a third
+     column, so canvas column count and width never change on selection. */
   grid-template-columns: 17rem minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 100vh;
-}
-
-.app-shell.properties-open {
-  grid-template-columns: 17rem minmax(0, 1fr) 16rem;
 }
 
 .app-header {
@@ -216,24 +214,32 @@ body {
   box-shadow: 0 14px 40px rgb(0 0 0 / 18%);
 }
 
-.library-panel {
+.dock {
+  display: flex;
+  flex-direction: column;
   grid-column: 1;
   grid-row: 2;
   min-width: 0;
   min-height: 0;
   max-height: calc(100vh - 4.5rem);
-  overflow-x: hidden;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  border-right: 1px solid var(--icm-border-strong);
+  background: var(--icm-surface-muted);
+}
+
+.library-panel {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0.75rem;
-  border-right: 1px solid var(--icm-border-strong);
-  background: var(--icm-surface-muted);
 }
 
 .library-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
 
@@ -383,47 +389,72 @@ body {
   font-size: 0.72rem;
 }
 
-.side-panel {
-  grid-column: 3;
-  grid-row: 2;
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  padding: 0.9rem;
-  border-left: 1px solid var(--icm-border-strong);
-  background: var(--icm-surface-muted);
-}
-
-.side-panel h2 {
+.selection-panel h2 {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;
 }
 
-.properties-heading {
+.selection-shelf {
+  flex: 0 0 auto;
+  max-height: min(42%, 20rem);
+  overflow: hidden;
+  border-top: 1px solid var(--icm-border-strong);
+  background: var(--icm-surface);
+}
+
+.selection-shelf > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  min-height: 2.4rem;
+  padding: 0 0.75rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  user-select: none;
 }
 
-.properties-heading h2 {
-  margin-bottom: 0.75rem;
+.selection-shelf-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 11rem;
+  color: var(--icm-text-muted);
+  font-size: 0.74rem;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.properties-heading button {
-  width: 1.65rem;
-  height: 1.65rem;
-  padding: 0;
-  line-height: 1;
+.selection-shelf-indicator {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--icm-accent);
 }
 
-.side-panel > h3 {
+.selection-panel {
+  max-height: min(18rem, 36vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem;
+}
+
+.inspect-empty {
+  margin: 0.5rem 0;
+  color: var(--icm-text-muted);
+  font-size: 0.78rem;
+}
+
+.selection-panel > h3 {
   margin: 0 0 0.55rem;
   color: var(--icm-text-muted);
   font-size: 0.78rem;
 }
 
-.side-panel > button {
+.selection-panel > button {
   display: block;
   width: 100%;
   margin-bottom: 0.45rem;

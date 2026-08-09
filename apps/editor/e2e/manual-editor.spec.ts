@@ -42,6 +42,12 @@ async function placeComponent(
   await page.getByTestId("schematic-canvas").click({ position });
 }
 
+async function openSelectionShelf(page: Page): Promise<void> {
+  const summary = page.getByTestId("selection-shelf");
+  const shelf = summary.locator("..");
+  if ((await shelf.getAttribute("open")) === null) await summary.click();
+}
+
 async function clickRoute(
   page: Page,
   routeId: string,
@@ -192,6 +198,8 @@ test("switches a selected MOS between Razavi three- and four-terminal views", as
   await placeComponent(page, "pmos", { x: 420, y: 260 });
   await expect(page.getByTestId("terminal-M1-B")).toHaveCount(0);
 
+  await openSelectionShelf(page);
+
   await page.getByRole("button", { name: "Show Bulk (4-terminal)" }).click();
   await expect(page.getByTestId("terminal-M1-B")).toHaveCount(1);
 
@@ -294,7 +302,7 @@ test("leaves device pins on their natural axis and deletes a selected junction",
     ),
   ).toBe(true);
 
-  await page.getByRole("button", { name: "Wire", exact: true }).click();
+  await page.getByRole("button", { name: "Wire tool" }).click();
   await page.getByTestId("terminal-M1-G").click();
   await page
     .getByTestId("schematic-canvas")
@@ -303,6 +311,7 @@ test("leaves device pins on their natural axis and deletes a selected junction",
   await expect(junction).toHaveCount(1);
 
   await junction.click();
+  await openSelectionShelf(page);
   await expect(
     page.getByRole("button", { name: "Delete junction and attached wires" }),
   ).toBeVisible();
@@ -310,7 +319,7 @@ test("leaves device pins on their natural axis and deletes a selected junction",
   await expect(junction).toHaveCount(0);
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
   await expect(page.getByTestId("status")).toContainText(
-    "Deleted junction and 1 attached routes",
+    "Deleted selected schematic objects",
   );
 
   await page.keyboard.press("Control+z");
@@ -338,7 +347,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
   await page.getByRole("button", { name: "Restore recovery" }).click();
   await expect(page.getByTestId("instance-count")).toHaveText("4");
 
-  await page.getByRole("button", { name: "Wire", exact: true }).click();
+  await page.getByRole("button", { name: "Wire tool" }).click();
   await page.getByTestId("terminal-M2-S").click();
   await page
     .getByTestId("schematic-canvas")
@@ -379,6 +388,7 @@ test("moves a selected wire segment and deletes a connected component safely", a
   expect((await readRoutePoints(page, "route-ui-1")).length).toBe(4);
 
   await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
   await page.keyboard.press("Delete");
   await expect(page.getByTestId("instance-count")).toHaveText("1");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
@@ -455,6 +465,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   );
 
   await clickRoute(page, "route-ui-1", 0.35, 1);
+  await openSelectionShelf(page);
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
     .fill("SIGNAL");
@@ -485,6 +496,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page.getByTestId("terminal-R4-1").click();
   await expect(page.getByTestId("net-count")).toHaveText("2");
   await clickRoute(page, "route-ui-2", 0.35, 1);
+  await openSelectionShelf(page);
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
     .fill("SIGNAL");
@@ -710,6 +722,42 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
   await expect(page.getByTestId("revision")).toHaveText("1");
 });
 
+test("keeps the component library stable while Selection stays collapsed", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const search = page.getByRole("textbox", { name: "Search components" });
+  const canvas = page.getByTestId("schematic-canvas");
+  const shelf = page.getByTestId("selection-shelf").locator("..");
+  const searchOffsetWithinDock = () =>
+    search.evaluate((element) => {
+      const dock = element.closest('[role="complementary"]');
+      if (!dock) return null;
+      return (
+        element.getBoundingClientRect().top - dock.getBoundingClientRect().top
+      );
+    });
+  await chooseComponent(page, "pmos");
+  const beforePlaceSearchOffset = await searchOffsetWithinDock();
+  const beforePlaceCanvas = await canvas.boundingBox();
+  if (beforePlaceSearchOffset === null || !beforePlaceCanvas)
+    throw new Error("Dock is not measurable");
+
+  await canvas.click({ position: { x: 420, y: 260 } });
+
+  await expect(search).toBeVisible();
+  expect(await shelf.getAttribute("open")).toBeNull();
+  const afterSearchOffset = await searchOffsetWithinDock();
+  const afterCanvas = await canvas.boundingBox();
+  expect(afterSearchOffset).toBe(beforePlaceSearchOffset);
+  expect(afterCanvas?.width).toBe(beforePlaceCanvas.width);
+
+  await openSelectionShelf(page);
+  await expect(
+    page.getByRole("button", { name: "Show Bulk (4-terminal)" }),
+  ).toBeVisible();
+});
+
 test("cancels pending recovery before save or project replacement", async ({
   page,
 }) => {
@@ -792,4 +840,19 @@ test("keeps the production command surface compact and publishes PWA metadata", 
     name: "Interactive Circuit Maker",
     display: "standalone",
   });
+});
+
+test("selecting an object does not change canvas width", async ({ page }) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+  const widthBefore = (await canvas.boundingBox())!.width;
+
+  // placeComponent selects the placed instance, which before E opened a right
+  // Properties column and shrank the canvas. With the inspector in the left
+  // dock, the canvas column count and width must stay constant.
+  await placeComponent(page, "resistor", { x: 280, y: 180 });
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+
+  const widthAfter = (await canvas.boundingBox())!.width;
+  expect(widthAfter).toBe(widthBefore);
 });

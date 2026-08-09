@@ -580,7 +580,6 @@ export function App({ project: initialProject }: AppProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [libraryOpen, setLibraryOpen] = useState(true);
-  const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
   const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
   const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
@@ -654,13 +653,12 @@ export function App({ project: initialProject }: AppProps) {
         (object) => object.id === selectedDraftingId,
       )
     : undefined;
-  const propertiesVisible = Boolean(
-    !propertiesCollapsed &&
-    (selectedInstance ||
-      selectedRoute ||
-      selectedAnnotation ||
-      selectedDrafting ||
-      selectedEndpoint),
+  const hasInspectableSelection = Boolean(
+    selectedInstance ||
+    selectedRoute ||
+    selectedAnnotation ||
+    selectedDrafting ||
+    selectedEndpoint,
   );
   const styleProfile = resolveSchematicStyleProfile(
     document.presentation.styleProfileId,
@@ -1623,7 +1621,6 @@ export function App({ project: initialProject }: AppProps) {
     );
     const segmentIndex = segmentAtPoint(routeRecord.polyline.points, point);
     if (tool === "pointer") {
-      setPropertiesCollapsed(false);
       clearSupplementalSelection();
       setSelectedRouteId(routeId);
       setSelectedRouteSegmentIndex(segmentIndex ?? 0);
@@ -1830,7 +1827,6 @@ export function App({ project: initialProject }: AppProps) {
     if (event.button !== 0 || annotation.locked) return;
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
-    setPropertiesCollapsed(false);
     clearSupplementalSelection();
     const pointerStart = pointFromClient(
       event.clientX,
@@ -2091,7 +2087,6 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function selectInstance(instanceId: string, additive: boolean): void {
-    setPropertiesCollapsed(false);
     clearSupplementalSelection();
     setSelectedRouteId(null);
     setSelectedEndpoint(null);
@@ -2332,7 +2327,6 @@ export function App({ project: initialProject }: AppProps) {
   // separately (double-click/Enter) so selection and text caret ownership do
   // not fight drag gestures.
   function selectDraftingObject(id: string): void {
-    setPropertiesCollapsed(false);
     clearSupplementalSelection();
     setSelectedDraftingId(id);
     setSelectedAnnotationId(null);
@@ -3730,9 +3724,7 @@ export function App({ project: initialProject }: AppProps) {
   });
 
   return (
-    <main
-      className={propertiesVisible ? "app-shell properties-open" : "app-shell"}
-    >
+    <main className="app-shell">
       <header className="app-header">
         <div>
           <h1>Interactive Circuit Maker</h1>
@@ -4026,357 +4018,391 @@ export function App({ project: initialProject }: AppProps) {
           ))}
         </section>
       ) : null}
-      <aside className="library-panel" aria-label="Symbols and drawing tools">
-        <div className="library-heading">
-          <h2>Symbols &amp; Tools</h2>
-          <button
-            type="button"
-            aria-expanded={libraryOpen}
-            onClick={() => setLibraryOpen((current) => !current)}
-          >
-            {libraryOpen ? "Collapse" : "Expand"}
-          </button>
-        </div>
-        {libraryOpen ? (
-          <>
-            <input
-              value={paletteQuery}
-              onChange={(event) => setPaletteQuery(event.currentTarget.value)}
-              placeholder="Search components"
-              aria-label="Search components"
-            />
-            <details className="library-tools" open>
-              <summary>Draw</summary>
-              <div className="library-tool-grid" aria-label="Drawing tools">
-                <button
-                  type="button"
-                  aria-label="Wire tool"
-                  aria-pressed={tool === "wire"}
-                  onClick={() => activateTool("wire")}
-                >
-                  Wire <kbd>W</kbd>
-                </button>
-                <button type="button" onClick={addPlainText}>
-                  Text
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={tool === "arrow"}
-                  onClick={() => activateTool("arrow")}
-                >
-                  Arrow <kbd>A</kbd>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={tool === "construction-line"}
-                  onClick={() => activateTool("construction-line")}
-                >
-                  Construction line <kbd>L</kbd>
-                </button>
-              </div>
-            </details>
-            <details className="library-components" open>
-              <summary>Components</summary>
-              <div className="library-components-content">
-                {componentGroups.map((group) => (
-                  <details key={group.category} open>
-                    <summary>{group.category}</summary>
-                    <div className="library-component-grid">
-                      {group.symbols.map((symbol) => (
-                        <button
-                          type="button"
-                          key={symbol.id}
-                          data-testid={`library-component-${symbol.id}`}
-                          title={`Place ${symbol.name}`}
-                          onClick={() => {
-                            setPendingSymbolId(symbol.id);
-                            setTool("pointer");
-                            setStatus(`Place ${symbol.name} on the canvas`);
-                          }}
-                        >
-                          <SymbolThumbnail symbol={symbol} />
-                          <span>{symbol.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </details>
-                ))}
-              </div>
-            </details>
-          </>
-        ) : null}
-      </aside>
       <aside
-        className="side-panel"
-        aria-label="Properties"
-        hidden={!propertiesVisible}
+        className="dock"
+        aria-label="Symbols and drawing tools"
+        role="complementary"
       >
-        <div className="properties-heading">
-          <h2>Properties</h2>
-          <button
-            type="button"
-            aria-label="Collapse properties"
-            onClick={() => setPropertiesCollapsed(true)}
-          >
-            ×
-          </button>
-        </div>
-        {unplaced.length > 0 ? <h3>Unplaced Instances</h3> : null}
-        {unplaced.map((instance) => (
-          <button
-            type="button"
-            draggable
-            data-testid={`unplaced-${instance.id}`}
-            key={instance.id}
-            onClick={() => {
-              setSelectedIds([instance.id]);
-              setSelectedRouteId(null);
-              setSelectedAnnotationId(null);
-              setStatus(`Selected ${instance.id}`);
-            }}
-            onDragStart={(event) => {
-              event.dataTransfer.setData(
-                "application/x-icm-instance",
-                instance.id,
-              );
-              event.dataTransfer.effectAllowed = "move";
-            }}
-          >
-            {instance.id} · {instance.symbolId}
-          </button>
-        ))}
-        {unplacedPorts.length > 0 ? <h3>Unplaced Ports</h3> : null}
-        {unplacedPorts.map((port) => (
-          <button
-            type="button"
-            data-testid={`unplaced-port-${port.id}`}
-            key={port.id}
-            onClick={() => placePortAtViewCenter(port.id)}
-          >
-            Place {port.name}
-          </button>
-        ))}
-        {selectedInstance ? (
-          <section
-            className="context-actions"
-            aria-label="Instance presentation"
-          >
-            <h2>Instance</h2>
-            {defaultRazaviSymbolVariantId(selectedInstance.symbolId) ? (
-              <fieldset className="mos-terminal-presentation">
-                <legend>MOS terminal view</legend>
-                <button
-                  type="button"
-                  aria-pressed={
-                    selectedInstance.symbolVariantId === "textbook-3terminal"
-                  }
-                  onClick={() =>
-                    setSelectedMosTerminalPresentation("three-terminal")
-                  }
-                >
-                  Textbook 3-terminal
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={selectedInstance.symbolVariantId === undefined}
-                  onClick={() =>
-                    setSelectedMosTerminalPresentation("four-terminal")
-                  }
-                >
-                  Show Bulk (4-terminal)
-                </button>
-              </fieldset>
-            ) : null}
-          </section>
-        ) : null}
-        {selectedRouteId ? (
-          <section className="context-actions" aria-label="Route actions">
-            <h2>Route</h2>
-            <p>Segment {(selectedRouteSegmentIndex ?? 0) + 1} selected</p>
-            <label>
-              Electrical Net label
+        <div className="library-panel">
+          <div className="library-heading">
+            <h2>Symbols &amp; Tools</h2>
+            <button
+              type="button"
+              aria-expanded={libraryOpen}
+              onClick={() => setLibraryOpen((current) => !current)}
+            >
+              {libraryOpen ? "Collapse" : "Expand"}
+            </button>
+          </div>
+          {libraryOpen ? (
+            <>
               <input
-                aria-label="Electrical Net label"
-                value={netLabelDraft}
-                onChange={(event) =>
-                  setNetLabelDraft(event.currentTarget.value)
-                }
+                value={paletteQuery}
+                onChange={(event) => setPaletteQuery(event.currentTarget.value)}
+                placeholder="Search components"
+                aria-label="Search components"
               />
-            </label>
-            <button type="button" onClick={applyNetLabel}>
-              Apply Net label
-            </button>
-            <button type="button" onClick={addCurrentArrow}>
-              Add current arrow
-            </button>
-            <button type="button" onClick={removeSelectedRouteGeometry}>
-              Remove route geometry
-            </button>
-          </section>
-        ) : null}
-        {selectedAnnotation && isRoutedMarker(selectedAnnotation) ? (
-          <section
-            className="context-actions"
-            aria-label="Current arrow actions"
-          >
-            <h2>Current arrow</h2>
-            <button type="button" onClick={reverseSelectedCurrentArrow}>
-              Reverse arrow
-            </button>
-          </section>
-        ) : null}
-        {selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction" ? (
-          <section className="context-actions" aria-label="Endpoint actions">
-            <h2>Endpoint</h2>
-            <button
-              type="button"
-              onClick={() => disconnectSelectedEndpoint(false)}
-            >
-              Disconnect endpoint
-            </button>
-            <button
-              type="button"
-              onClick={() => disconnectSelectedEndpoint(true)}
-            >
-              Delete connection
-            </button>
-            {selectedPortId ? (
+              <details className="library-tools" open>
+                <summary>Draw</summary>
+                <div className="library-tool-grid" aria-label="Drawing tools">
+                  <button
+                    type="button"
+                    aria-label="Wire tool"
+                    aria-pressed={tool === "wire"}
+                    onClick={() => activateTool("wire")}
+                  >
+                    Wire <kbd>W</kbd>
+                  </button>
+                  <button type="button" onClick={addPlainText}>
+                    Text
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={tool === "arrow"}
+                    onClick={() => activateTool("arrow")}
+                  >
+                    Arrow <kbd>A</kbd>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={tool === "construction-line"}
+                    onClick={() => activateTool("construction-line")}
+                  >
+                    Construction line <kbd>L</kbd>
+                  </button>
+                </div>
+              </details>
+              <details className="library-components" open>
+                <summary>Components</summary>
+                <div className="library-components-content">
+                  {componentGroups.map((group) => (
+                    <details key={group.category} open>
+                      <summary>{group.category}</summary>
+                      <div className="library-component-grid">
+                        {group.symbols.map((symbol) => (
+                          <button
+                            type="button"
+                            key={symbol.id}
+                            data-testid={`library-component-${symbol.id}`}
+                            title={`Place ${symbol.name}`}
+                            onClick={() => {
+                              setPendingSymbolId(symbol.id);
+                              setTool("pointer");
+                              setStatus(`Place ${symbol.name} on the canvas`);
+                            }}
+                          >
+                            <SymbolThumbnail symbol={symbol} />
+                            <span>{symbol.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </details>
+            </>
+          ) : null}
+        </div>
+        <details className="selection-shelf">
+          <summary data-testid="selection-shelf">
+            <span>Selection</span>
+            <span className="selection-shelf-summary">
+              {selectedIds.length > 0
+                ? selectedIds.join(", ")
+                : (selectedRouteId ??
+                  selectedAnnotationId ??
+                  selectedDraftingId ??
+                  "None")}
+              {hasInspectableSelection ? (
+                <span
+                  className="selection-shelf-indicator"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </span>
+          </summary>
+          <div className="selection-panel">
+            {!hasInspectableSelection ? (
+              <p className="inspect-empty">Select an object to inspect.</p>
+            ) : null}
+            {unplaced.length > 0 ? <h3>Unplaced Instances</h3> : null}
+            {unplaced.map((instance) => (
               <button
                 type="button"
-                onClick={() => placePortAtViewCenter(selectedPortId)}
+                draggable
+                data-testid={`unplaced-${instance.id}`}
+                key={instance.id}
+                onClick={() => {
+                  setSelectedIds([instance.id]);
+                  setSelectedRouteId(null);
+                  setSelectedAnnotationId(null);
+                  setStatus(`Selected ${instance.id}`);
+                }}
+                onDragStart={(event) => {
+                  event.dataTransfer.setData(
+                    "application/x-icm-instance",
+                    instance.id,
+                  );
+                  event.dataTransfer.effectAllowed = "move";
+                }}
               >
-                Move port to view center
+                {instance.id} · {instance.symbolId}
               </button>
+            ))}
+            {unplacedPorts.length > 0 ? <h3>Unplaced Ports</h3> : null}
+            {unplacedPorts.map((port) => (
+              <button
+                type="button"
+                data-testid={`unplaced-port-${port.id}`}
+                key={port.id}
+                onClick={() => placePortAtViewCenter(port.id)}
+              >
+                Place {port.name}
+              </button>
+            ))}
+            {selectedInstance ? (
+              <section
+                className="context-actions"
+                aria-label="Instance presentation"
+              >
+                <h2>Instance</h2>
+                {defaultRazaviSymbolVariantId(selectedInstance.symbolId) ? (
+                  <fieldset className="mos-terminal-presentation">
+                    <legend>MOS terminal view</legend>
+                    <button
+                      type="button"
+                      aria-pressed={
+                        selectedInstance.symbolVariantId ===
+                        "textbook-3terminal"
+                      }
+                      onClick={() =>
+                        setSelectedMosTerminalPresentation("three-terminal")
+                      }
+                    >
+                      Textbook 3-terminal
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={
+                        selectedInstance.symbolVariantId === undefined
+                      }
+                      onClick={() =>
+                        setSelectedMosTerminalPresentation("four-terminal")
+                      }
+                    >
+                      Show Bulk (4-terminal)
+                    </button>
+                  </fieldset>
+                ) : null}
+              </section>
             ) : null}
-          </section>
-        ) : null}
-        {selectedEndpoint?.endpoint.kind === "junction" ? (
-          <section className="context-actions" aria-label="Junction actions">
-            <h2>Junction</h2>
-            <button type="button" onClick={deleteSelectedJunction}>
-              Delete junction and attached wires
-            </button>
-          </section>
-        ) : null}
-        <dl className="inspector">
-          <dt>Selected</dt>
-          <dd>
-            {selectedIds.length > 0
-              ? selectedIds.join(", ")
-              : (selectedRouteId ?? selectedAnnotationId ?? "None")}
-          </dd>
-          <dt>Internal routes</dt>
-          <dd data-testid="selected-internal-route-count">
-            {internalSelection.routeIds.length}
-          </dd>
-          <dt>Revision</dt>
-          <dd data-testid="revision">{document.revision}</dd>
-          <dt>Source status</dt>
-          <dd data-testid="source-status">{document.sourceStatus}</dd>
-          <dt>Documents</dt>
-          <dd data-testid="document-count">{project.documents.length}</dd>
-          <dt>Current Document</dt>
-          <dd data-testid="active-document-id">{document.id}</dd>
-          <dt>Document instances</dt>
-          <dd data-testid="active-instance-count">
-            {document.instances.length}
-          </dd>
-          <dt>Instances</dt>
-          <dd data-testid="instance-count">{projectInstanceCount}</dd>
-          <dt>Nets</dt>
-          <dd data-testid="net-count">{document.nets.length}</dd>
-          <dt>Tool</dt>
-          <dd data-testid="active-tool">{tool}</dd>
-          <dt>Flightlines</dt>
-          <dd data-testid="flightline-count">{flightlines.length}</dd>
-          <dt>Crossings</dt>
-          <dd data-testid="crossing-count">{crossings.length}</dd>
-          <dt>Annotations</dt>
-          <dd data-testid="annotation-count">{document.annotations.length}</dd>
-          <dt>Structural diagnostics</dt>
-          <dd data-testid="structural-diagnostic-count">
-            {structuralDiagnostics.length}
-          </dd>
-          <dt>Visual observations</dt>
-          <dd data-testid="visual-diagnostic-count">
-            {visualObservations.length}
-          </dd>
-          <dt>Blocking diagnostics</dt>
-          <dd data-testid="blocking-diagnostic-count">
-            {
-              visualDiagnostics.filter((diagnostic) =>
-                hasBlockingVisualDiagnostics([diagnostic]),
-              ).length
-            }
-          </dd>
-          <dt>Status</dt>
-          <dd aria-live="polite">{status}</dd>
-        </dl>
-        <section aria-label="Import diagnostics" className="diagnostics">
-          <h2>Import Diagnostics</h2>
-          {importDiagnostics.length === 0 ? <p>No import diagnostics</p> : null}
-          <ul data-testid="import-diagnostics">
-            {importDiagnostics.map((diagnostic, index) => (
-              <li
-                key={`${diagnostic.code}-${index}`}
-                data-severity={diagnostic.severity}
+            {selectedRouteId ? (
+              <section className="context-actions" aria-label="Route actions">
+                <h2>Route</h2>
+                <p>Segment {(selectedRouteSegmentIndex ?? 0) + 1} selected</p>
+                <label>
+                  Electrical Net label
+                  <input
+                    aria-label="Electrical Net label"
+                    value={netLabelDraft}
+                    onChange={(event) =>
+                      setNetLabelDraft(event.currentTarget.value)
+                    }
+                  />
+                </label>
+                <button type="button" onClick={applyNetLabel}>
+                  Apply Net label
+                </button>
+                <button type="button" onClick={addCurrentArrow}>
+                  Add current arrow
+                </button>
+                <button type="button" onClick={removeSelectedRouteGeometry}>
+                  Remove route geometry
+                </button>
+              </section>
+            ) : null}
+            {selectedAnnotation && isRoutedMarker(selectedAnnotation) ? (
+              <section
+                className="context-actions"
+                aria-label="Current arrow actions"
               >
-                <strong>{diagnostic.code}</strong>: {diagnostic.message}
-              </li>
-            ))}
-          </ul>
-        </section>
-        <section aria-label="Visual diagnostics" className="diagnostics">
-          <h2>Diagnostics</h2>
-          {visualDiagnostics.length === 0 ? <p>No visual diagnostics</p> : null}
-          {structuralDiagnostics.length > 0 ? <h3>Structural issues</h3> : null}
-          <ul data-testid="visual-diagnostics">
-            {visualDiagnostics.map((diagnostic, index) => (
-              <li
-                key={`${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
-                data-severity={diagnostic.severity}
-                data-category={diagnostic.category}
-                data-confidence={diagnostic.confidence}
-                hidden={diagnostic.category !== "structural"}
+                <h2>Current arrow</h2>
+                <button type="button" onClick={reverseSelectedCurrentArrow}>
+                  Reverse arrow
+                </button>
+              </section>
+            ) : null}
+            {selectedEndpoint &&
+            selectedEndpoint.endpoint.kind !== "junction" ? (
+              <section
+                className="context-actions"
+                aria-label="Endpoint actions"
               >
+                <h2>Endpoint</h2>
                 <button
                   type="button"
-                  data-testid={`diagnostic-${index}`}
-                  onClick={() => jumpToVisualDiagnostic(diagnostic)}
+                  onClick={() => disconnectSelectedEndpoint(false)}
                 >
-                  <strong>{diagnostic.code}</strong>
-                  {diagnostic.objectIds.length > 0
-                    ? `: ${diagnostic.objectIds.join(", ")}`
-                    : ""}
+                  Disconnect endpoint
                 </button>
-              </li>
-            ))}
-          </ul>
-          {visualObservations.length > 0 ? <h3>Visual observations</h3> : null}
-          <ul data-testid="visual-observations">
-            {visualDiagnostics.map((diagnostic, index) => (
-              <li
-                key={`observation-${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
-                data-severity={diagnostic.severity}
-                data-category={diagnostic.category}
-                data-confidence={diagnostic.confidence}
-                hidden={diagnostic.category !== "observation"}
-              >
                 <button
                   type="button"
-                  data-testid={`observation-${index}`}
-                  onClick={() => jumpToVisualDiagnostic(diagnostic)}
+                  onClick={() => disconnectSelectedEndpoint(true)}
                 >
-                  <strong>{diagnostic.code}</strong>
-                  {diagnostic.objectIds.length > 0
-                    ? `: ${diagnostic.objectIds.join(", ")}`
-                    : ""}
-                  {` (${diagnostic.confidence} confidence)`}
+                  Delete connection
                 </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+                {selectedPortId ? (
+                  <button
+                    type="button"
+                    onClick={() => placePortAtViewCenter(selectedPortId)}
+                  >
+                    Move port to view center
+                  </button>
+                ) : null}
+              </section>
+            ) : null}
+            {selectedEndpoint?.endpoint.kind === "junction" ? (
+              <section
+                className="context-actions"
+                aria-label="Junction actions"
+              >
+                <h2>Junction</h2>
+                <button type="button" onClick={deleteSelectedJunction}>
+                  Delete junction and attached wires
+                </button>
+              </section>
+            ) : null}
+            <dl className="inspector">
+              <dt>Selected</dt>
+              <dd>
+                {selectedIds.length > 0
+                  ? selectedIds.join(", ")
+                  : (selectedRouteId ?? selectedAnnotationId ?? "None")}
+              </dd>
+              <dt>Internal routes</dt>
+              <dd data-testid="selected-internal-route-count">
+                {internalSelection.routeIds.length}
+              </dd>
+              <dt>Revision</dt>
+              <dd data-testid="revision">{document.revision}</dd>
+              <dt>Source status</dt>
+              <dd data-testid="source-status">{document.sourceStatus}</dd>
+              <dt>Documents</dt>
+              <dd data-testid="document-count">{project.documents.length}</dd>
+              <dt>Current Document</dt>
+              <dd data-testid="active-document-id">{document.id}</dd>
+              <dt>Document instances</dt>
+              <dd data-testid="active-instance-count">
+                {document.instances.length}
+              </dd>
+              <dt>Instances</dt>
+              <dd data-testid="instance-count">{projectInstanceCount}</dd>
+              <dt>Nets</dt>
+              <dd data-testid="net-count">{document.nets.length}</dd>
+              <dt>Tool</dt>
+              <dd data-testid="active-tool">{tool}</dd>
+              <dt>Flightlines</dt>
+              <dd data-testid="flightline-count">{flightlines.length}</dd>
+              <dt>Crossings</dt>
+              <dd data-testid="crossing-count">{crossings.length}</dd>
+              <dt>Annotations</dt>
+              <dd data-testid="annotation-count">
+                {document.annotations.length}
+              </dd>
+              <dt>Structural diagnostics</dt>
+              <dd data-testid="structural-diagnostic-count">
+                {structuralDiagnostics.length}
+              </dd>
+              <dt>Visual observations</dt>
+              <dd data-testid="visual-diagnostic-count">
+                {visualObservations.length}
+              </dd>
+              <dt>Blocking diagnostics</dt>
+              <dd data-testid="blocking-diagnostic-count">
+                {
+                  visualDiagnostics.filter((diagnostic) =>
+                    hasBlockingVisualDiagnostics([diagnostic]),
+                  ).length
+                }
+              </dd>
+              <dt>Status</dt>
+              <dd aria-live="polite">{status}</dd>
+            </dl>
+            <section aria-label="Import diagnostics" className="diagnostics">
+              <h2>Import Diagnostics</h2>
+              {importDiagnostics.length === 0 ? (
+                <p>No import diagnostics</p>
+              ) : null}
+              <ul data-testid="import-diagnostics">
+                {importDiagnostics.map((diagnostic, index) => (
+                  <li
+                    key={`${diagnostic.code}-${index}`}
+                    data-severity={diagnostic.severity}
+                  >
+                    <strong>{diagnostic.code}</strong>: {diagnostic.message}
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section aria-label="Visual diagnostics" className="diagnostics">
+              <h2>Diagnostics</h2>
+              {visualDiagnostics.length === 0 ? (
+                <p>No visual diagnostics</p>
+              ) : null}
+              {structuralDiagnostics.length > 0 ? (
+                <h3>Structural issues</h3>
+              ) : null}
+              <ul data-testid="visual-diagnostics">
+                {visualDiagnostics.map((diagnostic, index) => (
+                  <li
+                    key={`${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
+                    data-severity={diagnostic.severity}
+                    data-category={diagnostic.category}
+                    data-confidence={diagnostic.confidence}
+                    hidden={diagnostic.category !== "structural"}
+                  >
+                    <button
+                      type="button"
+                      data-testid={`diagnostic-${index}`}
+                      onClick={() => jumpToVisualDiagnostic(diagnostic)}
+                    >
+                      <strong>{diagnostic.code}</strong>
+                      {diagnostic.objectIds.length > 0
+                        ? `: ${diagnostic.objectIds.join(", ")}`
+                        : ""}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {visualObservations.length > 0 ? (
+                <h3>Visual observations</h3>
+              ) : null}
+              <ul data-testid="visual-observations">
+                {visualDiagnostics.map((diagnostic, index) => (
+                  <li
+                    key={`observation-${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
+                    data-severity={diagnostic.severity}
+                    data-category={diagnostic.category}
+                    data-confidence={diagnostic.confidence}
+                    hidden={diagnostic.category !== "observation"}
+                  >
+                    <button
+                      type="button"
+                      data-testid={`observation-${index}`}
+                      onClick={() => jumpToVisualDiagnostic(diagnostic)}
+                    >
+                      <strong>{diagnostic.code}</strong>
+                      {diagnostic.objectIds.length > 0
+                        ? `: ${diagnostic.objectIds.join(", ")}`
+                        : ""}
+                      {` (${diagnostic.confidence} confidence)`}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        </details>
       </aside>
       <section className="canvas-panel">
         <svg

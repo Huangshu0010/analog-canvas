@@ -170,6 +170,24 @@ can complete the named operation safely.
 - Normal wheel behavior remains available to the host page when the canvas
   does not own focus or the zoom modifier is absent.
 
+### Selection and layout stability
+
+- The canvas occupies a fixed grid column. Selecting, deselecting, or switching
+  the inspected object must not change the canvas column count, width, or
+  viewport. The app shell is a stable two-column grid (left dock + canvas); no
+  selection state adds or removes a column.
+- Components and drawing tools are the permanent, independently scrollable main
+  region of the left dock. Selecting or placing an object must never hide,
+  replace, collapse, or move this region.
+- Object inspection lives in a fixed, bottom `Selection` shelf in that same
+  dock. Selection updates only its short summary and indicator; the shelf is
+  collapsed by default and expands only after an explicit user action. When
+  open, its details scroll independently and may reduce only the library's
+  visible scroll height, never its top position or the canvas geometry.
+- In-place rich-text editing is unchanged: double-clicking editable text on the
+  canvas opens the existing canvas RichText editor. The `Inspect` tab does not
+  replace in-place text editing.
+
 ### Contextual manipulation
 
 - A selected direct route segment exposes a drag handle that creates an

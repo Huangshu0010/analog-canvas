@@ -15,6 +15,87 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-09 - GUI modernization: inspector moved into left dock
+
+- Target: per `plan/2026-08-09-gui-modernization/plan.md` work package E,
+  eliminate the right-hand Properties column that appeared/disappeared on
+  selection, by moving its contents into a left-dock `Inspect` tab. The canvas
+  becomes a fixed two-column grid (left dock + canvas), so selecting an object
+  no longer changes canvas column count or width.
+- Decision (human-confirmed): selecting an inspectable object auto-switches the
+  dock to the `Inspect` tab (preserving the legacy "selection reveals
+  properties" behavior that e2e `manual-editor.spec.ts:188/277/353/436` depend
+  on; the 436 test `.fill()`s a textbox after selecting). The no-reflow goal is
+  met by removing the right column (column count constant at 2), not by
+  freezing the within-dock tab. Default tab is Symbols & Tools; clearing
+  inspectable selection falls back to it. Both dock panels stay mounted (HTML
+  `hidden` toggles visibility) so post-selection inputs are immediately
+  interactable.
+- Changed areas:
+  - `apps/editor/src/App.tsx` — replaced `propertiesCollapsed` state with
+    `dockTab`; replaced `propertiesVisible` with `hasInspectableSelection`; added
+    a `useEffect` that switches the dock tab on selection change; root `<main>`
+    className fixed to `app-shell`; the `<aside className="library-panel">` and
+    `<aside className="side-panel">` became a single `<aside className="dock"
+role="complementary">` containing a tablist and two always-mounted panels
+    (`.library-panel`, `.inspect-panel`); migrated all Properties content
+    (unplaced instances/ports, instance/route/endpoint/junction context-actions,
+    inspector `<dl>`, import/visual diagnostics) into the inspect panel with an
+    empty-state; removed 4 `setPropertiesCollapsed(false)` call sites and the
+    properties close button.
+  - `apps/editor/src/styles.css` — removed `.app-shell.properties-open` (fixed
+    2-col grid); `.library-panel` grid-column rule became `.dock`; added
+    `.dock-tabs`/`.dock-tab`/`.dock-tab[aria-selected]`/`.dock-tab-indicator`/
+    `.dock-panel`/`.inspect-panel` rules; removed `.side-panel` and
+    `.properties-heading`. Canvas `#fff` background and grid-dot fill unchanged.
+  - `apps/editor/e2e/manual-editor.spec.ts` — added one regression test
+    "selecting an object does not change canvas width" (boundingBox width
+    before/after placeComponent). Existing 4 tests untouched.
+  - `docs/specs/editor-interaction.md` — added "Selection and layout stability"
+    subsection under Pointer/viewport contract.
+  - `plan/2026-08-09-gui-modernization/plan.md` — recorded the auto-switch
+    decision override and the stale dirty-state correction.
+- Validation: static verification done in-session — aside/div/section/fieldset
+  balanced (perl/awk), parens 1952/1952, braces 1182/1182, CSS braces 104/104,
+  `git diff --check` clean, no stale `side-panel`/`properties-*` references,
+  `role="complementary"` + "Symbols and drawing tools" name preserved,
+  `library-component-*` testid preserved, canvas `#fff` preserved.
+- Toolchain note: `node`/`pnpm`/`tsc`/`vitest`/`playwright` still not on PATH in
+  this session's Git Bash, so build/typecheck/vitest/e2e could NOT be executed
+  here and MUST be run by a human before commit — especially `pnpm test:e2e`
+  (the 4 existing selection-reveals-properties tests + the new width test).
+- Commit status: superseded before commit by the later fixed-library decision;
+  its auto-switch interaction did not land.
+
+## 2026-08-09 - GUI modernization: fixed library with Selection shelf
+
+- Target: correct the uncommitted left-dock Inspector attempt after review found
+  that placing a component selected it and automatically hid the component
+  library. Keep the successful fixed two-column canvas layout, but preserve a
+  stable placement surface.
+- Result: Components and Draw are an always-visible, independently scrollable
+  main area. The bottom `Selection` shelf is a permanent one-line child section
+  that summarizes the current selection without opening; it expands only when
+  the user clicks it. Its detailed properties and diagnostics scroll inside the
+  shelf and never change canvas geometry or move the library's top position.
+- Changed areas: `App.tsx` removes dock tab state/effect and uses native
+  `details/summary` for the shelf; `styles.css` makes the dock a fixed flex
+  column with separate library and shelf scroll regions; editor interaction
+  specification records the explicit-expansion contract; focused Playwright
+  tests explicitly open Selection for property actions and verify library/canvas
+  stability. Two stale test expectations were aligned with the existing `Wire
+  tool` accessible name and normalized deletion status.
+- Validation: editor build passed; scheduler Vitest 9/9 passed; focused
+  Playwright 3/3 passed (MOS presentation, junction deletion, fixed library);
+  Prettier and `git diff --check` passed. Browser visual verification placed
+  R1 while the full library remained visible and Selection stayed collapsed.
+  Workspace `pnpm typecheck` remains blocked by unrelated committed/parallel
+  Razavi fixture expectations for missing `leadsPx` in
+  `packages/symbols/src/razavi-catalog.test.ts`; no target file participates in
+  those errors.
+- Commit status: pending intentional scoped commit; unrelated generated assets,
+  Razavi-fidelity work, and other plans remain unstaged.
+
 ## 2026-08-09 - GUI modernization: chrome tokens and recovery scheduling
 
 - Target: per `plan/2026-08-09-gui-modernization/plan.md`, modernize editor
