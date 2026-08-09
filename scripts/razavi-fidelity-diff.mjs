@@ -42,7 +42,14 @@ const referenceRoot = resolve(
 
 // Parse args.
 const args = process.argv.slice(2);
-const devices = args.filter((a) => !a.startsWith("--"));
+const optionValueIndices = new Set(
+  ["--threshold", "--out"]
+    .map((option) => args.indexOf(option) + 1)
+    .filter((index) => index > 0),
+);
+const devices = args.filter(
+  (argument, index) => !argument.startsWith("--") && !optionValueIndices.has(index),
+);
 const thresholdIdx = args.indexOf("--threshold");
 const threshold =
   thresholdIdx >= 0 ? Number(args[thresholdIdx + 1]) : undefined;

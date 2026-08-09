@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.3`
+Version: `1.4`
 
 Owning phase: `Phase 8`
 
@@ -124,23 +124,31 @@ selectable without enlarging pin selection circles.
 
 | Input                      | Action                                                                             |
 | -------------------------- | ---------------------------------------------------------------------------------- |
-| `R`                        | Rotate the selected placeable objects by 90 degrees.                               |
+| `R` / `Shift+R`            | Rotate the selected placeable objects by 90 / -90 degrees.                         |
+| `F` / `Shift+F`            | Flip selected instances left/right or top/bottom in screen space.                  |
 | `W`                        | Enter or continue Wire mode.                                                       |
 | `Escape`                   | Cancel the active gesture, then return to Pointer mode.                            |
 | `Delete` / `Backspace`     | Delete the selected object after applying the selection-specific semantic command. |
-| `Ctrl+Z`                   | Undo one committed transaction.                                                    |
-| `Ctrl+Y` or `Ctrl+Shift+Z` | Redo one transaction.                                                              |
+| `U` / `Shift+U`            | Undo / redo one committed transaction.                                             |
+| `Ctrl+Z`                   | Undo one committed transaction (browser-compatible alias).                         |
+| `Ctrl+Y` or `Ctrl+Shift+Z` | Redo one transaction (browser-compatible aliases).                                 |
 | `Ctrl+S`                   | Save the current Project.                                                          |
 | `Ctrl+O`                   | Open a Project.                                                                    |
 | `Ctrl+A`                   | Select all selectable objects in the active Document.                              |
 | `Ctrl+C`                   | Copy selected instances plus their wholly internal routed subgraph.                |
 | `Ctrl+V`                   | Paste the internal clipboard with fresh IDs and a deterministic grid offset.       |
-| `F`                        | Fit the active Document in the viewport.                                           |
+| `Home`                     | Fit the active Document in the viewport.                                           |
 
 Letter and editing shortcuts must not fire while focus is in a text input,
 text editor, searchable palette field, or another control that consumes the
 key. Browser-reserved shortcuts must not be intercepted unless the application
 can complete the named operation safely.
+
+`F` and `Shift+F` are display-space actions, explicitly named in the UI as
+“Flip horizontal (left/right)” and “Flip vertical (top/bottom)”. The persisted
+orientation remains the compact `rotation + mirror: "x"` representation: the
+editor composes its two existing typed edits atomically rather than adding a
+second mirror enum, a new stored field, or an Agent API operation.
 
 ## Pointer and viewport contract
 

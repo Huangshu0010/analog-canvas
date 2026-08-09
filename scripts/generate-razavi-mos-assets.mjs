@@ -222,9 +222,9 @@ function viewBoxFor(symbol) {
   };
 }
 
-function symbol(polarity, measurement, threeTerminal) {
+function symbol(polarity, measurement, threeTerminal, bodyMeasurement) {
   const id = `${polarity}${threeTerminal ? "3" : ""}`;
-  const primitives = basePrimitives(measurement, polarity, threeTerminal);
+  const primitives = basePrimitives(bodyMeasurement, polarity, threeTerminal);
   if (threeTerminal) {
     primitives.push(...sourceArrowPrimitives(measurement, polarity));
   } else {
@@ -274,13 +274,19 @@ if (
 ) {
   fail("the complete MOS pixel map does not match the sole visual authority");
 }
+const nmosMeasurement = geometry.symbols?.nmos;
+if (!nmosMeasurement) fail("missing complete NMOS pixel map");
 
 for (const polarity of ["nmos", "pmos"]) {
   const measurement = geometry.symbols?.[polarity];
   if (!measurement) fail(`missing complete pixel map for ${polarity}`);
   for (const threeTerminal of [false, true]) {
     const generated = await format(
-      JSON.stringify(symbol(polarity, measurement, threeTerminal), null, 2),
+      JSON.stringify(
+        symbol(polarity, measurement, threeTerminal, nmosMeasurement),
+        null,
+        2,
+      ),
       { parser: "json" },
     );
     const target = resolve(

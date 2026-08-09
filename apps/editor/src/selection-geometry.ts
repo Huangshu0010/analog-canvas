@@ -1,0 +1,106 @@
+import { transformPoint } from "@icm/model";
+import type { Point, Rect, SchematicDocument } from "@icm/model";
+import type { ResolvedSymbol } from "@icm/symbols";
+
+function viewBoxCorners(viewBox: Rect): Point[] {
+  return [
+    { x: viewBox.x, y: viewBox.y },
+    { x: viewBox.x + viewBox.width, y: viewBox.y },
+    { x: viewBox.x, y: viewBox.y + viewBox.height },
+    { x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
+  ];
+}
+
+/**
+ * Returns the visible local envelope of a resolved symbol. A path cannot be
+ * bounded without parsing its SVG path data, so its declaration viewBox stays
+ * the safe fallback. Other primitive types are bounded from their painted
+ * points plus visible electrical pins.
+ */
+export function visibleSymbolLocalBounds(resolved: ResolvedSymbol): Rect {
+  const hiddenParts = new Set(resolved.variant?.hiddenPrimitiveParts ?? []);
+  const hiddenPins = new Set(resolved.variant?.hiddenPinNames ?? []);
+  const primitives = [
+    ...resolved.definition.primitives,
+    ...(resolved.variant?.additionalPrimitives ?? []),
+  ].filter((primitive) => !primitive.part || !hiddenParts.has(primitive.part));
+  const points: Point[] = [];
+
+  for (const primitive of primitives) {
+    switch (primitive.kind) {
+      case "line":
+        points.push(primitive.from, primitive.to);
+        break;
+      case "polyline":
+      case "polygon":
+        points.push(...primitive.points);
+        break;
+      case "circle":
+        points.push(
+          {
+            x: primitive.center.x - primitive.radius,
+            y: primitive.center.y - primitive.radius,
+          },
+          {
+            x: primitive.center.x + primitive.radius,
+            y: primitive.center.y + primitive.radius,
+          },
+        );
+        break;
+      case "path":
+        return resolved.definition.viewBox;
+    }
+  }
+
+  points.push(
+    ...resolved.definition.pins
+      .filter((pin) => !hiddenPins.has(pin.name))
+      .map((pin) => pin.at),
+  );
+  if (points.length === 0) return resolved.definition.viewBox;
+
+  const padding = 1.5;
+  const minX = Math.min(...points.map((point) => point.x)) - padding;
+  const minY = Math.min(...points.map((point) => point.y)) - padding;
+  const maxX = Math.max(...points.map((point) => point.x)) + padding;
+  const maxY = Math.max(...points.map((point) => point.y)) + padding;
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+export function instanceVisibleHitBox(
+  instance: SchematicDocument["instances"][number],
+  resolved: ResolvedSymbol,
+): Rect | null {
+  if (!instance.placement) return null;
+  const localBounds = visibleSymbolLocalBounds(resolved);
+  const corners = viewBoxCorners(localBounds).map((point) =>
+    transformPoint(point, instance.placement!.position, instance.placement!),
+  );
+  const xs = corners.map((point) => point.x);
+  const ys = corners.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+export function exceedsDragThreshold(
+  start: Point,
+  current: Point,
+  threshold: number,
+): boolean {
+  return Math.hypot(current.x - start.x, current.y - start.y) >= threshold;
+}
+
+/**
+ * Dense schematics use a two-stage gesture: an initial click selects an
+ * object, and only a later pointer-down on that already-selected object may
+ * begin movement. Modifiers are selection gestures, never move gestures.
+ */
+export function mayStartSelectedDrag(
+  isSelected: boolean,
+  hasSelectionModifier: boolean,
+): boolean {
+  return isSelected && !hasSelectionModifier;
+}

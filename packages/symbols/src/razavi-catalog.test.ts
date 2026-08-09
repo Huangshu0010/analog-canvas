@@ -75,6 +75,14 @@ const logicalPoint = (
     ) / 1_000_000,
 });
 
+const canonicalMosBodyPrimitives = (symbolId: "nmos" | "pmos") =>
+  requireRazaviCatalogSymbol(symbolId)
+    .primitives.filter((primitive) => primitive.part !== "bulk-lead")
+    .map(({ part: _part, ...primitive }) => primitive)
+    .sort((left, right) =>
+      JSON.stringify(left).localeCompare(JSON.stringify(right)),
+    );
+
 describe("Razavi symbol catalog", () => {
   it("publishes the versioned catalog identity and visual authority", () => {
     expect(razaviSymbolCatalogIdentity).toMatchObject({
@@ -350,6 +358,12 @@ describe("Razavi symbol catalog", () => {
     );
   });
 
+  it("uses NMOS canonical geometry for every non-arrow PMOS body primitive", () => {
+    expect(canonicalMosBodyPrimitives("pmos")).toEqual(
+      canonicalMosBodyPrimitives("nmos"),
+    );
+  });
+
   it("keeps the Razavi ground mark compact and lead-aligned", () => {
     const ground = requireRazaviCatalogSymbol("ground");
     expect(ground.pins).toMatchObject([
@@ -376,17 +390,19 @@ describe("Razavi symbol catalog", () => {
     );
   });
 
-  it("uses the screenshot-authored sharp Razavi resistor body", () => {
+  it("uses one screenshot-authored sharp Razavi resistor path through both leads", () => {
     const resistor = requireRazaviCatalogSymbol("resistor");
     expect(resistor.primitives[0]).toMatchObject({
       kind: "path",
-      data: "M 0 -8.72093 L 8.139535 -6.395349 L -6.976744 -4.069767 L 8.139535 -1.162791 L -7.55814 1.744186 L 8.139535 4.651163 L -6.976744 7.55814 L 0 8.72093",
+      data: "M 0 -20 L 0 -8.72093 L 5.372093 -6.395349 L -4.604651 -4.069767 L 5.372093 -1.162791 L -4.988372 1.744186 L 5.372093 4.651163 L -4.604651 7.55814 L 0 8.72093 L 0 20",
       style: {
         strokeRole: "normal",
         lineCap: "butt",
         lineJoin: "miter",
+        miterLimit: 12,
       },
     });
+    expect(resistor.primitives).toHaveLength(1);
   });
 
   it("uses calibrated MOS and source arrowheads with external voltage polarity marks", () => {

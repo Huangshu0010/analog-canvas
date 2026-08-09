@@ -92,6 +92,21 @@ describe("textbook monochrome SVG renderer", () => {
     expect(body).toContain('x2="-4.607544"');
   });
 
+  it("preserves the resistor's sharp miter override", () => {
+    const resistor = builtInSymbols.find((symbol) => symbol.id === "resistor");
+    expect(resistor).toBeDefined();
+
+    const body = renderSymbolDefinitionBody(
+      resistor!,
+      [],
+      [],
+      razaviTextbookProfile,
+    );
+
+    expect(body).toContain('stroke-linejoin="miter"');
+    expect(body).toContain('stroke-miterlimit="12"');
+  });
+
   it("renders only physical branch Junctions as connection dots", () => {
     const project = createEmptyProject("project-junction-roles", "Roles");
     const document = project.documents[0]!;
@@ -120,6 +135,58 @@ describe("textbook monochrome SVG renderer", () => {
         position: { x: 180, y: 100 },
         role: "route-anchor",
       },
+      {
+        id: "junction-branch-east",
+        netId: "net-a",
+        position: { x: 120, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "junction-branch-south",
+        netId: "net-a",
+        position: { x: 100, y: 120 },
+        role: "route-anchor",
+      },
+      {
+        id: "junction-legacy-loose",
+        netId: "net-a",
+        position: { x: 200, y: 100 },
+        role: "branch",
+      },
+    );
+    document.routes.push(
+      {
+        id: "route-branch-west",
+        netId: "net-a",
+        from: { kind: "junction", junctionId: "junction-branch" },
+        to: { kind: "junction", junctionId: "junction-route" },
+        waypoints: [],
+        segmentModes: ["auto"],
+      },
+      {
+        id: "route-branch-east",
+        netId: "net-a",
+        from: { kind: "junction", junctionId: "junction-branch" },
+        to: { kind: "junction", junctionId: "junction-branch-east" },
+        waypoints: [],
+        segmentModes: ["auto"],
+      },
+      {
+        id: "route-branch-south",
+        netId: "net-a",
+        from: { kind: "junction", junctionId: "junction-branch" },
+        to: { kind: "junction", junctionId: "junction-branch-south" },
+        waypoints: [],
+        segmentModes: ["auto"],
+      },
+      {
+        id: "route-legacy-loose",
+        netId: "net-a",
+        from: { kind: "junction", junctionId: "junction-legacy-loose" },
+        to: { kind: "junction", junctionId: "junction-label" },
+        waypoints: [],
+        segmentModes: ["auto"],
+      },
     );
 
     const svg = renderDocumentSvg(document, resolver);
@@ -127,6 +194,7 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain('data-object-id="junction-branch"');
     expect(svg).not.toContain('data-object-id="junction-label"');
     expect(svg).not.toContain('data-object-id="junction-route"');
+    expect(svg).not.toContain('data-object-id="junction-legacy-loose"');
   });
 
   it("renders formal symbols deterministically without editor overlays", () => {
@@ -425,6 +493,70 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain(
       '<circle data-object-id="port-vin" data-node-kind="port-origin" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#202020" stroke-width="1.6"/>',
     );
+  });
+
+  it("bridges direct terminal corners without changing route topology", () => {
+    const project = createEmptyProject("project-terminal-overlap", "Overlap");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.nets.push({
+      id: "net-supply",
+      scope: "local",
+      terminals: [
+        { instanceId: "VDD1", pinName: "P" },
+        { instanceId: "GND1", pinName: "0" },
+      ],
+      ports: [],
+    });
+    document.instances.push(
+      {
+        id: "VDD1",
+        symbolId: "vdd",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+      {
+        id: "GND1",
+        symbolId: "ground",
+        placement: {
+          position: { x: 100, y: 200 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    );
+    document.routes.push({
+      id: "route-supply",
+      netId: "net-supply",
+      from: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+      to: { kind: "terminal", instanceId: "GND1", pinName: "0" },
+      waypoints: [
+        { x: 130, y: 120 },
+        { x: 130, y: 190 },
+      ],
+      segmentModes: ["manual", "manual", "manual"],
+    });
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain(
+      'data-object-id="route-supply" data-net-id="net-supply" points="100,120 130,120 130,190 100,190"',
+    );
+    expect(svg).toContain(
+      'data-role="terminal-miter-bridge" data-route-id="route-supply" d="M 100 118.8 L 100 120 L 101.2 120"',
+    );
+    expect(svg).toContain(
+      'data-role="terminal-miter-bridge" data-route-id="route-supply" d="M 100 191.2 L 100 190 L 101.2 190"',
+    );
+    expect(document.routes[0]!.waypoints).toEqual([
+      { x: 130, y: 120 },
+      { x: 130, y: 190 },
+    ]);
   });
 
   it("renders the original dense analog fixture without blocking visual diagnostics", () => {

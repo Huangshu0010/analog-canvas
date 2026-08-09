@@ -48,6 +48,11 @@ export type ResolvedDraftingGeometry =
       kind: "arrow";
       from: Point;
       to: Point;
+      // The complete visible shaft path. `waypoints` remain free geometry;
+      // from/to retain their independently-resolved VisualAnchor semantics.
+      points: Point[];
+      vertices: Point[];
+      curveControls: Array<Point | null>;
       // Midpoint of from/to. Editor handle placement and 90° rotation pivot.
       center: Point;
       bounds: Rect;
@@ -76,6 +81,7 @@ export type ResolvedDraftingGeometry =
       // editor does not alias the persisted array by accident. Per-vertex
       // handle placement and vertex insert/delete use this list.
       vertices: Point[];
+      curveControls: Array<Point | null>;
       bounds: Rect;
       diagnostics: [];
     }
@@ -227,15 +233,25 @@ function resolveArrow(
   );
   const fromPoint = from.anchor.position;
   const toPoint = to.anchor.position;
+  const points = [
+    fromPoint,
+    ...(object.waypoints ?? []).map((point) => ({ ...point })),
+    toPoint,
+  ];
   return {
     kind: "arrow" as const,
     from: fromPoint,
     to: toPoint,
+    points,
+    vertices: points.map((point) => ({ ...point })),
+    curveControls: Array.from({ length: points.length - 1 }, (_, index) =>
+      object.curveControls?.[index] ? { ...object.curveControls[index] } : null,
+    ),
     center: {
       x: (fromPoint.x + toPoint.x) / 2,
       y: (fromPoint.y + toPoint.y) / 2,
     },
-    bounds: paddedBounds(unionBounds([fromPoint, toPoint]), ARROWHEAD_PADDING),
+    bounds: paddedBounds(unionBounds(points), ARROWHEAD_PADDING),
     diagnostics: [...from.diagnostics, ...to.diagnostics],
   };
 }
@@ -334,6 +350,13 @@ function resolveConstructionLine(
     kind: "construction-line" as const,
     points: object.points,
     vertices: object.points.map((point) => ({ ...point })),
+    curveControls: Array.from(
+      { length: object.points.length - 1 },
+      (_, index) =>
+        object.curveControls?.[index]
+          ? { ...object.curveControls[index] }
+          : null,
+    ),
     bounds: paddedBounds(unionBounds(object.points), STROKE_PADDING),
     diagnostics: [] as [],
   };

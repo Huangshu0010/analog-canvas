@@ -7,6 +7,7 @@ import {
   resolveDraftingObjectGeometry,
   routeAttachmentPlacement,
   routePolyline,
+  resolveEndpointOutwardDirection,
 } from "@icm/derived";
 import type { ResolvedDraftingGeometry } from "@icm/derived";
 import type {
@@ -74,6 +75,55 @@ function pointList(points: ReadonlyArray<{ x: number; y: number }>): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
 }
 
+/**
+ * Route topology always terminates at the exact electrical pin origin. Draw a
+ * short path from inside a terminal lead, through the exact pin, into the
+ * actual route segment. SVG then owns the sharp miter at the corner, removing
+ * the separate-stroke anti-alias seam without adding route geometry.
+ */
+function renderTerminalMiterBridges(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  route: SchematicDocument["routes"][number],
+  points: readonly Point[],
+  profile: SchematicStyleProfile,
+): string {
+  if (points.length < 2) return "";
+  const overlap = Math.max(profile.strokes.wire, profile.strokes.symbol) * 0.75;
+  const bridges: string[] = [];
+  const segmentDirection = (from: Point, to: Point): Point | null => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    if (dx !== 0 && dy === 0) return { x: Math.sign(dx), y: 0 };
+    if (dx === 0 && dy !== 0) return { x: 0, y: Math.sign(dy) };
+    return null;
+  };
+  const renderBridge = (point: Point, outward: Point, routeOutward: Point) =>
+    `<path data-role="terminal-miter-bridge" data-route-id="${escapeXml(route.id)}" d="M ${point.x - outward.x * overlap} ${point.y - outward.y * overlap} L ${point.x} ${point.y} L ${point.x + routeOutward.x * overlap} ${point.y + routeOutward.y * overlap}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="miter"${profileMiterAttribute(profile)}/>`;
+  const fromOutward = resolveEndpointOutwardDirection(
+    document,
+    resolver,
+    route.from,
+  );
+  const first = points[0]!;
+  const next = points[1]!;
+  const firstDirection = segmentDirection(first, next);
+  if (fromOutward && firstDirection)
+    bridges.push(renderBridge(first, fromOutward, firstDirection));
+
+  const toOutward = resolveEndpointOutwardDirection(
+    document,
+    resolver,
+    route.to,
+  );
+  const previous = points.at(-2)!;
+  const last = points.at(-1)!;
+  const lastDirection = segmentDirection(last, previous);
+  if (toOutward && lastDirection)
+    bridges.push(renderBridge(last, toOutward, lastDirection));
+  return bridges.join("");
+}
+
 function profileMiterAttribute(profile: SchematicStyleProfile): string {
   return profile.id === "textbook-monochrome-v1"
     ? ""
@@ -95,6 +145,9 @@ function primitiveStyle(
     strokeWidth === undefined ? "" : ` stroke-width="${strokeWidth}"`,
     style.lineCap === undefined ? "" : ` stroke-linecap="${style.lineCap}"`,
     style.lineJoin === undefined ? "" : ` stroke-linejoin="${style.lineJoin}"`,
+    style.miterLimit === undefined
+      ? ""
+      : ` stroke-miterlimit="${style.miterLimit}"`,
   ].join("");
 }
 
@@ -404,11 +457,34 @@ export function buildSvgScene(
       if (!polyline) {
         throw new Error(`Cannot render unresolved route: ${route.id}`);
       }
-      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>`;
+      const terminalBridges = renderTerminalMiterBridges(
+        document,
+        resolver,
+        route,
+        polyline.points,
+        profile,
+      );
+      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalBridges}`;
     })
     .join("");
+  const junctionDegrees = new Map(
+    document.junctions.map((junction) => [junction.id, 0]),
+  );
+  for (const route of document.routes) {
+    for (const endpoint of [route.from, route.to]) {
+      if (endpoint.kind !== "junction") continue;
+      junctionDegrees.set(
+        endpoint.junctionId,
+        (junctionDegrees.get(endpoint.junctionId) ?? 0) + 1,
+      );
+    }
+  }
   const junctions = [...document.junctions]
-    .filter((junction) => (junction.role ?? "branch") === "branch")
+    .filter(
+      (junction) =>
+        (junction.role ?? "branch") === "branch" &&
+        (junctionDegrees.get(junction.id) ?? 0) >= 3,
+    )
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map(
       (junction) =>
@@ -793,7 +869,31 @@ function renderConstructionLine(
         : "";
   const strokeScale = object.styleOverride?.strokeScale ?? 1;
   const strokeWidth = profile.strokes.annotation * strokeScale;
-  return `<polyline data-object-id="${object.id}" data-kind="construction-line" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"${dash}/>`;
+  const hasCurve = (object.curveControls ?? []).some(Boolean);
+  const shape = hasCurve
+    ? `<path d="${draftingPathData(object.points, object.curveControls ?? [])}" fill="none"`
+    : `<polyline points="${points}" fill="none"`;
+  return `${shape} data-object-id="${object.id}" data-kind="construction-line" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}/>`;
+}
+
+function draftingPathData(
+  points: Point[],
+  curveControls: Array<Point | null>,
+  finalPoint?: Point,
+): string {
+  const start = points[0]!;
+  let data = `M ${start.x} ${start.y}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const end =
+      index === points.length - 2 && finalPoint
+        ? finalPoint
+        : points[index + 1]!;
+    const control = curveControls[index];
+    data += control
+      ? ` Q ${control.x} ${control.y} ${end.x} ${end.y}`
+      : ` L ${end.x} ${end.y}`;
+  }
+  return data;
 }
 
 function renderDraftArrow(
@@ -804,10 +904,21 @@ function renderDraftArrow(
 ): string {
   const from = geometry.from;
   const to = geometry.to;
+  const points = geometry.points;
   const tipX = to.x;
   const tipY = to.y;
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
+  // The head follows the final non-zero segment, not the overall chord. This
+  // keeps a bent arrow's shaft cleanly terminated at its head base plane.
+  const lastControl = geometry.curveControls.at(-1);
+  const tail =
+    lastControl ??
+    [...points]
+      .reverse()
+      .slice(1)
+      .find((point) => point.x !== to.x || point.y !== to.y) ??
+    from;
+  const dx = to.x - tail.x;
+  const dy = to.y - tail.y;
   const length = Math.hypot(dx, dy) || 1;
   // strokeScale widens/narrows the shaft; arrowHeadScale grows/shrinks the head
   // independently. Both multiply the Razavi profile baseline so formal export
@@ -841,7 +952,14 @@ function renderDraftArrow(
   // every angle and head scale. A headless arrow remains a complete line.
   const shaftEndX = arrowHead === "none" ? tipX : baseX;
   const shaftEndY = arrowHead === "none" ? tipY : baseY;
-  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${shaftEndX}" y2="${shaftEndY}" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"${dash}/>${headBody}</g>`;
+  const shaftPoints = [...points.slice(0, -1), { x: shaftEndX, y: shaftEndY }]
+    .map((point) => `${point.x},${point.y}`)
+    .join(" ");
+  const hasCurve = geometry.curveControls.some(Boolean);
+  const shaft = hasCurve
+    ? `<path d="${draftingPathData(points, geometry.curveControls, { x: shaftEndX, y: shaftEndY })}" fill="none"`
+    : `<polyline points="${shaftPoints}" fill="none"`;
+  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}>${shaft} stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}/>${headBody}</g>`;
 }
 
 function renderDraftLeader(

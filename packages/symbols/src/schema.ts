@@ -31,6 +31,7 @@ const SymbolPrimitiveStyleSchema = z
     strokeWidth: z.number().positive().optional(),
     lineCap: z.enum(["butt", "round", "square"]).optional(),
     lineJoin: z.enum(["miter", "round", "bevel"]).optional(),
+    miterLimit: z.number().positive().optional(),
   })
   .superRefine((style, context) => {
     if (style.strokeRole !== undefined && style.strokeWidth !== undefined) {

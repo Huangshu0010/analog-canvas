@@ -188,10 +188,16 @@ export function buildOrthogonalEscapeRoute(
   from: RoutedEndpointGeometry,
   to: RoutedEndpointGeometry,
   escapeLength = 20,
+  connectionGrid = 10,
 ): OrthogonalEscapeRoute {
   if (!Number.isInteger(escapeLength) || escapeLength <= 0) {
     throw new Error("Route escape length must be a positive integer");
   }
+  if (!Number.isInteger(connectionGrid) || connectionGrid <= 0) {
+    throw new Error("Route connection grid must be a positive integer");
+  }
+  const snapToConnectionGrid = (value: number) =>
+    Math.round(value / connectionGrid) * connectionGrid;
   const rawPoints: Point[] = [{ ...from.point }];
   const rawModes: SegmentMode[] = [];
   const append = (point: Point, mode: SegmentMode) => {
@@ -232,14 +238,14 @@ export function buildOrthogonalEscapeRoute(
       const middleY =
         fromEscape.y === toEscape.y
           ? fromEscape.y + escapeLength
-          : Math.round((fromEscape.y + toEscape.y) / 2);
+          : snapToConnectionGrid((fromEscape.y + toEscape.y) / 2);
       append({ x: fromEscape.x, y: middleY }, "auto");
       append({ x: toEscape.x, y: middleY }, "auto");
     } else if (fromOutward.y !== 0 && toOutward.y !== 0) {
       const middleX =
         fromEscape.x === toEscape.x
           ? fromEscape.x + escapeLength
-          : Math.round((fromEscape.x + toEscape.x) / 2);
+          : snapToConnectionGrid((fromEscape.x + toEscape.x) / 2);
       append({ x: middleX, y: fromEscape.y }, "auto");
       append({ x: middleX, y: toEscape.y }, "auto");
     } else if (fromOutward.x !== 0) {

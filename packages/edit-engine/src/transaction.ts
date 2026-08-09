@@ -1312,6 +1312,7 @@ export function executeTransaction(
             outward: resolveEndpointOutwardDirection(draft, resolver, edit.to),
           },
           edit.escapeLength,
+          draft.presentation.grid,
         );
         const route: RouteBranch = {
           id: edit.routeId,

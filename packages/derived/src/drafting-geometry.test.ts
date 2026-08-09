@@ -193,8 +193,61 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     // from = M1 placement, to = route endpoint (port-out at 200,100).
     expect(geometry.from).toEqual({ x: 100, y: 100 });
     expect(geometry.to).toEqual({ x: 200, y: 100 });
+    expect(geometry.points).toEqual([
+      { x: 100, y: 100 },
+      { x: 200, y: 100 },
+    ]);
+    expect(geometry.vertices).toEqual(geometry.points);
     expect(geometry.center).toEqual({ x: 150, y: 100 });
     expect(geometry.bounds.width).toBeGreaterThan(0);
+  });
+
+  it("keeps free arrow waypoints between independently anchored endpoints", () => {
+    const object: Extract<DraftingObject, { kind: "arrow" }> = {
+      id: "a-bend",
+      kind: "arrow",
+      locked: false,
+      zIndex: 0,
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      from: { kind: "free", position: { x: 0, y: 0 } },
+      waypoints: [{ x: 40, y: 30 }],
+      to: { kind: "free", position: { x: 100, y: 30 } },
+    };
+    const geometry = resolveDraftingObjectGeometry(
+      documentWithRoute(),
+      resolver,
+      object,
+    );
+    expect(geometry.kind).toBe("arrow");
+    if (geometry.kind !== "arrow") return;
+    expect(geometry.points).toEqual([
+      { x: 0, y: 0 },
+      { x: 40, y: 30 },
+      { x: 100, y: 30 },
+    ]);
+    expect(geometry.curveControls).toEqual([null, null]);
+    expect(geometry.bounds.height).toBeGreaterThan(30);
+  });
+
+  it("preserves a quadratic control for each drafting path segment", () => {
+    const object: Extract<DraftingObject, { kind: "arrow" }> = {
+      id: "a-curve",
+      kind: "arrow",
+      locked: false,
+      zIndex: 0,
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
+      from: { kind: "free", position: { x: 0, y: 0 } },
+      to: { kind: "free", position: { x: 100, y: 0 } },
+      curveControls: [{ x: 50, y: 40 }],
+    };
+    const geometry = resolveDraftingObjectGeometry(
+      documentWithRoute(),
+      resolver,
+      object,
+    );
+    expect(geometry.kind).toBe("arrow");
+    if (geometry.kind !== "arrow") return;
+    expect(geometry.curveControls).toEqual([{ x: 50, y: 40 }]);
   });
 
   it("resolves a construction line with bounds covering its points and no anchors", () => {
@@ -208,6 +261,7 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
         { x: 0, y: 0 },
         { x: 100, y: 40 },
       ],
+      curveControls: [{ x: 35, y: 80 }],
       lineStyle: "dashed",
     };
     const geometry = resolveDraftingObjectGeometry(
@@ -217,6 +271,7 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     );
     expect(geometry.kind).toBe("construction-line");
     if (geometry.kind !== "construction-line") return;
+    expect(geometry.curveControls).toEqual([{ x: 35, y: 80 }]);
     expect(geometry.bounds).toMatchObject({
       x: -6,
       y: -6,

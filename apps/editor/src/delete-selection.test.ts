@@ -1,9 +1,10 @@
-import { createEmptyDocument } from "@icm/model";
+import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import { executeTransaction } from "@icm/edit-engine";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import {
+  collectVisualRouteDeletion,
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
 } from "./delete-selection";
@@ -125,6 +126,55 @@ describe("connected instance deletion", () => {
           },
         ],
       },
+    });
+  });
+});
+
+function documentWithJunctionRoute() {
+  const document = createEmptyProject("delete-routes", "Delete routes")
+    .documents[0]!;
+  document.nets.push({
+    id: "net-1",
+    name: "N1",
+    scope: "local",
+    terminals: [],
+    ports: [],
+  });
+  document.junctions.push(
+    { id: "junction-left", netId: "net-1", position: { x: 100, y: 100 } },
+    { id: "junction-right", netId: "net-1", position: { x: 200, y: 100 } },
+  );
+  document.routes.push({
+    id: "route-1",
+    netId: "net-1",
+    from: { kind: "junction", junctionId: "junction-left" },
+    to: { kind: "junction", junctionId: "junction-right" },
+    waypoints: [],
+    segmentModes: ["auto"],
+  });
+  return document;
+}
+
+describe("collectVisualRouteDeletion", () => {
+  it("cleans both orphan junction endpoints when a route is deleted", () => {
+    expect(
+      collectVisualRouteDeletion(documentWithJunctionRoute(), ["route-1"], []),
+    ).toEqual({
+      routeIds: ["route-1"],
+      junctionIds: ["junction-left", "junction-right"],
+    });
+  });
+
+  it("deletes every route attached to a selected junction before removing it", () => {
+    expect(
+      collectVisualRouteDeletion(
+        documentWithJunctionRoute(),
+        [],
+        ["junction-left"],
+      ),
+    ).toEqual({
+      routeIds: ["route-1"],
+      junctionIds: ["junction-left", "junction-right"],
     });
   });
 });

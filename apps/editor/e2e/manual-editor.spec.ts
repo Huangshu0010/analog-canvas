@@ -73,6 +73,35 @@ async function clickRoute(
   await page.mouse.click(point.x, point.y);
 }
 
+async function dragRouteSegment(
+  page: Page,
+  routeId: string,
+  delta: { x: number; y: number },
+  position = 0.5,
+  segmentIndex = 0,
+): Promise<void> {
+  const route = page.getByTestId(`route-hit-${routeId}`);
+  const point = await route.evaluate(
+    (element, options) => {
+      const polyline = element as SVGPolylineElement;
+      const from = polyline.points.getItem(options.segmentIndex);
+      const to = polyline.points.getItem(options.segmentIndex + 1);
+      const matrix = polyline.getScreenCTM();
+      if (!from || !to || !matrix) return null;
+      return new DOMPoint(
+        from.x + (to.x - from.x) * options.position,
+        from.y + (to.y - from.y) * options.position,
+      ).matrixTransform(matrix);
+    },
+    { position, segmentIndex },
+  );
+  if (!point) throw new Error(`Route ${routeId} is not measurable`);
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.mouse.move(point.x + delta.x, point.y + delta.y, { steps: 4 });
+  await page.mouse.up();
+}
+
 async function clickRouteWithScreenOffset(
   page: Page,
   routeId: string,
@@ -338,6 +367,7 @@ test("places free wire bends and finishes at an arbitrary grid point", async ({
   await expect(page.getByTestId("wire-preview")).toBeVisible();
   await canvas.dblclick({ position: { x: 650, y: 340 } });
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="junction-junction-ui-"]'),
   ).toHaveCount(1);
@@ -353,7 +383,59 @@ test("places free wire bends and finishes at an arbitrary grid point", async ({
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
-test("leaves device pins on their natural axis and deletes a selected junction", async ({
+test("moves an isolated free wire as one route", async ({ page }) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+  await clickCommand(page, "Draw", "Wire (W)");
+  await canvas.click({ position: { x: 420, y: 220 } });
+  await canvas.dblclick({ position: { x: 620, y: 300 } });
+  await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(0);
+
+  const route = page.locator('[data-testid^="route-hit-"]');
+  await expect(route).toHaveCount(1);
+  const routeId = (await route.getAttribute("data-testid"))!.replace(
+    "route-hit-",
+    "",
+  );
+  const before = await readRoutePoints(page, routeId);
+  await clickRoute(page, routeId);
+  await dragRouteSegment(page, routeId, { x: 120, y: 80 });
+  const after = await readRoutePoints(page, routeId);
+  const delta = {
+    x: after[0]!.x - before[0]!.x,
+    y: after[0]!.y - before[0]!.y,
+  };
+  expect(delta).not.toEqual({ x: 0, y: 0 });
+  expect(
+    after.map((point, index) => ({
+      x: point.x - before[index]!.x,
+      y: point.y - before[index]!.y,
+    })),
+  ).toEqual(after.map(() => delta));
+});
+
+test("stretches the pointed segment of a selected attached wire", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 300, y: 220 });
+  await placeComponent(page, "resistor", { x: 540, y: 220 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+
+  const before = await readRoutePoints(page, "route-ui-1");
+  await clickRoute(page, "route-ui-1");
+  await dragRouteSegment(page, "route-ui-1", { x: 0, y: 80 });
+  const after = await readRoutePoints(page, "route-ui-1");
+  expect(after[0]).toEqual(before[0]);
+  expect(after.at(-1)).toEqual(before.at(-1));
+  expect(
+    after.some((point) => !before.some((prior) => prior.y === point.y)),
+  ).toBe(true);
+});
+
+test("keeps direct device pin corners on-grid and deletes a selected junction", async ({
   page,
 }) => {
   await page.goto("/");
@@ -364,9 +446,11 @@ test("leaves device pins on their natural axis and deletes a selected junction",
   await page.getByTestId("terminal-R2-1").click();
 
   const terminalRoute = await readRoutePoints(page, "route-ui-1");
-  expect(terminalRoute.length).toBeGreaterThanOrEqual(3);
-  expect(terminalRoute[0]!.x).toBe(terminalRoute[1]!.x);
-  expect(terminalRoute.at(-2)!.x).toBe(terminalRoute.at(-1)!.x);
+  expect(terminalRoute).toEqual([
+    { x: 300, y: 240 },
+    { x: 530, y: 240 },
+    { x: 530, y: 140 },
+  ]);
   expect(
     terminalRoute.every(
       (point) => Math.abs(point.x % 10) === 0 && Math.abs(point.y % 10) === 0,
@@ -512,6 +596,84 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await expect(page.getByTestId("selected-internal-route-count")).toHaveText(
     "1",
   );
+});
+
+test("requires selection before a component drag can move it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  const canvas = page.getByTestId("schematic-canvas");
+  const hit = page.getByTestId("hit-R1");
+
+  // Placement selects the new part; clear that convenience selection so this
+  // is the same gesture a user makes in a dense, established schematic.
+  await canvas.click({ position: { x: 760, y: 420 } });
+  await hit.dragTo(canvas, { targetPosition: { x: 440, y: 300 } });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByTestId("status")).toContainText("drag again to move");
+
+  await hit.dragTo(canvas, { targetPosition: { x: 520, y: 340 } });
+  await expect(page.getByTestId("revision")).toHaveText("2");
+});
+
+test("selects an attached label without selecting its host", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+
+  await page.getByTestId("annotation-hit-instance-label-R1").click();
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toHaveClass(/hit-target/u);
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toHaveClass(/selected/u);
+  await expect(page.getByTestId("selection-shelf")).toContainText(
+    "instance-label-R1",
+  );
+});
+
+test("moves an attached label with a direct drag", async ({ page }) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+
+  // The same two-stage interaction as a component: select first, then drag.
+  const label = page.getByTestId("annotation-hit-instance-label-R1");
+  await expect(label).toBeVisible();
+  await label.click();
+  const before = await label.boundingBox();
+  expect(before).not.toBeNull();
+
+  await label.dragTo(page.getByTestId("schematic-canvas"), {
+    targetPosition: { x: 470, y: 330 },
+  });
+  const after = await label.boundingBox();
+  expect(after).not.toBeNull();
+  expect(after!.x).not.toBe(before!.x);
+  expect(after!.y).not.toBe(before!.y);
+});
+
+test("moves floating text after it is created", async ({ page }) => {
+  await page.goto("/");
+  await clickCommand(page, "Draw", "Text");
+  await page
+    .getByRole("textbox", { name: "Canvas text editor" })
+    .fill("Floating note");
+  await page.getByRole("button", { name: "Apply text changes" }).click();
+
+  const note = page.locator('[data-testid^="drafting-hit-note-"]');
+  await expect(note).toHaveCount(1);
+  const before = await note.boundingBox();
+  expect(before).not.toBeNull();
+  await note.dragTo(page.getByTestId("schematic-canvas"), {
+    targetPosition: { x: 650, y: 320 },
+  });
+  const after = await note.boundingBox();
+  expect(after).not.toBeNull();
+  expect(after!.x).not.toBe(before!.x);
+  expect(after!.y).not.toBe(before!.y);
 });
 
 test("edits instance, electrical Net, and free text with bounded label handles", async ({

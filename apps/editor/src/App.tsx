@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DragEvent, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  DragEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 
 import { DocumentHistory } from "@icm/edit-engine";
 import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
@@ -64,6 +68,7 @@ import type { SymbolDefinition } from "@icm/symbols";
 import { copySelection, proposePaste } from "./clipboard";
 import type { SchematicClipboard } from "./clipboard";
 import {
+  collectVisualRouteDeletion,
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
 } from "./delete-selection";
@@ -80,6 +85,14 @@ import type { VisualSelection, VisualSelectionKind } from "./visual-selection";
 import { createRecoveryScheduler } from "./recovery-scheduler";
 import type { RecoveryScheduler } from "./recovery-scheduler";
 import { RichTextEditor } from "./rich-text-editor";
+import { reflectOrientation } from "./shortcut-orientation";
+import type { ScreenFlip } from "./shortcut-orientation";
+import {
+  exceedsDragThreshold,
+  instanceVisibleHitBox,
+  mayStartSelectedDrag,
+} from "./selection-geometry";
+import { buildManualWirePath } from "./wire-path";
 
 const RECOVERY_KEY = "icm.recovery.v1";
 // Coalesce bursts of edits into one recovery write so a large schematic does
@@ -88,6 +101,7 @@ const RECOVERY_KEY = "icm.recovery.v1";
 const RECOVERY_DELAY_MS = 400;
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 const DIRECT_PIN_SNAP_RADIUS = 4;
+const DRAG_START_DISTANCE_PX = 4;
 // Drafting creation snap radius (logical units). Slightly more generous than
 // pin-snap so an arrow/construction-line endpoint finds a nearby pin/port/
 // junction without requiring pixel-perfect aiming.
@@ -97,8 +111,10 @@ interface DragPreview {
   instanceIds: string[];
   originalPositions: Record<string, Point>;
   pointerStart: Point;
+  rawPointerStart: Point;
   position: Point;
   pointerId: number;
+  dragging: boolean;
 }
 
 interface BoxPreview {
@@ -123,6 +139,8 @@ interface TextEditingSession {
 interface RouteStretchPreview {
   routeId: string;
   segmentIndex: number;
+  kind: "segment" | "translate";
+  start: Point;
   point: Point;
   pointerId: number;
 }
@@ -131,8 +149,10 @@ interface AnnotationDragPreview {
   annotationId: string;
   originalPosition: Point;
   pointerStart: Point;
+  rawPointerStart: Point;
   position: Point;
   pointerId: number;
+  dragging: boolean;
 }
 
 interface DraftingDragPreview {
@@ -162,11 +182,8 @@ interface WireSource {
   endpoint: RouteEndpoint;
   netId: string | null;
   point: Point;
-  preferredAxis?: OrthogonalAxis;
   preludeEdits: SchematicEdit[];
 }
-
-type OrthogonalAxis = "horizontal" | "vertical";
 
 export interface AppProps {
   project?: CircuitProject;
@@ -244,53 +261,93 @@ function polylinePoints(points: readonly Point[]): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
 }
 
-function extendOrthogonalPath(
+function draftingPathData(
   points: readonly Point[],
-  target: Point,
-  preferredInitialAxis: OrthogonalAxis = "horizontal",
-  preferredTargetAxis?: OrthogonalAxis,
-): Point[] {
-  const result = points.map((point) => ({ ...point }));
-  const last = result.at(-1);
-  if (!last) return [{ ...target }];
-  if (last.x === target.x || last.y === target.y) {
-    if (last.x !== target.x || last.y !== target.y) result.push({ ...target });
-    return result;
+  curveControls: readonly (Point | null)[],
+): string {
+  const start = points[0]!;
+  let data = `M ${start.x} ${start.y}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const end = points[index + 1]!;
+    const control = curveControls[index];
+    data += control
+      ? ` Q ${control.x} ${control.y} ${end.x} ${end.y}`
+      : ` L ${end.x} ${end.y}`;
   }
-  const previous = result.at(-2);
-  const departureAxis: OrthogonalAxis = previous
-    ? previous.x === last.x
-      ? "horizontal"
-      : "vertical"
-    : preferredInitialAxis;
-  if (!preferredTargetAxis || departureAxis !== preferredTargetAxis) {
-    result.push(
-      departureAxis === "horizontal"
-        ? { x: target.x, y: last.y }
-        : { x: last.x, y: target.y },
-    );
-  } else if (departureAxis === "horizontal") {
-    const middleX = snap((last.x + target.x) / 2, 1);
-    result.push({ x: middleX, y: last.y }, { x: middleX, y: target.y });
-  } else {
-    const middleY = snap((last.y + target.y) / 2, 1);
-    result.push({ x: last.x, y: middleY }, { x: target.x, y: middleY });
-  }
-  result.push({ ...target });
-  return result;
+  return data;
 }
 
-function transformedPinAxis(
-  direction: "north" | "east" | "south" | "west",
-  rotation: 0 | 90 | 180 | 270,
-): OrthogonalAxis {
-  const localAxis =
-    direction === "east" || direction === "west" ? "horizontal" : "vertical";
-  return rotation === 90 || rotation === 270
-    ? localAxis === "horizontal"
-      ? "vertical"
-      : "horizontal"
-    : localAxis;
+function quadraticMidpoint(
+  from: Point,
+  control: Point | null,
+  to: Point,
+): Point {
+  return control
+    ? {
+        x: (from.x + 2 * control.x + to.x) / 4,
+        y: (from.y + 2 * control.y + to.y) / 4,
+      }
+    : { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+}
+
+// A quadratic Bézier evaluated at t=0.5 is (P0 + 2C + P1)/4. Inverting it
+// makes the visible midpoint the direct manipulation handle the user drags.
+function controlForQuadraticMidpoint(
+  from: Point,
+  midpoint: Point,
+  to: Point,
+): Point {
+  return {
+    x: Math.round(2 * midpoint.x - (from.x + to.x) / 2),
+    y: Math.round(2 * midpoint.y - (from.y + to.y) / 2),
+  };
+}
+
+function quadraticTangentAngle(
+  from: Point,
+  control: Point | null,
+  to: Point,
+): number {
+  if (!control) return 0;
+  const start = { x: control.x - from.x, y: control.y - from.y };
+  const end = { x: to.x - control.x, y: to.y - control.y };
+  const startLength = Math.hypot(start.x, start.y);
+  const endLength = Math.hypot(end.x, end.y);
+  if (startLength < 1e-6 || endLength < 1e-6) return 0;
+  const cosine = Math.max(
+    -1,
+    Math.min(
+      1,
+      (start.x * end.x + start.y * end.y) / (startLength * endLength),
+    ),
+  );
+  return (Math.acos(cosine) * 180) / Math.PI;
+}
+
+function controlForTangentAngle(
+  from: Point,
+  to: Point,
+  angleDegrees: number,
+  existingControl: Point | null,
+): Point | null {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const chordLength = Math.hypot(dx, dy);
+  if (chordLength < 1e-6 || angleDegrees <= 0.01) return null;
+  const boundedAngle = Math.min(170, Math.max(0.01, angleDegrees));
+  const midpoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+  const normal = { x: -dy / chordLength, y: dx / chordLength };
+  const existingSide = existingControl
+    ? Math.sign(
+        (existingControl.x - midpoint.x) * normal.x +
+          (existingControl.y - midpoint.y) * normal.y,
+      )
+    : 1;
+  const offset = (chordLength / 2) * Math.tan((boundedAngle * Math.PI) / 360);
+  return {
+    x: Math.round(midpoint.x + normal.x * offset * (existingSide || 1)),
+    y: Math.round(midpoint.y + normal.y * offset * (existingSide || 1)),
+  };
 }
 
 interface RouteTap {
@@ -635,6 +692,28 @@ function rotateFreePoint(
   };
 }
 
+function rotatePointByDegrees(
+  point: Point,
+  pivot: Point,
+  degrees: number,
+): Point {
+  const radians = (degrees * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - pivot.x;
+  const dy = point.y - pivot.y;
+  return {
+    x: Math.round(pivot.x + dx * cos - dy * sin),
+    y: Math.round(pivot.y + dx * sin + dy * cos),
+  };
+}
+
+function normalizedBearing(from: Point, to: Point): number {
+  return (
+    ((Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI + 360) % 360
+  );
+}
+
 function centerOfBounds(bounds: Rect): Point {
   return {
     x: bounds.x + bounds.width / 2,
@@ -793,6 +872,18 @@ export function App({ project: initialProject }: AppProps) {
   const [draftingSnapPoint, setDraftingSnapPoint] = useState<Point | null>(
     null,
   );
+  const [draftingInspectorSegment, setDraftingInspectorSegment] = useState<{
+    objectId: string;
+    index: number;
+  } | null>(null);
+  const [draftingTangentInput, setDraftingTangentInput] = useState<{
+    key: string;
+    value: string;
+  } | null>(null);
+  const [draftingBearingInput, setDraftingBearingInput] = useState<{
+    objectId: string;
+    value: string;
+  } | null>(null);
   const [tool, setTool] = useState<EditorTool>("pointer");
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
   const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
@@ -948,10 +1039,6 @@ export function App({ project: initialProject }: AppProps) {
               instance.placement!.position,
               instance.placement!,
             ),
-            preferredAxis: transformedPinAxis(
-              pin.direction,
-              instance.placement!.rotation,
-            ),
             preludeEdits: [],
           };
         });
@@ -972,7 +1059,10 @@ export function App({ project: initialProject }: AppProps) {
         : [],
     ),
     ...document.junctions
-      .filter((junction) => (junction.role ?? "branch") === "branch")
+      .filter((junction) => {
+        const role = junction.role ?? "branch";
+        return role === "branch" || role === "route-anchor";
+      })
       .map((junction): WireSource => ({
         endpoint: { kind: "junction", junctionId: junction.id },
         netId: junction.netId,
@@ -993,6 +1083,45 @@ export function App({ project: initialProject }: AppProps) {
         polyline: NonNullable<ReturnType<typeof routePolyline>>;
       } => candidate.polyline !== null,
     );
+
+  function junctionRouteDegree(junctionId: string): number {
+    return document.routes.filter(
+      (route) =>
+        (route.from.kind === "junction" &&
+          route.from.junctionId === junctionId) ||
+        (route.to.kind === "junction" && route.to.junctionId === junctionId),
+    ).length;
+  }
+
+  function isLooseRouteEndpoint(endpoint: RouteEndpoint): boolean {
+    if (endpoint.kind !== "junction") return false;
+    const junction = document.junctions.find(
+      (candidate) => candidate.id === endpoint.junctionId,
+    );
+    if (!junction) return false;
+    // Older GUI-created loose ends were stored with the implicit branch role.
+    // Their degree still distinguishes them from a real electrical branch.
+    return (
+      junction.role === "route-anchor" ||
+      ((junction.role ?? "branch") === "branch" &&
+        junctionRouteDegree(junction.id) === 1)
+    );
+  }
+
+  function looseRouteAnchorIds(
+    route: SchematicDocument["routes"][number],
+  ): [string, string] | null {
+    if (
+      route.from.kind !== "junction" ||
+      route.to.kind !== "junction" ||
+      route.from.junctionId === route.to.junctionId ||
+      !isLooseRouteEndpoint(route.from) ||
+      !isLooseRouteEndpoint(route.to)
+    ) {
+      return null;
+    }
+    return [route.from.junctionId, route.to.junctionId];
+  }
 
   function directPinSnap(
     moves: readonly { instanceId: string; position: Point }[],
@@ -1033,7 +1162,6 @@ export function App({ project: initialProject }: AppProps) {
             pinName: pin.name,
           }),
           point: transformPoint(pin.at, move.position, placement),
-          preferredAxis: transformedPinAxis(pin.direction, placement.rotation),
           preludeEdits: [],
         }));
     });
@@ -1273,7 +1401,10 @@ export function App({ project: initialProject }: AppProps) {
         ? arrowBounds.y + arrowBounds.height
         : textBounds.y + textBounds.height,
     );
-    const padding = 6;
+    // The measured RichText bounds already follow the painted glyphs. Keep a
+    // small tolerance for targeting, rather than a large logical rectangle
+    // that steals nearby component and wire clicks.
+    const padding = 0;
     return {
       x: minimumX - padding,
       y: minimumY - padding,
@@ -1315,27 +1446,7 @@ export function App({ project: initialProject }: AppProps) {
       instance.symbolId,
       instance.symbolVariantId,
     );
-    if (!resolved) return null;
-    const viewBox = resolved.definition.viewBox;
-    const corners = [
-      { x: viewBox.x, y: viewBox.y },
-      { x: viewBox.x + viewBox.width, y: viewBox.y },
-      { x: viewBox.x, y: viewBox.y + viewBox.height },
-      { x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
-    ].map((point) =>
-      transformPoint(point, instance.placement!.position, instance.placement!),
-    );
-    const xs = corners.map((point) => point.x);
-    const ys = corners.map((point) => point.y);
-    const padding = 3;
-    const x = Math.min(...xs) - padding;
-    const y = Math.min(...ys) - padding;
-    return {
-      x,
-      y,
-      width: Math.max(...xs) - x + padding,
-      height: Math.max(...ys) - y + padding,
-    };
+    return resolved ? instanceVisibleHitBox(instance, resolved) : null;
   }
 
   function defaultInstanceLabel(
@@ -1402,11 +1513,11 @@ export function App({ project: initialProject }: AppProps) {
     : [];
   const wireDraftPoints =
     wireSource && wirePreviewPoint
-      ? extendOrthogonalPath(
-          wireFixedPoints,
-          wirePreviewPoint,
-          wireSource.preferredAxis,
-        )
+      ? buildManualWirePath(
+          wireSource,
+          { point: wirePreviewPoint },
+          wireWaypoints,
+        ).points
       : wireFixedPoints;
   const projectInstanceCount = project.documents.reduce(
     (count, candidate) => count + candidate.instances.length,
@@ -1795,24 +1906,15 @@ export function App({ project: initialProject }: AppProps) {
       to: candidate.endpoint,
       ...(!wireSource.netId && !candidate.netId ? { newNetId: netId } : {}),
     });
-    const routedPoints = extendOrthogonalPath(
-      [wireSource.point, ...wireWaypoints],
-      candidate.point,
-      wireSource.preferredAxis,
-      candidate.preferredAxis,
-    );
-    const waypoints = routedPoints.slice(1, -1);
+    const routed = buildManualWirePath(wireSource, candidate, wireWaypoints);
     edits.push({
       kind: "set_route_points",
       routeId: `route-ui-${suffix}`,
       netId,
       from: wireSource.endpoint,
       to: candidate.endpoint,
-      waypoints,
-      segmentModes: Array.from(
-        { length: waypoints.length + 1 },
-        () => "manual" as const,
-      ),
+      waypoints: routed.waypoints,
+      segmentModes: routed.segmentModes,
     });
     const result = transact(edits);
     if (result.ok) {
@@ -1840,6 +1942,7 @@ export function App({ project: initialProject }: AppProps) {
           junctionId,
           netId,
           position: point,
+          role: "route-anchor",
           ...(createNet ? { createNet: true } : {}),
         },
       ],
@@ -1856,14 +1959,15 @@ export function App({ project: initialProject }: AppProps) {
       setStatus("Wire source: free grid point");
       return;
     }
-    const fixed = extendOrthogonalPath(
-      [wireSource.point, ...wireWaypoints],
-      point,
-      wireSource.preferredAxis,
-    );
-    setWireWaypoints(fixed.slice(1));
+    const fixed = buildManualWirePath(wireSource, { point }, wireWaypoints);
+    // Keep the clicked point as an in-progress waypoint. The path builder
+    // treats it as a fixed bend on the next click while retaining the source
+    // terminal's escape segment.
+    setWireWaypoints(fixed.points.slice(1));
     setWirePreviewPoint(point);
-    setStatus(`Wire bend ${fixed.length - 1}; double-click or Enter to finish`);
+    setStatus(
+      `Wire bend ${fixed.points.length - 1}; double-click or Enter to finish`,
+    );
   }
 
   function finishWireAtPoint(point: Point): void {
@@ -1934,14 +2038,20 @@ export function App({ project: initialProject }: AppProps) {
       logicalRadiusForPixels(svg, 7),
     );
     if (tool === "pointer") {
-      clearSupplementalSelection();
-      setSelectedRouteId(routeId);
-      setSelectedRouteSegmentIndex(tap?.segmentIndex ?? 0);
-      setSelectedIds([]);
-      setSelectedAnnotationId(null);
-      setStatus(
-        `Selected route ${routeId}, segment ${(tap?.segmentIndex ?? 0) + 1}`,
-      );
+      const segmentIndex = tap?.segmentIndex ?? 0;
+      const routeIsAlreadySelected = selectedRouteId === routeId;
+      if (routeIsAlreadySelected) {
+        beginRouteStretch(
+          event,
+          routeId,
+          segmentIndex,
+          looseRouteAnchorIds(routeRecord.route) !== null
+            ? "translate"
+            : "segment",
+        );
+      } else {
+        selectRoute(routeId, segmentIndex);
+      }
       return;
     }
     if (!tap) {
@@ -1970,6 +2080,16 @@ export function App({ project: initialProject }: AppProps) {
     } else {
       commitWire(anchor);
     }
+  }
+
+  function selectRoute(routeId: string, segmentIndex = 0): void {
+    clearSupplementalSelection();
+    setSelectedRouteId(routeId);
+    setSelectedRouteSegmentIndex(segmentIndex);
+    setSelectedIds([]);
+    setSelectedAnnotationId(null);
+    setSelectedEndpoint(null);
+    setStatus(`Selected route ${routeId}, segment ${segmentIndex + 1}`);
   }
 
   function removeSelectedRouteGeometry(): void {
@@ -2022,28 +2142,30 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function beginRouteStretch(
-    event: ReactPointerEvent<SVGCircleElement>,
+    event: ReactPointerEvent<SVGElement>,
     routeId: string,
     segmentIndex: number,
+    kind: "segment" | "translate" = "segment",
   ): void {
     if (event.button !== 0) return;
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
+    const start = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+    );
     setRouteStretchPreview({
       routeId,
       segmentIndex,
+      kind,
       pointerId: event.pointerId,
-      point: pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget.ownerSVGElement!,
-      ),
+      start,
+      point: start,
     });
   }
 
-  function previewRouteStretch(
-    event: ReactPointerEvent<SVGCircleElement>,
-  ): void {
+  function previewRouteStretch(event: ReactPointerEvent<SVGElement>): void {
     if (routeStretchPreview?.pointerId !== event.pointerId) return;
     setRouteStretchPreview({
       ...routeStretchPreview,
@@ -2055,9 +2177,7 @@ export function App({ project: initialProject }: AppProps) {
     });
   }
 
-  function finishRouteStretch(
-    event: ReactPointerEvent<SVGCircleElement>,
-  ): void {
+  function finishRouteStretch(event: ReactPointerEvent<SVGElement>): void {
     if (routeStretchPreview?.pointerId !== event.pointerId) return;
     event.currentTarget.releasePointerCapture(event.pointerId);
     const record = routePolylines.find(
@@ -2073,22 +2193,67 @@ export function App({ project: initialProject }: AppProps) {
       event.currentTarget.ownerSVGElement!,
     );
     try {
-      const proposal = moveRouteSegment(
-        record.polyline,
-        routeStretchPreview.segmentIndex,
-        point,
-      );
-      const result = transact([
-        {
-          kind: "set_route_points",
-          routeId: record.route.id,
-          netId: record.route.netId,
-          from: record.route.from,
-          to: record.route.to,
-          ...proposal,
-        },
-      ]);
-      if (result.ok) setStatus(`Moved route segment ${record.route.id}`);
+      if (routeStretchPreview.kind === "translate") {
+        const anchorIds = looseRouteAnchorIds(record.route);
+        if (!anchorIds) {
+          throw new Error(
+            "Only a route with two loose ends can move as a whole",
+          );
+        }
+        const delta = {
+          x: point.x - routeStretchPreview.start.x,
+          y: point.y - routeStretchPreview.start.y,
+        };
+        if (delta.x !== 0 || delta.y !== 0) {
+          const junctionEdits = anchorIds.map((junctionId): SchematicEdit => {
+            const junction = document.junctions.find(
+              (candidate) => candidate.id === junctionId,
+            )!;
+            return {
+              kind: "move_junction",
+              junctionId,
+              position: {
+                x: junction.position.x + delta.x,
+                y: junction.position.y + delta.y,
+              },
+            };
+          });
+          const translatedPoints = record.polyline.points.map((routePoint) => ({
+            x: routePoint.x + delta.x,
+            y: routePoint.y + delta.y,
+          }));
+          const result = transact([
+            ...junctionEdits,
+            {
+              kind: "set_route_points",
+              routeId: record.route.id,
+              netId: record.route.netId,
+              from: record.route.from,
+              to: record.route.to,
+              waypoints: translatedPoints.slice(1, -1),
+              segmentModes: record.route.segmentModes,
+            },
+          ]);
+          if (result.ok) setStatus(`Moved loose route ${record.route.id}`);
+        }
+      } else {
+        const proposal = moveRouteSegment(
+          record.polyline,
+          routeStretchPreview.segmentIndex,
+          point,
+        );
+        const result = transact([
+          {
+            kind: "set_route_points",
+            routeId: record.route.id,
+            netId: record.route.netId,
+            from: record.route.from,
+            to: record.route.to,
+            ...proposal,
+          },
+        ]);
+        if (result.ok) setStatus(`Moved route segment ${record.route.id}`);
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Route move failed");
     }
@@ -2179,14 +2344,44 @@ export function App({ project: initialProject }: AppProps) {
     event: ReactPointerEvent<SVGRectElement>,
     annotation: Annotation,
   ): void {
-    if (event.button !== 0 || annotation.locked) return;
+    if (event.button !== 0) return;
     event.stopPropagation();
+    const labelAlreadySelected = selectedAnnotationId === annotation.id;
+    if (annotation.locked) {
+      clearSupplementalSelection();
+      setSelectedAnnotationId(annotation.id);
+      setSelectedIds([]);
+      setSelectedRouteId(null);
+      setSelectedEndpoint(null);
+      setStatus("Selected locked annotation");
+      return;
+    }
+    if (
+      !mayStartSelectedDrag(
+        labelAlreadySelected,
+        event.shiftKey || event.ctrlKey || event.metaKey,
+      )
+    ) {
+      clearSupplementalSelection();
+      setSelectedAnnotationId(annotation.id);
+      setSelectedIds([]);
+      setSelectedRouteId(null);
+      setSelectedEndpoint(null);
+      setStatus(`Selected annotation ${annotation.id}`);
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     clearSupplementalSelection();
     const pointerStart = pointFromClient(
       event.clientX,
       event.clientY,
       event.currentTarget.ownerSVGElement!,
+    );
+    const rawPointerStart = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+      false,
     );
     setSelectedAnnotationId(annotation.id);
     setSelectedIds([]);
@@ -2196,23 +2391,48 @@ export function App({ project: initialProject }: AppProps) {
       annotationId: annotation.id,
       originalPosition: { ...annotation.position },
       pointerStart,
+      rawPointerStart,
       position: { ...annotation.position },
       pointerId: event.pointerId,
+      dragging: false,
     });
   }
 
-  // Renderer defaults have no persisted object until the user gives the label
-  // an independent placement. Materialize the standard semantic annotation at
-  // pointer-down, then continue through the same drag protocol as every other
-  // electrical label. No text edit is required.
-  function beginDefaultInstanceLabelDrag(
+  // Renderer defaults have no persisted object. A first click selects the
+  // component without mutating the document; double-click makes the label
+  // explicit and opens its editor. This prevents a label click from becoming
+  // an accidental, persistent label drag.
+  function selectDefaultInstanceLabel(
     event: ReactPointerEvent<SVGRectElement>,
     instance: SchematicDocument["instances"][number],
   ): void {
+    event.stopPropagation();
+    if (event.altKey) {
+      const annotation = defaultInstanceLabel(instance);
+      if (!annotation) return;
+      const result = transact([{ kind: "upsert_annotation", annotation }]);
+      if (result.ok) {
+        clearSupplementalSelection();
+        setSelectedAnnotationId(annotation.id);
+        setSelectedIds([]);
+        setSelectedRouteId(null);
+        setStatus(`Selected label ${annotation.id}; drag again to move`);
+      }
+      return;
+    }
+    selectInstance(instance.id, false);
+    setStatus(`Selected ${instance.id}; double-click its label to edit`);
+  }
+
+  function editDefaultInstanceLabel(
+    event: ReactMouseEvent<SVGRectElement>,
+    instance: SchematicDocument["instances"][number],
+  ): void {
+    event.stopPropagation();
     const annotation = defaultInstanceLabel(instance);
     if (!annotation) return;
     const result = transact([{ kind: "upsert_annotation", annotation }]);
-    if (result.ok) beginAnnotationDrag(event, annotation);
+    if (result.ok) beginAnnotationTextEditing(annotation);
   }
 
   function previewAnnotationDrag(
@@ -2224,6 +2444,26 @@ export function App({ project: initialProject }: AppProps) {
       event.clientY,
       event.currentTarget.ownerSVGElement!,
     );
+    const rawPointer = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+      false,
+    );
+    const threshold = logicalRadiusForPixels(
+      event.currentTarget.ownerSVGElement!,
+      DRAG_START_DISTANCE_PX,
+    );
+    if (
+      !annotationDragPreview.dragging &&
+      !exceedsDragThreshold(
+        annotationDragPreview.rawPointerStart,
+        rawPointer,
+        threshold,
+      )
+    ) {
+      return;
+    }
     const annotation = document.annotations.find(
       (candidate) => candidate.id === annotationDragPreview.annotationId,
     );
@@ -2240,6 +2480,7 @@ export function App({ project: initialProject }: AppProps) {
           pointer.y -
           annotationDragPreview.pointerStart.y,
       }),
+      dragging: true,
     });
   }
 
@@ -2251,6 +2492,10 @@ export function App({ project: initialProject }: AppProps) {
     const annotation = document.annotations.find(
       (candidate) => candidate.id === annotationDragPreview.annotationId,
     );
+    if (!annotationDragPreview.dragging) {
+      setAnnotationDragPreview(null);
+      return;
+    }
     if (annotation) {
       let offset = { ...annotation.offset };
       let routeAttachment = annotation.routeAttachment;
@@ -2474,6 +2719,19 @@ export function App({ project: initialProject }: AppProps) {
     if (!instance?.placement) {
       return;
     }
+    const hasSelectionModifier =
+      event.shiftKey || event.ctrlKey || event.metaKey;
+    if (
+      !mayStartSelectedDrag(
+        selectedIds.includes(instanceId),
+        hasSelectionModifier,
+      )
+    ) {
+      suppressInstanceClick.current = true;
+      selectInstance(instanceId, hasSelectionModifier);
+      setStatus(`Selected ${instanceId}; drag again to move`);
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     suppressInstanceClick.current = false;
     const movingIds = selectedIds.includes(instanceId)
@@ -2485,6 +2743,12 @@ export function App({ project: initialProject }: AppProps) {
       event.clientY,
       event.currentTarget.ownerSVGElement!,
     );
+    const rawPointerStart = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+      false,
+    );
     setDragPreview({
       instanceIds: movingIds,
       originalPositions: Object.fromEntries(
@@ -2494,13 +2758,31 @@ export function App({ project: initialProject }: AppProps) {
         }),
       ),
       pointerStart,
+      rawPointerStart,
       pointerId: event.pointerId,
       position: pointerStart,
+      dragging: false,
     });
   }
 
   function previewMove(event: ReactPointerEvent<SVGRectElement>): void {
     if (!dragPreview || dragPreview.pointerId !== event.pointerId) {
+      return;
+    }
+    const rawPointer = pointFromClient(
+      event.clientX,
+      event.clientY,
+      event.currentTarget.ownerSVGElement!,
+      false,
+    );
+    const threshold = logicalRadiusForPixels(
+      event.currentTarget.ownerSVGElement!,
+      DRAG_START_DISTANCE_PX,
+    );
+    if (
+      !dragPreview.dragging &&
+      !exceedsDragThreshold(dragPreview.rawPointerStart, rawPointer, threshold)
+    ) {
       return;
     }
     const position = pointFromClient(
@@ -2528,12 +2810,11 @@ export function App({ project: initialProject }: AppProps) {
             position.y + directSnap.moves[0]!.position.y - moves[0]!.position.y,
         }
       : position;
-    if (delta.x !== 0 || delta.y !== 0) {
-      suppressInstanceClick.current = true;
-    }
+    suppressInstanceClick.current = true;
     setDragPreview({
       ...dragPreview,
       position: previewPosition,
+      dragging: true,
     });
   }
 
@@ -2542,6 +2823,10 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!dragPreview.dragging) {
+      setDragPreview(null);
+      return;
+    }
     const position = pointFromClient(
       event.clientX,
       event.clientY,
@@ -2681,7 +2966,28 @@ export function App({ project: initialProject }: AppProps) {
           return [
             {
               kind: "upsert_drafting_object",
-              object: { ...object, from, to },
+              object: {
+                ...object,
+                from,
+                to,
+                waypoints: object.waypoints?.map(
+                  (point) =>
+                    rotateFreePoint(
+                      { kind: "free", position: point },
+                      pivot,
+                      deltaDegrees,
+                    ).position,
+                ),
+                curveControls: object.curveControls?.map((point) =>
+                  point
+                    ? rotateFreePoint(
+                        { kind: "free", position: point },
+                        pivot,
+                        deltaDegrees,
+                      ).position
+                    : null,
+                ),
+              },
             },
           ];
         }
@@ -2695,10 +3001,19 @@ export function App({ project: initialProject }: AppProps) {
                 deltaDegrees,
               ).position,
           );
+          const curveControls = object.curveControls?.map((point) =>
+            point
+              ? rotateFreePoint(
+                  { kind: "free", position: point },
+                  pivot,
+                  deltaDegrees,
+                ).position
+              : null,
+          );
           return [
             {
               kind: "upsert_drafting_object",
-              object: { ...object, points },
+              object: { ...object, points, curveControls },
             },
           ];
         }
@@ -2709,18 +3024,28 @@ export function App({ project: initialProject }: AppProps) {
     if (edits.length > 0) transact(edits);
   }
 
-  function mirrorSelected(): void {
+  function mirrorSelected(direction: ScreenFlip = "left-right"): void {
     const edits = selectedIds.flatMap((id): SchematicEdit[] => {
       const instance = document.instances.find(
         (candidate) => candidate.id === id,
       );
       if (!instance?.placement) return [];
+      const orientation = reflectOrientation(instance.placement, direction);
       return [
         {
           kind: "mirror_instance",
           instanceId: instance.id,
-          mirror: instance.placement.mirror === "none" ? "x" : "none",
+          mirror: orientation.mirror,
         },
+        ...(orientation.rotation === instance.placement.rotation
+          ? []
+          : [
+              {
+                kind: "rotate_instance" as const,
+                instanceId: instance.id,
+                rotation: orientation.rotation,
+              },
+            ]),
       ];
     });
     if (edits.length > 0) transact(edits);
@@ -2790,6 +3115,9 @@ export function App({ project: initialProject }: AppProps) {
   function selectDraftingObject(id: string): void {
     clearSupplementalSelection();
     setSelectedDraftingId(id);
+    setDraftingInspectorSegment(null);
+    setDraftingTangentInput(null);
+    setDraftingBearingInput(null);
     setSelectedAnnotationId(null);
     setSelectedRouteId(null);
     setSelectedIds([]);
@@ -2829,6 +3157,14 @@ export function App({ project: initialProject }: AppProps) {
           x: Math.round(point.x + delta.x),
           y: Math.round(point.y + delta.y),
         })),
+        curveControls: object.curveControls?.map((point) =>
+          point
+            ? {
+                x: Math.round(point.x + delta.x),
+                y: Math.round(point.y + delta.y),
+              }
+            : null,
+        ),
       };
     }
     if (object.kind === "arrow") {
@@ -2837,6 +3173,18 @@ export function App({ project: initialProject }: AppProps) {
         anchor: moveFreeAnchor(object.anchor),
         from: moveFreeAnchor(object.from),
         to: moveFreeAnchor(object.to),
+        waypoints: object.waypoints?.map((point) => ({
+          x: Math.round(point.x + delta.x),
+          y: Math.round(point.y + delta.y),
+        })),
+        curveControls: object.curveControls?.map((point) =>
+          point
+            ? {
+                x: Math.round(point.x + delta.x),
+                y: Math.round(point.y + delta.y),
+              }
+            : null,
+        ),
       };
     }
     return { ...object, anchor: moveFreeAnchor(object.anchor) };
@@ -2857,6 +3205,16 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     event.stopPropagation();
+    if (
+      !mayStartSelectedDrag(
+        selectedDraftingId === object.id,
+        event.shiftKey || event.ctrlKey || event.metaKey,
+      )
+    ) {
+      selectDraftingObject(object.id);
+      setStatus(`Selected drawing ${object.id}; drag again to move`);
+      return;
+    }
     draftingDragSessionRef.current?.cancel();
     const hitTarget = event.currentTarget;
     hitTarget.setPointerCapture(event.pointerId);
@@ -2865,7 +3223,14 @@ export function App({ project: initialProject }: AppProps) {
       event.clientY,
       hitTarget.ownerSVGElement!,
     );
+    const rawStart = pointFromClient(
+      event.clientX,
+      event.clientY,
+      hitTarget.ownerSVGElement!,
+      false,
+    );
     const original = { ...origin };
+    let dragging = false;
     draftingDragPositionRef.current = original;
     selectDraftingObject(object.id);
     setDraftingDragPreview({
@@ -2877,6 +3242,26 @@ export function App({ project: initialProject }: AppProps) {
     });
 
     const move = (moveEvent: PointerEvent): void => {
+      const rawPoint = pointFromClient(
+        moveEvent.clientX,
+        moveEvent.clientY,
+        hitTarget.ownerSVGElement!,
+        false,
+      );
+      if (
+        !dragging &&
+        !exceedsDragThreshold(
+          rawStart,
+          rawPoint,
+          logicalRadiusForPixels(
+            hitTarget.ownerSVGElement!,
+            DRAG_START_DISTANCE_PX,
+          ),
+        )
+      ) {
+        return;
+      }
+      dragging = true;
       const point = pointFromClient(
         moveEvent.clientX,
         moveEvent.clientY,
@@ -2915,6 +3300,7 @@ export function App({ project: initialProject }: AppProps) {
       setDraftingDragPreview(null);
       draftingDragSessionRef.current = null;
       if (
+        dragging &&
         position &&
         (position.x !== original.x || position.y !== original.y)
       ) {
@@ -2952,7 +3338,9 @@ export function App({ project: initialProject }: AppProps) {
   function beginDraftingHandleDrag(
     event: ReactPointerEvent<SVGElement>,
     object: DraftingObject,
-    handle: { kind: "from" | "to" } | { kind: "vertex"; index: number },
+    handle:
+      | { kind: "from" | "to" }
+      | { kind: "waypoint" | "vertex" | "curve"; index: number },
   ): void {
     if (event.button !== 0 || object.locked) return;
     event.stopPropagation();
@@ -2961,14 +3349,40 @@ export function App({ project: initialProject }: AppProps) {
     hitTarget.setPointerCapture(event.pointerId);
     const svg = hitTarget.ownerSVGElement!;
     const start = pointFromClient(event.clientX, event.clientY, svg);
-    const originalObject = { ...object };
+    const originalGeometry = resolveDraftingObjectGeometry(
+      document,
+      resolver,
+      object,
+    );
+    if (handle.kind === "curve") {
+      setDraftingInspectorSegment({ objectId: object.id, index: handle.index });
+      setDraftingTangentInput(null);
+    }
     selectDraftingObject(object.id);
 
     const applyHandle = (
       target: DraftingObject,
       point: Point,
     ): DraftingObject => {
-      if (target.kind === "arrow" && handle.kind !== "vertex") {
+      if (target.kind === "arrow") {
+        if (handle.kind === "waypoint") {
+          const waypoints = [...(target.waypoints ?? [])];
+          waypoints[handle.index] = point;
+          return { ...target, waypoints };
+        }
+        if (handle.kind === "curve" && originalGeometry.kind === "arrow") {
+          const controls = Array.from(
+            { length: originalGeometry.points.length - 1 },
+            (_, index) => target.curveControls?.[index] ?? null,
+          );
+          controls[handle.index] = controlForQuadraticMidpoint(
+            originalGeometry.points[handle.index]!,
+            point,
+            originalGeometry.points[handle.index + 1]!,
+          );
+          return { ...target, curveControls: controls };
+        }
+        if (handle.kind === "vertex") return target;
         const anchor = handle.kind === "from" ? target.from : target.to;
         if (anchor.kind !== "free") return target;
         const nextAnchor = { ...anchor, position: point };
@@ -2980,6 +3394,22 @@ export function App({ project: initialProject }: AppProps) {
         const points = target.points.slice();
         points[handle.index] = point;
         return { ...target, points };
+      }
+      if (
+        target.kind === "construction-line" &&
+        handle.kind === "curve" &&
+        originalGeometry.kind === "construction-line"
+      ) {
+        const controls = Array.from(
+          { length: originalGeometry.points.length - 1 },
+          (_, index) => target.curveControls?.[index] ?? null,
+        );
+        controls[handle.index] = controlForQuadraticMidpoint(
+          originalGeometry.points[handle.index]!,
+          point,
+          originalGeometry.points[handle.index + 1]!,
+        );
+        return { ...target, curveControls: controls };
       }
       return target;
     };
@@ -3030,8 +3460,6 @@ export function App({ project: initialProject }: AppProps) {
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", cancel);
-    // Suppress unused-warning for originalObject (kept for future preview).
-    void originalObject;
   }
 
   // Insert a vertex on a construction line at the clicked point, on the nearest
@@ -3056,10 +3484,59 @@ export function App({ project: initialProject }: AppProps) {
     }
     const points = object.points.slice();
     points.splice(bestIndex, 0, { x: point.x, y: point.y });
+    const curveControls = object.curveControls
+      ? [...object.curveControls]
+      : undefined;
+    // An explicit vertex is a straightening operation for the selected
+    // segment. It avoids silently reinterpreting a Bézier control after the
+    // segment count changes.
+    if (curveControls) curveControls.splice(bestIndex - 1, 1, null, null);
     transact([
-      { kind: "upsert_drafting_object", object: { ...object, points } },
+      {
+        kind: "upsert_drafting_object",
+        object: { ...object, points, curveControls },
+      },
     ]);
     setStatus(`Inserted vertex ${bestIndex}`);
+  }
+
+  // Free arrows share the same midpoint editing model as construction lines.
+  // The inserted point is deliberately a waypoint, never an endpoint anchor:
+  // an attached arrow endpoint therefore remains attached after reshaping.
+  function insertArrowWaypoint(
+    object: Extract<DraftingObject, { kind: "arrow" }>,
+    point: Point,
+  ): void {
+    if (object.locked) return;
+    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+    if (geometry.kind !== "arrow") return;
+    let bestIndex = 0;
+    let bestDistance = Infinity;
+    for (let index = 0; index < geometry.points.length - 1; index += 1) {
+      const on = closestPointOnSegment(
+        point,
+        geometry.points[index]!,
+        geometry.points[index + 1]!,
+      );
+      const distance = (on.x - point.x) ** 2 + (on.y - point.y) ** 2;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    }
+    const waypoints = [...(object.waypoints ?? [])];
+    waypoints.splice(bestIndex, 0, point);
+    const curveControls = object.curveControls
+      ? [...object.curveControls]
+      : undefined;
+    if (curveControls) curveControls.splice(bestIndex, 1, null, null);
+    transact([
+      {
+        kind: "upsert_drafting_object",
+        object: { ...object, waypoints, curveControls },
+      },
+    ]);
+    setStatus(`Inserted arrow bend ${bestIndex + 1}`);
   }
 
   // Delete a vertex from a construction line by index; refuse below 2 vertices.
@@ -3075,8 +3552,9 @@ export function App({ project: initialProject }: AppProps) {
     const points = object.points.filter(
       (_, vertexIndex) => vertexIndex !== index,
     );
+    const { curveControls: _curveControls, ...straightObject } = object;
     transact([
-      { kind: "upsert_drafting_object", object: { ...object, points } },
+      { kind: "upsert_drafting_object", object: { ...straightObject, points } },
     ]);
     setStatus(`Deleted vertex ${index}`);
   }
@@ -3131,6 +3609,133 @@ export function App({ project: initialProject }: AppProps) {
     } else if (ids.length > 0) {
       setStatus("Drawing is locked; unlock it before editing its style");
     }
+  }
+
+  function setDraftingTangentAngle(angleDegrees: number): void {
+    if (
+      !selectedDrafting ||
+      selectedDrafting.locked ||
+      (selectedDrafting.kind !== "arrow" &&
+        selectedDrafting.kind !== "construction-line") ||
+      !Number.isFinite(angleDegrees)
+    ) {
+      return;
+    }
+    const geometry = resolveDraftingObjectGeometry(
+      document,
+      resolver,
+      selectedDrafting,
+    );
+    if (geometry.kind !== selectedDrafting.kind) return;
+    const index =
+      draftingInspectorSegment?.objectId === selectedDrafting.id
+        ? draftingInspectorSegment.index
+        : Math.max(0, geometry.curveControls.findIndex(Boolean));
+    if (index >= geometry.points.length - 1) return;
+    const curveControls = [...geometry.curveControls];
+    curveControls[index] = controlForTangentAngle(
+      geometry.points[index]!,
+      geometry.points[index + 1]!,
+      angleDegrees,
+      curveControls[index] ?? null,
+    );
+    transact([
+      {
+        kind: "upsert_drafting_object",
+        object: { ...selectedDrafting, curveControls },
+      },
+    ]);
+  }
+
+  function setDraftingBearing(bearingDegrees: number): void {
+    if (
+      !selectedDrafting ||
+      selectedDrafting.locked ||
+      (selectedDrafting.kind !== "arrow" &&
+        selectedDrafting.kind !== "construction-line") ||
+      !Number.isFinite(bearingDegrees)
+    ) {
+      return;
+    }
+    const geometry = resolveDraftingObjectGeometry(
+      document,
+      resolver,
+      selectedDrafting,
+    );
+    if (
+      (geometry.kind !== "arrow" && geometry.kind !== "construction-line") ||
+      geometry.points.length < 2
+    ) {
+      return;
+    }
+    const currentBearing = normalizedBearing(
+      geometry.points[0]!,
+      geometry.points[1]!,
+    );
+    const targetBearing = ((bearingDegrees % 360) + 360) % 360;
+    const delta = ((targetBearing - currentBearing + 540) % 360) - 180;
+    if (selectedDrafting.kind === "arrow") {
+      if (
+        geometry.kind !== "arrow" ||
+        selectedDrafting.from.kind !== "free" ||
+        selectedDrafting.to.kind !== "free"
+      ) {
+        setStatus(
+          "An attached arrow cannot rotate without detaching its endpoints",
+        );
+        return;
+      }
+      const pivot = geometry.center;
+      const from = {
+        ...selectedDrafting.from,
+        position: rotatePointByDegrees(
+          selectedDrafting.from.position,
+          pivot,
+          delta,
+        ),
+      };
+      const to = {
+        ...selectedDrafting.to,
+        position: rotatePointByDegrees(
+          selectedDrafting.to.position,
+          pivot,
+          delta,
+        ),
+      };
+      transact([
+        {
+          kind: "upsert_drafting_object",
+          object: {
+            ...selectedDrafting,
+            from,
+            to,
+            waypoints: selectedDrafting.waypoints?.map((point) =>
+              rotatePointByDegrees(point, pivot, delta),
+            ),
+            curveControls: selectedDrafting.curveControls?.map((point) =>
+              point ? rotatePointByDegrees(point, pivot, delta) : null,
+            ),
+          },
+        },
+      ]);
+      return;
+    }
+    if (geometry.kind !== "construction-line") return;
+    const pivot = centerOfBounds(geometry.bounds);
+    transact([
+      {
+        kind: "upsert_drafting_object",
+        object: {
+          ...selectedDrafting,
+          points: selectedDrafting.points.map((point) =>
+            rotatePointByDegrees(point, pivot, delta),
+          ),
+          curveControls: selectedDrafting.curveControls?.map((point) =>
+            point ? rotatePointByDegrees(point, pivot, delta) : null,
+          ),
+        },
+      },
+    ]);
   }
 
   function toggleDraftingLock(object: DraftingObject): void {
@@ -4265,7 +4870,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function deleteSelection(): void {
-    const selectedRouteIds = new Set(visualSelection.routeIds);
+    const initialRouteIds = new Set(visualSelection.routeIds);
     const selectedAnnotationIds = new Set(visualSelection.annotationIds);
     const selectedDraftingIds = new Set(visualSelection.draftingIds);
     const selectedJunctionIds = new Set([
@@ -4275,32 +4880,31 @@ export function App({ project: initialProject }: AppProps) {
         : []),
     ]);
     const hasMixedSelection =
-      selectedRouteIds.size > 0 ||
+      initialRouteIds.size > 0 ||
       selectedAnnotationIds.size > 0 ||
       selectedDraftingIds.size > 0 ||
       selectedJunctionIds.size > 0;
     if (
-      selectedRouteIds.size === 1 &&
+      initialRouteIds.size === 1 &&
       selectedAnnotationIds.size === 0 &&
       selectedDraftingIds.size === 0 &&
       selectedJunctionIds.size === 0 &&
-      selectedIds.length === 0
+      selectedIds.length === 0 &&
+      !document.routes.some(
+        (route) =>
+          initialRouteIds.has(route.id) &&
+          (route.from.kind === "junction" || route.to.kind === "junction"),
+      )
     ) {
       deleteSelectedRouteConnection();
       return;
     }
     if (hasMixedSelection) {
-      for (const junctionId of selectedJunctionIds) {
-        for (const route of document.routes) {
-          if (
-            (route.from.kind === "junction" &&
-              route.from.junctionId === junctionId) ||
-            (route.to.kind === "junction" && route.to.junctionId === junctionId)
-          ) {
-            selectedRouteIds.add(route.id);
-          }
-        }
-      }
+      const visualRouteDeletion = collectVisualRouteDeletion(
+        document,
+        [...initialRouteIds],
+        [...selectedJunctionIds],
+      );
       transactionCounter.current += 1;
       try {
         const instanceEdits =
@@ -4312,6 +4916,14 @@ export function App({ project: initialProject }: AppProps) {
                 transactionCounter.current,
               )
             : [];
+        const removesEveryRoute =
+          document.routes.length > 0 &&
+          visualRouteDeletion.routeIds.length === document.routes.length;
+        const temporaryJunctionIds = removesEveryRoute
+          ? instanceEdits.flatMap((edit) =>
+              edit.kind === "add_junction" ? [edit.junctionId] : [],
+            )
+          : [];
         // Instance deletion already removes every annotation attached to the
         // instance. A marquee can select both visual objects, but emitting the
         // same remove_annotation edit twice makes the second operation fail
@@ -4323,11 +4935,16 @@ export function App({ project: initialProject }: AppProps) {
         );
         const result = transact([
           ...instanceEdits,
-          ...[...selectedRouteIds].map((routeId): SchematicEdit => ({
+          ...visualRouteDeletion.routeIds.map((routeId): SchematicEdit => ({
             kind: "make_flightline",
             routeId,
           })),
-          ...[...selectedJunctionIds].map((junctionId): SchematicEdit => ({
+          ...[
+            ...new Set([
+              ...visualRouteDeletion.junctionIds,
+              ...temporaryJunctionIds,
+            ]),
+          ].map((junctionId): SchematicEdit => ({
             kind: "remove_junction",
             junctionId,
           })),
@@ -4520,7 +5137,11 @@ export function App({ project: initialProject }: AppProps) {
       }
       if (isTypingTarget(event.target)) return;
       const key = event.key.toLowerCase();
-      if (event.ctrlKey && key === "z") {
+      const plainShortcut = !event.ctrlKey && !event.metaKey && !event.altKey;
+      if (plainShortcut && key === "u") {
+        event.preventDefault();
+        transact([{ kind: event.shiftKey ? "redo" : "undo" }]);
+      } else if (event.ctrlKey && key === "z") {
         event.preventDefault();
         transact([{ kind: event.shiftKey ? "redo" : "undo" }]);
       } else if (event.ctrlKey && key === "y") {
@@ -4540,39 +5161,51 @@ export function App({ project: initialProject }: AppProps) {
         projectInputRef.current?.click();
       } else if (event.ctrlKey && key === "a") {
         event.preventDefault();
-        setSelectedIds(
-          document.instances
+        setVisualSelection({
+          instanceIds: document.instances
             .filter((instance) => instance.placement)
             .map((instance) => instance.id),
-        );
+          routeIds: document.routes.map((route) => route.id),
+          junctionIds: document.junctions.map((junction) => junction.id),
+          annotationIds: document.annotations.map(
+            (annotation) => annotation.id,
+          ),
+          draftingIds: (document.drafting?.objects ?? []).map(
+            (object) => object.id,
+          ),
+        });
+        setSelectedEndpoint(null);
       } else if (
-        !event.ctrlKey &&
+        plainShortcut &&
         key === "x" &&
         selectedAnnotation &&
         isRoutedMarker(selectedAnnotation)
       ) {
         event.preventDefault();
         reverseSelectedCurrentArrow();
-      } else if (!event.ctrlKey && key === "r") {
+      } else if (plainShortcut && key === "r") {
         event.preventDefault();
         rotateSelected(event.shiftKey ? -90 : 90);
-      } else if (!event.ctrlKey && key === "w") {
+      } else if (plainShortcut && key === "w") {
         event.preventDefault();
         activateTool("wire");
-      } else if (!event.ctrlKey && key === "a") {
+      } else if (plainShortcut && key === "a") {
         event.preventDefault();
         activateTool("arrow");
-      } else if (!event.ctrlKey && key === "l") {
+      } else if (plainShortcut && key === "l") {
         event.preventDefault();
         activateTool("construction-line");
-      } else if (!event.ctrlKey && key === "g") {
+      } else if (plainShortcut && key === "g") {
         event.preventDefault();
         activateTool("guide");
-      } else if (!event.ctrlKey && key === "f") {
+      } else if (plainShortcut && key === "f") {
+        event.preventDefault();
+        mirrorSelected(event.shiftKey ? "top-bottom" : "left-right");
+      } else if (plainShortcut && key === "home") {
         event.preventDefault();
         fitView();
       } else if (
-        !event.ctrlKey &&
+        plainShortcut &&
         (event.key === "[" || event.key === "]") &&
         selectedDrafting
       ) {
@@ -4857,10 +5490,17 @@ export function App({ project: initialProject }: AppProps) {
               </button>
               <button
                 type="button"
-                onClick={mirrorSelected}
+                onClick={() => mirrorSelected("left-right")}
                 disabled={selectedIds.length === 0}
               >
-                Mirror
+                Flip horizontal (F)
+              </button>
+              <button
+                type="button"
+                onClick={() => mirrorSelected("top-bottom")}
+                disabled={selectedIds.length === 0}
+              >
+                Flip vertical (Shift+F)
               </button>
               {selectedIds.length > 1 ? (
                 <button type="button" onClick={alignFirstLayoutGroup}>
@@ -4873,7 +5513,7 @@ export function App({ project: initialProject }: AppProps) {
             <summary>View</summary>
             <div className="command-popover">
               <button type="button" onClick={fitView}>
-                Fit
+                Fit (Home)
               </button>
               <span>
                 {structuralDiagnostics.length} structural,{" "}
@@ -4997,7 +5637,8 @@ export function App({ project: initialProject }: AppProps) {
                     <dt>File and history</dt>
                     <dd>
                       <kbd>Ctrl</kbd> + <kbd>S</kbd> save; <kbd>Ctrl</kbd> +
-                      <kbd>O</kbd> open; <kbd>Ctrl</kbd> + <kbd>Z</kbd> undo;
+                      <kbd>O</kbd> open; <kbd>U</kbd> undo; <kbd>Shift</kbd> +
+                      <kbd>U</kbd> redo; <kbd>Ctrl</kbd> + <kbd>Z</kbd> undo;
                       <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> or
                       <kbd>Ctrl</kbd> + <kbd>Y</kbd> redo.
                     </dd>
@@ -5008,6 +5649,8 @@ export function App({ project: initialProject }: AppProps) {
                       <kbd>Ctrl</kbd> + <kbd>A</kbd> selects all placed
                       components; <kbd>Ctrl</kbd> + <kbd>C</kbd> copy;
                       <kbd>Ctrl</kbd> + <kbd>V</kbd> paste; <kbd>R</kbd> rotate;
+                      <kbd>F</kbd> flip left/right; <kbd>Shift</kbd> +
+                      <kbd>F</kbd> flip top/bottom;
                       <kbd>Delete</kbd> or <kbd>Backspace</kbd> delete.
                     </dd>
                   </div>
@@ -5015,7 +5658,7 @@ export function App({ project: initialProject }: AppProps) {
                     <dt>Tools and view</dt>
                     <dd>
                       <kbd>W</kbd> wire; <kbd>A</kbd> arrow; <kbd>L</kbd>
-                      construction line; <kbd>G</kbd> guide; <kbd>F</kbd> fit
+                      construction line; <kbd>G</kbd> guide; <kbd>Home</kbd> fit
                       view; <kbd>X</kbd> reverses a selected current arrow.
                     </dd>
                   </div>
@@ -5402,7 +6045,17 @@ export function App({ project: initialProject }: AppProps) {
                       transact([
                         {
                           kind: "upsert_drafting_object",
-                          object: { ...selectedDrafting, from: to, to: from },
+                          object: {
+                            ...selectedDrafting,
+                            from: to,
+                            to: from,
+                            waypoints: [
+                              ...(selectedDrafting.waypoints ?? []),
+                            ].reverse(),
+                            curveControls: [
+                              ...(selectedDrafting.curveControls ?? []),
+                            ].reverse(),
+                          },
                         },
                       ]);
                     }}
@@ -5760,6 +6413,11 @@ export function App({ project: initialProject }: AppProps) {
                 );
                 const from = polyline.points[segmentIndex]!;
                 const to = polyline.points[segmentIndex + 1]!;
+                const translatesWholeRoute =
+                  looseRouteAnchorIds(route) !== null;
+                const routeCenter = centerOfBounds(
+                  polylineBounds(polyline.points),
+                );
                 const preview =
                   routeStretchPreview?.routeId === route.id
                     ? routeStretchPreview.point
@@ -5770,18 +6428,27 @@ export function App({ project: initialProject }: AppProps) {
                     data-testid={`route-handle-${route.id}`}
                     className="route-handle"
                     cx={
-                      from.y === to.y
-                        ? (from.x + to.x) / 2
-                        : (preview?.x ?? (from.x + to.x) / 2)
+                      translatesWholeRoute
+                        ? (preview?.x ?? routeCenter.x)
+                        : from.y === to.y
+                          ? (from.x + to.x) / 2
+                          : (preview?.x ?? (from.x + to.x) / 2)
                     }
                     cy={
-                      from.x === to.x
-                        ? (from.y + to.y) / 2
-                        : (preview?.y ?? (from.y + to.y) / 2)
+                      translatesWholeRoute
+                        ? (preview?.y ?? routeCenter.y)
+                        : from.x === to.x
+                          ? (from.y + to.y) / 2
+                          : (preview?.y ?? (from.y + to.y) / 2)
                     }
                     r="6"
                     onPointerDown={(event) =>
-                      beginRouteStretch(event, route.id, segmentIndex)
+                      beginRouteStretch(
+                        event,
+                        route.id,
+                        segmentIndex,
+                        translatesWholeRoute ? "translate" : "segment",
+                      )
                     }
                     pointerEvents={tool === "wire" ? "none" : undefined}
                     onPointerMove={previewRouteStretch}
@@ -5842,7 +6509,10 @@ export function App({ project: initialProject }: AppProps) {
                   {...annotationHitBox(label, label.position)}
                   onClick={(event) => event.stopPropagation()}
                   onPointerDown={(event) =>
-                    beginDefaultInstanceLabelDrag(event, instance)
+                    selectDefaultInstanceLabel(event, instance)
+                  }
+                  onDoubleClick={(event) =>
+                    editDefaultInstanceLabel(event, instance)
                   }
                   pointerEvents={tool === "wire" ? "none" : undefined}
                 />
@@ -5863,6 +6533,8 @@ export function App({ project: initialProject }: AppProps) {
                 onPointerDown={(event) =>
                   handleRoutePointerDown(event, route.id)
                 }
+                onPointerMove={previewRouteStretch}
+                onPointerUp={finishRouteStretch}
                 onClick={(event) => event.stopPropagation()}
               />
             ))}
@@ -5922,15 +6594,26 @@ export function App({ project: initialProject }: AppProps) {
                   ? annotationDragPreview.position
                   : anchor;
               const hitBox = annotationHitBox(annotation, preview);
+              const usesWideAnnotationHitBand = isRoutedMarker(annotation);
+              const selected =
+                selectedAnnotationId === annotation.id ||
+                supplementalSelection.annotationIds.includes(annotation.id);
               return (
                 <rect
                   key={`annotation-hit-${annotation.id}`}
                   data-testid={`annotation-hit-${annotation.id}`}
+                  // Text uses the same precise dashed selection rectangle as a
+                  // component. Current/voltage markers retain the wide line
+                  // hit band because their painted geometry is intentionally
+                  // thin and includes an arrow shaft.
                   className={
-                    selectedAnnotationId === annotation.id ||
-                    supplementalSelection.annotationIds.includes(annotation.id)
-                      ? "annotation-hit selected"
-                      : "annotation-hit"
+                    usesWideAnnotationHitBand
+                      ? selected
+                        ? "annotation-hit selected"
+                        : "annotation-hit"
+                      : selected
+                        ? "hit-target annotation-text-hit selected"
+                        : "hit-target annotation-text-hit"
                   }
                   {...hitBox}
                   onClick={(event) => event.stopPropagation()}
@@ -5976,21 +6659,60 @@ export function App({ project: initialProject }: AppProps) {
                   selectDraftingObject(object.id);
                 }
               };
-              if (object.kind === "construction-line") {
+              if (
+                object.kind === "construction-line" &&
+                geometry.kind === "construction-line"
+              ) {
                 const points = object.points
                   .map((point) => `${point.x},${point.y}`)
                   .join(" ");
-                return (
-                  <polyline
+                const hasCurve = geometry.curveControls.some(Boolean);
+                const commonProps = {
+                  key: `drafting-hit-${object.id}`,
+                  "data-testid": `drafting-hit-${object.id}`,
+                  className: selected,
+                  fill: "none",
+                  onPointerDown: onDown,
+                  onDoubleClick: (event: ReactMouseEvent<SVGElement>) => {
+                    event.stopPropagation();
+                    insertConstructionVertex(
+                      object,
+                      pointFromClient(
+                        event.clientX,
+                        event.clientY,
+                        event.currentTarget.ownerSVGElement!,
+                      ),
+                    );
+                  },
+                  pointerEvents: tool === "wire" ? "none" : undefined,
+                };
+                return hasCurve ? (
+                  <path
+                    {...commonProps}
+                    d={draftingPathData(
+                      geometry.points,
+                      geometry.curveControls,
+                    )}
+                  />
+                ) : (
+                  <polyline {...commonProps} points={points} />
+                );
+              }
+              if (object.kind === "arrow" && geometry.kind === "arrow") {
+                return geometry.curveControls.some(Boolean) ? (
+                  <path
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
                     className={selected}
-                    points={points}
+                    d={draftingPathData(
+                      geometry.points,
+                      geometry.curveControls,
+                    )}
                     fill="none"
                     onPointerDown={onDown}
                     onDoubleClick={(event) => {
                       event.stopPropagation();
-                      insertConstructionVertex(
+                      insertArrowWaypoint(
                         object,
                         pointFromClient(
                           event.clientX,
@@ -6001,19 +6723,27 @@ export function App({ project: initialProject }: AppProps) {
                     }}
                     pointerEvents={tool === "wire" ? "none" : undefined}
                   />
-                );
-              }
-              if (object.kind === "arrow" && geometry.kind === "arrow") {
-                return (
-                  <line
+                ) : (
+                  <polyline
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
                     className={selected}
-                    x1={geometry.from.x}
-                    y1={geometry.from.y}
-                    x2={geometry.to.x}
-                    y2={geometry.to.y}
+                    points={geometry.points
+                      .map((point) => `${point.x},${point.y}`)
+                      .join(" ")}
+                    fill="none"
                     onPointerDown={onDown}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      insertArrowWaypoint(
+                        object,
+                        pointFromClient(
+                          event.clientX,
+                          event.clientY,
+                          event.currentTarget.ownerSVGElement!,
+                        ),
+                      );
+                    }}
                     pointerEvents={tool === "wire" ? "none" : undefined}
                   />
                 );
@@ -6104,13 +6834,48 @@ export function App({ project: initialProject }: AppProps) {
                             })
                           }
                         />
-                        <circle
-                          className="draft-handle draft-handle-center"
-                          cx={geometry.center.x}
-                          cy={geometry.center.y}
-                          r="3"
-                          pointerEvents="none"
-                        />
+                        {geometry.points.slice(1, -1).map((point, index) => (
+                          <circle
+                            key={`draft-arrow-waypoint-${index}`}
+                            className="draft-handle"
+                            data-testid={`draft-handle-waypoint-${index}-${object.id}`}
+                            cx={point.x}
+                            cy={point.y}
+                            r="5"
+                            onPointerDown={(event) =>
+                              beginDraftingHandleDrag(event, object, {
+                                kind: "waypoint",
+                                index,
+                              })
+                            }
+                          />
+                        ))}
+                        {geometry.points.slice(0, -1).map((point, index) => {
+                          const next = geometry.points[index + 1]!;
+                          const midpoint = quadraticMidpoint(
+                            point,
+                            geometry.curveControls[index] ?? null,
+                            next,
+                          );
+                          return (
+                            <rect
+                              key={`draft-arrow-segment-${index}`}
+                              className="draft-handle draft-midpoint-handle"
+                              data-testid={`draft-handle-segment-${index}-${object.id}`}
+                              x={midpoint.x - 3}
+                              y={midpoint.y - 3}
+                              width="6"
+                              height="6"
+                              transform={`rotate(45 ${midpoint.x} ${midpoint.y})`}
+                              onPointerDown={(event) =>
+                                beginDraftingHandleDrag(event, object, {
+                                  kind: "curve",
+                                  index,
+                                })
+                              }
+                            />
+                          );
+                        })}
                         <circle
                           className="draft-handle"
                           data-testid={`draft-handle-to-${object.id}`}
@@ -6152,10 +6917,293 @@ export function App({ project: initialProject }: AppProps) {
                             }}
                           />
                         ))}
+                        {geometry.vertices.slice(0, -1).map((vertex, index) => {
+                          const next = geometry.vertices[index + 1]!;
+                          const midpoint = quadraticMidpoint(
+                            vertex,
+                            geometry.curveControls[index] ?? null,
+                            next,
+                          );
+                          return (
+                            <rect
+                              key={`draft-line-segment-${index}`}
+                              className="draft-handle draft-midpoint-handle"
+                              data-testid={`draft-handle-segment-${index}-${object.id}`}
+                              x={midpoint.x - 3}
+                              y={midpoint.y - 3}
+                              width="6"
+                              height="6"
+                              transform={`rotate(45 ${midpoint.x} ${midpoint.y})`}
+                              onPointerDown={(event) =>
+                                beginDraftingHandleDrag(event, object, {
+                                  kind: "curve",
+                                  index,
+                                })
+                              }
+                            />
+                          );
+                        })}
                       </g>
                     );
                   }
                   return null;
+                })()
+              : null}
+            {selectedDrafting &&
+            (selectedDrafting.kind === "arrow" ||
+              selectedDrafting.kind === "construction-line")
+              ? (() => {
+                  const geometry = resolveDraftingObjectGeometry(
+                    document,
+                    resolver,
+                    selectedDrafting,
+                  );
+                  if (
+                    geometry.kind !== "arrow" &&
+                    geometry.kind !== "construction-line"
+                  ) {
+                    return null;
+                  }
+                  const inspectorWidth =
+                    selectedDrafting.kind === "arrow" ? 192 : 144;
+                  const inspectorX = Math.max(
+                    viewBox.x + 8,
+                    Math.min(
+                      viewBox.x + viewBox.width - inspectorWidth - 8,
+                      geometry.bounds.x + geometry.bounds.width + 12,
+                    ),
+                  );
+                  const inspectorY = Math.max(
+                    viewBox.y + 8,
+                    Math.min(
+                      viewBox.y + viewBox.height - 136,
+                      geometry.bounds.y - 4,
+                    ),
+                  );
+                  const lineStyle =
+                    selectedDrafting.styleOverride?.lineStyle ??
+                    (selectedDrafting.kind === "construction-line"
+                      ? selectedDrafting.lineStyle
+                      : "solid");
+                  const segmentIndex =
+                    draftingInspectorSegment?.objectId === selectedDrafting.id
+                      ? draftingInspectorSegment.index
+                      : Math.max(0, geometry.curveControls.findIndex(Boolean));
+                  const tangentAngle = quadraticTangentAngle(
+                    geometry.points[segmentIndex]!,
+                    geometry.curveControls[segmentIndex] ?? null,
+                    geometry.points[segmentIndex + 1]!,
+                  );
+                  const tangentInputKey = `${selectedDrafting.id}:${segmentIndex}`;
+                  const realizedAngleText = String(
+                    Math.round(tangentAngle * 10) / 10,
+                  );
+                  const tangentInputValue =
+                    draftingTangentInput?.key === tangentInputKey
+                      ? draftingTangentInput.value
+                      : realizedAngleText;
+                  const bearing = normalizedBearing(
+                    geometry.points[0]!,
+                    geometry.points[1]!,
+                  );
+                  const realizedBearingText = String(
+                    Math.round(bearing * 10) / 10,
+                  );
+                  const bearingInputValue =
+                    draftingBearingInput?.objectId === selectedDrafting.id
+                      ? draftingBearingInput.value
+                      : realizedBearingText;
+                  return (
+                    <foreignObject
+                      data-testid="drafting-inline-inspector"
+                      x={inspectorX}
+                      y={inspectorY}
+                      width={inspectorWidth}
+                      height="132"
+                    >
+                      <div
+                        className="drafting-inline-inspector"
+                        onPointerDown={(event) => event.stopPropagation()}
+                      >
+                        <select
+                          aria-label="Inline line style"
+                          value={lineStyle}
+                          disabled={selectedDrafting.locked}
+                          onChange={(event) =>
+                            setDraftingStyle({
+                              lineStyle: event.currentTarget.value as
+                                "solid" | "dashed" | "dotted",
+                            })
+                          }
+                        >
+                          <option value="solid">Solid</option>
+                          <option value="dashed">Dashed</option>
+                          <option value="dotted">Dotted</option>
+                        </select>
+                        <select
+                          aria-label="Inline stroke width"
+                          value={String(
+                            selectedDrafting.styleOverride?.strokeScale ?? 1,
+                          )}
+                          disabled={selectedDrafting.locked}
+                          onChange={(event) =>
+                            setDraftingStyle({
+                              strokeScale: Number(event.currentTarget.value) as
+                                0.75 | 1 | 1.5 | 2,
+                            })
+                          }
+                        >
+                          <option value="0.75">0.75×</option>
+                          <option value="1">1×</option>
+                          <option value="1.5">1.5×</option>
+                          <option value="2">2×</option>
+                        </select>
+                        {geometry.points.length > 2 ? (
+                          <select
+                            aria-label="Curve segment"
+                            value={String(segmentIndex)}
+                            disabled={selectedDrafting.locked}
+                            onChange={(event) => {
+                              setDraftingInspectorSegment({
+                                objectId: selectedDrafting.id,
+                                index: Number(event.currentTarget.value),
+                              });
+                              setDraftingTangentInput(null);
+                            }}
+                          >
+                            {geometry.points.slice(0, -1).map((_, index) => (
+                              <option key={index} value={index}>
+                                Segment {index + 1}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
+                        <label className="drafting-tangent-angle">
+                          Tangent ∠
+                          <input
+                            aria-label="Tangent angle"
+                            type="number"
+                            min="0"
+                            max="170"
+                            step="1"
+                            value={tangentInputValue}
+                            disabled={selectedDrafting.locked}
+                            placeholder={realizedAngleText}
+                            onFocus={() => {
+                              // The readout is shown while unfocused. Start a
+                              // fresh numeric draft on focus, so a user can
+                              // simply type 60 rather than editing an initial
+                              // 0 into the visually confusing 060.
+                              setDraftingTangentInput({
+                                key: tangentInputKey,
+                                value: "",
+                              });
+                            }}
+                            onChange={(event) => {
+                              const value = event.currentTarget.value;
+                              setDraftingTangentInput({
+                                key: tangentInputKey,
+                                value,
+                              });
+                              const angle = Number(value);
+                              if (value !== "" && Number.isFinite(angle)) {
+                                setDraftingTangentAngle(angle);
+                              }
+                            }}
+                            onBlur={() => setDraftingTangentInput(null)}
+                          />
+                          °
+                        </label>
+                        <label className="drafting-tangent-angle">
+                          Bearing
+                          <input
+                            aria-label="Drawing bearing"
+                            type="number"
+                            min="0"
+                            max="359"
+                            step="1"
+                            value={bearingInputValue}
+                            disabled={selectedDrafting.locked}
+                            placeholder={realizedBearingText}
+                            onFocus={() =>
+                              setDraftingBearingInput({
+                                objectId: selectedDrafting.id,
+                                value: "",
+                              })
+                            }
+                            onChange={(event) => {
+                              const value = event.currentTarget.value;
+                              setDraftingBearingInput({
+                                objectId: selectedDrafting.id,
+                                value,
+                              });
+                              const bearing = Number(value);
+                              if (value !== "" && Number.isFinite(bearing)) {
+                                setDraftingBearing(bearing);
+                              }
+                            }}
+                            onBlur={() => setDraftingBearingInput(null)}
+                          />
+                          °
+                        </label>
+                        {selectedDrafting.kind === "arrow" ? (
+                          <>
+                            <select
+                              aria-label="Inline arrow head"
+                              value={
+                                selectedDrafting.styleOverride?.arrowHead ??
+                                "filled"
+                              }
+                              disabled={selectedDrafting.locked}
+                              onChange={(event) =>
+                                setDraftingStyle({
+                                  arrowHead: event.currentTarget.value as
+                                    "none" | "filled" | "open",
+                                })
+                              }
+                            >
+                              <option value="none">No head</option>
+                              <option value="filled">Filled</option>
+                              <option value="open">Open</option>
+                            </select>
+                            <button
+                              type="button"
+                              disabled={selectedDrafting.locked}
+                              onClick={() => {
+                                const { from, to } = selectedDrafting;
+                                transact([
+                                  {
+                                    kind: "upsert_drafting_object",
+                                    object: {
+                                      ...selectedDrafting,
+                                      from: to,
+                                      to: from,
+                                      waypoints: [
+                                        ...(selectedDrafting.waypoints ?? []),
+                                      ].reverse(),
+                                      curveControls: [
+                                        ...(selectedDrafting.curveControls ??
+                                          []),
+                                      ].reverse(),
+                                    },
+                                  },
+                                ]);
+                              }}
+                            >
+                              Reverse
+                            </button>
+                          </>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={selectedDrafting.locked}
+                          onClick={() => rotateSelected()}
+                        >
+                          Rotate
+                        </button>
+                      </div>
+                    </foreignObject>
+                  );
                 })()
               : null}
             {annotationDragPreview ? (
@@ -6171,28 +7219,6 @@ export function App({ project: initialProject }: AppProps) {
                 )?.text ?? ""}
               </text>
             ) : null}
-            {dragPreview
-              ? dragPreview.instanceIds.map((instanceId) => {
-                  const original = dragPreview.originalPositions[instanceId]!;
-                  return (
-                    <circle
-                      key={instanceId}
-                      className="drag-preview"
-                      cx={
-                        original.x +
-                        dragPreview.position.x -
-                        dragPreview.pointerStart.x
-                      }
-                      cy={
-                        original.y +
-                        dragPreview.position.y -
-                        dragPreview.pointerStart.y
-                      }
-                      r="34"
-                    />
-                  );
-                })
-              : null}
             {boxPreview ? (
               <rect
                 data-testid="selection-box"
