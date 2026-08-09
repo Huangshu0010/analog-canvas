@@ -15,6 +15,22 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-09 - GitHub Pages release preparation
+
+- Target: publish the GUI-only, local-first editor as a static GitHub Pages
+  site without exposing an Agent API, backend, account system, or server-side
+  Project storage.
+- Changed areas: added a least-privilege Pages workflow and user-facing
+  release/data-boundary documentation.
+- Validation: the editor production build passed with
+  `ICM_PAGE_BASE_PATH=interactive-circuit-maker`; built asset paths use that
+  prefix and the manifest remains relative scoped. Focused source audit found
+  no Agent/MCP/credential/authentication/backend request surface; only the
+  Service Worker fetches same-origin static assets. New workflow/docs/plan
+  formatting and `git diff --check` passed.
+- Commit status: ready to commit; repository Pages must be enabled by an
+  administrator once before the first `main` deployment.
+
 ## 2026-08-09 - First-version local-first editor baseline
 
 - Target: consolidate the human-reviewed first-version editor implementation
