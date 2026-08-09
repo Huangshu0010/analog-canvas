@@ -1969,7 +1969,7 @@ export function App({ project: initialProject }: AppProps) {
                 attachedObjectId: id,
                 offset: { x: 14, y: 5 },
                 alignment: "start" as const,
-                rotation: 0,
+                rotation: 0 as const,
                 locked: false,
               },
             },

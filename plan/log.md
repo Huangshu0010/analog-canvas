@@ -2795,5 +2795,14 @@ Editing System work.
 - Validation: focused Vitest 8/8 passed, editor production build passed, and
   `git diff --check` passed. Workspace typecheck is blocked by an unrelated
   retained VDD worktree hunk whose rotation literal is inferred as `number`.
-- Commit status: pending intentional partial staging of `App.tsx`; the VDD
-  hunk remains unowned.
+- Commit status: committed as `0415765 fix(editor): unify instance label
+  selection and deletion`.
+
+## 2026-08-09 - VDD label transaction type repair
+
+- Target: restore typecheck after the VDD placement target introduced a
+  power-label annotation with a widened rotation number.
+- Changed areas: one literal type assertion in the editor VDD placement edit.
+- Validation: workspace typecheck, editor production build, and `git diff
+  --check` passed.
+- Commit status: ready for `fix(editor): type VDD label rotation literal`.
