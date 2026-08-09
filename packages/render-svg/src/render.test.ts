@@ -443,7 +443,7 @@ describe("textbook monochrome SVG renderer", () => {
     );
   });
 
-  it("overlaps terminal escape routes beneath component leads without moving topology", () => {
+  it("bridges direct terminal corners without changing route topology", () => {
     const project = createEmptyProject("project-terminal-overlap", "Overlap");
     const document = project.documents[0]!;
     document.presentation.styleProfileId = "razavi-textbook-v1";
@@ -483,22 +483,28 @@ describe("textbook monochrome SVG renderer", () => {
       netId: "net-supply",
       from: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
       to: { kind: "terminal", instanceId: "GND1", pinName: "0" },
-      waypoints: [{ x: 100, y: 130 }],
-      segmentModes: ["escape", "escape"],
+      waypoints: [
+        { x: 130, y: 120 },
+        { x: 130, y: 190 },
+      ],
+      segmentModes: ["manual", "manual", "manual"],
     });
 
     const svg = renderDocumentSvg(document, resolver);
 
     expect(svg).toContain(
-      'data-object-id="route-supply" data-net-id="net-supply" points="100,120 100,130 100,190"',
+      'data-object-id="route-supply" data-net-id="net-supply" points="100,120 130,120 130,190 100,190"',
     );
     expect(svg).toContain(
-      'data-role="terminal-overlap" data-route-id="route-supply" x1="100" y1="118.8" x2="100" y2="121.2"',
+      'data-role="terminal-miter-bridge" data-route-id="route-supply" d="M 100 118.8 L 100 120 L 101.2 120"',
     );
     expect(svg).toContain(
-      'data-role="terminal-overlap" data-route-id="route-supply" x1="100" y1="191.2" x2="100" y2="188.8"',
+      'data-role="terminal-miter-bridge" data-route-id="route-supply" d="M 100 191.2 L 100 190 L 101.2 190"',
     );
-    expect(document.routes[0]!.waypoints).toEqual([{ x: 100, y: 130 }]);
+    expect(document.routes[0]!.waypoints).toEqual([
+      { x: 130, y: 120 },
+      { x: 130, y: 190 },
+    ]);
   });
 
   it("renders the original dense analog fixture without blocking visual diagnostics", () => {

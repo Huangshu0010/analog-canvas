@@ -3469,3 +3469,16 @@ orthogonal turns`.
   `App.tsx` and this log already contain staged, separately owned terminal-
   escape-routing work in the shared worktree; the changes must be integrated
   with that target rather than committing either target's partial index.
+## 2026-08-09 - Direct miter terminal joins
+
+- Target: remove the visually inflated default terminal escape from manual
+  wiring while retaining seamless sharp joins at component pins.
+- Result: GUI manual routes now end directly at their exact pin coordinates.
+  The renderer adds a short under-symbol miter bridge that joins the internal
+  component lead to the actual route segment, including direct right angles.
+  Agent orthogonal routing remains independent and may still explicitly escape.
+- Validation: focused wire-path/render Vitest 5/5, focused manual editor
+  Playwright 1/1, editor production build, target-file Prettier, and
+  `git diff --check` passed.
+- Commit status: committed as `fix(editor): use direct miter joins for manual
+  terminal wiring`.

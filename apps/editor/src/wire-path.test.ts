@@ -3,49 +3,57 @@ import { describe, expect, it } from "vitest";
 import { buildManualWirePath } from "./wire-path";
 
 describe("buildManualWirePath", () => {
-  it("escapes a horizontal terminal before turning vertically", () => {
+  it("keeps a direct terminal right-angle at the exact electrical endpoint", () => {
     const path = buildManualWirePath(
-      { point: { x: 100, y: 100 }, outward: { x: -1, y: 0 } },
+      { point: { x: 100, y: 100 } },
       { point: { x: 100, y: 200 } },
     );
 
     expect(path.points).toEqual([
       { x: 100, y: 100 },
-      { x: 90, y: 100 },
-      { x: 90, y: 200 },
       { x: 100, y: 200 },
     ]);
-    expect(path.segmentModes).toEqual(["escape", "auto", "auto"]);
+    expect(path.segmentModes).toEqual(["manual"]);
   });
 
-  it("approaches the target against its outward direction", () => {
+  it("adds only the one necessary orthogonal bend", () => {
     const path = buildManualWirePath(
       { point: { x: 100, y: 100 } },
-      { point: { x: 200, y: 100 }, outward: { x: 0, y: -1 } },
+      { point: { x: 200, y: 200 } },
     );
 
     expect(path.points).toEqual([
       { x: 100, y: 100 },
-      { x: 100, y: 90 },
-      { x: 200, y: 90 },
       { x: 200, y: 100 },
+      { x: 200, y: 200 },
     ]);
-    expect(path.segmentModes).toEqual(["auto", "auto", "escape"]);
+    expect(path.segmentModes).toEqual(["manual", "manual"]);
   });
 
-  it("keeps transformed directions as signed vectors rather than axes", () => {
+  it("normalizes redundant manual vertices without adding terminal geometry", () => {
     const path = buildManualWirePath(
-      { point: { x: 100, y: 100 }, outward: { x: 0, y: 1 } },
-      { point: { x: 180, y: 40 }, outward: { x: 1, y: 0 } },
+      { point: { x: 100, y: 100 } },
+      { point: { x: 300, y: 300 } },
+      [{ x: 100, y: 200 }],
     );
 
-    expect(path.points.slice(0, 2)).toEqual([
+    expect(path.points).toEqual([
       { x: 100, y: 100 },
-      { x: 100, y: 110 },
+      { x: 100, y: 300 },
+      { x: 300, y: 300 },
     ]);
-    expect(path.points.slice(-2)).toEqual([
-      { x: 190, y: 40 },
-      { x: 180, y: 40 },
-    ]);
+  });
+
+  it("allows the editor's zero-length source preview", () => {
+    expect(
+      buildManualWirePath(
+        { point: { x: 100, y: 100 } },
+        { point: { x: 100, y: 100 } },
+      ),
+    ).toEqual({
+      points: [{ x: 100, y: 100 }],
+      waypoints: [],
+      segmentModes: [],
+    });
   });
 });

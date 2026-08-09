@@ -164,7 +164,6 @@ interface WireSource {
   endpoint: RouteEndpoint;
   netId: string | null;
   point: Point;
-  outward?: Point;
   preludeEdits: SchematicEdit[];
 }
 
@@ -242,19 +241,6 @@ function endpointTestId(endpoint: RouteEndpoint): string {
 
 function polylinePoints(points: readonly Point[]): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
-}
-
-function transformedPinOutward(
-  direction: "north" | "east" | "south" | "west",
-  placement: { rotation: 0 | 90 | 180 | 270; mirror: "none" | "x" },
-): Point {
-  const local = {
-    north: { x: 0, y: -1 },
-    east: { x: 1, y: 0 },
-    south: { x: 0, y: 1 },
-    west: { x: -1, y: 0 },
-  }[direction];
-  return transformPoint(local, { x: 0, y: 0 }, placement);
 }
 
 interface RouteTap {
@@ -912,7 +898,6 @@ export function App({ project: initialProject }: AppProps) {
               instance.placement!.position,
               instance.placement!,
             ),
-            outward: transformedPinOutward(pin.direction, instance.placement!),
             preludeEdits: [],
           };
         });
@@ -994,7 +979,6 @@ export function App({ project: initialProject }: AppProps) {
             pinName: pin.name,
           }),
           point: transformPoint(pin.at, move.position, placement),
-          outward: transformedPinOutward(pin.direction, placement),
           preludeEdits: [],
         }));
     });
@@ -1367,7 +1351,6 @@ export function App({ project: initialProject }: AppProps) {
           wireSource,
           { point: wirePreviewPoint },
           wireWaypoints,
-          document.presentation.grid,
         ).points
       : wireFixedPoints;
   const projectInstanceCount = project.documents.reduce(
@@ -1757,12 +1740,7 @@ export function App({ project: initialProject }: AppProps) {
       to: candidate.endpoint,
       ...(!wireSource.netId && !candidate.netId ? { newNetId: netId } : {}),
     });
-    const routed = buildManualWirePath(
-      wireSource,
-      candidate,
-      wireWaypoints,
-      document.presentation.grid,
-    );
+    const routed = buildManualWirePath(wireSource, candidate, wireWaypoints);
     edits.push({
       kind: "set_route_points",
       routeId: `route-ui-${suffix}`,
@@ -1814,12 +1792,7 @@ export function App({ project: initialProject }: AppProps) {
       setStatus("Wire source: free grid point");
       return;
     }
-    const fixed = buildManualWirePath(
-      wireSource,
-      { point },
-      wireWaypoints,
-      document.presentation.grid,
-    );
+    const fixed = buildManualWirePath(wireSource, { point }, wireWaypoints);
     // Keep the clicked point as an in-progress waypoint. The path builder
     // treats it as a fixed bend on the next click while retaining the source
     // terminal's escape segment.

@@ -76,12 +76,12 @@ function pointList(points: ReadonlyArray<{ x: number; y: number }>): string {
 }
 
 /**
- * Route topology always terminates at the exact electrical pin origin. For a
- * terminal escape segment, draw a short, same-width overlap underneath the
- * symbol. This removes a butt-cap anti-alias seam without moving the main SVG
- * route coordinates or applying a visible dot/collar to every device pin.
+ * Route topology always terminates at the exact electrical pin origin. Draw a
+ * short path from inside a terminal lead, through the exact pin, into the
+ * actual route segment. SVG then owns the sharp miter at the corner, removing
+ * the separate-stroke anti-alias seam without adding route geometry.
  */
-function renderTerminalJoinOverlaps(
+function renderTerminalMiterBridges(
   document: SchematicDocument,
   resolver: SymbolResolver,
   route: SchematicDocument["routes"][number],
@@ -90,9 +90,16 @@ function renderTerminalJoinOverlaps(
 ): string {
   if (points.length < 2) return "";
   const overlap = Math.max(profile.strokes.wire, profile.strokes.symbol) * 0.75;
-  const overlaps: string[] = [];
-  const renderOverlap = (point: Point, outward: Point) =>
-    `<line data-role="terminal-overlap" data-route-id="${escapeXml(route.id)}" x1="${point.x - outward.x * overlap}" y1="${point.y - outward.y * overlap}" x2="${point.x + outward.x * overlap}" y2="${point.y + outward.y * overlap}" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}"/>`;
+  const bridges: string[] = [];
+  const segmentDirection = (from: Point, to: Point): Point | null => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    if (dx !== 0 && dy === 0) return { x: Math.sign(dx), y: 0 };
+    if (dx === 0 && dy !== 0) return { x: 0, y: Math.sign(dy) };
+    return null;
+  };
+  const renderBridge = (point: Point, outward: Point, routeOutward: Point) =>
+    `<path data-role="terminal-miter-bridge" data-route-id="${escapeXml(route.id)}" d="M ${point.x - outward.x * overlap} ${point.y - outward.y * overlap} L ${point.x} ${point.y} L ${point.x + routeOutward.x * overlap} ${point.y + routeOutward.y * overlap}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="miter"${profileMiterAttribute(profile)}/>`;
   const fromOutward = resolveEndpointOutwardDirection(
     document,
     resolver,
@@ -100,13 +107,9 @@ function renderTerminalJoinOverlaps(
   );
   const first = points[0]!;
   const next = points[1]!;
-  if (
-    route.segmentModes[0] === "escape" &&
-    fromOutward &&
-    (next.x - first.x) * fromOutward.x + (next.y - first.y) * fromOutward.y > 0
-  ) {
-    overlaps.push(renderOverlap(first, fromOutward));
-  }
+  const firstDirection = segmentDirection(first, next);
+  if (fromOutward && firstDirection)
+    bridges.push(renderBridge(first, fromOutward, firstDirection));
 
   const toOutward = resolveEndpointOutwardDirection(
     document,
@@ -115,15 +118,10 @@ function renderTerminalJoinOverlaps(
   );
   const previous = points.at(-2)!;
   const last = points.at(-1)!;
-  if (
-    route.segmentModes.at(-1) === "escape" &&
-    toOutward &&
-    (last.x - previous.x) * toOutward.x + (last.y - previous.y) * toOutward.y <
-      0
-  ) {
-    overlaps.push(renderOverlap(last, toOutward));
-  }
-  return overlaps.join("");
+  const lastDirection = segmentDirection(last, previous);
+  if (toOutward && lastDirection)
+    bridges.push(renderBridge(last, toOutward, lastDirection));
+  return bridges.join("");
 }
 
 function profileMiterAttribute(profile: SchematicStyleProfile): string {
@@ -459,14 +457,14 @@ export function buildSvgScene(
       if (!polyline) {
         throw new Error(`Cannot render unresolved route: ${route.id}`);
       }
-      const terminalOverlaps = renderTerminalJoinOverlaps(
+      const terminalBridges = renderTerminalMiterBridges(
         document,
         resolver,
         route,
         polyline.points,
         profile,
       );
-      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalOverlaps}`;
+      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalBridges}`;
     })
     .join("");
   const junctions = [...document.junctions]

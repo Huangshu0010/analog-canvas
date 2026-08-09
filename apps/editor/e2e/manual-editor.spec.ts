@@ -353,7 +353,7 @@ test("places free wire bends and finishes at an arbitrary grid point", async ({
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
-test("leaves device pins on their natural axis and deletes a selected junction", async ({
+test("keeps direct device pin corners on-grid and deletes a selected junction", async ({
   page,
 }) => {
   await page.goto("/");
@@ -364,9 +364,11 @@ test("leaves device pins on their natural axis and deletes a selected junction",
   await page.getByTestId("terminal-R2-1").click();
 
   const terminalRoute = await readRoutePoints(page, "route-ui-1");
-  expect(terminalRoute.length).toBeGreaterThanOrEqual(3);
-  expect(terminalRoute[0]!.x).toBe(terminalRoute[1]!.x);
-  expect(terminalRoute.at(-2)!.x).toBe(terminalRoute.at(-1)!.x);
+  expect(terminalRoute).toEqual([
+    { x: 300, y: 240 },
+    { x: 530, y: 240 },
+    { x: 530, y: 140 },
+  ]);
   expect(
     terminalRoute.every(
       (point) => Math.abs(point.x % 10) === 0 && Math.abs(point.y % 10) === 0,
