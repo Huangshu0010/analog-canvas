@@ -56,7 +56,7 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain(">in</tspan>");
   });
 
-  it("renders the Razavi palette port as a solid dot", () => {
+  it("renders the Razavi palette port as a hollow endpoint", () => {
     const port = builtInSymbols.find((symbol) => symbol.id === "port");
     expect(port).toBeDefined();
 
@@ -67,7 +67,10 @@ describe("textbook monochrome SVG renderer", () => {
       razaviTextbookProfile,
     );
 
-    expect(body).toContain('fill="#202020" stroke="none"');
+    expect(body).toContain(
+      'r="2.47907" fill="none" stroke="#202020" stroke-width="1.6"',
+    );
+    expect(body).toContain('x2="-4.607544"');
   });
 
   it("renders only physical branch Junctions as connection dots", () => {

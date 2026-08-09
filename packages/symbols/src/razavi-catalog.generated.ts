@@ -309,7 +309,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "port.symbol.json",
     assetHash:
-      "047b520645d516df8f1f1d634212eb18ca627699a22742528b80eb2e765fd94c",
+      "d0ca494905a2975920898719f15c59d35be44c85f627308b8bfadccc549707ab",
     generation: {
       kind: "vss-master-ir",
       evidencePath:
@@ -2238,13 +2238,13 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           x: -7.086614,
           y: 0,
         },
-        radius: 2.834646,
-        fill: "foreground",
-        stroke: "none",
+        radius: 2.47907,
+        fill: "none",
+        stroke: "foreground",
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
       {
@@ -2254,13 +2254,13 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         to: {
-          x: -7.086614,
+          x: -4.607544,
           y: 0,
         },
         style: {
           strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
+          lineCap: "butt",
+          lineJoin: "miter",
         },
       },
     ],

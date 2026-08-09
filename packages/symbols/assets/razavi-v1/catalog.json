@@ -260,7 +260,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "port.symbol.json",
-      "assetHash": "047b520645d516df8f1f1d634212eb18ca627699a22742528b80eb2e765fd94c",
+      "assetHash": "d0ca494905a2975920898719f15c59d35be44c85f627308b8bfadccc549707ab",
       "generation": {
         "kind": "vss-master-ir",
         "evidencePath": "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
