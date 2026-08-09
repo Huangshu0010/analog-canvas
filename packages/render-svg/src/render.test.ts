@@ -24,15 +24,38 @@ import { razaviTextbookProfile } from "./style-profile.js";
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("textbook monochrome SVG renderer", () => {
-  it("normalizes stale annotation RichText through semantic text rendering", () => {
+  it("preserves a manually formatted multi-character semantic subscript", () => {
     const document = createEmptyProject("project-rich-label", "Rich label")
       .documents[0]!;
     document.annotations.push({
       id: "label-vin",
       kind: "net-label",
-      text: "VIN",
+      text: "VOUT",
       content: {
-        runs: [{ kind: "text", value: "legacy override" }],
+        runs: [
+          {
+            kind: "span",
+            style: "italic",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "V" }],
+              },
+            ],
+          },
+          {
+            kind: "span",
+            style: "subscript",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "out" }],
+              },
+            ],
+          },
+        ],
       },
       position: { x: 100, y: 100 },
       offset: { x: 0, y: 0 },
@@ -46,7 +69,8 @@ describe("textbook monochrome SVG renderer", () => {
 
     expect(svg).toContain('data-object-id="label-vin"');
     expect(svg).toContain('data-text-run="subscript"');
-    expect(svg).toContain(">IN</tspan>");
+    expect(svg).toContain(">out</tspan>");
+    expect(svg).not.toContain(">OUT</tspan>");
     expect(svg).toContain("font-style:italic;font-weight:700");
     expect(svg).toContain("font-style:normal;font-weight:700");
   });

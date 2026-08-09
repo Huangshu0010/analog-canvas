@@ -845,7 +845,8 @@ export function App({ project: initialProject }: AppProps) {
     const fontSize =
       schematicTextFontSize(annotation.kind, styleProfile) * sizeScale;
     const textLayout = measureRichTextDocument(
-      schematicTextDocument(annotation.text, annotation.kind),
+      annotation.content ??
+        schematicTextDocument(annotation.text, annotation.kind),
       richTextMetrics(styleProfile, "label", sizeScale),
     );
     let labelPosition = anchor;
@@ -2704,10 +2705,13 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function annotationRichText(annotation: Annotation): RichTextDocument {
-    // Keep the editor session in lockstep with formal rendering. Annotation
-    // content is retained for round-trip compatibility, but electrical labels
-    // always begin from their canonical semantic text composition.
-    return schematicTextDocument(annotation.text, annotation.kind);
+    // Untouched semantic labels receive canonical math composition. A label
+    // saved through the floating editor reopens its exact AST, so explicit
+    // formatting (notably multi-character subscripts) round-trips.
+    return (
+      annotation.content ??
+      schematicTextDocument(annotation.text, annotation.kind)
+    );
   }
 
   function beginAnnotationTextEditing(annotation: Annotation): void {

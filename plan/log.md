@@ -2864,3 +2864,24 @@ with placed components`.
 - Validation: workspace typecheck, editor production build, focused Vitest
   11/11, and `git diff --check` passed.
 - Commit status: ready for `fix(editor): round canonical label positions`.
+
+## 2026-08-09 - Explicit semantic RichText rendering
+
+- Target: preserve user-selected RichText spans in semantic annotations,
+  especially multi-character subscripts, after the floating editor commits.
+- Root cause: the editor correctly persisted `Annotation.content`, but formal
+  rendering and label hit geometry discarded it and rebuilt formatting only
+  from flattened `Annotation.text`. That made the default Razavi parser erase
+  a user-selected subscript range.
+- Changed areas: formal annotation renderer, editor session initialization and
+  hit geometry, plus the shared schema contract comment and a direct renderer
+  regression for `V` with an explicit `out` subscript.
+- Result: no-content annotations keep the active Razavi default; annotations
+  with saved RichText retain their exact span structure. `text` remains the
+  semantic/electrical plain-text identity for connectivity and search.
+- Validation: targeted RichText renderer test passed; workspace typecheck,
+  Render-SVG build, editor production build, Prettier, and `git diff --check`
+  passed. The unfiltered Render-SVG file has four pre-existing golden failures
+  caused by old monochrome/geometry expectations versus current Razavi assets.
+- Commit status: ready for `fix(text): preserve explicit semantic rich text
+formatting`.

@@ -49,9 +49,16 @@ function renderAnnotationText(
   annotation: SchematicDocument["annotations"][number],
   profile: SchematicStyleProfile,
 ): string {
-  // Electrical annotation text is semantic, not a free-form RichText style
-  // override. Historical Projects may carry an older content AST, but it must
-  // never bypass the active profile's canonical math composition.
+  // A new semantic label has no RichText payload and receives canonical Razavi
+  // composition from its electrical string. Once a human explicitly formats
+  // it in the canvas editor, that persisted AST is the visual source of truth;
+  // flattening it back through `text` loses selected multi-character spans.
+  if (annotation.content) {
+    return renderRichTextDocument(
+      annotation.content as unknown as RichTextDocumentInput,
+      profile,
+    );
+  }
   return renderSchematicTextContent(annotation.text, annotation.kind, profile);
 }
 

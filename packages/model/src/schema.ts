@@ -172,9 +172,10 @@ export const AnnotationSchema = z
   .strictObject({
     id: StableIdSchema,
     kind: AnnotationKindSchema,
-    // Presentation-only rich content retained for editor round-tripping.
-    // `text` remains the canonical semantic string for electrical labels;
-    // formal rendering derives their standardized appearance from `text`.
+    // Optional explicit RichText presentation saved by the canvas editor.
+    // `text` remains the canonical semantic/electrical identity. When this is
+    // absent, formal rendering derives standardized appearance from `text`;
+    // when present, it preserves the user's explicit formatting.
     content: z.lazy(() => RichTextDocumentSchema).optional(),
     text: z.string(),
     position: PointSchema,
