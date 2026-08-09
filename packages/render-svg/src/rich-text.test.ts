@@ -84,7 +84,7 @@ describe("renderRichTextDocument (WP-A2)", () => {
     // Authority-calibrated subscript scale and attachment.
     expect(svg).toContain('font-size="76%"');
     expect(svg).toContain('baseline-shift="-0.28em"');
-    expect(svg).toContain('dx="0.04em"');
+    expect(svg).toContain('dx="0.046em"');
   });
 
   it("renders a fraction with numerator and denominator tspans", () => {

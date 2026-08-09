@@ -3052,6 +3052,19 @@ formatting`.
   `git diff --check` passed.
 - Commit status: ready for `fix(text): restore Razavi subscript proportions`.
 
+## 2026-08-09 - Bold upright subscript adjustment
+
+- Target: apply human-reviewed bold upright subscripts and increase horizontal
+  separation by approximately 15%.
+- Result: semantic and editor-default subscripts use upright weight 700; the
+  shared attachment gap changes from 0.040em to 0.046em. The 76% size and
+  0.28em vertical shift remain unchanged.
+- Validation: formatting check, focused typography tests, Derived/Render-SVG/
+  Editor builds, and `git diff --check` passed. The broad Render-SVG file still
+  has eight unrelated stale golden/color/size assertions already documented by
+  the active fidelity work.
+- Commit status: ready for `style(text): widen upright Razavi subscripts`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next

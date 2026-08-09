@@ -127,6 +127,13 @@ fidelity harness, raster authority, or MOS catalog assets.
   the new AST output showed the smaller, lower italic subscript and the objects
   were immediately undone. Focused typography tests pass 22/22, followed by
   Derived, Render-SVG, and Editor builds plus `git diff --check`.
+- Human review overrides the italic-subscript candidate: semantic/default
+  subscripts return to bold upright while bases remain bold italic. Horizontal
+  attachment increases by 15% from 0.040em to 0.046em; size and vertical shift
+  remain 76% and 0.28em.
+- Focused typography tests pass. The broader Render-SVG file reports eight
+  pre-existing stale golden/color/size assertions against older monochrome and
+  Razavi assets; its upright-subscript assertions now agree with production.
 
 - Added `formal-route-wire`, a real formal-route crop from the archived
   `current-port-reference.png`; the harness now prints the actual reference

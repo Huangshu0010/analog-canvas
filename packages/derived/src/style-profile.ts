@@ -67,7 +67,7 @@ export const globalSchematicTypography: SchematicTypography = {
   captionFontSize: 14,
   subscriptScale: 0.76,
   subscriptBaselineShiftEm: 0.28,
-  subscriptHorizontalGapEm: 0.04,
+  subscriptHorizontalGapEm: 0.046,
   labelGap: 6,
   lineHeight: 1,
 };

@@ -20,7 +20,7 @@ describe("schematic style profiles", () => {
       instanceFontSize: 15.116,
       subscriptScale: 0.76,
       subscriptBaselineShiftEm: 0.28,
-      subscriptHorizontalGapEm: 0.04,
+      subscriptHorizontalGapEm: 0.046,
     });
   });
 });
