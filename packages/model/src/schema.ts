@@ -324,6 +324,13 @@ export const DraftArrowSchema = DraftingObjectBaseSchema.extend({
   kind: z.literal("arrow"),
   from: VisualAnchorSchema,
   to: VisualAnchorSchema,
+  // Interior free points make a drafting arrow elastically reshapeable without
+  // weakening either endpoint's attachment contract. Omitted means a legacy
+  // two-point arrow.
+  waypoints: z.array(PointSchema).optional(),
+  // One optional quadratic Bézier control per visible path segment. A null
+  // entry keeps that segment straight, so legacy arrows need no migration.
+  curveControls: z.array(PointSchema.nullable()).optional(),
 });
 
 export const DraftLeaderSchema = DraftingObjectBaseSchema.extend({
@@ -343,6 +350,7 @@ export const DraftCalloutSchema = DraftingObjectBaseSchema.extend({
 export const DraftConstructionLineSchema = DraftingObjectBaseSchema.extend({
   kind: z.literal("construction-line"),
   points: z.array(PointSchema).min(2),
+  curveControls: z.array(PointSchema.nullable()).optional(),
   lineStyle: z.enum(["solid", "dashed", "dotted"]),
 });
 

@@ -133,7 +133,7 @@ describe("drafting layer rendering (WP-A1b)", () => {
       }`,
     );
     expect(svg).toContain(
-      `x1="0" y1="0" x2="${100 - profile.annotations.arrowHeadLength}" y2="0"`,
+      `points="0,0 ${100 - profile.annotations.arrowHeadLength},0"`,
     );
   });
 
@@ -157,6 +157,30 @@ describe("drafting layer rendering (WP-A1b)", () => {
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-kind="draft-arrow"');
     expect(svg).not.toContain("<polygon");
+  });
+
+  it("renders a curved arrow as a path and aims its head along the final tangent", () => {
+    const document = createEmptyDocument("doc", "Bent arrow");
+    document.drafting = {
+      objects: [
+        {
+          id: "bent-arrow",
+          kind: "arrow",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 0, y: 0 } },
+          from: { kind: "free", position: { x: 0, y: 0 } },
+          to: { kind: "free", position: { x: 100, y: 0 } },
+          curveControls: [{ x: 50, y: 50 }],
+        },
+      ],
+      guides: [],
+    };
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('<path d="M 0 0 Q 50 50');
+    // The curve's endpoint tangent is (100,0) - (50,50), not the overall
+    // straight chord. Its head base must therefore leave both x and y.
+    expect(svg).not.toContain('points="0,0');
   });
 
   it("renders a floating symbol with its primitives (WP-A4)", () => {

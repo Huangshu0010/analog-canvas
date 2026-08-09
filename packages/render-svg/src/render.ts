@@ -467,8 +467,24 @@ export function buildSvgScene(
       return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalBridges}`;
     })
     .join("");
+  const junctionDegrees = new Map(
+    document.junctions.map((junction) => [junction.id, 0]),
+  );
+  for (const route of document.routes) {
+    for (const endpoint of [route.from, route.to]) {
+      if (endpoint.kind !== "junction") continue;
+      junctionDegrees.set(
+        endpoint.junctionId,
+        (junctionDegrees.get(endpoint.junctionId) ?? 0) + 1,
+      );
+    }
+  }
   const junctions = [...document.junctions]
-    .filter((junction) => (junction.role ?? "branch") === "branch")
+    .filter(
+      (junction) =>
+        (junction.role ?? "branch") === "branch" &&
+        (junctionDegrees.get(junction.id) ?? 0) >= 3,
+    )
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map(
       (junction) =>
@@ -853,7 +869,31 @@ function renderConstructionLine(
         : "";
   const strokeScale = object.styleOverride?.strokeScale ?? 1;
   const strokeWidth = profile.strokes.annotation * strokeScale;
-  return `<polyline data-object-id="${object.id}" data-kind="construction-line" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"${dash}/>`;
+  const hasCurve = (object.curveControls ?? []).some(Boolean);
+  const shape = hasCurve
+    ? `<path d="${draftingPathData(object.points, object.curveControls ?? [])}" fill="none"`
+    : `<polyline points="${points}" fill="none"`;
+  return `${shape} data-object-id="${object.id}" data-kind="construction-line" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}/>`;
+}
+
+function draftingPathData(
+  points: Point[],
+  curveControls: Array<Point | null>,
+  finalPoint?: Point,
+): string {
+  const start = points[0]!;
+  let data = `M ${start.x} ${start.y}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const end =
+      index === points.length - 2 && finalPoint
+        ? finalPoint
+        : points[index + 1]!;
+    const control = curveControls[index];
+    data += control
+      ? ` Q ${control.x} ${control.y} ${end.x} ${end.y}`
+      : ` L ${end.x} ${end.y}`;
+  }
+  return data;
 }
 
 function renderDraftArrow(
@@ -864,10 +904,21 @@ function renderDraftArrow(
 ): string {
   const from = geometry.from;
   const to = geometry.to;
+  const points = geometry.points;
   const tipX = to.x;
   const tipY = to.y;
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
+  // The head follows the final non-zero segment, not the overall chord. This
+  // keeps a bent arrow's shaft cleanly terminated at its head base plane.
+  const lastControl = geometry.curveControls.at(-1);
+  const tail =
+    lastControl ??
+    [...points]
+      .reverse()
+      .slice(1)
+      .find((point) => point.x !== to.x || point.y !== to.y) ??
+    from;
+  const dx = to.x - tail.x;
+  const dy = to.y - tail.y;
   const length = Math.hypot(dx, dy) || 1;
   // strokeScale widens/narrows the shaft; arrowHeadScale grows/shrinks the head
   // independently. Both multiply the Razavi profile baseline so formal export
@@ -901,7 +952,14 @@ function renderDraftArrow(
   // every angle and head scale. A headless arrow remains a complete line.
   const shaftEndX = arrowHead === "none" ? tipX : baseX;
   const shaftEndY = arrowHead === "none" ? tipY : baseY;
-  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${shaftEndX}" y2="${shaftEndY}" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"${dash}/>${headBody}</g>`;
+  const shaftPoints = [...points.slice(0, -1), { x: shaftEndX, y: shaftEndY }]
+    .map((point) => `${point.x},${point.y}`)
+    .join(" ");
+  const hasCurve = geometry.curveControls.some(Boolean);
+  const shaft = hasCurve
+    ? `<path d="${draftingPathData(points, geometry.curveControls, { x: shaftEndX, y: shaftEndY })}" fill="none"`
+    : `<polyline points="${shaftPoints}" fill="none"`;
+  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}>${shaft} stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}/>${headBody}</g>`;
 }
 
 function renderDraftLeader(

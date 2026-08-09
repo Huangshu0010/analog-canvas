@@ -15,6 +15,37 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-10 - Release GUI interaction batch
+
+- Target: publish the user-authorized accumulated editor interaction, drafting,
+  selection, schematic-wire, rendering, and documentation work through a PR
+  and merge it into `origin/main`.
+- Changed areas: editor selection/shortcuts/drafting interaction and browser
+  tests; drafting schema/derived/render support; text and isolated-wire direct
+  manipulation; interaction specification and target plans.
+- Validation: focused browser interaction checks and editor production build
+  passed; `git diff --check` passed. Full workspace format/typecheck/test gates
+  remain red on pre-existing Razavi catalog `leadsPx` type expectations,
+  outdated visual golden/style assertions, and six pre-existing formatting
+  files. These failures are not reported as passing.
+- Commit status: committed locally as `7ae8a2c`; push/PR/merge pending.
+
+## 2026-08-09 - Cadence-style shortcut core
+
+- Target: make the release-facing editor keyboard layer compact and direct,
+  without adding property, hierarchy, or ambiguous dual-port shortcuts.
+- Changed areas: added the editor-local orientation composition helper and
+  exhaustive geometry test; bound `U`/`Shift+U` to undo/redo, `F`/`Shift+F` to
+  explicit left/right and top/bottom flips, and `Home` to Fit; synchronized the
+  Edit/View labels, in-app shortcut help, and editor interaction contract.
+- Validation: the focused orientation Vitest test passed (3 tests); editor
+  production build passed; target-file Prettier check and `git diff --check`
+  passed. Workspace `pnpm typecheck` remains blocked by pre-existing
+  `leadsPx` errors in `packages/symbols/src/razavi-catalog.test.ts`, outside
+  this target's owned paths.
+- Commit status: ready to commit after the user-owned concurrent dirty targets
+  are reconciled; not staged or committed by this target.
+
 ## 2026-08-09 - Pages workspace dependency build repair
 
 - Target: repair Pages run `31311029301`, whose fresh runner could not resolve
@@ -3469,6 +3500,42 @@ orthogonal turns`.
   `App.tsx` and this log already contain staged, separately owned terminal-
   escape-routing work in the shared worktree; the changes must be integrated
   with that target rather than committing either target's partial index.
+
+## 2026-08-09 - Precise selection interaction
+
+- Target: prevent accidental component/text movement and remove duplicate
+  component selection feedback.
+- Result: component hit rectangles now use visible symbol geometry and pins
+  when path geometry permits; text hit tolerance is reduced; component,
+  annotation, and free drafting moves require a 4px screen-space gesture;
+  implicit labels select on click and materialize for editing only on
+  double-click. The obsolete circular component drag placeholder is removed.
+- Validation: selection geometry plus editor-shell Vitest 14/14, editor
+  TypeScript check, production build, Prettier, and `git diff --check` passed.
+- Commit status: pending exact-hunk integration because a separate drafting
+  arrow target currently has uncommitted changes in `App.tsx` and `styles.css`.
+
+## 2026-08-09 - Select before drag
+
+- Target: stop dense schematics from moving an object during its first
+  selection gesture.
+- Result: components, annotations, and free drafting objects now use a
+  two-stage gesture. The first pointer-down selects; only a new drag from an
+  already-selected object may move it. Selection modifiers cannot start a
+  move. Annotation hit padding is zero, and unselected targets use the normal
+  pointer cursor while selected targets advertise movement. Attached labels
+  now follow that exact same model: a click selects the label, and a subsequent
+  drag moves it. This avoids deferred click-through that visibly switched
+  selection from a label to its host on pointer-up. Text annotations now use
+  the component's transparent dashed selection outline; wide filled selection
+  bands remain reserved for thin route-marker/drafting geometry.
+- Validation: selection geometry/editor-shell Vitest 15/15, focused Playwright
+  attached-label selection plus two-stage label drag and floating-text drag
+  3/3, editor TypeScript check, production build, Prettier, and `git diff
+--check` passed.
+- Commit status: pending exact-hunk integration with the separately owned,
+  uncommitted drafting-arrow target in `App.tsx` and `styles.css`.
+
 ## 2026-08-09 - Direct miter terminal joins
 
 - Target: remove the visually inflated default terminal escape from manual
@@ -3481,4 +3548,62 @@ orthogonal turns`.
   Playwright 1/1, editor production build, target-file Prettier, and
   `git diff --check` passed.
 - Commit status: committed as `fix(editor): use direct miter joins for manual
-  terminal wiring`.
+terminal wiring`.
+
+## 2026-08-09 - Virtuoso-style wire endpoint semantics
+
+- Target: distinguish loose wire ends from real electrical branches, and make
+  an isolated manually drawn wire movable as one object.
+- Result: GUI-created free endpoints now persist as `route-anchor` rather than
+  implicit `branch` Junctions. Formal rendering draws a junction dot only for
+  a branch Junction with three or more attached routes; route/label anchors
+  and legacy degree-one/two branch records remain electrically explicit but
+  visually invisible. A selected route whose two endpoints are loose anchors
+  can now be dragged directly on any wire segment to move both anchors and the
+  complete polyline in one transaction; the centre handle is optional. Routes
+  attached to terminals, ports, or real branches use the same direct gesture
+  to stretch the pointed segment while preserving their endpoints.
+- Validation: focused renderer branch-dot test 1/1, focused manual-editor
+  Playwright dangling-wire/direct-whole-route-move/direct-segment-stretch tests
+  3/3, editor TypeScript check, production build, Prettier, and `git diff
+--check` passed.
+- Commit status: pending exact-hunk integration because the same editor,
+  renderer, and log files contain separately owned uncommitted work.
+
+## 2026-08-09 - Drafting midpoint bending and contextual inspector
+
+- Target: make free drafting arrows and construction lines reshapeable by
+  dragging a segment midpoint, and make their frequent controls visible beside
+  the selected object.
+- Changed areas: arrow persistence gained optional free `waypoints` and both
+  free drafting shapes gained per-segment quadratic `curveControls`; shared
+  derived geometry and formal SVG rendering now use the same Bézier path and
+  aim an arrow head from its final tangent. Editor overlays supply draggable
+  curve-midpoint diamonds and a compact in-canvas inspector. Electrical routes
+  and route-bound current arrows were not changed.
+- Interaction refinement: the inspector now displays the active segment's
+  endpoint-tangent included angle in real time. Numeric entry rebuilds a
+  symmetric quadratic control on the same bend side; multi-segment drafting
+  objects expose a segment selector.
+- Follow-up: control-point creation now rounds at the persistence boundary,
+  because Project `Point` coordinates are integer-valued. Local GUI verification
+  created an arrow, entered 60°, and committed revision 2 with a displayed
+  60.2° realized angle and no transaction-validation diagnostic.
+- Input refinement: the field clears to a numeric draft on focus (while its
+  unfocused state remains a realized-angle readout), preventing controlled
+  rerenders from turning a desired `60` into `060` or overwriting partial text.
+  Local GUI verification typed `60` directly and retained that exact active
+  draft while applying the curve update.
+- Rotation refinement: the nearby inspector now exposes an absolute first-
+  segment Bearing field for arbitrary-angle rotation of free arrows and
+  construction lines, including their Bézier controls. The inspector was made
+  tall enough to show all line actions rather than clipping Rotate. Local GUI
+  verification entered 45° for a construction line; the field was enabled and
+  the complete action row remained visible.
+- Validation: model, derived, edit-engine, render-svg, and editor builds
+  passed; focused derived/render Vitest passed 26/26; editor TypeScript check
+  and `git diff --check` passed. Root `pnpm typecheck` remains blocked only by
+  the pre-existing `leadsPx` errors in `packages/symbols/src/razavi-catalog.test.ts`.
+- Commit status: not committed. A concurrent precise-selection target modified
+  the same `App.tsx`/`styles.css` files during this work; its untracked helper
+  files and plan were deliberately not staged or included.

@@ -663,7 +663,7 @@ body {
   fill: transparent;
   stroke: transparent;
   stroke-width: 2;
-  cursor: move;
+  cursor: default;
   pointer-events: all;
 }
 
@@ -686,14 +686,7 @@ body {
 .hit-target.selected {
   stroke: var(--icm-accent);
   stroke-dasharray: 6 4;
-}
-
-.drag-preview {
-  fill: var(--icm-accent-soft);
-  stroke: var(--icm-accent);
-  stroke-width: 1.5;
-  stroke-dasharray: 5 4;
-  pointer-events: none;
+  cursor: move;
 }
 
 .flightline {
@@ -839,6 +832,67 @@ body {
   fill: var(--icm-accent);
 }
 
+/* A diamond is the directly draggable midpoint of a quadratic curve. Endpoint
+   and existing-vertex handles stay circular, so a smooth bend is distinct from
+   explicit polyline vertex editing. */
+.draft-midpoint-handle {
+  fill: var(--icm-surface);
+  cursor: crosshair;
+}
+
+/* Compact direct-manipulation inspector for selected free drafting geometry.
+   It lives in the canvas just like RichTextEditor; the Selection shelf remains
+   available for bulk/property review below the canvas. */
+.drafting-inline-inspector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem;
+  box-sizing: border-box;
+  min-height: 7.5rem;
+  padding: 0.25rem;
+  overflow: visible;
+  border: 1px solid var(--icm-accent);
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--icm-surface) 96%, var(--icm-accent));
+  box-shadow: 0 0.25rem 0.65rem rgb(0 0 0 / 18%);
+  color: var(--icm-text);
+  font:
+    600 0.7rem/1 Arial,
+    "Helvetica Neue",
+    Helvetica,
+    sans-serif;
+  pointer-events: all;
+}
+
+.drafting-inline-inspector select,
+.drafting-inline-inspector button,
+.drafting-inline-inspector input {
+  min-width: 0;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--icm-text) 28%, transparent);
+  border-radius: 0.2rem;
+  background: var(--icm-surface);
+  color: var(--icm-text);
+  font: inherit;
+}
+
+.drafting-inline-inspector button {
+  cursor: pointer;
+}
+
+.drafting-tangent-angle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.16rem;
+  white-space: nowrap;
+}
+
+.drafting-tangent-angle input {
+  width: 3.6rem;
+}
+
 .snap-preview {
   fill: var(--icm-surface);
   stroke: var(--icm-accent);
@@ -856,7 +910,7 @@ body {
      transparent stroke IS the hit band — keep it for both unselected and
      selected, otherwise a selected thin line becomes unclickable. */
   stroke-width: 14;
-  cursor: move;
+  cursor: default;
   pointer-events: all;
   vector-effect: non-scaling-stroke;
 }
@@ -867,6 +921,7 @@ body {
      narrow stroke-width here — that would shrink the hit band to 1px and make
      a selected thin arrow/construction line nearly impossible to re-grab. */
   stroke: rgb(var(--icm-accent-rgb) / 45%);
+  cursor: move;
 }
 
 /* Editor-only HTML inside the SVG foreignObject. It is deliberately separate

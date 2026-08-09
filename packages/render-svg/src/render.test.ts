@@ -92,7 +92,6 @@ describe("textbook monochrome SVG renderer", () => {
     expect(body).toContain('x2="-4.607544"');
   });
 
-
   it("preserves the resistor's sharp miter override", () => {
     const resistor = builtInSymbols.find((symbol) => symbol.id === "resistor");
     expect(resistor).toBeDefined();
@@ -136,6 +135,58 @@ describe("textbook monochrome SVG renderer", () => {
         position: { x: 180, y: 100 },
         role: "route-anchor",
       },
+      {
+        id: "junction-branch-east",
+        netId: "net-a",
+        position: { x: 120, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "junction-branch-south",
+        netId: "net-a",
+        position: { x: 100, y: 120 },
+        role: "route-anchor",
+      },
+      {
+        id: "junction-legacy-loose",
+        netId: "net-a",
+        position: { x: 200, y: 100 },
+        role: "branch",
+      },
+    );
+    document.routes.push(
+      {
+        id: "route-branch-west",
+        netId: "net-a",
+        from: { kind: "junction", junctionId: "junction-branch" },
+        to: { kind: "junction", junctionId: "junction-route" },
+        waypoints: [],
+        segmentModes: ["auto"],
+      },
+      {
+        id: "route-branch-east",
+        netId: "net-a",
+        from: { kind: "junction", junctionId: "junction-branch" },
+        to: { kind: "junction", junctionId: "junction-branch-east" },
+        waypoints: [],
+        segmentModes: ["auto"],
+      },
+      {
+        id: "route-branch-south",
+        netId: "net-a",
+        from: { kind: "junction", junctionId: "junction-branch" },
+        to: { kind: "junction", junctionId: "junction-branch-south" },
+        waypoints: [],
+        segmentModes: ["auto"],
+      },
+      {
+        id: "route-legacy-loose",
+        netId: "net-a",
+        from: { kind: "junction", junctionId: "junction-legacy-loose" },
+        to: { kind: "junction", junctionId: "junction-label" },
+        waypoints: [],
+        segmentModes: ["auto"],
+      },
     );
 
     const svg = renderDocumentSvg(document, resolver);
@@ -143,6 +194,7 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain('data-object-id="junction-branch"');
     expect(svg).not.toContain('data-object-id="junction-label"');
     expect(svg).not.toContain('data-object-id="junction-route"');
+    expect(svg).not.toContain('data-object-id="junction-legacy-loose"');
   });
 
   it("renders formal symbols deterministically without editor overlays", () => {
