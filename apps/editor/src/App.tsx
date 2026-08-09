@@ -182,6 +182,19 @@ function referencedDocumentId(
   project: CircuitProject,
   instance: SchematicDocument["instances"][number],
 ): string | null {
+  const stableChildDocumentId = instance.properties["spice.childDocumentId"];
+  if (
+    typeof stableChildDocumentId === "string" &&
+    project.documents.some(
+      (candidate) => candidate.id === stableChildDocumentId,
+    )
+  ) {
+    return stableChildDocumentId;
+  }
+
+  // Projects saved before imported hierarchy links were stabilized retain the
+  // original SPICE target string. Keep this compatibility path read-only; new
+  // imports always write spice.childDocumentId.
   const target = instance.properties["spice.target"];
   if (typeof target !== "string" || !target.startsWith("subcircuit:")) {
     return null;
@@ -641,6 +654,15 @@ export function App({ project: initialProject }: AppProps) {
     selectedIds.length === 1
       ? document.instances.find((instance) => instance.id === selectedId)
       : undefined;
+  const hasImportedHierarchy = useMemo(
+    () =>
+      project.documents.some((candidate) =>
+        candidate.instances.some(
+          (instance) => referencedDocumentId(project, instance) !== null,
+        ),
+      ),
+    [project],
+  );
   const selectedRoute = selectedRouteId
     ? document.routes.find((route) => route.id === selectedRouteId)
     : undefined;
@@ -1343,7 +1365,7 @@ export function App({ project: initialProject }: AppProps) {
       documentViewBoxes.current.get(nextDocument.id) ?? DEFAULT_VIEWBOX,
     );
     resetInteractionState();
-    setStatus(`Opened Document ${nextDocument.name}`);
+    setStatus(`Opened Cell ${nextDocument.name}`);
   }
 
   function enterHierarchy(instanceId: string): void {
@@ -1352,7 +1374,7 @@ export function App({ project: initialProject }: AppProps) {
     );
     const targetId = instance ? referencedDocumentId(project, instance) : null;
     if (!targetId) {
-      setStatus(`${instanceId} has no resolved child Document`);
+      setStatus(`${instanceId} has no imported child Cell`);
       return;
     }
     setDocumentStack((current) => [...current, document.id]);
@@ -3829,49 +3851,60 @@ export function App({ project: initialProject }: AppProps) {
           </p>
         </div>
         <nav className="toolbar" aria-label="Editor commands">
-          <div className="document-nav" aria-label="Document navigation">
-            <button
-              type="button"
-              onClick={returnToParentDocument}
-              disabled={documentStack.length === 0}
+          {hasImportedHierarchy ? (
+            <div
+              className="document-nav"
+              aria-label="Imported cell navigation"
+              data-testid="cell-navigation"
             >
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={returnToTopDocument}
-              disabled={document.id === project.topDocumentId}
-            >
-              Top
-            </button>
-            <select
-              aria-label="Current Document"
-              data-testid="document-selector"
-              value={document.id}
-              onChange={(event) => {
-                setDocumentStack([]);
-                switchDocument(event.currentTarget.value);
-              }}
-            >
-              {project.documents.map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() =>
-                selectedInstance && enterHierarchy(selectedInstance.id)
-              }
-              disabled={
-                !selectedInstance ||
-                referencedDocumentId(project, selectedInstance) === null
-              }
-            >
-              Enter
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={returnToParentDocument}
+                disabled={documentStack.length === 0}
+                title="Return to the parent imported cell"
+              >
+                Up
+              </button>
+              <button
+                type="button"
+                onClick={returnToTopDocument}
+                disabled={document.id === project.topDocumentId}
+                title="Return to the top imported cell"
+              >
+                Top
+              </button>
+              <select
+                aria-label="Imported Cells"
+                data-testid="document-selector"
+                value={document.id}
+                onChange={(event) => {
+                  setDocumentStack([]);
+                  switchDocument(event.currentTarget.value);
+                }}
+              >
+                {project.documents.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidate.id === project.topDocumentId
+                      ? `${candidate.name} (top)`
+                      : candidate.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  selectedInstance && enterHierarchy(selectedInstance.id)
+                }
+                disabled={
+                  !selectedInstance ||
+                  referencedDocumentId(project, selectedInstance) === null
+                }
+                title="Enter the selected imported subcircuit"
+              >
+                Enter Cell
+              </button>
+            </div>
+          ) : null}
           <details className="command-menu" name="editor-command-menu">
             <summary>Draw</summary>
             <div className="command-popover">
@@ -4735,6 +4768,7 @@ export function App({ project: initialProject }: AppProps) {
               .map((instance) => {
                 const hitBox = instanceHitBox(instance);
                 if (!hitBox) return null;
+                const childDocumentId = referencedDocumentId(project, instance);
                 return (
                   <rect
                     key={instance.id}
@@ -4756,10 +4790,14 @@ export function App({ project: initialProject }: AppProps) {
                         event.shiftKey || event.ctrlKey,
                       );
                     }}
-                    onDoubleClick={(event) => {
-                      event.stopPropagation();
-                      enterHierarchy(instance.id);
-                    }}
+                    onDoubleClick={
+                      childDocumentId
+                        ? (event) => {
+                            event.stopPropagation();
+                            enterHierarchy(instance.id);
+                          }
+                        : undefined
+                    }
                     onPointerDown={(event) => beginMove(event, instance.id)}
                     onPointerMove={previewMove}
                     onPointerUp={finishMove}

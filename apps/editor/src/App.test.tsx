@@ -95,6 +95,38 @@ describe("editor shell", () => {
     const markup = renderToStaticMarkup(<App project={project} />);
     expect(markup).toContain("Smoke Project");
     expect(markup).toContain("Schematic canvas");
+    expect(markup).not.toContain('data-testid="cell-navigation"');
+  });
+
+  it("only exposes cell navigation for a resolvable imported subcircuit", () => {
+    const project = createEmptyProject("imported-hierarchy", "Imported");
+    const topDocument = project.documents[0]!;
+    const childDocument = {
+      ...topDocument,
+      id: "document-child",
+      name: "child",
+      instances: [],
+      nets: [],
+      ports: [],
+      routes: [],
+      junctions: [],
+      annotations: [],
+    };
+    topDocument.instances.push({
+      id: "X1",
+      symbolId: "generic-block-2",
+      placement: null,
+      properties: {
+        "spice.target": "subcircuit:child",
+        "spice.childDocumentId": childDocument.id,
+      },
+    });
+    project.documents.push(childDocument);
+
+    const markup = renderToStaticMarkup(<App project={project} />);
+    expect(markup).toContain('data-testid="cell-navigation"');
+    expect(markup).toContain("Enter Cell");
+    expect(markup).toContain("Main (top)");
   });
 
   it("provides a local-editor quick-start help entry without rendering it by default", () => {

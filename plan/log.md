@@ -3129,3 +3129,20 @@ formatting`.
 - Validation: editor Vitest 10/10, production build, focused Playwright 3/3,
   and `git diff --check` passed.
 - Commit status: ready for `feat(editor): simplify command hierarchy`.
+
+## 2026-08-09 - Imported hierarchy release scope
+
+- Target: limit this release to browsing SPICE-imported subcircuits, without
+  implying manual Cell authoring or symbol encapsulation.
+- Result: new imports store `spice.childDocumentId` as a stable child-document
+  link while retaining `spice.target` for source fidelity. The editor uses that
+  link first (with legacy name-resolution fallback), hides hierarchy controls
+  in a one-document project, and labels imported navigation `Cells`, `Up`,
+  `Top`, and `Enter Cell`. Only a resolvable child instance accepts double-click
+  navigation.
+- Validation: importer/editor Vitest 17/17, imported-SPICE Playwright flow
+  1/1, editor production build, Prettier, and `git diff --check` passed.
+  Workspace typecheck reaches only unrelated Razavi catalog fixture errors
+  (`leadsPx`); the concurrent drafting handoff's App type errors were repaired
+  separately but are intentionally not part of this commit.
+- Commit status: ready for `fix(editor): scope hierarchy UI to imported cells`.

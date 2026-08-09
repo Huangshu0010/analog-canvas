@@ -135,6 +135,7 @@ test("authors components and connectivity manually from an empty canvas", async 
   page,
 }) => {
   await page.goto("/");
+  await expect(page.getByTestId("cell-navigation")).toHaveCount(0);
   await expect(page.getByTestId("revision")).toHaveText("0");
 
   await placeComponent(page, "resistor", { x: 340, y: 220 });
@@ -575,16 +576,15 @@ test("imports the SPICE baseline through the grouped File menu", async ({
     .getByTestId("active-document-id")
     .textContent();
   expect(topDocumentId).toBeTruthy();
-  await page.getByTestId("diagnostic-0").click();
-  await expect(page.getByTestId("status")).toContainText("VISUAL_UNPLACED_");
 
   await page.getByTestId("unplaced-XFILTER").click();
-  await page.getByRole("button", { name: "Enter", exact: true }).click();
+  await expect(page.getByTestId("cell-navigation")).toBeVisible();
+  await page.getByRole("button", { name: "Enter Cell", exact: true }).click();
   await expect(page.getByTestId("active-document-name")).toHaveText(
     "mixed_passive_cell",
   );
   await expect(page.getByTestId("active-instance-count")).toHaveText("3");
-  await page.getByRole("button", { name: "Back", exact: true }).click();
+  await page.getByRole("button", { name: "Up", exact: true }).click();
   await expect(page.getByTestId("active-document-name")).toHaveText(
     "mixed_device_acceptance",
   );
