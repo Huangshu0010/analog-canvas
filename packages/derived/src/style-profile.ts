@@ -102,7 +102,7 @@ export const textbookMonochromeProfile: SchematicStyleProfile = {
 
 export const razaviTextbookProfile: SchematicStyleProfile = {
   id: "razavi-textbook-v1",
-  foreground: "#202020",
+  foreground: "#000",
   background: "#fff",
   strokes: {
     wire: 1.6,

@@ -107,6 +107,10 @@ fidelity harness, raster authority, or MOS catalog assets.
   thresholded ink than their reference crops, so the reported visually-small
   circle must be separated into radius, stroke, and GUI scale diagnostics
   before any geometry is enlarged.
+- Human review requested a pure-black formal comparison. The shared Razavi
+  `foreground` token is changed from `#202020` to `#000`; it intentionally
+  covers routes, symbols, nodes, and semantic text together, while retaining
+  white background and editor-only overlay colors.
 
 ### 1. Establish the common render-scale, then fit the wire baseline
 
