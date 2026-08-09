@@ -97,6 +97,16 @@ describe("editor shell", () => {
     expect(markup).toContain("Schematic canvas");
   });
 
+  it("provides a local-editor quick-start help entry without rendering it by default", () => {
+    const project = createEmptyProject("help-tutorial", "Help Tutorial");
+    const markup = renderToStaticMarkup(<App project={project} />);
+
+    expect(markup).toContain('aria-haspopup="dialog"');
+    expect(markup).toContain(">Help</button>");
+    expect(markup).not.toContain('role="dialog"');
+    expect(markup).not.toContain("Agent");
+  });
+
   it("keeps Selection as a persistent bottom shelf", () => {
     const project = createEmptyProject("selection-shelf", "Selection Shelf");
     const markup = renderToStaticMarkup(<App project={project} />);

@@ -579,6 +579,7 @@ export function App({ project: initialProject }: AppProps) {
   const [paletteQuery, setPaletteQuery] = useState("");
   const [libraryOpen, setLibraryOpen] = useState(true);
   const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
   // P0-2: live position of an in-progress drafting drag; read in pointerup so
@@ -590,6 +591,8 @@ export function App({ project: initialProject }: AppProps) {
   const pasteCounter = useRef(0);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const helpCloseRef = useRef<HTMLButtonElement>(null);
   const history = useRef(
     new DocumentHistory(
       project.documents.find(
@@ -777,23 +780,21 @@ export function App({ project: initialProject }: AppProps) {
             pinName: pin.name,
           }),
         )
-        .map(
-          (pin): WireSource => ({
-            endpoint: {
-              kind: "terminal",
-              instanceId: instance.id,
-              pinName: pin.name,
-            },
-            netId: endpointNetId(document, {
-              kind: "terminal",
-              instanceId: instance.id,
-              pinName: pin.name,
-            }),
-            point: transformPoint(pin.at, move.position, placement),
-            preferredAxis: transformedPinAxis(pin.direction, placement.rotation),
-            preludeEdits: [],
+        .map((pin): WireSource => ({
+          endpoint: {
+            kind: "terminal",
+            instanceId: instance.id,
+            pinName: pin.name,
+          },
+          netId: endpointNetId(document, {
+            kind: "terminal",
+            instanceId: instance.id,
+            pinName: pin.name,
           }),
-        );
+          point: transformPoint(pin.at, move.position, placement),
+          preferredAxis: transformedPinAxis(pin.direction, placement.rotation),
+          preludeEdits: [],
+        }));
     });
     const targets = visibleEndpoints.filter(
       (candidate) =>
@@ -826,7 +827,10 @@ export function App({ project: initialProject }: AppProps) {
     return {
       moves: moves.map((move) => ({
         ...move,
-        position: { x: move.position.x + delta.x, y: move.position.y + delta.y },
+        position: {
+          x: move.position.x + delta.x,
+          y: move.position.y + delta.y,
+        },
       })),
       from: closest.from,
       to: closest.to,
@@ -2219,8 +2223,10 @@ export function App({ project: initialProject }: AppProps) {
     const directSnap = directPinSnap(moves);
     const previewPosition = directSnap
       ? {
-          x: position.x + directSnap.moves[0]!.position.x - moves[0]!.position.x,
-          y: position.y + directSnap.moves[0]!.position.y - moves[0]!.position.y,
+          x:
+            position.x + directSnap.moves[0]!.position.x - moves[0]!.position.x,
+          y:
+            position.y + directSnap.moves[0]!.position.y - moves[0]!.position.y,
         }
       : position;
     if (delta.x !== 0 || delta.y !== 0) {
@@ -2259,8 +2265,12 @@ export function App({ project: initialProject }: AppProps) {
     const directSnap = directPinSnap(unsnappedMoves);
     const moves = directSnap?.moves ?? unsnappedMoves;
     const delta = {
-      x: moves[0]!.position.x - dragPreview.originalPositions[moves[0]!.instanceId]!.x,
-      y: moves[0]!.position.y - dragPreview.originalPositions[moves[0]!.instanceId]!.y,
+      x:
+        moves[0]!.position.x -
+        dragPreview.originalPositions[moves[0]!.instanceId]!.x,
+      y:
+        moves[0]!.position.y -
+        dragPreview.originalPositions[moves[0]!.instanceId]!.y,
     };
     if (delta.x !== 0 || delta.y !== 0) {
       try {
@@ -3768,6 +3778,10 @@ export function App({ project: initialProject }: AppProps) {
         event.preventDefault();
         finishWireAtPoint(wirePreviewPoint);
       } else if (event.key === "Escape") {
+        if (helpOpen) {
+          closeHelp();
+          return;
+        }
         setTool("pointer");
         setWireSource(null);
         setWirePreviewPoint(null);
@@ -3794,6 +3808,15 @@ export function App({ project: initialProject }: AppProps) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
+
+  useEffect(() => {
+    if (helpOpen) helpCloseRef.current?.focus();
+  }, [helpOpen]);
+
+  function closeHelp(): void {
+    setHelpOpen(false);
+    requestAnimationFrame(() => helpButtonRef.current?.focus());
+  }
 
   return (
     <main className="app-shell">
@@ -4037,11 +4060,117 @@ export function App({ project: initialProject }: AppProps) {
               </small>
             </div>
           </details>
+          <button
+            type="button"
+            ref={helpButtonRef}
+            aria-haspopup="dialog"
+            aria-expanded={helpOpen}
+            aria-controls="editor-help-dialog"
+            onClick={() => setHelpOpen(true)}
+          >
+            Help
+          </button>
         </nav>
         <p className="editor-status" data-testid="status" aria-live="polite">
           {status}
         </p>
       </header>
+      {helpOpen ? (
+        <div className="help-backdrop">
+          <section
+            className="help-dialog"
+            id="editor-help-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="help-title"
+          >
+            <header className="help-dialog-header">
+              <div>
+                <p className="help-kicker">Interactive Circuit Maker</p>
+                <h2 id="help-title">Quick start</h2>
+              </div>
+              <button
+                type="button"
+                ref={helpCloseRef}
+                onClick={closeHelp}
+                aria-label="Close help"
+              >
+                Close
+              </button>
+            </header>
+            <div className="help-dialog-content">
+              <section>
+                <h3>1. Start a circuit</h3>
+                <p>
+                  Use <strong>File / Open Project</strong> to continue an
+                  exported project, or <strong>File / Import SPICE</strong> to
+                  create editable Documents from SPICE source files.
+                </p>
+              </section>
+              <section>
+                <h3>2. Place and connect</h3>
+                <p>
+                  Select a symbol in the left library, or a drawing tool from
+                  <strong>Draw</strong>, then click the canvas to place or draw.
+                  Choose the Wire tool (or press <kbd>W</kbd>) and click
+                  terminals to draw a connection; click while drawing to add
+                  bends, then press <kbd>Enter</kbd> to finish.
+                </p>
+              </section>
+              <section>
+                <h3>3. Edit the schematic</h3>
+                <p>
+                  Select objects to move them or reveal selection actions. Use
+                  <strong>Edit</strong> for undo, redo, copy, paste, mirror, and
+                  alignment. Press <kbd>R</kbd> to rotate the selected object;{" "}
+                  <kbd>Delete</kbd> or <kbd>Backspace</kbd> removes the
+                  selection, or removes the latest bend while drawing a wire.
+                </p>
+              </section>
+              <section>
+                <h3>4. Navigate and export</h3>
+                <p>
+                  Move the mouse over the canvas and use the mouse wheel to
+                  zoom; middle-drag to pan; press <kbd>F</kbd> to fit the
+                  circuit in view. Choose <strong>File / Export</strong> to
+                  download SVG, PNG, or PDF; choose{" "}
+                  <strong>File / Save Project</strong> to keep an editable
+                  project file.
+                </p>
+              </section>
+              <section>
+                <h3>Keyboard shortcuts</h3>
+                <p>
+                  <kbd>Ctrl</kbd> + <kbd>Z</kbd> undo; <kbd>Ctrl</kbd> +
+                  <kbd>Shift</kbd> + <kbd>Z</kbd> or <kbd>Ctrl</kbd> +
+                  <kbd>Y</kbd> redo; <kbd>Ctrl</kbd> + <kbd>C</kbd> copy;
+                  <kbd>Ctrl</kbd> + <kbd>V</kbd> paste; <kbd>Ctrl</kbd> +
+                  <kbd>A</kbd> select all placed components; <kbd>Ctrl</kbd> +
+                  <kbd>S</kbd> save a project file; <kbd>Ctrl</kbd> +
+                  <kbd>O</kbd> open a project file.
+                </p>
+                <p>
+                  <kbd>W</kbd> wire; <kbd>A</kbd> arrow; <kbd>L</kbd>
+                  construction line; <kbd>G</kbd> guide; <kbd>X</kbd> reverses a
+                  selected current arrow. While wiring, click to add a bend and
+                  press <kbd>Enter</kbd> to finish. <kbd>Esc</kbd> cancels the
+                  active tool or closes this guide. Shortcuts are inactive while
+                  you are typing in a text field.
+                </p>
+              </section>
+              <section className="help-data-note">
+                <h3>Your project data</h3>
+                <p>
+                  This editor runs in your browser. Recovery data may be kept on
+                  this device, but it is not cloud storage and can be lost when
+                  browser data is cleared. Export a project file whenever you
+                  need a durable backup or want to move work to another device.
+                </p>
+              </section>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {paletteOpen ? (
         <section className="component-palette" aria-label="Component palette">
           <div className="palette-header">

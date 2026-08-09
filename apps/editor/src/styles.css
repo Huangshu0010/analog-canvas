@@ -199,6 +199,96 @@ body {
   text-align: left;
 }
 
+.help-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(21 21 21 / 36%);
+}
+
+.help-dialog {
+  width: min(42rem, 100%);
+  max-height: min(44rem, calc(100vh - 2.5rem));
+  overflow: auto;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: 0.55rem;
+  background: var(--icm-surface);
+  box-shadow: 0 20px 48px rgb(0 0 0 / 24%);
+}
+
+.help-dialog-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem 0.8rem;
+  border-bottom: 1px solid var(--icm-border);
+  background: var(--icm-surface);
+}
+
+.help-dialog-header h2,
+.help-dialog-header p,
+.help-dialog-content h3,
+.help-dialog-content p {
+  margin: 0;
+}
+
+.help-kicker {
+  color: var(--icm-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.help-dialog-header h2 {
+  margin-top: 0.2rem;
+  font-size: 1.2rem;
+}
+
+.help-dialog-content {
+  display: grid;
+  gap: 1.05rem;
+  padding: 1.1rem;
+  line-height: 1.55;
+}
+
+.help-dialog-content h3 {
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.help-dialog-content p {
+  color: var(--icm-text-muted);
+  font-size: 0.88rem;
+}
+
+.help-dialog-content strong {
+  color: var(--icm-text);
+}
+
+.help-dialog-content kbd {
+  padding: 0.05rem 0.25rem;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: 0.2rem;
+  color: var(--icm-text);
+  background: var(--icm-surface-muted);
+  font: inherit;
+  font-size: 0.8em;
+}
+
+.help-data-note {
+  padding: 0.8rem;
+  border: 1px solid var(--icm-border);
+  border-radius: 0.35rem;
+  background: var(--icm-surface-muted);
+}
+
 .component-palette {
   position: fixed;
   z-index: 20;
