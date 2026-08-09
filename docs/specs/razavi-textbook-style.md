@@ -270,12 +270,12 @@ the renderer composes base and subscript runs.
 Required examples:
 
 ```text
-M1    -> italic bold M + subscript 1
-R1    -> italic bold R + subscript 1
-VDD   -> italic bold V + subscript DD
-Vb1   -> italic bold V + subscript b1
-IX    -> italic bold I + subscript X
-V_X   -> italic bold V + explicit subscript X
+M1    -> italic bold M + upright bold subscript 1
+R1    -> italic bold R + upright bold subscript 1
+VDD   -> italic bold V + upright bold subscript DD
+Vb1   -> italic bold V + upright bold subscript b1
+IX    -> italic bold I + upright bold subscript X
+V_X   -> italic bold V + explicit upright bold subscript X
 ```
 
 Rules:
@@ -286,6 +286,8 @@ Rules:
 - For recognized voltage/current/power labels, the leading `V` or `I` is the
   base and the remaining identifier is the subscript.
 - Plain notes and figure captions are never implicitly parsed as math.
+- Auto-composed semantic subscripts are bold upright. Manual RichText remains
+  literal: an author may explicitly make any selected subscript italic.
 - `+`, `-`, parentheses, and numeric values remain upright unless explicitly
   included in a math run.
 - Text stays upright under component rotation or mirroring.

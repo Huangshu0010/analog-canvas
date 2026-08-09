@@ -106,6 +106,7 @@ function legacySchematicMathDocument(
     document.runs.push({
       kind: "span",
       style: "subscript",
+      role: "legacy-subscript",
       children: [{ kind: "text", value: runs.subscript }],
     });
   }
@@ -134,21 +135,30 @@ export function schematicTextDocument(
     runs.style === "italic"
       ? styled(children, "italic")
       : styled([styled(children, "bold")], "italic");
-  const baseAndSubscript: RichTextDocument["runs"] = [
-    { kind: "text", value: runs.base },
-    ...(runs.subscript
-      ? [
-          {
-            kind: "span" as const,
-            style: "subscript" as const,
-            children: [{ kind: "text" as const, value: runs.subscript }],
-          },
-        ]
-      : []),
-  ];
+  const subscript: RichTextDocument["runs"] = runs.subscript
+    ? [
+        {
+          kind: "span" as const,
+          style: "subscript" as const,
+          children:
+            runs.style === "math"
+              ? [
+                  {
+                    kind: "span" as const,
+                    style: "bold" as const,
+                    children: [
+                      { kind: "text" as const, value: runs.subscript },
+                    ],
+                  },
+                ]
+              : [{ kind: "text" as const, value: runs.subscript }],
+        },
+      ]
+    : [];
   return {
     runs: [
-      math(baseAndSubscript),
+      math([{ kind: "text", value: runs.base }]),
+      ...subscript,
       ...(runs.suffix ? [{ kind: "text" as const, value: runs.suffix }] : []),
     ],
   } as RichTextDocument;

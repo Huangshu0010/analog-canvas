@@ -9,7 +9,7 @@
 //
 // Usage:
 //   node scripts/razavi-text-fidelity-diff.mjs --reference C:/.../ota.png
-//     [--font Arial] [--out C:/.../text-diff]
+//     [--font Arial] [--subscript-face upright-bold] [--out C:/.../text-diff]
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -47,6 +47,18 @@ const fontIndex = args.indexOf("--font");
 const requestedFont = fontIndex >= 0 ? args[fontIndex + 1] : undefined;
 if (fontIndex >= 0 && !requestedFont) {
   throw new Error("--font requires a font-family value");
+}
+const subscriptFaceIndex = args.indexOf("--subscript-face");
+const requestedSubscriptFace =
+  subscriptFaceIndex >= 0 ? args[subscriptFaceIndex + 1] : undefined;
+const subscriptFaces = ["italic-bold", "upright-bold", "upright-plain"];
+if (
+  subscriptFaceIndex >= 0 &&
+  (!requestedSubscriptFace || !subscriptFaces.includes(requestedSubscriptFace))
+) {
+  throw new Error(
+    `--subscript-face must be one of ${subscriptFaces.join(", ")}`,
+  );
 }
 
 // These windows intentionally exclude adjacent wires/nodes. Coordinates are
@@ -294,13 +306,15 @@ let best = await choose(
     ? [requestedFont]
     : ["Arial", "Arial Narrow", "Times New Roman", "DejaVu Sans"]
   ).flatMap((fontFamily) =>
-    ["italic-bold", "upright-bold", "upright-plain"].map((subscriptFace) => ({
-      fontFamily,
-      baseSize: 16,
-      subscriptScale: 0.68,
-      subscriptShiftEm: 0.3,
-      subscriptFace,
-    })),
+    (requestedSubscriptFace ? [requestedSubscriptFace] : subscriptFaces).map(
+      (subscriptFace) => ({
+        fontFamily,
+        baseSize: 16,
+        subscriptScale: 0.68,
+        subscriptShiftEm: 0.3,
+        subscriptFace,
+      }),
+    ),
   ),
   "face",
 );

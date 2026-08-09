@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   parseSchematicMath,
   renderSchematicTextContent,
+  schematicTextDocument,
   schematicTextFontSize,
 } from "./schematic-text.js";
+import { renderRichTextDocument } from "./rich-text.js";
+import type { RichTextDocumentInput } from "./rich-text.js";
 import {
   razaviTextbookProfile,
   textbookMonochromeProfile,
@@ -80,7 +83,7 @@ describe("Razavi schematic typography", () => {
     );
   });
 
-  it("uses the calibrated italic subscript geometry", () => {
+  it("uses upright bold semantic subscripts with calibrated geometry", () => {
     const rendered = renderSchematicTextContent(
       "VDD",
       "power-label",
@@ -89,5 +92,21 @@ describe("Razavi schematic typography", () => {
     expect(rendered).toContain('font-size="76%"');
     expect(rendered).toContain('baseline-shift="-0.34em"');
     expect(rendered).toContain("font-style:italic;font-weight:700");
+    expect(rendered).toContain("font-style:normal;font-weight:700");
+  });
+
+  it("uses the same base/subscript convention in editor RichText defaults", () => {
+    const rendered = renderRichTextDocument(
+      schematicTextDocument(
+        "M1",
+        "instance-label",
+      ) as unknown as RichTextDocumentInput,
+      // The renderer's input admits compatibility-role metadata while the
+      // persisted model intentionally keeps its run union opaque here.
+      // The generated document itself remains model-valid.
+      razaviTextbookProfile,
+    );
+    expect(rendered).toContain("font-style:italic;font-weight:700");
+    expect(rendered).toContain("font-style:normal;font-weight:700");
   });
 });

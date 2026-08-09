@@ -101,3 +101,28 @@ One focused commit: `fix(razavi): calibrate default schematic typography`.
 - Owned-file Prettier check and `git diff --check` passed. The existing
   peripheral Port worktree hunks were preserved and are not part of this
   target.
+
+## Follow-up: semantic subscript face
+
+The user visually reviewed the supplied reference and corrected the prior
+automated interpretation: the mathematical base (`V`, `I`, `R`, `M`) is italic
+while its semantic subscript is upright. Re-open this target only to encode
+that distinction for auto-composed schematic labels, add a comparator face
+override for reporting the constrained candidate, and re-run the same Arial
+pixel comparison. Manual RichText subscript styling remains user-controlled.
+
+### Follow-up result
+
+- Added a renderer-only legacy role so automatic schematic-math subscripts are
+  upright bold while bases remain bold italic. This role is not persisted in
+  RichText; manually authored RichText continues to preserve the author's
+  italic choice.
+- Updated generated semantic RichText to use the same base/subscript split for
+  new editing sessions, and added `--subscript-face` to constrain a comparison
+  run to the visually selected face.
+- The constrained Chrome/Arial result selects the existing `18` / `0.76` /
+  `0.34em` geometry with `upright-bold` subscripts. Its clean-crop mean IoU is
+  `0.5509`; this is lower than the prior italic candidate (`0.5822`) but the
+  observed typeface rule is the decision authority.
+- Focused renderer tests (`19/19`), Render-SVG build, and workspace typecheck
+  passed.

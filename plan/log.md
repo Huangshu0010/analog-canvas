@@ -2706,3 +2706,18 @@ Editing System work.
   `git diff --check` passed. Unrelated peripheral Port worktree hunks were
   intentionally left unstaged.
 - Commit status: ready for `fix(razavi): calibrate default schematic typography`.
+
+## 2026-08-09 - Razavi semantic subscript face correction
+
+- Target: apply the user's visual correction that automatic schematic
+  subscripts are upright while `V`/`I`/`R`/`M` bases remain bold italic.
+- Changed areas: semantic-label renderer and generated editor RichText split;
+  constrained text comparison option; Razavi text specification and focused
+  renderer test.
+- Evidence: constrained Chrome/Arial search retained `18` / `0.76` /
+  `0.34em`, with an upright-bold clean-crop mean IoU of `0.5509`. This is below
+  the unconstrained italic score (`0.5822`), but the supplied reference's
+  observed glyph convention and explicit human review take precedence.
+- Validation: focused renderer tests `20/20`, Render-SVG build, workspace
+  typecheck, Prettier check, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): use upright semantic subscripts`.
