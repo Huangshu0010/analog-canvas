@@ -112,8 +112,9 @@ fidelity harness, raster authority, or MOS catalog assets.
   covers routes, symbols, nodes, and semantic text together, while retaining
   white background and editor-only overlay colors.
 - With the shared `normal` role already equal to the approved `wire: 1.6`, the
-  MOS generator now closes channel-to-gate and channel-to-D/S seams by one
-  reference pixel under adjoining opaque/stroked geometry. This is not a pin
+  MOS generator now uses each D/S lead's measured start as the only
+  channel-to-lead elbow centre. The channel overlaps only beneath its opaque
+  gate rectangle; it never extends beyond the lead centre. This is not a pin
   move or an externally visible channel-length increase.
 - Human review identified insufficient vertical separation between base glyphs
   and subscripts. The shared semantic typography token moves subscripts from

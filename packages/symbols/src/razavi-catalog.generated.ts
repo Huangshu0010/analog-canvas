@@ -150,7 +150,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "adb5b755693e6ef8531a75a88f533b08b68f77b68393aea5c266dbd721d0c855",
+      "40cf66d461665b0104a661a2a55a3c007d3af52341b5284fc58860d7242276e4",
   },
   {
     symbolId: "nmos3",
@@ -172,7 +172,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "nmos3.symbol.json",
     assetHash:
-      "3510f2c6281f3fb29cbb4d9caac6315394f2f522ccc132727e63dcf2a22275c7",
+      "64bd1f8911c27ba9a8dfba570629e96f41759f941cb31c4a6386eff4661cfdef",
   },
   {
     symbolId: "npn",
@@ -211,7 +211,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "daec5b8e761b985b218a16c34ae5897e950d168945d159f487bcf8e24683833d",
+      "8dd829f051886592d2560274c0220cb12d4f44041305f69a4ad0bc2cedb1d1a2",
   },
   {
     symbolId: "pmos3",
@@ -233,7 +233,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "af1044fe5133963e131c16149a7ccfee7d857e3e2ed80bfe44fd47d44cc06ca9",
+      "b008b73ad8e4658e7b27c7dff826ae8791b5b8853d22e23a2208b1f4303e8f48",
   },
   {
     symbolId: "pnp",
@@ -948,7 +948,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -6.976744,
         },
         to: {
-          x: 11.162791,
+          x: 10,
           y: -6.976744,
         },
         style: {
@@ -964,7 +964,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 6.976744,
         },
         to: {
-          x: 11.162791,
+          x: 10,
           y: 6.976744,
         },
         part: "source-arrow-host",
@@ -1180,7 +1180,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     viewBox: {
       x: -24,
       y: -24,
-      width: 40,
+      width: 39,
       height: 48,
     },
     pins: [
@@ -1232,7 +1232,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -6.976744,
         },
         to: {
-          x: 11.162791,
+          x: 10,
           y: -6.976744,
         },
         style: {
@@ -1248,7 +1248,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 6.976744,
         },
         to: {
-          x: 11.162791,
+          x: 10,
           y: 6.976744,
         },
         part: "source-arrow-host",
@@ -1607,7 +1607,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 7.122093,
         },
         to: {
-          x: 11.162791,
+          x: 10,
           y: 7.122093,
         },
         style: {
@@ -1623,7 +1623,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -7.122093,
         },
         to: {
-          x: 11.162791,
+          x: 10,
           y: -7.122093,
         },
         part: "source-arrow-host",
@@ -1822,7 +1822,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     viewBox: {
       x: -24,
       y: -24,
-      width: 40,
+      width: 39,
       height: 48,
     },
     pins: [
@@ -1874,7 +1874,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 7.122093,
         },
         to: {
-          x: 11.162791,
+          x: 10,
           y: 7.122093,
         },
         style: {
@@ -1890,7 +1890,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: -7.122093,
         },
         to: {
-          x: 11.162791,
+          x: 10,
           y: -7.122093,
         },
         part: "source-arrow-host",

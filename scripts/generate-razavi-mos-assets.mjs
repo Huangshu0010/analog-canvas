@@ -54,16 +54,24 @@ function lineFromPixels(measurement, pixelSegment, part) {
 }
 
 // Channel strokes meet separately rendered gate rectangles and D/S lead
-// strokes. Butt caps can leave a one-pixel white notch at those nominally
-// coincident vector joins after rasterization. Extend only under the adjacent
-// opaque/stroked geometry; pin anchors and the visible outer footprint stay
-// unchanged.
+// strokes. The measured channel endpoint and lead centre can differ by a raw
+// pixel, so extending both ends creates a protrusion while leaving the join
+// underconstrained. Use the D/S lead's own `from` point as the sole elbow
+// centre. Only the gate-side endpoint overlaps its opaque bar.
 function channelLineFromPixels(measurement, pixelSegment, part) {
+  const elbow = [measurement.leadsPx.D, measurement.leadsPx.S].find(
+    (lead) => lead.from.y === pixelSegment.to.y,
+  )?.from;
+  if (!elbow) {
+    fail(
+      `channel at y=${pixelSegment.to.y} has no D/S lead elbow in the pixel map`,
+    );
+  }
   return lineFromPixels(
     measurement,
     {
       from: { ...pixelSegment.from, x: pixelSegment.from.x - 1 },
-      to: { ...pixelSegment.to, x: pixelSegment.to.x + 1 },
+      to: elbow,
     },
     part,
   );

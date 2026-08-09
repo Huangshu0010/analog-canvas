@@ -321,10 +321,7 @@ describe("Razavi symbol catalog", () => {
             ...upperChannel.from,
             x: upperChannel.from.x - 1,
           }),
-          to: logicalPoint(measurement, {
-            ...upperChannel.to,
-            x: upperChannel.to.x + 1,
-          }),
+          to: logicalPoint(measurement, measurement.leadsPx.D.from),
           style: {
             strokeRole: "normal",
             lineCap: "butt",
