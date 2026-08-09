@@ -7,40 +7,11 @@ import { format } from "prettier";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assetRoot = resolve(root, "packages/symbols/assets/razavi-v1");
 const catalogPath = resolve(assetRoot, "catalog.json");
-const evidencePaths = [
-  resolve(root, "fixtures/symbols/vss-ir/razavi-rv1-master-ir.json"),
-  resolve(
-    root,
-    "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-  ),
-];
-const reviewManifestPath = resolve(
-  root,
-  "fixtures/symbols/circuit-vss-review.json",
-);
 const generatedPath = resolve(
   root,
   "packages/symbols/src/razavi-catalog.generated.ts",
 );
 const check = process.argv.includes("--check");
-const generationPolicies = new Map([
-  [
-    "scripts/generate-visio-mos-assets.mjs",
-    "fixtures/visual-reference/visio-mos/",
-  ],
-  [
-    "scripts/generate-razavi-mos-assets.mjs",
-    "fixtures/visual-reference/razavi-reference-v1/",
-  ],
-  [
-    "scripts/generate-razavi-peripheral-assets.mjs",
-    "fixtures/visual-reference/razavi-reference-v1/",
-  ],
-  [
-    "scripts/generate-visio-core-analog-assets.mjs",
-    "fixtures/visual-reference/visio-core-analog/",
-  ],
-]);
 
 const normalize = (value) => `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
 const hash = (value) => createHash("sha256").update(value).digest("hex");
@@ -50,12 +21,8 @@ function fail(message) {
 }
 
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
-const evidenceIrs = await Promise.all(
-  evidencePaths.map(async (path) => JSON.parse(await readFile(path, "utf8"))),
-);
-const reviewManifest = JSON.parse(await readFile(reviewManifestPath, "utf8"));
 if (
-  catalog.schemaVersion !== 1 ||
+  catalog.schemaVersion !== 2 ||
   catalog.id !== "razavi-symbols" ||
   catalog.version !== 1
 ) {
@@ -64,49 +31,15 @@ if (
 if (!Array.isArray(catalog.entries) || catalog.entries.length === 0) {
   fail("catalog must contain entries");
 }
-for (const evidence of evidenceIrs) {
-  if (
-    evidence.decoder.id !== catalog.decoder.id ||
-    evidence.decoder.version !== catalog.decoder.version
-  ) {
-    fail("catalog decoder identity does not match reviewed evidence");
-  }
-}
-const evidenceMasters = new Set(
-  evidenceIrs.flatMap((evidence) =>
-    evidence.masters.map((master) => master.nameU),
-  ),
-);
-const evidenceStencilHashes = new Set(
-  evidenceIrs.map((evidence) => evidence.source.sha256),
-);
-const reviewedMappings = new Map(
-  reviewManifest.mappings.map((mapping) => [mapping.symbolId, mapping]),
-);
-const provisionalMappings = new Map(
-  reviewManifest.migrationCandidates.map((mapping) => [
-    mapping.symbolId,
-    mapping,
-  ]),
-);
-if (!evidenceStencilHashes.has(reviewManifest.source.sha256)) {
-  fail("review manifest stencil identity does not match decoder evidence");
-}
-
 const symbols = [];
 const ids = new Set();
 const aliases = new Set();
-const masters = new Set();
 const assetPaths = new Set();
 for (const entry of catalog.entries) {
   if (ids.has(entry.symbolId) || aliases.has(entry.symbolId)) {
     fail(`duplicate symbol ID ${entry.symbolId}`);
   }
   ids.add(entry.symbolId);
-  if (masters.has(entry.source.masterNameU)) {
-    fail(`duplicate source Master ${entry.source.masterNameU}`);
-  }
-  masters.add(entry.source.masterNameU);
   if (
     entry.reviewStatus !== "reviewed" &&
     entry.reviewStatus !== "provisional"
@@ -120,81 +53,39 @@ for (const entry of catalog.entries) {
   ) {
     fail(`${entry.symbolId} is unreachable and lacks a manual-only reason`);
   }
-  if (entry.reviewStatus === "reviewed") {
-    const reviewedMapping = reviewedMappings.get(entry.symbolId);
-    if (
-      !reviewedMapping ||
-      reviewedMapping.status !== "reviewed" ||
-      reviewedMapping.masterNameU !== entry.source.masterNameU ||
-      reviewedMapping.pins.join("\u0000") !== entry.pinOrder.join("\u0000")
-    ) {
-      fail(`review manifest mismatch for ${entry.symbolId}`);
-    }
-  } else {
-    const provisionalMapping = provisionalMappings.get(entry.symbolId);
-    if (
-      !provisionalMapping ||
-      provisionalMapping.masterNameU !== entry.source.masterNameU ||
-      provisionalMapping.provisionalPins.join("\u0000") !==
-        entry.pinOrder.join("\u0000")
-    ) {
-      fail(`provisional review manifest mismatch for ${entry.symbolId}`);
-    }
-  }
-  if (
-    !evidenceStencilHashes.has(entry.source.stencilHash) ||
-    entry.source.decoderVersion !== catalog.decoder.version
-  ) {
-    fail(`invalid source provenance for ${entry.symbolId}`);
-  }
-  if (entry.generation !== undefined) {
-    const referencePrefix = generationPolicies.get(
-      entry.generation.converterPath,
+  if (entry.visualAuthority.kind === "razavi-reference-v1") {
+    const manifestPath = resolve(
+      root,
+      entry.visualAuthority.referenceManifestPath,
     );
-    if (!referencePrefix || entry.generation.converterVersion !== 1) {
-      fail(`invalid generation provenance for ${entry.symbolId}`);
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    if (
+      manifest.id !== "razavi-reference-v1" ||
+      manifest.visualAuthority !== "sole"
+    ) {
+      fail(`invalid Razavi Reference authority for ${entry.symbolId}`);
     }
-    if (entry.generation.kind === "vss-master-ir") {
-      if (
-        !entry.generation.evidencePath?.startsWith(
-          "fixtures/symbols/vss-ir/",
-        ) ||
-        !entry.generation.referencePath.startsWith(referencePrefix)
-      ) {
-        fail(`invalid VSS generation provenance for ${entry.symbolId}`);
-      }
-      await readFile(resolve(root, entry.generation.evidencePath), "utf8");
-    } else if (entry.generation.kind === "razavi-raster-reference") {
-      if (
-        !entry.generation.referenceManifestPath?.startsWith(referencePrefix) ||
-        !entry.generation.referencePath.startsWith(referencePrefix)
-      ) {
-        fail(`invalid raster generation provenance for ${entry.symbolId}`);
-      }
-      const manifest = JSON.parse(
-        await readFile(
-          resolve(root, entry.generation.referenceManifestPath),
-          "utf8",
-        ),
-      );
-      if (
-        manifest.visualAuthority !== "sole" ||
-        resolve(root, entry.generation.referencePath) !==
-          resolve(
-            dirname(resolve(root, entry.generation.referenceManifestPath)),
-            manifest.assetPath,
-          )
-      ) {
-        fail(`invalid raster authority for ${entry.symbolId}`);
-      }
-    } else {
-      fail(`unknown generation provenance for ${entry.symbolId}`);
+    if (entry.visualAuthority.referencePaths.length === 0) {
+      fail(`missing Razavi Reference path for ${entry.symbolId}`);
     }
-    await readFile(resolve(root, entry.generation.referencePath), "utf8");
-    await readFile(resolve(root, entry.generation.converterPath), "utf8");
-  }
-  if (!evidenceMasters.has(entry.source.masterNameU)) {
-    fail(`missing reviewed evidence for ${entry.source.masterNameU}`);
+    for (const referencePath of entry.visualAuthority.referencePaths) {
+      if (
+        !referencePath.startsWith(
+          "fixtures/visual-reference/razavi-reference-v1/",
+        )
+      ) {
+        fail(`reference path escapes Razavi authority for ${entry.symbolId}`);
+      }
+      await readFile(resolve(root, referencePath));
+    }
+    if (entry.visualAuthority.calibrationPath) {
+      await readFile(resolve(root, entry.visualAuthority.calibrationPath));
+    }
+  } else if (
+    entry.visualAuthority.kind !== "legacy-compatibility" ||
+    entry.visualAuthority.reason.trim() === ""
+  ) {
+    fail(`invalid visual authority for ${entry.symbolId}`);
   }
   if (assetPaths.has(entry.assetPath)) {
     fail(`duplicate asset path ${entry.assetPath}`);
@@ -242,19 +133,6 @@ for (const primitive of catalog.semanticPrimitives ?? []) {
   if (primitive.disposition !== "semantic-primitive") {
     fail(`invalid semantic disposition for ${primitive.id}`);
   }
-  if (
-    !evidenceStencilHashes.has(primitive.source.stencilHash) ||
-    primitive.source.decoderVersion !== catalog.decoder.version
-  ) {
-    fail(`invalid source provenance for ${primitive.id}`);
-  }
-  if (!evidenceMasters.has(primitive.source.masterNameU)) {
-    fail(`missing reviewed evidence for ${primitive.source.masterNameU}`);
-  }
-  if (masters.has(primitive.source.masterNameU)) {
-    fail(`source Master used twice: ${primitive.source.masterNameU}`);
-  }
-  masters.add(primitive.source.masterNameU);
 }
 
 const catalogSource = normalize(
@@ -275,7 +153,6 @@ export const razaviSymbolCatalogIdentity = ${JSON.stringify(
         schemaVersion: catalog.schemaVersion,
         id: catalog.id,
         version: catalog.version,
-        decoder: catalog.decoder,
       },
       null,
       2,

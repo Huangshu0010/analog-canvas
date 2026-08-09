@@ -7,8 +7,10 @@ import { describe, expect, it } from "vitest";
 import { builtInSymbols } from "./builtins.js";
 import {
   getRazaviCatalogEntry,
+  isRazaviReferencePaletteEntry,
   requireRazaviCatalogSymbol,
   razaviCatalogSymbols,
+  razaviReferencePaletteSymbols,
   razaviSemanticPrimitives,
   razaviSymbolCatalogEntries,
   razaviSymbolCatalogIdentity,
@@ -74,34 +76,33 @@ const logicalPoint = (
 });
 
 describe("Razavi symbol catalog", () => {
-  it("publishes the versioned catalog identity and source provenance", () => {
+  it("publishes the versioned catalog identity and visual authority", () => {
     expect(razaviSymbolCatalogIdentity).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       id: "razavi-symbols",
       version: 1,
-      decoder: { id: "icm-vss-master-ir", version: "0.1.0" },
     });
     expect(
       razaviSymbolCatalogEntries.map((entry) => [
         entry.symbolId,
-        entry.source.masterNameU,
         entry.reviewStatus,
+        entry.visualAuthority.kind,
       ]),
     ).toEqual([
-      ["capacitor", "C", "reviewed"],
-      ["current-source", "DC-I", "reviewed"],
-      ["diode", "Diode1", "reviewed"],
-      ["ground", "GND", "reviewed"],
-      ["inductor", "L", "reviewed"],
-      ["nmos", "NMOS4", "reviewed"],
-      ["nmos3", "Nmos3.a", "provisional"],
-      ["npn", "npn", "reviewed"],
-      ["pmos", "PMOS4", "reviewed"],
-      ["pmos3", "Pmos3.a", "provisional"],
-      ["pnp", "pnp", "reviewed"],
-      ["port", "I/O", "reviewed"],
-      ["resistor", "R", "reviewed"],
-      ["voltage-source", "DC-V", "reviewed"],
+      ["capacitor", "reviewed", "razavi-reference-v1"],
+      ["current-source", "reviewed", "razavi-reference-v1"],
+      ["diode", "reviewed", "legacy-compatibility"],
+      ["ground", "reviewed", "razavi-reference-v1"],
+      ["inductor", "reviewed", "legacy-compatibility"],
+      ["nmos", "reviewed", "razavi-reference-v1"],
+      ["nmos3", "provisional", "razavi-reference-v1"],
+      ["npn", "reviewed", "legacy-compatibility"],
+      ["pmos", "reviewed", "razavi-reference-v1"],
+      ["pmos3", "provisional", "razavi-reference-v1"],
+      ["pnp", "reviewed", "legacy-compatibility"],
+      ["port", "reviewed", "razavi-reference-v1"],
+      ["resistor", "reviewed", "razavi-reference-v1"],
+      ["voltage-source", "reviewed", "razavi-reference-v1"],
     ]);
   });
 
@@ -159,57 +160,70 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
+  it("lists only reviewed Reference-calibrated assets in the Razavi palette", () => {
+    expect(razaviReferencePaletteSymbols.map((symbol) => symbol.id)).toEqual([
+      "capacitor",
+      "current-source",
+      "ground",
+      "nmos",
+      "pmos",
+      "port",
+      "resistor",
+      "voltage-source",
+    ]);
+    for (const entry of razaviSymbolCatalogEntries) {
+      expect(isRazaviReferencePaletteEntry(entry)).toBe(
+        razaviReferencePaletteSymbols.some(
+          (symbol) => symbol.id === entry.symbolId,
+        ),
+      );
+    }
+  });
+
   it("keeps provisional three-terminal MOS assets out of automatic mappings", () => {
     for (const symbolId of ["nmos3", "pmos3"]) {
       expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
         reviewStatus: "provisional",
         automaticMappings: [],
         palette: true,
-        generation: {
-          kind: "razavi-raster-reference",
-          converterPath: "scripts/generate-razavi-mos-assets.mjs",
-          converterVersion: 1,
+        visualAuthority: {
+          kind: "razavi-reference-v1",
         },
       });
     }
   });
 
-  it("records independent Visio evidence for the Batch A non-transistor assets", () => {
+  it("retains only unmigrated assets as legacy compatibility symbols", () => {
+    for (const symbolId of ["inductor", "diode", "npn", "pnp"]) {
+      expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
+        reviewStatus: "reviewed",
+        visualAuthority: {
+          kind: "legacy-compatibility",
+        },
+      });
+    }
+  });
+
+  it("records Reference calibration for the complete active palette", () => {
     for (const symbolId of [
       "resistor",
       "capacitor",
-      "inductor",
-      "diode",
       "port",
+      "ground",
+      "voltage-source",
+      "current-source",
     ]) {
       expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
-        reviewStatus: "reviewed",
-        generation: {
-          kind: "vss-master-ir",
-          evidencePath:
-            "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-          converterPath: "scripts/generate-visio-core-analog-assets.mjs",
-          converterVersion: 1,
-        },
-      });
-    }
-  });
-
-  it("uses the sole Razavi raster for peripheral presentation assets", () => {
-    for (const symbolId of ["ground", "voltage-source", "current-source"]) {
-      expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
-        generation: {
-          kind: "razavi-raster-reference",
+        visualAuthority: {
+          kind: "razavi-reference-v1",
           referenceManifestPath:
             "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-          converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
-          converterVersion: 1,
         },
       });
     }
   });
 
-  it("keeps the source-derived Batch A geometry and grid-pin orientation", () => {
+  it("keeps the calibrated active geometry and grid-pin orientation", () => {
     const runtimeResistor = builtInSymbols.find(
       (symbol) => symbol.id === "resistor",
     );
@@ -238,8 +252,8 @@ describe("Razavi symbol catalog", () => {
       expect.arrayContaining([
         expect.objectContaining({
           kind: "circle",
-          fill: "foreground",
-          stroke: "none",
+          fill: "none",
+          stroke: "foreground",
         }),
       ]),
     );
@@ -469,12 +483,11 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
-  it("classifies the VSS node as a semantic primitive, not a component", () => {
+  it("classifies the junction dot as a semantic primitive, not a component", () => {
     expect(razaviSemanticPrimitives).toEqual([
       expect.objectContaining({
         id: "junction-dot",
         disposition: "semantic-primitive",
-        source: expect.objectContaining({ masterNameU: "node" }),
         runtimeOwner: "presentation.nodes.junction",
       }),
     ]);

@@ -32,23 +32,43 @@ export interface SchematicStyleProfile {
   readonly lineJoin: "miter" | "round" | "bevel";
   readonly miterLimit: number;
   readonly scaleFormalStrokes: boolean;
-  readonly typography: {
-    readonly fontFamily: string;
-    readonly mathWeight: number;
-    readonly mathStyle: "italic";
-    readonly plainWeight: number;
-    readonly instanceFontSize: number;
-    readonly netFontSize: number;
-    readonly powerFontSize: number;
-    readonly annotationFontSize: number;
-    readonly polarityFontSize: number;
-    readonly captionFontSize: number;
-    readonly subscriptScale: number;
-    readonly subscriptBaselineShiftEm: number;
-    readonly labelGap: number;
-    readonly lineHeight: number;
-  };
+  readonly typography: SchematicTypography;
 }
+
+export interface SchematicTypography {
+  readonly fontFamily: string;
+  readonly mathWeight: number;
+  readonly mathStyle: "italic";
+  readonly plainWeight: number;
+  readonly instanceFontSize: number;
+  readonly netFontSize: number;
+  readonly powerFontSize: number;
+  readonly annotationFontSize: number;
+  readonly polarityFontSize: number;
+  readonly captionFontSize: number;
+  readonly subscriptScale: number;
+  readonly subscriptBaselineShiftEm: number;
+  readonly labelGap: number;
+  readonly lineHeight: number;
+}
+
+/** The one typography system shared by all presentation profiles. */
+export const globalSchematicTypography: SchematicTypography = {
+  fontFamily: "Arial,'Helvetica Neue',Helvetica,sans-serif",
+  mathWeight: 700,
+  mathStyle: "italic",
+  plainWeight: 400,
+  instanceFontSize: 18,
+  netFontSize: 18,
+  powerFontSize: 18,
+  annotationFontSize: 18,
+  polarityFontSize: 14,
+  captionFontSize: 14,
+  subscriptScale: 0.84,
+  subscriptBaselineShiftEm: 0.28,
+  labelGap: 6,
+  lineHeight: 1,
+};
 
 export const textbookMonochromeProfile: SchematicStyleProfile = {
   id: "textbook-monochrome-v1",
@@ -77,22 +97,7 @@ export const textbookMonochromeProfile: SchematicStyleProfile = {
   lineJoin: "miter",
   miterLimit: 4,
   scaleFormalStrokes: false,
-  typography: {
-    fontFamily: "Georgia,'Times New Roman',serif",
-    mathWeight: 700,
-    mathStyle: "italic",
-    plainWeight: 400,
-    instanceFontSize: 12,
-    netFontSize: 12,
-    powerFontSize: 12,
-    annotationFontSize: 12,
-    polarityFontSize: 12,
-    captionFontSize: 12,
-    subscriptScale: 0.68,
-    subscriptBaselineShiftEm: 0.3,
-    labelGap: 2,
-    lineHeight: 1,
-  },
+  typography: globalSchematicTypography,
 };
 
 export const razaviTextbookProfile: SchematicStyleProfile = {
@@ -127,22 +132,7 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
   lineJoin: "miter",
   miterLimit: 4,
   scaleFormalStrokes: true,
-  typography: {
-    fontFamily: "Arial,'Helvetica Neue',Helvetica,sans-serif",
-    mathWeight: 700,
-    mathStyle: "italic",
-    plainWeight: 400,
-    instanceFontSize: 18,
-    netFontSize: 18,
-    powerFontSize: 18,
-    annotationFontSize: 18,
-    polarityFontSize: 14,
-    captionFontSize: 14,
-    subscriptScale: 0.84,
-    subscriptBaselineShiftEm: 0.28,
-    labelGap: 6,
-    lineHeight: 1,
-  },
+  typography: globalSchematicTypography,
 };
 
 const profiles = new Map<string, SchematicStyleProfile>([

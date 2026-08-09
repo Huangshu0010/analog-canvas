@@ -6,13 +6,9 @@ import type {
 } from "./razavi-catalog.js";
 
 export const razaviSymbolCatalogIdentity = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   id: "razavi-symbols",
   version: 1,
-  decoder: {
-    id: "icm-vss-master-ir",
-    version: "0.1.0",
-  },
 } as const;
 
 export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
@@ -20,12 +16,6 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     symbolId: "capacitor",
     name: "Capacitor",
     category: "passive",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "C",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["1", "2"],
     palette: true,
@@ -33,26 +23,21 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "capacitor.symbol.json",
     assetHash:
       "6c733aa0a6c9027c1f7df75f06ee4ee9e40604f8fcd9342939eac9eccd75f782",
-    generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath:
-        "fixtures/visual-reference/visio-core-analog/capacitor.svg",
-      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
-      converterVersion: 1,
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/capacitor-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/capacitor-geometry.json",
     },
   },
   {
     symbolId: "current-source",
     name: "Independent Current Source",
     category: "source",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "DC-I",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["+", "-"],
     palette: true,
@@ -60,26 +45,21 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "current-source.symbol.json",
     assetHash:
       "26427f16b5e60f7100d80c086747b2ce832a869e551dac5249f13ccb43722673",
-    generation: {
-      kind: "razavi-raster-reference",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
-      converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
-      converterVersion: 1,
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/current-port-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/current-port-geometry.json",
     },
   },
   {
     symbolId: "diode",
     name: "Diode",
     category: "semiconductor",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "Diode1",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["A", "K"],
     palette: true,
@@ -87,25 +67,16 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "diode.symbol.json",
     assetHash:
       "00214f1176f51b1b18b216dbcb6850e750ebe2e6a4403267499002f298b214c3",
-    generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath: "fixtures/visual-reference/visio-core-analog/diode.svg",
-      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
-      converterVersion: 1,
+    visualAuthority: {
+      kind: "legacy-compatibility",
+      reason:
+        "No approved Razavi Reference calibration exists for this symbol.",
     },
   },
   {
     symbolId: "ground",
     name: "Ground",
     category: "power",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "GND",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["0"],
     palette: true,
@@ -113,26 +84,21 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "ground.symbol.json",
     assetHash:
       "8aa38b7c438675e1dcb161b57be65d62609fe544e9ba19fc411e19f6c56a43e8",
-    generation: {
-      kind: "razavi-raster-reference",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePath:
+      referencePaths: [
         "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
-      converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
-      converterVersion: 1,
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/peripheral-geometry.json",
     },
   },
   {
     symbolId: "inductor",
     name: "Inductor",
     category: "passive",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "L",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["1", "2"],
     palette: true,
@@ -140,34 +106,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "inductor.symbol.json",
     assetHash:
       "5ccd24ed9f701ce4fdb46a921a21045f1e882d2b6302ff885dea8ba2a09026f8",
-    generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath: "fixtures/visual-reference/visio-core-analog/inductor.svg",
-      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
-      converterVersion: 1,
+    visualAuthority: {
+      kind: "legacy-compatibility",
+      reason:
+        "No approved Razavi Reference calibration exists for this symbol.",
     },
   },
   {
     symbolId: "nmos",
     name: "NMOS",
     category: "transistor",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "NMOS4",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
-    generation: {
-      kind: "razavi-raster-reference",
-      referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      converterPath: "scripts/generate-razavi-mos-assets.mjs",
-      converterVersion: 1,
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/mos-geometry.json",
     },
     pinOrder: ["D", "G", "S", "B"],
     palette: true,
@@ -180,21 +138,16 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     symbolId: "nmos3",
     name: "NMOS (3-terminal)",
     category: "transistor",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "Nmos3.a",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "provisional",
-    generation: {
-      kind: "razavi-raster-reference",
-      referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      converterPath: "scripts/generate-razavi-mos-assets.mjs",
-      converterVersion: 1,
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/mos-geometry.json",
     },
     pinOrder: ["D", "G", "S"],
     palette: true,
@@ -207,12 +160,6 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     symbolId: "npn",
     name: "NPN Bipolar Transistor",
     category: "transistor",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "npn",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["C", "B", "E"],
     palette: true,
@@ -220,26 +167,26 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "npn.symbol.json",
     assetHash:
       "1d4fdd28de656b9970e68823bf33a7d55de0acf78f77d1c8a32986f3da1b882c",
+    visualAuthority: {
+      kind: "legacy-compatibility",
+      reason:
+        "No approved Razavi Reference calibration exists for this symbol.",
+    },
   },
   {
     symbolId: "pmos",
     name: "PMOS",
     category: "transistor",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "PMOS4",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
-    generation: {
-      kind: "razavi-raster-reference",
-      referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      converterPath: "scripts/generate-razavi-mos-assets.mjs",
-      converterVersion: 1,
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/mos-geometry.json",
     },
     pinOrder: ["D", "G", "S", "B"],
     palette: true,
@@ -252,21 +199,16 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     symbolId: "pmos3",
     name: "PMOS (3-terminal)",
     category: "transistor",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "Pmos3.a",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "provisional",
-    generation: {
-      kind: "razavi-raster-reference",
-      referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      converterPath: "scripts/generate-razavi-mos-assets.mjs",
-      converterVersion: 1,
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/mos-geometry.json",
     },
     pinOrder: ["D", "G", "S"],
     palette: true,
@@ -279,12 +221,6 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     symbolId: "pnp",
     name: "PNP Bipolar Transistor",
     category: "transistor",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "pnp",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["C", "B", "E"],
     palette: true,
@@ -292,17 +228,16 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "pnp.symbol.json",
     assetHash:
       "17468fc70fb516aa16a9963b0388bd0732793dbf92ada73b7acc767bac7ec7d3",
+    visualAuthority: {
+      kind: "legacy-compatibility",
+      reason:
+        "No approved Razavi Reference calibration exists for this symbol.",
+    },
   },
   {
     symbolId: "port",
     name: "Port",
     category: "interface",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "I/O",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["P"],
     palette: true,
@@ -310,25 +245,21 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "port.symbol.json",
     assetHash:
       "d0ca494905a2975920898719f15c59d35be44c85f627308b8bfadccc549707ab",
-    generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath: "fixtures/visual-reference/visio-core-analog/port.svg",
-      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
-      converterVersion: 1,
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/current-port-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/current-port-geometry.json",
     },
   },
   {
     symbolId: "resistor",
     name: "Resistor",
     category: "passive",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "R",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["1", "2"],
     palette: true,
@@ -336,25 +267,21 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "resistor.symbol.json",
     assetHash:
       "b26b5d990c670cf52f39177fb21675f3db17e5faf35fffdd48f57b9fd74e7cf5",
-    generation: {
-      kind: "vss-master-ir",
-      evidencePath:
-        "fixtures/symbols/vss-ir/razavi-rv6-core-analog-master-ir.json",
-      referencePath: "fixtures/visual-reference/visio-core-analog/resistor.svg",
-      converterPath: "scripts/generate-visio-core-analog-assets.mjs",
-      converterVersion: 1,
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json",
     },
   },
   {
     symbolId: "voltage-source",
     name: "Independent Voltage Source",
     category: "source",
-    source: {
-      stencilHash:
-        "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-      masterNameU: "DC-V",
-      decoderVersion: "0.1.0",
-    },
     reviewStatus: "reviewed",
     pinOrder: ["+", "-"],
     palette: true,
@@ -362,14 +289,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     assetPath: "voltage-source.symbol.json",
     assetHash:
       "33082df048526fd6520fe5c69ef9b7f4e6ef04dce29528688b5753a90e621590",
-    generation: {
-      kind: "razavi-raster-reference",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
       referenceManifestPath:
         "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePath:
+      referencePaths: [
         "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
-      converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
-      converterVersion: 1,
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/peripheral-geometry.json",
     },
   },
 ];
@@ -379,12 +307,6 @@ export const razaviSemanticPrimitives: readonly RazaviSemanticPrimitiveEntry[] =
     {
       id: "junction-dot",
       disposition: "semantic-primitive",
-      source: {
-        stencilHash:
-          "502f574ae7527aa530502d401f7cd490de296593f4fefc61eb306c084e6f3587",
-        masterNameU: "node",
-        decoderVersion: "0.1.0",
-      },
       geometry: {
         kind: "circle",
         sourceDiameterIU: 0.0787401574803157,

@@ -10,26 +10,17 @@ export interface RazaviSymbolCatalogEntry {
   symbolId: string;
   name: string;
   category: string;
-  source: {
-    stencilHash: string;
-    masterNameU: string;
-    decoderVersion: string;
-  };
   reviewStatus: "reviewed" | "provisional";
-  generation?:
+  visualAuthority:
     | {
-        kind: "vss-master-ir";
-        evidencePath: string;
-        referencePath: string;
-        converterPath: string;
-        converterVersion: number;
+        kind: "razavi-reference-v1";
+        referenceManifestPath: string;
+        referencePaths: string[];
+        calibrationPath?: string;
       }
     | {
-        kind: "razavi-raster-reference";
-        referencePath: string;
-        referenceManifestPath: string;
-        converterPath: string;
-        converterVersion: number;
+        kind: "legacy-compatibility";
+        reason: string;
       };
   pinOrder: string[];
   palette: boolean;
@@ -42,11 +33,6 @@ export interface RazaviSymbolCatalogEntry {
 export interface RazaviSemanticPrimitiveEntry {
   id: string;
   disposition: "semantic-primitive";
-  source: {
-    stencilHash: string;
-    masterNameU: string;
-    decoderVersion: string;
-  };
   geometry: {
     kind: "circle";
     sourceDiameterIU: number;
@@ -62,6 +48,22 @@ const symbolsById = new Map(
 const entriesById = new Map(
   razaviSymbolCatalogEntries.map((entry) => [entry.symbolId, entry]),
 );
+
+export function isRazaviReferencePaletteEntry(
+  entry: RazaviSymbolCatalogEntry,
+): boolean {
+  return (
+    entry.palette &&
+    entry.reviewStatus === "reviewed" &&
+    entry.visualAuthority.kind === "razavi-reference-v1"
+  );
+}
+
+export const razaviReferencePaletteSymbols: readonly SymbolDefinition[] =
+  razaviSymbolCatalogEntries
+    .filter(isRazaviReferencePaletteEntry)
+    .map((entry) => symbolsById.get(entry.symbolId)!)
+    .filter((symbol): symbol is SymbolDefinition => symbol !== undefined);
 
 export {
   razaviCatalogSymbols,
