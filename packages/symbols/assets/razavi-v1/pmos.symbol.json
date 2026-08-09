@@ -64,15 +64,21 @@
   ],
   "primitives": [
     {
-      "kind": "line",
-      "from": {
-        "x": -4.244186,
-        "y": 7.122093
-      },
-      "to": {
-        "x": 10,
-        "y": 7.122093
-      },
+      "kind": "polyline",
+      "points": [
+        {
+          "x": -4.244186,
+          "y": 7.122093
+        },
+        {
+          "x": 10,
+          "y": 7.122093
+        },
+        {
+          "x": 10,
+          "y": 20
+        }
+      ],
       "style": {
         "strokeRole": "normal",
         "lineCap": "butt",
@@ -80,15 +86,21 @@
       }
     },
     {
-      "kind": "line",
-      "from": {
-        "x": -4.244186,
-        "y": -7.122093
-      },
-      "to": {
-        "x": 10,
-        "y": -7.122093
-      },
+      "kind": "polyline",
+      "points": [
+        {
+          "x": -4.244186,
+          "y": -7.122093
+        },
+        {
+          "x": 10,
+          "y": -7.122093
+        },
+        {
+          "x": 10,
+          "y": -20
+        }
+      ],
       "part": "source-arrow-host",
       "style": {
         "strokeRole": "normal",
@@ -147,44 +159,12 @@
     {
       "kind": "line",
       "from": {
-        "x": 10,
-        "y": 7.122093
-      },
-      "to": {
-        "x": 10,
-        "y": 20
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "butt",
-        "lineJoin": "miter"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
         "x": -9.476744,
         "y": 0
       },
       "to": {
         "x": -20,
         "y": 0
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "butt",
-        "lineJoin": "miter"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 10,
-        "y": -7.122093
-      },
-      "to": {
-        "x": 10,
-        "y": -20
       },
       "style": {
         "strokeRole": "normal",
@@ -237,15 +217,21 @@
       "hiddenPrimitiveParts": ["bulk-lead", "source-arrow-host"],
       "additionalPrimitives": [
         {
-          "kind": "line",
-          "from": {
-            "x": 5.639535,
-            "y": -7.122093
-          },
-          "to": {
-            "x": 10.581395,
-            "y": -7.122093
-          },
+          "kind": "polyline",
+          "points": [
+            {
+              "x": -4.244186,
+              "y": -7.122093
+            },
+            {
+              "x": 10,
+              "y": -7.122093
+            },
+            {
+              "x": 10,
+              "y": -20
+            }
+          ],
           "part": "source-arrow",
           "style": {
             "strokeRole": "normal",

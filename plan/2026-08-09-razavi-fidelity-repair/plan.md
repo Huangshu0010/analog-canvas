@@ -116,6 +116,11 @@ fidelity harness, raster authority, or MOS catalog assets.
   channel-to-lead elbow centre. The channel overlaps only beneath its opaque
   gate rectangle; it never extends beyond the lead centre. This is not a pin
   move or an externally visible channel-length increase.
+- The centre-point constraint alone was insufficient because the artwork still
+  joined independent SVG lines. MOS channel/lead artwork is therefore emitted
+  as one miter-joined polyline per D/S path; direct and variant three-terminal
+  arrows use the same complete L path. This eliminates independent butt-cap
+  boundaries at every elbow.
 - Human review identified insufficient vertical separation between base glyphs
   and subscripts. The shared semantic typography token moves subscripts from
   `0.28em` to `0.36em` downward; this affects every parsed math label without

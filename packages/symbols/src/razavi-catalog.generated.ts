@@ -150,7 +150,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "40cf66d461665b0104a661a2a55a3c007d3af52341b5284fc58860d7242276e4",
+      "ed43a49bac9efcab9883f5d6f89e5872b87b9752cc0df9de53cf82d8a6d8c898",
   },
   {
     symbolId: "nmos3",
@@ -172,7 +172,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "nmos3.symbol.json",
     assetHash:
-      "64bd1f8911c27ba9a8dfba570629e96f41759f941cb31c4a6386eff4661cfdef",
+      "d48b3f585efdb23602b0b1e64c8615fe01b5017f553f130e0cbbf96defc58062",
   },
   {
     symbolId: "npn",
@@ -211,7 +211,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "8dd829f051886592d2560274c0220cb12d4f44041305f69a4ad0bc2cedb1d1a2",
+      "ad5c851f2456ad7ca5c13e95075070edd35ce4b74c4e4b5e460e32864165767b",
   },
   {
     symbolId: "pmos3",
@@ -233,7 +233,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "b008b73ad8e4658e7b27c7dff826ae8791b5b8853d22e23a2208b1f4303e8f48",
+      "52ebb2fa13c4f37e28b50b1e2a169654437566749599bf8579af8fe8eec5552f",
   },
   {
     symbolId: "pnp",
@@ -942,15 +942,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "line",
-        from: {
-          x: -4.244186,
-          y: -6.976744,
-        },
-        to: {
-          x: 10,
-          y: -6.976744,
-        },
+        kind: "polyline",
+        points: [
+          {
+            x: -4.244186,
+            y: -6.976744,
+          },
+          {
+            x: 10,
+            y: -6.976744,
+          },
+          {
+            x: 10,
+            y: -20,
+          },
+        ],
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -958,15 +964,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
-        kind: "line",
-        from: {
-          x: -4.244186,
-          y: 6.976744,
-        },
-        to: {
-          x: 10,
-          y: 6.976744,
-        },
+        kind: "polyline",
+        points: [
+          {
+            x: -4.244186,
+            y: 6.976744,
+          },
+          {
+            x: 10,
+            y: 6.976744,
+          },
+          {
+            x: 10,
+            y: 20,
+          },
+        ],
         part: "source-arrow-host",
         style: {
           strokeRole: "normal",
@@ -1025,44 +1037,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 10,
-          y: 6.976744,
-        },
-        to: {
-          x: 10,
-          y: 20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
           x: -8.895349,
           y: 0,
         },
         to: {
           x: -20,
           y: 0,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 10,
-          y: -6.976744,
-        },
-        to: {
-          x: 10,
-          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -1132,15 +1112,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
         additionalPrimitives: [
           {
-            kind: "line",
-            from: {
-              x: -3.662791,
-              y: 6.976744,
-            },
-            to: {
-              x: 10.581395,
-              y: 6.976744,
-            },
+            kind: "polyline",
+            points: [
+              {
+                x: -4.244186,
+                y: 6.976744,
+              },
+              {
+                x: 10,
+                y: 6.976744,
+              },
+              {
+                x: 10,
+                y: 20,
+              },
+            ],
             part: "source-arrow",
             style: {
               strokeRole: "normal",
@@ -1226,32 +1212,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "line",
-        from: {
-          x: -4.244186,
-          y: -6.976744,
-        },
-        to: {
-          x: 10,
-          y: -6.976744,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -4.244186,
-          y: 6.976744,
-        },
-        to: {
-          x: 10,
-          y: 6.976744,
-        },
-        part: "source-arrow-host",
+        kind: "polyline",
+        points: [
+          {
+            x: -4.244186,
+            y: -6.976744,
+          },
+          {
+            x: 10,
+            y: -6.976744,
+          },
+          {
+            x: 10,
+            y: -20,
+          },
+        ],
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -1305,22 +1280,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         fill: "foreground",
         stroke: "none",
         part: "gate-bar",
-      },
-      {
-        kind: "line",
-        from: {
-          x: 10,
-          y: 6.976744,
-        },
-        to: {
-          x: 10,
-          y: 20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
       },
       {
         kind: "line",
@@ -1339,31 +1298,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
-        kind: "line",
-        from: {
-          x: 10,
-          y: -6.976744,
-        },
-        to: {
-          x: 10,
-          y: -20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -3.662791,
-          y: 6.976744,
-        },
-        to: {
-          x: 10.581395,
-          y: 6.976744,
-        },
+        kind: "polyline",
+        points: [
+          {
+            x: -4.244186,
+            y: 6.976744,
+          },
+          {
+            x: 10,
+            y: 6.976744,
+          },
+          {
+            x: 10,
+            y: 20,
+          },
+        ],
         part: "source-arrow",
         style: {
           strokeRole: "normal",
@@ -1601,15 +1550,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "line",
-        from: {
-          x: -4.244186,
-          y: 7.122093,
-        },
-        to: {
-          x: 10,
-          y: 7.122093,
-        },
+        kind: "polyline",
+        points: [
+          {
+            x: -4.244186,
+            y: 7.122093,
+          },
+          {
+            x: 10,
+            y: 7.122093,
+          },
+          {
+            x: 10,
+            y: 20,
+          },
+        ],
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -1617,15 +1572,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
-        kind: "line",
-        from: {
-          x: -4.244186,
-          y: -7.122093,
-        },
-        to: {
-          x: 10,
-          y: -7.122093,
-        },
+        kind: "polyline",
+        points: [
+          {
+            x: -4.244186,
+            y: -7.122093,
+          },
+          {
+            x: 10,
+            y: -7.122093,
+          },
+          {
+            x: 10,
+            y: -20,
+          },
+        ],
         part: "source-arrow-host",
         style: {
           strokeRole: "normal",
@@ -1684,44 +1645,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 10,
-          y: 7.122093,
-        },
-        to: {
-          x: 10,
-          y: 20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
           x: -9.476744,
           y: 0,
         },
         to: {
           x: -20,
           y: 0,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 10,
-          y: -7.122093,
-        },
-        to: {
-          x: 10,
-          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -1774,15 +1703,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
         additionalPrimitives: [
           {
-            kind: "line",
-            from: {
-              x: 5.639535,
-              y: -7.122093,
-            },
-            to: {
-              x: 10.581395,
-              y: -7.122093,
-            },
+            kind: "polyline",
+            points: [
+              {
+                x: -4.244186,
+                y: -7.122093,
+              },
+              {
+                x: 10,
+                y: -7.122093,
+              },
+              {
+                x: 10,
+                y: -20,
+              },
+            ],
             part: "source-arrow",
             style: {
               strokeRole: "normal",
@@ -1822,7 +1757,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     viewBox: {
       x: -24,
       y: -24,
-      width: 39,
+      width: 38,
       height: 48,
     },
     pins: [
@@ -1868,32 +1803,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "line",
-        from: {
-          x: -4.244186,
-          y: 7.122093,
-        },
-        to: {
-          x: 10,
-          y: 7.122093,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -4.244186,
-          y: -7.122093,
-        },
-        to: {
-          x: 10,
-          y: -7.122093,
-        },
-        part: "source-arrow-host",
+        kind: "polyline",
+        points: [
+          {
+            x: -4.244186,
+            y: 7.122093,
+          },
+          {
+            x: 10,
+            y: 7.122093,
+          },
+          {
+            x: 10,
+            y: 20,
+          },
+        ],
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -1947,22 +1871,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         fill: "foreground",
         stroke: "none",
         part: "gate-bar",
-      },
-      {
-        kind: "line",
-        from: {
-          x: 10,
-          y: 7.122093,
-        },
-        to: {
-          x: 10,
-          y: 20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
       },
       {
         kind: "line",
@@ -1981,31 +1889,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
-        kind: "line",
-        from: {
-          x: 10,
-          y: -7.122093,
-        },
-        to: {
-          x: 10,
-          y: -20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 5.639535,
-          y: -7.122093,
-        },
-        to: {
-          x: 10.581395,
-          y: -7.122093,
-        },
+        kind: "polyline",
+        points: [
+          {
+            x: -4.244186,
+            y: -7.122093,
+          },
+          {
+            x: 10,
+            y: -7.122093,
+          },
+          {
+            x: 10,
+            y: -20,
+          },
+        ],
         part: "source-arrow",
         style: {
           strokeRole: "normal",

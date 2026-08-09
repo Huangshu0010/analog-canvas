@@ -58,23 +58,28 @@ function lineFromPixels(measurement, pixelSegment, part) {
 // pixel, so extending both ends creates a protrusion while leaving the join
 // underconstrained. Use the D/S lead's own `from` point as the sole elbow
 // centre. Only the gate-side endpoint overlaps its opaque bar.
-function channelLineFromPixels(measurement, pixelSegment, part) {
-  const elbow = [measurement.leadsPx.D, measurement.leadsPx.S].find(
+function channelLeadPolylineFromPixels(measurement, pixelSegment, part) {
+  const lead = [measurement.leadsPx.D, measurement.leadsPx.S].find(
     (lead) => lead.from.y === pixelSegment.to.y,
-  )?.from;
-  if (!elbow) {
+  );
+  if (!lead) {
     fail(
       `channel at y=${pixelSegment.to.y} has no D/S lead elbow in the pixel map`,
     );
   }
-  return lineFromPixels(
-    measurement,
-    {
-      from: { ...pixelSegment.from, x: pixelSegment.from.x - 1 },
-      to: elbow,
-    },
-    part,
-  );
+  return {
+    kind: "polyline",
+    points: [
+      logicalPoint(measurement, {
+        ...pixelSegment.from,
+        x: pixelSegment.from.x - 1,
+      }),
+      logicalPoint(measurement, lead.from),
+      logicalPoint(measurement, lead.to),
+    ],
+    ...(part ? { part } : {}),
+    style: normal,
+  };
 }
 
 function rectangleFromPixels(measurement, rectangle, part) {
@@ -111,6 +116,29 @@ function arrowFromPixels(measurement, arrow, part) {
   ];
 }
 
+function sourceArrowPrimitives(measurement, polarity) {
+  const sourceChannel = polarity === "nmos" ? "lower" : "upper";
+  const arrow = measurement.sourceArrowPx;
+  return [
+    channelLeadPolylineFromPixels(
+      measurement,
+      measurement.channelsPx[sourceChannel],
+      "source-arrow",
+    ),
+    {
+      kind: "polygon",
+      points: [
+        logicalPoint(measurement, arrow.tip),
+        logicalPoint(measurement, arrow.baseTop),
+        logicalPoint(measurement, arrow.baseBottom),
+      ],
+      fill: "foreground",
+      stroke: "none",
+      part: "source-arrow",
+    },
+  ];
+}
+
 function pins(measurement, threeTerminal) {
   return PIN_CONTRACT.filter(([name]) => !threeTerminal || name !== "B").map(
     ([name, role, direction, expected]) => {
@@ -131,27 +159,33 @@ function pins(measurement, threeTerminal) {
   );
 }
 
-function basePrimitives(measurement, polarity) {
+function basePrimitives(measurement, polarity, threeTerminal) {
   const sourceChannel = polarity === "nmos" ? "lower" : "upper";
   const otherChannel = polarity === "nmos" ? "upper" : "lower";
   return [
-    channelLineFromPixels(measurement, measurement.channelsPx[otherChannel]),
-    channelLineFromPixels(
+    channelLeadPolylineFromPixels(
       measurement,
-      measurement.channelsPx[sourceChannel],
-      "source-arrow-host",
+      measurement.channelsPx[otherChannel],
     ),
+    ...(!threeTerminal
+      ? [
+          channelLeadPolylineFromPixels(
+            measurement,
+            measurement.channelsPx[sourceChannel],
+            "source-arrow-host",
+          ),
+        ]
+      : []),
     ...measurement.gateBarsPx.map((rectangle) =>
       rectangleFromPixels(measurement, rectangle, "gate-bar"),
     ),
-    lineFromPixels(measurement, measurement.leadsPx.S),
     lineFromPixels(measurement, measurement.leadsPx.G),
-    lineFromPixels(measurement, measurement.leadsPx.D),
   ];
 }
 
 function primitivePoints(primitive) {
   if (primitive.kind === "line") return [primitive.from, primitive.to];
+  if (primitive.kind === "polyline") return primitive.points;
   if (primitive.kind === "polygon") return primitive.points;
   fail(`unsupported primitive ${primitive.kind}`);
 }
@@ -185,15 +219,9 @@ function viewBoxFor(symbol) {
 
 function symbol(polarity, measurement, threeTerminal) {
   const id = `${polarity}${threeTerminal ? "3" : ""}`;
-  const primitives = basePrimitives(measurement, polarity);
+  const primitives = basePrimitives(measurement, polarity, threeTerminal);
   if (threeTerminal) {
-    primitives.push(
-      ...arrowFromPixels(
-        measurement,
-        measurement.sourceArrowPx,
-        "source-arrow",
-      ),
-    );
+    primitives.push(...sourceArrowPrimitives(measurement, polarity));
   } else {
     primitives.push(
       ...arrowFromPixels(measurement, measurement.bulkExtensionPx, "bulk-lead"),
@@ -213,11 +241,7 @@ function symbol(polarity, measurement, threeTerminal) {
             id: "textbook-3terminal",
             hiddenPinNames: ["B"],
             hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
-            additionalPrimitives: arrowFromPixels(
-              measurement,
-              measurement.sourceArrowPx,
-              "source-arrow",
-            ),
+            additionalPrimitives: sourceArrowPrimitives(measurement, polarity),
           },
         ],
     aliases: [threeTerminal ? `mos-${polarity[0]}-3` : `mos-${polarity[0]}`],

@@ -316,12 +316,15 @@ describe("Razavi symbol catalog", () => {
           part: "gate-bar",
         }),
         expect.objectContaining({
-          kind: "line",
-          from: logicalPoint(measurement, {
-            ...upperChannel.from,
-            x: upperChannel.from.x - 1,
-          }),
-          to: logicalPoint(measurement, measurement.leadsPx.D.from),
+          kind: "polyline",
+          points: [
+            logicalPoint(measurement, {
+              ...upperChannel.from,
+              x: upperChannel.from.x - 1,
+            }),
+            logicalPoint(measurement, measurement.leadsPx.D.from),
+            logicalPoint(measurement, measurement.leadsPx.D.to),
+          ],
           style: {
             strokeRole: "normal",
             lineCap: "butt",
@@ -413,9 +416,30 @@ describe("Razavi symbol catalog", () => {
       expect(variant?.additionalPrimitives).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            kind: "line",
-            from: logicalPoint(measurement, arrow.support.from),
-            to: logicalPoint(measurement, arrow.support.to),
+            kind: "polyline",
+            points: [
+              logicalPoint(measurement, {
+                ...measurement.channelsPx[
+                  symbolId === "nmos" ? "lower" : "upper"
+                ].from,
+                x:
+                  measurement.channelsPx[
+                    symbolId === "nmos" ? "lower" : "upper"
+                  ].from.x - 1,
+              }),
+              logicalPoint(
+                measurement,
+                measurement.leadsPx[
+                  symbolId === "nmos" ? "S" : "D"
+                ].from,
+              ),
+              logicalPoint(
+                measurement,
+                measurement.leadsPx[
+                  symbolId === "nmos" ? "S" : "D"
+                ].to,
+              ),
+            ],
             style: expect.objectContaining({ lineCap: "butt" }),
           }),
           expect.objectContaining({
@@ -463,20 +487,37 @@ describe("Razavi symbol catalog", () => {
       const arrow = measurement.sourceArrowPx;
       const support = variant?.additionalPrimitives?.find(
         (primitive) =>
-          primitive.kind === "line" && primitive.part === "source-arrow",
+          primitive.kind === "polyline" && primitive.part === "source-arrow",
       );
       const head = variant?.additionalPrimitives?.find(
         (primitive) =>
           primitive.kind === "polygon" && primitive.part === "source-arrow",
       );
-      expect(support).toMatchObject({ kind: "line" });
+      expect(support).toMatchObject({ kind: "polyline" });
       expect(head).toMatchObject({ kind: "polygon" });
-      if (support?.kind !== "line" || head?.kind !== "polygon") {
+      if (support?.kind !== "polyline" || head?.kind !== "polygon") {
         throw new Error(`${symbolId} has no textbook source arrow`);
       }
       expect(support).toMatchObject({
-        from: logicalPoint(measurement, arrow.support.from),
-        to: logicalPoint(measurement, arrow.support.to),
+        points: [
+          logicalPoint(measurement, {
+            ...measurement.channelsPx[
+              symbolId === "nmos" ? "lower" : "upper"
+            ].from,
+            x:
+              measurement.channelsPx[
+                symbolId === "nmos" ? "lower" : "upper"
+              ].from.x - 1,
+          }),
+          logicalPoint(
+            measurement,
+            measurement.leadsPx[symbolId === "nmos" ? "S" : "D"].from,
+          ),
+          logicalPoint(
+            measurement,
+            measurement.leadsPx[symbolId === "nmos" ? "S" : "D"].to,
+          ),
+        ],
       });
       expect(head).toMatchObject({
         points: [

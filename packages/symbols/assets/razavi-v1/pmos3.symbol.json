@@ -5,7 +5,7 @@
   "viewBox": {
     "x": -24,
     "y": -24,
-    "width": 39,
+    "width": 38,
     "height": 48
   },
   "pins": [
@@ -51,32 +51,21 @@
   ],
   "primitives": [
     {
-      "kind": "line",
-      "from": {
-        "x": -4.244186,
-        "y": 7.122093
-      },
-      "to": {
-        "x": 10,
-        "y": 7.122093
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "butt",
-        "lineJoin": "miter"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -4.244186,
-        "y": -7.122093
-      },
-      "to": {
-        "x": 10,
-        "y": -7.122093
-      },
-      "part": "source-arrow-host",
+      "kind": "polyline",
+      "points": [
+        {
+          "x": -4.244186,
+          "y": 7.122093
+        },
+        {
+          "x": 10,
+          "y": 7.122093
+        },
+        {
+          "x": 10,
+          "y": 20
+        }
+      ],
       "style": {
         "strokeRole": "normal",
         "lineCap": "butt",
@@ -130,22 +119,6 @@
       "fill": "foreground",
       "stroke": "none",
       "part": "gate-bar"
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 10,
-        "y": 7.122093
-      },
-      "to": {
-        "x": 10,
-        "y": 20
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "butt",
-        "lineJoin": "miter"
-      }
     },
     {
       "kind": "line",
@@ -164,31 +137,21 @@
       }
     },
     {
-      "kind": "line",
-      "from": {
-        "x": 10,
-        "y": -7.122093
-      },
-      "to": {
-        "x": 10,
-        "y": -20
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "butt",
-        "lineJoin": "miter"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 5.639535,
-        "y": -7.122093
-      },
-      "to": {
-        "x": 10.581395,
-        "y": -7.122093
-      },
+      "kind": "polyline",
+      "points": [
+        {
+          "x": -4.244186,
+          "y": -7.122093
+        },
+        {
+          "x": 10,
+          "y": -7.122093
+        },
+        {
+          "x": 10,
+          "y": -20
+        }
+      ],
       "part": "source-arrow",
       "style": {
         "strokeRole": "normal",
