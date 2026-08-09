@@ -54,18 +54,18 @@ export interface SchematicTypography {
 
 /** The one typography system shared by all presentation profiles. */
 export const globalSchematicTypography: SchematicTypography = {
-  fontFamily: "'DejaVu Sans',Arial,'Helvetica Neue',Helvetica,sans-serif",
+  fontFamily: "Arial,'Helvetica Neue',Helvetica,sans-serif",
   mathWeight: 700,
   mathStyle: "italic",
   plainWeight: 400,
-  instanceFontSize: 15.116,
-  netFontSize: 15.116,
-  powerFontSize: 15.116,
-  annotationFontSize: 15.116,
+  instanceFontSize: 17.44186,
+  netFontSize: 17.44186,
+  powerFontSize: 17.44186,
+  annotationFontSize: 17.44186,
   polarityFontSize: 14,
   captionFontSize: 14,
-  subscriptScale: 0.8,
-  subscriptBaselineShiftEm: 0.28,
+  subscriptScale: 0.76,
+  subscriptBaselineShiftEm: 0.2,
   labelGap: 6,
   lineHeight: 1,
 };

@@ -108,6 +108,11 @@ fidelity harness, raster authority, or MOS catalog assets.
 - PMOS source-arrow support now starts at the measured arrow tail and proceeds
   to the external lead before the filled head is painted; it cannot cross the
   arrow tip or leave a squared-off residual through the triangle.
+- A fresh four-label raster search against the authority found Arial to score
+  0.7321 versus the current DejaVu Sans score of 0.6149. Arial Narrow and
+  Calibri scored 0.5591 and 0.6384 respectively. The shared typography will
+  therefore use Arial, 30 px at the 1.72 px/logical calibration (17.44186
+  logical units), 0.76 subscript scale, and 0.20em subscript shift.
 
 - Added `formal-route-wire`, a real formal-route crop from the archived
   `current-port-reference.png`; the harness now prints the actual reference

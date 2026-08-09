@@ -3024,3 +3024,14 @@ formatting`.
 - Validation: regenerated four MOS assets and catalog, focused catalog Vitest
   16/16, Symbols build, Editor production build, and `git diff --check` passed.
 - Commit status: ready for `fix(razavi): clip PMOS source-arrow support`.
+
+## 2026-08-09 - Authority-calibrated compact typography
+
+- Target: correct the visually over-wide numeric glyphs in Razavi labels.
+- Result: a repeatable four-label authority search selected Arial (0.7321)
+  over DejaVu Sans (0.6149), Arial Narrow (0.5591), and Calibri (0.6384).
+  Shared label metrics are now Arial, 17.44186 logical units, 76% subscripts,
+  and 0.20em baseline shift.
+- Validation: focused Derived/Render-SVG Vitest 8/8, Derived build, Render-SVG
+  build, Editor production build, and `git diff --check` passed.
+- Commit status: ready for `style(razavi): calibrate compact Arial typography`.

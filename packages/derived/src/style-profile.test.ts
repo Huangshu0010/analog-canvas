@@ -13,4 +13,13 @@ describe("schematic style profiles", () => {
     );
     expect(razaviTextbookProfile.typography).toBe(globalSchematicTypography);
   });
+
+  it("uses the authority-calibrated compact Arial text metrics", () => {
+    expect(globalSchematicTypography).toMatchObject({
+      fontFamily: "Arial,'Helvetica Neue',Helvetica,sans-serif",
+      instanceFontSize: 17.44186,
+      subscriptScale: 0.76,
+      subscriptBaselineShiftEm: 0.2,
+    });
+  });
 });
