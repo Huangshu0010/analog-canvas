@@ -5,19 +5,19 @@ normative module contracts, concrete execution logs, and reusable experience.
 
 ## Documentation Map
 
-| Area | Purpose |
-|---|---|
-| [`current/`](current/README.md) | **Default reading set** for current product, visual, model, editor, and Agent work |
-| [`overall-product-plan.md`](overall-product-plan.md) | Current product boundary and system architecture |
-| [`architecture-and-pipeline-review.md`](architecture-and-pipeline-review.md) | Historical repository walkthrough; consult only when explicitly auditing past assumptions |
-| [`roadmap/`](roadmap/README.md) | Phase ordering, work packages, acceptance scenarios, and exit gates |
-| [`specs/`](specs/README.md) | Normative data, API, parser, rendering, and persistence contracts |
-| [`agent/`](agent/README.md) | Agent API usage and soft layout/routing guidance |
-| [`adr/`](adr/README.md) | Significant architectural decisions and their consequences |
+| Area                                                                                                   | Purpose                                                                                                          |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| [`current/`](current/README.md)                                                                        | **Default reading set** for current product, visual, model, editor, and Agent work                               |
+| [`overall-product-plan.md`](overall-product-plan.md)                                                   | Current product boundary and system architecture                                                                 |
+| [`archive/architecture-and-pipeline-review.md`](archive/architecture-and-pipeline-review.md)           | Historical repository walkthrough; excluded from ordinary implementation context                                 |
+| [`roadmap/`](roadmap/README.md)                                                                        | Phase ordering, work packages, acceptance scenarios, and exit gates                                              |
+| [`specs/`](specs/README.md)                                                                            | Normative data, API, parser, rendering, and persistence contracts                                                |
+| [`agent/`](agent/README.md)                                                                            | Agent API usage and soft layout/routing guidance                                                                 |
+| [`adr/`](adr/README.md)                                                                                | Significant architectural decisions and their consequences                                                       |
 | [`adr/0011-retire-visio-vss-as-visual-authority.md`](adr/0011-retire-visio-vss-as-visual-authority.md) | Accepted boundary: VSS is archived historical evidence; the Razavi raster reference is the sole visual authority |
-| [`experience/`](experience/README.md) | Human-requested, evidence-backed reusable lessons |
-| [`archive/`](archive/README.md) | Non-authoritative historical records, excluded from default task context |
-| [`../plan/`](../plan/README.md) | Bounded execution plans and factual maintenance history |
+| [`experience/`](experience/README.md)                                                                  | Human-requested, evidence-backed reusable lessons                                                                |
+| [`archive/`](archive/README.md)                                                                        | Non-authoritative historical records, excluded from default task context                                         |
+| [`../plan/`](../plan/README.md)                                                                        | Bounded execution plans and factual maintenance history                                                          |
 
 ## Authority Order
 

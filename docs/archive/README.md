@@ -9,6 +9,10 @@ accepted ADR, active specification, or the
 
 - [`visio-vss/`](visio-vss/) — retired VSS/Visio import and style guidance;
   never use as visual or generation authority.
+- [`architecture-and-pipeline-review.md`](architecture-and-pipeline-review.md)
+  — superseded repository walkthrough containing VSS-era assumptions.
+- [`roadmap/phase-5-symbols-and-visual-quality.md`](roadmap/phase-5-symbols-and-visual-quality.md)
+  — completed VSS-era visual-pipeline record.
 
 Use an archived document only when a current document links to it for explicit
 historical evidence.
