@@ -2806,3 +2806,17 @@ Editing System work.
 - Validation: workspace typecheck, editor production build, and `git diff
   --check` passed.
 - Commit status: ready for `fix(editor): type VDD label rotation literal`.
+
+## 2026-08-09 - Editor visual-selection normalization
+
+- Target: make editor selection an explicit, normalized protocol rather than a
+  combination of instance state, singular object IDs, and supplemental arrays.
+- Changed areas: editor selection state and gesture bridge; new pure
+  `VisualSelection` module and tests.
+- Result: marquee, primary object selection, junction selection, delete
+  eligibility, and mixed deletion all consume one deduplicated selection value.
+  Existing Annotation and DraftingObject persistence contracts remain separate.
+- Validation: workspace typecheck, editor production build, focused Vitest
+  10/10, and `git diff --check` passed.
+- Commit status: ready for `refactor(editor): normalize visual selection
+  protocol`.

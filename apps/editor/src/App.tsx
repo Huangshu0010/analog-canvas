@@ -67,6 +67,14 @@ import {
 } from "./delete-selection";
 import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
+import {
+  clearVisualSelectionKinds,
+  EMPTY_VISUAL_SELECTION,
+  hasVisualSelection,
+  normalizeVisualSelection,
+  replaceVisualSelectionKind,
+} from "./visual-selection";
+import type { VisualSelection, VisualSelectionKind } from "./visual-selection";
 import { RichTextEditor } from "./rich-text-editor";
 
 const RECOVERY_KEY = "icm.recovery.v1";
@@ -126,12 +134,7 @@ interface DraftingDragSession {
   cancel: () => void;
 }
 
-interface SupplementalSelection {
-  routeIds: string[];
-  junctionIds: string[];
-  annotationIds: string[];
-  draftingIds: string[];
-}
+type SupplementalSelection = Omit<VisualSelection, "instanceIds">;
 
 const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
   routeIds: [],
@@ -530,9 +533,9 @@ export function App({ project: initialProject }: AppProps) {
     () => project.topDocumentId,
   );
   const [documentStack, setDocumentStack] = useState<string[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [supplementalSelection, setSupplementalSelection] =
-    useState<SupplementalSelection>(EMPTY_SUPPLEMENTAL_SELECTION);
+  const [visualSelection, setVisualSelection] = useState<VisualSelection>(
+    EMPTY_VISUAL_SELECTION,
+  );
   const [viewBox, setViewBox] = useState<Rect>(DEFAULT_VIEWBOX);
   const [status, setStatus] = useState("Ready");
   const [recoveryCandidate, setRecoveryCandidate] =
@@ -558,17 +561,10 @@ export function App({ project: initialProject }: AppProps) {
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
   const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
   const [wireWaypoints, setWireWaypoints] = useState<Point[]>([]);
-  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [selectedRouteSegmentIndex, setSelectedRouteSegmentIndex] = useState<
     number | null
   >(null);
   const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
-    null,
-  );
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
-    string | null
-  >(null);
-  const [selectedDraftingId, setSelectedDraftingId] = useState<string | null>(
     null,
   );
   const [instanceLabelDraft, setInstanceLabelDraft] = useState("");
@@ -612,6 +608,16 @@ export function App({ project: initialProject }: AppProps) {
     (instance) => instance.placement === null,
   );
   const unplacedPorts = document.ports.filter((port) => port.position === null);
+  const selectedIds = visualSelection.instanceIds;
+  const supplementalSelection: SupplementalSelection = {
+    routeIds: visualSelection.routeIds,
+    junctionIds: visualSelection.junctionIds,
+    annotationIds: visualSelection.annotationIds,
+    draftingIds: visualSelection.draftingIds,
+  };
+  const selectedRouteId = visualSelection.routeIds.at(-1) ?? null;
+  const selectedAnnotationId = visualSelection.annotationIds.at(-1) ?? null;
+  const selectedDraftingId = visualSelection.draftingIds.at(-1) ?? null;
   const selectedId = selectedIds.at(-1) ?? null;
   const selectedInstance =
     selectedIds.length === 1
@@ -1123,16 +1129,43 @@ export function App({ project: initialProject }: AppProps) {
     }
   }, []);
 
+  function replaceSelectionIds(
+    kind: VisualSelectionKind,
+    next: string[] | ((current: string[]) => string[]),
+  ): void {
+    setVisualSelection((current) => {
+      const property = `${kind}Ids` as keyof VisualSelection;
+      const currentIds = current[property] as string[];
+      const ids = typeof next === "function" ? next(currentIds) : next;
+      return replaceVisualSelectionKind(current, kind, ids);
+    });
+  }
+
+  function setSelectedIds(
+    next: string[] | ((current: string[]) => string[]),
+  ): void {
+    replaceSelectionIds("instance", next);
+  }
+
+  function setSelectedRouteId(id: string | null): void {
+    replaceSelectionIds("route", id ? [id] : []);
+  }
+
+  function setSelectedAnnotationId(id: string | null): void {
+    replaceSelectionIds("annotation", id ? [id] : []);
+  }
+
+  function setSelectedDraftingId(id: string | null): void {
+    replaceSelectionIds("drafting", id ? [id] : []);
+  }
+
   function stageRecovery(nextProject: CircuitProject): void {
     localStorage.setItem(RECOVERY_KEY, serializeProject(nextProject));
   }
 
   function resetInteractionState(): void {
-    setSelectedIds([]);
-    setSupplementalSelection(EMPTY_SUPPLEMENTAL_SELECTION);
-    setSelectedRouteId(null);
+    setVisualSelection(EMPTY_VISUAL_SELECTION);
     setSelectedRouteSegmentIndex(null);
-    setSelectedAnnotationId(null);
     setTextEditing(null);
     setSelectedEndpoint(null);
     setDragPreview(null);
@@ -1143,7 +1176,26 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function clearSupplementalSelection(): void {
-    setSupplementalSelection(EMPTY_SUPPLEMENTAL_SELECTION);
+    setVisualSelection((current) =>
+      clearVisualSelectionKinds(current, [
+        "route",
+        "junction",
+        "annotation",
+        "drafting",
+      ]),
+    );
+  }
+
+  function selectEndpoint(candidate: WireSource): void {
+    setSelectedEndpoint(candidate);
+    setVisualSelection(
+      candidate.endpoint.kind === "junction"
+        ? {
+            ...EMPTY_VISUAL_SELECTION,
+            junctionIds: [candidate.endpoint.junctionId],
+          }
+        : EMPTY_VISUAL_SELECTION,
+    );
   }
 
   function switchDocument(nextDocumentId: string): void {
@@ -3292,11 +3344,12 @@ export function App({ project: initialProject }: AppProps) {
             )
             .map((object) => object.id),
         };
-    setSelectedIds(ids);
-    setSupplementalSelection(supplemental);
-    setSelectedRouteId(supplemental.routeIds.at(-1) ?? null);
-    setSelectedAnnotationId(supplemental.annotationIds.at(-1) ?? null);
-    setSelectedDraftingId(supplemental.draftingIds.at(-1) ?? null);
+    setVisualSelection(
+      normalizeVisualSelection({
+        instanceIds: ids,
+        ...supplemental,
+      }),
+    );
     setSelectedEndpoint(null);
     setBoxPreview(null);
     const count =
@@ -3363,20 +3416,11 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function deleteSelection(): void {
-    const selectedRouteIds = new Set([
-      ...supplementalSelection.routeIds,
-      ...(selectedRouteId ? [selectedRouteId] : []),
-    ]);
-    const selectedAnnotationIds = new Set([
-      ...supplementalSelection.annotationIds,
-      ...(selectedAnnotationId ? [selectedAnnotationId] : []),
-    ]);
-    const selectedDraftingIds = new Set([
-      ...supplementalSelection.draftingIds,
-      ...(selectedDraftingId ? [selectedDraftingId] : []),
-    ]);
+    const selectedRouteIds = new Set(visualSelection.routeIds);
+    const selectedAnnotationIds = new Set(visualSelection.annotationIds);
+    const selectedDraftingIds = new Set(visualSelection.draftingIds);
     const selectedJunctionIds = new Set([
-      ...supplementalSelection.junctionIds,
+      ...visualSelection.junctionIds,
       ...(selectedEndpoint?.endpoint.kind === "junction"
         ? [selectedEndpoint.endpoint.junctionId]
         : []),
@@ -3445,11 +3489,7 @@ export function App({ project: initialProject }: AppProps) {
           })),
         ]);
         if (result.ok) {
-          setSelectedIds([]);
-          clearSupplementalSelection();
-          setSelectedRouteId(null);
-          setSelectedAnnotationId(null);
-          setSelectedDraftingId(null);
+          setVisualSelection(EMPTY_VISUAL_SELECTION);
           setSelectedEndpoint(null);
           setStatus("Deleted selected schematic objects");
         }
@@ -3809,14 +3849,7 @@ export function App({ project: initialProject }: AppProps) {
                 type="button"
                 onClick={deleteSelection}
                 disabled={
-                  !selectedRouteId &&
-                  !selectedAnnotationId &&
-                  !selectedDraftingId &&
-                  supplementalSelection.routeIds.length === 0 &&
-                  supplementalSelection.junctionIds.length === 0 &&
-                  supplementalSelection.annotationIds.length === 0 &&
-                  supplementalSelection.draftingIds.length === 0 &&
-                  selectedIds.length === 0
+                  !hasVisualSelection(visualSelection) && !selectedEndpoint
                 }
               >
                 Delete
@@ -4596,7 +4629,7 @@ export function App({ project: initialProject }: AppProps) {
                 onContextMenu={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  setSelectedEndpoint(candidate);
+                  selectEndpoint(candidate);
                   setSelectedRouteId(null);
                   setSelectedIds([]);
                   setSelectedAnnotationId(null);
@@ -4610,7 +4643,7 @@ export function App({ project: initialProject }: AppProps) {
                     candidate.endpoint.kind === "junction"
                   ) {
                     event.stopPropagation();
-                    setSelectedEndpoint(candidate);
+                    selectEndpoint(candidate);
                     setSelectedRouteId(null);
                     setSelectedIds([]);
                     setSelectedAnnotationId(null);
