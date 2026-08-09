@@ -64,6 +64,15 @@ if (
 // These windows intentionally exclude adjacent wires/nodes. Coordinates are
 // measured from the supplied 237 x 273 user reference screenshot.
 const REFERENCE_TARGETS = {
+  "1204x794": [
+    // Panel (b): these isolated instance labels have no adjacent node/route
+    // ink inside their crop windows, unlike the crowded labels in panel (a).
+    { id: "m3", crop: { x: 550, y: 67, width: 54, height: 35 }, base: "M", sub: "3" },
+    { id: "m2", crop: { x: 550, y: 150, width: 54, height: 35 }, base: "M", sub: "2" },
+    { id: "m1", crop: { x: 550, y: 237, width: 54, height: 35 }, base: "M", sub: "1" },
+    // Panel (b) supply title exercises the same power-label semantic parser.
+    { id: "vdd", crop: { x: 561, y: 7, width: 66, height: 38 }, base: "V", sub: "DD" },
+  ],
   "237x273": [
     {
       id: "vdd",

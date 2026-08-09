@@ -76,10 +76,10 @@ describe("Razavi schematic typography", () => {
 
   it("uses semantic profile sizes", () => {
     expect(schematicTextFontSize("instance-label", razaviTextbookProfile)).toBe(
-      18,
+      15.116,
     );
     expect(schematicTextFontSize("route-marker", razaviTextbookProfile)).toBe(
-      18,
+      15.116,
     );
   });
 
@@ -89,8 +89,8 @@ describe("Razavi schematic typography", () => {
       "power-label",
       razaviTextbookProfile,
     );
-    expect(rendered).toContain('font-size="84%"');
-    expect(rendered).toContain('baseline-shift="-0.36em"');
+    expect(rendered).toContain('font-size="80%"');
+    expect(rendered).toContain('baseline-shift="-0.28em"');
     expect(rendered).toContain("font-style:italic;font-weight:700");
     expect(rendered).toContain("font-style:normal;font-weight:700");
   });

@@ -125,6 +125,11 @@ fidelity harness, raster authority, or MOS catalog assets.
   and subscripts. The shared semantic typography token moves subscripts from
   `0.28em` to `0.36em` downward; this affects every parsed math label without
   introducing symbol-local text geometry.
+- Screenshot-driven text candidate search over `M_3`, `M_2`, `M_1`, and
+  `V_DD` selects DejaVu Sans at 26 reference pixels. At the six-panel 1.72
+  pixels/logical calibration this yields a shared 15.116 logical-point token,
+  0.80 subscript scale, and 0.28em baseline shift. This replaces the earlier
+  provisional 18 / 0.84 / 0.36 settings.
 
 ### 1. Establish the common render-scale, then fit the wire baseline
 
