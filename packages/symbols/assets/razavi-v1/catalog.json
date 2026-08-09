@@ -258,7 +258,7 @@
       "palette": true,
       "automaticMappings": ["spice:R"],
       "assetPath": "resistor.symbol.json",
-      "assetHash": "257e1a526fab1fc6cf524d4c92d1c02af0a914decd3d1dcdfd3cf44a6a6323b3",
+      "assetHash": "474648eca063d107fb39f641a6ce6b3a99c2b5bd4d26f6ebff926cccd184c0a7",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

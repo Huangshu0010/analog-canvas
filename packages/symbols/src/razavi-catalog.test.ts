@@ -394,11 +394,12 @@ describe("Razavi symbol catalog", () => {
     const resistor = requireRazaviCatalogSymbol("resistor");
     expect(resistor.primitives[0]).toMatchObject({
       kind: "path",
-      data: "M 0 -20 L 0 -8.72093 L 8.139535 -6.395349 L -6.976744 -4.069767 L 8.139535 -1.162791 L -7.55814 1.744186 L 8.139535 4.651163 L -6.976744 7.55814 L 0 8.72093 L 0 20",
+      data: "M 0 -20 L 0 -8.72093 L 5.372093 -6.395349 L -4.604651 -4.069767 L 5.372093 -1.162791 L -4.988372 1.744186 L 5.372093 4.651163 L -4.604651 7.55814 L 0 8.72093 L 0 20",
       style: {
         strokeRole: "normal",
         lineCap: "butt",
         lineJoin: "miter",
+        miterLimit: 12,
       },
     });
     expect(resistor.primitives).toHaveLength(1);

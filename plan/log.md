@@ -3254,6 +3254,18 @@ formatting`.
   passed.
 - Commit status: ready for `fix(razavi): restore measured resistor outline`.
 
+## 2026-08-09 - Razavi resistor sharp-tip amplitude calibration
+
+- Target: retain sharp resistor tips while reducing their raster outer
+  expansion against the Razavi reference.
+- Result: kept the resistor-only `miterLimit: 12` and calibrated alternating
+  zig-zag amplitude to `0.66`, without moving either pin or the body-axis
+  coordinates. Human review accepted the result.
+- Validation: amplitude sweep, fidelity IoU 0.7290 / soft IoU 0.5752,
+  catalog Vitest 17/17, focused SVG miter assertion, Symbols and Render-SVG
+  builds, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): calibrate resistor sharp tips`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next

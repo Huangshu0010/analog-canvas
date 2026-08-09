@@ -93,6 +93,21 @@ describe("textbook monochrome SVG renderer", () => {
   });
 
 
+  it("preserves the resistor's sharp miter override", () => {
+    const resistor = builtInSymbols.find((symbol) => symbol.id === "resistor");
+    expect(resistor).toBeDefined();
+
+    const body = renderSymbolDefinitionBody(
+      resistor!,
+      [],
+      [],
+      razaviTextbookProfile,
+    );
+
+    expect(body).toContain('stroke-linejoin="miter"');
+    expect(body).toContain('stroke-miterlimit="12"');
+  });
+
   it("renders only physical branch Junctions as connection dots", () => {
     const project = createEmptyProject("project-junction-roles", "Roles");
     const document = project.documents[0]!;

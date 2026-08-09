@@ -308,7 +308,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:R"],
     assetPath: "resistor.symbol.json",
     assetHash:
-      "257e1a526fab1fc6cf524d4c92d1c02af0a914decd3d1dcdfd3cf44a6a6323b3",
+      "474648eca063d107fb39f641a6ce6b3a99c2b5bd4d26f6ebff926cccd184c0a7",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -2262,11 +2262,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     primitives: [
       {
         kind: "path",
-        data: "M 0 -20 L 0 -8.72093 L 8.139535 -6.395349 L -6.976744 -4.069767 L 8.139535 -1.162791 L -7.55814 1.744186 L 8.139535 4.651163 L -6.976744 7.55814 L 0 8.72093 L 0 20",
+        data: "M 0 -20 L 0 -8.72093 L 5.372093 -6.395349 L -4.604651 -4.069767 L 5.372093 -1.162791 L -4.988372 1.744186 L 5.372093 4.651163 L -4.604651 7.55814 L 0 8.72093 L 0 20",
         style: {
           strokeRole: "normal",
           lineCap: "butt",
           lineJoin: "miter",
+          miterLimit: 12,
         },
       },
     ],

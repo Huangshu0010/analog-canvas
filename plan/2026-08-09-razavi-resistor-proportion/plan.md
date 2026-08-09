@@ -59,6 +59,31 @@ plumbing; do not alter the measured vertices, segments, angles, or pins.
 - if changed: catalog generation, focused catalog/render test, Symbols build,
   `git diff --check`
 
+## Follow-up Decision
+
+Human visual review takes precedence over the low-resolution raster score for
+the intended sharp-corner appearance. Restore the resistor-only miter limit of
+12 without changing its measured centerline, then generate registered
+reference/current/diff crops for direct review. The worktree was clean at the
+start of this follow-up.
+
+## Amplitude Iteration
+
+Visual review of the miter-12 crop identifies excessive outer-tip expansion.
+Keep the sharp join but scan a shared scale for the alternating horizontal
+zig-zag amplitude (the dominant component of every diagonal segment), while
+holding body-axis coordinates and pin positions fixed. Concurrent editor
+deletion work now owns `App.tsx`, delete-selection files, and unrelated hunks
+in renderer files and `plan/log.md`; they remain read-only and unstaged.
+
+## Accepted Calibration
+
+The sweep selected amplitude scale `0.66`: binary IoU `0.7290`, soft IoU
+`0.5752`, and 64 extra pixels, compared with `0.6033`, `0.4561`, and 179 at
+the unscaled sharp path. It shortens the dominant diagonal span from `13.364`
+to approximately `9.02` logical units while retaining the 12-limit miter
+tips. Human review accepted this configuration.
+
 ## Commit Intent
 
 Only if measured geometry changes: `fix(razavi): calibrate resistor proportions`.
