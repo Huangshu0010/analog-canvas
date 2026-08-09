@@ -2578,6 +2578,7 @@ Editing System work.
   `git diff --check` passed. No visual inspection was performed.
 - Commit status: ready for
   `fix(razavi): join PMOS arrow to gate bar`.
+
 ## 2026-08-09 - Razavi route-current arrow length
 
 - Target: correct the route-attached current arrow after comparison with the
@@ -2590,6 +2591,7 @@ Editing System work.
   passed. The raster harness does not yet cover route markers, so no visual
   diff was claimed.
 - Commit status: ready for `fix(razavi): lengthen route current arrow`.
+
 ## 2026-08-09 - Razavi peripheral fidelity
 
 - Target: refine GND bars and independent current-source outline against the
@@ -2607,6 +2609,7 @@ Editing System work.
   broader render SVG golden failures remain from earlier MOS geometry commits;
   unrelated goldens were intentionally not updated.
 - Commit status: ready for `fix(razavi): refine peripheral reference fidelity`.
+
 ## 2026-08-09 - Razavi passive reference crop baseline
 
 - Target: record and compare the resistor in the sole Razavi reference without
@@ -2616,12 +2619,13 @@ Editing System work.
   resistor comparison target; replaced its round Visio body with the measured
   sharp, normal-stroke zigzag and aligned its lead joins.
 - Validation: resistor binary/soft IoU improved `0.2360/0.1779 ->
-  0.6597/0.6068`; registration lift is zero. Symbols/Derived/Render-SVG builds,
+0.6597/0.6068`; registration lift is zero. Symbols/Derived/Render-SVG builds,
   catalog generation and stale check, and focused tests 17/17 passed. The
   CLI correctly rejects unrecorded `capacitor`.
 - Evidence boundary: the six-panel authority has no capacitor; no capacitor
   asset change was made pending a capacitor-containing approved crop.
 - Commit status: ready for `test(razavi): add passive reference crop baseline`.
+
 ## 2026-08-09 - Razavi capacitor reference archive
 
 - Target: preserve the user-supplied capacitor screenshot as evidence within
@@ -2632,6 +2636,7 @@ Editing System work.
 - Validation: image and geometry SHA-256 links matched manifest values, both
   evidence IDs were present, JSON parsed, and `git diff --check` passed.
 - Commit status: ready for `docs(razavi): archive capacitor reference evidence`.
+
 ## 2026-08-09 - Razavi capacitor dual-orientation calibration
 
 - Target: calibrate the capacitor using archived C1 vertical and C2 horizontal
@@ -2662,3 +2667,24 @@ Editing System work.
   exist, and `git diff --check` is clean.
 - Commit status: ready for
   `docs: separate current guidance from VSS archive`.
+
+## 2026-08-09 - Unified canvas rich-text editing
+
+- Target: replace the separate Annotation and Drafting Text authoring panels
+  with one canvas-local RichText editing session.
+- Changed areas: added optional presentation `content` to semantic
+  annotations; unified their RichText SVG path with Drafting Text; replaced
+  raw-markup side panels with a floating canvas toolbar for bold, italic,
+  subscript, superscript, fraction insertion, size, apply, and delete; added
+  double-click editing for both text kinds while preserving electrical-net
+  semantics. Existing route-current reversal remains available only for its
+  relevant marker in that toolbar.
+- Validation: workspace typecheck, editor production build, focused model and
+  renderer tests (39 assertions), and 26 Playwright editor workflows passed.
+  The 3 whole-render golden failures remain component-only mismatches from
+  already committed Razavi calibration against stale goldens; targeted text
+  rendering tests pass. Workspace-wide `format:check` remains blocked by
+  existing component/fidelity helper and lockfile formatting outside this
+  target; every owned source and test file was individually formatted and
+  checked.
+- Commit status: ready for `feat(text): unify rich-text editing surface`.

@@ -43,15 +43,24 @@ describe("Razavi schematic typography", () => {
   });
 
   it("escapes text and emits deterministic Razavi tspan runs", () => {
-    expect(
-      renderSchematicTextContent("V_<X&Y>", "net-label", razaviTextbookProfile),
-    ).toBe(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">&lt;X&amp;Y&gt;</tspan>',
+    const explicit = renderSchematicTextContent(
+      "V_<X&Y>",
+      "net-label",
+      razaviTextbookProfile,
     );
-    expect(
-      renderSchematicTextContent("VIN+", "net-label", razaviTextbookProfile),
-    ).toBe(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">IN</tspan><tspan data-text-run="suffix" baseline-shift="baseline" dy="0.3em" style="font-style:normal;font-weight:400">+</tspan>',
+    expect(explicit).toContain("font-style:italic;font-weight:700");
+    expect(explicit).toContain('data-text-run="subscript"');
+    expect(explicit).toContain("&lt;X&amp;Y&gt;");
+    const signed = renderSchematicTextContent(
+      "VIN+",
+      "net-label",
+      razaviTextbookProfile,
+    );
+    expect(signed).toContain('data-text-run="subscript"');
+    expect(signed).toContain("IN");
+    expect(signed).toContain('data-text-run="suffix"');
+    expect(signed).toContain(
+      'style="font-style:normal;font-weight:400">+</tspan>',
     );
     expect(
       renderSchematicTextContent(

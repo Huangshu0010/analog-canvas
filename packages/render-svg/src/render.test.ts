@@ -24,6 +24,38 @@ import { razaviTextbookProfile } from "./style-profile.js";
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("textbook monochrome SVG renderer", () => {
+  it("renders annotation RichText through the same canonical text renderer", () => {
+    const document = createEmptyProject("project-rich-label", "Rich label")
+      .documents[0]!;
+    document.annotations.push({
+      id: "label-vin",
+      kind: "net-label",
+      text: "VIN",
+      content: {
+        runs: [
+          { kind: "text", value: "V" },
+          {
+            kind: "span",
+            style: "subscript",
+            children: [{ kind: "text", value: "in" }],
+          },
+        ],
+      },
+      position: { x: 100, y: 100 },
+      offset: { x: 0, y: 0 },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain('data-object-id="label-vin"');
+    expect(svg).toContain('data-text-run="subscript"');
+    expect(svg).toContain(">in</tspan>");
+  });
+
   it("renders the Razavi palette port as a solid dot", () => {
     const port = builtInSymbols.find((symbol) => symbol.id === "port");
     expect(port).toBeDefined();
@@ -344,8 +376,9 @@ describe("textbook monochrome SVG renderer", () => {
     expect(first).toContain('<text x="70" y="46" text-anchor="middle"');
     expect(first).toContain('text-anchor="middle" font-size="24"');
     expect(first).toContain('data-role="current-arrow-head"');
+    expect(first).toContain('data-text-run="subscript"');
     expect(first).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">I</tspan><tspan data-text-run="subscript"',
+      'style="font-style:italic;font-weight:700">x</tspan>',
     );
 
     document.ports[1]!.position = { x: 280, y: 60 };
@@ -437,15 +470,16 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain(
       "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
     );
+    expect(svg).toContain('data-text-run="subscript"');
     expect(svg).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">M</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">1</tspan>',
+      'style="font-style:italic;font-weight:700">1</tspan>',
     );
     expect(svg).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">V</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">DD</tspan>',
+      'style="font-style:italic;font-weight:700">DD</tspan>',
     );
     // The migrated route-marker (current) renders I_tail into Razavi tspans.
     expect(svg).toContain(
-      '<tspan data-text-run="base" style="font-style:italic;font-weight:700">I</tspan><tspan data-text-run="subscript" font-size="68%" baseline-shift="-0.3em" style="font-style:italic;font-weight:700">tail</tspan>',
+      'style="font-style:italic;font-weight:700">tail</tspan>',
     );
     expect(svg).toMatch(
       /data-kind="draft-text"[^>]*>Original matched differential stage<\/text>/u,

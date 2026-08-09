@@ -1,3 +1,7 @@
+import type { RichTextDocument } from "@icm/model";
+
+import { renderRichTextDocument } from "./rich-text.js";
+import type { RichTextDocumentInput } from "./rich-text.js";
 import type { SchematicStyleProfile } from "./style-profile.js";
 
 export type SchematicTextKind =
@@ -6,8 +10,6 @@ export type SchematicTextKind =
   | "net-label"
   | "power-label"
   | "pin-name"
-  // ADR 0010 SchematicAnnotation route-marker. Renders as text; arrow/polarity
-  // rendering is handled by the annotation layer in render.ts.
   | "route-marker";
 
 export interface SchematicMathRuns {
@@ -26,8 +28,6 @@ function escapeXml(value: string): string {
 }
 
 function permitsImplicitMath(_kind: SchematicTextKind): boolean {
-  // All remaining SchematicTextKinds permit implicit math; legacy
-  // plain-text/figure-caption kinds were removed with WP-A3.
   return true;
 }
 
@@ -47,9 +47,7 @@ export function parseSchematicMath(
     };
   }
   const explicitItalic = /^\\it\{([^{}]+)\}$/u.exec(text);
-  if (explicitItalic) {
-    return { base: explicitItalic[1]!, style: "italic" };
-  }
+  if (explicitItalic) return { base: explicitItalic[1]!, style: "italic" };
   if (!permitsImplicitMath(kind)) return null;
 
   const underscore = text.indexOf("_");
@@ -88,6 +86,74 @@ export function parseSchematicMath(
   return null;
 }
 
+function styled(
+  children: RichTextDocument["runs"],
+  style: "italic" | "bold",
+): RichTextDocument["runs"][number] {
+  return { kind: "span", style, children } as RichTextDocument["runs"][number];
+}
+
+function legacySchematicMathDocument(
+  runs: SchematicMathRuns,
+): RichTextDocumentInput {
+  const document: RichTextDocumentInput = { runs: [] };
+  document.runs.push({
+    kind: "text",
+    value: runs.base,
+    role: "legacy-base",
+  });
+  if (runs.subscript) {
+    document.runs.push({
+      kind: "span",
+      style: "subscript",
+      children: [{ kind: "text", value: runs.subscript }],
+    });
+  }
+  if (runs.suffix) {
+    document.runs.push({
+      kind: "text",
+      value: runs.suffix,
+      role: "legacy-suffix",
+    });
+  }
+  return document;
+}
+
+/** Convert legacy schematic-math strings into canonical RichText content. */
+export function schematicTextDocument(
+  text: string,
+  kind: SchematicTextKind,
+): RichTextDocument {
+  const runs = parseSchematicMath(text, kind);
+  if (!runs)
+    return { runs: [{ kind: "text", value: text }] } as RichTextDocument;
+
+  const math = (
+    children: RichTextDocument["runs"],
+  ): RichTextDocument["runs"][number] =>
+    runs.style === "italic"
+      ? styled(children, "italic")
+      : styled([styled(children, "bold")], "italic");
+  const baseAndSubscript: RichTextDocument["runs"] = [
+    { kind: "text", value: runs.base },
+    ...(runs.subscript
+      ? [
+          {
+            kind: "span" as const,
+            style: "subscript" as const,
+            children: [{ kind: "text" as const, value: runs.subscript }],
+          },
+        ]
+      : []),
+  ];
+  return {
+    runs: [
+      math(baseAndSubscript),
+      ...(runs.suffix ? [{ kind: "text" as const, value: runs.suffix }] : []),
+    ],
+  } as RichTextDocument;
+}
+
 export function schematicTextFontSize(
   kind: SchematicTextKind,
   profile: SchematicStyleProfile,
@@ -107,29 +173,27 @@ export function schematicTextFontSize(
   }
 }
 
+/**
+ * Compatibility wrapper for legacy callers. Both semantic labels and drafting
+ * rich text now use the same AST-to-SVG renderer.
+ */
 export function renderSchematicTextContent(
   text: string,
   kind: SchematicTextKind,
   profile: SchematicStyleProfile,
 ): string {
   if (profile.id === "textbook-monochrome-v1") return escapeXml(text);
-
   const runs = parseSchematicMath(text, kind);
-  if (!runs) return escapeXml(text);
-
-  const typography = profile.typography;
-  const runStyle =
-    runs.style === "italic"
-      ? `font-style:italic;font-weight:${typography.plainWeight}`
-      : `font-style:${typography.mathStyle};font-weight:${typography.mathWeight}`;
-  const subscriptPercent = typography.subscriptScale * 100;
-  const subscript = runs.subscript
-    ? `<tspan data-text-run="subscript" font-size="${subscriptPercent}%" baseline-shift="-${typography.subscriptBaselineShiftEm}em" style="${runStyle}">${escapeXml(runs.subscript)}</tspan>`
-    : "";
-  const suffix = runs.suffix
-    ? `<tspan data-text-run="suffix" baseline-shift="baseline" dy="${typography.subscriptBaselineShiftEm}em" style="font-style:normal;font-weight:${typography.plainWeight}">${escapeXml(runs.suffix)}</tspan>`
-    : "";
-  return `<tspan data-text-run="base" style="${runStyle}">${escapeXml(runs.base)}</tspan>${subscript}${suffix}`;
+  if (!runs) {
+    return renderRichTextDocument(
+      { runs: [{ kind: "text", value: text }] },
+      profile,
+    );
+  }
+  return renderRichTextDocument(legacySchematicMathDocument(runs), profile, {
+    defaultItalic: true,
+    defaultBold: runs.style === "math",
+  });
 }
 
 export function schematicTextSizeAttribute(
@@ -137,9 +201,6 @@ export function schematicTextSizeAttribute(
   profile: SchematicStyleProfile,
   sizeScale?: number,
 ): string {
-  // Keep legacy monochrome output byte-stable unless an author explicitly
-  // changes the annotation scale.  In that case monochrome must honor the
-  // persisted presentation setting just like the Razavi profile does.
   if (profile.id === "textbook-monochrome-v1" && sizeScale === undefined) {
     return "";
   }

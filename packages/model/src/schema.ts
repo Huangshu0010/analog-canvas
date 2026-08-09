@@ -172,6 +172,10 @@ export const AnnotationSchema = z
   .strictObject({
     id: StableIdSchema,
     kind: AnnotationKindSchema,
+    // Presentation-only rich content. `text` remains the canonical semantic
+    // string/fallback for existing Projects and electrical labels; this AST
+    // controls only how the same label is drawn and edited.
+    content: z.lazy(() => RichTextDocumentSchema).optional(),
     text: z.string(),
     position: PointSchema,
     attachedObjectId: StableIdSchema.optional(),

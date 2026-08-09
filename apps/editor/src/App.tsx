@@ -25,10 +25,9 @@ import {
 import {
   CircuitProjectSchema,
   createEmptyProject,
-  parseMarkup,
   parseProject,
   serializeProject,
-  serializeMarkup,
+  flattenRichText,
   transformPoint,
 } from "@icm/model";
 import type {
@@ -37,6 +36,7 @@ import type {
   DraftingObject,
   Point,
   Rect,
+  RichTextDocument,
   RouteAnnotationAttachment,
   RouteEndpoint,
   SchematicDocument,
@@ -45,6 +45,7 @@ import {
   buildSvgScene,
   renderSymbolDefinitionBody,
   resolveSchematicStyleProfile,
+  schematicTextDocument,
   schematicTextFontSize,
 } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
@@ -57,6 +58,7 @@ import type { SchematicClipboard } from "./clipboard";
 import { proposeConnectedInstanceDeletion } from "./delete-selection";
 import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
+import { RichTextEditor } from "./rich-text-editor";
 
 const RECOVERY_KEY = "icm.recovery.v1";
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
@@ -79,6 +81,13 @@ interface PanPreview {
   clientStart: Point;
   viewBoxStart: Rect;
   pointerId: number;
+}
+
+interface TextEditingSession {
+  owner: "annotation" | "drafting";
+  id: string;
+  content: RichTextDocument;
+  sizeScale: number;
 }
 
 interface RouteStretchPreview {
@@ -510,9 +519,9 @@ export function App({ project: initialProject }: AppProps) {
   );
   const [instanceLabelDraft, setInstanceLabelDraft] = useState("");
   const [netLabelDraft, setNetLabelDraft] = useState("");
-  const [annotationTextDraft, setAnnotationTextDraft] = useState("");
-  const [annotationSizeDraft, setAnnotationSizeDraft] = useState("1");
-  const [draftingTextDraft, setDraftingTextDraft] = useState("");
+  const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
+    null,
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
@@ -527,7 +536,6 @@ export function App({ project: initialProject }: AppProps) {
   const pasteCounter = useRef(0);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
-  const annotationTextInputRef = useRef<HTMLInputElement>(null);
   const history = useRef(
     new DocumentHistory(
       project.documents.find(
@@ -857,6 +865,28 @@ export function App({ project: initialProject }: AppProps) {
     };
   }
 
+  const editingAnnotation =
+    textEditing?.owner === "annotation"
+      ? document.annotations.find(
+          (annotation) => annotation.id === textEditing.id,
+        )
+      : undefined;
+  const editingDrafting =
+    textEditing?.owner === "drafting"
+      ? document.drafting?.objects.find(
+          (object) => object.id === textEditing.id,
+        )
+      : undefined;
+  const textEditingBounds = editingAnnotation
+    ? annotationHitBox(editingAnnotation, annotationAnchor(editingAnnotation))
+    : editingDrafting?.kind === "text"
+      ? resolveDraftingObjectGeometry(document, resolver, editingDrafting)
+          .bounds
+      : null;
+  const textEditingLocked = Boolean(
+    editingAnnotation?.locked || editingDrafting?.locked,
+  );
+
   function instanceHitBox(
     instance: SchematicDocument["instances"][number],
   ): Rect | null {
@@ -951,11 +981,6 @@ export function App({ project: initialProject }: AppProps) {
   }, [document.nets, selectedRoute]);
 
   useEffect(() => {
-    setAnnotationTextDraft(selectedAnnotation?.text ?? "");
-    setAnnotationSizeDraft(String(selectedAnnotation?.sizeScale ?? 1));
-  }, [selectedAnnotation]);
-
-  useEffect(() => {
     const serialized = localStorage.getItem(RECOVERY_KEY);
     if (!serialized) return;
     try {
@@ -978,6 +1003,7 @@ export function App({ project: initialProject }: AppProps) {
     setSelectedRouteId(null);
     setSelectedRouteSegmentIndex(null);
     setSelectedAnnotationId(null);
+    setTextEditing(null);
     setSelectedEndpoint(null);
     setDragPreview(null);
     setWireSource(null);
@@ -2020,24 +2046,14 @@ export function App({ project: initialProject }: AppProps) {
     setStatus("Loaded Phase 5 visual demo");
   }
 
-  // WP-R5: single entry point for selecting a drafting object. It clears every
-  // other selection kind and, for a drafting text, initializes the edit draft
-  // from the reversible markup serialization of the AST.
+  // Single entry point for selecting a drafting object. Editing is opened
+  // separately (double-click/Enter) so selection and text caret ownership do
+  // not fight drag gestures.
   function selectDraftingObject(id: string): void {
     setSelectedDraftingId(id);
     setSelectedAnnotationId(null);
     setSelectedRouteId(null);
     setSelectedIds([]);
-    const object = document.drafting?.objects.find(
-      (candidate) => candidate.id === id,
-    );
-    if (object?.kind === "text") {
-      setDraftingTextDraft(
-        serializeMarkup(
-          object.content as unknown as Parameters<typeof serializeMarkup>[0],
-        ),
-      );
-    }
   }
 
   // WP-R5: drag a drafting object by its free anchor. Object/route anchors move
@@ -2150,23 +2166,24 @@ export function App({ project: initialProject }: AppProps) {
       x: Math.round(viewBox.x + viewBox.width / 2),
       y: Math.round(viewBox.y + viewBox.height - 20),
     };
+    const textObject: Extract<DraftingObject, { kind: "text" }> = {
+      id,
+      kind: "text",
+      locked: false,
+      zIndex: 0,
+      anchor: { kind: "free", position },
+      content: { runs: [{ kind: "text", value: "Design note" }] },
+      alignment: "middle",
+      rotation: 0,
+    };
     const result = transact([
       {
         kind: "upsert_drafting_object",
-        object: {
-          id,
-          kind: "text",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position },
-          content: { runs: [{ kind: "text", value: "Design note" }] },
-          alignment: "middle",
-          rotation: 0,
-        },
+        object: textObject,
       },
     ]);
     if (result.ok) {
-      selectDraftingObject(id);
+      beginDraftingTextEditing(textObject);
       setStatus(`Added drafting text ${id}`);
     }
   }
@@ -2301,7 +2318,6 @@ export function App({ project: initialProject }: AppProps) {
       setSelectedAnnotationId(id);
       setSelectedIds([]);
       setSelectedRouteId(null);
-      setAnnotationTextDraft("I_x");
       setStatus(`Added current arrow on ${selectedRoute.id}`);
     }
   }
@@ -2458,29 +2474,6 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
-  function applyAnnotationText(): void {
-    if (!selectedAnnotation) return;
-    const text = annotationTextDraft.trim();
-    if (!text) {
-      transact([
-        { kind: "remove_annotation", annotationId: selectedAnnotation.id },
-      ]);
-      setSelectedAnnotationId(null);
-      return;
-    }
-    const parsedSize = Number(annotationSizeDraft);
-    const sizeScale = Number.isFinite(parsedSize)
-      ? Math.max(0.1, Math.min(10, parsedSize))
-      : (selectedAnnotation.sizeScale ?? 1);
-    transact([
-      {
-        kind: "upsert_annotation",
-        annotation: { ...selectedAnnotation, text, sizeScale },
-      },
-    ]);
-    setAnnotationSizeDraft(String(sizeScale));
-  }
-
   function richTextEqual(
     left: { runs: unknown[] },
     right: { runs: unknown[] },
@@ -2488,46 +2481,128 @@ export function App({ project: initialProject }: AppProps) {
     return JSON.stringify(left) === JSON.stringify(right);
   }
 
-  function applyDraftingText(): void {
-    if (!selectedDrafting || selectedDrafting.kind !== "text") return;
-    const markup = draftingTextDraft;
-    if (!markup.trim()) {
-      transact([
-        { kind: "remove_drafting_object", objectId: selectedDrafting.id },
-      ]);
-      setSelectedDraftingId(null);
-      return;
-    }
-    // WP-R3: editing is lossless — the markup string round-trips through
-    // parseMarkup(serializeMarkup(ast)). If the parsed AST equals the stored
-    // AST, do not generate a revision.
-    const content = parseMarkup(markup);
-    if (richTextEqual(content, selectedDrafting.content)) return;
-    transact([
-      {
-        kind: "upsert_drafting_object",
-        object: { ...selectedDrafting, content },
-      },
-    ]);
+  function annotationRichText(annotation: Annotation): RichTextDocument {
+    return annotation.content
+      ? (annotation.content as unknown as RichTextDocument)
+      : schematicTextDocument(annotation.text, annotation.kind);
   }
 
-  function insertAnnotationMarkup(kind: "subscript" | "italic"): void {
-    const input = annotationTextInputRef.current;
-    const start = input?.selectionStart ?? annotationTextDraft.length;
-    const end = input?.selectionEnd ?? start;
-    const selected = annotationTextDraft.slice(start, end);
-    const prefix = kind === "subscript" ? "_{" : "\\it{";
-    const insertion = `${prefix}${selected}}`;
-    const next = `${annotationTextDraft.slice(0, start)}${insertion}${annotationTextDraft.slice(end)}`;
-    const caret =
-      selected.length > 0 ? start + insertion.length : start + prefix.length;
-    setAnnotationTextDraft(next);
-    requestAnimationFrame(() => {
-      input?.focus();
-      input?.setSelectionRange(caret, caret);
+  function beginAnnotationTextEditing(annotation: Annotation): void {
+    setSelectedAnnotationId(annotation.id);
+    setSelectedDraftingId(null);
+    setSelectedRouteId(null);
+    setSelectedIds([]);
+    setTextEditing({
+      owner: "annotation",
+      id: annotation.id,
+      content: annotationRichText(annotation),
+      sizeScale: annotation.sizeScale ?? 1,
     });
   }
 
+  function beginDraftingTextEditing(
+    object: Extract<DraftingObject, { kind: "text" }>,
+  ): void {
+    selectDraftingObject(object.id);
+    setTextEditing({
+      owner: "drafting",
+      id: object.id,
+      content: object.content as unknown as RichTextDocument,
+      sizeScale: object.styleOverride?.sizeScale ?? 1,
+    });
+  }
+
+  function updateTextEditing(
+    change: Partial<Pick<TextEditingSession, "content" | "sizeScale">>,
+  ): void {
+    setTextEditing((current) => (current ? { ...current, ...change } : null));
+  }
+
+  function deleteTextEditing(): void {
+    if (!textEditing) return;
+    const result =
+      textEditing.owner === "annotation"
+        ? transact([
+            { kind: "remove_annotation", annotationId: textEditing.id },
+          ])
+        : transact([
+            { kind: "remove_drafting_object", objectId: textEditing.id },
+          ]);
+    if (result.ok) {
+      setSelectedAnnotationId(null);
+      setSelectedDraftingId(null);
+      setTextEditing(null);
+      setStatus(`Deleted text ${textEditing.id}`);
+    }
+  }
+
+  function commitTextEditing(): void {
+    if (!textEditing) return;
+    const plainText = flattenRichText(
+      textEditing.content as unknown as Parameters<typeof flattenRichText>[0],
+    ).trim();
+    if (!plainText) {
+      deleteTextEditing();
+      return;
+    }
+    if (textEditing.owner === "annotation") {
+      const annotation = document.annotations.find(
+        (candidate) => candidate.id === textEditing.id,
+      );
+      if (!annotation || annotation.locked) return;
+      const next = {
+        ...annotation,
+        text: plainText,
+        content: textEditing.content,
+        sizeScale: textEditing.sizeScale,
+      };
+      if (
+        annotation.text === next.text &&
+        annotation.sizeScale === next.sizeScale &&
+        annotation.content &&
+        richTextEqual(annotation.content, next.content)
+      ) {
+        setTextEditing(null);
+        return;
+      }
+      const result = transact([
+        { kind: "upsert_annotation", annotation: next },
+      ]);
+      if (result.ok) {
+        setTextEditing(null);
+        setStatus(`Updated text ${annotation.id}`);
+      }
+      return;
+    }
+    const object = document.drafting?.objects.find(
+      (candidate) => candidate.id === textEditing.id,
+    );
+    if (!object || object.kind !== "text" || object.locked) return;
+    const next = {
+      ...object,
+      content: textEditing.content,
+      styleOverride: {
+        ...object.styleOverride,
+        sizeScale: textEditing.sizeScale,
+      },
+    };
+    if (
+      object.styleOverride?.sizeScale === next.styleOverride.sizeScale &&
+      richTextEqual(object.content, next.content)
+    ) {
+      setTextEditing(null);
+      return;
+    }
+    const result = transact([{ kind: "upsert_drafting_object", object: next }]);
+    if (result.ok) {
+      setTextEditing(null);
+      setStatus(`Updated text ${object.id}`);
+    }
+  }
+
+  // WP-R3: editing is lossless — the markup string round-trips through
+  // parseMarkup(serializeMarkup(ast)). If the parsed AST equals the stored
+  // AST, do not generate a revision.
   // --- ADR 0010 Guide tool ------------------------------------------------
   function addGuide(axis: "horizontal" | "vertical"): void {
     const coordinate =
@@ -2632,21 +2707,6 @@ export function App({ project: initialProject }: AppProps) {
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
-  }
-
-  function applyAnnotationSize(): void {
-    if (!selectedAnnotation) return;
-    const parsedSize = Number(annotationSizeDraft);
-    const sizeScale = Number.isFinite(parsedSize)
-      ? Math.max(0.1, Math.min(10, parsedSize))
-      : (selectedAnnotation.sizeScale ?? 1);
-    const result = transact([
-      {
-        kind: "upsert_annotation",
-        annotation: { ...selectedAnnotation, sizeScale },
-      },
-    ]);
-    if (result.ok) setAnnotationSizeDraft(String(sizeScale));
   }
 
   function deleteSelectedAnnotation(): void {
@@ -3677,86 +3737,6 @@ export function App({ project: initialProject }: AppProps) {
             </button>
           </section>
         ) : null}
-        {selectedAnnotation ? (
-          <section className="context-actions" aria-label="Text actions">
-            <h2>Text</h2>
-            <label>
-              Content
-              <input
-                ref={annotationTextInputRef}
-                aria-label="Selected text content"
-                value={annotationTextDraft}
-                onChange={(event) =>
-                  setAnnotationTextDraft(event.currentTarget.value)
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    applyAnnotationText();
-                  }
-                }}
-              />
-            </label>
-            <div className="text-format-tools" aria-label="Text formatting">
-              <button
-                type="button"
-                aria-label="Insert subscript markup"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => insertAnnotationMarkup("subscript")}
-              >
-                xₐ
-              </button>
-              <button
-                type="button"
-                aria-label="Insert italic markup"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => insertAnnotationMarkup("italic")}
-              >
-                <em>Italic</em>
-              </button>
-              <small>Example: V_&#123;DD&#125;, M_&#123;1&#125;</small>
-            </div>
-            <label>
-              Size scale
-              <input
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="10"
-                aria-label="Selected text size scale"
-                value={annotationSizeDraft}
-                disabled={selectedAnnotation.locked}
-                onChange={(event) =>
-                  setAnnotationSizeDraft(event.currentTarget.value)
-                }
-                onBlur={applyAnnotationSize}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    event.currentTarget.blur();
-                  }
-                }}
-              />
-            </label>
-            <button
-              type="button"
-              disabled={selectedAnnotation.locked}
-              onClick={applyAnnotationText}
-            >
-              Apply text
-            </button>
-            {selectedAnnotation &&
-            isRoutedMarker(selectedAnnotation) &&
-            effectiveRouteAttachment(selectedAnnotation) ? (
-              <button type="button" onClick={reverseSelectedCurrentArrow}>
-                Reverse arrow
-              </button>
-            ) : null}
-            <button type="button" onClick={deleteSelectedAnnotation}>
-              Delete text
-            </button>
-          </section>
-        ) : null}
         {selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction" ? (
           <section className="context-actions" aria-label="Endpoint actions">
             <h2>Endpoint</h2>
@@ -3780,49 +3760,6 @@ export function App({ project: initialProject }: AppProps) {
                 Move port to view center
               </button>
             ) : null}
-          </section>
-        ) : null}
-        {selectedDrafting?.kind === "text" ? (
-          <section
-            className="context-actions"
-            aria-label="Drafting text actions"
-          >
-            <h2>Drafting text</h2>
-            <label>
-              Content (markup: subscripts, superscripts, italic, fractions)
-              <textarea
-                aria-label="Drafting text content"
-                rows={3}
-                value={draftingTextDraft}
-                onChange={(event) =>
-                  setDraftingTextDraft(event.currentTarget.value)
-                }
-                onKeyDown={(event) => {
-                  // Enter inserts a line break; Ctrl+Enter commits (WP-R3).
-                  if (event.key === "Enter" && event.ctrlKey) {
-                    event.preventDefault();
-                    applyDraftingText();
-                  }
-                }}
-              />
-            </label>
-            <button type="button" onClick={applyDraftingText}>
-              Apply text
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                transact([
-                  {
-                    kind: "remove_drafting_object",
-                    objectId: selectedDrafting.id,
-                  },
-                ]);
-                setSelectedDraftingId(null);
-              }}
-            >
-              Delete
-            </button>
           </section>
         ) : null}
         {selectedEndpoint?.endpoint.kind === "junction" ? (
@@ -4247,6 +4184,10 @@ export function App({ project: initialProject }: AppProps) {
                   }
                   onPointerMove={previewAnnotationDrag}
                   onPointerUp={finishAnnotationDrag}
+                  onDoubleClick={(event) => {
+                    event.stopPropagation();
+                    beginAnnotationTextEditing(annotation);
+                  }}
                 />
               );
             })}
@@ -4362,6 +4303,11 @@ export function App({ project: initialProject }: AppProps) {
                   className={selected}
                   {...hitBounds}
                   onPointerDown={onDown}
+                  onDoubleClick={(event) => {
+                    if (object.kind !== "text") return;
+                    event.stopPropagation();
+                    beginDraftingTextEditing(object);
+                  }}
                 />
               );
             })}
@@ -4424,6 +4370,32 @@ export function App({ project: initialProject }: AppProps) {
                 cy={wirePreviewPoint.y}
                 r="4"
               />
+            ) : null}
+            {textEditing && textEditingBounds ? (
+              <foreignObject
+                data-testid="canvas-text-editor"
+                x={textEditingBounds.x - 6}
+                y={textEditingBounds.y - 58}
+                width={Math.max(300, textEditingBounds.width + 12)}
+                height={Math.max(110, textEditingBounds.height + 68)}
+              >
+                <RichTextEditor
+                  targetKey={`${textEditing.owner}:${textEditing.id}`}
+                  content={textEditing.content}
+                  disabled={textEditingLocked}
+                  sizeScale={textEditing.sizeScale}
+                  onChange={(content) => updateTextEditing({ content })}
+                  onSizeChange={(sizeScale) => updateTextEditing({ sizeScale })}
+                  onCommit={commitTextEditing}
+                  onCancel={() => setTextEditing(null)}
+                  onDelete={deleteTextEditing}
+                  {...(editingAnnotation &&
+                  isRoutedMarker(editingAnnotation) &&
+                  effectiveRouteAttachment(editingAnnotation)
+                    ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
+                    : {})}
+                />
+              </foreignObject>
             ) : null}
           </g>
         </svg>

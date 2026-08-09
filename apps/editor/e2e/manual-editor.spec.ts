@@ -433,6 +433,18 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await expect(
     page.getByTestId("annotation-hit-net-label-route-ui-1"),
   ).toBeVisible();
+  await page.getByTestId("annotation-hit-net-label-route-ui-1").dblclick();
+  const annotationEditor = page.getByRole("textbox", {
+    name: "Canvas text editor",
+  });
+  await annotationEditor.fill("Vref");
+  await annotationEditor.press("Control+a");
+  await page.getByRole("button", { name: "Italic" }).click();
+  await page.getByRole("button", { name: "Increase text size" }).click();
+  await page.getByRole("button", { name: "Apply text changes" }).click();
+  await expect(page.locator('[data-layer="annotations"]')).toContainText(
+    "Vref",
+  );
 
   await placeComponent(page, "resistor", { x: 280, y: 320 });
   await placeComponent(page, "resistor", { x: 480, y: 320 });
@@ -452,10 +464,10 @@ test("edits instance, electrical Net, and free text with bounded label handles",
 
   await clickCommand(page, "More", "Add text");
   const textInput = page.getByRole("textbox", {
-    name: "Drafting text content",
+    name: "Canvas text editor",
   });
   await textInput.fill("Matched pair");
-  await page.getByRole("button", { name: "Apply text" }).click();
+  await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.locator('[data-layer="drafting"]')).toContainText(
     "Matched pair",
   );

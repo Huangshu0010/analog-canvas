@@ -74,9 +74,8 @@ async function dragLocator(
   await locator.page().mouse.up();
 }
 
-// WP-R6 scenario A: add drafting text with rich markup, verify the canonical
-// AST is persisted and undo/redo restores it.
-test("adds drafting text with rich markup and undo/redo restores it", async ({
+// The canvas-local toolbar creates RichText AST without exposing raw markup.
+test("adds formatted drafting text and undo/redo restores it", async ({
   page,
 }) => {
   await page.goto("/");
@@ -84,15 +83,15 @@ test("adds drafting text with rich markup and undo/redo restores it", async ({
 
   await clickCommand(page, "More", "Add text");
   const draftInput = page.getByRole("textbox", {
-    name: "Drafting text content",
+    name: "Canvas text editor",
   });
   await expect(draftInput).toBeVisible();
-  await draftInput.fill("V_{in}^{+} = \\frac{V_{DD}}{2}");
-  await page.getByRole("button", { name: "Apply text" }).click();
+  await draftInput.fill("Vin");
+  await draftInput.press("Control+a");
+  await page.getByRole("button", { name: "Subscript" }).click();
+  await page.getByRole("button", { name: "Apply text changes" }).click();
 
-  await expect(page.locator('[data-layer="drafting"]')).toContainText(
-    "Vin+ = VDD2",
-  );
+  await expect(page.locator('[data-layer="drafting"]')).toContainText("Vin");
   await expect(page.getByTestId("revision")).toHaveText("2");
 
   const projectBytes = await downloadBytes(page, "File", "Save Project");
@@ -103,7 +102,6 @@ test("adds drafting text with rich markup and undo/redo restores it", async ({
   );
   expect(textObject).toBeTruthy();
   const runs = textObject.content.runs.map((run: { kind: string }) => run.kind);
-  expect(runs).toContain("fraction");
   expect(runs).toContain("span");
 
   await page.keyboard.press("Control+z");
@@ -156,6 +154,9 @@ test("existing text drag commits once and undoes atomically (P0-2)", async ({
 }) => {
   await page.goto("/");
   await clickCommand(page, "More", "Add text");
+  await page
+    .getByRole("textbox", { name: "Canvas text editor" })
+    .press("Escape");
   await expect(page.getByTestId("revision")).toHaveText("1");
 
   const before = JSON.parse(
@@ -184,6 +185,9 @@ test("Escape cancels an existing text drag without a revision", async ({
 }) => {
   await page.goto("/");
   await clickCommand(page, "More", "Add text");
+  await page
+    .getByRole("textbox", { name: "Canvas text editor" })
+    .press("Escape");
   const hit = page.getByTestId(/^drafting-hit-note-/);
   const box = await hit.boundingBox();
   if (!box) throw new Error("Drafting hit target is not measurable");
@@ -255,16 +259,16 @@ test("unedited Apply does not add a revision (WP-R3)", async ({ page }) => {
   await page.goto("/");
   await clickCommand(page, "More", "Add text");
   const draftInput = page.getByRole("textbox", {
-    name: "Drafting text content",
+    name: "Canvas text editor",
   });
-  await draftInput.fill("V_{in}");
-  await page.getByRole("button", { name: "Apply text" }).click();
+  await draftInput.fill("Vin");
+  await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.getByTestId("revision")).toHaveText("2");
 
   const handle = page.getByTestId(/^drafting-hit-note-/);
-  await handle.click();
+  await handle.dblclick();
   await expect(draftInput).toBeVisible();
-  await page.getByRole("button", { name: "Apply text" }).click();
+  await page.getByRole("button", { name: "Apply text changes" }).click();
   await page.waitForTimeout(200);
   await expect(page.getByTestId("revision")).toHaveText("2");
 });
@@ -277,10 +281,11 @@ test("drafting content and anchor survive save and reopen (P1 persistence)", asy
   await page.goto("/");
   await clickCommand(page, "More", "Add text");
   const draftInput = page.getByRole("textbox", {
-    name: "Drafting text content",
+    name: "Canvas text editor",
   });
-  await draftInput.fill("\\it{V_{in}} = \\frac{V_{DD}}{2}");
-  await page.getByRole("button", { name: "Apply text" }).click();
+  await draftInput.fill("Vref");
+  await page.getByRole("button", { name: "Insert fraction" }).click();
+  await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.getByTestId("revision")).toHaveText("2");
 
   const projectBytes = await downloadBytes(page, "File", "Save Project");
@@ -289,6 +294,9 @@ test("drafting content and anchor survive save and reopen (P1 persistence)", asy
     (object: { kind: string }) => object.kind === "text",
   );
   expect(textObject).toBeTruthy();
+  expect(
+    textObject.content.runs.map((run: { kind: string }) => run.kind),
+  ).toContain("fraction");
   expect(textObject.anchor).toMatchObject({ kind: "free" });
   expect(typeof textObject.anchor.position.x).toBe("number");
   await clickCommand(page, "More", "Add text");

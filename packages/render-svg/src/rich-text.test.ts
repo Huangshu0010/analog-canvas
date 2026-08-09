@@ -35,6 +35,31 @@ describe("renderRichTextDocument (WP-A2)", () => {
     expect(svg).toContain("font-weight:700");
   });
 
+  it("composes nested styles instead of letting an inner style erase its parent", () => {
+    const svg = renderRichTextDocument(
+      {
+        runs: [
+          {
+            kind: "span",
+            style: "italic",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "gm" }],
+              },
+            ],
+          },
+        ],
+      },
+      razaviTextbookProfile,
+    );
+    expect(svg).toContain(
+      'style="font-style:italic;font-weight:700">gm</tspan>',
+    );
+    expect(svg).not.toContain('font-style:normal;font-weight:700">gm');
+  });
+
   it("renders subscript and superscript with scaled size and baseline shift", () => {
     const svg = renderRichTextDocument(
       {

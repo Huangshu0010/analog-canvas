@@ -458,6 +458,70 @@ body {
   stroke-width: 1;
 }
 
+/* Editor-only HTML inside the SVG foreignObject. It is deliberately separate
+   from formal SVG/export, but uses the same RichText AST as formal rendering. */
+.rich-text-editor-shell {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 16rem;
+  color: #202020;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.rich-text-floating-toolbar {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  gap: 0.1rem;
+  padding: 0.2rem;
+  border: 1px solid #a7a7a0;
+  border-radius: 0.35rem;
+  background: #fff;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 16%);
+}
+
+.rich-text-floating-toolbar button {
+  min-width: 1.75rem;
+  min-height: 1.65rem;
+  padding: 0.1rem 0.3rem;
+  border: 0;
+  background: transparent;
+  font-size: 0.74rem;
+}
+
+.rich-text-floating-toolbar button:hover:not(:disabled) {
+  background: #eef5ff;
+}
+
+.rich-text-toolbar-separator {
+  width: 1px;
+  height: 1.2rem;
+  margin: 0 0.1rem;
+  background: #d2d2cb;
+}
+
+.rich-text-editable {
+  min-height: 1.55rem;
+  padding: 0.18rem 0.35rem;
+  border: 1px solid #1f6feb;
+  border-radius: 0.2rem;
+  outline: 0;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 1px 5px rgb(31 111 235 / 16%);
+  font: inherit;
+  line-height: 1.15;
+  white-space: pre-wrap;
+}
+
+.rich-text-editable:focus {
+  box-shadow: 0 0 0 2px rgb(31 111 235 / 25%);
+}
+
+.rich-text-fraction-rule {
+  padding: 0 0.08em;
+}
+
 /* ADR 0010 editor-only Guide overlay: dashed, non-exported, never electrical. */
 .guide {
   stroke: rgb(31 111 235 / 55%);
