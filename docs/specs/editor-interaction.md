@@ -41,23 +41,25 @@ Project and Document baseline.
 
 ## Command surface
 
-The production header should expose only frequent entry points:
+The production header exposes document/navigation and high-frequency document
+commands. Component placement and drawing tools live in the left Library dock,
+not in a modal palette or a permanent toolbar row:
 
 ```text
-+ Component | Wire | File | Edit | View | Export | More
+File | Edit | View | Export | More
 ```
 
 The exact visual treatment may use icons, labels, or responsive grouping, but
 the information architecture is normative:
 
-| Group  | Commands                                                             |
-| ------ | -------------------------------------------------------------------- |
-| File   | Open, Save, Import, recent/example documents                         |
-| Edit   | Undo, Redo, Copy, Paste, Delete, and contextual Align                |
-| Add    | Component in the header; Text in More                                |
-| View   | Fit, Diagnostics, Grid, and presentation overlays                    |
-| Export | SVG, PNG, and PDF from one menu                                      |
-| More   | Help, shortcut reference, and development-only examples when enabled |
+| Group   | Commands                                                                            |
+| ------- | ----------------------------------------------------------------------------------- |
+| File    | Open, Save, Import, recent/example documents                                        |
+| Edit    | Undo, Redo, Copy, Paste, Delete, and contextual Align                               |
+| Library | searchable/collapsible component families; Wire, Text, Arrow, and Construction line |
+| View    | Fit, Diagnostics, Grid, and presentation overlays                                   |
+| Export  | SVG, PNG, and PDF from one menu                                                     |
+| More    | route-attached current arrow, Guides, help, and shortcut reference                  |
 
 The following are not permanent production toolbar modes:
 
@@ -65,23 +67,24 @@ The following are not permanent production toolbar modes:
 - Save snapshot and Reopen snapshot; recovery is automatic infrastructure.
 - Phase/demo actions; examples belong in File/Open Example or development mode.
 
-Wire remains visible for discoverability, while pointer-down on a pin or a
-selected conductor starts the same wire session.
+The left dock is collapsible. Choosing a component starts single-shot
+placement; choosing a drawing tool starts the named canvas gesture. Demo and
+diagnostic actions do not appear on the production command surface.
 
 ## Text, markup, and peripheral editing
 
 This section is `proposed` (ADR 0010); interaction lands in WP-A3/A4. It
 freezes the V1 tool surface and command mapping.
 
-`More` gains three folded groups and a command palette, instead of a permanent
-toolbar row:
+The left Library owns Text and free drawing tools. `More` retains only
+route-attached annotation and Guide commands:
 
-| Group   | Contents                                                        | Shortcut |
-| ------- | --------------------------------------------------------------- | -------- |
-| Text    | text, caption, format tools                                     | `T` text placement |
-| Markup  | route arrow, free arrow, leader, callout, construction line, floating symbol | `A` last-used markup tool |
-| Guides  | add horizontal/vertical guide, show/hide, lock, clear unlocked  | `G` guide tool |
-| Palette | search all low-frequency commands                               | `Ctrl+K` |
+| Group   | Contents                                                                          | Shortcut           |
+| ------- | --------------------------------------------------------------------------------- | ------------------ |
+| Text    | text, caption, format tools                                                       | `T` text placement |
+| Markup  | free arrow and construction line from the Library; route arrow remains contextual | `A` arrow          |
+| Guides  | add horizontal/vertical guide, show/hide, lock, clear unlocked                    | `G` guide tool     |
+| Palette | search all low-frequency commands                                                 | `Ctrl+K`           |
 
 `R`, `W`, undo/redo, and the existing keyboard contract are unchanged. Canvas
 shortcuts must not fire while a rich-text editor, input, or search field has
@@ -159,7 +162,9 @@ can complete the named operation safely.
 
 ### Viewport
 
-- `Ctrl` plus mouse wheel zooms around the cursor position.
+- An unmodified mouse wheel over the canvas zooms around the cursor position.
+- `Ctrl`/`Command` plus mouse wheel remains a browser-reserved page-zoom
+  gesture and must not be intercepted by the editor.
 - Middle-button drag pans the viewport.
 - Viewport changes never modify the Document revision or enter undo history.
 - Normal wheel behavior remains available to the host page when the canvas

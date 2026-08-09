@@ -69,9 +69,13 @@ body {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 14rem minmax(0, 1fr);
+  grid-template-columns: 17rem minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 100vh;
+}
+
+.app-shell.properties-open {
+  grid-template-columns: 17rem minmax(0, 1fr) 16rem;
 }
 
 .app-header {
@@ -97,6 +101,15 @@ body {
 .app-header p {
   color: #666;
   font-size: 0.8rem;
+}
+
+.editor-status {
+  max-width: 16rem;
+  overflow: hidden;
+  color: #666;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar {
@@ -180,6 +193,118 @@ body {
   box-shadow: 0 14px 40px rgb(0 0 0 / 18%);
 }
 
+.library-panel {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  max-height: calc(100vh - 4.5rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem;
+  border-right: 1px solid #c9c9c2;
+  background: #f8f8f4;
+}
+
+.library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.library-heading h2 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.library-panel > input {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0.7rem 0;
+  padding: 0.45rem;
+  border: 1px solid #b8b8b0;
+  border-radius: 0.3rem;
+}
+
+.library-tools,
+.library-components {
+  margin-top: 0.85rem;
+}
+
+.library-tools > summary,
+.library-components > summary {
+  cursor: pointer;
+  color: #555;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.library-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.library-tool-grid button {
+  min-height: 2.2rem;
+  padding: 0.35rem;
+  text-align: left;
+}
+
+.library-tool-grid kbd {
+  float: right;
+  color: #666;
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.library-components-content > details {
+  border-top: 1px solid #deded8;
+  padding-top: 0.4rem;
+}
+
+.library-components-content > details > summary {
+  cursor: pointer;
+  color: #333;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.library-component-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.library-component-grid button {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  min-height: 3.1rem;
+  padding: 0.3rem;
+  text-align: left;
+}
+
+.library-component-grid .palette-symbol-preview {
+  width: 2rem;
+  height: 2rem;
+}
+
+.library-component-grid span {
+  overflow: hidden;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+}
+
 .palette-header {
   display: flex;
   align-items: center;
@@ -236,14 +361,37 @@ body {
 }
 
 .side-panel {
+  grid-column: 3;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
   padding: 0.9rem;
-  border-right: 1px solid #c9c9c2;
+  border-left: 1px solid #c9c9c2;
   background: #f8f8f4;
 }
 
 .side-panel h2 {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;
+}
+
+.properties-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.properties-heading h2 {
+  margin-bottom: 0.75rem;
+}
+
+.properties-heading button {
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  line-height: 1;
 }
 
 .side-panel > h3 {
@@ -261,7 +409,7 @@ body {
 }
 
 .inspector {
-  display: grid;
+  display: none;
   grid-template-columns: auto 1fr;
   gap: 0.35rem 0.6rem;
   margin-top: 1.5rem;
@@ -278,6 +426,7 @@ body {
 }
 
 .diagnostics {
+  display: none;
   margin-top: 1rem;
   border-top: 1px solid #d8d8d2;
   padding-top: 0.75rem;
@@ -312,6 +461,8 @@ body {
 }
 
 .canvas-panel {
+  grid-column: 2;
+  grid-row: 2;
   position: relative;
   min-width: 0;
   min-height: 0;

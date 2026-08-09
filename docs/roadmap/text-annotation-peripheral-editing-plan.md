@@ -27,13 +27,13 @@ current | voltage | figure-caption
 
 每个对象只有一个字符串、位置、旋转、粗粒度 `sizeScale`，并且只有 `current` 能使用 `routeAttachment`。渲染器已能把 `M_{1}`、`V_{DD}`、`\\it{...}` 解析为有限的数学样式；编辑器也已有“添加文本”“添加电流箭头”“改字号/文本”的入口。问题是这些能力并不构成可扩展系统：
 
-| 已有能力 | 当前限制 | 产品后果 |
-| --- | --- | --- |
-| 单行字符串文字 | 以正则识别少数下标/斜体，不能表达嵌套样式、上标、分数、可控换行 | 文本输入看似可编辑，实际无法写教材公式 |
-| `current` route attachment | 其他文本、箭头、引线均不能贴 Route；attachment 是 `current` 专属 | “贴在线上”的表达只能特例实现 |
-| `Annotation` upsert/remove | 没有通用图形、辅助线、外围符号或层级 | 每增加一种视觉元素都要继续膨胀 `AnnotationKind` |
-| 自由位置 annotation | 缺少对象/Route 吸附语义、失效诊断及拖动把手 | 拉伸线路或移动器件后，说明性图形不稳定 |
-| 画布选择 | 器件、Route、annotation 的命中优先级和小把手未统一 | 文字/箭头容易被器件遮挡，精调困难 |
+| 已有能力                   | 当前限制                                                         | 产品后果                                        |
+| -------------------------- | ---------------------------------------------------------------- | ----------------------------------------------- |
+| 单行字符串文字             | 以正则识别少数下标/斜体，不能表达嵌套样式、上标、分数、可控换行  | 文本输入看似可编辑，实际无法写教材公式          |
+| `current` route attachment | 其他文本、箭头、引线均不能贴 Route；attachment 是 `current` 专属 | “贴在线上”的表达只能特例实现                    |
+| `Annotation` upsert/remove | 没有通用图形、辅助线、外围符号或层级                             | 每增加一种视觉元素都要继续膨胀 `AnnotationKind` |
+| 自由位置 annotation        | 缺少对象/Route 吸附语义、失效诊断及拖动把手                      | 拉伸线路或移动器件后，说明性图形不稳定          |
+| 画布选择                   | 器件、Route、annotation 的命中优先级和小把手未统一               | 文字/箭头容易被器件遮挡，精调困难               |
 
 结论：这是**模型边界和交互体系不完整**，不是再添几个按钮能解决的问题。
 
@@ -41,12 +41,12 @@ current | voltage | figure-caption
 
 ### 1. 电气层与绘图层严格分离
 
-| 层 | 内容 | 是否改变 SPICE/连通性 | 是否进入 formal SVG/PDF/PNG |
-| --- | --- | ---: | ---: |
-| Electrical | instance、port、net、route、junction | 是 | 是 |
-| Schematic annotation | 器件名、网名、电源名、贴 Route 的电流/电压标记 | 仅网名等已定义的语义动作 | 是 |
-| Drafting overlay | 自由文本、箭头、引线、callout、构造线、外围浮动符号 | 否 | 是 |
-| Editor guide | 水平/垂直参考线、临时对齐辅助 | 否 | 否 |
+| 层                   | 内容                                                |    是否改变 SPICE/连通性 | 是否进入 formal SVG/PDF/PNG |
+| -------------------- | --------------------------------------------------- | -----------------------: | --------------------------: |
+| Electrical           | instance、port、net、route、junction                |                       是 |                          是 |
+| Schematic annotation | 器件名、网名、电源名、贴 Route 的电流/电压标记      | 仅网名等已定义的语义动作 |                          是 |
+| Drafting overlay     | 自由文本、箭头、引线、callout、构造线、外围浮动符号 |                       否 |                          是 |
+| Editor guide         | 水平/垂直参考线、临时对齐辅助                       |                       否 |                          否 |
 
 外围箭头、说明线、浮动符号**绝不能**伪装成有引脚的 `Instance`，也不能创建 Net、flightline、Junction 或 SPICE 实例。相反，网名依然是电气语义：给 Route 命名仍使用既有 `set_net_name`，不是一个普通的文字覆盖层。
 
@@ -92,7 +92,7 @@ type VisualAnchor =
       kind: "route";
       routeId: StableId;
       segmentIndex: number;
-      t: number;              // 0..1，随该 segment 拉伸而保持比例
+      t: number; // 0..1，随该 segment 拉伸而保持比例
       normalOffset: number;
       direction: "forward" | "reverse";
       orientation: "follow" | "horizontal";
@@ -108,9 +108,16 @@ type RichTextDocument = { runs: RichTextRun[] };
 type RichTextRun =
   | { kind: "text"; value: string }
   | { kind: "line-break" }
-  | { kind: "span"; style: "italic" | "bold" | "subscript" | "superscript";
-      children: RichTextRun[] }
-  | { kind: "fraction"; numerator: RichTextDocument; denominator: RichTextDocument };
+  | {
+      kind: "span";
+      style: "italic" | "bold" | "subscript" | "superscript";
+      children: RichTextRun[];
+    }
+  | {
+      kind: "fraction";
+      numerator: RichTextDocument;
+      denominator: RichTextDocument;
+    };
 ```
 
 初版只支持上述六种节点；不支持任意 LaTeX、宏、脚本、SVG/HTML 注入或任意字体。渲染器把 AST 转成安全 SVG `tspan`/路径组合，导出和画布共用同一实现。
@@ -141,16 +148,16 @@ type DraftingObject =
 
 所有成员共用 `id`、`locked`、`zIndex`、`styleOverride?` 和有限的 `VisualAnchor`。初版的具体范围如下：
 
-| 类型 | 最小字段 | 初版用途 | 明确不做 |
-| --- | --- | --- | --- |
-| `text` | `content`、`anchor`、对齐、框宽、字号 token/scale | 公式、图注、自由说明 | 任意富文本文档排版 |
-| `arrow` | 起点/终点或 Route anchor、头部样式 | `I_x` 以外的方向标记 | 贝塞尔曲线、任意箭头图库 |
-| `leader` | 起点、终点、可选文本目标 | 从说明文字指向器件/节点 | 自动避障 |
-| `callout` | `RichTextDocument` + 一个 leader | 一次选择、一次移动的带箭头说明 | 多框/多 leader 流程图 |
-| `construction-line` | 正交两点或折线、线型 | 非电气反馈框、分区线、外部说明线 | 参与 Route 拓扑 |
-| `floating-symbol` | catalog `symbolId`、transform、anchor | 非电气的教材图标/装饰 | 有 Pin、可接线、SPICE 映射 |
+| 类型                | 最小字段                                          | 初版用途                                               | 明确不做                   |
+| ------------------- | ------------------------------------------------- | ------------------------------------------------------ | -------------------------- |
+| `text`              | `content`、`anchor`、对齐、框宽、字号 token/scale | 公式、图注、自由说明                                   | 任意富文本文档排版         |
+| `arrow`             | 起点/终点或 Route anchor、头部样式                | `I_x` 以外的方向标记                                   | 贝塞尔曲线、任意箭头图库   |
+| `leader`            | 起点、终点、可选文本目标                          | 从说明文字指向器件/节点                                | 自动避障                   |
+| `callout`           | `RichTextDocument` + 一个 leader                  | 一次选择、一次移动的带箭头说明                         | 多框/多 leader 流程图      |
+| `construction-line` | 正交两点或折线、线型                              | 非电气反馈框、分区线、外部说明线                       | 参与 Route 拓扑            |
+| `floating-symbol`   | catalog `symbolId`、transform、anchor             | 仅兼容历史项目的非电气教材图标/装饰；生产 GUI 不再创建 | 有 Pin、可接线、SPICE 映射 |
 
-`floating-symbol.symbolId` 只能引用 Symbol Catalog 中显式标为 `decorative: true` 的白名单条目；其渲染定义不得含 terminal。若用户需要电源、地或端口参与连通性，必须使用真正的 Component/Port，而不是浮动符号。
+`floating-symbol.symbolId` 只能引用 Symbol Catalog 中显式标为 `decorative: true` 的白名单条目；其渲染定义不得含 terminal。它保留读取、导出和删除兼容性，但不再出现在生产 GUI 或 Agent 的新建入口。若用户需要电源、地或端口参与连通性，必须使用真正的 Component/Port，而不是浮动符号。
 
 ### Guide
 
@@ -178,12 +185,12 @@ Guide 不需要复杂 shape、颜色或自由角度。水平/垂直两类已经�
 
 Header 不增加一排永久按钮。在既有 `More` 内加入三个折叠分组，并提供命令面板：
 
-| 分组 | 内容 | 快捷键 |
-| --- | --- | --- |
-| Text | 文本、图注、格式工具 | `T` 进入文本放置 |
-| Markup | 线路箭头、自由箭头、引线、callout、构造线、浮动符号 | `A` 为上次使用的 Markup 工具 |
-| Guides | 添加水平/垂直参考线、显示/隐藏、锁定/清除未锁定 | `G` 进入 Guide 工具 |
-| Command palette | 搜索全部低频命令 | `Ctrl+K` |
+| 分组            | 内容                                                | 快捷键                       |
+| --------------- | --------------------------------------------------- | ---------------------------- |
+| Text            | 文本、图注、格式工具                                | `T` 进入文本放置             |
+| Markup          | 线路箭头、自由箭头、引线、callout、构造线、浮动符号 | `A` 为上次使用的 Markup 工具 |
+| Guides          | 添加水平/垂直参考线、显示/隐藏、锁定/清除未锁定     | `G` 进入 Guide 工具          |
+| Command palette | 搜索全部低频命令                                    | `Ctrl+K`                     |
 
 `R`、`W`、撤销/重做和现有键盘契约保持不变。只要富文本编辑器、输入框、搜索框拥有焦点，画布快捷键不得触发。
 
@@ -232,13 +239,13 @@ Agent 可以请求“创建 Razavi 风格的电流箭头并贴在 Route X 第 2 
 
 迁移规则：
 
-| 旧 annotation | 新位置 | 迁移方式 |
-| --- | --- | --- |
-| `instance-label`、`net-label`、`power-label` | `annotations` / SchematicAnnotation | 保留语义和附件 |
-| `current` | `route-marker/current` | 现有 Route attachment 原样迁移 |
-| `voltage` | `route-marker/voltage` 或 `drafting.text` | 有可靠附件时前者，否则保留为自由文本并提示审阅 |
-| `plain-text` | `drafting.objects[text]` | string 变为单一 `text` run |
-| `figure-caption` | `drafting.objects[text]` | 保留 caption typography token 和对齐 |
+| 旧 annotation                                | 新位置                                    | 迁移方式                                       |
+| -------------------------------------------- | ----------------------------------------- | ---------------------------------------------- |
+| `instance-label`、`net-label`、`power-label` | `annotations` / SchematicAnnotation       | 保留语义和附件                                 |
+| `current`                                    | `route-marker/current`                    | 现有 Route attachment 原样迁移                 |
+| `voltage`                                    | `route-marker/voltage` 或 `drafting.text` | 有可靠附件时前者，否则保留为自由文本并提示审阅 |
+| `plain-text`                                 | `drafting.objects[text]`                  | string 变为单一 `text` run                     |
+| `figure-caption`                             | `drafting.objects[text]`                  | 保留 caption typography token 和对齐           |
 
 迁移必须幂等、可测试、不会改变 Net/Route/Junction/instance，也不得重写原始 SPICE。旧项目读取后自动升级到唯一的新真相；写回不得重新生成旧 `plain-text` 结构。
 

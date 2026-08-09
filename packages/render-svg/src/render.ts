@@ -799,12 +799,21 @@ function renderDraftArrow(
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
-  const head = 10;
-  const nx = (-dy / length) * 4;
-  const ny = (dx / length) * 4;
+  // Free arrows and route-mounted current arrows intentionally share the
+  // profile-owned head proportions. They differ only in shaft ownership: a
+  // route marker reuses its conductor, while a free arrow draws its own.
+  const head = profile.annotations.arrowHeadLength;
+  const halfHeadWidth = profile.annotations.arrowHeadWidth / 2;
+  const nx = (-dy / length) * halfHeadWidth;
+  const ny = (dx / length) * halfHeadWidth;
   const baseX = tipX - (dx / length) * head;
   const baseY = tipY - (dy / length) * head;
-  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${tipX}" y2="${tipY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" fill="${profile.foreground}"/></g>`;
+  const arrowHead = object.styleOverride?.arrowHead ?? "filled";
+  const headBody =
+    arrowHead === "none"
+      ? ""
+      : `<polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" ${arrowHead === "open" ? `fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"` : `fill="${profile.foreground}"`}/>`;
+  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${tipX}" y2="${tipY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>${headBody}</g>`;
 }
 
 function renderDraftLeader(

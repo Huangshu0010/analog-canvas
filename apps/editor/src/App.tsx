@@ -117,6 +117,20 @@ interface DraftingDragSession {
   cancel: () => void;
 }
 
+interface SupplementalSelection {
+  routeIds: string[];
+  junctionIds: string[];
+  annotationIds: string[];
+  draftingIds: string[];
+}
+
+const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
+  routeIds: [],
+  junctionIds: [],
+  annotationIds: [],
+  draftingIds: [],
+};
+
 type EditorTool = "pointer" | "wire" | "guide" | "construction-line" | "arrow";
 
 interface WireSource {
@@ -304,6 +318,35 @@ function normalizedRect(start: Point, end: Point): Rect {
   };
 }
 
+function rectsIntersect(left: Rect, right: Rect): boolean {
+  return (
+    left.x <= right.x + right.width &&
+    left.x + left.width >= right.x &&
+    left.y <= right.y + right.height &&
+    left.y + left.height >= right.y
+  );
+}
+
+function pointInRect(point: Point, rect: Rect): boolean {
+  return (
+    point.x >= rect.x &&
+    point.x <= rect.x + rect.width &&
+    point.y >= rect.y &&
+    point.y <= rect.y + rect.height
+  );
+}
+
+function polylineBounds(points: readonly Point[]): Rect {
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  return {
+    x: Math.min(...xs),
+    y: Math.min(...ys),
+    width: Math.max(1, Math.max(...xs) - Math.min(...xs)),
+    height: Math.max(1, Math.max(...ys) - Math.min(...ys)),
+  };
+}
+
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
@@ -479,6 +522,8 @@ export function App({ project: initialProject }: AppProps) {
   );
   const [documentStack, setDocumentStack] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [supplementalSelection, setSupplementalSelection] =
+    useState<SupplementalSelection>(EMPTY_SUPPLEMENTAL_SELECTION);
   const [viewBox, setViewBox] = useState<Rect>(DEFAULT_VIEWBOX);
   const [status, setStatus] = useState("Ready");
   const [recoveryCandidate, setRecoveryCandidate] =
@@ -524,6 +569,8 @@ export function App({ project: initialProject }: AppProps) {
   );
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
+  const [libraryOpen, setLibraryOpen] = useState(true);
+  const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
   const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
   const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
@@ -574,6 +621,14 @@ export function App({ project: initialProject }: AppProps) {
         (object) => object.id === selectedDraftingId,
       )
     : undefined;
+  const propertiesVisible = Boolean(
+    !propertiesCollapsed &&
+    (selectedInstance ||
+      selectedRoute ||
+      selectedAnnotation ||
+      selectedDrafting ||
+      selectedEndpoint),
+  );
   const styleProfile = resolveSchematicStyleProfile(
     document.presentation.styleProfileId,
   );
@@ -1000,6 +1055,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function resetInteractionState(): void {
     setSelectedIds([]);
+    setSupplementalSelection(EMPTY_SUPPLEMENTAL_SELECTION);
     setSelectedRouteId(null);
     setSelectedRouteSegmentIndex(null);
     setSelectedAnnotationId(null);
@@ -1010,6 +1066,10 @@ export function App({ project: initialProject }: AppProps) {
     setWirePreviewPoint(null);
     setWireWaypoints([]);
     setTool("pointer");
+  }
+
+  function clearSupplementalSelection(): void {
+    setSupplementalSelection(EMPTY_SUPPLEMENTAL_SELECTION);
   }
 
   function switchDocument(nextDocumentId: string): void {
@@ -1390,6 +1450,8 @@ export function App({ project: initialProject }: AppProps) {
     );
     const segmentIndex = segmentAtPoint(routeRecord.polyline.points, point);
     if (tool === "pointer") {
+      setPropertiesCollapsed(false);
+      clearSupplementalSelection();
       setSelectedRouteId(routeId);
       setSelectedRouteSegmentIndex(segmentIndex ?? 0);
       setSelectedIds([]);
@@ -1595,6 +1657,8 @@ export function App({ project: initialProject }: AppProps) {
     if (event.button !== 0 || annotation.locked) return;
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
+    setPropertiesCollapsed(false);
+    clearSupplementalSelection();
     const pointerStart = pointFromClient(
       event.clientX,
       event.clientY,
@@ -1813,6 +1877,8 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function selectInstance(instanceId: string, additive: boolean): void {
+    setPropertiesCollapsed(false);
+    clearSupplementalSelection();
     setSelectedRouteId(null);
     setSelectedEndpoint(null);
     setSelectedAnnotationId(null);
@@ -2050,25 +2116,73 @@ export function App({ project: initialProject }: AppProps) {
   // separately (double-click/Enter) so selection and text caret ownership do
   // not fight drag gestures.
   function selectDraftingObject(id: string): void {
+    setPropertiesCollapsed(false);
+    clearSupplementalSelection();
     setSelectedDraftingId(id);
     setSelectedAnnotationId(null);
     setSelectedRouteId(null);
     setSelectedIds([]);
   }
 
-  // WP-R5: drag a drafting object by its free anchor. Object/route anchors move
-  // with their target by construction; only a free anchor's position changes,
-  // and the persisted update goes through a typed edit.
-  // P0-2: dragging a drafting object uses a preview and commits ONE typed
-  // transaction on pointerup, so a long drag is a single undoable revision
-  // (not one revision per mouse sample). Escape/pointercancel discards it.
+  function draftingDragOrigin(object: DraftingObject): Point | null {
+    if (object.kind === "construction-line") return object.points[0] ?? null;
+    if (object.kind === "arrow") {
+      return object.from.kind === "free" && object.to.kind === "free"
+        ? object.from.position
+        : null;
+    }
+    return object.anchor.kind === "free" ? object.anchor.position : null;
+  }
+
+  function translateDraftingObject(
+    object: DraftingObject,
+    delta: Point,
+  ): DraftingObject {
+    const moveFreeAnchor = <T extends DraftingObject["anchor"]>(
+      anchor: T,
+    ): T =>
+      anchor.kind === "free"
+        ? ({
+            ...anchor,
+            position: {
+              x: Math.round(anchor.position.x + delta.x),
+              y: Math.round(anchor.position.y + delta.y),
+            },
+          } as T)
+        : anchor;
+    if (object.kind === "construction-line") {
+      return {
+        ...object,
+        anchor: moveFreeAnchor(object.anchor),
+        points: object.points.map((point) => ({
+          x: Math.round(point.x + delta.x),
+          y: Math.round(point.y + delta.y),
+        })),
+      };
+    }
+    if (object.kind === "arrow") {
+      return {
+        ...object,
+        anchor: moveFreeAnchor(object.anchor),
+        from: moveFreeAnchor(object.from),
+        to: moveFreeAnchor(object.to),
+      };
+    }
+    return { ...object, anchor: moveFreeAnchor(object.anchor) };
+  }
+
+  // A drafting drag commits exactly one typed transaction on pointerup. Its
+  // geometry is kind-aware: arrows move their free endpoints and construction
+  // lines move their points, rather than mutating the unused base anchor.
   function beginDraftingDrag(
     event: ReactPointerEvent<SVGElement>,
-    object: Extract<DraftingObject, { kind: "text" }>,
+    object: DraftingObject,
   ): void {
     if (event.button !== 0 || object.locked) return;
-    if (object.anchor.kind !== "free") {
+    const origin = draftingDragOrigin(object);
+    if (!origin) {
       selectDraftingObject(object.id);
+      setStatus("This anchored drawing moves with its attachment");
       return;
     }
     event.stopPropagation();
@@ -2080,7 +2194,7 @@ export function App({ project: initialProject }: AppProps) {
       event.clientY,
       hitTarget.ownerSVGElement!,
     );
-    const original = { ...object.anchor.position };
+    const original = { ...origin };
     draftingDragPositionRef.current = original;
     selectDraftingObject(object.id);
     setDraftingDragPreview({
@@ -2136,14 +2250,14 @@ export function App({ project: initialProject }: AppProps) {
         const latest = document.drafting?.objects.find(
           (item) => item.id === object.id,
         );
-        if (latest?.kind === "text" && latest.anchor.kind === "free") {
+        if (latest) {
           transact([
             {
               kind: "upsert_drafting_object",
-              object: {
-                ...latest,
-                anchor: { kind: "free", position },
-              },
+              object: translateDraftingObject(latest, {
+                x: position.x - original.x,
+                y: position.y - original.y,
+              }),
             },
           ]);
         }
@@ -2877,7 +2991,10 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function handleWheel(event: React.WheelEvent<SVGSVGElement>): void {
-    if (!event.ctrlKey) return;
+    // Ctrl/Command+wheel is a browser-reserved page-zoom gesture. The canvas
+    // owns an unmodified wheel gesture only while the pointer is over it, so
+    // schematic navigation stays useful without fighting the host browser.
+    if (event.ctrlKey || event.metaKey) return;
     event.preventDefault();
     const bounds = event.currentTarget.getBoundingClientRect();
     const ratioX = (event.clientX - bounds.left) / bounds.width;
@@ -3022,22 +3139,54 @@ export function App({ project: initialProject }: AppProps) {
     const ids = clicked
       ? []
       : document.instances
-          .filter(
-            (instance) =>
-              instance.placement &&
-              instance.placement.position.x >= rect.x &&
-              instance.placement.position.x <= rect.x + rect.width &&
-              instance.placement.position.y >= rect.y &&
-              instance.placement.position.y <= rect.y + rect.height,
-          )
+          .filter((instance) => {
+            const bounds = instanceHitBox(instance);
+            return bounds !== null && rectsIntersect(bounds, rect);
+          })
           .map((instance) => instance.id);
+    const supplemental = clicked
+      ? EMPTY_SUPPLEMENTAL_SELECTION
+      : {
+          routeIds: routePolylines
+            .filter(({ polyline }) =>
+              rectsIntersect(polylineBounds(polyline.points), rect),
+            )
+            .map(({ route }) => route.id),
+          junctionIds: document.junctions
+            .filter((junction) => pointInRect(junction.position, rect))
+            .map((junction) => junction.id),
+          annotationIds: document.annotations
+            .filter((annotation) =>
+              rectsIntersect(
+                annotationHitBox(annotation, annotationAnchor(annotation)),
+                rect,
+              ),
+            )
+            .map((annotation) => annotation.id),
+          draftingIds: (document.drafting?.objects ?? [])
+            .filter((object) =>
+              rectsIntersect(
+                resolveDraftingObjectGeometry(document, resolver, object)
+                  .bounds,
+                rect,
+              ),
+            )
+            .map((object) => object.id),
+        };
     setSelectedIds(ids);
-    setSelectedRouteId(null);
-    setSelectedAnnotationId(null);
+    setSupplementalSelection(supplemental);
+    setSelectedRouteId(supplemental.routeIds.at(-1) ?? null);
+    setSelectedAnnotationId(supplemental.annotationIds.at(-1) ?? null);
+    setSelectedDraftingId(supplemental.draftingIds.at(-1) ?? null);
+    setSelectedEndpoint(null);
     setBoxPreview(null);
-    setStatus(
-      ids.length > 0 ? `Selected ${ids.length} instances` : "Selection cleared",
-    );
+    const count =
+      ids.length +
+      supplemental.routeIds.length +
+      supplemental.junctionIds.length +
+      supplemental.annotationIds.length +
+      supplemental.draftingIds.length;
+    setStatus(count > 0 ? `Selected ${count} objects` : "Selection cleared");
   }
 
   // P1: commit a drag-created drafting object at the final end point.
@@ -3095,6 +3244,92 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function deleteSelection(): void {
+    const selectedRouteIds = new Set([
+      ...supplementalSelection.routeIds,
+      ...(selectedRouteId ? [selectedRouteId] : []),
+    ]);
+    const selectedAnnotationIds = new Set([
+      ...supplementalSelection.annotationIds,
+      ...(selectedAnnotationId ? [selectedAnnotationId] : []),
+    ]);
+    const selectedDraftingIds = new Set([
+      ...supplementalSelection.draftingIds,
+      ...(selectedDraftingId ? [selectedDraftingId] : []),
+    ]);
+    const selectedJunctionIds = new Set([
+      ...supplementalSelection.junctionIds,
+      ...(selectedEndpoint?.endpoint.kind === "junction"
+        ? [selectedEndpoint.endpoint.junctionId]
+        : []),
+    ]);
+    const hasMixedSelection =
+      selectedRouteIds.size > 0 ||
+      selectedAnnotationIds.size > 0 ||
+      selectedDraftingIds.size > 0 ||
+      selectedJunctionIds.size > 0;
+    if (hasMixedSelection) {
+      const lockedDrafting = (document.drafting?.objects ?? []).find(
+        (object) => selectedDraftingIds.has(object.id) && object.locked,
+      );
+      if (lockedDrafting) {
+        setStatus(`Drafting object ${lockedDrafting.id} is locked`);
+        return;
+      }
+      for (const junctionId of selectedJunctionIds) {
+        for (const route of document.routes) {
+          if (
+            (route.from.kind === "junction" &&
+              route.from.junctionId === junctionId) ||
+            (route.to.kind === "junction" && route.to.junctionId === junctionId)
+          ) {
+            selectedRouteIds.add(route.id);
+          }
+        }
+      }
+      transactionCounter.current += 1;
+      try {
+        const instanceEdits =
+          selectedIds.length > 0
+            ? proposeConnectedInstanceDeletion(
+                document,
+                resolver,
+                selectedIds,
+                transactionCounter.current,
+              )
+            : [];
+        const result = transact([
+          ...instanceEdits,
+          ...[...selectedRouteIds].map((routeId): SchematicEdit => ({
+            kind: "make_flightline",
+            routeId,
+          })),
+          ...[...selectedJunctionIds].map((junctionId): SchematicEdit => ({
+            kind: "remove_junction",
+            junctionId,
+          })),
+          ...[...selectedAnnotationIds].map((annotationId): SchematicEdit => ({
+            kind: "remove_annotation",
+            annotationId,
+          })),
+          ...[...selectedDraftingIds].map((objectId): SchematicEdit => ({
+            kind: "remove_drafting_object",
+            objectId,
+          })),
+        ]);
+        if (result.ok) {
+          setSelectedIds([]);
+          clearSupplementalSelection();
+          setSelectedRouteId(null);
+          setSelectedAnnotationId(null);
+          setSelectedDraftingId(null);
+          setSelectedEndpoint(null);
+          setStatus("Deleted selected schematic objects");
+        }
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Delete failed");
+      }
+      return;
+    }
     if (selectedEndpoint?.endpoint.kind === "junction") {
       deleteSelectedJunction();
       return;
@@ -3270,6 +3505,12 @@ export function App({ project: initialProject }: AppProps) {
       } else if (!event.ctrlKey && key === "w") {
         event.preventDefault();
         activateTool("wire");
+      } else if (!event.ctrlKey && key === "a") {
+        event.preventDefault();
+        activateTool("arrow");
+      } else if (!event.ctrlKey && key === "l") {
+        event.preventDefault();
+        activateTool("construction-line");
       } else if (!event.ctrlKey && key === "g") {
         event.preventDefault();
         activateTool("guide");
@@ -3308,7 +3549,9 @@ export function App({ project: initialProject }: AppProps) {
   });
 
   return (
-    <main className="app-shell">
+    <main
+      className={propertiesVisible ? "app-shell properties-open" : "app-shell"}
+    >
       <header className="app-header">
         <div>
           <h1>Interactive Circuit Maker</h1>
@@ -3361,16 +3604,6 @@ export function App({ project: initialProject }: AppProps) {
               Enter
             </button>
           </div>
-          <button type="button" onClick={() => setPaletteOpen(true)}>
-            + Component
-          </button>
-          <button
-            type="button"
-            aria-pressed={tool === "wire"}
-            onClick={() => activateTool("wire")}
-          >
-            Wire
-          </button>
           <details className="command-menu" name="editor-command-menu">
             <summary>File</summary>
             <div className="command-popover">
@@ -3450,6 +3683,11 @@ export function App({ project: initialProject }: AppProps) {
                 disabled={
                   !selectedRouteId &&
                   !selectedAnnotationId &&
+                  !selectedDraftingId &&
+                  supplementalSelection.routeIds.length === 0 &&
+                  supplementalSelection.junctionIds.length === 0 &&
+                  supplementalSelection.annotationIds.length === 0 &&
+                  supplementalSelection.draftingIds.length === 0 &&
                   selectedIds.length === 0
                 }
               >
@@ -3538,24 +3776,8 @@ export function App({ project: initialProject }: AppProps) {
           <details className="command-menu" name="editor-command-menu">
             <summary>More</summary>
             <div className="command-popover">
-              <button type="button" onClick={addPlainText}>
-                Add text
-              </button>
               <button type="button" onClick={addCurrentArrow}>
                 Add current arrow
-              </button>
-              <span className="command-group-label">Markup</span>
-              <button
-                type="button"
-                onClick={() => activateTool("construction-line")}
-              >
-                Construction line tool (drag)
-              </button>
-              <button type="button" onClick={() => activateTool("arrow")}>
-                Arrow tool (drag)
-              </button>
-              <button type="button" onClick={addFloatingSymbol}>
-                Add floating symbol
               </button>
               <span className="command-group-label">Guides</span>
               <button type="button" onClick={() => addGuide("vertical")}>
@@ -3573,12 +3795,6 @@ export function App({ project: initialProject }: AppProps) {
               <button type="button" onClick={() => activateTool("guide")}>
                 Guide tool (G)
               </button>
-              <button type="button" onClick={loadRoutingDemo}>
-                Open routing example
-              </button>
-              <button type="button" onClick={loadVisualDemo}>
-                Open visual example
-              </button>
               <small>
                 Ctrl+C/V copy/paste · R rotate · W wire · G guide · F fit ·
                 Ctrl+wheel zoom · middle-drag pan · wire click=bend ·
@@ -3587,6 +3803,9 @@ export function App({ project: initialProject }: AppProps) {
             </div>
           </details>
         </nav>
+        <p className="editor-status" data-testid="status" aria-live="polite">
+          {status}
+        </p>
       </header>
       {paletteOpen ? (
         <section className="component-palette" aria-label="Component palette">
@@ -3633,8 +3852,101 @@ export function App({ project: initialProject }: AppProps) {
           ))}
         </section>
       ) : null}
-      <aside className="side-panel" aria-label="Project inspector">
-        <h2>Project</h2>
+      <aside className="library-panel" aria-label="Symbols and drawing tools">
+        <div className="library-heading">
+          <h2>Symbols &amp; Tools</h2>
+          <button
+            type="button"
+            aria-expanded={libraryOpen}
+            onClick={() => setLibraryOpen((current) => !current)}
+          >
+            {libraryOpen ? "Collapse" : "Expand"}
+          </button>
+        </div>
+        {libraryOpen ? (
+          <>
+            <input
+              value={paletteQuery}
+              onChange={(event) => setPaletteQuery(event.currentTarget.value)}
+              placeholder="Search components"
+              aria-label="Search components"
+            />
+            <details className="library-tools" open>
+              <summary>Draw</summary>
+              <div className="library-tool-grid" aria-label="Drawing tools">
+                <button
+                  type="button"
+                  aria-label="Wire tool"
+                  aria-pressed={tool === "wire"}
+                  onClick={() => activateTool("wire")}
+                >
+                  Wire <kbd>W</kbd>
+                </button>
+                <button type="button" onClick={addPlainText}>
+                  Text
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={tool === "arrow"}
+                  onClick={() => activateTool("arrow")}
+                >
+                  Arrow <kbd>A</kbd>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={tool === "construction-line"}
+                  onClick={() => activateTool("construction-line")}
+                >
+                  Construction line <kbd>L</kbd>
+                </button>
+              </div>
+            </details>
+            <details className="library-components" open>
+              <summary>Components</summary>
+              <div className="library-components-content">
+                {componentGroups.map((group) => (
+                  <details key={group.category} open>
+                    <summary>{group.category}</summary>
+                    <div className="library-component-grid">
+                      {group.symbols.map((symbol) => (
+                        <button
+                          type="button"
+                          key={symbol.id}
+                          data-testid={`library-component-${symbol.id}`}
+                          title={`Place ${symbol.name}`}
+                          onClick={() => {
+                            setPendingSymbolId(symbol.id);
+                            setTool("pointer");
+                            setStatus(`Place ${symbol.name} on the canvas`);
+                          }}
+                        >
+                          <SymbolThumbnail symbol={symbol} />
+                          <span>{symbol.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </details>
+          </>
+        ) : null}
+      </aside>
+      <aside
+        className="side-panel"
+        aria-label="Properties"
+        hidden={!propertiesVisible}
+      >
+        <div className="properties-heading">
+          <h2>Properties</h2>
+          <button
+            type="button"
+            aria-label="Collapse properties"
+            onClick={() => setPropertiesCollapsed(true)}
+          >
+            ×
+          </button>
+        </div>
         {unplaced.length > 0 ? <h3>Unplaced Instances</h3> : null}
         {unplaced.map((instance) => (
           <button
@@ -3823,9 +4135,7 @@ export function App({ project: initialProject }: AppProps) {
             }
           </dd>
           <dt>Status</dt>
-          <dd data-testid="status" aria-live="polite">
-            {status}
-          </dd>
+          <dd aria-live="polite">{status}</dd>
         </dl>
         <section aria-label="Import diagnostics" className="diagnostics">
           <h2>Import Diagnostics</h2>
@@ -4002,6 +4312,7 @@ export function App({ project: initialProject }: AppProps) {
                 data-testid={`route-hit-${route.id}`}
                 className={
                   selectedRouteId === route.id ||
+                  supplementalSelection.routeIds.includes(route.id) ||
                   selectedInternalRouteIds.has(route.id)
                     ? "route-hit selected"
                     : "route-hit"
@@ -4123,6 +4434,10 @@ export function App({ project: initialProject }: AppProps) {
                 data-testid={endpointTestId(candidate.endpoint)}
                 className={
                   tool === "wire" ||
+                  (candidate.endpoint.kind === "junction" &&
+                    supplementalSelection.junctionIds.includes(
+                      candidate.endpoint.junctionId,
+                    )) ||
                   (selectedEndpoint?.endpoint.kind === "junction" &&
                     candidate.endpoint.kind === "junction" &&
                     selectedEndpoint.endpoint.junctionId ===
@@ -4174,7 +4489,8 @@ export function App({ project: initialProject }: AppProps) {
                   key={`annotation-hit-${annotation.id}`}
                   data-testid={`annotation-hit-${annotation.id}`}
                   className={
-                    selectedAnnotationId === annotation.id
+                    selectedAnnotationId === annotation.id ||
+                    supplementalSelection.annotationIds.includes(annotation.id)
                       ? "annotation-hit selected"
                       : "annotation-hit"
                   }
@@ -4203,23 +4519,19 @@ export function App({ project: initialProject }: AppProps) {
                 resolver,
                 object,
               );
-              const isText = object.kind === "text";
-              const draggableText =
-                isText && object.anchor.kind === "free" && !object.locked;
+              const draggable = !object.locked && draftingDragOrigin(object);
               const drag =
                 draftingDragPreview?.objectId === object.id
                   ? draftingDragPreview
                   : null;
               const selected =
-                selectedDraftingId === object.id
+                selectedDraftingId === object.id ||
+                supplementalSelection.draftingIds.includes(object.id)
                   ? "annotation-hit selected"
                   : "annotation-hit";
               const onDown = (event: ReactPointerEvent<SVGElement>): void => {
-                if (draggableText) {
-                  beginDraftingDrag(
-                    event,
-                    object as Extract<DraftingObject, { kind: "text" }>,
-                  );
+                if (draggable) {
+                  beginDraftingDrag(event, object);
                 } else {
                   event.stopPropagation();
                   selectDraftingObject(object.id);

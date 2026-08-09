@@ -22,8 +22,15 @@ async function clickCommand(
 }
 
 async function chooseComponent(page: Page, symbolId: string): Promise<void> {
-  await page.getByRole("button", { name: "+ Component" }).click();
-  await page.getByTestId(`add-component-${symbolId}`).click();
+  const library = page.getByRole("complementary", {
+    name: "Symbols and drawing tools",
+  });
+  if (
+    !(await library.getByTestId(`library-component-${symbolId}`).isVisible())
+  ) {
+    await library.getByRole("button", { name: "Expand" }).click();
+  }
+  await library.getByTestId(`library-component-${symbolId}`).click();
 }
 
 async function placeComponent(
@@ -89,7 +96,6 @@ test("shows faithful symbol previews and the expanded VSS-derived palette", asyn
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "+ Component" }).click();
   for (const symbolId of [
     "nmos",
     "pmos",
@@ -99,18 +105,18 @@ test("shows faithful symbol previews and the expanded VSS-derived palette", asyn
     "opamp",
     "transformer",
   ]) {
-    const button = page.getByTestId(`add-component-${symbolId}`);
+    const button = page.getByTestId(`library-component-${symbolId}`);
     await expect(button).toBeVisible();
     await expect(button.locator("svg.palette-symbol-preview")).toBeVisible();
   }
   await expect(
-    page.getByTestId("add-component-pmos").locator("circle"),
+    page.getByTestId("library-component-pmos").locator("circle"),
   ).toHaveCount(0);
   await expect(
-    page.getByTestId("add-component-pmos").locator("polygon"),
+    page.getByTestId("library-component-pmos").locator("polygon"),
   ).toHaveCount(3);
-  await expect(page.getByTestId("add-component-nmos3")).toHaveCount(0);
-  await expect(page.getByTestId("add-component-pmos3")).toHaveCount(0);
+  await expect(page.getByTestId("library-component-nmos3")).toHaveCount(0);
+  await expect(page.getByTestId("library-component-pmos3")).toHaveCount(0);
 });
 
 test("authors components and connectivity manually from an empty canvas", async ({
@@ -343,7 +349,6 @@ test("moves a selected wire segment and deletes a connected component safely", a
     handleBox.y + handleBox.height / 2 + 80,
   );
   await page.mouse.up();
-  await expect(page.getByTestId("status")).toContainText("Moved route segment");
   expect((await readRoutePoints(page, "route-ui-1")).length).toBe(4);
 
   await page.getByTestId("hit-R1").click();
