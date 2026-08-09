@@ -2818,8 +2818,8 @@ Editing System work.
   Existing Annotation and DraftingObject persistence contracts remain separate.
 - Validation: workspace typecheck, editor production build, focused Vitest
   10/10, and `git diff --check` passed.
-- Commit status: ready for `refactor(editor): normalize visual selection
-  protocol`.
+- Commit status: committed as `940b854 refactor(editor): normalize visual
+  selection protocol`.
 
 ## 2026-08-09 - Text-entry and current-arrow repair
 
@@ -2834,5 +2834,18 @@ Editing System work.
   representations.
 - Validation: workspace typecheck, editor production build, focused Vitest
   10/10, and `git diff --check` passed.
-- Commit status: ready for `fix(editor): unify text entry and current arrow
-  controls`.
+- Commit status: committed as `9337c8d fix(editor): unify text entry and
+  current arrow controls`.
+
+## 2026-08-09 - Canonical instance-label authoring
+
+- Target: prevent newly placed visible components from using renderer-only
+  default labels that cannot enter the RichText editing protocol.
+- Changed areas: editor component placement transaction.
+- Result: visible new components, including independent voltage sources,
+  receive an attached semantic `instance-label` in the same transaction as the
+  instance. The default renderer label is legacy read compatibility only.
+- Validation: workspace typecheck, editor production build, focused editor
+  tests 6/6, and `git diff --check` passed.
+- Commit status: ready for `fix(editor): create canonical labels with placed
+  components`.

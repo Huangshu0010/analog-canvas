@@ -1984,17 +1984,25 @@ export function App({ project: initialProject }: AppProps) {
       id = `${prefix[symbolId] ?? "X"}${instanceCounter.current}`;
     }
     const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
+    const instance = {
+      id,
+      symbolId,
+      ...(symbolVariantId ? { symbolVariantId } : {}),
+      placement: { position, rotation: 0 as const, mirror: "none" as const },
+      properties: {},
+    };
+    // New authoring never relies on the renderer-only default label. The
+    // explicit annotation is the one editable text object for all ordinary
+    // components, including independent voltage sources.
+    const instanceLabel = defaultInstanceLabel(instance);
     const result = transact([
       {
         kind: "add_instance",
-        instance: {
-          id,
-          symbolId,
-          ...(symbolVariantId ? { symbolVariantId } : {}),
-          placement: { position, rotation: 0, mirror: "none" },
-          properties: {},
-        },
+        instance,
       },
+      ...(instanceLabel
+        ? [{ kind: "upsert_annotation" as const, annotation: instanceLabel }]
+        : []),
       ...(symbolId === "vdd"
         ? [
             {
