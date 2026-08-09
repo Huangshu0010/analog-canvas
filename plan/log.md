@@ -3240,6 +3240,20 @@ formatting`.
   changes; the resistor-specific test passes.
 - Commit status: ready for `fix(razavi): preserve resistor acute corners`.
 
+## 2026-08-09 - Razavi resistor proportion audit
+
+- Target: determine whether the resistor's body proportions need adjustment
+  against the sole Razavi raster authority.
+- Result: no measured centerline proportion changes were warranted. All eight
+  vertices, segment lengths, turn angles, and envelope matched after inverse
+  rotation/scale. The prior miter limit of 12 was instead enlarging the
+  outline; it was removed in favor of the profile default of four.
+- Validation: deterministic point/segment/angle audit, miter-limit raster
+  sweep, resistor fidelity (IoU 0.6613, soft IoU 0.5068, 100% edge shell),
+  catalog Vitest 17/17, Symbols/Render-SVG builds, and `git diff --check`
+  passed.
+- Commit status: ready for `fix(razavi): restore measured resistor outline`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next

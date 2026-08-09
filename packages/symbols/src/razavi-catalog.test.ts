@@ -399,7 +399,6 @@ describe("Razavi symbol catalog", () => {
         strokeRole: "normal",
         lineCap: "butt",
         lineJoin: "miter",
-        miterLimit: 12,
       },
     });
     expect(resistor.primitives).toHaveLength(1);

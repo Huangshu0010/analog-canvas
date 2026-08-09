@@ -92,20 +92,6 @@ describe("textbook monochrome SVG renderer", () => {
     expect(body).toContain('x2="-4.607544"');
   });
 
-  it("preserves the resistor's calibrated sharp miter limit", () => {
-    const resistor = builtInSymbols.find((symbol) => symbol.id === "resistor");
-    expect(resistor).toBeDefined();
-
-    const body = renderSymbolDefinitionBody(
-      resistor!,
-      [],
-      [],
-      razaviTextbookProfile,
-    );
-
-    expect(body).toContain('stroke-linejoin="miter"');
-    expect(body).toContain('stroke-miterlimit="12"');
-  });
 
   it("renders only physical branch Junctions as connection dots", () => {
     const project = createEmptyProject("project-junction-roles", "Roles");

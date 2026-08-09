@@ -43,8 +43,7 @@
       "style": {
         "strokeRole": "normal",
         "lineCap": "butt",
-        "lineJoin": "miter",
-        "miterLimit": 12
+        "lineJoin": "miter"
       }
     }
   ],
