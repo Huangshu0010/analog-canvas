@@ -3091,3 +3091,17 @@ formatting`.
 - Validation: focused editor shell Vitest 8/8, Editor production build, and
   `git diff --check` passed.
 - Commit status: ready for `feat(editor): snap and directly connect pins`.
+
+## 2026-08-09 - Fixed Razavi MOS display and compact selection actions
+
+- Target: remove non-Razavi four-terminal MOS controls from the manual editor
+  while preserving full SPICE bulk connectivity, and simplify current-arrow
+  actions.
+- Result: all canonical MOS style migrations select the three-terminal visual
+  variant. A B connection to a non-supply Net remains electrically intact and
+  produces a selected-MOS hidden-bulk warning rather than a four-terminal
+  drawing. The selection-shelf reverse-arrow action is replaced with `X`; the
+  in-place text-editor control remains as a discoverable alternative.
+- Validation: focused editor/catalog Vitest 24/24, Editor production build,
+  and `git diff --check` passed.
+- Commit status: ready for `feat(razavi): fix MOS display to textbook mode`.

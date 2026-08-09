@@ -448,38 +448,35 @@ export function defaultRazaviSymbolVariantId(
   return RAZAVI_DEFAULT_SYMBOL_VARIANTS[symbolId];
 }
 
-function isRazaviImplicitBulkNet(
+export function razaviHiddenBulkRisk(
   document: SchematicDocument,
   instanceId: string,
-) {
+): SchematicDocument["nets"][number] | undefined {
   const bulkNet = document.nets.find((net) =>
     net.terminals.some(
       (terminal) =>
         terminal.instanceId === instanceId && terminal.pinName === "B",
     ),
   );
-  if (!bulkNet) return true;
-  return [bulkNet.name, bulkNet.id]
+  if (!bulkNet) return undefined;
+  const isImplicitSupply = [bulkNet.name, bulkNet.id]
     .filter((name): name is string => Boolean(name))
     .map((name) => name.toLowerCase().replaceAll(/[^a-z0-9]/gu, ""))
     .some((name) => RAZAVI_IMPLICIT_BULK_NET_NAMES.has(name));
+  return isImplicitSupply ? undefined : bulkNet;
 }
 
 /**
- * A style application is also a controlled visual migration. Only an absent
- * bulk connection or an explicitly recognized supply connection is implicit;
- * independent body-bias remains visible as a four-terminal MOS.
+ * Razavi presentation is fixed to the three-terminal visual variant. The B
+ * terminal stays in electrical/SPICE data; non-supply B connections are
+ * surfaced to the user as hidden-bulk risks instead of changing the artwork.
  */
 export function razaviMosPresentationEdits(
   document: SchematicDocument,
 ): SchematicEdit[] {
   return document.instances.flatMap((instance) => {
     const symbolVariantId = defaultRazaviSymbolVariantId(instance.symbolId);
-    if (
-      !symbolVariantId ||
-      instance.symbolVariantId !== undefined ||
-      !isRazaviImplicitBulkNet(document, instance.id)
-    ) {
+    if (!symbolVariantId || instance.symbolVariantId === symbolVariantId) {
       return [];
     }
     return [
@@ -1046,6 +1043,9 @@ export function App({ project: initialProject }: AppProps) {
           (annotation) => annotation.id === textEditing.id,
         )
       : undefined;
+  const selectedHiddenBulkNet = selectedInstance
+    ? razaviHiddenBulkRisk(document, selectedInstance.id)
+    : undefined;
   const editingDrafting =
     textEditing?.owner === "drafting"
       ? document.drafting?.objects.find(
@@ -2769,41 +2769,6 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
-  function setSelectedMosTerminalPresentation(
-    presentation: "three-terminal" | "four-terminal",
-  ): void {
-    if (!selectedInstance) return;
-    const textbookVariantId = defaultRazaviSymbolVariantId(
-      selectedInstance.symbolId,
-    );
-    if (!textbookVariantId) return;
-    const symbolVariantId =
-      presentation === "three-terminal" ? textbookVariantId : null;
-    if (
-      (presentation === "three-terminal" &&
-        selectedInstance.symbolVariantId === textbookVariantId) ||
-      (presentation === "four-terminal" &&
-        selectedInstance.symbolVariantId === undefined)
-    ) {
-      return;
-    }
-    const result = transact([
-      {
-        kind: "set_instance_symbol",
-        instanceId: selectedInstance.id,
-        symbolId: selectedInstance.symbolId,
-        symbolVariantId,
-      },
-    ]);
-    if (result.ok) {
-      setStatus(
-        presentation === "three-terminal"
-          ? `Set ${selectedInstance.id} to Razavi three-terminal view`
-          : `Set ${selectedInstance.id} to four-terminal Bulk-visible view`,
-      );
-    }
-  }
-
   function applyNetLabel(): void {
     if (!selectedRoute) return;
     const net = document.nets.find(
@@ -3797,6 +3762,14 @@ export function App({ project: initialProject }: AppProps) {
             .filter((instance) => instance.placement)
             .map((instance) => instance.id),
         );
+      } else if (
+        !event.ctrlKey &&
+        key === "x" &&
+        selectedAnnotation &&
+        isRoutedMarker(selectedAnnotation)
+      ) {
+        event.preventDefault();
+        reverseSelectedCurrentArrow();
       } else if (!event.ctrlKey && key === "r") {
         event.preventDefault();
         rotateSelected();
@@ -4283,40 +4256,17 @@ export function App({ project: initialProject }: AppProps) {
                 Place {port.name}
               </button>
             ))}
-            {selectedInstance ? (
+            {selectedInstance && selectedHiddenBulkNet ? (
               <section
                 className="context-actions"
-                aria-label="Instance presentation"
+                aria-label="Hidden MOS bulk warning"
               >
-                <h2>Instance</h2>
-                {defaultRazaviSymbolVariantId(selectedInstance.symbolId) ? (
-                  <fieldset className="mos-terminal-presentation">
-                    <legend>MOS terminal view</legend>
-                    <button
-                      type="button"
-                      aria-pressed={
-                        selectedInstance.symbolVariantId ===
-                        "textbook-3terminal"
-                      }
-                      onClick={() =>
-                        setSelectedMosTerminalPresentation("three-terminal")
-                      }
-                    >
-                      Textbook 3-terminal
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={
-                        selectedInstance.symbolVariantId === undefined
-                      }
-                      onClick={() =>
-                        setSelectedMosTerminalPresentation("four-terminal")
-                      }
-                    >
-                      Show Bulk (4-terminal)
-                    </button>
-                  </fieldset>
-                ) : null}
+                <h2>Hidden bulk warning</h2>
+                <p>
+                  {selectedInstance.id}.B is electrically connected to{" "}
+                  {selectedHiddenBulkNet.name ?? selectedHiddenBulkNet.id}, but
+                  Razavi MOS stays in three-terminal display.
+                </p>
               </section>
             ) : null}
             {selectedRouteId ? (
@@ -4341,17 +4291,6 @@ export function App({ project: initialProject }: AppProps) {
                 </button>
                 <button type="button" onClick={removeSelectedRouteGeometry}>
                   Remove route geometry
-                </button>
-              </section>
-            ) : null}
-            {selectedAnnotation && isRoutedMarker(selectedAnnotation) ? (
-              <section
-                className="context-actions"
-                aria-label="Current arrow actions"
-              >
-                <h2>Current arrow</h2>
-                <button type="button" onClick={reverseSelectedCurrentArrow}>
-                  Reverse arrow
                 </button>
               </section>
             ) : null}

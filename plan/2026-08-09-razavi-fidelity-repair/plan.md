@@ -50,6 +50,7 @@ fidelity harness, raster authority, or MOS catalog assets.
   only if rendering cannot express the measured contract through existing DSL
 - `apps/editor/src/App.tsx` and focused editor tests for endpoint hit radius and
   direct-pin snap/connect behavior during a component drag
+- `docs/user/getting-started.md` for the current-arrow reverse shortcut
 - `plan/log.md` for this target's factual completion record
 
 ## Read-Only Files
@@ -120,6 +121,14 @@ fidelity harness, raster authority, or MOS catalog assets.
   and adds a direct-pin snap that emits a wire-free connection only when the
   endpoints are unconnected or already share a Net. Different Nets remain
   unsnapped and are never silently shorted.
+- Razavi MOS presentation is fixed to the three-terminal visual variant. The
+  electrical B terminal remains in SPICE/Net data. The selection shelf no
+  longer exposes a four-terminal toggle; a selected MOS whose B is on a
+  non-supply Net instead shows a persistent hidden-bulk warning. Current-arrow
+  reversal moves from the shelf to the `X` shortcut (with the existing text
+  editor control retained for discoverability).
+- Validation completed: focused editor and catalog Vitest (24 tests), Editor
+  production build, and `git diff --check`.
 - The earlier four-label crop favored Arial only under the prior crop set and
   led to an incorrect 15% global size increase. The new supplied typography
   reference selects DejaVu Sans bold italic at 0.6957 and exposes the AST

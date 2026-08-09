@@ -44,8 +44,9 @@ Document for palette-first manual authoring.
   electrical Net label; assigning the same name to another Net explicitly
   connects those Nets. Use **More / Add text** for non-electrical notes. Label
   handles may be dragged near their owner, while plain text moves freely.
-- Press `R` to rotate, `F` to fit, `Ctrl+Z` to undo, and `Ctrl+Y` or
-  `Ctrl+Shift+Z` to redo. Shortcuts do not fire while typing in a field.
+- Press `R` to rotate, `F` to fit, `X` to reverse a selected current arrow,
+  `Ctrl+Z` to undo, and `Ctrl+Y` or `Ctrl+Shift+Z` to redo. Shortcuts do not
+  fire while typing in a field.
 - Use `Ctrl`+mouse wheel to zoom around the cursor and middle-button drag to
   pan. View changes do not increment the Document revision.
 - Human UI and Agent transactions use the same typed Edit Engine operations and

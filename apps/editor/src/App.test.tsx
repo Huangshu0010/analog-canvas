@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   App,
   defaultRazaviSymbolVariantId,
+  razaviHiddenBulkRisk,
   razaviMosPresentationEdits,
 } from "./App";
 import { createDemoProject } from "./demo-project";
@@ -22,7 +23,7 @@ describe("editor shell", () => {
     expect(defaultRazaviSymbolVariantId("resistor")).toBeUndefined();
   });
 
-  it("migrates only implicit-bulk MOS into the Razavi textbook view", () => {
+  it("fixes every canonical MOS to Razavi three-terminal display", () => {
     const document = createEmptyProject("razavi-migration", "Razavi")
       .documents[0]!;
     document.instances.push(
@@ -75,7 +76,18 @@ describe("editor shell", () => {
         symbolId: "pmos",
         symbolVariantId: "textbook-3terminal",
       },
+      {
+        kind: "set_instance_symbol",
+        instanceId: "MbodyBias",
+        symbolId: "nmos",
+        symbolVariantId: "textbook-3terminal",
+      },
     ]);
+    expect(razaviHiddenBulkRisk(document, "Mimplicit")).toBeUndefined();
+    expect(razaviHiddenBulkRisk(document, "Msupply")).toBeUndefined();
+    expect(razaviHiddenBulkRisk(document, "MbodyBias")?.id).toBe(
+      "net-body-bias",
+    );
   });
 
   it("renders an empty project without owning model state", () => {
