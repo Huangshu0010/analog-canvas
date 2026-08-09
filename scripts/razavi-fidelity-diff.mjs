@@ -8,7 +8,7 @@
 // Usage:
 //   node scripts/razavi-fidelity-diff.mjs [device...] [--threshold 160] [--out dir]
 //
-//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | ground | resistor
+//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | ground | resistor | capacitor-vertical | capacitor-horizontal
 //           (default: all raster-owned devices)
 //
 // This tool is read-only: it never edits source configs. Use its report to
@@ -70,6 +70,18 @@ const DEVICE_GEOMETRY = {
     key: "resistor",
     useVariant: false,
   },
+  "capacitor-vertical": {
+    file: "capacitor-geometry.json",
+    key: "capacitor-vertical",
+    symbolId: "capacitor",
+    useVariant: false,
+  },
+  "capacitor-horizontal": {
+    file: "capacitor-geometry.json",
+    key: "capacitor-horizontal",
+    symbolId: "capacitor",
+    useVariant: false,
+  },
 };
 
 const ALL_DEVICES = Object.keys(DEVICE_GEOMETRY);
@@ -110,7 +122,14 @@ console.log(`  out:       ${resolve(outDir)}`);
 console.log(`  devices:   ${targets.join(", ")}`);
 console.log("");
 
-const referenceRaster = await loadReferenceRaster(referencePath);
+const referenceRasters = new Map();
+async function referenceForGeometry(geometry) {
+  const path = resolve(referenceRoot, geometry.assetPath ?? manifest.assetPath);
+  if (!referenceRasters.has(path)) {
+    referenceRasters.set(path, await loadReferenceRaster(path));
+  }
+  return referenceRasters.get(path);
+}
 
 await mkdir(outDir, { recursive: true });
 
@@ -128,7 +147,8 @@ for (const deviceId of targets) {
   // The symbol definition id: nmos4/pmos4 map to the 4-terminal nmos/pmos
   // symbol; the 3-terminal default (nmos/pmos with useVariant) also resolves
   // to the same nmos/pmos definition but applies its textbook-3terminal variant.
-  const definitionId = deviceId.replace(/^([np])mos4$/, "$1mos");
+  const definitionId =
+    meta.symbolId ?? deviceId.replace(/^([np])mos4$/, "$1mos");
   const definition = getRazaviCatalogSymbol(definitionId);
   if (!definition) {
     console.error(`No symbol definition for ${deviceId} (→ ${definitionId})`);
@@ -145,7 +165,11 @@ for (const deviceId of targets) {
     window: measurement.cropWindowPx,
   };
 
-  const report = await compareDevice(spec, referenceRaster, definition);
+  const report = await compareDevice(
+    spec,
+    await referenceForGeometry(geometry),
+    definition,
+  );
   reports.push(report);
 
   // Write per-device rasters.

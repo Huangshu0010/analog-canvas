@@ -18,7 +18,7 @@
   "passiveGeometryPath": "passive-geometry.json",
   "passiveGeometrySha256": "ebdbbcd9641c4a11aac4934eddf9c44b6865e69aa79d159c2d4c7db90082ff15",
   "capacitorGeometryPath": "capacitor-geometry.json",
-  "capacitorGeometrySha256": "5d33e0fdeb6e348fc339021b6621509f8b97b20c7fbb56869bcad3490ab16da6",
+  "capacitorGeometrySha256": "9137e7a492c6a5e66ae0476618942f099899260a09e80f47b3d5ebe57c97cf6a",
   "pixels": {
     "width": 1204,
     "height": 794

@@ -2632,3 +2632,19 @@ Editing System work.
 - Validation: image and geometry SHA-256 links matched manifest values, both
   evidence IDs were present, JSON parsed, and `git diff --check` passed.
 - Commit status: ready for `docs(razavi): archive capacitor reference evidence`.
+## 2026-08-09 - Razavi capacitor dual-orientation calibration
+
+- Target: calibrate the capacitor using archived C1 vertical and C2 horizontal
+  reference evidence.
+- Changed areas: registered both supplemental-raster targets in the fidelity
+  CLI and corrected their origin anchors. The harness now reads a target's own
+  reference asset rather than assuming every target belongs to the six-panel
+  PNG.
+- Evidence: C1 improved `0.3037/0.2116 -> 0.5860/0.6240`; C2 improved
+  `0.4732/0.3510 -> 0.6982/0.6085`. A shorter normal-stroke capacitor was
+  tested and rejected because it worsened both-orientation evidence; no
+  capacitor asset change remains.
+- Validation: Symbols/Derived/Render-SVG builds, catalog generation and stale
+  check, focused tests 17/17, both pixel reports, and `git diff --check`
+  passed.
+- Commit status: ready for `test(razavi): add capacitor reference calibration`.
