@@ -48,6 +48,8 @@ fidelity harness, raster authority, or MOS catalog assets.
   catalog field must be represented in its public generated-entry contract
 - `packages/render-svg/src/{render.ts,schematic-text.ts}` and focused tests,
   only if rendering cannot express the measured contract through existing DSL
+- `apps/editor/src/App.tsx` and focused editor tests for endpoint hit radius and
+  direct-pin snap/connect behavior during a component drag
 - `plan/log.md` for this target's factual completion record
 
 ## Read-Only Files
@@ -112,6 +114,12 @@ fidelity harness, raster authority, or MOS catalog assets.
   electrical lead x-coordinate. It must not become the polyline elbow. The
   generator now uses the exact D/S lead `from` and `to` points as the shared
   90-degree corner; the support begins at the measured arrow tail only.
+- Direct placement currently changes only geometry: coincident pins remain
+  electrically floating because no `connect_endpoints` edit is emitted. This
+  target reduces the transparent endpoint hit radius from 8 to 4 logical units
+  and adds a direct-pin snap that emits a wire-free connection only when the
+  endpoints are unconnected or already share a Net. Different Nets remain
+  unsnapped and are never silently shorted.
 - The earlier four-label crop favored Arial only under the prior crop set and
   led to an incorrect 15% global size increase. The new supplied typography
   reference selects DejaVu Sans bold italic at 0.6957 and exposes the AST

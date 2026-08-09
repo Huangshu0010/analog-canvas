@@ -3078,3 +3078,16 @@ formatting`.
 - Validation: regenerated MOS assets/catalog, focused catalog Vitest 16/16,
   Symbols build, Editor production build, and `git diff --check` passed.
 - Commit status: ready for `fix(razavi): restore MOS arrow elbow`.
+
+## 2026-08-09 - Compact endpoint hit testing and direct pin connection
+
+- Target: prevent oversized endpoint hit areas from blocking manual routing and
+  make visually adjacent component pins electrically meaningful.
+- Result: endpoint hit testing and direct-pin snapping share a four-logical-unit
+  radius. A component drag snaps a visible pin to a stationary visible endpoint
+  and commits a wire-free `connect_endpoints` edit. The operation is limited to
+  unconnected endpoints or endpoints already on the same Net; different Nets
+  are not auto-shorted.
+- Validation: focused editor shell Vitest 8/8, Editor production build, and
+  `git diff --check` passed.
+- Commit status: ready for `feat(editor): snap and directly connect pins`.

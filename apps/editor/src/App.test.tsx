@@ -102,6 +102,23 @@ describe("editor shell", () => {
     expect(markup).toContain('data-testid="default-label-hit-M1"');
   });
 
+  it("uses the compact four-unit endpoint hit target", () => {
+    const project = createEmptyProject("endpoint-hit", "Endpoint Hit");
+    project.documents[0]!.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: {
+        position: { x: 160, y: 160 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+
+    const markup = renderToStaticMarkup(<App project={project} />);
+    expect(markup).toMatch(/data-testid="terminal-M1-D"[^>]*r="4"/u);
+  });
+
   it("accepts a voltage source and its canonical label in one transaction", () => {
     const result = EditTransactionSchema.safeParse({
       transactionId: "place-voltage-source",

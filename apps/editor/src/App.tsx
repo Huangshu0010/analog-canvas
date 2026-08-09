@@ -85,6 +85,7 @@ const RECOVERY_KEY = "icm.recovery.v1";
 // only if real measurement shows it is too coarse. See recovery-scheduler.ts.
 const RECOVERY_DELAY_MS = 400;
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
+const DIRECT_PIN_SNAP_RADIUS = 4;
 
 interface DragPreview {
   instanceIds: string[];
@@ -751,6 +752,89 @@ export function App({ project: initialProject }: AppProps) {
         polyline: NonNullable<ReturnType<typeof routePolyline>>;
       } => candidate.polyline !== null,
     );
+
+  function directPinSnap(
+    moves: readonly { instanceId: string; position: Point }[],
+  ):
+    | {
+        moves: { instanceId: string; position: Point }[];
+        from: WireSource;
+        to: WireSource;
+      }
+    | undefined {
+    const moveById = new Map(moves.map((move) => [move.instanceId, move]));
+    const movingEndpoints = document.instances.flatMap((instance) => {
+      const move = moveById.get(instance.id);
+      if (!move || !instance.placement) return [];
+      const resolved = resolver.resolve(
+        instance.symbolId,
+        instance.symbolVariantId,
+      );
+      if (!resolved) return [];
+      const placement = { ...instance.placement, position: move.position };
+      return resolved.definition.pins
+        .filter((pin) =>
+          isVisibleEndpoint(document, resolver, {
+            kind: "terminal",
+            instanceId: instance.id,
+            pinName: pin.name,
+          }),
+        )
+        .map(
+          (pin): WireSource => ({
+            endpoint: {
+              kind: "terminal",
+              instanceId: instance.id,
+              pinName: pin.name,
+            },
+            netId: endpointNetId(document, {
+              kind: "terminal",
+              instanceId: instance.id,
+              pinName: pin.name,
+            }),
+            point: transformPoint(pin.at, move.position, placement),
+            preferredAxis: transformedPinAxis(pin.direction, placement.rotation),
+            preludeEdits: [],
+          }),
+        );
+    });
+    const targets = visibleEndpoints.filter(
+      (candidate) =>
+        candidate.endpoint.kind !== "terminal" ||
+        !moveById.has(candidate.endpoint.instanceId),
+    );
+    const candidates = movingEndpoints.flatMap((from) =>
+      targets.flatMap((to) => {
+        if (
+          (from.netId && to.netId && from.netId !== to.netId) ||
+          endpointKey(from.endpoint) === endpointKey(to.endpoint)
+        ) {
+          return [];
+        }
+        const distanceSquared =
+          (from.point.x - to.point.x) ** 2 + (from.point.y - to.point.y) ** 2;
+        return distanceSquared <= DIRECT_PIN_SNAP_RADIUS ** 2
+          ? [{ from, to, distanceSquared }]
+          : [];
+      }),
+    );
+    const closest = candidates.sort(
+      (left, right) => left.distanceSquared - right.distanceSquared,
+    )[0];
+    if (!closest) return undefined;
+    const delta = {
+      x: closest.to.point.x - closest.from.point.x,
+      y: closest.to.point.y - closest.from.point.y,
+    };
+    return {
+      moves: moves.map((move) => ({
+        ...move,
+        position: { x: move.position.x + delta.x, y: move.position.y + delta.y },
+      })),
+      from: closest.from,
+      to: closest.to,
+    };
+  }
   function attachmentAtPoint(
     candidate: Point,
     routeId?: string,
@@ -2145,15 +2229,30 @@ export function App({ project: initialProject }: AppProps) {
       event.clientY,
       event.currentTarget.ownerSVGElement!,
     );
-    if (
-      position.x !== dragPreview.pointerStart.x ||
-      position.y !== dragPreview.pointerStart.y
-    ) {
+    const delta = {
+      x: position.x - dragPreview.pointerStart.x,
+      y: position.y - dragPreview.pointerStart.y,
+    };
+    const moves = dragPreview.instanceIds.map((instanceId) => {
+      const original = dragPreview.originalPositions[instanceId]!;
+      return {
+        instanceId,
+        position: { x: original.x + delta.x, y: original.y + delta.y },
+      };
+    });
+    const directSnap = directPinSnap(moves);
+    const previewPosition = directSnap
+      ? {
+          x: position.x + directSnap.moves[0]!.position.x - moves[0]!.position.x,
+          y: position.y + directSnap.moves[0]!.position.y - moves[0]!.position.y,
+        }
+      : position;
+    if (delta.x !== 0 || delta.y !== 0) {
       suppressInstanceClick.current = true;
     }
     setDragPreview({
       ...dragPreview,
-      position,
+      position: previewPosition,
     });
   }
 
@@ -2167,19 +2266,28 @@ export function App({ project: initialProject }: AppProps) {
       event.clientY,
       event.currentTarget.ownerSVGElement!,
     );
-    const delta = {
+    const rawDelta = {
       x: position.x - dragPreview.pointerStart.x,
       y: position.y - dragPreview.pointerStart.y,
     };
+    const unsnappedMoves = dragPreview.instanceIds.map((instanceId) => {
+      const original = dragPreview.originalPositions[instanceId]!;
+      return {
+        instanceId,
+        position: {
+          x: original.x + rawDelta.x,
+          y: original.y + rawDelta.y,
+        },
+      };
+    });
+    const directSnap = directPinSnap(unsnappedMoves);
+    const moves = directSnap?.moves ?? unsnappedMoves;
+    const delta = {
+      x: moves[0]!.position.x - dragPreview.originalPositions[moves[0]!.instanceId]!.x,
+      y: moves[0]!.position.y - dragPreview.originalPositions[moves[0]!.instanceId]!.y,
+    };
     if (delta.x !== 0 || delta.y !== 0) {
       try {
-        const moves = dragPreview.instanceIds.map((instanceId) => {
-          const original = dragPreview.originalPositions[instanceId]!;
-          return {
-            instanceId,
-            position: { x: original.x + delta.x, y: original.y + delta.y },
-          };
-        });
         const groupMove = proposeGroupMove(document, resolver, moves);
         const stretchEdits: SchematicEdit[] = groupMove.routes.map(
           (proposal) => {
@@ -2197,7 +2305,7 @@ export function App({ project: initialProject }: AppProps) {
             };
           },
         );
-        transact([
+        const result = transact([
           ...moves.map((move): SchematicEdit => ({
             kind: "move_instance",
             ...move,
@@ -2220,7 +2328,22 @@ export function App({ project: initialProject }: AppProps) {
                 ]
               : [];
           }),
+          ...(directSnap
+            ? [
+                {
+                  kind: "connect_endpoints" as const,
+                  from: directSnap.from.endpoint,
+                  to: directSnap.to.endpoint,
+                  ...(!directSnap.from.netId && !directSnap.to.netId
+                    ? { newNetId: `net-ui-${nextRoutingSuffix()}` }
+                    : {}),
+                },
+              ]
+            : []),
         ]);
+        if (result.ok && directSnap) {
+          setStatus("Snapped pin endpoints and connected them without a wire");
+        }
       } catch (error) {
         setStatus(
           error instanceof Error ? error.message : "Local stretch failed",
@@ -4664,7 +4787,7 @@ export function App({ project: initialProject }: AppProps) {
                 }
                 cx={candidate.point.x}
                 cy={candidate.point.y}
-                r="8"
+                r={DIRECT_PIN_SNAP_RADIUS}
                 onClick={(event) => event.stopPropagation()}
                 onContextMenu={(event) => {
                   event.preventDefault();
