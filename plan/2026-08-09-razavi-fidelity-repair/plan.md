@@ -115,6 +115,10 @@ fidelity harness, raster authority, or MOS catalog assets.
   MOS generator now closes channel-to-gate and channel-to-D/S seams by one
   reference pixel under adjoining opaque/stroked geometry. This is not a pin
   move or an externally visible channel-length increase.
+- Human review identified insufficient vertical separation between base glyphs
+  and subscripts. The shared semantic typography token moves subscripts from
+  `0.28em` to `0.36em` downward; this affects every parsed math label without
+  introducing symbol-local text geometry.
 
 ### 1. Establish the common render-scale, then fit the wire baseline
 
