@@ -42,6 +42,7 @@ import type {
   RouteAnnotationAttachment,
   RouteEndpoint,
   SchematicDocument,
+  VisualAnchor,
 } from "@icm/model";
 import {
   buildSvgScene,
@@ -50,6 +51,7 @@ import {
   schematicTextDocument,
   schematicTextFontSize,
 } from "@icm/render-svg";
+import type { SchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
 import {
@@ -86,6 +88,10 @@ const RECOVERY_KEY = "icm.recovery.v1";
 const RECOVERY_DELAY_MS = 400;
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 const DIRECT_PIN_SNAP_RADIUS = 4;
+// Drafting creation snap radius (logical units). Slightly more generous than
+// pin-snap so an arrow/construction-line endpoint finds a nearby pin/port/
+// junction without requiring pixel-perfect aiming.
+const DRAFTING_SNAP_RADIUS = 8;
 
 interface DragPreview {
   instanceIds: string[];
@@ -287,23 +293,86 @@ function transformedPinAxis(
     : localAxis;
 }
 
-function segmentAtPoint(points: readonly Point[], point: Point): number | null {
+interface RouteTap {
+  segmentIndex: number;
+  point: Point;
+  distanceSquared: number;
+}
+
+/**
+ * Resolve a pointer position to the nearest point on an orthogonal route.
+ *
+ * SVG gives the route a wide transparent hit stroke in screen pixels. The old
+ * code threw that tolerance away by demanding exact logical-coordinate
+ * equality after grid snapping, so a click that visibly hit a wire often could
+ * not make a junction. Keep the hit and topology layers consistent: project
+ * to the segment, retain the closest in-tolerance candidate, and use that
+ * exact projected point for a subsequent route split.
+ */
+function resolveRouteTap(
+  points: readonly Point[],
+  pointer: Point,
+  tolerance: number,
+): RouteTap | null {
+  // A geometric bend is a virtual snap target. Prefer it before projecting
+  // onto either of its two segments, otherwise an off-axis click near a corner
+  // becomes a point beside the bend and yields a visibly skewed branch.
+  let nearestVertex: RouteTap | null = null;
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const point = points[index]!;
+    const dx = pointer.x - point.x;
+    const dy = pointer.y - point.y;
+    const distanceSquared = dx * dx + dy * dy;
+    if (distanceSquared > tolerance * tolerance) continue;
+    if (
+      !nearestVertex ||
+      distanceSquared < nearestVertex.distanceSquared ||
+      (distanceSquared === nearestVertex.distanceSquared &&
+        index - 1 < nearestVertex.segmentIndex)
+    ) {
+      nearestVertex = {
+        segmentIndex: index - 1,
+        point: { ...point },
+        distanceSquared,
+      };
+    }
+  }
+  if (nearestVertex) return nearestVertex;
+
+  let best: RouteTap | null = null;
   for (let index = 0; index < points.length - 1; index += 1) {
     const from = points[index]!;
     const to = points[index + 1]!;
-    const onVertical =
-      from.x === to.x &&
-      point.x === from.x &&
-      point.y >= Math.min(from.y, to.y) &&
-      point.y <= Math.max(from.y, to.y);
-    const onHorizontal =
-      from.y === to.y &&
-      point.y === from.y &&
-      point.x >= Math.min(from.x, to.x) &&
-      point.x <= Math.max(from.x, to.x);
-    if (onVertical || onHorizontal) return index;
+    if (from.x !== to.x && from.y !== to.y) continue;
+    const point =
+      from.x === to.x
+        ? {
+            x: from.x,
+            y: Math.max(
+              Math.min(pointer.y, Math.max(from.y, to.y)),
+              Math.min(from.y, to.y),
+            ),
+          }
+        : {
+            x: Math.max(
+              Math.min(pointer.x, Math.max(from.x, to.x)),
+              Math.min(from.x, to.x),
+            ),
+            y: from.y,
+          };
+    const dx = pointer.x - point.x;
+    const dy = pointer.y - point.y;
+    const distanceSquared = dx * dx + dy * dy;
+    if (distanceSquared > tolerance * tolerance) continue;
+    if (
+      !best ||
+      distanceSquared < best.distanceSquared ||
+      (distanceSquared === best.distanceSquared && index < best.segmentIndex)
+    ) {
+      best = { segmentIndex: index, point, distanceSquared };
+    }
   }
-  return null;
+  return best;
 }
 
 function endpointNetId(
@@ -544,6 +613,140 @@ function SymbolThumbnail({ symbol }: { symbol: SymbolDefinition }) {
   );
 }
 
+// Rotate a free drafting anchor 90°/−90° about a pivot. Non-free anchors (route
+// or object-attached) are returned unchanged: their position is derived from
+// the thing they attach to, so a free-rotation must not detach them. Only free
+// arrows/leaders created by the editor tools are freely rotatable this way.
+function rotateFreePoint(
+  anchor: Extract<VisualAnchor, { kind: "free" }>,
+  pivot: Point,
+  deltaDegrees: 90 | -90,
+): Extract<VisualAnchor, { kind: "free" }> {
+  const cos = deltaDegrees === 90 ? 0 : 0; // cos(±90°) = 0
+  const sin = deltaDegrees === 90 ? 1 : -1; // sin(90°)=1, sin(-90°)=-1
+  const dx = anchor.position.x - pivot.x;
+  const dy = anchor.position.y - pivot.y;
+  return {
+    ...anchor,
+    position: {
+      x: Math.round(pivot.x + dx * cos - dy * sin),
+      y: Math.round(pivot.y + dx * sin + dy * cos),
+    },
+  };
+}
+
+function centerOfBounds(bounds: Rect): Point {
+  return {
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2,
+  };
+}
+
+// Step a bounded scale value to the next allowed entry (up or down). Used by the
+// [/] and Shift+[/] shortcuts for stroke width and arrow-head size.
+function stepScale<T extends number>(
+  current: T,
+  steps: readonly T[],
+  increase: boolean,
+): T {
+  const index = steps.indexOf(current);
+  const next = increase ? index + 1 : index - 1;
+  const clamped = Math.max(0, Math.min(steps.length - 1, next < 0 ? 0 : next));
+  return steps[clamped]!;
+}
+
+// Two-phase drafting creation preview (editor overlay only, never exported).
+// Renders the start anchor, the accumulated path, the live hover end, an arrow
+// head preview for arrows, a snap marker, and a length/angle readout. Mirrors
+// the wire tool's snap-preview affordance.
+interface DraftingCreatePreviewProps {
+  tool: EditorTool;
+  start: Point;
+  waypoints: Point[];
+  hover: Point;
+  snap: Point | null;
+  styleProfile: SchematicStyleProfile;
+}
+
+function DraftingCreatePreview({
+  tool,
+  start,
+  waypoints,
+  hover,
+  snap,
+  styleProfile,
+}: DraftingCreatePreviewProps) {
+  const path = [start, ...waypoints, hover];
+  const dx = hover.x - start.x;
+  const dy = hover.y - start.y;
+  const length = Math.hypot(dx, dy);
+  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const showHead = tool === "arrow" && length > 1;
+  const head = styleProfile.annotations.arrowHeadLength;
+  const halfHeadWidth = styleProfile.annotations.arrowHeadWidth / 2;
+  const nx = length === 0 ? 0 : (-dy / length) * halfHeadWidth;
+  const ny = length === 0 ? 0 : (dx / length) * halfHeadWidth;
+  const baseX = length === 0 ? hover.x : hover.x - (dx / length) * head;
+  const baseY = length === 0 ? hover.y : hover.y - (dy / length) * head;
+  const labelX = start.x + dx / 2;
+  const labelY = start.y + dy / 2 - 8;
+  return (
+    <g data-testid="drafting-create-preview" pointerEvents="none">
+      <polyline
+        className="drafting-create-preview"
+        points={polylinePoints(path)}
+        fill="none"
+      />
+      {/* start anchor (filled) */}
+      <circle
+        className="drafting-create-anchor"
+        cx={start.x}
+        cy={start.y}
+        r="3"
+      />
+      {/* hover end (hollow) */}
+      <circle
+        className="drafting-create-anchor draft-create-anchor-end"
+        cx={hover.x}
+        cy={hover.y}
+        r="3"
+      />
+      {/* accumulated vertices */}
+      {waypoints.map((point, index) => (
+        <circle
+          key={`draft-preview-vx-${index}`}
+          className="drafting-create-anchor draft-create-anchor-vx"
+          cx={point.x}
+          cy={point.y}
+          r="2.5"
+        />
+      ))}
+      {showHead ? (
+        <polygon
+          className="drafting-create-head"
+          points={`${hover.x},${hover.y} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}`}
+        />
+      ) : null}
+      {snap ? (
+        <circle
+          className="drafting-create-snap"
+          cx={snap.x}
+          cy={snap.y}
+          r="6"
+        />
+      ) : null}
+      <text
+        className="drafting-create-readout"
+        x={labelX}
+        y={labelY}
+        textAnchor="middle"
+      >
+        {Math.round(length)} · {Math.round(angle)}°
+      </text>
+    </g>
+  );
+}
+
 export function App({ project: initialProject }: AppProps) {
   const [project, setProject] = useState(() =>
     CircuitProjectSchema.parse(
@@ -579,11 +782,17 @@ export function App({ project: initialProject }: AppProps) {
     useState<AnnotationDragPreview | null>(null);
   const [draftingDragPreview, setDraftingDragPreview] =
     useState<DraftingDragPreview | null>(null);
-  const [draftingCreatePreview, setDraftingCreatePreview] = useState<{
-    start: Point;
-    end: Point;
-    pointerId: number;
-  } | null>(null);
+  // Two-phase drafting creation state (mirrors the wire tool's
+  // wireSource / wirePreviewPoint / wireWaypoints model). The first click fixes
+  // the start (and a snap candidate), hover updates the preview, the next click
+  // commits one upsert_drafting_object transaction. Construction lines append a
+  // vertex per click; arrows commit on the second click. See commitDraftingCreate.
+  const [draftingSource, setDraftingSource] = useState<Point | null>(null);
+  const [draftingHover, setDraftingHover] = useState<Point | null>(null);
+  const [draftingWaypoints, setDraftingWaypoints] = useState<Point[]>([]);
+  const [draftingSnapPoint, setDraftingSnapPoint] = useState<Point | null>(
+    null,
+  );
   const [tool, setTool] = useState<EditorTool>("pointer");
   const [wireSource, setWireSource] = useState<WireSource | null>(null);
   const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
@@ -1676,16 +1885,23 @@ export function App({ project: initialProject }: AppProps) {
     )!;
     const suffix = nextRoutingSuffix();
     const junctionId = `junction-ui-${suffix}`;
+    // Route taps are persisted geometry. Snap the projected screen hit back to
+    // the document grid before splitRoute validates it, avoiding sub-pixel SVG
+    // transform residue at an otherwise exact corner.
+    const splitPoint = {
+      x: snap(point.x, document.presentation.grid),
+      y: snap(point.y, document.presentation.grid),
+    };
     return {
       endpoint: { kind: "junction", junctionId },
       netId: route.netId,
-      point,
+      point: splitPoint,
       preludeEdits: [
         {
           kind: "add_junction",
           junctionId,
           netId: route.netId,
-          position: point,
+          position: splitPoint,
           split: {
             routeId,
             firstRouteId: `${routeId}-a-${suffix}`,
@@ -1710,29 +1926,34 @@ export function App({ project: initialProject }: AppProps) {
       (candidate) => candidate.route.id === routeId,
     );
     if (!routeRecord) return;
-    const point = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
+    const svg = event.currentTarget.ownerSVGElement!;
+    const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
+    const tap = resolveRouteTap(
+      routeRecord.polyline.points,
+      pointer,
+      logicalRadiusForPixels(svg, 7),
     );
-    const segmentIndex = segmentAtPoint(routeRecord.polyline.points, point);
     if (tool === "pointer") {
       clearSupplementalSelection();
       setSelectedRouteId(routeId);
-      setSelectedRouteSegmentIndex(segmentIndex ?? 0);
+      setSelectedRouteSegmentIndex(tap?.segmentIndex ?? 0);
       setSelectedIds([]);
       setSelectedAnnotationId(null);
       setStatus(
-        `Selected route ${routeId}, segment ${(segmentIndex ?? 0) + 1}`,
+        `Selected route ${routeId}, segment ${(tap?.segmentIndex ?? 0) + 1}`,
       );
       return;
     }
-    if (segmentIndex === null) {
+    if (!tap) {
       setStatus("Wire must start or end inside a route segment");
       return;
     }
-    const overlappingTargets = routePolylines.filter(
-      (candidate) => segmentAtPoint(candidate.polyline.points, point) !== null,
+    const overlappingTargets = routePolylines.filter((candidate) =>
+      resolveRouteTap(
+        candidate.polyline.points,
+        pointer,
+        logicalRadiusForPixels(svg, 7),
+      ),
     );
     if (overlappingTargets.length > 1) {
       setStatus(
@@ -1740,10 +1961,10 @@ export function App({ project: initialProject }: AppProps) {
       );
       return;
     }
-    const anchor = routeAnchor(routeId, point, segmentIndex);
+    const anchor = routeAnchor(routeId, tap.point, tap.segmentIndex);
     if (!wireSource) {
       setWireSource(anchor);
-      setWirePreviewPoint(point);
+      setWirePreviewPoint(tap.point);
       setWireWaypoints([]);
       setStatus(`Wire source: route ${routeId}`);
     } else {
@@ -1758,7 +1979,45 @@ export function App({ project: initialProject }: AppProps) {
     ]);
     if (result.ok) {
       setSelectedRouteId(null);
-      setStatus(`Removed route geometry at revision ${result.revision}`);
+      setStatus(`Unrouted ${selectedRouteId}; electrical Net retained`);
+    }
+  }
+
+  function deleteSelectedRouteConnection(): void {
+    if (!selectedRouteId) return;
+    const route = document.routes.find(
+      (candidate) => candidate.id === selectedRouteId,
+    );
+    if (!route) return;
+    if (route.from.kind === "junction" || route.to.kind === "junction") {
+      setStatus(
+        "Cannot safely delete a branched route yet; use Unroute to retain the Net, or delete the selected endpoint connection",
+      );
+      return;
+    }
+    const attachedRouteCount = (endpoint: RouteEndpoint): number =>
+      document.routes.filter(
+        (candidate) =>
+          endpointKey(candidate.from) === endpointKey(endpoint) ||
+          endpointKey(candidate.to) === endpointKey(endpoint),
+      ).length;
+    if (
+      attachedRouteCount(route.from) !== 1 ||
+      attachedRouteCount(route.to) !== 1
+    ) {
+      setStatus(
+        "Cannot safely delete a shared route yet; use Unroute to retain the Net, or disconnect a selected endpoint",
+      );
+      return;
+    }
+    const result = transact([
+      { kind: "make_flightline", routeId: route.id },
+      { kind: "disconnect_endpoint", endpoint: route.from },
+      { kind: "disconnect_endpoint", endpoint: route.to },
+    ]);
+    if (result.ok) {
+      setSelectedRouteId(null);
+      setStatus(`Deleted electrical connection ${route.id}`);
     }
   }
 
@@ -2052,6 +2311,7 @@ export function App({ project: initialProject }: AppProps) {
     clientX: number,
     clientY: number,
     svg: SVGSVGElement,
+    snapToGrid = true,
   ): Point {
     const grid = document.presentation.grid;
     const matrix = svg.getScreenCTM();
@@ -2061,21 +2321,28 @@ export function App({ project: initialProject }: AppProps) {
       clientPoint.y = clientY;
       const localPoint = clientPoint.matrixTransform(matrix.inverse());
       return {
-        x: snap(localPoint.x, grid),
-        y: snap(localPoint.y, grid),
+        x: snapToGrid ? snap(localPoint.x, grid) : localPoint.x,
+        y: snapToGrid ? snap(localPoint.y, grid) : localPoint.y,
       };
     }
     const bounds = svg.getBoundingClientRect();
+    const x =
+      viewBox.x + ((clientX - bounds.left) / bounds.width) * viewBox.width;
+    const y =
+      viewBox.y + ((clientY - bounds.top) / bounds.height) * viewBox.height;
     return {
-      x: snap(
-        viewBox.x + ((clientX - bounds.left) / bounds.width) * viewBox.width,
-        grid,
-      ),
-      y: snap(
-        viewBox.y + ((clientY - bounds.top) / bounds.height) * viewBox.height,
-        grid,
-      ),
+      x: snapToGrid ? snap(x, grid) : x,
+      y: snapToGrid ? snap(y, grid) : y,
     };
+  }
+
+  function logicalRadiusForPixels(svg: SVGSVGElement, pixels: number): number {
+    const matrix = svg.getScreenCTM();
+    if (!matrix) return pixels;
+    const xScale = Math.hypot(matrix.a, matrix.b);
+    const yScale = Math.hypot(matrix.c, matrix.d);
+    const scale = (xScale + yScale) / 2;
+    return scale > 0 ? pixels / scale : pixels;
   }
 
   function handleDrop(event: DragEvent<SVGSVGElement>): void {
@@ -2371,21 +2638,74 @@ export function App({ project: initialProject }: AppProps) {
     setDragPreview(null);
   }
 
-  function rotateSelected(): void {
-    const edits = selectedIds.flatMap((id): SchematicEdit[] => {
+  function rotateSelected(deltaDegrees: 90 | -90 = 90): void {
+    const instanceEdits = selectedIds.flatMap((id): SchematicEdit[] => {
       const instance = document.instances.find(
         (candidate) => candidate.id === id,
       );
       if (!instance?.placement) return [];
+      const next =
+        (((instance.placement.rotation + deltaDegrees) % 360) + 360) % 360;
       return [
         {
           kind: "rotate_instance",
           instanceId: instance.id,
-          rotation: ((instance.placement.rotation + 90) % 360) as
-            0 | 90 | 180 | 270,
+          rotation: next as 0 | 90 | 180 | 270,
         },
       ];
     });
+    // Drafting rotation: R now also rotates a selected drafting object. An arrow
+    // pivots about its resolved center; a construction line pivots about the
+    // center of its bounds. Purely geometric — never changes electrical Nets.
+    const draftingEdits = visualSelection.draftingIds.flatMap(
+      (id): SchematicEdit[] => {
+        const object = document.drafting?.objects.find(
+          (candidate) => candidate.id === id,
+        );
+        if (!object || object.locked) return [];
+        const geometry = resolveDraftingObjectGeometry(
+          document,
+          resolver,
+          object,
+        );
+        if (object.kind === "arrow" && geometry.kind === "arrow") {
+          const pivot = geometry.center;
+          const from =
+            object.from.kind === "free"
+              ? rotateFreePoint(object.from, pivot, deltaDegrees)
+              : object.from;
+          const to =
+            object.to.kind === "free"
+              ? rotateFreePoint(object.to, pivot, deltaDegrees)
+              : object.to;
+          return [
+            {
+              kind: "upsert_drafting_object",
+              object: { ...object, from, to },
+            },
+          ];
+        }
+        if (object.kind === "construction-line") {
+          const pivot = centerOfBounds(geometry.bounds);
+          const points = object.points.map(
+            (point) =>
+              rotateFreePoint(
+                { kind: "free", position: point },
+                pivot,
+                deltaDegrees,
+              ).position,
+          );
+          return [
+            {
+              kind: "upsert_drafting_object",
+              object: { ...object, points },
+            },
+          ];
+        }
+        return [];
+      },
+    );
+    const edits = [...instanceEdits, ...draftingEdits];
     if (edits.length > 0) transact(edits);
   }
 
@@ -2622,6 +2942,211 @@ export function App({ project: initialProject }: AppProps) {
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", cancel);
+  }
+
+  // Drag a single endpoint (arrow from/to) or vertex (construction-line index).
+  // Mirrors beginDraftingDrag's session discipline (cancel on Escape, commit
+  // once on pointerup from the ref) but mutates only the named handle, leaving
+  // the rest of the object's geometry in place. The arrow head always rides the
+  // tip because the renderer derives it from `to`.
+  function beginDraftingHandleDrag(
+    event: ReactPointerEvent<SVGElement>,
+    object: DraftingObject,
+    handle: { kind: "from" | "to" } | { kind: "vertex"; index: number },
+  ): void {
+    if (event.button !== 0 || object.locked) return;
+    event.stopPropagation();
+    draftingDragSessionRef.current?.cancel();
+    const hitTarget = event.currentTarget;
+    hitTarget.setPointerCapture(event.pointerId);
+    const svg = hitTarget.ownerSVGElement!;
+    const start = pointFromClient(event.clientX, event.clientY, svg);
+    const originalObject = { ...object };
+    selectDraftingObject(object.id);
+
+    const applyHandle = (
+      target: DraftingObject,
+      point: Point,
+    ): DraftingObject => {
+      if (target.kind === "arrow" && handle.kind !== "vertex") {
+        const anchor = handle.kind === "from" ? target.from : target.to;
+        if (anchor.kind !== "free") return target;
+        const nextAnchor = { ...anchor, position: point };
+        return handle.kind === "from"
+          ? { ...target, from: nextAnchor }
+          : { ...target, to: nextAnchor };
+      }
+      if (target.kind === "construction-line" && handle.kind === "vertex") {
+        const points = target.points.slice();
+        points[handle.index] = point;
+        return { ...target, points };
+      }
+      return target;
+    };
+
+    let latestPoint: Point | null = null;
+
+    const move = (moveEvent: PointerEvent): void => {
+      const snapped = snapDraftingPoint(
+        pointFromClient(moveEvent.clientX, moveEvent.clientY, svg),
+        moveEvent.altKey,
+        moveEvent.shiftKey,
+      );
+      latestPoint = snapped.point;
+    };
+
+    const cancel = (): void => {
+      latestPoint = null;
+      draftingDragSessionRef.current = null;
+      if (hitTarget.hasPointerCapture(event.pointerId)) {
+        hitTarget.releasePointerCapture(event.pointerId);
+      }
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+    };
+
+    const up = (): void => {
+      const point = latestPoint;
+      latestPoint = null;
+      draftingDragSessionRef.current = null;
+      if (point) {
+        const latest = document.drafting?.objects.find(
+          (item) => item.id === object.id,
+        );
+        if (latest) {
+          const next = applyHandle(latest, point);
+          if (next !== latest) {
+            transact([{ kind: "upsert_drafting_object", object: next }]);
+          }
+        }
+      }
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+    };
+
+    draftingDragSessionRef.current = { cancel };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    // Suppress unused-warning for originalObject (kept for future preview).
+    void originalObject;
+  }
+
+  // Insert a vertex on a construction line at the clicked point, on the nearest
+  // segment. Commits one transaction. Used by the construction-line hit shape's
+  // double-click handler.
+  function insertConstructionVertex(
+    object: Extract<DraftingObject, { kind: "construction-line" }>,
+    point: Point,
+  ): void {
+    if (object.locked) return;
+    let bestIndex = object.points.length - 1;
+    let bestDistance = Infinity;
+    for (let index = 0; index < object.points.length - 1; index += 1) {
+      const from = object.points[index]!;
+      const to = object.points[index + 1]!;
+      const on = closestPointOnSegment(point, from, to);
+      const distance = (on.x - point.x) ** 2 + (on.y - point.y) ** 2;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index + 1;
+      }
+    }
+    const points = object.points.slice();
+    points.splice(bestIndex, 0, { x: point.x, y: point.y });
+    transact([
+      { kind: "upsert_drafting_object", object: { ...object, points } },
+    ]);
+    setStatus(`Inserted vertex ${bestIndex}`);
+  }
+
+  // Delete a vertex from a construction line by index; refuse below 2 vertices.
+  function deleteConstructionVertex(
+    object: Extract<DraftingObject, { kind: "construction-line" }>,
+    index: number,
+  ): void {
+    if (object.locked) return;
+    if (object.points.length <= 2) {
+      setStatus("A construction line needs at least two vertices");
+      return;
+    }
+    const points = object.points.filter(
+      (_, vertexIndex) => vertexIndex !== index,
+    );
+    transact([
+      { kind: "upsert_drafting_object", object: { ...object, points } },
+    ]);
+    setStatus(`Deleted vertex ${index}`);
+  }
+
+  // Apply a bounded style change to the selected drafting object(s). `patch` is
+  // merged into styleOverride (undefined keys clear that property). One
+  // upsert_drafting_object transaction per object. Applies to free arrows and
+  // construction lines; route current markers keep their own binding.
+  function setDraftingStyle(
+    patch: Partial<{
+      lineStyle: "solid" | "dashed" | "dotted";
+      strokeScale: 0.75 | 1 | 1.5 | 2;
+      arrowHead: "none" | "filled" | "open";
+      arrowHeadScale: 0.75 | 1 | 1.25 | 1.5;
+    }>,
+  ): void {
+    const ids = visualSelection.draftingIds;
+    if (ids.length === 0) return;
+    const edits: SchematicEdit[] = [];
+    for (const id of ids) {
+      const object = document.drafting?.objects.find(
+        (candidate) => candidate.id === id,
+      );
+      if (
+        !object ||
+        object.locked ||
+        (object.kind !== "arrow" && object.kind !== "construction-line")
+      ) {
+        continue;
+      }
+      const currentOverride = object.styleOverride ?? {};
+      const nextOverride = { ...currentOverride };
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === undefined) {
+          delete (nextOverride as Record<string, unknown>)[key];
+        } else {
+          (nextOverride as Record<string, unknown>)[key] = value;
+        }
+      }
+      edits.push({
+        kind: "upsert_drafting_object",
+        object: {
+          ...object,
+          styleOverride:
+            Object.keys(nextOverride).length > 0 ? nextOverride : undefined,
+        },
+      });
+    }
+    if (edits.length > 0) {
+      const result = transact(edits);
+      if (result.ok) setStatus("Updated drawing style");
+    } else if (ids.length > 0) {
+      setStatus("Drawing is locked; unlock it before editing its style");
+    }
+  }
+
+  function toggleDraftingLock(object: DraftingObject): void {
+    const result = transact([
+      {
+        kind: "upsert_drafting_object",
+        object: { ...object, locked: !object.locked },
+      },
+    ]);
+    if (result.ok) {
+      setStatus(
+        object.locked
+          ? "Drawing unlocked; it can now be edited or deleted"
+          : "Drawing locked; unlock it before editing or deleting",
+      );
+    }
   }
 
   function addPlainText(): void {
@@ -3130,6 +3655,36 @@ export function App({ project: initialProject }: AppProps) {
     if (result.ok) setStatus(`Current arrow points ${direction}`);
   }
 
+  // Step a route current marker's normal offset (perpendicular distance from
+  // its conductor) up or down. Keeps the marker bound to its route; purely a
+  // presentation change, no electrical effect.
+  function stepCurrentArrowOffset(increase: boolean): void {
+    if (!selectedAnnotation || !isRoutedMarker(selectedAnnotation)) return;
+    const attachment = effectiveRouteAttachment(selectedAnnotation);
+    if (!attachment) return;
+    const step = 4;
+    const next = attachment.normalOffset + (increase ? step : -step);
+    const anchor =
+      selectedAnnotation.kind === "route-marker" &&
+      selectedAnnotation.anchor?.kind === "route"
+        ? { ...selectedAnnotation.anchor, normalOffset: next }
+        : selectedAnnotation.anchor;
+    const routeAttachment = selectedAnnotation.routeAttachment
+      ? { ...selectedAnnotation.routeAttachment, normalOffset: next }
+      : undefined;
+    const result = transact([
+      {
+        kind: "upsert_annotation",
+        annotation: {
+          ...selectedAnnotation,
+          ...(anchor ? { anchor } : {}),
+          ...(routeAttachment ? { routeAttachment } : {}),
+        },
+      },
+    ]);
+    if (result.ok) setStatus(`Current arrow offset ${next}`);
+  }
+
   function alignFirstLayoutGroup(): void {
     const group = document.layoutGroups[0];
     if (!group) {
@@ -3319,6 +3874,11 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     if (tool === "wire") return;
+    // Arrow / Construction line use a two-phase click model (mirroring wire):
+    // click to set the start, hover to preview, click to commit. They bypass the
+    // pointer-capture gesture trio here; creation lives in the SVG onClick and
+    // continueCanvasGesture hover handling.
+    if (tool === "construction-line" || tool === "arrow") return;
     if (tool === "guide") {
       // ADR 0010: clicking with the Guide tool adds a vertical guide at the
       // click x (the toolbar offers horizontal/vertical and clear/lock
@@ -3340,17 +3900,6 @@ export function App({ project: initialProject }: AppProps) {
         setTool("pointer");
         setStatus(`Added guide ${id}`);
       }
-      return;
-    }
-    if (tool === "construction-line" || tool === "arrow") {
-      // P1: drag from the start point to the end point to create the object.
-      event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setDraftingCreatePreview({
-        start: point,
-        end: point,
-        pointerId: event.pointerId,
-      });
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -3383,8 +3932,14 @@ export function App({ project: initialProject }: AppProps) {
     if (boxPreview?.pointerId === event.pointerId) {
       setBoxPreview({ ...boxPreview, end: point });
     }
-    if (draftingCreatePreview?.pointerId === event.pointerId) {
-      setDraftingCreatePreview({ ...draftingCreatePreview, end: point });
+    // Two-phase drafting: keep the preview anchored to the snap-aware hover point.
+    if (
+      (tool === "arrow" || tool === "construction-line") &&
+      draftingSource !== null
+    ) {
+      const snapped = snapDraftingPoint(point, event.altKey, event.shiftKey);
+      setDraftingHover(snapped.point);
+      setDraftingSnapPoint(snapped.snap);
     }
     if (tool === "wire" && wireSource) setWirePreviewPoint(point);
   }
@@ -3393,13 +3948,6 @@ export function App({ project: initialProject }: AppProps) {
     if (panPreview?.pointerId === event.pointerId) {
       event.currentTarget.releasePointerCapture(event.pointerId);
       setPanPreview(null);
-      return;
-    }
-    if (draftingCreatePreview?.pointerId === event.pointerId) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-      const { start, end } = draftingCreatePreview;
-      setDraftingCreatePreview(null);
-      commitDraftingCreate(tool, start, end);
       return;
     }
     if (boxPreview?.pointerId !== event.pointerId) return;
@@ -3474,7 +4022,167 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(count > 0 ? `Selected ${count} objects` : "Selection cleared");
   }
 
-  // P1: commit a drag-created drafting object at the final end point.
+  // Snap a free grid point for drafting creation. Alt suppresses snap (grid
+  // only). Otherwise the nearest of: pin/port/junction (visibleEndpoints), the
+  // closest point on any route segment, or any existing drafting vertex — within
+  // DRAFTING_SNAP_RADIUS — wins; grid snap is the fallback. Shift locks the
+  // resulting segment from the origin to horizontal/vertical/45°. Purely visual
+  // — never creates a Net, junction, or short.
+  function snapDraftingPoint(
+    point: Point,
+    altKey: boolean,
+    shiftKey: boolean,
+    origin?: Point,
+  ): { point: Point; snap: Point | null } {
+    let snapped = point;
+    let snapMarker: Point | null = null;
+    if (!altKey) {
+      let best: { point: Point; distanceSquared: number } | null = null;
+      const consider = (candidate: Point): void => {
+        const dx = candidate.x - point.x;
+        const dy = candidate.y - point.y;
+        const distanceSquared = dx * dx + dy * dy;
+        if (distanceSquared > DRAFTING_SNAP_RADIUS * DRAFTING_SNAP_RADIUS) {
+          return;
+        }
+        if (!best || distanceSquared < best.distanceSquared) {
+          best = { point: candidate, distanceSquared };
+        }
+      };
+      for (const candidate of visibleEndpoints) consider(candidate.point);
+      // Closest point on each route segment (visual snap to conductors; no
+      // electrical effect — drafting never joins a Net by proximity).
+      for (const { polyline } of routePolylines) {
+        for (let i = 0; i < polyline.points.length - 1; i += 1) {
+          consider(
+            closestPointOnSegment(
+              point,
+              polyline.points[i]!,
+              polyline.points[i + 1]!,
+            ),
+          );
+        }
+      }
+      // Existing drafting vertices.
+      for (const object of document.drafting?.objects ?? []) {
+        const geometry = resolveDraftingObjectGeometry(
+          document,
+          resolver,
+          object,
+        );
+        if (geometry.kind === "arrow") {
+          consider(geometry.from);
+          consider(geometry.to);
+        } else if (geometry.kind === "construction-line") {
+          for (const vertex of geometry.vertices) consider(vertex);
+        }
+      }
+      // `consider` updates a captured value, which TypeScript intentionally
+      // does not narrow after nested calls. Read it through this explicit
+      // candidate shape; runtime snap ordering remains unchanged.
+      const bestCandidate = best as {
+        point: Point;
+        distanceSquared: number;
+      } | null;
+      if (bestCandidate) {
+        snapped = bestCandidate.point;
+        snapMarker = bestCandidate.point;
+      }
+    }
+    if (shiftKey && origin) {
+      snapped = constrainAngle(origin, snapped);
+    }
+    return { point: snapped, snap: snapMarker };
+  }
+
+  function constrainAngle(origin: Point, target: Point): Point {
+    const dx = target.x - origin.x;
+    const dy = target.y - origin.y;
+    const angle = Math.atan2(dy, dx);
+    const step = Math.PI / 4; // 45° increments
+    const locked = Math.round(angle / step) * step;
+    const length = Math.hypot(dx, dy);
+    return {
+      x: Math.round(origin.x + Math.cos(locked) * length),
+      y: Math.round(origin.y + Math.sin(locked) * length),
+    };
+  }
+
+  // Reset the two-phase drafting creation state.
+  function clearDraftingCreate(): void {
+    setDraftingSource(null);
+    setDraftingHover(null);
+    setDraftingWaypoints([]);
+    setDraftingSnapPoint(null);
+  }
+
+  // Handle a canvas click while the Arrow / Construction line tool is active.
+  // Mirrors the wire tool's click model: first click fixes the start (and a snap
+  // candidate), hover updates the preview, the next click commits. Construction
+  // lines append a vertex per intermediate click; arrows commit on click #2.
+  function handleDraftingCanvasClick(
+    rawPoint: Point,
+    altKey: boolean,
+    shiftKey: boolean,
+  ): void {
+    if (tool !== "arrow" && tool !== "construction-line") return;
+    const { point, snap } = snapDraftingPoint(
+      rawPoint,
+      altKey,
+      shiftKey,
+      draftingSource ?? undefined,
+    );
+    if (draftingSource === null) {
+      setDraftingSource(point);
+      setDraftingHover(point);
+      setDraftingSnapPoint(snap);
+      setDraftingWaypoints([]);
+      setStatus(
+        tool === "arrow"
+          ? "Arrow: click the end point (Enter to finish, Esc to cancel)"
+          : "Construction line: click next vertex (Enter to finish, Esc to cancel)",
+      );
+      return;
+    }
+    if (tool === "arrow") {
+      commitDraftingCreate(tool, draftingSource, point);
+      clearDraftingCreate();
+      return;
+    }
+    // construction-line: each click appends a vertex; commit happens on Enter
+    // or double-click (finishDraftingCreate).
+    setDraftingWaypoints((current) => [...current, point]);
+    setDraftingHover(point);
+    setDraftingSnapPoint(snap);
+    setStatus(`Construction line: ${draftingWaypoints.length + 1} bend(s)`);
+  }
+
+  // Finish construction-line creation from the accumulated waypoints + hover,
+  // or finish an arrow from its source + hover. One transaction.
+  function finishDraftingCreate(): void {
+    if (tool !== "arrow" && tool !== "construction-line") return;
+    if (draftingSource === null) return;
+    const end = draftingHover ?? draftingSource;
+    if (tool === "arrow") {
+      if (draftingSource.x !== end.x || draftingSource.y !== end.y) {
+        commitDraftingCreate(tool, draftingSource, end);
+      }
+    } else {
+      const points = [draftingSource, ...draftingWaypoints];
+      if (
+        end.x !== points[points.length - 1]!.x ||
+        end.y !== points[points.length - 1]!.y
+      ) {
+        points.push(end);
+      }
+      if (points.length >= 2) {
+        commitDraftingCreateVertices(points);
+      }
+    }
+    clearDraftingCreate();
+  }
+
+  // P1: commit a drafting object at the final end point.
   function commitDraftingCreate(
     activeTool: EditorTool,
     start: Point,
@@ -3528,6 +4236,34 @@ export function App({ project: initialProject }: AppProps) {
     setTool("pointer");
   }
 
+  // Commit a multi-vertex construction line from the two-phase click model.
+  function commitDraftingCreateVertices(points: Point[]): void {
+    if (points.length < 2) return;
+    transactionCounter.current += 1;
+    const id = `construction-${transactionCounter.current}`;
+    const result = transact([
+      {
+        kind: "upsert_drafting_object",
+        object: {
+          id,
+          kind: "construction-line",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: points[0]! },
+          points: points.map((point) => ({
+            x: Math.round(point.x),
+            y: Math.round(point.y),
+          })),
+          lineStyle: "dashed",
+        },
+      },
+    ]);
+    if (result.ok) {
+      setStatus(`Added construction line ${id}`);
+      setTool("pointer");
+    }
+  }
+
   function deleteSelection(): void {
     const selectedRouteIds = new Set(visualSelection.routeIds);
     const selectedAnnotationIds = new Set(visualSelection.annotationIds);
@@ -3543,14 +4279,17 @@ export function App({ project: initialProject }: AppProps) {
       selectedAnnotationIds.size > 0 ||
       selectedDraftingIds.size > 0 ||
       selectedJunctionIds.size > 0;
+    if (
+      selectedRouteIds.size === 1 &&
+      selectedAnnotationIds.size === 0 &&
+      selectedDraftingIds.size === 0 &&
+      selectedJunctionIds.size === 0 &&
+      selectedIds.length === 0
+    ) {
+      deleteSelectedRouteConnection();
+      return;
+    }
     if (hasMixedSelection) {
-      const lockedDrafting = (document.drafting?.objects ?? []).find(
-        (object) => selectedDraftingIds.has(object.id) && object.locked,
-      );
-      if (lockedDrafting) {
-        setStatus(`Drafting object ${lockedDrafting.id} is locked`);
-        return;
-      }
       for (const junctionId of selectedJunctionIds) {
         for (const route of document.routes) {
           if (
@@ -3620,13 +4359,6 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     if (selectedDraftingId) {
-      const object = document.drafting?.objects.find(
-        (candidate) => candidate.id === selectedDraftingId,
-      );
-      if (object?.locked) {
-        setStatus("Drafting object is locked; unlock it before deleting");
-        return;
-      }
       const result = transact([
         { kind: "remove_drafting_object", objectId: selectedDraftingId },
       ]);
@@ -3637,7 +4369,7 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     if (selectedRouteId) {
-      removeSelectedRouteGeometry();
+      deleteSelectedRouteConnection();
       return;
     }
     if (selectedIds.length === 0) return;
@@ -3823,7 +4555,7 @@ export function App({ project: initialProject }: AppProps) {
         reverseSelectedCurrentArrow();
       } else if (!event.ctrlKey && key === "r") {
         event.preventDefault();
-        rotateSelected();
+        rotateSelected(event.shiftKey ? -90 : 90);
       } else if (!event.ctrlKey && key === "w") {
         event.preventDefault();
         activateTool("wire");
@@ -3839,12 +4571,51 @@ export function App({ project: initialProject }: AppProps) {
       } else if (!event.ctrlKey && key === "f") {
         event.preventDefault();
         fitView();
+      } else if (
+        !event.ctrlKey &&
+        (event.key === "[" || event.key === "]") &&
+        selectedDrafting
+      ) {
+        // [/]  step stroke width; Shift+[/] step arrow-head size. Bounded ratios.
+        event.preventDefault();
+        const increase = event.key === "]";
+        if (event.shiftKey) {
+          const scale = selectedDrafting.styleOverride?.arrowHeadScale ?? 1;
+          setDraftingStyle({
+            arrowHeadScale: stepScale(
+              scale,
+              [0.75, 1, 1.25, 1.5] as const,
+              increase,
+            ),
+          });
+        } else {
+          const scale = selectedDrafting.styleOverride?.strokeScale ?? 1;
+          setDraftingStyle({
+            strokeScale: stepScale(scale, [0.75, 1, 1.5, 2] as const, increase),
+          });
+        }
       } else if (event.key === "Enter" && wireSource && wirePreviewPoint) {
         event.preventDefault();
         finishWireAtPoint(wirePreviewPoint);
+      } else if (
+        event.key === "Enter" &&
+        (tool === "arrow" || tool === "construction-line") &&
+        draftingSource !== null
+      ) {
+        event.preventDefault();
+        finishDraftingCreate();
       } else if (event.key === "Escape") {
         if (helpOpen) {
           closeHelp();
+          return;
+        }
+        // Cancel an in-progress drafting creation first (two-phase click model).
+        if (
+          (tool === "arrow" || tool === "construction-line") &&
+          draftingSource !== null
+        ) {
+          clearDraftingCreate();
+          setStatus("Drawing cancelled");
           return;
         }
         setTool("pointer");
@@ -4079,7 +4850,7 @@ export function App({ project: initialProject }: AppProps) {
               </button>
               <button
                 type="button"
-                onClick={rotateSelected}
+                onClick={() => rotateSelected()}
                 disabled={selectedIds.length === 0}
               >
                 Rotate
@@ -4163,7 +4934,7 @@ export function App({ project: initialProject }: AppProps) {
             <header className="help-dialog-header">
               <div>
                 <p className="help-kicker">Interactive Circuit Maker</p>
-                <h2 id="help-title">Quick start</h2>
+                <h2 id="help-title">Help</h2>
               </div>
               <button
                 type="button"
@@ -4175,67 +4946,93 @@ export function App({ project: initialProject }: AppProps) {
               </button>
             </header>
             <div className="help-dialog-content">
-              <section>
-                <h3>1. Start a circuit</h3>
+              <section id="help-introduction" className="help-introduction">
+                <p className="help-section-label">Introduction</p>
+                <p>
+                  Interactive Circuit Maker is a browser-based schematic editor.
+                  Import SPICE or open a project, edit the circuit on the
+                  canvas, then export an editable project or drawing file.
+                </p>
+              </section>
+              <nav className="help-index" aria-label="Help sections">
+                <a href="#help-introduction">Introduction</a>
+                <a href="#help-handbook">Handbook</a>
+                <a href="#help-shortcuts">Shortcuts</a>
+                <a href="#help-data">Project data</a>
+              </nav>
+              <section id="help-handbook" className="help-handbook">
+                <p className="help-section-label">Handbook</p>
+                <h3>Start, open, and save</h3>
                 <p>
                   Use <strong>File / Open Project</strong> to continue an
                   exported project, or <strong>File / Import SPICE</strong> to
-                  create editable Documents from SPICE source files.
+                  create editable Documents from SPICE source files. Use
+                  <strong>File / Save Project</strong> to download an editable
+                  project file; use <strong>File / Export</strong> for SVG, PNG,
+                  or PDF drawings.
                 </p>
-              </section>
-              <section>
-                <h3>2. Place and connect</h3>
+                <h3>Place, select, and connect</h3>
                 <p>
                   Select a symbol in the left library, or a drawing tool from
                   <strong>Draw</strong>, then click the canvas to place or draw.
-                  Choose the Wire tool (or press <kbd>W</kbd>) and click
-                  terminals to draw a connection; click while drawing to add
-                  bends, then press <kbd>Enter</kbd> to finish.
-                </p>
-              </section>
-              <section>
-                <h3>3. Edit the schematic</h3>
-                <p>
-                  Select objects to move them or reveal selection actions. Use
-                  <strong>Edit</strong> for undo, redo, copy, paste, mirror, and
-                  alignment. Press <kbd>R</kbd> to rotate the selected object;{" "}
+                  Select objects to move them or reveal selection actions.
+                  Choose Wire (or <kbd>W</kbd>), click a terminal to start,
+                  click to add bends, then press <kbd>Enter</kbd> to finish.
                   <kbd>Delete</kbd> or <kbd>Backspace</kbd> removes the
-                  selection, or removes the latest bend while drawing a wire.
+                  selection, or removes the latest wire bend while drawing.
                 </p>
-              </section>
-              <section>
-                <h3>4. Navigate and export</h3>
+                <h3>View and drawing tools</h3>
                 <p>
-                  Move the mouse over the canvas and use the mouse wheel to
-                  zoom; middle-drag to pan; press <kbd>F</kbd> to fit the
-                  circuit in view. Choose <strong>File / Export</strong> to
-                  download SVG, PNG, or PDF; choose{" "}
-                  <strong>File / Save Project</strong> to keep an editable
-                  project file.
+                  With the pointer over the canvas, use the mouse wheel to zoom
+                  and middle-drag to pan; <kbd>F</kbd> fits the circuit in view.
+                  Draw also contains Wire, Text, Arrow, and Construction line.
+                  Guides are available from More and can be shown, cleared, or
+                  locked for alignment.
                 </p>
               </section>
-              <section>
+              <section id="help-shortcuts" className="help-shortcuts">
                 <h3>Keyboard shortcuts</h3>
+                <dl>
+                  <div>
+                    <dt>File and history</dt>
+                    <dd>
+                      <kbd>Ctrl</kbd> + <kbd>S</kbd> save; <kbd>Ctrl</kbd> +
+                      <kbd>O</kbd> open; <kbd>Ctrl</kbd> + <kbd>Z</kbd> undo;
+                      <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> or
+                      <kbd>Ctrl</kbd> + <kbd>Y</kbd> redo.
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Selection and edit</dt>
+                    <dd>
+                      <kbd>Ctrl</kbd> + <kbd>A</kbd> selects all placed
+                      components; <kbd>Ctrl</kbd> + <kbd>C</kbd> copy;
+                      <kbd>Ctrl</kbd> + <kbd>V</kbd> paste; <kbd>R</kbd> rotate;
+                      <kbd>Delete</kbd> or <kbd>Backspace</kbd> delete.
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Tools and view</dt>
+                    <dd>
+                      <kbd>W</kbd> wire; <kbd>A</kbd> arrow; <kbd>L</kbd>
+                      construction line; <kbd>G</kbd> guide; <kbd>F</kbd> fit
+                      view; <kbd>X</kbd> reverses a selected current arrow.
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>In-progress drawing</dt>
+                    <dd>
+                      <kbd>Enter</kbd> completes an active wire or drawing;
+                      <kbd>Esc</kbd> cancels the active tool or closes Help.
+                    </dd>
+                  </div>
+                </dl>
                 <p>
-                  <kbd>Ctrl</kbd> + <kbd>Z</kbd> undo; <kbd>Ctrl</kbd> +
-                  <kbd>Shift</kbd> + <kbd>Z</kbd> or <kbd>Ctrl</kbd> +
-                  <kbd>Y</kbd> redo; <kbd>Ctrl</kbd> + <kbd>C</kbd> copy;
-                  <kbd>Ctrl</kbd> + <kbd>V</kbd> paste; <kbd>Ctrl</kbd> +
-                  <kbd>A</kbd> select all placed components; <kbd>Ctrl</kbd> +
-                  <kbd>S</kbd> save a project file; <kbd>Ctrl</kbd> +
-                  <kbd>O</kbd> open a project file.
-                </p>
-                <p>
-                  <kbd>W</kbd> wire; <kbd>A</kbd> arrow; <kbd>L</kbd>
-                  construction line; <kbd>G</kbd> guide; <kbd>X</kbd> reverses a
-                  selected current arrow. While wiring, click to add a bend and
-                  press <kbd>Enter</kbd> to finish. <kbd>Esc</kbd> cancels the
-                  active tool or closes this guide. Shortcuts are inactive while
-                  you are typing in a text field.
+                  Shortcuts do not run while you are typing in a text field.
                 </p>
               </section>
-              <section className="help-data-note">
-                <h3>Your project data</h3>
+              <section id="help-data" className="help-data-note">
+                <h3>Project data and recovery</h3>
                 <p>
                   This editor runs in your browser. Recovery data may be kept on
                   this device, but it is not cloud storage and can be lost when
@@ -4440,8 +5237,11 @@ export function App({ project: initialProject }: AppProps) {
                 <button type="button" onClick={addCurrentArrow}>
                   Add current arrow
                 </button>
+                <button type="button" onClick={deleteSelectedRouteConnection}>
+                  Delete electrical connection
+                </button>
                 <button type="button" onClick={removeSelectedRouteGeometry}>
-                  Remove route geometry
+                  Unroute (keep electrical connection)
                 </button>
               </section>
             ) : null}
@@ -4482,6 +5282,166 @@ export function App({ project: initialProject }: AppProps) {
                 <h2>Junction</h2>
                 <button type="button" onClick={deleteSelectedJunction}>
                   Delete junction and attached wires
+                </button>
+              </section>
+            ) : null}
+            {selectedDrafting &&
+            (selectedDrafting.kind === "arrow" ||
+              selectedDrafting.kind === "construction-line") ? (
+              <section className="context-actions" aria-label="Drawing style">
+                <h2>Drawing</h2>
+                {selectedDrafting.locked ? (
+                  <p className="drawing-lock-status" role="status">
+                    Locked — editing is disabled; Delete is still available.
+                  </p>
+                ) : null}
+                <label>
+                  Line style
+                  <select
+                    aria-label="Line style"
+                    value={
+                      selectedDrafting.styleOverride?.lineStyle ??
+                      (selectedDrafting.kind === "construction-line"
+                        ? selectedDrafting.lineStyle
+                        : "solid")
+                    }
+                    disabled={selectedDrafting.locked}
+                    onChange={(event) =>
+                      setDraftingStyle({
+                        lineStyle: event.currentTarget.value as
+                          "solid" | "dashed" | "dotted",
+                      })
+                    }
+                  >
+                    <option value="solid">Solid</option>
+                    <option value="dashed">Dashed</option>
+                    <option value="dotted">Dotted</option>
+                  </select>
+                </label>
+                <label>
+                  Stroke width
+                  <select
+                    aria-label="Stroke width"
+                    value={String(
+                      selectedDrafting.styleOverride?.strokeScale ?? 1,
+                    )}
+                    disabled={selectedDrafting.locked}
+                    onChange={(event) =>
+                      setDraftingStyle({
+                        strokeScale: Number(event.currentTarget.value) as
+                          0.75 | 1 | 1.5 | 2,
+                      })
+                    }
+                  >
+                    <option value="0.75">0.75×</option>
+                    <option value="1">1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                  </select>
+                </label>
+                {selectedDrafting.kind === "arrow" ? (
+                  <>
+                    <label>
+                      Arrow head
+                      <select
+                        aria-label="Arrow head"
+                        value={
+                          selectedDrafting.styleOverride?.arrowHead ?? "filled"
+                        }
+                        disabled={selectedDrafting.locked}
+                        onChange={(event) =>
+                          setDraftingStyle({
+                            arrowHead: event.currentTarget.value as
+                              "none" | "filled" | "open",
+                          })
+                        }
+                      >
+                        <option value="none">None</option>
+                        <option value="filled">Filled</option>
+                        <option value="open">Open</option>
+                      </select>
+                    </label>
+                    <label>
+                      Arrow head size
+                      <select
+                        aria-label="Arrow head size"
+                        value={String(
+                          selectedDrafting.styleOverride?.arrowHeadScale ?? 1,
+                        )}
+                        disabled={selectedDrafting.locked}
+                        onChange={(event) =>
+                          setDraftingStyle({
+                            arrowHeadScale: Number(
+                              event.currentTarget.value,
+                            ) as 0.75 | 1 | 1.25 | 1.5,
+                          })
+                        }
+                      >
+                        <option value="0.75">0.75×</option>
+                        <option value="1">1×</option>
+                        <option value="1.25">1.25×</option>
+                        <option value="1.5">1.5×</option>
+                      </select>
+                    </label>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => rotateSelected()}
+                  disabled={selectedDrafting.locked}
+                >
+                  Rotate 90° (R)
+                </button>
+                {selectedDrafting.kind === "arrow" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedDrafting.locked) return;
+                      const from = selectedDrafting.from;
+                      const to = selectedDrafting.to;
+                      transact([
+                        {
+                          kind: "upsert_drafting_object",
+                          object: { ...selectedDrafting, from: to, to: from },
+                        },
+                      ]);
+                    }}
+                    disabled={selectedDrafting.locked}
+                  >
+                    Reverse direction
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => toggleDraftingLock(selectedDrafting)}
+                >
+                  {selectedDrafting.locked ? "Unlock" : "Lock"}
+                </button>
+              </section>
+            ) : null}
+            {selectedAnnotation && isRoutedMarker(selectedAnnotation) ? (
+              <section
+                className="context-actions"
+                aria-label="Current arrow actions"
+              >
+                <h2>Current arrow</h2>
+                <button type="button" onClick={reverseSelectedCurrentArrow}>
+                  Reverse direction (X)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stepCurrentArrowOffset(false)}
+                >
+                  Move closer to wire
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stepCurrentArrowOffset(true)}
+                >
+                  Move away from wire
+                </button>
+                <button type="button" onClick={deleteSelectedAnnotation}>
+                  Delete current arrow
                 </button>
               </section>
             ) : null}
@@ -4619,7 +5579,9 @@ export function App({ project: initialProject }: AppProps) {
       </aside>
       <section className="canvas-panel">
         <svg
-          className="schematic-canvas"
+          className={
+            tool === "wire" ? "schematic-canvas wire-mode" : "schematic-canvas"
+          }
           data-testid="schematic-canvas"
           role="img"
           aria-label="Schematic canvas"
@@ -4631,12 +5593,25 @@ export function App({ project: initialProject }: AppProps) {
           onPointerCancel={finishCanvasGesture}
           onClick={(event) => {
             const target = event.target as Element;
+            const onBackground =
+              target === event.currentTarget || target.tagName === "rect";
             if (
-              tool !== "wire" ||
-              event.detail !== 1 ||
-              (target !== event.currentTarget && target.tagName !== "rect")
-            )
+              (tool === "arrow" || tool === "construction-line") &&
+              event.detail === 1 &&
+              onBackground
+            ) {
+              handleDraftingCanvasClick(
+                pointFromClient(
+                  event.clientX,
+                  event.clientY,
+                  event.currentTarget,
+                ),
+                event.altKey,
+                event.shiftKey,
+              );
               return;
+            }
+            if (tool !== "wire" || event.detail !== 1) return;
             fixWirePoint(
               pointFromClient(
                 event.clientX,
@@ -4647,6 +5622,12 @@ export function App({ project: initialProject }: AppProps) {
           }}
           onDoubleClick={(event) => {
             const target = event.target as Element;
+            if (tool === "arrow" || tool === "construction-line") {
+              if (target !== event.currentTarget && target.tagName !== "rect")
+                return;
+              finishDraftingCreate();
+              return;
+            }
             if (
               tool !== "wire" ||
               (target !== event.currentTarget && target.tagName !== "rect")
@@ -4672,6 +5653,13 @@ export function App({ project: initialProject }: AppProps) {
           }}
           onContextMenu={(event) => {
             event.preventDefault();
+            if (tool === "arrow" || tool === "construction-line") {
+              if (draftingSource !== null) {
+                clearDraftingCreate();
+                setStatus("Drawing cancelled");
+              }
+              return;
+            }
             if (wireSource) {
               setWireSource(null);
               setWirePreviewPoint(null);
@@ -4701,6 +5689,16 @@ export function App({ project: initialProject }: AppProps) {
             fill="url(#grid)"
           />
           <g dangerouslySetInnerHTML={{ __html: scene.formalBody }} />
+          {tool === "wire" ? (
+            <rect
+              data-testid="wire-input-plane"
+              className="wire-input-plane"
+              x={viewBox.x}
+              y={viewBox.y}
+              width={viewBox.width}
+              height={viewBox.height}
+            />
+          ) : null}
           <g data-layer="editor-overlay">
             {flightlines.map((flightline) => (
               <line
@@ -4720,23 +5718,6 @@ export function App({ project: initialProject }: AppProps) {
                 points={polylinePoints(wireDraftPoints)}
               />
             ) : null}
-            {routePolylines.map(({ route, polyline }) => (
-              <polyline
-                key={route.id}
-                data-testid={`route-hit-${route.id}`}
-                className={
-                  selectedRouteId === route.id ||
-                  supplementalSelection.routeIds.includes(route.id) ||
-                  selectedInternalRouteIds.has(route.id)
-                    ? "route-hit selected"
-                    : "route-hit"
-                }
-                points={polylinePoints(polyline.points)}
-                onPointerDown={(event) =>
-                  handleRoutePointerDown(event, route.id)
-                }
-              />
-            ))}
             {(document.drafting?.guides ?? [])
               .filter((guide) => guide.visible)
               .map((guide) => (
@@ -4759,6 +5740,7 @@ export function App({ project: initialProject }: AppProps) {
                       : viewBox.y + viewBox.height
                   }
                   onPointerDown={(event) => beginGuideDrag(event, guide)}
+                  pointerEvents={tool === "wire" ? "none" : undefined}
                   onDoubleClick={() => toggleGuideLock(guide.id)}
                   onKeyDown={(event) => {
                     if (event.key === "Delete" || event.key === "Backspace") {
@@ -4801,6 +5783,7 @@ export function App({ project: initialProject }: AppProps) {
                     onPointerDown={(event) =>
                       beginRouteStretch(event, route.id, segmentIndex)
                     }
+                    pointerEvents={tool === "wire" ? "none" : undefined}
                     onPointerMove={previewRouteStretch}
                     onPointerUp={finishRouteStretch}
                   />
@@ -4844,6 +5827,7 @@ export function App({ project: initialProject }: AppProps) {
                     onPointerDown={(event) => beginMove(event, instance.id)}
                     onPointerMove={previewMove}
                     onPointerUp={finishMove}
+                    pointerEvents={tool === "wire" ? "none" : undefined}
                   />
                 );
               })}
@@ -4860,9 +5844,28 @@ export function App({ project: initialProject }: AppProps) {
                   onPointerDown={(event) =>
                     beginDefaultInstanceLabelDrag(event, instance)
                   }
+                  pointerEvents={tool === "wire" ? "none" : undefined}
                 />
               );
             })}
+            {routePolylines.map(({ route, polyline }) => (
+              <polyline
+                key={route.id}
+                data-testid={`route-hit-${route.id}`}
+                className={
+                  selectedRouteId === route.id ||
+                  supplementalSelection.routeIds.includes(route.id) ||
+                  selectedInternalRouteIds.has(route.id)
+                    ? "route-hit selected"
+                    : "route-hit"
+                }
+                points={polylinePoints(polyline.points)}
+                onPointerDown={(event) =>
+                  handleRoutePointerDown(event, route.id)
+                }
+                onClick={(event) => event.stopPropagation()}
+              />
+            ))}
             {visibleEndpoints.map((candidate) => (
               <circle
                 key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}
@@ -4936,6 +5939,7 @@ export function App({ project: initialProject }: AppProps) {
                   }
                   onPointerMove={previewAnnotationDrag}
                   onPointerUp={finishAnnotationDrag}
+                  pointerEvents={tool === "wire" ? "none" : undefined}
                   onDoubleClick={(event) => {
                     event.stopPropagation();
                     beginAnnotationTextEditing(annotation);
@@ -4984,6 +5988,18 @@ export function App({ project: initialProject }: AppProps) {
                     points={points}
                     fill="none"
                     onPointerDown={onDown}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      insertConstructionVertex(
+                        object,
+                        pointFromClient(
+                          event.clientX,
+                          event.clientY,
+                          event.currentTarget.ownerSVGElement!,
+                        ),
+                      );
+                    }}
+                    pointerEvents={tool === "wire" ? "none" : undefined}
                   />
                 );
               }
@@ -4998,6 +6014,7 @@ export function App({ project: initialProject }: AppProps) {
                     x2={geometry.to.x}
                     y2={geometry.to.y}
                     onPointerDown={onDown}
+                    pointerEvents={tool === "wire" ? "none" : undefined}
                   />
                 );
               }
@@ -5012,6 +6029,7 @@ export function App({ project: initialProject }: AppProps) {
                     x2={geometry.target.x}
                     y2={geometry.target.y}
                     onPointerDown={onDown}
+                    pointerEvents={tool === "wire" ? "none" : undefined}
                   />
                 );
               }
@@ -5021,6 +6039,7 @@ export function App({ project: initialProject }: AppProps) {
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
                     onPointerDown={onDown}
+                    pointerEvents={tool === "wire" ? "none" : undefined}
                   >
                     <line
                       className={selected}
@@ -5059,6 +6078,86 @@ export function App({ project: initialProject }: AppProps) {
                 />
               );
             })}
+            {selectedDraftingId
+              ? (() => {
+                  const object = document.drafting?.objects.find(
+                    (candidate) => candidate.id === selectedDraftingId,
+                  );
+                  if (!object || object.locked) return null;
+                  const geometry = resolveDraftingObjectGeometry(
+                    document,
+                    resolver,
+                    object,
+                  );
+                  if (object.kind === "arrow" && geometry.kind === "arrow") {
+                    return (
+                      <g data-testid={`drafting-handles-${object.id}`}>
+                        <circle
+                          className="draft-handle"
+                          data-testid={`draft-handle-from-${object.id}`}
+                          cx={geometry.from.x}
+                          cy={geometry.from.y}
+                          r="5"
+                          onPointerDown={(event) =>
+                            beginDraftingHandleDrag(event, object, {
+                              kind: "from",
+                            })
+                          }
+                        />
+                        <circle
+                          className="draft-handle draft-handle-center"
+                          cx={geometry.center.x}
+                          cy={geometry.center.y}
+                          r="3"
+                          pointerEvents="none"
+                        />
+                        <circle
+                          className="draft-handle"
+                          data-testid={`draft-handle-to-${object.id}`}
+                          cx={geometry.to.x}
+                          cy={geometry.to.y}
+                          r="5"
+                          onPointerDown={(event) =>
+                            beginDraftingHandleDrag(event, object, {
+                              kind: "to",
+                            })
+                          }
+                        />
+                      </g>
+                    );
+                  }
+                  if (
+                    object.kind === "construction-line" &&
+                    geometry.kind === "construction-line"
+                  ) {
+                    return (
+                      <g data-testid={`drafting-handles-${object.id}`}>
+                        {geometry.vertices.map((vertex, index) => (
+                          <circle
+                            key={`draft-vx-${index}`}
+                            className="draft-handle"
+                            data-testid={`draft-handle-vx-${index}-${object.id}`}
+                            cx={vertex.x}
+                            cy={vertex.y}
+                            r="5"
+                            onPointerDown={(event) =>
+                              beginDraftingHandleDrag(event, object, {
+                                kind: "vertex",
+                                index,
+                              })
+                            }
+                            onDoubleClick={(event) => {
+                              event.stopPropagation();
+                              deleteConstructionVertex(object, index);
+                            }}
+                          />
+                        ))}
+                      </g>
+                    );
+                  }
+                  return null;
+                })()
+              : null}
             {annotationDragPreview ? (
               <text
                 className="annotation-drag-preview"
@@ -5101,14 +6200,14 @@ export function App({ project: initialProject }: AppProps) {
                 {...normalizedRect(boxPreview.start, boxPreview.end)}
               />
             ) : null}
-            {draftingCreatePreview ? (
-              <line
-                data-testid="drafting-create-preview"
-                className="drafting-create-preview"
-                x1={draftingCreatePreview.start.x}
-                y1={draftingCreatePreview.start.y}
-                x2={draftingCreatePreview.end.x}
-                y2={draftingCreatePreview.end.y}
+            {draftingSource && draftingHover ? (
+              <DraftingCreatePreview
+                tool={tool}
+                start={draftingSource}
+                waypoints={draftingWaypoints}
+                hover={draftingHover}
+                snap={draftingSnapPoint}
+                styleProfile={styleProfile}
               />
             ) : null}
             {tool === "wire" && wirePreviewPoint ? (

@@ -784,13 +784,16 @@ function renderConstructionLine(
   const points = object.points
     .map((point) => `${point.x},${point.y}`)
     .join(" ");
+  const lineStyle = object.styleOverride?.lineStyle ?? object.lineStyle;
   const dash =
-    object.lineStyle === "dashed"
+    lineStyle === "dashed"
       ? ' stroke-dasharray="6 4"'
-      : object.lineStyle === "dotted"
+      : lineStyle === "dotted"
         ? ' stroke-dasharray="2 3"'
         : "";
-  return `<polyline data-object-id="${object.id}" data-kind="construction-line" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"${dash}/>`;
+  const strokeScale = object.styleOverride?.strokeScale ?? 1;
+  const strokeWidth = profile.strokes.annotation * strokeScale;
+  return `<polyline data-object-id="${object.id}" data-kind="construction-line" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"${dash}/>`;
 }
 
 function renderDraftArrow(
@@ -806,21 +809,39 @@ function renderDraftArrow(
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
+  // strokeScale widens/narrows the shaft; arrowHeadScale grows/shrinks the head
+  // independently. Both multiply the Razavi profile baseline so formal export
+  // and the editor canvas share one visual parameter (no raw px in objects).
+  const strokeScale = object.styleOverride?.strokeScale ?? 1;
+  const headScale = object.styleOverride?.arrowHeadScale ?? 1;
+  const strokeWidth = profile.strokes.annotation * strokeScale;
   // Free arrows and route-mounted current arrows intentionally share the
   // profile-owned head proportions. They differ only in shaft ownership: a
   // route marker reuses its conductor, while a free arrow draws its own.
-  const head = profile.annotations.arrowHeadLength;
-  const halfHeadWidth = profile.annotations.arrowHeadWidth / 2;
+  const head = profile.annotations.arrowHeadLength * headScale;
+  const halfHeadWidth = (profile.annotations.arrowHeadWidth * headScale) / 2;
   const nx = (-dy / length) * halfHeadWidth;
   const ny = (dx / length) * halfHeadWidth;
   const baseX = tipX - (dx / length) * head;
   const baseY = tipY - (dy / length) * head;
   const arrowHead = object.styleOverride?.arrowHead ?? "filled";
+  const lineStyle = object.styleOverride?.lineStyle ?? "solid";
+  const dash =
+    lineStyle === "dashed"
+      ? ' stroke-dasharray="6 4"'
+      : lineStyle === "dotted"
+        ? ' stroke-dasharray="2 3"'
+        : "";
   const headBody =
     arrowHead === "none"
       ? ""
-      : `<polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" ${arrowHead === "open" ? `fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"` : `fill="${profile.foreground}"`}/>`;
-  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${tipX}" y2="${tipY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/>${headBody}</g>`;
+      : `<polygon points="${tipX},${tipY} ${baseX + nx},${baseY + ny} ${baseX - nx},${baseY - ny}" ${arrowHead === "open" ? `fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}"` : `fill="${profile.foreground}"`}/>`;
+  // The shaft terminates on the arrow head's base plane, not underneath its
+  // tip. This preserves the clean triangular point of Razavi-style arrows at
+  // every angle and head scale. A headless arrow remains a complete line.
+  const shaftEndX = arrowHead === "none" ? tipX : baseX;
+  const shaftEndY = arrowHead === "none" ? tipY : baseY;
+  return `<g data-object-id="${object.id}" data-kind="draft-arrow"${unresolved}><line x1="${from.x}" y1="${from.y}" x2="${shaftEndX}" y2="${shaftEndY}" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"${dash}/>${headBody}</g>`;
 }
 
 function renderDraftLeader(

@@ -48,6 +48,8 @@ export type ResolvedDraftingGeometry =
       kind: "arrow";
       from: Point;
       to: Point;
+      // Midpoint of from/to. Editor handle placement and 90° rotation pivot.
+      center: Point;
       bounds: Rect;
       diagnostics: DraftingDiagnostic[];
     }
@@ -70,6 +72,10 @@ export type ResolvedDraftingGeometry =
   | {
       kind: "construction-line";
       points: Point[];
+      // Same vertices as points, exposed as the editable handle set so the
+      // editor does not alias the persisted array by accident. Per-vertex
+      // handle placement and vertex insert/delete use this list.
+      vertices: Point[];
       bounds: Rect;
       diagnostics: [];
     }
@@ -225,6 +231,10 @@ function resolveArrow(
     kind: "arrow" as const,
     from: fromPoint,
     to: toPoint,
+    center: {
+      x: (fromPoint.x + toPoint.x) / 2,
+      y: (fromPoint.y + toPoint.y) / 2,
+    },
     bounds: paddedBounds(unionBounds([fromPoint, toPoint]), ARROWHEAD_PADDING),
     diagnostics: [...from.diagnostics, ...to.diagnostics],
   };
@@ -323,6 +333,7 @@ function resolveConstructionLine(
   return {
     kind: "construction-line" as const,
     points: object.points,
+    vertices: object.points.map((point) => ({ ...point })),
     bounds: paddedBounds(unionBounds(object.points), STROKE_PADDING),
     diagnostics: [] as [],
   };

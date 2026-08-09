@@ -132,6 +132,9 @@ describe("drafting layer rendering (WP-A1b)", () => {
         -profile.annotations.arrowHeadWidth / 2
       }`,
     );
+    expect(svg).toContain(
+      `x1="0" y1="0" x2="${100 - profile.annotations.arrowHeadLength}" y2="0"`,
+    );
   });
 
   it("honors the constrained arrow-head override", () => {

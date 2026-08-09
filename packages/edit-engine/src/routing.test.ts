@@ -311,6 +311,62 @@ describe("routing Edit Engine", () => {
     });
   });
 
+  it("materializes a Junction at an existing orthogonal bend without a zero-length segment", () => {
+    const document = documentFixture();
+    document.routes = [
+      {
+        id: "route-bend",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [
+          { x: 100, y: 200 },
+          { x: 500, y: 200 },
+        ],
+        segmentModes: ["manual", "manual", "manual"],
+      },
+    ];
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "add_junction",
+          junctionId: "junction-bend",
+          netId: "net-h",
+          position: { x: 100, y: 200 },
+          split: {
+            routeId: "route-bend",
+            firstRouteId: "route-bend-a",
+            secondRouteId: "route-bend-b",
+            segmentIndex: 0,
+          },
+        },
+      ]),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes.map((route) => route.id)).toEqual([
+      "route-bend-a",
+      "route-bend-b",
+    ]);
+    expect(
+      routePolyline(result.document, resolver, result.document.routes[0]!)
+        ?.points,
+    ).toEqual([
+      { x: 100, y: 300 },
+      { x: 100, y: 200 },
+    ]);
+    expect(
+      routePolyline(result.document, resolver, result.document.routes[1]!)
+        ?.points,
+    ).toEqual([
+      { x: 100, y: 200 },
+      { x: 500, y: 200 },
+      { x: 500, y: 300 },
+    ]);
+  });
+
   it("splits only the explicitly targeted conductor at a crossing", () => {
     const document = documentFixture();
     document.routes = [

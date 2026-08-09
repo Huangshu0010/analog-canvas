@@ -9,9 +9,9 @@ pnpm dev
 
 Open the displayed loopback URL. Open **File** and use **Import SPICE** to
 select one `.cir`, `.sp`, or `.spi` entry plus its local include files.
-Imported instances begin unplaced so that a human or Agent can decide the
-presentation. A normal launch starts with a genuinely empty `New Circuit`
-Document for palette-first manual authoring.
+Imported instances begin unplaced so that the user can decide the presentation.
+A normal launch starts with a genuinely empty `New Circuit` Document for
+palette-first manual authoring; no Project file needs to be opened first.
 
 ## Edit and connect
 
@@ -49,20 +49,25 @@ Document for palette-first manual authoring.
   fire while typing in a field.
 - Use `Ctrl`+mouse wheel to zoom around the cursor and middle-button drag to
   pan. View changes do not increment the Document revision.
-- Human UI and Agent transactions use the same typed Edit Engine operations and
-  revision rules.
 
 ## Save and recover
 
-**File / Save Project** downloads canonical `.icproj.json`. Edits also stage
-an origin-local recovery copy. On a later start the File menu offers **Restore
-recovery** or **Discard recovery**; recovery never silently replaces a formal
-file.
+**File / Save Project** creates a canonical `.icproj.json` formal Project
+file. In browsers without an explicitly authorised file handle, this is a
+download; keep the downloaded file as your authoritative Project. Edits also
+stage an origin-local recovery copy. A recovery copy is not a formal save and
+can be lost if browser site data is cleared. On a later start the File menu
+offers recovery choices; recovery never silently replaces a formal file.
 
 Use **File / Open Project** to validate and reopen a formal Project file.
 Opening an invalid or future-version file leaves the current Document
 unchanged. The old manual snapshot buttons have been removed; recovery is
 automatic infrastructure.
+
+SPICE files are import inputs, not embedded source attachments. Saving an
+imported Project preserves the editable schematic and source provenance, but
+does not preserve `.spi`, `.lib`, or `.inc` contents; keep those original files
+when you need to import them again.
 
 ## Export
 

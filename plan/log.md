@@ -15,6 +15,127 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-09 - First-version local-first editor baseline
+
+- Target: consolidate the human-reviewed first-version editor implementation
+  before beginning the separate GitHub Pages publishing target. The product
+  remains GUI-only: no Agent API, account system, backend, or server-side
+  Project storage is included.
+- Changed areas: staged completed editor interaction, drafting/routing,
+  browser-persistence foundation, Pages/PWA base-path, documentation, and
+  target-plan work; added narrow ignore rules for local diagnostic and
+  generated layout outputs without deleting them.
+- Validation: focused platform-web, edit-engine, derived, and render Vitest
+  tests passed (50 tests); platform-web and editor production builds passed;
+  `git diff --check` passed. Workspace `pnpm typecheck` remains blocked by six
+  pre-existing `leadsPx` errors in `packages/symbols/src/razavi-catalog.test.ts`.
+  The combined drafting/manual Playwright run exceeded the 120-second command
+  budget and is not recorded as passing.
+- Commit status: ready to commit as one first-version baseline, then reconcile
+  the patch-equivalent remote hierarchy commit.
+
+## 2026-08-09 - Drafting edit paradigm: two-phase creation, hit layer, rotation
+
+- Target: per `plan/2026-08-09-drafting-edit-paradigm/plan.md`, convert Arrow /
+  Construction line from drag-once-commit to a Wire-style two-phase
+  click→hover→click creation model with snap/preview, harden the hit layer to a
+  fixed screen-pixel tolerance, and add drafting rotation (R/Shift+R) plus
+  selection handle markers. Stages 4 (styleOverride scale fields), 5 (route
+  current marker), 6 (full regression set) deferred to independent targets.
+- Coordination: App.tsx/styles.css/App.test.tsx arrived dirty (help-tutorial +
+  later editor/SPICE work). Agent committed the complete, self-contained
+  help-tutorial feature as `c3a46bd` to free a clean App.tsx/styles.css before
+  drafting edits. Remaining dirty (App.test.tsx, manual-editor.spec.ts,
+  packages/spice/*) belongs to other parallel targets and was not touched.
+- Changed areas:
+  - `packages/derived/src/drafting-geometry.ts` — arrow gained `center`
+    (from/to midpoint); construction-line gained `vertices` (editable handle
+    set). ResolvedDraftingGeometry union + resolvers updated.
+  - `packages/model/src/drafting-geometry-schema.ts` — mirror Zod strictObject
+    synchronized (required: agent snapshot validation rejects unsynced fields).
+  - `packages/derived/src/drafting-geometry.test.ts` — center/vertices
+    assertions added.
+  - `apps/editor/src/App.tsx` — replaced `draftingCreatePreview` (drag) with
+    `draftingSource`/`draftingHover`/`draftingWaypoints`/`draftingSnapPoint`
+    (two-phase, mirrors wire); `beginCanvasGesture` short-circuits
+    arrow/construction-line; SVG onClick/onDoubleClick/onContextMenu handle
+    click→commit and right-click cancel; `snapDraftingPoint` (grid +
+    visibleEndpoints pin/port/junction, Alt suppress, Shift 45° lock);
+    `DraftingCreatePreview` component (anchors, polyline, arrow-head preview,
+    snap marker, length/angle readout); Enter/Esc tiered cancel;
+    `rotateSelected(deltaDegrees)` extended to rotate drafting (arrow about
+    center, construction-line about bounds center); `rotatePoint`/
+    `centerOfBounds` helpers; selected drafting objects render handle markers;
+    `SchematicStyleProfile` + `VisualAnchor` type imports added.
+  - `apps/editor/src/styles.css` — `.annotation-hit` stroke-width 8→14 (matches
+    route-hit fixed screen tolerance); `.drafting-create-*` / `.draft-handle`
+    visual classes.
+  - `apps/editor/e2e/drafting.spec.ts` — `dragCreate` removed; `clickCreate`
+    (click→move→click) added; 4 creation tests rewritten (Draw-button
+    activation + clickCreate); new regression "arrow rotates 90° via R key and
+    shows selection handles".
+- Validation: static verification done in-session — App.tsx parens 2148/2148,
+  braces 1299/1299; drafting.spec.ts 340/340, 74/74; CSS braces 122/122;
+  geometry schema double-sync confirmed (center + vertices in both derived and
+  model mirror); no leftover `draftingCreatePreview`; `git diff --check` clean.
+- Deferred (explicit, not claimed): handle **drag** (endpoint/vertex drag-edit);
+  construction-line vertex insert (dblclick)/delete; `V` vertex mode;
+  route-segment and drafting-vertex snap. These need new pointer-drag sessions
+  and belong to a follow-up Stage 3 completion target. **(2026-08-09 更新：全部
+  已实施——见下方完整条目)**
+- Toolchain note: node/pnpm/tsc/vitest/playwright not on PATH in this session's
+  Git Bash; build/typecheck/vitest/e2e could NOT be run here and MUST be run by
+  a human before commit. Key checks: drafting.spec.ts test 8 (construction-line
+  hit `<polyline>`) unbroken; drafting-geometry.test.ts assertions pass;
+  manual-editor MOS rotation (instance branch) unbroken.
+- Commit status: ready to commit as
+  `feat(editor): drafting two-phase creation, hit layer, and rotation` once the
+  blocked toolchain validation passes. Stage only the 6 drafting files; do not
+  touch the parallel App.test.tsx/manual-editor.spec.ts/spice dirty work.
+
+## 2026-08-09 - Drafting edit paradigm completion: stages 3-6
+
+- Target: complete the remaining drafting-edit-paradigm stages — endpoint/vertex
+  handle drag, construction-line vertex insert/delete, route+vertex snap,
+  bounded style fields (strokeScale/arrowHeadScale) with render + shelf +
+  shortcuts, route current marker offset/reverse, and regressions. Also fix the
+  "still hard to select" defect reported after the first pass.
+- Changed areas (additional to the entry above):
+  - `apps/editor/src/styles.css` — **selection-hit fix**: `.annotation-hit.selected`
+    no longer narrows stroke-width to 1 (which shrank the hit band after
+    selection, making a selected thin line nearly unclickable); now keeps the
+    14px hit band and renders selection via a translucent accent stroke,
+    matching route-hit.selected.
+  - `packages/model/src/schema.ts` — `styleOverride` gained optional
+    `strokeScale` (0.75/1/1.5/2) and `arrowHeadScale` (0.75/1/1.25/1.5). Optional
+    fields, no schemaVersion bump, no migration.
+  - `packages/render-svg/src/render.ts` — `renderConstructionLine` and
+    `renderDraftArrow` apply strokeScale (shaft + open-head stroke) and
+    arrowHeadScale (head length/width) against the profile baseline, so formal
+    SVG/PNG/PDF and the editor canvas share one visual parameter.
+  - `apps/editor/src/App.tsx` — `beginDraftingHandleDrag` (per-endpoint/vertex
+    drag session, one upsert on pointerup); `insertConstructionVertex` (dblclick
+    nearest segment) + `deleteConstructionVertex` (dblclick vertex, <2 refuse);
+    handles made clickable (arrow from/to, construction vertices; center
+    decorative); `setDraftingStyle` (bounded style patch → upsert); Drawing
+    shelf section (line-style/stroke-width/arrow-head/head-size + Rotate/
+    Reverse/Lock); `[`/`]` and `Shift+[`/`]` shortcuts via `stepScale`;
+    `snapDraftingPoint` extended to also snap to route-segment closest points
+    and existing drafting vertices; `stepCurrentArrowOffset` + Current-arrow
+    context section (Reverse/Move closer/Move away/Delete).
+  - `apps/editor/e2e/drafting.spec.ts` — regressions for endpoint handle drag,
+    vertex insert via dblclick, bracket stroke-width shortcuts, Drawing shelf
+    line-style.
+- Validation: static — App.tsx parens 2354/2354, braces 1446/1446;
+  drafting.spec.ts 411/411, 96/96; `git diff --check` clean; geometry schema
+  double-sync intact. Toolchain (build/typecheck/vitest/e2e) blocked in this
+  session — must be run by a human; note render-svg drafting-render tests
+  (strokeScale defaults to 1, existing fixtures unaffected) and agent-api
+  fixtures (styleOverride new optional fields enter OpenAPI) should be checked.
+- Commit status: ready to commit alongside the prior drafting entry as
+  `feat(editor): drafting handle editing, bounded styles, route marker` once
+  the blocked toolchain validation passes.
+
 ## 2026-08-09 - GUI modernization: inspector moved into left dock
 
 - Target: per `plan/2026-08-09-gui-modernization/plan.md` work package E,
@@ -3130,6 +3251,48 @@ formatting`.
   and `git diff --check` passed.
 - Commit status: ready for `feat(editor): simplify command hierarchy`.
 
+## 2026-08-09 - Manual wire interaction P0
+
+- Target: make manual wire taps reliable at routes and bends, keep Wire mode
+  clear of visual-selection overlays, and distinguish deleting an isolated
+  electrical connection from merely removing its visible route geometry.
+- Result: route hit resolution is screen-tolerant and projects to a real route
+  point, preferring an internal bend exactly. The edit engine now splits an
+  existing waypoint without introducing a zero-length segment. Wire mode owns
+  an input plane and disables selection overlays; route hit priority is above
+  component boxes while endpoints and annotations remain higher. Delete clears
+  an isolated terminal/port connection; Unroute intentionally keeps its Net
+  and exposes flightlines. Branched/shared deletion is safely rejected pending
+  persistent connection-edge provenance in the model.
+- Validation: focused Playwright P0 3/3, routing engine Vitest 10/10, editor
+  production build, focused Prettier, and `git diff --check` passed. Workspace
+  typecheck/SSR and one old routing-demo browser case remain blocked by
+  parallel hierarchy/Razavi/command-menu work outside this target.
+- Commit status: pending intentional hunk staging.
+
+## 2026-08-09 - Drafting Selection shelf and reversible lock repair
+
+- Target: make Selection-shelf drawing controls visibly effective and make
+  drafting locks reversible while preserving edit protection.
+- Result: construction lines and free arrows render the persisted style
+  override; Lock changes to Unlock, disables other drawing edits while locked,
+  and explains the protection state. The edit engine permits only a
+  payload-identical pure unlock. Delete has higher priority and removes a
+  locked drafting object immediately. Numeric scale fields use a Zod
+  numeric-literal union (not an invalid numeric enum), so stroke and arrow-head
+  scale values survive transactions and reach SVG rendering. Free-arrow shafts
+  terminate at their arrowhead base plane instead of continuing to the tip.
+- Validation: editor build, drafting edit-engine Vitest 10/10, focused
+  Drawing-shelf Playwright 4/4, source/target-plan Prettier, and
+  `git diff --check` passed. The shared dirty log has a pre-existing Markdown
+  Prettier warning. The full drafting Playwright file exceeded the local 120 s
+  command budget and is not recorded as passing.
+- Local runtime: replaced duplicate Vite processes with one rebuilt editor
+  server at `http://localhost:5173`.
+- Commit status: pending intentional hunk staging because the shared editor and
+  drafting files retain unrelated uncommitted work from the completed drafting
+  and parallel targets.
+
 ## 2026-08-09 - Imported hierarchy release scope
 
 - Target: limit this release to browsing SPICE-imported subcircuits, without
@@ -3155,4 +3318,4 @@ formatting`.
   selection cancellation. Library details remain independent.
 - Validation: focused Playwright 1/1, editor production build, Prettier, and
   `git diff --check` passed.
-- Commit status: committed locally; remote integration pending.
+- Commit status: ready for `fix(editor): dismiss command menus outside the toolbar`.

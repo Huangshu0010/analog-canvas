@@ -73,6 +73,54 @@ async function clickRoute(
   await page.mouse.click(point.x, point.y);
 }
 
+async function clickRouteWithScreenOffset(
+  page: Page,
+  routeId: string,
+  offset: { x: number; y: number },
+  position = 0.5,
+  segmentIndex = 0,
+): Promise<void> {
+  const route = page.getByTestId(`route-hit-${routeId}`);
+  const point = await route.evaluate(
+    (element, options) => {
+      const polyline = element as SVGPolylineElement;
+      const first = polyline.points.getItem(options.segmentIndex);
+      const second = polyline.points.getItem(options.segmentIndex + 1);
+      const matrix = polyline.getScreenCTM();
+      if (!first || !second || !matrix) return null;
+      return new DOMPoint(
+        first.x + (second.x - first.x) * options.position,
+        first.y + (second.y - first.y) * options.position,
+      ).matrixTransform(matrix);
+    },
+    { position, segmentIndex },
+  );
+  if (!point) throw new Error(`Route ${routeId} is not measurable`);
+  await page.mouse.click(point.x + offset.x, point.y + offset.y);
+}
+
+async function clickRouteVertexWithScreenOffset(
+  page: Page,
+  routeId: string,
+  vertexIndex: number,
+  offset: { x: number; y: number },
+): Promise<void> {
+  const route = page.getByTestId(`route-hit-${routeId}`);
+  const point = await route.evaluate(
+    (element, options) => {
+      const polyline = element as SVGPolylineElement;
+      const vertex = polyline.points.getItem(options.vertexIndex);
+      const matrix = polyline.getScreenCTM();
+      if (!vertex || !matrix) return null;
+      return new DOMPoint(vertex.x, vertex.y).matrixTransform(matrix);
+    },
+    { vertexIndex },
+  );
+  if (!point)
+    throw new Error(`Route vertex ${routeId}:${vertexIndex} is not measurable`);
+  await page.mouse.click(point.x + offset.x, point.y + offset.y);
+}
+
 async function downloadBytes(
   page: Page,
   menu: string,
@@ -94,6 +142,14 @@ async function readRoutePoints(page: Page, routeId: string) {
       y: point.y,
     }));
   });
+}
+
+async function onlyRouteId(page: Page): Promise<string> {
+  const route = page.locator('[data-testid^="route-hit-"]');
+  await expect(route).toHaveCount(1);
+  const testId = await route.getAttribute("data-testid");
+  if (!testId) throw new Error("Route has no test id");
+  return testId.replace(/^route-hit-/u, "");
 }
 
 test("shows faithful symbol previews and the expanded VSS-derived palette", async ({
@@ -169,6 +225,92 @@ test("authors components and connectivity manually from an empty canvas", async 
   await page.keyboard.press("Control+z");
   await expect(page.getByTestId("revision")).toHaveText("6");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+});
+
+test("keeps Wire input above labels and resolves a screen-tolerant route tap", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  await placeComponent(page, "resistor", { x: 660, y: 220 });
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await expect(page.getByTestId("wire-input-plane")).toBeVisible();
+  const label = page.getByTestId("annotation-hit-instance-label-R1");
+  const labelBox = await label.boundingBox();
+  if (!labelBox) throw new Error("Default label is not measurable");
+  await page.mouse.click(
+    labelBox.x + labelBox.width / 2,
+    labelBox.y + labelBox.height / 2,
+  );
+  await expect(page.getByTestId("status")).toHaveText(
+    "Wire source: free grid point",
+  );
+  await page.keyboard.press("Escape");
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  const routeId = await onlyRouteId(page);
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await clickCommand(page, "Draw", "Wire (W)");
+  await clickRouteWithScreenOffset(page, routeId, { x: 0, y: 5 });
+  await expect(page.getByTestId("status")).toHaveText(
+    `Wire source: route ${routeId}`,
+  );
+});
+
+test("distinguishes deleting an isolated connection from unrouting it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  await placeComponent(page, "resistor", { x: 660, y: 220 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+
+  await clickRoute(page, "route-ui-1");
+  await expect(page.getByTestId("status")).toContainText(
+    "Selected route route-ui-1",
+  );
+  await page.keyboard.press("Delete");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await expect(page.getByTestId("status")).toContainText(
+    "Deleted electrical connection route-ui-1",
+  );
+
+  await page.keyboard.press("Control+z");
+  await clickRoute(page, "route-ui-1");
+  await page
+    .getByRole("button", { name: "Unroute (keep electrical connection)" })
+    .click();
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
+});
+
+test("turns an off-axis tap near a route bend into an exact junction", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "nmos", { x: 300, y: 260 });
+  await placeComponent(page, "resistor", { x: 540, y: 160 });
+  await placeComponent(page, "resistor", { x: 680, y: 360 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-M1-D").click();
+  await page.getByTestId("terminal-R2-1").click();
+  const points = await readRoutePoints(page, "route-ui-1");
+  expect(points.length).toBeGreaterThanOrEqual(3);
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R3-1").click();
+  await clickRouteVertexWithScreenOffset(page, "route-ui-1", 1, {
+    x: 3,
+    y: 3,
+  });
+  await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(1);
 });
 
 test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
@@ -533,7 +675,7 @@ test("derives crossings and creates junctions only when a wire ends on a route",
 
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-E-P1").click();
-  await clickRoute(page, "route-ui-1", 0.25);
+  await clickRouteWithScreenOffset(page, "route-ui-1", { x: 0, y: 5 }, 0.25);
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
   await expect(page.getByTestId("crossing-count")).toHaveText("3");
@@ -733,7 +875,9 @@ test("keeps the production command surface compact and publishes PWA metadata", 
     await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
   }
   await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);
-  await expect(toolbar.locator("summary", { hasText: "Export" })).toHaveCount(0);
+  await expect(toolbar.locator("summary", { hasText: "Export" })).toHaveCount(
+    0,
+  );
   await clickCommand(page, "Draw", "Wire (W)");
   await expect(page.getByTestId("active-tool")).toHaveText("wire");
   await openMenu(page, "More");

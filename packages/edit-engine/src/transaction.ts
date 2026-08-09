@@ -621,12 +621,51 @@ function splitRoute(
   if (segmentIndex >= polyline.points.length - 1) {
     return `Route split segment is out of range: ${segmentIndex}`;
   }
+  const vertexIndex = polyline.points.findIndex(
+    (point, index) =>
+      index > 0 &&
+      index < polyline.points.length - 1 &&
+      point.x === position.x &&
+      point.y === position.y,
+  );
+  const junctionEndpoint: RouteEndpoint = { kind: "junction", junctionId };
+  if (vertexIndex > 0) {
+    // A manual orthogonal bend is already a geometric vertex, not a point in
+    // the interior of either adjoining segment. Splitting it through the
+    // ordinary path would introduce a zero-length segment and is rejected by
+    // route validation. Partition the existing polyline at the vertex instead.
+    const firstNormalized = normalizeRouteGeometry(
+      polyline.points.slice(0, vertexIndex + 1),
+      route.segmentModes.slice(0, vertexIndex),
+    );
+    const secondNormalized = normalizeRouteGeometry(
+      polyline.points.slice(vertexIndex),
+      route.segmentModes.slice(vertexIndex),
+    );
+    return {
+      first: {
+        id: firstRouteId,
+        netId: route.netId,
+        from: structuredClone(route.from),
+        to: junctionEndpoint,
+        waypoints: firstNormalized.points.slice(1, -1),
+        segmentModes: firstNormalized.segmentModes,
+      },
+      second: {
+        id: secondRouteId,
+        netId: route.netId,
+        from: junctionEndpoint,
+        to: structuredClone(route.to),
+        waypoints: secondNormalized.points.slice(1, -1),
+        segmentModes: secondNormalized.segmentModes,
+      },
+    };
+  }
   const segmentFrom = polyline.points[segmentIndex]!;
   const segmentTo = polyline.points[segmentIndex + 1]!;
   if (!pointOnSegment(position, segmentFrom, segmentTo)) {
     return `Junction position is not inside route segment ${segmentIndex}`;
   }
-  const junctionEndpoint: RouteEndpoint = { kind: "junction", junctionId };
   const firstNormalized = normalizeRouteGeometry(
     [...polyline.points.slice(0, segmentIndex + 1), position],
     route.segmentModes.slice(0, segmentIndex + 1),
@@ -1753,24 +1792,35 @@ export function executeTransaction(
           (item) => item.id === edit.object.id,
         );
         const existing = objects[existingIndex];
-        if (existing?.locked) {
+        const parsed = DraftingObjectSchema.parse(edit.object);
+        // Locking protects the object from normal replacement, but it must not
+        // become irreversible. Permit exactly one exceptional replacement: the
+        // same canonical object with only `locked` switched to false. Parsing
+        // both sides through the model schema gives this comparison a stable
+        // persisted shape and prevents Unlock from smuggling in another edit.
+        const isPureUnlock =
+          existing?.locked === true &&
+          parsed.locked === false &&
+          JSON.stringify({ ...existing, locked: false }) ===
+            JSON.stringify(parsed);
+        if (existing?.locked && !isPureUnlock) {
           return rejectAt(
             "EDIT_PRECONDITION",
             `Drafting object is locked: ${existing.id}`,
           );
         }
-        if (edit.object.kind === "floating-symbol") {
+        if (parsed.kind === "floating-symbol") {
           if (!resolver) {
             return rejectAt(
               "EDIT_PRECONDITION",
-              `A Symbol Resolver is required to validate a floating symbol: ${edit.object.symbolId}`,
+              `A Symbol Resolver is required to validate a floating symbol: ${parsed.symbolId}`,
             );
           }
-          const resolved = resolver.resolve(edit.object.symbolId);
+          const resolved = resolver.resolve(parsed.symbolId);
           if (!resolved) {
             return rejectAt(
               "EDIT_PRECONDITION",
-              `Unknown floating symbol: ${edit.object.symbolId}`,
+              `Unknown floating symbol: ${parsed.symbolId}`,
             );
           }
           // ADR 0010: a floating symbol must reference a `decorative: true`
@@ -1779,17 +1829,16 @@ export function executeTransaction(
           if (!resolved.definition.decorative) {
             return rejectAt(
               "EDIT_PRECONDITION",
-              `Floating symbol must be decorative: ${edit.object.symbolId}`,
+              `Floating symbol must be decorative: ${parsed.symbolId}`,
             );
           }
           if (resolved.definition.pins.length > 0) {
             return rejectAt(
               "EDIT_PRECONDITION",
-              `Floating symbol must be terminal-free: ${edit.object.symbolId}`,
+              `Floating symbol must be terminal-free: ${parsed.symbolId}`,
             );
           }
         }
-        const parsed = DraftingObjectSchema.parse(edit.object);
         if (existingIndex >= 0) objects[existingIndex] = parsed;
         else objects.push(parsed);
         changedObjectIds.add(parsed.id);
@@ -1804,12 +1853,6 @@ export function executeTransaction(
           return rejectAt(
             "OBJECT_NOT_FOUND",
             `Drafting object does not exist: ${edit.objectId}`,
-          );
-        }
-        if (object.locked) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Drafting object is locked: ${object.id}`,
           );
         }
         objects.splice(index, 1);
