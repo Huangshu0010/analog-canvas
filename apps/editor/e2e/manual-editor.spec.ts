@@ -696,19 +696,66 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await expect(page.getByTestId("revision")).toHaveText("1");
-  expect(
-    await page.evaluate(() => localStorage.getItem("icm.recovery.v1")),
-  ).toContain('"revision": 1');
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
+    .toContain('"revision": 1');
 
   await page.reload();
   await openMenu(page, "File");
   await page.getByRole("button", { name: "Restore recovery" }).click();
   await expect(page.getByTestId("revision")).toHaveText("1");
 
-  await page.getByRole("button", { name: "+ Component" }).click();
   const search = page.getByRole("textbox", { name: "Search components" });
   await search.fill("r");
   await expect(page.getByTestId("revision")).toHaveText("1");
+});
+
+test("cancels pending recovery before save or project replacement", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 360, y: 220 });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  // Save clears the slot while a debounced write is pending. Waiting past the
+  // debounce proves the old timer cannot recreate it.
+  await downloadBytes(page, "File", "Save Project");
+  await page.waitForTimeout(500);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
+    .toBeNull();
+
+  await placeComponent(page, "resistor", { x: 500, y: 220 });
+  await expect(page.getByTestId("revision")).toHaveText("2");
+  await page
+    .getByTestId("project-file")
+    .setInputFiles(
+      resolve(
+        process.cwd(),
+        "fixtures/projects/phase-1-manual/project.icproj.json",
+      ),
+    );
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "Manual Editor Demo",
+  );
+  await page.waitForTimeout(500);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
+    .toBeNull();
+});
+
+test("discard recovery clears the recovery slot", async ({ page }) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 360, y: 220 });
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
+    .toContain('"revision": 1');
+
+  await page.reload();
+  await clickCommand(page, "File", "Discard recovery");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
+    .toBeNull();
 });
 
 test("keeps the production command surface compact and publishes PWA metadata", async ({

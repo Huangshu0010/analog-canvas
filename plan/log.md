@@ -15,6 +15,41 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-09 - GUI modernization: chrome tokens and recovery scheduling
+
+- Target: per `plan/2026-08-09-gui-modernization/plan.md`, modernize editor
+  chrome colors via CSS design tokens, replace synchronous per-transaction
+  recovery writes with a coalesced + flush-on-hide + cancel-on-replace
+  scheduler, and record the GUI mutation lifecycle and try/catch audit. White
+  canvas, grid dot, and formal SVG/export output unchanged.
+- Changed areas:
+  - `apps/editor/src/styles.css` — added `:root` `--icm-*` chrome tokens;
+    replaced 13 hardcoded `#1f6feb` and scattered panel/border/diagnostic
+    colors with tokens. `.schematic-canvas { background:#fff }` left literal.
+  - `apps/editor/src/recovery-scheduler.ts` (new) — injectable scheduler with
+    `schedule/flush/cancel` and `isPending`; owns no React state.
+  - `apps/editor/src/recovery-scheduler.test.ts` (new) — fake-timer coverage of
+    coalescing, flush idempotency, cancel, reschedule, delay.
+  - `apps/editor/src/App.tsx` — `stageRecovery` now schedules; added
+    `cancelRecovery`/`flushRecovery`; `visibilitychange`/`pagehide` flush
+    effect with cancel-on-unmount; `cancelRecovery` before
+    `replaceActiveProject`, `saveProjectFile`, `discardRecovery`. `applyResult`
+    remains the sole transaction→recovery scheduling site.
+  - `docs/specs/editor-interaction.md` — added "Mutation lifecycle" section and
+    "Recovery persistence lifecycle" subsection.
+  - `plan/2026-08-09-gui-modernization/plan.md` — appended C try/catch audit
+    conclusion (8/8 catch retained, no code change).
+- Validation: static verification preserved the white canvas literal, grid-dot,
+  and formal body boundary. Actual checks passed: recovery scheduler Vitest
+  9/9; recovery Playwright scenarios 3/3 (coalesced restore, Save/Open stale
+  timer cancellation, Discard); workspace `pnpm typecheck`; editor production
+  build; Prettier for all changed target files; and `git diff --check`.
+- C audit conclusion: all 8 try/catch blocks in App.tsx wrap a throwing domain
+  helper or an external boundary; none is strictly `transact()`-only, so none
+  is removed. Recorded in the plan's C section.
+- Commit status: target validation complete; pending an intentional, scoped
+  commit. Unrelated concurrent Razavi-fidelity changes remain unstaged.
+
 ## 2026-08-08 - Calibrate Razavi geometry from supplied reference pixels
 
 - Target: use the supplied 1204x794 six-panel Razavi reference, rather than

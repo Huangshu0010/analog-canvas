@@ -292,6 +292,45 @@ The editor must keep ambiguous or destructive logical intent explicit:
 All inferred edits require a deterministic preview when they would change
 connectivity.
 
+## Mutation lifecycle
+
+Every circuit change to the current Document follows one path. The editor does
+not maintain a second command engine, event bus, or JSON-patch protocol beside
+this one:
+
+```text
+gesture / menu / shortcut
+  → proposal (optional; a domain helper may throw a recoverable error)
+  → transact(typed edits)
+  → applyResult(result)
+  → Project update + recovery schedule + default status
+  → success-time local UI convergence (selection / preview / tool)
+```
+
+Normative constraints:
+
+1. A persisted circuit edit to the current Document may only be applied through
+   `transact(edits)`. Handlers do not patch Project JSON directly and do not
+   write recovery directly.
+2. `applyResult()` is the only point that schedules recovery from a successful
+   transaction. It also renders an `EditTransactionResult` failure as a
+   structured status; it is the sole owner of both outcomes.
+3. The proposal layer (group move, route stretch, connected deletion) may throw
+   a recoverable domain error. The catch nearest the gesture converts it to a
+   status and always converges the temporary preview. Reducing the number of
+   catches is not a quality goal; a catch that protects a throwing domain
+   helper or an external boundary must stay.
+4. Whole-project replacement (Open, Import, Restore, demo load) is not a
+   transaction. It goes through the project replacement entry point, which
+   cancels any pending recovery write for the outgoing Project first.
+5. Selection, viewport, active tool, and drag preview are editor-local
+   transient state. They never enter the Project, the Agent API, or the
+   recovery file.
+6. This lifecycle is not extended with a `CommandEngine`, an `executeCommand`
+   enumeration, an event bus, a second request/response schema, or any Agent
+   API surface. "Unified" here means converging the existing call chain, not
+   adding another layer.
+
 ## Symbol fidelity boundary
 
 The component palette uses runtime-independent Symbol DSL definitions. The 12
@@ -340,6 +379,34 @@ Document revision. Previews and cancelled gestures are transient.
   `export: false`; they never appear in formal SVG/PNG/PDF.
 - External build-time evidence: VSS inventories, reviewed pin mapping, and
   geometry comparison artifacts.
+
+### Recovery persistence lifecycle
+
+Unsaved work is recoverable through a coalesced write to a single recovery
+slot. The lifecycle is owned by one scheduler and three operations:
+
+- `schedule(project)` — the only write path from a successful transaction. It
+  arms a short coalescing timer that keeps only the latest Project, so a burst
+  of edits becomes one serialize-and-write instead of one per edit. A burst of
+  revisions must never produce more than one recovery write of the newest
+  Project.
+- `flush()` — writes the pending Project immediately and clears the timer. It
+  runs on `visibilitychange` (transition to `hidden`) and `pagehide`, so the
+  last edit is never lost to a timer that did not fire. It is idempotent when
+  nothing is pending.
+- `cancel()` — drops a pending write without writing. It runs before any
+  whole-project replacement (Save, Discard, Open, Import, Restore, and demo
+  load) and on component unmount, so a stale pending write for an outgoing
+  Project cannot revive after the user has moved on.
+
+The `applyResult()` of a successful transaction is the only point that schedules
+recovery from a typed edit. Handlers never write recovery directly and never
+serialize the Project outside this scheduler. Whole-project replacements
+(Open/Import/Restore/demo) are not transactions; they go through the project
+replacement entry point, which cancels first.
+
+The recovery key, file format, and migration are unchanged; only the write
+timing and ordering are specified here.
 
 ## Valid example
 

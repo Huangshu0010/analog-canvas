@@ -75,9 +75,15 @@ import {
   replaceVisualSelectionKind,
 } from "./visual-selection";
 import type { VisualSelection, VisualSelectionKind } from "./visual-selection";
+import { createRecoveryScheduler } from "./recovery-scheduler";
+import type { RecoveryScheduler } from "./recovery-scheduler";
 import { RichTextEditor } from "./rich-text-editor";
 
 const RECOVERY_KEY = "icm.recovery.v1";
+// Coalesce bursts of edits into one recovery write so a large schematic does
+// not serialize and block on every transaction. Not a product contract; tuned
+// only if real measurement shows it is too coarse. See recovery-scheduler.ts.
+const RECOVERY_DELAY_MS = 400;
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 
 interface DragPreview {
@@ -597,6 +603,19 @@ export function App({ project: initialProject }: AppProps) {
   );
   const histories = useRef(new Map([[project.topDocumentId, history.current]]));
   const documentViewBoxes = useRef(new Map<string, Rect>());
+  // Coalesces recovery writes. Created once; `stageRecovery` schedules, the
+  // pagehide/visibilitychange effect flushes, and whole-project replacements
+  // cancel so a stale pending write for an old project cannot revive.
+  const [recoveryScheduler] = useState<RecoveryScheduler>(() =>
+    createRecoveryScheduler({
+      delayMs: RECOVERY_DELAY_MS,
+      write: (project) =>
+        localStorage.setItem(
+          RECOVERY_KEY,
+          serializeProject(project as CircuitProject),
+        ),
+    }),
+  );
   const document =
     project.documents.find((candidate) => candidate.id === activeDocumentId) ??
     project.documents.find(
@@ -1117,6 +1136,26 @@ export function App({ project: initialProject }: AppProps) {
     }
   }, []);
 
+  // Flush a coalesced recovery write before the tab is hidden or unloaded, so
+  // the last edit is never lost to a timer that did not fire. `flush()` is
+  // idempotent when nothing is pending.
+  useEffect(() => {
+    const flushWhenHidden = () => {
+      if (window.document.visibilityState === "hidden") flushRecovery();
+    };
+    const flushOnPageHide = () => flushRecovery();
+    window.addEventListener("visibilitychange", flushWhenHidden);
+    window.addEventListener("pagehide", flushOnPageHide);
+    return () => {
+      window.removeEventListener("visibilitychange", flushWhenHidden);
+      window.removeEventListener("pagehide", flushOnPageHide);
+      // On unmount (distinct from page hide — e.g. StrictMode remount or a
+      // future routed shell) cancel rather than write, so a stale timer cannot
+      // fire against a React session that no longer owns the project.
+      recoveryScheduler.dispose();
+    };
+  }, []);
+
   function replaceSelectionIds(
     kind: VisualSelectionKind,
     next: string[] | ((current: string[]) => string[]),
@@ -1148,7 +1187,18 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function stageRecovery(nextProject: CircuitProject): void {
-    localStorage.setItem(RECOVERY_KEY, serializeProject(nextProject));
+    // Coalesced: a burst of edits becomes one delayed write. The lifecycle
+    // effect flushes before the tab hides, and cancelRecovery() clears any
+    // pending write before a whole-project replacement.
+    recoveryScheduler.schedule(nextProject);
+  }
+
+  function cancelRecovery(): void {
+    recoveryScheduler.cancel();
+  }
+
+  function flushRecovery(): void {
+    recoveryScheduler.flush();
   }
 
   function resetInteractionState(): void {
@@ -1239,6 +1289,10 @@ export function App({ project: initialProject }: AppProps) {
     nextProject: CircuitProject,
     nextViewBox: Rect = DEFAULT_VIEWBOX,
   ): SchematicDocument {
+    // Drop any pending recovery write for the outgoing project so it cannot
+    // revive after Save/Discard/Open/Import/Restore/demo-load swaps the project.
+    // Callers that also remove the recovery key do so after this cancels.
+    cancelRecovery();
     const nextDocument = nextProject.documents.find(
       (candidate) => candidate.id === nextProject.topDocumentId,
     )!;
@@ -2230,6 +2284,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function saveProjectFile(): void {
+    cancelRecovery();
     download(serializeProject(project), "application/json", "icproj.json");
     localStorage.removeItem(RECOVERY_KEY);
     setRecoveryCandidate(null);
@@ -2244,6 +2299,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function discardRecovery(): void {
+    cancelRecovery();
     localStorage.removeItem(RECOVERY_KEY);
     setRecoveryCandidate(null);
     setStatus("Discarded recovery");
