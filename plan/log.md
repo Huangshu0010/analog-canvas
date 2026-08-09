@@ -2735,3 +2735,19 @@ Editing System work.
 - Validation: focused tests `24/24`, Derived/Render-SVG builds, workspace
   typecheck, Prettier check, and `git diff --check` passed.
 - Commit status: ready for `fix(razavi): refine unified subscript geometry`.
+
+## 2026-08-09 - Global semantic annotation typography
+
+- Target: make existing as well as newly edited electrical annotations consume
+  the active Razavi typography profile.
+- Changed areas: formal renderer and editor session initialization now derive
+  semantic annotations from canonical `text`; schema and style contract clarify
+  that stored annotation `content` is not a visual style override; regression
+  covers a stale legacy RichText payload.
+- Result: `V/I/R/M` base styling, upright subscript face, `0.84` scale, and
+  `0.28em` baseline apply immediately to all semantic labels without modifying
+  individual project files. DraftText remains independent RichText.
+- Validation: 36 of 39 focused renderer/text checks passed; the three failures
+  are existing component-symbol goldens. Render-SVG/editor builds, workspace
+  typecheck, formatting, and `git diff --check` passed.
+- Commit status: ready for `fix(text): normalize semantic annotation typography`.

@@ -24,7 +24,7 @@ import { razaviTextbookProfile } from "./style-profile.js";
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("textbook monochrome SVG renderer", () => {
-  it("renders annotation RichText through the same canonical text renderer", () => {
+  it("normalizes stale annotation RichText through semantic text rendering", () => {
     const document = createEmptyProject("project-rich-label", "Rich label")
       .documents[0]!;
     document.annotations.push({
@@ -32,14 +32,7 @@ describe("textbook monochrome SVG renderer", () => {
       kind: "net-label",
       text: "VIN",
       content: {
-        runs: [
-          { kind: "text", value: "V" },
-          {
-            kind: "span",
-            style: "subscript",
-            children: [{ kind: "text", value: "in" }],
-          },
-        ],
+        runs: [{ kind: "text", value: "legacy override" }],
       },
       position: { x: 100, y: 100 },
       offset: { x: 0, y: 0 },
@@ -53,7 +46,9 @@ describe("textbook monochrome SVG renderer", () => {
 
     expect(svg).toContain('data-object-id="label-vin"');
     expect(svg).toContain('data-text-run="subscript"');
-    expect(svg).toContain(">in</tspan>");
+    expect(svg).toContain(">IN</tspan>");
+    expect(svg).toContain("font-style:italic;font-weight:700");
+    expect(svg).toContain("font-style:normal;font-weight:700");
   });
 
   it("renders the Razavi palette port as a hollow endpoint", () => {
@@ -546,7 +541,7 @@ describe("textbook monochrome SVG renderer", () => {
       '<text data-role="polarity-negative" x="92" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">−</text>',
     );
     expect(svg).toContain(
-      '<text x="100" y="100" text-anchor="start" font-size="16"><tspan',
+      '<text x="100" y="100" text-anchor="start" font-size="18"><tspan',
     );
     expect(svg).not.toContain('transform="rotate(90 100 100)"><tspan');
   });

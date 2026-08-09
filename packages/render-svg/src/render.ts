@@ -49,12 +49,9 @@ function renderAnnotationText(
   annotation: SchematicDocument["annotations"][number],
   profile: SchematicStyleProfile,
 ): string {
-  if (annotation.content) {
-    return renderRichTextDocument(
-      annotation.content as unknown as RichTextDocumentInput,
-      profile,
-    );
-  }
+  // Electrical annotation text is semantic, not a free-form RichText style
+  // override. Historical Projects may carry an older content AST, but it must
+  // never bypass the active profile's canonical math composition.
   return renderSchematicTextContent(annotation.text, annotation.kind, profile);
 }
 

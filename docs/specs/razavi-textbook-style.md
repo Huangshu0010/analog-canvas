@@ -295,7 +295,9 @@ Rules:
 - Text stays upright under component rotation or mirroring.
 
 The renderer implements these rules without rewriting persisted annotation
-text. Implicit voltage/current parsing keeps a trailing `+` or `-` in a
+text. All semantic SchematicAnnotations render from their canonical `text`
+field, even when a historical `content` AST is present; only free DraftText
+uses RichText presentation directly. Implicit voltage/current parsing keeps a trailing `+` or `-` in a
 separate upright suffix run; an underscore makes the following content an
 explicit math run. The compatibility profile emits the original escaped text
 without `<tspan>` composition, preserving its byte goldens.

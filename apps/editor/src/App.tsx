@@ -2482,9 +2482,10 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function annotationRichText(annotation: Annotation): RichTextDocument {
-    return annotation.content
-      ? (annotation.content as unknown as RichTextDocument)
-      : schematicTextDocument(annotation.text, annotation.kind);
+    // Keep the editor session in lockstep with formal rendering. Annotation
+    // content is retained for round-trip compatibility, but electrical labels
+    // always begin from their canonical semantic text composition.
+    return schematicTextDocument(annotation.text, annotation.kind);
   }
 
   function beginAnnotationTextEditing(annotation: Annotation): void {

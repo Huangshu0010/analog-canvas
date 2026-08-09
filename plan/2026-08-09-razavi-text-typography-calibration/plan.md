@@ -150,3 +150,35 @@ bold only for automatic semantic labels.
   while applying the new values only to `razavi-textbook-v1`.
 - Focused Derived/Render-SVG tests (`24/24`), both package builds, workspace
   typecheck, owned-file Prettier check, and `git diff --check` passed.
+
+## Follow-up: global semantic-annotation normalization
+
+Existing annotations can carry an older `content` AST. The renderer currently
+prefers that presentation AST over the annotation's canonical semantic `text`,
+so those labels bypass the global Razavi math formatter until a user edits and
+saves them. Normalize this at consumption rather than bulk-rewriting Projects:
+all semantic SchematicAnnotation kinds render from `text`; only free DraftText
+uses its persisted RichText presentation. Align the editor's initial RichText
+session to the same semantic normalization, document the ownership rule, and
+test an intentionally stale annotation content payload.
+
+Additional owned paths: `apps/editor/src/App.tsx`,
+`packages/model/src/schema.ts`, `packages/render-svg/src/render.ts`, and their
+focused tests. This is a shared presentation-contract clarification only; it
+does not migrate or alter saved Project files.
+
+### Follow-up result
+
+- Formal rendering now always derives every semantic annotation from its
+  canonical `text`, so old or newly persisted `content` cannot cause a label
+  to retain outdated font, subscript, or baseline styling.
+- The editor now opens every semantic annotation with the same normalized
+  RichText composition; a later Apply writes a matching presentation AST, but
+  no one-time Project rewrite is necessary for the visual correction.
+- Free DraftText remains on the original RichText rendering path. A renderer
+  regression includes a deliberately stale annotation `content` payload and
+  proves that it renders as canonical `V_IN` instead.
+- Focused renderer/text tests passed `36/39`; the three remaining failures
+  are the pre-existing symbol-golden mismatches from the concurrent Razavi
+  component calibration. Render-SVG and editor builds, workspace typecheck,
+  formatting, and `git diff --check` passed.
