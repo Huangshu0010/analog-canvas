@@ -45,6 +45,16 @@
     }
   },
   "formal": {
+    "route-wire": {
+      "evidence": "Vin port lead between the hollow origin and M1 gate",
+      "originPx": { "x": 81, "y": 118.5 },
+      "window": {
+        "width": 13,
+        "height": 7,
+        "minX": -4.3165467626,
+        "minY": -2.5179856115
+      }
+    },
     "route-current-arrow": {
       "evidence": "I1 on the left vertical route",
       "originPx": { "x": 124, "y": 82 },

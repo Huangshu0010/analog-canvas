@@ -55,6 +55,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       calibrationPath:
         "fixtures/visual-reference/razavi-reference-v1/current-port-geometry.json",
     },
+    generation: {
+      kind: "razavi-raster-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
+      converterVersion: 1,
+    },
   },
   {
     symbolId: "diode",
@@ -93,6 +102,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       ],
       calibrationPath:
         "fixtures/visual-reference/razavi-reference-v1/peripheral-geometry.json",
+    },
+    generation: {
+      kind: "razavi-raster-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
+      converterVersion: 1,
     },
   },
   {
@@ -298,6 +316,15 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       ],
       calibrationPath:
         "fixtures/visual-reference/razavi-reference-v1/peripheral-geometry.json",
+    },
+    generation: {
+      kind: "razavi-raster-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+      converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
+      converterVersion: 1,
     },
   },
   {

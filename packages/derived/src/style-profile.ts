@@ -105,7 +105,7 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
   foreground: "#202020",
   background: "#fff",
   strokes: {
-    wire: 1.6,
+    wire: 1.28,
     symbol: 1.6,
     normal: 1.6,
     emphasis: 2.16,

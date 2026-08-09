@@ -28,6 +28,13 @@ export interface RazaviSymbolCatalogEntry {
   manualOnlyReason?: string;
   assetPath: string;
   assetHash: string;
+  generation?: {
+    kind: "razavi-raster-reference";
+    referenceManifestPath: string;
+    referencePath: string;
+    converterPath: string;
+    converterVersion: number;
+  };
 }
 
 export interface RazaviSemanticPrimitiveEntry {

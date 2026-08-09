@@ -34,7 +34,7 @@
   "capacitorGeometryPath": "capacitor-geometry.json",
   "capacitorGeometrySha256": "9137e7a492c6a5e66ae0476618942f099899260a09e80f47b3d5ebe57c97cf6a",
   "currentPortGeometryPath": "current-port-geometry.json",
-  "currentPortGeometrySha256": "fbdf7f8cf39cfcc036a77abf386aa7c2d1acfa2e3467610a9df4de9dfa07e961",
+  "currentPortGeometrySha256": "182bc62fdec937cec49051ba5ad1ff802b8d23a576ff2695f8fdce02b0fa66fd",
   "vddGeometryPath": "vdd-geometry.json",
   "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
   "pixels": {

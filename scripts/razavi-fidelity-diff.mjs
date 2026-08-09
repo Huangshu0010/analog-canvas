@@ -8,7 +8,7 @@
 // Usage:
 //   node scripts/razavi-fidelity-diff.mjs [device...] [--threshold 160] [--out dir]
 //
-//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | current-source-compact | formal-port | formal-route-current-arrow | vdd | ground | resistor | capacitor-vertical | capacitor-horizontal
+//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | current-source-compact | formal-port | formal-route-wire | formal-route-current-arrow | vdd | ground | resistor | capacitor-vertical | capacitor-horizontal
 //           (default: all raster-owned devices)
 //
 // This tool is read-only: it never edits source configs. Use its report to
@@ -104,6 +104,12 @@ const DEVICE_GEOMETRY = {
     collection: "ports",
     key: "hollowOrigin",
     formal: "port",
+  },
+  "formal-route-wire": {
+    file: "current-port-geometry.json",
+    collection: "formal",
+    key: "route-wire",
+    formal: "wire",
   },
   "formal-route-current-arrow": {
     file: "current-port-geometry.json",
@@ -206,6 +212,38 @@ function formalDocument(kind) {
       netId: "net-port",
       from: { kind: "port", portId: "port-origin" },
       to: { kind: "port", portId: "port-wire" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    return document;
+  }
+
+  if (kind === "wire") {
+    document.ports.push(
+      {
+        id: "wire-left",
+        name: "L",
+        direction: "passive",
+        position: { x: -100, y: 0 },
+      },
+      {
+        id: "wire-right",
+        name: "R",
+        direction: "passive",
+        position: { x: 100, y: 0 },
+      },
+    );
+    document.nets.push({
+      id: "net-wire",
+      scope: "local",
+      terminals: [],
+      ports: ["wire-left", "wire-right"],
+    });
+    document.routes.push({
+      id: "route-wire",
+      netId: "net-wire",
+      from: { kind: "port", portId: "wire-left" },
+      to: { kind: "port", portId: "wire-right" },
       waypoints: [],
       segmentModes: ["manual"],
     });
@@ -348,6 +386,9 @@ for (const deviceId of targets) {
     spec,
     await referenceForGeometry(geometry),
     definition,
+  );
+  console.log(
+    `  ${deviceId}: reference ${geometry.assetPath ?? manifest.assetPath}`,
   );
   reports.push(report);
 

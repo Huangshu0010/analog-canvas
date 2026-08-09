@@ -39,6 +39,13 @@
           "fixtures/visual-reference/razavi-reference-v1/current-port-reference.png"
         ],
         "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/current-port-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-raster-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+        "converterPath": "scripts/generate-razavi-peripheral-assets.mjs",
+        "converterVersion": 1
       }
     },
     {
@@ -73,6 +80,13 @@
           "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
         ],
         "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/peripheral-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-raster-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+        "converterPath": "scripts/generate-razavi-peripheral-assets.mjs",
+        "converterVersion": 1
       }
     },
     {
@@ -251,6 +265,13 @@
           "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png"
         ],
         "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/peripheral-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-raster-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
+        "converterPath": "scripts/generate-razavi-peripheral-assets.mjs",
+        "converterVersion": 1
       }
     },
     {
