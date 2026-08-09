@@ -13,6 +13,7 @@ normative module contracts, concrete execution logs, and reusable experience.
 | [`specs/`](specs/README.md) | Normative data, API, parser, rendering, and persistence contracts |
 | [`agent/`](agent/README.md) | Agent API usage and soft layout/routing guidance |
 | [`adr/`](adr/README.md) | Significant architectural decisions and their consequences |
+| [`adr/0011-retire-visio-vss-as-visual-authority.md`](adr/0011-retire-visio-vss-as-visual-authority.md) | Accepted boundary: VSS is archived historical evidence; the Razavi raster reference is the sole visual authority |
 | [`experience/`](experience/README.md) | Human-requested, evidence-backed reusable lessons |
 | [`../plan/`](../plan/README.md) | Bounded execution plans and factual maintenance history |
 
@@ -32,6 +33,11 @@ accepted ADR or approved normative spec
 Implementation and tests are evidence, but they do not silently redefine an
 approved contract. Update the relevant spec or ADR when behavior intentionally
 changes.
+
+The retired Visio/VSS route is not an exception to this order: its old plans,
+fixtures, converters, and review boards are historical records only. They may
+not be used to infer active symbol geometry, line styles, typography, or visual
+acceptance criteria.
 
 ## Status Vocabulary
 

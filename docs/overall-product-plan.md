@@ -1053,3 +1053,9 @@ MOS 资产必须直接在最终渲染坐标系定义：D/G/S/B 保持网格 pin 
 视觉验收固定 Chromium、DPR、viewport、字体、前景色、线宽、line cap 和
 line join；先对单器件裁图 diff，再对完整教材式电路板 diff。不同缩放下
 的浏览器截图不得作为“像素不一致”的证据。
+# Supersession notice (2026-08-09)
+
+All statements in this document that describe `circuit.vss`, Visio extraction,
+or VSS-derived symbol geometry as an active product or development route are
+superseded by [ADR 0011](adr/0011-retire-visio-vss-as-visual-authority.md).
+The approved Razavi raster reference is the only visual authority.
