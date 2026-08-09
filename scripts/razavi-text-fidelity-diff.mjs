@@ -63,42 +63,94 @@ if (
 
 // These windows intentionally exclude adjacent wires/nodes. Coordinates are
 // measured from the supplied 237 x 273 user reference screenshot.
-const TARGETS = [
-  {
-    id: "vdd",
-    crop: { x: 196, y: 31, width: 39, height: 25 },
-    base: "V",
-    sub: "DD",
-  },
-  {
-    id: "rd",
-    crop: { x: 37, y: 70, width: 35, height: 23 },
-    base: "R",
-    sub: "D",
-  },
-  {
-    id: "vout",
-    // This label touches an output node and polarity marker in the source
-    // crop. Keep the diagnostic, but never let surrounding circuit ink select
-    // the default text tokens.
-    diagnosticOnly: true,
-    crop: { x: 101, y: 102, width: 43, height: 24 },
-    base: "V",
-    sub: "out",
-  },
-  {
-    id: "m1",
-    crop: { x: 83, y: 142, width: 37, height: 27 },
-    base: "M",
-    sub: "1",
-  },
-  {
-    id: "m2",
-    crop: { x: 143, y: 142, width: 38, height: 27 },
-    base: "M",
-    sub: "2",
-  },
-];
+const REFERENCE_TARGETS = {
+  "237x273": [
+    {
+      id: "vdd",
+      crop: { x: 196, y: 31, width: 39, height: 25 },
+      base: "V",
+      sub: "DD",
+    },
+    {
+      id: "rd",
+      crop: { x: 37, y: 70, width: 35, height: 23 },
+      base: "R",
+      sub: "D",
+    },
+    {
+      id: "vout",
+      // This label touches an output node and polarity marker in the source
+      // crop. Keep the diagnostic, but never let surrounding circuit ink select
+      // the default text tokens.
+      diagnosticOnly: true,
+      crop: { x: 101, y: 102, width: 43, height: 24 },
+      base: "V",
+      sub: "out",
+    },
+    {
+      id: "m1",
+      crop: { x: 83, y: 142, width: 37, height: 27 },
+      base: "M",
+      sub: "1",
+    },
+    {
+      id: "m2",
+      crop: { x: 143, y: 142, width: 38, height: 27 },
+      base: "M",
+      sub: "2",
+    },
+  ],
+  "546x522": [
+    {
+      id: "vdd",
+      crop: { x: 282, y: 7, width: 82, height: 51 },
+      base: "V",
+      sub: "DD",
+    },
+    {
+      id: "vb3",
+      crop: { x: 48, y: 84, width: 82, height: 50 },
+      base: "V",
+      sub: "b3",
+    },
+    {
+      id: "m3",
+      crop: { x: 255, y: 96, width: 67, height: 48 },
+      base: "M",
+      sub: "3",
+    },
+    {
+      id: "vb1",
+      crop: { x: 48, y: 199, width: 82, height: 50 },
+      base: "V",
+      sub: "b1",
+    },
+    {
+      id: "m2",
+      crop: { x: 255, y: 211, width: 67, height: 48 },
+      base: "M",
+      sub: "2",
+    },
+    {
+      id: "ix",
+      crop: { x: 360, y: 246, width: 52, height: 45 },
+      base: "I",
+      sub: "X",
+    },
+    {
+      id: "vx",
+      crop: { x: 474, y: 372, width: 66, height: 53 },
+      base: "V",
+      sub: "X",
+    },
+    {
+      id: "m1",
+      crop: { x: 255, y: 351, width: 67, height: 48 },
+      base: "M",
+      sub: "1",
+    },
+  ],
+};
 const THRESHOLD = 190;
 
 function xml(value) {
@@ -118,7 +170,7 @@ function subscriptStyle(candidate) {
 
 function textSvg(target, candidate) {
   const baseStyle = "font-style:italic;font-weight:700";
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="72" viewBox="0 0 160 72"><rect width="160" height="72" fill="#fff"/><text x="20" y="46" font-family="${candidate.fontFamily}" font-size="${candidate.baseSize}" fill="#202020"><tspan style="${baseStyle}">${xml(target.base)}</tspan><tspan font-size="${Math.round(candidate.subscriptScale * 100)}%" baseline-shift="-${candidate.subscriptShiftEm}em" style="${subscriptStyle(candidate)}">${xml(target.sub)}</tspan></text></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="72" viewBox="0 0 160 72"><rect width="160" height="72" fill="#fff"/><text x="20" y="46" font-family="${candidate.fontFamily}" font-size="${candidate.baseSize}" fill="#202020"><tspan style="${baseStyle}">${xml(target.base)}</tspan><tspan dx="${candidate.subscriptHorizontalOffsetEm}em" font-size="${Math.round(candidate.subscriptScale * 100)}%" baseline-shift="-${candidate.subscriptShiftEm}em" style="${subscriptStyle(candidate)}">${xml(target.sub)}</tspan></text></svg>`;
 }
 
 let browser;
@@ -236,7 +288,7 @@ function maskRaster(mask, width, height) {
 
 async function evaluate(reference, candidate, includeRasters = false) {
   const reports = [];
-  for (const target of TARGETS) {
+  for (const target of targets) {
     const referenceCrop = tightMask(
       cropRaster(
         reference,
@@ -263,19 +315,19 @@ async function evaluate(reference, candidate, includeRasters = false) {
       reports
         .filter(
           (item) =>
-            !TARGETS.find((target) => target.id === item.id)?.diagnosticOnly,
+            !targets.find((target) => target.id === item.id)?.diagnosticOnly,
         )
         .reduce((total, item) => total + item.iou, 0) /
       reports.filter(
         (item) =>
-          !TARGETS.find((target) => target.id === item.id)?.diagnosticOnly,
+          !targets.find((target) => target.id === item.id)?.diagnosticOnly,
       ).length,
     reports,
   };
 }
 
 function candidateKey(candidate) {
-  return `${candidate.fontFamily}/${candidate.baseSize}/${candidate.subscriptScale}/${candidate.subscriptShiftEm}/${candidate.subscriptFace}`;
+  return `${candidate.fontFamily}/${candidate.baseSize}/${candidate.subscriptScale}/${candidate.subscriptShiftEm}/${candidate.subscriptHorizontalOffsetEm}/${candidate.subscriptFace}`;
 }
 
 async function choose(reference, candidates, label) {
@@ -294,9 +346,10 @@ async function choose(reference, candidates, label) {
 }
 
 const reference = await decodePng(await readFile(referencePath));
-if (reference.width !== 237 || reference.height !== 273) {
+const targets = REFERENCE_TARGETS[`${reference.width}x${reference.height}`];
+if (!targets) {
   throw new Error(
-    `Expected the 237x273 OTA reference, received ${reference.width}x${reference.height}`,
+    `Unsupported reference dimensions ${reference.width}x${reference.height}`,
   );
 }
 
@@ -312,6 +365,7 @@ let best = await choose(
         baseSize: 16,
         subscriptScale: 0.68,
         subscriptShiftEm: 0.3,
+        subscriptHorizontalOffsetEm: 0,
         subscriptFace,
       }),
     ),
@@ -320,12 +374,15 @@ let best = await choose(
 );
 best = await choose(
   reference,
-  [14, 15, 16, 17, 18].map((baseSize) => ({ ...best, baseSize })),
+  [14, 15, 16, 17, 18, 22, 26, 30, 34, 38, 42].map((baseSize) => ({
+    ...best,
+    baseSize,
+  })),
   "base size",
 );
 best = await choose(
   reference,
-  [0.6, 0.64, 0.68, 0.72, 0.76].map((subscriptScale) => ({
+  [0.64, 0.68, 0.72, 0.76, 0.8, 0.84, 0.88].map((subscriptScale) => ({
     ...best,
     subscriptScale,
   })),
@@ -333,11 +390,19 @@ best = await choose(
 );
 best = await choose(
   reference,
-  [0.22, 0.26, 0.3, 0.34, 0.38].map((subscriptShiftEm) => ({
+  [0.16, 0.2, 0.24, 0.28, 0.32, 0.36, 0.4].map((subscriptShiftEm) => ({
     ...best,
     subscriptShiftEm,
   })),
   "subscript baseline",
+);
+best = await choose(
+  reference,
+  [-0.16, -0.12, -0.08, -0.04, 0].map((subscriptHorizontalOffsetEm) => ({
+    ...best,
+    subscriptHorizontalOffsetEm,
+  })),
+  "subscript attachment",
 );
 
 const final = await evaluate(reference, best, true);

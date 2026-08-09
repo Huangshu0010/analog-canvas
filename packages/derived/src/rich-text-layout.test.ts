@@ -74,8 +74,8 @@ describe("shared rich-text layout", () => {
       ],
     } as RichTextDocument;
     const layout = measureRichTextDocument(content, metrics);
-    expect(metrics.subscriptScale).toBe(0.76);
-    expect(metrics.subscriptBaselineShiftEm).toBe(0.34);
+    expect(metrics.subscriptScale).toBe(0.84);
+    expect(metrics.subscriptBaselineShiftEm).toBe(0.28);
     expect(layout.height).toBeCloseTo(
       metrics.fontSize *
         (metrics.subscriptScale + metrics.subscriptBaselineShiftEm),

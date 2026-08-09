@@ -2721,3 +2721,17 @@ Editing System work.
 - Validation: focused renderer tests `20/20`, Render-SVG build, workspace
   typecheck, Prettier check, and `git diff --check` passed.
 - Commit status: ready for `fix(razavi): use upright semantic subscripts`.
+
+## 2026-08-09 - Razavi unified subscript proportion and attachment
+
+- Target: correct the undersized, overly detached default subscript using the
+  supplied `I_X`/`V_X` Razavi reference.
+- Changed areas: text comparator now supports this second reference and a
+  relative attachment sweep; Razavi typography profile, derived bounds,
+  renderer expectations, and active specifications use the calibrated values.
+- Evidence: at the reference's own fitted 42px base scale, the selected
+  relative geometry is `0.84` scale and `0.28em` down. A horizontal sweep
+  selected `0em`; negative tracking worsened the match.
+- Validation: focused tests `24/24`, Derived/Render-SVG builds, workspace
+  typecheck, Prettier check, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): refine unified subscript geometry`.

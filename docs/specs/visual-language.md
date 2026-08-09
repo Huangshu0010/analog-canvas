@@ -68,8 +68,8 @@ netFontSize: 18
 powerFontSize: 18
 annotationFontSize: 18
 captionFontSize: 14
-subscriptScale: 0.76
-subscriptBaselineShift: 0.34em downward
+subscriptScale: 0.84
+subscriptBaselineShift: 0.28em downward
 labelGap: 6
 supplyBarWidth: 20
 currentArrowLength: 53.488372

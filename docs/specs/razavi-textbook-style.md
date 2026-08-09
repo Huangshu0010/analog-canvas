@@ -249,17 +249,19 @@ Version 1 uses these formal tokens:
 | `annotationFontSize`     | `18` scene units                               |
 | `polarityFontSize`       | `14` scene units                               |
 | `captionFontSize`        | `14` scene units                               |
-| `subscriptScale`         | `0.76`                                         |
-| `subscriptBaselineShift` | `0.34em` downward                              |
+| `subscriptScale`         | `0.84`                                         |
+| `subscriptBaselineShift` | `0.28em` downward                              |
 | `labelGap`               | `6` scene units                                |
 | `lineHeight`             | `1.0`                                          |
 
 These values are calibrated against the supplied Razavi OTA raster using the
 editor's Chrome text rasterizer and the installed Arial face. The clean
 `V_DD`, `R_D`, `M_1`, and `M_2` crops improved from mean binary IoU `0.3654`
-to `0.5822`; `V_out` remains diagnostic-only because its source crop includes
-a node and polarity marker. A future profile revision requires equivalent
-evidence rather than subjective token changes.
+to `0.5822`; a subsequent reference selected a larger `0.84` scale and
+shallower `0.28em` shift for the unified default. `V_out` remains
+diagnostic-only because its source crop includes a node and polarity marker. A
+future profile revision requires equivalent evidence rather than subjective
+token changes.
 
 ### Schematic-math composition
 

@@ -126,3 +126,27 @@ pixel comparison. Manual RichText subscript styling remains user-controlled.
   observed typeface rule is the decision authority.
 - Focused renderer tests (`19/19`), Render-SVG build, and workspace typecheck
   passed.
+
+## Follow-up: unified subscript proportion and attachment
+
+The user supplied a second Razavi reference and observed that the current
+subscript remains visually too small and too detached, most visibly in `I_X`
+and `V_X`. Extend the text-only comparator to this screenshot; search a larger
+subscript scale, a shallower baseline shift, and a profile-owned horizontal
+attachment offset. Apply those three values uniformly to renderer output and
+derived bounds, including manual RichText subscripts, while retaining upright
+bold only for automatic semantic labels.
+
+### Follow-up result
+
+- The second reference is a larger 546×522 raster, so the comparator first
+  fitted its own 42px base scale and then used only its relative geometry.
+  The selected unified values are `0.84` subscript scale and `0.28em`
+  downward shift, compared with the previous `0.76` and `0.34em`.
+- A separate horizontal attachment sweep selected `0em`: the apparent gap is
+  corrected by the larger, higher subscript; artificial negative tracking
+  worsened the match. No needless spacing token was added.
+- Restored the compatibility profile's original `0.68` / `0.30em` values
+  while applying the new values only to `razavi-textbook-v1`.
+- Focused Derived/Render-SVG tests (`24/24`), both package builds, workspace
+  typecheck, owned-file Prettier check, and `git diff --check` passed.
