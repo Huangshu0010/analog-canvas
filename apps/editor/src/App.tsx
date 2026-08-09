@@ -15,9 +15,11 @@ import {
   diagnoseVisualQuality,
   endpointKey,
   hasBlockingVisualDiagnostics,
+  measureRichTextDocument,
   isVisibleEndpoint,
   moveRouteSegment,
   proposeGroupMove,
+  richTextMetrics,
   resolveDraftingObjectGeometry,
   routeAttachmentPlacement,
   routePolyline,
@@ -59,7 +61,10 @@ import type { SymbolDefinition } from "@icm/symbols";
 
 import { copySelection, proposePaste } from "./clipboard";
 import type { SchematicClipboard } from "./clipboard";
-import { proposeConnectedInstanceDeletion } from "./delete-selection";
+import {
+  explicitAnnotationRemovals,
+  proposeConnectedInstanceDeletion,
+} from "./delete-selection";
 import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
 import { RichTextEditor } from "./rich-text-editor";
@@ -834,6 +839,10 @@ export function App({ project: initialProject }: AppProps) {
     const sizeScale = annotation.sizeScale ?? 1;
     const fontSize =
       schematicTextFontSize(annotation.kind, styleProfile) * sizeScale;
+    const textLayout = measureRichTextDocument(
+      schematicTextDocument(annotation.text, annotation.kind),
+      richTextMetrics(styleProfile, "label", sizeScale),
+    );
     let labelPosition = anchor;
     let alignment = annotation.alignment;
     let rotation = annotation.rotation;
@@ -881,11 +890,11 @@ export function App({ project: initialProject }: AppProps) {
           };
     }
 
-    const width = Math.max(
-      fontSize * 0.6,
-      annotation.text.length * fontSize * 0.6,
-    );
-    const height = fontSize * 1.35;
+    // This matches the RichText composition used by the formal renderer, so a
+    // Razavi subscript is selectable where it is painted instead of by an
+    // inaccurate character-count estimate.
+    const width = Math.max(fontSize * 0.6, textLayout.width);
+    const height = Math.max(fontSize * 1.35, textLayout.height);
     const left =
       alignment === "start"
         ? labelPosition.x
@@ -974,6 +983,63 @@ export function App({ project: initialProject }: AppProps) {
       y,
       width: Math.max(...xs) - x + padding,
       height: Math.max(...ys) - y + padding,
+    };
+  }
+
+  function defaultInstanceLabel(
+    instance: SchematicDocument["instances"][number],
+  ): Annotation | null {
+    if (!instance.placement) return null;
+    if (
+      document.annotations.some(
+        (annotation) =>
+          annotation.kind === "instance-label" &&
+          annotation.attachedObjectId === instance.id,
+      )
+    ) {
+      return null;
+    }
+    const resolved = resolver.resolve(
+      instance.symbolId,
+      instance.symbolVariantId,
+    );
+    if (!resolved || resolved.definition.labelVisibility === "hidden") {
+      return null;
+    }
+    const viewBox = resolved.definition.viewBox;
+    const corners = [
+      { x: viewBox.x, y: viewBox.y },
+      { x: viewBox.x + viewBox.width, y: viewBox.y },
+      { x: viewBox.x, y: viewBox.y + viewBox.height },
+      { x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
+    ].map((point) =>
+      transformPoint(point, instance.placement!.position, instance.placement!),
+    );
+    const minimumX = Math.min(...corners.map((point) => point.x));
+    const maximumX = Math.max(...corners.map((point) => point.x));
+    const maximumY = Math.max(...corners.map((point) => point.y));
+    const position = {
+      x: (minimumX + maximumX) / 2,
+      y:
+        document.presentation.styleProfileId === "textbook-monochrome-v1"
+          ? maximumY + 14
+          : maximumY +
+            styleProfile.typography.labelGap +
+            styleProfile.typography.instanceFontSize,
+    };
+    return {
+      id: `instance-label-${instance.id}`,
+      kind: "instance-label",
+      text: instance.id,
+      position,
+      attachedObjectId: instance.id,
+      offset: {
+        x: position.x - instance.placement.position.x,
+        y: position.y - instance.placement.position.y,
+      },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
     };
   }
   const internalSelection = deriveInternalGroupSelection(document, selectedIds);
@@ -1683,6 +1749,20 @@ export function App({ project: initialProject }: AppProps) {
       position: { ...annotation.position },
       pointerId: event.pointerId,
     });
+  }
+
+  // Renderer defaults have no persisted object until the user gives the label
+  // an independent placement. Materialize the standard semantic annotation at
+  // pointer-down, then continue through the same drag protocol as every other
+  // electrical label. No text edit is required.
+  function beginDefaultInstanceLabelDrag(
+    event: ReactPointerEvent<SVGRectElement>,
+    instance: SchematicDocument["instances"][number],
+  ): void {
+    const annotation = defaultInstanceLabel(instance);
+    if (!annotation) return;
+    const result = transact([{ kind: "upsert_annotation", annotation }]);
+    if (result.ok) beginAnnotationDrag(event, annotation);
   }
 
   function previewAnnotationDrag(
@@ -3165,12 +3245,24 @@ export function App({ project: initialProject }: AppProps) {
       rect.height <= document.presentation.grid;
     const ids = clicked
       ? []
-      : document.instances
-          .filter((instance) => {
-            const bounds = instanceHitBox(instance);
-            return bounds !== null && rectsIntersect(bounds, rect);
-          })
-          .map((instance) => instance.id);
+      : [
+          ...new Set(
+            document.instances
+              .filter((instance) => {
+                const bounds = instanceHitBox(instance);
+                const defaultLabel = defaultInstanceLabel(instance);
+                return (
+                  (bounds !== null && rectsIntersect(bounds, rect)) ||
+                  (defaultLabel !== null &&
+                    rectsIntersect(
+                      annotationHitBox(defaultLabel, defaultLabel.position),
+                      rect,
+                    ))
+                );
+              })
+              .map((instance) => instance.id),
+          ),
+        ];
     const supplemental = clicked
       ? EMPTY_SUPPLEMENTAL_SELECTION
       : {
@@ -3324,6 +3416,15 @@ export function App({ project: initialProject }: AppProps) {
                 transactionCounter.current,
               )
             : [];
+        // Instance deletion already removes every annotation attached to the
+        // instance. A marquee can select both visual objects, but emitting the
+        // same remove_annotation edit twice makes the second operation fail
+        // with OBJECT_NOT_FOUND and rolls back the whole transaction.
+        const explicitAnnotationIds = explicitAnnotationRemovals(
+          document,
+          selectedIds,
+          [...selectedAnnotationIds],
+        );
         const result = transact([
           ...instanceEdits,
           ...[...selectedRouteIds].map((routeId): SchematicEdit => ({
@@ -3334,7 +3435,7 @@ export function App({ project: initialProject }: AppProps) {
             kind: "remove_junction",
             junctionId,
           })),
-          ...[...selectedAnnotationIds].map((annotationId): SchematicEdit => ({
+          ...explicitAnnotationIds.map((annotationId): SchematicEdit => ({
             kind: "remove_annotation",
             annotationId,
           })),
@@ -4455,6 +4556,22 @@ export function App({ project: initialProject }: AppProps) {
                   />
                 );
               })}
+            {document.instances.map((instance) => {
+              const label = defaultInstanceLabel(instance);
+              if (!label) return null;
+              return (
+                <rect
+                  key={`default-label-hit-${instance.id}`}
+                  data-testid={`default-label-hit-${instance.id}`}
+                  className="annotation-hit"
+                  {...annotationHitBox(label, label.position)}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) =>
+                    beginDefaultInstanceLabelDrag(event, instance)
+                  }
+                />
+              );
+            })}
             {visibleEndpoints.map((candidate) => (
               <circle
                 key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}

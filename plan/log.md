@@ -2689,6 +2689,49 @@ Editing System work.
   checked.
 - Commit status: ready for `feat(text): unify rich-text editing surface`.
 
+## 2026-08-09 - Razavi current, source, and Port reference calibration
+
+- Target: archive the supplied compact current-reference raster and align the
+  route current marker, current source, and Port origin to its evidence.
+- Changed areas: hash-pinned the 326 x 254 supplemental raster and measured
+  map; made Razavi formal Ports hollow while preserving their junction-sized
+  outside radius; made attached route markers head-only so the route is their
+  shaft; tuned the head to the recorded proportions.
+- Evidence: a compact-current-source arrow extension was tested and rejected:
+  IoU/soft-IoU regressed `0.6087/0.5597 -> 0.5897/0.5262`. The retained
+  `0.6087/0.5597` score is anti-alias-sensitive with +0.220 registration lift,
+  so no blind source geometry change remains.
+- Validation: peripheral and catalog generation, Symbols/Derived/Render-SVG
+  builds, the focused 2-test current-arrow/hollow-Port renderer run, current
+  source fidelity report, and `git diff --check` passed. The three existing
+  whole-render golden failures remain stale MOS-fixture mismatches outside this
+  target.
+- Commit status: ready for `fix(razavi): calibrate current markers and ports`.
+
+### Actual-render scoring completion
+
+- Added formal-SVG raster targets for the hollow Port and attached route-current
+  arrow. This closes their prior pixel-comparison gap.
+- Port tuning improved binary/soft IoU `0.6232/0.5245 -> 0.6393/0.6013`; the
+  next smaller candidate was rejected at `0.5238/0.5155`.
+- The route-current arrow scored `0.5947/0.6199`; a longer head regressed to
+  `0.5679/0.5683` and was rejected.
+
+## 2026-08-09 - Razavi semantic subscript face correction
+
+- Target: apply the user's visual correction that automatic schematic
+  subscripts are upright while `V`/`I`/`R`/`M` bases remain bold italic.
+- Changed areas: semantic-label renderer and generated editor RichText split;
+  constrained text comparison option; Razavi text specification and focused
+  renderer test.
+- Evidence: constrained Chrome/Arial search retained `18` / `0.76` /
+  `0.34em`, with an upright-bold clean-crop mean IoU of `0.5509`. This is below
+  the unconstrained italic score (`0.5822`), but the supplied reference's
+  observed glyph convention and explicit human review take precedence.
+- Validation: focused renderer tests `19/19`, Render-SVG build, workspace
+  typecheck, Prettier check, and `git diff --check` passed.
+- Commit status: ready for `fix(razavi): use upright semantic subscripts`.
+
 ## 2026-08-09 - Razavi default text typography calibration
 
 - Target: calibrate the default Razavi label typography against the
@@ -2706,21 +2749,6 @@ Editing System work.
   `git diff --check` passed. Unrelated peripheral Port worktree hunks were
   intentionally left unstaged.
 - Commit status: ready for `fix(razavi): calibrate default schematic typography`.
-
-## 2026-08-09 - Razavi semantic subscript face correction
-
-- Target: apply the user's visual correction that automatic schematic
-  subscripts are upright while `V`/`I`/`R`/`M` bases remain bold italic.
-- Changed areas: semantic-label renderer and generated editor RichText split;
-  constrained text comparison option; Razavi text specification and focused
-  renderer test.
-- Evidence: constrained Chrome/Arial search retained `18` / `0.76` /
-  `0.34em`, with an upright-bold clean-crop mean IoU of `0.5509`. This is below
-  the unconstrained italic score (`0.5822`), but the supplied reference's
-  observed glyph convention and explicit human review take precedence.
-- Validation: focused renderer tests `20/20`, Render-SVG build, workspace
-  typecheck, Prettier check, and `git diff --check` passed.
-- Commit status: ready for `fix(razavi): use upright semantic subscripts`.
 
 ## 2026-08-09 - Razavi unified subscript proportion and attachment
 
@@ -2751,3 +2779,21 @@ Editing System work.
   are existing component-symbol goldens. Render-SVG/editor builds, workspace
   typecheck, formatting, and `git diff --check` passed.
 - Commit status: ready for `fix(text): normalize semantic annotation typography`.
+
+## 2026-08-09 - Editor label selection and mixed deletion
+
+- Target: make render-only default instance labels movable without a preceding
+  text edit, and repair marquee deletion when both an instance and its attached
+  label are selected.
+- Changed areas: editor default-label interaction overlay and RichText-aware
+  annotation hit geometry; deletion edit de-duplication; focused editor and
+  deletion regressions.
+- Result: pointer-down on an implicit instance ID materializes the equivalent
+  semantic `instance-label` then uses the standard label drag path; framing an
+  implicit label selects its instance; duplicate attached-label removal is
+  removed from mixed transactions.
+- Validation: focused Vitest 8/8 passed, editor production build passed, and
+  `git diff --check` passed. Workspace typecheck is blocked by an unrelated
+  retained VDD worktree hunk whose rotation literal is inferred as `number`.
+- Commit status: pending intentional partial staging of `App.tsx`; the VDD
+  hunk remains unowned.

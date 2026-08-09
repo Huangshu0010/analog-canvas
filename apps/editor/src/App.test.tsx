@@ -84,6 +84,23 @@ describe("editor shell", () => {
     expect(markup).toContain("Schematic canvas");
   });
 
+  it("gives an implicit instance label its own selection surface", () => {
+    const project = createEmptyProject("implicit-label", "Implicit label");
+    project.documents[0]!.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: {
+        position: { x: 160, y: 160 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+
+    const markup = renderToStaticMarkup(<App project={project} />);
+    expect(markup).toContain('data-testid="default-label-hit-M1"');
+  });
+
   it("keeps the bundled demo equal to the canonical Project fixture", () => {
     const fixture = readFileSync(
       resolve(
