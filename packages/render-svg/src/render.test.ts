@@ -580,6 +580,45 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).not.toContain(">GND1</text>");
   });
 
+  it("renders VDD through the shared semantic power-label typography", () => {
+    const project = createEmptyProject("project-vdd-label", "VDD Label");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.instances = [
+      {
+        id: "VDD1",
+        symbolId: "vdd",
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    ];
+    document.annotations = [
+      {
+        id: "label-VDD1",
+        kind: "power-label",
+        text: "VDD",
+        position: { x: 114, y: 105 },
+        attachedObjectId: "VDD1",
+        offset: { x: 14, y: 5 },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      },
+    ];
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(resolver.resolve("vdd")?.definition.labelVisibility).toBe("hidden");
+    expect(svg).toContain('data-object-id="label-VDD1"');
+    expect(svg).toContain('data-text-run="subscript"');
+    expect(svg).toContain(">DD</tspan>");
+    expect(svg).not.toContain(">VDD1</text>");
+  });
+
   it("renders drafting text at its typography-token size", () => {
     const project = createEmptyProject("project-text-scale", "Text Scale");
     const document = project.documents[0]!;

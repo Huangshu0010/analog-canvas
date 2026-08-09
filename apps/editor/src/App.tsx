@@ -1877,6 +1877,24 @@ export function App({ project: initialProject }: AppProps) {
           properties: {},
         },
       },
+      ...(symbolId === "vdd"
+        ? [
+            {
+              kind: "upsert_annotation" as const,
+              annotation: {
+                id: `label-${id}`,
+                kind: "power-label" as const,
+                text: "VDD",
+                position: { x: position.x + 14, y: position.y + 5 },
+                attachedObjectId: id,
+                offset: { x: 14, y: 5 },
+                alignment: "start" as const,
+                rotation: 0,
+                locked: false,
+              },
+            },
+          ]
+        : []),
     ]);
     if (result.ok) {
       setSelectedIds([id]);

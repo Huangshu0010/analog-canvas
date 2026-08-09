@@ -9,11 +9,18 @@
   "symbols": {
     "vdd": {
       "evidence": "top supply marker above RD",
+      "originPx": { "x": 104, "y": 45 },
       "barCenterPx": { "x": 104, "y": 45 },
       "barHalfWidthPx": 12,
       "barStrokePx": 2,
       "stemBottomYPx": 69,
-      "label": "VDD"
+      "label": "VDD",
+      "window": {
+        "width": 27,
+        "height": 27,
+        "minX": -11.3043478261,
+        "minY": -2.6086956522
+      }
     }
   }
 }

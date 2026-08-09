@@ -8,7 +8,7 @@
 // Usage:
 //   node scripts/razavi-fidelity-diff.mjs [device...] [--threshold 160] [--out dir]
 //
-//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | current-source-compact | formal-port | formal-route-current-arrow | ground | resistor | capacitor-vertical | capacitor-horizontal
+//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | current-source-compact | formal-port | formal-route-current-arrow | vdd | ground | resistor | capacitor-vertical | capacitor-horizontal
 //           (default: all raster-owned devices)
 //
 // This tool is read-only: it never edits source configs. Use its report to
@@ -92,6 +92,11 @@ const DEVICE_GEOMETRY = {
     file: "current-port-geometry.json",
     key: "current-source",
     symbolId: "current-source",
+    useVariant: false,
+  },
+  vdd: {
+    file: "vdd-geometry.json",
+    key: "vdd",
     useVariant: false,
   },
   "formal-port": {

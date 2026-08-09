@@ -310,7 +310,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "vdd.symbol.json",
     assetHash:
-      "69afa895cf5f542b1c96c1771e7a7ce8bde2e2d8802ee14a5cfcb6ce684efe07",
+      "bf4571ccb9a15ecf6f60455b787d7919e783deae715fa324eec0609779c71cc6",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -2478,19 +2478,19 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: -10,
-            y: 0.88,
+            y: -0.88,
           },
           {
             x: 10,
-            y: 0.88,
+            y: -0.88,
           },
           {
             x: 10,
-            y: 4.12,
+            y: 2.36,
           },
           {
             x: -10,
-            y: 4.12,
+            y: 2.36,
           },
         ],
         fill: "foreground",
@@ -2499,6 +2499,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: ["power-vdd", "vpwr"],
-    labelVisibility: "shown",
+    labelVisibility: "hidden",
   },
 ];

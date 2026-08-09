@@ -36,7 +36,7 @@
   "currentPortGeometryPath": "current-port-geometry.json",
   "currentPortGeometrySha256": "fbdf7f8cf39cfcc036a77abf386aa7c2d1acfa2e3467610a9df4de9dfa07e961",
   "vddGeometryPath": "vdd-geometry.json",
-  "vddGeometrySha256": "6182664f5f8447a6bd39d7187681667a2590c660feefb2be801a80056a484f07",
+  "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
   "pixels": {
     "width": 1204,
     "height": 794

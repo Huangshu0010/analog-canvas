@@ -2,8 +2,11 @@
 
 ## Goal
 
-Archive the supplied VDD screenshot within the sole Razavi authority and add a
-reviewed screenshot-derived VDD power-port asset to the Razavi palette.
+Archive the supplied VDD screenshot within the sole Razavi authority, add a
+reviewed screenshot-derived VDD power-port asset to the Razavi palette, and
+complete the body-only IoU check. The VDD label must use the existing unified
+semantic text renderer, so its `DD` is a subscript rather than symbol-local
+text geometry.
 
 ## Dirty-state decision
 
@@ -18,12 +21,15 @@ of scope.
 - VDD geometry and authority-manifest registration
 - `packages/symbols/assets/razavi-v1/vdd.symbol.json` and catalog metadata
 - generated Razavi catalog artifacts and focused catalog tests
+- VDD body fidelity harness registration and editor palette placement path
 - `plan/2026-08-09-razavi-vdd-reference-symbol/plan.md`
 
 ## Validation
 
-Archive/hash verification, catalog generation, Symbols build, focused palette
-test, and GUI availability check.
+Archive/hash verification, catalog generation, Symbols and Editor builds, VDD
+body IoU report, focused palette test, and GUI availability check. The IoU
+window deliberately excludes the label; text follows the shared semantic text
+renderer and is verified through the rendered SVG path.
 
 ## Commit intent
 
