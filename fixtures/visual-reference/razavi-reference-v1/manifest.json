@@ -9,16 +9,27 @@
       "path": "capacitor-reference.png",
       "sha256": "e2b13a01eed7e7565080bc9d0d7c98bc8dc6714ceed3c7159096c8b5deb3dcbc",
       "scope": ["capacitor geometry", "capacitor stroke treatment"]
+    },
+    {
+      "path": "current-port-reference.png",
+      "sha256": "09b2cc33652e29b6b5fe784397bceb514db1c07f0772bb04e54a96d8927140e5",
+      "scope": [
+        "route current-arrow treatment",
+        "current-source geometry",
+        "hollow port origin"
+      ]
     }
   ],
   "mosGeometryPath": "mos-geometry.json",
   "mosGeometrySha256": "0e61e355ca658dcde5ac127a729fd9893bf58dd07547de8a061a952f3772d195",
   "peripheralGeometryPath": "peripheral-geometry.json",
-  "peripheralGeometrySha256": "0a2e4e0a351d634a84832cd6e21b922bd803edf8f45155cf89087282316456ff",
+  "peripheralGeometrySha256": "5bb3f3cbd8b08035040aeb4cf018be80853edf9c323426fe975a2bdb7ccb65e9",
   "passiveGeometryPath": "passive-geometry.json",
   "passiveGeometrySha256": "ebdbbcd9641c4a11aac4934eddf9c44b6865e69aa79d159c2d4c7db90082ff15",
   "capacitorGeometryPath": "capacitor-geometry.json",
   "capacitorGeometrySha256": "9137e7a492c6a5e66ae0476618942f099899260a09e80f47b3d5ebe57c97cf6a",
+  "currentPortGeometryPath": "current-port-geometry.json",
+  "currentPortGeometrySha256": "fbdf7f8cf39cfcc036a77abf386aa7c2d1acfa2e3467610a9df4de9dfa07e961",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -29,7 +40,8 @@
     "line width and cap treatment",
     "textbook annotation typography",
     "ground, supply, port, and source presentation",
-    "capacitor geometry and stroke treatment"
+    "capacitor geometry and stroke treatment",
+    "route current-arrow treatment, current-source geometry, and hollow port origin"
   ],
   "notes": [
     "This raster is the only visual authority for Razavi style v1.",

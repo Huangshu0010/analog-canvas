@@ -425,9 +425,10 @@ export function buildSvgScene(
             (port) => port.position !== null && !powerPortIds.has(port.id),
           )
           .sort((left, right) => left.id.localeCompare(right.id, "en"))
-          .map(
-            (port) =>
-              `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.foreground}"/>`,
+          .map((port) =>
+            profile.id === "razavi-textbook-v1"
+              ? `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.background}" stroke="${profile.foreground}" stroke-width="${profile.strokes.normal}"/>`
+              : `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.foreground}"/>`,
           )
           .join("");
   const portLayer =
@@ -555,16 +556,18 @@ export function buildSvgScene(
               : annotation.alignment;
         if (profile.id !== "textbook-monochrome-v1") {
           const arrow = profile.annotations;
-          const halfLength = arrow.currentArrowLength / 2;
-          const tipX = x + halfLength;
-          const baseX = tipX - arrow.arrowHeadLength;
+          // A route-marker is mounted on an existing route, so that route is
+          // the arrow shaft.  Draw only the triangular head; a separate fixed
+          // shaft leaves visible stubs on short/vertical wires.
+          const tipX = x + arrow.arrowHeadLength / 2;
+          const baseX = x - arrow.arrowHeadLength / 2;
           const halfHeadWidth = arrow.arrowHeadWidth / 2;
           const razaviTextX = label
             ? label.x
             : attachmentPlacement
               ? attachmentPlacement.labelPosition.x
               : vertical
-                ? x + halfLength + arrow.currentLabelGap
+                ? x + arrow.arrowHeadLength / 2 + arrow.currentLabelGap
                 : x;
           const razaviTextY = label
             ? label.y
@@ -573,7 +576,7 @@ export function buildSvgScene(
               : vertical
                 ? y + 4
                 : y - arrow.currentLabelGap;
-          return `<g ${attributes}><g transform="${transform}"><line data-role="current-arrow-shaft" x1="${x - halfLength}" y1="${y}" x2="${baseX}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}" stroke-linecap="${profile.lineCap}"/><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
+          return `<g ${attributes}><g transform="${transform}"><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
         }
         return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
       }

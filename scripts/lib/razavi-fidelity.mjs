@@ -44,7 +44,14 @@ import { rasterizeSymbol } from "./symbol-rasterize.mjs";
  * @param {number} baselineIou
  * @returns {{bestIou:number, bestDx:number, bestDy:number, lift:number}}
  */
-function bestTranslation(refMask, renderedMask, width, height, maxShift, baselineIou) {
+function bestTranslation(
+  refMask,
+  renderedMask,
+  width,
+  height,
+  maxShift,
+  baselineIou,
+) {
   let best = { bestIou: baselineIou, bestDx: 0, bestDy: 0, lift: 0 };
   for (let dy = -maxShift; dy <= maxShift; dy++) {
     for (let dx = -maxShift; dx <= maxShift; dx++) {
@@ -140,7 +147,11 @@ export function pixelWindowFromViewBox(viewBox, pixelsPerLogical) {
  * @param {number} padding  logical-unit padding added around the geometry bbox
  * @returns {{width:number,height:number}}
  */
-export function pixelWindowFromGeometry(definition, pixelsPerLogical, padding = 2) {
+export function pixelWindowFromGeometry(
+  definition,
+  pixelsPerLogical,
+  padding = 2,
+) {
   const xs = [];
   const ys = [];
   for (const pin of definition.pins ?? []) {
@@ -203,7 +214,11 @@ function makeOdd(n) {
 export async function compareDevice(spec, referenceRaster, definition) {
   const derived =
     spec.window ??
-    pixelWindowFromGeometry(definition, spec.pixelsPerLogical, spec.windowPadding ?? 0);
+    pixelWindowFromGeometry(
+      definition,
+      spec.pixelsPerLogical,
+      spec.windowPadding ?? 0,
+    );
   // Support both symmetric (width/height only) and asymmetric (with minX/minY)
   // windows. For symmetric windows the origin sits at the center; for asymmetric
   // ones it sits at -minX from the left (the geometry's left bound).
@@ -230,14 +245,16 @@ export async function compareDevice(spec, referenceRaster, definition) {
     x: spec.originPx.x - refX,
     y: spec.originPx.y - refY,
   };
-  const rendered = await rasterizeSymbol(
-    definition,
-    window,
-    spec.pixelsPerLogical,
-    spec.useVariant ?? false,
-    originInWindow,
-    spec.rotation ?? 0,
-  );
+  const rendered = spec.rasterize
+    ? await spec.rasterize(window, originInWindow)
+    : await rasterizeSymbol(
+        definition,
+        window,
+        spec.pixelsPerLogical,
+        spec.useVariant ?? false,
+        originInWindow,
+        spec.rotation ?? 0,
+      );
 
   // Guard: footprints must match for a meaningful pixel diff.
   if (rendered.width !== window.width || rendered.height !== window.height) {
@@ -286,12 +303,28 @@ export async function compareDevice(spec, referenceRaster, definition) {
     if (refMask[i] === 1 && renderedMask[i] !== 1) missMask[i] = 1;
     if (renderedMask[i] === 1 && refMask[i] !== 1) extraMask[i] = 1;
   }
-  const shellMiss = edgeShellRatio(missMask, renderedMask, window.width, window.height, 2);
-  const shellExtra = edgeShellRatio(extraMask, refMask, window.width, window.height, 2);
+  const shellMiss = edgeShellRatio(
+    missMask,
+    renderedMask,
+    window.width,
+    window.height,
+    2,
+  );
+  const shellExtra = edgeShellRatio(
+    extraMask,
+    refMask,
+    window.width,
+    window.height,
+    2,
+  );
   const totalDisagree = shellMiss.total + shellExtra.total;
-  const shellRatio = totalDisagree === 0 ? 0 : (shellMiss.near + shellExtra.near) / totalDisagree;
+  const shellRatio =
+    totalDisagree === 0
+      ? 0
+      : (shellMiss.near + shellExtra.near) / totalDisagree;
   // 3. Device anti-alias sensitivity flag.
-  const aaSensitive = isAntiAliasSensitive(definition);
+  const aaSensitive =
+    spec.antiAliasSensitive ?? isAntiAliasSensitive(definition);
 
   return {
     symbolId: spec.symbolId,
@@ -306,7 +339,9 @@ export async function compareDevice(spec, referenceRaster, definition) {
     miss: result.miss,
     extra: result.extra,
     missPct: refMask.length ? (result.miss / refMask.length) * 100 : 0,
-    extraPct: renderedMask.length ? (result.extra / renderedMask.length) * 100 : 0,
+    extraPct: renderedMask.length
+      ? (result.extra / renderedMask.length) * 100
+      : 0,
     // diagnostics
     regLift: reg.lift,
     regBestIou: reg.bestIou,

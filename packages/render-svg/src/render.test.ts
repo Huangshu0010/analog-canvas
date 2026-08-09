@@ -374,17 +374,35 @@ describe("textbook monochrome SVG renderer", () => {
     const first = renderDocumentSvg(document, resolver);
     expect(first).toContain('transform="rotate(180 70 60)"');
     expect(first).toContain('<text x="70" y="46" text-anchor="middle"');
-    expect(first).toContain('text-anchor="middle" font-size="24"');
+    expect(first).toContain('text-anchor="middle" font-size="27"');
     expect(first).toContain('data-role="current-arrow-head"');
+    expect(first).not.toContain('data-role="current-arrow-shaft"');
     expect(first).toContain('data-text-run="subscript"');
     expect(first).toContain(
-      'style="font-style:italic;font-weight:700">x</tspan>',
+      'style="font-style:normal;font-weight:700">x</tspan>',
     );
 
     document.ports[1]!.position = { x: 280, y: 60 };
     const stretched = renderDocumentSvg(document, resolver);
     expect(stretched).toContain('transform="rotate(180 100 60)"');
     expect(stretched).toContain('<text x="100" y="46" text-anchor="middle"');
+  });
+
+  it("renders a Razavi formal Port as a hollow node with a junction-sized outside radius", () => {
+    const project = createEmptyProject("project-hollow-port", "Hollow port");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.ports.push({
+      id: "port-vin",
+      name: "Vin",
+      direction: "passive",
+      position: { x: 40, y: 60 },
+    });
+
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain(
+      '<circle data-object-id="port-vin" data-node-kind="port-origin" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#202020" stroke-width="1.6"/>',
+    );
   });
 
   it("renders the original dense analog fixture without blocking visual diagnostics", () => {
@@ -444,7 +462,10 @@ describe("textbook monochrome SVG renderer", () => {
     );
     expect(svg).toContain('stroke-linecap="butt"');
     expect(svg).toContain('stroke-miterlimit="4"');
-    expect(svg).toContain('r="3" fill="#202020"');
+    expect(svg).toContain('data-node-kind="port-origin"');
+    expect(svg).toContain(
+      'r="2.47907" fill="#fff" stroke="#202020" stroke-width="1.6"',
+    );
     expect(svg).toContain('<g data-layer="ports">');
     expect([...svg.matchAll(/data-node-kind="port-origin"/gu)].length).toBe(5);
     expect(svg).not.toContain(
@@ -464,8 +485,8 @@ describe("textbook monochrome SVG renderer", () => {
     );
     expect(svg).not.toContain('data-node-kind="device-pin"');
     expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
-    // WP-A2: the migrated route-marker renders a full current arrow again.
-    expect(svg).toContain('data-role="current-arrow-shaft"');
+    // A route-marker contributes a head; its attached route remains the shaft.
+    expect(svg).not.toContain('data-role="current-arrow-shaft"');
     expect(svg).toContain('data-kind="route-marker"');
     expect(svg).toContain(
       "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",

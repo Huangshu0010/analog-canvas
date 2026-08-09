@@ -110,7 +110,9 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
   },
   nodes: {
     junctionRadius: razaviPeripheralGeometry.solidNodeRadius,
-    portOriginRadius: razaviPeripheralGeometry.solidNodeRadius,
+    // A hollow Port uses the same *outside* radius as a solid junction.  Its
+    // geometric radius therefore excludes half of the normal outline stroke.
+    portOriginRadius: razaviPeripheralGeometry.solidNodeRadius - 1.3,
   },
   annotations: {
     supplyBarWidth: 20,
