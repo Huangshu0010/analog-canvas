@@ -211,7 +211,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "27885e21c0b88466fa5807bdd2608a0a90c24c012127739cb90192a0ba504f64",
+      "a995e33e91c8c4828967e75572cb323fdcd6af49a710dd088a2b5d5b3e91e391",
   },
   {
     symbolId: "pmos3",
@@ -233,7 +233,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "2e5b714aed7553e187d4f593d9bc90f4b9ac5b4229af73f1046f55f5aa63abe7",
+      "d2416d0a22a651dbac75d94bfa57c63aa1a792dc88e275256f066ad9717165ba",
   },
   {
     symbolId: "pnp",
@@ -308,7 +308,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:R"],
     assetPath: "resistor.symbol.json",
     assetHash:
-      "b26b5d990c670cf52f39177fb21675f3db17e5faf35fffdd48f57b9fd74e7cf5",
+      "257e1a526fab1fc6cf524d4c92d1c02af0a914decd3d1dcdfd3cf44a6a6323b3",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -1578,11 +1578,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: -4.244186,
-            y: 7.122093,
+            y: 6.976744,
           },
           {
             x: 10,
-            y: 7.122093,
+            y: 6.976744,
           },
           {
             x: 10,
@@ -1600,11 +1600,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: -4.244186,
-            y: -7.122093,
+            y: -6.976744,
           },
           {
             x: 10,
-            y: -7.122093,
+            y: -6.976744,
           },
           {
             x: 10,
@@ -1622,20 +1622,20 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -12.383721,
-            y: -9.302326,
+            x: -11.802326,
+            y: -9.593023,
           },
           {
-            x: -12.383721,
-            y: 9.302326,
+            x: -11.802326,
+            y: 9.593023,
           },
           {
-            x: -9.476744,
-            y: 9.302326,
+            x: -8.895349,
+            y: 9.593023,
           },
           {
-            x: -9.476744,
-            y: -9.302326,
+            x: -8.895349,
+            y: -9.593023,
           },
         ],
         fill: "foreground",
@@ -1647,19 +1647,19 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: -6.569767,
-            y: -12.209302,
+            y: -12.5,
           },
           {
             x: -6.569767,
-            y: 12.209302,
+            y: 12.5,
           },
           {
             x: -3.662791,
-            y: 12.209302,
+            y: 12.5,
           },
           {
             x: -3.662791,
-            y: -12.209302,
+            y: -12.5,
           },
         ],
         fill: "foreground",
@@ -1669,7 +1669,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -9.476744,
+          x: -8.895349,
           y: 0,
         },
         to: {
@@ -1831,11 +1831,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: -4.244186,
-            y: 7.122093,
+            y: 6.976744,
           },
           {
             x: 10,
-            y: 7.122093,
+            y: 6.976744,
           },
           {
             x: 10,
@@ -1852,20 +1852,20 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -12.383721,
-            y: -9.302326,
+            x: -11.802326,
+            y: -9.593023,
           },
           {
-            x: -12.383721,
-            y: 9.302326,
+            x: -11.802326,
+            y: 9.593023,
           },
           {
-            x: -9.476744,
-            y: 9.302326,
+            x: -8.895349,
+            y: 9.593023,
           },
           {
-            x: -9.476744,
-            y: -9.302326,
+            x: -8.895349,
+            y: -9.593023,
           },
         ],
         fill: "foreground",
@@ -1877,19 +1877,19 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: -6.569767,
-            y: -12.209302,
+            y: -12.5,
           },
           {
             x: -6.569767,
-            y: 12.209302,
+            y: 12.5,
           },
           {
             x: -3.662791,
-            y: 12.209302,
+            y: 12.5,
           },
           {
             x: -3.662791,
-            y: -12.209302,
+            y: -12.5,
           },
         ],
         fill: "foreground",
@@ -1899,7 +1899,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -9.476744,
+          x: -8.895349,
           y: 0,
         },
         to: {
@@ -2262,39 +2262,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     primitives: [
       {
         kind: "path",
-        data: "M 0 -8.72093 L 8.139535 -6.395349 L -6.976744 -4.069767 L 8.139535 -1.162791 L -7.55814 1.744186 L 8.139535 4.651163 L -6.976744 7.55814 L 0 8.72093",
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 0,
-          y: -8.72093,
-        },
-        to: {
-          x: 0,
-          y: -20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 0,
-          y: 8.72093,
-        },
-        to: {
-          x: 0,
-          y: 20,
-        },
+        data: "M 0 -20 L 0 -8.72093 L 8.139535 -6.395349 L -6.976744 -4.069767 L 8.139535 -1.162791 L -7.55814 1.744186 L 8.139535 4.651163 L -6.976744 7.55814 L 0 8.72093 L 0 20",
         style: {
           strokeRole: "normal",
           lineCap: "butt",

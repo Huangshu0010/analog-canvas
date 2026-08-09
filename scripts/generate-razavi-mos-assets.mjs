@@ -82,24 +82,14 @@ function channelLeadPolylineFromPixels(measurement, pixelSegment, part) {
   };
 }
 
-function rectangleFromPixels(measurement, rectangle, part, widthPx) {
-  const normalized =
-    widthPx === undefined
-      ? rectangle
-      : { ...rectangle, left: rectangle.right - widthPx };
+function rectangleFromPixels(measurement, rectangle, part) {
   return {
     kind: "polygon",
     points: [
-      logicalPoint(measurement, { x: normalized.left, y: normalized.top }),
-      logicalPoint(measurement, {
-        x: normalized.left,
-        y: normalized.bottom,
-      }),
-      logicalPoint(measurement, {
-        x: normalized.right,
-        y: normalized.bottom,
-      }),
-      logicalPoint(measurement, { x: normalized.right, y: normalized.top }),
+      logicalPoint(measurement, { x: rectangle.left, y: rectangle.top }),
+      logicalPoint(measurement, { x: rectangle.left, y: rectangle.bottom }),
+      logicalPoint(measurement, { x: rectangle.right, y: rectangle.bottom }),
+      logicalPoint(measurement, { x: rectangle.right, y: rectangle.top }),
     ],
     fill: "foreground",
     stroke: "none",
@@ -174,12 +164,7 @@ function pins(measurement, threeTerminal) {
   );
 }
 
-function basePrimitives(
-  measurement,
-  polarity,
-  threeTerminal,
-  outerGateBarWidthPx,
-) {
+function basePrimitives(measurement, polarity, threeTerminal) {
   const sourceChannel = polarity === "nmos" ? "lower" : "upper";
   const otherChannel = polarity === "nmos" ? "upper" : "lower";
   return [
@@ -196,13 +181,8 @@ function basePrimitives(
           ),
         ]
       : []),
-    ...measurement.gateBarsPx.map((rectangle, index) =>
-      rectangleFromPixels(
-        measurement,
-        rectangle,
-        "gate-bar",
-        index === 0 ? outerGateBarWidthPx : undefined,
-      ),
+    ...measurement.gateBarsPx.map((rectangle) =>
+      rectangleFromPixels(measurement, rectangle, "gate-bar"),
     ),
     lineFromPixels(measurement, measurement.leadsPx.G),
   ];
@@ -242,14 +222,9 @@ function viewBoxFor(symbol) {
   };
 }
 
-function symbol(polarity, measurement, threeTerminal, outerGateBarWidthPx) {
+function symbol(polarity, measurement, threeTerminal, bodyMeasurement) {
   const id = `${polarity}${threeTerminal ? "3" : ""}`;
-  const primitives = basePrimitives(
-    measurement,
-    polarity,
-    threeTerminal,
-    outerGateBarWidthPx,
-  );
+  const primitives = basePrimitives(bodyMeasurement, polarity, threeTerminal);
   if (threeTerminal) {
     primitives.push(...sourceArrowPrimitives(measurement, polarity));
   } else {
@@ -299,9 +274,8 @@ if (
 ) {
   fail("the complete MOS pixel map does not match the sole visual authority");
 }
-const nmosOuterGateBar = geometry.symbols?.nmos?.gateBarsPx?.[0];
-if (!nmosOuterGateBar) fail("missing NMOS outer gate-bar measurement");
-const nmosOuterGateBarWidthPx = nmosOuterGateBar.right - nmosOuterGateBar.left;
+const nmosMeasurement = geometry.symbols?.nmos;
+if (!nmosMeasurement) fail("missing complete NMOS pixel map");
 
 for (const polarity of ["nmos", "pmos"]) {
   const measurement = geometry.symbols?.[polarity];
@@ -309,12 +283,7 @@ for (const polarity of ["nmos", "pmos"]) {
   for (const threeTerminal of [false, true]) {
     const generated = await format(
       JSON.stringify(
-        symbol(
-          polarity,
-          measurement,
-          threeTerminal,
-          polarity === "pmos" ? nmosOuterGateBarWidthPx : undefined,
-        ),
+        symbol(polarity, measurement, threeTerminal, nmosMeasurement),
         null,
         2,
       ),

@@ -3214,6 +3214,17 @@ formatting`.
   the active fidelity work.
 - Commit status: ready for `style(text): widen upright Razavi subscripts`.
 
+## 2026-08-09 - Razavi resistor continuous miter path
+
+- Target: make the resistor zig-zag sharp and continuous with its leads.
+- Result: the resistor is one miter-joined SVG path from pin 1 through all
+  measured body vertices to pin 2. No independent butt-capped body/lead seam
+  remains; electrical pins and measured body geometry are unchanged.
+- Validation: focused catalog Vitest 17/17, Symbols build, resistor fidelity
+  IoU 0.6613 with zero registration lift and anti-alias-only residual, plus
+  `git diff --check` passed.
+- Commit status: ready for `fix(razavi): join resistor body and leads`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next
@@ -3359,4 +3370,17 @@ formatting`.
 - Validation: Razavi catalog Vitest 17/17, MOS and catalog generated-artifact
   checks, target-file Prettier, and `git diff --check` passed. Full workspace
   formatting remains blocked by seven unrelated pre-existing files on `main`.
+- Commit status: pending intentional staging.
+
+## 2026-08-09 - Canonical MOS body geometry
+
+- Target: use NMOS as the shared MOS-body geometry source so PMOS bar widths,
+  spacing, channels, and gate lead cannot drift independently; retain PMOS
+  arrow polarity.
+- Result: both PMOS variants now generate their bodies from NMOS measurement.
+  PMOS source/bulk arrow primitives retain the PMOS measurement and direction.
+  The catalog test compares every non-arrow body primitive after ignoring only
+  arrow-specific labels.
+- Validation: Razavi catalog Vitest 17/17, MOS and catalog generated-artifact
+  checks, target-file Prettier, and `git diff --check` passed.
 - Commit status: pending intentional staging.
