@@ -6,6 +6,7 @@ export interface RichTextMetrics {
   fontSize: number;
   lineHeight: number;
   subscriptScale: number;
+  subscriptBaselineShiftEm: number;
 }
 
 export interface RichTextLayout {
@@ -48,6 +49,7 @@ export function richTextMetrics(
     fontSize: typographyFontSize(token, profile) * sizeScale,
     lineHeight: profile.typography.lineHeight,
     subscriptScale: profile.typography.subscriptScale,
+    subscriptBaselineShiftEm: profile.typography.subscriptBaselineShiftEm,
   };
 }
 
@@ -103,7 +105,7 @@ function measureRun(run: LayoutRun, metrics: RichTextMetrics): Line[] {
       fontSize: metrics.fontSize * scale,
     });
     if (scale < 1) {
-      const shift = metrics.fontSize * 0.3;
+      const shift = metrics.fontSize * metrics.subscriptBaselineShiftEm;
       child.forEach((line) => {
         line.height += shift;
       });

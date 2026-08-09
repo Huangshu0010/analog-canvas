@@ -73,10 +73,21 @@ describe("Razavi schematic typography", () => {
 
   it("uses semantic profile sizes", () => {
     expect(schematicTextFontSize("instance-label", razaviTextbookProfile)).toBe(
-      16,
+      18,
     );
     expect(schematicTextFontSize("route-marker", razaviTextbookProfile)).toBe(
-      16,
+      18,
     );
+  });
+
+  it("uses the calibrated italic subscript geometry", () => {
+    const rendered = renderSchematicTextContent(
+      "VDD",
+      "power-label",
+      razaviTextbookProfile,
+    );
+    expect(rendered).toContain('font-size="76%"');
+    expect(rendered).toContain('baseline-shift="-0.34em"');
+    expect(rendered).toContain("font-style:italic;font-weight:700");
   });
 });

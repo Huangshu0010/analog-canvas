@@ -2688,3 +2688,21 @@ Editing System work.
   target; every owned source and test file was individually formatted and
   checked.
 - Commit status: ready for `feat(text): unify rich-text editing surface`.
+
+## 2026-08-09 - Razavi default text typography calibration
+
+- Target: calibrate the default Razavi label typography against the
+  user-supplied OTA raster without changing any symbol or route geometry.
+- Changed areas: added a Chrome/Arial text-only calibration CLI; set semantic
+  label sizes to `18`, subscript scale to `0.76`, and baseline shift to
+  `0.34em`; routed the same baseline token into derived rich-text bounds; and
+  updated the two active style specifications and focused renderer tests.
+- Evidence: clean-crop mean binary IoU for `V_DD`, `R_D`, `M_1`, and `M_2`
+  improved `0.3654 -> 0.5822`. `V_out` remains a diagnostic-only crop because
+  the source includes a node and polarity marker. Mathematical bases and
+  subscripts remained bold italic; signs stay upright by the existing rule.
+- Validation: focused tests `23/23`, Derived/Render-SVG builds, workspace
+  typecheck, editor production build, owned-file Prettier check, and
+  `git diff --check` passed. Unrelated peripheral Port worktree hunks were
+  intentionally left unstaged.
+- Commit status: ready for `fix(razavi): calibrate default schematic typography`.

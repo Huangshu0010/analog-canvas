@@ -243,20 +243,23 @@ Version 1 uses these formal tokens:
 | `mathWeight`             | `700`                                          |
 | `mathStyle`              | `italic`                                       |
 | `plainWeight`            | `400`                                          |
-| `instanceFontSize`       | `16` scene units                               |
-| `netFontSize`            | `16` scene units                               |
-| `powerFontSize`          | `16` scene units                               |
-| `annotationFontSize`     | `16` scene units                               |
+| `instanceFontSize`       | `18` scene units                               |
+| `netFontSize`            | `18` scene units                               |
+| `powerFontSize`          | `18` scene units                               |
+| `annotationFontSize`     | `18` scene units                               |
 | `polarityFontSize`       | `14` scene units                               |
 | `captionFontSize`        | `14` scene units                               |
-| `subscriptScale`         | `0.68`                                         |
-| `subscriptBaselineShift` | `0.30em` downward                              |
+| `subscriptScale`         | `0.76`                                         |
+| `subscriptBaselineShift` | `0.34em` downward                              |
 | `labelGap`               | `6` scene units                                |
 | `lineHeight`             | `1.0`                                          |
 
-The first implementation must render with these values. Calibration may
-change them before the profile reaches `accepted`; after acceptance, any token
-change requires a new profile version.
+These values are calibrated against the supplied Razavi OTA raster using the
+editor's Chrome text rasterizer and the installed Arial face. The clean
+`V_DD`, `R_D`, `M_1`, and `M_2` crops improved from mean binary IoU `0.3654`
+to `0.5822`; `V_out` remains diagnostic-only because its source crop includes
+a node and polarity marker. A future profile revision requires equivalent
+evidence rather than subjective token changes.
 
 ### Schematic-math composition
 

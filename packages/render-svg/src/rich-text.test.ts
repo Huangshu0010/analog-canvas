@@ -81,8 +81,9 @@ describe("renderRichTextDocument (WP-A2)", () => {
     );
     expect(svg).toContain('data-text-run="subscript"');
     expect(svg).toContain('data-text-run="superscript"');
-    // Subscript scale 0.68 -> 68%.
-    expect(svg).toContain('font-size="68%"');
+    // Calibrated Razavi subscript scale 0.76 -> 76%.
+    expect(svg).toContain('font-size="76%"');
+    expect(svg).toContain('baseline-shift="-0.34em"');
   });
 
   it("renders a fraction with numerator and denominator tspans", () => {

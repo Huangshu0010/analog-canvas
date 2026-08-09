@@ -63,13 +63,13 @@ scaleFormalStrokes: true
 fontFamily: "Arial, Helvetica Neue, Helvetica, sans-serif"
 mathWeight: 700
 mathStyle: italic
-instanceFontSize: 16
-netFontSize: 16
-powerFontSize: 16
-annotationFontSize: 16
+instanceFontSize: 18
+netFontSize: 18
+powerFontSize: 18
+annotationFontSize: 18
 captionFontSize: 14
-subscriptScale: 0.68
-subscriptBaselineShift: 0.30em downward
+subscriptScale: 0.76
+subscriptBaselineShift: 0.34em downward
 labelGap: 6
 supplyBarWidth: 20
 currentArrowLength: 53.488372
