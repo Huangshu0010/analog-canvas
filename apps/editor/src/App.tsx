@@ -1857,6 +1857,7 @@ export function App({ project: initialProject }: AppProps) {
       crystal: "Y",
       transformer: "T",
       ground: "GND",
+      vdd: "VDD",
       port: "P",
     };
     let id = `${prefix[symbolId] ?? "X"}${instanceCounter.current}`;

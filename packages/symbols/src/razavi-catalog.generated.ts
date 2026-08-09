@@ -300,6 +300,28 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
         "fixtures/visual-reference/razavi-reference-v1/peripheral-geometry.json",
     },
   },
+  {
+    symbolId: "vdd",
+    name: "VDD Power Port",
+    category: "power",
+    reviewStatus: "reviewed",
+    pinOrder: ["P"],
+    palette: true,
+    automaticMappings: [],
+    assetPath: "vdd.symbol.json",
+    assetHash:
+      "69afa895cf5f542b1c96c1771e7a7ce8bde2e2d8802ee14a5cfcb6ce684efe07",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/vdd-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/vdd-geometry.json",
+    },
+  },
 ];
 
 export const razaviSemanticPrimitives: readonly RazaviSemanticPrimitiveEntry[] =
@@ -2408,5 +2430,75 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: ["dc-voltage"],
+  },
+  {
+    schemaVersion: 1,
+    id: "vdd",
+    name: "VDD Power Port",
+    viewBox: {
+      x: -12,
+      y: -2,
+      width: 24,
+      height: 26,
+    },
+    pins: [
+      {
+        name: "P",
+        role: "power",
+        at: {
+          x: 0,
+          y: 20,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 20,
+        },
+        to: {
+          x: 0,
+          y: 2.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -10,
+            y: 0.88,
+          },
+          {
+            x: 10,
+            y: 0.88,
+          },
+          {
+            x: 10,
+            y: 4.12,
+          },
+          {
+            x: -10,
+            y: 4.12,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      },
+    ],
+    variants: [],
+    aliases: ["power-vdd", "vpwr"],
+    labelVisibility: "shown",
   },
 ];

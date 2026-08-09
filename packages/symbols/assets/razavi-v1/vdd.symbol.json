@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "vdd",
+  "name": "VDD Power Port",
+  "viewBox": { "x": -12, "y": -2, "width": 24, "height": 26 },
+  "pins": [
+    {
+      "name": "P",
+      "role": "power",
+      "at": { "x": 0, "y": 20 },
+      "direction": "south",
+      "presentation": { "visibility": "visible", "leadLength": 10 }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": { "x": 0, "y": 20 },
+      "to": { "x": 0, "y": 2.5 },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "polygon",
+      "points": [
+        { "x": -10, "y": 0.88 },
+        { "x": 10, "y": 0.88 },
+        { "x": 10, "y": 4.12 },
+        { "x": -10, "y": 4.12 }
+      ],
+      "fill": "foreground",
+      "stroke": "none"
+    }
+  ],
+  "variants": [],
+  "aliases": ["power-vdd", "vpwr"],
+  "labelVisibility": "shown"
+}

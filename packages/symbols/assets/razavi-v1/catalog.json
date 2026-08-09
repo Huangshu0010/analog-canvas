@@ -252,6 +252,25 @@
         ],
         "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/peripheral-geometry.json"
       }
+    },
+    {
+      "symbolId": "vdd",
+      "name": "VDD Power Port",
+      "category": "power",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P"],
+      "palette": true,
+      "automaticMappings": [],
+      "assetPath": "vdd.symbol.json",
+      "assetHash": "69afa895cf5f542b1c96c1771e7a7ce8bde2e2d8802ee14a5cfcb6ce684efe07",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/vdd-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/vdd-geometry.json"
+      }
     }
   ],
   "semanticPrimitives": [

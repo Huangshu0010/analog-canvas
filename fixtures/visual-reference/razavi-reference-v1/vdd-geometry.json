@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "referenceId": "razavi-reference-v1",
+  "assetPath": "vdd-reference.png",
+  "assetSha256": "fae2ed83a534e62bfdb9f0f7cef97892ef46fa8630be481ad1d8a83611361f84",
+  "coordinateSystem": "reference-raster-pixels",
+  "pixels": { "width": 198, "height": 255 },
+  "pixelsPerLogical": 1.15,
+  "symbols": {
+    "vdd": {
+      "evidence": "top supply marker above RD",
+      "barCenterPx": { "x": 104, "y": 45 },
+      "barHalfWidthPx": 12,
+      "barStrokePx": 2,
+      "stemBottomYPx": 69,
+      "label": "VDD"
+    }
+  }
+}

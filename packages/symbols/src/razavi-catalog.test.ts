@@ -103,6 +103,7 @@ describe("Razavi symbol catalog", () => {
       ["port", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
       ["voltage-source", "reviewed", "razavi-reference-v1"],
+      ["vdd", "reviewed", "razavi-reference-v1"],
     ]);
   });
 
@@ -150,7 +151,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses catalog objects in the built-in compatibility library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(14);
+    expect(razaviCatalogSymbols).toHaveLength(15);
     for (const catalogSymbol of razaviCatalogSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -170,6 +171,7 @@ describe("Razavi symbol catalog", () => {
       "port",
       "resistor",
       "voltage-source",
+      "vdd",
     ]);
     for (const entry of razaviSymbolCatalogEntries) {
       expect(isRazaviReferencePaletteEntry(entry)).toBe(

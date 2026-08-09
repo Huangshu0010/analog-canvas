@@ -18,6 +18,11 @@
         "current-source geometry",
         "hollow port origin"
       ]
+    },
+    {
+      "path": "vdd-reference.png",
+      "sha256": "fae2ed83a534e62bfdb9f0f7cef97892ef46fa8630be481ad1d8a83611361f84",
+      "scope": ["VDD supply marker geometry"]
     }
   ],
   "mosGeometryPath": "mos-geometry.json",
@@ -30,6 +35,8 @@
   "capacitorGeometrySha256": "9137e7a492c6a5e66ae0476618942f099899260a09e80f47b3d5ebe57c97cf6a",
   "currentPortGeometryPath": "current-port-geometry.json",
   "currentPortGeometrySha256": "fbdf7f8cf39cfcc036a77abf386aa7c2d1acfa2e3467610a9df4de9dfa07e961",
+  "vddGeometryPath": "vdd-geometry.json",
+  "vddGeometrySha256": "6182664f5f8447a6bd39d7187681667a2590c660feefb2be801a80056a484f07",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -41,7 +48,8 @@
     "textbook annotation typography",
     "ground, supply, port, and source presentation",
     "capacitor geometry and stroke treatment",
-    "route current-arrow treatment, current-source geometry, and hollow port origin"
+    "route current-arrow treatment, current-source geometry, and hollow port origin",
+    "VDD supply marker geometry"
   ],
   "notes": [
     "This raster is the only visual authority for Razavi style v1.",
