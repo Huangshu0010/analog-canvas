@@ -4,6 +4,8 @@ import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { format } from "prettier";
 
+import { loadRazaviReferenceAuthority } from "./lib/razavi-reference-authority.mjs";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assetRoot = resolve(root, "packages/symbols/assets/razavi-v1");
 const catalogPath = resolve(assetRoot, "catalog.json");
@@ -31,6 +33,77 @@ if (
 if (!Array.isArray(catalog.entries) || catalog.entries.length === 0) {
   fail("catalog must contain entries");
 }
+
+const authorityRoot = resolve(
+  root,
+  "fixtures/visual-reference/razavi-reference-v1",
+);
+const { manifest: authorityManifest, files: authorityFiles } =
+  await loadRazaviReferenceAuthority(authorityRoot);
+if (
+  typeof authorityManifest.fidelityTargetsPath !== "string" ||
+  typeof authorityManifest.fidelityTargetsSha256 !== "string"
+) {
+  fail("invalid fidelity registry authority");
+}
+const fidelityRegistrySource = authorityFiles.get(
+  authorityManifest.fidelityTargetsPath,
+);
+const fidelityRegistry = JSON.parse(fidelityRegistrySource.toString("utf8"));
+if (
+  fidelityRegistry.schemaVersion !== 1 ||
+  fidelityRegistry.referenceId !== authorityManifest.id ||
+  !Array.isArray(fidelityRegistry.targets) ||
+  fidelityRegistry.targets.length === 0
+) {
+  fail("invalid fidelity registry identity");
+}
+const fidelityTargetIds = new Set();
+const formalKinds = new Set(["port", "wire", "route-current-arrow"]);
+for (const target of fidelityRegistry.targets) {
+  if (
+    typeof target.id !== "string" ||
+    fidelityTargetIds.has(target.id) ||
+    typeof target.measurementPath !== "string" ||
+    typeof target.measurementKey !== "string"
+  ) {
+    fail(`invalid or duplicate fidelity target ${target.id ?? "<unknown>"}`);
+  }
+  fidelityTargetIds.add(target.id);
+  const hasSymbol = typeof target.symbolId === "string";
+  const hasFormal = formalKinds.has(target.formalKind);
+  if (hasSymbol === hasFormal) {
+    fail(
+      `fidelity target ${target.id} must select exactly one Symbol or formal scene`,
+    );
+  }
+  const measurementSource = authorityFiles.get(target.measurementPath);
+  if (!measurementSource) {
+    fail(`fidelity measurement is not manifest-pinned for ${target.id}`);
+  }
+  const measurementFile = JSON.parse(measurementSource.toString("utf8"));
+  const collection = target.measurementCollection ?? "symbols";
+  const measurement = measurementFile[collection]?.[target.measurementKey];
+  if (!measurement) {
+    fail(`missing fidelity measurement for ${target.id}`);
+  }
+  const window =
+    target.window ?? measurement.window ?? measurement.cropWindowPx;
+  if (
+    !window ||
+    !Number.isInteger(window.width) ||
+    window.width <= 0 ||
+    !Number.isInteger(window.height) ||
+    window.height <= 0 ||
+    (window.minX !== undefined && !Number.isFinite(window.minX)) ||
+    (window.minY !== undefined && !Number.isFinite(window.minY))
+  ) {
+    fail(
+      `fidelity target ${target.id} requires a fixed reference-owned window`,
+    );
+  }
+}
+
 const symbols = [];
 const ids = new Set();
 const aliases = new Set();
@@ -122,6 +195,20 @@ for (const entry of catalog.entries) {
   }
   entry.assetHash = assetHash;
   symbols.push(symbol);
+}
+
+const symbolsById = new Map(symbols.map((symbol) => [symbol.id, symbol]));
+for (const target of fidelityRegistry.targets) {
+  if (!target.symbolId) continue;
+  const symbol = symbolsById.get(target.symbolId);
+  if (!symbol) {
+    fail(
+      `fidelity target ${target.id} references unknown Symbol ${target.symbolId}`,
+    );
+  }
+  if (target.useVariant && !symbol.variants?.length) {
+    fail(`fidelity target ${target.id} requests a missing Symbol variant`);
+  }
 }
 
 const semanticIds = new Set();

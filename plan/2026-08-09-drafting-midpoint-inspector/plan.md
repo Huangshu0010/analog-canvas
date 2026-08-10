@@ -27,6 +27,12 @@ the manual-editor E2E spec, interaction docs, and untracked shortcut helpers.
 This target will confine its final editor hunks to free-drafting geometry and
 the nearby inspector, then leave every concurrent path unstaged.
 
+At follow-up start, the shared editor files remain dirty alongside independent
+canvas-drag-session, route-stretch, and selection changes. This fix adds only
+the transient free-drafting handle preview and leaves all of those neighboring
+hunks intact; package renderer/test edits are isolated to arrow end tangent
+calculation.
+
 ## Ownership
 
 Owned paths:
@@ -73,6 +79,11 @@ Read-only shared boundaries:
   bearing. Entering a bearing rotates all free path points and quadratic
   controls around the object pivot; attached arrow endpoints remain protected
   from a rotation that would detach them.
+- Follow-up render check: curved free arrows must share one final-segment
+  tangent for their shaft truncation and arrowhead polygon in both the editor
+  canvas and formal export. A focused SVG renderer regression verifies that a
+  final curved segment changes the head polygon direction rather than merely
+  the shaft path; the editor build exercises the same renderer in the canvas.
 
 ## Validation
 

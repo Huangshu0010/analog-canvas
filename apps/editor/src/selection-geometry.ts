@@ -84,23 +84,3 @@ export function instanceVisibleHitBox(
   const maxY = Math.max(...ys);
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
-
-export function exceedsDragThreshold(
-  start: Point,
-  current: Point,
-  threshold: number,
-): boolean {
-  return Math.hypot(current.x - start.x, current.y - start.y) >= threshold;
-}
-
-/**
- * Dense schematics use a two-stage gesture: an initial click selects an
- * object, and only a later pointer-down on that already-selected object may
- * begin movement. Modifiers are selection gestures, never move gestures.
- */
-export function mayStartSelectedDrag(
-  isSelected: boolean,
-  hasSelectionModifier: boolean,
-): boolean {
-  return isSelected && !hasSelectionModifier;
-}

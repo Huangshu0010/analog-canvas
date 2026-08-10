@@ -491,7 +491,7 @@ describe("textbook monochrome SVG renderer", () => {
 
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain(
-      '<circle data-object-id="port-vin" data-node-kind="port-origin" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#202020" stroke-width="1.6"/>',
+      '<circle data-object-id="port-vin" data-node-kind="port-origin" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#000" stroke-width="1.6"/>',
     );
   });
 

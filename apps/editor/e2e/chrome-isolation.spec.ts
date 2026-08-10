@@ -29,3 +29,18 @@ test("keeps editor chrome typography from suppressing SVG italics", async ({
     ),
   ).not.toBe("none");
 });
+
+test("dismisses Help with Escape or a backdrop pointer", async ({ page }) => {
+  await page.goto("/");
+  const help = page.getByRole("dialog", { name: "Help" });
+
+  await page.getByRole("button", { name: "Help" }).click();
+  await expect(help).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(help).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Help" }).click();
+  await expect(help).toBeVisible();
+  await page.locator(".help-backdrop").click({ position: { x: 4, y: 4 } });
+  await expect(help).toHaveCount(0);
+});

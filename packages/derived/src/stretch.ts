@@ -4,6 +4,7 @@ import type { SymbolResolver } from "@icm/symbols";
 import { resolveEndpointPoint } from "./endpoint.js";
 import {
   isOrthogonal,
+  moveRouteSegment,
   normalizeRouteGeometry,
   routePolyline,
 } from "./routes.js";
@@ -36,6 +37,277 @@ export interface GroupMoveProposal {
   annotations: AnnotationMoveProposal[];
   internalNetIds: string[];
   internalRouteIds: string[];
+}
+
+/**
+ * A topology-preserving direct-manipulation proposal for one visible wire
+ * segment. Multiple persisted Routes may participate when a dotless
+ * `route-anchor` happens to divide the visible conductor.
+ */
+export interface WireSegmentDragProposal {
+  routes: RouteStretchProposal[];
+  junctions: JunctionMoveProposal[];
+}
+
+function routeJunctionDegree(
+  document: SchematicDocument,
+  junctionId: string,
+): number {
+  return document.routes.filter(
+    (route) =>
+      (route.from.kind === "junction" &&
+        route.from.junctionId === junctionId) ||
+      (route.to.kind === "junction" && route.to.junctionId === junctionId),
+  ).length;
+}
+
+/**
+ * Persisted Route boundaries are not automatically visual anchors. A
+ * degree-one/two route-anchor is editable geometry; terminals, ports, legacy
+ * branch records, and degree-three-or-greater Junctions remain hard anchors.
+ */
+function softRouteAnchorId(
+  document: SchematicDocument,
+  endpoint: SchematicDocument["routes"][number]["from"],
+): string | null {
+  if (endpoint.kind !== "junction") return null;
+  const junction = document.junctions.find(
+    (candidate) => candidate.id === endpoint.junctionId,
+  );
+  if (!junction) return null;
+  const degree = routeJunctionDegree(document, junction.id);
+  if (degree > 2) return null;
+  if (junction.role === "route-anchor") return junction.id;
+  // GUI Projects created before route-anchor roles used an implicit branch
+  // record for a dangling end. Preserve that established loose-end behavior.
+  if ((junction.role ?? "branch") === "branch" && degree === 1) {
+    return junction.id;
+  }
+  return null;
+}
+
+function protectedMode(mode: SegmentMode | undefined): boolean {
+  return mode === "locked" || mode === "trunk";
+}
+
+function normalizeProposal(
+  routeId: string,
+  points: readonly Point[],
+  modes: readonly SegmentMode[],
+): RouteStretchProposal {
+  const normalized = normalizeRouteGeometry(points, modes);
+  if (!isOrthogonal(normalized.points)) {
+    throw new Error(
+      `Wire segment drag would make route ${routeId} non-orthogonal`,
+    );
+  }
+  return {
+    routeId,
+    waypoints: normalized.points.slice(1, -1),
+    segmentModes: normalized.segmentModes,
+  };
+}
+
+function stretchRouteEndpoint(
+  routeId: string,
+  points: Point[],
+  modes: SegmentMode[],
+  side: "from" | "to",
+  originalPoint: Point,
+  movedPoint: Point,
+): void {
+  const segmentMode = side === "from" ? modes[0] : modes.at(-1);
+  if (protectedMode(segmentMode)) {
+    throw new Error(`Route ${routeId} has a protected adjacent segment`);
+  }
+  const endpointIndex = side === "from" ? 0 : points.length - 1;
+  const neighborIndex = side === "from" ? 1 : points.length - 2;
+  const neighbor = points[neighborIndex]!;
+  points[endpointIndex] = { ...movedPoint };
+
+  const originallyVertical =
+    originalPoint.x === neighbor.x && originalPoint.y !== neighbor.y;
+  const originallyHorizontal =
+    originalPoint.y === neighbor.y && originalPoint.x !== neighbor.x;
+  if (!originallyVertical && !originallyHorizontal) {
+    throw new Error(`Route ${routeId} has invalid endpoint geometry`);
+  }
+
+  if (points.length > 2) {
+    if (originallyVertical) neighbor.x = movedPoint.x;
+    else neighbor.y = movedPoint.y;
+    return;
+  }
+
+  const stillAligned = originallyVertical
+    ? movedPoint.x === neighbor.x
+    : movedPoint.y === neighbor.y;
+  if (stillAligned) return;
+
+  const insertIndex = side === "from" ? 1 : points.length - 1;
+  points.splice(insertIndex, 0, { ...originalPoint });
+  const modeIndex = side === "from" ? 0 : modes.length - 1;
+  const mode = modes[modeIndex]!;
+  modes.splice(modeIndex, 1, mode, mode);
+}
+
+/**
+ * Move a visible orthogonal segment perpendicular to itself while preserving
+ * connectivity across persisted Route boundaries. The caller commits the
+ * returned Junction and Route edits together in one transaction.
+ */
+export function proposeWireSegmentDrag(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  routeId: string,
+  segmentIndex: number,
+  target: Point,
+): WireSegmentDragProposal {
+  const selectedRoute = document.routes.find((route) => route.id === routeId);
+  if (!selectedRoute) throw new Error(`Route not found: ${routeId}`);
+  const selectedPolyline = routePolyline(document, resolver, selectedRoute);
+  if (!selectedPolyline)
+    throw new Error(`Route ${routeId} has unresolved geometry`);
+  if (segmentIndex < 0 || segmentIndex >= selectedPolyline.points.length - 1) {
+    throw new Error(`Route segment index is out of range: ${segmentIndex}`);
+  }
+  const affectedModes = [
+    selectedPolyline.segmentModes[segmentIndex - 1],
+    selectedPolyline.segmentModes[segmentIndex],
+    selectedPolyline.segmentModes[segmentIndex + 1],
+  ];
+  if (affectedModes.some(protectedMode)) {
+    throw new Error("Route segment or its neighbor is protected");
+  }
+
+  const fromPoint = selectedPolyline.points[segmentIndex]!;
+  const toPoint = selectedPolyline.points[segmentIndex + 1]!;
+  const horizontal = fromPoint.y === toPoint.y;
+  const vertical = fromPoint.x === toPoint.x;
+  if (!horizontal && !vertical) {
+    throw new Error(`Route ${routeId} segment is not orthogonal`);
+  }
+
+  const lastPointIndex = selectedPolyline.points.length - 1;
+  const selectedEndpointAnchor = (pointIndex: number): string | null => {
+    if (pointIndex === 0) {
+      return softRouteAnchorId(document, selectedRoute.from);
+    }
+    if (pointIndex === lastPointIndex) {
+      return softRouteAnchorId(document, selectedRoute.to);
+    }
+    return null;
+  };
+  const leftAnchorId = selectedEndpointAnchor(segmentIndex);
+  const rightAnchorId = selectedEndpointAnchor(segmentIndex + 1);
+
+  // Ordinary single-Route bends keep the established dogleg behavior. The
+  // topology-aware path is required only when a soft persisted endpoint makes
+  // the storage partition observable.
+  if (!leftAnchorId && !rightAnchorId) {
+    return {
+      routes: [
+        {
+          routeId,
+          ...moveRouteSegment(selectedPolyline, segmentIndex, target),
+        },
+      ],
+      junctions: [],
+    };
+  }
+
+  const axis: "x" | "y" = horizontal ? "y" : "x";
+  const coordinate = target[axis];
+  const movedJunctions = new Map<string, Point>();
+  for (const anchorId of [leftAnchorId, rightAnchorId]) {
+    if (!anchorId || movedJunctions.has(anchorId)) continue;
+    const junction = document.junctions.find(
+      (candidate) => candidate.id === anchorId,
+    )!;
+    movedJunctions.set(anchorId, { ...junction.position, [axis]: coordinate });
+  }
+
+  const selectedPoints = selectedPolyline.points.map((point) => ({ ...point }));
+  const selectedModes = [...selectedPolyline.segmentModes];
+  const left = selectedPoints[segmentIndex]!;
+  const right = selectedPoints[segmentIndex + 1]!;
+  if (segmentIndex > 0 || leftAnchorId) left[axis] = coordinate;
+  if (segmentIndex + 1 < lastPointIndex || rightAnchorId) {
+    right[axis] = coordinate;
+  }
+
+  // A hard endpoint stays in place; split only that boundary segment to form
+  // the local dogleg. Internal bends and soft anchors move with the segment.
+  if (segmentIndex === 0 && !leftAnchorId && left[axis] !== coordinate) {
+    const mode = selectedModes[0]!;
+    selectedPoints.splice(1, 0, { ...left, [axis]: coordinate });
+    selectedModes.splice(0, 1, mode, mode);
+  }
+  const selectedRightIndex = selectedPoints.indexOf(right);
+  if (
+    segmentIndex + 1 === lastPointIndex &&
+    !rightAnchorId &&
+    right[axis] !== coordinate
+  ) {
+    const modeIndex = selectedRightIndex - 1;
+    const mode = selectedModes[modeIndex]!;
+    selectedPoints.splice(selectedRightIndex, 0, {
+      ...right,
+      [axis]: coordinate,
+    });
+    selectedModes.splice(modeIndex, 1, mode, mode);
+  }
+
+  const proposals = new Map<string, RouteStretchProposal>();
+  proposals.set(
+    routeId,
+    normalizeProposal(routeId, selectedPoints, selectedModes),
+  );
+
+  for (const route of document.routes) {
+    if (route.id === routeId) continue;
+    const fromAnchor = softRouteAnchorId(document, route.from);
+    const toAnchor = softRouteAnchorId(document, route.to);
+    const movedFrom = fromAnchor ? movedJunctions.get(fromAnchor) : undefined;
+    const movedTo = toAnchor ? movedJunctions.get(toAnchor) : undefined;
+    if (!movedFrom && !movedTo) continue;
+    const polyline = routePolyline(document, resolver, route);
+    if (!polyline) throw new Error(`Route ${route.id} has unresolved geometry`);
+    const points = polyline.points.map((point) => ({ ...point }));
+    const modes = [...polyline.segmentModes];
+    if (movedFrom) {
+      stretchRouteEndpoint(
+        route.id,
+        points,
+        modes,
+        "from",
+        polyline.points[0]!,
+        movedFrom,
+      );
+    }
+    if (movedTo) {
+      stretchRouteEndpoint(
+        route.id,
+        points,
+        modes,
+        "to",
+        polyline.points.at(-1)!,
+        movedTo,
+      );
+    }
+    proposals.set(route.id, normalizeProposal(route.id, points, modes));
+  }
+
+  return {
+    routes: [...proposals.values()].sort((leftProposal, rightProposal) =>
+      leftProposal.routeId.localeCompare(rightProposal.routeId, "en"),
+    ),
+    junctions: [...movedJunctions.entries()]
+      .map(([junctionId, position]) => ({ junctionId, position }))
+      .sort((leftMove, rightMove) =>
+        leftMove.junctionId.localeCompare(rightMove.junctionId, "en"),
+      ),
+  };
 }
 
 export interface InternalGroupSelection {

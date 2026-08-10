@@ -285,6 +285,37 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     expect(geometry.diagnostics).toEqual([]);
   });
 
+  it("resolves a rotated rectangle into four shared render corners", () => {
+    const object: Extract<DraftingObject, { kind: "rectangle" }> = {
+      id: "rect1",
+      kind: "rectangle",
+      locked: false,
+      zIndex: 0,
+      anchor: { kind: "free", position: { x: 100, y: 80 } },
+      center: { x: 100, y: 80 },
+      width: 80,
+      height: 40,
+      rotation: 90,
+      lineStyle: "solid",
+    };
+    const geometry = resolveDraftingObjectGeometry(
+      documentWithRoute(),
+      resolver,
+      object,
+    );
+    expect(geometry.kind).toBe("rectangle");
+    if (geometry.kind !== "rectangle") return;
+    expect(geometry.corners[0]).toMatchObject({ x: 120, y: 40 });
+    expect(geometry.corners[2]).toMatchObject({ x: 80, y: 120 });
+    expect(geometry.bounds).toMatchObject({
+      x: 74,
+      y: 34,
+      width: 52,
+      height: 92,
+    });
+    expect(geometry.diagnostics).toEqual([]);
+  });
+
   it("reports an unresolved floating symbol and uses anchor fallback bounds", () => {
     const document = documentWithRoute();
     const object: Extract<DraftingObject, { kind: "floating-symbol" }> = {

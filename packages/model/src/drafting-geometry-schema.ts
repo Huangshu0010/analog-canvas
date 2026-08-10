@@ -17,6 +17,11 @@ const FloatRectSchema = z.strictObject({
   height: z.number(),
 });
 
+const FloatPointSchema = z.strictObject({
+  x: z.number().finite(),
+  y: z.number().finite(),
+});
+
 export const DraftingDiagnosticSchema = z.strictObject({
   code: z.enum([
     "DRAFTING_ANCHOR_TARGET_MISSING",
@@ -71,6 +76,16 @@ export const ResolvedDraftingGeometrySchema = z.discriminatedUnion("kind", [
     points: z.array(PointSchema),
     vertices: z.array(PointSchema),
     curveControls: z.array(PointSchema.nullable()),
+    bounds: FloatRectSchema,
+    diagnostics: z.array(DraftingDiagnosticSchema),
+  }),
+  z.strictObject({
+    kind: z.literal("rectangle"),
+    center: PointSchema,
+    width: z.number().positive(),
+    height: z.number().positive(),
+    rotation: z.number().finite(),
+    corners: z.array(FloatPointSchema).length(4),
     bounds: FloatRectSchema,
     diagnostics: z.array(DraftingDiagnosticSchema),
   }),

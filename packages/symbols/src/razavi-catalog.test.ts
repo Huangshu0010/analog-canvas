@@ -45,6 +45,13 @@ const mosGeometry = JSON.parse(
           to: { x: number; y: number };
         }
       >;
+      leadsPx: Record<
+        "D" | "G" | "S",
+        {
+          from: { x: number; y: number };
+          to: { x: number; y: number };
+        }
+      >;
       sourceArrowPx: {
         support: {
           from: { x: number; y: number };

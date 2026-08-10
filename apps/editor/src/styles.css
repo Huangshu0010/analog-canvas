@@ -138,10 +138,10 @@ body {
 .app-header {
   position: relative;
   z-index: 20;
-  display: flex;
+  display: grid;
   grid-column: 1 / -1;
+  grid-template-columns: minmax(10rem, 1fr) auto minmax(10rem, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   min-height: 3.75rem;
   padding: 0.6rem 1rem;
@@ -168,7 +168,10 @@ body {
 }
 
 .editor-status {
+  box-sizing: border-box;
+  width: min(17rem, 100%);
   max-width: 17rem;
+  justify-self: end;
   overflow: hidden;
   padding: 0.25rem 0.5rem;
   border: 1px solid transparent;
@@ -177,6 +180,7 @@ body {
   background: var(--icm-surface-muted);
   font-size: 0.72rem;
   font-weight: 500;
+  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -830,6 +834,13 @@ body {
   touch-action: none;
 }
 
+/* The interactive scene reuses the formal renderer body without its exported
+   SVG wrapper. Supply that wrapper's canonical schematic typography here so
+   canvas labels and free text cannot fall back to the surrounding UI font. */
+.schematic-canvas text {
+  font-family: "DejaVu Sans", Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
 .hit-target {
   fill: transparent;
   stroke: transparent;
@@ -1053,6 +1064,19 @@ body {
   cursor: pointer;
 }
 
+.drafting-inline-inspector[data-drafting-kind="arrow"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.drafting-inline-inspector[data-drafting-kind="arrow"] > * {
+  max-width: 100%;
+}
+
 .drafting-tangent-angle {
   display: inline-flex;
   align-items: center;
@@ -1100,15 +1124,19 @@ body {
 .rich-text-editor-shell {
   display: grid;
   gap: 0.25rem;
-  min-width: 16rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   color: var(--icm-text);
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-family: "DejaVu Sans", Arial, "Helvetica Neue", Helvetica, sans-serif;
 }
 
 .rich-text-floating-toolbar {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  width: max-content;
+  box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
   gap: 0.1rem;
   padding: 0.2rem;
@@ -1139,6 +1167,8 @@ body {
 }
 
 .rich-text-editable {
+  box-sizing: border-box;
+  max-width: 100%;
   min-height: 1.55rem;
   padding: 0.18rem 0.35rem;
   border: 1px solid var(--icm-accent);
@@ -1148,6 +1178,7 @@ body {
   box-shadow: 0 1px 5px rgb(var(--icm-accent-rgb) / 16%);
   font: inherit;
   line-height: 1.15;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
@@ -1264,8 +1295,13 @@ body {
 
 @media (max-width: 860px) {
   .app-header {
+    display: flex;
     align-items: flex-start;
     flex-wrap: wrap;
+  }
+
+  .editor-status {
+    width: auto;
   }
 
   .toolbar {

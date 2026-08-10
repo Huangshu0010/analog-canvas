@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.6`
+Version: `1.7`
 
 Owning phase: `Phase 1/5`
 
@@ -43,57 +43,30 @@ junctionRadius: 1.75
 fontFamily: "Georgia, Times New Roman, serif"
 ```
 
-The proposed `razavi-textbook-v1` profile is also executable:
-
-```yaml
-foreground: "#202020"
-wireStroke: 1.6
-symbolStroke: 1.6
-normalStroke: 1.6
-emphasisStroke: 2.16
-groundBarStroke: 2.906977
-supplyStroke: 1.8
-annotationStroke: 1.6
-junctionRadius: 3.779070
-portOriginRadius: 3.779070
-strokeLinecap: butt
-strokeLinejoin: miter
-strokeMiterLimit: 4
-scaleFormalStrokes: true
-fontFamily: "Arial, Helvetica Neue, Helvetica, sans-serif"
-mathWeight: 700
-mathStyle: italic
-instanceFontSize: 18
-netFontSize: 18
-powerFontSize: 18
-annotationFontSize: 18
-captionFontSize: 14
-subscriptScale: 0.84
-subscriptBaselineShift: 0.28em downward
-labelGap: 6
-supplyBarWidth: 20
-currentArrowLength: 53.488372
-arrowHeadLength: 15.116279
-arrowHeadWidth: 8.720930
-currentLabelGap: 6.976744
-polarityOffsetX: 12
-polarityHalfGap: 8
-```
+The accepted `razavi-textbook-v1` profile, including its sole token table,
+component-construction rules, and pixel-alignment contract, is defined in
+[`razavi-visual-contract.md`](razavi-visual-contract.md). This generic visual
+language specification does not duplicate Razavi values.
 
 Unknown persisted profile IDs are blocking render errors; the renderer never
 silently substitutes a profile. Semantic symbol roles resolve through the
 selected profile. Legacy numeric primitive widths remain literal only under
 `textbook-monochrome-v1`; Razavi output clusters them into profile-owned normal
-or emphasis widths until the source asset is explicitly migrated. Migrated
-Visio assets use exact reviewed roles (`1.2` normal and `2.16` emphasis) and
-retain finite-decimal geometry.
+or emphasis widths until the source asset is explicitly migrated. Reviewed
+Razavi assets use semantic roles and retain measured finite-decimal geometry;
+retired source weights remain provenance evidence only.
 
-For Razavi formal output, a positioned signal Port renders as a filled origin
-circle. A Port attached to a `power-label` renders a supply bar instead of an
-origin circle. Explicit Junctions render independently; device-pin anchors,
-ordinary corners, and geometric crossings never acquire a dot from appearance
-or degree alone. Current and voltage annotation geometry is derived from the
-annotation kind and profile tokens, not text glyphs or editor overlays.
+For Razavi formal output, a positioned model Port renders as a hollow origin
+with the same outside radius as a solid Junction. The reviewed `port` and
+`port-filled` Symbol assets separately provide explicit hollow and filled
+palette presentations; they do not change formal model-Port semantics. A Port
+attached to a `power-label` renders a supply bar instead of an origin circle.
+Explicit Junctions render independently; device-pin anchors, ordinary corners,
+and geometric crossings never acquire a dot from appearance or degree alone.
+Current and voltage annotation geometry is derived from the annotation kind and
+profile tokens, not text glyphs or editor overlays. Razavi-specific authority,
+construction, and pixel-alignment rules live in
+[`razavi-visual-contract.md`](razavi-visual-contract.md).
 
 Formal SVG has stable groups for routes, Junctions, symbols, and annotations.
 The editor creates its grid and interaction overlay outside the formal group.
@@ -148,8 +121,9 @@ active symbol variant's visible geometry and clusters repeated overlaps.
   together and emits no `vector-effect="non-scaling-stroke"`.
 - Annotation attachment moves with an edited instance while its offset and
   semantic kind remain persisted.
-- Port-origin circles and supply bars are mutually exclusive presentations of
-  their attached semantic Port.
+- Hollow model-Port origins and supply bars are mutually exclusive
+  presentations of their attached semantic Port. Explicit `port` and
+  `port-filled` Symbol instances remain independent component presentations.
 - Instance-label drag is bounded around its symbol and Net-label drag is
   bounded around attached route geometry; free text is unconstrained.
 - Visual goldens use original project fixtures, not copied textbook artwork.
@@ -184,13 +158,10 @@ correct.
 
 ## Compatibility and migration
 
-Phase 1 proportions are provisional. Phase 5 may calibrate artwork and tokens,
-but a changed golden requires visual review and a profile-version decision when
-the change is not backward-compatible.
-
-Adding `razavi-textbook-v1` does not change existing or newly created Project
-defaults yet. The default switch is an explicit RV-7 migration decision after
-the acceptance board and export gates pass.
+`textbook-monochrome-v1` remains available for compatibility fixtures and old
+documents. New Projects use `razavi-textbook-v1`. A non-backward-compatible
+profile or golden change requires visual review and an explicit profile-version
+decision under the unified Razavi visual contract.
 
 ## Deterministic validation
 

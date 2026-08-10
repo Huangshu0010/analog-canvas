@@ -183,17 +183,6 @@ export function RichTextEditor({
     sync();
   };
 
-  const insertFraction = (): void => {
-    if (disabled || !editableRef.current) return;
-    editableRef.current.focus();
-    document.execCommand(
-      "insertHTML",
-      false,
-      '<span data-rich-fraction="true" contenteditable="false"><span data-fraction-numerator="true">N</span><span class="rich-text-fraction-rule">/</span><span data-fraction-denominator="true">D</span></span>',
-    );
-    sync();
-  };
-
   return (
     <div
       className="rich-text-editor-shell"
@@ -239,15 +228,6 @@ export function RichTextEditor({
           onClick={() => command("superscript")}
         >
           x<sup>2</sup>
-        </button>
-        <button
-          type="button"
-          aria-label="Insert fraction"
-          disabled={disabled}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={insertFraction}
-        >
-          a/b
         </button>
         <span className="rich-text-toolbar-separator" />
         <button
@@ -310,6 +290,7 @@ export function RichTextEditor({
         role="textbox"
         aria-label="Canvas text editor"
         aria-multiline="true"
+        style={{ fontSize: `${15.116 * sizeScale}px` }}
         onInput={sync}
         onSelect={rememberSelection}
         onKeyUp={rememberSelection}

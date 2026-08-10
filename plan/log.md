@@ -35,7 +35,7 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Changed areas: capacitor source asset, hash-pinned Razavi catalog entry, and
   generated runtime catalog definition.
 - Validation: regenerated catalog; Symbols build; C1 vertical IoU improved
-  `0.5860 ? 0.6174` and C2 horizontal `0.6982 ? 0.7019`; catalog stale check,
+  `0.5860 → 0.6174` and C2 horizontal `0.6982 → 0.7019`; catalog stale check,
   focused catalog Vitest 17/17, editor build, and `git diff --check` passed.
 - Commit status: committed with this target; concurrent drafting work remains
   unstaged.
@@ -3674,6 +3674,7 @@ terminal wiring`.
 - Commit status: not committed. A concurrent precise-selection target modified
   the same `App.tsx`/`styles.css` files during this work; its untracked helper
   files and plan were deliberately not staged or included.
+
 ## 2026-08-10 - Reusable wire endpoints and route-anchor joins
 
 - Target: allow a dangling manual wire endpoint to start a later wire, without
@@ -3702,7 +3703,7 @@ terminal wiring`.
 - Validation: owned-file Prettier check passed; editor App Vitest passed 11/11;
   editor production build passed; six focused Playwright interaction/layout
   checks passed, including stable canvas width and direct-pin coordinates; `git
-  diff --check` passed. The full Playwright baseline completed 30/49, with the
+diff --check` passed. The full Playwright baseline completed 30/49, with the
   remaining failures traced to existing stale UI/route expectations; an
   unmodified-main comparison reproduced the selected-route failure. Root
   formatting and typecheck remain blocked by previously dirty formatting paths
@@ -3722,3 +3723,159 @@ terminal wiring`.
   the editor plus its workspace dependencies built; `git diff --check` passed.
   Eight broader renderer golden assertions remain independently stale and are
   not affected by browser CSS.
+
+## 2026-08-10 - Drafting floating-control consolidation
+
+- Target: make canvas floating inspectors the single edit surface for free
+  arrows and construction lines, remove the arrow Segment control, and contain
+  the arrow and rich-text editors within their SVG overlays.
+- Changed areas: removed the Selection `Drawing style` section; moved
+  Lock/Unlock into the drafting float; retained arrow head size there; limited
+  `Curve segment` to multi-segment construction lines; added deterministic
+  arrow grid sizing/viewBox clamping and wrapping, clamped rich-text layout.
+- Validation: focused drafting Playwright passed 5/5 with geometric overflow
+  assertions; App Vitest passed 11/11; editor dependencies and production build
+  passed; owned-file Prettier and `git diff --check` passed. The full drafting
+  file passed 14/18; the four failures are existing retired-menu,
+  duplicate-locator, and concurrent drag-session gesture cases outside this
+  UI target.
+- Commit status: pending. Shared `App.tsx` and drafting-test files contain
+  separately owned uncommitted drag-session work, and the branch is already
+  ahead with external commits; no mixed commit was created.
+- Review follow-up: widened the text editor to a contained 420-unit, single-row
+  toolbar; added non-committing Escape/outside-pointer dismissal for text and
+  drafting floats; added Help backdrop dismissal; and changed the header to
+  symmetric title/commands/status columns so status updates cannot move the
+  command bar.
+- Follow-up validation: eight focused Playwright scenarios passed, including
+  measured one-row/overflow geometry, both dismissal paths, Help dismissal,
+  and an exact before/after command-bar rectangle across a status change. App
+  Vitest passed 11/11, the editor dependency/build chain passed, and owned-file
+  formatting plus `git diff --check` passed.
+- Text-system follow-up: removed the fraction insertion mode without removing
+  legacy fraction compatibility; made A-/A+ preview live in the editing field;
+  created free text with the `label` typography token; applied the canonical
+  DejaVu/Razavi font stack to the editor and interactive canvas; matched free
+  text selection to annotation text's precise dashed frame; and added/documented
+  the `T` shortcut. Three focused Playwright scenarios passed, App Vitest passed
+  11/11, the editor dependency/build chain passed, and owned-file formatting
+  plus `git diff --check` passed. Root typecheck remains blocked by unrelated
+  dirty `inout` and symbol-catalog `leadsPx` test fixtures.
+
+## 2026-08-10 - Curved free-arrow head follow-through
+
+- Target: make a free arrow's triangular head follow its final quadratic
+  segment while a user bends the shaft and after the edit commits.
+- Changed areas: formal SVG now obtains shaft truncation and head orientation
+  from one final-segment tangent helper. The editor swaps only the dragged
+  drafting object into a transient render document during a handle drag, so
+  the formal shaft and arrowhead redraw together before pointer-up. The
+  renderer regression checks the head direction against a curved end tangent.
+- Validation: focused render/derived Vitest passed 27/27; renderer and editor
+  TypeScript checks, editor production build, and `git diff --check` passed.
+- Commit status: not committed. This narrow follow-up overlaps dirty shared
+  `App.tsx` with other active canvas interaction targets; no files were staged.
+
+## 2026-08-10 - Drafting rectangle tool
+
+- Target: add a Virtuoso-style `R` rectangle tool to the non-electrical
+  drafting layer, sharing the existing free-line appearance and edit surfaces.
+- Changed areas: Project schema now persists rectangle center, dimensions,
+  bearing, and line style; derived geometry supplies four rotated corners and
+  export bounds; formal SVG renders a transparent outline. The editor provides
+  two-corner live creation, precise outline selection, whole-object movement,
+  four-corner resizing, arbitrary bearing, 90-degree Rotate, style/stroke
+  controls, Lock/Unlock, Delete, and `R` activation. `Shift+R` retains selection
+  rotation after the shortcut conflict was resolved in favor of the requested
+  Virtuoso convention.
+- Validation: focused derived/render Vitest passed 29/29; focused Playwright
+  passed 2/2 for shortcut creation, selection, four handles, resize, styling,
+  and Shift+R rotation; all workspace packages built; editor TypeScript and
+  production build passed; owned-file formatting and `git diff --check` passed.
+  Root typecheck remains blocked by pre-existing `inout` direction fixtures in
+  `stretch.test.ts` and missing `leadsPx` fields in symbol catalog tests.
+- Commit status: not committed. Shared editor, E2E, docs, renderer, and log
+  files contain unrelated dirty work; no files were staged.
+- Shortcut correction after GUI review: `R` now rotates a selected placed
+  component, arrow, construction line, or rectangle by +90 degrees, and only
+  enters Rectangle mode when no rotatable selection exists. `Shift+R` rotates
+  the same selection by -90 degrees. Focused browser coverage includes both
+  selected-arrow and selected-component `R` rotation plus unselected `R`
+  rectangle creation.
+
+## 2026-08-10 - Unified canvas interaction session
+
+- Target: remove divergent object drag state machines, prevent overlapping
+  text/geometry from changing the drag target, and make painted objects follow
+  the pointer before commit.
+- Changed areas: one shared pointer session; semantic hit ranking with selected
+  target stickiness and `Alt` candidate cycling; direct temporary SVG
+  transforms/polyline previews; unsnapped grab-offset-preserving movement with
+  snap deferred to pointer-up; duplicate default-label hit removal.
+- Validation: focused interaction modules passed 10/10 Vitest; App passed
+  11/11; ten focused manual/drafting Playwright gestures passed, including
+  live movement before revision commit, component/label targeting, free text,
+  loose Route translation, connected segment stretch, Escape cancellation, and
+  arrow handles and one-commit Guide movement. Editor TypeScript and production
+  build passed; Prettier and `git diff --check` passed.
+- Commit status: pending because shared editor/test/spec/log files contain
+  completed but uncommitted concurrent UI, rectangle, and route targets; no
+  mixed staging was performed.
+
+## 2026-08-10 - Razavi symbol construction experience
+
+- Target: extract the repeated component-construction and pixel-calibration
+  lessons into one concise experience note for future palette extensions.
+- Changed areas: added a two-part note covering reusable methodology and the
+  concrete evidence, asset, generator, renderer, and fidelity-script paths.
+  It records reference-owned registration, electrical/visual coordinate
+  separation, canonical family geometry, topology-aware seam construction,
+  actual-render pixel diagnostics, the compiled-`dist` boundary, and the
+  required execution order. The note is in English, and the experience README
+  now makes English the standard language for future extracted lessons.
+- Validation: local links and named paths checked; target-only Markdown diff
+  reviewed; `git diff --check` passed.
+- Commit status: pending isolated staging because `plan/log.md` contains
+  unrelated concurrent target entries.
+
+## 2026-08-10 - Unified Razavi visual contract and fidelity registry
+
+- Target: consolidate scattered Razavi style, extension, Port/node, and
+  pixel-alignment rules without removing hollow/filled Port behavior or any
+  construction and fidelity method.
+- Changed areas: added one accepted Razavi visual contract; converted the old
+  style and extension specs into redirects; corrected active navigation and
+  formal Port terminology; moved all 15 fidelity target declarations from the
+  CLI into one manifest-pinned registry; froze the seven former
+  candidate-derived windows; and added a shared authority loader that verifies
+  raster, measurement, and registry hashes for both catalog checks and fidelity
+  runs. The stale formal-Port foreground assertion now matches the executable
+  `#000` profile.
+- Validation: `symbols:razavi:check` passed; Model, Symbols, Derived,
+  Render-SVG, and Exporters builds passed; all 15 registered fidelity targets
+  completed with the pre-refactor scores preserved; catalog Vitest passed
+  17/17 and focused formal-Port rendering passed 1/1; owned-file Prettier and
+  local-link checks passed; `git diff --check` passed.
+- Commit status: pending isolated staging because the branch and shared
+  `plan/log.md` contain unrelated concurrent target work.
+
+## 2026-08-10 - Integrate modernized editor work
+
+- Target: commit every current change on `codex/modernize-editor-chrome`, merge
+  the complete branch into `main`, and push both refs as explicitly requested.
+- Changed areas: integrated the completed drafting controls, rectangle tool,
+  unified canvas drag session, topology-aware route movement, renderer/model
+  support, Razavi visual contract and registry, documentation, experience note,
+  fixtures, scripts, and their target plans. Test-only integration repairs
+  synchronized Port fixtures, MOS measurement typing, and the remaining route
+  drag browser scenario with current contracts.
+- Validation: changed-file Prettier, `references:check`,
+  `symbols:razavi:check`, root typecheck, 46/46 focused Vitest cases, all
+  workspace builds, 23/23 focused Playwright cases, and `git diff --check`
+  passed. Full Vitest completed 350/364 with 14 already-recorded stale
+  Razavi/style/golden and snapshot-bound expectations. Full Playwright exceeded
+  the 60-second runner limit and was replaced by the deterministic focused
+  changed-surface run; it was not recorded as passing.
+- Commit status: ready to commit as
+  `feat(editor): unify drafting interactions and visual contracts`, then merge
+  to `main` and push both branches.

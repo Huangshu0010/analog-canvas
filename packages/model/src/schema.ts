@@ -284,9 +284,9 @@ export const GuideSchema = z.strictObject({
 
 // DraftingObject union (ADR 0010). Each member shares id/locked/zIndex, an
 // optional styleOverride, and a VisualAnchor. A1a ships the minimal set with
-// text fully populated; arrow/leader/callout/construction-line/floating-symbol
-// carry their discriminator and anchor so the Edit Engine can route them, with
-// kind-specific fields added as their tooling lands (WP-A2/A4).
+// text fully populated; arrow/leader/callout/construction-line/rectangle/
+// floating-symbol carry their discriminator and anchor so the Edit Engine can
+// route them, with kind-specific fields added as their tooling lands (WP-A2/A4).
 const DraftingObjectBaseSchema = z.strictObject({
   id: StableIdSchema,
   locked: z.boolean(),
@@ -354,6 +354,18 @@ export const DraftConstructionLineSchema = DraftingObjectBaseSchema.extend({
   lineStyle: z.enum(["solid", "dashed", "dotted"]),
 });
 
+export const DraftRectangleSchema = DraftingObjectBaseSchema.extend({
+  kind: z.literal("rectangle"),
+  center: PointSchema,
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  // Free drafting geometry is allowed to rotate continuously. Persist a
+  // normalized bearing rather than restricting the rectangle to symbol-style
+  // quarter turns.
+  rotation: z.number().finite().min(0).lt(360),
+  lineStyle: z.enum(["solid", "dashed", "dotted"]),
+});
+
 export const DraftFloatingSymbolSchema = DraftingObjectBaseSchema.extend({
   kind: z.literal("floating-symbol"),
   symbolId: StableIdSchema,
@@ -368,6 +380,7 @@ export const DraftingObjectSchema = z.discriminatedUnion("kind", [
   DraftLeaderSchema,
   DraftCalloutSchema,
   DraftConstructionLineSchema,
+  DraftRectangleSchema,
   DraftFloatingSymbolSchema,
 ]);
 
@@ -753,6 +766,7 @@ export type DraftArrow = z.infer<typeof DraftArrowSchema>;
 export type DraftLeader = z.infer<typeof DraftLeaderSchema>;
 export type DraftCallout = z.infer<typeof DraftCalloutSchema>;
 export type DraftConstructionLine = z.infer<typeof DraftConstructionLineSchema>;
+export type DraftRectangle = z.infer<typeof DraftRectangleSchema>;
 export type DraftFloatingSymbol = z.infer<typeof DraftFloatingSymbolSchema>;
 export type DraftingObject = z.infer<typeof DraftingObjectSchema>;
 export type DraftingLayer = z.infer<typeof DraftingLayerSchema>;

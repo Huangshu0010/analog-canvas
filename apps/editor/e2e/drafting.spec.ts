@@ -70,6 +70,56 @@ async function dragLocator(
   await locator.page().mouse.up();
 }
 
+async function clickSvgPolyline(locator: Locator): Promise<void> {
+  const point = await locator.evaluate((element) => {
+    const polyline = element as SVGPolylineElement;
+    const matrix = polyline.getScreenCTM();
+    if (!matrix || polyline.points.numberOfItems === 0) return null;
+    const first = polyline.points.getItem(0);
+    const last = polyline.points.getItem(polyline.points.numberOfItems - 1);
+    const center = new DOMPoint(
+      (first.x + last.x) / 2,
+      (first.y + last.y) / 2,
+    ).matrixTransform(matrix);
+    return { x: center.x, y: center.y };
+  });
+  if (!point) throw new Error("Drafting polyline is not measurable");
+  await locator.page().mouse.click(point.x, point.y);
+}
+
+async function expectForeignObjectContentsContained(
+  foreignObject: Locator,
+): Promise<void> {
+  await expect(foreignObject).toBeVisible();
+  const containment = await foreignObject.evaluate((element) => {
+    const host = element.getBoundingClientRect();
+    const content = element.firstElementChild as HTMLElement | null;
+    if (!content) return null;
+    const contentRect = content.getBoundingClientRect();
+    const children = [...content.children].map((child) =>
+      child.getBoundingClientRect(),
+    );
+    return {
+      contentFits:
+        content.scrollWidth <= content.clientWidth + 1 &&
+        content.scrollHeight <= content.clientHeight + 1,
+      contained:
+        contentRect.left >= host.left - 1 &&
+        contentRect.top >= host.top - 1 &&
+        contentRect.right <= host.right + 1 &&
+        contentRect.bottom <= host.bottom + 1 &&
+        children.every(
+          (child) =>
+            child.left >= host.left - 1 &&
+            child.top >= host.top - 1 &&
+            child.right <= host.right + 1 &&
+            child.bottom <= host.bottom + 1,
+        ),
+    };
+  });
+  expect(containment).toEqual({ contentFits: true, contained: true });
+}
+
 // The canvas-local toolbar creates RichText AST without exposing raw markup.
 test("adds formatted drafting text and undo/redo restores it", async ({
   page,
@@ -77,17 +127,52 @@ test("adds formatted drafting text and undo/redo restores it", async ({
   await page.goto("/");
   await expect(page.getByTestId("revision")).toHaveText("0");
 
-  await clickCommand(page, "More", "Add text");
+  await clickCommand(page, "Draw", "Text");
   const draftInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
   await expect(draftInput).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Insert fraction" }),
+  ).toHaveCount(0);
+  await expect(draftInput).toHaveCSS("font-family", /DejaVu Sans.*Arial/u);
+  await expectForeignObjectContentsContained(
+    page.getByTestId("canvas-text-editor"),
+  );
+  const toolbarCenters = await page
+    .getByRole("toolbar", { name: "Text formatting" })
+    .locator(":scope > *")
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return bounds.top + bounds.height / 2;
+      }),
+    );
+  expect(
+    Math.max(...toolbarCenters) - Math.min(...toolbarCenters),
+  ).toBeLessThan(1);
+  const initialFontSize = await draftInput.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  await page.getByRole("button", { name: "Increase text size" }).click();
+  const previewFontSize = await draftInput.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  expect(previewFontSize).toBeGreaterThan(initialFontSize);
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expectForeignObjectContentsContained(
+    page.getByTestId("canvas-text-editor"),
+  );
   await draftInput.fill("Vin");
   await draftInput.press("Control+a");
   await page.getByRole("button", { name: "Subscript" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
 
   await expect(page.locator('[data-layer="drafting"]')).toContainText("Vin");
+  await expect(page.locator('[data-kind="draft-text"]')).toHaveCSS(
+    "font-family",
+    /DejaVu Sans.*Arial/u,
+  );
   await expect(page.getByTestId("revision")).toHaveText("2");
 
   const projectBytes = await downloadBytes(page, "File", "Save Project");
@@ -97,8 +182,14 @@ test("adds formatted drafting text and undo/redo restores it", async ({
     (object: { kind: string }) => object.kind === "text",
   );
   expect(textObject).toBeTruthy();
+  expect(textObject.typographyToken).toBe("label");
+  expect(textObject.styleOverride?.sizeScale).toBe(1.1);
   const runs = textObject.content.runs.map((run: { kind: string }) => run.kind);
   expect(runs).toContain("span");
+  const selectedTextHit = page.getByTestId(/^drafting-hit-note-/);
+  await expect(selectedTextHit).toHaveClass(/hit-target/u);
+  await expect(selectedTextHit).toHaveClass(/selected/u);
+  await expect(selectedTextHit).toHaveCSS("stroke-dasharray", /6px.*4px/u);
 
   await page.keyboard.press("Control+z");
   await expect(page.locator('[data-layer="drafting"] text')).toHaveCount(1);
@@ -108,6 +199,40 @@ test("adds formatted drafting text and undo/redo restores it", async ({
   await expect(page.locator('[data-layer="drafting"] text')).toHaveCount(1);
   await page.keyboard.press("Control+y");
   await expect(page.getByTestId("revision")).toHaveText("6");
+});
+
+test("T shortcut creates Razavi drafting text", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.press("t");
+  await expect(
+    page.getByRole("textbox", { name: "Canvas text editor" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await page
+    .getByRole("textbox", { name: "Canvas text editor" })
+    .press("Escape");
+  const projectBytes = await downloadBytes(page, "File", "Save Project");
+  const project = JSON.parse(projectBytes.toString("utf8"));
+  expect(project.documents[0].drafting.objects[0].typographyToken).toBe(
+    "label",
+  );
+});
+
+test("text floating editor closes on Escape or an outside pointer", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "Draw", "Text");
+  await expect(page.getByTestId("canvas-text-editor")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("canvas-text-editor")).toHaveCount(0);
+
+  await clickCommand(page, "Draw", "Text");
+  await expect(page.getByTestId("canvas-text-editor")).toBeVisible();
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 700, y: 100 } });
+  await expect(page.getByTestId("canvas-text-editor")).toHaveCount(0);
 });
 
 // WP-R6 scenario E: export bounds cover drafting content and guides never
@@ -131,6 +256,33 @@ test("export includes drafting bounds and never emits guides (WP-R6)", async ({
   expect(svg).not.toContain("guide-");
 });
 
+test("guide follows the pointer and commits only on release", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "More", "Add vertical guide");
+  const guide = page.locator('[data-testid^="guide-"]');
+  const start = await guide.evaluate((element) => {
+    const line = element as SVGLineElement;
+    const matrix = line.getScreenCTM();
+    if (!matrix) return null;
+    const point = new DOMPoint(
+      Number(line.getAttribute("x1")),
+      (Number(line.getAttribute("y1")) + Number(line.getAttribute("y2"))) / 2,
+    ).matrixTransform(matrix);
+    return { x: point.x, y: point.y };
+  });
+  if (!start) throw new Error("Guide is not measurable");
+  const before = await guide.getAttribute("x1");
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 70, start.y, { steps: 4 });
+  await expect(guide).not.toHaveAttribute("x1", before!);
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await page.mouse.up();
+  await expect(page.getByTestId("revision")).toHaveText("2");
+});
+
 // WP-R6 scenario F: the editor mounts without console errors (dev server; the
 // production-preview smoke is covered by the build gate).
 test("editor mounts without console errors", async ({ page }) => {
@@ -149,7 +301,7 @@ test("existing text drag commits once and undoes atomically (P0-2)", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Add text");
+  await clickCommand(page, "Draw", "Text");
   await page
     .getByRole("textbox", { name: "Canvas text editor" })
     .press("Escape");
@@ -180,7 +332,7 @@ test("Escape cancels an existing text drag without a revision", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Add text");
+  await clickCommand(page, "Draw", "Text");
   await page
     .getByRole("textbox", { name: "Canvas text editor" })
     .press("Escape");
@@ -195,7 +347,7 @@ test("Escape cancels an existing text drag without a revision", async ({
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect(page.getByTestId("revision")).toHaveText("1");
-  await expect(page.getByText("Cancelled drafting drag")).toBeVisible();
+  await expect(page.getByTestId("status")).toHaveText("Cancelled canvas drag");
 });
 
 // P1: drag-creating a construction line commits one object.
@@ -253,7 +405,7 @@ test("construction line uses stroke-based hit, not a blocking rect", async ({
 // WP-R3 scenario B: an unedited Apply must not add a revision.
 test("unedited Apply does not add a revision (WP-R3)", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Add text");
+  await clickCommand(page, "Draw", "Text");
   const draftInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
@@ -275,12 +427,13 @@ test("drafting content and anchor survive save and reopen (P1 persistence)", asy
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Add text");
+  await clickCommand(page, "Draw", "Text");
   const draftInput = page.getByRole("textbox", {
     name: "Canvas text editor",
   });
   await draftInput.fill("Vref");
-  await page.getByRole("button", { name: "Insert fraction" }).click();
+  await draftInput.press("Control+a");
+  await page.getByRole("button", { name: "Italic" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.getByTestId("revision")).toHaveText("2");
 
@@ -292,10 +445,10 @@ test("drafting content and anchor survive save and reopen (P1 persistence)", asy
   expect(textObject).toBeTruthy();
   expect(
     textObject.content.runs.map((run: { kind: string }) => run.kind),
-  ).toContain("fraction");
+  ).toContain("span");
   expect(textObject.anchor).toMatchObject({ kind: "free" });
   expect(typeof textObject.anchor.position.x).toBe("number");
-  await clickCommand(page, "More", "Add text");
+  await clickCommand(page, "Draw", "Text");
   await expect(page.locator('[data-kind="draft-text"]')).toHaveCount(2);
 
   await page.getByTestId("project-file").setInputFiles({
@@ -303,9 +456,9 @@ test("drafting content and anchor survive save and reopen (P1 persistence)", asy
     mimeType: "application/json",
     buffer: projectBytes,
   });
-  await expect(
-    page.getByText(/Opened saved-drafting\.icproj\.json/),
-  ).toBeVisible();
+  await expect(page.getByTestId("status")).toContainText(
+    "Opened saved-drafting.icproj.json",
+  );
   await expect(page.locator('[data-kind="draft-text"]')).toHaveCount(1);
   const reopenedBytes = await downloadBytes(page, "File", "Save Project");
   const reopened = JSON.parse(reopenedBytes.toString("utf8"));
@@ -317,9 +470,9 @@ test("drafting content and anchor survive save and reopen (P1 persistence)", asy
 });
 
 // Stage 1/3 regression: a two-phase-created arrow shows selection handles and
-// rotates 90° via the R key, committing one revision and keeping the head at
+// rotates +90° via R, committing one revision and keeping the head at
 // the (rotated) tip.
-test("arrow rotates 90° via R key and shows selection handles", async ({
+test("selected arrow rotates via R and shows selection handles", async ({
   page,
 }) => {
   await page.goto("/");
@@ -328,7 +481,7 @@ test("arrow rotates 90° via R key and shows selection handles", async ({
   await expect(page.getByTestId("revision")).toHaveText("1");
 
   const hit = page.getByTestId(/^drafting-hit-arrow-/);
-  await hit.click();
+  await clickSvgPolyline(hit);
   await expect(
     page.locator('[data-testid^="drafting-handles-arrow-"]'),
   ).toHaveCount(1);
@@ -341,19 +494,65 @@ test("arrow rotates 90° via R key and shows selection handles", async ({
   ).toHaveCount(1);
 });
 
+test("R creates a selectable, styleable rectangle with four resize handles", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("r");
+  await clickCreate(page, { x: 220, y: 220 }, { x: 380, y: 320 });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  const rectangle = page.locator('[data-kind="draft-rectangle"]');
+  await expect(rectangle).toHaveCount(1);
+  await expect(rectangle).toHaveAttribute("fill", "none");
+
+  const hit = page.getByTestId(/^drafting-hit-rectangle-/);
+  const edge = await hit.evaluate((element) => {
+    const polygon = element as SVGPolygonElement;
+    const matrix = polygon.getScreenCTM();
+    if (!matrix || polygon.points.numberOfItems < 2) return null;
+    const first = polygon.points.getItem(0);
+    const second = polygon.points.getItem(1);
+    const midpoint = new DOMPoint(
+      (first.x + second.x) / 2,
+      (first.y + second.y) / 2,
+    ).matrixTransform(matrix);
+    return { x: midpoint.x, y: midpoint.y };
+  });
+  if (!edge) throw new Error("rectangle hit target is not measurable");
+  await page.mouse.click(edge.x, edge.y);
+  await expect(
+    page.locator('[data-testid^="draft-handle-corner-"]'),
+  ).toHaveCount(4);
+
+  await page
+    .getByRole("combobox", { name: "Inline line style" })
+    .selectOption("dotted");
+  await expect(rectangle).toHaveAttribute("stroke-dasharray", "2 3");
+  await expect(page.getByTestId("revision")).toHaveText("2");
+
+  const pointsBeforeResize = await rectangle.getAttribute("points");
+  await dragLocator(page.getByTestId(/^draft-handle-corner-0-/), {
+    x: -20,
+    y: -10,
+  });
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  expect(await rectangle.getAttribute("points")).not.toBe(pointsBeforeResize);
+});
+
 // Stage 3: dragging an arrow endpoint handle moves just that endpoint in one
 // transaction; undo restores it.
 test("arrow endpoint handle drag moves the tip", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Arrow (A)" }).click();
+  await clickCommand(page, "Draw", "Arrow (A)");
   await clickCreate(page, { x: 200, y: 300 }, { x: 320, y: 300 });
-  await page.getByTestId(/^drafting-hit-arrow-/).click();
+  await clickSvgPolyline(page.getByTestId(/^drafting-hit-arrow-/));
   const tipHandle = page.getByTestId(/^draft-handle-to-arrow-/);
   await dragLocator(tipHandle, { x: 0, y: 40 });
   await expect(page.getByTestId("revision")).toHaveText("2");
 
   await page.keyboard.press("Control+z");
-  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByTestId("revision")).toHaveText("3");
 });
 
 // Stage 3: double-clicking a construction line inserts a vertex; double-clicking
@@ -389,53 +588,89 @@ test("bracket shortcuts step stroke width", async ({ page }) => {
   await expect(page.getByTestId("revision")).toHaveText("3");
 });
 
-// Stage 4: the Drawing shelf exposes line-style and stroke-width controls.
-test("drawing shelf changes line style via select", async ({ page }) => {
+// Stage 4: the canvas inspector is the only line-style editing surface.
+test("floating inspector changes line style without a Selection duplicate", async ({
+  page,
+}) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Construction line (L)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-construction-/).click({ force: true });
   await page
-    .getByRole("combobox", { name: "Line style" })
+    .getByRole("combobox", { name: "Inline line style" })
     .selectOption("solid");
   await expect(page.getByTestId("revision")).toHaveText("2");
+  await expect(page.locator('[aria-label="Drawing style"]')).toHaveCount(0);
 });
 
-test("drawing shelf renders an arrow line-style override", async ({ page }) => {
-  await page.goto("/");
-  await clickCommand(page, "Draw", "Arrow (A)");
-  await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
-  await page.getByTestId(/^drafting-hit-arrow-/).click({ force: true });
-  await page
-    .getByRole("combobox", { name: "Line style" })
-    .selectOption("dotted");
-  await expect(
-    page.locator('[data-kind="draft-arrow"] > line'),
-  ).toHaveAttribute("stroke-dasharray", "2 3");
-});
-
-test("drawing shelf renders free-arrow stroke and head-size overrides", async ({
+test("floating inspector renders an arrow line-style override", async ({
   page,
 }) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Arrow (A)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-arrow-/).click({ force: true });
-  const shaft = page.locator('[data-kind="draft-arrow"] > line');
+  const commandBar = page.getByRole("navigation", { name: "Editor commands" });
+  const commandBarBefore = await commandBar.boundingBox();
+  await page
+    .getByRole("combobox", { name: "Inline line style" })
+    .selectOption("dotted");
+  await expect(
+    page.locator('[data-kind="draft-arrow"] > polyline'),
+  ).toHaveAttribute("stroke-dasharray", "2 3");
+  expect(await commandBar.boundingBox()).toEqual(commandBarBefore);
+});
+
+test("floating arrow inspector fits and omits the Segment selector", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
+  await page.getByTestId(/^drafting-hit-arrow-/).click({ force: true });
+  const shaft = page.locator('[data-kind="draft-arrow"] > polyline');
   const head = page.locator('[data-kind="draft-arrow"] > polygon');
   const originalPoints = await head.getAttribute("points");
 
-  await page.getByRole("combobox", { name: "Stroke width" }).selectOption("2");
+  const inspector = page.getByTestId("drafting-inline-inspector");
+  await expectForeignObjectContentsContained(inspector);
+  await expect(
+    inspector.getByRole("combobox", { name: "Curve segment" }),
+  ).toHaveCount(0);
+
+  await inspector
+    .getByRole("combobox", { name: "Inline stroke width" })
+    .selectOption("2");
   await expect(shaft).toHaveAttribute("stroke-width", "3.2");
 
-  await page
-    .getByRole("combobox", { name: "Arrow head size" })
+  await inspector
+    .getByRole("combobox", { name: "Inline arrow head size" })
     .selectOption("1.5");
   expect(await head.getAttribute("points")).not.toBe(originalPoints);
 });
 
+test("drafting floating inspector closes on Escape or a background pointer", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "Draw", "Arrow (A)");
+  await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
+  const hit = page.getByTestId(/^drafting-hit-arrow-/);
+  await hit.click({ force: true });
+  await expect(page.getByTestId("drafting-inline-inspector")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("drafting-inline-inspector")).toHaveCount(0);
+
+  await hit.click({ force: true });
+  await expect(page.getByTestId("drafting-inline-inspector")).toBeVisible();
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 820, y: 520 } });
+  await expect(page.getByTestId("drafting-inline-inspector")).toHaveCount(0);
+});
+
 // Lock protects in-place edits but Delete has priority and remains available.
-test("drawing shelf unlocks a protected drawing and Delete overrides its lock", async ({
+test("floating inspector unlocks a protected drawing and Delete overrides its lock", async ({
   page,
 }) => {
   await page.goto("/");
@@ -445,7 +680,7 @@ test("drawing shelf unlocks a protected drawing and Delete overrides its lock", 
   await drawing.click({ force: true });
 
   await page
-    .getByRole("combobox", { name: "Line style" })
+    .getByRole("combobox", { name: "Inline line style" })
     .selectOption("dotted");
   const styledProject = JSON.parse(
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
@@ -458,9 +693,7 @@ test("drawing shelf unlocks a protected drawing and Delete overrides its lock", 
   await expect(
     page.getByRole("button", { name: "Unlock", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Locked — editing is disabled; Delete is still available."),
-  ).toBeVisible();
+  await expect(page.locator('[aria-label="Drawing style"]')).toHaveCount(0);
   await page.getByRole("button", { name: "Unlock", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Lock", exact: true }),

@@ -1,0 +1,287 @@
+# Razavi Visual Contract
+
+Status: `accepted`
+
+Version: `1.0`
+
+Owners: `fixtures/visual-reference`, `packages/symbols`, `packages/derived`,
+`packages/render-svg`, `scripts`
+
+## Purpose
+
+Define the single normative contract for Razavi visual authority, component
+construction, product exposure, reference registration, and pixel-fidelity
+comparison. Generic Symbol DSL, electrical model, routing, and export contracts
+remain in their owning specifications and are not duplicated here.
+
+## Authority and evidence
+
+`fixtures/visual-reference/razavi-reference-v1/manifest.json` and the raster
+assets it hash-pins are the sole visual authority. They control component
+geometry, stroke hierarchy, node and Port treatment, arrows, typography,
+annotations, and visual acceptance. Supplemental rasters are scoped evidence
+inside the same authority, not competing authorities.
+
+VSS, Visio, decoded master IR, historical generators, legacy assets, and the
+current candidate rendering are not visual evidence. If the authority lacks a
+component or feature, it remains unreviewed; do not infer it from those sources.
+
+Every reviewed reference target records or resolves:
+
+```text
+assetPath and asset hash
+originPx
+pixelsPerLogical
+fixed crop window
+rotation
+measurement coordinate system
+subject symbol/formal-scene identity
+```
+
+Reference windows and origins belong to evidence. A candidate-derived window
+may support exploration but is not a reviewed regression baseline.
+
+## Coordinate and construction contract
+
+- Electrical pin anchors use the canonical 10-unit connection grid.
+- Visual primitives may use measured finite-decimal logical coordinates.
+- Visual calibration must not move pins, change pin order, or change topology.
+- Instance transforms apply local x mirror, then rotation, then translation.
+- A symbol family has one canonical shared body geometry; polarity, arrow,
+  hidden-pin presentation, and other semantic differences remain separate.
+- A geometry change must satisfy every registered orientation, sample, and
+  reviewed variant for the affected asset.
+- Extending a primitive beyond the previous bounds requires an explicit
+  viewBox audit so visible strokes are not clipped.
+
+Construct continuous presentation according to primitive topology:
+
+```text
+one continuous visual stroke       -> one continuous path
+separate primitives that may cover -> deterministic overlap and render order
+separate model or topology objects -> render-only bridge
+```
+
+Seam repair never changes route endpoints, pin anchors, Net membership, or
+Junction semantics. Review `lineCap`, `lineJoin`, stroke width, `miterLimit`,
+render order, and viewBox together. For acute corners, calibrate centerline
+points first, then cap/join, then miter limit, and only then outline amplitude.
+
+## Port and node semantics
+
+The following are distinct reviewed presentations and must not be conflated:
+
+| Object                                    | Presentation                                       | Meaning                                     |
+| ----------------------------------------- | -------------------------------------------------- | ------------------------------------------- |
+| Formal model `Port`                       | Hollow origin with a junction-sized outside radius | Document boundary/connectivity object       |
+| `port` symbol                             | Hollow circle and lead                             | Explicit hollow interface symbol            |
+| `port-filled` symbol (`solid-port` alias) | Filled circle and lead                             | Explicit manual solid-endpoint symbol       |
+| Explicit `Junction`                       | Filled solid dot                                   | Route-graph branch/join object              |
+| Device pin, bend, or crossing             | No automatic dot                                   | Geometry alone never creates node semantics |
+| Port with `power-label`                   | Supply bar instead of origin circle                | Mutually exclusive power presentation       |
+
+Both `port` and `port-filled` are reviewed palette symbols. `port-filled` is
+manual-only and has no automatic SPICE mapping. Hollow versus filled is
+explicit product intent, not a style-profile fallback.
+
+## Style, text, and rendering
+
+The profile ID is `razavi-textbook-v1`. Formal output is black on white, has no
+decorative effects or editor overlays, scales geometry and strokes together,
+and uses butt caps plus miter joins unless a reviewed primitive overrides them.
+
+The accepted profile tokens are:
+
+```yaml
+foreground: "#000"
+background: "#fff"
+strokes:
+  wire: 1.6
+  symbol: 1.6
+  normal: 1.6
+  emphasis: 2.16
+  ground: 2.906977
+  supply: 1.8
+  annotation: 1.6
+nodes:
+  junctionRadius: 3.77907
+  portOriginRadius: 2.47907
+annotations:
+  supplyBarWidth: 20
+  currentArrowLength: 53.488372
+  arrowHeadLength: 16.569767
+  arrowHeadWidth: 7.906977
+  currentLabelGap: 6.976744
+  polarityOffsetX: 12
+  polarityHalfGap: 8
+lineCap: butt
+lineJoin: miter
+miterLimit: 4
+scaleFormalStrokes: true
+typography:
+  fontFamily: "'DejaVu Sans', Arial, 'Helvetica Neue', Helvetica, sans-serif"
+  mathWeight: 700
+  mathStyle: italic
+  plainWeight: 400
+  instanceFontSize: 15.116
+  netFontSize: 15.116
+  powerFontSize: 15.116
+  annotationFontSize: 15.116
+  polarityFontSize: 14
+  captionFontSize: 14
+  subscriptScale: 0.76
+  subscriptBaselineShiftEm: 0.28
+  subscriptHorizontalGapEm: 0.046
+  labelGap: 6
+  lineHeight: 1
+```
+
+`packages/derived/src/style-profile.ts` and its generated measurement adapters
+are the executable representation of this table. A token change updates the
+contract, generator/source, focused assertions, and affected fidelity baselines
+together. Profile selection must not silently change the global typography or
+math-composition rules.
+
+Formal rendering uses deterministic layer and stable-ID order. Selection, hit
+targets, grid, previews, diagnostics, and flightlines are absent from export.
+SVG and raster outputs are derived presentation, never persistence or
+connectivity truth.
+
+## Catalog, runtime, and palette exposure
+
+A Razavi palette entry is eligible only when all conditions hold:
+
+1. its `SymbolDefinition` is electrically reviewed and every pin is on-grid;
+2. `catalog.json` records `reviewStatus: "reviewed"`;
+3. `palette` is true and `visualAuthority.kind` is
+   `"razavi-reference-v1"`;
+4. referenced rasters and measurements are present and hash-checked;
+5. the symbol is registered in `builtInSymbols`.
+
+`razaviReferencePaletteSymbols` is the sole selector for the Razavi palette.
+Legacy compatibility symbols may remain resolvable for old documents or SPICE
+mapping but cannot enter that selector. PDK mappings separately declare model
+scope, terminal count, and complete ordered pin lists; a visual name never
+implies electrical pin order.
+
+## Pixel-alignment and IoU contract
+
+The declarative target registry is
+`fixtures/visual-reference/razavi-reference-v1/fidelity-targets.json`. It is
+hash-pinned by the authority manifest and is the single source for fidelity
+target identity, measurement selection, symbol/variant selection, and formal
+scene kind. Adding a reviewed comparison target must not require a second
+hard-coded device table in the CLI.
+
+For each target, the fidelity runner must:
+
+1. verify authority and registry integrity before treating results as reviewed;
+2. load the target's reference-owned measurement and fixed window;
+3. crop the reference with the recorded origin and floor-based top-left rule,
+   preserving the origin's subpixel position inside the crop;
+4. rasterize the actual Symbol or formal SVG path at the same
+   `pixelsPerLogical`, integer footprint, rotation, and subpixel origin;
+5. reject mismatched raster dimensions;
+6. emit reference, rendered, and red/green/gray diff PNGs;
+7. report binary IoU, soft IoU, miss/extra counts, registration lift,
+   edge-shell ratio, and the best diagnostic shift.
+
+Binary IoU uses the manifest threshold and is a relative regression signal,
+not a universal pass value. Soft IoU reduces the weight of antialiased edge
+differences. The bounded translation search is diagnostic only: its best score
+and registration lift never replace the unshifted baseline. A high edge-shell
+ratio suggests contour/antialias disagreement; solid mismatch regions suggest
+geometry error. Automated verdicts guide inspection but do not approve a
+geometry change without reviewing the spatial diff and formal rendering.
+
+The fidelity scripts currently import `packages/*/dist`. Regenerate assets and
+rebuild affected packages before comparison; stale compiled output invalidates
+the result. The comparison tool is read-only with respect to source geometry,
+although it writes derived reports and PNGs.
+
+## Component extension workflow
+
+1. Add an approved raster to the authority fixture, record its scope, and pin
+   its hash. Stop if the required visual evidence is absent.
+2. Add or update a measurement file with coordinate system, scale, origin,
+   fixed window, rotation, visible geometry, and intended Symbol mapping.
+3. Define electrical pins, order, roles, directions, variants, and any PDK/SPICE
+   mappings independently of visual tuning.
+4. Author or generate Symbol DSL using semantic stroke roles; preserve on-grid
+   pins and family-canonical geometry.
+5. Register catalog authority and product exposure. Add a runtime registration
+   only for a new symbol ID.
+6. Add the fidelity target to the single registry and protect geometry,
+   authority, and eligibility with focused assertions.
+7. Generate assets/catalog, run authority/hash checks, rebuild the packages
+   consumed by the fidelity tool, compare every registered sample/variant, and
+   inspect the diffs before acceptance.
+
+Typical commands are:
+
+```powershell
+pnpm symbols:razavi-mos
+pnpm symbols:razavi-peripherals
+pnpm symbols:razavi
+pnpm symbols:razavi:check
+pnpm --filter @icm/symbols build
+pnpm --filter @icm/model build
+pnpm --filter @icm/derived build
+pnpm --filter @icm/render-svg build
+pnpm --filter @icm/exporters build
+node scripts/razavi-fidelity-diff.mjs <target>
+```
+
+Run only the generators relevant to the changed family. Do not rewrite a
+reviewed asset merely to enlarge the palette or improve one metric at the cost
+of another registered sample.
+
+## Failure behavior
+
+- Missing or mismatched authority/registry hashes block reviewed validation.
+- Missing measurement, target, symbol, variant, or formal-scene adapter blocks
+  that target; no fallback symbol or reference is substituted.
+- Off-grid pins, pin-order mismatch, stale generated catalog output, and
+  ineligible palette exposure fail deterministic checks.
+- Candidate-derived windows are rejected for reviewed acceptance even when
+  they improve IoU.
+- Unknown profile IDs remain blocking render errors.
+- If accepted specifications disagree, resolve the specification conflict
+  before changing implementation or goldens.
+
+## Valid and rejected examples
+
+A valid filled Port is the reviewed `port-filled` symbol with its own explicit
+catalog identity and manual-only exposure. It does not change the formal model
+Port into a filled origin.
+
+A valid seam repair joins one resistor stroke into a continuous path or adds a
+render-only bridge between separate route objects while preserving endpoints.
+
+A rejected calibration shifts an electrical pin to improve pixel overlap. A
+rejected fidelity target derives its formal crop from the candidate's changing
+bounds or promotes the best translated IoU to the baseline score.
+
+## Deterministic validation
+
+- `pnpm symbols:razavi:check`
+- focused Symbol catalog and renderer tests
+- generator stale checks for affected families
+- package builds consumed by the fidelity runner
+- registered symbol and formal-scene pixel comparisons
+- inspection of reference/rendered/diff PNGs
+- repeated render equality and transform coverage
+
+## Compatibility
+
+This consolidation changes neither persisted Projects nor current rendering.
+The hollow `port`, filled `port-filled`, formal Port, Junction, palette, and
+SPICE behavior remain distinct. The former Razavi style and component-extension
+specifications are superseded by this document and retained as redirects.
+
+Related decisions and explanatory evidence:
+
+- [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
+- [`symbol-dsl.md`](symbol-dsl.md)
+- [`visual-language.md`](visual-language.md)
+- [`../experience/razavi-symbol-construction-and-pixel-calibration.md`](../experience/razavi-symbol-construction-and-pixel-calibration.md)
