@@ -5,7 +5,6 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from "react";
 
-import { DocumentHistory } from "@icm/edit-engine";
 import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
 import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
 import {
@@ -29,7 +28,6 @@ import {
   routePolyline,
 } from "@icm/derived";
 import {
-  CircuitProjectSchema,
   createEmptyProject,
   parseProject,
   serializeProject,
@@ -58,8 +56,6 @@ import {
 import type { SchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
-import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
-
 import { copySelection, proposePaste } from "./clipboard";
 import type { SchematicClipboard } from "./clipboard";
 import { startCanvasDragSession } from "./canvas-drag-session";
@@ -67,11 +63,8 @@ import type { CanvasDragSession } from "./canvas-drag-session";
 import { startCanvasDragVisual } from "./canvas-drag-visual";
 import { resolveCanvasHitAtPoint } from "./canvas-hit-resolver";
 import { ComponentLibrary } from "./component-library";
-import {
-  referencedDocumentId,
-  replaceProjectDocument,
-  resolveActiveDocument,
-} from "./editor-session";
+import { useDocumentController } from "./document-controller";
+import { referencedDocumentId } from "./editor-session";
 import { useInteractionState } from "./interaction-state";
 import type { EditorTool, WireSource } from "./interaction-state";
 import {
@@ -678,19 +671,28 @@ function DraftingCreatePreview({
 }
 
 export function App({ project: initialProject }: AppProps) {
-  const [project, setProject] = useState(() =>
-    CircuitProjectSchema.parse(
-      structuredClone(
-        initialProject ?? createEmptyProject("project-main", "New Circuit"),
-      ),
-    ),
+  const [recoveryScheduler] = useState<RecoveryScheduler>(() =>
+    createRecoveryScheduler({
+      delayMs: RECOVERY_DELAY_MS,
+      write: (project) =>
+        localStorage.setItem(
+          RECOVERY_KEY,
+          serializeProject(project as CircuitProject),
+        ),
+    }),
   );
-  const resolver = useMemo(
-    () => createProjectSymbolResolver(project, builtInSymbols),
-    [project],
-  );
-  const [activeDocumentId, setActiveDocumentId] = useState(
-    () => project.topDocumentId,
+  const {
+    project,
+    document,
+    resolver,
+    canUndo,
+    canRedo,
+    openDocument,
+    replaceProject,
+    transact: transactDocument,
+  } = useDocumentController(
+    initialProject ?? createEmptyProject("project-main", "New Circuit"),
+    (nextProject) => recoveryScheduler.schedule(nextProject),
   );
   const [documentStack, setDocumentStack] = useState<string[]>([]);
   const {
@@ -702,6 +704,7 @@ export function App({ project: initialProject }: AppProps) {
     clearKinds: clearSelectionKinds,
     reset: resetSelection,
   } = useSelectionController();
+  const uniqueSuffixCounter = useRef(0);
   const [viewBox, setViewBox] = useState<Rect>(DEFAULT_VIEWBOX);
   const [status, setStatus] = useState("Ready");
   const [recoveryCandidate, setRecoveryCandidate] =
@@ -761,7 +764,6 @@ export function App({ project: initialProject }: AppProps) {
     null,
   );
   const [helpOpen, setHelpOpen] = useState(false);
-  const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const instanceCounter = useRef(0);
@@ -771,30 +773,7 @@ export function App({ project: initialProject }: AppProps) {
   const projectInputRef = useRef<HTMLInputElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const helpCloseRef = useRef<HTMLButtonElement>(null);
-  const history = useRef(
-    new DocumentHistory(
-      project.documents.find(
-        (candidate) => candidate.id === project.topDocumentId,
-      )!,
-      { symbolResolver: resolver },
-    ),
-  );
-  const histories = useRef(new Map([[project.topDocumentId, history.current]]));
   const documentViewBoxes = useRef(new Map<string, Rect>());
-  // Coalesces recovery writes. Created once; `stageRecovery` schedules, the
-  // pagehide/visibilitychange effect flushes, and whole-project replacements
-  // cancel so a stale pending write for an old project cannot revive.
-  const [recoveryScheduler] = useState<RecoveryScheduler>(() =>
-    createRecoveryScheduler({
-      delayMs: RECOVERY_DELAY_MS,
-      write: (project) =>
-        localStorage.setItem(
-          RECOVERY_KEY,
-          serializeProject(project as CircuitProject),
-        ),
-    }),
-  );
-  const document = resolveActiveDocument(project, activeDocumentId);
   const renderedDocument = useMemo(() => {
     if (!draftingHandlePreview || !document.drafting) return document;
     return {
@@ -1493,21 +1472,12 @@ export function App({ project: initialProject }: AppProps) {
 
   function switchDocument(nextDocumentId: string): void {
     if (nextDocumentId === document.id) return;
-    const nextDocument = project.documents.find(
-      (candidate) => candidate.id === nextDocumentId,
-    );
+    documentViewBoxes.current.set(document.id, viewBox);
+    const nextDocument = openDocument(nextDocumentId);
     if (!nextDocument) {
       setStatus(`Document not found: ${nextDocumentId}`);
       return;
     }
-    documentViewBoxes.current.set(document.id, viewBox);
-    const existingHistory = histories.current.get(nextDocument.id);
-    history.current =
-      existingHistory?.document.revision === nextDocument.revision
-        ? existingHistory
-        : new DocumentHistory(nextDocument, { symbolResolver: resolver });
-    histories.current.set(nextDocument.id, history.current);
-    setActiveDocumentId(nextDocument.id);
     setViewBox(
       documentViewBoxes.current.get(nextDocument.id) ?? DEFAULT_VIEWBOX,
     );
@@ -1548,20 +1518,8 @@ export function App({ project: initialProject }: AppProps) {
     // revive after Save/Discard/Open/Import/Restore/demo-load swaps the project.
     // Callers that also remove the recovery key do so after this cancels.
     cancelRecovery();
-    const nextDocument = nextProject.documents.find(
-      (candidate) => candidate.id === nextProject.topDocumentId,
-    )!;
-    const nextResolver = createProjectSymbolResolver(
-      nextProject,
-      builtInSymbols,
-    );
-    history.current = new DocumentHistory(nextDocument, {
-      symbolResolver: nextResolver,
-    });
-    histories.current = new Map([[nextDocument.id, history.current]]);
+    const nextDocument = replaceProject(nextProject);
     documentViewBoxes.current = new Map();
-    setProject(nextProject);
-    setActiveDocumentId(nextDocument.id);
     setDocumentStack([]);
     setViewBox(nextViewBox);
     resetInteractionState();
@@ -1621,13 +1579,6 @@ export function App({ project: initialProject }: AppProps) {
       );
       return;
     }
-    if (result.applied) {
-      setProject((current) => {
-        const next = replaceProjectDocument(current, result.document);
-        stageRecovery(next);
-        return next;
-      });
-    }
     setStatus(
       result.applied
         ? `Committed revision ${result.revision}`
@@ -1636,14 +1587,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function transact(edits: SchematicEdit[]): EditTransactionResult {
-    transactionCounter.current += 1;
-    const result = history.current.transact({
-      transactionId: `transaction-ui-${transactionCounter.current}`,
-      documentId: document.id,
-      expectedRevision: history.current.document.revision,
-      actor: { kind: "human", id: "human-local" },
-      edits,
-    });
+    const result = transactDocument(edits);
     applyResult(result);
     return result;
   }
@@ -3603,8 +3547,8 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function addPlainText(): void {
-    transactionCounter.current += 1;
-    const id = `note-${transactionCounter.current}`;
+    uniqueSuffixCounter.current += 1;
+    const id = `note-${uniqueSuffixCounter.current}`;
     const position = {
       x: Math.round(viewBox.x + viewBox.width / 2),
       y: Math.round(viewBox.y + viewBox.height - 20),
@@ -3633,8 +3577,8 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function addConstructionLine(): void {
-    transactionCounter.current += 1;
-    const id = `construction-${transactionCounter.current}`;
+    uniqueSuffixCounter.current += 1;
+    const id = `construction-${uniqueSuffixCounter.current}`;
     const center = {
       x: Math.round(viewBox.x + viewBox.width / 2),
       y: Math.round(viewBox.y + viewBox.height / 2),
@@ -3660,8 +3604,8 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function addFreeArrow(): void {
-    transactionCounter.current += 1;
-    const id = `arrow-${transactionCounter.current}`;
+    uniqueSuffixCounter.current += 1;
+    const id = `arrow-${uniqueSuffixCounter.current}`;
     const center = {
       x: Math.round(viewBox.x + viewBox.width / 2),
       y: Math.round(viewBox.y + viewBox.height / 2),
@@ -3684,8 +3628,8 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function addFloatingSymbol(): void {
-    transactionCounter.current += 1;
-    const id = `floating-${transactionCounter.current}`;
+    uniqueSuffixCounter.current += 1;
+    const id = `floating-${uniqueSuffixCounter.current}`;
     const position = {
       x: Math.round(viewBox.x + viewBox.width / 2),
       y: Math.round(viewBox.y + viewBox.height / 2),
@@ -3729,8 +3673,8 @@ export function App({ project: initialProject }: AppProps) {
       setStatus("Selected wire segment cannot accept a current arrow");
       return;
     }
-    transactionCounter.current += 1;
-    const id = `current-${transactionCounter.current}`;
+    uniqueSuffixCounter.current += 1;
+    const id = `current-${uniqueSuffixCounter.current}`;
     const fallbackPosition = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
     const result = transact([
       {
@@ -3965,7 +3909,7 @@ export function App({ project: initialProject }: AppProps) {
       axis === "vertical"
         ? Math.round(viewBox.x + viewBox.width / 2)
         : Math.round(viewBox.y + viewBox.height / 2);
-    const id = `guide-${++transactionCounter.current}`;
+    const id = `guide-${++uniqueSuffixCounter.current}`;
     const result = transact([
       {
         kind: "set_guide",
@@ -4368,7 +4312,7 @@ export function App({ project: initialProject }: AppProps) {
       // ADR 0010: clicking with the Guide tool adds a vertical guide at the
       // click x (the toolbar offers horizontal/vertical and clear/lock
       // actions). Guides are editor aids; they never enter formal export.
-      const id = `guide-${++transactionCounter.current}`;
+      const id = `guide-${++uniqueSuffixCounter.current}`;
       const result = transact([
         {
           kind: "set_guide",
@@ -4682,9 +4626,9 @@ export function App({ project: initialProject }: AppProps) {
     start: Point,
     end: Point,
   ): void {
-    transactionCounter.current += 1;
+    uniqueSuffixCounter.current += 1;
     if (activeTool === "construction-line") {
-      const id = `construction-${transactionCounter.current}`;
+      const id = `construction-${uniqueSuffixCounter.current}`;
       const result = transact([
         {
           kind: "upsert_drafting_object",
@@ -4704,7 +4648,7 @@ export function App({ project: initialProject }: AppProps) {
       ]);
       if (result.ok) setStatus(`Added construction line ${id}`);
     } else if (activeTool === "arrow") {
-      const id = `arrow-${transactionCounter.current}`;
+      const id = `arrow-${uniqueSuffixCounter.current}`;
       const result = transact([
         {
           kind: "upsert_drafting_object",
@@ -4733,7 +4677,7 @@ export function App({ project: initialProject }: AppProps) {
         setStatus("Rectangle needs non-zero width and height");
         return;
       }
-      const id = `rectangle-${transactionCounter.current}`;
+      const id = `rectangle-${uniqueSuffixCounter.current}`;
       const center = {
         x: Math.round((start.x + end.x) / 2),
         y: Math.round((start.y + end.y) / 2),
@@ -4763,8 +4707,8 @@ export function App({ project: initialProject }: AppProps) {
   // Commit a multi-vertex construction line from the two-phase click model.
   function commitDraftingCreateVertices(points: Point[]): void {
     if (points.length < 2) return;
-    transactionCounter.current += 1;
-    const id = `construction-${transactionCounter.current}`;
+    uniqueSuffixCounter.current += 1;
+    const id = `construction-${uniqueSuffixCounter.current}`;
     const result = transact([
       {
         kind: "upsert_drafting_object",
@@ -4824,7 +4768,7 @@ export function App({ project: initialProject }: AppProps) {
         [...initialRouteIds],
         [...selectedJunctionIds],
       );
-      transactionCounter.current += 1;
+      uniqueSuffixCounter.current += 1;
       try {
         const instanceEdits =
           selectedIds.length > 0
@@ -4832,7 +4776,7 @@ export function App({ project: initialProject }: AppProps) {
                 document,
                 resolver,
                 selectedIds,
-                transactionCounter.current,
+                uniqueSuffixCounter.current,
               )
             : [];
         const removesEveryRoute =
@@ -4909,14 +4853,14 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     if (selectedIds.length === 0) return;
-    transactionCounter.current += 1;
+    uniqueSuffixCounter.current += 1;
     try {
       const result = transact(
         proposeConnectedInstanceDeletion(
           document,
           resolver,
           selectedIds,
-          transactionCounter.current,
+          uniqueSuffixCounter.current,
         ),
       );
       if (result.ok) {
@@ -5414,14 +5358,14 @@ export function App({ project: initialProject }: AppProps) {
               <button
                 type="button"
                 onClick={() => transact([{ kind: "undo" }])}
-                disabled={!history.current.canUndo}
+                disabled={!canUndo}
               >
                 Undo
               </button>
               <button
                 type="button"
                 onClick={() => transact([{ kind: "redo" }])}
-                disabled={!history.current.canRedo}
+                disabled={!canRedo}
               >
                 Redo
               </button>
