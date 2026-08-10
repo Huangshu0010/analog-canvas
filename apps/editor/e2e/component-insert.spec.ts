@@ -89,3 +89,64 @@ test("keeps the workspace inside the viewport and exposes low-interference zoom 
   const canvasAfter = await page.getByTestId("schematic-canvas").boundingBox();
   expect(canvasAfter?.width).toBe(canvasBefore?.width);
 });
+
+test("keeps insert actions and preview fixed while the catalog scrolls", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1100, height: 720 });
+  await page.goto("/");
+  await page.keyboard.press("i");
+
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  const options = dialog.locator(".insert-component-options");
+  const artwork = dialog.locator(".insert-symbol-artwork");
+  const cancel = dialog.getByRole("button", { name: "Cancel" });
+  const apply = dialog.getByRole("button", { name: "Apply" });
+
+  const measure = () =>
+    dialog.evaluate((element) => {
+      const bounds = (target: Element) => {
+        const rect = target.getBoundingClientRect();
+        return {
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        };
+      };
+      const list = element.querySelector(".insert-component-options")!;
+      const preview = element.querySelector(".insert-component-preview")!;
+      const artwork = element.querySelector(".insert-symbol-artwork")!;
+      const footer = element.querySelector(".insert-dialog-actions")!;
+      return {
+        dialog: bounds(element),
+        list: {
+          ...bounds(list),
+          clientHeight: list.clientHeight,
+          scrollHeight: list.scrollHeight,
+          overflowY: getComputedStyle(list).overflowY,
+        },
+        preview: bounds(preview),
+        artwork: bounds(artwork),
+        footer: bounds(footer),
+      };
+    });
+
+  const before = await measure();
+  await expect(cancel).toBeVisible();
+  await expect(apply).toBeVisible();
+  expect(before.footer.bottom).toBeLessThanOrEqual(before.dialog.bottom);
+  expect(before.list.overflowY).toBe("auto");
+  expect(before.list.scrollHeight).toBeGreaterThan(before.list.clientHeight);
+
+  await dialog.getByTestId("insert-component-inductor").click();
+  const after = await measure();
+  expect(after.dialog.height).toBeCloseTo(before.dialog.height, 0);
+  expect(after.list.height).toBeCloseTo(before.list.height, 0);
+  expect(after.preview.width).toBeCloseTo(before.preview.width, 0);
+  expect(after.preview.height).toBeCloseTo(before.preview.height, 0);
+  expect(after.artwork.width).toBeCloseTo(before.artwork.width, 0);
+  expect(after.artwork.height).toBeCloseTo(before.artwork.height, 0);
+  expect(after.footer.top).toBeCloseTo(before.footer.top, 0);
+  expect(after.footer.bottom).toBeLessThanOrEqual(after.dialog.bottom);
+});

@@ -4185,3 +4185,15 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   `packages/derived/src/connectivity.ts`.
 - Commit status: ready to commit on `main` as
   `feat(symbols): add PDF-derived Razavi inductor`.
+
+## 2026-08-11 - Stabilize component insert dialog layout
+
+- Target: keep catalog growth from resizing the Insert Component dialog or
+  clipping its Cancel and Apply controls.
+- Changed areas: fixed dialog row sizing, internally scrolling component list,
+  fixed symbol-preview dimensions, and focused browser regression coverage.
+- Validation: three focused Playwright flows, repository typecheck, editor
+  production build, focused Prettier check, live in-app browser inspection, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `fix(editor): stabilize component insert dialog layout`.

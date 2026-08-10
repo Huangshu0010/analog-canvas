@@ -1200,9 +1200,10 @@ body {
 
 .insert-component-dialog {
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 0.9rem;
   width: min(46rem, calc(100vw - 2.5rem));
-  max-height: min(42rem, calc(100dvh - 2.5rem));
+  height: min(42rem, calc(100dvh - 2.5rem));
   padding: 1rem;
   overflow: hidden;
   border: 1px solid var(--icm-border-strong);
@@ -1280,7 +1281,7 @@ body {
 .insert-dialog-body {
   display: grid;
   grid-template-columns: minmax(14rem, 0.9fr) minmax(18rem, 1.1fr);
-  min-height: 20rem;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--icm-border);
   border-radius: var(--icm-radius-md);
@@ -1359,14 +1360,18 @@ body {
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 0.75rem;
   min-width: 0;
+  min-height: 0;
   padding: 1.25rem;
+  overflow: hidden;
   background:
     radial-gradient(circle at 50% 40%, #fff 0, #fff 42%, transparent 72%),
     linear-gradient(135deg, var(--icm-surface-muted), #fff);
 }
 
 .insert-symbol-artwork {
-  width: 100%;
+  align-self: center;
+  justify-self: center;
+  width: min(100%, 18rem);
   height: 14rem;
   color: #111827;
 }
