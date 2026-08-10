@@ -863,7 +863,6 @@ function followAttachedAnnotations(
   newPosition: Point,
   newOrientation: Orientation,
   changedObjectIds: Set<string>,
-  resolver?: SymbolResolver,
 ): void {
   const directionForRotation = (rotation: Rotation): Point => {
     switch (rotation) {
@@ -884,53 +883,13 @@ function followAttachedAnnotations(
     return 270;
   };
   const origin = { x: 0, y: 0 };
-  const orientationChanged =
-    oldOrientation.rotation !== newOrientation.rotation ||
-    oldOrientation.mirror !== newOrientation.mirror;
-  const instance = draft.instances.find(
-    (candidate) => candidate.id === instanceId,
-  );
-  const definition = instance
-    ? resolver?.resolve(instance.symbolId, instance.symbolVariantId)?.definition
-    : undefined;
   for (const annotation of draft.annotations) {
     if (annotation.attachedObjectId !== instanceId) continue;
-    let local = inverseTransformPoint(
+    const local = inverseTransformPoint(
       annotation.position,
       oldPosition,
       oldOrientation,
     );
-    if (
-      annotation.kind === "instance-label" &&
-      orientationChanged &&
-      definition
-    ) {
-      const viewBox = definition.viewBox;
-      const center = {
-        x: viewBox.x + viewBox.width / 2,
-        y: viewBox.y + viewBox.height / 2,
-      };
-      const dx = local.x - center.x;
-      const dy = local.y - center.y;
-      const clearance = Math.max(20, draft.presentation.grid * 2);
-      if (Math.abs(dx) >= Math.abs(dy)) {
-        local = {
-          ...local,
-          x:
-            dx >= 0
-              ? Math.max(local.x, viewBox.x + viewBox.width + clearance)
-              : Math.min(local.x, viewBox.x - clearance),
-        };
-      } else {
-        local = {
-          ...local,
-          y:
-            dy >= 0
-              ? Math.max(local.y, viewBox.y + viewBox.height + clearance)
-              : Math.min(local.y, viewBox.y - clearance),
-        };
-      }
-    }
     annotation.position = transformPoint(local, newPosition, newOrientation);
     annotation.offset = {
       x: annotation.position.x - newPosition.x,
@@ -1293,7 +1252,6 @@ export function executeTransaction(
           instance.placement.position,
           instance.placement,
           changedObjectIds,
-          context.symbolResolver,
         );
         // Use the snapshot taken immediately before this edit. This is still
         // progressive for multi-edit transactions, but unlike the old path it
@@ -1347,7 +1305,6 @@ export function executeTransaction(
           instance.placement.position,
           instance.placement,
           changedObjectIds,
-          context.symbolResolver,
         );
         const rotateResolver = context.symbolResolver;
         if (rotateResolver) {
@@ -1399,7 +1356,6 @@ export function executeTransaction(
           instance.placement.position,
           instance.placement,
           changedObjectIds,
-          context.symbolResolver,
         );
         const mirrorResolver = context.symbolResolver;
         if (mirrorResolver) {

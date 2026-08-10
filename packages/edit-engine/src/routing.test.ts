@@ -227,8 +227,8 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 180, y: 260 },
-      offset: { x: 20, y: -60 },
+      position: { x: 180, y: 280 },
+      offset: { x: 20, y: -40 },
       alignment: "middle",
       rotation: 0,
     });
@@ -258,8 +258,8 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 180, y: 380 },
-      offset: { x: 20, y: 60 },
+      position: { x: 180, y: 360 },
+      offset: { x: 20, y: 40 },
       alignment: "middle",
       rotation: 0,
     });
