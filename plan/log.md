@@ -3977,3 +3977,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   typecheck, editor production build, and `git diff --check` passed.
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `refactor(editor): extract drafting creation preview`.
+
+## 2026-08-10 - Extract canvas text editor overlay
+
+- Target: separate viewport-aware canvas text-editor layout from the App
+  orchestration shell without changing text persistence or interaction state.
+- Changed areas: added a focused overlay component and pure frame resolver;
+  covered normal, scaled, translated, and four-edge-constrained layout; replaced
+  the inline App render closure with the component while retaining all callbacks
+  in App.
+- Validation: 15 focused Vitest tests and six text-editing Playwright flows
+  passed; repository typecheck, editor production build, changed-file Prettier,
+  and `git diff --check` passed. The existing large-chunk build warning remains.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `refactor(editor): extract canvas text editor overlay`.

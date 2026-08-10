@@ -56,6 +56,7 @@ import {
   normalizedRect,
   serializePolylinePoints,
 } from "./canvas-geometry";
+import { CanvasTextEditorOverlay } from "./canvas-text-editor-overlay";
 import { ComponentLibrary } from "./component-library";
 import { useDocumentController } from "./document-controller";
 import {
@@ -104,7 +105,6 @@ import { useProjectRecovery } from "./project-recovery";
 import { useSelectionController } from "./selection-controller";
 import { hasVisualSelection } from "./visual-selection";
 import type { VisualSelection } from "./visual-selection";
-import { RichTextEditor } from "./rich-text-editor";
 import {
   annotationAnchor,
   annotationHitBox,
@@ -5868,67 +5868,23 @@ export function App({ project: initialProject }: AppProps) {
                 r="4"
               />
             ) : null}
-            {textEditing && textEditingBounds
-              ? (() => {
-                  const editorWidth = Math.min(
-                    Math.max(420, textEditingBounds.width + 12),
-                    viewBox.width - 16,
-                  );
-                  const editorHeight = Math.min(
-                    Math.max(
-                      110,
-                      textEditingBounds.height + 68,
-                      78 + 15.116 * textEditing.sizeScale * 1.3,
-                    ),
-                    viewBox.height - 16,
-                  );
-                  const editorX = Math.max(
-                    viewBox.x + 8,
-                    Math.min(
-                      viewBox.x + viewBox.width - editorWidth - 8,
-                      textEditingBounds.x - 6,
-                    ),
-                  );
-                  const editorY = Math.max(
-                    viewBox.y + 8,
-                    Math.min(
-                      viewBox.y + viewBox.height - editorHeight - 8,
-                      textEditingBounds.y - 58,
-                    ),
-                  );
-                  return (
-                    <foreignObject
-                      data-testid="canvas-text-editor"
-                      x={editorX}
-                      y={editorY}
-                      width={editorWidth}
-                      height={editorHeight}
-                    >
-                      <RichTextEditor
-                        targetKey={`${textEditing.owner}:${textEditing.id}`}
-                        content={textEditing.content}
-                        disabled={textEditingLocked}
-                        sizeScale={textEditing.sizeScale}
-                        onChange={(content) => updateTextEditing({ content })}
-                        onSizeChange={(sizeScale) =>
-                          updateTextEditing({ sizeScale })
-                        }
-                        onCommit={commitTextEditing}
-                        onCancel={() => setTextEditing(null)}
-                        onDelete={deleteTextEditing}
-                        {...(editingAnnotation &&
-                        isRoutedMarker(editingAnnotation) &&
-                        effectiveRouteAttachment(editingAnnotation)
-                          ? {
-                              onReverseCurrentArrow:
-                                reverseSelectedCurrentArrow,
-                            }
-                          : {})}
-                      />
-                    </foreignObject>
-                  );
-                })()
-              : null}
+            {textEditing && textEditingBounds ? (
+              <CanvasTextEditorOverlay
+                session={textEditing}
+                bounds={textEditingBounds}
+                viewBox={viewBox}
+                disabled={textEditingLocked}
+                onUpdate={updateTextEditing}
+                onCommit={commitTextEditing}
+                onCancel={() => setTextEditing(null)}
+                onDelete={deleteTextEditing}
+                {...(editingAnnotation &&
+                isRoutedMarker(editingAnnotation) &&
+                effectiveRouteAttachment(editingAnnotation)
+                  ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
+                  : {})}
+              />
+            ) : null}
           </g>
         </svg>
       </section>
