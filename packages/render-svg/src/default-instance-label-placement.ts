@@ -67,7 +67,7 @@ export function defaultInstanceLabelPlacement(
     8,
     profile.typography.labelGap + profile.typography.instanceFontSize * 0.3,
   );
-  const compactSideGap = mosSideGap * 0.5;
+  const compactSideGap = mosSideGap * 0.25;
   const baselineOffset = profile.typography.instanceFontSize * 0.35;
   let localPosition: Point;
   let localOutward: Point | null = null;

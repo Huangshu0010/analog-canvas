@@ -56,6 +56,11 @@ too distant. Keep the MOS gap unchanged and reduce only the non-MOS side gap
 to 50% of its measured visual-boundary distance. The concurrent worktree
 changes remain unrelated and unstaged.
 
+## Compact Spacing Follow-up
+
+Human review requests one further 50% reduction. Non-MOS side labels therefore
+use 25% of the original side gap; MOS remains unchanged.
+
 ## Validation
 
 - focused placement unit test for no-rotation, rotation, and mirror cases

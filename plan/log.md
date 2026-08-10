@@ -3318,6 +3318,15 @@ formatting`.
   `git diff --check` passed.
 - Commit status: ready for `fix(editor): compact default side labels`.
 
+## 2026-08-10 - Extra-compact non-MOS default label spacing
+
+- Target: halve the non-MOS side-label visual gap once more after review.
+- Result: passive, source, and Port labels now use 25% of the initial side
+  gap; transistor positions remain unchanged.
+- Validation: focused placement Vitest 5/5, Render-SVG and Editor builds, and
+  `git diff --check` passed.
+- Commit status: ready for `fix(editor): tighten default side labels`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next
