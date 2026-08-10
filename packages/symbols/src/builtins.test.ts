@@ -10,7 +10,7 @@ import { InMemorySymbolResolver } from "./resolver.js";
 import { SYMBOL_CONNECTION_GRID, SymbolDefinitionSchema } from "./schema.js";
 
 describe("initial built-in Symbol Library", () => {
-  it("contains the reviewed Phase 5 production families", () => {
+  it("contains the reviewed production symbol families", () => {
     expect(builtInSymbols.map((symbol) => symbol.id)).toEqual([
       "decorative-note-box",
       "resistor",

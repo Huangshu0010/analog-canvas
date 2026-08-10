@@ -32,7 +32,7 @@ function addInstance(id: string, symbolId: string, x: number) {
   };
 }
 
-describe("Phase 8 semantic authoring", () => {
+describe("semantic authoring", () => {
   it("adds devices and connects two previously unconnected pins atomically", () => {
     const document = createEmptyDocument("document-main", "Main");
     const result = executeTransaction(

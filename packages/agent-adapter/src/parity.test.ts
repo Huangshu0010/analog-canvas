@@ -33,7 +33,7 @@ function fixtureProject() {
 // The same typed drafting edits submitted through the Agent service and the
 // shared Edit Engine must produce the identical Document and identical SVG.
 // This proves typed-edit semantic parity; it does not exercise the GUI
-// (renamed from "GUI/Agent parity" per WP-R6).
+// The Edit Engine is the shared execution boundary for browser and Agent edits.
 const draftingEdits = [
   {
     kind: "upsert_schematic_annotation",
@@ -93,7 +93,7 @@ const draftingEdits = [
   },
 ] as const;
 
-describe("Agent/Edit Engine drafting parity (WP-R6)", () => {
+describe("Agent/Edit Engine drafting parity", () => {
   it("produces the same Document and SVG through the Agent service and the shared Edit Engine", () => {
     // Agent path: typed edits through the service.
     const project = fixtureProject();

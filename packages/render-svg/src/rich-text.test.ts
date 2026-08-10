@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { renderRichTextDocument } from "./rich-text.js";
 import { razaviTextbookProfile } from "./style-profile.js";
 
-describe("renderRichTextDocument (WP-A2)", () => {
+describe("renderRichTextDocument", () => {
   it("renders a plain text run escaped", () => {
     const svg = renderRichTextDocument(
       { runs: [{ kind: "text", value: "a<b>&c" }] },

@@ -314,7 +314,7 @@ describe("drafting and guide edits", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("accepts a decorative floating symbol and rejects a terminal-bearing one (WP-A4)", () => {
+  it("accepts a decorative floating symbol and rejects a terminal-bearing one", () => {
     const resolver = new InMemorySymbolResolver(builtInSymbols);
     const document = createEmptyDocument("doc", "Floating");
     const decorative = executeTransaction(

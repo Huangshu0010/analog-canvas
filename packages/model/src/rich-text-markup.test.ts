@@ -133,7 +133,7 @@ describe("parseMarkup (ADR 0010 import shorthand)", () => {
     }
   });
 
-  it("round-trips ANY valid AST, including literal markup-like text (P0-1)", () => {
+  it("round-trips any valid AST, including literal markup-like text", () => {
     const cases: MarkupDocument[] = [
       { runs: [{ kind: "text", value: "V_{in}" }] },
       { runs: [{ kind: "text", value: "\\frac{1}{2}" }] },

@@ -8,7 +8,10 @@ process.env.NO_PROXY = [process.env.NO_PROXY, "127.0.0.1", "localhost"]
 
 export default defineConfig({
   testDir: "apps/editor/e2e",
-  fullyParallel: false,
+  // Each scenario owns an isolated browser context. Test-level parallelism
+  // lets CI shards balance cases instead of assigning the entire suite to one
+  // shard based on the three large spec files.
+  fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: "line",

@@ -229,7 +229,7 @@ describe("Agent Document Snapshot", () => {
     expect(after.electricalTopologyHash).not.toBe(base.electricalTopologyHash);
   });
 
-  it("exposes resolved drafting geometry matching the persisted anchor (WP-R4)", () => {
+  it("exposes resolved drafting geometry matching the persisted anchor", () => {
     const project = fixtureProject();
     const document = project.documents[0]!;
     document.drafting = {
@@ -273,7 +273,7 @@ describe("Agent Document Snapshot", () => {
     });
   });
 
-  it("hides guide coordinates by default and includes them on includeEditorGuides (WP-R4)", () => {
+  it("hides guide coordinates by default and includes them on includeEditorGuides", () => {
     const project = fixtureProject();
     const document = project.documents[0]!;
     document.drafting = {

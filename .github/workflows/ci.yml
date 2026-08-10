@@ -5,9 +5,58 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "plan/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate:
+  static:
+    name: Static contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Formatting
+        run: pnpm format:check
+      - name: Pinned references
+        run: pnpm references:check
+      - name: TypeScript
+        run: pnpm typecheck
+
+  unit:
+    name: Unit and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  release:
+    name: Release contracts
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -20,10 +69,40 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
-      - run: pnpm references:check
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm release:verify
+      - name: Build workspace
+        run: pnpm build
+      - name: Performance budgets
+        run: node scripts/performance-baseline.mjs
+      - name: Export goldens
+        run: node scripts/phase-7-export-golden.mjs --check
+      - name: PWA icons
+        run: node scripts/pwa-icons.mjs --check
+      - name: Production preview
+        run: node scripts/editor-production-smoke.mjs --check
+      - name: Package release
+        run: node scripts/package-release.mjs
+      - name: Packaged release smoke
+        run: node scripts/release-smoke.mjs
+
+  e2e:
+    name: Browser tests (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - 1/2
+          - 2/2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - run: pnpm test:e2e -- --shard=${{ matrix.shard }}

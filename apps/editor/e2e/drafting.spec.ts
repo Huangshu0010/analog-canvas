@@ -206,9 +206,8 @@ test("text floating editor closes on Escape or an outside pointer", async ({
   await expect(page.getByTestId("canvas-text-editor")).toHaveCount(0);
 });
 
-// WP-R6 scenario E: export bounds cover drafting content and guides never
-// appear in the SVG.
-test("export includes drafting bounds and never emits guides (WP-R6)", async ({
+// Export bounds cover drafting content and guides never appear in the SVG.
+test("export includes drafting bounds and never emits guides", async ({
   page,
 }) => {
   await page.goto("/");
@@ -254,8 +253,7 @@ test("guide follows the pointer and commits only on release", async ({
   await expect(page.getByTestId("revision")).toHaveText("2");
 });
 
-// WP-R6 scenario F: the editor mounts without console errors (dev server; the
-// production-preview smoke is covered by the build gate).
+// Production-preview smoke is covered separately by the build gate.
 test("editor mounts without console errors", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -284,9 +282,9 @@ test("switching creation tools discards the incompatible draft session", async (
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
-// P0-2: moving an existing drafting object commits exactly one transaction,
-// so one Ctrl+Z restores its original persisted anchor.
-test("existing text drag commits once and undoes atomically (P0-2)", async ({
+// Moving an existing drafting object commits exactly one transaction, so one
+// Ctrl+Z restores its original persisted anchor.
+test("existing text drag commits once and undoes atomically", async ({
   page,
 }) => {
   await page.goto("/");
@@ -339,7 +337,7 @@ test("Escape cancels an existing text drag without a revision", async ({
   await expect(page.getByTestId("status")).toHaveText("Cancelled canvas drag");
 });
 
-// P1: drag-creating a construction line commits one object.
+// Creating a construction line commits one object.
 test("two-phase click-creates a construction line", async ({ page }) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Construction line (L)");
@@ -391,8 +389,8 @@ test("construction line uses stroke-based hit, not a blocking rect", async ({
   ).toHaveCount(1);
 });
 
-// WP-R3 scenario B: an unedited Apply must not add a revision.
-test("unedited Apply does not add a revision (WP-R3)", async ({ page }) => {
+// An unedited Apply must not add a revision.
+test("unedited Apply does not add a revision", async ({ page }) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Text");
   const draftInput = page.getByRole("textbox", {
@@ -410,9 +408,9 @@ test("unedited Apply does not add a revision (WP-R3)", async ({ page }) => {
   await expect(page.getByTestId("revision")).toHaveText("2");
 });
 
-// WP-R3/P1: a saved project is actually reopened through the file input and
-// preserves both its canonical rich-text AST and anchor.
-test("drafting content and anchor survive save and reopen (P1 persistence)", async ({
+// A saved project is reopened through the file input and preserves both its
+// canonical rich-text AST and anchor.
+test("drafting content and anchor survive save and reopen", async ({
   page,
 }) => {
   await page.goto("/");
@@ -458,9 +456,8 @@ test("drafting content and anchor survive save and reopen (P1 persistence)", asy
   expect(reopenedText.content).toEqual(textObject.content);
 });
 
-// Stage 1/3 regression: a two-phase-created arrow shows selection handles and
-// rotates +90° via R, committing one revision and keeping the head at
-// the (rotated) tip.
+// A two-phase-created arrow shows selection handles and rotates +90° via R,
+// committing one revision and keeping the head at the rotated tip.
 test("selected arrow rotates via R and shows selection handles", async ({
   page,
 }) => {
@@ -564,7 +561,7 @@ test("R creates a selectable, styleable rectangle with four resize handles", asy
   expect(await rectangle.getAttribute("points")).not.toBe(pointsBeforeResize);
 });
 
-// Stage 3: dragging an arrow endpoint handle moves just that endpoint in one
+// Dragging an arrow endpoint handle moves just that endpoint in one
 // transaction; undo restores it.
 test("arrow endpoint handle drag moves the tip", async ({ page }) => {
   await page.goto("/");
@@ -579,8 +576,8 @@ test("arrow endpoint handle drag moves the tip", async ({ page }) => {
   await expect(page.getByTestId("revision")).toHaveText("3");
 });
 
-// Stage 3: double-clicking a construction line inserts a vertex; double-clicking
-// a vertex (below the 2-floor) is refused.
+// Double-clicking a construction line inserts a vertex; double-clicking a
+// vertex below the two-vertex floor is refused.
 test("construction line vertex insert via double-click", async ({ page }) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Construction line (L)");
@@ -601,8 +598,8 @@ test("construction line vertex insert via double-click", async ({ page }) => {
   );
 });
 
-// Stage 4: the [ and ] shortcuts step the selected object's stroke width and
-// commit one revision each.
+// The [ and ] shortcuts step the selected object's stroke width and commit one
+// revision each.
 test("bracket shortcuts step stroke width", async ({ page }) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Construction line (L)");
@@ -614,7 +611,7 @@ test("bracket shortcuts step stroke width", async ({ page }) => {
   await expect(page.getByTestId("revision")).toHaveText("3");
 });
 
-// Stage 4: the canvas inspector is the only line-style editing surface.
+// The canvas inspector is the only line-style editing surface.
 test("floating inspector changes line style without a Selection duplicate", async ({
   page,
 }) => {

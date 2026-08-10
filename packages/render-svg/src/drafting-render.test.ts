@@ -7,7 +7,7 @@ import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
-describe("drafting layer rendering (WP-A1b)", () => {
+describe("drafting layer rendering", () => {
   it("renders a DraftText object in a data-layer=drafting group", () => {
     const document = createEmptyDocument("doc", "Drafting");
     document.drafting = {
@@ -30,7 +30,7 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(svg).toContain('data-object-id="note-1"');
     expect(svg).toContain('data-kind="draft-text"');
     // The flat text projection preserves the literal value; full tspan
-    // rendering is WP-A2.
+    // rendering is covered by the rich-text rendering contract.
     expect(svg).toContain("V_{in}");
   });
 
@@ -81,7 +81,7 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(svg).not.toContain('data-kind="guide"');
   });
 
-  it("renders a construction-line with dashed style (WP-A4)", () => {
+  it("renders a construction-line with dashed style", () => {
     const document = createEmptyDocument("doc", "Drafting");
     document.drafting = {
       objects: [
@@ -132,7 +132,7 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(svg).toContain('points="10,30 90,30 90,70 10,70"');
   });
 
-  it("renders a draft arrow with a head (WP-A4)", () => {
+  it("renders a draft arrow with a head", () => {
     const document = createEmptyDocument("doc", "Drafting");
     document.drafting = {
       objects: [
@@ -225,7 +225,7 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(Math.abs(headDirection.x)).toBeCloseTo(Math.abs(headDirection.y), 6);
   });
 
-  it("renders a floating symbol with its primitives (WP-A4)", () => {
+  it("renders a floating symbol with its primitives", () => {
     const document = createEmptyDocument("doc", "Drafting");
     document.drafting = {
       objects: [
@@ -246,7 +246,7 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(svg).toContain('data-symbol-id="resistor"');
   });
 
-  it("includes drafting bounds in the export viewBox (WP-R2)", () => {
+  it("includes drafting bounds in the export viewBox", () => {
     const document = createEmptyDocument("doc", "Bounds");
     document.drafting = {
       objects: [
@@ -279,7 +279,7 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(y + height).toBeGreaterThanOrEqual(312);
   });
 
-  it("exports a fallback-anchored object with data-anchor-resolved=false (WP-R2)", () => {
+  it("exports a fallback-anchored object with data-anchor-resolved=false", () => {
     const document = createEmptyDocument("doc", "Fallback");
     document.drafting = {
       objects: [

@@ -186,7 +186,7 @@ describe("Agent Circuit API v1 service", () => {
     });
   });
 
-  it("keeps Phase 8 instance authoring identical to direct Edit Engine execution", () => {
+  it("keeps Agent instance authoring identical to direct Edit Engine execution", () => {
     const fixture = serviceFixture();
     const request = {
       apiVersion: "1.0" as const,

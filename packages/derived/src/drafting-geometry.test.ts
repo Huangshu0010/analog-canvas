@@ -74,7 +74,7 @@ function textObject(
   };
 }
 
-describe("resolveDraftingObjectGeometry (WP-R1)", () => {
+describe("resolveDraftingObjectGeometry", () => {
   it("resolves a free-anchored text to its position with bounds", () => {
     const geometry = resolveDraftingObjectGeometry(
       documentWithRoute(),
@@ -349,7 +349,7 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     expect(second).toEqual(first);
   });
 
-  it("freezes rotation semantics: follow route anchor composes anchor+object rotation (P1)", () => {
+  it("composes route-anchor and object rotation", () => {
     const document = documentWithRoute();
     // A follow-anchored text with object rotation 90 reports 90 (route is
     // horizontal at 0), the single truth the renderer must use.
@@ -396,7 +396,7 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     expect(fg.rotation).toBe(90);
   });
 
-  it("transforms floating-symbol viewBox corners for rotation and mirror (P1)", () => {
+  it("transforms floating-symbol viewBox corners for rotation and mirror", () => {
     const document = documentWithRoute();
     const base: Extract<DraftingObject, { kind: "floating-symbol" }> = {
       id: "fs1",
@@ -440,7 +440,7 @@ describe("resolveDraftingObjectGeometry (WP-R1)", () => {
     });
   });
 
-  it("measures multi-line text bounds with per-line height (P1)", () => {
+  it("measures multi-line text bounds with per-line height", () => {
     const document = documentWithRoute();
     const object: Extract<DraftingObject, { kind: "text" }> = {
       id: "t-multi",

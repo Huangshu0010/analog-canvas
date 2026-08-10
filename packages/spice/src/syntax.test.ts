@@ -5,7 +5,7 @@ import { createSourceBundle } from "./source.js";
 const encoder = new TextEncoder();
 
 describe("SPICE statement profile", () => {
-  it("projects every Phase 2 element family and recognizes baseline directives", async () => {
+  it("projects every supported element family and recognizes baseline directives", async () => {
     const text = [
       ".param BASE=1k SCALE={2*BASE}",
       ".model DMOD D (is=1e-15)",
