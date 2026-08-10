@@ -60,6 +60,121 @@
         "three-terminal op-amp geometry",
         "op-amp polarity marks and stroke hierarchy"
       ]
+    },
+    {
+      "id": "razavi-textbook-diode",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 661,
+        "printedPage": 642,
+        "figure": "15.54"
+      },
+      "extractPath": "diode-vector-source.json",
+      "extractSha256": "2a0d92e0f5ae6fa1952a1b183ae84552faebbdf2384b4bf1c93bc6df9b93446e",
+      "rasterPath": "diode-reference.png",
+      "rasterSha256": "ca3108e036bb57744a08240f50a842ea321d8c9d964749eda5d551df087bf154",
+      "scope": ["diode family geometry"]
+    },
+    {
+      "id": "razavi-textbook-ideal-switch",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 560,
+        "printedPage": 541,
+        "figure": "13.4"
+      },
+      "extractPath": "ideal-switch-vector-source.json",
+      "extractSha256": "a5d52b0067d1f89ae839ab7f1c69802464f832f400586b553c1dfe7e03818034",
+      "rasterPath": "ideal-switch-reference.png",
+      "rasterSha256": "ce48cd75685c08dfeba6b0e71b1e31a816a4aa02897a64692ad06d36365eda43",
+      "scope": ["two-terminal ideal switch geometry"]
+    },
+    {
+      "id": "razavi-textbook-npn",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 533,
+        "printedPage": 514,
+        "figure": "12.6"
+      },
+      "extractPath": "npn-vector-source.json",
+      "extractSha256": "19749c0b968c9fa5e9a2e13713bd9f1fa34e4a094ebffc9bcddca68624f5dbb0",
+      "rasterPath": "npn-reference.png",
+      "rasterSha256": "7606f59e70434684dbcdaff81425554cd3240c89ec37df1eb62b0c890ae1f0c0",
+      "scope": ["BJT family body", "NPN arrow-polarity derivation"]
+    },
+    {
+      "id": "razavi-textbook-pnp",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 533,
+        "printedPage": 514,
+        "figure": "12.6"
+      },
+      "extractPath": "pnp-vector-source.json",
+      "extractSha256": "3634b01e2b0040d1185654737b2bab0c9a75f2bcc37c2905b51687d35d79d18a",
+      "rasterPath": "pnp-reference.png",
+      "rasterSha256": "6afc91e63d7bb6a9b0193db94436f1e2bb4ef7a7ac23a0701e3907b7a3abb0e6",
+      "scope": ["Razavi PNP family body and emitter arrow"]
+    },
+    {
+      "id": "razavi-textbook-transformer",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 639,
+        "printedPage": 620,
+        "figure": "15.21"
+      },
+      "extractPath": "transformer-vector-source.json",
+      "extractSha256": "e93f92670d367bea8df3a0597457be25861d8685adc7e553f79bf9cc36355b99",
+      "rasterPath": "transformer-reference.png",
+      "rasterSha256": "afcbe28e5d9191c8fb8ef15e8f43b9c9e1e88eafa4a6bb4e32ef23a9c21db01e",
+      "scope": ["coupled-inductor composite from the extracted inductor family"]
+    },
+    {
+      "id": "razavi-textbook-vccs",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 51,
+        "printedPage": 32,
+        "figure": "2.37"
+      },
+      "extractPath": "vccs-vector-source.json",
+      "extractSha256": "72480ac3594358f98256ab01c412fd85a9a6bda49197c1a967558df09c9ff33b",
+      "rasterPath": "vccs-reference.png",
+      "rasterSha256": "932f8b8905dae9c5fa8fad38fe47ee60f183c82c524dfd44f2f19d0265eb4b20",
+      "scope": [
+        "dependent current-source geometry",
+        "explicit SPICE control terminals"
+      ]
+    },
+    {
+      "id": "razavi-textbook-voltage-amplifier",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 307,
+        "printedPage": 288,
+        "figure": "8.24"
+      },
+      "extractPath": "voltage-amplifier-vector-source.json",
+      "extractSha256": "3f1488f44c704e6602dcf348c460172c89e7b1b933b8b0a210337e05be700609",
+      "rasterPath": "voltage-amplifier-reference.png",
+      "rasterSha256": "fdb61fc08f73fe657ee9deafa6251149262adcd03a3ea62beaeda11a24e43c59",
+      "scope": ["single-ended voltage-gain block geometry"]
     }
   ],
   "mosGeometryPath": "mos-geometry.json",
@@ -78,8 +193,10 @@
   "inductorGeometrySha256": "f718ef7c95303335ca752aed2a391eb41b38116ffd19251e340076988fa7e863",
   "opampGeometryPath": "opamp-geometry.json",
   "opampGeometrySha256": "51003a9dbe09ea8b9d3a346489d9777c4019a57466bac10dbfdc5b9e8d0390ba",
+  "commonSymbolGeometryPath": "common-symbol-geometry.json",
+  "commonSymbolGeometrySha256": "0bdb9a08c7bba3e18c9469ec8ea82587c6df93058543a8d8d62da767ca82a1db",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "29fe315d71719c4f3c057daa7d9c181718acec4d999942fee4a9b2a97478637c",
+  "fidelityTargetsSha256": "b08636a9a6405fcc75fd7f210094bc66a0b933e99da39ae47e986bb9586d0f78",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -94,7 +211,8 @@
     "route current-arrow treatment, current-source geometry, and hollow port origin",
     "VDD supply marker geometry",
     "PDF-derived inductor geometry and stroke treatment",
-    "PDF-derived three-terminal op-amp geometry and polarity marks"
+    "PDF-derived three-terminal op-amp geometry and polarity marks",
+    "PDF-derived common BJT, diode, dependent-source, gain-block, switch, and coupled-inductor families"
   ],
   "notes": [
     "This manifest is the sole visual authority for Razavi style v1.",

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "diode",
+  "name": "Diode",
+  "viewBox": {
+    "x": -34,
+    "y": -14,
+    "width": 68,
+    "height": 28
+  },
+  "pins": [
+    {
+      "name": "A",
+      "role": "anode",
+      "at": {
+        "x": -30,
+        "y": 0
+      },
+      "direction": "west",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 15
+      }
+    },
+    {
+      "name": "K",
+      "role": "cathode",
+      "at": {
+        "x": 30,
+        "y": 0
+      },
+      "direction": "east",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 15
+      }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": {
+        "x": -30,
+        "y": 0
+      },
+      "to": {
+        "x": -10,
+        "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "polygon",
+      "points": [
+        {
+          "x": -10,
+          "y": -9
+        },
+        {
+          "x": -10,
+          "y": 9
+        },
+        {
+          "x": 7,
+          "y": 0
+        }
+      ],
+      "fill": "foreground",
+      "stroke": "none"
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 8,
+        "y": -10
+      },
+      "to": {
+        "x": 8,
+        "y": 10
+      },
+      "style": {
+        "strokeRole": "emphasis",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 8,
+        "y": 0
+      },
+      "to": {
+        "x": 30,
+        "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    }
+  ],
+  "variants": [],
+  "aliases": ["pn-diode", "rectifier-diode"]
+}

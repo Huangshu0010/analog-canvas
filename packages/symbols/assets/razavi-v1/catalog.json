@@ -49,6 +49,33 @@
       }
     },
     {
+      "symbolId": "diode",
+      "name": "Diode",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["A", "K"],
+      "palette": true,
+      "automaticMappings": ["spice:D"],
+      "assetPath": "diode.symbol.json",
+      "assetHash": "3b6d9ec0ae5e4e9d5c9177acb953dd9afb1899944aa9bb42ad7dade609a87f82",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/diode-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/diode-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/diode-vector-source.json",
+        "converterPath": "scripts/generate-razavi-common-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
       "symbolId": "ground",
       "name": "Ground",
       "category": "power",
@@ -71,6 +98,34 @@
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
         "converterPath": "scripts/generate-razavi-peripheral-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
+      "symbolId": "ideal-switch",
+      "name": "Ideal Switch",
+      "category": "switch",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["1", "2"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
+      "assetPath": "ideal-switch.symbol.json",
+      "assetHash": "9cdce6cc5418f516626497c272dd2753b04fa916fdc1c699bdc4230b4772b718",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/ideal-switch-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/ideal-switch-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/ideal-switch-vector-source.json",
+        "converterPath": "scripts/generate-razavi-common-assets.mjs",
         "converterVersion": 1
       }
     },
@@ -140,6 +195,33 @@
       "assetHash": "93636dfafd0690edaa7a9402e3bc2da014d048a404a558e8d3765c3c30126cc8"
     },
     {
+      "symbolId": "npn",
+      "name": "NPN Bipolar Transistor",
+      "category": "transistor",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["C", "B", "E"],
+      "palette": true,
+      "automaticMappings": ["spice:Q:npn", "pdk:model-type:npn"],
+      "assetPath": "npn.symbol.json",
+      "assetHash": "07be0cd5b1b774d99c069117e6369e35d4dbc5da248ca15632c98da0622ce094",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/npn-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/npn-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/npn-vector-source.json",
+        "converterPath": "scripts/generate-razavi-common-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
       "symbolId": "opamp",
       "name": "Operational Amplifier",
       "category": "analog-block",
@@ -206,6 +288,33 @@
       "assetHash": "d2416d0a22a651dbac75d94bfa57c63aa1a792dc88e275256f066ad9717165ba"
     },
     {
+      "symbolId": "pnp",
+      "name": "PNP Bipolar Transistor",
+      "category": "transistor",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["C", "B", "E"],
+      "palette": true,
+      "automaticMappings": ["spice:Q:pnp", "pdk:model-type:pnp"],
+      "assetPath": "pnp.symbol.json",
+      "assetHash": "9995cb8ff67a74dbe42da38e755b3df17a5f48f6082426d710273fcd8cdfc0c8",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/pnp-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/pnp-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/pnp-vector-source.json",
+        "converterPath": "scripts/generate-razavi-common-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
       "symbolId": "port",
       "name": "Port",
       "category": "interface",
@@ -264,6 +373,108 @@
       }
     },
     {
+      "symbolId": "transformer",
+      "name": "Transformer / Coupled Inductor",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P1", "P2", "S1", "S2"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Textbook four-terminal visual composite; SPICE K references existing inductors rather than owning four nodes.",
+      "assetPath": "transformer.symbol.json",
+      "assetHash": "e0df6c64f87711989aea3f6761c12fcd75ac1e17cb320743a98c8ace5ba6d6a7",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/transformer-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/transformer-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/transformer-vector-source.json",
+        "converterPath": "scripts/generate-razavi-common-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
+      "symbolId": "vccs",
+      "name": "Voltage-Controlled Current Source",
+      "category": "source",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["OUT+", "OUT-", "CTRL+", "CTRL-"],
+      "palette": true,
+      "automaticMappings": ["spice:G"],
+      "assetPath": "vccs.symbol.json",
+      "assetHash": "a64b5a3676fb48d24acf94225e491b3fac8b18e40475f80cdcbf8508d08a9e68",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/vccs-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/vccs-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/vccs-vector-source.json",
+        "converterPath": "scripts/generate-razavi-common-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
+      "symbolId": "vdd",
+      "name": "VDD Power Port",
+      "category": "power",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["P"],
+      "palette": true,
+      "automaticMappings": [],
+      "assetPath": "vdd.symbol.json",
+      "assetHash": "bf4571ccb9a15ecf6f60455b787d7919e783deae715fa324eec0609779c71cc6",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/vdd-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/vdd-geometry.json"
+      }
+    },
+    {
+      "symbolId": "voltage-amplifier",
+      "name": "Voltage Amplifier",
+      "category": "analog-block",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["IN", "OUT"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Textbook gain block has implicit reference nodes and no exact primitive SPICE terminal contract.",
+      "assetPath": "voltage-amplifier.symbol.json",
+      "assetHash": "42bd3e0e3740536979a04b9ecb0a26f8509674bd59538e4003b6cb059ebc253c",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/voltage-amplifier-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/voltage-amplifier-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/voltage-amplifier-vector-source.json",
+        "converterPath": "scripts/generate-razavi-common-assets.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
       "symbolId": "voltage-source",
       "name": "Independent Voltage Source",
       "category": "source",
@@ -287,25 +498,6 @@
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
         "converterPath": "scripts/generate-razavi-peripheral-assets.mjs",
         "converterVersion": 1
-      }
-    },
-    {
-      "symbolId": "vdd",
-      "name": "VDD Power Port",
-      "category": "power",
-      "reviewStatus": "reviewed",
-      "pinOrder": ["P"],
-      "palette": true,
-      "automaticMappings": [],
-      "assetPath": "vdd.symbol.json",
-      "assetHash": "bf4571ccb9a15ecf6f60455b787d7919e783deae715fa324eec0609779c71cc6",
-      "visualAuthority": {
-        "kind": "razavi-reference-v1",
-        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-        "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/vdd-reference.png"
-        ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/vdd-geometry.json"
       }
     }
   ],

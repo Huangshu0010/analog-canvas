@@ -1,11 +1,50 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { compileSourceBundle } from "./compiler.js";
+import { compileSourceBundle, compileSpiceSources } from "./compiler.js";
 import { importCompileResult } from "./importer.js";
 import { loadSourceBundleFromFile } from "./node-source.js";
 
 describe("SPICE elaboration and Project import", () => {
+  it("imports reviewed diode, BJT, and four-terminal VCCS contracts", async () => {
+    const source = Buffer.from(`
+.model DREF D
+.model QNREF NPN
+.model QPREF PNP
+D1 anode 0 DREF
+Q1 collector base emitter QNREF
+Q2 collector base emitter QPREF
+G1 out 0 ctrl 0 1m
+.end
+`);
+    const imported = importCompileResult(
+      await compileSpiceSources(
+        [{ path: "common.cir", bytes: source }],
+        "common.cir",
+      ),
+    );
+    expect(imported.successful).toBe(true);
+    expect(
+      imported.project?.documents[0]?.instances.map((instance) => [
+        instance.properties["spice.name"],
+        instance.symbolId,
+      ]),
+    ).toEqual([
+      ["D1", "diode"],
+      ["Q1", "npn"],
+      ["Q2", "pnp"],
+      ["G1", "vccs"],
+    ]);
+    expect(
+      imported.project?.documents[0]?.instances.at(-1)?.properties,
+    ).toMatchObject({
+      "spice.pin.P1": "OUT+",
+      "spice.pin.P2": "OUT-",
+      "spice.pin.P3": "CTRL+",
+      "spice.pin.P4": "CTRL-",
+    });
+  });
+
   it("preserves mixed-device IR but rejects devices outside the Razavi catalog", async () => {
     const entry = resolve(
       process.cwd(),

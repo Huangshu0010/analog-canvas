@@ -286,8 +286,11 @@ async function rasterizeFormal(kind, pixelsPerLogical, window, originInWindow) {
   return decodePng(rasterizeSvgBytes(svg, window.width));
 }
 
-async function referenceForGeometry(geometry) {
-  const path = resolve(referenceRoot, geometry.assetPath ?? manifest.assetPath);
+async function referenceForGeometry(geometry, measurement) {
+  const path = resolve(
+    referenceRoot,
+    measurement.assetPath ?? geometry.assetPath ?? manifest.assetPath,
+  );
   if (!referenceRasters.has(path)) {
     referenceRasters.set(path, await loadReferenceRaster(path));
   }
@@ -347,11 +350,11 @@ for (const deviceId of targets) {
 
   const report = await compareDevice(
     spec,
-    await referenceForGeometry(geometry),
+    await referenceForGeometry(geometry, measurement),
     definition,
   );
   console.log(
-    `  ${deviceId}: reference ${geometry.assetPath ?? manifest.assetPath}`,
+    `  ${deviceId}: reference ${measurement.assetPath ?? geometry.assetPath ?? manifest.assetPath}`,
   );
   reports.push(report);
 

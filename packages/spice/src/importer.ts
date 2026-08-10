@@ -63,6 +63,12 @@ function symbolFor(
     const modelType = modelTypeByName.get(
       instance.target.modelName.toLowerCase(),
     );
+    if (instance.terminals.length === 2 && modelType === "d")
+      return { symbolId: "diode", pinNames: ["A", "K"] };
+    if (instance.terminals.length === 3 && modelType === "npn")
+      return { symbolId: "npn", pinNames: ["C", "B", "E"] };
+    if (instance.terminals.length === 3 && modelType === "pnp")
+      return { symbolId: "pnp", pinNames: ["C", "B", "E"] };
     if (instance.terminals.length === 4 && modelType === "nmos")
       return { symbolId: "nmos", pinNames: ["D", "G", "S", "B"] };
     if (instance.terminals.length === 4 && modelType === "pmos")
@@ -84,17 +90,21 @@ function symbolFor(
       : null;
   }
   if (instance.target.kind !== "primitive") return null;
-  const symbols: Record<string, string> = {
-    resistor: "resistor",
-    capacitor: "capacitor",
-    inductor: "inductor",
-    nmos: "nmos",
-    pmos: "pmos",
-    "voltage-source": "voltage-source",
-    "current-source": "current-source",
+  const symbols: Record<string, ImportSymbolMapping> = {
+    resistor: { symbolId: "resistor" },
+    capacitor: { symbolId: "capacitor" },
+    inductor: { symbolId: "inductor" },
+    nmos: { symbolId: "nmos" },
+    pmos: { symbolId: "pmos" },
+    "voltage-source": { symbolId: "voltage-source" },
+    "current-source": { symbolId: "current-source" },
+    vccs: {
+      symbolId: "vccs",
+      pinNames: ["OUT+", "OUT-", "CTRL+", "CTRL-"],
+    },
   };
-  const symbolId = symbols[instance.target.family];
-  return symbolId && isRazaviProductSymbolId(symbolId) ? { symbolId } : null;
+  const mapping = symbols[instance.target.family];
+  return mapping && isRazaviProductSymbolId(mapping.symbolId) ? mapping : null;
 }
 
 function targetDescription(

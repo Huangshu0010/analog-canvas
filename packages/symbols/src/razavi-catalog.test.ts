@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { CircuitProjectSchema } from "@icm/model";
 
 import { builtInSymbols } from "./builtins.js";
 import {
@@ -106,18 +107,25 @@ describe("Razavi symbol catalog", () => {
     ).toEqual([
       ["capacitor", "reviewed", "razavi-reference-v1"],
       ["current-source", "reviewed", "razavi-reference-v1"],
+      ["diode", "reviewed", "razavi-reference-v1"],
       ["ground", "reviewed", "razavi-reference-v1"],
+      ["ideal-switch", "reviewed", "razavi-reference-v1"],
       ["inductor", "reviewed", "razavi-reference-v1"],
       ["nmos", "reviewed", "razavi-reference-v1"],
       ["nmos3", "provisional", "razavi-reference-v1"],
+      ["npn", "reviewed", "razavi-reference-v1"],
       ["opamp", "reviewed", "razavi-reference-v1"],
       ["pmos", "reviewed", "razavi-reference-v1"],
       ["pmos3", "provisional", "razavi-reference-v1"],
+      ["pnp", "reviewed", "razavi-reference-v1"],
       ["port", "reviewed", "razavi-reference-v1"],
       ["port-filled", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
-      ["voltage-source", "reviewed", "razavi-reference-v1"],
+      ["transformer", "reviewed", "razavi-reference-v1"],
+      ["vccs", "reviewed", "razavi-reference-v1"],
       ["vdd", "reviewed", "razavi-reference-v1"],
+      ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
+      ["voltage-source", "reviewed", "razavi-reference-v1"],
     ]);
   });
 
@@ -165,7 +173,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(14);
+    expect(razaviCatalogSymbols).toHaveLength(21);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -179,16 +187,23 @@ describe("Razavi symbol catalog", () => {
     expect(razaviProductSymbols.map((symbol) => symbol.id)).toEqual([
       "capacitor",
       "current-source",
+      "diode",
       "ground",
+      "ideal-switch",
       "inductor",
       "nmos",
+      "npn",
       "opamp",
       "pmos",
+      "pnp",
       "port",
       "port-filled",
       "resistor",
-      "voltage-source",
+      "transformer",
+      "vccs",
       "vdd",
+      "voltage-amplifier",
+      "voltage-source",
     ]);
     for (const entry of razaviSymbolCatalogEntries) {
       expect(isRazaviProductCatalogEntry(entry)).toBe(
@@ -210,8 +225,8 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
-  it("contains no removed legacy compatibility symbols", () => {
-    for (const symbolId of ["diode", "npn", "pnp"]) {
+  it("contains no removed generic compatibility symbols", () => {
+    for (const symbolId of ["poly-resistor", "generic-block-4"]) {
       expect(getRazaviCatalogEntry(symbolId)).toBeUndefined();
       expect(builtInSymbols.some((symbol) => symbol.id === symbolId)).toBe(
         false,
@@ -225,6 +240,13 @@ describe("Razavi symbol catalog", () => {
       "capacitor",
       "inductor",
       "opamp",
+      "diode",
+      "ideal-switch",
+      "npn",
+      "pnp",
+      "transformer",
+      "vccs",
+      "voltage-amplifier",
       "port",
       "port-filled",
       "ground",
@@ -609,5 +631,35 @@ describe("Razavi symbol catalog", () => {
     expect(
       razaviCatalogSymbols.some((symbol) => symbol.id === "junction-dot"),
     ).toBe(false);
+  });
+
+  it("composes the BJT hybrid-pi model from reviewed electrical primitives", () => {
+    const fixture = CircuitProjectSchema.parse(
+      JSON.parse(
+        readFileSync(
+          resolve(
+            process.cwd(),
+            "fixtures/projects/razavi-bjt-small-signal/project.icproj.json",
+          ),
+          "utf8",
+        ),
+      ),
+    );
+    const document = fixture.documents[0]!;
+    expect(document.instances.map((instance) => instance.symbolId)).toEqual([
+      "resistor",
+      "capacitor",
+      "capacitor",
+      "resistor",
+      "vccs",
+    ]);
+    expect(
+      document.nets.find((net) => net.id === "net-emitter")?.terminals,
+    ).toEqual(
+      expect.arrayContaining([
+        { instanceId: "GM", pinName: "OUT-" },
+        { instanceId: "GM", pinName: "CTRL-" },
+      ]),
+    );
   });
 });

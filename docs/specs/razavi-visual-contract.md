@@ -246,6 +246,7 @@ pnpm symbols:razavi-mos
 pnpm symbols:razavi-peripherals
 pnpm symbols:razavi-inductor
 pnpm symbols:razavi-opamp
+pnpm symbols:razavi-common
 pnpm symbols:razavi
 pnpm symbols:razavi:check
 pnpm --filter @icm/symbols build
@@ -299,6 +300,12 @@ bounds or promotes the best translated IoU to the baseline score.
 - registered symbol and formal-scene pixel comparisons
 - inspection of reference/rendered/diff PNGs
 - repeated render equality and transform coverage
+
+For BJT small-signal work, `npn`/`pnp` are device symbols while the hybrid-pi
+equivalent is a circuit composition. The canonical fixture is
+`fixtures/projects/razavi-bjt-small-signal/project.icproj.json`; it uses
+`r_pi`, `r_o`, `C_pi`, `C_mu`, and a four-terminal `vccs`. Do not add a
+single hybrid-pi pseudo-symbol that would hide these electrical nodes.
 
 ## Compatibility
 

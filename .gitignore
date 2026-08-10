@@ -12,6 +12,10 @@ tmp/
 # Razavi fidelity diff generated output
 fixtures/visual-reference/razavi-reference-v1/diff/
 fixtures/visual-reference/razavi-reference-v1/text-diff/
+fixtures/visual-reference/razavi-reference-v1/diff-common/
+
+# Python PDF extractor bytecode
+**/__pycache__/
 
 # Local Agent-tooling scratch and generated layout exports
 .zcode/

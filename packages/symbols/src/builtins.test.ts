@@ -9,16 +9,23 @@ import { SYMBOL_CONNECTION_GRID, SymbolDefinitionSchema } from "./schema.js";
 const PRODUCT_IDS = [
   "capacitor",
   "current-source",
+  "diode",
   "ground",
+  "ideal-switch",
   "inductor",
   "nmos",
+  "npn",
   "opamp",
   "pmos",
+  "pnp",
   "port",
   "port-filled",
   "resistor",
-  "voltage-source",
+  "transformer",
+  "vccs",
   "vdd",
+  "voltage-amplifier",
+  "voltage-source",
 ] as const;
 
 describe("Razavi-only product Symbol Library", () => {
@@ -33,12 +40,9 @@ describe("Razavi-only product Symbol Library", () => {
   it("does not resolve removed compatibility or generic symbols", () => {
     const resolver = new InMemorySymbolResolver(builtInSymbols);
     for (const symbolId of [
-      "diode",
-      "npn",
-      "pnp",
       "poly-resistor",
       "generic-block-4",
-      "switch-open",
+      "legacy-switch-open",
     ]) {
       expect(resolver.resolve(symbolId), symbolId).toBeUndefined();
     }

@@ -6,6 +6,7 @@ const CATEGORY_ORDER = [
   "Analog Blocks",
   "Passives",
   "Sources",
+  "Switches",
   "Power and Ports",
 ] as const;
 
@@ -15,18 +16,23 @@ export interface ComponentCatalogGroup {
 }
 
 export function symbolCategory(symbolId: string): string {
-  if (["nmos", "pmos"].includes(symbolId)) {
+  if (["nmos", "pmos", "npn", "pnp"].includes(symbolId)) {
     return "Transistors";
   }
-  if (["resistor", "capacitor", "inductor"].includes(symbolId)) {
+  if (
+    ["resistor", "capacitor", "inductor", "diode", "transformer"].includes(
+      symbolId,
+    )
+  ) {
     return "Passives";
   }
-  if (symbolId === "opamp") {
+  if (["opamp", "voltage-amplifier"].includes(symbolId)) {
     return "Analog Blocks";
   }
-  if (["voltage-source", "current-source"].includes(symbolId)) {
+  if (["voltage-source", "current-source", "vccs"].includes(symbolId)) {
     return "Sources";
   }
+  if (symbolId === "ideal-switch") return "Switches";
   return "Power and Ports";
 }
 

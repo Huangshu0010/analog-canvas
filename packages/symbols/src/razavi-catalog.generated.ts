@@ -66,6 +66,38 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
   },
   {
+    symbolId: "diode",
+    name: "Diode",
+    category: "passive",
+    reviewStatus: "reviewed",
+    pinOrder: ["A", "K"],
+    palette: true,
+    automaticMappings: ["spice:D"],
+    assetPath: "diode.symbol.json",
+    assetHash:
+      "3b6d9ec0ae5e4e9d5c9177acb953dd9afb1899944aa9bb42ad7dade609a87f82",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/diode-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/diode-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/diode-vector-source.json",
+      converterPath: "scripts/generate-razavi-common-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
     symbolId: "ground",
     name: "Ground",
     category: "power",
@@ -93,6 +125,40 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       referencePath:
         "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
       converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
+    symbolId: "ideal-switch",
+    name: "Ideal Switch",
+    category: "switch",
+    reviewStatus: "reviewed",
+    pinOrder: ["1", "2"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
+    assetPath: "ideal-switch.symbol.json",
+    assetHash:
+      "9cdce6cc5418f516626497c272dd2753b04fa916fdc1c699bdc4230b4772b718",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/ideal-switch-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/ideal-switch-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/ideal-switch-vector-source.json",
+      converterPath: "scripts/generate-razavi-common-assets.mjs",
       converterVersion: 1,
     },
   },
@@ -173,6 +239,38 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "93636dfafd0690edaa7a9402e3bc2da014d048a404a558e8d3765c3c30126cc8",
   },
   {
+    symbolId: "npn",
+    name: "NPN Bipolar Transistor",
+    category: "transistor",
+    reviewStatus: "reviewed",
+    pinOrder: ["C", "B", "E"],
+    palette: true,
+    automaticMappings: ["spice:Q:npn", "pdk:model-type:npn"],
+    assetPath: "npn.symbol.json",
+    assetHash:
+      "07be0cd5b1b774d99c069117e6369e35d4dbc5da248ca15632c98da0622ce094",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/npn-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/npn-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/npn-vector-source.json",
+      converterPath: "scripts/generate-razavi-common-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
     symbolId: "opamp",
     name: "Operational Amplifier",
     category: "analog-block",
@@ -251,6 +349,38 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "d2416d0a22a651dbac75d94bfa57c63aa1a792dc88e275256f066ad9717165ba",
   },
   {
+    symbolId: "pnp",
+    name: "PNP Bipolar Transistor",
+    category: "transistor",
+    reviewStatus: "reviewed",
+    pinOrder: ["C", "B", "E"],
+    palette: true,
+    automaticMappings: ["spice:Q:pnp", "pdk:model-type:pnp"],
+    assetPath: "pnp.symbol.json",
+    assetHash:
+      "9995cb8ff67a74dbe42da38e755b3df17a5f48f6082426d710273fcd8cdfc0c8",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/pnp-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/pnp-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/pnp-vector-source.json",
+      converterPath: "scripts/generate-razavi-common-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
     symbolId: "port",
     name: "Port",
     category: "interface",
@@ -319,6 +449,128 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
   },
   {
+    symbolId: "transformer",
+    name: "Transformer / Coupled Inductor",
+    category: "passive",
+    reviewStatus: "reviewed",
+    pinOrder: ["P1", "P2", "S1", "S2"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Textbook four-terminal visual composite; SPICE K references existing inductors rather than owning four nodes.",
+    assetPath: "transformer.symbol.json",
+    assetHash:
+      "e0df6c64f87711989aea3f6761c12fcd75ac1e17cb320743a98c8ace5ba6d6a7",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/transformer-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/transformer-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/transformer-vector-source.json",
+      converterPath: "scripts/generate-razavi-common-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
+    symbolId: "vccs",
+    name: "Voltage-Controlled Current Source",
+    category: "source",
+    reviewStatus: "reviewed",
+    pinOrder: ["OUT+", "OUT-", "CTRL+", "CTRL-"],
+    palette: true,
+    automaticMappings: ["spice:G"],
+    assetPath: "vccs.symbol.json",
+    assetHash:
+      "a64b5a3676fb48d24acf94225e491b3fac8b18e40475f80cdcbf8508d08a9e68",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/vccs-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/vccs-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/vccs-vector-source.json",
+      converterPath: "scripts/generate-razavi-common-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
+    symbolId: "vdd",
+    name: "VDD Power Port",
+    category: "power",
+    reviewStatus: "reviewed",
+    pinOrder: ["P"],
+    palette: true,
+    automaticMappings: [],
+    assetPath: "vdd.symbol.json",
+    assetHash:
+      "bf4571ccb9a15ecf6f60455b787d7919e783deae715fa324eec0609779c71cc6",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/vdd-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/vdd-geometry.json",
+    },
+  },
+  {
+    symbolId: "voltage-amplifier",
+    name: "Voltage Amplifier",
+    category: "analog-block",
+    reviewStatus: "reviewed",
+    pinOrder: ["IN", "OUT"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Textbook gain block has implicit reference nodes and no exact primitive SPICE terminal contract.",
+    assetPath: "voltage-amplifier.symbol.json",
+    assetHash:
+      "42bd3e0e3740536979a04b9ecb0a26f8509674bd59538e4003b6cb059ebc253c",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/voltage-amplifier-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/voltage-amplifier-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/voltage-amplifier-vector-source.json",
+      converterPath: "scripts/generate-razavi-common-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
     symbolId: "voltage-source",
     name: "Independent Voltage Source",
     category: "source",
@@ -347,28 +599,6 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
         "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
       converterPath: "scripts/generate-razavi-peripheral-assets.mjs",
       converterVersion: 1,
-    },
-  },
-  {
-    symbolId: "vdd",
-    name: "VDD Power Port",
-    category: "power",
-    reviewStatus: "reviewed",
-    pinOrder: ["P"],
-    palette: true,
-    automaticMappings: [],
-    assetPath: "vdd.symbol.json",
-    assetHash:
-      "bf4571ccb9a15ecf6f60455b787d7919e783deae715fa324eec0609779c71cc6",
-    visualAuthority: {
-      kind: "razavi-reference-v1",
-      referenceManifestPath:
-        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/vdd-reference.png",
-      ],
-      calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/vdd-geometry.json",
     },
   },
 ];
@@ -621,6 +851,116 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
   },
   {
     schemaVersion: 1,
+    id: "diode",
+    name: "Diode",
+    viewBox: {
+      x: -34,
+      y: -14,
+      width: 68,
+      height: 28,
+    },
+    pins: [
+      {
+        name: "A",
+        role: "anode",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 15,
+        },
+      },
+      {
+        name: "K",
+        role: "cathode",
+        at: {
+          x: 30,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 15,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -10,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -10,
+            y: -9,
+          },
+          {
+            x: -10,
+            y: 9,
+          },
+          {
+            x: 7,
+            y: 0,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      },
+      {
+        kind: "line",
+        from: {
+          x: 8,
+          y: -10,
+        },
+        to: {
+          x: 8,
+          y: 10,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 8,
+          y: 0,
+        },
+        to: {
+          x: 30,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["pn-diode", "rectifier-diode"],
+  },
+  {
+    schemaVersion: 1,
     id: "ground",
     name: "Ground",
     viewBox: {
@@ -713,6 +1053,127 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     variants: [],
     aliases: ["gnd"],
     labelVisibility: "hidden",
+  },
+  {
+    schemaVersion: 1,
+    id: "ideal-switch",
+    name: "Ideal Switch",
+    viewBox: {
+      x: -34,
+      y: -18,
+      width: 68,
+      height: 36,
+    },
+    pins: [
+      {
+        name: "1",
+        role: "passive",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 15,
+        },
+      },
+      {
+        name: "2",
+        role: "passive",
+        at: {
+          x: 30,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 15,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -11,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: -9,
+          y: 0,
+        },
+        radius: 2,
+        fill: "none",
+        stroke: "foreground",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: 9,
+          y: 0,
+        },
+        radius: 2,
+        fill: "none",
+        stroke: "foreground",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 11,
+          y: 0,
+        },
+        to: {
+          x: 30,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -7.5,
+          y: -1.5,
+        },
+        to: {
+          x: 7.5,
+          y: -12,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["switch-open", "two-terminal-switch"],
   },
   {
     schemaVersion: 1,
@@ -1233,6 +1694,177 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: ["mos-n-3"],
+  },
+  {
+    schemaVersion: 1,
+    id: "npn",
+    name: "NPN Bipolar Transistor",
+    viewBox: {
+      x: -34,
+      y: -34,
+      width: 42,
+      height: 68,
+    },
+    pins: [
+      {
+        name: "C",
+        role: "collector",
+        at: {
+          x: 0,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "B",
+        role: "base",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "E",
+        role: "emitter",
+        at: {
+          x: 0,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -9,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -9,
+          y: -13,
+        },
+        to: {
+          x: -9,
+          y: 13,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -9,
+          y: -8,
+        },
+        to: {
+          x: 0,
+          y: -16,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: -16,
+        },
+        to: {
+          x: 0,
+          y: -30,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -9,
+          y: 8,
+        },
+        to: {
+          x: 0,
+          y: 16,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 16,
+        },
+        to: {
+          x: 0,
+          y: 30,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -1,
+            y: 15.2,
+          },
+          {
+            x: -6.2,
+            y: 8.8,
+          },
+          {
+            x: -0.2,
+            y: 9.8,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      },
+    ],
+    variants: [],
+    aliases: ["bjt-npn", "bipolar-npn"],
   },
   {
     schemaVersion: 1,
@@ -1849,6 +2481,177 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
   },
   {
     schemaVersion: 1,
+    id: "pnp",
+    name: "PNP Bipolar Transistor",
+    viewBox: {
+      x: -34,
+      y: -34,
+      width: 42,
+      height: 68,
+    },
+    pins: [
+      {
+        name: "C",
+        role: "collector",
+        at: {
+          x: 0,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "B",
+        role: "base",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "E",
+        role: "emitter",
+        at: {
+          x: 0,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -9,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -9,
+          y: -13,
+        },
+        to: {
+          x: -9,
+          y: 13,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -9,
+          y: -8,
+        },
+        to: {
+          x: 0,
+          y: -16,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: -16,
+        },
+        to: {
+          x: 0,
+          y: -30,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -9,
+          y: 8,
+        },
+        to: {
+          x: 0,
+          y: 16,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 16,
+        },
+        to: {
+          x: 0,
+          y: 30,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -6.2,
+            y: 8.8,
+          },
+          {
+            x: -1,
+            y: 15.2,
+          },
+          {
+            x: -8.5,
+            y: 14.2,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      },
+    ],
+    variants: [],
+    aliases: ["bjt-pnp", "bipolar-pnp"],
+  },
+  {
+    schemaVersion: 1,
     id: "port",
     name: "Port",
     viewBox: {
@@ -2024,6 +2827,510 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
   },
   {
     schemaVersion: 1,
+    id: "transformer",
+    name: "Transformer / Coupled Inductor",
+    viewBox: {
+      x: -34,
+      y: -34,
+      width: 68,
+      height: 68,
+    },
+    pins: [
+      {
+        name: "P1",
+        role: "primary",
+        at: {
+          x: -20,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "P2",
+        role: "primary",
+        at: {
+          x: -20,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "S1",
+        role: "secondary",
+        at: {
+          x: 20,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "S2",
+        role: "secondary",
+        at: {
+          x: 20,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "path",
+        data: "M -20 -30 L -20 -22 C -30 -19 -30 -11 -20 -8 C -10 -5 -10 3 -20 6 C -30 9 -30 17 -20 20 L -20 30",
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "path",
+        data: "M 20 -30 L 20 -22 C 10 -19 10 -11 20 -8 C 30 -5 30 3 20 6 C 10 9 10 17 20 20 L 20 30",
+        style: {
+          strokeRole: "normal",
+          lineCap: "round",
+          lineJoin: "round",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -4,
+          y: -20,
+        },
+        to: {
+          x: -4,
+          y: 20,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 4,
+          y: -20,
+        },
+        to: {
+          x: 4,
+          y: 20,
+        },
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["coupled-inductor", "magnetic-transformer"],
+  },
+  {
+    schemaVersion: 1,
+    id: "vccs",
+    name: "Voltage-Controlled Current Source",
+    viewBox: {
+      x: -34,
+      y: -34,
+      width: 64,
+      height: 68,
+    },
+    pins: [
+      {
+        name: "OUT+",
+        role: "output-positive",
+        at: {
+          x: 20,
+          y: -30,
+        },
+        direction: "north",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "OUT-",
+        role: "output-negative",
+        at: {
+          x: 20,
+          y: 30,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "CTRL+",
+        role: "control-positive",
+        at: {
+          x: -30,
+          y: -10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "CTRL-",
+        role: "control-negative",
+        at: {
+          x: -30,
+          y: 10,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: -30,
+        },
+        to: {
+          x: 20,
+          y: -12,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: 20,
+          y: 0,
+        },
+        radius: 12,
+        fill: "none",
+        stroke: "foreground",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: 12,
+        },
+        to: {
+          x: 20,
+          y: 30,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: -10,
+        },
+        to: {
+          x: -12,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 10,
+        },
+        to: {
+          x: -12,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -9,
+          y: -13,
+        },
+        to: {
+          x: -9,
+          y: -7,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -12,
+          y: -10,
+        },
+        to: {
+          x: -6,
+          y: -10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -12,
+          y: 10,
+        },
+        to: {
+          x: -6,
+          y: 10,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 20,
+          y: -6,
+        },
+        to: {
+          x: 20,
+          y: 5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: 20,
+            y: 8,
+          },
+          {
+            x: 15.5,
+            y: 1,
+          },
+          {
+            x: 24.5,
+            y: 1,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      },
+    ],
+    variants: [],
+    aliases: ["dependent-current-source", "transconductance-source"],
+  },
+  {
+    schemaVersion: 1,
+    id: "vdd",
+    name: "VDD Power Port",
+    viewBox: {
+      x: -12,
+      y: -2,
+      width: 24,
+      height: 26,
+    },
+    pins: [
+      {
+        name: "P",
+        role: "power",
+        at: {
+          x: 0,
+          y: 20,
+        },
+        direction: "south",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: 0,
+          y: 20,
+        },
+        to: {
+          x: 0,
+          y: 2.5,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "polygon",
+        points: [
+          {
+            x: -10,
+            y: -0.88,
+          },
+          {
+            x: 10,
+            y: -0.88,
+          },
+          {
+            x: 10,
+            y: 2.36,
+          },
+          {
+            x: -10,
+            y: 2.36,
+          },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      },
+    ],
+    variants: [],
+    aliases: ["power-vdd", "vpwr"],
+    labelVisibility: "hidden",
+  },
+  {
+    schemaVersion: 1,
+    id: "voltage-amplifier",
+    name: "Voltage Amplifier",
+    viewBox: {
+      x: -44,
+      y: -28,
+      width: 88,
+      height: 56,
+    },
+    pins: [
+      {
+        name: "IN",
+        role: "input",
+        at: {
+          x: -40,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+      {
+        name: "OUT",
+        role: "output",
+        at: {
+          x: 40,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 20,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -40,
+          y: 0,
+        },
+        to: {
+          x: -22,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "path",
+        data: "M -22 -24 L -22 24 L 22 0 Z",
+        style: {
+          strokeRole: "emphasis",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 22,
+          y: 0,
+        },
+        to: {
+          x: 40,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["gain-block", "voltage-gain", "a0"],
+  },
+  {
+    schemaVersion: 1,
     id: "voltage-source",
     name: "Independent Voltage Source",
     viewBox: {
@@ -2157,75 +3464,5 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: ["dc-voltage"],
-  },
-  {
-    schemaVersion: 1,
-    id: "vdd",
-    name: "VDD Power Port",
-    viewBox: {
-      x: -12,
-      y: -2,
-      width: 24,
-      height: 26,
-    },
-    pins: [
-      {
-        name: "P",
-        role: "power",
-        at: {
-          x: 0,
-          y: 20,
-        },
-        direction: "south",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-    ],
-    primitives: [
-      {
-        kind: "line",
-        from: {
-          x: 0,
-          y: 20,
-        },
-        to: {
-          x: 0,
-          y: 2.5,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -10,
-            y: -0.88,
-          },
-          {
-            x: 10,
-            y: -0.88,
-          },
-          {
-            x: 10,
-            y: 2.36,
-          },
-          {
-            x: -10,
-            y: 2.36,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-      },
-    ],
-    variants: [],
-    aliases: ["power-vdd", "vpwr"],
-    labelVisibility: "hidden",
   },
 ];

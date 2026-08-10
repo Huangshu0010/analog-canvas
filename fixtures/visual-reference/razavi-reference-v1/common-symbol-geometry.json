@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "referenceId": "razavi-reference-v1",
+  "symbols": {
+    "pnp": {
+      "assetPath": "pnp-reference.png",
+      "pixelsPerLogical": 2.4,
+      "originPx": {
+        "x": 81.6,
+        "y": 81.6
+      },
+      "window": {
+        "width": 101,
+        "height": 164,
+        "minX": -34,
+        "minY": -34
+      }
+    },
+    "npn": {
+      "assetPath": "npn-reference.png",
+      "pixelsPerLogical": 2.4,
+      "originPx": {
+        "x": 81.6,
+        "y": 81.6
+      },
+      "window": {
+        "width": 101,
+        "height": 164,
+        "minX": -34,
+        "minY": -34
+      }
+    },
+    "vccs": {
+      "assetPath": "vccs-reference.png",
+      "pixelsPerLogical": 2.4,
+      "originPx": {
+        "x": 81.6,
+        "y": 81.6
+      },
+      "window": {
+        "width": 154,
+        "height": 164,
+        "minX": -34,
+        "minY": -34
+      }
+    },
+    "diode": {
+      "assetPath": "diode-reference.png",
+      "pixelsPerLogical": 2.4,
+      "originPx": {
+        "x": 81.6,
+        "y": 33.6
+      },
+      "window": {
+        "width": 164,
+        "height": 68,
+        "minX": -34,
+        "minY": -14
+      }
+    },
+    "voltage-amplifier": {
+      "assetPath": "voltage-amplifier-reference.png",
+      "pixelsPerLogical": 2.4,
+      "originPx": {
+        "x": 105.6,
+        "y": 67.2
+      },
+      "window": {
+        "width": 212,
+        "height": 135,
+        "minX": -44,
+        "minY": -28
+      }
+    },
+    "ideal-switch": {
+      "assetPath": "ideal-switch-reference.png",
+      "pixelsPerLogical": 2.4,
+      "originPx": {
+        "x": 81.6,
+        "y": 43.2
+      },
+      "window": {
+        "width": 164,
+        "height": 87,
+        "minX": -34,
+        "minY": -18
+      }
+    },
+    "transformer": {
+      "assetPath": "transformer-reference.png",
+      "pixelsPerLogical": 2.4,
+      "originPx": {
+        "x": 81.6,
+        "y": 81.6
+      },
+      "window": {
+        "width": 164,
+        "height": 164,
+        "minX": -34,
+        "minY": -34
+      }
+    }
+  }
+}

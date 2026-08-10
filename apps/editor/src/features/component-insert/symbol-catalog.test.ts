@@ -21,6 +21,10 @@ describe("component insertion catalog", () => {
     ]);
     expect(symbolCategory("capacitor")).toBe("Passives");
     expect(symbolCategory("opamp")).toBe("Analog Blocks");
+    expect(symbolCategory("npn")).toBe("Transistors");
+    expect(symbolCategory("diode")).toBe("Passives");
+    expect(symbolCategory("vccs")).toBe("Sources");
+    expect(symbolCategory("ideal-switch")).toBe("Switches");
   });
 
   it("searches names, ids, and aliases without exposing retired MOS entries", () => {
@@ -40,9 +44,9 @@ describe("component insertion catalog", () => {
     );
     expect(symbols.map((symbol) => symbol.id)).toContain("inductor");
     expect(symbols.map((symbol) => symbol.id)).toContain("opamp");
-    for (const removed of ["diode", "npn", "pnp"]) {
-      expect(symbols.some((symbol) => symbol.id === removed)).toBe(false);
-    }
+    expect(symbols.map((symbol) => symbol.id)).toEqual(
+      expect.arrayContaining(["diode", "npn", "pnp", "transformer"]),
+    );
   });
 
   it("returns no selectable entries for an unmatched query", () => {

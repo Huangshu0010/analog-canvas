@@ -44,8 +44,12 @@ The tool boundaries are mandatory:
 
 This decision is applied one reviewed component at a time. It does not
 authorize bulk conversion or replacement of existing raster evidence. The
-current PDF-derived set is the inductor from Figure 15.21 and the three-terminal
-op-amp from Figure 8.26.
+current PDF-derived set includes the inductor from Figure 15.21, the
+three-terminal op-amp from Figure 8.26, and the common-device family recorded
+by `extract-razavi-common-assets.py`: BJT, dependent current source, diode,
+voltage amplifier, ideal switch, and coupled-inductor/transformer composition.
+Every derived sibling or composite must say so in its evidence; it must not be
+described as a direct source crop.
 
 ## Inductor mapping
 
@@ -65,6 +69,24 @@ surrounding feedback circuit and junction dots. The reviewed Symbol exposes
 It has no implicit supply pins and no automatic SPICE mapping; a real op-amp
 subcircuit requires an explicit complete pin contract.
 
+## Common-device mapping
+
+The common-device extractor fingerprints native objects in a tight page/figure
+region and commits a normalized SymbolDefinition with an isolated witness.
+The PNP body is directly observed in the bandgap chapter; NPN shares that body
+and reverses only conventional emitter-arrow polarity. The four-terminal VCCS
+adds explicit control terminals to Razavi's labeled dependent-source drawing,
+so it maps exactly to SPICE `G`. Two-terminal diode and three-terminal NPN/PNP
+map to SPICE `D` and three-node `Q`, respectively.
+
+The two-terminal ideal switch does not map to four-terminal SPICE `S`. The
+transformer is explicitly a composition of two Figure 15.21 inductor-family
+paths plus a conventional core; it does not map to SPICE `K`, whose instance
+contract references two existing inductors rather than owning four nodes. The
+single-ended voltage amplifier likewise remains manual because its reference
+nodes are implicit. BJT hybrid-pi models are composed from resistor,
+capacitor, and the reviewed VCCS rather than represented by a pseudo-device.
+
 ## Consequences
 
 - The inductor keeps source-level curve precision and traceable textbook
@@ -80,7 +102,7 @@ subcircuit requires an explicit complete pin contract.
 - Extractor rejects a mismatched textbook SHA-256 or path fingerprint.
 - Authority loader accepts legacy manifests and rejects modified vector
   extracts or witnesses.
-- The inductor generator has write and stale-check modes.
+- The inductor and common-family generators have write and stale-check modes.
 - Symbol/catalog tests enforce continuous geometry, on-grid pins, provenance,
   palette exposure, and SPICE import mapping.
 - The existing fidelity runner produces the inductor reference/render/diff

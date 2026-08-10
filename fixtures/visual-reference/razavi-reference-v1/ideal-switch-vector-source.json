@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 1,
+  "id": "razavi-textbook-ideal-switch",
+  "kind": "pdf-vector-extract",
+  "source": {
+    "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+    "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+    "pdfPage": 560,
+    "printedPage": 541,
+    "figure": "13.4"
+  },
+  "selection": {
+    "method": "direct-family-observation",
+    "boundsPdf": {
+      "left": 225.0,
+      "top": 420.0,
+      "right": 280.0,
+      "bottom": 455.0
+    },
+    "nativeObjectCount": 7,
+    "nativeObjectSha256": "3534ae8a5c5775e6699a24f19260e76e61245f9ee3894348db6b4eeffb51cadd",
+    "nativeObjectSample": [
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 244.958,
+        "top": 447.2852,
+        "x1": 251.416,
+        "bottom": 452.3072,
+        "pathCommandCount": 2,
+        "pathSha256": "484b92ad118cb31da6415e191f7f99e6bdacbc24e4a323cf535dc87aeecddf4d"
+      },
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 255.003,
+        "top": 453.0242,
+        "x1": 261.46,
+        "bottom": 453.0242,
+        "pathCommandCount": 2,
+        "pathSha256": "95494300646d1db1da8a2da92f05225324d404434ff97bb9291bb284b64a3f5b"
+      },
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 235.631,
+        "top": 453.0242,
+        "x1": 242.805,
+        "bottom": 453.0242,
+        "pathCommandCount": 2,
+        "pathSha256": "799783c17555139243fbbd122a46b6625c5f821d708cfbe925f826d3f7b9506b"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 0.717,
+        "x0": 258.68,
+        "top": 453.0242,
+        "x1": 270.16,
+        "bottom": 475.9842,
+        "pathCommandCount": 3,
+        "pathSha256": "911561ea6f0f854f75fd6bd10d479905ba963c2a8945b48d03ff20eda32f17b4"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 0.717,
+        "x0": 224.241,
+        "top": 453.0242,
+        "x1": 235.72,
+        "bottom": 475.9842,
+        "pathCommandCount": 3,
+        "pathSha256": "de58aced7c6488906f9921eb7affc2c4d3fd0c482d920093bb4d1591031e6cd8"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 0.717,
+        "x0": 252.13,
+        "top": 451.5802,
+        "x1": 255.0,
+        "bottom": 454.4502,
+        "pathCommandCount": 5,
+        "pathSha256": "24d8f20fd96e4af94c66adc14420a185cba329daf7eced3fe2370ba24ee6b7d1"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 0.717,
+        "x0": 242.842,
+        "top": 451.5802,
+        "x1": 245.713,
+        "bottom": 454.4502,
+        "pathCommandCount": 5,
+        "pathSha256": "ffb4784e28d435bc512c2e811fb1fcf7c1591ccc9623646f7937f18db4dcac12"
+      }
+    ]
+  },
+  "normalization": {
+    "pinAnchorsLogical": [
+      {
+        "name": "1",
+        "x": -30,
+        "y": 0
+      },
+      {
+        "name": "2",
+        "x": 30,
+        "y": 0
+      }
+    ],
+    "strokeMapping": {
+      "normal": {
+        "targetRole": "normal"
+      },
+      "emphasis": {
+        "targetRole": "emphasis"
+      }
+    },
+    "symbolDefinition": {
+      "schemaVersion": 1,
+      "id": "ideal-switch",
+      "name": "Ideal Switch",
+      "viewBox": {
+        "x": -34,
+        "y": -18,
+        "width": 68,
+        "height": 36
+      },
+      "pins": [
+        {
+          "name": "1",
+          "role": "passive",
+          "at": {
+            "x": -30,
+            "y": 0
+          },
+          "direction": "west",
+          "presentation": {
+            "visibility": "visible",
+            "leadLength": 15
+          }
+        },
+        {
+          "name": "2",
+          "role": "passive",
+          "at": {
+            "x": 30,
+            "y": 0
+          },
+          "direction": "east",
+          "presentation": {
+            "visibility": "visible",
+            "leadLength": 15
+          }
+        }
+      ],
+      "primitives": [
+        {
+          "kind": "line",
+          "from": {
+            "x": -30,
+            "y": 0
+          },
+          "to": {
+            "x": -11,
+            "y": 0
+          },
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "circle",
+          "center": {
+            "x": -9,
+            "y": 0
+          },
+          "radius": 2,
+          "fill": "none",
+          "stroke": "foreground",
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "circle",
+          "center": {
+            "x": 9,
+            "y": 0
+          },
+          "radius": 2,
+          "fill": "none",
+          "stroke": "foreground",
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "line",
+          "from": {
+            "x": 11,
+            "y": 0
+          },
+          "to": {
+            "x": 30,
+            "y": 0
+          },
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "line",
+          "from": {
+            "x": -7.5,
+            "y": -1.5
+          },
+          "to": {
+            "x": 7.5,
+            "y": -12
+          },
+          "style": {
+            "strokeRole": "emphasis",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        }
+      ],
+      "variants": [],
+      "aliases": [
+        "switch-open",
+        "two-terminal-switch"
+      ]
+    }
+  },
+  "rasterWitness": {
+    "kind": "isolated-normalized-pdf-family",
+    "dpi": 300.0,
+    "pixels": {
+      "width": 164,
+      "height": 87
+    },
+    "pixelsPerLogical": 2.4,
+    "originPx": {
+      "x": 81.6,
+      "y": 43.2
+    },
+    "assetPath": "ideal-switch-reference.png",
+    "threshold": 160
+  }
+}

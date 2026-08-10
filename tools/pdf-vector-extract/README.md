@@ -8,7 +8,10 @@ The family extractors currently cover:
 
 - `extract-razavi-inductor.py`: continuous inductor path from Figure 15.21;
 - `extract-razavi-opamp.py`: triangle, three leads, and polarity marks from
-  Figure 8.26.
+  Figure 8.26;
+- `extract-razavi-common-assets.py`: BJT, dependent current source, diode,
+  voltage amplifier, ideal switch, and the explicitly derived
+  coupled-inductor family.
 
 Each extractor writes:
 
@@ -31,3 +34,8 @@ $python = "C:\Users\90590\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 The extractor depends on `pdfplumber`, Pillow, and Poppler's `pdftoppm`. It
 does not import or modify the raster fidelity implementation.
+
+The common extractor accepts `--asset all` (default) or one symbol ID. It
+records `selection.method` and `derivation` whenever geometry is a family
+sibling or composite, so such evidence cannot be mistaken for a direct symbol
+crop.

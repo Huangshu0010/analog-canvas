@@ -4226,3 +4226,20 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `fix(editor): stabilize component insert dialog layout`.
+
+## 2026-08-11 - Add common Razavi device families
+
+- Target: complete NPN/PNP, dependent current source, diode, gain block,
+  ideal switch, coupled inductor/transformer, and a composable BJT hybrid-pi
+  fixture from the approved Razavi textbook.
+- Changed areas: separated PDF extraction and hash-pinned witnesses, seven
+  generated Symbol assets, catalog and GUI registration, exact SPICE `D`/`Q`/`G`
+  mappings, per-measurement fidelity witnesses, and electrical composition
+  fixture/documentation.
+- Validation: extractor/source integrity, generator stale checks, 64 affected
+  tests plus 37 focused authority tests, repository typecheck, affected builds,
+  seven registered fidelity diffs, targeted formatting, and `git diff --check`
+  passed. Broad formatting reports only the pre-existing untouched
+  `packages/derived/src/connectivity.ts`.
+- Commit status: ready to commit on `main` as
+  `feat(symbols): add common Razavi device families`.
