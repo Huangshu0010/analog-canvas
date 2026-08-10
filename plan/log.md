@@ -15,6 +15,18 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-10 - Razavi capacitor proportion refinement
+
+- Target: reduce capacitor plate span and plate-center separation by 10% while
+  retaining continuous leads in both orientations.
+- Changed areas: capacitor source asset, hash-pinned Razavi catalog entry, and
+  generated runtime catalog definition.
+- Validation: regenerated catalog; Symbols build; C1 vertical IoU improved
+  `0.5860 ? 0.6174` and C2 horizontal `0.6982 ? 0.7019`; catalog stale check,
+  focused catalog Vitest 17/17, editor build, and `git diff --check` passed.
+- Commit status: committed with this target; concurrent drafting work remains
+  unstaged.
+
 ## 2026-08-10 - Fixed default side-label clearance
 
 - Target: reduce non-MOS default instance-label clearance to an explicit 1.5

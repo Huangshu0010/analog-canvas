@@ -22,7 +22,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:C"],
     assetPath: "capacitor.symbol.json",
     assetHash:
-      "6c733aa0a6c9027c1f7df75f06ee4ee9e40604f8fcd9342939eac9eccd75f782",
+      "c0dd77af2588cc016b0b97dbec477cb992217ea816aab807c4aabb6514084a2d",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -433,12 +433,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 7.086614,
-          y: -3.11811,
+          x: 6.377953,
+          y: -2.806299,
         },
         to: {
-          x: -7.086614,
-          y: -3.11811,
+          x: -6.377953,
+          y: -2.806299,
         },
         style: {
           strokeRole: "emphasis",
@@ -449,12 +449,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 7.086614,
-          y: 3.11811,
+          x: 6.377953,
+          y: 2.806299,
         },
         to: {
-          x: -7.086614,
-          y: 3.11811,
+          x: -6.377953,
+          y: 2.806299,
         },
         style: {
           strokeRole: "emphasis",
@@ -466,7 +466,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: -3.11811,
+          y: -2.806299,
         },
         to: {
           x: 0,
@@ -482,7 +482,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: 3.401575,
+          y: 3.089764,
         },
         to: {
           x: 0,
