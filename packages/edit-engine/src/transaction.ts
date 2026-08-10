@@ -2429,14 +2429,7 @@ export function executeTransaction(
           );
         }
         const beforeGroups = netEndpointGroups(draft, net.id);
-        if (beforeGroups.length > 1) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Cannot cut ${route.id}: Net ${net.id} still has unrouted members; disconnect a pin explicitly`,
-            [],
-            [route.id, net.id],
-          );
-        }
+        const preserveLogicalNet = beforeGroups.length > 1;
 
         const candidateOrphanJunctionIds = new Set(
           [route.from, route.to].flatMap((endpoint) =>
@@ -2485,15 +2478,7 @@ export function executeTransaction(
           connectivityChanged = true;
           break;
         }
-        if (groups.length > 1 && net.scope === "global") {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Cannot split global Net ${net.id}; disconnect a pin explicitly`,
-            [],
-            [route.id, net.id],
-          );
-        }
-        if (groups.length > 1) {
+        if (groups.length > 1 && !preserveLogicalNet && net.scope === "local") {
           const netIdByEndpoint = new Map<string, string>();
           const splitNetIds = groups
             .slice(1)

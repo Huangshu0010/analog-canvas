@@ -1361,7 +1361,7 @@ export function App({ project: initialProject }: AppProps) {
     const result = transact([{ kind: "cut_connection", routeId: route.id }]);
     if (result.ok) {
       replaceSelectionKind("route", []);
-      setStatus(`Deleted electrical branch ${route.id}`);
+      setStatus(`Deleted wire ${route.id}`);
     }
   }
 
@@ -5016,7 +5016,7 @@ export function App({ project: initialProject }: AppProps) {
                   Add current arrow
                 </button>
                 <button type="button" onClick={deleteSelectedRouteConnection}>
-                  Delete electrical branch
+                  Delete wire
                 </button>
               </section>
             ) : null}

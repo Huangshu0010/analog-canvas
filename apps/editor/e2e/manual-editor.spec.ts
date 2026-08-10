@@ -301,9 +301,7 @@ test("keeps Wire input above labels and resolves a screen-tolerant route tap", a
   );
 });
 
-test("deletes a wire as an electrical branch without exposing Unroute", async ({
-  page,
-}) => {
+test("deletes a wire without exposing Unroute", async ({ page }) => {
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 340, y: 220 });
   await placeComponent(page, "resistor", { x: 660, y: 220 });
@@ -320,18 +318,58 @@ test("deletes a wire as an electrical branch without exposing Unroute", async ({
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
   await expect(page.getByTestId("flightline")).toHaveCount(0);
   await expect(page.getByTestId("status")).toContainText(
-    "Deleted electrical branch route-ui-1",
+    "Deleted wire route-ui-1",
   );
 
   await page.keyboard.press("Control+z");
   await clickRoute(page, "route-ui-1");
   await openSelectionShelf(page);
-  await expect(
-    page.getByRole("button", { name: "Delete electrical branch" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete wire" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Unroute (keep electrical connection)" }),
   ).toHaveCount(0);
+});
+
+test("deletes a routed part of an imported Net that still has flightlines", async ({
+  page,
+}) => {
+  const project = createRoutingDemoProject();
+  const document = project.documents[0]!;
+  document.sourceBinding = {
+    cellName: "routing_demo",
+    sourceRef: {
+      fileId: "source-routing-demo",
+      start: { offset: 0, line: 1, column: 1 },
+      end: { offset: 1, line: 1, column: 2 },
+    },
+  };
+  document.routes = [
+    {
+      id: "route-imported-partial",
+      netId: "net-h",
+      from: { kind: "terminal", instanceId: "A", pinName: "P" },
+      to: { kind: "terminal", instanceId: "B", pinName: "P" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+  ];
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "routing-imported-partial.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+
+  await clickRoute(page, "route-imported-partial");
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await page.keyboard.press("Delete");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+  await expect(page.getByTestId("status")).toContainText(
+    "Deleted wire route-imported-partial",
+  );
+
+  await page.getByTestId("hit-A").click();
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
 });
 
 test("uses a flightline as direct Wire guidance", async ({ page }) => {

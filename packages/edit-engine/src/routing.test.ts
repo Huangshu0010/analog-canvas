@@ -1198,7 +1198,7 @@ describe("routing Edit Engine", () => {
     );
   });
 
-  it("rejects a cut while imported Net members remain unrouted", () => {
+  it("deletes routed geometry while preserving a partially routed imported Net", () => {
     const document = documentFixture();
     document.routes = [
       {
@@ -1219,13 +1219,49 @@ describe("routing Edit Engine", () => {
       context,
     );
 
-    expect(result).toMatchObject({
-      ok: false,
-      error: {
-        code: "EDIT_PRECONDITION",
-        message: expect.stringContaining("disconnect a pin explicitly"),
+    const beforeNet = structuredClone(
+      document.nets.find((net) => net.id === "net-h"),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toEqual([]);
+    expect(result.document.nets.find((net) => net.id === "net-h")).toEqual(
+      beforeNet,
+    );
+    expect(deriveFlightlines(result.document, resolver)).toHaveLength(3);
+    expect(result.document.sourceStatus).toBe("geometry-only-changed");
+  });
+
+  it("deletes global-Net route geometry without partitioning the Net", () => {
+    const document = documentFixture();
+    const net = document.nets.find((candidate) => candidate.id === "net-v")!;
+    net.scope = "global";
+    const beforeNet = structuredClone(net);
+    document.routes = [
+      {
+        id: "route-global",
+        netId: "net-v",
+        from: terminal("C"),
+        to: terminal("D"),
+        waypoints: [],
+        segmentModes: ["manual"],
       },
+    ];
+
+    const result = executeTransaction(
       document,
-    });
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-global" },
+      ]),
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toEqual([]);
+    expect(
+      result.document.nets.find((candidate) => candidate.id === "net-v"),
+    ).toEqual(beforeNet);
+    expect(result.document.sourceStatus).toBe("geometry-only-changed");
   });
 });

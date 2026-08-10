@@ -124,10 +124,11 @@ preserving the explicit graph unchanged.
 - `move_junction` changes a Junction coordinate without changing Net
   membership; the caller includes corresponding Route replacements atomically.
 - `cut_connection` is the ordinary Delete semantic for a RouteBranch. It
-  removes the branch and, when that removal divides a fully routed local Net,
-  deterministically partitions the Net records. A redundant cycle retains one
-  Net. A global Net or a partially routed/imported Net with ambiguous unrouted
-  members rejects the cut instead of guessing.
+  always removes the visible branch. When that removal divides a fully routed
+  local Net, it deterministically partitions the Net records. A redundant
+  cycle retains one Net. A global or already-partially-routed/imported Net
+  retains its logical membership and derives new flightlines instead of
+  guessing at unresolved electrical partitions.
 - `make_flightline` removes only Route geometry and retains its logical Net.
   It is an advanced API operation for rerouting workflows and is not exposed
   as the ordinary GUI Delete action.

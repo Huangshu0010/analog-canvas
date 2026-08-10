@@ -275,11 +275,13 @@ second mirror enum, a new stored field, or an Agent API operation.
 - Instance labels remain draggable only within a bounded neighborhood of the
   owning symbol. Net labels remain draggable only near their attached Route;
   plain text may move freely.
-- Ordinary Route deletion is one command, `Delete electrical branch`, backed
-  by `cut_connection`. The editor does not expose geometry-only Unroute as a
-  competing normal action. Explicit endpoint disconnection remains available
-  when the user selects a pin or port; advanced Agent/API rerouting may still
-  use `make_flightline` without changing Net membership.
+- Ordinary Route deletion is one command, `Delete wire`, backed by
+  `cut_connection`. The editor does not expose geometry-only Unroute as a
+  competing normal action. The command partitions a fully routed local Net
+  only when the result is deterministic; an already-partial or global Net
+  keeps its logical membership and derives flightlines. Explicit endpoint
+  disconnection remains available when the user selects a pin or port;
+  advanced Agent/API rerouting may still use `make_flightline` directly.
 
 ## Manual component authoring
 
@@ -347,9 +349,10 @@ The core rule is:
   and removes the instance atomically. Remaining Route geometry and Net
   identity are preserved as dangling wiring.
 - Deleting a Route invokes `cut_connection`: a redundant path removes only
-  geometry, while an unambiguous bridge partitions the local Net. A cut is
-  rejected when partially routed logical membership or a global Net makes the
-  intended electrical partition ambiguous.
+  geometry, while an unambiguous bridge partitions a fully routed local Net.
+  If logical membership is already partially routed, or the Net is global,
+  Delete removes the visible Wire but preserves the logical Net and restores
+  derived flightline guidance.
 
 ### Net semantics
 

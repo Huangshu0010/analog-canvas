@@ -4109,6 +4109,20 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `main` as
   `fix(editor): simplify wire deletion and flightline guidance`.
 
+## 2026-08-11 - Fix partial SPICE wire deletion
+
+- Target: let users delete a visible Wire from an imported Net that still has
+  unresolved flightlines without silently changing SPICE connectivity.
+- Changed areas: made `cut_connection` preserve logical membership for
+  already-partial and global Nets while still partitioning deterministic fully
+  routed local Nets; renamed the GUI action to `Delete wire`; updated routing
+  specifications and imported-partial-Net regressions.
+- Validation: 22 focused Edit Engine tests, two focused Playwright flows,
+  repository typecheck, affected builds, and `git diff --check` passed. The
+  existing large-chunk warning remains.
+- Commit status: ready to commit on `main` as
+  `fix(editor): allow deleting routed parts of imported nets`.
+
 ## 2026-08-10 - Enforce a Razavi-only product symbol catalog
 
 - Target: remove the second/legacy device library and fail visibly instead of

@@ -141,11 +141,12 @@ Phase 8 topology operations have these preconditions:
 - `cut_connection` requires one existing unlocked Route. If the Net is fully
   routed, removing a bridge deterministically partitions its endpoints,
   Junctions, and remaining Routes into local Nets; removing a redundant cycle
-  keeps the original Net. The operation rejects global-Net partitioning and
-  partially routed Nets whose pre-existing disconnected members make the cut
-  ambiguous. Newly orphaned Junction endpoints of the deleted branch are
-  removed, an empty local Net is removed, and attached annotations follow the
-  normal unresolved-anchor fallback rule.
+  keeps the original Net. For global Nets and Nets that already had multiple
+  routed components, the Route is removed while logical membership is retained
+  so the derived layer can restore flightlines without guessing at an
+  electrical split. Newly orphaned Junction endpoints of the deleted branch
+  are removed, an empty local Net is removed, and attached annotations follow
+  the normal unresolved-anchor fallback rule.
 - `make_flightline` remains the explicit geometry-only operation: it removes a
   Route while preserving its logical Net membership. It is intended for
   advanced rerouting clients, not ordinary Delete.
