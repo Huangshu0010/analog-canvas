@@ -34,7 +34,7 @@ export type RecoverySetTimeout = (
 ) => RecoveryTimerHandle;
 export type RecoveryClearTimeout = (handle: RecoveryTimerHandle) => void;
 
-export interface RecoverySchedulerOptions {
+export interface RecoverySchedulerOptions<Project = unknown> {
   /** Delay before a scheduled write actually fires. */
   readonly delayMs: number;
   /**
@@ -42,20 +42,20 @@ export interface RecoverySchedulerOptions {
    * called. Implementations serialize and persist it. Must be idempotent under
    * repeated calls with the same value.
    */
-  readonly write: (project: unknown) => void;
+  readonly write: (project: Project) => void;
   /** Injectable for tests; defaults to the global timer. */
   readonly setTimeout?: RecoverySetTimeout;
   /** Injectable for tests; defaults to the global timer. */
   readonly clearTimeout?: RecoveryClearTimeout;
 }
 
-export interface RecoveryScheduler {
+export interface RecoveryScheduler<Project = unknown> {
   /**
    * Schedule (or reschedule) a write of `project`. Any previously pending
    * write for an earlier project is cancelled — the newest Project always
    * wins.
    */
-  schedule(project: unknown): void;
+  schedule(project: Project): void;
   /**
    * Write the latest pending Project immediately if one is pending, then clear
    * the timer and pending value. Idempotent: a second call with nothing
@@ -77,9 +77,9 @@ export interface RecoveryScheduler {
   readonly isPending: boolean;
 }
 
-export function createRecoveryScheduler(
-  options: RecoverySchedulerOptions,
-): RecoveryScheduler {
+export function createRecoveryScheduler<Project = unknown>(
+  options: RecoverySchedulerOptions<Project>,
+): RecoveryScheduler<Project> {
   const timer: RecoverySetTimeout =
     options.setTimeout ??
     ((handler: () => void, ms: number) => globalThis.setTimeout(handler, ms));
@@ -91,7 +91,7 @@ export function createRecoveryScheduler(
       ));
 
   let handle: RecoveryTimerHandle | null = null;
-  let pending: unknown = NOTHING;
+  let pending: Project | typeof NOTHING = NOTHING;
 
   function clearTimer(): void {
     if (handle !== null) {
@@ -104,14 +104,15 @@ export function createRecoveryScheduler(
     pending = NOTHING;
   }
 
-  const scheduler: RecoveryScheduler = {
-    schedule(project: unknown): void {
+  const scheduler: RecoveryScheduler<Project> = {
+    schedule(project: Project): void {
       pending = project;
       clearTimer();
       handle = timer(() => {
         handle = null;
         const current = pending;
         resetPending();
+        if (current === NOTHING) return;
         options.write(current);
       }, options.delayMs);
     },
