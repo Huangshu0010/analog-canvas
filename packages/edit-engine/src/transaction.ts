@@ -1143,6 +1143,9 @@ function followAttachedAnnotations(
     let transformedSide: Point | null = null;
     if (annotation.kind === "instance-label" && definition) {
       const box = definition.viewBox;
+      const pinRoles = new Set(definition.pins.map((pin) => pin.role));
+      const isMosSymbol =
+        pinRoles.has("gate") && pinRoles.has("drain") && pinRoles.has("source");
       const edges = {
         left: box.x,
         right: box.x + box.width,
@@ -1164,12 +1167,39 @@ function followAttachedAnnotations(
           : []),
       ].sort((left, right) => left.gap - right.gap);
       const reference = candidates[0];
-      if (reference) {
-        transformedSide = transformPoint(
-          reference.side,
-          origin,
-          newOrientation,
-        );
+      // MOS labels deliberately sit beside the channel and may still be inside
+      // the padded symbol viewBox. Outside-edge detection therefore cannot
+      // reliably recover their authored side. Derive that side from the
+      // dominant normalized displacement so upright text receives the correct
+      // start/end alignment after 180/360 degrees.
+      const center = {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+      };
+      const normalizedDisplacement = {
+        x: (local.x - center.x) / Math.max(box.width / 2, 1),
+        y: (local.y - center.y) / Math.max(box.height / 2, 1),
+      };
+      const interiorSide: Point | null =
+        normalizedDisplacement.x === 0 && normalizedDisplacement.y === 0
+          ? null
+          : Math.abs(normalizedDisplacement.x) >=
+              Math.abs(normalizedDisplacement.y)
+            ? { x: normalizedDisplacement.x > 0 ? 1 : -1, y: 0 }
+            : { x: 0, y: normalizedDisplacement.y > 0 ? 1 : -1 };
+      // MOS default labels are authored from pin/channel semantics rather than
+      // viewBox clearance. The 4-terminal symbols keep that anchor inside the
+      // padded box, while the narrower 3-terminal symbols put the same anchor
+      // just outside it. Treat both forms identically.
+      const semanticSide = isMosSymbol
+        ? interiorSide
+        : (reference?.side ?? null);
+      if (semanticSide) {
+        transformedSide = transformPoint(semanticSide, origin, newOrientation);
+      }
+      if (reference && !isMosSymbol) {
+        const edgeSide = transformPoint(reference.side, origin, newOrientation);
+        transformedSide = edgeSide;
         const corners = [
           { x: edges.left, y: edges.top },
           { x: edges.right, y: edges.top },
@@ -1191,11 +1221,11 @@ function followAttachedAnnotations(
           // Keep a deterministic typography fallback for a legacy/unknown
           // profile; formal rendering reports the invalid profile separately.
         }
-        if (transformedSide.x > 0) {
+        if (edgeSide.x > 0) {
           position = { x: bounds.right + reference.gap, y: position.y };
-        } else if (transformedSide.x < 0) {
+        } else if (edgeSide.x < 0) {
           position = { x: bounds.left - reference.gap, y: position.y };
-        } else if (transformedSide.y > 0) {
+        } else if (edgeSide.y > 0) {
           // SVG y is a baseline. Preserve the visual gap from the glyph top.
           position = {
             x: position.x,

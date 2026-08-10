@@ -4036,3 +4036,16 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   large-chunk warning remains; loopback browser automation was unavailable.
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `feat(editor): unify snap and alignment interactions`.
+
+## 2026-08-10 - Preserve MOS label side through rotation
+
+- Target: keep materialized transistor instance labels in the same semantic
+  position as renderer-owned defaults through repeated rotation.
+- Changed areas: made the Edit Engine recognize MOS symbols by terminal roles,
+  preserve their rigid semantic label anchor, and derive upright alignment from
+  normalized local displacement; added full-cycle NMOS/PMOS regressions for
+  both four-terminal variants and dedicated three-terminal symbols.
+- Validation: 23 focused Edit Engine/render placement tests, Edit Engine build,
+  repository typecheck, and `git diff --check` passed.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `fix(edit-engine): preserve mos label side through rotation`.
