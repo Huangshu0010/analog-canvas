@@ -1,8 +1,11 @@
 import { useReducer } from "react";
 import type { SetStateAction } from "react";
 
-import type { SchematicEdit } from "@icm/edit-engine";
-import type { Point, RouteEndpoint } from "@icm/model";
+import type { Point } from "@icm/model";
+
+import type { WireSource } from "./wire-editing";
+
+export type { WireSource } from "./wire-editing";
 
 export type EditorTool =
   "pointer" | "wire" | "guide" | "construction-line" | "arrow" | "rectangle";
@@ -11,13 +14,6 @@ export type DrawingTool = Extract<
   EditorTool,
   "construction-line" | "arrow" | "rectangle"
 >;
-
-export interface WireSource {
-  endpoint: RouteEndpoint;
-  netId: string | null;
-  point: Point;
-  preludeEdits: SchematicEdit[];
-}
 
 export type InteractionState =
   | { kind: "idle" }

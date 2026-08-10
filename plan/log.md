@@ -4005,3 +4005,19 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   and `git diff --check` passed. The existing large-chunk warning remains.
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `refactor(editor): extract selection inspector details`.
+
+## 2026-08-10 - Centralize wire editing contract
+
+- Target: move the wire source and deterministic edit-order contract out of
+  React interaction state and App orchestration.
+- Changed areas: added pure complete-wire, free-anchor, and snapped route-tap
+  proposal builders; moved `WireSource` ownership to the wire domain while
+  preserving an interaction-state compatibility export; replaced App's manual
+  merge/connect/route edit assembly with one proposal call.
+- Validation: 25 focused Vitest tests and six manual-editor Playwright wire
+  flows passed, followed by the full 423-test Vitest suite and all 59
+  Playwright flows; repository typecheck, editor production build,
+  changed-file Prettier, and `git diff --check` passed. The existing
+  large-chunk warning remains.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `refactor(editor): centralize wire editing contract`.

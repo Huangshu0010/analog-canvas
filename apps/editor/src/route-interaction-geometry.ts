@@ -24,8 +24,8 @@ import type { SchematicStyleProfile } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { clamp, closestPointOnSegment } from "./canvas-geometry";
-import type { WireSource } from "./interaction-state";
 import { instanceVisibleHitBox } from "./selection-geometry";
+import type { WireSource } from "./wire-editing";
 
 export interface RoutePolylineRecord {
   route: SchematicDocument["routes"][number];

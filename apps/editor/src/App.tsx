@@ -79,7 +79,7 @@ import { resolveEditorShortcut, stepBoundedScale } from "./editor-shortcuts";
 import { EditorHelpDialog } from "./editor-help-dialog";
 import { referencedDocumentId } from "./editor-session";
 import { useInteractionState } from "./interaction-state";
-import type { EditorTool, WireSource } from "./interaction-state";
+import type { EditorTool } from "./interaction-state";
 import {
   createTextEditingSession,
   proposeTextEditingCommit,
@@ -122,6 +122,12 @@ import {
 } from "./route-interaction-geometry";
 import { reflectOrientation } from "./shortcut-orientation";
 import type { ScreenFlip } from "./shortcut-orientation";
+import {
+  createFreeWireAnchor,
+  createRouteWireAnchor,
+  proposeWireCommit,
+} from "./wire-editing";
+import type { WireSource } from "./wire-editing";
 import { buildManualWirePath } from "./wire-path";
 
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
@@ -983,41 +989,13 @@ export function App({ project: initialProject }: AppProps) {
   function commitWire(candidate: WireSource): void {
     if (!wireSource) return;
     const suffix = nextRoutingSuffix();
-    const edits: SchematicEdit[] = [
-      ...wireSource.preludeEdits,
-      ...candidate.preludeEdits,
-    ];
-    let netId = wireSource.netId ?? candidate.netId;
-    if (
-      wireSource.netId &&
-      candidate.netId &&
-      wireSource.netId !== candidate.netId
-    ) {
-      netId = wireSource.netId;
-      edits.push({
-        kind: "merge_nets",
-        targetNetId: wireSource.netId,
-        sourceNetId: candidate.netId,
-      });
-    }
-    if (!netId) netId = `net-ui-${suffix}`;
-    edits.push({
-      kind: "connect_endpoints",
-      from: wireSource.endpoint,
-      to: candidate.endpoint,
-      ...(!wireSource.netId && !candidate.netId ? { newNetId: netId } : {}),
-    });
-    const routed = buildManualWirePath(wireSource, candidate, wireWaypoints);
-    edits.push({
-      kind: "set_route_points",
-      routeId: `route-ui-${suffix}`,
-      netId,
-      from: wireSource.endpoint,
-      to: candidate.endpoint,
-      waypoints: routed.waypoints,
-      segmentModes: routed.segmentModes,
-    });
-    const result = transact(edits);
+    const proposal = proposeWireCommit(
+      wireSource,
+      candidate,
+      wireWaypoints,
+      suffix,
+    );
+    const result = transact(proposal.edits);
     if (result.ok) {
       setWireSource(null);
       setWirePreviewPoint(null);
@@ -1032,22 +1010,7 @@ export function App({ project: initialProject }: AppProps) {
     netId: string,
     createNet: boolean,
   ): WireSource {
-    const junctionId = `junction-ui-${nextRoutingSuffix()}`;
-    return {
-      endpoint: { kind: "junction", junctionId },
-      netId,
-      point,
-      preludeEdits: [
-        {
-          kind: "add_junction",
-          junctionId,
-          netId,
-          position: point,
-          role: "route-anchor",
-          ...(createNet ? { createNet: true } : {}),
-        },
-      ],
-    };
+    return createFreeWireAnchor(point, netId, createNet, nextRoutingSuffix());
   }
 
   function fixWirePoint(point: Point): void {
@@ -1089,33 +1052,16 @@ export function App({ project: initialProject }: AppProps) {
       (candidate) => candidate.id === routeId,
     )!;
     const suffix = nextRoutingSuffix();
-    const junctionId = `junction-ui-${suffix}`;
     // Route taps are persisted geometry. Snap the projected screen hit back to
     // the document grid before splitRoute validates it, avoiding sub-pixel SVG
     // transform residue at an otherwise exact corner.
-    const splitPoint = {
-      x: snap(point.x, document.presentation.grid),
-      y: snap(point.y, document.presentation.grid),
-    };
-    return {
-      endpoint: { kind: "junction", junctionId },
-      netId: route.netId,
-      point: splitPoint,
-      preludeEdits: [
-        {
-          kind: "add_junction",
-          junctionId,
-          netId: route.netId,
-          position: splitPoint,
-          split: {
-            routeId,
-            firstRouteId: `${routeId}-a-${suffix}`,
-            secondRouteId: `${routeId}-b-${suffix}`,
-            segmentIndex,
-          },
-        },
-      ],
-    };
+    return createRouteWireAnchor(
+      route,
+      point,
+      segmentIndex,
+      document.presentation.grid,
+      suffix,
+    );
   }
 
   function handleRoutePointerDown(
