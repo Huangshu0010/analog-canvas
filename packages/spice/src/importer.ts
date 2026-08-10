@@ -87,6 +87,7 @@ function symbolFor(
   const symbols: Record<string, string> = {
     resistor: "resistor",
     capacitor: "capacitor",
+    inductor: "inductor",
     nmos: "nmos",
     pmos: "pmos",
     "voltage-source": "voltage-source",

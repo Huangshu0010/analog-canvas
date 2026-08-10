@@ -107,6 +107,7 @@ describe("Razavi symbol catalog", () => {
       ["capacitor", "reviewed", "razavi-reference-v1"],
       ["current-source", "reviewed", "razavi-reference-v1"],
       ["ground", "reviewed", "razavi-reference-v1"],
+      ["inductor", "reviewed", "razavi-reference-v1"],
       ["nmos", "reviewed", "razavi-reference-v1"],
       ["nmos3", "provisional", "razavi-reference-v1"],
       ["pmos", "reviewed", "razavi-reference-v1"],
@@ -163,7 +164,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(12);
+    expect(razaviCatalogSymbols).toHaveLength(13);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -178,6 +179,7 @@ describe("Razavi symbol catalog", () => {
       "capacitor",
       "current-source",
       "ground",
+      "inductor",
       "nmos",
       "pmos",
       "port",
@@ -207,7 +209,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("contains no removed legacy compatibility symbols", () => {
-    for (const symbolId of ["inductor", "diode", "npn", "pnp"]) {
+    for (const symbolId of ["diode", "npn", "pnp"]) {
       expect(getRazaviCatalogEntry(symbolId)).toBeUndefined();
       expect(builtInSymbols.some((symbol) => symbol.id === symbolId)).toBe(
         false,
@@ -219,6 +221,7 @@ describe("Razavi symbol catalog", () => {
     for (const symbolId of [
       "resistor",
       "capacitor",
+      "inductor",
       "port",
       "port-filled",
       "ground",
@@ -390,6 +393,28 @@ describe("Razavi symbol catalog", () => {
       },
     });
     expect(resistor.primitives).toHaveLength(1);
+  });
+
+  it("uses one continuous PDF-derived inductor path through both grid pins", () => {
+    const inductor = requireRazaviCatalogSymbol("inductor");
+    expect(inductor.pins).toMatchObject([
+      { name: "1", at: { x: 0, y: -30 }, direction: "north" },
+      { name: "2", at: { x: 0, y: 30 }, direction: "south" },
+    ]);
+    expect(inductor.primitives).toHaveLength(1);
+    expect(inductor.primitives[0]).toMatchObject({
+      kind: "path",
+      data: expect.stringMatching(/^M 0 -30 L 0 -29\.243 .* L 0 30$/u),
+      style: {
+        strokeRole: "normal",
+        lineCap: "butt",
+        lineJoin: "round",
+      },
+    });
+    expect(getRazaviCatalogEntry("inductor")?.generation).toMatchObject({
+      kind: "razavi-pdf-vector-reference",
+      converterPath: "scripts/generate-razavi-inductor-asset.mjs",
+    });
   });
 
   it("uses calibrated MOS and source arrowheads with external voltage polarity marks", () => {

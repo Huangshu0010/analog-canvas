@@ -4168,3 +4168,20 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   changed-file Prettier, live main GUI inspection, and `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `merge: integrate advanced editor GUI with mainline`.
+
+## 2026-08-10 - Add PDF-derived Razavi inductor
+
+- Target: add only the Razavi inductor from a textbook-native PDF path while
+  keeping PDF extraction, Symbol generation, and raster comparison separate.
+- Changed areas: standalone PDF extractor and provenance, compatible
+  hash-pinned `vectorEvidence` manifest entries, continuous inductor Symbol,
+  catalog/editor/SPICE registration, visual-contract ADR/specification, and
+  focused authority/catalog/import tests.
+- Validation: source fingerprint and extractor reproducibility, generator
+  stale checks, affected package builds, repository typecheck, 34 focused
+  tests, changed-file formatting, inductor fidelity diff (IoU `0.7849`, zero
+  registration lift, anti-alias verdict), and `git diff --check` passed. The
+  broad formatter reports only the pre-existing untouched
+  `packages/derived/src/connectivity.ts`.
+- Commit status: ready to commit on `main` as
+  `feat(symbols): add PDF-derived Razavi inductor`.

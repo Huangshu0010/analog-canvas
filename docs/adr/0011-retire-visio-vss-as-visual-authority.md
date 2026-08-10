@@ -2,6 +2,12 @@
 
 Status: `accepted`
 
+Amended by
+[`0012-pdf-vector-evidence-for-razavi-assets.md`](0012-pdf-vector-evidence-for-razavi-assets.md):
+the manifest remains the sole authority, but it may now hash-pin scoped PDF
+vector evidence with a raster witness when the accepted raster set lacks a
+component. The Visio/VSS retirement in this ADR is unchanged.
+
 Date: `2026-08-09`
 
 Owners: `packages/symbols`, `packages/render-svg`, `fixtures/visual-reference`,

@@ -75,6 +75,33 @@
       }
     },
     {
+      "symbolId": "inductor",
+      "name": "Inductor",
+      "category": "passive",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["1", "2"],
+      "palette": true,
+      "automaticMappings": ["spice:L"],
+      "assetPath": "inductor.symbol.json",
+      "assetHash": "a0e4bf19ef973f7fcbe184e568f691c4986ca8517aa2623eb06c633c070ebe10",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/inductor-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/inductor-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/inductor-vector-source.json",
+        "converterPath": "scripts/generate-razavi-inductor-asset.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
       "symbolId": "nmos",
       "name": "NMOS",
       "category": "transistor",

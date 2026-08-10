@@ -53,7 +53,7 @@ describe("SPICE elaboration and Project import", () => {
     );
   });
 
-  it("rejects an inductor instead of generating a fallback symbol", async () => {
+  it("imports reviewed inductors with the PDF-derived Razavi symbol", async () => {
     const entry = resolve(
       process.cwd(),
       "netlists/rlc-broadband-50-to-200-match/circuit.spi",
@@ -61,18 +61,13 @@ describe("SPICE elaboration and Project import", () => {
     const imported = importCompileResult(
       compileSourceBundle(await loadSourceBundleFromFile(entry)),
     );
-    expect(imported.project).toBeNull();
-    expect(imported.successful).toBe(false);
+    expect(imported.project).not.toBeNull();
+    expect(imported.successful).toBe(true);
     expect(
-      imported.diagnostics.find(
-        (item) =>
-          item.code === "SPICE_IMPORT_UNSUPPORTED_SYMBOL" &&
-          item.message.includes("L1"),
-      ),
-    ).toMatchObject({
-      severity: "error",
-      stage: "import",
-    });
+      imported.project?.documents[0]?.instances
+        .filter((instance) => instance.symbolId === "inductor")
+        .map((instance) => instance.properties["spice.name"]),
+    ).toEqual(["L1", "L2"]);
   });
 
   it("normalizes reviewed SKY130 MOS models without losing source facts", async () => {

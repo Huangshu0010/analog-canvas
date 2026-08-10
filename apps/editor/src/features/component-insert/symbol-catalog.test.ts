@@ -37,7 +37,8 @@ describe("component insertion catalog", () => {
     expect(symbols.map((symbol) => symbol.id)).toEqual(
       expect.arrayContaining(["nmos", "pmos", "resistor", "capacitor"]),
     );
-    for (const removed of ["diode", "inductor", "npn", "pnp", "opamp"]) {
+    expect(symbols.map((symbol) => symbol.id)).toContain("inductor");
+    for (const removed of ["diode", "npn", "pnp", "opamp"]) {
       expect(symbols.some((symbol) => symbol.id === removed)).toBe(false);
     }
   });

@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.0`
+Version: `1.1`
 
 Owners: `fixtures/visual-reference`, `packages/symbols`, `packages/derived`,
 `packages/render-svg`, `scripts`
@@ -16,20 +16,39 @@ remain in their owning specifications and are not duplicated here.
 
 ## Authority and evidence
 
-`fixtures/visual-reference/razavi-reference-v1/manifest.json` and the raster
-assets it hash-pins are the sole visual authority. They control component
-geometry, stroke hierarchy, node and Port treatment, arrows, typography,
-annotations, and visual acceptance. Supplemental rasters are scoped evidence
-inside the same authority, not competing authorities.
+`fixtures/visual-reference/razavi-reference-v1/manifest.json` and the evidence
+it hash-pins are the sole visual authority. They control component geometry,
+stroke hierarchy, node and Port treatment, arrows, typography, annotations,
+and visual acceptance. Supplemental rasters and PDF vector extracts are scoped
+evidence inside the same authority, not competing authorities.
+
+Existing raster targets remain raster-owned. A `pdf-vector-extract` entry is
+allowed only when the approved raster set lacks the component and the manifest
+records the source PDF SHA-256, PDF page, printed page, figure, extracted JSON,
+and a raster witness. The source PDF is external evidence; the committed,
+hash-pinned extract is the reproducible geometry input. Its raster witness
+keeps final validation on the same diff protocol as raster-owned assets.
 
 VSS, Visio, decoded master IR, historical generators, legacy assets, and the
 current candidate rendering are not visual evidence. If the authority lacks a
 component or feature, it remains unreviewed; do not infer it from those sources.
 
+PDF extraction, Symbol generation, and raster comparison are separate tools:
+
+```text
+source PDF -> tools/pdf-vector-extract -> pinned vector evidence + PNG witness
+pinned vector evidence -> family generator -> Symbol DSL
+PNG witness + rendered Symbol -> scripts/razavi-fidelity-diff.mjs -> report
+```
+
+The PDF extractor must not import the fidelity implementation, and the
+fidelity tool remains read-only with respect to vector evidence and Symbol DSL.
+
 Every reviewed reference target records or resolves:
 
 ```text
-assetPath and asset hash
+evidence path(s) and asset hash(es)
+source identity and page/figure provenance when PDF-derived
 originPx
 pixelsPerLogical
 fixed crop window
@@ -155,7 +174,8 @@ A Razavi palette entry is eligible only when all conditions hold:
 2. `catalog.json` records `reviewStatus: "reviewed"`;
 3. `palette` is true and `visualAuthority.kind` is
    `"razavi-reference-v1"`;
-4. referenced rasters and measurements are present and hash-checked;
+4. referenced evidence, raster witness, and measurements are present and
+   hash-checked;
 5. the symbol is present in `razaviProductSymbols`.
 
 `razaviProductSymbols` is the sole runtime device collection and the sole
@@ -201,8 +221,10 @@ although it writes derived reports and PNGs.
 
 ## Component extension workflow
 
-1. Add an approved raster to the authority fixture, record its scope, and pin
-   its hash. Stop if the required visual evidence is absent.
+1. Add approved evidence to the authority fixture, record its scope, and pin
+   its hash. Use a raster for raster-owned targets. For a PDF-only component,
+   add a `pdf-vector-extract` entry and its raster witness. Stop if neither form
+   contains sufficient evidence.
 2. Add or update a measurement file with coordinate system, scale, origin,
    fixed window, rotation, visible geometry, and intended Symbol mapping.
 3. Define electrical pins, order, roles, directions, variants, and any PDK/SPICE
@@ -222,6 +244,7 @@ Typical commands are:
 ```powershell
 pnpm symbols:razavi-mos
 pnpm symbols:razavi-peripherals
+pnpm symbols:razavi-inductor
 pnpm symbols:razavi
 pnpm symbols:razavi:check
 pnpm --filter @icm/symbols build
@@ -231,6 +254,10 @@ pnpm --filter @icm/render-svg build
 pnpm --filter @icm/exporters build
 node scripts/razavi-fidelity-diff.mjs <target>
 ```
+
+The PDF extraction command and dependencies are documented in
+`tools/pdf-vector-extract/README.md`; it is intentionally not part of the
+routine raster calibration command set.
 
 Run only the generators relevant to the changed family. Do not rewrite a
 reviewed asset merely to enlarge the palette or improve one metric at the cost
@@ -274,14 +301,17 @@ bounds or promotes the best translated IoU to the baseline score.
 
 ## Compatibility
 
-This consolidation changes neither persisted Projects nor current rendering.
-The hollow `port`, filled `port-filled`, formal Port, Junction, palette, and
-SPICE behavior remain distinct. The former Razavi style and component-extension
-specifications are superseded by this document and retained as redirects.
+Schema-version-1 manifests without `vectorEvidence` remain valid. Adding the
+inductor extends palette and SPICE `L` import behavior without changing
+persisted Project schema. The hollow `port`, filled `port-filled`, formal Port,
+Junction, and all existing symbol behavior remain distinct. The former Razavi
+style and component-extension specifications are superseded by this document
+and retained as redirects.
 
 Related decisions and explanatory evidence:
 
 - [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
+- [`../adr/0012-pdf-vector-evidence-for-razavi-assets.md`](../adr/0012-pdf-vector-evidence-for-razavi-assets.md)
 - [`symbol-dsl.md`](symbol-dsl.md)
 - [`visual-language.md`](visual-language.md)
 - [`../experience/razavi-symbol-construction-and-pixel-calibration.md`](../experience/razavi-symbol-construction-and-pixel-calibration.md)

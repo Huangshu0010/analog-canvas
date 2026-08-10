@@ -24,7 +24,7 @@ export interface RazaviSymbolCatalogEntry {
   assetPath: string;
   assetHash: string;
   generation?: {
-    kind: "razavi-raster-reference";
+    kind: "razavi-raster-reference" | "razavi-pdf-vector-reference";
     referenceManifestPath: string;
     referencePath: string;
     converterPath: string;

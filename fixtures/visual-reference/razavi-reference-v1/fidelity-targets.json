@@ -120,6 +120,13 @@
       "useVariant": false
     },
     {
+      "id": "inductor",
+      "measurementPath": "inductor-geometry.json",
+      "measurementKey": "inductor",
+      "symbolId": "inductor",
+      "useVariant": false
+    },
+    {
       "id": "capacitor-vertical",
       "measurementPath": "capacitor-geometry.json",
       "measurementKey": "capacitor-vertical",

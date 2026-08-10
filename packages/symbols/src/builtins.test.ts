@@ -10,6 +10,7 @@ const PRODUCT_IDS = [
   "capacitor",
   "current-source",
   "ground",
+  "inductor",
   "nmos",
   "pmos",
   "port",
@@ -32,7 +33,6 @@ describe("Razavi-only product Symbol Library", () => {
     const resolver = new InMemorySymbolResolver(builtInSymbols);
     for (const symbolId of [
       "diode",
-      "inductor",
       "npn",
       "pnp",
       "poly-resistor",

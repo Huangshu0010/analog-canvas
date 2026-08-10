@@ -25,6 +25,24 @@
       "scope": ["VDD supply marker geometry"]
     }
   ],
+  "vectorEvidence": [
+    {
+      "id": "razavi-textbook-figure-15-21-inductor",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 639,
+        "printedPage": 620,
+        "figure": "15.21"
+      },
+      "extractPath": "inductor-vector-source.json",
+      "extractSha256": "03641ab7a6d2f96edb57769f0c07c919f043b5ac584c2dfd34908bc8b61310f5",
+      "rasterPath": "inductor-reference.png",
+      "rasterSha256": "f3327aecd75ddc7231a0e90117904d2815ba07c30e1761eccfdb7f27bb471070",
+      "scope": ["inductor geometry", "inductor stroke treatment"]
+    }
+  ],
   "mosGeometryPath": "mos-geometry.json",
   "mosGeometrySha256": "0e61e355ca658dcde5ac127a729fd9893bf58dd07547de8a061a952f3772d195",
   "peripheralGeometryPath": "peripheral-geometry.json",
@@ -37,8 +55,10 @@
   "currentPortGeometrySha256": "182bc62fdec937cec49051ba5ad1ff802b8d23a576ff2695f8fdce02b0fa66fd",
   "vddGeometryPath": "vdd-geometry.json",
   "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
+  "inductorGeometryPath": "inductor-geometry.json",
+  "inductorGeometrySha256": "f718ef7c95303335ca752aed2a391eb41b38116ffd19251e340076988fa7e863",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "1191801074dba359cf6b05bcccdbe729fe35476bcea8fae7b05fb306e8ebf86b",
+  "fidelityTargetsSha256": "6c99006b66d09634bf8ac41997e3755d6cd691eefd06b27d12790f130f5d1e3a",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -51,11 +71,13 @@
     "ground, supply, port, and source presentation",
     "capacitor geometry and stroke treatment",
     "route current-arrow treatment, current-source geometry, and hollow port origin",
-    "VDD supply marker geometry"
+    "VDD supply marker geometry",
+    "PDF-derived inductor geometry and stroke treatment"
   ],
   "notes": [
-    "This raster is the only visual authority for Razavi style v1.",
+    "This manifest is the sole visual authority for Razavi style v1.",
     "Supplemental rasters are user-supplied evidence within this same sole authority.",
+    "PDF vector evidence is scoped, hash-pinned source evidence and carries a raster witness for the existing comparison workflow.",
     "Visio/VSS may establish legacy pin semantics but must not determine visual geometry."
   ]
 }

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "referenceId": "razavi-reference-v1",
+  "assetPath": "inductor-reference.png",
+  "assetSha256": "f3327aecd75ddc7231a0e90117904d2815ba07c30e1761eccfdb7f27bb471070",
+  "vectorEvidencePath": "inductor-vector-source.json",
+  "vectorEvidenceSha256": "03641ab7a6d2f96edb57769f0c07c919f043b5ac584c2dfd34908bc8b61310f5",
+  "coordinateSystem": "pdf-raster-witness-pixels",
+  "pixels": { "width": 64, "height": 131 },
+  "pixelsPerLogical": 1.867711,
+  "symbols": {
+    "inductor": {
+      "evidenceId": "razavi-textbook-figure-15-21-inductor",
+      "originPx": { "x": 32.141917, "y": 65.380768 },
+      "rotation": 0,
+      "window": {
+        "width": 64,
+        "height": 131,
+        "minX": -17.209256,
+        "minY": -35.005827
+      }
+    }
+  }
+}

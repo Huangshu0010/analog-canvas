@@ -77,7 +77,10 @@ For netlist changes, also verify:
 
 `lib/circuit.vss`, `tools/vss-import/`, and the `generate-visio-*` scripts are
 historical archive material. Do not run, extend, or use them to derive symbol
-geometry or style. The raster reference manifest under
-`fixtures/visual-reference/razavi-reference-v1/` is the only visual authority.
+geometry or style. The reference manifest under
+`fixtures/visual-reference/razavi-reference-v1/` and the scoped evidence it
+hash-pins are the only visual authority. PDF vector evidence is permitted only
+through the compatible manifest protocol defined by
+[`docs/adr/0012-pdf-vector-evidence-for-razavi-assets.md`](docs/adr/0012-pdf-vector-evidence-for-razavi-assets.md).
 The VSS archive remains immutable while legacy provenance is retired from the
 catalog; it must never be rewritten or interpreted as text.

@@ -8,6 +8,7 @@ export default defineConfig({
     include: [
       "apps/**/*.test.{ts,tsx}",
       "packages/**/*.test.{ts,tsx}",
+      "scripts/**/*.test.mjs",
       "skills/circuit-layout/scripts/**/*.test.{ts,mjs}",
     ],
   },
