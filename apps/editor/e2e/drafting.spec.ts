@@ -1,36 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 
-async function openMenu(page: Page, name: string): Promise<Locator> {
-  const summary = page.locator("summary", { hasText: name }).filter({
-    hasText: new RegExp(`^${name}$`, "u"),
-  });
-  const details = summary.locator("..");
-  if ((await details.getAttribute("open")) === null) await summary.click();
-  return details;
-}
-
-async function clickCommand(
-  page: Page,
-  menu: string,
-  button: string,
-): Promise<void> {
-  const details = await openMenu(page, menu);
-  await details.getByRole("button", { name: button, exact: true }).click();
-}
-
-async function downloadBytes(
-  page: Page,
-  menu: string,
-  buttonName: string,
-): Promise<Buffer> {
-  const downloadPromise = page.waitForEvent("download");
-  await clickCommand(page, menu, buttonName);
-  const stream = await (await downloadPromise).createReadStream();
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-  return Buffer.concat(chunks);
-}
+import { clickCommand, downloadBytes } from "./editor-fixtures.js";
 
 // Two-phase drafting creation: click to set the start, move to preview, click to
 // commit. Arrow commits on the second click; construction line commits on the
@@ -293,6 +264,24 @@ test("editor mounts without console errors", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("schematic-canvas")).toBeVisible();
   expect(consoleErrors).toEqual([]);
+});
+
+test("switching creation tools discards the incompatible draft session", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "Draw", "Arrow (A)");
+  await page.getByTestId("schematic-canvas").click({
+    position: { x: 220, y: 220 },
+  });
+  await expect(page.getByTestId("drafting-create-preview")).toBeVisible();
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
+  await expect(page.getByTestId("drafting-create-preview")).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
 // P0-2: moving an existing drafting object commits exactly one transaction,

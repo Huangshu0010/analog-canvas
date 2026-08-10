@@ -436,21 +436,6 @@ body {
   background: linear-gradient(135deg, var(--icm-surface-muted), #fff);
 }
 
-.component-palette {
-  position: fixed;
-  z-index: 20;
-  top: 4rem;
-  left: 15rem;
-  width: min(36rem, calc(100vw - 17rem));
-  max-height: calc(100vh - 6rem);
-  overflow: auto;
-  padding: 0.8rem;
-  border: 1px solid var(--icm-border);
-  border-radius: var(--icm-radius-lg);
-  background: var(--icm-surface);
-  box-shadow: var(--icm-shadow-lg);
-}
-
 .dock {
   display: flex;
   flex-direction: column;
@@ -604,63 +589,11 @@ body {
   -webkit-line-clamp: 2;
 }
 
-.palette-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.palette-header h2 {
-  margin: 0;
-  font-size: 0.95rem;
-  letter-spacing: -0.01em;
-}
-
-.component-palette > input {
-  width: 100%;
-  margin: 0.65rem 0;
-  min-height: 2.35rem;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--icm-border);
-  border-radius: var(--icm-radius-sm);
-  background: var(--icm-surface-muted);
-  font: inherit;
-}
-
-.palette-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.45rem;
-}
-
-.palette-group h3 {
-  margin: 0.75rem 0 0.35rem;
-  color: var(--icm-text-muted);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.palette-grid button {
-  display: grid;
-  grid-template-columns: 3.4rem 1fr;
-  grid-template-rows: auto auto;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.7rem;
-  border-color: var(--icm-border);
-  border-radius: var(--icm-radius-md);
-  box-shadow: none;
-  text-align: left;
-}
-
 .palette-symbol-preview {
-  grid-row: 1 / 3;
   width: 3rem;
   height: 3rem;
 }
 
-.palette-grid span,
 .command-popover small {
   color: var(--icm-text-muted);
   font-size: 0.72rem;

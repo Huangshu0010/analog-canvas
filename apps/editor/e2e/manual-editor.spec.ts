@@ -4,24 +4,7 @@ import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
 
 import { createRoutingDemoProject } from "../src/routing-demo.js";
-
-async function openMenu(page: Page, name: string): Promise<Locator> {
-  const summary = page.locator("summary", { hasText: name }).filter({
-    hasText: new RegExp(`^${name}$`, "u"),
-  });
-  const details = summary.locator("..");
-  if ((await details.getAttribute("open")) === null) await summary.click();
-  return details;
-}
-
-async function clickCommand(
-  page: Page,
-  menu: string,
-  button: string,
-): Promise<void> {
-  const details = await openMenu(page, menu);
-  await details.getByRole("button", { name: button, exact: true }).click();
-}
+import { clickCommand, downloadBytes, openMenu } from "./editor-fixtures.js";
 
 async function chooseComponent(page: Page, symbolId: string): Promise<void> {
   const library = page.getByRole("complementary", {
@@ -150,19 +133,6 @@ async function clickRouteVertexWithScreenOffset(
   if (!point)
     throw new Error(`Route vertex ${routeId}:${vertexIndex} is not measurable`);
   await page.mouse.click(point.x + offset.x, point.y + offset.y);
-}
-
-async function downloadBytes(
-  page: Page,
-  menu: string,
-  buttonName: string,
-): Promise<Buffer> {
-  const downloadPromise = page.waitForEvent("download");
-  await clickCommand(page, menu, buttonName);
-  const stream = await (await downloadPromise).createReadStream();
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-  return Buffer.concat(chunks);
 }
 
 async function readRoutePoints(page: Page, routeId: string) {

@@ -7,12 +7,12 @@ import { EditTransactionSchema } from "@icm/edit-engine";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { App } from "./App";
 import {
-  App,
   defaultRazaviSymbolVariantId,
   razaviHiddenBulkRisk,
   razaviMosPresentationEdits,
-} from "./App";
+} from "./razavi-presentation";
 import { createDemoProject } from "./demo-project";
 import { createRoutingDemoProject } from "./routing-demo";
 

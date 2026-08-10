@@ -51,7 +51,6 @@ import type {
 import {
   buildSvgScene,
   defaultInstanceLabelPlacement,
-  renderSymbolDefinitionBody,
   resolveSchematicStyleProfile,
   schematicTextDocument,
   schematicTextFontSize,
@@ -59,12 +58,7 @@ import {
 import type { SchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
-import {
-  builtInSymbols,
-  createProjectSymbolResolver,
-  razaviReferencePaletteSymbols,
-} from "@icm/symbols";
-import type { SymbolDefinition } from "@icm/symbols";
+import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
 
 import { copySelection, proposePaste } from "./clipboard";
 import type { SchematicClipboard } from "./clipboard";
@@ -72,6 +66,19 @@ import { startCanvasDragSession } from "./canvas-drag-session";
 import type { CanvasDragSession } from "./canvas-drag-session";
 import { startCanvasDragVisual } from "./canvas-drag-visual";
 import { resolveCanvasHitAtPoint } from "./canvas-hit-resolver";
+import { ComponentLibrary } from "./component-library";
+import {
+  referencedDocumentId,
+  replaceProjectDocument,
+  resolveActiveDocument,
+} from "./editor-session";
+import { useInteractionState } from "./interaction-state";
+import type { EditorTool, WireSource } from "./interaction-state";
+import {
+  defaultRazaviSymbolVariantId,
+  razaviHiddenBulkRisk,
+  razaviMosPresentationEdits,
+} from "./razavi-presentation";
 import {
   collectVisualRouteDeletion,
   explicitAnnotationRemovals,
@@ -164,61 +171,8 @@ const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
   draftingIds: [],
 };
 
-type EditorTool =
-  "pointer" | "wire" | "guide" | "construction-line" | "arrow" | "rectangle";
-
-interface WireSource {
-  endpoint: RouteEndpoint;
-  netId: string | null;
-  point: Point;
-  preludeEdits: SchematicEdit[];
-}
-
 export interface AppProps {
   project?: CircuitProject;
-}
-
-function replaceDocument(
-  project: CircuitProject,
-  document: SchematicDocument,
-): CircuitProject {
-  return CircuitProjectSchema.parse({
-    ...project,
-    documents: project.documents.map((candidate) =>
-      candidate.id === document.id ? document : candidate,
-    ),
-  });
-}
-
-function referencedDocumentId(
-  project: CircuitProject,
-  instance: SchematicDocument["instances"][number],
-): string | null {
-  const stableChildDocumentId = instance.properties["spice.childDocumentId"];
-  if (
-    typeof stableChildDocumentId === "string" &&
-    project.documents.some(
-      (candidate) => candidate.id === stableChildDocumentId,
-    )
-  ) {
-    return stableChildDocumentId;
-  }
-
-  // Projects saved before imported hierarchy links were stabilized retain the
-  // original SPICE target string. Keep this compatibility path read-only; new
-  // imports always write spice.childDocumentId.
-  const target = instance.properties["spice.target"];
-  if (typeof target !== "string" || !target.startsWith("subcircuit:")) {
-    return null;
-  }
-  const name = target.slice("subcircuit:".length).toLowerCase();
-  return (
-    project.documents.find(
-      (candidate) =>
-        candidate.name.toLowerCase() === name ||
-        candidate.sourceBinding?.cellName.toLowerCase() === name,
-    )?.id ?? null
-  );
 }
 
 function snap(value: number, grid: number): number {
@@ -563,137 +517,6 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-function symbolCategory(symbolId: string): string {
-  if (["nmos", "pmos", "nmos3", "pmos3", "npn", "pnp"].includes(symbolId)) {
-    return "Transistors";
-  }
-  if (
-    ["resistor", "capacitor", "inductor", "crystal", "transformer"].includes(
-      symbolId,
-    )
-  ) {
-    return "Passives";
-  }
-  if (
-    [
-      "voltage-source",
-      "current-source",
-      "ac-voltage-source",
-      "pulse-voltage-source",
-    ].includes(symbolId)
-  ) {
-    return "Sources";
-  }
-  if (["diode", "zener", "schottky", "led"].includes(symbolId)) {
-    return "Diodes";
-  }
-  if (["opamp", "switch-open", "switch-closed"].includes(symbolId)) {
-    return "Functional";
-  }
-  return "Power and Ports";
-}
-
-const RAZAVI_DEFAULT_SYMBOL_VARIANTS: Readonly<Record<string, string>> = {
-  nmos: "textbook-3terminal",
-  pmos: "textbook-3terminal",
-};
-
-const RAZAVI_RETIRED_PALETTE_SYMBOL_IDS = new Set(["nmos3", "pmos3"]);
-const RAZAVI_IMPLICIT_BULK_NET_NAMES = new Set([
-  "0",
-  "gnd",
-  "vss",
-  "vdd",
-  "vssa",
-  "vdda",
-  "vgnd",
-  "vpwr",
-]);
-
-/**
- * Razavi is the sole current presentation family. Canonical MOS definitions
- * retain D/G/S/B electrically, while the textbook variant controls the
- * approved visible three-terminal body and source arrow.
- */
-export function defaultRazaviSymbolVariantId(
-  symbolId: string,
-): string | undefined {
-  return RAZAVI_DEFAULT_SYMBOL_VARIANTS[symbolId];
-}
-
-export function razaviHiddenBulkRisk(
-  document: SchematicDocument,
-  instanceId: string,
-): SchematicDocument["nets"][number] | undefined {
-  const bulkNet = document.nets.find((net) =>
-    net.terminals.some(
-      (terminal) =>
-        terminal.instanceId === instanceId && terminal.pinName === "B",
-    ),
-  );
-  if (!bulkNet) return undefined;
-  const isImplicitSupply = [bulkNet.name, bulkNet.id]
-    .filter((name): name is string => Boolean(name))
-    .map((name) => name.toLowerCase().replaceAll(/[^a-z0-9]/gu, ""))
-    .some((name) => RAZAVI_IMPLICIT_BULK_NET_NAMES.has(name));
-  return isImplicitSupply ? undefined : bulkNet;
-}
-
-/**
- * Razavi presentation is fixed to the three-terminal visual variant. The B
- * terminal stays in electrical/SPICE data; non-supply B connections are
- * surfaced to the user as hidden-bulk risks instead of changing the artwork.
- */
-export function razaviMosPresentationEdits(
-  document: SchematicDocument,
-): SchematicEdit[] {
-  return document.instances.flatMap((instance) => {
-    const symbolVariantId = defaultRazaviSymbolVariantId(instance.symbolId);
-    if (!symbolVariantId || instance.symbolVariantId === symbolVariantId) {
-      return [];
-    }
-    return [
-      {
-        kind: "set_instance_symbol",
-        instanceId: instance.id,
-        symbolId: instance.symbolId,
-        symbolVariantId,
-      },
-    ];
-  });
-}
-
-function SymbolThumbnail({ symbol }: { symbol: SymbolDefinition }) {
-  const variantId = defaultRazaviSymbolVariantId(symbol.id);
-  const variant = symbol.variants.find(
-    (candidate) => candidate.id === variantId,
-  );
-  const { x, y, width, height } = symbol.viewBox;
-  const padding = Math.max(width, height) * 0.12;
-  return (
-    <svg
-      className="palette-symbol-preview"
-      viewBox={`${x - padding} ${y - padding} ${width + padding * 2} ${height + padding * 2}`}
-      aria-hidden="true"
-    >
-      <g
-        fill="none"
-        stroke="#000"
-        strokeWidth="1"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-        dangerouslySetInnerHTML={{
-          __html: renderSymbolDefinitionBody(
-            symbol,
-            variant?.hiddenPrimitiveParts,
-            variant?.additionalPrimitives,
-          ),
-        }}
-      />
-    </svg>
-  );
-}
-
 // Rotate a free drafting anchor 90°/−90° about a pivot. Non-free anchors (route
 // or object-attached) are returned unchanged: their position is derived from
 // the thing they attach to, so a free-rotation must not detach them. Only free
@@ -891,17 +714,29 @@ export function App({ project: initialProject }: AppProps) {
     useState<RouteStretchPreview | null>(null);
   const [draftingHandlePreview, setDraftingHandlePreview] =
     useState<DraftingHandlePreview | null>(null);
-  // Two-phase drafting creation state (mirrors the wire tool's
-  // wireSource / wirePreviewPoint / wireWaypoints model). The first click fixes
-  // the start (and a snap candidate), hover updates the preview, the next click
-  // commits one upsert_drafting_object transaction. Construction lines append a
-  // vertex per click; arrows commit on the second click. See commitDraftingCreate.
-  const [draftingSource, setDraftingSource] = useState<Point | null>(null);
-  const [draftingHover, setDraftingHover] = useState<Point | null>(null);
-  const [draftingWaypoints, setDraftingWaypoints] = useState<Point[]>([]);
-  const [draftingSnapPoint, setDraftingSnapPoint] = useState<Point | null>(
-    null,
-  );
+  const {
+    state: interactionState,
+    tool,
+    pendingSymbolId,
+    wireSource,
+    wirePreviewPoint,
+    wireWaypoints,
+    draftingSource,
+    draftingHover,
+    draftingWaypoints,
+    draftingSnapPoint,
+    setTool,
+    beginComponentPlacement,
+    setWireSource,
+    setWirePreviewPoint,
+    setWireWaypoints,
+    setDraftingSource,
+    setDraftingHover,
+    setDraftingWaypoints,
+    setDraftingSnapPoint,
+    clearDraftingCreate,
+    cancelInteraction,
+  } = useInteractionState();
   const [draftingInspectorSegment, setDraftingInspectorSegment] = useState<{
     objectId: string;
     index: number;
@@ -914,10 +749,6 @@ export function App({ project: initialProject }: AppProps) {
     objectId: string;
     value: string;
   } | null>(null);
-  const [tool, setTool] = useState<EditorTool>("pointer");
-  const [wireSource, setWireSource] = useState<WireSource | null>(null);
-  const [wirePreviewPoint, setWirePreviewPoint] = useState<Point | null>(null);
-  const [wireWaypoints, setWireWaypoints] = useState<Point[]>([]);
   const [selectedRouteSegmentIndex, setSelectedRouteSegmentIndex] = useState<
     number | null
   >(null);
@@ -928,10 +759,6 @@ export function App({ project: initialProject }: AppProps) {
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [paletteQuery, setPaletteQuery] = useState("");
-  const [libraryOpen, setLibraryOpen] = useState(true);
-  const [pendingSymbolId, setPendingSymbolId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
@@ -966,11 +793,7 @@ export function App({ project: initialProject }: AppProps) {
         ),
     }),
   );
-  const document =
-    project.documents.find((candidate) => candidate.id === activeDocumentId) ??
-    project.documents.find(
-      (candidate) => candidate.id === project.topDocumentId,
-    )!;
+  const document = resolveActiveDocument(project, activeDocumentId);
   const renderedDocument = useMemo(() => {
     if (!draftingHandlePreview || !document.drafting) return document;
     return {
@@ -1584,26 +1407,6 @@ export function App({ project: initialProject }: AppProps) {
     (count, candidate) => count + candidate.instances.length,
     0,
   );
-  const paletteSource =
-    document.presentation.styleProfileId === "razavi-textbook-v1"
-      ? razaviReferencePaletteSymbols
-      : builtInSymbols;
-  const componentSymbols = paletteSource.filter(
-    (symbol) =>
-      symbol.id !== "generic-block" &&
-      !RAZAVI_RETIRED_PALETTE_SYMBOL_IDS.has(symbol.id) &&
-      `${symbol.name} ${symbol.id} ${symbol.aliases.join(" ")}`
-        .toLowerCase()
-        .includes(paletteQuery.trim().toLowerCase()),
-  );
-  const componentGroups = [
-    ...new Set(componentSymbols.map((symbol) => symbolCategory(symbol.id))),
-  ].map((category) => ({
-    category,
-    symbols: componentSymbols.filter(
-      (symbol) => symbolCategory(symbol.id) === category,
-    ),
-  }));
   const contentScene = buildSvgScene(document, resolver);
 
   useEffect(() => {
@@ -1705,10 +1508,7 @@ export function App({ project: initialProject }: AppProps) {
     setSelectedRouteSegmentIndex(null);
     setTextEditing(null);
     setSelectedEndpoint(null);
-    setWireSource(null);
-    setWirePreviewPoint(null);
-    setWireWaypoints([]);
-    setTool("pointer");
+    cancelInteraction();
   }
 
   function clearSupplementalSelection(): void {
@@ -1862,7 +1662,7 @@ export function App({ project: initialProject }: AppProps) {
     }
     if (result.applied) {
       setProject((current) => {
-        const next = replaceDocument(current, result.document);
+        const next = replaceProjectDocument(current, result.document);
         stageRecovery(next);
         return next;
       });
@@ -1895,10 +1695,6 @@ export function App({ project: initialProject }: AppProps) {
 
   function activateTool(nextTool: EditorTool): void {
     setTool(nextTool);
-    clearDraftingCreate();
-    setWireSource(null);
-    setWirePreviewPoint(null);
-    setWireWaypoints([]);
     if (nextTool !== "pointer") {
       setSelectedRouteId(null);
       setSelectedRouteSegmentIndex(null);
@@ -2813,7 +2609,7 @@ export function App({ project: initialProject }: AppProps) {
     ]);
     if (result.ok) {
       setSelectedIds([id]);
-      setPendingSymbolId(null);
+      cancelInteraction();
       setStatus(`Added ${id} (${symbolId})`);
     }
   }
@@ -4873,14 +4669,6 @@ export function App({ project: initialProject }: AppProps) {
     };
   }
 
-  // Reset the two-phase drafting creation state.
-  function clearDraftingCreate(): void {
-    setDraftingSource(null);
-    setDraftingHover(null);
-    setDraftingWaypoints([]);
-    setDraftingSnapPoint(null);
-  }
-
   // Handle a canvas click while the Arrow / Construction line tool is active.
   // Mirrors the wire tool's click model: first click fixes the start (and a snap
   // candidate), hover updates the preview, the next click commits. Construction
@@ -5351,18 +5139,6 @@ export function App({ project: initialProject }: AppProps) {
         setStatus("Cancelled text editing");
         return;
       }
-      if (
-        event.key === "Escape" &&
-        selectedDrafting &&
-        (selectedDrafting.kind === "arrow" ||
-          selectedDrafting.kind === "construction-line" ||
-          selectedDrafting.kind === "rectangle")
-      ) {
-        event.preventDefault();
-        setSelectedDraftingId(null);
-        setStatus("Cleared drawing selection");
-        return;
-      }
       if (isTypingTarget(event.target)) return;
       const key = event.key.toLowerCase();
       const plainShortcut = !event.ctrlKey && !event.metaKey && !event.altKey;
@@ -5481,28 +5257,32 @@ export function App({ project: initialProject }: AppProps) {
           closeHelp();
           return;
         }
-        // Cancel an in-progress drafting creation first (two-phase click model).
-        if (
-          (tool === "arrow" ||
-            tool === "construction-line" ||
-            tool === "rectangle") &&
-          draftingSource !== null
-        ) {
-          clearDraftingCreate();
-          setStatus("Drawing cancelled");
-          return;
-        }
-        setTool("pointer");
-        setWireSource(null);
-        setWirePreviewPoint(null);
-        setWireWaypoints([]);
-        setPendingSymbolId(null);
-        setBoxPreview(null);
         if (canvasDragSessionRef.current) {
           canvasDragSessionRef.current.cancel();
           setStatus("Cancelled canvas drag");
           return;
         }
+        if (interactionState.kind !== "idle") {
+          cancelInteraction();
+          setBoxPreview(null);
+          setStatus(
+            interactionState.kind === "drawing"
+              ? "Drawing cancelled"
+              : "Cancelled active tool",
+          );
+          return;
+        }
+        if (
+          selectedDrafting &&
+          (selectedDrafting.kind === "arrow" ||
+            selectedDrafting.kind === "construction-line" ||
+            selectedDrafting.kind === "rectangle")
+        ) {
+          setSelectedDraftingId(null);
+          setStatus("Cleared drawing selection");
+          return;
+        }
+        setBoxPreview(null);
         setStatus("Cancelled");
       } else if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
@@ -5537,7 +5317,19 @@ export function App({ project: initialProject }: AppProps) {
             <span data-testid="active-document-name">{document.name}</span>
           </p>
         </div>
-        <nav className="toolbar" aria-label="Editor commands">
+        <nav
+          className="toolbar"
+          aria-label="Editor commands"
+          onClick={(event) => {
+            const target = event.target;
+            if (
+              target instanceof Element &&
+              target.closest(".command-popover button")
+            ) {
+              dismissOpenCommandMenus();
+            }
+          }}
+        >
           {hasImportedHierarchy ? (
             <div
               className="document-nav"
@@ -5943,106 +5735,18 @@ export function App({ project: initialProject }: AppProps) {
           </section>
         </div>
       ) : null}
-      {paletteOpen ? (
-        <section className="component-palette" aria-label="Component palette">
-          <div className="palette-header">
-            <h2>Add Component</h2>
-            <button
-              type="button"
-              onClick={() => setPaletteOpen(false)}
-              aria-label="Close component palette"
-            >
-              ×
-            </button>
-          </div>
-          <input
-            autoFocus
-            value={paletteQuery}
-            onChange={(event) => setPaletteQuery(event.currentTarget.value)}
-            placeholder="Search symbols"
-            aria-label="Search components"
-          />
-          {componentGroups.map((group) => (
-            <section key={group.category} className="palette-group">
-              <h3>{group.category}</h3>
-              <div className="palette-grid">
-                {group.symbols.map((symbol) => (
-                  <button
-                    type="button"
-                    key={symbol.id}
-                    data-testid={`add-component-${symbol.id}`}
-                    onClick={() => {
-                      setPendingSymbolId(symbol.id);
-                      setPaletteOpen(false);
-                      setTool("pointer");
-                      setStatus(`Place ${symbol.name} on the canvas`);
-                    }}
-                  >
-                    <SymbolThumbnail symbol={symbol} />
-                    <strong>{symbol.name}</strong>
-                    <span>{symbol.id}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </section>
-      ) : null}
       <aside
         className="dock"
         aria-label="Symbols and drawing tools"
         role="complementary"
       >
-        <div className="library-panel">
-          <div className="library-heading">
-            <h2>Symbols &amp; Tools</h2>
-            <button
-              type="button"
-              aria-expanded={libraryOpen}
-              onClick={() => setLibraryOpen((current) => !current)}
-            >
-              {libraryOpen ? "Collapse" : "Expand"}
-            </button>
-          </div>
-          {libraryOpen ? (
-            <>
-              <input
-                value={paletteQuery}
-                onChange={(event) => setPaletteQuery(event.currentTarget.value)}
-                placeholder="Search components"
-                aria-label="Search components"
-              />
-              <details className="library-components" open>
-                <summary>Components</summary>
-                <div className="library-components-content">
-                  {componentGroups.map((group) => (
-                    <details key={group.category} open>
-                      <summary>{group.category}</summary>
-                      <div className="library-component-grid">
-                        {group.symbols.map((symbol) => (
-                          <button
-                            type="button"
-                            key={symbol.id}
-                            data-testid={`library-component-${symbol.id}`}
-                            title={`Place ${symbol.name}`}
-                            onClick={() => {
-                              setPendingSymbolId(symbol.id);
-                              setTool("pointer");
-                              setStatus(`Place ${symbol.name} on the canvas`);
-                            }}
-                          >
-                            <SymbolThumbnail symbol={symbol} />
-                            <span>{symbol.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </details>
-                  ))}
-                </div>
-              </details>
-            </>
-          ) : null}
-        </div>
+        <ComponentLibrary
+          styleProfileId={document.presentation.styleProfileId}
+          onPlace={(symbolId, symbolName) => {
+            beginComponentPlacement(symbolId);
+            setStatus(`Place ${symbolName} on the canvas`);
+          }}
+        />
         <section className="selection-shelf" aria-label="Selection">
           <header
             className="selection-shelf-header"
