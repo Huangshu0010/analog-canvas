@@ -3297,6 +3297,17 @@ formatting`.
   builds, and `git diff --check` passed.
 - Commit status: ready for `fix(razavi): calibrate resistor sharp tips`.
 
+## 2026-08-10 - Semantic default instance-label placement
+
+- Target: prevent new component labels from occupying terminal escape lanes.
+- Result: shared semantic placement now assigns passive/source labels to their
+  side, Port labels to the reverse endpoint extension, and MOS labels to the
+  gate-opposite lower body side. Rotation and mirroring preserve outward text
+  alignment; explicit labels are not relocated.
+- Validation: focused placement Vitest 5/5, Render-SVG and Editor builds, and
+  `git diff --check` passed.
+- Commit status: ready for `fix(editor): place default labels by symbol semantics`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next

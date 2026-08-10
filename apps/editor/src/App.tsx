@@ -50,6 +50,7 @@ import type {
 } from "@icm/model";
 import {
   buildSvgScene,
+  defaultInstanceLabelPlacement,
   renderSymbolDefinitionBody,
   resolveSchematicStyleProfile,
   schematicTextDocument,
@@ -1469,28 +1470,13 @@ export function App({ project: initialProject }: AppProps) {
     if (!resolved || resolved.definition.labelVisibility === "hidden") {
       return null;
     }
-    const viewBox = resolved.definition.viewBox;
-    const corners = [
-      { x: viewBox.x, y: viewBox.y },
-      { x: viewBox.x + viewBox.width, y: viewBox.y },
-      { x: viewBox.x, y: viewBox.y + viewBox.height },
-      { x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
-    ].map((point) =>
-      transformPoint(point, instance.placement!.position, instance.placement!),
+    const placement = defaultInstanceLabelPlacement(
+      instance,
+      resolved.definition,
+      styleProfile,
     );
-    const minimumX = Math.min(...corners.map((point) => point.x));
-    const maximumX = Math.max(...corners.map((point) => point.x));
-    const maximumY = Math.max(...corners.map((point) => point.y));
-    const position = {
-      x: Math.round((minimumX + maximumX) / 2),
-      y: Math.round(
-        document.presentation.styleProfileId === "textbook-monochrome-v1"
-          ? maximumY + 14
-          : maximumY +
-              styleProfile.typography.labelGap +
-              styleProfile.typography.instanceFontSize,
-      ),
-    };
+    if (!placement) return null;
+    const position = placement.position;
     return {
       id: `instance-label-${instance.id}`,
       kind: "instance-label",
@@ -1501,7 +1487,7 @@ export function App({ project: initialProject }: AppProps) {
         x: position.x - instance.placement.position.x,
         y: position.y - instance.placement.position.y,
       },
-      alignment: "middle",
+      alignment: placement.alignment,
       rotation: 0,
       locked: false,
     };

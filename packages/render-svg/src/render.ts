@@ -34,6 +34,7 @@ import {
 } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
 import type { RichTextDocumentInput } from "./rich-text.js";
+import { defaultInstanceLabelPlacement } from "./default-instance-label-placement.js";
 
 export interface SvgRenderOptions {
   bounds?: Rect;
@@ -600,21 +601,17 @@ export function buildSvgScene(
         instance,
         profile,
       );
-      const bounds = symbolBounds(resolved.definition, instance);
-      const labelX = bounds.x + bounds.width / 2;
-      const labelY =
-        profile.id === "textbook-monochrome-v1"
-          ? bounds.y + bounds.height + 14
-          : bounds.y +
-            bounds.height +
-            profile.typography.labelGap +
-            profile.typography.instanceFontSize;
+      const labelPlacement = defaultInstanceLabelPlacement(
+        instance,
+        resolved.definition,
+        profile,
+      );
       const labelHiddenBySymbol =
         resolved.definition.labelVisibility === "hidden";
       const defaultLabel =
-        explicitInstanceLabels.has(instance.id) || labelHiddenBySymbol
+        explicitInstanceLabels.has(instance.id) || labelHiddenBySymbol || !labelPlacement
           ? ""
-          : `<text x="${labelX}" y="${labelY}" text-anchor="middle"${schematicTextSizeAttribute("default-instance", profile)}>${renderSchematicTextContent(instance.id, "default-instance", profile)}</text>`;
+          : `<text x="${labelPlacement.position.x}" y="${labelPlacement.position.y}" text-anchor="${labelPlacement.alignment}"${schematicTextSizeAttribute("default-instance", profile)}>${renderSchematicTextContent(instance.id, "default-instance", profile)}</text>`;
       return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}>${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
     })
     .join("");
