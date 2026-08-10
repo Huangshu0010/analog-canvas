@@ -625,6 +625,85 @@ interface NetLabelRouteAnchor {
   arcFraction: number;
 }
 
+interface RouteMarkerAnchor {
+  annotationId: string;
+  routeId: string;
+  segmentIndex: number;
+  segmentCount: number;
+  t: number;
+  position: Point;
+  direction: Point;
+  routeStart: Point;
+  routeEnd: Point;
+}
+
+function closestRouteMarkerAnchor(
+  points: readonly Point[],
+  position: Point,
+  preferredDirection: Point,
+): { segmentIndex: number; t: number; distanceSquared: number } | null {
+  const candidates = points.slice(0, -1).flatMap((from, segmentIndex) => {
+    const to = points[segmentIndex + 1]!;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const lengthSquared = dx * dx + dy * dy;
+    if (lengthSquared === 0) return [];
+    const t = Math.max(
+      0,
+      Math.min(
+        1,
+        ((position.x - from.x) * dx + (position.y - from.y) * dy) /
+          lengthSquared,
+      ),
+    );
+    const anchor = { x: from.x + dx * t, y: from.y + dy * t };
+    const direction = { x: Math.sign(dx), y: Math.sign(dy) };
+    return [
+      {
+        segmentIndex,
+        t,
+        distanceSquared:
+          (position.x - anchor.x) ** 2 + (position.y - anchor.y) ** 2,
+        directionPenalty:
+          direction.x === preferredDirection.x &&
+          direction.y === preferredDirection.y
+            ? 0
+            : direction.x === -preferredDirection.x &&
+                direction.y === -preferredDirection.y
+              ? 1
+              : 2,
+      },
+    ];
+  });
+  const closest = candidates.sort(
+    (left, right) =>
+      left.distanceSquared - right.distanceSquared ||
+      left.directionPenalty - right.directionPenalty ||
+      left.segmentIndex - right.segmentIndex,
+  )[0];
+  return closest
+    ? {
+        segmentIndex: closest.segmentIndex,
+        t: closest.t,
+        distanceSquared: closest.distanceSquared,
+      }
+    : null;
+}
+
+function routeMarkerAttachment(annotation: Annotation) {
+  if (annotation.kind !== "route-marker") return null;
+  if (annotation.anchor?.kind === "route") {
+    return {
+      routeId: annotation.anchor.routeId,
+      segmentIndex: annotation.anchor.segmentIndex,
+      t: annotation.anchor.t,
+      direction: annotation.anchor.direction,
+      normalOffset: annotation.anchor.normalOffset,
+    };
+  }
+  return annotation.routeAttachment ?? null;
+}
+
 function closestRouteAnchor(
   points: readonly Point[],
   position: Point,
@@ -716,6 +795,43 @@ function captureNetLabelRouteAnchors(
   });
 }
 
+function captureRouteMarkerAnchors(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+): RouteMarkerAnchor[] {
+  return document.annotations.flatMap((annotation) => {
+    const attachment = routeMarkerAttachment(annotation);
+    if (!attachment) return [];
+    const route = document.routes.find(
+      (candidate) => candidate.id === attachment.routeId,
+    );
+    if (!route) return [];
+    const polyline = routePolyline(document, resolver, route);
+    if (!polyline) return [];
+    const from = polyline.points[attachment.segmentIndex];
+    const to = polyline.points[attachment.segmentIndex + 1];
+    const routeStart = polyline.points[0];
+    const routeEnd = polyline.points.at(-1);
+    if (!from || !to || !routeStart || !routeEnd) return [];
+    return [
+      {
+        annotationId: annotation.id,
+        routeId: route.id,
+        segmentIndex: attachment.segmentIndex,
+        segmentCount: polyline.points.length - 1,
+        t: attachment.t,
+        position: {
+          x: from.x + (to.x - from.x) * attachment.t,
+          y: from.y + (to.y - from.y) * attachment.t,
+        },
+        direction: { x: Math.sign(to.x - from.x), y: Math.sign(to.y - from.y) },
+        routeStart,
+        routeEnd,
+      },
+    ];
+  });
+}
+
 function pointAtArcFraction(
   points: readonly Point[],
   fraction: number,
@@ -794,6 +910,150 @@ function followNetLabelsOnChangedRoutes(
       x: Math.round(offset.x),
       y: Math.round(offset.y),
     };
+    changedObjectIds.add(annotation.id);
+  }
+}
+
+function followRouteMarkersOnChangedRoutes(
+  draft: SchematicDocument,
+  resolver: SymbolResolver,
+  anchors: readonly RouteMarkerAnchor[],
+  changedRouteIds: ReadonlySet<string>,
+  changedObjectIds: Set<string>,
+): void {
+  for (const captured of anchors) {
+    if (
+      !changedRouteIds.has(captured.routeId) ||
+      changedObjectIds.has(captured.annotationId)
+    ) {
+      continue;
+    }
+    const annotation = draft.annotations.find(
+      (candidate) => candidate.id === captured.annotationId,
+    );
+    const route = draft.routes.find(
+      (candidate) => candidate.id === captured.routeId,
+    );
+    if (!annotation || annotation.kind !== "route-marker" || !route) continue;
+    const polyline = routePolyline(draft, resolver, route);
+    if (!polyline) continue;
+    const segmentCount = polyline.points.length - 1;
+    let attachment =
+      segmentCount === captured.segmentCount &&
+      captured.segmentIndex < segmentCount
+        ? { segmentIndex: captured.segmentIndex, t: captured.t }
+        : null;
+    if (!attachment) {
+      const nextStart = polyline.points[0]!;
+      const nextEnd = polyline.points.at(-1)!;
+      const startDelta = {
+        x: nextStart.x - captured.routeStart.x,
+        y: nextStart.y - captured.routeStart.y,
+      };
+      const endDelta = {
+        x: nextEnd.x - captured.routeEnd.x,
+        y: nextEnd.y - captured.routeEnd.y,
+      };
+      const expectedPosition =
+        startDelta.x === endDelta.x && startDelta.y === endDelta.y
+          ? {
+              x: captured.position.x + startDelta.x,
+              y: captured.position.y + startDelta.y,
+            }
+          : captured.position;
+      const closest = closestRouteMarkerAnchor(
+        polyline.points,
+        expectedPosition,
+        captured.direction,
+      );
+      attachment = closest
+        ? { segmentIndex: closest.segmentIndex, t: closest.t }
+        : null;
+    }
+    if (!attachment) continue;
+    const from = polyline.points[attachment.segmentIndex]!;
+    const to = polyline.points[attachment.segmentIndex + 1]!;
+    const position = {
+      x: Math.round(from.x + (to.x - from.x) * attachment.t),
+      y: Math.round(from.y + (to.y - from.y) * attachment.t),
+    };
+    if (annotation.anchor?.kind === "route") {
+      annotation.anchor = {
+        ...annotation.anchor,
+        segmentIndex: attachment.segmentIndex,
+        t: attachment.t,
+        fallbackPosition: position,
+      };
+    }
+    if (annotation.routeAttachment) {
+      annotation.routeAttachment = {
+        ...annotation.routeAttachment,
+        segmentIndex: attachment.segmentIndex,
+        t: attachment.t,
+      };
+    }
+    annotation.position = position;
+    changedObjectIds.add(annotation.id);
+  }
+}
+
+function remapRouteMarkersAfterSplit(
+  draft: SchematicDocument,
+  resolver: SymbolResolver,
+  anchors: readonly RouteMarkerAnchor[],
+  splitRouteIds: readonly string[],
+  changedObjectIds: Set<string>,
+): void {
+  for (const captured of anchors) {
+    const closest = splitRouteIds
+      .flatMap((routeId) => {
+        const route = draft.routes.find(
+          (candidate) => candidate.id === routeId,
+        );
+        const polyline = route ? routePolyline(draft, resolver, route) : null;
+        if (!route || !polyline) return [];
+        const attachment = closestRouteMarkerAnchor(
+          polyline.points,
+          captured.position,
+          captured.direction,
+        );
+        return attachment ? [{ route, polyline, attachment }] : [];
+      })
+      .sort(
+        (left, right) =>
+          left.attachment.distanceSquared - right.attachment.distanceSquared ||
+          left.route.id.localeCompare(right.route.id, "en"),
+      )[0];
+    if (!closest) continue;
+    const annotation = draft.annotations.find(
+      (candidate) => candidate.id === captured.annotationId,
+    );
+    if (!annotation || annotation.kind !== "route-marker") continue;
+    const { segmentIndex, t } = closest.attachment;
+    const from = closest.polyline.points[segmentIndex]!;
+    const to = closest.polyline.points[segmentIndex + 1]!;
+    const position = {
+      x: Math.round(from.x + (to.x - from.x) * t),
+      y: Math.round(from.y + (to.y - from.y) * t),
+    };
+    if (annotation.anchor?.kind === "route") {
+      annotation.anchor = {
+        ...annotation.anchor,
+        routeId: closest.route.id,
+        segmentIndex,
+        t,
+        fallbackPosition: position,
+      };
+    }
+    if (annotation.routeAttachment) {
+      annotation.routeAttachment = {
+        ...annotation.routeAttachment,
+        routeId: closest.route.id,
+        segmentIndex,
+        t,
+      };
+    }
+    annotation.position = position;
     changedObjectIds.add(annotation.id);
   }
 }
@@ -1345,6 +1605,9 @@ export function executeTransaction(
   );
   const originalNetLabelAnchors = resolver
     ? captureNetLabelRouteAnchors(document, resolver)
+    : [];
+  const originalRouteMarkerAnchors = resolver
+    ? captureRouteMarkerAnchors(document, resolver)
     : [];
   const changedRouteIds = new Set<string>();
   let geometryChanged = false;
@@ -1968,6 +2231,10 @@ export function executeTransaction(
               `Route contains a locked segment: ${route.id}`,
             );
           }
+          const splitMarkerAnchors = captureRouteMarkerAnchors(
+            draft,
+            resolver,
+          ).filter((anchor) => anchor.routeId === route.id);
           const split = splitRoute(
             draft,
             route,
@@ -1992,6 +2259,13 @@ export function executeTransaction(
               return rejectAt("EDIT_PRECONDITION", routeError);
             }
           }
+          remapRouteMarkersAfterSplit(
+            draft,
+            resolver,
+            splitMarkerAnchors,
+            [split.first.id, split.second.id],
+            changedObjectIds,
+          );
           changedObjectIds.add(route.id);
           changedObjectIds.add(split.first.id);
           changedObjectIds.add(split.second.id);
@@ -2634,6 +2908,13 @@ export function executeTransaction(
       draft,
       resolver,
       originalNetLabelAnchors,
+      changedRouteIds,
+      changedObjectIds,
+    );
+    followRouteMarkersOnChangedRoutes(
+      draft,
+      resolver,
+      originalRouteMarkerAnchors,
       changedRouteIds,
       changedObjectIds,
     );

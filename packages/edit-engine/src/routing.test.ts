@@ -207,6 +207,108 @@ describe("routing Edit Engine", () => {
     );
   });
 
+  it("remaps a current marker by physical location when route segments change", () => {
+    const document = documentFixture();
+    document.routes = [
+      {
+        id: "route-h",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+    document.annotations.push({
+      id: "current-route-h",
+      kind: "route-marker",
+      markerKind: "current",
+      text: "I_x",
+      position: { x: 300, y: 300 },
+      anchor: {
+        kind: "route",
+        routeId: "route-h",
+        segmentIndex: 0,
+        t: 0.5,
+        normalOffset: -14,
+        direction: "forward",
+        orientation: "follow",
+        fallbackPosition: { x: 300, y: 300 },
+      },
+      offset: { x: 0, y: 0 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+
+    const complex = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [
+            { x: 100, y: 200 },
+            { x: 300, y: 200 },
+            { x: 300, y: 300 },
+          ],
+          segmentModes: ["manual", "manual", "manual", "manual"],
+        },
+      ]),
+      context,
+    );
+    expect(complex.ok).toBe(true);
+    if (!complex.ok) return;
+    expect(
+      complex.document.annotations.find(
+        (annotation) => annotation.id === "current-route-h",
+      ),
+    ).toMatchObject({
+      position: { x: 300, y: 300 },
+      anchor: {
+        kind: "route",
+        routeId: "route-h",
+        segmentIndex: 3,
+        t: 0,
+        normalOffset: -14,
+        direction: "forward",
+        fallbackPosition: { x: 300, y: 300 },
+      },
+    });
+    expect(complex.diff.changedObjectIds).toEqual(
+      expect.arrayContaining(["route-h", "current-route-h"]),
+    );
+
+    const simple = executeTransaction(
+      complex.document,
+      transaction(document.id, 1, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(simple.ok).toBe(true);
+    if (!simple.ok) return;
+    expect(
+      simple.document.annotations.find(
+        (annotation) => annotation.id === "current-route-h",
+      ),
+    ).toMatchObject({
+      position: { x: 300, y: 300 },
+      anchor: { segmentIndex: 0, t: 0.5 },
+    });
+  });
+
   it("keeps connected Routes and attached labels with move, rotate, and mirror", () => {
     const document = documentFixture();
     document.annotations.push({
@@ -678,6 +780,27 @@ describe("routing Edit Engine", () => {
         segmentModes: ["manual"],
       },
     ];
+    document.annotations.push({
+      id: "current-split",
+      kind: "route-marker",
+      markerKind: "current",
+      text: "I_x",
+      position: { x: 400, y: 300 },
+      anchor: {
+        kind: "route",
+        routeId: "route-h",
+        segmentIndex: 0,
+        t: 0.75,
+        normalOffset: -14,
+        direction: "forward",
+        orientation: "follow",
+        fallbackPosition: { x: 400, y: 300 },
+      },
+      offset: { x: 0, y: 0 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
     const result = executeTransaction(
       document,
       transaction(document.id, 0, [
@@ -717,6 +840,20 @@ describe("routing Edit Engine", () => {
     expect(result.document.routes[1]!.from).toEqual({
       kind: "junction",
       junctionId: "junction-h",
+    });
+    expect(
+      result.document.annotations.find(
+        (annotation) => annotation.id === "current-split",
+      ),
+    ).toMatchObject({
+      position: { x: 400, y: 300 },
+      anchor: {
+        kind: "route",
+        routeId: "route-h-b",
+        segmentIndex: 0,
+        t: 0.5,
+        normalOffset: -14,
+      },
     });
   });
 

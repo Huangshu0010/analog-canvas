@@ -2196,11 +2196,15 @@ export function App({ project: initialProject }: AppProps) {
       ...movingInternalSelection.junctionIds,
     ]);
     const movingInternalAnnotationIds = document.annotations
-      .filter(
-        (annotation) =>
-          annotation.attachedObjectId !== undefined &&
-          movingInternalObjectIds.has(annotation.attachedObjectId),
-      )
+      .filter((annotation) => {
+        const routeAttachment = effectiveRouteAttachment(annotation);
+        return (
+          (annotation.attachedObjectId !== undefined &&
+            movingInternalObjectIds.has(annotation.attachedObjectId)) ||
+          (routeAttachment !== null &&
+            movingInternalSelection.routeIds.includes(routeAttachment.routeId))
+        );
+      })
       .map((annotation) => annotation.id);
     let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
     const dragVisual = () =>

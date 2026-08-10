@@ -4108,3 +4108,16 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   timeout passed both isolated and on the subsequent full run.
 - Commit status: ready to commit on `codex/insert-component-dialog` as
   `fix(editor): unify group and routed marker movement`.
+
+## 2026-08-10 - Preserve route markers through geometry edits
+
+- Target: eliminate stale Junction/current-marker drag previews and prevent
+  route-attached arrows from collapsing or rotating after a complex reroute.
+- Changed areas: group preview membership, canonical Edit Engine marker
+  projection across Route geometry changes and Junction splits, bend-direction
+  tie-breaking, interaction specification, and focused unit/E2E regressions.
+- Validation: affected production builds, repository typecheck, format check,
+  448 Vitest tests, 63 Playwright flows, in-app browser inspection, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `codex/insert-component-dialog` as
+  `fix(editor): preserve route markers through geometry edits`.

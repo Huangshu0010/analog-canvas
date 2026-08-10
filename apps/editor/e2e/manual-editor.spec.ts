@@ -584,6 +584,9 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Add current arrow" }).click();
 
   await page.keyboard.press("Control+a");
   await expect(page.getByTestId("selected-internal-route-count")).toHaveText(
@@ -604,7 +607,10 @@ test("moves internal wiring with a selected group and copies the routed subgraph
       await expect(
         page.locator('[data-layer="symbols"] [data-object-id="R1"]'),
       ).toHaveAttribute("transform", /translate/u);
-      await expect(page.getByTestId("revision")).toHaveText("3");
+      await expect(
+        page.locator('[data-layer="annotations"] [data-object-id="current-1"]'),
+      ).toHaveAttribute("transform", /translate/u);
+      await expect(page.getByTestId("revision")).toHaveText("4");
     },
   );
   const after = await readRoutePoints(page, "route-ui-1");
@@ -631,6 +637,41 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await expect(page.getByTestId("selected-internal-route-count")).toHaveText(
     "1",
   );
+});
+
+test("keeps an internal junction with the live group preview", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await placeComponent(page, "resistor", { x: 520, y: 220 });
+  await placeComponent(page, "resistor", { x: 420, y: 420 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await clickCommand(page, "Draw", "Wire (W)");
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await page.getByTestId("terminal-R3-1").click();
+
+  const junctionHit = page.locator('[data-testid^="junction-"]').first();
+  await expect(junctionHit).toBeVisible();
+  const junctionId = await junctionHit.getAttribute("data-drag-object-id");
+  if (!junctionId) throw new Error("Internal junction has no drag identity");
+  const junctionBefore = await junctionHit.boundingBox();
+  await page.keyboard.press("Control+a");
+  const routeHit = page.locator('[data-testid^="route-hit-"]').first();
+  const routeTestId = await routeHit.getAttribute("data-testid");
+  if (!routeTestId) throw new Error("Internal route has no test id");
+  const routeId = routeTestId.replace(/^route-hit-/u, "");
+  await dragRouteSegment(page, routeId, { x: 76, y: 62 }, 0.35, 0, async () => {
+    await expect(
+      page.locator(`[data-object-id="${junctionId}"]`),
+    ).toHaveAttribute("transform", /translate/u);
+    await expect(page.getByTestId("revision")).toHaveText("5");
+  });
+  const junctionAfter = await junctionHit.boundingBox();
+  expect(junctionAfter?.x).not.toBe(junctionBefore?.x);
+  expect(junctionAfter?.y).not.toBe(junctionBefore?.y);
 });
 
 test("drags a current marker directly along and around its route", async ({
@@ -676,6 +717,31 @@ test("drags a current marker directly along and around its route", async ({
   expect(after?.y).not.toBe(before?.y);
   expect(await readRoutePoints(page, "route-ui-1")).toEqual(routeBefore);
   await expect(page.getByTestId("revision")).toHaveText("5");
+
+  await placeComponent(page, "resistor", { x: 420, y: 420 });
+  const markerBeforeSplit = await hit.boundingBox();
+  const projectBeforeSplit = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  );
+  const markerDataBeforeSplit =
+    projectBeforeSplit.documents[0].annotations.find(
+      (annotation: { id: string }) => annotation.id === "current-1",
+    );
+  await clickCommand(page, "Draw", "Wire (W)");
+  await clickRoute(page, "route-ui-1", 0.2, 0);
+  await page.getByTestId("terminal-R3-1").click();
+  const markerAfterSplit = await hit.boundingBox();
+  const projectAfterSplit = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  );
+  const markerDataAfterSplit = projectAfterSplit.documents[0].annotations.find(
+    (annotation: { id: string }) => annotation.id === "current-1",
+  );
+  expect(markerDataAfterSplit.position).toEqual(markerDataBeforeSplit.position);
+  expect(markerDataAfterSplit.anchor.routeId).not.toBe("route-ui-1");
+  expect(markerAfterSplit?.x).toBeCloseTo(markerBeforeSplit?.x ?? 0, 0);
+  expect(markerAfterSplit?.y).toBeCloseTo(markerBeforeSplit?.y ?? 0, 0);
+  await expect(page.getByTestId("revision")).toHaveText("7");
 });
 
 test("moves an unselected component in one thresholded drag", async ({

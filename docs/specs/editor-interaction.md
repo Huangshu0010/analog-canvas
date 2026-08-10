@@ -127,6 +127,11 @@ The route marker uses the same precise dashed selection rectangle as component
 and text selection; separate closer/away movement buttons are not exposed. A leader/
 callout is first pointed at the explained object/node, then dragged to the
 explanation; its text and leader select, move, copy, and delete as one object.
+A Route geometry edit must preserve a marker's physical position and segment
+direction when segment indices change. Splitting a Route at a Junction remaps
+the marker to the nearest resulting Route; it must never leave a marker
+referencing the replaced Route id. Route markers and internal Junctions are
+members of the same live group preview as their selected circuit subgraph.
 A construction line is visually distinct from Wire (dashed/lighter preview) and
 never shows an electrical snap/junction preview.
 A rectangle is a persisted, non-electrical outline with four resize handles;
