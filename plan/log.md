@@ -3991,3 +3991,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   and `git diff --check` passed. The existing large-chunk build warning remains.
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `refactor(editor): extract canvas text editor overlay`.
+
+## 2026-08-10 - Extract selection inspector details
+
+- Target: separate read-only editor metrics and diagnostics from selection
+  actions and remove duplicate diagnostic partition/rendering logic.
+- Changed areas: introduced a typed inspector snapshot and shared diagnostic
+  summary; moved metrics, import diagnostics, structural issues, and visual
+  observations into a focused component; each diagnostic category is now
+  rendered from its own partition rather than duplicated hidden list entries.
+- Validation: 13 focused Vitest tests and two manual-editor Playwright flows
+  passed; repository typecheck, editor production build, changed-file Prettier,
+  and `git diff --check` passed. The existing large-chunk warning remains.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `refactor(editor): extract selection inspector details`.

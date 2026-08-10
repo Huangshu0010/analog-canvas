@@ -17,7 +17,6 @@ import {
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
   endpointKey,
-  hasBlockingVisualDiagnostics,
   isVisibleEndpoint,
   moveRouteSegment,
   proposeGroupMove,
@@ -103,6 +102,10 @@ import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
 import { useProjectRecovery } from "./project-recovery";
 import { useSelectionController } from "./selection-controller";
+import {
+  SelectionInspectorDetails,
+  summarizeVisualDiagnostics,
+} from "./selection-inspector-details";
 import { hasVisualSelection } from "./visual-selection";
 import type { VisualSelection } from "./visual-selection";
 import {
@@ -634,12 +637,12 @@ export function App({ project: initialProject }: AppProps) {
     () => diagnoseVisualQuality(document, resolver),
     [document, resolver],
   );
-  const structuralDiagnostics = visualDiagnostics.filter(
-    (diagnostic) => diagnostic.category === "structural",
+  const visualDiagnosticSummary = useMemo(
+    () => summarizeVisualDiagnostics(visualDiagnostics),
+    [visualDiagnostics],
   );
-  const visualObservations = visualDiagnostics.filter(
-    (diagnostic) => diagnostic.category === "observation",
-  );
+  const structuralDiagnostics = visualDiagnosticSummary.structural;
+  const visualObservations = visualDiagnosticSummary.observations;
   const visibleEndpoints: WireSource[] = useMemo(
     () => [
       ...document.instances.flatMap((instance) => {
@@ -4571,135 +4574,30 @@ export function App({ project: initialProject }: AppProps) {
                 </button>
               </section>
             ) : null}
-            <dl className="inspector">
-              <dt>Selected</dt>
-              <dd>
-                {selectedIds.length > 0
-                  ? selectedIds.join(", ")
-                  : (selectedRouteId ?? selectedAnnotationId ?? "None")}
-              </dd>
-              <dt>Internal routes</dt>
-              <dd data-testid="selected-internal-route-count">
-                {internalSelection.routeIds.length}
-              </dd>
-              <dt>Revision</dt>
-              <dd data-testid="revision">{document.revision}</dd>
-              <dt>Source status</dt>
-              <dd data-testid="source-status">{document.sourceStatus}</dd>
-              <dt>Documents</dt>
-              <dd data-testid="document-count">{project.documents.length}</dd>
-              <dt>Current Document</dt>
-              <dd data-testid="active-document-id">{document.id}</dd>
-              <dt>Document instances</dt>
-              <dd data-testid="active-instance-count">
-                {document.instances.length}
-              </dd>
-              <dt>Instances</dt>
-              <dd data-testid="instance-count">{projectInstanceCount}</dd>
-              <dt>Nets</dt>
-              <dd data-testid="net-count">{document.nets.length}</dd>
-              <dt>Tool</dt>
-              <dd data-testid="active-tool">{tool}</dd>
-              <dt>Flightlines</dt>
-              <dd data-testid="flightline-count">{flightlines.length}</dd>
-              <dt>Crossings</dt>
-              <dd data-testid="crossing-count">{crossings.length}</dd>
-              <dt>Annotations</dt>
-              <dd data-testid="annotation-count">
-                {document.annotations.length}
-              </dd>
-              <dt>Structural diagnostics</dt>
-              <dd data-testid="structural-diagnostic-count">
-                {structuralDiagnostics.length}
-              </dd>
-              <dt>Visual observations</dt>
-              <dd data-testid="visual-diagnostic-count">
-                {visualObservations.length}
-              </dd>
-              <dt>Blocking diagnostics</dt>
-              <dd data-testid="blocking-diagnostic-count">
-                {
-                  visualDiagnostics.filter((diagnostic) =>
-                    hasBlockingVisualDiagnostics([diagnostic]),
-                  ).length
-                }
-              </dd>
-              <dt>Status</dt>
-              <dd aria-live="polite">{status}</dd>
-            </dl>
-            <section aria-label="Import diagnostics" className="diagnostics">
-              <h2>Import Diagnostics</h2>
-              {importDiagnostics.length === 0 ? (
-                <p>No import diagnostics</p>
-              ) : null}
-              <ul data-testid="import-diagnostics">
-                {importDiagnostics.map((diagnostic, index) => (
-                  <li
-                    key={`${diagnostic.code}-${index}`}
-                    data-severity={diagnostic.severity}
-                  >
-                    <strong>{diagnostic.code}</strong>: {diagnostic.message}
-                  </li>
-                ))}
-              </ul>
-            </section>
-            <section aria-label="Visual diagnostics" className="diagnostics">
-              <h2>Diagnostics</h2>
-              {visualDiagnostics.length === 0 ? (
-                <p>No visual diagnostics</p>
-              ) : null}
-              {structuralDiagnostics.length > 0 ? (
-                <h3>Structural issues</h3>
-              ) : null}
-              <ul data-testid="visual-diagnostics">
-                {visualDiagnostics.map((diagnostic, index) => (
-                  <li
-                    key={`${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
-                    data-severity={diagnostic.severity}
-                    data-category={diagnostic.category}
-                    data-confidence={diagnostic.confidence}
-                    hidden={diagnostic.category !== "structural"}
-                  >
-                    <button
-                      type="button"
-                      data-testid={`diagnostic-${index}`}
-                      onClick={() => jumpToVisualDiagnostic(diagnostic)}
-                    >
-                      <strong>{diagnostic.code}</strong>
-                      {diagnostic.objectIds.length > 0
-                        ? `: ${diagnostic.objectIds.join(", ")}`
-                        : ""}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {visualObservations.length > 0 ? (
-                <h3>Visual observations</h3>
-              ) : null}
-              <ul data-testid="visual-observations">
-                {visualDiagnostics.map((diagnostic, index) => (
-                  <li
-                    key={`observation-${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
-                    data-severity={diagnostic.severity}
-                    data-category={diagnostic.category}
-                    data-confidence={diagnostic.confidence}
-                    hidden={diagnostic.category !== "observation"}
-                  >
-                    <button
-                      type="button"
-                      data-testid={`observation-${index}`}
-                      onClick={() => jumpToVisualDiagnostic(diagnostic)}
-                    >
-                      <strong>{diagnostic.code}</strong>
-                      {diagnostic.objectIds.length > 0
-                        ? `: ${diagnostic.objectIds.join(", ")}`
-                        : ""}
-                      {` (${diagnostic.confidence} confidence)`}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <SelectionInspectorDetails
+              snapshot={{
+                selected:
+                  selectedIds.length > 0
+                    ? selectedIds.join(", ")
+                    : (selectedRouteId ?? selectedAnnotationId ?? "None"),
+                internalRouteCount: internalSelection.routeIds.length,
+                revision: document.revision,
+                sourceStatus: document.sourceStatus,
+                documentCount: project.documents.length,
+                activeDocumentId: document.id,
+                activeInstanceCount: document.instances.length,
+                projectInstanceCount,
+                netCount: document.nets.length,
+                tool,
+                flightlineCount: flightlines.length,
+                crossingCount: crossings.length,
+                annotationCount: document.annotations.length,
+                status,
+              }}
+              importDiagnostics={importDiagnostics}
+              visualSummary={visualDiagnosticSummary}
+              onSelectVisualDiagnostic={jumpToVisualDiagnostic}
+            />
           </div>
         </section>
       </aside>
