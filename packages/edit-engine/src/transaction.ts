@@ -34,6 +34,7 @@ import {
   normalizeRouteGeometry,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
+  resolveSchematicStyleProfile,
   routePolyline,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
@@ -863,6 +864,7 @@ function followAttachedAnnotations(
   newPosition: Point,
   newOrientation: Orientation,
   changedObjectIds: Set<string>,
+  resolver?: SymbolResolver,
 ): void {
   const directionForRotation = (rotation: Rotation): Point => {
     switch (rotation) {
@@ -883,24 +885,123 @@ function followAttachedAnnotations(
     return 270;
   };
   const origin = { x: 0, y: 0 };
+  const instance = draft.instances.find(
+    (candidate) => candidate.id === instanceId,
+  );
+  const definition = instance
+    ? resolver?.resolve(instance.symbolId, instance.symbolVariantId)?.definition
+    : undefined;
   for (const annotation of draft.annotations) {
     if (annotation.attachedObjectId !== instanceId) continue;
+    const hasRecordedOffset =
+      annotation.offset.x !== 0 ||
+      annotation.offset.y !== 0 ||
+      (annotation.position.x === oldPosition.x &&
+        annotation.position.y === oldPosition.y);
+    const semanticAnchor = hasRecordedOffset
+      ? {
+          x: oldPosition.x + annotation.offset.x,
+          y: oldPosition.y + annotation.offset.y,
+        }
+      : annotation.position;
     const local = inverseTransformPoint(
-      annotation.position,
+      semanticAnchor,
       oldPosition,
       oldOrientation,
     );
-    annotation.position = transformPoint(local, newPosition, newOrientation);
+    const transformedAnchor = transformPoint(
+      local,
+      newPosition,
+      newOrientation,
+    );
+    let position = transformedAnchor;
+    let transformedSide: Point | null = null;
+    if (annotation.kind === "instance-label" && definition) {
+      const box = definition.viewBox;
+      const edges = {
+        left: box.x,
+        right: box.x + box.width,
+        top: box.y,
+        bottom: box.y + box.height,
+      };
+      const candidates = [
+        ...(local.x < edges.left
+          ? [{ side: { x: -1, y: 0 }, gap: edges.left - local.x }]
+          : []),
+        ...(local.x > edges.right
+          ? [{ side: { x: 1, y: 0 }, gap: local.x - edges.right }]
+          : []),
+        ...(local.y < edges.top
+          ? [{ side: { x: 0, y: -1 }, gap: edges.top - local.y }]
+          : []),
+        ...(local.y > edges.bottom
+          ? [{ side: { x: 0, y: 1 }, gap: local.y - edges.bottom }]
+          : []),
+      ].sort((left, right) => left.gap - right.gap);
+      const reference = candidates[0];
+      if (reference) {
+        transformedSide = transformPoint(
+          reference.side,
+          origin,
+          newOrientation,
+        );
+        const corners = [
+          { x: edges.left, y: edges.top },
+          { x: edges.right, y: edges.top },
+          { x: edges.right, y: edges.bottom },
+          { x: edges.left, y: edges.bottom },
+        ].map((corner) => transformPoint(corner, newPosition, newOrientation));
+        const bounds = {
+          left: Math.min(...corners.map((corner) => corner.x)),
+          right: Math.max(...corners.map((corner) => corner.x)),
+          top: Math.min(...corners.map((corner) => corner.y)),
+          bottom: Math.max(...corners.map((corner) => corner.y)),
+        };
+        let fontSize = 15.116 * (annotation.sizeScale ?? 1);
+        try {
+          fontSize =
+            resolveSchematicStyleProfile(draft.presentation.styleProfileId)
+              .typography.instanceFontSize * (annotation.sizeScale ?? 1);
+        } catch {
+          // Keep a deterministic typography fallback for a legacy/unknown
+          // profile; formal rendering reports the invalid profile separately.
+        }
+        if (transformedSide.x > 0) {
+          position = { x: bounds.right + reference.gap, y: position.y };
+        } else if (transformedSide.x < 0) {
+          position = { x: bounds.left - reference.gap, y: position.y };
+        } else if (transformedSide.y > 0) {
+          // SVG y is a baseline. Preserve the visual gap from the glyph top.
+          position = {
+            x: position.x,
+            y: bounds.bottom + reference.gap + fontSize * 1.05,
+          };
+        } else {
+          // Preserve the visual gap from the glyph bottom.
+          position = {
+            x: position.x,
+            y: bounds.top - reference.gap - fontSize * 0.3,
+          };
+        }
+      }
+    }
+    annotation.position = {
+      x: Math.round(position.x),
+      y: Math.round(position.y),
+    };
     annotation.offset = {
-      x: annotation.position.x - newPosition.x,
-      y: annotation.position.y - newPosition.y,
+      x: transformedAnchor.x - newPosition.x,
+      y: transformedAnchor.y - newPosition.y,
     };
     if (annotation.kind === "instance-label") {
       annotation.rotation = 0;
-      const dx = annotation.position.x - newPosition.x;
-      const dy = annotation.position.y - newPosition.y;
-      annotation.alignment =
-        Math.abs(dx) <= Math.abs(dy) ? "middle" : dx > 0 ? "start" : "end";
+      annotation.alignment = transformedSide
+        ? transformedSide.x > 0
+          ? "start"
+          : transformedSide.x < 0
+            ? "end"
+            : "middle"
+        : "middle";
     } else {
       const oldDirection = directionForRotation(annotation.rotation);
       const localDirection = inverseTransformPoint(
@@ -1252,6 +1353,7 @@ export function executeTransaction(
           instance.placement.position,
           instance.placement,
           changedObjectIds,
+          context.symbolResolver,
         );
         // Use the snapshot taken immediately before this edit. This is still
         // progressive for multi-edit transactions, but unlike the old path it
@@ -1305,6 +1407,7 @@ export function executeTransaction(
           instance.placement.position,
           instance.placement,
           changedObjectIds,
+          context.symbolResolver,
         );
         const rotateResolver = context.symbolResolver;
         if (rotateResolver) {
@@ -1356,6 +1459,7 @@ export function executeTransaction(
           instance.placement.position,
           instance.placement,
           changedObjectIds,
+          context.symbolResolver,
         );
         const mirrorResolver = context.symbolResolver;
         if (mirrorResolver) {

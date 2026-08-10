@@ -148,9 +148,9 @@ describe("routing Edit Engine", () => {
       id: "label-a",
       kind: "instance-label",
       text: "A",
-      position: { x: 100, y: 280 },
+      position: { x: 99, y: 280 },
       attachedObjectId: "A",
-      offset: { x: 0, y: 0 },
+      offset: { x: -41, y: -20 },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -201,7 +201,12 @@ describe("routing Edit Engine", () => {
       moved.document.annotations.find(
         (annotation) => annotation.id === "label-a",
       ),
-    ).toMatchObject({ position: { x: 120, y: 300 }, rotation: 0 });
+    ).toMatchObject({
+      position: { x: 119, y: 300 },
+      offset: { x: -41, y: -20 },
+      alignment: "end",
+      rotation: 0,
+    });
 
     const rotated = executeTransaction(
       moved.document,
@@ -227,8 +232,8 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 180, y: 280 },
-      offset: { x: 20, y: -40 },
+      position: { x: 180, y: 274 },
+      offset: { x: 20, y: -41 },
       alignment: "middle",
       rotation: 0,
     });
@@ -258,8 +263,8 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 180, y: 360 },
-      offset: { x: 20, y: 40 },
+      position: { x: 180, y: 377 },
+      offset: { x: 20, y: 41 },
       alignment: "middle",
       rotation: 0,
     });
