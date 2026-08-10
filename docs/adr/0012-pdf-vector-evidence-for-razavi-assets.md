@@ -42,8 +42,10 @@ The tool boundaries are mandatory:
 3. `scripts/razavi-fidelity-diff.mjs` compares the rendered Symbol with the
    witness and never edits either source.
 
-This decision is applied only to the inductor in this target. It does not
-authorize converting other components or replacing their raster evidence.
+This decision is applied one reviewed component at a time. It does not
+authorize bulk conversion or replacement of existing raster evidence. The
+current PDF-derived set is the inductor from Figure 15.21 and the three-terminal
+op-amp from Figure 8.26.
 
 ## Inductor mapping
 
@@ -53,6 +55,15 @@ along their existing centerline to electrical pins `(0,-30)` and `(0,30)`,
 which preserves the source curve while satisfying the 10-unit grid. Electrical
 pin names, order, and SPICE `L` mapping are product semantics added outside the
 PDF extract.
+
+## Op-amp mapping
+
+The Figure 8.26 triangle, three terminal leads, and polarity marks are retained
+as selected PDF vector objects. A selection-only raster witness excludes the
+surrounding feedback circuit and junction dots. The reviewed Symbol exposes
+`IN+`, `IN-`, and `OUT` on the 10-unit grid, matching the ideal textbook symbol.
+It has no implicit supply pins and no automatic SPICE mapping; a real op-amp
+subcircuit requires an explicit complete pin contract.
 
 ## Consequences
 

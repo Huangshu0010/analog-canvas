@@ -110,6 +110,7 @@ describe("Razavi symbol catalog", () => {
       ["inductor", "reviewed", "razavi-reference-v1"],
       ["nmos", "reviewed", "razavi-reference-v1"],
       ["nmos3", "provisional", "razavi-reference-v1"],
+      ["opamp", "reviewed", "razavi-reference-v1"],
       ["pmos", "reviewed", "razavi-reference-v1"],
       ["pmos3", "provisional", "razavi-reference-v1"],
       ["port", "reviewed", "razavi-reference-v1"],
@@ -164,7 +165,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(13);
+    expect(razaviCatalogSymbols).toHaveLength(14);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -181,6 +182,7 @@ describe("Razavi symbol catalog", () => {
       "ground",
       "inductor",
       "nmos",
+      "opamp",
       "pmos",
       "port",
       "port-filled",
@@ -222,6 +224,7 @@ describe("Razavi symbol catalog", () => {
       "resistor",
       "capacitor",
       "inductor",
+      "opamp",
       "port",
       "port-filled",
       "ground",
@@ -414,6 +417,45 @@ describe("Razavi symbol catalog", () => {
     expect(getRazaviCatalogEntry("inductor")?.generation).toMatchObject({
       kind: "razavi-pdf-vector-reference",
       converterPath: "scripts/generate-razavi-inductor-asset.mjs",
+    });
+  });
+
+  it("uses the PDF-derived three-terminal op-amp geometry and polarity marks", () => {
+    const opamp = requireRazaviCatalogSymbol("opamp");
+    expect(opamp.pins).toMatchObject([
+      { name: "IN+", at: { x: -50, y: 10 }, direction: "west" },
+      { name: "IN-", at: { x: -50, y: -10 }, direction: "west" },
+      { name: "OUT", at: { x: 40, y: 0 }, direction: "east" },
+    ]);
+    expect(opamp.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "path",
+          data: "M -26.7979 -24.9983 L -26.7979 25 L 23.2021 0 Z",
+          style: expect.objectContaining({
+            strokeRole: "emphasis",
+            lineJoin: "miter",
+          }),
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -21.796167, y: 12.5 },
+          to: { x: -14.296167, y: 12.5 },
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -21.796167, y: -12.5 },
+          to: { x: -14.296167, y: -12.5 },
+        }),
+      ]),
+    );
+    expect(getRazaviCatalogEntry("opamp")).toMatchObject({
+      automaticMappings: [],
+      manualOnlyReason: expect.stringContaining("Three-terminal textbook"),
+      generation: {
+        kind: "razavi-pdf-vector-reference",
+        converterPath: "scripts/generate-razavi-opamp-asset.mjs",
+      },
     });
   });
 

@@ -20,6 +20,7 @@ describe("component insertion catalog", () => {
       "resistor",
     ]);
     expect(symbolCategory("capacitor")).toBe("Passives");
+    expect(symbolCategory("opamp")).toBe("Analog Blocks");
   });
 
   it("searches names, ids, and aliases without exposing retired MOS entries", () => {
@@ -38,7 +39,8 @@ describe("component insertion catalog", () => {
       expect.arrayContaining(["nmos", "pmos", "resistor", "capacitor"]),
     );
     expect(symbols.map((symbol) => symbol.id)).toContain("inductor");
-    for (const removed of ["diode", "npn", "pnp", "opamp"]) {
+    expect(symbols.map((symbol) => symbol.id)).toContain("opamp");
+    for (const removed of ["diode", "npn", "pnp"]) {
       expect(symbols.some((symbol) => symbol.id === removed)).toBe(false);
     }
   });

@@ -4,8 +4,13 @@ This directory contains source-PDF extraction tools. It is deliberately
 separate from `scripts/razavi-fidelity-diff.mjs` and `scripts/lib/`, which own
 the raster comparison workflow.
 
-`extract-razavi-inductor.py` extracts the continuous inductor path from Figure
-15.21 of the pinned Razavi textbook. It writes:
+The family extractors currently cover:
+
+- `extract-razavi-inductor.py`: continuous inductor path from Figure 15.21;
+- `extract-razavi-opamp.py`: triangle, three leads, and polarity marks from
+  Figure 8.26.
+
+Each extractor writes:
 
 - a normalized, provenance-bearing vector evidence JSON; and
 - a small PDF-rendered PNG witness used by the existing raster diff harness.

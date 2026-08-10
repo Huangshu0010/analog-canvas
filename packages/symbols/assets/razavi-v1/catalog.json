@@ -140,6 +140,34 @@
       "assetHash": "93636dfafd0690edaa7a9402e3bc2da014d048a404a558e8d3765c3c30126cc8"
     },
     {
+      "symbolId": "opamp",
+      "name": "Operational Amplifier",
+      "category": "analog-block",
+      "reviewStatus": "reviewed",
+      "pinOrder": ["IN+", "IN-", "OUT"],
+      "palette": true,
+      "automaticMappings": [],
+      "manualOnlyReason": "Three-terminal textbook op-amp; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
+      "assetPath": "opamp.symbol.json",
+      "assetHash": "0710b34aa1ae4f39d555155bfc51e66495cf6b0b02ae094707a41df8733e4ee3",
+      "visualAuthority": {
+        "kind": "razavi-reference-v1",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePaths": [
+          "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+          "fixtures/visual-reference/razavi-reference-v1/opamp-reference.png"
+        ],
+        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/opamp-geometry.json"
+      },
+      "generation": {
+        "kind": "razavi-pdf-vector-reference",
+        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+        "referencePath": "fixtures/visual-reference/razavi-reference-v1/opamp-vector-source.json",
+        "converterPath": "scripts/generate-razavi-opamp-asset.mjs",
+        "converterVersion": 1
+      }
+    },
+    {
       "symbolId": "pmos",
       "name": "PMOS",
       "category": "transistor",

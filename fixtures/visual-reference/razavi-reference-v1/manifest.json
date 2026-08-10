@@ -41,6 +41,25 @@
       "rasterPath": "inductor-reference.png",
       "rasterSha256": "f3327aecd75ddc7231a0e90117904d2815ba07c30e1761eccfdb7f27bb471070",
       "scope": ["inductor geometry", "inductor stroke treatment"]
+    },
+    {
+      "id": "razavi-textbook-figure-8-26-opamp",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 308,
+        "printedPage": 289,
+        "figure": "8.26"
+      },
+      "extractPath": "opamp-vector-source.json",
+      "extractSha256": "f38b0da4e111e82f913780418607391de8e455ff0974f0374a96129048001c81",
+      "rasterPath": "opamp-reference.png",
+      "rasterSha256": "435ee2e733c865a35ba1a9a16d5a17afdfda0b41893ccf82ca26bb07db28436e",
+      "scope": [
+        "three-terminal op-amp geometry",
+        "op-amp polarity marks and stroke hierarchy"
+      ]
     }
   ],
   "mosGeometryPath": "mos-geometry.json",
@@ -57,8 +76,10 @@
   "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
   "inductorGeometryPath": "inductor-geometry.json",
   "inductorGeometrySha256": "f718ef7c95303335ca752aed2a391eb41b38116ffd19251e340076988fa7e863",
+  "opampGeometryPath": "opamp-geometry.json",
+  "opampGeometrySha256": "51003a9dbe09ea8b9d3a346489d9777c4019a57466bac10dbfdc5b9e8d0390ba",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "6c99006b66d09634bf8ac41997e3755d6cd691eefd06b27d12790f130f5d1e3a",
+  "fidelityTargetsSha256": "29fe315d71719c4f3c057daa7d9c181718acec4d999942fee4a9b2a97478637c",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -72,7 +93,8 @@
     "capacitor geometry and stroke treatment",
     "route current-arrow treatment, current-source geometry, and hollow port origin",
     "VDD supply marker geometry",
-    "PDF-derived inductor geometry and stroke treatment"
+    "PDF-derived inductor geometry and stroke treatment",
+    "PDF-derived three-terminal op-amp geometry and polarity marks"
   ],
   "notes": [
     "This manifest is the sole visual authority for Razavi style v1.",

@@ -245,6 +245,7 @@ Typical commands are:
 pnpm symbols:razavi-mos
 pnpm symbols:razavi-peripherals
 pnpm symbols:razavi-inductor
+pnpm symbols:razavi-opamp
 pnpm symbols:razavi
 pnpm symbols:razavi:check
 pnpm --filter @icm/symbols build
@@ -301,12 +302,12 @@ bounds or promotes the best translated IoU to the baseline score.
 
 ## Compatibility
 
-Schema-version-1 manifests without `vectorEvidence` remain valid. Adding the
-inductor extends palette and SPICE `L` import behavior without changing
-persisted Project schema. The hollow `port`, filled `port-filled`, formal Port,
-Junction, and all existing symbol behavior remain distinct. The former Razavi
-style and component-extension specifications are superseded by this document
-and retained as redirects.
+Schema-version-1 manifests without `vectorEvidence` remain valid. PDF-derived
+symbols extend the palette without changing persisted Project schema; only an
+explicit reviewed mapping may extend SPICE import behavior. The hollow `port`,
+filled `port-filled`, formal Port, Junction, and all existing symbol behavior
+remain distinct. The former Razavi style and component-extension specifications
+are superseded by this document and retained as redirects.
 
 Related decisions and explanatory evidence:
 

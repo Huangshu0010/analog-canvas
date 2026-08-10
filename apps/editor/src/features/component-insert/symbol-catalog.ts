@@ -3,6 +3,7 @@ import type { SymbolDefinition } from "@icm/symbols";
 
 const CATEGORY_ORDER = [
   "Transistors",
+  "Analog Blocks",
   "Passives",
   "Sources",
   "Power and Ports",
@@ -19,6 +20,9 @@ export function symbolCategory(symbolId: string): string {
   }
   if (["resistor", "capacitor", "inductor"].includes(symbolId)) {
     return "Passives";
+  }
+  if (symbolId === "opamp") {
+    return "Analog Blocks";
   }
   if (["voltage-source", "current-source"].includes(symbolId)) {
     return "Sources";

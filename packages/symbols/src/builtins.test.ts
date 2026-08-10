@@ -12,6 +12,7 @@ const PRODUCT_IDS = [
   "ground",
   "inductor",
   "nmos",
+  "opamp",
   "pmos",
   "port",
   "port-filled",
@@ -37,7 +38,6 @@ describe("Razavi-only product Symbol Library", () => {
       "pnp",
       "poly-resistor",
       "generic-block-4",
-      "opamp",
       "switch-open",
     ]) {
       expect(resolver.resolve(symbolId), symbolId).toBeUndefined();

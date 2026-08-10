@@ -38,6 +38,8 @@
     "symbols:razavi-peripherals:check": "node scripts/generate-razavi-peripheral-assets.mjs --check",
     "symbols:razavi-inductor": "node scripts/generate-razavi-inductor-asset.mjs",
     "symbols:razavi-inductor:check": "node scripts/generate-razavi-inductor-asset.mjs --check",
+    "symbols:razavi-opamp": "node scripts/generate-razavi-opamp-asset.mjs",
+    "symbols:razavi-opamp:check": "node scripts/generate-razavi-opamp-asset.mjs --check",
     "visual:phase5": "pnpm build && node scripts/phase-5-golden.mjs",
     "visual:phase5:check": "pnpm build && node scripts/phase-5-golden.mjs --check",
     "visual:current-arrow": "pnpm build && node scripts/route-attached-current-arrow-golden.mjs",

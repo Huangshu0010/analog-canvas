@@ -4186,6 +4186,21 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `main` as
   `feat(symbols): add PDF-derived Razavi inductor`.
 
+## 2026-08-11 - Add PDF-derived Razavi op-amp
+
+- Target: add one three-terminal textbook op-amp through the established,
+  separated PDF-vector evidence and raster-witness pipeline.
+- Changed areas: Figure 8.26 object extractor, isolated witness and manifest
+  provenance, generated op-amp Symbol, Analog Blocks palette registration,
+  catalog tests, and PDF-evidence documentation.
+- Validation: exact extractor reproduction, generator stale checks, symbols
+  and editor production builds, repository typecheck, 31 focused tests,
+  changed-file formatting, op-amp fidelity diff (IoU `0.7330`, soft IoU
+  `0.8037`, zero registration lift, 100% edge-shell anti-alias verdict), and
+  `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `feat(symbols): add PDF-derived Razavi op-amp`.
+
 ## 2026-08-11 - Stabilize component insert dialog layout
 
 - Target: keep catalog growth from resizing the Insert Component dialog or
