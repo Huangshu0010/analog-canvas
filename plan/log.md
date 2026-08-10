@@ -3643,3 +3643,15 @@ terminal wiring`.
 - Commit status: prepared for `feat(editor): modernize the editor chrome` on
   `codex/modernize-editor-chrome`; concurrent canvas-drag-session work remains
   untouched and unstaged.
+- Review follow-up: removed inherited `font-synthesis: none` and
+  `text-rendering` from the root chrome rule after human review showed that the
+  browser could no longer synthesize italic SVG glyphs. Added a focused browser
+  regression that places a component and verifies its formal SVG italic run.
+  A selector audit found no second chrome rule reaching formal `text`/`tspan`
+  content, geometry, pointer behavior, or export markup.
+- Follow-up validation: editor/render-text Vitest passed 31/31; seven focused
+  Playwright checks passed for italic rendering, clean mount, presentation
+  isolation, pin coordinates, stable library/canvas layout, and menu dismissal;
+  the editor plus its workspace dependencies built; `git diff --check` passed.
+  Eight broader renderer golden assertions remain independently stale and are
+  not affected by browser CSS.

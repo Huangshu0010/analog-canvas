@@ -69,6 +69,38 @@ unstaged. Validation results will distinguish them from this target.
 5. Validate functional tests, production build, browser interactions, and the
    absence of formal/export changes.
 
+## Review Follow-up: Canvas Text Isolation
+
+Human review found that the chrome typography reset inherited into the SVG
+canvas and disabled browser-synthesized italics. This follow-up owns only
+`apps/editor/src/styles.css`, this plan, and `plan/log.md`. The current dirty
+editor interaction, selection geometry, specification, and drag-session paths
+belong to another target and remain read-only and unstaged.
+
+Remove inherited chrome-only font rendering controls from `:root`, then verify
+that an italic SVG text run computes to `font-style: italic`. Review every CSS
+selector added by this target for accidental reach into formal SVG text,
+geometry, pointer behavior, and export markup. No renderer or model change is
+authorized.
+
+Follow-up evidence:
+
+- The inherited `font-synthesis: none` and `text-rendering` declarations were
+  removed from `:root`; no formal SVG renderer or persisted data changed.
+- The new focused browser regression places a component, finds its formal SVG
+  italic run, verifies computed `font-style: italic`, and rejects inherited
+  `font-synthesis: none`.
+- The complete modernization CSS diff was audited for selectors that can reach
+  `text`, `tspan`, formal layers, pointer behavior, or exported markup. No
+  second formal-canvas override was found.
+- Focused editor/render-text Vitest passed 31/31, the high-risk Playwright set
+  passed 7/7, the editor and its workspace dependencies built successfully,
+  and `git diff --check` passed.
+- The broader renderer test file remains red on eight pre-existing golden/style
+  expectations (for example `#202020` versus current `#000` and old font
+  metrics). CSS is not loaded by these Node renderer tests, so those failures
+  are unrelated to this follow-up and were not modified here.
+
 ## Validation
 
 - `pnpm exec vitest run apps/editor/src/App.test.tsx`
