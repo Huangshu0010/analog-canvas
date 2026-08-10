@@ -3,9 +3,9 @@ import type { SetStateAction } from "react";
 
 import type { Point } from "@icm/model";
 
-import type { WireSource } from "./wire-editing";
+import type { WireSource } from "../features/wiring/wire-editing";
 
-export type { WireSource } from "./wire-editing";
+export type { WireSource } from "../features/wiring/wire-editing";
 
 export type EditorTool =
   "pointer" | "wire" | "guide" | "construction-line" | "arrow" | "rectangle";

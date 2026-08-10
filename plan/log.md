@@ -4034,3 +4034,61 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   inspection, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/insert-component-dialog` as
   `feat(editor): add component insert dialog and refine workspace`.
+
+## 2026-08-10 - Unified editor Snap Engine
+
+- Target: replace disconnected grid, pin, Guide, Wire, and drafting snap paths
+  with one editor-owned runtime contract.
+- Changed areas: added the pure Snap Engine and candidate builder; migrated
+  instance/group, Drafting, Guide, and Wire interactions; added transient smart
+  guides, live Alt suppression, off-grid candidate rejection, and current-
+  selection Align; removed the old direct pin helper; updated the interaction
+  specification.
+- Validation: 29 focused Vitest tests, repository typecheck, editor production
+  build, changed-file Prettier, and `git diff --check` passed. The existing
+  large-chunk warning remains; loopback browser automation was unavailable.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `feat(editor): unify snap and alignment interactions`.
+
+## 2026-08-10 - Preserve MOS label side through rotation
+
+- Target: keep materialized transistor instance labels in the same semantic
+  position as renderer-owned defaults through repeated rotation.
+- Changed areas: made the Edit Engine recognize MOS symbols by terminal roles,
+  preserve their rigid semantic label anchor, and derive upright alignment from
+  normalized local displacement; added full-cycle NMOS/PMOS regressions for
+  both four-terminal variants and dedicated three-terminal symbols.
+- Validation: 23 focused Edit Engine/render placement tests, Edit Engine build,
+  repository typecheck, and `git diff --check` passed.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `fix(edit-engine): preserve mos label side through rotation`.
+
+## 2026-08-10 - Place rotated MOS labels outside visible symbols
+
+- Target: eliminate transistor/Annotation overlap caused by using padded
+  viewBoxes and raw SVG baselines as rotation reference boundaries.
+- Changed areas: introduced shared Derived instance-label placement, exposed
+  variant-aware visible symbol bounds, routed renderer/editor/Edit Engine MOS
+  labels through the same geometry, and separated painted baseline position
+  from semantic transform offset.
+- Validation: 90 focused tests, three affected package builds, repository
+  typecheck, `git diff --check`, and live browser rectangle measurements at all
+  four orientations passed with zero overlaps.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `fix(render): place rotated mos labels outside visible symbols`.
+
+## 2026-08-10 - Organize editor source by domain
+
+- Target: replace the flat editor source directory with explicit ownership and
+  dependency boundaries without changing behavior.
+- Changed areas: moved 57 modules and colocated tests under `app`,
+  `interaction`, `canvas`, `document`, `components`, `demos`, `presentation`,
+  and five `features` domains; kept only build/runtime infrastructure at the
+  source root; repaired relative imports and documented placement/dependency
+  rules in the source README.
+- Validation: all 68 editor TypeScript relative imports resolve; 77 Vitest
+  files and 440 tests, repository typecheck, editor production build, all 59
+  Playwright flows, changed-file Prettier, and `git diff --check` passed. The
+  existing large-chunk warning remains.
+- Commit status: ready to commit directly on local `main` as
+  `refactor(editor): organize source by domain`; remote push remains pending.

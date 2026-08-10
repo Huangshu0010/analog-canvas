@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { renderSymbolDefinitionBody } from "@icm/render-svg";
 import type { SymbolDefinition } from "@icm/symbols";
 
-import { defaultRazaviSymbolVariantId } from "../../razavi-presentation";
+import { defaultRazaviSymbolVariantId } from "../../presentation/razavi-presentation";
 import {
   componentCatalog,
   findPaletteSymbol,

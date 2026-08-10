@@ -1,12 +1,9 @@
 import {
-  endpointKey,
-  isVisibleEndpoint,
   measureRichTextDocument,
   richTextMetrics,
   routeAttachmentPlacement,
 } from "@icm/derived";
 import type { RoutePolyline } from "@icm/derived";
-import { transformPoint } from "@icm/model";
 import type {
   Annotation,
   Point,
@@ -23,9 +20,8 @@ import {
 import type { SchematicStyleProfile } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { clamp, closestPointOnSegment } from "./canvas-geometry";
-import { instanceVisibleHitBox } from "./selection-geometry";
-import type { WireSource } from "./wire-editing";
+import { clamp, closestPointOnSegment } from "../../canvas/canvas-geometry";
+import { instanceVisibleHitBox } from "../../canvas/instance-geometry";
 
 export interface RoutePolylineRecord {
   route: SchematicDocument["routes"][number];
@@ -97,92 +93,6 @@ export function looseRouteAnchorIds(
     return null;
   }
   return [route.from.junctionId, route.to.junctionId];
-}
-
-export function directPinSnap(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  visibleEndpoints: readonly WireSource[],
-  moves: readonly { instanceId: string; position: Point }[],
-  radius: number,
-):
-  | {
-      moves: { instanceId: string; position: Point }[];
-      from: WireSource;
-      to: WireSource;
-    }
-  | undefined {
-  const moveById = new Map(moves.map((move) => [move.instanceId, move]));
-  const movingEndpoints = document.instances.flatMap((instance) => {
-    const move = moveById.get(instance.id);
-    if (!move || !instance.placement) return [];
-    const resolved = resolver.resolve(
-      instance.symbolId,
-      instance.symbolVariantId,
-    );
-    if (!resolved) return [];
-    const placement = { ...instance.placement, position: move.position };
-    return resolved.definition.pins
-      .filter((pin) =>
-        isVisibleEndpoint(document, resolver, {
-          kind: "terminal",
-          instanceId: instance.id,
-          pinName: pin.name,
-        }),
-      )
-      .map((pin): WireSource => {
-        const endpoint: RouteEndpoint = {
-          kind: "terminal",
-          instanceId: instance.id,
-          pinName: pin.name,
-        };
-        return {
-          endpoint,
-          netId: endpointNetId(document, endpoint),
-          point: transformPoint(pin.at, move.position, placement),
-          preludeEdits: [],
-        };
-      });
-  });
-  const targets = visibleEndpoints.filter(
-    (candidate) =>
-      candidate.endpoint.kind !== "terminal" ||
-      !moveById.has(candidate.endpoint.instanceId),
-  );
-  const candidates = movingEndpoints.flatMap((from) =>
-    targets.flatMap((to) => {
-      if (
-        (from.netId && to.netId && from.netId !== to.netId) ||
-        endpointKey(from.endpoint) === endpointKey(to.endpoint)
-      ) {
-        return [];
-      }
-      const distanceSquared =
-        (from.point.x - to.point.x) ** 2 + (from.point.y - to.point.y) ** 2;
-      return distanceSquared <= radius ** 2
-        ? [{ from, to, distanceSquared }]
-        : [];
-    }),
-  );
-  const closest = candidates.sort(
-    (left, right) => left.distanceSquared - right.distanceSquared,
-  )[0];
-  if (!closest) return undefined;
-  const delta = {
-    x: closest.to.point.x - closest.from.point.x,
-    y: closest.to.point.y - closest.from.point.y,
-  };
-  return {
-    moves: moves.map((move) => ({
-      ...move,
-      position: {
-        x: move.position.x + delta.x,
-        y: move.position.y + delta.y,
-      },
-    })),
-    from: closest.from,
-    to: closest.to,
-  };
 }
 
 export function attachmentAtPoint(
@@ -419,7 +329,7 @@ export function defaultInstanceLabel(
   }
   const placement = defaultInstanceLabelPlacement(
     instance,
-    resolved.definition,
+    resolved,
     styleProfile,
   );
   if (!placement) return null;
@@ -431,8 +341,8 @@ export function defaultInstanceLabel(
     position,
     attachedObjectId: instance.id,
     offset: {
-      x: position.x - instance.placement.position.x,
-      y: position.y - instance.placement.position.y,
+      x: placement.semanticPosition.x - instance.placement.position.x,
+      y: placement.semanticPosition.y - instance.placement.position.y,
     },
     alignment: placement.alignment,
     rotation: 0,

@@ -2,6 +2,7 @@ export * from "./anchor.js";
 export * from "./connectivity.js";
 export * from "./drafting-geometry.js";
 export * from "./endpoint.js";
+export * from "./instance-label-placement.js";
 export * from "./routes.js";
 export * from "./rich-text-layout.js";
 export * from "./style-profile.js";

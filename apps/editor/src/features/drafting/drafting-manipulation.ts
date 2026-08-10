@@ -6,7 +6,7 @@ import {
   closestPointOnSegment,
   normalizedBearing,
   rotatePointByDegrees,
-} from "./canvas-geometry";
+} from "../../canvas/canvas-geometry";
 
 export type DraftingHandle =
   | { kind: "from" | "to" }

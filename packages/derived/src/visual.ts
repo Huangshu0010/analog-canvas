@@ -104,7 +104,7 @@ function primitivePoints(primitive: SymbolPrimitive): Point[] | null {
   }
 }
 
-function visibleLocalBounds(resolved: ResolvedSymbol): Rect {
+export function visibleSymbolLocalBounds(resolved: ResolvedSymbol): Rect {
   const hiddenParts = new Set(resolved.variant?.hiddenPrimitiveParts ?? []);
   const hiddenPins = new Set(resolved.variant?.hiddenPinNames ?? []);
   const primitives = [
@@ -154,7 +154,7 @@ function instanceBounds(
       instance.symbolVariantId,
     );
     if (!resolved) return [];
-    const box = visibleLocalBounds(resolved);
+    const box = visibleSymbolLocalBounds(resolved);
     const corners = [
       { x: box.x, y: box.y },
       { x: box.x + box.width, y: box.y },

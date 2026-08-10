@@ -1,7 +1,7 @@
 import { createEmptyDocument } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
-import { copySelection, proposePaste } from "./clipboard";
+import { copySelection, proposePaste } from "../clipboard/clipboard";
 
 describe("route-attached current arrows", () => {
   it("copies a route-marker with its route VisualAnchor re-mapped on paste", () => {

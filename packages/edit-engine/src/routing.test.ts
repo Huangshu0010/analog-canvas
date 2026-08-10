@@ -338,6 +338,93 @@ describe("routing Edit Engine", () => {
     );
   });
 
+  it.each(["nmos", "pmos", "nmos3", "pmos3"])(
+    "preserves a materialized %s label side through a full rotation",
+    (symbolId) => {
+      const document = documentFixture();
+      document.instances.push({
+        id: "M1",
+        symbolId,
+        ...(symbolId === "nmos" || symbolId === "pmos"
+          ? { symbolVariantId: "textbook-3terminal" }
+          : {}),
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      });
+      // This is the canonical Razavi MOS label materialized by the editor when
+      // the user edits or explicitly moves the otherwise renderer-owned label.
+      document.annotations.push({
+        id: "instance-label-M1",
+        kind: "instance-label",
+        text: "M1",
+        position: { x: 116, y: 108 },
+        attachedObjectId: "M1",
+        offset: { x: 16, y: 8 },
+        alignment: "start",
+        rotation: 0,
+        locked: false,
+      });
+
+      const expected = [
+        {
+          rotation: 90 as const,
+          position: { x: 92, y: 132 },
+          offset: { x: -8, y: 16 },
+          alignment: "middle" as const,
+        },
+        {
+          rotation: 180 as const,
+          position: { x: 84, y: 92 },
+          offset: { x: -16, y: -8 },
+          alignment: "end" as const,
+        },
+        {
+          rotation: 270 as const,
+          position: { x: 108, y: 79 },
+          offset: { x: 8, y: -16 },
+          alignment: "middle" as const,
+        },
+        {
+          rotation: 0 as const,
+          position: { x: 116, y: 108 },
+          offset: { x: 16, y: 8 },
+          alignment: "start" as const,
+        },
+      ];
+
+      let current = document;
+      for (const [index, state] of expected.entries()) {
+        const rotated = executeTransaction(
+          current,
+          transaction(document.id, index, [
+            {
+              kind: "rotate_instance",
+              instanceId: "M1",
+              rotation: state.rotation,
+            },
+          ]),
+          context,
+        );
+        if (!rotated.ok) throw new Error(rotated.error.message);
+        expect(
+          rotated.document.annotations.find(
+            (annotation) => annotation.id === "instance-label-M1",
+          ),
+        ).toMatchObject({
+          position: state.position,
+          offset: state.offset,
+          alignment: state.alignment,
+          rotation: 0,
+        });
+        current = rotated.document;
+      }
+    },
+  );
+
   it("preserves the painted label vector across repeated pure translations", () => {
     const document = documentFixture();
     document.annotations.push(

@@ -1,6 +1,7 @@
 export interface ClientPoint {
   x: number;
   y: number;
+  altKey?: boolean;
 }
 
 export interface CanvasDragResult {
@@ -75,6 +76,7 @@ export function startCanvasDragSession(
   const pointerPoint = (event: PointerEvent): ClientPoint => ({
     x: event.clientX,
     y: event.clientY,
+    ...(event.altKey ? { altKey: true } : {}),
   });
 
   const move = ((event: PointerEvent): void => {

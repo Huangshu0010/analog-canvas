@@ -41,12 +41,12 @@ import type {
 import { buildSvgScene, resolveSchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
-import { copySelection, proposePaste } from "./clipboard";
-import type { SchematicClipboard } from "./clipboard";
-import { startCanvasDragSession } from "./canvas-drag-session";
-import type { CanvasDragSession } from "./canvas-drag-session";
-import { startCanvasDragVisual } from "./canvas-drag-visual";
-import { resolveCanvasHitAtPoint } from "./canvas-hit-resolver";
+import { copySelection, proposePaste } from "../features/clipboard/clipboard";
+import type { SchematicClipboard } from "../features/clipboard/clipboard";
+import { startCanvasDragSession } from "../canvas/canvas-drag-session";
+import type { CanvasDragSession } from "../canvas/canvas-drag-session";
+import { startCanvasDragVisual } from "../canvas/canvas-drag-visual";
+import { resolveCanvasHitAtPoint } from "../canvas/canvas-hit-resolver";
 import {
   centerOfBounds,
   clamp,
@@ -54,14 +54,14 @@ import {
   normalizedBearing,
   normalizedRect,
   serializePolylinePoints,
-} from "./canvas-geometry";
-import { CanvasTextEditorOverlay } from "./canvas-text-editor-overlay";
+} from "../canvas/canvas-geometry";
+import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
 import {
   ComponentPlacementPreview,
   InsertComponentDialog,
-} from "./features/component-insert/insert-component-dialog";
-import { ToolIcon } from "./features/editor-shell/tool-icon";
-import { useDocumentController } from "./document-controller";
+} from "../features/component-insert/insert-component-dialog";
+import { ToolIcon } from "../features/editor-shell/tool-icon";
+import { useDocumentController } from "../document/document-controller";
 import {
   applyDraftingHandle,
   applyDraftingStylePatch,
@@ -73,78 +73,91 @@ import {
   setDraftingBearing as setDraftingObjectBearing,
   setDraftingTangentAngle as setDraftingObjectTangentAngle,
   translateDraftingObject,
-} from "./drafting-manipulation";
+} from "../features/drafting/drafting-manipulation";
 import type {
   DraftingHandle,
   DraftingStylePatch,
-} from "./drafting-manipulation";
-import { DraftingCreatePreview } from "./drafting-create-preview";
-import { resolveEditorShortcut, stepBoundedScale } from "./editor-shortcuts";
-import { EditorHelpDialog } from "./editor-help-dialog";
-import { referencedDocumentId } from "./editor-session";
-import { useInteractionState } from "./interaction-state";
-import type { EditorTool } from "./interaction-state";
+} from "../features/drafting/drafting-manipulation";
+import { DraftingCreatePreview } from "../features/drafting/drafting-create-preview";
+import {
+  resolveEditorShortcut,
+  stepBoundedScale,
+} from "../interaction/editor-shortcuts";
+import { EditorHelpDialog } from "../components/editor-help-dialog";
+import { referencedDocumentId } from "../document/editor-session";
+import { useInteractionState } from "../interaction/interaction-state";
+import type { EditorTool } from "../interaction/interaction-state";
 import {
   createTextEditingSession,
   proposeTextEditingCommit,
   resolveTextEditingTarget,
   textDeletionEdit,
   updateTextEditingSession,
-} from "./text-editing";
-import type { TextEditingSession } from "./text-editing";
+} from "../features/text-editing/text-editing";
+import type { TextEditingSession } from "../features/text-editing/text-editing";
 import {
   defaultRazaviSymbolVariantId,
   razaviHiddenBulkRisk,
   razaviMosPresentationEdits,
-} from "./razavi-presentation";
+} from "../presentation/razavi-presentation";
 import {
   collectVisualRouteDeletion,
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
-} from "./delete-selection";
-import { createRoutingDemoProject } from "./routing-demo";
-import { createVisualDemoProject } from "./visual-demo";
-import { useProjectRecovery } from "./project-recovery";
-import { useSelectionController } from "./selection-controller";
+} from "../features/selection/delete-selection";
+import { createRoutingDemoProject } from "../demos/routing-demo";
+import { createVisualDemoProject } from "../demos/visual-demo";
+import { useProjectRecovery } from "../document/project-recovery";
+import { useSelectionController } from "../features/selection/selection-controller";
 import {
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
-} from "./selection-inspector-details";
-import { hasVisualSelection } from "./visual-selection";
-import type { VisualSelection } from "./visual-selection";
+} from "../features/selection/selection-inspector-details";
+import { hasVisualSelection } from "../features/selection/visual-selection";
+import type { VisualSelection } from "../features/selection/visual-selection";
 import {
   annotationAnchor,
   annotationHitBox,
   attachmentAtPoint,
   defaultInstanceLabel,
-  directPinSnap,
   effectiveRouteAttachment,
   endpointNetId,
   instanceHitBox,
   isRoutedMarker,
   looseRouteAnchorIds,
-} from "./route-interaction-geometry";
-import { reflectOrientation } from "./shortcut-orientation";
-import type { ScreenFlip } from "./shortcut-orientation";
+} from "../features/wiring/route-interaction-geometry";
+import { reflectOrientation } from "../interaction/shortcut-orientation";
+import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   createFreeWireAnchor,
   createRouteWireAnchor,
   proposeWireCommit,
-} from "./wire-editing";
-import type { WireSource } from "./wire-editing";
-import { buildManualWirePath } from "./wire-path";
+} from "../features/wiring/wire-editing";
+import type { WireSource } from "../features/wiring/wire-editing";
+import { buildManualWirePath } from "../features/wiring/wire-path";
+import {
+  buildDraftingAnchors,
+  buildInstanceAnchors,
+  buildSceneSnapTargets,
+  endpointSnapAnchor,
+} from "../snap/candidates";
+import {
+  logicalToleranceForScale,
+  resolvePointSnap,
+  resolveTranslationSnap,
+  SNAP_PROFILES,
+  snapCoordinate,
+} from "../snap/engine";
+import type { SnapGuideLine, SnapResult } from "../snap/engine";
 
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 const RECENT_COMPONENTS_STORAGE_KEY = "icm.recent-components.v1";
-const DIRECT_PIN_SNAP_RADIUS = 4;
 const DRAG_START_DISTANCE_PX = 4;
-// Drafting creation snap radius (logical units). Slightly more generous than
-// pin-snap so an arrow/construction-line endpoint finds a nearby pin/port/
-// junction without requiring pixel-perfect aiming.
-const DRAFTING_SNAP_RADIUS = 8;
+const SNAP_CAPTURE_RADIUS_PX = 7;
 
 interface DragPreview {
   instanceIds: string[];
+  primaryInstanceId: string;
   originalPositions: Record<string, Point>;
   pointerStart: Point;
 }
@@ -194,10 +207,6 @@ const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
 
 export interface AppProps {
   project?: CircuitProject;
-}
-
-function snap(value: number, grid: number): number {
-  return Math.round(value / grid) * grid;
 }
 
 function dismissOpenCommandMenus(): boolean {
@@ -511,6 +520,7 @@ export function App({ project: initialProject }: AppProps) {
     useState<RouteStretchPreview | null>(null);
   const [draftingHandlePreview, setDraftingHandlePreview] =
     useState<DraftingHandlePreview | null>(null);
+  const snapGuideLayerRef = useRef<SVGGElement | null>(null);
   const {
     state: interactionState,
     tool,
@@ -1356,8 +1366,14 @@ export function App({ project: initialProject }: AppProps) {
           );
         }
         const delta = {
-          x: snap(point.x - preview.start.x, document.presentation.grid),
-          y: snap(point.y - preview.start.y, document.presentation.grid),
+          x: snapCoordinate(
+            point.x - preview.start.x,
+            document.presentation.grid,
+          ),
+          y: snapCoordinate(
+            point.y - preview.start.y,
+            document.presentation.grid,
+          ),
         };
         if (delta.x !== 0 || delta.y !== 0) {
           const junctionEdits = anchorIds.map((junctionId): SchematicEdit => {
@@ -1396,8 +1412,8 @@ export function App({ project: initialProject }: AppProps) {
           record.polyline,
           preview.segmentIndex,
           {
-            x: snap(point.x, document.presentation.grid),
-            y: snap(point.y, document.presentation.grid),
+            x: snapCoordinate(point.x, document.presentation.grid),
+            y: snapCoordinate(point.y, document.presentation.grid),
           },
         );
         const result = transact([
@@ -1690,8 +1706,8 @@ export function App({ project: initialProject }: AppProps) {
       clientPoint.y = clientY;
       const localPoint = clientPoint.matrixTransform(matrix.inverse());
       return {
-        x: snapToGrid ? snap(localPoint.x, grid) : localPoint.x,
-        y: snapToGrid ? snap(localPoint.y, grid) : localPoint.y,
+        x: snapToGrid ? snapCoordinate(localPoint.x, grid) : localPoint.x,
+        y: snapToGrid ? snapCoordinate(localPoint.y, grid) : localPoint.y,
       };
     }
     const bounds = svg.getBoundingClientRect();
@@ -1700,8 +1716,8 @@ export function App({ project: initialProject }: AppProps) {
     const y =
       viewBox.y + ((clientY - bounds.top) / bounds.height) * viewBox.height;
     return {
-      x: snapToGrid ? snap(x, grid) : x,
-      y: snapToGrid ? snap(y, grid) : y,
+      x: snapToGrid ? snapCoordinate(x, grid) : x,
+      y: snapToGrid ? snapCoordinate(y, grid) : y,
     };
   }
 
@@ -1711,7 +1727,147 @@ export function App({ project: initialProject }: AppProps) {
     const xScale = Math.hypot(matrix.a, matrix.b);
     const yScale = Math.hypot(matrix.c, matrix.d);
     const scale = (xScale + yScale) / 2;
-    return scale > 0 ? pixels / scale : pixels;
+    return logicalToleranceForScale(pixels, scale);
+  }
+
+  function paintSnapGuides(guides: readonly SnapGuideLine[]): void {
+    const layer = snapGuideLayerRef.current;
+    if (!layer) return;
+    layer.replaceChildren(
+      ...guides.map((guide) => {
+        const line = globalThis.document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "line",
+        );
+        line.setAttribute("class", "smart-snap-guide");
+        line.setAttribute("data-testid", `snap-guide-${guide.axis}`);
+        line.setAttribute(
+          "x1",
+          String(guide.axis === "x" ? guide.coordinate : guide.from - 24),
+        );
+        line.setAttribute(
+          "y1",
+          String(guide.axis === "y" ? guide.coordinate : guide.from - 24),
+        );
+        line.setAttribute(
+          "x2",
+          String(guide.axis === "x" ? guide.coordinate : guide.to + 24),
+        );
+        line.setAttribute(
+          "y2",
+          String(guide.axis === "y" ? guide.coordinate : guide.to + 24),
+        );
+        return line;
+      }),
+    );
+  }
+
+  function resolveWireCanvasSnap(
+    point: Point,
+    svg: SVGSVGElement,
+    suppressSnap: boolean,
+  ): {
+    point: Point;
+    endpoint?: WireSource;
+    route?: { routeId: string; segmentIndex: number; point: Point };
+    guides: SnapGuideLine[];
+  } {
+    if (suppressSnap) return { point, guides: [] };
+    const routeTargets = routePolylines.flatMap(({ route, polyline }) =>
+      polyline.points.slice(0, -1).map((from, segmentIndex) => ({
+        anchor: {
+          id: `wire-route:${route.id}:${segmentIndex}`,
+          point: closestPointOnSegment(
+            point,
+            from,
+            polyline.points[segmentIndex + 1]!,
+          ),
+          kind: "route" as const,
+        },
+        routeId: route.id,
+        segmentIndex,
+      })),
+    );
+    const endpointTargets = visibleEndpoints.map((source) => ({
+      source,
+      anchor: endpointSnapAnchor(source),
+    }));
+    const resolved = resolvePointSnap(
+      point,
+      [
+        ...endpointTargets.map((candidate) => candidate.anchor),
+        ...routeTargets.map((candidate) => candidate.anchor),
+      ],
+      {
+        grid: document.presentation.grid,
+        tolerance: logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
+        profile: SNAP_PROFILES.wire,
+      },
+    );
+    const snappedPoint = {
+      x: point.x + resolved.delta.x,
+      y: point.y + resolved.delta.y,
+    };
+    const endpoint = endpointTargets.find(
+      (candidate) => candidate.anchor.id === resolved.pointMatch?.id,
+    )?.source;
+    const route = routeTargets.find(
+      (candidate) => candidate.anchor.id === resolved.pointMatch?.id,
+    );
+    return {
+      point: snappedPoint,
+      ...(endpoint ? { endpoint } : {}),
+      ...(route
+        ? {
+            route: {
+              routeId: route.routeId,
+              segmentIndex: route.segmentIndex,
+              point: snappedPoint,
+            },
+          }
+        : {}),
+      guides: resolved.guides,
+    };
+  }
+
+  function applyWireCanvasPoint(
+    rawPoint: Point,
+    svg: SVGSVGElement,
+    suppressSnap: boolean,
+    finish: boolean,
+  ): void {
+    const resolved = resolveWireCanvasSnap(rawPoint, svg, suppressSnap);
+    paintSnapGuides([]);
+    if (resolved.endpoint) {
+      if (!wireSource) {
+        setWireSource(resolved.endpoint);
+        setWirePreviewPoint(resolved.endpoint.point);
+        setWireWaypoints([]);
+      } else if (
+        endpointKey(wireSource.endpoint) !==
+        endpointKey(resolved.endpoint.endpoint)
+      ) {
+        commitWire(resolved.endpoint);
+      }
+      return;
+    }
+    if (resolved.route) {
+      const anchor = routeAnchor(
+        resolved.route.routeId,
+        resolved.route.point,
+        resolved.route.segmentIndex,
+      );
+      if (!wireSource) {
+        setWireSource(anchor);
+        setWirePreviewPoint(anchor.point);
+        setWireWaypoints([]);
+      } else {
+        commitWire(anchor);
+      }
+      return;
+    }
+    if (finish) finishWireAtPoint(resolved.point);
+    else fixWirePoint(resolved.point);
   }
 
   function handleCanvasHitPointerDown(
@@ -1928,6 +2084,7 @@ export function App({ project: initialProject }: AppProps) {
     );
     const preview: DragPreview = {
       instanceIds: movingIds,
+      primaryInstanceId: instanceId,
       originalPositions: Object.fromEntries(
         movingIds.map((id) => {
           const candidate = document.instances.find((item) => item.id === id)!;
@@ -1949,6 +2106,8 @@ export function App({ project: initialProject }: AppProps) {
         ...movingIds,
         ...attachedAnnotationIds,
       ]));
+    const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
+    let lastSnap: SnapResult | undefined;
     canvasDragSessionRef.current = startCanvasDragSession({
       target: hitTarget,
       pointerId: event.pointerId,
@@ -1956,27 +2115,42 @@ export function App({ project: initialProject }: AppProps) {
       thresholdPx: DRAG_START_DISTANCE_PX,
       onPreview: (client) => {
         const position = pointFromClient(client.x, client.y, svg, false);
-        const { moves } = instanceMoveAt(preview, position, false);
-        const first = moves[0]!;
-        const original = preview.originalPositions[first.instanceId]!;
+        const resolved = instanceMoveAt(
+          preview,
+          position,
+          tolerance,
+          Boolean(client.altKey),
+          lastSnap,
+        );
+        lastSnap = resolved.snap;
+        paintSnapGuides(resolved.snap.guides);
+        const primary = resolved.moves.find(
+          (move) => move.instanceId === preview.primaryInstanceId,
+        )!;
+        const original = preview.originalPositions[preview.primaryInstanceId]!;
         dragVisual().translate({
-          x: first.position.x - original.x,
-          y: first.position.y - original.y,
+          x: primary.position.x - original.x,
+          y: primary.position.y - original.y,
         });
       },
       onFinish: ({ client, dragged }) => {
         canvasDragSessionRef.current = null;
         visual?.restore();
+        paintSnapGuides([]);
         if (dragged) {
           completeInstanceMove(
             preview,
             pointFromClient(client.x, client.y, svg, false),
+            tolerance,
+            Boolean(client.altKey),
+            lastSnap,
           );
         }
       },
       onCancel: () => {
         canvasDragSessionRef.current = null;
         visual?.restore();
+        paintSnapGuides([]);
       },
     });
   }
@@ -1984,48 +2158,68 @@ export function App({ project: initialProject }: AppProps) {
   function instanceMoveAt(
     preview: DragPreview,
     position: Point,
-    commitSnap: boolean,
+    tolerance: number,
+    suppressSnap: boolean,
+    previous?: SnapResult,
   ) {
     const rawDelta = {
       x: position.x - preview.pointerStart.x,
       y: position.y - preview.pointerStart.y,
     };
-    const unsnappedMoves = preview.instanceIds.map((instanceId) => {
+    const movingIds = new Set(preview.instanceIds);
+    const movingAnchors = buildInstanceAnchors(
+      document,
+      resolver,
+      visibleEndpoints,
+      movingIds,
+    );
+    const snap: SnapResult = suppressSnap
+      ? { delta: rawDelta, guides: [] }
+      : resolveTranslationSnap(
+          {
+            rawDelta,
+            movingAnchors,
+            targetAnchors: buildSceneSnapTargets(
+              document,
+              resolver,
+              visibleEndpoints,
+              movingIds,
+            ),
+            primaryAnchorId: `instance:${preview.primaryInstanceId}:origin`,
+            grid: document.presentation.grid,
+            tolerance,
+            profile: SNAP_PROFILES.instanceMove,
+          },
+          previous,
+        );
+    const moves = preview.instanceIds.map((instanceId) => {
       const original = preview.originalPositions[instanceId]!;
       return {
         instanceId,
         position: {
-          x: original.x + rawDelta.x,
-          y: original.y + rawDelta.y,
+          x: original.x + snap.delta.x,
+          y: original.y + snap.delta.y,
         },
       };
     });
-    if (!commitSnap) return { directSnap: null, moves: unsnappedMoves };
-    const first = unsnappedMoves[0]!;
-    const grid = document.presentation.grid;
-    const correction = {
-      x: snap(first.position.x, grid) - first.position.x,
-      y: snap(first.position.y, grid) - first.position.y,
-    };
-    const gridMoves = unsnappedMoves.map((move) => ({
-      ...move,
-      position: {
-        x: move.position.x + correction.x,
-        y: move.position.y + correction.y,
-      },
-    }));
-    const directSnap = directPinSnap(
-      document,
-      resolver,
-      visibleEndpoints,
-      gridMoves,
-      DIRECT_PIN_SNAP_RADIUS,
-    );
-    return { directSnap, moves: directSnap?.moves ?? gridMoves };
+    return { snap, moves };
   }
 
-  function completeInstanceMove(preview: DragPreview, position: Point): void {
-    const { directSnap, moves } = instanceMoveAt(preview, position, true);
+  function completeInstanceMove(
+    preview: DragPreview,
+    position: Point,
+    tolerance: number,
+    suppressSnap: boolean,
+    previous?: SnapResult,
+  ): void {
+    const { snap: resolvedSnap, moves } = instanceMoveAt(
+      preview,
+      position,
+      tolerance,
+      suppressSnap,
+      previous,
+    );
+    const electricalMatch = resolvedSnap.electricalMatch;
     const delta = {
       x:
         moves[0]!.position.x -
@@ -2076,20 +2270,22 @@ export function App({ project: initialProject }: AppProps) {
                 ]
               : [];
           }),
-          ...(directSnap
+          ...(electricalMatch?.moving.electrical &&
+          electricalMatch.target.electrical
             ? [
                 {
                   kind: "connect_endpoints" as const,
-                  from: directSnap.from.endpoint,
-                  to: directSnap.to.endpoint,
-                  ...(!directSnap.from.netId && !directSnap.to.netId
+                  from: electricalMatch.moving.electrical.endpoint,
+                  to: electricalMatch.target.electrical.endpoint,
+                  ...(!electricalMatch.moving.electrical.netId &&
+                  !electricalMatch.target.electrical.netId
                     ? { newNetId: `net-ui-${nextRoutingSuffix()}` }
                     : {}),
                 },
               ]
             : []),
         ]);
-        if (result.ok && directSnap) {
+        if (result.ok && electricalMatch) {
           setStatus("Snapped pin endpoints and connected them without a wire");
         }
       } catch (error) {
@@ -2256,19 +2452,52 @@ export function App({ project: initialProject }: AppProps) {
     let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
     const dragVisual = () =>
       (visual ??= startCanvasDragVisual(svg, [object.id]));
+    const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
+    const movingAnchors = [
+      {
+        id: `drafting:${object.id}:origin`,
+        point: original,
+        kind: "drafting" as const,
+      },
+      ...buildDraftingAnchors(document, resolver, new Set([object.id])),
+    ];
+    const targetAnchors = buildSceneSnapTargets(
+      document,
+      resolver,
+      visibleEndpoints,
+      new Set(),
+      new Set([object.id]),
+    );
+    let lastSnap: SnapResult | undefined;
     const positionAt = (
       clientX: number,
       clientY: number,
-      commitSnap: boolean,
-    ): Point => {
+      suppressSnap: boolean,
+      previous?: SnapResult,
+    ): { position: Point; snap: SnapResult } => {
       const point = pointFromClient(clientX, clientY, svg, false);
-      const raw = {
-        x: original.x + point.x - start.x,
-        y: original.y + point.y - start.y,
+      const rawDelta = { x: point.x - start.x, y: point.y - start.y };
+      const resolved: SnapResult = suppressSnap
+        ? { delta: rawDelta, guides: [] }
+        : resolveTranslationSnap(
+            {
+              rawDelta,
+              movingAnchors,
+              targetAnchors,
+              primaryAnchorId: `drafting:${object.id}:origin`,
+              grid: document.presentation.grid,
+              tolerance,
+              profile: SNAP_PROFILES.draftingMove,
+            },
+            previous,
+          );
+      return {
+        position: {
+          x: original.x + resolved.delta.x,
+          y: original.y + resolved.delta.y,
+        },
+        snap: resolved,
       };
-      if (!commitSnap) return raw;
-      const grid = document.presentation.grid;
-      return { x: snap(raw.x, grid), y: snap(raw.y, grid) };
     };
     canvasDragSessionRef.current = startCanvasDragSession({
       target: hitTarget,
@@ -2276,17 +2505,30 @@ export function App({ project: initialProject }: AppProps) {
       startClient: { x: event.clientX, y: event.clientY },
       thresholdPx: DRAG_START_DISTANCE_PX,
       onPreview: (client) => {
-        const position = positionAt(client.x, client.y, false);
+        const resolved = positionAt(
+          client.x,
+          client.y,
+          Boolean(client.altKey),
+          lastSnap,
+        );
+        lastSnap = resolved.snap;
+        paintSnapGuides(resolved.snap.guides);
         dragVisual().translate({
-          x: position.x - original.x,
-          y: position.y - original.y,
+          x: resolved.position.x - original.x,
+          y: resolved.position.y - original.y,
         });
       },
       onFinish: ({ client, dragged }) => {
         canvasDragSessionRef.current = null;
         visual?.restore();
+        paintSnapGuides([]);
         if (dragged) {
-          const position = positionAt(client.x, client.y, true);
+          const position = positionAt(
+            client.x,
+            client.y,
+            Boolean(client.altKey),
+            lastSnap,
+          ).position;
           const latest = document.drafting?.objects.find(
             (item) => item.id === object.id,
           );
@@ -2309,6 +2551,7 @@ export function App({ project: initialProject }: AppProps) {
       onCancel: () => {
         canvasDragSessionRef.current = null;
         visual?.restore();
+        paintSnapGuides([]);
       },
     });
   }
@@ -2345,23 +2588,34 @@ export function App({ project: initialProject }: AppProps) {
       startClient: { x: event.clientX, y: event.clientY },
       thresholdPx: DRAG_START_DISTANCE_PX,
       onPreview: (client) => {
-        const point = snapDraftingPoint(
+        const snapped = snapDraftingPoint(
           pointFromClient(client.x, client.y, svg),
-          event.altKey,
+          Boolean(client.altKey),
           event.shiftKey,
-        ).point;
+          undefined,
+          logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
+        );
+        paintSnapGuides(snapped.guides);
         setDraftingHandlePreview({
           objectId: object.id,
-          object: applyDraftingHandle(object, handle, point, originalGeometry),
+          object: applyDraftingHandle(
+            object,
+            handle,
+            snapped.point,
+            originalGeometry,
+          ),
         });
       },
       onFinish: ({ client, dragged }) => {
         canvasDragSessionRef.current = null;
+        paintSnapGuides([]);
         if (dragged) {
           const point = snapDraftingPoint(
             pointFromClient(client.x, client.y, svg),
-            event.altKey,
+            Boolean(client.altKey),
             event.shiftKey,
+            undefined,
+            logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
           ).point;
           const latest = document.drafting?.objects.find(
             (item) => item.id === object.id,
@@ -2383,6 +2637,7 @@ export function App({ project: initialProject }: AppProps) {
       onCancel: () => {
         canvasDragSessionRef.current = null;
         setDraftingHandlePreview(null);
+        paintSnapGuides([]);
       },
     });
   }
@@ -2937,13 +3192,35 @@ export function App({ project: initialProject }: AppProps) {
         else target.setAttribute(name, value);
       }
     };
+    const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
+    const targetAnchors = buildSceneSnapTargets(
+      document,
+      resolver,
+      visibleEndpoints,
+    );
+    let lastSnap: SnapResult | undefined;
     const coordinateAt = (
       clientX: number,
       clientY: number,
-      commitSnap: boolean,
-    ): number => {
-      const point = pointFromClient(clientX, clientY, svg, commitSnap);
-      return guide.axis === "vertical" ? point.x : point.y;
+      suppressSnap: boolean,
+      previous?: SnapResult,
+    ): { coordinate: number; snap: SnapResult } => {
+      const point = pointFromClient(clientX, clientY, svg, false);
+      const resolved: SnapResult = suppressSnap
+        ? { delta: { x: 0, y: 0 }, guides: [] }
+        : resolvePointSnap(point, targetAnchors, {
+            grid: document.presentation.grid,
+            tolerance,
+            profile: SNAP_PROFILES.guideMove,
+            ...(previous ? { previous } : {}),
+          });
+      return {
+        coordinate:
+          guide.axis === "vertical"
+            ? point.x + resolved.delta.x
+            : point.y + resolved.delta.y,
+        snap: resolved,
+      };
     };
     canvasDragSessionRef.current = startCanvasDragSession({
       target,
@@ -2951,7 +3228,15 @@ export function App({ project: initialProject }: AppProps) {
       startClient: { x: event.clientX, y: event.clientY },
       thresholdPx: DRAG_START_DISTANCE_PX,
       onPreview: (client) => {
-        const coordinate = coordinateAt(client.x, client.y, false);
+        const resolved = coordinateAt(
+          client.x,
+          client.y,
+          Boolean(client.altKey),
+          lastSnap,
+        );
+        lastSnap = resolved.snap;
+        paintSnapGuides(resolved.snap.guides);
+        const coordinate = resolved.coordinate;
         if (guide.axis === "vertical") {
           target.setAttribute("x1", String(coordinate));
           target.setAttribute("x2", String(coordinate));
@@ -2963,6 +3248,7 @@ export function App({ project: initialProject }: AppProps) {
       onFinish: ({ client, dragged }) => {
         canvasDragSessionRef.current = null;
         restore();
+        paintSnapGuides([]);
         if (!dragged) return;
         const current = document.drafting?.guides.find(
           (candidate) => candidate.id === guide.id,
@@ -2973,7 +3259,12 @@ export function App({ project: initialProject }: AppProps) {
             kind: "set_guide",
             guide: {
               ...current,
-              coordinate: coordinateAt(client.x, client.y, true),
+              coordinate: coordinateAt(
+                client.x,
+                client.y,
+                Boolean(client.altKey),
+                lastSnap,
+              ).coordinate,
             },
           },
         ]);
@@ -2981,6 +3272,7 @@ export function App({ project: initialProject }: AppProps) {
       onCancel: () => {
         canvasDragSessionRef.current = null;
         restore();
+        paintSnapGuides([]);
       },
     });
   }
@@ -3053,23 +3345,16 @@ export function App({ project: initialProject }: AppProps) {
     if (result.ok) setStatus(`Current arrow offset ${next}`);
   }
 
-  function alignFirstLayoutGroup(): void {
-    const group = document.layoutGroups[0];
-    if (!group) {
-      setStatus("No multi-instance layout group is available");
-      return;
-    }
-    const instanceIds = group.objectIds.filter((id) =>
-      document.instances.some((instance) => instance.id === id),
-    );
-    if (instanceIds.length < 2) {
-      setStatus("No multi-instance layout group is available");
+  function alignSelectedInstances(): void {
+    if (selectedIds.length < 2) {
+      setStatus("Select at least two instances to align");
       return;
     }
     const result = transact([
-      { kind: "align_instances", instanceIds, axis: "y" },
+      { kind: "align_instances", instanceIds: selectedIds, axis: "y" },
     ]);
-    if (result.ok) setStatus(`Aligned layout group ${group.id}`);
+    if (result.ok)
+      setStatus(`Aligned ${selectedIds.length} selected instances`);
   }
 
   function exportSvg(): void {
@@ -3194,8 +3479,14 @@ export function App({ project: initialProject }: AppProps) {
     const port = document.ports.find((candidate) => candidate.id === portId);
     if (!port) return;
     const position = {
-      x: snap(viewBox.x + viewBox.width / 2, document.presentation.grid),
-      y: snap(viewBox.y + viewBox.height / 2, document.presentation.grid),
+      x: snapCoordinate(
+        viewBox.x + viewBox.width / 2,
+        document.presentation.grid,
+      ),
+      y: snapCoordinate(
+        viewBox.y + viewBox.height / 2,
+        document.presentation.grid,
+      ),
     };
     const result = transact([
       {
@@ -3339,11 +3630,32 @@ export function App({ project: initialProject }: AppProps) {
         tool === "rectangle") &&
       draftingSource !== null
     ) {
-      const snapped = snapDraftingPoint(point, event.altKey, event.shiftKey);
+      const snapped = snapDraftingPoint(
+        point,
+        event.altKey,
+        event.shiftKey,
+        draftingSource ?? undefined,
+        logicalRadiusForPixels(event.currentTarget, SNAP_CAPTURE_RADIUS_PX),
+      );
       setDraftingHover(snapped.point);
       setDraftingSnapPoint(snapped.snap);
+      paintSnapGuides(snapped.guides);
     }
-    if (tool === "wire" && wireSource) setWirePreviewPoint(point);
+    if (tool === "wire" && wireSource) {
+      const rawPoint = pointFromClient(
+        event.clientX,
+        event.clientY,
+        event.currentTarget,
+        false,
+      );
+      const resolved = resolveWireCanvasSnap(
+        rawPoint,
+        event.currentTarget,
+        event.altKey,
+      );
+      setWirePreviewPoint(resolved.point);
+      paintSnapGuides(resolved.guides);
+    }
   }
 
   function finishCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
@@ -3440,8 +3752,8 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(count > 0 ? `Selected ${count} objects` : "Selection cleared");
   }
 
-  // Snap a free grid point for drafting creation. Alt suppresses snap (grid
-  // only). Otherwise the nearest of: pin/port/junction (visibleEndpoints), the
+  // Drafting uses the shared Snap Engine. It may align visually to electrical
+  // geometry, but this profile never creates a Net or junction.
   // closest point on any route segment, or any existing drafting vertex — within
   // DRAFTING_SNAP_RADIUS — wins; grid snap is the fallback. Shift locks the
   // resulting segment from the origin to horizontal/vertical/45°. Purely visual
@@ -3451,68 +3763,53 @@ export function App({ project: initialProject }: AppProps) {
     altKey: boolean,
     shiftKey: boolean,
     origin?: Point,
-  ): { point: Point; snap: Point | null } {
-    let snapped = point;
-    let snapMarker: Point | null = null;
-    if (!altKey) {
-      let best: { point: Point; distanceSquared: number } | null = null;
-      const consider = (candidate: Point): void => {
-        const dx = candidate.x - point.x;
-        const dy = candidate.y - point.y;
-        const distanceSquared = dx * dx + dy * dy;
-        if (distanceSquared > DRAFTING_SNAP_RADIUS * DRAFTING_SNAP_RADIUS) {
-          return;
-        }
-        if (!best || distanceSquared < best.distanceSquared) {
-          best = { point: candidate, distanceSquared };
-        }
-      };
-      for (const candidate of visibleEndpoints) consider(candidate.point);
-      // Closest point on each route segment (visual snap to conductors; no
-      // electrical effect — drafting never joins a Net by proximity).
-      for (const { polyline } of routePolylines) {
-        for (let i = 0; i < polyline.points.length - 1; i += 1) {
-          consider(
-            closestPointOnSegment(
-              point,
-              polyline.points[i]!,
-              polyline.points[i + 1]!,
-            ),
-          );
-        }
-      }
-      // Existing drafting vertices.
-      for (const object of document.drafting?.objects ?? []) {
-        const geometry = resolveDraftingObjectGeometry(
-          document,
-          resolver,
-          object,
-        );
-        if (geometry.kind === "arrow") {
-          consider(geometry.from);
-          consider(geometry.to);
-        } else if (geometry.kind === "construction-line") {
-          for (const vertex of geometry.vertices) consider(vertex);
-        } else if (geometry.kind === "rectangle") {
-          for (const corner of geometry.corners) consider(corner);
-        }
-      }
-      // `consider` updates a captured value, which TypeScript intentionally
-      // does not narrow after nested calls. Read it through this explicit
-      // candidate shape; runtime snap ordering remains unchanged.
-      const bestCandidate = best as {
-        point: Point;
-        distanceSquared: number;
-      } | null;
-      if (bestCandidate) {
-        snapped = bestCandidate.point;
-        snapMarker = bestCandidate.point;
-      }
+    tolerance = document.presentation.grid,
+  ): { point: Point; snap: Point | null; guides: SnapGuideLine[] } {
+    if (altKey) {
+      const constrained =
+        shiftKey && origin ? constrainAngle(origin, point) : point;
+      return { point: constrained, snap: null, guides: [] };
     }
+    const routeTargets = routePolylines.flatMap(({ route, polyline }) =>
+      polyline.points.slice(0, -1).map((from, segmentIndex) => ({
+        id: `route:${route.id}:${segmentIndex}`,
+        point: closestPointOnSegment(
+          point,
+          from,
+          polyline.points[segmentIndex + 1]!,
+        ),
+        kind: "route" as const,
+      })),
+    );
+    const resolved = resolvePointSnap(
+      point,
+      [
+        ...buildSceneSnapTargets(document, resolver, visibleEndpoints),
+        ...routeTargets,
+      ],
+      {
+        grid: document.presentation.grid,
+        tolerance,
+        profile: SNAP_PROFILES.draftingHandle,
+      },
+    );
+    let snapped = {
+      x: point.x + resolved.delta.x,
+      y: point.y + resolved.delta.y,
+    };
+    const hasObjectSnap =
+      (resolved.xMatch && resolved.xMatch.targetKind !== "grid") ||
+      (resolved.yMatch && resolved.yMatch.targetKind !== "grid");
+    // Closest point on each route segment (visual snap to conductors; no
+    // electrical effect — drafting never joins a Net by proximity).
     if (shiftKey && origin) {
       snapped = constrainAngle(origin, snapped);
     }
-    return { point: snapped, snap: snapMarker };
+    return {
+      point: snapped,
+      snap: hasObjectSnap ? snapped : null,
+      guides: resolved.guides,
+    };
   }
 
   function constrainAngle(origin: Point, target: Point): Point {
@@ -3536,6 +3833,7 @@ export function App({ project: initialProject }: AppProps) {
     rawPoint: Point,
     altKey: boolean,
     shiftKey: boolean,
+    tolerance: number,
   ): void {
     if (
       tool !== "arrow" &&
@@ -3548,6 +3846,7 @@ export function App({ project: initialProject }: AppProps) {
       altKey,
       shiftKey,
       draftingSource ?? undefined,
+      tolerance,
     );
     if (draftingSource === null) {
       setDraftingSource(point);
@@ -4411,7 +4710,7 @@ export function App({ project: initialProject }: AppProps) {
                 Flip vertical (Shift+F)
               </button>
               {selectedIds.length > 1 ? (
-                <button type="button" onClick={alignFirstLayoutGroup}>
+                <button type="button" onClick={alignSelectedInstances}>
                   Align
                 </button>
               ) : null}
@@ -4818,16 +5117,24 @@ export function App({ project: initialProject }: AppProps) {
                 ),
                 event.altKey,
                 event.shiftKey,
+                logicalRadiusForPixels(
+                  event.currentTarget,
+                  SNAP_CAPTURE_RADIUS_PX,
+                ),
               );
               return;
             }
             if (tool !== "wire" || event.detail !== 1) return;
-            fixWirePoint(
+            applyWireCanvasPoint(
               pointFromClient(
                 event.clientX,
                 event.clientY,
                 event.currentTarget,
+                false,
               ),
+              event.currentTarget,
+              event.altKey,
+              false,
             );
           }}
           onDoubleClick={(event) => {
@@ -4851,19 +5158,30 @@ export function App({ project: initialProject }: AppProps) {
               event.clientX,
               event.clientY,
               event.currentTarget,
+              false,
+            );
+            const resolved = resolveWireCanvasSnap(
+              point,
+              event.currentTarget,
+              event.altKey,
             );
             if (
               wireSource?.endpoint.kind === "junction" &&
               wireSource.preludeEdits.some(
                 (edit) => edit.kind === "add_junction" && edit.createNet,
               ) &&
-              wireSource.point.x === point.x &&
-              wireSource.point.y === point.y
+              wireSource.point.x === resolved.point.x &&
+              wireSource.point.y === resolved.point.y
             ) {
               setStatus("Choose a different point to finish the wire");
               return;
             }
-            finishWireAtPoint(point);
+            applyWireCanvasPoint(
+              point,
+              event.currentTarget,
+              event.altKey,
+              true,
+            );
           }}
           onContextMenu={(event) => {
             event.preventDefault();
@@ -5014,6 +5332,7 @@ export function App({ project: initialProject }: AppProps) {
                   />
                 </g>
               ))}
+            <g ref={snapGuideLayerRef} data-layer="snap-guides" />
             {routePolylines
               .filter(({ route }) => route.id === selectedRouteId)
               .map(({ route, polyline }) => {
@@ -5206,7 +5525,7 @@ export function App({ project: initialProject }: AppProps) {
                 }
                 cx={candidate.point.x}
                 cy={candidate.point.y}
-                r={DIRECT_PIN_SNAP_RADIUS}
+                r={4}
                 onClick={(event) => event.stopPropagation()}
                 onContextMenu={(event) => {
                   event.preventDefault();

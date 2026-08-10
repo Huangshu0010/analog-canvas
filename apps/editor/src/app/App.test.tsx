@@ -12,9 +12,9 @@ import {
   defaultRazaviSymbolVariantId,
   razaviHiddenBulkRisk,
   razaviMosPresentationEdits,
-} from "./razavi-presentation";
-import { createDemoProject } from "./demo-project";
-import { createRoutingDemoProject } from "./routing-demo";
+} from "../presentation/razavi-presentation";
+import { createDemoProject } from "../demos/demo-project";
+import { createRoutingDemoProject } from "../demos/routing-demo";
 
 describe("editor shell", () => {
   it("uses one canonical Razavi presentation for manually placed MOS", () => {
