@@ -3894,3 +3894,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit as
   `feat(editor): unify drafting interactions and visual contracts`, then merge
   to `main` and push both branches.
+
+## 2026-08-10 - Rectangle outline hit testing
+
+- Target: stop non-electrical drafting rectangles from blocking component
+  placement and selection inside their empty area.
+- Changed areas: the rectangle editor overlay now uses a transparent,
+  stroke-only fixed-pixel hit band; selected rectangles no longer fill their
+  interior; marquee selection tests the four outline segments instead of the
+  rectangle's filled bounds; the focused browser regression covers interior
+  marquee, direct MOS placement, border selection, styling, and resize.
+- Validation: changed-file Prettier passed; editor TypeScript passed; focused
+  Playwright passed 1/1; editor production build passed; `git diff --check`
+  passed.
+- Commit status: prepared on `codex/fix-rectangle-hit-testing` for focused
+  staging, commit, and push.

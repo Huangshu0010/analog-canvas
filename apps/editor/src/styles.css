@@ -1119,6 +1119,16 @@ body {
   cursor: move;
 }
 
+/* A rectangle is an outline, not a translucent panel. Keep the same generous
+   screen-space tolerance as other drafting strokes, but let its empty interior
+   pass clicks through to the canvas and any components placed underneath. */
+.annotation-hit.drafting-rectangle-hit,
+.annotation-hit.drafting-rectangle-hit.selected {
+  fill: none;
+  stroke: transparent;
+  pointer-events: stroke;
+}
+
 /* Editor-only HTML inside the SVG foreignObject. It is deliberately separate
    from formal SVG/export, but uses the same RichText AST as formal rendering. */
 .rich-text-editor-shell {

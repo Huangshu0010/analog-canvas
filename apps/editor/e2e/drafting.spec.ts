@@ -507,6 +507,41 @@ test("R creates a selectable, styleable rectangle with four resize handles", asy
   await expect(rectangle).toHaveAttribute("fill", "none");
 
   const hit = page.getByTestId(/^drafting-hit-rectangle-/);
+  await expect(hit).toHaveCSS("pointer-events", "stroke");
+  await expect(hit).toHaveCSS("fill", "none");
+  const center = await hit.evaluate((element) => {
+    const polygon = element as SVGPolygonElement;
+    const matrix = polygon.getScreenCTM();
+    if (!matrix || polygon.points.numberOfItems !== 4) return null;
+    const logicalCenter = Array.from({ length: 4 }, (_, index) =>
+      polygon.points.getItem(index),
+    ).reduce(
+      (sum, point) => ({ x: sum.x + point.x / 4, y: sum.y + point.y / 4 }),
+      { x: 0, y: 0 },
+    );
+    const screenCenter = new DOMPoint(
+      logicalCenter.x,
+      logicalCenter.y,
+    ).matrixTransform(matrix);
+    return { x: screenCenter.x, y: screenCenter.y };
+  });
+  if (!center) throw new Error("rectangle center is not measurable");
+
+  // A marquee wholly inside the empty rectangle must not select its outline.
+  await page.mouse.move(center.x - 12, center.y - 12);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 12, center.y + 12, { steps: 4 });
+  await page.mouse.up();
+  await expect(
+    page.locator('[data-testid^="draft-handle-corner-"]'),
+  ).toHaveCount(0);
+
+  // The empty interior must also pass a placement click through to the canvas.
+  await page.getByTestId("library-component-nmos").click();
+  await page.mouse.click(center.x, center.y);
+  await expect(page.getByTestId("hit-M1")).toHaveCount(1);
+  await expect(page.getByTestId("revision")).toHaveText("2");
+
   const edge = await hit.evaluate((element) => {
     const polygon = element as SVGPolygonElement;
     const matrix = polygon.getScreenCTM();
@@ -529,14 +564,14 @@ test("R creates a selectable, styleable rectangle with four resize handles", asy
     .getByRole("combobox", { name: "Inline line style" })
     .selectOption("dotted");
   await expect(rectangle).toHaveAttribute("stroke-dasharray", "2 3");
-  await expect(page.getByTestId("revision")).toHaveText("2");
+  await expect(page.getByTestId("revision")).toHaveText("3");
 
   const pointsBeforeResize = await rectangle.getAttribute("points");
   await dragLocator(page.getByTestId(/^draft-handle-corner-0-/), {
     x: -20,
     y: -10,
   });
-  await expect(page.getByTestId("revision")).toHaveText("3");
+  await expect(page.getByTestId("revision")).toHaveText("4");
   expect(await rectangle.getAttribute("points")).not.toBe(pointsBeforeResize);
 });
 

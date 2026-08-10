@@ -493,6 +493,41 @@ function pointInRect(point: Point, rect: Rect): boolean {
   );
 }
 
+function segmentIntersectsRect(from: Point, to: Point, rect: Rect): boolean {
+  if (pointInRect(from, rect) || pointInRect(to, rect)) return true;
+
+  const delta = { x: to.x - from.x, y: to.y - from.y };
+  let entry = 0;
+  let exit = 1;
+  const boundaries: ReadonlyArray<readonly [number, number]> = [
+    [-delta.x, from.x - rect.x],
+    [delta.x, rect.x + rect.width - from.x],
+    [-delta.y, from.y - rect.y],
+    [delta.y, rect.y + rect.height - from.y],
+  ];
+
+  for (const [direction, distance] of boundaries) {
+    if (direction === 0) {
+      if (distance < 0) return false;
+      continue;
+    }
+    const ratio = distance / direction;
+    if (direction < 0) entry = Math.max(entry, ratio);
+    else exit = Math.min(exit, ratio);
+    if (entry > exit) return false;
+  }
+  return true;
+}
+
+function rectangleBoundaryIntersectsRect(
+  corners: readonly Point[],
+  rect: Rect,
+): boolean {
+  return corners.some((corner, index) =>
+    segmentIntersectsRect(corner, corners[(index + 1) % corners.length]!, rect),
+  );
+}
+
 function polylineBounds(points: readonly Point[]): Rect {
   const xs = points.map((point) => point.x);
   const ys = points.map((point) => point.y);
@@ -4721,13 +4756,16 @@ export function App({ project: initialProject }: AppProps) {
             )
             .map((annotation) => annotation.id),
           draftingIds: (document.drafting?.objects ?? [])
-            .filter((object) =>
-              rectsIntersect(
-                resolveDraftingObjectGeometry(document, resolver, object)
-                  .bounds,
-                rect,
-              ),
-            )
+            .filter((object) => {
+              const geometry = resolveDraftingObjectGeometry(
+                document,
+                resolver,
+                object,
+              );
+              return geometry.kind === "rectangle"
+                ? rectangleBoundaryIntersectsRect(geometry.corners, rect)
+                : rectsIntersect(geometry.bounds, rect);
+            })
             .map((object) => object.id),
         };
     setVisualSelection(
@@ -6895,7 +6933,10 @@ export function App({ project: initialProject }: AppProps) {
                   <polygon
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
-                    className={selected}
+                    data-canvas-hit-kind="drafting"
+                    data-canvas-hit-id={object.id}
+                    data-drag-object-id={object.id}
+                    className={`${selected} drafting-rectangle-hit`}
                     points={polylinePoints(geometry.corners)}
                     fill="none"
                     onPointerDown={onDown}
