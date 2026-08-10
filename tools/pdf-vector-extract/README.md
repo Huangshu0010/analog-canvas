@@ -9,8 +9,8 @@ The family extractors currently cover:
 - `extract-razavi-inductor.py`: continuous inductor path from Figure 15.21;
 - `extract-razavi-opamp.py`: triangle, three leads, and polarity marks from
   Figure 8.26;
-- `extract-razavi-common-assets.py`: NPN/PNP BJT, dependent current source,
-  diode, voltage amplifier, and ideal switch.
+- `extract-razavi-common-assets.py`: NPN/PNP BJT, diode, voltage amplifier,
+  and ideal switch.
 
 Each extractor writes:
 

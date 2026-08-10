@@ -75,7 +75,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:D"],
     assetPath: "diode.symbol.json",
     assetHash:
-      "f47ecac20ddca1d0c4c6764c747ffbbc42aa931e4651d39ee631e41d5bba6b95",
+      "8e89c123c3a5e69b03e15d1cf76e3d06c3f1d6c88070cd6ea3993004bc2233f9",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -140,7 +140,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
     assetPath: "ideal-switch.symbol.json",
     assetHash:
-      "9cdce6cc5418f516626497c272dd2753b04fa916fdc1c699bdc4230b4772b718",
+      "5ee34dd634e550923d87ab037882e2f3dde7ad578e74323e0b5c7ced349d26d7",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -248,7 +248,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:npn", "pdk:model-type:npn"],
     assetPath: "npn.symbol.json",
     assetHash:
-      "1efe656cf9d640ebc53398ebb232f03de6319525d020070af8cbc84cdf146772",
+      "e406e2ce0043b3bbb7afea8fac2044b5afc0e65058506ae4580d92672dc2a941",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -358,7 +358,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:pnp", "pdk:model-type:pnp"],
     assetPath: "pnp.symbol.json",
     assetHash:
-      "fbc5236276e893fde03b56bfaa91ec8a5fb25c8bbb83dfad8f03ac58f657e28c",
+      "226d0967e7b23a490144bcc892701a03dbce2e5af92aeb9227fe5028825eb5ca",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -446,38 +446,6 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       ],
       calibrationPath:
         "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json",
-    },
-  },
-  {
-    symbolId: "vccs",
-    name: "Voltage-Controlled Current Source",
-    category: "source",
-    reviewStatus: "reviewed",
-    pinOrder: ["OUT+", "OUT-", "CTRL+", "CTRL-"],
-    palette: true,
-    automaticMappings: ["spice:G"],
-    assetPath: "vccs.symbol.json",
-    assetHash:
-      "8c12563ee39b6c776b3620f1d63e23fcde6ade7b5a112828220f2ae1db65217e",
-    visualAuthority: {
-      kind: "razavi-reference-v1",
-      referenceManifestPath:
-        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/vccs-vector-source.json",
-        "fixtures/visual-reference/razavi-reference-v1/vccs-reference.png",
-      ],
-      calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
-    },
-    generation: {
-      kind: "razavi-pdf-vector-reference",
-      referenceManifestPath:
-        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/vccs-vector-source.json",
-      converterPath: "scripts/generate-razavi-common-assets.mjs",
-      converterVersion: 1,
     },
   },
   {
@@ -820,36 +788,36 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "diode",
     name: "Diode",
     viewBox: {
-      x: -34,
-      y: -14,
-      width: 68,
-      height: 28,
+      x: -24,
+      y: -10,
+      width: 48,
+      height: 20,
     },
     pins: [
       {
         name: "A",
         role: "anode",
         at: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         direction: "west",
         presentation: {
           visibility: "visible",
-          leadLength: 15,
+          leadLength: 10,
         },
       },
       {
         name: "K",
         role: "cathode",
         at: {
-          x: 30,
+          x: 20,
           y: 0,
         },
         direction: "east",
         presentation: {
           visibility: "visible",
-          leadLength: 15,
+          leadLength: 10,
         },
       },
     ],
@@ -857,11 +825,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         to: {
-          x: -10,
+          x: -6.666667,
           y: 0,
         },
         style: {
@@ -874,15 +842,15 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -10,
-            y: -8.1,
+            x: -6.666667,
+            y: -5.4,
           },
           {
-            x: -10,
-            y: 8.1,
+            x: -6.666667,
+            y: 5.4,
           },
           {
-            x: 7,
+            x: 4.666667,
             y: 0,
           },
         ],
@@ -897,12 +865,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 8,
-          y: -8.8,
+          x: 5.333333,
+          y: -5.866667,
         },
         to: {
-          x: 8,
-          y: 8.8,
+          x: 5.333333,
+          y: 5.866667,
         },
         style: {
           strokeRole: "emphasis",
@@ -913,11 +881,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 8,
+          x: 5.333333,
           y: 0,
         },
         to: {
-          x: 30,
+          x: 20,
           y: 0,
         },
         style: {
@@ -1030,36 +998,36 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "ideal-switch",
     name: "Ideal Switch",
     viewBox: {
-      x: -34,
-      y: -18,
-      width: 68,
-      height: 36,
+      x: -24,
+      y: -12,
+      width: 48,
+      height: 24,
     },
     pins: [
       {
         name: "1",
         role: "passive",
         at: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         direction: "west",
         presentation: {
           visibility: "visible",
-          leadLength: 15,
+          leadLength: 10,
         },
       },
       {
         name: "2",
         role: "passive",
         at: {
-          x: 30,
+          x: 20,
           y: 0,
         },
         direction: "east",
         presentation: {
           visibility: "visible",
-          leadLength: 15,
+          leadLength: 10,
         },
       },
     ],
@@ -1067,11 +1035,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         to: {
-          x: -11,
+          x: -7.333333,
           y: 0,
         },
         style: {
@@ -1083,10 +1051,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "circle",
         center: {
-          x: -9,
+          x: -6,
           y: 0,
         },
-        radius: 2,
+        radius: 1.333333,
         fill: "none",
         stroke: "foreground",
         style: {
@@ -1098,10 +1066,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "circle",
         center: {
-          x: 9,
+          x: 6,
           y: 0,
         },
-        radius: 2,
+        radius: 1.333333,
         fill: "none",
         stroke: "foreground",
         style: {
@@ -1113,11 +1081,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 11,
+          x: 7.333333,
           y: 0,
         },
         to: {
-          x: 30,
+          x: 20,
           y: 0,
         },
         style: {
@@ -1129,12 +1097,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -7.5,
-          y: -1.5,
+          x: -5,
+          y: -1,
         },
         to: {
-          x: 7.5,
-          y: -12,
+          x: 5,
+          y: -8,
         },
         style: {
           strokeRole: "emphasis",
@@ -1671,10 +1639,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "npn",
     name: "NPN Bipolar Transistor",
     viewBox: {
-      x: -34,
-      y: -34,
-      width: 42,
-      height: 68,
+      x: -24,
+      y: -24,
+      width: 32,
+      height: 48,
     },
     pins: [
       {
@@ -1682,7 +1650,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "collector",
         at: {
           x: 0,
-          y: -30,
+          y: -20,
         },
         direction: "north",
         presentation: {
@@ -1694,13 +1662,13 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "B",
         role: "base",
         at: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         direction: "west",
         presentation: {
           visibility: "visible",
-          leadLength: 20,
+          leadLength: 10,
         },
       },
       {
@@ -1708,7 +1676,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "emitter",
         at: {
           x: 0,
-          y: 30,
+          y: 20,
         },
         direction: "south",
         presentation: {
@@ -1721,11 +1689,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         to: {
-          x: -13.42,
+          x: -8.946667,
           y: 0,
         },
         style: {
@@ -1737,12 +1705,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.42,
-          y: -9.96,
+          x: -8.946667,
+          y: -6.64,
         },
         to: {
-          x: -13.42,
-          y: 9.96,
+          x: -8.946667,
+          y: 6.64,
         },
         style: {
           strokeRole: "emphasis",
@@ -1753,12 +1721,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.42,
-          y: -4.47,
+          x: -8.946667,
+          y: -2.98,
         },
         to: {
           x: 0,
-          y: -10.06,
+          y: -6.706667,
         },
         style: {
           strokeRole: "normal",
@@ -1770,11 +1738,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: -10.06,
+          y: -6.706667,
         },
         to: {
           x: 0,
-          y: -30,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -1785,12 +1753,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.42,
-          y: 4.47,
+          x: -8.946667,
+          y: 2.98,
         },
         to: {
           x: 0,
-          y: 10.06,
+          y: 6.706667,
         },
         style: {
           strokeRole: "normal",
@@ -1802,11 +1770,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: 10.06,
+          y: 6.706667,
         },
         to: {
           x: 0,
-          y: 30,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -1818,16 +1786,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -4.47,
-            y: 5.59,
+            x: -2.98,
+            y: 3.726667,
           },
           {
-            x: -6.71,
-            y: 10.06,
+            x: -4.473333,
+            y: 6.706667,
           },
           {
             x: 0,
-            y: 10.06,
+            y: 6.706667,
           },
         ],
         fill: "foreground",
@@ -2455,10 +2423,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "pnp",
     name: "PNP Bipolar Transistor",
     viewBox: {
-      x: -34,
-      y: -34,
-      width: 42,
-      height: 68,
+      x: -24,
+      y: -24,
+      width: 32,
+      height: 48,
     },
     pins: [
       {
@@ -2466,7 +2434,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "collector",
         at: {
           x: 0,
-          y: 30,
+          y: 20,
         },
         direction: "south",
         presentation: {
@@ -2478,13 +2446,13 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "B",
         role: "base",
         at: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         direction: "west",
         presentation: {
           visibility: "visible",
-          leadLength: 20,
+          leadLength: 10,
         },
       },
       {
@@ -2492,7 +2460,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "emitter",
         at: {
           x: 0,
-          y: -30,
+          y: -20,
         },
         direction: "north",
         presentation: {
@@ -2505,11 +2473,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -30,
+          x: -20,
           y: 0,
         },
         to: {
-          x: -13.42,
+          x: -8.946667,
           y: 0,
         },
         style: {
@@ -2521,12 +2489,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.42,
-          y: -9.96,
+          x: -8.946667,
+          y: -6.64,
         },
         to: {
-          x: -13.42,
-          y: 9.96,
+          x: -8.946667,
+          y: 6.64,
         },
         style: {
           strokeRole: "emphasis",
@@ -2537,12 +2505,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.42,
-          y: -4.47,
+          x: -8.946667,
+          y: -2.98,
         },
         to: {
           x: 0,
-          y: -10.06,
+          y: -6.706667,
         },
         style: {
           strokeRole: "normal",
@@ -2554,11 +2522,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: -10.06,
+          y: -6.706667,
         },
         to: {
           x: 0,
-          y: -30,
+          y: -20,
         },
         style: {
           strokeRole: "normal",
@@ -2569,12 +2537,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -13.42,
-          y: 4.47,
+          x: -8.946667,
+          y: 2.98,
         },
         to: {
           x: 0,
-          y: 10.06,
+          y: 6.706667,
         },
         style: {
           strokeRole: "normal",
@@ -2586,11 +2554,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: 10.06,
+          y: 6.706667,
         },
         to: {
           x: 0,
-          y: 30,
+          y: 20,
         },
         style: {
           strokeRole: "normal",
@@ -2602,16 +2570,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -7.69,
-            y: -9.51,
+            x: -5.126667,
+            y: -6.34,
           },
           {
-            x: -5.45,
-            y: -5.03,
+            x: -3.633333,
+            y: -3.353333,
           },
           {
-            x: -12.16,
-            y: -5.03,
+            x: -8.106667,
+            y: -3.353333,
           },
         ],
         fill: "foreground",
@@ -2795,237 +2763,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: [],
-  },
-  {
-    schemaVersion: 1,
-    id: "vccs",
-    name: "Voltage-Controlled Current Source",
-    viewBox: {
-      x: -34,
-      y: -34,
-      width: 64,
-      height: 68,
-    },
-    pins: [
-      {
-        name: "OUT+",
-        role: "output-positive",
-        at: {
-          x: 20,
-          y: -30,
-        },
-        direction: "north",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "OUT-",
-        role: "output-negative",
-        at: {
-          x: 20,
-          y: 30,
-        },
-        direction: "south",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "CTRL+",
-        role: "control-positive",
-        at: {
-          x: -30,
-          y: -10,
-        },
-        direction: "west",
-        presentation: {
-          visibility: "visible",
-          leadLength: 20,
-        },
-      },
-      {
-        name: "CTRL-",
-        role: "control-negative",
-        at: {
-          x: -30,
-          y: 10,
-        },
-        direction: "west",
-        presentation: {
-          visibility: "visible",
-          leadLength: 20,
-        },
-      },
-    ],
-    primitives: [
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: -30,
-        },
-        to: {
-          x: 20,
-          y: -12,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "circle",
-        center: {
-          x: 20,
-          y: 0,
-        },
-        radius: 12,
-        fill: "none",
-        stroke: "foreground",
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: 12,
-        },
-        to: {
-          x: 20,
-          y: 30,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -30,
-          y: -10,
-        },
-        to: {
-          x: -12,
-          y: -10,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -30,
-          y: 10,
-        },
-        to: {
-          x: -12,
-          y: 10,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -9,
-          y: -13,
-        },
-        to: {
-          x: -9,
-          y: -7,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -12,
-          y: -10,
-        },
-        to: {
-          x: -6,
-          y: -10,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -12,
-          y: 10,
-        },
-        to: {
-          x: -6,
-          y: 10,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 20,
-          y: -7.4,
-        },
-        to: {
-          x: 20,
-          y: -1.4,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: 20,
-            y: 7.6,
-          },
-          {
-            x: 15.5,
-            y: -1.4,
-          },
-          {
-            x: 24.5,
-            y: -1.4,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-      },
-    ],
-    variants: [],
-    aliases: ["dependent-current-source", "transconductance-source"],
   },
   {
     schemaVersion: 1,

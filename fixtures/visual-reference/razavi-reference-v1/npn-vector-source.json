@@ -147,17 +147,17 @@
       {
         "name": "C",
         "x": 0,
-        "y": -30
+        "y": -20
       },
       {
         "name": "B",
-        "x": -30,
+        "x": -20,
         "y": 0
       },
       {
         "name": "E",
         "x": 0,
-        "y": 30
+        "y": 20
       }
     ],
     "strokeMapping": {
@@ -173,10 +173,10 @@
       "id": "npn",
       "name": "NPN Bipolar Transistor",
       "viewBox": {
-        "x": -34,
-        "y": -34,
-        "width": 42,
-        "height": 68
+        "x": -24,
+        "y": -24,
+        "width": 32,
+        "height": 48
       },
       "pins": [
         {
@@ -184,7 +184,7 @@
           "role": "collector",
           "at": {
             "x": 0,
-            "y": -30
+            "y": -20
           },
           "direction": "north",
           "presentation": {
@@ -196,13 +196,13 @@
           "name": "B",
           "role": "base",
           "at": {
-            "x": -30,
+            "x": -20,
             "y": 0
           },
           "direction": "west",
           "presentation": {
             "visibility": "visible",
-            "leadLength": 20
+            "leadLength": 10
           }
         },
         {
@@ -210,7 +210,7 @@
           "role": "emitter",
           "at": {
             "x": 0,
-            "y": 30
+            "y": 20
           },
           "direction": "south",
           "presentation": {
@@ -223,11 +223,11 @@
         {
           "kind": "line",
           "from": {
-            "x": -30,
+            "x": -20,
             "y": 0
           },
           "to": {
-            "x": -13.42,
+            "x": -8.946667,
             "y": 0
           },
           "style": {
@@ -239,12 +239,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -13.42,
-            "y": -9.96
+            "x": -8.946667,
+            "y": -6.64
           },
           "to": {
-            "x": -13.42,
-            "y": 9.96
+            "x": -8.946667,
+            "y": 6.64
           },
           "style": {
             "strokeRole": "emphasis",
@@ -255,12 +255,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -13.42,
-            "y": -4.47
+            "x": -8.946667,
+            "y": -2.98
           },
           "to": {
             "x": 0,
-            "y": -10.06
+            "y": -6.706667
           },
           "style": {
             "strokeRole": "normal",
@@ -272,11 +272,11 @@
           "kind": "line",
           "from": {
             "x": 0,
-            "y": -10.06
+            "y": -6.706667
           },
           "to": {
             "x": 0,
-            "y": -30
+            "y": -20
           },
           "style": {
             "strokeRole": "normal",
@@ -287,12 +287,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -13.42,
-            "y": 4.47
+            "x": -8.946667,
+            "y": 2.98
           },
           "to": {
             "x": 0,
-            "y": 10.06
+            "y": 6.706667
           },
           "style": {
             "strokeRole": "normal",
@@ -304,11 +304,11 @@
           "kind": "line",
           "from": {
             "x": 0,
-            "y": 10.06
+            "y": 6.706667
           },
           "to": {
             "x": 0,
-            "y": 30
+            "y": 20
           },
           "style": {
             "strokeRole": "normal",
@@ -320,16 +320,16 @@
           "kind": "polygon",
           "points": [
             {
-              "x": -4.47,
-              "y": 5.59
+              "x": -2.98,
+              "y": 3.726667
             },
             {
-              "x": -6.71,
-              "y": 10.06
+              "x": -4.473333,
+              "y": 6.706667
             },
             {
               "x": 0,
-              "y": 10.06
+              "y": 6.706667
             }
           ],
           "fill": "foreground",
@@ -347,13 +347,13 @@
     "kind": "isolated-normalized-pdf-family",
     "dpi": 300.0,
     "pixels": {
-      "width": 101,
-      "height": 164
+      "width": 77,
+      "height": 116
     },
     "pixelsPerLogical": 2.4,
     "originPx": {
-      "x": 81.6,
-      "y": 81.6
+      "x": 57.6,
+      "y": 57.6
     },
     "assetPath": "npn-reference.png",
     "threshold": 160

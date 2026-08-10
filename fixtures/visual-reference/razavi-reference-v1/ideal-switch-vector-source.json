@@ -96,12 +96,12 @@
     "pinAnchorsLogical": [
       {
         "name": "1",
-        "x": -30,
+        "x": -20,
         "y": 0
       },
       {
         "name": "2",
-        "x": 30,
+        "x": 20,
         "y": 0
       }
     ],
@@ -118,36 +118,36 @@
       "id": "ideal-switch",
       "name": "Ideal Switch",
       "viewBox": {
-        "x": -34,
-        "y": -18,
-        "width": 68,
-        "height": 36
+        "x": -24,
+        "y": -12,
+        "width": 48,
+        "height": 24
       },
       "pins": [
         {
           "name": "1",
           "role": "passive",
           "at": {
-            "x": -30,
+            "x": -20,
             "y": 0
           },
           "direction": "west",
           "presentation": {
             "visibility": "visible",
-            "leadLength": 15
+            "leadLength": 10
           }
         },
         {
           "name": "2",
           "role": "passive",
           "at": {
-            "x": 30,
+            "x": 20,
             "y": 0
           },
           "direction": "east",
           "presentation": {
             "visibility": "visible",
-            "leadLength": 15
+            "leadLength": 10
           }
         }
       ],
@@ -155,11 +155,11 @@
         {
           "kind": "line",
           "from": {
-            "x": -30,
+            "x": -20,
             "y": 0
           },
           "to": {
-            "x": -11,
+            "x": -7.333333,
             "y": 0
           },
           "style": {
@@ -171,10 +171,10 @@
         {
           "kind": "circle",
           "center": {
-            "x": -9,
+            "x": -6,
             "y": 0
           },
-          "radius": 2,
+          "radius": 1.333333,
           "fill": "none",
           "stroke": "foreground",
           "style": {
@@ -186,10 +186,10 @@
         {
           "kind": "circle",
           "center": {
-            "x": 9,
+            "x": 6,
             "y": 0
           },
-          "radius": 2,
+          "radius": 1.333333,
           "fill": "none",
           "stroke": "foreground",
           "style": {
@@ -201,11 +201,11 @@
         {
           "kind": "line",
           "from": {
-            "x": 11,
+            "x": 7.333333,
             "y": 0
           },
           "to": {
-            "x": 30,
+            "x": 20,
             "y": 0
           },
           "style": {
@@ -217,12 +217,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -7.5,
-            "y": -1.5
+            "x": -5,
+            "y": -1
           },
           "to": {
-            "x": 7.5,
-            "y": -12
+            "x": 5,
+            "y": -8
           },
           "style": {
             "strokeRole": "emphasis",
@@ -242,13 +242,13 @@
     "kind": "isolated-normalized-pdf-family",
     "dpi": 300.0,
     "pixels": {
-      "width": 164,
-      "height": 87
+      "width": 116,
+      "height": 58
     },
     "pixelsPerLogical": 2.4,
     "originPx": {
-      "x": 81.6,
-      "y": 43.2
+      "x": 57.6,
+      "y": 28.8
     },
     "assetPath": "ideal-switch-reference.png",
     "threshold": 160

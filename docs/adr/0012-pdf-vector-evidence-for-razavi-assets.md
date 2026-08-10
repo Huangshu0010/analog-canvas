@@ -46,9 +46,9 @@ This decision is applied one reviewed component at a time. It does not
 authorize bulk conversion or replacement of existing raster evidence. The
 current PDF-derived set includes the inductor from Figure 15.21, the
 three-terminal op-amp from Figure 8.26, and the common-device family recorded
-by `extract-razavi-common-assets.py`: NPN and PNP BJT, dependent current source,
-diode, voltage amplifier, and ideal switch. Every semantic pin extension must
-say so in its evidence; it must not be described as native source artwork.
+by `extract-razavi-common-assets.py`: NPN and PNP BJT, diode, voltage amplifier,
+and ideal switch. Every semantic pin extension must say so in its evidence; it
+must not be described as native source artwork.
 
 ## Inductor mapping
 
@@ -75,11 +75,10 @@ region and commits a normalized SymbolDefinition with an isolated witness.
 The NPN body and outward emitter arrow are directly normalized from Figure
 12.6. The PNP body and inward upper-emitter arrow are separately normalized
 from Figure 12.11; neither arrow is a hand-drawn polarity reversal. The
-four-terminal VCCS preserves Figure 2.37's `g_m V_GS` source circle and arrow,
-then adds explicit grid-aligned control/output terminal extensions for the
-SPICE `G` contract. Figure 15.54 supplies an outline diode triangle and a
-double-width cathode bar. Two-terminal diode and three-terminal NPN/PNP map to
-SPICE `D` and three-node `Q`, respectively.
+Figure 15.54 supplies an outline diode triangle and a double-width cathode bar.
+Two-terminal diode and three-terminal NPN/PNP map to SPICE `D` and three-node
+`Q`, respectively. SPICE `G` remains valid parser/compiler IR, but no reviewed
+controlled-source graphical symbol is exposed or automatically imported.
 
 The two-terminal ideal switch does not map to four-terminal SPICE `S`. No
 standalone Razavi transformer source has been approved, so no transformer is

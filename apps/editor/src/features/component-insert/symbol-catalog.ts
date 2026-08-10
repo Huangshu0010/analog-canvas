@@ -25,7 +25,7 @@ export function symbolCategory(symbolId: string): string {
   if (["opamp", "voltage-amplifier"].includes(symbolId)) {
     return "Analog Blocks";
   }
-  if (["voltage-source", "current-source", "vccs"].includes(symbolId)) {
+  if (["voltage-source", "current-source"].includes(symbolId)) {
     return "Sources";
   }
   if (symbolId === "ideal-switch") return "Switches";

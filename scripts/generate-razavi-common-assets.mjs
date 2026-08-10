@@ -35,13 +35,6 @@ const entries = [
     ["C", "B", "E"],
     ["spice:Q:pnp", "pdk:model-type:pnp"],
   ],
-  [
-    "vccs",
-    "Voltage-Controlled Current Source",
-    "source",
-    ["OUT+", "OUT-", "CTRL+", "CTRL-"],
-    ["spice:G"],
-  ],
   ["voltage-amplifier", "Voltage Amplifier", "analog-block", ["IN", "OUT"], []],
 ];
 

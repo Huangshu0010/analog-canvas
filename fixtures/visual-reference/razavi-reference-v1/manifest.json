@@ -72,9 +72,9 @@
         "figure": "15.54"
       },
       "extractPath": "diode-vector-source.json",
-      "extractSha256": "9f86e695d5a369ca9ea6bc38fac0b135b5ff636386772101a3f93e0957006e7b",
+      "extractSha256": "6a0fab299cfae432358bb6bdb4ab11c3c0f7845c481dafac0f8f0a589fdc1883",
       "rasterPath": "diode-reference.png",
-      "rasterSha256": "1ed15c2f475ea97f374a95d77c91738b04dd5236f949eaed81e269d0d42b6526",
+      "rasterSha256": "340af471b836ec73dbcf66d9be04c470c7f15c7c92231feacfe678d8c4178893",
       "scope": ["outline diode geometry", "double-width cathode bar"]
     },
     {
@@ -88,9 +88,9 @@
         "figure": "13.4"
       },
       "extractPath": "ideal-switch-vector-source.json",
-      "extractSha256": "a5d52b0067d1f89ae839ab7f1c69802464f832f400586b553c1dfe7e03818034",
+      "extractSha256": "fce6a21907246daf9f425ab80704ba8082b98ed0a06fd5409c30d762832d7d9a",
       "rasterPath": "ideal-switch-reference.png",
-      "rasterSha256": "ce48cd75685c08dfeba6b0e71b1e31a816a4aa02897a64692ad06d36365eda43",
+      "rasterSha256": "8f3952ba941067ef47ea3e3983f6211207a5929ca33f7472438b8364bbf0a49b",
       "scope": ["two-terminal ideal switch geometry"]
     },
     {
@@ -104,9 +104,9 @@
         "figure": "12.6"
       },
       "extractPath": "npn-vector-source.json",
-      "extractSha256": "99595397577c0705cbdb018d3524b91e3c8bfde086a28f40234360cb2048f617",
+      "extractSha256": "b52b9a80e5dca81bc938ee81b9092c81981a07b18c9d13d671438c92a27d8649",
       "rasterPath": "npn-reference.png",
-      "rasterSha256": "a640c8cfe5e556b3a4e61f1a213648ad19524ce6391f494d36ea22cd5c4f9e4b",
+      "rasterSha256": "973f796d6d57fae6d149aa16a71579605207eb71e67639c8c68029058c79a47a",
       "scope": ["direct NPN body and outward emitter arrow"]
     },
     {
@@ -120,29 +120,10 @@
         "figure": "12.11"
       },
       "extractPath": "pnp-vector-source.json",
-      "extractSha256": "4839f41a88ff6b0657e8e717c3f947a062cc444bd8d7e00413e37e9a80874fa0",
+      "extractSha256": "607d0c8d70e1aec4725f3f631466827f70d78d038f090f7dff5407dcda1d59cf",
       "rasterPath": "pnp-reference.png",
-      "rasterSha256": "d1d85867f15456fa1ba378344f50b92d8aa1671f7c942266ff4bbeba75aae508",
+      "rasterSha256": "8abbd1b3388b3fe969f576d11c35bf7a05a1abc686c65dfdb07dc6e1693486fb",
       "scope": ["direct PNP body and inward upper-emitter arrow"]
-    },
-    {
-      "id": "razavi-textbook-vccs",
-      "kind": "pdf-vector-extract",
-      "source": {
-        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
-        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
-        "pdfPage": 51,
-        "printedPage": 32,
-        "figure": "2.37"
-      },
-      "extractPath": "vccs-vector-source.json",
-      "extractSha256": "3aba90207250484eb232ba3ff151938e287c003cb38e676848565a528b970880",
-      "rasterPath": "vccs-reference.png",
-      "rasterSha256": "31285569d9bb681888d45af8ad0eda612a93fe8aae0b826cba5164fd1a51f5d4",
-      "scope": [
-        "dependent current-source geometry",
-        "explicit SPICE control terminals"
-      ]
     },
     {
       "id": "razavi-textbook-voltage-amplifier",
@@ -178,9 +159,9 @@
   "opampGeometryPath": "opamp-geometry.json",
   "opampGeometrySha256": "51003a9dbe09ea8b9d3a346489d9777c4019a57466bac10dbfdc5b9e8d0390ba",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
-  "commonSymbolGeometrySha256": "0376e59a73f33f4a4ec84ece111a869a1804ebcdee0b37feb1be50c924decc73",
+  "commonSymbolGeometrySha256": "becc28ce70dd4bf7bfe0027108651dfbf04d83fbba255f72f5baba805ac8f98f",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "b6535606de4b37e887194c1aa3a618d2eafc622585af485af88afb163db8e3ad",
+  "fidelityTargetsSha256": "f22750d6febb521ce3ce93c0b3e5f7bce3af397e6d941da3720443c2d74d1158",
   "pixels": {
     "width": 1204,
     "height": 794
@@ -196,7 +177,7 @@
     "VDD supply marker geometry",
     "PDF-derived inductor geometry and stroke treatment",
     "PDF-derived three-terminal op-amp geometry and polarity marks",
-    "PDF-derived common BJT, diode, dependent-source, gain-block, and switch families"
+    "PDF-derived common BJT, diode, gain-block, and switch families"
   ],
   "notes": [
     "This manifest is the sole visual authority for Razavi style v1.",

@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
-import { CircuitProjectSchema } from "@icm/model";
 
 import { builtInSymbols } from "./builtins.js";
 import {
@@ -121,7 +120,6 @@ describe("Razavi symbol catalog", () => {
       ["port", "reviewed", "razavi-reference-v1"],
       ["port-filled", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
-      ["vccs", "reviewed", "razavi-reference-v1"],
       ["vdd", "reviewed", "razavi-reference-v1"],
       ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
       ["voltage-source", "reviewed", "razavi-reference-v1"],
@@ -172,7 +170,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(20);
+    expect(razaviCatalogSymbols).toHaveLength(19);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -198,7 +196,6 @@ describe("Razavi symbol catalog", () => {
       "port",
       "port-filled",
       "resistor",
-      "vccs",
       "vdd",
       "voltage-amplifier",
       "voltage-source",
@@ -242,7 +239,6 @@ describe("Razavi symbol catalog", () => {
       "ideal-switch",
       "npn",
       "pnp",
-      "vccs",
       "voltage-amplifier",
       "port",
       "port-filled",
@@ -481,17 +477,17 @@ describe("Razavi symbol catalog", () => {
   it("keeps the directly normalized BJT arrows and outline diode geometry", () => {
     const npn = requireRazaviCatalogSymbol("npn");
     expect(npn.pins).toMatchObject([
-      { name: "C", at: { x: 0, y: -30 }, direction: "north" },
-      { name: "B", at: { x: -30, y: 0 }, direction: "west" },
-      { name: "E", at: { x: 0, y: 30 }, direction: "south" },
+      { name: "C", at: { x: 0, y: -20 }, direction: "north" },
+      { name: "B", at: { x: -20, y: 0 }, direction: "west" },
+      { name: "E", at: { x: 0, y: 20 }, direction: "south" },
     ]);
     expect(npn.primitives).toContainEqual(
       expect.objectContaining({
         kind: "polygon",
         points: [
-          { x: -4.47, y: 5.59 },
-          { x: -6.71, y: 10.06 },
-          { x: 0, y: 10.06 },
+          { x: -2.98, y: 3.726667 },
+          { x: -4.473333, y: 6.706667 },
+          { x: 0, y: 6.706667 },
         ],
         fill: "foreground",
         stroke: "none",
@@ -500,17 +496,17 @@ describe("Razavi symbol catalog", () => {
 
     const pnp = requireRazaviCatalogSymbol("pnp");
     expect(pnp.pins).toMatchObject([
-      { name: "C", at: { x: 0, y: 30 }, direction: "south" },
-      { name: "B", at: { x: -30, y: 0 }, direction: "west" },
-      { name: "E", at: { x: 0, y: -30 }, direction: "north" },
+      { name: "C", at: { x: 0, y: 20 }, direction: "south" },
+      { name: "B", at: { x: -20, y: 0 }, direction: "west" },
+      { name: "E", at: { x: 0, y: -20 }, direction: "north" },
     ]);
     expect(pnp.primitives).toContainEqual(
       expect.objectContaining({
         kind: "polygon",
         points: [
-          { x: -7.69, y: -9.51 },
-          { x: -5.45, y: -5.03 },
-          { x: -12.16, y: -5.03 },
+          { x: -5.126667, y: -6.34 },
+          { x: -3.633333, y: -3.353333 },
+          { x: -8.106667, y: -3.353333 },
         ],
         fill: "foreground",
         stroke: "none",
@@ -528,13 +524,18 @@ describe("Razavi symbol catalog", () => {
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: 8, y: -8.8 },
-          to: { x: 8, y: 8.8 },
+          from: { x: 5.333333, y: -5.866667 },
+          to: { x: 5.333333, y: 5.866667 },
           style: expect.objectContaining({ strokeRole: "emphasis" }),
         }),
       ]),
     );
+    expect(diode.pins.map((pin) => pin.at.x)).toEqual([-20, 20]);
+    expect(
+      requireRazaviCatalogSymbol("ideal-switch").pins.map((pin) => pin.at.x),
+    ).toEqual([-20, 20]);
     expect(getRazaviCatalogEntry("transformer")).toBeUndefined();
+    expect(getRazaviCatalogEntry("vccs")).toBeUndefined();
   });
 
   it("uses calibrated MOS and source arrowheads with external voltage polarity marks", () => {
@@ -687,35 +688,5 @@ describe("Razavi symbol catalog", () => {
     expect(
       razaviCatalogSymbols.some((symbol) => symbol.id === "junction-dot"),
     ).toBe(false);
-  });
-
-  it("composes the BJT hybrid-pi model from reviewed electrical primitives", () => {
-    const fixture = CircuitProjectSchema.parse(
-      JSON.parse(
-        readFileSync(
-          resolve(
-            process.cwd(),
-            "fixtures/projects/razavi-bjt-small-signal/project.icproj.json",
-          ),
-          "utf8",
-        ),
-      ),
-    );
-    const document = fixture.documents[0]!;
-    expect(document.instances.map((instance) => instance.symbolId)).toEqual([
-      "resistor",
-      "capacitor",
-      "capacitor",
-      "resistor",
-      "vccs",
-    ]);
-    expect(
-      document.nets.find((net) => net.id === "net-emitter")?.terminals,
-    ).toEqual(
-      expect.arrayContaining([
-        { instanceId: "GM", pinName: "OUT-" },
-        { instanceId: "GM", pinName: "CTRL-" },
-      ]),
-    );
   });
 });

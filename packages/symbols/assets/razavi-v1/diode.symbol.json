@@ -3,36 +3,36 @@
   "id": "diode",
   "name": "Diode",
   "viewBox": {
-    "x": -34,
-    "y": -14,
-    "width": 68,
-    "height": 28
+    "x": -24,
+    "y": -10,
+    "width": 48,
+    "height": 20
   },
   "pins": [
     {
       "name": "A",
       "role": "anode",
       "at": {
-        "x": -30,
+        "x": -20,
         "y": 0
       },
       "direction": "west",
       "presentation": {
         "visibility": "visible",
-        "leadLength": 15
+        "leadLength": 10
       }
     },
     {
       "name": "K",
       "role": "cathode",
       "at": {
-        "x": 30,
+        "x": 20,
         "y": 0
       },
       "direction": "east",
       "presentation": {
         "visibility": "visible",
-        "leadLength": 15
+        "leadLength": 10
       }
     }
   ],
@@ -40,11 +40,11 @@
     {
       "kind": "line",
       "from": {
-        "x": -30,
+        "x": -20,
         "y": 0
       },
       "to": {
-        "x": -10,
+        "x": -6.666667,
         "y": 0
       },
       "style": {
@@ -57,15 +57,15 @@
       "kind": "polygon",
       "points": [
         {
-          "x": -10,
-          "y": -8.1
+          "x": -6.666667,
+          "y": -5.4
         },
         {
-          "x": -10,
-          "y": 8.1
+          "x": -6.666667,
+          "y": 5.4
         },
         {
-          "x": 7,
+          "x": 4.666667,
           "y": 0
         }
       ],
@@ -80,12 +80,12 @@
     {
       "kind": "line",
       "from": {
-        "x": 8,
-        "y": -8.8
+        "x": 5.333333,
+        "y": -5.866667
       },
       "to": {
-        "x": 8,
-        "y": 8.8
+        "x": 5.333333,
+        "y": 5.866667
       },
       "style": {
         "strokeRole": "emphasis",
@@ -96,11 +96,11 @@
     {
       "kind": "line",
       "from": {
-        "x": 8,
+        "x": 5.333333,
         "y": 0
       },
       "to": {
-        "x": 30,
+        "x": 20,
         "y": 0
       },
       "style": {

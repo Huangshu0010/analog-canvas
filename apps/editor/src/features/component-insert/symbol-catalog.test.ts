@@ -23,7 +23,6 @@ describe("component insertion catalog", () => {
     expect(symbolCategory("opamp")).toBe("Analog Blocks");
     expect(symbolCategory("npn")).toBe("Transistors");
     expect(symbolCategory("diode")).toBe("Passives");
-    expect(symbolCategory("vccs")).toBe("Sources");
     expect(symbolCategory("ideal-switch")).toBe("Switches");
   });
 
@@ -48,6 +47,7 @@ describe("component insertion catalog", () => {
       expect.arrayContaining(["diode", "npn", "pnp"]),
     );
     expect(symbols.map((symbol) => symbol.id)).not.toContain("transformer");
+    expect(symbols.map((symbol) => symbol.id)).not.toContain("vccs");
   });
 
   it("returns no selectable entries for an unmatched query", () => {

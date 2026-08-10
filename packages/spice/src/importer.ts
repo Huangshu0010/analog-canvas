@@ -98,10 +98,6 @@ function symbolFor(
     pmos: { symbolId: "pmos" },
     "voltage-source": { symbolId: "voltage-source" },
     "current-source": { symbolId: "current-source" },
-    vccs: {
-      symbolId: "vccs",
-      pinNames: ["OUT+", "OUT-", "CTRL+", "CTRL-"],
-    },
   };
   const mapping = symbols[instance.target.family];
   return mapping && isRazaviProductSymbolId(mapping.symbolId) ? mapping : null;

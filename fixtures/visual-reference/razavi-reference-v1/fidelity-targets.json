@@ -176,13 +176,6 @@
       "useVariant": false
     },
     {
-      "id": "vccs",
-      "measurementPath": "common-symbol-geometry.json",
-      "measurementKey": "vccs",
-      "symbolId": "vccs",
-      "useVariant": false
-    },
-    {
       "id": "voltage-amplifier",
       "measurementPath": "common-symbol-geometry.json",
       "measurementKey": "voltage-amplifier",

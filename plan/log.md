@@ -4259,3 +4259,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   warning.
 - Commit status: ready to commit on `main` as
   `fix(symbols): correct common Razavi source fidelity`.
+
+## 2026-08-11 - Remove VCCS and normalize compact-device scale
+
+- Target: remove the unneeded graphical controlled source and correct the
+  oversized normalization of the recently added compact devices.
+- Changed areas: VCCS asset/evidence/catalog/GUI/import removal, retained SPICE
+  `G` syntax/IR with unsupported graphical-import diagnostics, retired hybrid-pi
+  fixture, and uniform `2/3` scaling of NPN, PNP, diode, and ideal switch from
+  60-unit to 40-unit primary pin spans.
+- Validation: authority and generator checks, 39 focused tests, affected
+  builds, repository typecheck, editor production build, four fidelity diffs,
+  live GUI inspection, formatting, and `git diff --check` passed. The editor
+  build retains its existing large-chunk warning.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): remove VCCS and normalize device scale`.

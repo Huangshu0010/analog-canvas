@@ -79,19 +79,19 @@ def npn_bjt() -> dict[str, Any]:
     # (216.54, 233.936).  The filled arrow is deliberately emitted after the
     # emitter branch so it masks the centerline exactly as in the source.
     primitives = [
-        line(-30, 0, -13.42, 0),
-        line(-13.42, -9.96, -13.42, 9.96, EMPHASIS),
-        line(-13.42, -4.47, 0, -10.06),
-        line(0, -10.06, 0, -30),
-        line(-13.42, 4.47, 0, 10.06),
-        line(0, 10.06, 0, 30),
-        polygon([(-4.47, 5.59), (-6.71, 10.06), (0, 10.06)]),
+        line(-20, 0, -8.946667, 0),
+        line(-8.946667, -6.64, -8.946667, 6.64, EMPHASIS),
+        line(-8.946667, -2.98, 0, -6.706667),
+        line(0, -6.706667, 0, -20),
+        line(-8.946667, 2.98, 0, 6.706667),
+        line(0, 6.706667, 0, 20),
+        polygon([(-2.98, 3.726667), (-4.473333, 6.706667), (0, 6.706667)]),
     ]
     return symbol(
         "npn",
         "NPN Bipolar Transistor",
-        (-34, -34, 42, 68),
-        [pin("C", "collector", 0, -30, "north"), pin("B", "base", -30, 0, "west", 20), pin("E", "emitter", 0, 30, "south")],
+        (-24, -24, 32, 48),
+        [pin("C", "collector", 0, -20, "north"), pin("B", "base", -20, 0, "west"), pin("E", "emitter", 0, 20, "south")],
         primitives,
         ["bjt-npn", "bipolar-npn"],
     )
@@ -102,19 +102,19 @@ def pnp_bjt() -> dict[str, Any]:
     # (198.383, 592.511).  Unlike the NPN, the directly observed emitter and
     # its inward arrow are on the upper branch.
     primitives = [
-        line(-30, 0, -13.42, 0),
-        line(-13.42, -9.96, -13.42, 9.96, EMPHASIS),
-        line(-13.42, -4.47, 0, -10.06),
-        line(0, -10.06, 0, -30),
-        line(-13.42, 4.47, 0, 10.06),
-        line(0, 10.06, 0, 30),
-        polygon([(-7.69, -9.51), (-5.45, -5.03), (-12.16, -5.03)]),
+        line(-20, 0, -8.946667, 0),
+        line(-8.946667, -6.64, -8.946667, 6.64, EMPHASIS),
+        line(-8.946667, -2.98, 0, -6.706667),
+        line(0, -6.706667, 0, -20),
+        line(-8.946667, 2.98, 0, 6.706667),
+        line(0, 6.706667, 0, 20),
+        polygon([(-5.126667, -6.34), (-3.633333, -3.353333), (-8.106667, -3.353333)]),
     ]
     return symbol(
         "pnp",
         "PNP Bipolar Transistor",
-        (-34, -34, 42, 68),
-        [pin("C", "collector", 0, 30, "south"), pin("B", "base", -30, 0, "west", 20), pin("E", "emitter", 0, -30, "north")],
+        (-24, -24, 32, 48),
+        [pin("C", "collector", 0, 20, "south"), pin("B", "base", -20, 0, "west"), pin("E", "emitter", 0, -20, "north")],
         primitives,
         ["bjt-pnp", "bipolar-pnp"],
     )
@@ -131,24 +131,13 @@ SPECS: dict[str, dict[str, Any]] = {
         "crop": (198.0, 220.0, 222.0, 250.0), "method": "direct-device-vector-normalization",
         "definition": npn_bjt(),
     },
-    "vccs": {
-        "pdfPage": 51, "printedPage": 32, "figure": "2.37",
-        "crop": (155.0, 30.0, 315.0, 105.0), "method": "direct-plus-explicit-control-terminals",
-        "definition": symbol(
-            "vccs", "Voltage-Controlled Current Source", (-34, -34, 64, 68),
-            [pin("OUT+", "output-positive", 20, -30, "north"), pin("OUT-", "output-negative", 20, 30, "south"), pin("CTRL+", "control-positive", -30, -10, "west", 20), pin("CTRL-", "control-negative", -30, 10, "west", 20)],
-            [line(20, -30, 20, -12), circle(20, 0, 12), line(20, 12, 20, 30), line(-30, -10, -12, -10), line(-30, 10, -12, 10), line(-9, -13, -9, -7), line(-12, -10, -6, -10), line(-12, 10, -6, 10), line(20, -7.4, 20, -1.4), polygon([(20, 7.6), (15.5, -1.4), (24.5, -1.4)])],
-            ["dependent-current-source", "transconductance-source"],
-        ),
-        "derivation": "Figure 2.37 directly supplies the dependent-current-source circle and arrow. OUT+/OUT- and CTRL+/CTRL- are explicit 10-unit-grid electrical extensions of the labeled D/S and VGS terminals required by the four-node SPICE G contract.",
-    },
     "diode": {
         "pdfPage": 661, "printedPage": 642, "figure": "15.54",
         "crop": (180.0, 95.0, 455.0, 125.0), "method": "direct-family-observation",
         "definition": symbol(
-            "diode", "Diode", (-34, -14, 68, 28),
-            [pin("A", "anode", -30, 0, "west", 15), pin("K", "cathode", 30, 0, "east", 15)],
-            [line(-30, 0, -10, 0), outline_polygon([(-10, -8.1), (-10, 8.1), (7, 0)]), line(8, -8.8, 8, 8.8, EMPHASIS), line(8, 0, 30, 0)],
+            "diode", "Diode", (-24, -10, 48, 20),
+            [pin("A", "anode", -20, 0, "west"), pin("K", "cathode", 20, 0, "east")],
+            [line(-20, 0, -6.666667, 0), outline_polygon([(-6.666667, -5.4), (-6.666667, 5.4), (4.666667, 0)]), line(5.333333, -5.866667, 5.333333, 5.866667, EMPHASIS), line(5.333333, 0, 20, 0)],
             ["pn-diode", "rectifier-diode"],
         ),
     },
@@ -166,9 +155,9 @@ SPECS: dict[str, dict[str, Any]] = {
         "pdfPage": 560, "printedPage": 541, "figure": "13.4",
         "crop": (225.0, 420.0, 280.0, 455.0), "method": "direct-family-observation",
         "definition": symbol(
-            "ideal-switch", "Ideal Switch", (-34, -18, 68, 36),
-            [pin("1", "passive", -30, 0, "west", 15), pin("2", "passive", 30, 0, "east", 15)],
-            [line(-30, 0, -11, 0), circle(-9, 0, 2), circle(9, 0, 2), line(11, 0, 30, 0), line(-7.5, -1.5, 7.5, -12, EMPHASIS)],
+            "ideal-switch", "Ideal Switch", (-24, -12, 48, 24),
+            [pin("1", "passive", -20, 0, "west"), pin("2", "passive", 20, 0, "east")],
+            [line(-20, 0, -7.333333, 0), circle(-6, 0, 1.333333), circle(6, 0, 1.333333), line(7.333333, 0, 20, 0), line(-5, -1, 5, -8, EMPHASIS)],
             ["switch-open", "two-terminal-switch"],
         ),
     },

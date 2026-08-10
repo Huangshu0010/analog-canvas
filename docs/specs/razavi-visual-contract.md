@@ -301,11 +301,10 @@ bounds or promotes the best translated IoU to the baseline score.
 - inspection of reference/rendered/diff PNGs
 - repeated render equality and transform coverage
 
-For BJT small-signal work, `npn`/`pnp` are device symbols while the hybrid-pi
-equivalent is a circuit composition. The canonical fixture is
-`fixtures/projects/razavi-bjt-small-signal/project.icproj.json`; it uses
-`r_pi`, `r_o`, `C_pi`, `C_mu`, and a four-terminal `vccs`. Do not add a
-single hybrid-pi pseudo-symbol that would hide these electrical nodes.
+For BJT small-signal work, `npn`/`pnp` remain device symbols. No standalone
+hybrid-pi or controlled-source pseudo-symbol is part of the reviewed palette;
+such equivalent circuits must be expressed only when their complete primitive
+symbol set has been separately approved.
 
 ## Compatibility
 
