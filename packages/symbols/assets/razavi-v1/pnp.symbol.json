@@ -14,9 +14,9 @@
       "role": "collector",
       "at": {
         "x": 0,
-        "y": -30
+        "y": 30
       },
-      "direction": "north",
+      "direction": "south",
       "presentation": {
         "visibility": "visible",
         "leadLength": 10
@@ -40,9 +40,9 @@
       "role": "emitter",
       "at": {
         "x": 0,
-        "y": 30
+        "y": -30
       },
-      "direction": "south",
+      "direction": "north",
       "presentation": {
         "visibility": "visible",
         "leadLength": 10
@@ -57,7 +57,7 @@
         "y": 0
       },
       "to": {
-        "x": -9,
+        "x": -13.42,
         "y": 0
       },
       "style": {
@@ -69,12 +69,12 @@
     {
       "kind": "line",
       "from": {
-        "x": -9,
-        "y": -13
+        "x": -13.42,
+        "y": -9.96
       },
       "to": {
-        "x": -9,
-        "y": 13
+        "x": -13.42,
+        "y": 9.96
       },
       "style": {
         "strokeRole": "emphasis",
@@ -85,12 +85,12 @@
     {
       "kind": "line",
       "from": {
-        "x": -9,
-        "y": -8
+        "x": -13.42,
+        "y": -4.47
       },
       "to": {
         "x": 0,
-        "y": -16
+        "y": -10.06
       },
       "style": {
         "strokeRole": "normal",
@@ -102,7 +102,7 @@
       "kind": "line",
       "from": {
         "x": 0,
-        "y": -16
+        "y": -10.06
       },
       "to": {
         "x": 0,
@@ -117,12 +117,12 @@
     {
       "kind": "line",
       "from": {
-        "x": -9,
-        "y": 8
+        "x": -13.42,
+        "y": 4.47
       },
       "to": {
         "x": 0,
-        "y": 16
+        "y": 10.06
       },
       "style": {
         "strokeRole": "normal",
@@ -134,7 +134,7 @@
       "kind": "line",
       "from": {
         "x": 0,
-        "y": 16
+        "y": 10.06
       },
       "to": {
         "x": 0,
@@ -150,16 +150,16 @@
       "kind": "polygon",
       "points": [
         {
-          "x": -6.2,
-          "y": 8.8
+          "x": -7.69,
+          "y": -9.51
         },
         {
-          "x": -1,
-          "y": 15.2
+          "x": -5.45,
+          "y": -5.03
         },
         {
-          "x": -8.5,
-          "y": 14.2
+          "x": -12.16,
+          "y": -5.03
         }
       ],
       "fill": "foreground",

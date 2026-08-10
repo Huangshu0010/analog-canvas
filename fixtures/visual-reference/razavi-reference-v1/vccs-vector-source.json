@@ -369,11 +369,11 @@
           "kind": "line",
           "from": {
             "x": 20,
-            "y": -6
+            "y": -7.4
           },
           "to": {
             "x": 20,
-            "y": 5
+            "y": -1.4
           },
           "style": {
             "strokeRole": "normal",
@@ -386,15 +386,15 @@
           "points": [
             {
               "x": 20,
-              "y": 8
+              "y": 7.6
             },
             {
               "x": 15.5,
-              "y": 1
+              "y": -1.4
             },
             {
               "x": 24.5,
-              "y": 1
+              "y": -1.4
             }
           ],
           "fill": "foreground",
@@ -422,5 +422,6 @@
     },
     "assetPath": "vccs-reference.png",
     "threshold": 160
-  }
+  },
+  "derivation": "Figure 2.37 directly supplies the dependent-current-source circle and arrow. OUT+/OUT- and CTRL+/CTRL- are explicit 10-unit-grid electrical extensions of the labeled D/S and VGS terminals required by the four-node SPICE G contract."
 }

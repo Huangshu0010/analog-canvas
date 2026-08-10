@@ -176,13 +176,6 @@
       "useVariant": false
     },
     {
-      "id": "transformer",
-      "measurementPath": "common-symbol-geometry.json",
-      "measurementKey": "transformer",
-      "symbolId": "transformer",
-      "useVariant": false
-    },
-    {
       "id": "vccs",
       "measurementPath": "common-symbol-geometry.json",
       "measurementKey": "vccs",

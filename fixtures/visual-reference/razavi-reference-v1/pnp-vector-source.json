@@ -5,140 +5,140 @@
   "source": {
     "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
     "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
-    "pdfPage": 533,
-    "printedPage": 514,
-    "figure": "12.6"
+    "pdfPage": 537,
+    "printedPage": 518,
+    "figure": "12.11"
   },
   "selection": {
-    "method": "direct-family-observation",
+    "method": "direct-device-vector-normalization",
     "boundsPdf": {
-      "left": 215.0,
-      "top": 185.0,
-      "right": 405.0,
-      "bottom": 285.0
+      "left": 178.0,
+      "top": 578.0,
+      "right": 202.0,
+      "bottom": 607.0
     },
-    "nativeObjectCount": 63,
-    "nativeObjectSha256": "fabeb02b318346e1d5906671262e0c18911e34672df8d94b3b9dc59b1e638fb6",
+    "nativeObjectCount": 13,
+    "nativeObjectSha256": "dc591f617b6e6db79cf8c94e83aac62c70291c1be58cf0540fe908094b0b5428",
     "nativeObjectSample": [
       {
         "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 264.251,
-        "top": 216.0452,
-        "x1": 282.144,
-        "bottom": 216.0452,
-        "pathCommandCount": 2,
-        "pathSha256": "2df9231472dbeb4344cf9dcec9924b28bb78fe5c0c657b307a33b2ffdd5e1cc1"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 216.54,
-        "top": 216.0452,
-        "x1": 234.432,
-        "bottom": 216.0452,
-        "pathCommandCount": 2,
-        "pathSha256": "da1104c588ae74dea3f9eb56db322d55210942d6e46a5bf344b7bc6bd09378f1"
-      },
-      {
-        "objectType": "line",
         "linewidth": 1.434,
-        "x0": 291.044,
-        "top": 227.2912,
-        "x1": 291.044,
-        "bottom": 240.5732,
+        "x0": 189.436,
+        "top": 585.8722,
+        "x1": 189.436,
+        "bottom": 599.1532,
         "pathCommandCount": 2,
-        "pathSha256": "836c45109dc487fe69ebce711703917d91b7e76c51212c00ea936fa7a79cea43"
+        "pathSha256": "7dadcce185d9afdcfc7abfeef67741b6120663920022da5fdd4227fb742766bd"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 236.9192,
-        "x1": 291.044,
-        "bottom": 240.6452,
+        "x0": 189.437,
+        "top": 585.8012,
+        "x1": 198.383,
+        "bottom": 589.5292,
         "pathCommandCount": 2,
-        "pathSha256": "d1f89ff139cad39d88756ab73c72a9f11f93cd332c79d911b6a1d90fd8d0dc36"
+        "pathSha256": "b99de2c0ed454e51ae49b5aff52ca331d97d566b1b156430537f244896f61de2"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 236.9192,
-        "x1": 291.044,
-        "bottom": 240.6452,
+        "x0": 189.437,
+        "top": 585.8012,
+        "x1": 198.383,
+        "bottom": 589.5292,
         "pathCommandCount": 2,
-        "pathSha256": "d1f89ff139cad39d88756ab73c72a9f11f93cd332c79d911b6a1d90fd8d0dc36"
+        "pathSha256": "b99de2c0ed454e51ae49b5aff52ca331d97d566b1b156430537f244896f61de2"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 227.2262,
-        "x1": 291.044,
-        "bottom": 230.9542,
+        "x0": 189.437,
+        "top": 595.4932,
+        "x1": 198.383,
+        "bottom": 599.2212,
         "pathCommandCount": 2,
-        "pathSha256": "a68561dec8527d2dc5d3a0af4950809b92b5f32f49df4b162a9a44ec8be2bfe7"
+        "pathSha256": "14f37ef1877f61a3a3d6dcbc95ae06a2e503f32562b853809a3858ca73f4a2b6"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 227.2262,
-        "x1": 291.044,
-        "bottom": 230.9542,
+        "x0": 189.437,
+        "top": 595.4932,
+        "x1": 198.383,
+        "bottom": 599.2212,
         "pathCommandCount": 2,
-        "pathSha256": "a68561dec8527d2dc5d3a0af4950809b92b5f32f49df4b162a9a44ec8be2bfe7"
+        "pathSha256": "14f37ef1877f61a3a3d6dcbc95ae06a2e503f32562b853809a3858ca73f4a2b6"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 291.044,
-        "top": 233.9362,
-        "x1": 299.99,
-        "bottom": 233.9362,
+        "x0": 180.491,
+        "top": 592.5112,
+        "x1": 189.437,
+        "bottom": 592.5112,
         "pathCommandCount": 2,
-        "pathSha256": "4859a8c423f89e6c4b2e8d4db6bc65c87b7e9b69c920aa9ac7e8859a8b9ad45f"
+        "pathSha256": "c74d768acbb5b14d53682ee14586885b2db8ff7c4dde8526027dae7794399f57"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 221.2622,
-        "x1": 282.098,
-        "bottom": 227.2262,
+        "x0": 198.382,
+        "top": 599.2212,
+        "x1": 198.382,
+        "bottom": 605.1852,
         "pathCommandCount": 2,
-        "pathSha256": "778ef87b02f52b6bf6b26b6b34235070f293f2f30da16a90f2ca47a5d0eb3ed4"
+        "pathSha256": "548fb79e1221341e61ff85d5dc4f1d1162e490c54995d8a171c5f36e772d244d"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 240.6452,
-        "x1": 282.098,
-        "bottom": 246.6092,
+        "x0": 198.382,
+        "top": 579.8382,
+        "x1": 198.382,
+        "bottom": 585.8012,
         "pathCommandCount": 2,
-        "pathSha256": "eee93475f513a3b4c028cd0d947af6059e7567dc04e9022573be90ab726d93a6"
+        "pathSha256": "4abe0a92cd79515f9cd024bb8407cb8689ac47df83331d9cab3b77acfee8588d"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 207.594,
-        "top": 236.9192,
-        "x1": 216.54,
-        "bottom": 240.6452,
+        "x0": 198.383,
+        "top": 604.4382,
+        "x1": 198.383,
+        "bottom": 610.4022,
         "pathCommandCount": 2,
-        "pathSha256": "8da57a2a19c19683cf668a0c6b5287659cfb8b7b070d84c5b1c07720d00e5469"
+        "pathSha256": "87b889850d8a257b6b0d3659ea5c93319c20d08af9b0d041e4eaaac9f5addafe"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 207.594,
-        "top": 236.9192,
-        "x1": 216.54,
-        "bottom": 240.6452,
+        "x0": 198.3189,
+        "top": 516.7682,
+        "x1": 198.3189,
+        "bottom": 581.3412,
         "pathCommandCount": 2,
-        "pathSha256": "8da57a2a19c19683cf668a0c6b5287659cfb8b7b070d84c5b1c07720d00e5469"
+        "pathSha256": "b794a12eed508fab5a9105e79f9db981bcca00c126b154b144b34a6d206be536"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 1.434,
+        "x0": 190.276,
+        "top": 586.1742,
+        "x1": 194.749,
+        "bottom": 589.1582,
+        "pathCommandCount": 3,
+        "pathSha256": "4c9899eda37e89c395002425d502f111b04b9e9d5cf9aca74122c7cb2caca444"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 0.717,
+        "x0": 190.276,
+        "top": 586.1742,
+        "x1": 194.749,
+        "bottom": 589.1582,
+        "pathCommandCount": 3,
+        "pathSha256": "4c9899eda37e89c395002425d502f111b04b9e9d5cf9aca74122c7cb2caca444"
       }
     ]
   },
@@ -147,7 +147,7 @@
       {
         "name": "C",
         "x": 0,
-        "y": -30
+        "y": 30
       },
       {
         "name": "B",
@@ -157,7 +157,7 @@
       {
         "name": "E",
         "x": 0,
-        "y": 30
+        "y": -30
       }
     ],
     "strokeMapping": {
@@ -184,9 +184,9 @@
           "role": "collector",
           "at": {
             "x": 0,
-            "y": -30
+            "y": 30
           },
-          "direction": "north",
+          "direction": "south",
           "presentation": {
             "visibility": "visible",
             "leadLength": 10
@@ -210,9 +210,9 @@
           "role": "emitter",
           "at": {
             "x": 0,
-            "y": 30
+            "y": -30
           },
-          "direction": "south",
+          "direction": "north",
           "presentation": {
             "visibility": "visible",
             "leadLength": 10
@@ -227,7 +227,7 @@
             "y": 0
           },
           "to": {
-            "x": -9,
+            "x": -13.42,
             "y": 0
           },
           "style": {
@@ -239,12 +239,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -9,
-            "y": -13
+            "x": -13.42,
+            "y": -9.96
           },
           "to": {
-            "x": -9,
-            "y": 13
+            "x": -13.42,
+            "y": 9.96
           },
           "style": {
             "strokeRole": "emphasis",
@@ -255,12 +255,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -9,
-            "y": -8
+            "x": -13.42,
+            "y": -4.47
           },
           "to": {
             "x": 0,
-            "y": -16
+            "y": -10.06
           },
           "style": {
             "strokeRole": "normal",
@@ -272,7 +272,7 @@
           "kind": "line",
           "from": {
             "x": 0,
-            "y": -16
+            "y": -10.06
           },
           "to": {
             "x": 0,
@@ -287,12 +287,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -9,
-            "y": 8
+            "x": -13.42,
+            "y": 4.47
           },
           "to": {
             "x": 0,
-            "y": 16
+            "y": 10.06
           },
           "style": {
             "strokeRole": "normal",
@@ -304,7 +304,7 @@
           "kind": "line",
           "from": {
             "x": 0,
-            "y": 16
+            "y": 10.06
           },
           "to": {
             "x": 0,
@@ -320,16 +320,16 @@
           "kind": "polygon",
           "points": [
             {
-              "x": -6.2,
-              "y": 8.8
+              "x": -7.69,
+              "y": -9.51
             },
             {
-              "x": -1.0,
-              "y": 15.2
+              "x": -5.45,
+              "y": -5.03
             },
             {
-              "x": -8.5,
-              "y": 14.2
+              "x": -12.16,
+              "y": -5.03
             }
           ],
           "fill": "foreground",

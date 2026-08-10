@@ -118,7 +118,7 @@ strokes:
   wire: 1.6
   symbol: 1.6
   normal: 1.6
-  emphasis: 2.16
+  emphasis: 2.4
   ground: 2.906977
   supply: 1.8
   annotation: 1.6

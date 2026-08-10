@@ -75,7 +75,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:D"],
     assetPath: "diode.symbol.json",
     assetHash:
-      "3b6d9ec0ae5e4e9d5c9177acb953dd9afb1899944aa9bb42ad7dade609a87f82",
+      "f47ecac20ddca1d0c4c6764c747ffbbc42aa931e4651d39ee631e41d5bba6b95",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -248,7 +248,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:npn", "pdk:model-type:npn"],
     assetPath: "npn.symbol.json",
     assetHash:
-      "07be0cd5b1b774d99c069117e6369e35d4dbc5da248ca15632c98da0622ce094",
+      "1efe656cf9d640ebc53398ebb232f03de6319525d020070af8cbc84cdf146772",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -358,7 +358,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:pnp", "pdk:model-type:pnp"],
     assetPath: "pnp.symbol.json",
     assetHash:
-      "9995cb8ff67a74dbe42da38e755b3df17a5f48f6082426d710273fcd8cdfc0c8",
+      "fbc5236276e893fde03b56bfaa91ec8a5fb25c8bbb83dfad8f03ac58f657e28c",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -449,40 +449,6 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
   },
   {
-    symbolId: "transformer",
-    name: "Transformer / Coupled Inductor",
-    category: "passive",
-    reviewStatus: "reviewed",
-    pinOrder: ["P1", "P2", "S1", "S2"],
-    palette: true,
-    automaticMappings: [],
-    manualOnlyReason:
-      "Textbook four-terminal visual composite; SPICE K references existing inductors rather than owning four nodes.",
-    assetPath: "transformer.symbol.json",
-    assetHash:
-      "e0df6c64f87711989aea3f6761c12fcd75ac1e17cb320743a98c8ace5ba6d6a7",
-    visualAuthority: {
-      kind: "razavi-reference-v1",
-      referenceManifestPath:
-        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/transformer-vector-source.json",
-        "fixtures/visual-reference/razavi-reference-v1/transformer-reference.png",
-      ],
-      calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
-    },
-    generation: {
-      kind: "razavi-pdf-vector-reference",
-      referenceManifestPath:
-        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePath:
-        "fixtures/visual-reference/razavi-reference-v1/transformer-vector-source.json",
-      converterPath: "scripts/generate-razavi-common-assets.mjs",
-      converterVersion: 1,
-    },
-  },
-  {
     symbolId: "vccs",
     name: "Voltage-Controlled Current Source",
     category: "source",
@@ -492,7 +458,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:G"],
     assetPath: "vccs.symbol.json",
     assetHash:
-      "a64b5a3676fb48d24acf94225e491b3fac8b18e40475f80cdcbf8508d08a9e68",
+      "8c12563ee39b6c776b3620f1d63e23fcde6ade7b5a112828220f2ae1db65217e",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -909,29 +875,34 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: -10,
-            y: -9,
+            y: -8.1,
           },
           {
             x: -10,
-            y: 9,
+            y: 8.1,
           },
           {
             x: 7,
             y: 0,
           },
         ],
-        fill: "foreground",
-        stroke: "none",
+        fill: "none",
+        stroke: "foreground",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
       },
       {
         kind: "line",
         from: {
           x: 8,
-          y: -10,
+          y: -8.8,
         },
         to: {
           x: 8,
-          y: 10,
+          y: 8.8,
         },
         style: {
           strokeRole: "emphasis",
@@ -1754,7 +1725,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         to: {
-          x: -9,
+          x: -13.42,
           y: 0,
         },
         style: {
@@ -1766,12 +1737,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -9,
-          y: -13,
+          x: -13.42,
+          y: -9.96,
         },
         to: {
-          x: -9,
-          y: 13,
+          x: -13.42,
+          y: 9.96,
         },
         style: {
           strokeRole: "emphasis",
@@ -1782,12 +1753,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -9,
-          y: -8,
+          x: -13.42,
+          y: -4.47,
         },
         to: {
           x: 0,
-          y: -16,
+          y: -10.06,
         },
         style: {
           strokeRole: "normal",
@@ -1799,7 +1770,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: -16,
+          y: -10.06,
         },
         to: {
           x: 0,
@@ -1814,12 +1785,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -9,
-          y: 8,
+          x: -13.42,
+          y: 4.47,
         },
         to: {
           x: 0,
-          y: 16,
+          y: 10.06,
         },
         style: {
           strokeRole: "normal",
@@ -1831,7 +1802,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: 16,
+          y: 10.06,
         },
         to: {
           x: 0,
@@ -1847,16 +1818,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -1,
-            y: 15.2,
+            x: -4.47,
+            y: 5.59,
           },
           {
-            x: -6.2,
-            y: 8.8,
+            x: -6.71,
+            y: 10.06,
           },
           {
-            x: -0.2,
-            y: 9.8,
+            x: 0,
+            y: 10.06,
           },
         ],
         fill: "foreground",
@@ -2495,9 +2466,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "collector",
         at: {
           x: 0,
-          y: -30,
+          y: 30,
         },
-        direction: "north",
+        direction: "south",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -2521,9 +2492,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "emitter",
         at: {
           x: 0,
-          y: 30,
+          y: -30,
         },
-        direction: "south",
+        direction: "north",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -2538,7 +2509,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         to: {
-          x: -9,
+          x: -13.42,
           y: 0,
         },
         style: {
@@ -2550,12 +2521,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -9,
-          y: -13,
+          x: -13.42,
+          y: -9.96,
         },
         to: {
-          x: -9,
-          y: 13,
+          x: -13.42,
+          y: 9.96,
         },
         style: {
           strokeRole: "emphasis",
@@ -2566,12 +2537,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -9,
-          y: -8,
+          x: -13.42,
+          y: -4.47,
         },
         to: {
           x: 0,
-          y: -16,
+          y: -10.06,
         },
         style: {
           strokeRole: "normal",
@@ -2583,7 +2554,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: -16,
+          y: -10.06,
         },
         to: {
           x: 0,
@@ -2598,12 +2569,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -9,
-          y: 8,
+          x: -13.42,
+          y: 4.47,
         },
         to: {
           x: 0,
-          y: 16,
+          y: 10.06,
         },
         style: {
           strokeRole: "normal",
@@ -2615,7 +2586,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: 16,
+          y: 10.06,
         },
         to: {
           x: 0,
@@ -2631,16 +2602,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -6.2,
-            y: 8.8,
+            x: -7.69,
+            y: -9.51,
           },
           {
-            x: -1,
-            y: 15.2,
+            x: -5.45,
+            y: -5.03,
           },
           {
-            x: -8.5,
-            y: 14.2,
+            x: -12.16,
+            y: -5.03,
           },
         ],
         fill: "foreground",
@@ -2824,125 +2795,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: [],
-  },
-  {
-    schemaVersion: 1,
-    id: "transformer",
-    name: "Transformer / Coupled Inductor",
-    viewBox: {
-      x: -34,
-      y: -34,
-      width: 68,
-      height: 68,
-    },
-    pins: [
-      {
-        name: "P1",
-        role: "primary",
-        at: {
-          x: -20,
-          y: -30,
-        },
-        direction: "north",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "P2",
-        role: "primary",
-        at: {
-          x: -20,
-          y: 30,
-        },
-        direction: "south",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "S1",
-        role: "secondary",
-        at: {
-          x: 20,
-          y: -30,
-        },
-        direction: "north",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "S2",
-        role: "secondary",
-        at: {
-          x: 20,
-          y: 30,
-        },
-        direction: "south",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-    ],
-    primitives: [
-      {
-        kind: "path",
-        data: "M -20 -30 L -20 -22 C -30 -19 -30 -11 -20 -8 C -10 -5 -10 3 -20 6 C -30 9 -30 17 -20 20 L -20 30",
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "path",
-        data: "M 20 -30 L 20 -22 C 10 -19 10 -11 20 -8 C 30 -5 30 3 20 6 C 10 9 10 17 20 20 L 20 30",
-        style: {
-          strokeRole: "normal",
-          lineCap: "round",
-          lineJoin: "round",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -4,
-          y: -20,
-        },
-        to: {
-          x: -4,
-          y: 20,
-        },
-        style: {
-          strokeRole: "emphasis",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 4,
-          y: -20,
-        },
-        to: {
-          x: 4,
-          y: 20,
-        },
-        style: {
-          strokeRole: "emphasis",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-    ],
-    variants: [],
-    aliases: ["coupled-inductor", "magnetic-transformer"],
   },
   {
     schemaVersion: 1,
@@ -3140,11 +2992,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 20,
-          y: -6,
+          y: -7.4,
         },
         to: {
           x: 20,
-          y: 5,
+          y: -1.4,
         },
         style: {
           strokeRole: "normal",
@@ -3157,15 +3009,15 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         points: [
           {
             x: 20,
-            y: 8,
+            y: 7.6,
           },
           {
             x: 15.5,
-            y: 1,
+            y: -1.4,
           },
           {
             x: 24.5,
-            y: 1,
+            y: -1.4,
           },
         ],
         fill: "foreground",

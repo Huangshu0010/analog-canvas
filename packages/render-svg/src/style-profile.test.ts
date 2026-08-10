@@ -17,7 +17,7 @@ describe("schematic style profiles", () => {
       razaviTextbookProfile,
     );
     expect(strokeWidthForRole(razaviTextbookProfile, "normal")).toBe(1.6);
-    expect(strokeWidthForRole(razaviTextbookProfile, "emphasis")).toBe(2.16);
+    expect(strokeWidthForRole(razaviTextbookProfile, "emphasis")).toBe(2.4);
     expect(strokeWidthForRole(razaviTextbookProfile, "ground")).toBe(2.906977);
     expect(razaviTextbookProfile.nodes).toEqual({
       junctionRadius: 3.77907,
@@ -34,7 +34,7 @@ describe("schematic style profiles", () => {
     });
     expect(
       resolvePrimitiveStrokeWidth(razaviTextbookProfile, undefined, 2),
-    ).toBe(2.16);
+    ).toBe(2.4);
     expect(
       resolvePrimitiveStrokeWidth(textbookMonochromeProfile, undefined, 2),
     ).toBe(2);

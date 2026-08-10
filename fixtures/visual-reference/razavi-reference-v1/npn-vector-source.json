@@ -10,135 +10,135 @@
     "figure": "12.6"
   },
   "selection": {
-    "method": "polarity-derived-family-sibling",
+    "method": "direct-device-vector-normalization",
     "boundsPdf": {
-      "left": 215.0,
-      "top": 185.0,
-      "right": 405.0,
-      "bottom": 285.0
+      "left": 198.0,
+      "top": 220.0,
+      "right": 222.0,
+      "bottom": 250.0
     },
-    "nativeObjectCount": 63,
-    "nativeObjectSha256": "fabeb02b318346e1d5906671262e0c18911e34672df8d94b3b9dc59b1e638fb6",
+    "nativeObjectCount": 14,
+    "nativeObjectSha256": "312f85fc06b40fb4bba9aec1434802692d7dcbcb7e33de795ec0e0ca8f7a506b",
     "nativeObjectSample": [
       {
         "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 264.251,
-        "top": 216.0452,
-        "x1": 282.144,
-        "bottom": 216.0452,
+        "linewidth": 1.434,
+        "x0": 207.594,
+        "top": 227.2912,
+        "x1": 207.594,
+        "bottom": 240.5732,
         "pathCommandCount": 2,
-        "pathSha256": "2df9231472dbeb4344cf9dcec9924b28bb78fe5c0c657b307a33b2ffdd5e1cc1"
+        "pathSha256": "3008d6d4c0ecbd5698b37094148068bf2c609f75cb1509478a4550176b98d2be"
+      },
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 207.594,
+        "top": 236.9192,
+        "x1": 216.54,
+        "bottom": 240.6452,
+        "pathCommandCount": 2,
+        "pathSha256": "8da57a2a19c19683cf668a0c6b5287659cfb8b7b070d84c5b1c07720d00e5469"
+      },
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 207.594,
+        "top": 236.9192,
+        "x1": 216.54,
+        "bottom": 240.6452,
+        "pathCommandCount": 2,
+        "pathSha256": "8da57a2a19c19683cf668a0c6b5287659cfb8b7b070d84c5b1c07720d00e5469"
+      },
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 207.594,
+        "top": 227.2262,
+        "x1": 216.54,
+        "bottom": 230.9542,
+        "pathCommandCount": 2,
+        "pathSha256": "9ff13de7e890376e72b359805606a2c9655c37a102e42dd8fed2e3ffde81fb9d"
+      },
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 207.594,
+        "top": 227.2262,
+        "x1": 216.54,
+        "bottom": 230.9542,
+        "pathCommandCount": 2,
+        "pathSha256": "9ff13de7e890376e72b359805606a2c9655c37a102e42dd8fed2e3ffde81fb9d"
+      },
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 198.648,
+        "top": 233.9362,
+        "x1": 207.594,
+        "bottom": 233.9362,
+        "pathCommandCount": 2,
+        "pathSha256": "82142bc13531bcee3d493fe62ef16f5873787cffe5a4dc8b9cb7ed67d1a9fea0"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
         "x0": 216.54,
-        "top": 216.0452,
-        "x1": 234.432,
-        "bottom": 216.0452,
-        "pathCommandCount": 2,
-        "pathSha256": "da1104c588ae74dea3f9eb56db322d55210942d6e46a5bf344b7bc6bd09378f1"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 1.434,
-        "x0": 291.044,
-        "top": 227.2912,
-        "x1": 291.044,
-        "bottom": 240.5732,
-        "pathCommandCount": 2,
-        "pathSha256": "836c45109dc487fe69ebce711703917d91b7e76c51212c00ea936fa7a79cea43"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 236.9192,
-        "x1": 291.044,
-        "bottom": 240.6452,
-        "pathCommandCount": 2,
-        "pathSha256": "d1f89ff139cad39d88756ab73c72a9f11f93cd332c79d911b6a1d90fd8d0dc36"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 236.9192,
-        "x1": 291.044,
-        "bottom": 240.6452,
-        "pathCommandCount": 2,
-        "pathSha256": "d1f89ff139cad39d88756ab73c72a9f11f93cd332c79d911b6a1d90fd8d0dc36"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 227.2262,
-        "x1": 291.044,
-        "bottom": 230.9542,
-        "pathCommandCount": 2,
-        "pathSha256": "a68561dec8527d2dc5d3a0af4950809b92b5f32f49df4b162a9a44ec8be2bfe7"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 282.098,
-        "top": 227.2262,
-        "x1": 291.044,
-        "bottom": 230.9542,
-        "pathCommandCount": 2,
-        "pathSha256": "a68561dec8527d2dc5d3a0af4950809b92b5f32f49df4b162a9a44ec8be2bfe7"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 291.044,
-        "top": 233.9362,
-        "x1": 299.99,
-        "bottom": 233.9362,
-        "pathCommandCount": 2,
-        "pathSha256": "4859a8c423f89e6c4b2e8d4db6bc65c87b7e9b69c920aa9ac7e8859a8b9ad45f"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 282.098,
         "top": 221.2622,
-        "x1": 282.098,
+        "x1": 216.54,
         "bottom": 227.2262,
         "pathCommandCount": 2,
-        "pathSha256": "778ef87b02f52b6bf6b26b6b34235070f293f2f30da16a90f2ca47a5d0eb3ed4"
+        "pathSha256": "79e9d8c72ce5de72f7c073b486238b68d05591e56df8566fe3d2704a7e028b05"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 282.098,
+        "x0": 216.54,
         "top": 240.6452,
-        "x1": 282.098,
+        "x1": 216.54,
         "bottom": 246.6092,
         "pathCommandCount": 2,
-        "pathSha256": "eee93475f513a3b4c028cd0d947af6059e7567dc04e9022573be90ab726d93a6"
+        "pathSha256": "d820093f2800360d98176f4c9f74c4c7eee560329609afecc7067674c80ceddc"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 207.594,
-        "top": 236.9192,
+        "x0": 216.54,
+        "top": 192.1882,
         "x1": 216.54,
-        "bottom": 240.6452,
+        "bottom": 222.0072,
         "pathCommandCount": 2,
-        "pathSha256": "8da57a2a19c19683cf668a0c6b5287659cfb8b7b070d84c5b1c07720d00e5469"
+        "pathSha256": "83eeb057e60b5b3851e9683ea4f61783858981fbf298af1e8ecf33ee07219baf"
       },
       {
         "objectType": "line",
         "linewidth": 0.717,
-        "x0": 207.594,
-        "top": 236.9192,
+        "x0": 216.54,
+        "top": 249.3592,
+        "x1": 216.54,
+        "bottom": 253.8312,
+        "pathCommandCount": 2,
+        "pathSha256": "ff7b2c405f3074dc69cdcb855325cd132fb064a55721a19b63395bba9d740ebd"
+      },
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 216.54,
+        "top": 245.8642,
+        "x1": 216.54,
+        "bottom": 251.8282,
+        "pathCommandCount": 2,
+        "pathSha256": "d0a0077ae27de135b62667a542c8e766e1352830de38d1b14d68179e42c9debf"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 1.434,
+        "x0": 212.067,
+        "top": 237.6642,
         "x1": 216.54,
         "bottom": 240.6452,
-        "pathCommandCount": 2,
-        "pathSha256": "8da57a2a19c19683cf668a0c6b5287659cfb8b7b070d84c5b1c07720d00e5469"
+        "pathCommandCount": 3,
+        "pathSha256": "be7b0dc754a0ff246fe1250d4ae2bbafdd6ad46070a2f32df511f1db03bfc8ea"
       }
     ]
   },
@@ -227,7 +227,7 @@
             "y": 0
           },
           "to": {
-            "x": -9,
+            "x": -13.42,
             "y": 0
           },
           "style": {
@@ -239,12 +239,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -9,
-            "y": -13
+            "x": -13.42,
+            "y": -9.96
           },
           "to": {
-            "x": -9,
-            "y": 13
+            "x": -13.42,
+            "y": 9.96
           },
           "style": {
             "strokeRole": "emphasis",
@@ -255,12 +255,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -9,
-            "y": -8
+            "x": -13.42,
+            "y": -4.47
           },
           "to": {
             "x": 0,
-            "y": -16
+            "y": -10.06
           },
           "style": {
             "strokeRole": "normal",
@@ -272,7 +272,7 @@
           "kind": "line",
           "from": {
             "x": 0,
-            "y": -16
+            "y": -10.06
           },
           "to": {
             "x": 0,
@@ -287,12 +287,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -9,
-            "y": 8
+            "x": -13.42,
+            "y": 4.47
           },
           "to": {
             "x": 0,
-            "y": 16
+            "y": 10.06
           },
           "style": {
             "strokeRole": "normal",
@@ -304,7 +304,7 @@
           "kind": "line",
           "from": {
             "x": 0,
-            "y": 16
+            "y": 10.06
           },
           "to": {
             "x": 0,
@@ -320,16 +320,16 @@
           "kind": "polygon",
           "points": [
             {
-              "x": -1.0,
-              "y": 15.2
+              "x": -4.47,
+              "y": 5.59
             },
             {
-              "x": -6.2,
-              "y": 8.8
+              "x": -6.71,
+              "y": 10.06
             },
             {
-              "x": -0.2,
-              "y": 9.8
+              "x": 0,
+              "y": 10.06
             }
           ],
           "fill": "foreground",
@@ -357,6 +357,5 @@
     },
     "assetPath": "npn-reference.png",
     "threshold": 160
-  },
-  "derivation": "PNP body from Figure 12.6 with conventional emitter-arrow polarity reversal for NPN."
+  }
 }

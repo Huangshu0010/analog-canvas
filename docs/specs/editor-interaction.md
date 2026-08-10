@@ -445,7 +445,7 @@ geometry-migrated from VSS; VSS remains a project-native power-port definition.
 
 The runtime library includes NMOS/PMOS three- and four-terminal forms, NPN/PNP,
 resistor, capacitor, inductor, diode variants, voltage/current source variants,
-op-amp, switches, crystal, transformer, VDD/VSS/GND, and ports. VSS remains
+op-amp, switches, crystal, VDD/VSS/GND, and ports. VSS remains
 immutable build-time evidence; the runtime must not require Visio or parse
 `.vss` files.
 

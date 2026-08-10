@@ -45,8 +45,9 @@ describe("component insertion catalog", () => {
     expect(symbols.map((symbol) => symbol.id)).toContain("inductor");
     expect(symbols.map((symbol) => symbol.id)).toContain("opamp");
     expect(symbols.map((symbol) => symbol.id)).toEqual(
-      expect.arrayContaining(["diode", "npn", "pnp", "transformer"]),
+      expect.arrayContaining(["diode", "npn", "pnp"]),
     );
+    expect(symbols.map((symbol) => symbol.id)).not.toContain("transformer");
   });
 
   it("returns no selectable entries for an unmatched query", () => {

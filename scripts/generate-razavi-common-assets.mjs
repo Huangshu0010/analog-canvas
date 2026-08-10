@@ -36,13 +36,6 @@ const entries = [
     ["spice:Q:pnp", "pdk:model-type:pnp"],
   ],
   [
-    "transformer",
-    "Transformer / Coupled Inductor",
-    "passive",
-    ["P1", "P2", "S1", "S2"],
-    [],
-  ],
-  [
     "vccs",
     "Voltage-Controlled Current Source",
     "source",
@@ -96,9 +89,7 @@ for (const [symbolId, name, category, pinOrder, automaticMappings] of entries) {
           manualOnlyReason:
             symbolId === "ideal-switch"
               ? "Two-terminal Razavi switch; SPICE S has a four-terminal control contract."
-              : symbolId === "transformer"
-                ? "Textbook four-terminal visual composite; SPICE K references existing inductors rather than owning four nodes."
-                : "Textbook gain block has implicit reference nodes and no exact primitive SPICE terminal contract.",
+              : "Textbook gain block has implicit reference nodes and no exact primitive SPICE terminal contract.",
         }
       : {}),
     assetPath: `${symbolId}.symbol.json`,

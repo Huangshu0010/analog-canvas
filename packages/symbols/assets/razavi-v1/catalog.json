@@ -57,7 +57,7 @@
       "palette": true,
       "automaticMappings": ["spice:D"],
       "assetPath": "diode.symbol.json",
-      "assetHash": "3b6d9ec0ae5e4e9d5c9177acb953dd9afb1899944aa9bb42ad7dade609a87f82",
+      "assetHash": "f47ecac20ddca1d0c4c6764c747ffbbc42aa931e4651d39ee631e41d5bba6b95",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -203,7 +203,7 @@
       "palette": true,
       "automaticMappings": ["spice:Q:npn", "pdk:model-type:npn"],
       "assetPath": "npn.symbol.json",
-      "assetHash": "07be0cd5b1b774d99c069117e6369e35d4dbc5da248ca15632c98da0622ce094",
+      "assetHash": "1efe656cf9d640ebc53398ebb232f03de6319525d020070af8cbc84cdf146772",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -296,7 +296,7 @@
       "palette": true,
       "automaticMappings": ["spice:Q:pnp", "pdk:model-type:pnp"],
       "assetPath": "pnp.symbol.json",
-      "assetHash": "9995cb8ff67a74dbe42da38e755b3df17a5f48f6082426d710273fcd8cdfc0c8",
+      "assetHash": "fbc5236276e893fde03b56bfaa91ec8a5fb25c8bbb83dfad8f03ac58f657e28c",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -373,34 +373,6 @@
       }
     },
     {
-      "symbolId": "transformer",
-      "name": "Transformer / Coupled Inductor",
-      "category": "passive",
-      "reviewStatus": "reviewed",
-      "pinOrder": ["P1", "P2", "S1", "S2"],
-      "palette": true,
-      "automaticMappings": [],
-      "manualOnlyReason": "Textbook four-terminal visual composite; SPICE K references existing inductors rather than owning four nodes.",
-      "assetPath": "transformer.symbol.json",
-      "assetHash": "e0df6c64f87711989aea3f6761c12fcd75ac1e17cb320743a98c8ace5ba6d6a7",
-      "visualAuthority": {
-        "kind": "razavi-reference-v1",
-        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-        "referencePaths": [
-          "fixtures/visual-reference/razavi-reference-v1/transformer-vector-source.json",
-          "fixtures/visual-reference/razavi-reference-v1/transformer-reference.png"
-        ],
-        "calibrationPath": "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json"
-      },
-      "generation": {
-        "kind": "razavi-pdf-vector-reference",
-        "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-        "referencePath": "fixtures/visual-reference/razavi-reference-v1/transformer-vector-source.json",
-        "converterPath": "scripts/generate-razavi-common-assets.mjs",
-        "converterVersion": 1
-      }
-    },
-    {
       "symbolId": "vccs",
       "name": "Voltage-Controlled Current Source",
       "category": "source",
@@ -409,7 +381,7 @@
       "palette": true,
       "automaticMappings": ["spice:G"],
       "assetPath": "vccs.symbol.json",
-      "assetHash": "a64b5a3676fb48d24acf94225e491b3fac8b18e40475f80cdcbf8508d08a9e68",
+      "assetHash": "8c12563ee39b6c776b3620f1d63e23fcde6ade7b5a112828220f2ae1db65217e",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

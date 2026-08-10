@@ -4243,3 +4243,19 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   `packages/derived/src/connectivity.ts`.
 - Commit status: ready to commit on `main` as
   `feat(symbols): add common Razavi device families`.
+
+## 2026-08-11 - Correct common Razavi source fidelity
+
+- Target: remove the unsupported transformer and replace overclaimed common
+  device approximations with traceable textbook geometry.
+- Changed areas: direct Figure 12.6/12.11 NPN/PNP arrows, Figure 15.54 outline
+  diode, Figure 2.37 VCCS arrow and provenance, Razavi emphasis stroke, catalog
+  and GUI removal of transformer, authority hashes, fidelity targets, and
+  correction documentation/tests.
+- Validation: generator and authority stale checks, 35 focused tests, affected
+  builds, repository typecheck, editor production build, five registered
+  fidelity comparisons, live GUI inspection, formatting, and
+  `git diff --check` passed. The editor build retains its existing large-chunk
+  warning.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): correct common Razavi source fidelity`.

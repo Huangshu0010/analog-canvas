@@ -4,8 +4,8 @@
 This tool is deliberately separate from the raster fidelity harness. It pins
 the textbook PDF, fingerprints native vector objects in a tight source region,
 and emits one normalized SymbolDefinition plus an isolated raster witness per
-asset. Some families are explicitly derived from a directly observed sibling;
-that distinction is recorded in ``selection.method`` and ``derivation``.
+asset. Electrical pin extensions that are not present in the source figure are
+recorded as semantic normalization rather than presented as extracted art.
 """
 
 from __future__ import annotations
@@ -31,7 +31,6 @@ RASTER_DPI = 300.0
 PIXELS_PER_LOGICAL = 2.4
 
 NORMAL = {"strokeRole": "normal", "lineCap": "butt", "lineJoin": "miter"}
-ROUND = {"strokeRole": "normal", "lineCap": "round", "lineJoin": "round"}
 EMPHASIS = {"strokeRole": "emphasis", "lineCap": "butt", "lineJoin": "miter"}
 
 
@@ -57,6 +56,10 @@ def polygon(points: list[tuple[float, float]]) -> dict[str, Any]:
     return {"kind": "polygon", "points": [{"x": x, "y": y} for x, y in points], "fill": "foreground", "stroke": "none"}
 
 
+def outline_polygon(points: list[tuple[float, float]], style: dict[str, Any] = NORMAL) -> dict[str, Any]:
+    return {"kind": "polygon", "points": [{"x": x, "y": y} for x, y in points], "fill": "none", "stroke": "foreground", "style": style}
+
+
 def symbol(symbol_id: str, name: str, view_box: tuple[float, float, float, float], pins: list[dict[str, Any]], primitives: list[dict[str, Any]], aliases: list[str]) -> dict[str, Any]:
     x, y, width, height = view_box
     return {
@@ -71,47 +74,62 @@ def symbol(symbol_id: str, name: str, view_box: tuple[float, float, float, float
     }
 
 
-def bjt(symbol_id: str, pnp: bool) -> dict[str, Any]:
+def npn_bjt() -> dict[str, Any]:
+    # Figure 12.6 Q1, normalized from its native PDF objects around
+    # (216.54, 233.936).  The filled arrow is deliberately emitted after the
+    # emitter branch so it masks the centerline exactly as in the source.
     primitives = [
-        line(-30, 0, -9, 0),
-        line(-9, -13, -9, 13, EMPHASIS),
-        line(-9, -8, 0, -16),
-        line(0, -16, 0, -30),
-        line(-9, 8, 0, 16),
-        line(0, 16, 0, 30),
+        line(-30, 0, -13.42, 0),
+        line(-13.42, -9.96, -13.42, 9.96, EMPHASIS),
+        line(-13.42, -4.47, 0, -10.06),
+        line(0, -10.06, 0, -30),
+        line(-13.42, 4.47, 0, 10.06),
+        line(0, 10.06, 0, 30),
+        polygon([(-4.47, 5.59), (-6.71, 10.06), (0, 10.06)]),
     ]
-    # Razavi's CMOS-compatible PNP is the direct source. NPN reverses only the
-    # emitter-arrow polarity while retaining the measured family body.
-    primitives.append(
-        polygon([(-6.2, 8.8), (-1.0, 15.2), (-8.5, 14.2)])
-        if pnp
-        else polygon([(-1.0, 15.2), (-6.2, 8.8), (-0.2, 9.8)])
-    )
     return symbol(
-        symbol_id,
-        "PNP Bipolar Transistor" if pnp else "NPN Bipolar Transistor",
+        "npn",
+        "NPN Bipolar Transistor",
         (-34, -34, 42, 68),
-        [
-            pin("C", "collector", 0, -30, "north"),
-            pin("B", "base", -30, 0, "west", 20),
-            pin("E", "emitter", 0, 30, "south"),
-        ],
+        [pin("C", "collector", 0, -30, "north"), pin("B", "base", -30, 0, "west", 20), pin("E", "emitter", 0, 30, "south")],
         primitives,
-        ["bjt-pnp", "bipolar-pnp"] if pnp else ["bjt-npn", "bipolar-npn"],
+        ["bjt-npn", "bipolar-npn"],
+    )
+
+
+def pnp_bjt() -> dict[str, Any]:
+    # Figure 12.11 Q1, normalized from its own native PDF objects around
+    # (198.383, 592.511).  Unlike the NPN, the directly observed emitter and
+    # its inward arrow are on the upper branch.
+    primitives = [
+        line(-30, 0, -13.42, 0),
+        line(-13.42, -9.96, -13.42, 9.96, EMPHASIS),
+        line(-13.42, -4.47, 0, -10.06),
+        line(0, -10.06, 0, -30),
+        line(-13.42, 4.47, 0, 10.06),
+        line(0, 10.06, 0, 30),
+        polygon([(-7.69, -9.51), (-5.45, -5.03), (-12.16, -5.03)]),
+    ]
+    return symbol(
+        "pnp",
+        "PNP Bipolar Transistor",
+        (-34, -34, 42, 68),
+        [pin("C", "collector", 0, 30, "south"), pin("B", "base", -30, 0, "west", 20), pin("E", "emitter", 0, -30, "north")],
+        primitives,
+        ["bjt-pnp", "bipolar-pnp"],
     )
 
 
 SPECS: dict[str, dict[str, Any]] = {
     "pnp": {
-        "pdfPage": 533, "printedPage": 514, "figure": "12.6",
-        "crop": (215.0, 185.0, 405.0, 285.0), "method": "direct-family-observation",
-        "definition": bjt("pnp", True),
+        "pdfPage": 537, "printedPage": 518, "figure": "12.11",
+        "crop": (178.0, 578.0, 202.0, 607.0), "method": "direct-device-vector-normalization",
+        "definition": pnp_bjt(),
     },
     "npn": {
         "pdfPage": 533, "printedPage": 514, "figure": "12.6",
-        "crop": (215.0, 185.0, 405.0, 285.0), "method": "polarity-derived-family-sibling",
-        "derivation": "PNP body from Figure 12.6 with conventional emitter-arrow polarity reversal for NPN.",
-        "definition": bjt("npn", False),
+        "crop": (198.0, 220.0, 222.0, 250.0), "method": "direct-device-vector-normalization",
+        "definition": npn_bjt(),
     },
     "vccs": {
         "pdfPage": 51, "printedPage": 32, "figure": "2.37",
@@ -119,9 +137,10 @@ SPECS: dict[str, dict[str, Any]] = {
         "definition": symbol(
             "vccs", "Voltage-Controlled Current Source", (-34, -34, 64, 68),
             [pin("OUT+", "output-positive", 20, -30, "north"), pin("OUT-", "output-negative", 20, 30, "south"), pin("CTRL+", "control-positive", -30, -10, "west", 20), pin("CTRL-", "control-negative", -30, 10, "west", 20)],
-            [line(20, -30, 20, -12), circle(20, 0, 12), line(20, 12, 20, 30), line(-30, -10, -12, -10), line(-30, 10, -12, 10), line(-9, -13, -9, -7), line(-12, -10, -6, -10), line(-12, 10, -6, 10), line(20, -6, 20, 5), polygon([(20, 8), (15.5, 1), (24.5, 1)])],
+            [line(20, -30, 20, -12), circle(20, 0, 12), line(20, 12, 20, 30), line(-30, -10, -12, -10), line(-30, 10, -12, 10), line(-9, -13, -9, -7), line(-12, -10, -6, -10), line(-12, 10, -6, 10), line(20, -7.4, 20, -1.4), polygon([(20, 7.6), (15.5, -1.4), (24.5, -1.4)])],
             ["dependent-current-source", "transconductance-source"],
         ),
+        "derivation": "Figure 2.37 directly supplies the dependent-current-source circle and arrow. OUT+/OUT- and CTRL+/CTRL- are explicit 10-unit-grid electrical extensions of the labeled D/S and VGS terminals required by the four-node SPICE G contract.",
     },
     "diode": {
         "pdfPage": 661, "printedPage": 642, "figure": "15.54",
@@ -129,7 +148,7 @@ SPECS: dict[str, dict[str, Any]] = {
         "definition": symbol(
             "diode", "Diode", (-34, -14, 68, 28),
             [pin("A", "anode", -30, 0, "west", 15), pin("K", "cathode", 30, 0, "east", 15)],
-            [line(-30, 0, -10, 0), polygon([(-10, -9), (-10, 9), (7, 0)]), line(8, -10, 8, 10, EMPHASIS), line(8, 0, 30, 0)],
+            [line(-30, 0, -10, 0), outline_polygon([(-10, -8.1), (-10, 8.1), (7, 0)]), line(8, -8.8, 8, 8.8, EMPHASIS), line(8, 0, 30, 0)],
             ["pn-diode", "rectifier-diode"],
         ),
     },
@@ -151,21 +170,6 @@ SPECS: dict[str, dict[str, Any]] = {
             [pin("1", "passive", -30, 0, "west", 15), pin("2", "passive", 30, 0, "east", 15)],
             [line(-30, 0, -11, 0), circle(-9, 0, 2), circle(9, 0, 2), line(11, 0, 30, 0), line(-7.5, -1.5, 7.5, -12, EMPHASIS)],
             ["switch-open", "two-terminal-switch"],
-        ),
-    },
-    "transformer": {
-        "pdfPage": 639, "printedPage": 620, "figure": "15.21",
-        "crop": (115.0, 145.0, 465.0, 310.0), "method": "family-composite-from-two-pdf-derived-inductors",
-        "derivation": "No standalone transformer symbol was located; this four-terminal coupled-inductor symbol composes two copies of the Figure 15.21 inductor family with a conventional core.",
-        "definition": symbol(
-            "transformer", "Transformer / Coupled Inductor", (-34, -34, 68, 68),
-            [pin("P1", "primary", -20, -30, "north"), pin("P2", "primary", -20, 30, "south"), pin("S1", "secondary", 20, -30, "north"), pin("S2", "secondary", 20, 30, "south")],
-            [
-                {"kind": "path", "data": "M -20 -30 L -20 -22 C -30 -19 -30 -11 -20 -8 C -10 -5 -10 3 -20 6 C -30 9 -30 17 -20 20 L -20 30", "style": ROUND},
-                {"kind": "path", "data": "M 20 -30 L 20 -22 C 10 -19 10 -11 20 -8 C 30 -5 30 3 20 6 C 10 9 10 17 20 20 L 20 30", "style": ROUND},
-                line(-4, -20, -4, 20, EMPHASIS), line(4, -20, 4, 20, EMPHASIS),
-            ],
-            ["coupled-inductor", "magnetic-transformer"],
         ),
     },
 }

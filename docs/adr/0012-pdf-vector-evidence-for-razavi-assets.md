@@ -46,10 +46,9 @@ This decision is applied one reviewed component at a time. It does not
 authorize bulk conversion or replacement of existing raster evidence. The
 current PDF-derived set includes the inductor from Figure 15.21, the
 three-terminal op-amp from Figure 8.26, and the common-device family recorded
-by `extract-razavi-common-assets.py`: BJT, dependent current source, diode,
-voltage amplifier, ideal switch, and coupled-inductor/transformer composition.
-Every derived sibling or composite must say so in its evidence; it must not be
-described as a direct source crop.
+by `extract-razavi-common-assets.py`: NPN and PNP BJT, dependent current source,
+diode, voltage amplifier, and ideal switch. Every semantic pin extension must
+say so in its evidence; it must not be described as native source artwork.
 
 ## Inductor mapping
 
@@ -73,17 +72,19 @@ subcircuit requires an explicit complete pin contract.
 
 The common-device extractor fingerprints native objects in a tight page/figure
 region and commits a normalized SymbolDefinition with an isolated witness.
-The PNP body is directly observed in the bandgap chapter; NPN shares that body
-and reverses only conventional emitter-arrow polarity. The four-terminal VCCS
-adds explicit control terminals to Razavi's labeled dependent-source drawing,
-so it maps exactly to SPICE `G`. Two-terminal diode and three-terminal NPN/PNP
-map to SPICE `D` and three-node `Q`, respectively.
+The NPN body and outward emitter arrow are directly normalized from Figure
+12.6. The PNP body and inward upper-emitter arrow are separately normalized
+from Figure 12.11; neither arrow is a hand-drawn polarity reversal. The
+four-terminal VCCS preserves Figure 2.37's `g_m V_GS` source circle and arrow,
+then adds explicit grid-aligned control/output terminal extensions for the
+SPICE `G` contract. Figure 15.54 supplies an outline diode triangle and a
+double-width cathode bar. Two-terminal diode and three-terminal NPN/PNP map to
+SPICE `D` and three-node `Q`, respectively.
 
-The two-terminal ideal switch does not map to four-terminal SPICE `S`. The
-transformer is explicitly a composition of two Figure 15.21 inductor-family
-paths plus a conventional core; it does not map to SPICE `K`, whose instance
-contract references two existing inductors rather than owning four nodes. The
-single-ended voltage amplifier likewise remains manual because its reference
+The two-terminal ideal switch does not map to four-terminal SPICE `S`. No
+standalone Razavi transformer source has been approved, so no transformer is
+generated or exposed in the catalog. The single-ended voltage amplifier
+likewise remains manual because its reference
 nodes are implicit. BJT hybrid-pi models are composed from resistor,
 capacitor, and the reviewed VCCS rather than represented by a pseudo-device.
 

@@ -121,7 +121,6 @@ describe("Razavi symbol catalog", () => {
       ["port", "reviewed", "razavi-reference-v1"],
       ["port-filled", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
-      ["transformer", "reviewed", "razavi-reference-v1"],
       ["vccs", "reviewed", "razavi-reference-v1"],
       ["vdd", "reviewed", "razavi-reference-v1"],
       ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
@@ -173,7 +172,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(21);
+    expect(razaviCatalogSymbols).toHaveLength(20);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -199,7 +198,6 @@ describe("Razavi symbol catalog", () => {
       "port",
       "port-filled",
       "resistor",
-      "transformer",
       "vccs",
       "vdd",
       "voltage-amplifier",
@@ -244,7 +242,6 @@ describe("Razavi symbol catalog", () => {
       "ideal-switch",
       "npn",
       "pnp",
-      "transformer",
       "vccs",
       "voltage-amplifier",
       "port",
@@ -479,6 +476,65 @@ describe("Razavi symbol catalog", () => {
         converterPath: "scripts/generate-razavi-opamp-asset.mjs",
       },
     });
+  });
+
+  it("keeps the directly normalized BJT arrows and outline diode geometry", () => {
+    const npn = requireRazaviCatalogSymbol("npn");
+    expect(npn.pins).toMatchObject([
+      { name: "C", at: { x: 0, y: -30 }, direction: "north" },
+      { name: "B", at: { x: -30, y: 0 }, direction: "west" },
+      { name: "E", at: { x: 0, y: 30 }, direction: "south" },
+    ]);
+    expect(npn.primitives).toContainEqual(
+      expect.objectContaining({
+        kind: "polygon",
+        points: [
+          { x: -4.47, y: 5.59 },
+          { x: -6.71, y: 10.06 },
+          { x: 0, y: 10.06 },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      }),
+    );
+
+    const pnp = requireRazaviCatalogSymbol("pnp");
+    expect(pnp.pins).toMatchObject([
+      { name: "C", at: { x: 0, y: 30 }, direction: "south" },
+      { name: "B", at: { x: -30, y: 0 }, direction: "west" },
+      { name: "E", at: { x: 0, y: -30 }, direction: "north" },
+    ]);
+    expect(pnp.primitives).toContainEqual(
+      expect.objectContaining({
+        kind: "polygon",
+        points: [
+          { x: -7.69, y: -9.51 },
+          { x: -5.45, y: -5.03 },
+          { x: -12.16, y: -5.03 },
+        ],
+        fill: "foreground",
+        stroke: "none",
+      }),
+    );
+
+    const diode = requireRazaviCatalogSymbol("diode");
+    expect(diode.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "polygon",
+          fill: "none",
+          stroke: "foreground",
+          style: expect.objectContaining({ strokeRole: "normal" }),
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: 8, y: -8.8 },
+          to: { x: 8, y: 8.8 },
+          style: expect.objectContaining({ strokeRole: "emphasis" }),
+        }),
+      ]),
+    );
+    expect(getRazaviCatalogEntry("transformer")).toBeUndefined();
   });
 
   it("uses calibrated MOS and source arrowheads with external voltage polarity marks", () => {

@@ -21,7 +21,6 @@ const PRODUCT_IDS = [
   "port",
   "port-filled",
   "resistor",
-  "transformer",
   "vccs",
   "vdd",
   "voltage-amplifier",

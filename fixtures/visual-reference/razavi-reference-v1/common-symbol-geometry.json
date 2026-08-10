@@ -85,20 +85,6 @@
         "minX": -34,
         "minY": -18
       }
-    },
-    "transformer": {
-      "assetPath": "transformer-reference.png",
-      "pixelsPerLogical": 2.4,
-      "originPx": {
-        "x": 81.6,
-        "y": 81.6
-      },
-      "window": {
-        "width": 164,
-        "height": 164,
-        "minX": -34,
-        "minY": -34
-      }
     }
   }
 }
