@@ -79,6 +79,7 @@ import type {
   DraftingHandle,
   DraftingStylePatch,
 } from "./drafting-manipulation";
+import { resolveEditorShortcut, stepBoundedScale } from "./editor-shortcuts";
 import { referencedDocumentId } from "./editor-session";
 import { useInteractionState } from "./interaction-state";
 import type { EditorTool, WireSource } from "./interaction-state";
@@ -446,19 +447,6 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return Boolean(
     element?.closest("input, textarea, select, [contenteditable='true']"),
   );
-}
-
-// Step a bounded scale value to the next allowed entry (up or down). Used by the
-// [/] and Shift+[/] shortcuts for stroke width and arrow-head size.
-function stepScale<T extends number>(
-  current: T,
-  steps: readonly T[],
-  increase: boolean,
-): T {
-  const index = steps.indexOf(current);
-  const next = increase ? index + 1 : index - 1;
-  const clamped = Math.max(0, Math.min(steps.length - 1, next < 0 ? 0 : next));
-  return steps[clamped]!;
 }
 
 // Two-phase drafting creation preview (editor overlay only, never exported).
@@ -4133,130 +4121,128 @@ export function App({ project: initialProject }: AppProps) {
         setStatus("Cancelled text editing");
         return;
       }
-      if (isTypingTarget(event.target)) return;
-      const key = event.key.toLowerCase();
-      const plainShortcut = !event.ctrlKey && !event.metaKey && !event.altKey;
-      if (plainShortcut && key === "u") {
-        event.preventDefault();
-        transact([{ kind: event.shiftKey ? "redo" : "undo" }]);
-      } else if (event.ctrlKey && key === "z") {
-        event.preventDefault();
-        transact([{ kind: event.shiftKey ? "redo" : "undo" }]);
-      } else if (event.ctrlKey && key === "y") {
-        event.preventDefault();
-        transact([{ kind: "redo" }]);
-      } else if (event.ctrlKey && key === "c") {
-        event.preventDefault();
-        copySelected();
-      } else if (event.ctrlKey && key === "v") {
-        event.preventDefault();
-        pasteCopied();
-      } else if (event.ctrlKey && key === "s") {
-        event.preventDefault();
-        saveProjectFile();
-      } else if (event.ctrlKey && key === "o") {
-        event.preventDefault();
-        projectInputRef.current?.click();
-      } else if (event.ctrlKey && key === "a") {
-        event.preventDefault();
-        replaceSelection({
-          instanceIds: document.instances
-            .filter((instance) => instance.placement)
-            .map((instance) => instance.id),
-          routeIds: document.routes.map((route) => route.id),
-          junctionIds: document.junctions.map((junction) => junction.id),
-          annotationIds: document.annotations.map(
-            (annotation) => annotation.id,
-          ),
-          draftingIds: (document.drafting?.objects ?? []).map(
-            (object) => object.id,
-          ),
-        });
-        setSelectedEndpoint(null);
-      } else if (
-        plainShortcut &&
-        key === "x" &&
-        selectedAnnotation &&
-        isRoutedMarker(selectedAnnotation)
-      ) {
-        event.preventDefault();
-        reverseSelectedCurrentArrow();
-      } else if (plainShortcut && key === "r") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          rotateSelected(-90);
-        } else if (hasRotatableSelection) {
-          rotateSelected(90);
-        } else {
-          activateTool("rectangle");
-        }
-      } else if (plainShortcut && key === "w") {
-        event.preventDefault();
-        activateTool("wire");
-      } else if (plainShortcut && key === "t") {
-        event.preventDefault();
-        addPlainText();
-      } else if (plainShortcut && key === "a") {
-        event.preventDefault();
-        activateTool("arrow");
-      } else if (plainShortcut && key === "l") {
-        event.preventDefault();
-        activateTool("construction-line");
-      } else if (plainShortcut && key === "g") {
-        event.preventDefault();
-        activateTool("guide");
-      } else if (plainShortcut && key === "f") {
-        event.preventDefault();
-        mirrorSelected(event.shiftKey ? "top-bottom" : "left-right");
-      } else if (plainShortcut && key === "home") {
-        event.preventDefault();
-        fitView();
-      } else if (
-        plainShortcut &&
-        (event.key === "[" || event.key === "]") &&
-        selectedDrafting
-      ) {
-        // [/]  step stroke width; Shift+[/] step arrow-head size. Bounded ratios.
-        event.preventDefault();
-        const increase = event.key === "]";
-        if (event.shiftKey) {
-          const scale = selectedDrafting.styleOverride?.arrowHeadScale ?? 1;
-          setDraftingStyle({
-            arrowHeadScale: stepScale(
-              scale,
-              [0.75, 1, 1.25, 1.5] as const,
-              increase,
+      const shortcut = resolveEditorShortcut(event, {
+        isTyping: isTypingTarget(event.target),
+        hasRoutedMarkerSelection: Boolean(
+          selectedAnnotation && isRoutedMarker(selectedAnnotation),
+        ),
+        hasRotatableSelection,
+        hasDraftingSelection: Boolean(selectedDrafting),
+        wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
+        draftingReadyToFinish:
+          (tool === "arrow" ||
+            tool === "construction-line" ||
+            tool === "rectangle") &&
+          draftingSource !== null,
+        helpOpen,
+        canvasDragActive: canvasDragSessionRef.current !== null,
+        interactionActive: interactionState.kind !== "idle",
+        hasClearableDraftingSelection:
+          selectedDrafting?.kind === "arrow" ||
+          selectedDrafting?.kind === "construction-line" ||
+          selectedDrafting?.kind === "rectangle",
+        hasRemovableWireWaypoint: Boolean(
+          wireSource && wireWaypoints.length > 0,
+        ),
+      });
+      if (!shortcut) return;
+
+      const escapeIntent =
+        shortcut.kind === "close-help" ||
+        shortcut.kind === "cancel-canvas-drag" ||
+        shortcut.kind === "cancel-interaction" ||
+        shortcut.kind === "clear-drafting-selection" ||
+        shortcut.kind === "cancel-passive";
+      if (!escapeIntent) event.preventDefault();
+
+      switch (shortcut.kind) {
+        case "undo":
+        case "redo":
+          transact([{ kind: shortcut.kind }]);
+          return;
+        case "copy":
+          copySelected();
+          return;
+        case "paste":
+          pasteCopied();
+          return;
+        case "save":
+          saveProjectFile();
+          return;
+        case "open":
+          projectInputRef.current?.click();
+          return;
+        case "select-all":
+          replaceSelection({
+            instanceIds: document.instances
+              .filter((instance) => instance.placement)
+              .map((instance) => instance.id),
+            routeIds: document.routes.map((route) => route.id),
+            junctionIds: document.junctions.map((junction) => junction.id),
+            annotationIds: document.annotations.map(
+              (annotation) => annotation.id,
+            ),
+            draftingIds: (document.drafting?.objects ?? []).map(
+              (object) => object.id,
             ),
           });
-        } else {
-          const scale = selectedDrafting.styleOverride?.strokeScale ?? 1;
-          setDraftingStyle({
-            strokeScale: stepScale(scale, [0.75, 1, 1.5, 2] as const, increase),
-          });
+          setSelectedEndpoint(null);
+          return;
+        case "reverse-current-marker":
+          reverseSelectedCurrentArrow();
+          return;
+        case "rotate":
+          rotateSelected(shortcut.deltaDegrees);
+          return;
+        case "activate-tool":
+          activateTool(shortcut.tool);
+          return;
+        case "add-text":
+          addPlainText();
+          return;
+        case "mirror":
+          mirrorSelected(shortcut.direction);
+          return;
+        case "fit-view":
+          fitView();
+          return;
+        case "step-drafting-style": {
+          if (!selectedDrafting) return;
+          if (shortcut.target === "arrow-head") {
+            const scale = selectedDrafting.styleOverride?.arrowHeadScale ?? 1;
+            setDraftingStyle({
+              arrowHeadScale: stepBoundedScale(
+                scale,
+                [0.75, 1, 1.25, 1.5] as const,
+                shortcut.increase,
+              ),
+            });
+          } else {
+            const scale = selectedDrafting.styleOverride?.strokeScale ?? 1;
+            setDraftingStyle({
+              strokeScale: stepBoundedScale(
+                scale,
+                [0.75, 1, 1.5, 2] as const,
+                shortcut.increase,
+              ),
+            });
+          }
+          return;
         }
-      } else if (event.key === "Enter" && wireSource && wirePreviewPoint) {
-        event.preventDefault();
-        finishWireAtPoint(wirePreviewPoint);
-      } else if (
-        event.key === "Enter" &&
-        (tool === "arrow" ||
-          tool === "construction-line" ||
-          tool === "rectangle") &&
-        draftingSource !== null
-      ) {
-        event.preventDefault();
-        finishDraftingCreate();
-      } else if (event.key === "Escape") {
-        if (helpOpen) {
+        case "finish-wire":
+          if (wirePreviewPoint) finishWireAtPoint(wirePreviewPoint);
+          return;
+        case "finish-drafting":
+          finishDraftingCreate();
+          return;
+        case "close-help":
           closeHelp();
           return;
-        }
-        if (canvasDragSessionRef.current) {
-          canvasDragSessionRef.current.cancel();
+        case "cancel-canvas-drag":
+          canvasDragSessionRef.current?.cancel();
           setStatus("Cancelled canvas drag");
           return;
-        }
-        if (interactionState.kind !== "idle") {
+        case "cancel-interaction":
           cancelInteraction();
           setBoxPreview(null);
           setStatus(
@@ -4265,27 +4251,21 @@ export function App({ project: initialProject }: AppProps) {
               : "Cancelled active tool",
           );
           return;
-        }
-        if (
-          selectedDrafting &&
-          (selectedDrafting.kind === "arrow" ||
-            selectedDrafting.kind === "construction-line" ||
-            selectedDrafting.kind === "rectangle")
-        ) {
+        case "clear-drafting-selection":
           replaceSelectionKind("drafting", []);
           setStatus("Cleared drawing selection");
           return;
-        }
-        setBoxPreview(null);
-        setStatus("Cancelled");
-      } else if (event.key === "Delete" || event.key === "Backspace") {
-        event.preventDefault();
-        if (wireSource && wireWaypoints.length > 0) {
+        case "cancel-passive":
+          setBoxPreview(null);
+          setStatus("Cancelled");
+          return;
+        case "remove-wire-waypoint":
           setWireWaypoints(wireWaypoints.slice(0, -1));
           setStatus("Removed last wire bend");
-        } else {
+          return;
+        case "delete-selection":
           deleteSelection();
-        }
+          return;
       }
     }
     window.addEventListener("keydown", onKeyDown);
