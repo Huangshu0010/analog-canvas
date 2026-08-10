@@ -63,8 +63,12 @@ export function buildSymbolSvg(
   const viewBoxY = -oy / pixelsPerLogical;
 
   const variant = definition.variants?.[0];
-  const hiddenPrimitiveParts = useVariant ? (variant?.hiddenPrimitiveParts ?? []) : [];
-  const additionalPrimitives = useVariant ? (variant?.additionalPrimitives ?? []) : [];
+  const hiddenPrimitiveParts = useVariant
+    ? (variant?.hiddenPrimitiveParts ?? [])
+    : [];
+  const additionalPrimitives = useVariant
+    ? (variant?.additionalPrimitives ?? [])
+    : [];
   const body = renderSymbolDefinitionBody(
     definition,
     hiddenPrimitiveParts,

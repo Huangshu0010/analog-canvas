@@ -25,6 +25,7 @@ describe("initial built-in Symbol Library", () => {
       "vdd",
       "vss",
       "port",
+      "port-filled",
       "voltage-source",
       "current-source",
       "ac-voltage-source",
@@ -79,10 +80,10 @@ describe("initial built-in Symbol Library", () => {
         expect.objectContaining({
           kind: "polygon",
           points: [
-            { x: -10, y: 0.88 },
-            { x: 10, y: 0.88 },
-            { x: 10, y: 4.12 },
-            { x: -10, y: 4.12 },
+            { x: -10, y: -0.88 },
+            { x: 10, y: -0.88 },
+            { x: 10, y: 2.36 },
+            { x: -10, y: 2.36 },
           ],
           fill: "foreground",
           stroke: "none",
@@ -144,7 +145,7 @@ describe("initial built-in Symbol Library", () => {
     ]);
     for (const resolved of [nmos, pmos]) {
       expect(resolved?.variant?.additionalPrimitives).toEqual([
-        expect.objectContaining({ kind: "line", part: "source-arrow" }),
+        expect.objectContaining({ kind: "polyline", part: "source-arrow" }),
         expect.objectContaining({
           kind: "polygon",
           fill: "foreground",

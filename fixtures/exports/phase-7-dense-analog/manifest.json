@@ -5,25 +5,25 @@
     "x": -11,
     "y": -41,
     "width": 482,
-    "height": 407
+    "height": 418
   },
   "raster": {
     "scale": 3,
     "width": 1446,
-    "height": 1221
+    "height": 1254
   },
   "files": {
     "schematic.svg": {
-      "byteLength": 11097,
-      "sha256": "90228f73bba91330181cc5fe61ee3320612c5a1dee54113781accbce83f56e69"
+      "byteLength": 12552,
+      "sha256": "796b65534a6e3cbad4acd97dd4ebb87ef871c6c9953001d06cba48fbb2d9284c"
     },
     "schematic.png": {
-      "byteLength": 51961,
-      "sha256": "f3c3890cc823deeab7b1b5ec5fc1fcdc82594a0e9fd4c88ee7204d993fe57c3d"
+      "byteLength": 55320,
+      "sha256": "381d9a7e442cc8e014f7bade0b42c0c9ea9b09ec31e9871b7844e3f12b95485e"
     },
     "schematic.pdf": {
-      "byteLength": 29394,
-      "sha256": "d6ebe00f77d9244c11cfb667f753ba84a0a72a87440f787e9a2cb3af120dc6ed"
+      "byteLength": 31099,
+      "sha256": "cf521811b435f43e68cbf613dd9d0733fcdcfcaeebed2b59e03b7d603dd2e700"
     }
   }
 }

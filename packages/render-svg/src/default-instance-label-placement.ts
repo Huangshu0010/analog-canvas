@@ -106,11 +106,7 @@ export function defaultInstanceLabelPlacement(
     localPosition = { x: middleX, y: viewBox.y + viewBox.height + bottomGap };
   }
 
-  const position = transformPoint(
-    localPosition,
-    placement.position,
-    placement,
-  );
+  const position = transformPoint(localPosition, placement.position, placement);
   return {
     position: { x: Math.round(position.x), y: Math.round(position.y) },
     alignment: localOutward

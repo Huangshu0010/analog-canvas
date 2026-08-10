@@ -248,7 +248,7 @@ test("export includes drafting bounds and never emits guides (WP-R6)", async ({
   await expect(page.getByTestId("revision")).toHaveText("2");
   await expect(page.locator('[data-testid^="guide-"]')).toHaveCount(1);
 
-  const svg = (await downloadBytes(page, "Export", "Export SVG")).toString(
+  const svg = (await downloadBytes(page, "File", "Export SVG")).toString(
     "utf8",
   );
   expect(svg).toContain('data-kind="construction-line"');
@@ -602,7 +602,9 @@ test("construction line vertex insert via double-click", async ({ page }) => {
   const hit = page.getByTestId(/^drafting-hit-construction-/);
   const box = await hit.boundingBox();
   if (!box) throw new Error("construction line hit not measurable");
-  await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
+  // Avoid the midpoint curve handle, which is rendered above the line and
+  // intentionally owns its pointer events.
+  await page.mouse.dblclick(box.x + box.width * 0.35, box.y + box.height / 2);
   await expect(page.getByTestId("revision")).toHaveText("2");
   // Three vertex handles now.
   await expect(page.locator('[data-testid^="draft-handle-vx-"]')).toHaveCount(

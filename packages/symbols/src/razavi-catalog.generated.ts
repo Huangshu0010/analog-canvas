@@ -286,7 +286,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Explicit solid endpoint style; no automatic SPICE mapping.",
     assetPath: "port-filled.symbol.json",
     assetHash:
-      "6cff46d6e2fd79df4c5915d49001f18bb3735a7fbe8930e621a491eaaa91b07c",
+      "bb266895c22ed004c7706ca7c3825e84f51bcd78b00f000b4a47830cc1e0ab12",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:

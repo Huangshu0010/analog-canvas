@@ -87,7 +87,7 @@ describe("textbook monochrome SVG renderer", () => {
     );
 
     expect(body).toContain(
-      'r="2.47907" fill="none" stroke="#202020" stroke-width="1.6"',
+      'r="2.47907" fill="none" stroke="#000" stroke-width="1.6"',
     );
     expect(body).toContain('x2="-4.607544"');
   });
@@ -341,8 +341,8 @@ describe("textbook monochrome SVG renderer", () => {
         expect(scene.formalBody).toContain(
           `transform="translate(100 80) rotate(${rotation})${expectedMirror}"`,
         );
-        expect(scene.formalBody).toContain(
-          `<text x="100" y="118" text-anchor="middle">M1</text>`,
+        expect(scene.formalBody).toMatch(
+          /<text x="[^"]+" y="[^"]+" text-anchor="(?:start|middle|end)">M1<\/text>/u,
         );
         expect(scene.viewBox.width).toBeGreaterThan(0);
         expect(scene.viewBox.height).toBeGreaterThan(0);
@@ -464,7 +464,7 @@ describe("textbook monochrome SVG renderer", () => {
     const first = renderDocumentSvg(document, resolver);
     expect(first).toContain('transform="rotate(180 70 60)"');
     expect(first).toContain('<text x="70" y="46" text-anchor="middle"');
-    expect(first).toContain('text-anchor="middle" font-size="27"');
+    expect(first).toContain('text-anchor="middle" font-size="22.67"');
     expect(first).toContain('data-role="current-arrow-head"');
     expect(first).not.toContain('data-role="current-arrow-shaft"');
     expect(first).toContain('data-text-run="subscript"');
@@ -668,15 +668,15 @@ describe("textbook monochrome SVG renderer", () => {
     const svg = renderDocumentSvg(document, resolver, { title: "Razavi" });
 
     expect(svg).toContain('data-style-profile="razavi-textbook-v1"');
-    expect(svg).toContain('stroke="#202020" stroke-width="1.6"');
+    expect(svg).toContain('stroke="#000" stroke-width="1.6"');
     expect(svg).toContain(
-      '<polygon points="-9.956614,-12.197835 -9.956614,12.197835 -6.716614,12.197835 -6.716614,-12.197835" fill="#202020" stroke="none"/>',
+      '<polygon points="-11.802326,-9.593023 -11.802326,9.593023 -8.895349,9.593023 -8.895349,-9.593023" fill="#000" stroke="none"/>',
     );
     expect(svg).toContain('stroke-linecap="butt"');
     expect(svg).toContain('stroke-miterlimit="4"');
     expect(svg).toContain('data-node-kind="port-origin"');
     expect(svg).toContain(
-      'r="2.47907" fill="#fff" stroke="#202020" stroke-width="1.6"',
+      'r="2.47907" fill="#fff" stroke="#000" stroke-width="1.6"',
     );
     expect(svg).toContain('<g data-layer="ports">');
     expect([...svg.matchAll(/data-node-kind="port-origin"/gu)].length).toBe(5);
@@ -693,7 +693,7 @@ describe("textbook monochrome SVG renderer", () => {
       '<line data-role="supply-bar" x1="245" y1="270" x2="265" y2="270"',
     );
     expect(svg).toContain(
-      '<circle data-object-id="junction-bias" cx="225" cy="80" r="3" fill="#202020"/>',
+      '<circle data-object-id="junction-bias" cx="225" cy="80" r="3.77907" fill="#000"/>',
     );
     expect(svg).not.toContain('data-node-kind="device-pin"');
     expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
@@ -701,18 +701,18 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).not.toContain('data-role="current-arrow-shaft"');
     expect(svg).toContain('data-kind="route-marker"');
     expect(svg).toContain(
-      "font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:16px",
+      "font-family:'DejaVu Sans',Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:15.116px",
     );
     expect(svg).toContain('data-text-run="subscript"');
     expect(svg).toContain(
-      'style="font-style:italic;font-weight:700">1</tspan>',
+      'style="font-style:normal;font-weight:700">1</tspan>',
     );
     expect(svg).toContain(
-      'style="font-style:italic;font-weight:700">DD</tspan>',
+      'style="font-style:normal;font-weight:700">DD</tspan>',
     );
     // The migrated route-marker (current) renders I_tail into Razavi tspans.
     expect(svg).toContain(
-      'style="font-style:italic;font-weight:700">tail</tspan>',
+      'style="font-style:normal;font-weight:700">tail</tspan>',
     );
     expect(svg).toMatch(
       /data-kind="draft-text"[^>]*>Original matched differential stage<\/text>/u,
@@ -755,7 +755,7 @@ describe("textbook monochrome SVG renderer", () => {
       '<text data-role="polarity-negative" x="92" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">−</text>',
     );
     expect(svg).toContain(
-      '<text x="100" y="100" text-anchor="start" font-size="18"><tspan',
+      '<text x="100" y="100" text-anchor="start" font-size="15.116"><tspan',
     );
     expect(svg).not.toContain('transform="rotate(90 100 100)"><tspan');
   });

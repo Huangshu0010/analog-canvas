@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
 
+import { createRoutingDemoProject } from "../src/routing-demo.js";
+
 async function openMenu(page: Page, name: string): Promise<Locator> {
   const summary = page.locator("summary", { hasText: name }).filter({
     hasText: new RegExp(`^${name}$`, "u"),
@@ -215,18 +217,21 @@ async function dragBy(
   await locator.page().mouse.up();
 }
 
-test("shows faithful symbol previews and the expanded VSS-derived palette", async ({
+test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   page,
 }) => {
   await page.goto("/");
   for (const symbolId of [
+    "capacitor",
+    "current-source",
+    "ground",
     "nmos",
     "pmos",
-    "zener",
-    "schottky",
-    "led",
-    "opamp",
-    "transformer",
+    "port",
+    "port-filled",
+    "resistor",
+    "voltage-source",
+    "vdd",
   ]) {
     const button = page.getByTestId(`library-component-${symbolId}`);
     await expect(button).toBeVisible();
@@ -514,10 +519,10 @@ test("keeps direct device pin corners on-grid and deletes a selected junction", 
   await page
     .getByTestId("schematic-canvas")
     .dblclick({ position: { x: 180, y: 390 } });
-  const junction = page.locator('[data-testid^="junction-junction-ui-"]');
+  const junction = page.locator('[data-canvas-hit-kind="junction"]');
   await expect(junction).toHaveCount(1);
 
-  await junction.click();
+  await junction.click({ button: "right", force: true });
   await openSelectionShelf(page);
   await expect(
     page.getByRole("button", { name: "Delete junction and attached wires" }),
@@ -773,17 +778,17 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page.getByTestId("terminal-R2-1").click();
 
   await page.getByTestId("hit-R1").click();
+  await page.getByTestId("annotation-hit-instance-label-R1").dblclick();
   await page
-    .getByRole("textbox", { name: "Displayed instance name" })
+    .getByRole("textbox", { name: "Canvas text editor" })
     .fill("R_LOAD");
-  await page.getByRole("button", { name: "Apply name" }).click();
-  // The canonical name keeps the underscore; schematic-math renders it as a
-  // subscript, so DOM textContent is RLOAD.
+  await page.getByRole("button", { name: "Apply text changes" }).click();
+  // Canvas text editing preserves the exact user-authored instance label.
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
-    "RLOAD",
+    "R_LOAD",
   );
 
-  await clickRoute(page, "route-ui-1", 0.35, 1);
+  await clickRoute(page, "route-ui-1", 0.5, 0);
   await openSelectionShelf(page);
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
@@ -814,7 +819,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await page.getByTestId("terminal-R3-2").click();
   await page.getByTestId("terminal-R4-1").click();
   await expect(page.getByTestId("net-count")).toHaveText("2");
-  await clickRoute(page, "route-ui-2", 0.35, 1);
+  await clickRoute(page, "route-ui-2", 0.5, 0);
   await openSelectionShelf(page);
   await page
     .getByRole("textbox", { name: "Electrical Net label" })
@@ -865,7 +870,9 @@ test("selects and moves multiple instances while viewport gestures stay transien
     },
   );
   await page.mouse.up();
-  await expect(page.getByText("M1, M2", { exact: true })).toBeVisible();
+  await expect(
+    page.getByTestId("selection-shelf").getByText("M1, M2", { exact: true }),
+  ).toBeVisible();
 
   await page
     .getByTestId("hit-M1")
@@ -876,12 +883,8 @@ test("selects and moves multiple instances while viewport gestures stay transien
 
   const canvas = page.getByTestId("schematic-canvas");
   const beforeViewBox = await canvas.getAttribute("viewBox");
-  await canvas.dispatchEvent("wheel", {
-    ctrlKey: true,
-    deltaY: -120,
-    clientX: 700,
-    clientY: 350,
-  });
+  await canvas.hover({ position: { x: 700, y: 350 } });
+  await page.mouse.wheel(0, -120);
   await expect(canvas).not.toHaveAttribute("viewBox", beforeViewBox!);
   await expect(page.getByTestId("revision")).toHaveText("3");
 
@@ -915,7 +918,11 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Open routing example");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "routing-example.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(createRoutingDemoProject())),
+  });
 
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-A-P1").click();
@@ -940,7 +947,7 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await clickRouteWithScreenOffset(page, "route-ui-1", { x: 0, y: 5 }, 0.25);
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
-  await expect(page.getByTestId("crossing-count")).toHaveText("3");
+  await expect(page.getByTestId("crossing-count")).toHaveText("2");
 
   await clickRoute(page, "route-ui-2", 0.25);
   const handle = page.getByTestId("route-handle-route-ui-2");

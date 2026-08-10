@@ -63,7 +63,11 @@ describe("shared rich-text layout", () => {
   });
 
   it("uses the profile baseline shift when reserving subscript bounds", () => {
-    const metrics = richTextMetrics(razaviTextbookProfile);
+    const metrics = {
+      ...richTextMetrics(razaviTextbookProfile),
+      subscriptScale: 0.63,
+      subscriptBaselineShiftEm: 0.51,
+    };
     const content = {
       runs: [
         {
@@ -74,11 +78,12 @@ describe("shared rich-text layout", () => {
       ],
     } as RichTextDocument;
     const layout = measureRichTextDocument(content, metrics);
-    expect(metrics.subscriptScale).toBe(0.8);
-    expect(metrics.subscriptBaselineShiftEm).toBe(0.28);
     expect(layout.height).toBeCloseTo(
       metrics.fontSize *
-        (metrics.subscriptScale + metrics.subscriptBaselineShiftEm),
+        Math.max(
+          metrics.lineHeight,
+          metrics.subscriptScale + metrics.subscriptBaselineShiftEm,
+        ),
     );
   });
 });

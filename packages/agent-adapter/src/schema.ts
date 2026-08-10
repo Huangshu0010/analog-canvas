@@ -127,6 +127,16 @@ export const AgentCircuitRequestSchema = z.discriminatedUnion("operation", [
   AgentRenderRequestSchema,
 ]);
 
+// Visual diagnostics are derived from rendered geometry. Text measurement and
+// rotated drafting AABBs legitimately produce fractional coordinates even
+// though persisted schematic coordinates remain integer-grid values.
+const AgentDiagnosticBoundsSchema = z.strictObject({
+  x: z.number().finite(),
+  y: z.number().finite(),
+  width: z.number().finite().positive(),
+  height: z.number().finite().positive(),
+});
+
 export const AgentDiagnosticSchema = z.strictObject({
   code: z.string().min(1),
   severity: z.enum(["error", "warning", "info"]),
@@ -137,7 +147,7 @@ export const AgentDiagnosticSchema = z.strictObject({
   objectIds: z.array(StableIdSchema).optional(),
   path: z.array(z.union([z.string(), z.number().int()])).optional(),
   revision: z.number().int().nonnegative().optional(),
-  bounds: RectSchema.optional(),
+  bounds: AgentDiagnosticBoundsSchema.optional(),
   point: PointSchema.optional(),
   parameters: z
     .record(

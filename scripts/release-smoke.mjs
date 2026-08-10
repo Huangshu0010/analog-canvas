@@ -24,11 +24,16 @@ try {
   const manifestData = await manifest.json();
   if (manifestData.icons.length < 2 || manifestData.display !== "standalone")
     throw new Error("PWA manifest is incomplete");
+  const serviceWorkerSource = await serviceWorker.text();
   if (
     !serviceWorker.ok ||
-    !(await serviceWorker.text()).includes("icm-shell-v0.1.0")
+    serviceWorker.headers.get("content-type") !==
+      "text/javascript; charset=utf-8" ||
+    serviceWorker.headers.get("cache-control") !== "no-cache" ||
+    !serviceWorkerSource.includes('self.addEventListener("install"') ||
+    !serviceWorkerSource.includes("caches.open(")
   )
-    throw new Error("Service worker is missing");
+    throw new Error("Service worker shell contract is incomplete");
   if (!index.ok || !(await index.text()).includes("Interactive Circuit Maker"))
     throw new Error("Editor shell is missing");
   process.stdout.write(`Release smoke passed at ${running.origin}.\n`);

@@ -73,7 +73,12 @@ export function cropRaster(raster, x, y, w, h) {
       const srcX = x + col;
       const srcY = y + row;
       const dst = (row * w + col) * 4;
-      if (srcX < 0 || srcY < 0 || srcX >= raster.width || srcY >= raster.height) {
+      if (
+        srcX < 0 ||
+        srcY < 0 ||
+        srcX >= raster.width ||
+        srcY >= raster.height
+      ) {
         data[dst] = 0;
         data[dst + 1] = 0;
         data[dst + 2] = 0;
@@ -209,8 +214,14 @@ export function edgeShellRatio(missExtra, other, width, height, maxDist = 2) {
     }
   }
   const neighbours = [
-    -1, 1, -width, width,
-    -width - 1, -width + 1, width - 1, width + 1,
+    -1,
+    1,
+    -width,
+    width,
+    -width - 1,
+    -width + 1,
+    width - 1,
+    width + 1,
   ];
   while (head < queue.length) {
     const i = queue[head++];
