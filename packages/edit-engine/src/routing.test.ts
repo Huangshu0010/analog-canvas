@@ -269,7 +269,7 @@ describe("routing Edit Engine", () => {
     ).toMatchObject({
       position: { x: 119, y: 300 },
       offset: { x: -41, y: -20 },
-      alignment: "end",
+      alignment: "middle",
       rotation: 0,
     });
 
@@ -336,6 +336,96 @@ describe("routing Edit Engine", () => {
     expect(mirrored.diff.changedObjectIds).toEqual(
       expect.arrayContaining(["A", "label-a", "route-h"]),
     );
+  });
+
+  it("preserves the painted label vector across repeated pure translations", () => {
+    const document = documentFixture();
+    document.annotations.push(
+      {
+        id: "label-a",
+        kind: "instance-label",
+        text: "A",
+        // Deliberately differs from instance position + semantic offset. This
+        // is the valid state produced by upright baseline/clearance correction
+        // after a rotate or mirror operation.
+        position: { x: 185, y: 257 },
+        attachedObjectId: "A",
+        offset: { x: 20, y: -35 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "marker-a",
+        kind: "route-marker",
+        markerKind: "voltage",
+        text: "V_A",
+        position: { x: 150, y: 280 },
+        attachedObjectId: "A",
+        anchor: {
+          kind: "object",
+          objectId: "A",
+          localOffset: { x: 10, y: -20 },
+          fallbackPosition: { x: 150, y: 280 },
+        },
+        offset: { x: 10, y: -20 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+      },
+    );
+
+    const first = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "move_instance",
+          instanceId: "A",
+          position: { x: 160, y: 330 },
+        },
+      ]),
+      context,
+    );
+    if (!first.ok) throw new Error(first.error.message);
+    expect(first.document.annotations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "label-a",
+          position: { x: 205, y: 287 },
+          offset: { x: 20, y: -35 },
+          alignment: "middle",
+        }),
+        expect.objectContaining({
+          id: "marker-a",
+          position: { x: 170, y: 310 },
+          anchor: expect.objectContaining({
+            fallbackPosition: { x: 170, y: 310 },
+          }),
+        }),
+      ]),
+    );
+
+    const second = executeTransaction(
+      first.document,
+      transaction(document.id, 1, [
+        {
+          kind: "move_instance",
+          instanceId: "A",
+          position: { x: 210, y: 350 },
+        },
+      ]),
+      context,
+    );
+    if (!second.ok) throw new Error(second.error.message);
+    expect(
+      second.document.annotations.find(
+        (annotation) => annotation.id === "label-a",
+      ),
+    ).toMatchObject({
+      position: { x: 255, y: 307 },
+      offset: { x: 20, y: -35 },
+      alignment: "middle",
+    });
   });
 
   it("rotates a terminal escape with the pin instead of rejecting the Route", () => {

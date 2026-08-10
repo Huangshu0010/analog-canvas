@@ -56,17 +56,37 @@ describe("presentation and layout edits", () => {
       },
       properties: {},
     }));
-    document.annotations.push({
-      id: "label-M2",
-      kind: "instance-label",
-      text: "M2",
-      position: { x: 180, y: 145 },
-      attachedObjectId: "M2",
-      offset: { x: 0, y: 25 },
-      alignment: "middle",
-      rotation: 0,
-      locked: false,
-    });
+    document.annotations.push(
+      {
+        id: "label-M2",
+        kind: "instance-label",
+        text: "M2",
+        position: { x: 180, y: 145 },
+        attachedObjectId: "M2",
+        offset: { x: 0, y: 25 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "marker-M2",
+        kind: "route-marker",
+        markerKind: "voltage",
+        text: "V_M2",
+        position: { x: 190, y: 145 },
+        attachedObjectId: "M2",
+        anchor: {
+          kind: "object",
+          objectId: "M2",
+          localOffset: { x: 10, y: 25 },
+          fallbackPosition: { x: 190, y: 145 },
+        },
+        offset: { x: 10, y: 25 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+      },
+    );
     const result = executeTransaction(
       document,
       transaction("doc", [
@@ -85,6 +105,10 @@ describe("presentation and layout edits", () => {
     expect(result.ok).toBe(true);
     expect(result.document.instances[1]!.placement!.position.y).toBe(100);
     expect(result.document.annotations[0]!.position.y).toBe(125);
+    expect(result.document.annotations[1]).toMatchObject({
+      position: { x: 190, y: 125 },
+      anchor: { fallbackPosition: { x: 190, y: 125 } },
+    });
     expect(result.document.constraints[0]!.id).toBe("matched-y");
   });
 

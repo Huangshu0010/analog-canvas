@@ -19,6 +19,7 @@ import {
   transformPoint,
 } from "@icm/model";
 import type {
+  Annotation,
   Orientation,
   Point,
   Rotation,
@@ -1039,6 +1040,31 @@ function applyInstanceRouteFollow(
   return changed.sort((left, right) => left.localeCompare(right, "en"));
 }
 
+function translateAttachedAnnotation(
+  annotation: Annotation,
+  attachedObjectId: string,
+  delta: Point,
+): void {
+  annotation.position = {
+    x: annotation.position.x + delta.x,
+    y: annotation.position.y + delta.y,
+  };
+  if (annotation.anchor?.kind === "free") {
+    annotation.anchor.position = {
+      x: annotation.anchor.position.x + delta.x,
+      y: annotation.anchor.position.y + delta.y,
+    };
+  } else if (
+    annotation.anchor?.kind === "object" &&
+    annotation.anchor.objectId === attachedObjectId
+  ) {
+    annotation.anchor.fallbackPosition = {
+      x: annotation.anchor.fallbackPosition.x + delta.x,
+      y: annotation.anchor.fallbackPosition.y + delta.y,
+    };
+  }
+}
+
 function followAttachedAnnotations(
   draft: SchematicDocument,
   instanceId: string,
@@ -1049,6 +1075,22 @@ function followAttachedAnnotations(
   changedObjectIds: Set<string>,
   resolver?: SymbolResolver,
 ): void {
+  const isPureTranslation =
+    oldOrientation.rotation === newOrientation.rotation &&
+    oldOrientation.mirror === newOrientation.mirror;
+  if (isPureTranslation) {
+    const delta = {
+      x: newPosition.x - oldPosition.x,
+      y: newPosition.y - oldPosition.y,
+    };
+    for (const annotation of draft.annotations) {
+      if (annotation.attachedObjectId !== instanceId) continue;
+      translateAttachedAnnotation(annotation, instanceId, delta);
+      changedObjectIds.add(annotation.id);
+    }
+    return;
+  }
+
   const directionForRotation = (rotation: Rotation): Point => {
     switch (rotation) {
       case 0:
@@ -1719,8 +1761,7 @@ export function executeTransaction(
         port.position = structuredClone(edit.position);
         for (const annotation of draft.annotations) {
           if (annotation.attachedObjectId === edit.portId) {
-            annotation.position.x += delta.x;
-            annotation.position.y += delta.y;
+            translateAttachedAnnotation(annotation, edit.portId, delta);
             changedObjectIds.add(annotation.id);
           }
         }
@@ -2508,7 +2549,10 @@ export function executeTransaction(
           instance!.placement!.position[edit.axis] = coordinate;
           for (const annotation of draft.annotations) {
             if (annotation.attachedObjectId === instance!.id) {
-              annotation.position[edit.axis] += coordinate - oldCoordinate;
+              translateAttachedAnnotation(annotation, instance!.id, {
+                x: edit.axis === "x" ? coordinate - oldCoordinate : 0,
+                y: edit.axis === "y" ? coordinate - oldCoordinate : 0,
+              });
               changedObjectIds.add(annotation.id);
             }
           }

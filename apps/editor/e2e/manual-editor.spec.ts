@@ -181,6 +181,40 @@ async function onlyRouteId(page: Page): Promise<string> {
   return testId.replace(/^route-hit-/u, "");
 }
 
+async function instanceLabelVector(
+  page: Page,
+  instanceId: string,
+): Promise<{ x: number; y: number }> {
+  const instance = await page
+    .locator(`[data-layer="symbols"] [data-object-id="${instanceId}"]`)
+    .boundingBox();
+  const label = await page
+    .locator(
+      `[data-layer="annotations"] [data-object-id="instance-label-${instanceId}"]`,
+    )
+    .boundingBox();
+  if (!instance || !label) throw new Error("Instance label is not measurable");
+  return {
+    x: label.x + label.width / 2 - (instance.x + instance.width / 2),
+    y: label.y + label.height / 2 - (instance.y + instance.height / 2),
+  };
+}
+
+async function dragBy(
+  locator: Locator,
+  delta: { x: number; y: number },
+): Promise<void> {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("Drag target is not measurable");
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await locator.page().mouse.move(start.x, start.y);
+  await locator.page().mouse.down();
+  await locator.page().mouse.move(start.x + delta.x, start.y + delta.y, {
+    steps: 4,
+  });
+  await locator.page().mouse.up();
+}
+
 test("shows faithful symbol previews and the expanded VSS-derived palette", async ({
   page,
 }) => {
@@ -640,6 +674,28 @@ test("moves an unselected component in one thresholded drag", async ({
   expect(during?.y).not.toBe(before.y);
   await page.mouse.up();
   await expect(page.getByTestId("revision")).toHaveText("2");
+});
+
+test("keeps a transformed instance label at a constant distance while moving", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await page.keyboard.press("Shift+r");
+  await expect(page.getByTestId("revision")).toHaveText("2");
+
+  const hit = page.getByTestId("hit-R1");
+  const before = await instanceLabelVector(page, "R1");
+  await dragBy(hit, { x: 83, y: 47 });
+  const afterFirst = await instanceLabelVector(page, "R1");
+  expect(afterFirst.x).toBeCloseTo(before.x, 3);
+  expect(afterFirst.y).toBeCloseTo(before.y, 3);
+
+  await dragBy(hit, { x: -51, y: 69 });
+  const afterSecond = await instanceLabelVector(page, "R1");
+  expect(afterSecond.x).toBeCloseTo(before.x, 3);
+  expect(afterSecond.y).toBeCloseTo(before.y, 3);
+  await expect(page.getByTestId("revision")).toHaveText("4");
 });
 
 test("selects an attached label without selecting its host", async ({

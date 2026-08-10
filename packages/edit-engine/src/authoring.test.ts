@@ -229,17 +229,37 @@ describe("Phase 8 semantic authoring", () => {
       direction: "input",
       position: null,
     });
-    document.annotations.push({
-      id: "label-in",
-      kind: "net-label",
-      text: "IN",
-      position: { x: 80, y: 100 },
-      attachedObjectId: "port-in",
-      offset: { x: -20, y: 0 },
-      alignment: "end",
-      rotation: 0,
-      locked: false,
-    });
+    document.annotations.push(
+      {
+        id: "label-in",
+        kind: "net-label",
+        text: "IN",
+        position: { x: 80, y: 100 },
+        attachedObjectId: "port-in",
+        offset: { x: -20, y: 0 },
+        alignment: "end",
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "marker-in",
+        kind: "route-marker",
+        markerKind: "voltage",
+        text: "V_IN",
+        position: { x: 80, y: 110 },
+        attachedObjectId: "port-in",
+        anchor: {
+          kind: "object",
+          objectId: "port-in",
+          localOffset: { x: -20, y: 10 },
+          fallbackPosition: { x: 80, y: 110 },
+        },
+        offset: { x: -20, y: 10 },
+        alignment: "end",
+        rotation: 0,
+        locked: false,
+      },
+    );
     const placed = executeTransaction(
       document,
       transaction([
@@ -267,8 +287,20 @@ describe("Phase 8 semantic authoring", () => {
       ok: true,
       document: {
         ports: [{ position: { x: 140, y: 120 } }],
-        annotations: [{ position: { x: 120, y: 120 } }],
       },
+    });
+    expect(
+      moved.document.annotations.find(
+        (annotation) => annotation.id === "label-in",
+      ),
+    ).toMatchObject({ position: { x: 120, y: 120 } });
+    expect(
+      moved.document.annotations.find(
+        (annotation) => annotation.id === "marker-in",
+      ),
+    ).toMatchObject({
+      position: { x: 120, y: 130 },
+      anchor: { fallbackPosition: { x: 120, y: 130 } },
     });
   });
 

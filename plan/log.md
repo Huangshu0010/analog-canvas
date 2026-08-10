@@ -3822,6 +3822,21 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   completed but uncommitted concurrent UI, rectangle, and route targets; no
   mixed staging was performed.
 
+## 2026-08-10 - Stable instance annotation translation
+
+- Target: stop attached Annotation distance from drifting when an instance is
+  translated, especially after upright-label baseline correction from a prior
+  rotate or mirror.
+- Changed areas: pure `move_instance` translation now applies the painted delta
+  directly instead of rerunning transform placement; a shared helper also keeps
+  free/object anchor fallbacks synchronized for port movement and instance
+  alignment. Rotation and mirroring still use the transform-aware path.
+- Validation: Edit Engine plus Agent service passed 60/60 tests; three focused
+  editor gestures passed, including two consecutive moves of a rotated
+  component with a constant label vector; Edit Engine/editor builds and editor
+  production build passed; formatting and `git diff --check` passed.
+- Commit status: prepared directly on `main` as explicitly requested.
+
 ## 2026-08-10 - Razavi symbol construction experience
 
 - Target: extract the repeated component-construction and pixel-calibration
