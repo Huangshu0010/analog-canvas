@@ -40,7 +40,6 @@ import type {
   RichTextDocument,
   RouteEndpoint,
   SchematicDocument,
-  VisualAnchor,
 } from "@icm/model";
 import {
   buildSvgScene,
@@ -56,9 +55,30 @@ import { startCanvasDragSession } from "./canvas-drag-session";
 import type { CanvasDragSession } from "./canvas-drag-session";
 import { startCanvasDragVisual } from "./canvas-drag-visual";
 import { resolveCanvasHitAtPoint } from "./canvas-hit-resolver";
-import { clamp, closestPointOnSegment } from "./canvas-geometry";
+import {
+  centerOfBounds,
+  clamp,
+  closestPointOnSegment,
+  normalizedBearing,
+} from "./canvas-geometry";
 import { ComponentLibrary } from "./component-library";
 import { useDocumentController } from "./document-controller";
+import {
+  applyDraftingHandle,
+  applyDraftingStylePatch,
+  deleteConstructionVertex as deleteConstructionVertexObject,
+  draftingDragOrigin,
+  insertArrowWaypoint as insertArrowWaypointObject,
+  insertConstructionVertex as insertConstructionVertexObject,
+  rotateDraftingObject,
+  setDraftingBearing as setDraftingObjectBearing,
+  setDraftingTangentAngle as setDraftingObjectTangentAngle,
+  translateDraftingObject,
+} from "./drafting-manipulation";
+import type {
+  DraftingHandle,
+  DraftingStylePatch,
+} from "./drafting-manipulation";
 import { referencedDocumentId } from "./editor-session";
 import { useInteractionState } from "./interaction-state";
 import type { EditorTool, WireSource } from "./interaction-state";
@@ -223,17 +243,6 @@ function quadraticMidpoint(
 
 // A quadratic Bézier evaluated at t=0.5 is (P0 + 2C + P1)/4. Inverting it
 // makes the visible midpoint the direct manipulation handle the user drags.
-function controlForQuadraticMidpoint(
-  from: Point,
-  midpoint: Point,
-  to: Point,
-): Point {
-  return {
-    x: Math.round(2 * midpoint.x - (from.x + to.x) / 2),
-    y: Math.round(2 * midpoint.y - (from.y + to.y) / 2),
-  };
-}
-
 function quadraticTangentAngle(
   from: Point,
   control: Point | null,
@@ -253,32 +262,6 @@ function quadraticTangentAngle(
     ),
   );
   return (Math.acos(cosine) * 180) / Math.PI;
-}
-
-function controlForTangentAngle(
-  from: Point,
-  to: Point,
-  angleDegrees: number,
-  existingControl: Point | null,
-): Point | null {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const chordLength = Math.hypot(dx, dy);
-  if (chordLength < 1e-6 || angleDegrees <= 0.01) return null;
-  const boundedAngle = Math.min(170, Math.max(0.01, angleDegrees));
-  const midpoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
-  const normal = { x: -dy / chordLength, y: dx / chordLength };
-  const existingSide = existingControl
-    ? Math.sign(
-        (existingControl.x - midpoint.x) * normal.x +
-          (existingControl.y - midpoint.y) * normal.y,
-      )
-    : 1;
-  const offset = (chordLength / 2) * Math.tan((boundedAngle * Math.PI) / 360);
-  return {
-    x: Math.round(midpoint.x + normal.x * offset * (existingSide || 1)),
-    y: Math.round(midpoint.y + normal.y * offset * (existingSide || 1)),
-  };
 }
 
 interface RouteTap {
@@ -463,57 +446,6 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return Boolean(
     element?.closest("input, textarea, select, [contenteditable='true']"),
   );
-}
-
-// Rotate a free drafting anchor 90°/−90° about a pivot. Non-free anchors (route
-// or object-attached) are returned unchanged: their position is derived from
-// the thing they attach to, so a free-rotation must not detach them. Only free
-// arrows/leaders created by the editor tools are freely rotatable this way.
-function rotateFreePoint(
-  anchor: Extract<VisualAnchor, { kind: "free" }>,
-  pivot: Point,
-  deltaDegrees: 90 | -90,
-): Extract<VisualAnchor, { kind: "free" }> {
-  const cos = deltaDegrees === 90 ? 0 : 0; // cos(±90°) = 0
-  const sin = deltaDegrees === 90 ? 1 : -1; // sin(90°)=1, sin(-90°)=-1
-  const dx = anchor.position.x - pivot.x;
-  const dy = anchor.position.y - pivot.y;
-  return {
-    ...anchor,
-    position: {
-      x: Math.round(pivot.x + dx * cos - dy * sin),
-      y: Math.round(pivot.y + dx * sin + dy * cos),
-    },
-  };
-}
-
-function rotatePointByDegrees(
-  point: Point,
-  pivot: Point,
-  degrees: number,
-): Point {
-  const radians = (degrees * Math.PI) / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
-  const dx = point.x - pivot.x;
-  const dy = point.y - pivot.y;
-  return {
-    x: Math.round(pivot.x + dx * cos - dy * sin),
-    y: Math.round(pivot.y + dx * sin + dy * cos),
-  };
-}
-
-function normalizedBearing(from: Point, to: Point): number {
-  return (
-    ((Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI + 360) % 360
-  );
-}
-
-function centerOfBounds(bounds: Rect): Point {
-  return {
-    x: bounds.x + bounds.width / 2,
-    y: bounds.y + bounds.height / 2,
-  };
 }
 
 // Step a bounded scale value to the next allowed entry (up or down). Used by the
@@ -2291,89 +2223,13 @@ export function App({ project: initialProject }: AppProps) {
         const object = document.drafting?.objects.find(
           (candidate) => candidate.id === id,
         );
-        if (!object || object.locked) return [];
-        const geometry = resolveDraftingObjectGeometry(
-          document,
-          resolver,
+        if (!object) return [];
+        const next = rotateDraftingObject(
           object,
+          resolveDraftingObjectGeometry(document, resolver, object),
+          deltaDegrees,
         );
-        if (object.kind === "arrow" && geometry.kind === "arrow") {
-          const pivot = geometry.center;
-          const from =
-            object.from.kind === "free"
-              ? rotateFreePoint(object.from, pivot, deltaDegrees)
-              : object.from;
-          const to =
-            object.to.kind === "free"
-              ? rotateFreePoint(object.to, pivot, deltaDegrees)
-              : object.to;
-          return [
-            {
-              kind: "upsert_drafting_object",
-              object: {
-                ...object,
-                from,
-                to,
-                waypoints: object.waypoints?.map(
-                  (point) =>
-                    rotateFreePoint(
-                      { kind: "free", position: point },
-                      pivot,
-                      deltaDegrees,
-                    ).position,
-                ),
-                curveControls: object.curveControls?.map((point) =>
-                  point
-                    ? rotateFreePoint(
-                        { kind: "free", position: point },
-                        pivot,
-                        deltaDegrees,
-                      ).position
-                    : null,
-                ),
-              },
-            },
-          ];
-        }
-        if (object.kind === "construction-line") {
-          const pivot = centerOfBounds(geometry.bounds);
-          const points = object.points.map(
-            (point) =>
-              rotateFreePoint(
-                { kind: "free", position: point },
-                pivot,
-                deltaDegrees,
-              ).position,
-          );
-          const curveControls = object.curveControls?.map((point) =>
-            point
-              ? rotateFreePoint(
-                  { kind: "free", position: point },
-                  pivot,
-                  deltaDegrees,
-                ).position
-              : null,
-          );
-          return [
-            {
-              kind: "upsert_drafting_object",
-              object: { ...object, points, curveControls },
-            },
-          ];
-        }
-        if (object.kind === "rectangle") {
-          return [
-            {
-              kind: "upsert_drafting_object",
-              object: {
-                ...object,
-                rotation:
-                  (((object.rotation + deltaDegrees) % 360) + 360) % 360,
-              },
-            },
-          ];
-        }
-        return [];
+        return next ? [{ kind: "upsert_drafting_object", object: next }] : [];
       },
     );
     const edits = [...instanceEdits, ...draftingEdits];
@@ -2470,85 +2326,6 @@ export function App({ project: initialProject }: AppProps) {
     setDraftingBearingInput(null);
   }
 
-  function draftingDragOrigin(object: DraftingObject): Point | null {
-    if (object.kind === "construction-line") return object.points[0] ?? null;
-    if (object.kind === "rectangle") return object.center;
-    if (object.kind === "arrow") {
-      return object.from.kind === "free" && object.to.kind === "free"
-        ? object.from.position
-        : null;
-    }
-    return object.anchor.kind === "free" ? object.anchor.position : null;
-  }
-
-  function translateDraftingObject(
-    object: DraftingObject,
-    delta: Point,
-  ): DraftingObject {
-    const moveFreeAnchor = <T extends DraftingObject["anchor"]>(
-      anchor: T,
-    ): T =>
-      anchor.kind === "free"
-        ? ({
-            ...anchor,
-            position: {
-              x: Math.round(anchor.position.x + delta.x),
-              y: Math.round(anchor.position.y + delta.y),
-            },
-          } as T)
-        : anchor;
-    if (object.kind === "construction-line") {
-      return {
-        ...object,
-        anchor: moveFreeAnchor(object.anchor),
-        points: object.points.map((point) => ({
-          x: Math.round(point.x + delta.x),
-          y: Math.round(point.y + delta.y),
-        })),
-        curveControls: object.curveControls?.map((point) =>
-          point
-            ? {
-                x: Math.round(point.x + delta.x),
-                y: Math.round(point.y + delta.y),
-              }
-            : null,
-        ),
-      };
-    }
-    if (object.kind === "arrow") {
-      return {
-        ...object,
-        anchor: moveFreeAnchor(object.anchor),
-        from: moveFreeAnchor(object.from),
-        to: moveFreeAnchor(object.to),
-        waypoints: object.waypoints?.map((point) => ({
-          x: Math.round(point.x + delta.x),
-          y: Math.round(point.y + delta.y),
-        })),
-        curveControls: object.curveControls?.map((point) =>
-          point
-            ? {
-                x: Math.round(point.x + delta.x),
-                y: Math.round(point.y + delta.y),
-              }
-            : null,
-        ),
-      };
-    }
-    if (object.kind === "rectangle") {
-      const center = {
-        x: Math.round(object.center.x + delta.x),
-        y: Math.round(object.center.y + delta.y),
-      };
-      return {
-        ...object,
-        center,
-        anchor: { kind: "free", position: center },
-      };
-    }
-    return { ...object, anchor: moveFreeAnchor(object.anchor) };
-  }
-
   // A drafting drag commits exactly one typed transaction on pointerup. Its
   // geometry is kind-aware: arrows move their free endpoints and construction
   // lines move their points, rather than mutating the unused base anchor.
@@ -2643,12 +2420,7 @@ export function App({ project: initialProject }: AppProps) {
   function beginDraftingHandleDrag(
     event: ReactPointerEvent<SVGElement>,
     object: DraftingObject,
-    handle:
-      | { kind: "from" | "to" }
-      | {
-          kind: "waypoint" | "vertex" | "curve" | "rectangle-corner";
-          index: number;
-        },
+    handle: DraftingHandle,
   ): void {
     if (event.button !== 0 || object.locked) return;
     event.stopPropagation();
@@ -2666,87 +2438,6 @@ export function App({ project: initialProject }: AppProps) {
     }
     selectDraftingObject(object.id);
 
-    const applyHandle = (
-      target: DraftingObject,
-      point: Point,
-    ): DraftingObject => {
-      if (target.kind === "arrow") {
-        if (handle.kind === "waypoint") {
-          const waypoints = [...(target.waypoints ?? [])];
-          waypoints[handle.index] = point;
-          return { ...target, waypoints };
-        }
-        if (handle.kind === "curve" && originalGeometry.kind === "arrow") {
-          const controls = Array.from(
-            { length: originalGeometry.points.length - 1 },
-            (_, index) => target.curveControls?.[index] ?? null,
-          );
-          controls[handle.index] = controlForQuadraticMidpoint(
-            originalGeometry.points[handle.index]!,
-            point,
-            originalGeometry.points[handle.index + 1]!,
-          );
-          return { ...target, curveControls: controls };
-        }
-        if (handle.kind === "vertex") return target;
-        const anchor = handle.kind === "from" ? target.from : target.to;
-        if (anchor.kind !== "free") return target;
-        const nextAnchor = { ...anchor, position: point };
-        return handle.kind === "from"
-          ? { ...target, from: nextAnchor }
-          : { ...target, to: nextAnchor };
-      }
-      if (target.kind === "construction-line" && handle.kind === "vertex") {
-        const points = target.points.slice();
-        points[handle.index] = point;
-        return { ...target, points };
-      }
-      if (
-        target.kind === "construction-line" &&
-        handle.kind === "curve" &&
-        originalGeometry.kind === "construction-line"
-      ) {
-        const controls = Array.from(
-          { length: originalGeometry.points.length - 1 },
-          (_, index) => target.curveControls?.[index] ?? null,
-        );
-        controls[handle.index] = controlForQuadraticMidpoint(
-          originalGeometry.points[handle.index]!,
-          point,
-          originalGeometry.points[handle.index + 1]!,
-        );
-        return { ...target, curveControls: controls };
-      }
-      if (
-        target.kind === "rectangle" &&
-        handle.kind === "rectangle-corner" &&
-        originalGeometry.kind === "rectangle"
-      ) {
-        const opposite = originalGeometry.corners[(handle.index + 2) % 4]!;
-        const radians = (target.rotation * Math.PI) / 180;
-        const ux = { x: Math.cos(radians), y: Math.sin(radians) };
-        const uy = { x: -Math.sin(radians), y: Math.cos(radians) };
-        const delta = { x: point.x - opposite.x, y: point.y - opposite.y };
-        const localWidth = delta.x * ux.x + delta.y * ux.y;
-        const localHeight = delta.x * uy.x + delta.y * uy.y;
-        const center = {
-          x: Math.round(
-            opposite.x + (localWidth * ux.x + localHeight * uy.x) / 2,
-          ),
-          y: Math.round(
-            opposite.y + (localWidth * ux.y + localHeight * uy.y) / 2,
-          ),
-        };
-        return {
-          ...target,
-          center,
-          anchor: { kind: "free", position: center },
-          width: Math.max(1, Math.round(Math.abs(localWidth))),
-          height: Math.max(1, Math.round(Math.abs(localHeight))),
-        };
-      }
-      return target;
-    };
     canvasDragSessionRef.current = startCanvasDragSession({
       target: hitTarget,
       pointerId: event.pointerId,
@@ -2760,7 +2451,7 @@ export function App({ project: initialProject }: AppProps) {
         ).point;
         setDraftingHandlePreview({
           objectId: object.id,
-          object: applyHandle(object, point),
+          object: applyDraftingHandle(object, handle, point, originalGeometry),
         });
       },
       onFinish: ({ client, dragged }) => {
@@ -2775,7 +2466,12 @@ export function App({ project: initialProject }: AppProps) {
             (item) => item.id === object.id,
           );
           if (latest) {
-            const next = applyHandle(latest, point);
+            const next = applyDraftingHandle(
+              latest,
+              handle,
+              point,
+              originalGeometry,
+            );
             if (next !== latest) {
               transact([{ kind: "upsert_drafting_object", object: next }]);
             }
@@ -2797,35 +2493,18 @@ export function App({ project: initialProject }: AppProps) {
     object: Extract<DraftingObject, { kind: "construction-line" }>,
     point: Point,
   ): void {
-    if (object.locked) return;
-    let bestIndex = object.points.length - 1;
-    let bestDistance = Infinity;
-    for (let index = 0; index < object.points.length - 1; index += 1) {
-      const from = object.points[index]!;
-      const to = object.points[index + 1]!;
-      const on = closestPointOnSegment(point, from, to);
-      const distance = (on.x - point.x) ** 2 + (on.y - point.y) ** 2;
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = index + 1;
-      }
-    }
-    const points = object.points.slice();
-    points.splice(bestIndex, 0, { x: point.x, y: point.y });
-    const curveControls = object.curveControls
-      ? [...object.curveControls]
-      : undefined;
+    const next = insertConstructionVertexObject(object, point);
+    if (!next) return;
     // An explicit vertex is a straightening operation for the selected
     // segment. It avoids silently reinterpreting a Bézier control after the
     // segment count changes.
-    if (curveControls) curveControls.splice(bestIndex - 1, 1, null, null);
     transact([
       {
         kind: "upsert_drafting_object",
-        object: { ...object, points, curveControls },
+        object: next.object,
       },
     ]);
-    setStatus(`Inserted vertex ${bestIndex}`);
+    setStatus(`Inserted vertex ${next.index}`);
   }
 
   // Free arrows share the same midpoint editing model as construction lines.
@@ -2835,36 +2514,17 @@ export function App({ project: initialProject }: AppProps) {
     object: Extract<DraftingObject, { kind: "arrow" }>,
     point: Point,
   ): void {
-    if (object.locked) return;
     const geometry = resolveDraftingObjectGeometry(document, resolver, object);
     if (geometry.kind !== "arrow") return;
-    let bestIndex = 0;
-    let bestDistance = Infinity;
-    for (let index = 0; index < geometry.points.length - 1; index += 1) {
-      const on = closestPointOnSegment(
-        point,
-        geometry.points[index]!,
-        geometry.points[index + 1]!,
-      );
-      const distance = (on.x - point.x) ** 2 + (on.y - point.y) ** 2;
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = index;
-      }
-    }
-    const waypoints = [...(object.waypoints ?? [])];
-    waypoints.splice(bestIndex, 0, point);
-    const curveControls = object.curveControls
-      ? [...object.curveControls]
-      : undefined;
-    if (curveControls) curveControls.splice(bestIndex, 1, null, null);
+    const next = insertArrowWaypointObject(object, geometry, point);
+    if (!next) return;
     transact([
       {
         kind: "upsert_drafting_object",
-        object: { ...object, waypoints, curveControls },
+        object: next.object,
       },
     ]);
-    setStatus(`Inserted arrow bend ${bestIndex + 1}`);
+    setStatus(`Inserted arrow bend ${next.index + 1}`);
   }
 
   // Delete a vertex from a construction line by index; refuse below 2 vertices.
@@ -2872,18 +2532,13 @@ export function App({ project: initialProject }: AppProps) {
     object: Extract<DraftingObject, { kind: "construction-line" }>,
     index: number,
   ): void {
-    if (object.locked) return;
-    if (object.points.length <= 2) {
+    const next = deleteConstructionVertexObject(object, index);
+    if (next.kind === "minimum") {
       setStatus("A construction line needs at least two vertices");
       return;
     }
-    const points = object.points.filter(
-      (_, vertexIndex) => vertexIndex !== index,
-    );
-    const { curveControls: _curveControls, ...straightObject } = object;
-    transact([
-      { kind: "upsert_drafting_object", object: { ...straightObject, points } },
-    ]);
+    if (next.kind !== "updated") return;
+    transact([{ kind: "upsert_drafting_object", object: next.object }]);
     setStatus(`Deleted vertex ${index}`);
   }
 
@@ -2891,14 +2546,7 @@ export function App({ project: initialProject }: AppProps) {
   // merged into styleOverride (undefined keys clear that property). One
   // upsert_drafting_object transaction per object. Applies to free arrows and
   // construction lines; route current markers keep their own binding.
-  function setDraftingStyle(
-    patch: Partial<{
-      lineStyle: "solid" | "dashed" | "dotted";
-      strokeScale: 0.75 | 1 | 1.5 | 2;
-      arrowHead: "none" | "filled" | "open";
-      arrowHeadScale: 0.75 | 1 | 1.25 | 1.5;
-    }>,
-  ): void {
+  function setDraftingStyle(patch: DraftingStylePatch): void {
     const ids = visualSelection.draftingIds;
     if (ids.length === 0) return;
     const edits: SchematicEdit[] = [];
@@ -2906,31 +2554,12 @@ export function App({ project: initialProject }: AppProps) {
       const object = document.drafting?.objects.find(
         (candidate) => candidate.id === id,
       );
-      if (
-        !object ||
-        object.locked ||
-        (object.kind !== "arrow" &&
-          object.kind !== "construction-line" &&
-          object.kind !== "rectangle")
-      ) {
-        continue;
-      }
-      const currentOverride = object.styleOverride ?? {};
-      const nextOverride = { ...currentOverride };
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === undefined) {
-          delete (nextOverride as Record<string, unknown>)[key];
-        } else {
-          (nextOverride as Record<string, unknown>)[key] = value;
-        }
-      }
+      if (!object) continue;
+      const nextObject = applyDraftingStylePatch(object, patch);
+      if (!nextObject) continue;
       edits.push({
         kind: "upsert_drafting_object",
-        object: {
-          ...object,
-          styleOverride:
-            Object.keys(nextOverride).length > 0 ? nextOverride : undefined,
-        },
+        object: nextObject,
       });
     }
     if (edits.length > 0) {
@@ -2962,17 +2591,17 @@ export function App({ project: initialProject }: AppProps) {
         ? draftingInspectorSegment.index
         : Math.max(0, geometry.curveControls.findIndex(Boolean));
     if (index >= geometry.points.length - 1) return;
-    const curveControls = [...geometry.curveControls];
-    curveControls[index] = controlForTangentAngle(
-      geometry.points[index]!,
-      geometry.points[index + 1]!,
+    const next = setDraftingObjectTangentAngle(
+      selectedDrafting,
+      geometry,
+      index,
       angleDegrees,
-      curveControls[index] ?? null,
     );
+    if (!next) return;
     transact([
       {
         kind: "upsert_drafting_object",
-        object: { ...selectedDrafting, curveControls },
+        object: next,
       },
     ]);
   }
@@ -2993,90 +2622,19 @@ export function App({ project: initialProject }: AppProps) {
       resolver,
       selectedDrafting,
     );
-    if (selectedDrafting.kind === "rectangle") {
-      const rotation = ((bearingDegrees % 360) + 360) % 360;
-      transact([
-        {
-          kind: "upsert_drafting_object",
-          object: { ...selectedDrafting, rotation },
-        },
-      ]);
-      return;
-    }
-    if (
-      (geometry.kind !== "arrow" && geometry.kind !== "construction-line") ||
-      geometry.points.length < 2
-    ) {
-      return;
-    }
-    const currentBearing = normalizedBearing(
-      geometry.points[0]!,
-      geometry.points[1]!,
+    const next = setDraftingObjectBearing(
+      selectedDrafting,
+      geometry,
+      bearingDegrees,
     );
-    const targetBearing = ((bearingDegrees % 360) + 360) % 360;
-    const delta = ((targetBearing - currentBearing + 540) % 360) - 180;
-    if (selectedDrafting.kind === "arrow") {
-      if (
-        geometry.kind !== "arrow" ||
-        selectedDrafting.from.kind !== "free" ||
-        selectedDrafting.to.kind !== "free"
-      ) {
-        setStatus(
-          "An attached arrow cannot rotate without detaching its endpoints",
-        );
-        return;
-      }
-      const pivot = geometry.center;
-      const from = {
-        ...selectedDrafting.from,
-        position: rotatePointByDegrees(
-          selectedDrafting.from.position,
-          pivot,
-          delta,
-        ),
-      };
-      const to = {
-        ...selectedDrafting.to,
-        position: rotatePointByDegrees(
-          selectedDrafting.to.position,
-          pivot,
-          delta,
-        ),
-      };
-      transact([
-        {
-          kind: "upsert_drafting_object",
-          object: {
-            ...selectedDrafting,
-            from,
-            to,
-            waypoints: selectedDrafting.waypoints?.map((point) =>
-              rotatePointByDegrees(point, pivot, delta),
-            ),
-            curveControls: selectedDrafting.curveControls?.map((point) =>
-              point ? rotatePointByDegrees(point, pivot, delta) : null,
-            ),
-          },
-        },
-      ]);
+    if (next.kind === "attached-arrow") {
+      setStatus(
+        "An attached arrow cannot rotate without detaching its endpoints",
+      );
       return;
     }
-    if (geometry.kind !== "construction-line") return;
-    const pivot = centerOfBounds(geometry.bounds);
-    transact([
-      {
-        kind: "upsert_drafting_object",
-        object: {
-          ...selectedDrafting,
-          points: selectedDrafting.points.map((point) =>
-            rotatePointByDegrees(point, pivot, delta),
-          ),
-          curveControls: selectedDrafting.curveControls?.map((point) =>
-            point ? rotatePointByDegrees(point, pivot, delta) : null,
-          ),
-        },
-      },
-    ]);
+    if (next.kind !== "updated") return;
+    transact([{ kind: "upsert_drafting_object", object: next.object }]);
   }
 
   function toggleDraftingLock(object: DraftingObject): void {

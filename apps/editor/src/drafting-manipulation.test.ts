@@ -1,0 +1,242 @@
+import { describe, expect, it } from "vitest";
+
+import { resolveDraftingObjectGeometry } from "@icm/derived";
+import { createEmptyDocument } from "@icm/model";
+import type { DraftingObject } from "@icm/model";
+import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
+
+import {
+  applyDraftingHandle,
+  applyDraftingStylePatch,
+  deleteConstructionVertex,
+  draftingDragOrigin,
+  insertArrowWaypoint,
+  insertConstructionVertex,
+  rotateDraftingObject,
+  setDraftingBearing,
+  setDraftingTangentAngle,
+  translateDraftingObject,
+} from "./drafting-manipulation";
+
+const document = createEmptyDocument("drafting", "Drafting");
+const resolver = new InMemorySymbolResolver(builtInSymbols);
+
+const arrow = (): Extract<DraftingObject, { kind: "arrow" }> => ({
+  id: "arrow-1",
+  kind: "arrow",
+  locked: false,
+  zIndex: 0,
+  anchor: { kind: "free", position: { x: 50, y: 0 } },
+  from: { kind: "free", position: { x: 0, y: 0 } },
+  to: { kind: "free", position: { x: 100, y: 0 } },
+  waypoints: [{ x: 50, y: 0 }],
+  curveControls: [null, null],
+});
+
+const construction = (): Extract<
+  DraftingObject,
+  { kind: "construction-line" }
+> => ({
+  id: "construction-1",
+  kind: "construction-line",
+  locked: false,
+  zIndex: 0,
+  anchor: { kind: "free", position: { x: 0, y: 0 } },
+  points: [
+    { x: 0, y: 0 },
+    { x: 50, y: 0 },
+    { x: 100, y: 0 },
+  ],
+  curveControls: [null, null],
+  lineStyle: "solid",
+});
+
+const rectangle = (): Extract<DraftingObject, { kind: "rectangle" }> => ({
+  id: "rectangle-1",
+  kind: "rectangle",
+  locked: false,
+  zIndex: 0,
+  anchor: { kind: "free", position: { x: 50, y: 50 } },
+  center: { x: 50, y: 50 },
+  width: 40,
+  height: 20,
+  rotation: 0,
+  lineStyle: "solid",
+});
+
+describe("drafting manipulation", () => {
+  it("translates every free geometry point without detaching anchors", () => {
+    const moved = translateDraftingObject(arrow(), { x: 10, y: 20 });
+    expect(moved).toMatchObject({
+      anchor: { kind: "free", position: { x: 60, y: 20 } },
+      from: { kind: "free", position: { x: 10, y: 20 } },
+      to: { kind: "free", position: { x: 110, y: 20 } },
+      waypoints: [{ x: 60, y: 20 }],
+    });
+
+    const attached = {
+      ...arrow(),
+      to: {
+        kind: "object" as const,
+        objectId: "R1",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 100, y: 0 },
+      },
+    };
+    expect(draftingDragOrigin(attached)).toBeNull();
+    expect(translateDraftingObject(attached, { x: 10, y: 20 })).toMatchObject({
+      to: { kind: "object", objectId: "R1" },
+    });
+  });
+
+  it("moves only the requested endpoint, vertex, curve, or rectangle corner", () => {
+    const arrowObject = arrow();
+    const arrowGeometry = resolveDraftingObjectGeometry(
+      document,
+      resolver,
+      arrowObject,
+    );
+    expect(
+      applyDraftingHandle(
+        arrowObject,
+        { kind: "to" },
+        { x: 120, y: 10 },
+        arrowGeometry,
+      ),
+    ).toMatchObject({
+      from: { position: { x: 0, y: 0 } },
+      to: { position: { x: 120, y: 10 } },
+    });
+
+    const line = construction();
+    const lineGeometry = resolveDraftingObjectGeometry(
+      document,
+      resolver,
+      line,
+    );
+    expect(
+      applyDraftingHandle(
+        line,
+        { kind: "curve", index: 0 },
+        { x: 25, y: 20 },
+        lineGeometry,
+      ),
+    ).toMatchObject({ curveControls: [{ x: 25, y: 40 }, null] });
+
+    const box = rectangle();
+    const boxGeometry = resolveDraftingObjectGeometry(document, resolver, box);
+    const resized = applyDraftingHandle(
+      box,
+      { kind: "rectangle-corner", index: 0 },
+      { x: 20, y: 30 },
+      boxGeometry,
+    );
+    expect(resized).toMatchObject({
+      center: { x: 45, y: 45 },
+      width: 50,
+      height: 30,
+      anchor: { position: { x: 45, y: 45 } },
+    });
+  });
+
+  it("inserts and deletes vertices while preserving explicit invariants", () => {
+    const inserted = insertConstructionVertex(construction(), { x: 75, y: 3 });
+    expect(inserted?.index).toBe(2);
+    expect(inserted?.object.points[2]).toEqual({ x: 75, y: 3 });
+    expect(inserted?.object.curveControls).toEqual([null, null, null]);
+
+    const deleted = deleteConstructionVertex(inserted!.object, 2);
+    expect(deleted.kind).toBe("updated");
+    if (deleted.kind === "updated") {
+      expect(deleted.object.points).toHaveLength(3);
+      expect(deleted.object.curveControls).toBeUndefined();
+    }
+    expect(
+      deleteConstructionVertex(
+        { ...construction(), points: construction().points.slice(0, 2) },
+        0,
+      ),
+    ).toEqual({ kind: "minimum" });
+  });
+
+  it("inserts an arrow waypoint on the nearest resolved segment", () => {
+    const object = arrow();
+    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+    if (geometry.kind !== "arrow") throw new Error("Expected arrow geometry");
+    const inserted = insertArrowWaypoint(object, geometry, { x: 75, y: 5 });
+    expect(inserted?.index).toBe(1);
+    expect(inserted?.object.waypoints).toEqual([
+      { x: 50, y: 0 },
+      { x: 75, y: 5 },
+    ]);
+  });
+
+  it("applies bounded style patches only to editable supported objects", () => {
+    expect(
+      applyDraftingStylePatch(arrow(), {
+        lineStyle: "dashed",
+        strokeScale: 1.5,
+      }),
+    ).toMatchObject({
+      styleOverride: { lineStyle: "dashed", strokeScale: 1.5 },
+    });
+    expect(
+      applyDraftingStylePatch(
+        { ...arrow(), locked: true },
+        { lineStyle: "dotted" },
+      ),
+    ).toBeNull();
+  });
+
+  it("rotates and sets bearing without detaching an attached arrow", () => {
+    const object = arrow();
+    const geometry = resolveDraftingObjectGeometry(document, resolver, object);
+    expect(rotateDraftingObject(object, geometry, 90)).toMatchObject({
+      from: { position: { x: 50, y: -50 } },
+      to: { position: { x: 50, y: 50 } },
+    });
+    expect(setDraftingBearing(object, geometry, 90)).toMatchObject({
+      kind: "updated",
+      object: {
+        from: { position: { x: 50, y: -50 } },
+        to: { position: { x: 50, y: 50 } },
+      },
+    });
+
+    const attached = {
+      ...object,
+      to: {
+        kind: "object" as const,
+        objectId: "R1",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 100, y: 0 },
+      },
+    };
+    const attachedGeometry = resolveDraftingObjectGeometry(
+      document,
+      resolver,
+      attached,
+    );
+    expect(setDraftingBearing(attached, attachedGeometry, 90)).toEqual({
+      kind: "attached-arrow",
+    });
+  });
+
+  it("updates one tangent control and normalizes rectangle bearing", () => {
+    const line = construction();
+    const geometry = resolveDraftingObjectGeometry(document, resolver, line);
+    if (geometry.kind !== "construction-line") {
+      throw new Error("Expected construction-line geometry");
+    }
+    expect(setDraftingTangentAngle(line, geometry, 0, 45)).toMatchObject({
+      curveControls: [{ x: 25, y: 10 }, null],
+    });
+
+    const box = rectangle();
+    const boxGeometry = resolveDraftingObjectGeometry(document, resolver, box);
+    expect(setDraftingBearing(box, boxGeometry, -90)).toMatchObject({
+      kind: "updated",
+      object: { rotation: 270 },
+    });
+  });
+});
