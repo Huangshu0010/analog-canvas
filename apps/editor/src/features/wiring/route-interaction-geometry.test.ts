@@ -7,6 +7,7 @@ import {
   annotationAnchor,
   attachmentAtPoint,
   defaultInstanceLabel,
+  dragRouteAttachmentAtPoint,
   effectiveRouteAttachment,
   looseRouteAnchorIds,
 } from "./route-interaction-geometry";
@@ -113,6 +114,54 @@ describe("route interaction geometry", () => {
     };
     expect(effectiveRouteAttachment(marker)?.t).toBe(0.5);
     expect(annotationAnchor(marker, [record])).toEqual({ x: 50, y: 0 });
+
+    expect(
+      dragRouteAttachmentAtPoint(
+        [record],
+        { x: 80, y: -24 },
+        effectiveRouteAttachment(marker)!,
+      ),
+    ).toEqual({
+      routeAttachment: {
+        routeId: "route-1",
+        segmentIndex: 0,
+        t: 0.8,
+        direction: "forward",
+        normalOffset: -24,
+      },
+      position: { x: 80, y: 0 },
+    });
+  });
+
+  it("keeps a dragged marker label in a stable bounded halo around its route", () => {
+    const document = looseRouteDocument();
+    const record = {
+      route: document.routes[0]!,
+      polyline: {
+        routeId: "route-1",
+        netId: "net-1",
+        points: [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+        ],
+        segmentModes: ["manual" as const],
+      },
+    };
+    const current = {
+      routeId: "route-1",
+      segmentIndex: 0,
+      t: 0.5,
+      direction: "forward" as const,
+      normalOffset: -14,
+    };
+    expect(
+      dragRouteAttachmentAtPoint([record], { x: 60, y: -2 }, current)
+        ?.routeAttachment,
+    ).toMatchObject({ t: 0.6, normalOffset: -12 });
+    expect(
+      dragRouteAttachmentAtPoint([record], { x: 60, y: 90 }, current)
+        ?.routeAttachment,
+    ).toMatchObject({ t: 0.6, normalOffset: 40 });
   });
 
   it("builds an implicit instance label only while no explicit label exists", () => {

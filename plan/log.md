@@ -4092,3 +4092,19 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   existing large-chunk warning remains.
 - Commit status: ready to commit directly on local `main` as
   `refactor(editor): organize source by domain`; remote push remains pending.
+
+## 2026-08-10 - Unify group and routed-marker movement
+
+- Target: remove drag-ownership conflicts between selected circuit groups,
+  internal wires, and route-attached current markers after integrating the
+  mainline Snap Engine.
+- Changed areas: mainline branch integration, composite-selection hit
+  precedence and live group preview, bounded route-attachment drag, common
+  dashed marker selection, compact command surface, interaction specification,
+  and focused unit/E2E regressions.
+- Validation: repository typecheck, editor production build, 447 Vitest tests,
+  62 Playwright flows plus enhanced focused preview checks, full format check,
+  browser inspection, and `git diff --check` passed. One initial exporter test
+  timeout passed both isolated and on the subsequent full run.
+- Commit status: ready to commit on `codex/insert-component-dialog` as
+  `fix(editor): unify group and routed marker movement`.

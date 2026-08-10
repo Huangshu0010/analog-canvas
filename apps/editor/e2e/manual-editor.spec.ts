@@ -61,6 +61,7 @@ async function dragRouteSegment(
   delta: { x: number; y: number },
   position = 0.5,
   segmentIndex = 0,
+  duringDrag?: () => Promise<void>,
 ): Promise<void> {
   const route = page.getByTestId(`route-hit-${routeId}`);
   const point = await route.evaluate(
@@ -81,6 +82,7 @@ async function dragRouteSegment(
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
   await page.mouse.move(point.x + delta.x, point.y + delta.y, { steps: 4 });
+  await duringDrag?.();
   await page.mouse.up();
 }
 
@@ -588,12 +590,25 @@ test("moves internal wiring with a selected group and copies the routed subgraph
     "1",
   );
   const before = await readRoutePoints(page, "route-ui-1");
-  await page
-    .getByTestId("hit-R1")
-    .dragTo(page.getByTestId("schematic-canvas"), {
-      targetPosition: { x: 470, y: 350 },
-    });
+  const firstBefore = await page.getByTestId("hit-R1").boundingBox();
+  await dragRouteSegment(
+    page,
+    "route-ui-1",
+    { x: 90, y: 70 },
+    0.35,
+    0,
+    async () => {
+      await expect(
+        page.locator('[data-layer="routes"] [data-object-id="route-ui-1"]'),
+      ).toHaveAttribute("transform", /translate/u);
+      await expect(
+        page.locator('[data-layer="symbols"] [data-object-id="R1"]'),
+      ).toHaveAttribute("transform", /translate/u);
+      await expect(page.getByTestId("revision")).toHaveText("3");
+    },
+  );
   const after = await readRoutePoints(page, "route-ui-1");
+  const firstAfter = await page.getByTestId("hit-R1").boundingBox();
   const delta = {
     x: after[0]!.x - before[0]!.x,
     y: after[0]!.y - before[0]!.y,
@@ -605,6 +620,8 @@ test("moves internal wiring with a selected group and copies the routed subgraph
       y: point.y - before[index]!.y,
     })),
   ).toEqual(after.map(() => delta));
+  expect(firstAfter?.x).not.toBe(firstBefore?.x);
+  expect(firstAfter?.y).not.toBe(firstBefore?.y);
 
   await page.keyboard.press("Control+c");
   await page.keyboard.press("Control+v");
@@ -614,6 +631,51 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await expect(page.getByTestId("selected-internal-route-count")).toHaveText(
     "1",
   );
+});
+
+test("drags a current marker directly along and around its route", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await placeComponent(page, "resistor", { x: 520, y: 220 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Add current arrow" }).click();
+
+  const hit = page.getByTestId("annotation-hit-current-1");
+  await expect(hit).toHaveClass(/hit-target/u);
+  await expect(hit).toHaveClass(/selected/u);
+  await expect(
+    page.getByRole("button", { name: "Move closer to wire" }),
+  ).toHaveCount(0);
+  const routeBefore = await readRoutePoints(page, "route-ui-1");
+  const before = await hit.boundingBox();
+  if (!before) throw new Error("Current marker is not measurable");
+  const start = {
+    x: before.x + before.width / 2,
+    y: before.y + before.height / 2,
+  };
+  const paintedMarker = page.locator(
+    '[data-layer="annotations"] [data-object-id="current-1"]',
+  );
+  const paintedBefore = await paintedMarker.boundingBox();
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 58, start.y + 24, { steps: 4 });
+  await expect
+    .poll(async () => (await paintedMarker.boundingBox())?.x)
+    .not.toBe(paintedBefore?.x);
+  await expect(page.getByTestId("revision")).toHaveText("4");
+  await page.mouse.up();
+  const after = await hit.boundingBox();
+  expect(after?.x).not.toBe(before?.x);
+  expect(after?.y).not.toBe(before?.y);
+  expect(await readRoutePoints(page, "route-ui-1")).toEqual(routeBefore);
+  await expect(page.getByTestId("revision")).toHaveText("5");
 });
 
 test("moves an unselected component in one thresholded drag", async ({
@@ -1113,9 +1175,10 @@ test("keeps the production command surface compact and publishes PWA metadata", 
 }) => {
   await page.goto("/");
   const toolbar = page.getByRole("navigation", { name: "Editor commands" });
-  for (const label of ["File", "Edit", "Draw", "View", "More"]) {
+  for (const label of ["File", "Edit", "Draw", "More"]) {
     await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
   }
+  await expect(toolbar.locator("summary", { hasText: "View" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Export" })).toHaveCount(
     0,

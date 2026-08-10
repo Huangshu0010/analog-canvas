@@ -28,6 +28,9 @@ export interface RoutePolylineRecord {
   polyline: RoutePolyline;
 }
 
+export const ROUTED_MARKER_MIN_NORMAL_OFFSET = 12;
+export const ROUTED_MARKER_MAX_NORMAL_OFFSET = 40;
+
 export function endpointNetId(
   document: SchematicDocument,
   endpoint: RouteEndpoint,
@@ -133,6 +136,85 @@ export function attachmentAtPoint(
         };
       }),
     )
+    .sort((left, right) => left.distanceSquared - right.distanceSquared);
+  const closest = candidates[0];
+  return closest
+    ? {
+        routeAttachment: closest.routeAttachment,
+        position: closest.position,
+      }
+    : null;
+}
+
+/**
+ * Reposition an existing route marker from the desired label position. The
+ * electrical route remains authoritative: the marker may slide along the
+ * attached route and its label may move only within a small normal-offset
+ * band around the arrow. Near the shaft, the existing side is retained so a
+ * pointer crossing the conductor does not make the label flicker.
+ */
+export function dragRouteAttachmentAtPoint(
+  routePolylines: readonly RoutePolylineRecord[],
+  candidate: Point,
+  current: RouteAnnotationAttachment,
+): { routeAttachment: RouteAnnotationAttachment; position: Point } | null {
+  const record = routePolylines.find(
+    ({ route }) => route.id === current.routeId,
+  );
+  if (!record) return null;
+  const candidates = record.polyline.points
+    .slice(0, -1)
+    .flatMap((from, segmentIndex) => {
+      const to = record.polyline.points[segmentIndex + 1]!;
+      const position = closestPointOnSegment(candidate, from, to);
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const lengthSquared = dx * dx + dy * dy;
+      if (lengthSquared === 0) return [];
+      const length = Math.sqrt(lengthSquared);
+      const t = clamp(
+        ((position.x - from.x) * dx + (position.y - from.y) * dy) /
+          lengthSquared,
+        0,
+        1,
+      );
+      const normal = { x: -dy / length, y: dx / length };
+      const rawNormalOffset =
+        (candidate.x - position.x) * normal.x +
+        (candidate.y - position.y) * normal.y;
+      const previousSign = current.normalOffset >= 0 ? 1 : -1;
+      const sign =
+        Math.abs(rawNormalOffset) < ROUTED_MARKER_MIN_NORMAL_OFFSET
+          ? previousSign
+          : rawNormalOffset >= 0
+            ? 1
+            : -1;
+      const normalOffset =
+        sign *
+        clamp(
+          Math.abs(rawNormalOffset),
+          ROUTED_MARKER_MIN_NORMAL_OFFSET,
+          ROUTED_MARKER_MAX_NORMAL_OFFSET,
+        );
+      const labelPosition = {
+        x: position.x + normal.x * normalOffset,
+        y: position.y + normal.y * normalOffset,
+      };
+      return [
+        {
+          routeAttachment: {
+            ...current,
+            segmentIndex,
+            t,
+            normalOffset,
+          },
+          position: { x: Math.round(position.x), y: Math.round(position.y) },
+          distanceSquared:
+            (labelPosition.x - candidate.x) ** 2 +
+            (labelPosition.y - candidate.y) ** 2,
+        },
+      ];
+    })
     .sort((left, right) => left.distanceSquared - right.distanceSquared);
   const closest = candidates[0];
   return closest

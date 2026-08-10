@@ -21,6 +21,7 @@ import {
   moveRouteSegment,
   proposeGroupMove,
   resolveDraftingObjectGeometry,
+  routeAttachmentPlacement,
   routePolyline,
 } from "@icm/derived";
 import {
@@ -120,6 +121,7 @@ import {
   annotationHitBox,
   attachmentAtPoint,
   defaultInstanceLabel,
+  dragRouteAttachmentAtPoint,
   effectiveRouteAttachment,
   endpointNetId,
   instanceHitBox,
@@ -520,6 +522,8 @@ export function App({ project: initialProject }: AppProps) {
     useState<RouteStretchPreview | null>(null);
   const [draftingHandlePreview, setDraftingHandlePreview] =
     useState<DraftingHandlePreview | null>(null);
+  const [annotationDragPreview, setAnnotationDragPreview] =
+    useState<Annotation | null>(null);
   const snapGuideLayerRef = useRef<SVGGElement | null>(null);
   const {
     state: interactionState,
@@ -578,19 +582,30 @@ export function App({ project: initialProject }: AppProps) {
   const helpCloseRef = useRef<HTMLButtonElement>(null);
   const documentViewBoxes = useRef(new Map<string, Rect>());
   const renderedDocument = useMemo(() => {
-    if (!draftingHandlePreview || !document.drafting) return document;
+    if (!draftingHandlePreview && !annotationDragPreview) return document;
     return {
       ...document,
-      drafting: {
-        ...document.drafting,
-        objects: document.drafting.objects.map((object) =>
-          object.id === draftingHandlePreview.objectId
-            ? draftingHandlePreview.object
-            : object,
-        ),
-      },
+      annotations: annotationDragPreview
+        ? document.annotations.map((annotation) =>
+            annotation.id === annotationDragPreview.id
+              ? annotationDragPreview
+              : annotation,
+          )
+        : document.annotations,
+      ...(draftingHandlePreview && document.drafting
+        ? {
+            drafting: {
+              ...document.drafting,
+              objects: document.drafting.objects.map((object) =>
+                object.id === draftingHandlePreview.objectId
+                  ? draftingHandlePreview.object
+                  : object,
+              ),
+            },
+          }
+        : {}),
     };
-  }, [document, draftingHandlePreview]);
+  }, [annotationDragPreview, document, draftingHandlePreview]);
   const scene = useMemo(
     () => buildSvgScene(renderedDocument, resolver, { bounds: viewBox }),
     [renderedDocument, resolver, viewBox],
@@ -795,6 +810,12 @@ export function App({ project: initialProject }: AppProps) {
 
   const internalSelection = deriveInternalGroupSelection(document, selectedIds);
   const selectedInternalRouteIds = new Set(internalSelection.routeIds);
+  const selectedInternalJunctionIds = new Set(internalSelection.junctionIds);
+  const selectedInternalObjectIds = new Set([
+    ...internalSelection.netIds,
+    ...internalSelection.routeIds,
+    ...internalSelection.junctionIds,
+  ]);
   const wireFixedPoints = wireSource
     ? [wireSource.point, ...wireWaypoints]
     : [];
@@ -818,6 +839,44 @@ export function App({ project: initialProject }: AppProps) {
     document.routes.length === 0 &&
     document.annotations.length === 0 &&
     (document.drafting?.objects.length ?? 0) === 0;
+
+  function compositeSelectionOwnsHit(
+    kind: "instance" | "instance-label" | "annotation" | "route" | "junction",
+    id: string,
+  ): boolean {
+    const hasCompositeSelection =
+      selectedIds.length > 0 &&
+      (selectedIds.length > 1 ||
+        visualSelection.routeIds.length > 0 ||
+        visualSelection.junctionIds.length > 0 ||
+        visualSelection.annotationIds.length > 0 ||
+        visualSelection.draftingIds.length > 0);
+    if (!hasCompositeSelection) return false;
+    if (kind === "instance" || kind === "instance-label") {
+      return selectedIds.includes(id);
+    }
+    if (kind === "route") {
+      return (
+        visualSelection.routeIds.includes(id) ||
+        selectedInternalRouteIds.has(id)
+      );
+    }
+    if (kind === "junction") {
+      return (
+        visualSelection.junctionIds.includes(id) ||
+        selectedInternalJunctionIds.has(id)
+      );
+    }
+    const annotation = document.annotations.find(
+      (candidate) => candidate.id === id,
+    );
+    return Boolean(
+      visualSelection.annotationIds.includes(id) ||
+      (annotation?.attachedObjectId &&
+        (selectedIds.includes(annotation.attachedObjectId) ||
+          selectedInternalObjectIds.has(annotation.attachedObjectId))),
+    );
+  }
 
   useEffect(() => {
     if (!selectedRouteId) setSelectedRouteSegmentIndex(null);
@@ -1437,17 +1496,6 @@ export function App({ project: initialProject }: AppProps) {
     annotation: Annotation,
     candidate: Point,
   ): Point {
-    const routeAttachment = effectiveRouteAttachment(annotation);
-    if (isRoutedMarker(annotation) && routeAttachment) {
-      return (
-        attachmentAtPoint(
-          routePolylines,
-          candidate,
-          routeAttachment.routeId,
-          routeAttachment.normalOffset,
-        )?.position ?? annotation.position
-      );
-    }
     if (annotation.kind === "instance-label" && annotation.attachedObjectId) {
       const instance = document.instances.find(
         (item) => item.id === annotation.attachedObjectId,
@@ -1514,6 +1562,55 @@ export function App({ project: initialProject }: AppProps) {
     return { x: Math.round(candidate.x), y: Math.round(candidate.y) };
   }
 
+  function draggedAnnotationAtPosition(
+    annotation: Annotation,
+    candidate: Point,
+  ): Annotation {
+    const currentAttachment = effectiveRouteAttachment(annotation);
+    if (isRoutedMarker(annotation) && currentAttachment) {
+      const attached = dragRouteAttachmentAtPoint(
+        routePolylines,
+        candidate,
+        currentAttachment,
+      );
+      if (!attached) return annotation;
+      const anchor =
+        annotation.anchor?.kind === "route"
+          ? {
+              ...annotation.anchor,
+              segmentIndex: attached.routeAttachment.segmentIndex,
+              t: attached.routeAttachment.t,
+              normalOffset: attached.routeAttachment.normalOffset,
+              direction: attached.routeAttachment.direction,
+              fallbackPosition: attached.position,
+            }
+          : annotation.anchor;
+      return {
+        ...annotation,
+        position: attached.position,
+        ...(anchor ? { anchor } : {}),
+        ...(annotation.routeAttachment
+          ? { routeAttachment: attached.routeAttachment }
+          : {}),
+      };
+    }
+
+    const position = constrainAnnotationPosition(annotation, candidate);
+    let offset = { ...annotation.offset };
+    if (annotation.attachedObjectId) {
+      const instance = document.instances.find(
+        (item) => item.id === annotation.attachedObjectId,
+      );
+      if (instance?.placement) {
+        offset = {
+          x: position.x - instance.placement.position.x,
+          y: position.y - instance.placement.position.y,
+        };
+      }
+    }
+    return { ...annotation, position, offset };
+  }
+
   function beginAnnotationDrag(
     event: ReactPointerEvent<SVGElement>,
     annotation: Annotation,
@@ -1539,9 +1636,23 @@ export function App({ project: initialProject }: AppProps) {
       svg,
       false,
     );
+    const currentAttachment = effectiveRouteAttachment(annotation);
+    const record = currentAttachment
+      ? routePolylines.find(
+          ({ route }) => route.id === currentAttachment.routeId,
+        )
+      : undefined;
+    const markerPlacement =
+      record && currentAttachment
+        ? routeAttachmentPlacement(record.polyline, currentAttachment)
+        : null;
     const preview: AnnotationDragPreview = {
       annotationId: annotation.id,
-      originalPosition: { ...annotation.position },
+      originalPosition: {
+        ...(isRoutedMarker(annotation) && markerPlacement
+          ? markerPlacement.labelPosition
+          : annotation.position),
+      },
       pointerStart,
     };
     let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
@@ -1561,6 +1672,12 @@ export function App({ project: initialProject }: AppProps) {
       thresholdPx: DRAG_START_DISTANCE_PX,
       onPreview: (client) => {
         const position = positionAt(client.x, client.y);
+        if (isRoutedMarker(annotation)) {
+          setAnnotationDragPreview(
+            draggedAnnotationAtPosition(annotation, position),
+          );
+          return;
+        }
         dragVisual().translate({
           x: position.x - preview.originalPosition.x,
           y: position.y - preview.originalPosition.y,
@@ -1569,19 +1686,15 @@ export function App({ project: initialProject }: AppProps) {
       onFinish: ({ client, dragged }) => {
         canvasDragSessionRef.current = null;
         visual?.restore();
+        setAnnotationDragPreview(null);
         if (dragged) {
-          completeAnnotationDrag(
-            preview,
-            constrainAnnotationPosition(
-              annotation,
-              positionAt(client.x, client.y),
-            ),
-          );
+          completeAnnotationDrag(preview, positionAt(client.x, client.y));
         }
       },
       onCancel: () => {
         canvasDragSessionRef.current = null;
         visual?.restore();
+        setAnnotationDragPreview(null);
       },
     });
   }
@@ -1638,56 +1751,10 @@ export function App({ project: initialProject }: AppProps) {
       (candidate) => candidate.id === preview.annotationId,
     );
     if (!annotation) return;
-    let offset = { ...annotation.offset };
-    let routeAttachment = annotation.routeAttachment;
-    // For a route-marker the route attachment lives on its VisualAnchor; the
-    // drag re-resolves segmentIndex/t while preserving direction/offset.
-    let anchor = annotation.anchor;
-    const currentAttachment = effectiveRouteAttachment(annotation);
-    if (isRoutedMarker(annotation) && currentAttachment) {
-      const attached = attachmentAtPoint(
-        routePolylines,
-        position,
-        currentAttachment.routeId,
-        currentAttachment.normalOffset,
-      );
-      if (attached) {
-        if (annotation.kind === "route-marker" && anchor?.kind === "route") {
-          anchor = {
-            ...anchor,
-            segmentIndex: attached.routeAttachment.segmentIndex,
-            t: attached.routeAttachment.t,
-            fallbackPosition: position,
-          };
-        } else {
-          routeAttachment = {
-            ...attached.routeAttachment,
-            direction: currentAttachment.direction,
-          };
-        }
-      }
-    }
-    if (annotation.attachedObjectId) {
-      const instance = document.instances.find(
-        (candidate) => candidate.id === annotation.attachedObjectId,
-      );
-      if (instance?.placement) {
-        offset = {
-          x: position.x - instance.placement.position.x,
-          y: position.y - instance.placement.position.y,
-        };
-      }
-    }
     transact([
       {
         kind: "upsert_annotation",
-        annotation: {
-          ...annotation,
-          position,
-          offset,
-          ...(routeAttachment ? { routeAttachment } : {}),
-          ...(anchor ? { anchor } : {}),
-        },
+        annotation: draggedAnnotationAtPosition(annotation, position),
       },
     ]);
   }
@@ -1889,6 +1956,24 @@ export function App({ project: initialProject }: AppProps) {
     event.preventDefault();
     event.stopPropagation();
 
+    if (
+      !event.shiftKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      (hit.kind === "instance" ||
+        hit.kind === "instance-label" ||
+        hit.kind === "annotation" ||
+        hit.kind === "route" ||
+        hit.kind === "junction") &&
+      compositeSelectionOwnsHit(hit.kind, hit.id)
+    ) {
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) {
+        beginMove(event, primaryInstanceId, hitTarget);
+        return;
+      }
+    }
+
     if (hit.kind === "instance") {
       beginMove(event, hit.id, hitTarget);
       return;
@@ -2064,7 +2149,8 @@ export function App({ project: initialProject }: AppProps) {
     }
     const hasSelectionModifier =
       event.shiftKey || event.ctrlKey || event.metaKey;
-    suppressInstanceClick.current = true;
+    suppressInstanceClick.current =
+      hitTarget.getAttribute("data-canvas-hit-kind") === "instance";
     if (hasSelectionModifier) {
       selectInstance(instanceId, hasSelectionModifier);
       setStatus(`Selected ${instanceId}`);
@@ -2100,11 +2186,32 @@ export function App({ project: initialProject }: AppProps) {
           movingIds.includes(annotation.attachedObjectId),
       )
       .map((annotation) => annotation.id);
+    const movingInternalSelection = deriveInternalGroupSelection(
+      document,
+      movingIds,
+    );
+    const movingInternalObjectIds = new Set([
+      ...movingInternalSelection.netIds,
+      ...movingInternalSelection.routeIds,
+      ...movingInternalSelection.junctionIds,
+    ]);
+    const movingInternalAnnotationIds = document.annotations
+      .filter(
+        (annotation) =>
+          annotation.attachedObjectId !== undefined &&
+          movingInternalObjectIds.has(annotation.attachedObjectId),
+      )
+      .map((annotation) => annotation.id);
     let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
     const dragVisual = () =>
       (visual ??= startCanvasDragVisual(svg, [
-        ...movingIds,
-        ...attachedAnnotationIds,
+        ...new Set([
+          ...movingIds,
+          ...movingInternalSelection.routeIds,
+          ...movingInternalSelection.junctionIds,
+          ...attachedAnnotationIds,
+          ...movingInternalAnnotationIds,
+        ]),
       ]));
     const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
     let lastSnap: SnapResult | undefined;
@@ -3313,36 +3420,6 @@ export function App({ project: initialProject }: AppProps) {
       },
     ]);
     if (result.ok) setStatus(`Current arrow points ${direction}`);
-  }
-
-  // Step a route current marker's normal offset (perpendicular distance from
-  // its conductor) up or down. Keeps the marker bound to its route; purely a
-  // presentation change, no electrical effect.
-  function stepCurrentArrowOffset(increase: boolean): void {
-    if (!selectedAnnotation || !isRoutedMarker(selectedAnnotation)) return;
-    const attachment = effectiveRouteAttachment(selectedAnnotation);
-    if (!attachment) return;
-    const step = 4;
-    const next = attachment.normalOffset + (increase ? step : -step);
-    const anchor =
-      selectedAnnotation.kind === "route-marker" &&
-      selectedAnnotation.anchor?.kind === "route"
-        ? { ...selectedAnnotation.anchor, normalOffset: next }
-        : selectedAnnotation.anchor;
-    const routeAttachment = selectedAnnotation.routeAttachment
-      ? { ...selectedAnnotation.routeAttachment, normalOffset: next }
-      : undefined;
-    const result = transact([
-      {
-        kind: "upsert_annotation",
-        annotation: {
-          ...selectedAnnotation,
-          ...(anchor ? { anchor } : {}),
-          ...(routeAttachment ? { routeAttachment } : {}),
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Current arrow offset ${next}`);
   }
 
   function alignSelectedInstances(): void {
@@ -4717,18 +4794,6 @@ export function App({ project: initialProject }: AppProps) {
             </div>
           </details>
           <details className="command-menu" name="editor-command-menu">
-            <summary>View</summary>
-            <div className="command-popover">
-              <button type="button" onClick={fitView}>
-                Fit (Home)
-              </button>
-              <span>
-                {structuralDiagnostics.length} structural,{" "}
-                {visualObservations.length} observations
-              </span>
-            </div>
-          </details>
-          <details className="command-menu" name="editor-command-menu">
             <summary>More</summary>
             <div className="command-popover">
               <span className="command-group-label">Guides</span>
@@ -5000,18 +5065,7 @@ export function App({ project: initialProject }: AppProps) {
                 <button type="button" onClick={reverseSelectedCurrentArrow}>
                   Reverse direction (X)
                 </button>
-                <button
-                  type="button"
-                  onClick={() => stepCurrentArrowOffset(false)}
-                >
-                  Move closer to wire
-                </button>
-                <button
-                  type="button"
-                  onClick={() => stepCurrentArrowOffset(true)}
-                >
-                  Move away from wire
-                </button>
+                <small>Drag to slide along the wire or move its label.</small>
                 <button type="button" onClick={deleteSelectedAnnotation}>
                   Delete current arrow
                 </button>
@@ -5373,14 +5427,22 @@ export function App({ project: initialProject }: AppProps) {
                           : (preview?.y ?? (from.y + to.y) / 2)
                     }
                     r="6"
-                    onPointerDown={(event) =>
+                    onPointerDown={(event) => {
+                      const primaryInstanceId = selectedIds.at(-1);
+                      if (
+                        primaryInstanceId &&
+                        compositeSelectionOwnsHit("route", route.id)
+                      ) {
+                        beginMove(event, primaryInstanceId);
+                        return;
+                      }
                       beginRouteStretch(
                         event,
                         route.id,
                         segmentIndex,
                         translatesWholeRoute ? "translate" : "segment",
-                      )
-                    }
+                      );
+                    }}
                     pointerEvents={tool === "wire" ? "none" : undefined}
                   />
                 );
@@ -5557,7 +5619,6 @@ export function App({ project: initialProject }: AppProps) {
                 routePolylines,
                 styleProfile,
               );
-              const usesWideAnnotationHitBand = isRoutedMarker(annotation);
               const selected =
                 selectedAnnotationId === annotation.id ||
                 supplementalSelection.annotationIds.includes(annotation.id);
@@ -5568,18 +5629,10 @@ export function App({ project: initialProject }: AppProps) {
                   data-canvas-hit-kind="annotation"
                   data-canvas-hit-id={annotation.id}
                   data-drag-object-id={annotation.id}
-                  // Text uses the same precise dashed selection rectangle as a
-                  // component. Current/voltage markers retain the wide line
-                  // hit band because their painted geometry is intentionally
-                  // thin and includes an arrow shaft.
                   className={
-                    usesWideAnnotationHitBand
-                      ? selected
-                        ? "annotation-hit selected"
-                        : "annotation-hit"
-                      : selected
-                        ? "hit-target annotation-text-hit selected"
-                        : "hit-target annotation-text-hit"
+                    selected
+                      ? "hit-target annotation-text-hit selected"
+                      : "hit-target annotation-text-hit"
                   }
                   {...hitBox}
                   onClick={(event) => event.stopPropagation()}

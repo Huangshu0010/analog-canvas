@@ -48,20 +48,18 @@ drawing tools live in the compact `Draw` menu rather than a permanent toolbar
 row or component sidebar:
 
 ```text
-File | Edit | View | Export | More
+File | Edit | Draw | More
 ```
 
 The exact visual treatment may use icons, labels, or responsive grouping, but
 the information architecture is normative:
 
-| Group  | Commands                                                              |
-| ------ | --------------------------------------------------------------------- |
-| File   | Open, Save, Import, recent/example documents                          |
-| Edit   | Undo, Redo, Copy, Paste, Delete, and contextual Align                 |
-| Draw   | Insert Component; Wire, Text, Arrow, Construction line, and Rectangle |
-| View   | Fit, Diagnostics, Grid, and presentation overlays                     |
-| Export | SVG, PNG, and PDF from one menu                                       |
-| More   | route-attached current arrow, Guides, help, and shortcut reference    |
+| Group | Commands                                                              |
+| ----- | --------------------------------------------------------------------- |
+| File  | Open, Save, Import, Export, and recent/example documents              |
+| Edit  | Undo, Redo, Copy, Paste, Delete, and contextual Align                 |
+| Draw  | Insert Component; Wire, Text, Arrow, Construction line, and Rectangle |
+| More  | Guides and shortcut reference; diagnostics remain in Inspector        |
 
 The following are not permanent production toolbar modes:
 
@@ -86,6 +84,9 @@ rotate, lock, and viewport actions use one linear SVG icon vocabulary while
 retaining text and shortcut labels. Hover, selected, active-tool, placement
 ghost, endpoint snap, and Guide-hit feedback remain editor overlays and never
 enter formal export.
+
+Fit and zoom are direct canvas controls and shortcuts, so a second `View` menu
+must not duplicate them. Formal SVG/PNG/PDF export remains grouped in `File`.
 
 ## Text, markup, and peripheral editing
 
@@ -121,7 +122,9 @@ AST.
 
 Route markers, arrows, leaders, and callouts use the shared `VisualAnchor`: a
 current marker dragged along a Route updates `segmentIndex/t`, a normal drag
-updates `normalOffset`, and a reverse button toggles `direction`. A leader/
+updates a bounded `normalOffset`, and a reverse button toggles `direction`.
+The route marker uses the same precise dashed selection rectangle as component
+and text selection; separate closer/away movement buttons are not exposed. A leader/
 callout is first pointed at the explained object/node, then dragged to the
 explanation; its text and leader select, move, copy, and delete as one object.
 A construction line is visually distinct from Wire (dashed/lighter preview) and
