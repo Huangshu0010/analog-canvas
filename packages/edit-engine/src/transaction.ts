@@ -15,8 +15,11 @@ import {
   SegmentModeSchema,
   SchematicDocumentSchema,
   StableIdSchema,
+  inverseTransformPoint,
+  transformPoint,
 } from "@icm/model";
 import type {
+  Orientation,
   Point,
   RouteBranch,
   RouteEndpoint,
@@ -28,7 +31,6 @@ import {
   endpointBelongsToNet,
   isOrthogonal,
   normalizeRouteGeometry,
-  proposeLocalStretch,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
   routePolyline,
@@ -697,57 +699,180 @@ function splitRoute(
   };
 }
 
+function samePoint(left: Point, right: Point): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
+function endpointBelongsToInstance(
+  endpoint: RouteEndpoint,
+  instanceId: string,
+): boolean {
+  return endpoint.kind === "terminal" && endpoint.instanceId === instanceId;
+}
+
 /**
- * Apply topology-preserving Route stretch after an instance move. Uses the
- * original (pre-move) document with `proposeLocalStretch`, then writes the
- * proposed waypoints/segmentModes into the draft. Returns the stretched
- * routeIds. Routes with a protected adjacent segment are skipped (the post-loop
- * validation rejects if a skipped Route becomes non-orthogonal and the caller
- * did not re-point it). Per ADR 0009: move stretches, never reroutes.
+ * Move one resolved terminal endpoint while preserving the axis of its
+ * adjacent persisted segment. This changes geometry only; it never changes
+ * Route topology or connectivity.
  */
-function applyStretchedRoutes(
+function followRouteEndpoint(
+  routeId: string,
+  points: Point[],
+  modes: RouteBranch["segmentModes"],
+  side: "from" | "to",
+  oldPoint: Point,
+  newPoint: Point,
+  outward: Point | null,
+): void {
+  if (samePoint(oldPoint, newPoint)) return;
+  const mode = side === "from" ? modes[0] : modes.at(-1);
+  if (mode === "locked" || mode === "trunk") {
+    throw new Error(`Route ${routeId} has a protected adjacent segment`);
+  }
+  const endpointIndex = side === "from" ? 0 : points.length - 1;
+  points[endpointIndex] = { ...newPoint };
+  if (points.length === 2) return;
+
+  const neighborIndex = side === "from" ? 1 : points.length - 2;
+  const neighbor = points[neighborIndex]!;
+  const oldNeighbor = { ...neighbor };
+  if (mode === "escape" && outward) {
+    const escapeLength =
+      Math.abs(oldNeighbor.x - oldPoint.x) +
+      Math.abs(oldNeighbor.y - oldPoint.y);
+    neighbor.x = newPoint.x + outward.x * escapeLength;
+    neighbor.y = newPoint.y + outward.y * escapeLength;
+
+    const nextIndex = side === "from" ? neighborIndex + 1 : neighborIndex - 1;
+    const next = points[nextIndex]!;
+    if (neighbor.x !== next.x && neighbor.y !== next.y) {
+      // Turn away from the rotated/mirrored escape before reconnecting to the
+      // unchanged body. Choosing the perpendicular axis avoids a collinear
+      // U-turn that normalization would collapse back toward the pin.
+      const bridge =
+        outward.x !== 0
+          ? { x: neighbor.x, y: next.y }
+          : { x: next.x, y: neighbor.y };
+      const bridgeModeIndex = side === "from" ? 1 : modes.length - 2;
+      const bridgeMode = modes[bridgeModeIndex] ?? "auto";
+      points.splice(side === "from" ? nextIndex : neighborIndex, 0, bridge);
+      modes.splice(bridgeModeIndex, 1, bridgeMode, bridgeMode);
+    }
+    return;
+  }
+  if (oldPoint.x === neighbor.x && oldPoint.y !== neighbor.y) {
+    neighbor.x = newPoint.x;
+  } else if (oldPoint.y === neighbor.y && oldPoint.x !== neighbor.x) {
+    neighbor.y = newPoint.y;
+  } else {
+    throw new Error(`Route ${routeId} has invalid endpoint geometry`);
+  }
+}
+
+/**
+ * Apply topology-preserving Route geometry after any instance placement
+ * transform. The caller supplies the pre-edit snapshot and the transformed
+ * draft, making move/rotate/mirror share one behavior at the transaction
+ * boundary.
+ */
+function applyInstanceRouteFollow(
   draft: SchematicDocument,
   originalDocument: SchematicDocument,
   resolver: SymbolResolver,
   instanceId: string,
-  newPosition: Point,
-  rejectAt: (
-    code: EditErrorCode,
-    message: string,
-    diagnostics?: readonly EditDiagnostic[],
-    objectIds?: readonly string[],
-  ) => RejectedTransaction,
 ): string[] {
-  let proposals;
-  try {
-    proposals = proposeLocalStretch(
-      originalDocument,
-      resolver,
-      instanceId,
-      newPosition,
-    );
-  } catch {
-    // A Route touching this instance has a protected adjacent segment. Rather
-    // than rejecting the whole move, leave it unstretched: if the caller
-    // re-points that Route later in the same transaction the post-loop
-    // validation will pass; otherwise it rejects with INVALID_RESULT, naming
-    // the Route. This keeps the move+set_route_points pattern working.
-    return [];
-  }
-  const stretched: string[] = [];
-  for (const proposal of proposals) {
+  const changed: string[] = [];
+  for (const originalRoute of originalDocument.routes) {
+    const movesFrom = endpointBelongsToInstance(originalRoute.from, instanceId);
+    const movesTo = endpointBelongsToInstance(originalRoute.to, instanceId);
+    if (!movesFrom && !movesTo) continue;
+
     const route = draft.routes.find(
-      (candidate) => candidate.id === proposal.routeId,
+      (candidate) => candidate.id === originalRoute.id,
     );
-    if (!route) continue;
-    route.waypoints = proposal.waypoints.map((point) => ({ ...point }));
-    route.segmentModes = [...proposal.segmentModes];
-    stretched.push(route.id);
+    const original = routePolyline(originalDocument, resolver, originalRoute);
+    const newFrom = route
+      ? resolveEndpointPoint(draft, resolver, route.from)
+      : null;
+    const newTo = route
+      ? resolveEndpointPoint(draft, resolver, route.to)
+      : null;
+    if (!route || !original || !newFrom || !newTo) continue;
+
+    const points = original.points.map((point) => ({ ...point }));
+    const modes = [...original.segmentModes];
+    try {
+      if (movesFrom) {
+        followRouteEndpoint(
+          route.id,
+          points,
+          modes,
+          "from",
+          original.points[0]!,
+          newFrom,
+          resolveEndpointOutwardDirection(draft, resolver, route.from),
+        );
+      }
+      if (movesTo) {
+        followRouteEndpoint(
+          route.id,
+          points,
+          modes,
+          "to",
+          original.points.at(-1)!,
+          newTo,
+          resolveEndpointOutwardDirection(draft, resolver, route.to),
+        );
+      }
+    } catch {
+      // Preserve the established move+set_route_points escape hatch. A later
+      // explicit edit may provide valid geometry; otherwise final validation
+      // rejects this transaction and names the affected Route.
+      continue;
+    }
+
+    if (points.length === 2 && newFrom.x !== newTo.x && newFrom.y !== newTo.y) {
+      const originallyVertical =
+        original.points[0]!.x === original.points[1]!.x;
+      points.splice(
+        1,
+        0,
+        originallyVertical
+          ? { x: newFrom.x, y: newTo.y }
+          : { x: newTo.x, y: newFrom.y },
+      );
+      const mode = modes[0] ?? "manual";
+      modes.splice(0, 1, mode, mode);
+    }
+
+    const normalized = normalizeRouteGeometry(points, modes);
+    if (!isOrthogonal(normalized.points)) continue;
+    route.waypoints = normalized.points.slice(1, -1);
+    route.segmentModes = normalized.segmentModes;
+    changed.push(route.id);
   }
-  // The caller's rejectAt is accepted to keep the signature symmetric, but
-  // stretching never rejects here; protected segments surface as null above.
-  void rejectAt;
-  return stretched;
+  return changed.sort((left, right) => left.localeCompare(right, "en"));
+}
+
+function followAttachedAnnotations(
+  draft: SchematicDocument,
+  instanceId: string,
+  oldPosition: Point,
+  oldOrientation: Orientation,
+  newPosition: Point,
+  newOrientation: Orientation,
+  changedObjectIds: Set<string>,
+): void {
+  for (const annotation of draft.annotations) {
+    if (annotation.attachedObjectId !== instanceId) continue;
+    const local = inverseTransformPoint(
+      annotation.position,
+      oldPosition,
+      oldOrientation,
+    );
+    annotation.position = transformPoint(local, newPosition, newOrientation);
+    changedObjectIds.add(annotation.id);
+  }
 }
 
 /**
@@ -1075,33 +1200,28 @@ export function executeTransaction(
             `Instance is not placed: ${edit.instanceId}`,
           );
         }
-        const delta = {
-          x: edit.position.x - instance.placement.position.x,
-          y: edit.position.y - instance.placement.position.y,
-        };
+        const beforeTransform = structuredClone(draft);
+        const oldPlacement = structuredClone(instance.placement);
         instance.placement.position = structuredClone(edit.position);
-        for (const annotation of draft.annotations) {
-          if (annotation.attachedObjectId === edit.instanceId) {
-            annotation.position.x += delta.x;
-            annotation.position.y += delta.y;
-            changedObjectIds.add(annotation.id);
-          }
-        }
-        // Stretch Routes whose terminal endpoints moved with this instance.
-        // Pass the evolving draft (not the pre-transaction Document) so a
-        // later move_instance in the same transaction sees the geometry
-        // produced by earlier moves on shared Routes. proposeLocalStretch
-        // clones its input and re-moves the (already-moved) instance to
-        // newPosition, reading current waypoints from draft.routes.
+        followAttachedAnnotations(
+          draft,
+          edit.instanceId,
+          oldPlacement.position,
+          oldPlacement,
+          instance.placement.position,
+          instance.placement,
+          changedObjectIds,
+        );
+        // Use the snapshot taken immediately before this edit. This is still
+        // progressive for multi-edit transactions, but unlike the old path it
+        // retains the terminal's actual pre-move coordinates.
         const resolver = context.symbolResolver;
         if (resolver) {
-          const stretched = applyStretchedRoutes(
+          const stretched = applyInstanceRouteFollow(
             draft,
-            draft,
+            beforeTransform,
             resolver,
             edit.instanceId,
-            edit.position,
-            rejectAt,
           );
           for (const routeId of stretched) changedObjectIds.add(routeId);
         }
@@ -1133,7 +1253,29 @@ export function executeTransaction(
             `Instance is not placed: ${edit.instanceId}`,
           );
         }
+        const beforeTransform = structuredClone(draft);
+        const oldPlacement = structuredClone(instance.placement);
         instance.placement.rotation = edit.rotation;
+        followAttachedAnnotations(
+          draft,
+          edit.instanceId,
+          oldPlacement.position,
+          oldPlacement,
+          instance.placement.position,
+          instance.placement,
+          changedObjectIds,
+        );
+        const rotateResolver = context.symbolResolver;
+        if (rotateResolver) {
+          for (const routeId of applyInstanceRouteFollow(
+            draft,
+            beforeTransform,
+            rotateResolver,
+            edit.instanceId,
+          )) {
+            changedObjectIds.add(routeId);
+          }
+        }
         changedObjectIds.add(edit.instanceId);
         break;
       }
@@ -1162,7 +1304,29 @@ export function executeTransaction(
             `Instance is not placed: ${edit.instanceId}`,
           );
         }
+        const beforeTransform = structuredClone(draft);
+        const oldPlacement = structuredClone(instance.placement);
         instance.placement.mirror = edit.mirror;
+        followAttachedAnnotations(
+          draft,
+          edit.instanceId,
+          oldPlacement.position,
+          oldPlacement,
+          instance.placement.position,
+          instance.placement,
+          changedObjectIds,
+        );
+        const mirrorResolver = context.symbolResolver;
+        if (mirrorResolver) {
+          for (const routeId of applyInstanceRouteFollow(
+            draft,
+            beforeTransform,
+            mirrorResolver,
+            edit.instanceId,
+          )) {
+            changedObjectIds.add(routeId);
+          }
+        }
         changedObjectIds.add(edit.instanceId);
         break;
       }
