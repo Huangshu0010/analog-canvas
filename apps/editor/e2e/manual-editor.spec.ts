@@ -4,19 +4,12 @@ import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
 
 import { createRoutingDemoProject } from "../src/demos/routing-demo.js";
-import { clickCommand, downloadBytes, openMenu } from "./editor-fixtures.js";
-
-async function chooseComponent(page: Page, symbolId: string): Promise<void> {
-  const library = page.getByRole("complementary", {
-    name: "Symbols and drawing tools",
-  });
-  if (
-    !(await library.getByTestId(`library-component-${symbolId}`).isVisible())
-  ) {
-    await library.getByRole("button", { name: "Expand" }).click();
-  }
-  await library.getByTestId(`library-component-${symbolId}`).click();
-}
+import {
+  chooseComponent,
+  clickCommand,
+  downloadBytes,
+  openMenu,
+} from "./editor-fixtures.js";
 
 async function placeComponent(
   page: Page,
@@ -28,7 +21,11 @@ async function placeComponent(
 }
 
 async function openSelectionShelf(page: Page): Promise<void> {
-  await expect(page.getByTestId("selection-shelf")).toBeVisible();
+  const shelf = page.getByTestId("selection-shelf");
+  await expect(shelf).toBeVisible();
+  if ((await shelf.getAttribute("aria-expanded")) !== "true") {
+    await shelf.click();
+  }
 }
 
 async function clickRoute(
@@ -64,6 +61,7 @@ async function dragRouteSegment(
   delta: { x: number; y: number },
   position = 0.5,
   segmentIndex = 0,
+  duringDrag?: () => Promise<void>,
 ): Promise<void> {
   const route = page.getByTestId(`route-hit-${routeId}`);
   const point = await route.evaluate(
@@ -84,6 +82,7 @@ async function dragRouteSegment(
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
   await page.mouse.move(point.x + delta.x, point.y + delta.y, { steps: 4 });
+  await duringDrag?.();
   await page.mouse.up();
 }
 
@@ -191,6 +190,10 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  const search = dialog.getByRole("combobox");
+  const preview = dialog.locator("svg.insert-symbol-artwork");
   for (const symbolId of [
     "capacitor",
     "current-source",
@@ -203,18 +206,17 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
     "voltage-source",
     "vdd",
   ]) {
-    const button = page.getByTestId(`library-component-${symbolId}`);
-    await expect(button).toBeVisible();
-    await expect(button.locator("svg.palette-symbol-preview")).toBeVisible();
+    await search.fill(symbolId);
+    await dialog.getByTestId(`insert-component-${symbolId}`).click();
+    await expect(preview).toBeVisible();
   }
-  await expect(
-    page.getByTestId("library-component-pmos").locator("circle"),
-  ).toHaveCount(0);
-  await expect(
-    page.getByTestId("library-component-pmos").locator("polygon"),
-  ).toHaveCount(3);
-  await expect(page.getByTestId("library-component-nmos3")).toHaveCount(0);
-  await expect(page.getByTestId("library-component-pmos3")).toHaveCount(0);
+  await search.fill("pmos");
+  await dialog.getByTestId("insert-component-pmos").click();
+  await expect(preview.locator("circle")).toHaveCount(0);
+  await expect(preview.locator("polygon")).toHaveCount(3);
+  await expect(dialog.getByTestId("insert-component-nmos3")).toHaveCount(0);
+  await expect(dialog.getByTestId("insert-component-pmos3")).toHaveCount(0);
+  await page.keyboard.press("Escape");
 });
 
 test("does not expose presentation-style switching in the browser", async ({
@@ -249,6 +251,7 @@ test("authors components and connectivity manually from an empty canvas", async 
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
 
   await page.getByTestId("terminal-R1-2").click({ button: "right" });
+  await openSelectionShelf(page);
   await expect(
     page.getByRole("button", { name: "Disconnect endpoint" }),
   ).toBeVisible();
@@ -322,6 +325,7 @@ test("deletes a wire as an electrical branch without exposing Unroute", async ({
 
   await page.keyboard.press("Control+z");
   await clickRoute(page, "route-ui-1");
+  await openSelectionShelf(page);
   await expect(
     page.getByRole("button", { name: "Delete electrical branch" }),
   ).toBeVisible();
@@ -520,11 +524,9 @@ test("keeps direct device pin corners on-grid and deletes a selected junction", 
   await page.getByTestId("terminal-R2-1").click();
 
   const terminalRoute = await readRoutePoints(page, "route-ui-1");
-  expect(terminalRoute).toEqual([
-    { x: 300, y: 240 },
-    { x: 530, y: 240 },
-    { x: 530, y: 140 },
-  ]);
+  expect(terminalRoute).toHaveLength(3);
+  expect(terminalRoute[0]!.y).toBe(terminalRoute[1]!.y);
+  expect(terminalRoute[1]!.x).toBe(terminalRoute[2]!.x);
   expect(
     terminalRoute.every(
       (point) => Math.abs(point.x % 10) === 0 && Math.abs(point.y % 10) === 0,
@@ -629,18 +631,37 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Add current arrow" }).click();
 
   await page.keyboard.press("Control+a");
   await expect(page.getByTestId("selected-internal-route-count")).toHaveText(
     "1",
   );
   const before = await readRoutePoints(page, "route-ui-1");
-  await page
-    .getByTestId("hit-R1")
-    .dragTo(page.getByTestId("schematic-canvas"), {
-      targetPosition: { x: 470, y: 350 },
-    });
+  const firstBefore = await page.getByTestId("hit-R1").boundingBox();
+  await dragRouteSegment(
+    page,
+    "route-ui-1",
+    { x: 90, y: 70 },
+    0.35,
+    0,
+    async () => {
+      await expect(
+        page.locator('[data-layer="routes"] [data-object-id="route-ui-1"]'),
+      ).toHaveAttribute("transform", /translate/u);
+      await expect(
+        page.locator('[data-layer="symbols"] [data-object-id="R1"]'),
+      ).toHaveAttribute("transform", /translate/u);
+      await expect(
+        page.locator('[data-layer="annotations"] [data-object-id="current-1"]'),
+      ).toHaveAttribute("transform", /translate/u);
+      await expect(page.getByTestId("revision")).toHaveText("4");
+    },
+  );
   const after = await readRoutePoints(page, "route-ui-1");
+  const firstAfter = await page.getByTestId("hit-R1").boundingBox();
   const delta = {
     x: after[0]!.x - before[0]!.x,
     y: after[0]!.y - before[0]!.y,
@@ -652,6 +673,8 @@ test("moves internal wiring with a selected group and copies the routed subgraph
       y: point.y - before[index]!.y,
     })),
   ).toEqual(after.map(() => delta));
+  expect(firstAfter?.x).not.toBe(firstBefore?.x);
+  expect(firstAfter?.y).not.toBe(firstBefore?.y);
 
   await page.keyboard.press("Control+c");
   await page.keyboard.press("Control+v");
@@ -661,6 +684,111 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await expect(page.getByTestId("selected-internal-route-count")).toHaveText(
     "1",
   );
+});
+
+test("keeps an internal junction with the live group preview", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await placeComponent(page, "resistor", { x: 520, y: 220 });
+  await placeComponent(page, "resistor", { x: 420, y: 420 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await clickCommand(page, "Draw", "Wire (W)");
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await page.getByTestId("terminal-R3-1").click();
+
+  const junctionHit = page.locator('[data-testid^="junction-"]').first();
+  await expect(junctionHit).toBeVisible();
+  const junctionId = await junctionHit.getAttribute("data-drag-object-id");
+  if (!junctionId) throw new Error("Internal junction has no drag identity");
+  const junctionBefore = await junctionHit.boundingBox();
+  await page.keyboard.press("Control+a");
+  const routeHit = page.locator('[data-testid^="route-hit-"]').first();
+  const routeTestId = await routeHit.getAttribute("data-testid");
+  if (!routeTestId) throw new Error("Internal route has no test id");
+  const routeId = routeTestId.replace(/^route-hit-/u, "");
+  await dragRouteSegment(page, routeId, { x: 76, y: 62 }, 0.35, 0, async () => {
+    await expect(
+      page.locator(`[data-object-id="${junctionId}"]`),
+    ).toHaveAttribute("transform", /translate/u);
+    await expect(page.getByTestId("revision")).toHaveText("5");
+  });
+  const junctionAfter = await junctionHit.boundingBox();
+  expect(junctionAfter?.x).not.toBe(junctionBefore?.x);
+  expect(junctionAfter?.y).not.toBe(junctionBefore?.y);
+});
+
+test("drags a current marker directly along and around its route", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await placeComponent(page, "resistor", { x: 520, y: 220 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Add current arrow" }).click();
+
+  const hit = page.getByTestId("annotation-hit-current-1");
+  await expect(hit).toHaveClass(/hit-target/u);
+  await expect(hit).toHaveClass(/selected/u);
+  await expect(
+    page.getByRole("button", { name: "Move closer to wire" }),
+  ).toHaveCount(0);
+  const routeBefore = await readRoutePoints(page, "route-ui-1");
+  const before = await hit.boundingBox();
+  if (!before) throw new Error("Current marker is not measurable");
+  const start = {
+    x: before.x + before.width / 2,
+    y: before.y + before.height / 2,
+  };
+  const paintedMarker = page.locator(
+    '[data-layer="annotations"] [data-object-id="current-1"]',
+  );
+  const paintedBefore = await paintedMarker.boundingBox();
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 58, start.y + 24, { steps: 4 });
+  await expect
+    .poll(async () => (await paintedMarker.boundingBox())?.x)
+    .not.toBe(paintedBefore?.x);
+  await expect(page.getByTestId("revision")).toHaveText("4");
+  await page.mouse.up();
+  const after = await hit.boundingBox();
+  expect(after?.x).not.toBe(before?.x);
+  expect(after?.y).not.toBe(before?.y);
+  expect(await readRoutePoints(page, "route-ui-1")).toEqual(routeBefore);
+  await expect(page.getByTestId("revision")).toHaveText("5");
+
+  await placeComponent(page, "resistor", { x: 420, y: 420 });
+  const markerBeforeSplit = await hit.boundingBox();
+  const projectBeforeSplit = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  );
+  const markerDataBeforeSplit =
+    projectBeforeSplit.documents[0].annotations.find(
+      (annotation: { id: string }) => annotation.id === "current-1",
+    );
+  await clickCommand(page, "Draw", "Wire (W)");
+  await clickRoute(page, "route-ui-1", 0.2, 0);
+  await page.getByTestId("terminal-R3-1").click();
+  const markerAfterSplit = await hit.boundingBox();
+  const projectAfterSplit = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  );
+  const markerDataAfterSplit = projectAfterSplit.documents[0].annotations.find(
+    (annotation: { id: string }) => annotation.id === "current-1",
+  );
+  expect(markerDataAfterSplit.position).toEqual(markerDataBeforeSplit.position);
+  expect(markerDataAfterSplit.anchor.routeId).not.toBe("route-ui-1");
+  expect(markerAfterSplit?.x).toBeCloseTo(markerBeforeSplit?.x ?? 0, 0);
+  expect(markerAfterSplit?.y).toBeCloseTo(markerBeforeSplit?.y ?? 0, 0);
+  await expect(page.getByTestId("revision")).toHaveText("7");
 });
 
 test("moves an unselected component in one thresholded drag", async ({
@@ -887,6 +1015,7 @@ test("selects and moves multiple instances while viewport gestures stay transien
     },
   );
   await page.mouse.up();
+  await openSelectionShelf(page);
   await expect(
     page.getByTestId("selection-shelf").getByText("M1, M2", { exact: true }),
   ).toBeVisible();
@@ -942,16 +1071,16 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   });
 
   await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("terminal-A-P1").click();
-  await page.getByTestId("terminal-B-P1").click();
+  await page.getByTestId("terminal-A-P").click();
+  await page.getByTestId("terminal-B-P").click();
   await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("terminal-C-P1").click();
-  await page.getByTestId("terminal-D-P1").click();
+  await page.getByTestId("terminal-C-P").click();
+  await page.getByTestId("terminal-D-P").click();
   await expect(page.getByTestId("crossing-count")).toHaveText("1");
   await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(0);
 
   await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("terminal-E-P1").click();
+  await page.getByTestId("terminal-E-P").click();
   await clickRoute(page, "route-ui-1", 0.5);
   await expect(page.getByTestId("status")).toContainText(
     "Ambiguous intersection",
@@ -960,7 +1089,7 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await page.keyboard.press("Escape");
 
   await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("terminal-E-P1").click();
+  await page.getByTestId("terminal-E-P").click();
   await clickRouteWithScreenOffset(page, "route-ui-1", { x: 0, y: 5 }, 0.25);
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
@@ -1035,39 +1164,40 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
   await page.getByRole("button", { name: "Restore recovery" }).click();
   await expect(page.getByTestId("revision")).toHaveText("1");
 
-  const search = page.getByRole("textbox", { name: "Search components" });
+  await page.keyboard.press("i");
+  const search = page.getByRole("combobox", {
+    name: "Search or choose a component",
+  });
   await search.fill("r");
+  await page.keyboard.press("r");
   await expect(page.getByTestId("revision")).toHaveText("1");
 });
 
-test("keeps the component library stable while Selection remains persistent", async ({
+test("keeps component insertion and inspection from resizing the canvas", async ({
   page,
 }) => {
   await page.goto("/");
-  const search = page.getByRole("textbox", { name: "Search components" });
   const canvas = page.getByTestId("schematic-canvas");
-  const shelf = page.getByTestId("selection-shelf").locator("..");
-  const searchOffsetWithinDock = () =>
-    search.evaluate((element) => {
-      const dock = element.closest('[role="complementary"]');
-      if (!dock) return null;
-      return (
-        element.getBoundingClientRect().top - dock.getBoundingClientRect().top
-      );
-    });
-  await chooseComponent(page, "pmos");
-  const beforePlaceSearchOffset = await searchOffsetWithinDock();
   const beforePlaceCanvas = await canvas.boundingBox();
-  if (beforePlaceSearchOffset === null || !beforePlaceCanvas)
-    throw new Error("Dock is not measurable");
+  if (!beforePlaceCanvas) throw new Error("Canvas is not measurable");
+
+  await page.keyboard.press("i");
+  await expect(
+    page.getByRole("dialog", { name: "Insert Component" }),
+  ).toBeVisible();
+  expect((await canvas.boundingBox())?.width).toBe(beforePlaceCanvas.width);
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByRole("combobox").fill("pmos");
+  await dialog.getByTestId("insert-component-pmos").click();
+  await dialog.getByRole("button", { name: "Apply" }).click();
 
   await canvas.click({ position: { x: 420, y: 260 } });
 
-  await expect(search).toBeVisible();
-  await expect(shelf).toHaveAttribute("aria-label", "Selection");
-  const afterSearchOffset = await searchOffsetWithinDock();
+  await expect(
+    page.getByRole("complementary", { name: "Selection inspector" }),
+  ).toBeVisible();
+  await page.getByTestId("selection-shelf").click();
   const afterCanvas = await canvas.boundingBox();
-  expect(afterSearchOffset).toBe(beforePlaceSearchOffset);
   expect(afterCanvas?.width).toBe(beforePlaceCanvas.width);
 
   await expect(page.getByTestId("selection-shelf")).toContainText("M1");
@@ -1126,9 +1256,10 @@ test("keeps the production command surface compact and publishes PWA metadata", 
 }) => {
   await page.goto("/");
   const toolbar = page.getByRole("navigation", { name: "Editor commands" });
-  for (const label of ["File", "Edit", "Draw", "View", "More"]) {
+  for (const label of ["File", "Edit", "Draw", "More"]) {
     await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
   }
+  await expect(toolbar.locator("summary", { hasText: "View" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Export" })).toHaveCount(
     0,

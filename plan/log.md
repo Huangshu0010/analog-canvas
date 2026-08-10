@@ -4022,6 +4022,19 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `refactor(editor): centralize wire editing contract`.
 
+## 2026-08-10 - Add component insertion dialog and refine workspace
+
+- Target: replace the permanent component sidebar with an `I` master/detail
+  insertion flow and finish a canvas-first GUI refinement pass.
+- Changed areas: component-insert and icon features, editor shell/shortcuts,
+  Inspector/Guide/drafting interactions, responsive styling, E2E isolation,
+  interaction specification, and focused tests.
+- Validation: 26 focused Vitest tests, repository typecheck, dependency-aware
+  editor build, all 61 Playwright flows, full format check, real browser visual
+  inspection, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/insert-component-dialog` as
+  `feat(editor): add component insert dialog and refine workspace`.
+
 ## 2026-08-10 - Unified editor Snap Engine
 
 - Target: replace disconnected grid, pin, Guide, Wire, and drafting snap paths
@@ -4112,3 +4125,46 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   `packages/derived/src/connectivity.ts`.
 - Commit status: ready to commit on `main` as
   `refactor(symbols): enforce Razavi-only product catalog`.
+
+## 2026-08-10 - Unify group and routed-marker movement
+
+- Target: remove drag-ownership conflicts between selected circuit groups,
+  internal wires, and route-attached current markers after integrating the
+  mainline Snap Engine.
+- Changed areas: mainline branch integration, composite-selection hit
+  precedence and live group preview, bounded route-attachment drag, common
+  dashed marker selection, compact command surface, interaction specification,
+  and focused unit/E2E regressions.
+- Validation: repository typecheck, editor production build, 447 Vitest tests,
+  62 Playwright flows plus enhanced focused preview checks, full format check,
+  browser inspection, and `git diff --check` passed. One initial exporter test
+  timeout passed both isolated and on the subsequent full run.
+- Commit status: ready to commit on `codex/insert-component-dialog` as
+  `fix(editor): unify group and routed marker movement`.
+
+## 2026-08-10 - Preserve route markers through geometry edits
+
+- Target: eliminate stale Junction/current-marker drag previews and prevent
+  route-attached arrows from collapsing or rotating after a complex reroute.
+- Changed areas: group preview membership, canonical Edit Engine marker
+  projection across Route geometry changes and Junction splits, bend-direction
+  tie-breaking, interaction specification, and focused unit/E2E regressions.
+- Validation: affected production builds, repository typecheck, format check,
+  448 Vitest tests, 63 Playwright flows, in-app browser inspection, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `codex/insert-component-dialog` as
+  `fix(editor): preserve route markers through geometry edits`.
+
+## 2026-08-10 - Merge advanced GUI and Page mainline
+
+- Target: make the accepted canvas-first GUI the mainline editor while retaining
+  newer Page/file-system, Razavi-only, and electrical-connection behavior.
+- Changed areas: resolved the editor shell and E2E merge; retained the modal
+  component insert flow, floating Inspector, group/route-marker interaction,
+  Page open/recovery, unsupported-symbol rejection, clickable flightlines, and
+  `cut_connection`; adapted the modal catalog to the ten approved Razavi symbols.
+- Validation: Razavi catalog check, repository typecheck, 448 Vitest tests,
+  editor production build, Agent API artifact check, 65 Playwright flows,
+  changed-file Prettier, live main GUI inspection, and `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `merge: integrate advanced editor GUI with mainline`.
