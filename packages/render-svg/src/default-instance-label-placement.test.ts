@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getRazaviCatalogSymbol } from "@icm/symbols";
+import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
 import { defaultInstanceLabelPlacement } from "./default-instance-label-placement.js";
 import { razaviTextbookProfile } from "./style-profile.js";
@@ -9,17 +9,22 @@ function placed(
   symbolId: string,
   rotation: 0 | 90 | 180 | 270 = 0,
   mirror: "none" | "x" = "none",
+  symbolVariantId?: string,
 ) {
-  const definition = getRazaviCatalogSymbol(symbolId);
-  if (!definition) throw new Error(`Missing symbol: ${symbolId}`);
+  const resolved = new InMemorySymbolResolver(builtInSymbols).resolve(
+    symbolId,
+    symbolVariantId,
+  );
+  if (!resolved) throw new Error(`Missing symbol: ${symbolId}`);
   const placement = defaultInstanceLabelPlacement(
     {
       id: `${symbolId}-1`,
       symbolId,
+      ...(symbolVariantId ? { symbolVariantId } : {}),
       placement: { position: { x: 100, y: 100 }, rotation, mirror },
       properties: {},
     },
-    definition,
+    resolved,
     razaviTextbookProfile,
   );
   if (!placement) throw new Error("Placed instance must receive a label");
@@ -54,14 +59,31 @@ describe("semantic default instance-label placement", () => {
 
   it("places MOS text opposite the gate and below the channel center", () => {
     expect(placed("nmos")).toMatchObject({
+      position: { x: 123, y: 108 },
+      alignment: "start",
+    });
+    expect(placed("nmos", 0, "none", "textbook-3terminal")).toMatchObject({
       position: { x: 116, y: 108 },
       alignment: "start",
     });
   });
 
+  it("uses visible glyph edges for vertical MOS orientations", () => {
+    expect(placed("nmos", 90, "none", "textbook-3terminal")).toMatchObject({
+      position: { x: 92, y: 132 },
+      semanticPosition: { x: 92, y: 116 },
+      alignment: "middle",
+    });
+    expect(placed("nmos", 270, "none", "textbook-3terminal")).toMatchObject({
+      position: { x: 108, y: 79 },
+      semanticPosition: { x: 108, y: 84 },
+      alignment: "middle",
+    });
+  });
+
   it("keeps the outward side alignment after mirroring", () => {
     expect(placed("nmos", 0, "x")).toMatchObject({
-      position: { x: 84, y: 108 },
+      position: { x: 78, y: 108 },
       alignment: "end",
     });
   });

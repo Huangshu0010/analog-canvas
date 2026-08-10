@@ -329,7 +329,7 @@ export function defaultInstanceLabel(
   }
   const placement = defaultInstanceLabelPlacement(
     instance,
-    resolved.definition,
+    resolved,
     styleProfile,
   );
   if (!placement) return null;
@@ -341,8 +341,8 @@ export function defaultInstanceLabel(
     position,
     attachedObjectId: instance.id,
     offset: {
-      x: position.x - instance.placement.position.x,
-      y: position.y - instance.placement.position.y,
+      x: placement.semanticPosition.x - instance.placement.position.x,
+      y: placement.semanticPosition.y - instance.placement.position.y,
     },
     alignment: placement.alignment,
     rotation: 0,

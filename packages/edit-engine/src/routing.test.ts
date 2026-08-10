@@ -355,7 +355,7 @@ describe("routing Edit Engine", () => {
         },
         properties: {},
       });
-      // This is the canonical Razavi NMOS label materialized by the editor when
+      // This is the canonical Razavi MOS label materialized by the editor when
       // the user edits or explicitly moves the otherwise renderer-owned label.
       document.annotations.push({
         id: "instance-label-M1",
@@ -372,7 +372,7 @@ describe("routing Edit Engine", () => {
       const expected = [
         {
           rotation: 90 as const,
-          position: { x: 92, y: 116 },
+          position: { x: 92, y: 132 },
           offset: { x: -8, y: 16 },
           alignment: "middle" as const,
         },
@@ -384,7 +384,7 @@ describe("routing Edit Engine", () => {
         },
         {
           rotation: 270 as const,
-          position: { x: 108, y: 84 },
+          position: { x: 108, y: 79 },
           offset: { x: 8, y: -16 },
           alignment: "middle" as const,
         },

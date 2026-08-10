@@ -4049,3 +4049,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   repository typecheck, and `git diff --check` passed.
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `fix(edit-engine): preserve mos label side through rotation`.
+
+## 2026-08-10 - Place rotated MOS labels outside visible symbols
+
+- Target: eliminate transistor/Annotation overlap caused by using padded
+  viewBoxes and raw SVG baselines as rotation reference boundaries.
+- Changed areas: introduced shared Derived instance-label placement, exposed
+  variant-aware visible symbol bounds, routed renderer/editor/Edit Engine MOS
+  labels through the same geometry, and separated painted baseline position
+  from semantic transform offset.
+- Validation: 90 focused tests, three affected package builds, repository
+  typecheck, `git diff --check`, and live browser rectangle measurements at all
+  four orientations passed with zero overlaps.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `fix(render): place rotated mos labels outside visible symbols`.

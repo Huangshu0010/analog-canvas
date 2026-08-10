@@ -143,4 +143,31 @@ describe("route interaction geometry", () => {
       defaultInstanceLabel(document, instance, resolver, profile),
     ).toBeNull();
   });
+
+  it("keeps a rotated MOS label semantic offset separate from its glyph baseline", () => {
+    const document = createEmptyDocument("mos-label", "MOS Label");
+    const instance = {
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 90 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    };
+    document.instances.push(instance);
+    const profile = resolveSchematicStyleProfile(
+      document.presentation.styleProfileId,
+    );
+
+    expect(
+      defaultInstanceLabel(document, instance, resolver, profile),
+    ).toMatchObject({
+      position: { x: 92, y: 132 },
+      offset: { x: -8, y: 16 },
+      alignment: "middle",
+    });
+  });
 });

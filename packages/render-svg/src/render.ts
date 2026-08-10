@@ -603,7 +603,7 @@ export function buildSvgScene(
       );
       const labelPlacement = defaultInstanceLabelPlacement(
         instance,
-        resolved.definition,
+        resolved,
         profile,
       );
       const labelHiddenBySymbol =
