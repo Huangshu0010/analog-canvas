@@ -50,3 +50,16 @@ export function normalizedBearing(from: Point, to: Point): number {
     ((Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI + 360) % 360
   );
 }
+
+export function normalizedRect(start: Point, end: Point): Rect {
+  return {
+    x: Math.min(start.x, end.x),
+    y: Math.min(start.y, end.y),
+    width: Math.max(1, Math.abs(end.x - start.x)),
+    height: Math.max(1, Math.abs(end.y - start.y)),
+  };
+}
+
+export function serializePolylinePoints(points: readonly Point[]): string {
+  return points.map((point) => `${point.x},${point.y}`).join(" ");
+}

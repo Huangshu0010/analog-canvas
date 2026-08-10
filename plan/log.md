@@ -3965,3 +3965,15 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `docs(plan): archive completed plans and clarify protocol` after the user
   authorized taking ownership of the previously concurrent changes.
+
+## 2026-08-10 - Extract drafting creation preview
+
+- Target: separate the transient arrow, construction-line, and rectangle
+  creation preview from the App orchestration shell.
+- Changed areas: added a six-input SVG preview component; centralized Canvas
+  rectangle normalization and polyline serialization; added Canvas geometry
+  contract tests; reduced App by 112 lines.
+- Validation: 14 focused Vitest tests and four drafting Playwright flows passed;
+  typecheck, editor production build, and `git diff --check` passed.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `refactor(editor): extract drafting creation preview`.

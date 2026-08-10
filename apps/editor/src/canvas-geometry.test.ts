@@ -1,0 +1,51 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  centerOfBounds,
+  closestPointOnSegment,
+  normalizedBearing,
+  normalizedRect,
+  rotatePointByDegrees,
+  serializePolylinePoints,
+} from "./canvas-geometry";
+
+describe("canvas geometry primitives", () => {
+  it("projects onto orthogonal segments", () => {
+    expect(
+      closestPointOnSegment({ x: 7, y: 30 }, { x: 10, y: 0 }, { x: 10, y: 20 }),
+    ).toEqual({ x: 10, y: 20 });
+    expect(
+      closestPointOnSegment({ x: 7, y: 4 }, { x: 0, y: 10 }, { x: 20, y: 10 }),
+    ).toEqual({ x: 7, y: 10 });
+  });
+
+  it("normalizes drag rectangles and retains a visible minimum", () => {
+    expect(normalizedRect({ x: 20, y: 30 }, { x: 5, y: 10 })).toEqual({
+      x: 5,
+      y: 10,
+      width: 15,
+      height: 20,
+    });
+    expect(normalizedRect({ x: 5, y: 5 }, { x: 5, y: 5 })).toMatchObject({
+      width: 1,
+      height: 1,
+    });
+  });
+
+  it("shares center, rotation, bearing, and SVG serialization conventions", () => {
+    expect(centerOfBounds({ x: 10, y: 20, width: 30, height: 40 })).toEqual({
+      x: 25,
+      y: 40,
+    });
+    expect(
+      rotatePointByDegrees({ x: 20, y: 10 }, { x: 10, y: 10 }, 90),
+    ).toEqual({ x: 10, y: 20 });
+    expect(normalizedBearing({ x: 0, y: 0 }, { x: 0, y: -10 })).toBe(270);
+    expect(
+      serializePolylinePoints([
+        { x: 1, y: 2 },
+        { x: 3, y: 4 },
+      ]),
+    ).toBe("1,2 3,4");
+  });
+});
