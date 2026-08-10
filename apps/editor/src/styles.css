@@ -1148,6 +1148,14 @@ body {
   cursor: not-allowed;
 }
 
+.smart-snap-guide {
+  stroke: rgb(var(--icm-accent-rgb) / 90%);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
 .command-group-label {
   display: block;
   margin: 0.5rem 0 0.125rem;

@@ -115,10 +115,17 @@ its line style, stroke width, bearing, lock, movement, and deletion use the same
 drafting controls as free arrows and construction lines.
 
 Guides are dragged from a ruler (or `G` then click for touch). Drag moves the
-guide, double-click locks it, `Delete` removes an unlocked guide. Snap priority
-for object editing is Grid, Guide, object bounds/anchor, and selected
-DraftingObject endpoints only; Pin/Junction/Route snap belongs to Wire
-sessions. Copy/paste uses fresh IDs and remaps internal object/route anchors in
+guide, double-click locks it, `Delete` removes an unlocked guide. One permanent,
+editor-owned Snap Engine resolves every pointer profile. It prioritizes exact
+compatible electrical endpoints, explicit Guides, Route geometry, peer object
+centers/edges, drafting anchors, and finally the grid. X and Y matches are
+independent so pin, center, and edge extension lines can align without forcing
+objects to overlap. Profiles decide which candidates are legal: Wire may create
+electrical connectivity after snap, while object and drafting profiles only
+change geometry. Instance candidates that would move the primary instance off
+the document grid are discarded before preview. Holding `Alt` after a drag has
+latched temporarily suppresses Snap and permits an unconstrained translation.
+Copy/paste uses fresh IDs and remaps internal object/route anchors in
 the same Document; external target anchors become free anchors with a prompt.
 
 Hit testing uses a screen-pixel tolerance, not a large document-coordinate
@@ -190,11 +197,14 @@ second mirror enum, a new stored field, or an Agent API operation.
 - A drag latches its resolved object at pointer-down. Pointer movement never
   reruns hit testing and therefore cannot switch from a symbol or Route to an
   overlapping label halfway through the gesture.
-- Live movement preserves the original grab offset and follows the unsnapped
-  pointer continuously. Grid, pin, Route, and constraint snapping is applied
-  only to the pointer-up proposal. The painted formal object and its hit
-  outline share one temporary SVG transform/geometry preview, which is restored
-  before the single typed transaction is committed.
+- Live movement preserves the original grab offset and resolves through the
+  same Snap Engine result used by pointer-up. A capture uses a screen-pixel
+  radius with a larger release radius, displays transient extension lines, and
+  never changes candidate ownership after pointer-down. The painted formal
+  object and its hit outline share one temporary SVG transform/geometry preview,
+  which is restored before the single typed transaction is committed. Snap
+  matches and extension lines are transient editor state and are never persisted
+  or added to the Edit Engine or Agent API.
 - High-frequency pointer movement must not rebuild the formal scene or rerun
   crossings, flightlines, or visual diagnostics. These derived results are
   memoized by Document/view revision; transient previews update at most once

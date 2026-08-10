@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { createEmptyDocument, transformPoint } from "@icm/model";
+import { createEmptyDocument } from "@icm/model";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
 import {
   annotationAnchor,
   attachmentAtPoint,
   defaultInstanceLabel,
-  directPinSnap,
   effectiveRouteAttachment,
   looseRouteAnchorIds,
 } from "./route-interaction-geometry";
@@ -143,61 +142,5 @@ describe("route interaction geometry", () => {
     expect(
       defaultInstanceLabel(document, instance, resolver, profile),
     ).toBeNull();
-  });
-
-  it("snaps a moving visible pin and translates the whole move group", () => {
-    const document = createEmptyDocument("snap", "Snap");
-    const instance = {
-      id: "R1",
-      symbolId: "resistor",
-      placement: {
-        position: { x: 100, y: 100 },
-        rotation: 0 as const,
-        mirror: "none" as const,
-      },
-      properties: {},
-    };
-    document.instances.push(instance);
-    const pin = resolver.resolve("resistor")!.definition.pins[0]!;
-    const pinPoint = transformPoint(
-      pin.at,
-      instance.placement.position,
-      instance.placement,
-    );
-    document.nets.push({
-      id: "net-1",
-      scope: "local",
-      terminals: [{ instanceId: "R1", pinName: pin.name }],
-      ports: [],
-    });
-    document.junctions.push({
-      id: "target",
-      netId: "net-1",
-      position: { x: pinPoint.x + 3, y: pinPoint.y },
-      role: "branch",
-    });
-
-    const result = directPinSnap(
-      document,
-      resolver,
-      [
-        {
-          endpoint: { kind: "junction", junctionId: "target" },
-          netId: "net-1",
-          point: document.junctions[0]!.position,
-          preludeEdits: [],
-        },
-      ],
-      [
-        { instanceId: "R1", position: { x: 100, y: 100 } },
-        { instanceId: "companion", position: { x: 200, y: 100 } },
-      ],
-      4,
-    );
-
-    expect(result?.moves).toEqual([
-      { instanceId: "R1", position: { x: 103, y: 100 } },
-      { instanceId: "companion", position: { x: 203, y: 100 } },
-    ]);
   });
 });

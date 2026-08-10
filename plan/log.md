@@ -4021,3 +4021,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   large-chunk warning remains.
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `refactor(editor): centralize wire editing contract`.
+
+## 2026-08-10 - Unified editor Snap Engine
+
+- Target: replace disconnected grid, pin, Guide, Wire, and drafting snap paths
+  with one editor-owned runtime contract.
+- Changed areas: added the pure Snap Engine and candidate builder; migrated
+  instance/group, Drafting, Guide, and Wire interactions; added transient smart
+  guides, live Alt suppression, off-grid candidate rejection, and current-
+  selection Align; removed the old direct pin helper; updated the interaction
+  specification.
+- Validation: 29 focused Vitest tests, repository typecheck, editor production
+  build, changed-file Prettier, and `git diff --check` passed. The existing
+  large-chunk warning remains; loopback browser automation was unavailable.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `feat(editor): unify snap and alignment interactions`.

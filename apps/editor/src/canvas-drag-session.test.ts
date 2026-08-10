@@ -38,8 +38,13 @@ class FakeTarget extends FakeEvents {
   }
 }
 
-function pointer(pointerId: number, clientX: number, clientY: number): object {
-  return { pointerId, clientX, clientY };
+function pointer(
+  pointerId: number,
+  clientX: number,
+  clientY: number,
+  altKey = false,
+): object {
+  return { pointerId, clientX, clientY, altKey };
 }
 
 describe("canvas drag session", () => {
@@ -132,5 +137,31 @@ describe("canvas drag session", () => {
     expect(cancel).toHaveBeenCalledTimes(1);
     expect(finish).not.toHaveBeenCalled();
     expect(target.captured).toBeNull();
+  });
+
+  it("carries the live Alt snap-suppression modifier", () => {
+    const source = new FakeEvents();
+    const target = new FakeTarget();
+    const preview = vi.fn();
+    const frames: FrameRequestCallback[] = [];
+    startCanvasDragSession({
+      target,
+      pointerId: 4,
+      startClient: { x: 0, y: 0 },
+      thresholdPx: 4,
+      onPreview: preview,
+      onFinish: vi.fn(),
+      eventSource: source,
+      requestFrame: (callback) => {
+        frames.push(callback);
+        return frames.length;
+      },
+      cancelFrame: vi.fn(),
+    });
+
+    source.emit("pointermove", pointer(4, 10, 0, true));
+    frames[0]!(0);
+
+    expect(preview).toHaveBeenCalledWith({ x: 10, y: 0, altKey: true });
   });
 });
