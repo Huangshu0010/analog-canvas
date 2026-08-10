@@ -200,8 +200,8 @@ describe("routing Edit Engine", () => {
     expect(
       moved.document.annotations.find(
         (annotation) => annotation.id === "label-a",
-      )?.position,
-    ).toEqual({ x: 120, y: 300 });
+      ),
+    ).toMatchObject({ position: { x: 120, y: 300 }, rotation: 0 });
 
     const rotated = executeTransaction(
       moved.document,
@@ -225,8 +225,8 @@ describe("routing Edit Engine", () => {
     expect(
       rotated.document.annotations.find(
         (annotation) => annotation.id === "label-a",
-      )?.position,
-    ).toEqual({ x: 180, y: 280 });
+      ),
+    ).toMatchObject({ position: { x: 180, y: 280 }, rotation: 90 });
 
     const mirrored = executeTransaction(
       rotated.document,
@@ -251,8 +251,8 @@ describe("routing Edit Engine", () => {
     expect(
       mirrored.document.annotations.find(
         (annotation) => annotation.id === "label-a",
-      )?.position,
-    ).toEqual({ x: 180, y: 360 });
+      ),
+    ).toMatchObject({ position: { x: 180, y: 360 }, rotation: 270 });
     expect(mirrored.diff.changedObjectIds).toEqual(
       expect.arrayContaining(["A", "label-a", "route-h"]),
     );

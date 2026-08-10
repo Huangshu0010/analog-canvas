@@ -21,6 +21,7 @@ import {
 import type {
   Orientation,
   Point,
+  Rotation,
   RouteBranch,
   RouteEndpoint,
   SchematicDocument,
@@ -863,6 +864,25 @@ function followAttachedAnnotations(
   newOrientation: Orientation,
   changedObjectIds: Set<string>,
 ): void {
+  const directionForRotation = (rotation: Rotation): Point => {
+    switch (rotation) {
+      case 0:
+        return { x: 1, y: 0 };
+      case 90:
+        return { x: 0, y: 1 };
+      case 180:
+        return { x: -1, y: 0 };
+      case 270:
+        return { x: 0, y: -1 };
+    }
+  };
+  const rotationForDirection = (direction: Point): Rotation => {
+    if (direction.x > 0) return 0;
+    if (direction.y > 0) return 90;
+    if (direction.x < 0) return 180;
+    return 270;
+  };
+  const origin = { x: 0, y: 0 };
   for (const annotation of draft.annotations) {
     if (annotation.attachedObjectId !== instanceId) continue;
     const local = inverseTransformPoint(
@@ -871,6 +891,15 @@ function followAttachedAnnotations(
       oldOrientation,
     );
     annotation.position = transformPoint(local, newPosition, newOrientation);
+    const oldDirection = directionForRotation(annotation.rotation);
+    const localDirection = inverseTransformPoint(
+      oldDirection,
+      origin,
+      oldOrientation,
+    );
+    annotation.rotation = rotationForDirection(
+      transformPoint(localDirection, origin, newOrientation),
+    );
     changedObjectIds.add(annotation.id);
   }
 }
