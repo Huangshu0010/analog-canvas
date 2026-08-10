@@ -8,6 +8,7 @@ import type {
 
 const baseContext: EditorShortcutContext = {
   isTyping: false,
+  componentPlacementActive: false,
   hasRoutedMarkerSelection: false,
   hasRotatableSelection: false,
   hasDraftingSelection: false,
@@ -70,6 +71,19 @@ describe("editor shortcut contract", () => {
       kind: "rotate",
       deltaDegrees: -90,
     });
+  });
+
+  it("opens insertion with I and gives placement rotation priority", () => {
+    expect(resolve("i")).toEqual({ kind: "open-component-insert" });
+    expect(
+      resolve("r", {
+        componentPlacementActive: true,
+        hasRotatableSelection: true,
+      }),
+    ).toEqual({ kind: "rotate-placement", deltaDegrees: 90 });
+    expect(
+      resolve("r", { componentPlacementActive: true }, { shiftKey: true }),
+    ).toEqual({ kind: "rotate-placement", deltaDegrees: -90 });
   });
 
   it("maps creation, mirror, fit, and marker commands", () => {
@@ -160,7 +174,7 @@ describe("editor shortcut contract", () => {
   });
 
   it("suppresses every global shortcut while typing", () => {
-    for (const value of ["r", "Escape", "Delete", "Enter"]) {
+    for (const value of ["i", "r", "Escape", "Delete", "Enter"]) {
       expect(resolve(value, { isTyping: true })).toBeNull();
     }
     expect(resolve("s", { isTyping: true }, { ctrlKey: true })).toBeNull();

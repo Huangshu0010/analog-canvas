@@ -18,6 +18,17 @@ export async function clickCommand(
   await details.getByRole("button", { name: button, exact: true }).click();
 }
 
+export async function chooseComponent(
+  page: Page,
+  symbolId: string,
+): Promise<void> {
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByRole("combobox").fill(symbolId);
+  await dialog.getByTestId(`insert-component-${symbolId}`).click();
+  await dialog.getByRole("button", { name: "Apply" }).click();
+}
+
 export async function downloadBytes(
   page: Page,
   menu: string,

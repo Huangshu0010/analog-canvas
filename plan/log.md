@@ -4021,3 +4021,16 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   large-chunk warning remains.
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `refactor(editor): centralize wire editing contract`.
+
+## 2026-08-10 - Add component insertion dialog and refine workspace
+
+- Target: replace the permanent component sidebar with an `I` master/detail
+  insertion flow and finish a canvas-first GUI refinement pass.
+- Changed areas: component-insert and icon features, editor shell/shortcuts,
+  Inspector/Guide/drafting interactions, responsive styling, E2E isolation,
+  interaction specification, and focused tests.
+- Validation: 26 focused Vitest tests, repository typecheck, dependency-aware
+  editor build, all 61 Playwright flows, full format check, real browser visual
+  inspection, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/insert-component-dialog` as
+  `feat(editor): add component insert dialog and refine workspace`.

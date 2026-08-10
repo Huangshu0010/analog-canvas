@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 
-import { clickCommand, downloadBytes } from "./editor-fixtures.js";
+import {
+  chooseComponent,
+  clickCommand,
+  downloadBytes,
+} from "./editor-fixtures.js";
 
 // Two-phase drafting creation: click to set the start, move to preview, click to
 // commit. Arrow commits on the second click; construction line commits on the
@@ -523,7 +527,7 @@ test("R creates a selectable, styleable rectangle with four resize handles", asy
   ).toHaveCount(0);
 
   // The empty interior must also pass a placement click through to the canvas.
-  await page.getByTestId("library-component-nmos").click();
+  await chooseComponent(page, "nmos");
   await page.mouse.click(center.x, center.y);
   await expect(page.getByTestId("hit-M1")).toHaveCount(1);
   await expect(page.getByTestId("revision")).toHaveText("2");

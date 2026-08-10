@@ -139,7 +139,7 @@ describe("editor shell", () => {
     expect(markup).not.toContain("Agent");
   });
 
-  it("keeps Selection as a persistent bottom shelf", () => {
+  it("keeps Selection as an explicit overlay without a permanent library", () => {
     const project = createEmptyProject("selection-shelf", "Selection Shelf");
     const markup = renderToStaticMarkup(<App project={project} />);
 
@@ -147,7 +147,10 @@ describe("editor shell", () => {
       '<section class="selection-shelf" aria-label="Selection">',
     );
     expect(markup).toContain('data-testid="selection-shelf"');
-    expect(markup).not.toContain('<details class="selection-shelf"');
+    expect(markup).toContain('aria-label="Selection inspector"');
+    expect(markup).toContain("Insert component (I)");
+    expect(markup).not.toContain("Symbols &amp; Tools");
+    expect(markup).not.toContain("Search components");
   });
 
   it("gives an implicit instance label its own selection surface", () => {

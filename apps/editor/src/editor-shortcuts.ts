@@ -11,6 +11,7 @@ export interface EditorShortcutKey {
 
 export interface EditorShortcutContext {
   isTyping: boolean;
+  componentPlacementActive: boolean;
   hasRoutedMarkerSelection: boolean;
   hasRotatableSelection: boolean;
   hasDraftingSelection: boolean;
@@ -27,6 +28,8 @@ export type EditorShortcutIntent =
   | { kind: "undo" | "redo" }
   | { kind: "copy" | "paste" | "save" | "open" | "select-all" }
   | { kind: "reverse-current-marker" }
+  | { kind: "open-component-insert" }
+  | { kind: "rotate-placement"; deltaDegrees: 90 | -90 }
   | { kind: "rotate"; deltaDegrees: 90 | -90 }
   | { kind: "activate-tool"; tool: EditorTool }
   | { kind: "add-text" }
@@ -84,7 +87,14 @@ export function resolveEditorShortcut(
   if (plain && key === "x" && context.hasRoutedMarkerSelection) {
     return { kind: "reverse-current-marker" };
   }
+  if (plain && key === "i") return { kind: "open-component-insert" };
   if (plain && key === "r") {
+    if (context.componentPlacementActive) {
+      return {
+        kind: "rotate-placement",
+        deltaDegrees: event.shiftKey ? -90 : 90,
+      };
+    }
     return event.shiftKey
       ? { kind: "rotate", deltaDegrees: -90 }
       : context.hasRotatableSelection

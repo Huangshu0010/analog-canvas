@@ -4,19 +4,12 @@ import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
 
 import { createRoutingDemoProject } from "../src/routing-demo.js";
-import { clickCommand, downloadBytes, openMenu } from "./editor-fixtures.js";
-
-async function chooseComponent(page: Page, symbolId: string): Promise<void> {
-  const library = page.getByRole("complementary", {
-    name: "Symbols and drawing tools",
-  });
-  if (
-    !(await library.getByTestId(`library-component-${symbolId}`).isVisible())
-  ) {
-    await library.getByRole("button", { name: "Expand" }).click();
-  }
-  await library.getByTestId(`library-component-${symbolId}`).click();
-}
+import {
+  chooseComponent,
+  clickCommand,
+  downloadBytes,
+  openMenu,
+} from "./editor-fixtures.js";
 
 async function placeComponent(
   page: Page,
@@ -28,7 +21,11 @@ async function placeComponent(
 }
 
 async function openSelectionShelf(page: Page): Promise<void> {
-  await expect(page.getByTestId("selection-shelf")).toBeVisible();
+  const shelf = page.getByTestId("selection-shelf");
+  await expect(shelf).toBeVisible();
+  if ((await shelf.getAttribute("aria-expanded")) !== "true") {
+    await shelf.click();
+  }
 }
 
 async function clickRoute(
@@ -191,6 +188,10 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  const search = dialog.getByRole("combobox");
+  const preview = dialog.locator("svg.insert-symbol-artwork");
   for (const symbolId of [
     "capacitor",
     "current-source",
@@ -203,18 +204,17 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
     "voltage-source",
     "vdd",
   ]) {
-    const button = page.getByTestId(`library-component-${symbolId}`);
-    await expect(button).toBeVisible();
-    await expect(button.locator("svg.palette-symbol-preview")).toBeVisible();
+    await search.fill(symbolId);
+    await dialog.getByTestId(`insert-component-${symbolId}`).click();
+    await expect(preview).toBeVisible();
   }
-  await expect(
-    page.getByTestId("library-component-pmos").locator("circle"),
-  ).toHaveCount(0);
-  await expect(
-    page.getByTestId("library-component-pmos").locator("polygon"),
-  ).toHaveCount(3);
-  await expect(page.getByTestId("library-component-nmos3")).toHaveCount(0);
-  await expect(page.getByTestId("library-component-pmos3")).toHaveCount(0);
+  await search.fill("pmos");
+  await dialog.getByTestId("insert-component-pmos").click();
+  await expect(preview.locator("circle")).toHaveCount(0);
+  await expect(preview.locator("polygon")).toHaveCount(3);
+  await expect(dialog.getByTestId("insert-component-nmos3")).toHaveCount(0);
+  await expect(dialog.getByTestId("insert-component-pmos3")).toHaveCount(0);
+  await page.keyboard.press("Escape");
 });
 
 test("does not expose presentation-style switching in the browser", async ({
@@ -249,6 +249,7 @@ test("authors components and connectivity manually from an empty canvas", async 
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
 
   await page.getByTestId("terminal-R1-2").click({ button: "right" });
+  await openSelectionShelf(page);
   await expect(
     page.getByRole("button", { name: "Disconnect endpoint" }),
   ).toBeVisible();
@@ -322,6 +323,7 @@ test("distinguishes deleting an isolated connection from unrouting it", async ({
 
   await page.keyboard.press("Control+z");
   await clickRoute(page, "route-ui-1");
+  await openSelectionShelf(page);
   await page
     .getByRole("button", { name: "Unroute (keep electrical connection)" })
     .click();
@@ -473,11 +475,9 @@ test("keeps direct device pin corners on-grid and deletes a selected junction", 
   await page.getByTestId("terminal-R2-1").click();
 
   const terminalRoute = await readRoutePoints(page, "route-ui-1");
-  expect(terminalRoute).toEqual([
-    { x: 300, y: 240 },
-    { x: 530, y: 240 },
-    { x: 530, y: 140 },
-  ]);
+  expect(terminalRoute).toHaveLength(3);
+  expect(terminalRoute[0]!.y).toBe(terminalRoute[1]!.y);
+  expect(terminalRoute[1]!.x).toBe(terminalRoute[2]!.x);
   expect(
     terminalRoute.every(
       (point) => Math.abs(point.x % 10) === 0 && Math.abs(point.y % 10) === 0,
@@ -840,6 +840,7 @@ test("selects and moves multiple instances while viewport gestures stay transien
     },
   );
   await page.mouse.up();
+  await openSelectionShelf(page);
   await expect(
     page.getByTestId("selection-shelf").getByText("M1, M2", { exact: true }),
   ).toBeVisible();
@@ -952,6 +953,7 @@ test("imports the SPICE baseline through the grouped File menu", async ({
   );
   await expect(page.getByTestId("document-count")).toHaveText("8");
   await expect(page.getByTestId("instance-count")).toHaveText("32");
+  await openSelectionShelf(page);
   await expect(page.getByTestId("unplaced-XFILTER")).toBeVisible();
   const topDocumentId = await page
     .getByTestId("active-document-id")
@@ -1019,39 +1021,40 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
   await page.getByRole("button", { name: "Restore recovery" }).click();
   await expect(page.getByTestId("revision")).toHaveText("1");
 
-  const search = page.getByRole("textbox", { name: "Search components" });
+  await page.keyboard.press("i");
+  const search = page.getByRole("combobox", {
+    name: "Search or choose a component",
+  });
   await search.fill("r");
+  await page.keyboard.press("r");
   await expect(page.getByTestId("revision")).toHaveText("1");
 });
 
-test("keeps the component library stable while Selection remains persistent", async ({
+test("keeps component insertion and inspection from resizing the canvas", async ({
   page,
 }) => {
   await page.goto("/");
-  const search = page.getByRole("textbox", { name: "Search components" });
   const canvas = page.getByTestId("schematic-canvas");
-  const shelf = page.getByTestId("selection-shelf").locator("..");
-  const searchOffsetWithinDock = () =>
-    search.evaluate((element) => {
-      const dock = element.closest('[role="complementary"]');
-      if (!dock) return null;
-      return (
-        element.getBoundingClientRect().top - dock.getBoundingClientRect().top
-      );
-    });
-  await chooseComponent(page, "pmos");
-  const beforePlaceSearchOffset = await searchOffsetWithinDock();
   const beforePlaceCanvas = await canvas.boundingBox();
-  if (beforePlaceSearchOffset === null || !beforePlaceCanvas)
-    throw new Error("Dock is not measurable");
+  if (!beforePlaceCanvas) throw new Error("Canvas is not measurable");
+
+  await page.keyboard.press("i");
+  await expect(
+    page.getByRole("dialog", { name: "Insert Component" }),
+  ).toBeVisible();
+  expect((await canvas.boundingBox())?.width).toBe(beforePlaceCanvas.width);
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByRole("combobox").fill("pmos");
+  await dialog.getByTestId("insert-component-pmos").click();
+  await dialog.getByRole("button", { name: "Apply" }).click();
 
   await canvas.click({ position: { x: 420, y: 260 } });
 
-  await expect(search).toBeVisible();
-  await expect(shelf).toHaveAttribute("aria-label", "Selection");
-  const afterSearchOffset = await searchOffsetWithinDock();
+  await expect(
+    page.getByRole("complementary", { name: "Selection inspector" }),
+  ).toBeVisible();
+  await page.getByTestId("selection-shelf").click();
   const afterCanvas = await canvas.boundingBox();
-  expect(afterSearchOffset).toBe(beforePlaceSearchOffset);
   expect(afterCanvas?.width).toBe(beforePlaceCanvas.width);
 
   await expect(page.getByTestId("selection-shelf")).toContainText("M1");

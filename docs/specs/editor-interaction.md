@@ -20,7 +20,8 @@ Project and Document baseline.
 
 ## Consumers
 
-- The editor shell, canvas controller, component palette, and context menus.
+- The editor shell, canvas controller, component insertion dialog, and context
+  menus.
 - The Edit Engine and history implementation.
 - Connectivity, routing, derived-overlay, and SVG-rendering modules.
 - The built-in Symbol DSL library and VSS development-import workflow.
@@ -42,8 +43,9 @@ Project and Document baseline.
 ## Command surface
 
 The production header exposes document/navigation and high-frequency document
-commands. Component placement and drawing tools live in the left Library dock,
-not in a modal palette or a permanent toolbar row:
+commands. Component placement uses one modeless master/detail insertion dialog;
+drawing tools live in the compact `Draw` menu rather than a permanent toolbar
+row or component sidebar:
 
 ```text
 File | Edit | View | Export | More
@@ -52,14 +54,14 @@ File | Edit | View | Export | More
 The exact visual treatment may use icons, labels, or responsive grouping, but
 the information architecture is normative:
 
-| Group   | Commands                                                                                       |
-| ------- | ---------------------------------------------------------------------------------------------- |
-| File    | Open, Save, Import, recent/example documents                                                   |
-| Edit    | Undo, Redo, Copy, Paste, Delete, and contextual Align                                          |
-| Library | searchable/collapsible component families; Wire, Text, Arrow, Construction line, and Rectangle |
-| View    | Fit, Diagnostics, Grid, and presentation overlays                                              |
-| Export  | SVG, PNG, and PDF from one menu                                                                |
-| More    | route-attached current arrow, Guides, help, and shortcut reference                             |
+| Group  | Commands                                                              |
+| ------ | --------------------------------------------------------------------- |
+| File   | Open, Save, Import, recent/example documents                          |
+| Edit   | Undo, Redo, Copy, Paste, Delete, and contextual Align                 |
+| Draw   | Insert Component; Wire, Text, Arrow, Construction line, and Rectangle |
+| View   | Fit, Diagnostics, Grid, and presentation overlays                     |
+| Export | SVG, PNG, and PDF from one menu                                       |
+| More   | route-attached current arrow, Guides, help, and shortcut reference    |
 
 The following are not permanent production toolbar modes:
 
@@ -67,16 +69,30 @@ The following are not permanent production toolbar modes:
 - Save snapshot and Reopen snapshot; recovery is automatic infrastructure.
 - Phase/demo actions; examples belong in File/Open Example or development mode.
 
-The left dock is collapsible. Choosing a component starts single-shot
-placement; choosing a drawing tool starts the named canvas gesture. Demo and
-diagnostic actions do not appear on the production command surface.
+`I` or `Draw > Insert component` opens one dialog: a searchable categorized
+text list on the left and the currently selected symbol's full preview on the
+right. Arrow keys move the current option, `Enter` or `Apply` starts single-shot
+placement, and `Escape` cancels. During placement the resolved symbol follows
+the pointer; `R`/`Shift+R` rotates it before the placement click. Recent symbols
+are promoted only inside their existing category. The dialog reuses the Symbol
+DSL renderer and owns no separate thumbnail assets.
+
+The editor shell is viewport-contained: the document body never becomes the
+scroll owner, overlays and inspectors scroll internally, and the SVG canvas
+fills the remaining application row. A low-interference bottom-right control
+shows zoom percentage, zoom in/out, and Fit View. Empty Documents show a subtle
+`I`/`W` quick-start hint that disappears after authored content exists. Draw,
+rotate, lock, and viewport actions use one linear SVG icon vocabulary while
+retaining text and shortcut labels. Hover, selected, active-tool, placement
+ghost, endpoint snap, and Guide-hit feedback remain editor overlays and never
+enter formal export.
 
 ## Text, markup, and peripheral editing
 
 This section is `proposed` (ADR 0010); interaction lands in WP-A3/A4. It
 freezes the V1 tool surface and command mapping.
 
-The left Library owns Text and free drawing tools. `More` retains only
+The `Draw` menu owns Text and free drawing tools. `More` retains only
 route-attached annotation and Guide commands:
 
 | Group   | Contents                                                                     | Shortcut                 |
@@ -214,16 +230,14 @@ second mirror enum, a new stored field, or an Agent API operation.
 
 - The canvas occupies a fixed grid column. Selecting, deselecting, or switching
   the inspected object must not change the canvas column count, width, or
-  viewport. The app shell is a stable two-column grid (left dock + canvas); no
-  selection state adds or removes a column.
-- Components and drawing tools are the permanent, independently scrollable main
-  region of the left dock. Selecting or placing an object must never hide,
-  replace, collapse, or move this region.
-- Object inspection lives in a fixed, bottom `Selection` shelf in that same
-  dock. Selection updates only its short summary and indicator; the shelf is
-  collapsed by default and expands only after an explicit user action. When
-  open, its details scroll independently and may reduce only the library's
-  visible scroll height, never its top position or the canvas geometry.
+  viewport. The app shell is a stable single canvas column; no selection state
+  adds or removes a layout column.
+- Component selection is transient in the `I` insertion dialog. No permanent
+  component library consumes canvas width or duplicates the Draw command
+  surface.
+- Object inspection lives in a floating left `Inspect` shelf. It is collapsed
+  by default, expands only after an explicit user action, overlays rather than
+  resizes the canvas, and scrolls internally when its details overflow.
 - In-place rich-text editing is unchanged: double-clicking editable text on the
   canvas opens the existing canvas RichText editor. The `Inspect` tab does not
   replace in-place text editing.
@@ -249,7 +263,8 @@ geometry`, `Disconnect endpoint`, and `Delete connection`. These operations
 
 ## Manual component authoring
 
-The Add Component entry opens a searchable palette grouped by device family.
+The Add Component entry and `I` shortcut open the searchable master/detail
+insertion dialog grouped by device family.
 Every entry includes a deterministic preview rendered from the same Symbol DSL
 definition used by the canvas. Choosing a symbol starts single-shot placement
 and the next canvas click places an instance. Placement is possible in a new
@@ -391,7 +406,7 @@ Normative constraints:
 
 ## Symbol fidelity boundary
 
-The component palette uses runtime-independent Symbol DSL definitions. The 12
+The component insertion dialog uses runtime-independent Symbol DSL definitions. The 12
 review-manifest families retain their VSS evidence and human-reviewed pin
 mappings. A separate migration-candidate catalog exposes additional VSS-derived
 geometry with provisional pin mappings explicitly marked for review. VDD is
@@ -410,7 +425,9 @@ stateDiagram-v2
     [*] --> Pointer
     Pointer --> BoxSelect: drag blank canvas
     Pointer --> MoveSelection: drag movable object beyond threshold
-    Pointer --> PlaceComponent: choose component
+    Pointer --> InsertDialog: I or Insert component
+    InsertDialog --> PlaceComponent: Enter or Apply
+    InsertDialog --> Pointer: cancel
     Pointer --> Wire: W or drag from endpoint/segment
     BoxSelect --> Pointer: release or cancel
     MoveSelection --> Pointer: commit or cancel
@@ -470,7 +487,7 @@ timing and ordering are specified here.
 
 ```text
 Empty Document
--> add an NMOS and resistor from the component palette
+-> add an NMOS and resistor from the insertion dialog
 -> drag from the NMOS drain to the resistor pin
 -> pass over one unrelated route and release on a second route
 -> the passed route remains an unconnected Crossing
