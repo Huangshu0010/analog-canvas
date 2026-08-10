@@ -15,6 +15,19 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-10 - Measured Razavi capacitor refinement
+
+- Target: replace the initial approximate 10% capacitor reduction with the
+  joint optimum measured from vertical and horizontal reference crops.
+- Changed areas: capacitor source asset, hash-pinned catalog entry, and
+  generated runtime catalog definition.
+- Validation: two-dimensional span/gap sweep chose 0.91 span and 0.745 gap
+  scales; final C1 is `0.6225/0.5619` and C2 is `0.7063/0.5508` binary/soft
+  IoU. Catalog stale check, focused catalog Vitest 17/17, Symbols/editor
+  builds, and `git diff --check` passed.
+- Commit status: committed with this target; concurrent drafting work remains
+  unstaged.
+
 ## 2026-08-10 - Razavi capacitor proportion refinement
 
 - Target: reduce capacitor plate span and plate-center separation by 10% while
