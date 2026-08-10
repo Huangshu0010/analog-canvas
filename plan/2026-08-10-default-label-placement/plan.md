@@ -49,6 +49,13 @@ Persisted label annotations and manually moved/locked labels remain unchanged.
   lock state because the resolver runs only when no explicit instance label
   exists.
 
+## Spacing Follow-up
+
+Human review accepts the MOS offset but finds passive/source/Port side labels
+too distant. Keep the MOS gap unchanged and reduce only the non-MOS side gap
+to 50% of its measured visual-boundary distance. The concurrent worktree
+changes remain unrelated and unstaged.
+
 ## Validation
 
 - focused placement unit test for no-rotation, rotation, and mirror cases

@@ -63,10 +63,11 @@ export function defaultInstanceLabelPlacement(
   const viewBox = definition.viewBox;
   const middleY = viewBox.y + viewBox.height / 2;
   const middleX = viewBox.x + viewBox.width / 2;
-  const sideGap = Math.max(
+  const mosSideGap = Math.max(
     8,
     profile.typography.labelGap + profile.typography.instanceFontSize * 0.3,
   );
+  const compactSideGap = mosSideGap * 0.5;
   const baselineOffset = profile.typography.instanceFontSize * 0.35;
   let localPosition: Point;
   let localOutward: Point | null = null;
@@ -75,7 +76,7 @@ export function defaultInstanceLabelPlacement(
     // The Port's pin and short lead face right in local space. Its label belongs
     // on the opposite continuation of the visible endpoint.
     localPosition = {
-      x: viewBox.x - sideGap,
+      x: viewBox.x - compactSideGap,
       y: middleY + baselineOffset,
     };
     localOutward = { x: -1, y: 0 };
@@ -83,13 +84,13 @@ export function defaultInstanceLabelPlacement(
     // Gate is local-left; leave its wire lane clear and name the device on the
     // channel's other side, slightly toward the lower source side.
     localPosition = {
-      x: localRightmostPin(definition) + sideGap * 0.6,
+      x: localRightmostPin(definition) + mosSideGap * 0.6,
       y: middleY + profile.typography.instanceFontSize * 0.55,
     };
     localOutward = { x: 1, y: 0 };
   } else if (SIDE_LABEL_SYMBOLS.has(instance.symbolId)) {
     localPosition = {
-      x: viewBox.x + viewBox.width + sideGap,
+      x: viewBox.x + viewBox.width + compactSideGap,
       y: middleY + baselineOffset,
     };
     localOutward = { x: 1, y: 0 };

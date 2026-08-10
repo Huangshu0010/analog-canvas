@@ -3308,6 +3308,16 @@ formatting`.
   `git diff --check` passed.
 - Commit status: ready for `fix(editor): place default labels by symbol semantics`.
 
+## 2026-08-10 - Compact non-MOS default label spacing
+
+- Target: reduce excess whitespace between non-MOS components and their new
+  semantic side labels.
+- Result: passive, source, and Port side gaps now use 50% of the prior visual
+  boundary distance; MOS placement remains unchanged.
+- Validation: focused placement Vitest 5/5, Render-SVG and Editor builds, and
+  `git diff --check` passed.
+- Commit status: ready for `fix(editor): compact default side labels`.
+
 ## 2026-08-09 - MOS source-arrow orthogonal elbow regression
 
 - Target: restore the electrical D/S lead's strict 90-degree continuation next

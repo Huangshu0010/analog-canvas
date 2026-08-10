@@ -29,25 +29,25 @@ function placed(
 describe("semantic default instance-label placement", () => {
   it("keeps passive and source labels on their local right side", () => {
     expect(placed("resistor")).toMatchObject({
-      position: { x: 121, y: 105 },
+      position: { x: 115, y: 105 },
       alignment: "start",
     });
     expect(placed("voltage-source")).toMatchObject({
-      position: { x: 126, y: 105 },
+      position: { x: 120, y: 105 },
       alignment: "start",
     });
   });
 
   it("moves a rotated passive side label with the symbol", () => {
     expect(placed("capacitor", 90)).toMatchObject({
-      position: { x: 95, y: 123 },
+      position: { x: 95, y: 117 },
       alignment: "middle",
     });
   });
 
   it("places Port text on the endpoint's reverse extension", () => {
     expect(placed("port")).toMatchObject({
-      position: { x: 75, y: 105 },
+      position: { x: 81, y: 105 },
       alignment: "end",
     });
   });
