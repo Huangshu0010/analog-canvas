@@ -610,6 +610,189 @@ function sameResolvedRoutePoints(
   );
 }
 
+interface NetLabelRouteAnchor {
+  annotationId: string;
+  routeId: string;
+  segmentIndex: number;
+  segmentCount: number;
+  t: number;
+  normalOffset: number;
+  arcFraction: number;
+}
+
+function closestRouteAnchor(
+  points: readonly Point[],
+  position: Point,
+):
+  | (Omit<NetLabelRouteAnchor, "annotationId" | "routeId" | "segmentCount"> & {
+      distanceSquared: number;
+    })
+  | null {
+  const lengths = points.slice(0, -1).map((from, index) => {
+    const to = points[index + 1]!;
+    return Math.hypot(to.x - from.x, to.y - from.y);
+  });
+  const totalLength = lengths.reduce((sum, length) => sum + length, 0);
+  if (totalLength === 0) return null;
+  let traversed = 0;
+  const candidates = lengths.flatMap((length, segmentIndex) => {
+    const from = points[segmentIndex]!;
+    const to = points[segmentIndex + 1]!;
+    if (length === 0) return [];
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const t = Math.max(
+      0,
+      Math.min(
+        1,
+        ((position.x - from.x) * dx + (position.y - from.y) * dy) /
+          (length * length),
+      ),
+    );
+    const anchor = { x: from.x + dx * t, y: from.y + dy * t };
+    const delta = {
+      x: position.x - anchor.x,
+      y: position.y - anchor.y,
+    };
+    const candidate = {
+      segmentIndex,
+      t,
+      normalOffset: delta.x * (-dy / length) + delta.y * (dx / length),
+      arcFraction: (traversed + t * length) / totalLength,
+      distanceSquared: delta.x * delta.x + delta.y * delta.y,
+    };
+    traversed += length;
+    return [candidate];
+  });
+  return (
+    candidates.sort(
+      (left, right) =>
+        left.distanceSquared - right.distanceSquared ||
+        left.segmentIndex - right.segmentIndex,
+    )[0] ?? null
+  );
+}
+
+function captureNetLabelRouteAnchors(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+): NetLabelRouteAnchor[] {
+  const polylines = document.routes.flatMap((route) => {
+    const polyline = routePolyline(document, resolver, route);
+    return polyline ? [{ route, polyline }] : [];
+  });
+  return document.annotations.flatMap((annotation) => {
+    if (annotation.kind !== "net-label" || !annotation.attachedObjectId) {
+      return [];
+    }
+    const closest = polylines
+      .filter(({ route }) => route.netId === annotation.attachedObjectId)
+      .flatMap(({ route, polyline }) => {
+        const anchor = closestRouteAnchor(polyline.points, annotation.position);
+        return anchor
+          ? [
+              {
+                ...anchor,
+                annotationId: annotation.id,
+                routeId: route.id,
+                segmentCount: polyline.points.length - 1,
+              },
+            ]
+          : [];
+      })
+      .sort(
+        (left, right) =>
+          left.distanceSquared - right.distanceSquared ||
+          left.routeId.localeCompare(right.routeId, "en"),
+      )[0];
+    if (!closest) return [];
+    const { distanceSquared: _distanceSquared, ...anchor } = closest;
+    return [anchor];
+  });
+}
+
+function pointAtArcFraction(
+  points: readonly Point[],
+  fraction: number,
+): { segmentIndex: number; t: number } | null {
+  const lengths = points.slice(0, -1).map((from, index) => {
+    const to = points[index + 1]!;
+    return Math.hypot(to.x - from.x, to.y - from.y);
+  });
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  if (total === 0) return null;
+  const target = Math.max(0, Math.min(1, fraction)) * total;
+  let traversed = 0;
+  for (const [segmentIndex, length] of lengths.entries()) {
+    if (length === 0) continue;
+    if (traversed + length >= target || segmentIndex === lengths.length - 1) {
+      return {
+        segmentIndex,
+        t: Math.max(0, Math.min(1, (target - traversed) / length)),
+      };
+    }
+    traversed += length;
+  }
+  return null;
+}
+
+function followNetLabelsOnChangedRoutes(
+  draft: SchematicDocument,
+  resolver: SymbolResolver,
+  anchors: readonly NetLabelRouteAnchor[],
+  changedRouteIds: ReadonlySet<string>,
+  changedObjectIds: Set<string>,
+): void {
+  for (const captured of anchors) {
+    if (
+      !changedRouteIds.has(captured.routeId) ||
+      changedObjectIds.has(captured.annotationId)
+    ) {
+      continue;
+    }
+    const annotation = draft.annotations.find(
+      (candidate) => candidate.id === captured.annotationId,
+    );
+    const route = draft.routes.find(
+      (candidate) => candidate.id === captured.routeId,
+    );
+    if (!annotation || annotation.kind !== "net-label" || !route) continue;
+    const polyline = routePolyline(draft, resolver, route);
+    if (!polyline) continue;
+    const segmentCount = polyline.points.length - 1;
+    const attachment =
+      segmentCount === captured.segmentCount &&
+      captured.segmentIndex < segmentCount
+        ? { segmentIndex: captured.segmentIndex, t: captured.t }
+        : pointAtArcFraction(polyline.points, captured.arcFraction);
+    if (!attachment) continue;
+    const from = polyline.points[attachment.segmentIndex]!;
+    const to = polyline.points[attachment.segmentIndex + 1]!;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy);
+    if (length === 0) continue;
+    const anchor = {
+      x: from.x + dx * attachment.t,
+      y: from.y + dy * attachment.t,
+    };
+    const normal = { x: -dy / length, y: dx / length };
+    const offset = {
+      x: normal.x * captured.normalOffset,
+      y: normal.y * captured.normalOffset,
+    };
+    annotation.position = {
+      x: Math.round(anchor.x + offset.x),
+      y: Math.round(anchor.y + offset.y),
+    };
+    annotation.offset = {
+      x: Math.round(offset.x),
+      y: Math.round(offset.y),
+    };
+    changedObjectIds.add(annotation.id);
+  }
+}
+
 function splitRoute(
   document: SchematicDocument,
   route: RouteBranch,
@@ -1081,6 +1264,10 @@ export function executeTransaction(
         ])
       : [],
   );
+  const originalNetLabelAnchors = resolver
+    ? captureNetLabelRouteAnchors(document, resolver)
+    : [];
+  const changedRouteIds = new Set<string>();
   let geometryChanged = false;
   let connectivityChanged = false;
 
@@ -2359,8 +2546,16 @@ export function executeTransaction(
       }
       if (original !== undefined && resolvedGeometryChanged) {
         changedObjectIds.add(route.id);
+        changedRouteIds.add(route.id);
       }
     }
+    followNetLabelsOnChangedRoutes(
+      draft,
+      resolver,
+      originalNetLabelAnchors,
+      changedRouteIds,
+      changedObjectIds,
+    );
   }
 
   if (connectivityChanged) {

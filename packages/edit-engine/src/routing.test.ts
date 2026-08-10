@@ -142,6 +142,71 @@ describe("routing Edit Engine", () => {
     }
   });
 
+  it("moves a net label with its reshaped wire segment", () => {
+    const document = documentFixture();
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+    routed.document.annotations.push({
+      id: "net-label-route-h",
+      kind: "net-label",
+      text: "CLK",
+      position: { x: 300, y: 292 },
+      attachedObjectId: "net-h",
+      offset: { x: 0, y: -8 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+
+    const reshaped = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [
+            { x: 100, y: 340 },
+            { x: 500, y: 340 },
+          ],
+          segmentModes: ["manual", "manual", "manual"],
+        },
+      ]),
+      context,
+    );
+    expect(reshaped.ok).toBe(true);
+    if (!reshaped.ok) return;
+    expect(
+      reshaped.document.annotations.find(
+        (annotation) => annotation.id === "net-label-route-h",
+      ),
+    ).toMatchObject({
+      position: { x: 300, y: 332 },
+      offset: { x: 0, y: -8 },
+      rotation: 0,
+    });
+    expect(reshaped.diff.changedObjectIds).toEqual(
+      expect.arrayContaining(["route-h", "net-label-route-h"]),
+    );
+  });
+
   it("keeps connected Routes and attached labels with move, rotate, and mirror", () => {
     const document = documentFixture();
     document.annotations.push({
