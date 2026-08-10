@@ -3618,3 +3618,28 @@ terminal wiring`.
 - Validation: focused renderer Vitest 1/1, focused manual-editor Playwright
   1/1, editor production build, and `git diff --check` passed.
 - Commit status: pending.
+
+## 2026-08-10 - Editor chrome modernization
+
+- Target: modernize the browser editor's visual hierarchy without changing
+  schematic behavior, persistence, exports, shortcuts, or Agent exposure.
+- Changed areas: editor-only CSS tokens and styling for the header, command
+  menus, component palette and library, Selection shelf, Help dialog, status
+  feedback, focus states, canvas frame, reduced motion, and desktop-width
+  adaptations. No formal SVG body, domain package, event handler, accessible
+  name, or test ID was changed by this target.
+- Visual verification: inspected empty, menu-open, Help-open, placed-component,
+  selected-object, 1280px, 1024px, and 800px states in the local browser. A
+  menu stacking issue was found and repaired; original canvas sizing was
+  retained after a baseline comparison exposed coordinate sensitivity.
+- Validation: owned-file Prettier check passed; editor App Vitest passed 11/11;
+  editor production build passed; six focused Playwright interaction/layout
+  checks passed, including stable canvas width and direct-pin coordinates; `git
+  diff --check` passed. The full Playwright baseline completed 30/49, with the
+  remaining failures traced to existing stale UI/route expectations; an
+  unmodified-main comparison reproduced the selected-route failure. Root
+  formatting and typecheck remain blocked by previously dirty formatting paths
+  and the existing symbol-catalog `leadsPx` fixture type gap.
+- Commit status: prepared for `feat(editor): modernize the editor chrome` on
+  `codex/modernize-editor-chrome`; concurrent canvas-drag-session work remains
+  untouched and unstaged.
