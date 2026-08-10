@@ -15,6 +15,18 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-10 - Fixed default side-label clearance
+
+- Target: reduce non-MOS default instance-label clearance to an explicit 1.5
+  canvas units after live-editor review.
+- Changed areas: shared `@icm/render-svg` default label resolver and its
+  focused placement test.
+- Validation: focused Vitest passed 5/5; render-svg and editor production
+  builds passed; running Vite editor verification placed a new resistor and
+  confirmed the persisted `instance-label` anchor; `git diff --check` passed.
+- Commit status: committed with this target; concurrent editor drag and CSS
+  work remains unstaged.
+
 ## 2026-08-10 - Release GUI interaction batch
 
 - Target: publish the user-authorized accumulated editor interaction, drafting,

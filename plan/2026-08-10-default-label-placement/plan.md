@@ -61,6 +61,25 @@ changes remain unrelated and unstaged.
 Human review requests one further 50% reduction. Non-MOS side labels therefore
 use 25% of the original side gap; MOS remains unchanged.
 
+## Fixed-Gap Follow-up
+
+Human review of the live editor requests an explicit 1.5-unit clearance rather
+than a proportional gap. This follow-up owns only
+`packages/render-svg/src/default-instance-label-placement.ts` and its focused
+test, plus this plan and the factual log. The concurrent dirty editor and
+dragging files remain unrelated and unstaged. The renderer and editor both
+consume this shared resolver, so a focused resolver test plus both package
+builds verify the registration path.
+
+## Fixed-Gap Result
+
+`compactSideGap` is now exactly `1.5` canvas units. The focused resolver test
+locks the corresponding passive/source/Port anchors. Browser verification on
+the active Vite editor at `127.0.0.1:4173` placed a new resistor and confirmed
+the authored `instance-label` anchor from the shared resolver. Its apparent
+ink-to-glyph gap remains larger than 1.5 pixels only because the symbol viewBox
+has intentional interior whitespace; the authored offset itself is 1.5 units.
+
 ## Validation
 
 - focused placement unit test for no-rotation, rotation, and mirror cases

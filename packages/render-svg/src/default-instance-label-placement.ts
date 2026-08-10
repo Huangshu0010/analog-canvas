@@ -67,7 +67,11 @@ export function defaultInstanceLabelPlacement(
     8,
     profile.typography.labelGap + profile.typography.instanceFontSize * 0.3,
   );
-  const compactSideGap = mosSideGap * 0.25;
+  // Passives, independent sources, and Ports use a deliberately fixed visual
+  // clearance from their symbol box. This is an authored-canvas unit, not a
+  // typography-derived gap: their labels must sit close to the symbol at every
+  // supported text scale.
+  const compactSideGap = 1.5;
   const baselineOffset = profile.typography.instanceFontSize * 0.35;
   let localPosition: Point;
   let localOutward: Point | null = null;
