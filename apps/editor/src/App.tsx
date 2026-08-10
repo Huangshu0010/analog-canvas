@@ -86,14 +86,9 @@ import {
 } from "./delete-selection";
 import { createRoutingDemoProject } from "./routing-demo";
 import { createVisualDemoProject } from "./visual-demo";
-import {
-  clearVisualSelectionKinds,
-  EMPTY_VISUAL_SELECTION,
-  hasVisualSelection,
-  normalizeVisualSelection,
-  replaceVisualSelectionKind,
-} from "./visual-selection";
-import type { VisualSelection, VisualSelectionKind } from "./visual-selection";
+import { useSelectionController } from "./selection-controller";
+import { hasVisualSelection } from "./visual-selection";
+import type { VisualSelection } from "./visual-selection";
 import { createRecoveryScheduler } from "./recovery-scheduler";
 import type { RecoveryScheduler } from "./recovery-scheduler";
 import { RichTextEditor } from "./rich-text-editor";
@@ -698,9 +693,15 @@ export function App({ project: initialProject }: AppProps) {
     () => project.topDocumentId,
   );
   const [documentStack, setDocumentStack] = useState<string[]>([]);
-  const [visualSelection, setVisualSelection] = useState<VisualSelection>(
-    EMPTY_VISUAL_SELECTION,
-  );
+  const {
+    selection: visualSelection,
+    replace: replaceSelection,
+    replaceKind: replaceSelectionKind,
+    selectOnly,
+    selectInstance: updateInstanceSelection,
+    clearKinds: clearSelectionKinds,
+    reset: resetSelection,
+  } = useSelectionController();
   const [viewBox, setViewBox] = useState<Rect>(DEFAULT_VIEWBOX);
   const [status, setStatus] = useState("Ready");
   const [recoveryCandidate, setRecoveryCandidate] =
@@ -1458,36 +1459,6 @@ export function App({ project: initialProject }: AppProps) {
     };
   }, []);
 
-  function replaceSelectionIds(
-    kind: VisualSelectionKind,
-    next: string[] | ((current: string[]) => string[]),
-  ): void {
-    setVisualSelection((current) => {
-      const property = `${kind}Ids` as keyof VisualSelection;
-      const currentIds = current[property] as string[];
-      const ids = typeof next === "function" ? next(currentIds) : next;
-      return replaceVisualSelectionKind(current, kind, ids);
-    });
-  }
-
-  function setSelectedIds(
-    next: string[] | ((current: string[]) => string[]),
-  ): void {
-    replaceSelectionIds("instance", next);
-  }
-
-  function setSelectedRouteId(id: string | null): void {
-    replaceSelectionIds("route", id ? [id] : []);
-  }
-
-  function setSelectedAnnotationId(id: string | null): void {
-    replaceSelectionIds("annotation", id ? [id] : []);
-  }
-
-  function setSelectedDraftingId(id: string | null): void {
-    replaceSelectionIds("drafting", id ? [id] : []);
-  }
-
   function stageRecovery(nextProject: CircuitProject): void {
     // Coalesced: a burst of edits becomes one delayed write. The lifecycle
     // effect flushes before the tab hides, and cancelRecovery() clears any
@@ -1504,34 +1475,20 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function resetInteractionState(): void {
-    setVisualSelection(EMPTY_VISUAL_SELECTION);
+    resetSelection();
     setSelectedRouteSegmentIndex(null);
     setTextEditing(null);
     setSelectedEndpoint(null);
     cancelInteraction();
   }
 
-  function clearSupplementalSelection(): void {
-    setVisualSelection((current) =>
-      clearVisualSelectionKinds(current, [
-        "route",
-        "junction",
-        "annotation",
-        "drafting",
-      ]),
-    );
-  }
-
   function selectEndpoint(candidate: WireSource): void {
     setSelectedEndpoint(candidate);
-    setVisualSelection(
-      candidate.endpoint.kind === "junction"
-        ? {
-            ...EMPTY_VISUAL_SELECTION,
-            junctionIds: [candidate.endpoint.junctionId],
-          }
-        : EMPTY_VISUAL_SELECTION,
-    );
+    if (candidate.endpoint.kind === "junction") {
+      selectOnly("junction", [candidate.endpoint.junctionId]);
+    } else {
+      resetSelection();
+    }
   }
 
   function switchDocument(nextDocumentId: string): void {
@@ -1624,9 +1581,13 @@ export function App({ project: initialProject }: AppProps) {
     const annotationId = ids.find((id) =>
       document.annotations.some((annotation) => annotation.id === id),
     );
-    setSelectedIds(instanceIds);
-    setSelectedRouteId(routeId ?? null);
-    setSelectedAnnotationId(annotationId ?? null);
+    replaceSelection({
+      instanceIds,
+      routeIds: routeId ? [routeId] : [],
+      junctionIds: [],
+      annotationIds: annotationId ? [annotationId] : [],
+      draftingIds: [],
+    });
     setSelectedEndpoint(null);
     const target =
       diagnostic.bounds ??
@@ -1696,7 +1657,7 @@ export function App({ project: initialProject }: AppProps) {
   function activateTool(nextTool: EditorTool): void {
     setTool(nextTool);
     if (nextTool !== "pointer") {
-      setSelectedRouteId(null);
+      replaceSelectionKind("route", []);
       setSelectedRouteSegmentIndex(null);
     }
     setStatus(
@@ -1944,11 +1905,8 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function selectRoute(routeId: string, segmentIndex = 0): void {
-    clearSupplementalSelection();
-    setSelectedRouteId(routeId);
+    selectOnly("route", [routeId]);
     setSelectedRouteSegmentIndex(segmentIndex);
-    setSelectedIds([]);
-    setSelectedAnnotationId(null);
     setSelectedEndpoint(null);
     setStatus(`Selected route ${routeId}, segment ${segmentIndex + 1}`);
   }
@@ -1959,7 +1917,7 @@ export function App({ project: initialProject }: AppProps) {
       { kind: "make_flightline", routeId: selectedRouteId },
     ]);
     if (result.ok) {
-      setSelectedRouteId(null);
+      replaceSelectionKind("route", []);
       setStatus(`Unrouted ${selectedRouteId}; electrical Net retained`);
     }
   }
@@ -1997,7 +1955,7 @@ export function App({ project: initialProject }: AppProps) {
       { kind: "disconnect_endpoint", endpoint: route.to },
     ]);
     if (result.ok) {
-      setSelectedRouteId(null);
+      replaceSelectionKind("route", []);
       setStatus(`Deleted electrical connection ${route.id}`);
     }
   }
@@ -2244,10 +2202,7 @@ export function App({ project: initialProject }: AppProps) {
   ): void {
     if (event.button !== 0) return;
     event.stopPropagation();
-    clearSupplementalSelection();
-    setSelectedAnnotationId(annotation.id);
-    setSelectedIds([]);
-    setSelectedRouteId(null);
+    selectOnly("annotation", [annotation.id]);
     setSelectedEndpoint(null);
     if (annotation.locked) {
       setStatus("Selected locked annotation");
@@ -2326,10 +2281,7 @@ export function App({ project: initialProject }: AppProps) {
       if (!annotation) return;
       const result = transact([{ kind: "upsert_annotation", annotation }]);
       if (result.ok) {
-        clearSupplementalSelection();
-        setSelectedAnnotationId(annotation.id);
-        setSelectedIds([]);
-        setSelectedRouteId(null);
+        selectOnly("annotation", [annotation.id]);
         setStatus(`Selected label ${annotation.id}; drag again to move`);
       }
       return;
@@ -2503,9 +2455,6 @@ export function App({ project: initialProject }: AppProps) {
     );
     if (endpoint) {
       selectEndpoint(endpoint);
-      setSelectedRouteId(null);
-      setSelectedIds([]);
-      setSelectedAnnotationId(null);
       setStatus(`Selected ${endpointTestId(endpoint.endpoint)}`);
     }
   }
@@ -2531,7 +2480,7 @@ export function App({ project: initialProject }: AppProps) {
         },
       },
     ]);
-    setSelectedIds([instanceId]);
+    selectOnly("instance", [instanceId]);
   }
 
   function placeNewComponent(symbolId: string, position: Point): void {
@@ -2608,23 +2557,15 @@ export function App({ project: initialProject }: AppProps) {
         : []),
     ]);
     if (result.ok) {
-      setSelectedIds([id]);
+      selectOnly("instance", [id]);
       cancelInteraction();
       setStatus(`Added ${id} (${symbolId})`);
     }
   }
 
   function selectInstance(instanceId: string, additive: boolean): void {
-    clearSupplementalSelection();
-    setSelectedRouteId(null);
     setSelectedEndpoint(null);
-    setSelectedAnnotationId(null);
-    setSelectedIds((current) => {
-      if (!additive) return [instanceId];
-      return current.includes(instanceId)
-        ? current.filter((id) => id !== instanceId)
-        : [...current, instanceId];
-    });
+    updateInstanceSelection(instanceId, additive);
   }
 
   function beginMove(
@@ -3030,14 +2971,10 @@ export function App({ project: initialProject }: AppProps) {
   // separately (double-click/Enter) so selection and text caret ownership do
   // not fight drag gestures.
   function selectDraftingObject(id: string): void {
-    clearSupplementalSelection();
-    setSelectedDraftingId(id);
+    selectOnly("drafting", [id]);
     setDraftingInspectorSegment(null);
     setDraftingTangentInput(null);
     setDraftingBearingInput(null);
-    setSelectedAnnotationId(null);
-    setSelectedRouteId(null);
-    setSelectedIds([]);
   }
 
   function draftingDragOrigin(object: DraftingObject): Point | null {
@@ -3822,9 +3759,7 @@ export function App({ project: initialProject }: AppProps) {
       },
     ]);
     if (result.ok) {
-      setSelectedAnnotationId(id);
-      setSelectedIds([]);
-      setSelectedRouteId(null);
+      selectOnly("annotation", [id]);
       setStatus(`Added current arrow on ${selectedRoute.id}`);
     }
   }
@@ -3886,7 +3821,7 @@ export function App({ project: initialProject }: AppProps) {
     });
     const result = transact(edits);
     if (result.ok) {
-      setSelectedAnnotationId(labelId);
+      replaceSelectionKind("annotation", [labelId]);
       setStatus(
         sameNameNet
           ? `Connected Nets through label ${name}`
@@ -3913,10 +3848,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function beginAnnotationTextEditing(annotation: Annotation): void {
-    setSelectedAnnotationId(annotation.id);
-    setSelectedDraftingId(null);
-    setSelectedRouteId(null);
-    setSelectedIds([]);
+    selectOnly("annotation", [annotation.id]);
     setTextEditing({
       owner: "annotation",
       id: annotation.id,
@@ -3954,8 +3886,7 @@ export function App({ project: initialProject }: AppProps) {
             { kind: "remove_drafting_object", objectId: textEditing.id },
           ]);
     if (result.ok) {
-      setSelectedAnnotationId(null);
-      setSelectedDraftingId(null);
+      clearSelectionKinds(["annotation", "drafting"]);
       setTextEditing(null);
       setStatus(`Deleted text ${textEditing.id}`);
     }
@@ -4171,7 +4102,7 @@ export function App({ project: initialProject }: AppProps) {
     const result = transact([
       { kind: "remove_annotation", annotationId: selectedAnnotation.id },
     ]);
-    if (result.ok) setSelectedAnnotationId(null);
+    if (result.ok) replaceSelectionKind("annotation", []);
   }
 
   function reverseSelectedCurrentArrow(): void {
@@ -4564,12 +4495,10 @@ export function App({ project: initialProject }: AppProps) {
             })
             .map((object) => object.id),
         };
-    setVisualSelection(
-      normalizeVisualSelection({
-        instanceIds: ids,
-        ...supplemental,
-      }),
-    );
+    replaceSelection({
+      instanceIds: ids,
+      ...supplemental,
+    });
     setSelectedEndpoint(null);
     setBoxPreview(null);
     const count =
@@ -4948,7 +4877,7 @@ export function App({ project: initialProject }: AppProps) {
           })),
         ]);
         if (result.ok) {
-          setVisualSelection(EMPTY_VISUAL_SELECTION);
+          resetSelection();
           setSelectedEndpoint(null);
           setStatus("Deleted selected schematic objects");
         }
@@ -4970,7 +4899,7 @@ export function App({ project: initialProject }: AppProps) {
         { kind: "remove_drafting_object", objectId: selectedDraftingId },
       ]);
       if (result.ok) {
-        setSelectedDraftingId(null);
+        replaceSelectionKind("drafting", []);
         setStatus(`Deleted drafting object ${selectedDraftingId}`);
       }
       return;
@@ -4991,7 +4920,7 @@ export function App({ project: initialProject }: AppProps) {
         ),
       );
       if (result.ok) {
-        setSelectedIds([]);
+        replaceSelectionKind("instance", []);
         setStatus(
           "Deleted component selection; connected wires remain dangling",
         );
@@ -5084,8 +5013,7 @@ export function App({ project: initialProject }: AppProps) {
     );
     const result = transact(proposal.edits);
     if (result.ok) {
-      setSelectedIds(proposal.instanceIds);
-      setSelectedRouteId(null);
+      selectOnly("instance", proposal.instanceIds);
       setStatus(`Pasted ${proposal.instanceIds.length} components`);
     }
   }
@@ -5165,7 +5093,7 @@ export function App({ project: initialProject }: AppProps) {
         projectInputRef.current?.click();
       } else if (event.ctrlKey && key === "a") {
         event.preventDefault();
-        setVisualSelection({
+        replaceSelection({
           instanceIds: document.instances
             .filter((instance) => instance.placement)
             .map((instance) => instance.id),
@@ -5278,7 +5206,7 @@ export function App({ project: initialProject }: AppProps) {
             selectedDrafting.kind === "construction-line" ||
             selectedDrafting.kind === "rectangle")
         ) {
-          setSelectedDraftingId(null);
+          replaceSelectionKind("drafting", []);
           setStatus("Cleared drawing selection");
           return;
         }
@@ -5780,9 +5708,7 @@ export function App({ project: initialProject }: AppProps) {
                 data-testid={`unplaced-${instance.id}`}
                 key={instance.id}
                 onClick={() => {
-                  setSelectedIds([instance.id]);
-                  setSelectedRouteId(null);
-                  setSelectedAnnotationId(null);
+                  selectOnly("instance", [instance.id]);
                   setStatus(`Selected ${instance.id}`);
                 }}
                 onDragStart={(event) => {
@@ -6071,7 +5997,7 @@ export function App({ project: initialProject }: AppProps) {
                 `[data-testid="drafting-handles-${selectedDrafting.id}"]`,
               )
             ) {
-              setSelectedDraftingId(null);
+              replaceSelectionKind("drafting", []);
             }
             handleCanvasHitPointerDown(event);
           }}
@@ -6437,9 +6363,6 @@ export function App({ project: initialProject }: AppProps) {
                   event.preventDefault();
                   event.stopPropagation();
                   selectEndpoint(candidate);
-                  setSelectedRouteId(null);
-                  setSelectedIds([]);
-                  setSelectedAnnotationId(null);
                   setStatus(
                     `Endpoint actions: ${endpointTestId(candidate.endpoint)}`,
                   );
@@ -6451,9 +6374,6 @@ export function App({ project: initialProject }: AppProps) {
                   ) {
                     event.stopPropagation();
                     selectEndpoint(candidate);
-                    setSelectedRouteId(null);
-                    setSelectedIds([]);
-                    setSelectedAnnotationId(null);
                     setStatus(`Selected ${endpointTestId(candidate.endpoint)}`);
                     return;
                   }
