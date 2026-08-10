@@ -4,7 +4,7 @@ import { renderSymbolDefinitionBody } from "@icm/render-svg";
 import { builtInSymbols, razaviReferencePaletteSymbols } from "@icm/symbols";
 import type { SymbolDefinition } from "@icm/symbols";
 
-import { defaultRazaviSymbolVariantId } from "./razavi-presentation";
+import { defaultRazaviSymbolVariantId } from "../presentation/razavi-presentation";
 
 const RETIRED_RAZAVI_SYMBOL_IDS = new Set(["nmos3", "pmos3"]);
 

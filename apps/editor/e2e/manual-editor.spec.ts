@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
 
-import { createRoutingDemoProject } from "../src/routing-demo.js";
+import { createRoutingDemoProject } from "../src/demos/routing-demo.js";
 import { clickCommand, downloadBytes, openMenu } from "./editor-fixtures.js";
 
 async function chooseComponent(page: Page, symbolId: string): Promise<void> {

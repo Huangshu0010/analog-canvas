@@ -5,7 +5,7 @@ import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import {
   instanceVisibleHitBox,
   visibleSymbolLocalBounds,
-} from "./selection-geometry";
+} from "./instance-geometry";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 

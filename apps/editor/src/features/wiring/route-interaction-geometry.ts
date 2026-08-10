@@ -20,8 +20,8 @@ import {
 import type { SchematicStyleProfile } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { clamp, closestPointOnSegment } from "./canvas-geometry";
-import { instanceVisibleHitBox } from "./selection-geometry";
+import { clamp, closestPointOnSegment } from "../../canvas/canvas-geometry";
+import { instanceVisibleHitBox } from "../../canvas/instance-geometry";
 
 export interface RoutePolylineRecord {
   route: SchematicDocument["routes"][number];

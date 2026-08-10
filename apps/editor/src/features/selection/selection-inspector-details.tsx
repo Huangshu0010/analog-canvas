@@ -2,7 +2,7 @@ import { hasBlockingVisualDiagnostics } from "@icm/derived";
 import type { VisualDiagnostic } from "@icm/derived";
 import type { SpiceDiagnostic } from "@icm/spice";
 
-import type { EditorTool } from "./interaction-state";
+import type { EditorTool } from "../../interaction/interaction-state";
 
 export interface SelectionInspectorSnapshot {
   selected: string;

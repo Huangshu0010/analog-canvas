@@ -41,12 +41,12 @@ import type {
 import { buildSvgScene, resolveSchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
-import { copySelection, proposePaste } from "./clipboard";
-import type { SchematicClipboard } from "./clipboard";
-import { startCanvasDragSession } from "./canvas-drag-session";
-import type { CanvasDragSession } from "./canvas-drag-session";
-import { startCanvasDragVisual } from "./canvas-drag-visual";
-import { resolveCanvasHitAtPoint } from "./canvas-hit-resolver";
+import { copySelection, proposePaste } from "../features/clipboard/clipboard";
+import type { SchematicClipboard } from "../features/clipboard/clipboard";
+import { startCanvasDragSession } from "../canvas/canvas-drag-session";
+import type { CanvasDragSession } from "../canvas/canvas-drag-session";
+import { startCanvasDragVisual } from "../canvas/canvas-drag-visual";
+import { resolveCanvasHitAtPoint } from "../canvas/canvas-hit-resolver";
 import {
   centerOfBounds,
   clamp,
@@ -54,10 +54,10 @@ import {
   normalizedBearing,
   normalizedRect,
   serializePolylinePoints,
-} from "./canvas-geometry";
-import { CanvasTextEditorOverlay } from "./canvas-text-editor-overlay";
-import { ComponentLibrary } from "./component-library";
-import { useDocumentController } from "./document-controller";
+} from "../canvas/canvas-geometry";
+import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
+import { ComponentLibrary } from "../components/component-library";
+import { useDocumentController } from "../document/document-controller";
 import {
   applyDraftingHandle,
   applyDraftingStylePatch,
@@ -69,45 +69,48 @@ import {
   setDraftingBearing as setDraftingObjectBearing,
   setDraftingTangentAngle as setDraftingObjectTangentAngle,
   translateDraftingObject,
-} from "./drafting-manipulation";
+} from "../features/drafting/drafting-manipulation";
 import type {
   DraftingHandle,
   DraftingStylePatch,
-} from "./drafting-manipulation";
-import { DraftingCreatePreview } from "./drafting-create-preview";
-import { resolveEditorShortcut, stepBoundedScale } from "./editor-shortcuts";
-import { EditorHelpDialog } from "./editor-help-dialog";
-import { referencedDocumentId } from "./editor-session";
-import { useInteractionState } from "./interaction-state";
-import type { EditorTool } from "./interaction-state";
+} from "../features/drafting/drafting-manipulation";
+import { DraftingCreatePreview } from "../features/drafting/drafting-create-preview";
+import {
+  resolveEditorShortcut,
+  stepBoundedScale,
+} from "../interaction/editor-shortcuts";
+import { EditorHelpDialog } from "../components/editor-help-dialog";
+import { referencedDocumentId } from "../document/editor-session";
+import { useInteractionState } from "../interaction/interaction-state";
+import type { EditorTool } from "../interaction/interaction-state";
 import {
   createTextEditingSession,
   proposeTextEditingCommit,
   resolveTextEditingTarget,
   textDeletionEdit,
   updateTextEditingSession,
-} from "./text-editing";
-import type { TextEditingSession } from "./text-editing";
+} from "../features/text-editing/text-editing";
+import type { TextEditingSession } from "../features/text-editing/text-editing";
 import {
   defaultRazaviSymbolVariantId,
   razaviHiddenBulkRisk,
   razaviMosPresentationEdits,
-} from "./razavi-presentation";
+} from "../presentation/razavi-presentation";
 import {
   collectVisualRouteDeletion,
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
-} from "./delete-selection";
-import { createRoutingDemoProject } from "./routing-demo";
-import { createVisualDemoProject } from "./visual-demo";
-import { useProjectRecovery } from "./project-recovery";
-import { useSelectionController } from "./selection-controller";
+} from "../features/selection/delete-selection";
+import { createRoutingDemoProject } from "../demos/routing-demo";
+import { createVisualDemoProject } from "../demos/visual-demo";
+import { useProjectRecovery } from "../document/project-recovery";
+import { useSelectionController } from "../features/selection/selection-controller";
 import {
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
-} from "./selection-inspector-details";
-import { hasVisualSelection } from "./visual-selection";
-import type { VisualSelection } from "./visual-selection";
+} from "../features/selection/selection-inspector-details";
+import { hasVisualSelection } from "../features/selection/visual-selection";
+import type { VisualSelection } from "../features/selection/visual-selection";
 import {
   annotationAnchor,
   annotationHitBox,
@@ -118,30 +121,30 @@ import {
   instanceHitBox,
   isRoutedMarker,
   looseRouteAnchorIds,
-} from "./route-interaction-geometry";
-import { reflectOrientation } from "./shortcut-orientation";
-import type { ScreenFlip } from "./shortcut-orientation";
+} from "../features/wiring/route-interaction-geometry";
+import { reflectOrientation } from "../interaction/shortcut-orientation";
+import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   createFreeWireAnchor,
   createRouteWireAnchor,
   proposeWireCommit,
-} from "./wire-editing";
-import type { WireSource } from "./wire-editing";
-import { buildManualWirePath } from "./wire-path";
+} from "../features/wiring/wire-editing";
+import type { WireSource } from "../features/wiring/wire-editing";
+import { buildManualWirePath } from "../features/wiring/wire-path";
 import {
   buildDraftingAnchors,
   buildInstanceAnchors,
   buildSceneSnapTargets,
   endpointSnapAnchor,
-} from "./snap/candidates";
+} from "../snap/candidates";
 import {
   logicalToleranceForScale,
   resolvePointSnap,
   resolveTranslationSnap,
   SNAP_PROFILES,
   snapCoordinate,
-} from "./snap/engine";
-import type { SnapGuideLine, SnapResult } from "./snap/engine";
+} from "../snap/engine";
+import type { SnapGuideLine, SnapResult } from "../snap/engine";
 
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 const DRAG_START_DISTANCE_PX = 4;

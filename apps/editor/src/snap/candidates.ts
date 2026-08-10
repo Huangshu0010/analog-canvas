@@ -2,8 +2,8 @@ import { resolveDraftingObjectGeometry } from "@icm/derived";
 import type { Point, Rect, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { instanceVisibleHitBox } from "../selection-geometry";
-import type { WireSource } from "../wire-editing";
+import { instanceVisibleHitBox } from "../canvas/instance-geometry";
+import type { WireSource } from "../features/wiring/wire-editing";
 import type { SnapAnchor, SnapTargetKind } from "./engine";
 
 function boundsAnchors(prefix: string, bounds: Rect): SnapAnchor[] {

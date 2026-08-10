@@ -1,8 +1,11 @@
 import type { Point } from "@icm/model";
 import type { SchematicStyleProfile } from "@icm/render-svg";
 
-import { normalizedRect, serializePolylinePoints } from "./canvas-geometry";
-import type { EditorTool } from "./interaction-state";
+import {
+  normalizedRect,
+  serializePolylinePoints,
+} from "../../canvas/canvas-geometry";
+import type { EditorTool } from "../../interaction/interaction-state";
 
 export interface DraftingCreatePreviewProps {
   tool: EditorTool;

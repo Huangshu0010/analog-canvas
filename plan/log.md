@@ -4063,3 +4063,19 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   four orientations passed with zero overlaps.
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `fix(render): place rotated mos labels outside visible symbols`.
+
+## 2026-08-10 - Organize editor source by domain
+
+- Target: replace the flat editor source directory with explicit ownership and
+  dependency boundaries without changing behavior.
+- Changed areas: moved 57 modules and colocated tests under `app`,
+  `interaction`, `canvas`, `document`, `components`, `demos`, `presentation`,
+  and five `features` domains; kept only build/runtime infrastructure at the
+  source root; repaired relative imports and documented placement/dependency
+  rules in the source README.
+- Validation: all 68 editor TypeScript relative imports resolve; 77 Vitest
+  files and 440 tests, repository typecheck, editor production build, all 59
+  Playwright flows, changed-file Prettier, and `git diff --check` passed. The
+  existing large-chunk warning remains.
+- Commit status: ready to commit directly on local `main` as
+  `refactor(editor): organize source by domain`; remote push remains pending.

@@ -1,7 +1,7 @@
 import { parseProject } from "@icm/model";
 import type { CircuitProject } from "@icm/model";
 
-import denseAnalogProject from "../../../fixtures/projects/phase-5-dense-analog/project.icproj.json";
+import denseAnalogProject from "../../../../fixtures/projects/phase-5-dense-analog/project.icproj.json";
 
 export function createVisualDemoProject(): CircuitProject {
   // The checked-in visual fixture intentionally remains a migration input.
