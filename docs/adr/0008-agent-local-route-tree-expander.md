@@ -173,5 +173,5 @@ package and its knowledge doc, not a runtime capability the Agent invents.
 - [`../specs/agent-api.md`](../specs/agent-api.md)
 - [`../specs/connectivity-and-routing.md`](../specs/connectivity-and-routing.md)
 - [`../agent/rule-guided-layout-architecture.md`](../agent/rule-guided-layout-architecture.md)
-- [`../agent/knowledge/razavi-style-canon.md`](../agent/knowledge/razavi-style-canon.md)
+- [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)
 - [`../../skills/circuit-layout/references/manifest.md`](../../skills/circuit-layout/references/manifest.md)

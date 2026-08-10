@@ -3909,3 +3909,22 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   passed.
 - Commit status: prepared on `codex/fix-rectangle-hit-testing` for focused
   staging, commit, and push.
+
+## 2026-08-10 - Remove redundant visual documentation redirects
+
+- Target: reduce current visual-documentation surface after the unified Razavi
+  contract and archive structure made six redirect-only files redundant.
+- Changed areas: removed the former Razavi style, component-extension, VSS
+  import, architecture-review, Phase 5, and Agent style-canon redirect files;
+  pointed active specifications, roadmaps, ADR, and Circuit Layout Skill routing
+  directly to the unified contract or archive originals; added a compact former
+  path mapping to the archive index; repaired three pre-existing broken links in
+  the archived style canon. No unique contract, method, or historical document
+  was deleted.
+- Validation: all six targets are absent; every changed-document local link
+  resolves; no active Markdown link targets a removed path; changed-file
+  formatting was reviewed without normalizing unrelated tables, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `docs: remove redundant visual redirects` after the user authorized taking
+  ownership of the previously concurrent changes.

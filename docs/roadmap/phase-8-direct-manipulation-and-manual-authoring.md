@@ -59,7 +59,8 @@ the existing non-MCP API boundary.
 - Accepted [`Edit Engine`](../specs/edit-engine.md),
   [`Connectivity and Routing`](../specs/connectivity-and-routing.md),
   [`Symbol DSL`](../specs/symbol-dsl.md),
-  [`VSS Development Import`](../specs/vss-development-import.md), and
+  the archived
+  [`VSS Development Import`](../archive/visio-vss/vss-development-import.md), and
   [`Agent API`](../specs/agent-api.md) contracts, each revised compatibly when
   its Phase 8 surface changes.
 - Immutable `lib/circuit.vss` evidence and existing visual/contact-sheet tools.

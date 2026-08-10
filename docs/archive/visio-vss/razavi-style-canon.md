@@ -7,7 +7,7 @@ Status: `superseded` by
 This document records the former VSS-derived profile only. It MUST NOT be
 loaded by an Agent or used for current style, geometry, arrow, typography, or
 stroke decisions. The active source is the raster-authoritative
-[`Razavi textbook style specification`](../../specs/razavi-textbook-style.md).
+[`Razavi visual contract`](../../specs/razavi-visual-contract.md).
 
 # Razavi fixed-style hard canon (historical record)
 
@@ -18,11 +18,11 @@ reasoning for applying the canon when placing, routing, and labeling. Strength:
 or composition. Trigger: any placement, label text, Route geometry, or
 visual-token decision under the `razavi-textbook-v1` profile.
 
-This is an Agent-facing curated view of the fixed-style hard canon. The
-authoritative source is the normative spec
-[`../../specs/razavi-textbook-style.md`](../../specs/razavi-textbook-style.md)
-(status `proposed`, version `0.1`). On conflict, the spec wins. The runtime
-token values quoted here are the ones the renderer actually enforces, read from
+This is an Agent-facing curated view of the fixed-style hard canon. At the time,
+the authoritative source was `docs/specs/razavi-textbook-style.md` (status
+`proposed`, version `0.1`); it is now replaced by the
+[`Razavi visual contract`](../../specs/razavi-visual-contract.md). The runtime
+token values quoted here were read from
 `packages/render-svg/src/style-profile.ts`.
 
 ## What the fixed style is, and is not
@@ -42,9 +42,9 @@ three layers above are mechanically judgeable; routing is not.
 When this profile is in effect, treat the coordinate, typography, and
 stroke/node rules below as hard constraints the renderer will enforce or
 visually expose. Treat any routing decision as your own judgment, guided by
-[`routing-and-diagnostics.md`](routing-and-diagnostics.md),
-[`schematic-expression.md`](schematic-expression.md), and
-[`../../layout-guidance.md`](../../layout-guidance.md) — not by this canon.
+[`routing-and-diagnostics.md`](../../agent/knowledge/routing-and-diagnostics.md),
+[`schematic-expression.md`](../../agent/knowledge/schematic-expression.md), and
+[`layout-guidance.md`](../../agent/layout-guidance.md) — not by this canon.
 
 ## Coordinate canon
 

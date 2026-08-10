@@ -25,14 +25,6 @@ against. They describe required behavior and invariants, not task history.
 Create a specification when its owning phase begins; do not create empty files
 only to mirror this table. Start from [`spec.template.md`](spec.template.md).
 
-## Superseded specifications
-
-- [`vss-development-import.md`](vss-development-import.md) is a redirect to
-  archived history. It is not an active contract; see ADR 0011.
-- [`razavi-textbook-style.md`](razavi-textbook-style.md) and
-  [`razavi-component-extension.md`](razavi-component-extension.md) redirect to
-  the unified Razavi visual contract.
-
 ## Specification Rules
 
 - State status, version, owners, consumers, and related ADRs.

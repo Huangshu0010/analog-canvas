@@ -96,11 +96,12 @@ Snapshot and later audit can explain the choice.
 reviewed Symbol DSL → validate → compile library → resolve at runtime
 ```
 
-Raw VSS extraction must pass through the pinned source inventory and human pin
-review before its electrical semantics become reviewed. Candidate geometry may
-ship with a provisional mapping only when the manifest and contact sheet label
-that status unambiguously. See
-[`vss-development-import.md`](vss-development-import.md).
+Historical VSS extraction and review evidence is archived and cannot authorize
+new visual geometry. Existing electrical provenance remains auditable, while
+new Razavi work follows
+[`razavi-visual-contract.md`](razavi-visual-contract.md). See
+[`ADR 0011`](../adr/0011-retire-visio-vss-as-visual-authority.md) for the
+retirement boundary.
 
 ## Persistence boundary
 
