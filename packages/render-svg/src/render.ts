@@ -34,6 +34,7 @@ import {
 } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
 import type { RichTextDocumentInput } from "./rich-text.js";
+import { defaultInstanceLabelPlacement } from "./default-instance-label-placement.js";
 
 export interface SvgRenderOptions {
   bounds?: Rect;
@@ -600,21 +601,19 @@ export function buildSvgScene(
         instance,
         profile,
       );
-      const bounds = symbolBounds(resolved.definition, instance);
-      const labelX = bounds.x + bounds.width / 2;
-      const labelY =
-        profile.id === "textbook-monochrome-v1"
-          ? bounds.y + bounds.height + 14
-          : bounds.y +
-            bounds.height +
-            profile.typography.labelGap +
-            profile.typography.instanceFontSize;
+      const labelPlacement = defaultInstanceLabelPlacement(
+        instance,
+        resolved.definition,
+        profile,
+      );
       const labelHiddenBySymbol =
         resolved.definition.labelVisibility === "hidden";
       const defaultLabel =
-        explicitInstanceLabels.has(instance.id) || labelHiddenBySymbol
+        explicitInstanceLabels.has(instance.id) ||
+        labelHiddenBySymbol ||
+        !labelPlacement
           ? ""
-          : `<text x="${labelX}" y="${labelY}" text-anchor="middle"${schematicTextSizeAttribute("default-instance", profile)}>${renderSchematicTextContent(instance.id, "default-instance", profile)}</text>`;
+          : `<text x="${labelPlacement.position.x}" y="${labelPlacement.position.y}" text-anchor="${labelPlacement.alignment}"${schematicTextSizeAttribute("default-instance", profile)}>${renderSchematicTextContent(instance.id, "default-instance", profile)}</text>`;
       return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}>${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
     })
     .join("");
@@ -847,6 +846,15 @@ function renderDraftingLayer(
           );
         case "construction-line":
           return renderConstructionLine(object, profile);
+        case "rectangle":
+          return renderDraftRectangle(
+            object,
+            geometry as Extract<
+              ResolvedDraftingGeometry,
+              { kind: "rectangle" }
+            >,
+            profile,
+          );
         case "arrow":
           return renderDraftArrow(
             object,
@@ -930,6 +938,26 @@ function renderConstructionLine(
   return `${shape} data-object-id="${object.id}" data-kind="construction-line" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}/>`;
 }
 
+function renderDraftRectangle(
+  object: Extract<DraftingObject, { kind: "rectangle" }>,
+  geometry: Extract<ResolvedDraftingGeometry, { kind: "rectangle" }>,
+  profile: SchematicStyleProfile,
+): string {
+  const lineStyle = object.styleOverride?.lineStyle ?? object.lineStyle;
+  const dash =
+    lineStyle === "dashed"
+      ? ' stroke-dasharray="6 4"'
+      : lineStyle === "dotted"
+        ? ' stroke-dasharray="2 3"'
+        : "";
+  const strokeWidth =
+    profile.strokes.annotation * (object.styleOverride?.strokeScale ?? 1);
+  const points = geometry.corners
+    .map((point) => `${point.x},${point.y}`)
+    .join(" ");
+  return `<polygon data-object-id="${object.id}" data-kind="draft-rectangle" points="${points}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}/>`;
+}
+
 function draftingPathData(
   points: Point[],
   curveControls: Array<Point | null>,
@@ -950,30 +978,43 @@ function draftingPathData(
   return data;
 }
 
+// A free arrow may end with either a straight or a quadratic segment.  Its
+// head must be based on the *visible final segment's* end tangent, never on
+// the overall from→to chord.  Keeping this calculation here makes the shaft
+// truncation and the triangle share one direction even when an arrow has
+// waypoints or an earlier zero-length segment.
+function finalDraftArrowTangent(
+  points: readonly Point[],
+  curveControls: readonly (Point | null)[],
+): Point {
+  for (let index = points.length - 2; index >= 0; index -= 1) {
+    const end = points[index + 1]!;
+    const predecessor = curveControls[index] ?? points[index]!;
+    const tangent = {
+      x: end.x - predecessor.x,
+      y: end.y - predecessor.y,
+    };
+    if (Math.hypot(tangent.x, tangent.y) > 1e-6) return tangent;
+  }
+  return { x: 1, y: 0 };
+}
+
 function renderDraftArrow(
   object: Extract<DraftingObject, { kind: "arrow" }>,
   geometry: Extract<ResolvedDraftingGeometry, { kind: "arrow" }>,
   profile: SchematicStyleProfile,
   unresolved: string,
 ): string {
-  const from = geometry.from;
   const to = geometry.to;
   const points = geometry.points;
   const tipX = to.x;
   const tipY = to.y;
   // The head follows the final non-zero segment, not the overall chord. This
   // keeps a bent arrow's shaft cleanly terminated at its head base plane.
-  const lastControl = geometry.curveControls.at(-1);
-  const tail =
-    lastControl ??
-    [...points]
-      .reverse()
-      .slice(1)
-      .find((point) => point.x !== to.x || point.y !== to.y) ??
-    from;
-  const dx = to.x - tail.x;
-  const dy = to.y - tail.y;
-  const length = Math.hypot(dx, dy) || 1;
+  const tangent = finalDraftArrowTangent(points, geometry.curveControls);
+  const dx = tangent.x;
+  const dy = tangent.y;
+  const length = Math.hypot(dx, dy);
   // strokeScale widens/narrows the shaft; arrowHeadScale grows/shrinks the head
   // independently. Both multiply the Razavi profile baseline so formal export
   // and the editor canvas share one visual parameter (no raw px in objects).

@@ -102,7 +102,7 @@ unreviewed rather than using VSS to fill the gap.
 
 ## Related documents
 
-- [`../specs/razavi-textbook-style.md`](../specs/razavi-textbook-style.md)
+- [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)
 - [`../overall-product-plan.md`](../overall-product-plan.md) (older VSS
   workflow statements are superseded by this ADR)
 - [`../../fixtures/visual-reference/razavi-reference-v1/manifest.json`](../../fixtures/visual-reference/razavi-reference-v1/manifest.json)

@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "referenceId": "razavi-reference-v1",
+  "targets": [
+    {
+      "id": "nmos",
+      "label": "nmos (3-term)",
+      "measurementPath": "mos-geometry.json",
+      "measurementKey": "nmos",
+      "symbolId": "nmos",
+      "useVariant": true,
+      "window": { "width": 69, "height": 69, "minX": -20, "minY": -20 }
+    },
+    {
+      "id": "pmos",
+      "label": "pmos (3-term)",
+      "measurementPath": "mos-geometry.json",
+      "measurementKey": "pmos",
+      "symbolId": "pmos",
+      "useVariant": true,
+      "window": { "width": 69, "height": 69, "minX": -20, "minY": -20 }
+    },
+    {
+      "id": "nmos4",
+      "label": "nmos (4-term)",
+      "measurementPath": "mos-geometry.json",
+      "measurementKey": "nmos",
+      "symbolId": "nmos",
+      "useVariant": false,
+      "window": { "width": 69, "height": 69, "minX": -20, "minY": -20 }
+    },
+    {
+      "id": "pmos4",
+      "label": "pmos (4-term)",
+      "measurementPath": "mos-geometry.json",
+      "measurementKey": "pmos",
+      "symbolId": "pmos",
+      "useVariant": false,
+      "window": { "width": 69, "height": 69, "minX": -20, "minY": -20 }
+    },
+    {
+      "id": "voltage-source",
+      "measurementPath": "peripheral-geometry.json",
+      "measurementKey": "voltage-source",
+      "symbolId": "voltage-source",
+      "useVariant": false,
+      "window": {
+        "width": 57,
+        "height": 69,
+        "minX": -20.058139,
+        "minY": -20
+      }
+    },
+    {
+      "id": "current-source",
+      "measurementPath": "peripheral-geometry.json",
+      "measurementKey": "current-source",
+      "symbolId": "current-source",
+      "useVariant": false,
+      "window": {
+        "width": 43,
+        "height": 69,
+        "minX": -12.255814,
+        "minY": -20
+      }
+    },
+    {
+      "id": "current-source-compact",
+      "measurementPath": "current-port-geometry.json",
+      "measurementKey": "current-source",
+      "symbolId": "current-source",
+      "useVariant": false
+    },
+    {
+      "id": "vdd",
+      "measurementPath": "vdd-geometry.json",
+      "measurementKey": "vdd",
+      "symbolId": "vdd",
+      "useVariant": false
+    },
+    {
+      "id": "formal-port",
+      "measurementPath": "current-port-geometry.json",
+      "measurementCollection": "ports",
+      "measurementKey": "hollowOrigin",
+      "formalKind": "port"
+    },
+    {
+      "id": "formal-route-wire",
+      "measurementPath": "current-port-geometry.json",
+      "measurementCollection": "formal",
+      "measurementKey": "route-wire",
+      "formalKind": "wire"
+    },
+    {
+      "id": "formal-route-current-arrow",
+      "measurementPath": "current-port-geometry.json",
+      "measurementCollection": "formal",
+      "measurementKey": "route-current-arrow",
+      "formalKind": "route-current-arrow"
+    },
+    {
+      "id": "ground",
+      "measurementPath": "peripheral-geometry.json",
+      "measurementKey": "ground",
+      "symbolId": "ground",
+      "useVariant": false,
+      "window": {
+        "width": 23,
+        "height": 37,
+        "minX": -6.395349,
+        "minY": -10
+      }
+    },
+    {
+      "id": "resistor",
+      "measurementPath": "passive-geometry.json",
+      "measurementKey": "resistor",
+      "symbolId": "resistor",
+      "useVariant": false
+    },
+    {
+      "id": "capacitor-vertical",
+      "measurementPath": "capacitor-geometry.json",
+      "measurementKey": "capacitor-vertical",
+      "symbolId": "capacitor",
+      "useVariant": false
+    },
+    {
+      "id": "capacitor-horizontal",
+      "measurementPath": "capacitor-geometry.json",
+      "measurementKey": "capacitor-horizontal",
+      "symbolId": "capacitor",
+      "useVariant": false
+    }
+  ]
+}

@@ -12,7 +12,7 @@
       "palette": true,
       "automaticMappings": ["spice:C"],
       "assetPath": "capacitor.symbol.json",
-      "assetHash": "6c733aa0a6c9027c1f7df75f06ee4ee9e40604f8fcd9342939eac9eccd75f782",
+      "assetHash": "e5072a4d36017918f5410d73f3b29536bf3637689295c9e9f941928553ac481b",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

@@ -4,6 +4,10 @@
 commits, reviews, validation reports, and failed attempts. It is not a second
 maintenance log.
 
+Experience notes are written in English so terminology, paths, commands, and
+cross-target guidance remain consistent. Source evidence may use another
+language, but the extracted lesson is normalized to English.
+
 ## What Counts as Experience
 
 A note explains a transferable judgment: the tested assumption, observed

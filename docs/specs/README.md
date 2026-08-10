@@ -5,23 +5,22 @@ against. They describe required behavior and invariants, not task history.
 
 ## Planned Specifications
 
-| Specification                                                    | Owning phase | Initial status           | Covers                                                                           |
-| ---------------------------------------------------------------- | -----------: | ------------------------ | -------------------------------------------------------------------------------- |
-| [`project-file-format.md`](project-file-format.md)               |            0 | accepted                 | Project JSON, source manifest, symbol lock, canonical save/load                  |
-| [`schematic-model.md`](schematic-model.md)                       |            0 | accepted                 | Document, instance, net, route, junction, annotation, presentation               |
-| [`edit-engine.md`](edit-engine.md)                               |          0/1 | accepted envelope        | Typed edits, transactions, revision, undo/redo, atomicity                        |
-| [`circuit-ir.md`](circuit-ir.md)                                 |          0/2 | accepted boundary        | Transient dialect-neutral import boundary                                        |
-| [`symbol-dsl.md`](symbol-dsl.md)                                 |          0/1 | accepted boundary        | Geometry, electrical/visual pins, variants, validation                           |
-| [`spice-frontend.md`](spice-frontend.md)                         |          2/4 | accepted current profile | Lossless syntax, dialects, includes, expressions, elaboration                    |
-| [`connectivity-and-routing.md`](connectivity-and-routing.md)     |            3 | accepted                 | Route graph, junction, crossing, flightline, locks                               |
-| [`visual-language.md`](visual-language.md)                       |          1/5 | accepted initial         | `textbook-monochrome-v1`, annotations, overlays, golden output                   |
-| [`razavi-textbook-style.md`](razavi-textbook-style.md)           |       RV-1/8 | accepted                 | Sole visual authority, global text, stroke/node profile, and palette eligibility |
-| [`razavi-component-extension.md`](razavi-component-extension.md) |       RV-1/8 | accepted                 | Reference-to-catalog procedure for adding a Razavi component                     |
-| [`agent-api.md`](agent-api.md)                                   |          6/9 | accepted                 | v1 query compatibility; v2 Snapshot, typed edits, render, permissions            |
-| [`persistence-and-recovery.md`](persistence-and-recovery.md)     |          0/7 | accepted boundary        | Atomic save, AppData cache/session/recovery, migrations                          |
-| [`export.md`](export.md)                                         |            7 | accepted                 | Formal SVG source and derived PNG/PDF contracts                                  |
-| [`performance.md`](performance.md)                               |            7 | accepted                 | Representative workloads and release budgets                                     |
-| [`editor-interaction.md`](editor-interaction.md)                 |            8 | accepted                 | Direct manipulation, manual authoring, gestures, and automation boundary         |
+| Specification                                                | Owning phase | Initial status           | Covers                                                                       |
+| ------------------------------------------------------------ | -----------: | ------------------------ | ---------------------------------------------------------------------------- |
+| [`project-file-format.md`](project-file-format.md)           |            0 | accepted                 | Project JSON, source manifest, symbol lock, canonical save/load              |
+| [`schematic-model.md`](schematic-model.md)                   |            0 | accepted                 | Document, instance, net, route, junction, annotation, presentation           |
+| [`edit-engine.md`](edit-engine.md)                           |          0/1 | accepted envelope        | Typed edits, transactions, revision, undo/redo, atomicity                    |
+| [`circuit-ir.md`](circuit-ir.md)                             |          0/2 | accepted boundary        | Transient dialect-neutral import boundary                                    |
+| [`symbol-dsl.md`](symbol-dsl.md)                             |          0/1 | accepted boundary        | Geometry, electrical/visual pins, variants, validation                       |
+| [`spice-frontend.md`](spice-frontend.md)                     |          2/4 | accepted current profile | Lossless syntax, dialects, includes, expressions, elaboration                |
+| [`connectivity-and-routing.md`](connectivity-and-routing.md) |            3 | accepted                 | Route graph, junction, crossing, flightline, locks                           |
+| [`visual-language.md`](visual-language.md)                   |          1/5 | accepted initial         | `textbook-monochrome-v1`, annotations, overlays, golden output               |
+| [`razavi-visual-contract.md`](razavi-visual-contract.md)     |       RV-1/8 | accepted                 | Razavi authority, construction, Port semantics, exposure, and pixel fidelity |
+| [`agent-api.md`](agent-api.md)                               |          6/9 | accepted                 | v1 query compatibility; v2 Snapshot, typed edits, render, permissions        |
+| [`persistence-and-recovery.md`](persistence-and-recovery.md) |          0/7 | accepted boundary        | Atomic save, AppData cache/session/recovery, migrations                      |
+| [`export.md`](export.md)                                     |            7 | accepted                 | Formal SVG source and derived PNG/PDF contracts                              |
+| [`performance.md`](performance.md)                           |            7 | accepted                 | Representative workloads and release budgets                                 |
+| [`editor-interaction.md`](editor-interaction.md)             |            8 | accepted                 | Direct manipulation, manual authoring, gestures, and automation boundary     |
 
 Create a specification when its owning phase begins; do not create empty files
 only to mirror this table. Start from [`spec.template.md`](spec.template.md).
@@ -30,6 +29,9 @@ only to mirror this table. Start from [`spec.template.md`](spec.template.md).
 
 - [`vss-development-import.md`](vss-development-import.md) is a redirect to
   archived history. It is not an active contract; see ADR 0011.
+- [`razavi-textbook-style.md`](razavi-textbook-style.md) and
+  [`razavi-component-extension.md`](razavi-component-extension.md) redirect to
+  the unified Razavi visual contract.
 
 ## Specification Rules
 

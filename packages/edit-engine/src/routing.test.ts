@@ -142,6 +142,238 @@ describe("routing Edit Engine", () => {
     }
   });
 
+  it("moves a net label with its reshaped wire segment", () => {
+    const document = documentFixture();
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+    routed.document.annotations.push({
+      id: "net-label-route-h",
+      kind: "net-label",
+      text: "CLK",
+      position: { x: 300, y: 292 },
+      attachedObjectId: "net-h",
+      offset: { x: 0, y: -8 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+
+    const reshaped = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [
+            { x: 100, y: 340 },
+            { x: 500, y: 340 },
+          ],
+          segmentModes: ["manual", "manual", "manual"],
+        },
+      ]),
+      context,
+    );
+    expect(reshaped.ok).toBe(true);
+    if (!reshaped.ok) return;
+    expect(
+      reshaped.document.annotations.find(
+        (annotation) => annotation.id === "net-label-route-h",
+      ),
+    ).toMatchObject({
+      position: { x: 300, y: 332 },
+      offset: { x: 0, y: -8 },
+      rotation: 0,
+    });
+    expect(reshaped.diff.changedObjectIds).toEqual(
+      expect.arrayContaining(["route-h", "net-label-route-h"]),
+    );
+  });
+
+  it("keeps connected Routes and attached labels with move, rotate, and mirror", () => {
+    const document = documentFixture();
+    document.annotations.push({
+      id: "label-a",
+      kind: "instance-label",
+      text: "A",
+      position: { x: 99, y: 280 },
+      attachedObjectId: "A",
+      offset: { x: -41, y: -20 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+
+    const moved = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, [
+        {
+          kind: "move_instance",
+          instanceId: "A",
+          position: { x: 160, y: 320 },
+        },
+      ]),
+      context,
+    );
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) return;
+    expect(
+      routePolyline(
+        moved.document,
+        resolver,
+        moved.document.routes.find((route) => route.id === "route-h")!,
+      )?.points,
+    ).toEqual([
+      { x: 120, y: 320 },
+      { x: 500, y: 320 },
+      { x: 500, y: 300 },
+    ]);
+    expect(
+      moved.document.annotations.find(
+        (annotation) => annotation.id === "label-a",
+      ),
+    ).toMatchObject({
+      position: { x: 119, y: 300 },
+      offset: { x: -41, y: -20 },
+      alignment: "end",
+      rotation: 0,
+    });
+
+    const rotated = executeTransaction(
+      moved.document,
+      transaction(document.id, 2, [
+        { kind: "rotate_instance", instanceId: "A", rotation: 90 },
+      ]),
+      context,
+    );
+    if (!rotated.ok) throw new Error(rotated.error.message);
+    expect(
+      routePolyline(
+        rotated.document,
+        resolver,
+        rotated.document.routes.find((route) => route.id === "route-h")!,
+      )?.points,
+    ).toEqual([
+      { x: 160, y: 280 },
+      { x: 500, y: 280 },
+      { x: 500, y: 300 },
+    ]);
+    expect(
+      rotated.document.annotations.find(
+        (annotation) => annotation.id === "label-a",
+      ),
+    ).toMatchObject({
+      position: { x: 180, y: 274 },
+      offset: { x: 20, y: -41 },
+      alignment: "middle",
+      rotation: 0,
+    });
+
+    const mirrored = executeTransaction(
+      rotated.document,
+      transaction(document.id, 3, [
+        { kind: "mirror_instance", instanceId: "A", mirror: "x" },
+      ]),
+      context,
+    );
+    expect(mirrored.ok).toBe(true);
+    if (!mirrored.ok) return;
+    expect(
+      routePolyline(
+        mirrored.document,
+        resolver,
+        mirrored.document.routes.find((route) => route.id === "route-h")!,
+      )?.points,
+    ).toEqual([
+      { x: 160, y: 360 },
+      { x: 500, y: 360 },
+      { x: 500, y: 300 },
+    ]);
+    expect(
+      mirrored.document.annotations.find(
+        (annotation) => annotation.id === "label-a",
+      ),
+    ).toMatchObject({
+      position: { x: 180, y: 377 },
+      offset: { x: 20, y: 41 },
+      alignment: "middle",
+      rotation: 0,
+    });
+    expect(mirrored.diff.changedObjectIds).toEqual(
+      expect.arrayContaining(["A", "label-a", "route-h"]),
+    );
+  });
+
+  it("rotates a terminal escape with the pin instead of rejecting the Route", () => {
+    const document = documentFixture();
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "route_orthogonal",
+          routeId: "route-agent",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          escapeLength: 20,
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+
+    const rotated = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, [
+        { kind: "rotate_instance", instanceId: "A", rotation: 90 },
+      ]),
+      context,
+    );
+    if (!rotated.ok) throw new Error(rotated.error.message);
+    const route = rotated.document.routes.find(
+      (candidate) => candidate.id === "route-agent",
+    )!;
+    const points = routePolyline(rotated.document, resolver, route)?.points;
+    expect(points?.[0]).toEqual({ x: 140, y: 260 });
+    expect(points?.[1]).toEqual({ x: 140, y: 240 });
+    expect(points && isOrthogonal(points)).toBe(true);
+  });
+
   it("stretches a shared Route across two instance moves in one transaction (ADR 0009)", () => {
     const document = documentFixture();
     // Establish a direct Route between A and B.

@@ -6,5 +6,5 @@ It contains obsolete VSS-era visual assumptions and must not be used for
 current implementation.
 
 Use the [`current reading set`](current/README.md), especially the
-[`Razavi component extension procedure`](specs/razavi-component-extension.md),
+[`Razavi visual contract`](specs/razavi-visual-contract.md),
 instead.

@@ -15,9 +15,13 @@ import {
   SegmentModeSchema,
   SchematicDocumentSchema,
   StableIdSchema,
+  inverseTransformPoint,
+  transformPoint,
 } from "@icm/model";
 import type {
+  Orientation,
   Point,
+  Rotation,
   RouteBranch,
   RouteEndpoint,
   SchematicDocument,
@@ -28,9 +32,9 @@ import {
   endpointBelongsToNet,
   isOrthogonal,
   normalizeRouteGeometry,
-  proposeLocalStretch,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
+  resolveSchematicStyleProfile,
   routePolyline,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
@@ -606,6 +610,189 @@ function sameResolvedRoutePoints(
   );
 }
 
+interface NetLabelRouteAnchor {
+  annotationId: string;
+  routeId: string;
+  segmentIndex: number;
+  segmentCount: number;
+  t: number;
+  normalOffset: number;
+  arcFraction: number;
+}
+
+function closestRouteAnchor(
+  points: readonly Point[],
+  position: Point,
+):
+  | (Omit<NetLabelRouteAnchor, "annotationId" | "routeId" | "segmentCount"> & {
+      distanceSquared: number;
+    })
+  | null {
+  const lengths = points.slice(0, -1).map((from, index) => {
+    const to = points[index + 1]!;
+    return Math.hypot(to.x - from.x, to.y - from.y);
+  });
+  const totalLength = lengths.reduce((sum, length) => sum + length, 0);
+  if (totalLength === 0) return null;
+  let traversed = 0;
+  const candidates = lengths.flatMap((length, segmentIndex) => {
+    const from = points[segmentIndex]!;
+    const to = points[segmentIndex + 1]!;
+    if (length === 0) return [];
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const t = Math.max(
+      0,
+      Math.min(
+        1,
+        ((position.x - from.x) * dx + (position.y - from.y) * dy) /
+          (length * length),
+      ),
+    );
+    const anchor = { x: from.x + dx * t, y: from.y + dy * t };
+    const delta = {
+      x: position.x - anchor.x,
+      y: position.y - anchor.y,
+    };
+    const candidate = {
+      segmentIndex,
+      t,
+      normalOffset: delta.x * (-dy / length) + delta.y * (dx / length),
+      arcFraction: (traversed + t * length) / totalLength,
+      distanceSquared: delta.x * delta.x + delta.y * delta.y,
+    };
+    traversed += length;
+    return [candidate];
+  });
+  return (
+    candidates.sort(
+      (left, right) =>
+        left.distanceSquared - right.distanceSquared ||
+        left.segmentIndex - right.segmentIndex,
+    )[0] ?? null
+  );
+}
+
+function captureNetLabelRouteAnchors(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+): NetLabelRouteAnchor[] {
+  const polylines = document.routes.flatMap((route) => {
+    const polyline = routePolyline(document, resolver, route);
+    return polyline ? [{ route, polyline }] : [];
+  });
+  return document.annotations.flatMap((annotation) => {
+    if (annotation.kind !== "net-label" || !annotation.attachedObjectId) {
+      return [];
+    }
+    const closest = polylines
+      .filter(({ route }) => route.netId === annotation.attachedObjectId)
+      .flatMap(({ route, polyline }) => {
+        const anchor = closestRouteAnchor(polyline.points, annotation.position);
+        return anchor
+          ? [
+              {
+                ...anchor,
+                annotationId: annotation.id,
+                routeId: route.id,
+                segmentCount: polyline.points.length - 1,
+              },
+            ]
+          : [];
+      })
+      .sort(
+        (left, right) =>
+          left.distanceSquared - right.distanceSquared ||
+          left.routeId.localeCompare(right.routeId, "en"),
+      )[0];
+    if (!closest) return [];
+    const { distanceSquared: _distanceSquared, ...anchor } = closest;
+    return [anchor];
+  });
+}
+
+function pointAtArcFraction(
+  points: readonly Point[],
+  fraction: number,
+): { segmentIndex: number; t: number } | null {
+  const lengths = points.slice(0, -1).map((from, index) => {
+    const to = points[index + 1]!;
+    return Math.hypot(to.x - from.x, to.y - from.y);
+  });
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  if (total === 0) return null;
+  const target = Math.max(0, Math.min(1, fraction)) * total;
+  let traversed = 0;
+  for (const [segmentIndex, length] of lengths.entries()) {
+    if (length === 0) continue;
+    if (traversed + length >= target || segmentIndex === lengths.length - 1) {
+      return {
+        segmentIndex,
+        t: Math.max(0, Math.min(1, (target - traversed) / length)),
+      };
+    }
+    traversed += length;
+  }
+  return null;
+}
+
+function followNetLabelsOnChangedRoutes(
+  draft: SchematicDocument,
+  resolver: SymbolResolver,
+  anchors: readonly NetLabelRouteAnchor[],
+  changedRouteIds: ReadonlySet<string>,
+  changedObjectIds: Set<string>,
+): void {
+  for (const captured of anchors) {
+    if (
+      !changedRouteIds.has(captured.routeId) ||
+      changedObjectIds.has(captured.annotationId)
+    ) {
+      continue;
+    }
+    const annotation = draft.annotations.find(
+      (candidate) => candidate.id === captured.annotationId,
+    );
+    const route = draft.routes.find(
+      (candidate) => candidate.id === captured.routeId,
+    );
+    if (!annotation || annotation.kind !== "net-label" || !route) continue;
+    const polyline = routePolyline(draft, resolver, route);
+    if (!polyline) continue;
+    const segmentCount = polyline.points.length - 1;
+    const attachment =
+      segmentCount === captured.segmentCount &&
+      captured.segmentIndex < segmentCount
+        ? { segmentIndex: captured.segmentIndex, t: captured.t }
+        : pointAtArcFraction(polyline.points, captured.arcFraction);
+    if (!attachment) continue;
+    const from = polyline.points[attachment.segmentIndex]!;
+    const to = polyline.points[attachment.segmentIndex + 1]!;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy);
+    if (length === 0) continue;
+    const anchor = {
+      x: from.x + dx * attachment.t,
+      y: from.y + dy * attachment.t,
+    };
+    const normal = { x: -dy / length, y: dx / length };
+    const offset = {
+      x: normal.x * captured.normalOffset,
+      y: normal.y * captured.normalOffset,
+    };
+    annotation.position = {
+      x: Math.round(anchor.x + offset.x),
+      y: Math.round(anchor.y + offset.y),
+    };
+    annotation.offset = {
+      x: Math.round(offset.x),
+      y: Math.round(offset.y),
+    };
+    changedObjectIds.add(annotation.id);
+  }
+}
+
 function splitRoute(
   document: SchematicDocument,
   route: RouteBranch,
@@ -697,57 +884,320 @@ function splitRoute(
   };
 }
 
+function samePoint(left: Point, right: Point): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
+function endpointBelongsToInstance(
+  endpoint: RouteEndpoint,
+  instanceId: string,
+): boolean {
+  return endpoint.kind === "terminal" && endpoint.instanceId === instanceId;
+}
+
 /**
- * Apply topology-preserving Route stretch after an instance move. Uses the
- * original (pre-move) document with `proposeLocalStretch`, then writes the
- * proposed waypoints/segmentModes into the draft. Returns the stretched
- * routeIds. Routes with a protected adjacent segment are skipped (the post-loop
- * validation rejects if a skipped Route becomes non-orthogonal and the caller
- * did not re-point it). Per ADR 0009: move stretches, never reroutes.
+ * Move one resolved terminal endpoint while preserving the axis of its
+ * adjacent persisted segment. This changes geometry only; it never changes
+ * Route topology or connectivity.
  */
-function applyStretchedRoutes(
+function followRouteEndpoint(
+  routeId: string,
+  points: Point[],
+  modes: RouteBranch["segmentModes"],
+  side: "from" | "to",
+  oldPoint: Point,
+  newPoint: Point,
+  outward: Point | null,
+): void {
+  if (samePoint(oldPoint, newPoint)) return;
+  const mode = side === "from" ? modes[0] : modes.at(-1);
+  if (mode === "locked" || mode === "trunk") {
+    throw new Error(`Route ${routeId} has a protected adjacent segment`);
+  }
+  const endpointIndex = side === "from" ? 0 : points.length - 1;
+  points[endpointIndex] = { ...newPoint };
+  if (points.length === 2) return;
+
+  const neighborIndex = side === "from" ? 1 : points.length - 2;
+  const neighbor = points[neighborIndex]!;
+  const oldNeighbor = { ...neighbor };
+  if (mode === "escape" && outward) {
+    const escapeLength =
+      Math.abs(oldNeighbor.x - oldPoint.x) +
+      Math.abs(oldNeighbor.y - oldPoint.y);
+    neighbor.x = newPoint.x + outward.x * escapeLength;
+    neighbor.y = newPoint.y + outward.y * escapeLength;
+
+    const nextIndex = side === "from" ? neighborIndex + 1 : neighborIndex - 1;
+    const next = points[nextIndex]!;
+    if (neighbor.x !== next.x && neighbor.y !== next.y) {
+      // Turn away from the rotated/mirrored escape before reconnecting to the
+      // unchanged body. Choosing the perpendicular axis avoids a collinear
+      // U-turn that normalization would collapse back toward the pin.
+      const bridge =
+        outward.x !== 0
+          ? { x: neighbor.x, y: next.y }
+          : { x: next.x, y: neighbor.y };
+      const bridgeModeIndex = side === "from" ? 1 : modes.length - 2;
+      const bridgeMode = modes[bridgeModeIndex] ?? "auto";
+      points.splice(side === "from" ? nextIndex : neighborIndex, 0, bridge);
+      modes.splice(bridgeModeIndex, 1, bridgeMode, bridgeMode);
+    }
+    return;
+  }
+  if (oldPoint.x === neighbor.x && oldPoint.y !== neighbor.y) {
+    neighbor.x = newPoint.x;
+  } else if (oldPoint.y === neighbor.y && oldPoint.x !== neighbor.x) {
+    neighbor.y = newPoint.y;
+  } else {
+    throw new Error(`Route ${routeId} has invalid endpoint geometry`);
+  }
+}
+
+/**
+ * Apply topology-preserving Route geometry after any instance placement
+ * transform. The caller supplies the pre-edit snapshot and the transformed
+ * draft, making move/rotate/mirror share one behavior at the transaction
+ * boundary.
+ */
+function applyInstanceRouteFollow(
   draft: SchematicDocument,
   originalDocument: SchematicDocument,
   resolver: SymbolResolver,
   instanceId: string,
-  newPosition: Point,
-  rejectAt: (
-    code: EditErrorCode,
-    message: string,
-    diagnostics?: readonly EditDiagnostic[],
-    objectIds?: readonly string[],
-  ) => RejectedTransaction,
 ): string[] {
-  let proposals;
-  try {
-    proposals = proposeLocalStretch(
-      originalDocument,
-      resolver,
-      instanceId,
-      newPosition,
-    );
-  } catch {
-    // A Route touching this instance has a protected adjacent segment. Rather
-    // than rejecting the whole move, leave it unstretched: if the caller
-    // re-points that Route later in the same transaction the post-loop
-    // validation will pass; otherwise it rejects with INVALID_RESULT, naming
-    // the Route. This keeps the move+set_route_points pattern working.
-    return [];
-  }
-  const stretched: string[] = [];
-  for (const proposal of proposals) {
+  const changed: string[] = [];
+  for (const originalRoute of originalDocument.routes) {
+    const movesFrom = endpointBelongsToInstance(originalRoute.from, instanceId);
+    const movesTo = endpointBelongsToInstance(originalRoute.to, instanceId);
+    if (!movesFrom && !movesTo) continue;
+
     const route = draft.routes.find(
-      (candidate) => candidate.id === proposal.routeId,
+      (candidate) => candidate.id === originalRoute.id,
     );
-    if (!route) continue;
-    route.waypoints = proposal.waypoints.map((point) => ({ ...point }));
-    route.segmentModes = [...proposal.segmentModes];
-    stretched.push(route.id);
+    const original = routePolyline(originalDocument, resolver, originalRoute);
+    const newFrom = route
+      ? resolveEndpointPoint(draft, resolver, route.from)
+      : null;
+    const newTo = route
+      ? resolveEndpointPoint(draft, resolver, route.to)
+      : null;
+    if (!route || !original || !newFrom || !newTo) continue;
+
+    const points = original.points.map((point) => ({ ...point }));
+    const modes = [...original.segmentModes];
+    try {
+      if (movesFrom) {
+        followRouteEndpoint(
+          route.id,
+          points,
+          modes,
+          "from",
+          original.points[0]!,
+          newFrom,
+          resolveEndpointOutwardDirection(draft, resolver, route.from),
+        );
+      }
+      if (movesTo) {
+        followRouteEndpoint(
+          route.id,
+          points,
+          modes,
+          "to",
+          original.points.at(-1)!,
+          newTo,
+          resolveEndpointOutwardDirection(draft, resolver, route.to),
+        );
+      }
+    } catch {
+      // Preserve the established move+set_route_points escape hatch. A later
+      // explicit edit may provide valid geometry; otherwise final validation
+      // rejects this transaction and names the affected Route.
+      continue;
+    }
+
+    if (points.length === 2 && newFrom.x !== newTo.x && newFrom.y !== newTo.y) {
+      const originallyVertical =
+        original.points[0]!.x === original.points[1]!.x;
+      points.splice(
+        1,
+        0,
+        originallyVertical
+          ? { x: newFrom.x, y: newTo.y }
+          : { x: newTo.x, y: newFrom.y },
+      );
+      const mode = modes[0] ?? "manual";
+      modes.splice(0, 1, mode, mode);
+    }
+
+    const normalized = normalizeRouteGeometry(points, modes);
+    if (!isOrthogonal(normalized.points)) continue;
+    route.waypoints = normalized.points.slice(1, -1);
+    route.segmentModes = normalized.segmentModes;
+    changed.push(route.id);
   }
-  // The caller's rejectAt is accepted to keep the signature symmetric, but
-  // stretching never rejects here; protected segments surface as null above.
-  void rejectAt;
-  return stretched;
+  return changed.sort((left, right) => left.localeCompare(right, "en"));
+}
+
+function followAttachedAnnotations(
+  draft: SchematicDocument,
+  instanceId: string,
+  oldPosition: Point,
+  oldOrientation: Orientation,
+  newPosition: Point,
+  newOrientation: Orientation,
+  changedObjectIds: Set<string>,
+  resolver?: SymbolResolver,
+): void {
+  const directionForRotation = (rotation: Rotation): Point => {
+    switch (rotation) {
+      case 0:
+        return { x: 1, y: 0 };
+      case 90:
+        return { x: 0, y: 1 };
+      case 180:
+        return { x: -1, y: 0 };
+      case 270:
+        return { x: 0, y: -1 };
+    }
+  };
+  const rotationForDirection = (direction: Point): Rotation => {
+    if (direction.x > 0) return 0;
+    if (direction.y > 0) return 90;
+    if (direction.x < 0) return 180;
+    return 270;
+  };
+  const origin = { x: 0, y: 0 };
+  const instance = draft.instances.find(
+    (candidate) => candidate.id === instanceId,
+  );
+  const definition = instance
+    ? resolver?.resolve(instance.symbolId, instance.symbolVariantId)?.definition
+    : undefined;
+  for (const annotation of draft.annotations) {
+    if (annotation.attachedObjectId !== instanceId) continue;
+    const hasRecordedOffset =
+      annotation.offset.x !== 0 ||
+      annotation.offset.y !== 0 ||
+      (annotation.position.x === oldPosition.x &&
+        annotation.position.y === oldPosition.y);
+    const semanticAnchor = hasRecordedOffset
+      ? {
+          x: oldPosition.x + annotation.offset.x,
+          y: oldPosition.y + annotation.offset.y,
+        }
+      : annotation.position;
+    const local = inverseTransformPoint(
+      semanticAnchor,
+      oldPosition,
+      oldOrientation,
+    );
+    const transformedAnchor = transformPoint(
+      local,
+      newPosition,
+      newOrientation,
+    );
+    let position = transformedAnchor;
+    let transformedSide: Point | null = null;
+    if (annotation.kind === "instance-label" && definition) {
+      const box = definition.viewBox;
+      const edges = {
+        left: box.x,
+        right: box.x + box.width,
+        top: box.y,
+        bottom: box.y + box.height,
+      };
+      const candidates = [
+        ...(local.x < edges.left
+          ? [{ side: { x: -1, y: 0 }, gap: edges.left - local.x }]
+          : []),
+        ...(local.x > edges.right
+          ? [{ side: { x: 1, y: 0 }, gap: local.x - edges.right }]
+          : []),
+        ...(local.y < edges.top
+          ? [{ side: { x: 0, y: -1 }, gap: edges.top - local.y }]
+          : []),
+        ...(local.y > edges.bottom
+          ? [{ side: { x: 0, y: 1 }, gap: local.y - edges.bottom }]
+          : []),
+      ].sort((left, right) => left.gap - right.gap);
+      const reference = candidates[0];
+      if (reference) {
+        transformedSide = transformPoint(
+          reference.side,
+          origin,
+          newOrientation,
+        );
+        const corners = [
+          { x: edges.left, y: edges.top },
+          { x: edges.right, y: edges.top },
+          { x: edges.right, y: edges.bottom },
+          { x: edges.left, y: edges.bottom },
+        ].map((corner) => transformPoint(corner, newPosition, newOrientation));
+        const bounds = {
+          left: Math.min(...corners.map((corner) => corner.x)),
+          right: Math.max(...corners.map((corner) => corner.x)),
+          top: Math.min(...corners.map((corner) => corner.y)),
+          bottom: Math.max(...corners.map((corner) => corner.y)),
+        };
+        let fontSize = 15.116 * (annotation.sizeScale ?? 1);
+        try {
+          fontSize =
+            resolveSchematicStyleProfile(draft.presentation.styleProfileId)
+              .typography.instanceFontSize * (annotation.sizeScale ?? 1);
+        } catch {
+          // Keep a deterministic typography fallback for a legacy/unknown
+          // profile; formal rendering reports the invalid profile separately.
+        }
+        if (transformedSide.x > 0) {
+          position = { x: bounds.right + reference.gap, y: position.y };
+        } else if (transformedSide.x < 0) {
+          position = { x: bounds.left - reference.gap, y: position.y };
+        } else if (transformedSide.y > 0) {
+          // SVG y is a baseline. Preserve the visual gap from the glyph top.
+          position = {
+            x: position.x,
+            y: bounds.bottom + reference.gap + fontSize * 1.05,
+          };
+        } else {
+          // Preserve the visual gap from the glyph bottom.
+          position = {
+            x: position.x,
+            y: bounds.top - reference.gap - fontSize * 0.3,
+          };
+        }
+      }
+    }
+    annotation.position = {
+      x: Math.round(position.x),
+      y: Math.round(position.y),
+    };
+    annotation.offset = {
+      x: transformedAnchor.x - newPosition.x,
+      y: transformedAnchor.y - newPosition.y,
+    };
+    if (annotation.kind === "instance-label") {
+      annotation.rotation = 0;
+      annotation.alignment = transformedSide
+        ? transformedSide.x > 0
+          ? "start"
+          : transformedSide.x < 0
+            ? "end"
+            : "middle"
+        : "middle";
+    } else {
+      const oldDirection = directionForRotation(annotation.rotation);
+      const localDirection = inverseTransformPoint(
+        oldDirection,
+        origin,
+        oldOrientation,
+      );
+      annotation.rotation = rotationForDirection(
+        transformPoint(localDirection, origin, newOrientation),
+      );
+    }
+    changedObjectIds.add(annotation.id);
+  }
 }
 
 /**
@@ -814,6 +1264,10 @@ export function executeTransaction(
         ])
       : [],
   );
+  const originalNetLabelAnchors = resolver
+    ? captureNetLabelRouteAnchors(document, resolver)
+    : [];
+  const changedRouteIds = new Set<string>();
   let geometryChanged = false;
   let connectivityChanged = false;
 
@@ -1075,33 +1529,29 @@ export function executeTransaction(
             `Instance is not placed: ${edit.instanceId}`,
           );
         }
-        const delta = {
-          x: edit.position.x - instance.placement.position.x,
-          y: edit.position.y - instance.placement.position.y,
-        };
+        const beforeTransform = structuredClone(draft);
+        const oldPlacement = structuredClone(instance.placement);
         instance.placement.position = structuredClone(edit.position);
-        for (const annotation of draft.annotations) {
-          if (annotation.attachedObjectId === edit.instanceId) {
-            annotation.position.x += delta.x;
-            annotation.position.y += delta.y;
-            changedObjectIds.add(annotation.id);
-          }
-        }
-        // Stretch Routes whose terminal endpoints moved with this instance.
-        // Pass the evolving draft (not the pre-transaction Document) so a
-        // later move_instance in the same transaction sees the geometry
-        // produced by earlier moves on shared Routes. proposeLocalStretch
-        // clones its input and re-moves the (already-moved) instance to
-        // newPosition, reading current waypoints from draft.routes.
+        followAttachedAnnotations(
+          draft,
+          edit.instanceId,
+          oldPlacement.position,
+          oldPlacement,
+          instance.placement.position,
+          instance.placement,
+          changedObjectIds,
+          context.symbolResolver,
+        );
+        // Use the snapshot taken immediately before this edit. This is still
+        // progressive for multi-edit transactions, but unlike the old path it
+        // retains the terminal's actual pre-move coordinates.
         const resolver = context.symbolResolver;
         if (resolver) {
-          const stretched = applyStretchedRoutes(
+          const stretched = applyInstanceRouteFollow(
             draft,
-            draft,
+            beforeTransform,
             resolver,
             edit.instanceId,
-            edit.position,
-            rejectAt,
           );
           for (const routeId of stretched) changedObjectIds.add(routeId);
         }
@@ -1133,7 +1583,30 @@ export function executeTransaction(
             `Instance is not placed: ${edit.instanceId}`,
           );
         }
+        const beforeTransform = structuredClone(draft);
+        const oldPlacement = structuredClone(instance.placement);
         instance.placement.rotation = edit.rotation;
+        followAttachedAnnotations(
+          draft,
+          edit.instanceId,
+          oldPlacement.position,
+          oldPlacement,
+          instance.placement.position,
+          instance.placement,
+          changedObjectIds,
+          context.symbolResolver,
+        );
+        const rotateResolver = context.symbolResolver;
+        if (rotateResolver) {
+          for (const routeId of applyInstanceRouteFollow(
+            draft,
+            beforeTransform,
+            rotateResolver,
+            edit.instanceId,
+          )) {
+            changedObjectIds.add(routeId);
+          }
+        }
         changedObjectIds.add(edit.instanceId);
         break;
       }
@@ -1162,7 +1635,30 @@ export function executeTransaction(
             `Instance is not placed: ${edit.instanceId}`,
           );
         }
+        const beforeTransform = structuredClone(draft);
+        const oldPlacement = structuredClone(instance.placement);
         instance.placement.mirror = edit.mirror;
+        followAttachedAnnotations(
+          draft,
+          edit.instanceId,
+          oldPlacement.position,
+          oldPlacement,
+          instance.placement.position,
+          instance.placement,
+          changedObjectIds,
+          context.symbolResolver,
+        );
+        const mirrorResolver = context.symbolResolver;
+        if (mirrorResolver) {
+          for (const routeId of applyInstanceRouteFollow(
+            draft,
+            beforeTransform,
+            mirrorResolver,
+            edit.instanceId,
+          )) {
+            changedObjectIds.add(routeId);
+          }
+        }
         changedObjectIds.add(edit.instanceId);
         break;
       }
@@ -2050,8 +2546,16 @@ export function executeTransaction(
       }
       if (original !== undefined && resolvedGeometryChanged) {
         changedObjectIds.add(route.id);
+        changedRouteIds.add(route.id);
       }
     }
+    followNetLabelsOnChangedRoutes(
+      draft,
+      resolver,
+      originalNetLabelAnchors,
+      changedRouteIds,
+      changedObjectIds,
+    );
   }
 
   if (connectivityChanged) {

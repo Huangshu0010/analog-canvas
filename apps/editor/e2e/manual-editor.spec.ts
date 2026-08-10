@@ -418,7 +418,6 @@ test("moves an isolated free wire as one route", async ({ page }) => {
     "",
   );
   const before = await readRoutePoints(page, routeId);
-  await clickRoute(page, routeId);
   await dragRouteSegment(page, routeId, { x: 120, y: 80 });
   const after = await readRoutePoints(page, routeId);
   const delta = {
@@ -445,7 +444,6 @@ test("stretches the pointed segment of a selected attached wire", async ({
   await page.getByTestId("terminal-R2-1").click();
 
   const before = await readRoutePoints(page, "route-ui-1");
-  await clickRoute(page, "route-ui-1");
   await dragRouteSegment(page, "route-ui-1", { x: 0, y: 80 });
   const after = await readRoutePoints(page, "route-ui-1");
   expect(after[0]).toEqual(before[0]);
@@ -544,23 +542,14 @@ test("moves a selected wire segment and deletes a connected component safely", a
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
 
-  // Select the exposed middle segment; the terminal escape segments are
-  // intentionally covered by their component hit targets.
-  await clickRoute(page, "route-ui-1", 0.5, 1);
-  const handle = page.getByTestId("route-handle-route-ui-1");
-  const handleBox = await handle.boundingBox();
-  if (!handleBox) throw new Error("Route handle is not measurable");
-  await page.mouse.move(
-    handleBox.x + handleBox.width / 2,
-    handleBox.y + handleBox.height / 2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(
-    handleBox.x + handleBox.width / 2,
-    handleBox.y + handleBox.height / 2 + 80,
-  );
-  await page.mouse.up();
-  expect((await readRoutePoints(page, "route-ui-1")).length).toBe(4);
+  // Drag the exposed middle segment directly through the unified canvas
+  // session; terminal escape segments remain covered by component hit targets.
+  const before = await readRoutePoints(page, "route-ui-1");
+  await dragRouteSegment(page, "route-ui-1", { x: 0, y: 80 });
+  const after = await readRoutePoints(page, "route-ui-1");
+  expect(after[0]).toEqual(before[0]);
+  expect(after.at(-1)).toEqual(before.at(-1));
+  expect(after).not.toEqual(before);
 
   await page.getByTestId("hit-R1").click();
   await openSelectionShelf(page);
@@ -618,7 +607,7 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   );
 });
 
-test("requires selection before a component drag can move it", async ({
+test("moves an unselected component in one thresholded drag", async ({
   page,
 }) => {
   await page.goto("/");
@@ -629,11 +618,27 @@ test("requires selection before a component drag can move it", async ({
   // Placement selects the new part; clear that convenience selection so this
   // is the same gesture a user makes in a dense, established schematic.
   await canvas.click({ position: { x: 760, y: 420 } });
-  await hit.dragTo(canvas, { targetPosition: { x: 440, y: 300 } });
+  const before = await hit.boundingBox();
+  if (!before) throw new Error("Component hit target is not measurable");
+  const start = {
+    x: before.x + before.width * 0.7,
+    y: before.y + before.height * 0.6,
+  };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 74, start.y + 53, { steps: 4 });
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-layer="symbols"] [data-object-id="R1"]')
+        .getAttribute("transform"),
+    )
+    .toContain("translate(");
   await expect(page.getByTestId("revision")).toHaveText("1");
-  await expect(page.getByTestId("status")).toContainText("drag again to move");
-
-  await hit.dragTo(canvas, { targetPosition: { x: 520, y: 340 } });
+  const during = await hit.boundingBox();
+  expect(during?.x).not.toBe(before.x);
+  expect(during?.y).not.toBe(before.y);
+  await page.mouse.up();
   await expect(page.getByTestId("revision")).toHaveText("2");
 });
 
@@ -643,7 +648,9 @@ test("selects an attached label without selecting its host", async ({
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
 
-  await page.getByTestId("annotation-hit-instance-label-R1").click();
+  await page
+    .getByTestId("annotation-hit-instance-label-R1")
+    .click({ modifiers: ["Alt"] });
   await expect(
     page.getByTestId("annotation-hit-instance-label-R1"),
   ).toHaveClass(/hit-target/u);
@@ -655,14 +662,17 @@ test("selects an attached label without selecting its host", async ({
   );
 });
 
-test("moves an attached label with a direct drag", async ({ page }) => {
+test("moves an explicitly selected attached label", async ({ page }) => {
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 320, y: 220 });
 
-  // The same two-stage interaction as a component: select first, then drag.
+  // Text uses the same one-gesture threshold as a component.
   const label = page.getByTestId("annotation-hit-instance-label-R1");
   await expect(label).toBeVisible();
-  await label.click();
+  // The placed component is initially selected and therefore owns an
+  // overlapping drag. Alt cycles to the label once; subsequent drags remain
+  // sticky to that explicit selection.
+  await label.click({ modifiers: ["Alt"] });
   const before = await label.boundingBox();
   expect(before).not.toBeNull();
 
@@ -829,6 +839,20 @@ test("selects and moves multiple instances while viewport gestures stay transien
 
   await page.keyboard.press("r");
   await expect(page.getByTestId("revision")).toHaveText("4");
+});
+
+test("R rotates a selected component instead of entering Rectangle", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "nmos", { x: 420, y: 260 });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  await page.getByTestId("hit-M1").click();
+  await page.keyboard.press("r");
+
+  await expect(page.getByTestId("revision")).toHaveText("2");
+  await expect(page.locator('[data-kind="draft-rectangle"]')).toHaveCount(0);
 });
 
 test("derives crossings and creates junctions only when a wire ends on a route", async ({

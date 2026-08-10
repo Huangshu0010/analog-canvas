@@ -86,6 +86,16 @@ export type ResolvedDraftingGeometry =
       diagnostics: [];
     }
   | {
+      kind: "rectangle";
+      center: Point;
+      width: number;
+      height: number;
+      rotation: number;
+      corners: Point[];
+      bounds: Rect;
+      diagnostics: [];
+    }
+  | {
       kind: "floating-symbol";
       position: Point;
       rotation: 0 | 90 | 180 | 270;
@@ -114,6 +124,8 @@ export function resolveDraftingObjectGeometry(
       return resolveCallout(document, resolver, object);
     case "construction-line":
       return resolveConstructionLine(object);
+    case "rectangle":
+      return resolveRectangle(object);
     case "floating-symbol":
       return resolveFloatingSymbol(document, resolver, object);
   }
@@ -358,6 +370,35 @@ function resolveConstructionLine(
           : null,
     ),
     bounds: paddedBounds(unionBounds(object.points), STROKE_PADDING),
+    diagnostics: [] as [],
+  };
+}
+
+function resolveRectangle(
+  object: Extract<DraftingObject, { kind: "rectangle" }>,
+) {
+  const radians = (object.rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const halfWidth = object.width / 2;
+  const halfHeight = object.height / 2;
+  const corners = [
+    { x: -halfWidth, y: -halfHeight },
+    { x: halfWidth, y: -halfHeight },
+    { x: halfWidth, y: halfHeight },
+    { x: -halfWidth, y: halfHeight },
+  ].map((point) => ({
+    x: object.center.x + point.x * cos - point.y * sin,
+    y: object.center.y + point.x * sin + point.y * cos,
+  }));
+  return {
+    kind: "rectangle" as const,
+    center: { ...object.center },
+    width: object.width,
+    height: object.height,
+    rotation: object.rotation,
+    corners,
+    bounds: paddedBounds(unionBounds(corners), STROKE_PADDING),
     diagnostics: [] as [],
   };
 }

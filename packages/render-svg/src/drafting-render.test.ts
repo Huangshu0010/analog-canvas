@@ -105,6 +105,33 @@ describe("drafting layer rendering (WP-A1b)", () => {
     expect(svg).toContain("stroke-dasharray");
   });
 
+  it("renders a rotated outline rectangle with drafting stroke style", () => {
+    const document = createEmptyDocument("doc", "Rectangle");
+    document.drafting = {
+      objects: [
+        {
+          id: "rect-1",
+          kind: "rectangle",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 50, y: 50 } },
+          center: { x: 50, y: 50 },
+          width: 80,
+          height: 40,
+          rotation: 0,
+          lineStyle: "dotted",
+          styleOverride: { strokeScale: 1.5 },
+        },
+      ],
+      guides: [],
+    };
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('data-kind="draft-rectangle"');
+    expect(svg).toContain('fill="none"');
+    expect(svg).toContain('stroke-dasharray="2 3"');
+    expect(svg).toContain('points="10,30 90,30 90,70 10,70"');
+  });
+
   it("renders a draft arrow with a head (WP-A4)", () => {
     const document = createEmptyDocument("doc", "Drafting");
     document.drafting = {
@@ -179,8 +206,23 @@ describe("drafting layer rendering (WP-A1b)", () => {
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('<path d="M 0 0 Q 50 50');
     // The curve's endpoint tangent is (100,0) - (50,50), not the overall
-    // straight chord. Its head base must therefore leave both x and y.
-    expect(svg).not.toContain('points="0,0');
+    // straight chord. The polygon base must therefore leave both x and y;
+    // a horizontal head would have both base vertices symmetric about y = 0.
+    const polygon = svg.match(/<polygon points="([^"]+)"/)?.[1];
+    expect(polygon).toBeDefined();
+    const vertices = polygon!
+      .split(" ")
+      .map((vertex) => vertex.split(",").map(Number));
+    expect(vertices[0]).toEqual([100, 0]);
+    const baseCenter = {
+      x: (vertices[1]![0]! + vertices[2]![0]!) / 2,
+      y: (vertices[1]![1]! + vertices[2]![1]!) / 2,
+    };
+    // Tip − base centre is parallel to the final quadratic tangent (50,-50).
+    const headDirection = { x: 100 - baseCenter.x, y: -baseCenter.y };
+    expect(headDirection.x).toBeGreaterThan(0);
+    expect(headDirection.y).toBeLessThan(0);
+    expect(Math.abs(headDirection.x)).toBeCloseTo(Math.abs(headDirection.y), 6);
   });
 
   it("renders a floating symbol with its primitives (WP-A4)", () => {

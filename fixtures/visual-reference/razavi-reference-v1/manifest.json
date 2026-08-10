@@ -37,6 +37,8 @@
   "currentPortGeometrySha256": "182bc62fdec937cec49051ba5ad1ff802b8d23a576ff2695f8fdce02b0fa66fd",
   "vddGeometryPath": "vdd-geometry.json",
   "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
+  "fidelityTargetsPath": "fidelity-targets.json",
+  "fidelityTargetsSha256": "1191801074dba359cf6b05bcccdbe729fe35476bcea8fae7b05fb306e8ebf86b",
   "pixels": {
     "width": 1204,
     "height": 794

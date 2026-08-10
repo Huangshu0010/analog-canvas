@@ -2,7 +2,11 @@ import { createEmptyDocument } from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
-import { proposeGroupMove, proposeGroupStretch } from "./stretch.js";
+import {
+  proposeGroupMove,
+  proposeGroupStretch,
+  proposeWireSegmentDrag,
+} from "./stretch.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -207,5 +211,202 @@ describe("group route stretch", () => {
         { routeId: "route-2", waypoints: [] },
       ],
     });
+  });
+});
+
+describe("topology-aware wire segment drag", () => {
+  function closedLoopDocument(splitAtTopRight: boolean) {
+    const document = createEmptyDocument("document-loop", "Loop");
+    document.ports.push(
+      {
+        id: "top-pin",
+        name: "TOP",
+        direction: "bidirectional",
+        position: { x: 0, y: 0 },
+      },
+      {
+        id: "bottom-pin",
+        name: "BOTTOM",
+        direction: "bidirectional",
+        position: { x: 0, y: 100 },
+      },
+    );
+    document.nets.push({
+      id: "net-loop",
+      scope: "local",
+      terminals: [],
+      ports: ["top-pin", "bottom-pin"],
+    });
+    if (!splitAtTopRight) {
+      document.routes.push({
+        id: "loop",
+        netId: "net-loop",
+        from: { kind: "port", portId: "bottom-pin" },
+        to: { kind: "port", portId: "top-pin" },
+        waypoints: [
+          { x: 100, y: 100 },
+          { x: 100, y: 0 },
+        ],
+        segmentModes: ["manual", "manual", "manual"],
+      });
+      return document;
+    }
+    document.junctions.push({
+      id: "top-right",
+      netId: "net-loop",
+      position: { x: 100, y: 0 },
+      role: "route-anchor",
+    });
+    document.routes.push(
+      {
+        id: "loop-side",
+        netId: "net-loop",
+        from: { kind: "port", portId: "bottom-pin" },
+        to: { kind: "junction", junctionId: "top-right" },
+        waypoints: [{ x: 100, y: 100 }],
+        segmentModes: ["manual", "manual"],
+      },
+      {
+        id: "loop-top",
+        netId: "net-loop",
+        from: { kind: "junction", junctionId: "top-right" },
+        to: { kind: "port", portId: "top-pin" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+    return document;
+  }
+
+  it("shrinks a split closed loop without leaving its route-anchor behind", () => {
+    const document = closedLoopDocument(true);
+
+    expect(
+      proposeWireSegmentDrag(document, resolver, "loop-side", 1, {
+        x: 60,
+        y: 50,
+      }),
+    ).toEqual({
+      junctions: [{ junctionId: "top-right", position: { x: 60, y: 0 } }],
+      routes: [
+        {
+          routeId: "loop-side",
+          waypoints: [{ x: 60, y: 100 }],
+          segmentModes: ["manual", "manual"],
+        },
+        {
+          routeId: "loop-top",
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ],
+    });
+  });
+
+  it("is invariant to whether the same visible loop is one or two Routes", () => {
+    const single = proposeWireSegmentDrag(
+      closedLoopDocument(false),
+      resolver,
+      "loop",
+      1,
+      { x: 60, y: 50 },
+    );
+    const split = proposeWireSegmentDrag(
+      closedLoopDocument(true),
+      resolver,
+      "loop-side",
+      1,
+      { x: 60, y: 50 },
+    );
+
+    expect(single).toEqual({
+      junctions: [],
+      routes: [
+        {
+          routeId: "loop",
+          waypoints: [
+            { x: 60, y: 100 },
+            { x: 60, y: 0 },
+          ],
+          segmentModes: ["manual", "manual", "manual"],
+        },
+      ],
+    });
+    expect(split.junctions[0]!.position).toEqual(
+      single.routes[0]!.waypoints[1],
+    );
+    expect(
+      split.routes.find((route) => route.routeId === "loop-side")!.waypoints,
+    ).toEqual([single.routes[0]!.waypoints[0]]);
+  });
+
+  it("moves a dangling route-anchor but keeps a real branch fixed", () => {
+    const loose = closedLoopDocument(true);
+    loose.routes.splice(1, 1);
+    const looseProposal = proposeWireSegmentDrag(
+      loose,
+      resolver,
+      "loop-side",
+      1,
+      { x: 70, y: 50 },
+    );
+    expect(looseProposal.junctions).toEqual([
+      { junctionId: "top-right", position: { x: 70, y: 0 } },
+    ]);
+
+    const branch = closedLoopDocument(true);
+    branch.ports.push({
+      id: "branch-pin",
+      name: "BRANCH",
+      direction: "bidirectional",
+      position: { x: 140, y: 0 },
+    });
+    branch.nets[0]!.ports.push("branch-pin");
+    branch.routes.push({
+      id: "loop-branch",
+      netId: "net-loop",
+      from: { kind: "junction", junctionId: "top-right" },
+      to: { kind: "port", portId: "branch-pin" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    const branchProposal = proposeWireSegmentDrag(
+      branch,
+      resolver,
+      "loop-side",
+      1,
+      { x: 70, y: 50 },
+    );
+    expect(branchProposal.junctions).toEqual([]);
+    expect(branchProposal.routes).toEqual([
+      {
+        routeId: "loop-side",
+        waypoints: [
+          { x: 70, y: 100 },
+          { x: 70, y: 0 },
+        ],
+        segmentModes: ["manual", "manual", "manual"],
+      },
+    ]);
+  });
+
+  it("rejects protected selected and incident geometry", () => {
+    const selectedProtected = closedLoopDocument(true);
+    selectedProtected.routes[0]!.segmentModes[1] = "locked";
+    expect(() =>
+      proposeWireSegmentDrag(selectedProtected, resolver, "loop-side", 1, {
+        x: 60,
+        y: 50,
+      }),
+    ).toThrow("protected");
+
+    const incidentProtected = closedLoopDocument(true);
+    incidentProtected.routes[1]!.segmentModes[0] = "trunk";
+    expect(() =>
+      proposeWireSegmentDrag(incidentProtected, resolver, "loop-side", 1, {
+        x: 60,
+        y: 50,
+      }),
+    ).toThrow("protected adjacent segment");
   });
 });

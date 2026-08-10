@@ -8,12 +8,13 @@
 // Usage:
 //   node scripts/razavi-fidelity-diff.mjs [device...] [--threshold 160] [--out dir]
 //
-//   device: nmos | pmos | nmos3 | pmos3 | voltage-source | current-source | current-source-compact | formal-port | formal-route-wire | formal-route-current-arrow | vdd | ground | resistor | capacitor-vertical | capacitor-horizontal
-//           (default: all raster-owned devices)
+//   device: any ID registered in
+//           fixtures/visual-reference/razavi-reference-v1/fidelity-targets.json
+//           (default: every registered target)
 //
 // This tool is read-only: it never edits source configs. Use its report to
-// guide manual edits to mos-geometry.json / peripheral-geometry.json /
-// style-profile.ts, then re-run generate-razavi-*-assets.mjs and this script.
+// guide manual edits to the registered measurement/generator/style source, then
+// re-run the relevant generator, rebuild the consumed packages, and run again.
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
@@ -33,6 +34,7 @@ import {
   encodeReportRasters,
 } from "./lib/razavi-fidelity.mjs";
 import { decodePng } from "./lib/png-io.mjs";
+import { loadRazaviReferenceAuthority } from "./lib/razavi-reference-authority.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const referenceRoot = resolve(
@@ -48,7 +50,8 @@ const optionValueIndices = new Set(
     .filter((index) => index > 0),
 );
 const devices = args.filter(
-  (argument, index) => !argument.startsWith("--") && !optionValueIndices.has(index),
+  (argument, index) =>
+    !argument.startsWith("--") && !optionValueIndices.has(index),
 );
 const thresholdIdx = args.indexOf("--threshold");
 const threshold =
@@ -56,113 +59,66 @@ const threshold =
 const outIdx = args.indexOf("--out");
 const outDir = outIdx >= 0 ? args[outIdx + 1] : resolve(referenceRoot, "diff");
 
-// Device → where its geometry lives + variant flag.
-// The reference six-panel renders MOS in their 3-terminal form (source arrow,
-// no bulk lead), so the default MOS comparison uses the 3-terminal variant.
-// nmos4/pmos4 entries compare the full 4-terminal bulk presentation instead.
-const DEVICE_GEOMETRY = {
-  nmos: {
-    file: "mos-geometry.json",
-    key: "nmos",
-    useVariant: true,
-    label: "nmos (3-term)",
-  },
-  pmos: {
-    file: "mos-geometry.json",
-    key: "pmos",
-    useVariant: true,
-    label: "pmos (3-term)",
-  },
-  nmos4: {
-    file: "mos-geometry.json",
-    key: "nmos",
-    useVariant: false,
-    label: "nmos (4-term)",
-  },
-  pmos4: {
-    file: "mos-geometry.json",
-    key: "pmos",
-    useVariant: false,
-    label: "pmos (4-term)",
-  },
-  "voltage-source": {
-    file: "peripheral-geometry.json",
-    key: "voltage-source",
-    useVariant: false,
-  },
-  "current-source": {
-    file: "peripheral-geometry.json",
-    key: "current-source",
-    useVariant: false,
-  },
-  "current-source-compact": {
-    file: "current-port-geometry.json",
-    key: "current-source",
-    symbolId: "current-source",
-    useVariant: false,
-  },
-  vdd: {
-    file: "vdd-geometry.json",
-    key: "vdd",
-    useVariant: false,
-  },
-  "formal-port": {
-    file: "current-port-geometry.json",
-    collection: "ports",
-    key: "hollowOrigin",
-    formal: "port",
-  },
-  "formal-route-wire": {
-    file: "current-port-geometry.json",
-    collection: "formal",
-    key: "route-wire",
-    formal: "wire",
-  },
-  "formal-route-current-arrow": {
-    file: "current-port-geometry.json",
-    collection: "formal",
-    key: "route-current-arrow",
-    formal: "route-current-arrow",
-  },
-  ground: {
-    file: "peripheral-geometry.json",
-    key: "ground",
-    useVariant: false,
-  },
-  resistor: {
-    file: "passive-geometry.json",
-    key: "resistor",
-    useVariant: false,
-  },
-  "capacitor-vertical": {
-    file: "capacitor-geometry.json",
-    key: "capacitor-vertical",
-    symbolId: "capacitor",
-    useVariant: false,
-  },
-  "capacitor-horizontal": {
-    file: "capacitor-geometry.json",
-    key: "capacitor-horizontal",
-    symbolId: "capacitor",
-    useVariant: false,
-  },
-};
+// Load the authority manifest and its single declarative fidelity-target
+// registry. Device identity, measurement selection, Symbol variants, and formal
+// scene kinds are reference-owned data rather than a second hard-coded CLI map.
+const { manifest, files: authorityFiles } =
+  await loadRazaviReferenceAuthority(referenceRoot);
+const registry = JSON.parse(
+  authorityFiles.get(manifest.fidelityTargetsPath).toString("utf8"),
+);
+if (
+  registry.schemaVersion !== 1 ||
+  registry.referenceId !== manifest.id ||
+  !Array.isArray(registry.targets) ||
+  registry.targets.length === 0
+) {
+  throw new Error("Invalid Razavi fidelity target registry");
+}
+
+const DEVICE_GEOMETRY = {};
+const formalKinds = new Set(["port", "wire", "route-current-arrow"]);
+for (const target of registry.targets) {
+  if (
+    typeof target.id !== "string" ||
+    typeof target.measurementPath !== "string" ||
+    typeof target.measurementKey !== "string" ||
+    DEVICE_GEOMETRY[target.id]
+  ) {
+    throw new Error(
+      `Invalid or duplicate fidelity target ${target.id ?? "<unknown>"}`,
+    );
+  }
+  const hasSymbol = typeof target.symbolId === "string";
+  const hasFormal = formalKinds.has(target.formalKind);
+  if (hasSymbol === hasFormal) {
+    throw new Error(
+      `Fidelity target ${target.id} must select exactly one Symbol or formal scene`,
+    );
+  }
+  DEVICE_GEOMETRY[target.id] = {
+    file: target.measurementPath,
+    key: target.measurementKey,
+    collection: target.measurementCollection,
+    symbolId: target.symbolId,
+    useVariant: target.useVariant ?? false,
+    label: target.label,
+    formal: target.formalKind,
+    window: target.window,
+  };
+}
 
 const ALL_DEVICES = Object.keys(DEVICE_GEOMETRY);
 const targets = devices.length ? devices : ALL_DEVICES;
-
-// Validate.
-for (const d of targets) {
-  if (!DEVICE_GEOMETRY[d]) {
-    console.error(`Unknown device: ${d}\nValid: ${ALL_DEVICES.join(", ")}`);
+for (const device of targets) {
+  if (!DEVICE_GEOMETRY[device]) {
+    console.error(
+      `Unknown device: ${device}\nValid: ${ALL_DEVICES.join(", ")}`,
+    );
     process.exit(1);
   }
 }
 
-// Load manifest + reference + geometry files.
-const manifest = JSON.parse(
-  await readFile(resolve(referenceRoot, "manifest.json"), "utf8"),
-);
 const referencePath = resolve(referenceRoot, manifest.assetPath);
 const geometryFiles = new Map();
 async function loadGeometry(file) {
@@ -376,7 +332,7 @@ for (const deviceId of targets) {
     threshold: resolvedThreshold,
     useVariant: meta.useVariant,
     rotation: measurement.rotation ?? 0,
-    window: measurement.window ?? measurement.cropWindowPx,
+    window: meta.window ?? measurement.window ?? measurement.cropWindowPx,
     antiAliasSensitive: Boolean(meta.formal),
     rasterize: meta.formal
       ? (window, originInWindow) =>

@@ -52,14 +52,14 @@ File | Edit | View | Export | More
 The exact visual treatment may use icons, labels, or responsive grouping, but
 the information architecture is normative:
 
-| Group   | Commands                                                                            |
-| ------- | ----------------------------------------------------------------------------------- |
-| File    | Open, Save, Import, recent/example documents                                        |
-| Edit    | Undo, Redo, Copy, Paste, Delete, and contextual Align                               |
-| Library | searchable/collapsible component families; Wire, Text, Arrow, and Construction line |
-| View    | Fit, Diagnostics, Grid, and presentation overlays                                   |
-| Export  | SVG, PNG, and PDF from one menu                                                     |
-| More    | route-attached current arrow, Guides, help, and shortcut reference                  |
+| Group   | Commands                                                                                       |
+| ------- | ---------------------------------------------------------------------------------------------- |
+| File    | Open, Save, Import, recent/example documents                                                   |
+| Edit    | Undo, Redo, Copy, Paste, Delete, and contextual Align                                          |
+| Library | searchable/collapsible component families; Wire, Text, Arrow, Construction line, and Rectangle |
+| View    | Fit, Diagnostics, Grid, and presentation overlays                                              |
+| Export  | SVG, PNG, and PDF from one menu                                                                |
+| More    | route-attached current arrow, Guides, help, and shortcut reference                             |
 
 The following are not permanent production toolbar modes:
 
@@ -79,16 +79,19 @@ freezes the V1 tool surface and command mapping.
 The left Library owns Text and free drawing tools. `More` retains only
 route-attached annotation and Guide commands:
 
-| Group   | Contents                                                                          | Shortcut           |
-| ------- | --------------------------------------------------------------------------------- | ------------------ |
-| Text    | text, caption, format tools                                                       | `T` text placement |
-| Markup  | free arrow and construction line from the Library; route arrow remains contextual | `A` arrow          |
-| Guides  | add horizontal/vertical guide, show/hide, lock, clear unlocked                    | `G` guide tool     |
-| Palette | search all low-frequency commands                                                 | `Ctrl+K`           |
+| Group   | Contents                                                                     | Shortcut                 |
+| ------- | ---------------------------------------------------------------------------- | ------------------------ |
+| Text    | text, caption, format tools                                                  | `T` text placement       |
+| Markup  | free arrow, construction line, and rectangle; route arrow remains contextual | `A` arrow, `R` rectangle |
+| Guides  | add horizontal/vertical guide, show/hide, lock, clear unlocked               | `G` guide tool           |
+| Palette | search all low-frequency commands                                            | `Ctrl+K`                 |
 
-`R`, `W`, undo/redo, and the existing keyboard contract are unchanged. Canvas
-shortcuts must not fire while a rich-text editor, input, or search field has
-focus.
+`R` is context-dispatched on the unified canvas: it rotates a selected placed
+component, arrow, construction line, or rectangle by +90 degrees; when there is
+no rotatable selection it follows Virtuoso Layout by entering Rectangle mode.
+`Shift+R` rotates the same selection by -90 degrees. `W`, undo/redo, and the
+rest of the keyboard contract are unchanged. Canvas shortcuts must not fire
+while a rich-text editor, input, or search field has focus.
 
 Rich text is edited in place: selecting `Text` and clicking canvas/Route/object
 shows a free/route/object anchor preview, then an inline editor. `Enter` breaks
@@ -107,6 +110,9 @@ callout is first pointed at the explained object/node, then dragged to the
 explanation; its text and leader select, move, copy, and delete as one object.
 A construction line is visually distinct from Wire (dashed/lighter preview) and
 never shows an electrical snap/junction preview.
+A rectangle is a persisted, non-electrical outline with four resize handles;
+its line style, stroke width, bearing, lock, movement, and deletion use the same
+drafting controls as free arrows and construction lines.
 
 Guides are dragged from a ruler (or `G` then click for touch). Drag moves the
 guide, double-click locks it, `Delete` removes an unlocked guide. Snap priority
@@ -116,15 +122,19 @@ sessions. Copy/paste uses fresh IDs and remaps internal object/route anchors in
 the same Document; external target anchors become free anchors with a prompt.
 
 Hit testing uses a screen-pixel tolerance, not a large document-coordinate
-circle: text box/handle first, then DraftingObject, then Symbol/Route. `Alt`
-cycles candidates at the same point, so text hidden behind a device remains
-selectable without enlarging pin selection circles.
+circle. The canvas resolves one semantic candidate list at pointer-down rather
+than allowing SVG paint order to choose an event owner. Explicit handles rank
+first; an already-selected object is sticky across overlapping text, symbols,
+Routes, and drawing geometry. `Alt` chooses the next candidate at the same
+point, so an attached label remains reachable without allowing it to steal a
+component or short Route drag.
 
 ## Keyboard contract
 
 | Input                      | Action                                                                             |
 | -------------------------- | ---------------------------------------------------------------------------------- |
-| `R` / `Shift+R`            | Rotate the selected placeable objects by 90 / -90 degrees.                         |
+| `R`                        | Rotate a rotatable selection +90°; otherwise enter Rectangle mode.                 |
+| `Shift+R`                  | Rotate the selected placeable objects by -90 degrees.                              |
 | `F` / `Shift+F`            | Flip selected instances left/right or top/bottom in screen space.                  |
 | `W`                        | Enter or continue Wire mode.                                                       |
 | `Escape`                   | Cancel the active gesture, then return to Pointer mode.                            |
@@ -156,17 +166,39 @@ second mirror enum, a new stored field, or an Agent API operation.
 
 - Clicking a selectable object selects it; clicking blank canvas clears the
   selection.
+- Pointer-down on a movable object begins one pending canvas gesture. Releasing
+  within the 4-pixel screen-space threshold is a click; crossing the threshold
+  becomes a drag immediately, whether or not the object was selected before
+  pointer-down. There is no "select, then drag again" state.
 - `Shift`-click or `Ctrl`-click adds or removes an object from the selection.
 - Dragging blank canvas creates a rectangular selection preview. Releasing
   commits the selection; `Escape` restores the prior selection.
-- Dragging any selected movable object moves the whole movable selection in
-  one atomic transaction.
+- Dragging a movable object selects it and moves it. If it already belongs to a
+  movable multi-selection, the whole movable selection moves in one atomic
+  transaction.
 - An atomic multi-object move includes Junctions, Routes, and annotations whose
   complete electrical subgraph is internal to the selected instances. Internal
   geometry translates by the common delta; only connections crossing the
   selection boundary receive deterministic local stretch. If any member is
   locked or violates a constraint, the whole move is rejected with a visible
   reason.
+- Instance, annotation, drafting-object, drafting-handle, Route, and Guide
+  drags share one transient pointer-session controller. It owns the threshold,
+  pointer capture, animation-frame coalescing, cancel cleanup, and pointer-up
+  boundary. Object-specific geometry remains outside the controller and
+  commits through the existing typed edit engine exactly once.
+- A drag latches its resolved object at pointer-down. Pointer movement never
+  reruns hit testing and therefore cannot switch from a symbol or Route to an
+  overlapping label halfway through the gesture.
+- Live movement preserves the original grab offset and follows the unsnapped
+  pointer continuously. Grid, pin, Route, and constraint snapping is applied
+  only to the pointer-up proposal. The painted formal object and its hit
+  outline share one temporary SVG transform/geometry preview, which is restored
+  before the single typed transaction is committed.
+- High-frequency pointer movement must not rebuild the formal scene or rerun
+  crossings, flightlines, or visual diagnostics. These derived results are
+  memoized by Document/view revision; transient previews update at most once
+  per animation frame.
 
 ### Viewport
 
@@ -377,7 +409,7 @@ immutable build-time evidence; the runtime must not require Visio or parse
 stateDiagram-v2
     [*] --> Pointer
     Pointer --> BoxSelect: drag blank canvas
-    Pointer --> MoveSelection: drag selected object
+    Pointer --> MoveSelection: drag movable object beyond threshold
     Pointer --> PlaceComponent: choose component
     Pointer --> Wire: W or drag from endpoint/segment
     BoxSelect --> Pointer: release or cancel

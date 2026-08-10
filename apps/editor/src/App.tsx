@@ -50,6 +50,7 @@ import type {
 } from "@icm/model";
 import {
   buildSvgScene,
+  defaultInstanceLabelPlacement,
   renderSymbolDefinitionBody,
   resolveSchematicStyleProfile,
   schematicTextDocument,
@@ -67,6 +68,10 @@ import type { SymbolDefinition } from "@icm/symbols";
 
 import { copySelection, proposePaste } from "./clipboard";
 import type { SchematicClipboard } from "./clipboard";
+import { startCanvasDragSession } from "./canvas-drag-session";
+import type { CanvasDragSession } from "./canvas-drag-session";
+import { startCanvasDragVisual } from "./canvas-drag-visual";
+import { resolveCanvasHitAtPoint } from "./canvas-hit-resolver";
 import {
   collectVisualRouteDeletion,
   explicitAnnotationRemovals,
@@ -87,11 +92,7 @@ import type { RecoveryScheduler } from "./recovery-scheduler";
 import { RichTextEditor } from "./rich-text-editor";
 import { reflectOrientation } from "./shortcut-orientation";
 import type { ScreenFlip } from "./shortcut-orientation";
-import {
-  exceedsDragThreshold,
-  instanceVisibleHitBox,
-  mayStartSelectedDrag,
-} from "./selection-geometry";
+import { instanceVisibleHitBox } from "./selection-geometry";
 import { buildManualWirePath } from "./wire-path";
 
 const RECOVERY_KEY = "icm.recovery.v1";
@@ -111,10 +112,6 @@ interface DragPreview {
   instanceIds: string[];
   originalPositions: Record<string, Point>;
   pointerStart: Point;
-  rawPointerStart: Point;
-  position: Point;
-  pointerId: number;
-  dragging: boolean;
 }
 
 interface BoxPreview {
@@ -142,29 +139,20 @@ interface RouteStretchPreview {
   kind: "segment" | "translate";
   start: Point;
   point: Point;
-  pointerId: number;
 }
 
 interface AnnotationDragPreview {
   annotationId: string;
   originalPosition: Point;
   pointerStart: Point;
-  rawPointerStart: Point;
-  position: Point;
-  pointerId: number;
-  dragging: boolean;
 }
 
-interface DraftingDragPreview {
+// Handle drags are geometry edits rather than translations.  Keep a complete
+// transient object so the formal SVG renderer can redraw both a curved shaft
+// and its arrow head from the same latest control point before pointer-up.
+interface DraftingHandlePreview {
   objectId: string;
-  originalPosition: Point;
-  pointerStart: Point;
-  position: Point;
-  pointerId: number;
-}
-
-interface DraftingDragSession {
-  cancel: () => void;
+  object: DraftingObject;
 }
 
 type SupplementalSelection = Omit<VisualSelection, "instanceIds">;
@@ -176,7 +164,8 @@ const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
   draftingIds: [],
 };
 
-type EditorTool = "pointer" | "wire" | "guide" | "construction-line" | "arrow";
+type EditorTool =
+  "pointer" | "wire" | "guide" | "construction-line" | "arrow" | "rectangle";
 
 interface WireSource {
   endpoint: RouteEndpoint;
@@ -760,6 +749,8 @@ function DraftingCreatePreview({
   const dy = hover.y - start.y;
   const length = Math.hypot(dx, dy);
   const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const rectangle = normalizedRect(start, hover);
+  const isRectangle = tool === "rectangle";
   const showHead = tool === "arrow" && length > 1;
   const head = styleProfile.annotations.arrowHeadLength;
   const halfHeadWidth = styleProfile.annotations.arrowHeadWidth / 2;
@@ -771,11 +762,15 @@ function DraftingCreatePreview({
   const labelY = start.y + dy / 2 - 8;
   return (
     <g data-testid="drafting-create-preview" pointerEvents="none">
-      <polyline
-        className="drafting-create-preview"
-        points={polylinePoints(path)}
-        fill="none"
-      />
+      {isRectangle ? (
+        <rect className="drafting-create-preview" {...rectangle} fill="none" />
+      ) : (
+        <polyline
+          className="drafting-create-preview"
+          points={polylinePoints(path)}
+          fill="none"
+        />
+      )}
       {/* start anchor (filled) */}
       <circle
         className="drafting-create-anchor"
@@ -791,15 +786,16 @@ function DraftingCreatePreview({
         r="3"
       />
       {/* accumulated vertices */}
-      {waypoints.map((point, index) => (
-        <circle
-          key={`draft-preview-vx-${index}`}
-          className="drafting-create-anchor draft-create-anchor-vx"
-          cx={point.x}
-          cy={point.y}
-          r="2.5"
-        />
-      ))}
+      {!isRectangle &&
+        waypoints.map((point, index) => (
+          <circle
+            key={`draft-preview-vx-${index}`}
+            className="drafting-create-anchor draft-create-anchor-vx"
+            cx={point.x}
+            cy={point.y}
+            r="2.5"
+          />
+        ))}
       {showHead ? (
         <polygon
           className="drafting-create-head"
@@ -820,7 +816,9 @@ function DraftingCreatePreview({
         y={labelY}
         textAnchor="middle"
       >
-        {Math.round(length)} · {Math.round(angle)}°
+        {isRectangle
+          ? `${Math.round(rectangle.width)} × ${Math.round(rectangle.height)}`
+          : `${Math.round(length)} · ${Math.round(angle)}°`}
       </text>
     </g>
   );
@@ -852,15 +850,12 @@ export function App({ project: initialProject }: AppProps) {
   const [importDiagnostics, setImportDiagnostics] = useState<SpiceDiagnostic[]>(
     [],
   );
-  const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [routeStretchPreview, setRouteStretchPreview] =
     useState<RouteStretchPreview | null>(null);
-  const [annotationDragPreview, setAnnotationDragPreview] =
-    useState<AnnotationDragPreview | null>(null);
-  const [draftingDragPreview, setDraftingDragPreview] =
-    useState<DraftingDragPreview | null>(null);
+  const [draftingHandlePreview, setDraftingHandlePreview] =
+    useState<DraftingHandlePreview | null>(null);
   // Two-phase drafting creation state (mirrors the wire tool's
   // wireSource / wirePreviewPoint / wireWaypoints model). The first click fixes
   // the start (and a snap candidate), hover updates the preview, the next click
@@ -905,10 +900,7 @@ export function App({ project: initialProject }: AppProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const transactionCounter = useRef(0);
   const routeCounter = useRef(0);
-  // P0-2: live position of an in-progress drafting drag; read in pointerup so
-  // the commit runs exactly once (state updaters must stay side-effect free).
-  const draftingDragPositionRef = useRef<Point | null>(null);
-  const draftingDragSessionRef = useRef<DraftingDragSession | null>(null);
+  const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const instanceCounter = useRef(0);
   const clipboard = useRef<SchematicClipboard | null>(null);
   const pasteCounter = useRef(0);
@@ -944,7 +936,24 @@ export function App({ project: initialProject }: AppProps) {
     project.documents.find(
       (candidate) => candidate.id === project.topDocumentId,
     )!;
-  const scene = buildSvgScene(document, resolver, { bounds: viewBox });
+  const renderedDocument = useMemo(() => {
+    if (!draftingHandlePreview || !document.drafting) return document;
+    return {
+      ...document,
+      drafting: {
+        ...document.drafting,
+        objects: document.drafting.objects.map((object) =>
+          object.id === draftingHandlePreview.objectId
+            ? draftingHandlePreview.object
+            : object,
+        ),
+      },
+    };
+  }, [document, draftingHandlePreview]);
+  const scene = useMemo(
+    () => buildSvgScene(renderedDocument, resolver, { bounds: viewBox }),
+    [renderedDocument, resolver, viewBox],
+  );
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
@@ -986,6 +995,22 @@ export function App({ project: initialProject }: AppProps) {
         (object) => object.id === selectedDraftingId,
       )
     : undefined;
+  const hasRotatableSelection =
+    selectedIds.some((id) =>
+      document.instances.some(
+        (instance) => instance.id === id && instance.placement !== null,
+      ),
+    ) ||
+    visualSelection.draftingIds.some((id) => {
+      const object = document.drafting?.objects.find(
+        (candidate) => candidate.id === id,
+      );
+      return (
+        object?.kind === "arrow" ||
+        object?.kind === "construction-line" ||
+        object?.kind === "rectangle"
+      );
+    });
   const hasInspectableSelection = Boolean(
     selectedInstance ||
     selectedRoute ||
@@ -1000,89 +1025,105 @@ export function App({ project: initialProject }: AppProps) {
     selectedEndpoint?.endpoint.kind === "port"
       ? selectedEndpoint.endpoint.portId
       : null;
-  const flightlines = deriveFlightlines(document, resolver);
-  const crossings = deriveCrossings(document, resolver);
-  const visualDiagnostics = diagnoseVisualQuality(document, resolver);
+  const flightlines = useMemo(
+    () => deriveFlightlines(document, resolver),
+    [document, resolver],
+  );
+  const crossings = useMemo(
+    () => deriveCrossings(document, resolver),
+    [document, resolver],
+  );
+  const visualDiagnostics = useMemo(
+    () => diagnoseVisualQuality(document, resolver),
+    [document, resolver],
+  );
   const structuralDiagnostics = visualDiagnostics.filter(
     (diagnostic) => diagnostic.category === "structural",
   );
   const visualObservations = visualDiagnostics.filter(
     (diagnostic) => diagnostic.category === "observation",
   );
-  const visibleEndpoints: WireSource[] = [
-    ...document.instances.flatMap((instance) => {
-      if (!instance.placement) return [];
-      const resolved = resolver.resolve(
-        instance.symbolId,
-        instance.symbolVariantId,
-      );
-      if (!resolved) return [];
-      return resolved.definition.pins
-        .filter((pin) =>
-          isVisibleEndpoint(document, resolver, {
-            kind: "terminal",
-            instanceId: instance.id,
-            pinName: pin.name,
-          }),
-        )
-        .map((pin): WireSource => {
-          const endpoint: RouteEndpoint = {
-            kind: "terminal",
-            instanceId: instance.id,
-            pinName: pin.name,
-          };
-          return {
-            endpoint,
-            netId: endpointNetId(document, endpoint),
-            point: transformPoint(
-              pin.at,
-              instance.placement!.position,
-              instance.placement!,
-            ),
-            preludeEdits: [],
-          };
-        });
-    }),
-    ...document.ports.flatMap((port): WireSource[] =>
-      port.position
-        ? [
-            {
-              endpoint: { kind: "port", portId: port.id },
-              netId: endpointNetId(document, {
-                kind: "port",
-                portId: port.id,
-              }),
-              point: port.position,
+  const visibleEndpoints: WireSource[] = useMemo(
+    () => [
+      ...document.instances.flatMap((instance) => {
+        if (!instance.placement) return [];
+        const resolved = resolver.resolve(
+          instance.symbolId,
+          instance.symbolVariantId,
+        );
+        if (!resolved) return [];
+        return resolved.definition.pins
+          .filter((pin) =>
+            isVisibleEndpoint(document, resolver, {
+              kind: "terminal",
+              instanceId: instance.id,
+              pinName: pin.name,
+            }),
+          )
+          .map((pin): WireSource => {
+            const endpoint: RouteEndpoint = {
+              kind: "terminal",
+              instanceId: instance.id,
+              pinName: pin.name,
+            };
+            return {
+              endpoint,
+              netId: endpointNetId(document, endpoint),
+              point: transformPoint(
+                pin.at,
+                instance.placement!.position,
+                instance.placement!,
+              ),
               preludeEdits: [],
-            },
-          ]
-        : [],
-    ),
-    ...document.junctions
-      .filter((junction) => {
-        const role = junction.role ?? "branch";
-        return role === "branch" || role === "route-anchor";
-      })
-      .map((junction): WireSource => ({
-        endpoint: { kind: "junction", junctionId: junction.id },
-        netId: junction.netId,
-        point: junction.position,
-        preludeEdits: [],
-      })),
-  ];
-  const routePolylines = document.routes
-    .map((route) => ({
-      route,
-      polyline: routePolyline(document, resolver, route),
-    }))
-    .filter(
-      (
-        candidate,
-      ): candidate is {
-        route: SchematicDocument["routes"][number];
-        polyline: NonNullable<ReturnType<typeof routePolyline>>;
-      } => candidate.polyline !== null,
-    );
+            };
+          });
+      }),
+      ...document.ports.flatMap((port): WireSource[] =>
+        port.position
+          ? [
+              {
+                endpoint: { kind: "port", portId: port.id },
+                netId: endpointNetId(document, {
+                  kind: "port",
+                  portId: port.id,
+                }),
+                point: port.position,
+                preludeEdits: [],
+              },
+            ]
+          : [],
+      ),
+      ...document.junctions
+        .filter((junction) => {
+          const role = junction.role ?? "branch";
+          return role === "branch" || role === "route-anchor";
+        })
+        .map((junction): WireSource => ({
+          endpoint: { kind: "junction", junctionId: junction.id },
+          netId: junction.netId,
+          point: junction.position,
+          preludeEdits: [],
+        })),
+    ],
+    [document, resolver],
+  );
+  const routePolylines = useMemo(
+    () =>
+      document.routes
+        .map((route) => ({
+          route,
+          polyline: routePolyline(document, resolver, route),
+        }))
+        .filter(
+          (
+            candidate,
+          ): candidate is {
+            route: SchematicDocument["routes"][number];
+            polyline: NonNullable<ReturnType<typeof routePolyline>>;
+          } => candidate.polyline !== null,
+        ),
+    [document, resolver],
+  );
 
   function junctionRouteDegree(junctionId: string): number {
     return document.routes.filter(
@@ -1469,28 +1510,13 @@ export function App({ project: initialProject }: AppProps) {
     if (!resolved || resolved.definition.labelVisibility === "hidden") {
       return null;
     }
-    const viewBox = resolved.definition.viewBox;
-    const corners = [
-      { x: viewBox.x, y: viewBox.y },
-      { x: viewBox.x + viewBox.width, y: viewBox.y },
-      { x: viewBox.x, y: viewBox.y + viewBox.height },
-      { x: viewBox.x + viewBox.width, y: viewBox.y + viewBox.height },
-    ].map((point) =>
-      transformPoint(point, instance.placement!.position, instance.placement!),
+    const placement = defaultInstanceLabelPlacement(
+      instance,
+      resolved.definition,
+      styleProfile,
     );
-    const minimumX = Math.min(...corners.map((point) => point.x));
-    const maximumX = Math.max(...corners.map((point) => point.x));
-    const maximumY = Math.max(...corners.map((point) => point.y));
-    const position = {
-      x: Math.round((minimumX + maximumX) / 2),
-      y: Math.round(
-        document.presentation.styleProfileId === "textbook-monochrome-v1"
-          ? maximumY + 14
-          : maximumY +
-              styleProfile.typography.labelGap +
-              styleProfile.typography.instanceFontSize,
-      ),
-    };
+    if (!placement) return null;
+    const position = placement.position;
     return {
       id: `instance-label-${instance.id}`,
       kind: "instance-label",
@@ -1501,7 +1527,7 @@ export function App({ project: initialProject }: AppProps) {
         x: position.x - instance.placement.position.x,
         y: position.y - instance.placement.position.y,
       },
-      alignment: "middle",
+      alignment: placement.alignment,
       rotation: 0,
       locked: false,
     };
@@ -1644,7 +1670,6 @@ export function App({ project: initialProject }: AppProps) {
     setSelectedRouteSegmentIndex(null);
     setTextEditing(null);
     setSelectedEndpoint(null);
-    setDragPreview(null);
     setWireSource(null);
     setWirePreviewPoint(null);
     setWireWaypoints([]);
@@ -1835,6 +1860,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function activateTool(nextTool: EditorTool): void {
     setTool(nextTool);
+    clearDraftingCreate();
     setWireSource(null);
     setWirePreviewPoint(null);
     setWireWaypoints([]);
@@ -1845,7 +1871,13 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(
       nextTool === "wire"
         ? "Wire: choose a pin, junction, route segment, or blank grid point"
-        : "Pointer ready",
+        : nextTool === "rectangle"
+          ? "Rectangle: click the first corner"
+          : nextTool === "arrow"
+            ? "Arrow: click the start point"
+            : nextTool === "construction-line"
+              ? "Construction line: click the start point"
+              : "Pointer ready",
     );
   }
 
@@ -2018,8 +2050,9 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function handleRoutePointerDown(
-    event: ReactPointerEvent<SVGPolylineElement>,
+    event: ReactPointerEvent<SVGElement>,
     routeId: string,
+    hitTarget: SVGElement = event.currentTarget,
   ): void {
     event.stopPropagation();
     if (event.altKey) {
@@ -2030,7 +2063,7 @@ export function App({ project: initialProject }: AppProps) {
       (candidate) => candidate.route.id === routeId,
     );
     if (!routeRecord) return;
-    const svg = event.currentTarget.ownerSVGElement!;
+    const svg = hitTarget.ownerSVGElement!;
     const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
     const tap = resolveRouteTap(
       routeRecord.polyline.points,
@@ -2039,19 +2072,16 @@ export function App({ project: initialProject }: AppProps) {
     );
     if (tool === "pointer") {
       const segmentIndex = tap?.segmentIndex ?? 0;
-      const routeIsAlreadySelected = selectedRouteId === routeId;
-      if (routeIsAlreadySelected) {
-        beginRouteStretch(
-          event,
-          routeId,
-          segmentIndex,
-          looseRouteAnchorIds(routeRecord.route) !== null
-            ? "translate"
-            : "segment",
-        );
-      } else {
-        selectRoute(routeId, segmentIndex);
-      }
+      selectRoute(routeId, segmentIndex);
+      beginRouteStretch(
+        event,
+        routeId,
+        segmentIndex,
+        looseRouteAnchorIds(routeRecord.route) !== null
+          ? "translate"
+          : "segment",
+        hitTarget,
+      );
       return;
     }
     if (!tap) {
@@ -2146,54 +2176,88 @@ export function App({ project: initialProject }: AppProps) {
     routeId: string,
     segmentIndex: number,
     kind: "segment" | "translate" = "segment",
+    hitTarget: SVGElement = event.currentTarget,
   ): void {
     if (event.button !== 0) return;
     event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    const start = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
+    canvasDragSessionRef.current?.cancel();
+    const svg = hitTarget.ownerSVGElement!;
+    const start = pointFromClient(event.clientX, event.clientY, svg, false);
+    const record = routePolylines.find(
+      (candidate) => candidate.route.id === routeId,
     );
-    setRouteStretchPreview({
+    if (!record) return;
+    const anchorIds =
+      kind === "translate" ? (looseRouteAnchorIds(record.route) ?? []) : [];
+    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    const dragVisual = () =>
+      (visual ??= startCanvasDragVisual(svg, [routeId, ...anchorIds]));
+    const preview: RouteStretchPreview = {
       routeId,
       segmentIndex,
       kind,
-      pointerId: event.pointerId,
       start,
       point: start,
+    };
+    setRouteStretchPreview(preview);
+    canvasDragSessionRef.current = startCanvasDragSession({
+      target: hitTarget,
+      pointerId: event.pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      thresholdPx: DRAG_START_DISTANCE_PX,
+      onPreview: (client) => {
+        const point = pointFromClient(client.x, client.y, svg, false);
+        if (kind === "translate") {
+          dragVisual().translate({
+            x: point.x - start.x,
+            y: point.y - start.y,
+          });
+          return;
+        }
+        try {
+          const proposal = moveRouteSegment(
+            record.polyline,
+            segmentIndex,
+            point,
+          );
+          dragVisual().setPolyline([
+            record.polyline.points[0]!,
+            ...proposal.waypoints,
+            record.polyline.points.at(-1)!,
+          ]);
+        } catch {
+          // Keep the last valid preview; commit reports the geometry error.
+        }
+      },
+      onFinish: ({ client, dragged }) => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+        if (dragged) {
+          completeRouteStretch(
+            preview,
+            pointFromClient(client.x, client.y, svg, false),
+          );
+        }
+        setRouteStretchPreview(null);
+      },
+      onCancel: () => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+        setRouteStretchPreview(null);
+      },
     });
   }
 
-  function previewRouteStretch(event: ReactPointerEvent<SVGElement>): void {
-    if (routeStretchPreview?.pointerId !== event.pointerId) return;
-    setRouteStretchPreview({
-      ...routeStretchPreview,
-      point: pointFromClient(
-        event.clientX,
-        event.clientY,
-        event.currentTarget.ownerSVGElement!,
-      ),
-    });
-  }
-
-  function finishRouteStretch(event: ReactPointerEvent<SVGElement>): void {
-    if (routeStretchPreview?.pointerId !== event.pointerId) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
+  function completeRouteStretch(
+    preview: RouteStretchPreview,
+    point: Point,
+  ): void {
     const record = routePolylines.find(
-      (candidate) => candidate.route.id === routeStretchPreview.routeId,
+      (candidate) => candidate.route.id === preview.routeId,
     );
-    if (!record) {
-      setRouteStretchPreview(null);
-      return;
-    }
-    const point = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
-    );
+    if (!record) return;
     try {
-      if (routeStretchPreview.kind === "translate") {
+      if (preview.kind === "translate") {
         const anchorIds = looseRouteAnchorIds(record.route);
         if (!anchorIds) {
           throw new Error(
@@ -2201,8 +2265,8 @@ export function App({ project: initialProject }: AppProps) {
           );
         }
         const delta = {
-          x: point.x - routeStretchPreview.start.x,
-          y: point.y - routeStretchPreview.start.y,
+          x: snap(point.x - preview.start.x, document.presentation.grid),
+          y: snap(point.y - preview.start.y, document.presentation.grid),
         };
         if (delta.x !== 0 || delta.y !== 0) {
           const junctionEdits = anchorIds.map((junctionId): SchematicEdit => {
@@ -2239,8 +2303,11 @@ export function App({ project: initialProject }: AppProps) {
       } else {
         const proposal = moveRouteSegment(
           record.polyline,
-          routeStretchPreview.segmentIndex,
-          point,
+          preview.segmentIndex,
+          {
+            x: snap(point.x, document.presentation.grid),
+            y: snap(point.y, document.presentation.grid),
+          },
         );
         const result = transact([
           {
@@ -2257,7 +2324,6 @@ export function App({ project: initialProject }: AppProps) {
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Route move failed");
     }
-    setRouteStretchPreview(null);
   }
 
   function constrainAnnotationPosition(
@@ -2341,60 +2407,77 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function beginAnnotationDrag(
-    event: ReactPointerEvent<SVGRectElement>,
+    event: ReactPointerEvent<SVGElement>,
     annotation: Annotation,
+    hitTarget: SVGElement = event.currentTarget,
   ): void {
     if (event.button !== 0) return;
     event.stopPropagation();
-    const labelAlreadySelected = selectedAnnotationId === annotation.id;
-    if (annotation.locked) {
-      clearSupplementalSelection();
-      setSelectedAnnotationId(annotation.id);
-      setSelectedIds([]);
-      setSelectedRouteId(null);
-      setSelectedEndpoint(null);
-      setStatus("Selected locked annotation");
-      return;
-    }
-    if (
-      !mayStartSelectedDrag(
-        labelAlreadySelected,
-        event.shiftKey || event.ctrlKey || event.metaKey,
-      )
-    ) {
-      clearSupplementalSelection();
-      setSelectedAnnotationId(annotation.id);
-      setSelectedIds([]);
-      setSelectedRouteId(null);
-      setSelectedEndpoint(null);
-      setStatus(`Selected annotation ${annotation.id}`);
-      return;
-    }
-    event.currentTarget.setPointerCapture(event.pointerId);
     clearSupplementalSelection();
-    const pointerStart = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
-    );
-    const rawPointerStart = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
-      false,
-    );
     setSelectedAnnotationId(annotation.id);
     setSelectedIds([]);
     setSelectedRouteId(null);
     setSelectedEndpoint(null);
-    setAnnotationDragPreview({
+    if (annotation.locked) {
+      setStatus("Selected locked annotation");
+      return;
+    }
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      setStatus(`Selected annotation ${annotation.id}`);
+      return;
+    }
+    canvasDragSessionRef.current?.cancel();
+    const svg = hitTarget.ownerSVGElement!;
+    const pointerStart = pointFromClient(
+      event.clientX,
+      event.clientY,
+      svg,
+      false,
+    );
+    const preview: AnnotationDragPreview = {
       annotationId: annotation.id,
       originalPosition: { ...annotation.position },
       pointerStart,
-      rawPointerStart,
-      position: { ...annotation.position },
+    };
+    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    const dragVisual = () =>
+      (visual ??= startCanvasDragVisual(svg, [annotation.id]));
+    const positionAt = (clientX: number, clientY: number): Point => {
+      const pointer = pointFromClient(clientX, clientY, svg, false);
+      return {
+        x: preview.originalPosition.x + pointer.x - preview.pointerStart.x,
+        y: preview.originalPosition.y + pointer.y - preview.pointerStart.y,
+      };
+    };
+    canvasDragSessionRef.current = startCanvasDragSession({
+      target: hitTarget,
       pointerId: event.pointerId,
-      dragging: false,
+      startClient: { x: event.clientX, y: event.clientY },
+      thresholdPx: DRAG_START_DISTANCE_PX,
+      onPreview: (client) => {
+        const position = positionAt(client.x, client.y);
+        dragVisual().translate({
+          x: position.x - preview.originalPosition.x,
+          y: position.y - preview.originalPosition.y,
+        });
+      },
+      onFinish: ({ client, dragged }) => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+        if (dragged) {
+          completeAnnotationDrag(
+            preview,
+            constrainAnnotationPosition(
+              annotation,
+              positionAt(client.x, client.y),
+            ),
+          );
+        }
+      },
+      onCancel: () => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+      },
     });
   }
 
@@ -2403,7 +2486,7 @@ export function App({ project: initialProject }: AppProps) {
   // explicit and opens its editor. This prevents a label click from becoming
   // an accidental, persistent label drag.
   function selectDefaultInstanceLabel(
-    event: ReactPointerEvent<SVGRectElement>,
+    event: ReactPointerEvent<SVGElement>,
     instance: SchematicDocument["instances"][number],
   ): void {
     event.stopPropagation();
@@ -2435,121 +2518,65 @@ export function App({ project: initialProject }: AppProps) {
     if (result.ok) beginAnnotationTextEditing(annotation);
   }
 
-  function previewAnnotationDrag(
-    event: ReactPointerEvent<SVGRectElement>,
+  function completeAnnotationDrag(
+    preview: AnnotationDragPreview,
+    position: Point,
   ): void {
-    if (annotationDragPreview?.pointerId !== event.pointerId) return;
-    const pointer = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
-    );
-    const rawPointer = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
-      false,
-    );
-    const threshold = logicalRadiusForPixels(
-      event.currentTarget.ownerSVGElement!,
-      DRAG_START_DISTANCE_PX,
-    );
-    if (
-      !annotationDragPreview.dragging &&
-      !exceedsDragThreshold(
-        annotationDragPreview.rawPointerStart,
-        rawPointer,
-        threshold,
-      )
-    ) {
-      return;
-    }
     const annotation = document.annotations.find(
-      (candidate) => candidate.id === annotationDragPreview.annotationId,
+      (candidate) => candidate.id === preview.annotationId,
     );
     if (!annotation) return;
-    setAnnotationDragPreview({
-      ...annotationDragPreview,
-      position: constrainAnnotationPosition(annotation, {
-        x:
-          annotationDragPreview.originalPosition.x +
-          pointer.x -
-          annotationDragPreview.pointerStart.x,
-        y:
-          annotationDragPreview.originalPosition.y +
-          pointer.y -
-          annotationDragPreview.pointerStart.y,
-      }),
-      dragging: true,
-    });
-  }
-
-  function finishAnnotationDrag(
-    event: ReactPointerEvent<SVGRectElement>,
-  ): void {
-    if (annotationDragPreview?.pointerId !== event.pointerId) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    const annotation = document.annotations.find(
-      (candidate) => candidate.id === annotationDragPreview.annotationId,
-    );
-    if (!annotationDragPreview.dragging) {
-      setAnnotationDragPreview(null);
-      return;
-    }
-    if (annotation) {
-      let offset = { ...annotation.offset };
-      let routeAttachment = annotation.routeAttachment;
-      // For a route-marker the route attachment lives on its VisualAnchor; the
-      // drag re-resolves segmentIndex/t while preserving direction/offset.
-      let anchor = annotation.anchor;
-      const currentAttachment = effectiveRouteAttachment(annotation);
-      if (isRoutedMarker(annotation) && currentAttachment) {
-        const attached = attachmentAtPoint(
-          annotationDragPreview.position,
-          currentAttachment.routeId,
-          currentAttachment.normalOffset,
-        );
-        if (attached) {
-          if (annotation.kind === "route-marker" && anchor?.kind === "route") {
-            anchor = {
-              ...anchor,
-              segmentIndex: attached.routeAttachment.segmentIndex,
-              t: attached.routeAttachment.t,
-              fallbackPosition: annotationDragPreview.position,
-            };
-          } else {
-            routeAttachment = {
-              ...attached.routeAttachment,
-              direction: currentAttachment.direction,
-            };
-          }
-        }
-      }
-      if (annotation.attachedObjectId) {
-        const instance = document.instances.find(
-          (candidate) => candidate.id === annotation.attachedObjectId,
-        );
-        if (instance?.placement) {
-          offset = {
-            x: annotationDragPreview.position.x - instance.placement.position.x,
-            y: annotationDragPreview.position.y - instance.placement.position.y,
+    let offset = { ...annotation.offset };
+    let routeAttachment = annotation.routeAttachment;
+    // For a route-marker the route attachment lives on its VisualAnchor; the
+    // drag re-resolves segmentIndex/t while preserving direction/offset.
+    let anchor = annotation.anchor;
+    const currentAttachment = effectiveRouteAttachment(annotation);
+    if (isRoutedMarker(annotation) && currentAttachment) {
+      const attached = attachmentAtPoint(
+        position,
+        currentAttachment.routeId,
+        currentAttachment.normalOffset,
+      );
+      if (attached) {
+        if (annotation.kind === "route-marker" && anchor?.kind === "route") {
+          anchor = {
+            ...anchor,
+            segmentIndex: attached.routeAttachment.segmentIndex,
+            t: attached.routeAttachment.t,
+            fallbackPosition: position,
+          };
+        } else {
+          routeAttachment = {
+            ...attached.routeAttachment,
+            direction: currentAttachment.direction,
           };
         }
       }
-      transact([
-        {
-          kind: "upsert_annotation",
-          annotation: {
-            ...annotation,
-            position: annotationDragPreview.position,
-            offset,
-            ...(routeAttachment ? { routeAttachment } : {}),
-            ...(anchor ? { anchor } : {}),
-          },
-        },
-      ]);
     }
-    setAnnotationDragPreview(null);
+    if (annotation.attachedObjectId) {
+      const instance = document.instances.find(
+        (candidate) => candidate.id === annotation.attachedObjectId,
+      );
+      if (instance?.placement) {
+        offset = {
+          x: position.x - instance.placement.position.x,
+          y: position.y - instance.placement.position.y,
+        };
+      }
+    }
+    transact([
+      {
+        kind: "upsert_annotation",
+        annotation: {
+          ...annotation,
+          position,
+          offset,
+          ...(routeAttachment ? { routeAttachment } : {}),
+          ...(anchor ? { anchor } : {}),
+        },
+      },
+    ]);
   }
 
   function pointFromClient(
@@ -2588,6 +2615,68 @@ export function App({ project: initialProject }: AppProps) {
     const yScale = Math.hypot(matrix.c, matrix.d);
     const scale = (xScale + yScale) / 2;
     return scale > 0 ? pixels / scale : pixels;
+  }
+
+  function handleCanvasHitPointerDown(
+    event: ReactPointerEvent<SVGSVGElement>,
+  ): void {
+    if (tool !== "pointer" || event.button !== 0) return;
+    if (
+      (event.target as Element).closest(".draft-handle, .route-handle, .guide")
+    ) {
+      return;
+    }
+    const hit = resolveCanvasHitAtPoint(
+      event.currentTarget.ownerDocument,
+      { x: event.clientX, y: event.clientY },
+      event.altKey ? 1 : 0,
+    );
+    if (!hit || hit.kind === "handle") return;
+    const hitTarget = hit.element as SVGElement;
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (hit.kind === "instance") {
+      beginMove(event, hit.id, hitTarget);
+      return;
+    }
+    if (hit.kind === "instance-label") {
+      const instance = document.instances.find(
+        (candidate) => candidate.id === hit.id,
+      );
+      if (instance) selectDefaultInstanceLabel(event, instance);
+      return;
+    }
+    if (hit.kind === "annotation") {
+      const annotation = document.annotations.find(
+        (candidate) => candidate.id === hit.id,
+      );
+      if (annotation) beginAnnotationDrag(event, annotation, hitTarget);
+      return;
+    }
+    if (hit.kind === "route") {
+      handleRoutePointerDown(event, hit.id, hitTarget);
+      return;
+    }
+    if (hit.kind === "drafting") {
+      const object = document.drafting?.objects.find(
+        (candidate) => candidate.id === hit.id,
+      );
+      if (object) beginDraftingDrag(event, object, hitTarget);
+      return;
+    }
+    const endpoint = visibleEndpoints.find(
+      (candidate) =>
+        candidate.endpoint.kind === "junction" &&
+        candidate.endpoint.junctionId === hit.id,
+    );
+    if (endpoint) {
+      selectEndpoint(endpoint);
+      setSelectedRouteId(null);
+      setSelectedIds([]);
+      setSelectedAnnotationId(null);
+      setStatus(`Selected ${endpointTestId(endpoint.endpoint)}`);
+    }
   }
 
   function handleDrop(event: DragEvent<SVGSVGElement>): void {
@@ -2708,8 +2797,9 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function beginMove(
-    event: ReactPointerEvent<SVGRectElement>,
+    event: ReactPointerEvent<SVGElement>,
     instanceId: string,
+    hitTarget: SVGElement = event.currentTarget,
   ): void {
     if (tool !== "pointer" || event.button !== 0) return;
     event.stopPropagation();
@@ -2721,35 +2811,25 @@ export function App({ project: initialProject }: AppProps) {
     }
     const hasSelectionModifier =
       event.shiftKey || event.ctrlKey || event.metaKey;
-    if (
-      !mayStartSelectedDrag(
-        selectedIds.includes(instanceId),
-        hasSelectionModifier,
-      )
-    ) {
-      suppressInstanceClick.current = true;
+    suppressInstanceClick.current = true;
+    if (hasSelectionModifier) {
       selectInstance(instanceId, hasSelectionModifier);
-      setStatus(`Selected ${instanceId}; drag again to move`);
+      setStatus(`Selected ${instanceId}`);
       return;
     }
-    event.currentTarget.setPointerCapture(event.pointerId);
-    suppressInstanceClick.current = false;
     const movingIds = selectedIds.includes(instanceId)
       ? selectedIds
       : [instanceId];
-    if (!selectedIds.includes(instanceId)) setSelectedIds([instanceId]);
+    if (!selectedIds.includes(instanceId)) selectInstance(instanceId, false);
+    canvasDragSessionRef.current?.cancel();
+    const svg = hitTarget.ownerSVGElement!;
     const pointerStart = pointFromClient(
       event.clientX,
       event.clientY,
-      event.currentTarget.ownerSVGElement!,
-    );
-    const rawPointerStart = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
+      svg,
       false,
     );
-    setDragPreview({
+    const preview: DragPreview = {
       instanceIds: movingIds,
       originalPositions: Object.fromEntries(
         movingIds.map((id) => {
@@ -2758,86 +2838,63 @@ export function App({ project: initialProject }: AppProps) {
         }),
       ),
       pointerStart,
-      rawPointerStart,
+    };
+    const attachedAnnotationIds = document.annotations
+      .filter(
+        (annotation) =>
+          annotation.attachedObjectId !== undefined &&
+          movingIds.includes(annotation.attachedObjectId),
+      )
+      .map((annotation) => annotation.id);
+    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    const dragVisual = () =>
+      (visual ??= startCanvasDragVisual(svg, [
+        ...movingIds,
+        ...attachedAnnotationIds,
+      ]));
+    canvasDragSessionRef.current = startCanvasDragSession({
+      target: hitTarget,
       pointerId: event.pointerId,
-      position: pointerStart,
-      dragging: false,
-    });
-  }
-
-  function previewMove(event: ReactPointerEvent<SVGRectElement>): void {
-    if (!dragPreview || dragPreview.pointerId !== event.pointerId) {
-      return;
-    }
-    const rawPointer = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
-      false,
-    );
-    const threshold = logicalRadiusForPixels(
-      event.currentTarget.ownerSVGElement!,
-      DRAG_START_DISTANCE_PX,
-    );
-    if (
-      !dragPreview.dragging &&
-      !exceedsDragThreshold(dragPreview.rawPointerStart, rawPointer, threshold)
-    ) {
-      return;
-    }
-    const position = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
-    );
-    const delta = {
-      x: position.x - dragPreview.pointerStart.x,
-      y: position.y - dragPreview.pointerStart.y,
-    };
-    const moves = dragPreview.instanceIds.map((instanceId) => {
-      const original = dragPreview.originalPositions[instanceId]!;
-      return {
-        instanceId,
-        position: { x: original.x + delta.x, y: original.y + delta.y },
-      };
-    });
-    const directSnap = directPinSnap(moves);
-    const previewPosition = directSnap
-      ? {
-          x:
-            position.x + directSnap.moves[0]!.position.x - moves[0]!.position.x,
-          y:
-            position.y + directSnap.moves[0]!.position.y - moves[0]!.position.y,
+      startClient: { x: event.clientX, y: event.clientY },
+      thresholdPx: DRAG_START_DISTANCE_PX,
+      onPreview: (client) => {
+        const position = pointFromClient(client.x, client.y, svg, false);
+        const { moves } = instanceMoveAt(preview, position, false);
+        const first = moves[0]!;
+        const original = preview.originalPositions[first.instanceId]!;
+        dragVisual().translate({
+          x: first.position.x - original.x,
+          y: first.position.y - original.y,
+        });
+      },
+      onFinish: ({ client, dragged }) => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+        if (dragged) {
+          completeInstanceMove(
+            preview,
+            pointFromClient(client.x, client.y, svg, false),
+          );
         }
-      : position;
-    suppressInstanceClick.current = true;
-    setDragPreview({
-      ...dragPreview,
-      position: previewPosition,
-      dragging: true,
+      },
+      onCancel: () => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+      },
     });
   }
 
-  function finishMove(event: ReactPointerEvent<SVGRectElement>): void {
-    if (!dragPreview || dragPreview.pointerId !== event.pointerId) {
-      return;
-    }
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    if (!dragPreview.dragging) {
-      setDragPreview(null);
-      return;
-    }
-    const position = pointFromClient(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.ownerSVGElement!,
-    );
+  function instanceMoveAt(
+    preview: DragPreview,
+    position: Point,
+    commitSnap: boolean,
+  ) {
     const rawDelta = {
-      x: position.x - dragPreview.pointerStart.x,
-      y: position.y - dragPreview.pointerStart.y,
+      x: position.x - preview.pointerStart.x,
+      y: position.y - preview.pointerStart.y,
     };
-    const unsnappedMoves = dragPreview.instanceIds.map((instanceId) => {
-      const original = dragPreview.originalPositions[instanceId]!;
+    const unsnappedMoves = preview.instanceIds.map((instanceId) => {
+      const original = preview.originalPositions[instanceId]!;
       return {
         instanceId,
         position: {
@@ -2846,15 +2903,33 @@ export function App({ project: initialProject }: AppProps) {
         },
       };
     });
-    const directSnap = directPinSnap(unsnappedMoves);
-    const moves = directSnap?.moves ?? unsnappedMoves;
+    if (!commitSnap) return { directSnap: null, moves: unsnappedMoves };
+    const first = unsnappedMoves[0]!;
+    const grid = document.presentation.grid;
+    const correction = {
+      x: snap(first.position.x, grid) - first.position.x,
+      y: snap(first.position.y, grid) - first.position.y,
+    };
+    const gridMoves = unsnappedMoves.map((move) => ({
+      ...move,
+      position: {
+        x: move.position.x + correction.x,
+        y: move.position.y + correction.y,
+      },
+    }));
+    const directSnap = directPinSnap(gridMoves);
+    return { directSnap, moves: directSnap?.moves ?? gridMoves };
+  }
+
+  function completeInstanceMove(preview: DragPreview, position: Point): void {
+    const { directSnap, moves } = instanceMoveAt(preview, position, true);
     const delta = {
       x:
         moves[0]!.position.x -
-        dragPreview.originalPositions[moves[0]!.instanceId]!.x,
+        preview.originalPositions[moves[0]!.instanceId]!.x,
       y:
         moves[0]!.position.y -
-        dragPreview.originalPositions[moves[0]!.instanceId]!.y,
+        preview.originalPositions[moves[0]!.instanceId]!.y,
     };
     if (delta.x !== 0 || delta.y !== 0) {
       try {
@@ -2920,7 +2995,6 @@ export function App({ project: initialProject }: AppProps) {
         );
       }
     }
-    setDragPreview(null);
   }
 
   function rotateSelected(deltaDegrees: 90 | -90 = 90): void {
@@ -3014,6 +3088,18 @@ export function App({ project: initialProject }: AppProps) {
             {
               kind: "upsert_drafting_object",
               object: { ...object, points, curveControls },
+            },
+          ];
+        }
+        if (object.kind === "rectangle") {
+          return [
+            {
+              kind: "upsert_drafting_object",
+              object: {
+                ...object,
+                rotation:
+                  (((object.rotation + deltaDegrees) % 360) + 360) % 360,
+              },
             },
           ];
         }
@@ -3125,6 +3211,7 @@ export function App({ project: initialProject }: AppProps) {
 
   function draftingDragOrigin(object: DraftingObject): Point | null {
     if (object.kind === "construction-line") return object.points[0] ?? null;
+    if (object.kind === "rectangle") return object.center;
     if (object.kind === "arrow") {
       return object.from.kind === "free" && object.to.kind === "free"
         ? object.from.position
@@ -3187,6 +3274,17 @@ export function App({ project: initialProject }: AppProps) {
         ),
       };
     }
+    if (object.kind === "rectangle") {
+      const center = {
+        x: Math.round(object.center.x + delta.x),
+        y: Math.round(object.center.y + delta.y),
+      };
+      return {
+        ...object,
+        center,
+        anchor: { kind: "free", position: center },
+      };
+    }
     return { ...object, anchor: moveFreeAnchor(object.anchor) };
   }
 
@@ -3196,6 +3294,7 @@ export function App({ project: initialProject }: AppProps) {
   function beginDraftingDrag(
     event: ReactPointerEvent<SVGElement>,
     object: DraftingObject,
+    hitTarget: SVGElement = event.currentTarget,
   ): void {
     if (event.button !== 0 || object.locked) return;
     const origin = draftingDragOrigin(object);
@@ -3205,129 +3304,74 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     event.stopPropagation();
-    if (
-      !mayStartSelectedDrag(
-        selectedDraftingId === object.id,
-        event.shiftKey || event.ctrlKey || event.metaKey,
-      )
-    ) {
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
       selectDraftingObject(object.id);
-      setStatus(`Selected drawing ${object.id}; drag again to move`);
+      setStatus(`Selected drawing ${object.id}`);
       return;
     }
-    draftingDragSessionRef.current?.cancel();
-    const hitTarget = event.currentTarget;
-    hitTarget.setPointerCapture(event.pointerId);
-    const start = pointFromClient(
-      event.clientX,
-      event.clientY,
-      hitTarget.ownerSVGElement!,
-    );
-    const rawStart = pointFromClient(
-      event.clientX,
-      event.clientY,
-      hitTarget.ownerSVGElement!,
-      false,
-    );
+    canvasDragSessionRef.current?.cancel();
+    const svg = hitTarget.ownerSVGElement!;
+    const start = pointFromClient(event.clientX, event.clientY, svg, false);
     const original = { ...origin };
-    let dragging = false;
-    draftingDragPositionRef.current = original;
     selectDraftingObject(object.id);
-    setDraftingDragPreview({
-      objectId: object.id,
-      originalPosition: original,
-      pointerStart: start,
-      position: original,
-      pointerId: event.pointerId,
-    });
-
-    const move = (moveEvent: PointerEvent): void => {
-      const rawPoint = pointFromClient(
-        moveEvent.clientX,
-        moveEvent.clientY,
-        hitTarget.ownerSVGElement!,
-        false,
-      );
-      if (
-        !dragging &&
-        !exceedsDragThreshold(
-          rawStart,
-          rawPoint,
-          logicalRadiusForPixels(
-            hitTarget.ownerSVGElement!,
-            DRAG_START_DISTANCE_PX,
-          ),
-        )
-      ) {
-        return;
-      }
-      dragging = true;
-      const point = pointFromClient(
-        moveEvent.clientX,
-        moveEvent.clientY,
-        hitTarget.ownerSVGElement!,
-      );
-      const dx = point.x - start.x;
-      const dy = point.y - start.y;
-      const position = {
-        x: Math.round(original.x + dx),
-        y: Math.round(original.y + dy),
+    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    const dragVisual = () =>
+      (visual ??= startCanvasDragVisual(svg, [object.id]));
+    const positionAt = (
+      clientX: number,
+      clientY: number,
+      commitSnap: boolean,
+    ): Point => {
+      const point = pointFromClient(clientX, clientY, svg, false);
+      const raw = {
+        x: original.x + point.x - start.x,
+        y: original.y + point.y - start.y,
       };
-      draftingDragPositionRef.current = position;
-      setDraftingDragPreview((current) =>
-        current ? { ...current, position } : current,
-      );
+      if (!commitSnap) return raw;
+      const grid = document.presentation.grid;
+      return { x: snap(raw.x, grid), y: snap(raw.y, grid) };
     };
-
-    const cancel = (): void => {
-      draftingDragPositionRef.current = null;
-      setDraftingDragPreview(null);
-      draftingDragSessionRef.current = null;
-      if (hitTarget.hasPointerCapture(event.pointerId)) {
-        hitTarget.releasePointerCapture(event.pointerId);
-      }
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
-    };
-
-    const up = (): void => {
-      // Commit exactly once from the ref (state updaters must not have side
-      // effects; React may invoke them twice in Strict Mode). A click without
-      // movement does not commit, so selection does not add a revision.
-      const position = draftingDragPositionRef.current;
-      draftingDragPositionRef.current = null;
-      setDraftingDragPreview(null);
-      draftingDragSessionRef.current = null;
-      if (
-        dragging &&
-        position &&
-        (position.x !== original.x || position.y !== original.y)
-      ) {
-        const latest = document.drafting?.objects.find(
-          (item) => item.id === object.id,
-        );
-        if (latest) {
-          transact([
-            {
-              kind: "upsert_drafting_object",
-              object: translateDraftingObject(latest, {
-                x: position.x - original.x,
-                y: position.y - original.y,
-              }),
-            },
-          ]);
+    canvasDragSessionRef.current = startCanvasDragSession({
+      target: hitTarget,
+      pointerId: event.pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      thresholdPx: DRAG_START_DISTANCE_PX,
+      onPreview: (client) => {
+        const position = positionAt(client.x, client.y, false);
+        dragVisual().translate({
+          x: position.x - original.x,
+          y: position.y - original.y,
+        });
+      },
+      onFinish: ({ client, dragged }) => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+        if (dragged) {
+          const position = positionAt(client.x, client.y, true);
+          const latest = document.drafting?.objects.find(
+            (item) => item.id === object.id,
+          );
+          if (
+            latest &&
+            (position.x !== original.x || position.y !== original.y)
+          ) {
+            transact([
+              {
+                kind: "upsert_drafting_object",
+                object: translateDraftingObject(latest, {
+                  x: position.x - original.x,
+                  y: position.y - original.y,
+                }),
+              },
+            ]);
+          }
         }
-      }
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
-    };
-
-    draftingDragSessionRef.current = { cancel };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", cancel);
+      },
+      onCancel: () => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+      },
+    });
   }
 
   // Drag a single endpoint (arrow from/to) or vertex (construction-line index).
@@ -3340,15 +3384,16 @@ export function App({ project: initialProject }: AppProps) {
     object: DraftingObject,
     handle:
       | { kind: "from" | "to" }
-      | { kind: "waypoint" | "vertex" | "curve"; index: number },
+      | {
+          kind: "waypoint" | "vertex" | "curve" | "rectangle-corner";
+          index: number;
+        },
   ): void {
     if (event.button !== 0 || object.locked) return;
     event.stopPropagation();
-    draftingDragSessionRef.current?.cancel();
+    canvasDragSessionRef.current?.cancel();
     const hitTarget = event.currentTarget;
-    hitTarget.setPointerCapture(event.pointerId);
     const svg = hitTarget.ownerSVGElement!;
-    const start = pointFromClient(event.clientX, event.clientY, svg);
     const originalGeometry = resolveDraftingObjectGeometry(
       document,
       resolver,
@@ -3411,55 +3456,77 @@ export function App({ project: initialProject }: AppProps) {
         );
         return { ...target, curveControls: controls };
       }
+      if (
+        target.kind === "rectangle" &&
+        handle.kind === "rectangle-corner" &&
+        originalGeometry.kind === "rectangle"
+      ) {
+        const opposite = originalGeometry.corners[(handle.index + 2) % 4]!;
+        const radians = (target.rotation * Math.PI) / 180;
+        const ux = { x: Math.cos(radians), y: Math.sin(radians) };
+        const uy = { x: -Math.sin(radians), y: Math.cos(radians) };
+        const delta = { x: point.x - opposite.x, y: point.y - opposite.y };
+        const localWidth = delta.x * ux.x + delta.y * ux.y;
+        const localHeight = delta.x * uy.x + delta.y * uy.y;
+        const center = {
+          x: Math.round(
+            opposite.x + (localWidth * ux.x + localHeight * uy.x) / 2,
+          ),
+          y: Math.round(
+            opposite.y + (localWidth * ux.y + localHeight * uy.y) / 2,
+          ),
+        };
+        return {
+          ...target,
+          center,
+          anchor: { kind: "free", position: center },
+          width: Math.max(1, Math.round(Math.abs(localWidth))),
+          height: Math.max(1, Math.round(Math.abs(localHeight))),
+        };
+      }
       return target;
     };
-
-    let latestPoint: Point | null = null;
-
-    const move = (moveEvent: PointerEvent): void => {
-      const snapped = snapDraftingPoint(
-        pointFromClient(moveEvent.clientX, moveEvent.clientY, svg),
-        moveEvent.altKey,
-        moveEvent.shiftKey,
-      );
-      latestPoint = snapped.point;
-    };
-
-    const cancel = (): void => {
-      latestPoint = null;
-      draftingDragSessionRef.current = null;
-      if (hitTarget.hasPointerCapture(event.pointerId)) {
-        hitTarget.releasePointerCapture(event.pointerId);
-      }
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
-    };
-
-    const up = (): void => {
-      const point = latestPoint;
-      latestPoint = null;
-      draftingDragSessionRef.current = null;
-      if (point) {
-        const latest = document.drafting?.objects.find(
-          (item) => item.id === object.id,
-        );
-        if (latest) {
-          const next = applyHandle(latest, point);
-          if (next !== latest) {
-            transact([{ kind: "upsert_drafting_object", object: next }]);
+    canvasDragSessionRef.current = startCanvasDragSession({
+      target: hitTarget,
+      pointerId: event.pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      thresholdPx: DRAG_START_DISTANCE_PX,
+      onPreview: (client) => {
+        const point = snapDraftingPoint(
+          pointFromClient(client.x, client.y, svg),
+          event.altKey,
+          event.shiftKey,
+        ).point;
+        setDraftingHandlePreview({
+          objectId: object.id,
+          object: applyHandle(object, point),
+        });
+      },
+      onFinish: ({ client, dragged }) => {
+        canvasDragSessionRef.current = null;
+        if (dragged) {
+          const point = snapDraftingPoint(
+            pointFromClient(client.x, client.y, svg),
+            event.altKey,
+            event.shiftKey,
+          ).point;
+          const latest = document.drafting?.objects.find(
+            (item) => item.id === object.id,
+          );
+          if (latest) {
+            const next = applyHandle(latest, point);
+            if (next !== latest) {
+              transact([{ kind: "upsert_drafting_object", object: next }]);
+            }
           }
         }
-      }
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
-    };
-
-    draftingDragSessionRef.current = { cancel };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", cancel);
+        setDraftingHandlePreview(null);
+      },
+      onCancel: () => {
+        canvasDragSessionRef.current = null;
+        setDraftingHandlePreview(null);
+      },
+    });
   }
 
   // Insert a vertex on a construction line at the clicked point, on the nearest
@@ -3581,7 +3648,9 @@ export function App({ project: initialProject }: AppProps) {
       if (
         !object ||
         object.locked ||
-        (object.kind !== "arrow" && object.kind !== "construction-line")
+        (object.kind !== "arrow" &&
+          object.kind !== "construction-line" &&
+          object.kind !== "rectangle")
       ) {
         continue;
       }
@@ -3652,7 +3721,8 @@ export function App({ project: initialProject }: AppProps) {
       !selectedDrafting ||
       selectedDrafting.locked ||
       (selectedDrafting.kind !== "arrow" &&
-        selectedDrafting.kind !== "construction-line") ||
+        selectedDrafting.kind !== "construction-line" &&
+        selectedDrafting.kind !== "rectangle") ||
       !Number.isFinite(bearingDegrees)
     ) {
       return;
@@ -3662,6 +3732,16 @@ export function App({ project: initialProject }: AppProps) {
       resolver,
       selectedDrafting,
     );
+    if (selectedDrafting.kind === "rectangle") {
+      const rotation = ((bearingDegrees % 360) + 360) % 360;
+      transact([
+        {
+          kind: "upsert_drafting_object",
+          object: { ...selectedDrafting, rotation },
+        },
+      ]);
+      return;
+    }
     if (
       (geometry.kind !== "arrow" && geometry.kind !== "construction-line") ||
       geometry.points.length < 2
@@ -3770,6 +3850,7 @@ export function App({ project: initialProject }: AppProps) {
       content: { runs: [{ kind: "text", value: "Design note" }] },
       alignment: "middle",
       rotation: 0,
+      typographyToken: "label",
     };
     const result = transact([
       {
@@ -4187,39 +4268,71 @@ export function App({ project: initialProject }: AppProps) {
     event: ReactPointerEvent<SVGLineElement>,
     guide: { id: string; axis: "horizontal" | "vertical"; locked: boolean },
   ): void {
-    if (guide.locked) return;
+    if (guide.locked || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
-    const element = event.currentTarget.ownerSVGElement;
-    if (!element) return;
-    const move = (moveEvent: PointerEvent): void => {
-      const point = pointFromClient(
-        moveEvent.clientX,
-        moveEvent.clientY,
-        element,
-      );
-      const current = document.drafting?.guides.find(
-        (candidate) => candidate.id === guide.id,
-      );
-      if (!current) return;
-      transact([
-        {
-          kind: "set_guide",
-          guide: {
-            ...current,
-            coordinate: Math.round(
-              guide.axis === "vertical" ? point.x : point.y,
-            ),
+    canvasDragSessionRef.current?.cancel();
+    const target = event.currentTarget;
+    const svg = target.ownerSVGElement;
+    if (!svg) return;
+    const original = {
+      x1: target.getAttribute("x1"),
+      x2: target.getAttribute("x2"),
+      y1: target.getAttribute("y1"),
+      y2: target.getAttribute("y2"),
+    };
+    const restore = (): void => {
+      for (const [name, value] of Object.entries(original)) {
+        if (value === null) target.removeAttribute(name);
+        else target.setAttribute(name, value);
+      }
+    };
+    const coordinateAt = (
+      clientX: number,
+      clientY: number,
+      commitSnap: boolean,
+    ): number => {
+      const point = pointFromClient(clientX, clientY, svg, commitSnap);
+      return guide.axis === "vertical" ? point.x : point.y;
+    };
+    canvasDragSessionRef.current = startCanvasDragSession({
+      target,
+      pointerId: event.pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      thresholdPx: DRAG_START_DISTANCE_PX,
+      onPreview: (client) => {
+        const coordinate = coordinateAt(client.x, client.y, false);
+        if (guide.axis === "vertical") {
+          target.setAttribute("x1", String(coordinate));
+          target.setAttribute("x2", String(coordinate));
+        } else {
+          target.setAttribute("y1", String(coordinate));
+          target.setAttribute("y2", String(coordinate));
+        }
+      },
+      onFinish: ({ client, dragged }) => {
+        canvasDragSessionRef.current = null;
+        restore();
+        if (!dragged) return;
+        const current = document.drafting?.guides.find(
+          (candidate) => candidate.id === guide.id,
+        );
+        if (!current) return;
+        transact([
+          {
+            kind: "set_guide",
+            guide: {
+              ...current,
+              coordinate: coordinateAt(client.x, client.y, true),
+            },
           },
-        },
-      ]);
-    };
-    const up = (): void => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
+        ]);
+      },
+      onCancel: () => {
+        canvasDragSessionRef.current = null;
+        restore();
+      },
+    });
   }
 
   function deleteSelectedAnnotation(): void {
@@ -4483,7 +4596,12 @@ export function App({ project: initialProject }: AppProps) {
     // click to set the start, hover to preview, click to commit. They bypass the
     // pointer-capture gesture trio here; creation lives in the SVG onClick and
     // continueCanvasGesture hover handling.
-    if (tool === "construction-line" || tool === "arrow") return;
+    if (
+      tool === "construction-line" ||
+      tool === "arrow" ||
+      tool === "rectangle"
+    )
+      return;
     if (tool === "guide") {
       // ADR 0010: clicking with the Guide tool adds a vertical guide at the
       // click x (the toolbar offers horizontal/vertical and clear/lock
@@ -4539,7 +4657,9 @@ export function App({ project: initialProject }: AppProps) {
     }
     // Two-phase drafting: keep the preview anchored to the snap-aware hover point.
     if (
-      (tool === "arrow" || tool === "construction-line") &&
+      (tool === "arrow" ||
+        tool === "construction-line" ||
+        tool === "rectangle") &&
       draftingSource !== null
     ) {
       const snapped = snapDraftingPoint(point, event.altKey, event.shiftKey);
@@ -4680,6 +4800,8 @@ export function App({ project: initialProject }: AppProps) {
           consider(geometry.to);
         } else if (geometry.kind === "construction-line") {
           for (const vertex of geometry.vertices) consider(vertex);
+        } else if (geometry.kind === "rectangle") {
+          for (const corner of geometry.corners) consider(corner);
         }
       }
       // `consider` updates a captured value, which TypeScript intentionally
@@ -4730,7 +4852,12 @@ export function App({ project: initialProject }: AppProps) {
     altKey: boolean,
     shiftKey: boolean,
   ): void {
-    if (tool !== "arrow" && tool !== "construction-line") return;
+    if (
+      tool !== "arrow" &&
+      tool !== "construction-line" &&
+      tool !== "rectangle"
+    )
+      return;
     const { point, snap } = snapDraftingPoint(
       rawPoint,
       altKey,
@@ -4745,11 +4872,13 @@ export function App({ project: initialProject }: AppProps) {
       setStatus(
         tool === "arrow"
           ? "Arrow: click the end point (Enter to finish, Esc to cancel)"
-          : "Construction line: click next vertex (Enter to finish, Esc to cancel)",
+          : tool === "rectangle"
+            ? "Rectangle: click the opposite corner (Esc to cancel)"
+            : "Construction line: click next vertex (Enter to finish, Esc to cancel)",
       );
       return;
     }
-    if (tool === "arrow") {
+    if (tool === "arrow" || tool === "rectangle") {
       commitDraftingCreate(tool, draftingSource, point);
       clearDraftingCreate();
       return;
@@ -4765,10 +4894,15 @@ export function App({ project: initialProject }: AppProps) {
   // Finish construction-line creation from the accumulated waypoints + hover,
   // or finish an arrow from its source + hover. One transaction.
   function finishDraftingCreate(): void {
-    if (tool !== "arrow" && tool !== "construction-line") return;
+    if (
+      tool !== "arrow" &&
+      tool !== "construction-line" &&
+      tool !== "rectangle"
+    )
+      return;
     if (draftingSource === null) return;
     const end = draftingHover ?? draftingSource;
-    if (tool === "arrow") {
+    if (tool === "arrow" || tool === "rectangle") {
       if (draftingSource.x !== end.x || draftingSource.y !== end.y) {
         commitDraftingCreate(tool, draftingSource, end);
       }
@@ -4837,6 +4971,36 @@ export function App({ project: initialProject }: AppProps) {
         },
       ]);
       if (result.ok) setStatus(`Added free arrow ${id}`);
+    } else if (activeTool === "rectangle") {
+      const width = Math.round(Math.abs(end.x - start.x));
+      const height = Math.round(Math.abs(end.y - start.y));
+      if (width < 1 || height < 1) {
+        setStatus("Rectangle needs non-zero width and height");
+        return;
+      }
+      const id = `rectangle-${transactionCounter.current}`;
+      const center = {
+        x: Math.round((start.x + end.x) / 2),
+        y: Math.round((start.y + end.y) / 2),
+      };
+      const result = transact([
+        {
+          kind: "upsert_drafting_object",
+          object: {
+            id,
+            kind: "rectangle",
+            locked: false,
+            zIndex: 0,
+            anchor: { kind: "free", position: center },
+            center,
+            width,
+            height,
+            rotation: 0,
+            lineStyle: "solid",
+          },
+        },
+      ]);
+      if (result.ok) setStatus(`Added rectangle ${id}`);
     }
     setTool("pointer");
   }
@@ -5104,6 +5268,14 @@ export function App({ project: initialProject }: AppProps) {
     function dismissOnOutsidePointerDown(event: PointerEvent): void {
       const target = event.target;
       if (!(target instanceof Node)) return;
+      const targetElement =
+        target instanceof Element ? target : target.parentElement;
+      if (
+        textEditing &&
+        !targetElement?.closest('[data-testid="canvas-text-editor"]')
+      ) {
+        setTextEditing(null);
+      }
       const openMenus = Array.from(
         globalThis.document.querySelectorAll<HTMLDetailsElement>(
           ".command-menu[open]",
@@ -5127,12 +5299,30 @@ export function App({ project: initialProject }: AppProps) {
         dismissOnOutsidePointerDown,
         true,
       );
-  }, []);
+  }, [textEditing]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape" && dismissOpenCommandMenus()) {
         event.preventDefault();
+        return;
+      }
+      if (event.key === "Escape" && textEditing) {
+        event.preventDefault();
+        setTextEditing(null);
+        setStatus("Cancelled text editing");
+        return;
+      }
+      if (
+        event.key === "Escape" &&
+        selectedDrafting &&
+        (selectedDrafting.kind === "arrow" ||
+          selectedDrafting.kind === "construction-line" ||
+          selectedDrafting.kind === "rectangle")
+      ) {
+        event.preventDefault();
+        setSelectedDraftingId(null);
+        setStatus("Cleared drawing selection");
         return;
       }
       if (isTypingTarget(event.target)) return;
@@ -5185,10 +5375,19 @@ export function App({ project: initialProject }: AppProps) {
         reverseSelectedCurrentArrow();
       } else if (plainShortcut && key === "r") {
         event.preventDefault();
-        rotateSelected(event.shiftKey ? -90 : 90);
+        if (event.shiftKey) {
+          rotateSelected(-90);
+        } else if (hasRotatableSelection) {
+          rotateSelected(90);
+        } else {
+          activateTool("rectangle");
+        }
       } else if (plainShortcut && key === "w") {
         event.preventDefault();
         activateTool("wire");
+      } else if (plainShortcut && key === "t") {
+        event.preventDefault();
+        addPlainText();
       } else if (plainShortcut && key === "a") {
         event.preventDefault();
         activateTool("arrow");
@@ -5232,7 +5431,9 @@ export function App({ project: initialProject }: AppProps) {
         finishWireAtPoint(wirePreviewPoint);
       } else if (
         event.key === "Enter" &&
-        (tool === "arrow" || tool === "construction-line") &&
+        (tool === "arrow" ||
+          tool === "construction-line" ||
+          tool === "rectangle") &&
         draftingSource !== null
       ) {
         event.preventDefault();
@@ -5244,7 +5445,9 @@ export function App({ project: initialProject }: AppProps) {
         }
         // Cancel an in-progress drafting creation first (two-phase click model).
         if (
-          (tool === "arrow" || tool === "construction-line") &&
+          (tool === "arrow" ||
+            tool === "construction-line" ||
+            tool === "rectangle") &&
           draftingSource !== null
         ) {
           clearDraftingCreate();
@@ -5257,10 +5460,9 @@ export function App({ project: initialProject }: AppProps) {
         setWireWaypoints([]);
         setPendingSymbolId(null);
         setBoxPreview(null);
-        // P0-2: Escape cancels an in-progress drafting drag without committing.
-        if (draftingDragSessionRef.current) {
-          draftingDragSessionRef.current.cancel();
-          setStatus("Cancelled drafting drag");
+        if (canvasDragSessionRef.current) {
+          canvasDragSessionRef.current.cancel();
+          setStatus("Cancelled canvas drag");
           return;
         }
         setStatus("Cancelled");
@@ -5362,8 +5564,8 @@ export function App({ project: initialProject }: AppProps) {
               >
                 Wire (W)
               </button>
-              <button type="button" onClick={addPlainText}>
-                Text
+              <button type="button" aria-label="Text" onClick={addPlainText}>
+                Text (T)
               </button>
               <button
                 type="button"
@@ -5378,6 +5580,13 @@ export function App({ project: initialProject }: AppProps) {
                 onClick={() => activateTool("construction-line")}
               >
                 Construction line (L)
+              </button>
+              <button
+                type="button"
+                aria-pressed={tool === "rectangle"}
+                onClick={() => activateTool("rectangle")}
+              >
+                Rectangle (R)
               </button>
             </div>
           </details>
@@ -5563,7 +5772,12 @@ export function App({ project: initialProject }: AppProps) {
         </p>
       </header>
       {helpOpen ? (
-        <div className="help-backdrop">
+        <div
+          className="help-backdrop"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) closeHelp();
+          }}
+        >
           <section
             className="help-dialog"
             id="editor-help-dialog"
@@ -5625,7 +5839,10 @@ export function App({ project: initialProject }: AppProps) {
                 <p>
                   With the pointer over the canvas, use the mouse wheel to zoom
                   and middle-drag to pan; <kbd>F</kbd> fits the circuit in view.
-                  Draw also contains Wire, Text, Arrow, and Construction line.
+                  Draw also contains Wire, Text, Arrow, Construction line, and
+                  Rectangle. With no rotatable selection, <kbd>R</kbd> starts
+                  Rectangle; with a component or drawing selected it rotates
+                  clockwise. <kbd>Shift+R</kbd> rotates counter-clockwise.
                   Guides are available from More and can be shown, cleared, or
                   locked for alignment.
                 </p>
@@ -5657,9 +5874,10 @@ export function App({ project: initialProject }: AppProps) {
                   <div>
                     <dt>Tools and view</dt>
                     <dd>
-                      <kbd>W</kbd> wire; <kbd>A</kbd> arrow; <kbd>L</kbd>
-                      construction line; <kbd>G</kbd> guide; <kbd>Home</kbd> fit
-                      view; <kbd>X</kbd> reverses a selected current arrow.
+                      <kbd>W</kbd> wire; <kbd>T</kbd> text; <kbd>A</kbd> arrow;
+                      <kbd>L</kbd> construction line; <kbd>G</kbd> guide;
+                      <kbd>Home</kbd> fit view; <kbd>X</kbd> reverses a selected
+                      current arrow.
                     </dd>
                   </div>
                   <div>
@@ -5928,150 +6146,6 @@ export function App({ project: initialProject }: AppProps) {
                 </button>
               </section>
             ) : null}
-            {selectedDrafting &&
-            (selectedDrafting.kind === "arrow" ||
-              selectedDrafting.kind === "construction-line") ? (
-              <section className="context-actions" aria-label="Drawing style">
-                <h2>Drawing</h2>
-                {selectedDrafting.locked ? (
-                  <p className="drawing-lock-status" role="status">
-                    Locked — editing is disabled; Delete is still available.
-                  </p>
-                ) : null}
-                <label>
-                  Line style
-                  <select
-                    aria-label="Line style"
-                    value={
-                      selectedDrafting.styleOverride?.lineStyle ??
-                      (selectedDrafting.kind === "construction-line"
-                        ? selectedDrafting.lineStyle
-                        : "solid")
-                    }
-                    disabled={selectedDrafting.locked}
-                    onChange={(event) =>
-                      setDraftingStyle({
-                        lineStyle: event.currentTarget.value as
-                          "solid" | "dashed" | "dotted",
-                      })
-                    }
-                  >
-                    <option value="solid">Solid</option>
-                    <option value="dashed">Dashed</option>
-                    <option value="dotted">Dotted</option>
-                  </select>
-                </label>
-                <label>
-                  Stroke width
-                  <select
-                    aria-label="Stroke width"
-                    value={String(
-                      selectedDrafting.styleOverride?.strokeScale ?? 1,
-                    )}
-                    disabled={selectedDrafting.locked}
-                    onChange={(event) =>
-                      setDraftingStyle({
-                        strokeScale: Number(event.currentTarget.value) as
-                          0.75 | 1 | 1.5 | 2,
-                      })
-                    }
-                  >
-                    <option value="0.75">0.75×</option>
-                    <option value="1">1×</option>
-                    <option value="1.5">1.5×</option>
-                    <option value="2">2×</option>
-                  </select>
-                </label>
-                {selectedDrafting.kind === "arrow" ? (
-                  <>
-                    <label>
-                      Arrow head
-                      <select
-                        aria-label="Arrow head"
-                        value={
-                          selectedDrafting.styleOverride?.arrowHead ?? "filled"
-                        }
-                        disabled={selectedDrafting.locked}
-                        onChange={(event) =>
-                          setDraftingStyle({
-                            arrowHead: event.currentTarget.value as
-                              "none" | "filled" | "open",
-                          })
-                        }
-                      >
-                        <option value="none">None</option>
-                        <option value="filled">Filled</option>
-                        <option value="open">Open</option>
-                      </select>
-                    </label>
-                    <label>
-                      Arrow head size
-                      <select
-                        aria-label="Arrow head size"
-                        value={String(
-                          selectedDrafting.styleOverride?.arrowHeadScale ?? 1,
-                        )}
-                        disabled={selectedDrafting.locked}
-                        onChange={(event) =>
-                          setDraftingStyle({
-                            arrowHeadScale: Number(
-                              event.currentTarget.value,
-                            ) as 0.75 | 1 | 1.25 | 1.5,
-                          })
-                        }
-                      >
-                        <option value="0.75">0.75×</option>
-                        <option value="1">1×</option>
-                        <option value="1.25">1.25×</option>
-                        <option value="1.5">1.5×</option>
-                      </select>
-                    </label>
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => rotateSelected()}
-                  disabled={selectedDrafting.locked}
-                >
-                  Rotate 90° (R)
-                </button>
-                {selectedDrafting.kind === "arrow" ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedDrafting.locked) return;
-                      const from = selectedDrafting.from;
-                      const to = selectedDrafting.to;
-                      transact([
-                        {
-                          kind: "upsert_drafting_object",
-                          object: {
-                            ...selectedDrafting,
-                            from: to,
-                            to: from,
-                            waypoints: [
-                              ...(selectedDrafting.waypoints ?? []),
-                            ].reverse(),
-                            curveControls: [
-                              ...(selectedDrafting.curveControls ?? []),
-                            ].reverse(),
-                          },
-                        },
-                      ]);
-                    }}
-                    disabled={selectedDrafting.locked}
-                  >
-                    Reverse direction
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => toggleDraftingLock(selectedDrafting)}
-                >
-                  {selectedDrafting.locked ? "Unlock" : "Lock"}
-                </button>
-              </section>
-            ) : null}
             {selectedAnnotation && isRoutedMarker(selectedAnnotation) ? (
               <section
                 className="context-actions"
@@ -6240,6 +6314,25 @@ export function App({ project: initialProject }: AppProps) {
           aria-label="Schematic canvas"
           viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
           onWheel={handleWheel}
+          onPointerDownCapture={(event) => {
+            const target = event.target as Element;
+            if (
+              selectedDrafting &&
+              (selectedDrafting.kind === "arrow" ||
+                selectedDrafting.kind === "construction-line" ||
+                selectedDrafting.kind === "rectangle") &&
+              !target.closest('[data-testid="drafting-inline-inspector"]') &&
+              !target.closest(
+                `[data-testid="drafting-hit-${selectedDrafting.id}"]`,
+              ) &&
+              !target.closest(
+                `[data-testid="drafting-handles-${selectedDrafting.id}"]`,
+              )
+            ) {
+              setSelectedDraftingId(null);
+            }
+            handleCanvasHitPointerDown(event);
+          }}
           onPointerDown={beginCanvasGesture}
           onPointerMove={continueCanvasGesture}
           onPointerUp={finishCanvasGesture}
@@ -6249,7 +6342,9 @@ export function App({ project: initialProject }: AppProps) {
             const onBackground =
               target === event.currentTarget || target.tagName === "rect";
             if (
-              (tool === "arrow" || tool === "construction-line") &&
+              (tool === "arrow" ||
+                tool === "construction-line" ||
+                tool === "rectangle") &&
               event.detail === 1 &&
               onBackground
             ) {
@@ -6275,7 +6370,11 @@ export function App({ project: initialProject }: AppProps) {
           }}
           onDoubleClick={(event) => {
             const target = event.target as Element;
-            if (tool === "arrow" || tool === "construction-line") {
+            if (
+              tool === "arrow" ||
+              tool === "construction-line" ||
+              tool === "rectangle"
+            ) {
               if (target !== event.currentTarget && target.tagName !== "rect")
                 return;
               finishDraftingCreate();
@@ -6306,7 +6405,11 @@ export function App({ project: initialProject }: AppProps) {
           }}
           onContextMenu={(event) => {
             event.preventDefault();
-            if (tool === "arrow" || tool === "construction-line") {
+            if (
+              tool === "arrow" ||
+              tool === "construction-line" ||
+              tool === "rectangle"
+            ) {
               if (draftingSource !== null) {
                 clearDraftingCreate();
                 setStatus("Drawing cancelled");
@@ -6426,6 +6529,8 @@ export function App({ project: initialProject }: AppProps) {
                   <circle
                     key={`handle-${route.id}`}
                     data-testid={`route-handle-${route.id}`}
+                    data-canvas-hit-kind="handle"
+                    data-canvas-hit-id={`route-handle-${route.id}`}
                     className="route-handle"
                     cx={
                       translatesWholeRoute
@@ -6451,8 +6556,6 @@ export function App({ project: initialProject }: AppProps) {
                       )
                     }
                     pointerEvents={tool === "wire" ? "none" : undefined}
-                    onPointerMove={previewRouteStretch}
-                    onPointerUp={finishRouteStretch}
                   />
                 );
               })}
@@ -6466,6 +6569,9 @@ export function App({ project: initialProject }: AppProps) {
                   <rect
                     key={instance.id}
                     data-testid={`hit-${instance.id}`}
+                    data-canvas-hit-kind="instance"
+                    data-canvas-hit-id={instance.id}
+                    data-drag-object-id={instance.id}
                     {...hitBox}
                     className={
                       selectedIds.includes(instance.id)
@@ -6492,19 +6598,29 @@ export function App({ project: initialProject }: AppProps) {
                         : undefined
                     }
                     onPointerDown={(event) => beginMove(event, instance.id)}
-                    onPointerMove={previewMove}
-                    onPointerUp={finishMove}
                     pointerEvents={tool === "wire" ? "none" : undefined}
                   />
                 );
               })}
             {document.instances.map((instance) => {
+              if (
+                document.annotations.some(
+                  (annotation) =>
+                    annotation.kind === "instance-label" &&
+                    annotation.attachedObjectId === instance.id,
+                )
+              ) {
+                return null;
+              }
               const label = defaultInstanceLabel(instance);
               if (!label) return null;
               return (
                 <rect
                   key={`default-label-hit-${instance.id}`}
                   data-testid={`default-label-hit-${instance.id}`}
+                  data-canvas-hit-kind="instance-label"
+                  data-canvas-hit-id={instance.id}
+                  data-drag-object-id={instance.id}
                   className="annotation-hit"
                   {...annotationHitBox(label, label.position)}
                   onClick={(event) => event.stopPropagation()}
@@ -6522,6 +6638,9 @@ export function App({ project: initialProject }: AppProps) {
               <polyline
                 key={route.id}
                 data-testid={`route-hit-${route.id}`}
+                data-canvas-hit-kind="route"
+                data-canvas-hit-id={route.id}
+                data-drag-object-id={route.id}
                 className={
                   selectedRouteId === route.id ||
                   supplementalSelection.routeIds.includes(route.id) ||
@@ -6533,8 +6652,6 @@ export function App({ project: initialProject }: AppProps) {
                 onPointerDown={(event) =>
                   handleRoutePointerDown(event, route.id)
                 }
-                onPointerMove={previewRouteStretch}
-                onPointerUp={finishRouteStretch}
                 onClick={(event) => event.stopPropagation()}
               />
             ))}
@@ -6542,6 +6659,21 @@ export function App({ project: initialProject }: AppProps) {
               <circle
                 key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}
                 data-testid={endpointTestId(candidate.endpoint)}
+                data-canvas-hit-kind={
+                  candidate.endpoint.kind === "junction"
+                    ? "junction"
+                    : undefined
+                }
+                data-canvas-hit-id={
+                  candidate.endpoint.kind === "junction"
+                    ? candidate.endpoint.junctionId
+                    : undefined
+                }
+                data-drag-object-id={
+                  candidate.endpoint.kind === "junction"
+                    ? candidate.endpoint.junctionId
+                    : undefined
+                }
                 className={
                   tool === "wire" ||
                   (candidate.endpoint.kind === "junction" &&
@@ -6589,11 +6721,7 @@ export function App({ project: initialProject }: AppProps) {
             ))}
             {document.annotations.map((annotation) => {
               const anchor = annotationAnchor(annotation);
-              const preview =
-                annotationDragPreview?.annotationId === annotation.id
-                  ? annotationDragPreview.position
-                  : anchor;
-              const hitBox = annotationHitBox(annotation, preview);
+              const hitBox = annotationHitBox(annotation, anchor);
               const usesWideAnnotationHitBand = isRoutedMarker(annotation);
               const selected =
                 selectedAnnotationId === annotation.id ||
@@ -6602,6 +6730,9 @@ export function App({ project: initialProject }: AppProps) {
                 <rect
                   key={`annotation-hit-${annotation.id}`}
                   data-testid={`annotation-hit-${annotation.id}`}
+                  data-canvas-hit-kind="annotation"
+                  data-canvas-hit-id={annotation.id}
+                  data-drag-object-id={annotation.id}
                   // Text uses the same precise dashed selection rectangle as a
                   // component. Current/voltage markers retain the wide line
                   // hit band because their painted geometry is intentionally
@@ -6620,8 +6751,6 @@ export function App({ project: initialProject }: AppProps) {
                   onPointerDown={(event) =>
                     beginAnnotationDrag(event, annotation)
                   }
-                  onPointerMove={previewAnnotationDrag}
-                  onPointerUp={finishAnnotationDrag}
                   pointerEvents={tool === "wire" ? "none" : undefined}
                   onDoubleClick={(event) => {
                     event.stopPropagation();
@@ -6642,15 +6771,16 @@ export function App({ project: initialProject }: AppProps) {
                 object,
               );
               const draggable = !object.locked && draftingDragOrigin(object);
-              const drag =
-                draftingDragPreview?.objectId === object.id
-                  ? draftingDragPreview
-                  : null;
               const selected =
                 selectedDraftingId === object.id ||
                 supplementalSelection.draftingIds.includes(object.id)
                   ? "annotation-hit selected"
                   : "annotation-hit";
+              const textSelected =
+                selectedDraftingId === object.id ||
+                supplementalSelection.draftingIds.includes(object.id)
+                  ? "hit-target annotation-text-hit selected"
+                  : "hit-target annotation-text-hit";
               const onDown = (event: ReactPointerEvent<SVGElement>): void => {
                 if (draggable) {
                   beginDraftingDrag(event, object);
@@ -6670,6 +6800,9 @@ export function App({ project: initialProject }: AppProps) {
                 const commonProps = {
                   key: `drafting-hit-${object.id}`,
                   "data-testid": `drafting-hit-${object.id}`,
+                  "data-canvas-hit-kind": "drafting",
+                  "data-canvas-hit-id": object.id,
+                  "data-drag-object-id": object.id,
                   className: selected,
                   fill: "none",
                   onPointerDown: onDown,
@@ -6703,6 +6836,9 @@ export function App({ project: initialProject }: AppProps) {
                   <path
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
+                    data-canvas-hit-kind="drafting"
+                    data-canvas-hit-id={object.id}
+                    data-drag-object-id={object.id}
                     className={selected}
                     d={draftingPathData(
                       geometry.points,
@@ -6727,6 +6863,9 @@ export function App({ project: initialProject }: AppProps) {
                   <polyline
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
+                    data-canvas-hit-kind="drafting"
+                    data-canvas-hit-id={object.id}
+                    data-drag-object-id={object.id}
                     className={selected}
                     points={geometry.points
                       .map((point) => `${point.x},${point.y}`)
@@ -6748,11 +6887,30 @@ export function App({ project: initialProject }: AppProps) {
                   />
                 );
               }
+              if (
+                object.kind === "rectangle" &&
+                geometry.kind === "rectangle"
+              ) {
+                return (
+                  <polygon
+                    key={`drafting-hit-${object.id}`}
+                    data-testid={`drafting-hit-${object.id}`}
+                    className={selected}
+                    points={polylinePoints(geometry.corners)}
+                    fill="none"
+                    onPointerDown={onDown}
+                    pointerEvents={tool === "wire" ? "none" : undefined}
+                  />
+                );
+              }
               if (object.kind === "leader" && geometry.kind === "leader") {
                 return (
                   <line
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
+                    data-canvas-hit-kind="drafting"
+                    data-canvas-hit-id={object.id}
+                    data-drag-object-id={object.id}
                     className={selected}
                     x1={geometry.anchor.x}
                     y1={geometry.anchor.y}
@@ -6768,6 +6926,9 @@ export function App({ project: initialProject }: AppProps) {
                   <g
                     key={`drafting-hit-${object.id}`}
                     data-testid={`drafting-hit-${object.id}`}
+                    data-canvas-hit-kind="drafting"
+                    data-canvas-hit-id={object.id}
+                    data-drag-object-id={object.id}
                     onPointerDown={onDown}
                     pointerEvents={tool === "wire" ? "none" : undefined}
                   >
@@ -6782,23 +6943,15 @@ export function App({ project: initialProject }: AppProps) {
                   </g>
                 );
               }
-              const hitBounds = drag
-                ? {
-                    ...geometry.bounds,
-                    x:
-                      geometry.bounds.x +
-                      (drag.position.x - drag.originalPosition.x),
-                    y:
-                      geometry.bounds.y +
-                      (drag.position.y - drag.originalPosition.y),
-                  }
-                : geometry.bounds;
               return (
                 <rect
                   key={`drafting-hit-${object.id}`}
                   data-testid={`drafting-hit-${object.id}`}
-                  className={selected}
-                  {...hitBounds}
+                  data-canvas-hit-kind="drafting"
+                  data-canvas-hit-id={object.id}
+                  data-drag-object-id={object.id}
+                  className={object.kind === "text" ? textSelected : selected}
+                  {...geometry.bounds}
                   onPointerDown={onDown}
                   onDoubleClick={(event) => {
                     if (object.kind !== "text") return;
@@ -6821,7 +6974,11 @@ export function App({ project: initialProject }: AppProps) {
                   );
                   if (object.kind === "arrow" && geometry.kind === "arrow") {
                     return (
-                      <g data-testid={`drafting-handles-${object.id}`}>
+                      <g
+                        data-testid={`drafting-handles-${object.id}`}
+                        data-canvas-hit-kind="handle"
+                        data-canvas-hit-id={`drafting-handles-${object.id}`}
+                      >
                         <circle
                           className="draft-handle"
                           data-testid={`draft-handle-from-${object.id}`}
@@ -6896,7 +7053,11 @@ export function App({ project: initialProject }: AppProps) {
                     geometry.kind === "construction-line"
                   ) {
                     return (
-                      <g data-testid={`drafting-handles-${object.id}`}>
+                      <g
+                        data-testid={`drafting-handles-${object.id}`}
+                        data-canvas-hit-kind="handle"
+                        data-canvas-hit-id={`drafting-handles-${object.id}`}
+                      >
                         {geometry.vertices.map((vertex, index) => (
                           <circle
                             key={`draft-vx-${index}`}
@@ -6946,12 +7107,39 @@ export function App({ project: initialProject }: AppProps) {
                       </g>
                     );
                   }
+                  if (
+                    object.kind === "rectangle" &&
+                    geometry.kind === "rectangle"
+                  ) {
+                    return (
+                      <g data-testid={`drafting-handles-${object.id}`}>
+                        {geometry.corners.map((corner, index) => (
+                          <rect
+                            key={`draft-rectangle-corner-${index}`}
+                            className="draft-handle"
+                            data-testid={`draft-handle-corner-${index}-${object.id}`}
+                            x={corner.x - 4}
+                            y={corner.y - 4}
+                            width="8"
+                            height="8"
+                            onPointerDown={(event) =>
+                              beginDraftingHandleDrag(event, object, {
+                                kind: "rectangle-corner",
+                                index,
+                              })
+                            }
+                          />
+                        ))}
+                      </g>
+                    );
+                  }
                   return null;
                 })()
               : null}
             {selectedDrafting &&
             (selectedDrafting.kind === "arrow" ||
-              selectedDrafting.kind === "construction-line")
+              selectedDrafting.kind === "construction-line" ||
+              selectedDrafting.kind === "rectangle")
               ? (() => {
                   const geometry = resolveDraftingObjectGeometry(
                     document,
@@ -6960,12 +7148,15 @@ export function App({ project: initialProject }: AppProps) {
                   );
                   if (
                     geometry.kind !== "arrow" &&
-                    geometry.kind !== "construction-line"
+                    geometry.kind !== "construction-line" &&
+                    geometry.kind !== "rectangle"
                   ) {
                     return null;
                   }
                   const inspectorWidth =
-                    selectedDrafting.kind === "arrow" ? 192 : 144;
+                    selectedDrafting.kind === "arrow" ? 252 : 144;
+                  const inspectorHeight =
+                    selectedDrafting.kind === "arrow" ? 144 : 132;
                   const inspectorX = Math.max(
                     viewBox.x + 8,
                     Math.min(
@@ -6976,24 +7167,34 @@ export function App({ project: initialProject }: AppProps) {
                   const inspectorY = Math.max(
                     viewBox.y + 8,
                     Math.min(
-                      viewBox.y + viewBox.height - 136,
+                      viewBox.y + viewBox.height - inspectorHeight - 8,
                       geometry.bounds.y - 4,
                     ),
                   );
                   const lineStyle =
                     selectedDrafting.styleOverride?.lineStyle ??
-                    (selectedDrafting.kind === "construction-line"
+                    (selectedDrafting.kind === "construction-line" ||
+                    selectedDrafting.kind === "rectangle"
                       ? selectedDrafting.lineStyle
                       : "solid");
+                  const isRectangle = geometry.kind === "rectangle";
+                  const geometryPoints = isRectangle
+                    ? geometry.corners
+                    : geometry.points;
+                  const curveControls = isRectangle
+                    ? geometryPoints.slice(0, -1).map(() => null)
+                    : geometry.curveControls;
                   const segmentIndex =
                     draftingInspectorSegment?.objectId === selectedDrafting.id
                       ? draftingInspectorSegment.index
-                      : Math.max(0, geometry.curveControls.findIndex(Boolean));
-                  const tangentAngle = quadraticTangentAngle(
-                    geometry.points[segmentIndex]!,
-                    geometry.curveControls[segmentIndex] ?? null,
-                    geometry.points[segmentIndex + 1]!,
-                  );
+                      : Math.max(0, curveControls.findIndex(Boolean));
+                  const tangentAngle = isRectangle
+                    ? 0
+                    : quadraticTangentAngle(
+                        geometryPoints[segmentIndex]!,
+                        curveControls[segmentIndex] ?? null,
+                        geometryPoints[segmentIndex + 1]!,
+                      );
                   const tangentInputKey = `${selectedDrafting.id}:${segmentIndex}`;
                   const realizedAngleText = String(
                     Math.round(tangentAngle * 10) / 10,
@@ -7002,10 +7203,9 @@ export function App({ project: initialProject }: AppProps) {
                     draftingTangentInput?.key === tangentInputKey
                       ? draftingTangentInput.value
                       : realizedAngleText;
-                  const bearing = normalizedBearing(
-                    geometry.points[0]!,
-                    geometry.points[1]!,
-                  );
+                  const bearing = isRectangle
+                    ? geometry.rotation
+                    : normalizedBearing(geometryPoints[0]!, geometryPoints[1]!);
                   const realizedBearingText = String(
                     Math.round(bearing * 10) / 10,
                   );
@@ -7019,10 +7219,11 @@ export function App({ project: initialProject }: AppProps) {
                       x={inspectorX}
                       y={inspectorY}
                       width={inspectorWidth}
-                      height="132"
+                      height={inspectorHeight}
                     >
                       <div
                         className="drafting-inline-inspector"
+                        data-drafting-kind={selectedDrafting.kind}
                         onPointerDown={(event) => event.stopPropagation()}
                       >
                         <select
@@ -7058,7 +7259,8 @@ export function App({ project: initialProject }: AppProps) {
                           <option value="1.5">1.5×</option>
                           <option value="2">2×</option>
                         </select>
-                        {geometry.points.length > 2 ? (
+                        {selectedDrafting.kind === "construction-line" &&
+                        geometryPoints.length > 2 ? (
                           <select
                             aria-label="Curve segment"
                             value={String(segmentIndex)}
@@ -7071,49 +7273,47 @@ export function App({ project: initialProject }: AppProps) {
                               setDraftingTangentInput(null);
                             }}
                           >
-                            {geometry.points.slice(0, -1).map((_, index) => (
+                            {geometryPoints.slice(0, -1).map((_, index) => (
                               <option key={index} value={index}>
                                 Segment {index + 1}
                               </option>
                             ))}
                           </select>
                         ) : null}
-                        <label className="drafting-tangent-angle">
-                          Tangent ∠
-                          <input
-                            aria-label="Tangent angle"
-                            type="number"
-                            min="0"
-                            max="170"
-                            step="1"
-                            value={tangentInputValue}
-                            disabled={selectedDrafting.locked}
-                            placeholder={realizedAngleText}
-                            onFocus={() => {
-                              // The readout is shown while unfocused. Start a
-                              // fresh numeric draft on focus, so a user can
-                              // simply type 60 rather than editing an initial
-                              // 0 into the visually confusing 060.
-                              setDraftingTangentInput({
-                                key: tangentInputKey,
-                                value: "",
-                              });
-                            }}
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              setDraftingTangentInput({
-                                key: tangentInputKey,
-                                value,
-                              });
-                              const angle = Number(value);
-                              if (value !== "" && Number.isFinite(angle)) {
-                                setDraftingTangentAngle(angle);
-                              }
-                            }}
-                            onBlur={() => setDraftingTangentInput(null)}
-                          />
-                          °
-                        </label>
+                        {!isRectangle ? (
+                          <label className="drafting-tangent-angle">
+                            Tangent ∠
+                            <input
+                              aria-label="Tangent angle"
+                              type="number"
+                              min="0"
+                              max="170"
+                              step="1"
+                              value={tangentInputValue}
+                              disabled={selectedDrafting.locked}
+                              placeholder={realizedAngleText}
+                              onFocus={() => {
+                                setDraftingTangentInput({
+                                  key: tangentInputKey,
+                                  value: "",
+                                });
+                              }}
+                              onChange={(event) => {
+                                const value = event.currentTarget.value;
+                                setDraftingTangentInput({
+                                  key: tangentInputKey,
+                                  value,
+                                });
+                                const angle = Number(value);
+                                if (value !== "" && Number.isFinite(angle)) {
+                                  setDraftingTangentAngle(angle);
+                                }
+                              }}
+                              onBlur={() => setDraftingTangentInput(null)}
+                            />
+                            °
+                          </label>
+                        ) : null}
                         <label className="drafting-tangent-angle">
                           Bearing
                           <input
@@ -7166,6 +7366,26 @@ export function App({ project: initialProject }: AppProps) {
                               <option value="filled">Filled</option>
                               <option value="open">Open</option>
                             </select>
+                            <select
+                              aria-label="Inline arrow head size"
+                              value={String(
+                                selectedDrafting.styleOverride
+                                  ?.arrowHeadScale ?? 1,
+                              )}
+                              disabled={selectedDrafting.locked}
+                              onChange={(event) =>
+                                setDraftingStyle({
+                                  arrowHeadScale: Number(
+                                    event.currentTarget.value,
+                                  ) as 0.75 | 1 | 1.25 | 1.5,
+                                })
+                              }
+                            >
+                              <option value="0.75">0.75× head</option>
+                              <option value="1">1× head</option>
+                              <option value="1.25">1.25× head</option>
+                              <option value="1.5">1.5× head</option>
+                            </select>
                             <button
                               type="button"
                               disabled={selectedDrafting.locked}
@@ -7201,24 +7421,17 @@ export function App({ project: initialProject }: AppProps) {
                         >
                           Rotate
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleDraftingLock(selectedDrafting)}
+                        >
+                          {selectedDrafting.locked ? "Unlock" : "Lock"}
+                        </button>
                       </div>
                     </foreignObject>
                   );
                 })()
               : null}
-            {annotationDragPreview ? (
-              <text
-                className="annotation-drag-preview"
-                x={annotationDragPreview.position.x}
-                y={annotationDragPreview.position.y}
-                textAnchor="middle"
-              >
-                {document.annotations.find(
-                  (annotation) =>
-                    annotation.id === annotationDragPreview.annotationId,
-                )?.text ?? ""}
-              </text>
-            ) : null}
             {boxPreview ? (
               <rect
                 data-testid="selection-box"
@@ -7244,32 +7457,67 @@ export function App({ project: initialProject }: AppProps) {
                 r="4"
               />
             ) : null}
-            {textEditing && textEditingBounds ? (
-              <foreignObject
-                data-testid="canvas-text-editor"
-                x={textEditingBounds.x - 6}
-                y={textEditingBounds.y - 58}
-                width={Math.max(300, textEditingBounds.width + 12)}
-                height={Math.max(110, textEditingBounds.height + 68)}
-              >
-                <RichTextEditor
-                  targetKey={`${textEditing.owner}:${textEditing.id}`}
-                  content={textEditing.content}
-                  disabled={textEditingLocked}
-                  sizeScale={textEditing.sizeScale}
-                  onChange={(content) => updateTextEditing({ content })}
-                  onSizeChange={(sizeScale) => updateTextEditing({ sizeScale })}
-                  onCommit={commitTextEditing}
-                  onCancel={() => setTextEditing(null)}
-                  onDelete={deleteTextEditing}
-                  {...(editingAnnotation &&
-                  isRoutedMarker(editingAnnotation) &&
-                  effectiveRouteAttachment(editingAnnotation)
-                    ? { onReverseCurrentArrow: reverseSelectedCurrentArrow }
-                    : {})}
-                />
-              </foreignObject>
-            ) : null}
+            {textEditing && textEditingBounds
+              ? (() => {
+                  const editorWidth = Math.min(
+                    Math.max(420, textEditingBounds.width + 12),
+                    viewBox.width - 16,
+                  );
+                  const editorHeight = Math.min(
+                    Math.max(
+                      110,
+                      textEditingBounds.height + 68,
+                      78 + 15.116 * textEditing.sizeScale * 1.3,
+                    ),
+                    viewBox.height - 16,
+                  );
+                  const editorX = Math.max(
+                    viewBox.x + 8,
+                    Math.min(
+                      viewBox.x + viewBox.width - editorWidth - 8,
+                      textEditingBounds.x - 6,
+                    ),
+                  );
+                  const editorY = Math.max(
+                    viewBox.y + 8,
+                    Math.min(
+                      viewBox.y + viewBox.height - editorHeight - 8,
+                      textEditingBounds.y - 58,
+                    ),
+                  );
+                  return (
+                    <foreignObject
+                      data-testid="canvas-text-editor"
+                      x={editorX}
+                      y={editorY}
+                      width={editorWidth}
+                      height={editorHeight}
+                    >
+                      <RichTextEditor
+                        targetKey={`${textEditing.owner}:${textEditing.id}`}
+                        content={textEditing.content}
+                        disabled={textEditingLocked}
+                        sizeScale={textEditing.sizeScale}
+                        onChange={(content) => updateTextEditing({ content })}
+                        onSizeChange={(sizeScale) =>
+                          updateTextEditing({ sizeScale })
+                        }
+                        onCommit={commitTextEditing}
+                        onCancel={() => setTextEditing(null)}
+                        onDelete={deleteTextEditing}
+                        {...(editingAnnotation &&
+                        isRoutedMarker(editingAnnotation) &&
+                        effectiveRouteAttachment(editingAnnotation)
+                          ? {
+                              onReverseCurrentArrow:
+                                reverseSelectedCurrentArrow,
+                            }
+                          : {})}
+                      />
+                    </foreignObject>
+                  );
+                })()
+              : null}
           </g>
         </svg>
       </section>
