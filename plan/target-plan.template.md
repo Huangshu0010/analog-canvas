@@ -1,10 +1,15 @@
+---
+status: active
+experience: none
+---
+
 # Target Title
 
 ## Goal
 
 State the concrete objective.
 
-## Dirty-State Note
+## State and Ownership
 
 Start state from `git status --short --branch`:
 
@@ -13,21 +18,17 @@ Start state from `git status --short --branch`:
 ```
 
 State whether the worktree is clean or why unrelated dirty files are safe to
-leave untouched.
-
-## Owned Files
+leave untouched. Name the owned paths.
 
 - `<paths this target may edit>`
 
-## Read-Only Files
+Name read-only paths and shared dependencies only when overlap or contract risk
+is credible:
 
-- `<paths this target may inspect but not edit>`
+- Read-only: `<paths this target may inspect but not edit>`
+- Shared: `<contracts, generated artifacts, APIs, docs, or decisions>`
 
-## Shared Dependencies
-
-- `<shared contracts, generated artifacts, APIs, docs, or decisions>`
-
-## Expected Work
+## Work
 
 1. `<step>`
 2. `<step>`
@@ -38,15 +39,8 @@ leave untouched.
 - `git status --short --branch`
 - `<smallest deterministic checks covering behavior and dependencies>`
 
-Explain why the checks match the affected surface and risk. If adding tests or
-running a full suite, state the behavior, regression risk, contract, or policy
-that justifies it.
-
-## Experience Signal (for human review)
-
-Optionally flag a repeated failure, contradicted rule, unsafe shortcut, or
-validation gap. This is not an Agent self-evaluation; a human decides whether
-to request lesson extraction. Leave empty for routine work.
+Add test rationale or broader-suite justification only when it is not obvious
+from the changed behavior and risk.
 
 ## Commit Intent
 
@@ -55,3 +49,10 @@ Commit as:
 ```text
 <commit message>
 ```
+
+## Outcome
+
+At close-out, summarize the actual change and validation, then set
+`status: completed`. Set `experience: candidate` only for a concrete reusable
+signal; otherwise leave it as `none`. A human later changes a candidate to
+`extracted`, `rejected`, or `deferred`.

@@ -418,7 +418,8 @@ tool` accessible name and normalized deletion status.
 - Target: consolidate the product definition and design discussion into one
   overall implementation plan for the AI/human collaborative circuit canvas.
 - Changed areas: added `docs/overall-product-plan.md` and its bounded target
-  plan under `plan/2026-08-06-document-overall-product-plan/`.
+  plan under
+  `plan/archived/2026-08/2026-08-06-document-overall-product-plan/`.
 - Validation: confirmed balanced Markdown fences and required architecture
   contracts; reviewed headings and terminology; `git diff --check` passed.
 - Commit status: ready to commit as
@@ -446,7 +447,7 @@ tool` accessible name and normalized deletion status.
   external model, Project-to-Document persistence, seven protocol operations,
   GUI-driven human edits, transient parser artifacts, and a minimal user
   project layout; added the bounded target plan under
-  `plan/2026-08-07-flatten-overall-product-plan/`.
+  `plan/archived/2026-08/2026-08-07-flatten-overall-product-plan/`.
 - Validation: confirmed balanced Markdown fences and required full-SPICE,
   junction/crossing, VSS isolation, GUI/Edit Engine, protocol, file-layout,
   visual-language, validation, and MVP contracts; `git diff --check` passed.
@@ -461,7 +462,8 @@ tool` accessible name and normalized deletion status.
 - Changed areas: added `docs/README.md`; added roadmap index, phase template,
   and substantive Phase 0–7 plans; added specification, Agent, and ADR indexes
   and templates; updated the repository README; added the bounded target plan
-  under `plan/2026-08-07-establish-execution-docs/`.
+  under
+  `plan/archived/2026-08/2026-08-07-establish-execution-docs/`.
 - Validation: confirmed all eight phase files contain every required planning
   section; all relative Markdown links resolve; all Markdown fences are
   balanced; no application source scaffold was created; `git diff --check`
@@ -1589,7 +1591,8 @@ tool` accessible name and normalized deletion status.
   (route-attached-current-arrow, annotation-editing, editor-text-label-hit-fixes,
   flat-cdac-new-architecture-audit) stay with their code; only this plan, whose
   artifacts are gitignored local build outputs, lands now.
-- Changed areas: `plan/2026-08-07-redraw-ota-with-repaired-bulk-and-new-symbols/plan.md`.
+- Changed areas:
+  `plan/archived/2026-08/2026-08-07-redraw-ota-with-repaired-bulk-and-new-symbols/plan.md`.
 - Note: the referenced `razavi-ota-5t-redrawn.*` and `razavi-layout.mjs` are
   gitignored under `netlists/` and are intentionally not version-controlled;
   the plan records intent and factual outcome only.
@@ -3928,3 +3931,37 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `agent/fix-ci-baseline` as
   `docs: remove redundant visual redirects` after the user authorized taking
   ownership of the previously concurrent changes.
+
+## 2026-08-10 - Archive completed foundation plans
+
+- Target: reduce the active planning surface by introducing a documented
+  archive and moving only completed, committed foundation and phase-wrapper
+  plans whose operational value is historical.
+- Changed areas: added the `plan/archived/` retention policy and monthly
+  layout; moved 12 completed plans into `plan/archived/2026-08/`; documented
+  the archive from `plan/README.md`; updated three historical log references.
+  Plans with unresolved work or explicit experience signals remain active.
+- Validation: all 12 archived `plan.md` blobs match their original `HEAD`
+  blobs; all source directories are absent and destinations exist; local
+  Markdown links resolve; remaining old-root strings occur only as historical
+  ownership/path records inside archived plans and this target plan;
+  `git diff --check` passed.
+- Commit status: ready to commit on `agent/fix-ci-baseline` after the user
+  authorized taking ownership of the previously concurrent changes.
+
+## 2026-08-10 - Archive completed plans and slim the planning protocol
+
+- Target: archive a second evidence-backed completed-plan batch and remove the
+  status and experience ambiguities exposed by the archive audit.
+- Changed areas: moved 42 byte-preserved completed plans into
+  `plan/archived/2026-08/`; added their commit index; introduced required
+  `status` and `experience` metadata for future plans; reduced the single plan
+  template to a compact ownership/validation core; separated plan, Git, log,
+  and experience authority; updated affected current-location links.
+- Validation: every selected plan has an outcome and Git evidence; all 42
+  archived blobs match their original `HEAD` blobs; sources are absent and
+  destinations exist; local Markdown links resolve; remaining old-root strings
+  are intentional historical records; `git diff --check` passed.
+- Commit status: ready to commit on `agent/fix-ci-baseline` as
+  `docs(plan): archive completed plans and clarify protocol` after the user
+  authorized taking ownership of the previously concurrent changes.

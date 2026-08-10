@@ -11,9 +11,28 @@ Create a plan before editing tracked files at:
 plan/<date-goal-slug>/plan.md
 ```
 
-Start from `target-plan.template.md`. Each plan names the goal, dirty-state
-decision, owned and read-only paths, shared dependencies, expected work,
-validation sized to risk, and commit intent.
+Start from `target-plan.template.md`. Keep routine targets compact: state the
+goal, dirty-state and ownership decision, work, validation, and commit intent.
+Add explicit read-only paths, dependency analysis, test rationale, or
+coordination detail only when the target's risk requires them.
+
+Each plan begins with the current-state authority:
+
+```yaml
+---
+status: active
+experience: none
+---
+```
+
+Allowed `status` values are `active`, `blocked`, `completed`, and
+`superseded`. Allowed `experience` values are `none`, `candidate`, `extracted`,
+`rejected`, and `deferred`. Do not create blank experience sections. Git, not
+plan metadata, remains the authority for whether and where work was committed.
+
+A target follows one ownership and validation boundary. Related symptoms that
+share files, contracts, and checks normally belong in one target; unrelated
+changes remain separate even when they are individually small.
 
 ## Dirty Worktree Handling
 
@@ -24,8 +43,20 @@ coordinate when ownership or overlap is unclear.
 
 ## Maintenance Log
 
-`log.md` records accepted project maintenance history. Each entry states the
-date, target, changed areas, validation, and commit status. Keep it factual.
+`log.md` is the concise cross-target factual index. Each entry states the date,
+target, changed areas, validation, and commit status; it does not repeat plan
+intent, detailed transcripts, or reusable lessons.
+
+## Archived Plans
+
+Tracked plans with `status: completed` may move to
+[`archived/`](archived/README.md) when their work is committed, validation and
+outcome are recorded, no decision or coordination remains open, and
+`experience` is resolved. Archive directories are grouped by completion month.
+Moving a plan does not authorize rewriting its historical content.
+
+Failed, blocked, unresolved, proposed-only, superseded-before-implementation,
+pending, and active plans remain visible in the plan root.
 
 ## Experience Extraction
 
@@ -34,8 +65,15 @@ human may ask an Agent to draft an evidence-backed candidate in
 `docs/experience/`; the human then accepts, edits, or rejects it. Raw status,
 diffs, and validation transcripts belong in plans, logs, or Git history.
 
+When a lesson is accepted, set the source plan to `experience: extracted` and
+cite the experience note from the archive index or plan outcome. When it is not
+worth extracting, use `rejected`; use `deferred` only for an explicit human
+decision to postpone extraction.
+
 ## Relationship to Git
 
-Plans explain intent, logs explain outcomes, and Git records actual repository
-state. A complete target normally ends with proportional validation, a log
-update, intentional staging, a commit, and a push according to branch policy.
+Plans own intent, boundaries, state, and concise outcomes; logs provide the
+cross-target index; Git records exact repository state; experience notes own
+transferable judgments. A complete target normally ends with proportional
+validation, a plan outcome/state update, a concise log entry, intentional
+staging, a commit, and a push according to branch policy.

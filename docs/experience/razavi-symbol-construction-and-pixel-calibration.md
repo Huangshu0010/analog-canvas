@@ -68,8 +68,9 @@ render-only bridges. Detailed chronology and measurements remain in
 [`plan/2026-08-09-razavi-capacitor-calibration`](../../plan/2026-08-09-razavi-capacitor-calibration/plan.md),
 [`plan/2026-08-09-razavi-mos-route-arrow-continuity`](../../plan/2026-08-09-razavi-mos-route-arrow-continuity/plan.md),
 [`plan/2026-08-09-razavi-resistor-continuity`](../../plan/2026-08-09-razavi-resistor-continuity/plan.md),
-[`plan/2026-08-09-direct-miter-terminal-joins`](../../plan/2026-08-09-direct-miter-terminal-joins/plan.md),
-and [`plan/2026-08-10-reusable-wire-endpoints`](../../plan/2026-08-10-reusable-wire-endpoints/plan.md).
+[`plan/2026-08-09-direct-miter-terminal-joins`](../../plan/archived/2026-08/2026-08-09-direct-miter-terminal-joins/plan.md),
+and
+[`plan/2026-08-10-reusable-wire-endpoints`](../../plan/archived/2026-08/2026-08-10-reusable-wire-endpoints/plan.md).
 
 ## 2. Code and Paths
 

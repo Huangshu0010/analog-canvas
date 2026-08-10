@@ -31,13 +31,23 @@ Create or update a target plan before editing tracked files:
 plan/<date-goal-slug>/plan.md
 ```
 
-The plan must state the goal, dirty-state decision, owned and read-only paths,
-shared dependencies, expected work, validation, and commit intent. Do not edit
-outside the owned set without updating the plan first.
+Start it with the machine-readable state block from
+`plan/target-plan.template.md`. `status` is one of `active`, `blocked`,
+`completed`, or `superseded`; `experience` is one of `none`, `candidate`,
+`extracted`, `rejected`, or `deferred`. These fields are the only current-state
+authority. Do not add an empty `Experience Signal` section.
+
+The plan must state the goal, dirty-state decision, ownership boundary,
+expected work, validation, and commit intent. Name shared dependencies and
+read-only paths when they create a credible overlap risk. Do not edit outside
+the owned set without updating the plan first.
 
 ## During Work
 
 - Keep each target small and reviewable; exclude unrelated cleanup.
+- Define a target by one ownership and validation boundary, not by every
+  visible symptom. Closely related micro-fixes that share files, contracts,
+  and validation belong in one target; independent changes do not.
 - Protect shared contracts, generated artifacts, binary assets, and user-owned
   work unless the plan explicitly claims them.
 - Update the plan before expanding scope or taking on a new dependency.
@@ -76,9 +86,11 @@ Before considering a target complete:
 2. At minimum, run `git diff --check` and `git status --short --branch`.
 3. Update `plan/log.md` with target, changed areas, validation, and commit
    status.
-4. Review the diff, stage only intended files, then commit and push according
+4. Record a concise outcome, set `status: completed`, and set `experience` to
+   `none` or `candidate`. Never use a blank signal as a placeholder.
+5. Review the diff, stage only intended files, then commit and push according
    to branch policy.
-5. Do not automatically extract a reusable lesson. When a human asks, draft a
+6. Do not automatically extract a reusable lesson. When a human asks, draft a
    candidate under `docs/experience/` with supporting evidence for the human
    to accept, edit, or reject.
 
@@ -99,10 +111,12 @@ human reviews plans, logs, failures, or commits
 -> human accepts, edits, or rejects it
 ```
 
-A plan records intent before work. A log records facts after work. An
-experience note records a transferable judgment supported by evidence. An
-Agent may flag a possible signal—such as a repeated failure, contradicted
-rule, unsafe shortcut, or validation gap—but the human decides whether it is a
+A plan owns intent, boundaries, current state, and its concise outcome. Git
+owns the exact change and commit evidence. The log owns a short cross-target
+factual index and must not reproduce the plan. An experience note owns only a
+transferable judgment supported by evidence. An Agent may set
+`experience: candidate` for a repeated failure, contradicted
+rule, unsafe shortcut, or validation gap, but the human decides whether it is a
 lesson.
 
 ## Boundary and Hygiene Rules
@@ -114,7 +128,9 @@ lesson.
   validation or human review is available.
 - Do not delete unresolved plans or review notes to make the repository appear
   clean.
-- Completed plans may be summarized in `plan/log.md` and archived according to
-  project policy. Keep failed, blocked, or unresolved plans visible.
-- Before archiving a completed plan with a possible experience signal, ask a
-  human whether they want a lesson extracted.
+- A tracked plan with `status: completed` may be archived according to project
+  policy after its work is committed. Keep active, blocked, unresolved, and
+  superseded-before-implementation plans visible.
+- Before archiving a completed plan with `experience: candidate`, ask a human
+  whether to extract, reject, or defer the lesson. `none`, `extracted`,
+  `rejected`, and explicitly `deferred` are resolved dispositions.
