@@ -28,7 +28,6 @@ import {
   createEmptyProject,
   parseProject,
   serializeProject,
-  flattenRichText,
   transformPoint,
 } from "@icm/model";
 import type {
@@ -37,15 +36,10 @@ import type {
   DraftingObject,
   Point,
   Rect,
-  RichTextDocument,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
-import {
-  buildSvgScene,
-  resolveSchematicStyleProfile,
-  schematicTextDocument,
-} from "@icm/render-svg";
+import { buildSvgScene, resolveSchematicStyleProfile } from "@icm/render-svg";
 import type { SchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
@@ -83,6 +77,14 @@ import { resolveEditorShortcut, stepBoundedScale } from "./editor-shortcuts";
 import { referencedDocumentId } from "./editor-session";
 import { useInteractionState } from "./interaction-state";
 import type { EditorTool, WireSource } from "./interaction-state";
+import {
+  createTextEditingSession,
+  proposeTextEditingCommit,
+  resolveTextEditingTarget,
+  textDeletionEdit,
+  updateTextEditingSession,
+} from "./text-editing";
+import type { TextEditingSession } from "./text-editing";
 import {
   defaultRazaviSymbolVariantId,
   razaviHiddenBulkRisk,
@@ -140,13 +142,6 @@ interface PanPreview {
   clientStart: Point;
   viewBoxStart: Rect;
   pointerId: number;
-}
-
-interface TextEditingSession {
-  owner: "annotation" | "drafting";
-  id: string;
-  content: RichTextDocument;
-  sizeScale: number;
 }
 
 interface RouteStretchPreview {
@@ -838,20 +833,19 @@ export function App({ project: initialProject }: AppProps) {
     [document, resolver],
   );
 
+  const textEditingTarget = textEditing
+    ? resolveTextEditingTarget(document, textEditing)
+    : null;
   const editingAnnotation =
-    textEditing?.owner === "annotation"
-      ? document.annotations.find(
-          (annotation) => annotation.id === textEditing.id,
-        )
+    textEditingTarget?.owner === "annotation"
+      ? textEditingTarget.object
       : undefined;
   const selectedHiddenBulkNet = selectedInstance
     ? razaviHiddenBulkRisk(document, selectedInstance.id)
     : undefined;
   const editingDrafting =
-    textEditing?.owner === "drafting"
-      ? document.drafting?.objects.find(
-          (object) => object.id === textEditing.id,
-        )
+    textEditingTarget?.owner === "drafting"
+      ? textEditingTarget.object
       : undefined;
   const textEditingBounds = editingAnnotation
     ? annotationHitBox(
@@ -864,9 +858,7 @@ export function App({ project: initialProject }: AppProps) {
       ? resolveDraftingObjectGeometry(document, resolver, editingDrafting)
           .bounds
       : null;
-  const textEditingLocked = Boolean(
-    editingAnnotation?.locked || editingDrafting?.locked,
-  );
+  const textEditingLocked = Boolean(textEditingTarget?.object.locked);
 
   const internalSelection = deriveInternalGroupSelection(document, selectedIds);
   const selectedInternalRouteIds = new Set(internalSelection.routeIds);
@@ -2869,61 +2861,39 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
-  function richTextEqual(
-    left: { runs: unknown[] },
-    right: { runs: unknown[] },
-  ): boolean {
-    return JSON.stringify(left) === JSON.stringify(right);
-  }
-
-  function annotationRichText(annotation: Annotation): RichTextDocument {
-    // Untouched semantic labels receive canonical math composition. A label
-    // saved through the floating editor reopens its exact AST, so explicit
-    // formatting (notably multi-character subscripts) round-trips.
-    return (
-      annotation.content ??
-      schematicTextDocument(annotation.text, annotation.kind)
-    );
-  }
-
   function beginAnnotationTextEditing(annotation: Annotation): void {
     selectOnly("annotation", [annotation.id]);
-    setTextEditing({
-      owner: "annotation",
-      id: annotation.id,
-      content: annotationRichText(annotation),
-      sizeScale: annotation.sizeScale ?? 1,
-    });
+    setTextEditing(
+      createTextEditingSession({
+        owner: "annotation",
+        object: annotation,
+      }),
+    );
   }
 
   function beginDraftingTextEditing(
     object: Extract<DraftingObject, { kind: "text" }>,
   ): void {
     selectDraftingObject(object.id);
-    setTextEditing({
-      owner: "drafting",
-      id: object.id,
-      content: object.content as unknown as RichTextDocument,
-      sizeScale: object.styleOverride?.sizeScale ?? 1,
-    });
+    setTextEditing(
+      createTextEditingSession({
+        owner: "drafting",
+        object,
+      }),
+    );
   }
 
   function updateTextEditing(
     change: Partial<Pick<TextEditingSession, "content" | "sizeScale">>,
   ): void {
-    setTextEditing((current) => (current ? { ...current, ...change } : null));
+    setTextEditing((current) =>
+      current ? updateTextEditingSession(current, change) : null,
+    );
   }
 
   function deleteTextEditing(): void {
     if (!textEditing) return;
-    const result =
-      textEditing.owner === "annotation"
-        ? transact([
-            { kind: "remove_annotation", annotationId: textEditing.id },
-          ])
-        : transact([
-            { kind: "remove_drafting_object", objectId: textEditing.id },
-          ]);
+    const result = transact([textDeletionEdit(textEditing)]);
     if (result.ok) {
       clearSelectionKinds(["annotation", "drafting"]);
       setTextEditing(null);
@@ -2933,71 +2903,28 @@ export function App({ project: initialProject }: AppProps) {
 
   function commitTextEditing(): void {
     if (!textEditing) return;
-    const plainText = flattenRichText(
-      textEditing.content as unknown as Parameters<typeof flattenRichText>[0],
-    ).trim();
-    if (!plainText) {
-      deleteTextEditing();
-      return;
-    }
-    if (textEditing.owner === "annotation") {
-      const annotation = document.annotations.find(
-        (candidate) => candidate.id === textEditing.id,
-      );
-      if (!annotation || annotation.locked) return;
-      const next = {
-        ...annotation,
-        text: plainText,
-        content: textEditing.content,
-        sizeScale: textEditing.sizeScale,
-      };
-      if (
-        annotation.text === next.text &&
-        annotation.sizeScale === next.sizeScale &&
-        annotation.content &&
-        richTextEqual(annotation.content, next.content)
-      ) {
-        setTextEditing(null);
-        return;
-      }
-      const result = transact([
-        { kind: "upsert_annotation", annotation: next },
-      ]);
-      if (result.ok) {
-        setTextEditing(null);
-        setStatus(`Updated text ${annotation.id}`);
-      }
-      return;
-    }
-    const object = document.drafting?.objects.find(
-      (candidate) => candidate.id === textEditing.id,
-    );
-    if (!object || object.kind !== "text" || object.locked) return;
-    const next = {
-      ...object,
-      content: textEditing.content,
-      styleOverride: {
-        ...object.styleOverride,
-        sizeScale: textEditing.sizeScale,
-      },
-    };
-    if (
-      object.styleOverride?.sizeScale === next.styleOverride.sizeScale &&
-      richTextEqual(object.content, next.content)
-    ) {
+    const proposal = proposeTextEditingCommit(document, textEditing);
+    if (proposal.kind === "blocked") return;
+    if (proposal.kind === "unchanged") {
       setTextEditing(null);
       return;
     }
-    const result = transact([{ kind: "upsert_drafting_object", object: next }]);
-    if (result.ok) {
-      setTextEditing(null);
-      setStatus(`Updated text ${object.id}`);
+    const result = transact([proposal.edit]);
+    if (!result.ok) return;
+    if (proposal.kind === "delete") {
+      clearSelectionKinds(["annotation", "drafting"]);
+      setStatus(`Deleted text ${proposal.id}`);
+    } else {
+      setStatus(`Updated text ${proposal.id}`);
     }
+    setTextEditing(null);
   }
 
-  // WP-R3: editing is lossless — the markup string round-trips through
-  // parseMarkup(serializeMarkup(ast)). If the parsed AST equals the stored
-  // AST, do not generate a revision.
+  /*
+   * Text sessions use one persistence proposal for both annotation and
+   * drafting owners. The tagged target keeps their typed edit differences at
+   * the boundary rather than branching through the floating editor lifecycle.
+   */
   // --- ADR 0010 Guide tool ------------------------------------------------
   function addGuide(axis: "horizontal" | "vertical"): void {
     const coordinate =
