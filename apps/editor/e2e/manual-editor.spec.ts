@@ -298,7 +298,7 @@ test("keeps Wire input above labels and resolves a screen-tolerant route tap", a
   );
 });
 
-test("distinguishes deleting an isolated connection from unrouting it", async ({
+test("deletes a wire as an electrical branch without exposing Unroute", async ({
   page,
 }) => {
   await page.goto("/");
@@ -317,15 +317,62 @@ test("distinguishes deleting an isolated connection from unrouting it", async ({
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
   await expect(page.getByTestId("flightline")).toHaveCount(0);
   await expect(page.getByTestId("status")).toContainText(
-    "Deleted electrical connection route-ui-1",
+    "Deleted electrical branch route-ui-1",
   );
 
   await page.keyboard.press("Control+z");
   await clickRoute(page, "route-ui-1");
-  await page
-    .getByRole("button", { name: "Unroute (keep electrical connection)" })
-    .click();
-  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Delete electrical branch" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Unroute (keep electrical connection)" }),
+  ).toHaveCount(0);
+});
+
+test("uses a flightline as direct Wire guidance", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "routing-flightlines.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(createRoutingDemoProject())),
+  });
+
+  await expect(page.getByTestId("flightline")).toHaveCount(3);
+  const hint = page.getByTestId("flightline-hit").first();
+  await hint.click({ force: true });
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
+  await expect(page.getByTestId("status")).toContainText(
+    "Wire source: flightline on",
+  );
+
+  await hint.click({ force: true });
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
+});
+
+test("focuses imported flightlines on the selected Net", async ({ page }) => {
+  const project = createRoutingDemoProject();
+  project.documents[0]!.sourceBinding = {
+    cellName: "routing_demo",
+    sourceRef: {
+      fileId: "source-routing-demo",
+      start: { offset: 0, line: 1, column: 1 },
+      end: { offset: 1, line: 1, column: 2 },
+    },
+  };
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "routing-imported.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await page.getByTestId("hit-A").click();
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await page.getByTestId("hit-C").click();
   await expect(page.getByTestId("flightline")).toHaveCount(1);
 });
 

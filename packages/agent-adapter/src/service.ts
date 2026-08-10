@@ -67,6 +67,7 @@ export const AGENT_EDIT_KINDS = [
   "remove_junction",
   "move_junction",
   "make_flightline",
+  "cut_connection",
   "connect_endpoints",
   "merge_nets",
   "set_net_name",
@@ -457,6 +458,7 @@ function editCategory(
     case "add_junction":
     case "remove_junction":
     case "make_flightline":
+    case "cut_connection":
     case "connect_endpoints":
     case "merge_nets":
     case "set_net_name":

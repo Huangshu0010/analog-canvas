@@ -23,6 +23,7 @@ import {
   resolveDraftingObjectGeometry,
   routePolyline,
 } from "@icm/derived";
+import type { Flightline } from "@icm/derived";
 import {
   createEmptyProject,
   parseProject,
@@ -645,6 +646,40 @@ export function App({ project: initialProject }: AppProps) {
     () => deriveFlightlines(document, resolver),
     [document, resolver],
   );
+  const displayedFlightlines = useMemo(() => {
+    if (!document.sourceBinding) return flightlines;
+    const focusedNetIds = new Set<string>();
+    if (selectedRoute) focusedNetIds.add(selectedRoute.netId);
+    if (selectedEndpoint) {
+      const netId = endpointNetId(document, selectedEndpoint.endpoint);
+      if (netId) focusedNetIds.add(netId);
+    }
+    for (const net of document.nets) {
+      if (
+        net.terminals.some((terminal) =>
+          selectedIds.includes(terminal.instanceId),
+        ) ||
+        visualSelection.junctionIds.some((junctionId) =>
+          document.junctions.some(
+            (junction) =>
+              junction.id === junctionId && junction.netId === net.id,
+          ),
+        )
+      ) {
+        focusedNetIds.add(net.id);
+      }
+    }
+    return flightlines.filter((flightline) =>
+      focusedNetIds.has(flightline.netId),
+    );
+  }, [
+    document,
+    flightlines,
+    selectedEndpoint,
+    selectedIds,
+    selectedRoute,
+    visualSelection.junctionIds,
+  ]);
   const crossings = useMemo(
     () => deriveCrossings(document, resolver),
     [document, resolver],
@@ -996,6 +1031,42 @@ export function App({ project: initialProject }: AppProps) {
     commitWire(candidate);
   }
 
+  function handleFlightline(
+    event: ReactMouseEvent<SVGLineElement>,
+    flightline: Flightline,
+  ): void {
+    event.stopPropagation();
+    const from: WireSource = {
+      endpoint: flightline.from,
+      netId: flightline.netId,
+      point: flightline.fromPoint,
+      preludeEdits: [],
+    };
+    const to: WireSource = {
+      endpoint: flightline.to,
+      netId: flightline.netId,
+      point: flightline.toPoint,
+      preludeEdits: [],
+    };
+    setTool("wire");
+    if (wireSource) {
+      const candidate =
+        endpointKey(wireSource.endpoint) === endpointKey(from.endpoint)
+          ? to
+          : from;
+      if (
+        endpointKey(wireSource.endpoint) !== endpointKey(candidate.endpoint)
+      ) {
+        commitWire(candidate);
+      }
+      return;
+    }
+    setWireSource(from);
+    setWirePreviewPoint(to.point);
+    setWireWaypoints([]);
+    setStatus(`Wire source: flightline on ${flightline.netId}`);
+  }
+
   function commitWire(candidate: WireSource): void {
     if (!wireSource) return;
     const suffix = nextRoutingSuffix();
@@ -1144,52 +1215,16 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(`Selected route ${routeId}, segment ${segmentIndex + 1}`);
   }
 
-  function removeSelectedRouteGeometry(): void {
-    if (!selectedRouteId) return;
-    const result = transact([
-      { kind: "make_flightline", routeId: selectedRouteId },
-    ]);
-    if (result.ok) {
-      replaceSelectionKind("route", []);
-      setStatus(`Unrouted ${selectedRouteId}; electrical Net retained`);
-    }
-  }
-
   function deleteSelectedRouteConnection(): void {
     if (!selectedRouteId) return;
     const route = document.routes.find(
       (candidate) => candidate.id === selectedRouteId,
     );
     if (!route) return;
-    if (route.from.kind === "junction" || route.to.kind === "junction") {
-      setStatus(
-        "Cannot safely delete a branched route yet; use Unroute to retain the Net, or delete the selected endpoint connection",
-      );
-      return;
-    }
-    const attachedRouteCount = (endpoint: RouteEndpoint): number =>
-      document.routes.filter(
-        (candidate) =>
-          endpointKey(candidate.from) === endpointKey(endpoint) ||
-          endpointKey(candidate.to) === endpointKey(endpoint),
-      ).length;
-    if (
-      attachedRouteCount(route.from) !== 1 ||
-      attachedRouteCount(route.to) !== 1
-    ) {
-      setStatus(
-        "Cannot safely delete a shared route yet; use Unroute to retain the Net, or disconnect a selected endpoint",
-      );
-      return;
-    }
-    const result = transact([
-      { kind: "make_flightline", routeId: route.id },
-      { kind: "disconnect_endpoint", endpoint: route.from },
-      { kind: "disconnect_endpoint", endpoint: route.to },
-    ]);
+    const result = transact([{ kind: "cut_connection", routeId: route.id }]);
     if (result.ok) {
       replaceSelectionKind("route", []);
-      setStatus(`Deleted electrical connection ${route.id}`);
+      setStatus(`Deleted electrical branch ${route.id}`);
     }
   }
 
@@ -3926,12 +3961,7 @@ export function App({ project: initialProject }: AppProps) {
       selectedAnnotationIds.size === 0 &&
       selectedDraftingIds.size === 0 &&
       selectedJunctionIds.size === 0 &&
-      selectedIds.length === 0 &&
-      !document.routes.some(
-        (route) =>
-          initialRouteIds.has(route.id) &&
-          (route.from.kind === "junction" || route.to.kind === "junction"),
-      )
+      selectedIds.length === 0
     ) {
       deleteSelectedRouteConnection();
       return;
@@ -3953,14 +3983,17 @@ export function App({ project: initialProject }: AppProps) {
                 uniqueSuffixCounter.current,
               )
             : [];
-        const removesEveryRoute =
-          document.routes.length > 0 &&
-          visualRouteDeletion.routeIds.length === document.routes.length;
-        const temporaryJunctionIds = removesEveryRoute
-          ? instanceEdits.flatMap((edit) =>
-              edit.kind === "add_junction" ? [edit.junctionId] : [],
-            )
-          : [];
+        const alreadyOrphanedJunctionIds =
+          visualRouteDeletion.junctionIds.filter(
+            (junctionId) =>
+              !document.routes.some(
+                (route) =>
+                  (route.from.kind === "junction" &&
+                    route.from.junctionId === junctionId) ||
+                  (route.to.kind === "junction" &&
+                    route.to.junctionId === junctionId),
+              ),
+          );
         // Instance deletion already removes every annotation attached to the
         // instance. A marquee can select both visual objects, but emitting the
         // same remove_annotation edit twice makes the second operation fail
@@ -3973,15 +4006,10 @@ export function App({ project: initialProject }: AppProps) {
         const result = transact([
           ...instanceEdits,
           ...visualRouteDeletion.routeIds.map((routeId): SchematicEdit => ({
-            kind: "make_flightline",
+            kind: "cut_connection",
             routeId,
           })),
-          ...[
-            ...new Set([
-              ...visualRouteDeletion.junctionIds,
-              ...temporaryJunctionIds,
-            ]),
-          ].map((junctionId): SchematicEdit => ({
+          ...alreadyOrphanedJunctionIds.map((junctionId): SchematicEdit => ({
             kind: "remove_junction",
             junctionId,
           })),
@@ -4059,13 +4087,14 @@ export function App({ project: initialProject }: AppProps) {
           (route.to.kind === "junction" && route.to.junctionId === junctionId),
       )
       .map((route): SchematicEdit => ({
-        kind: "make_flightline",
+        kind: "cut_connection",
         routeId: route.id,
       }));
-    const result = transact([
-      ...attachedRouteEdits,
-      { kind: "remove_junction", junctionId },
-    ]);
+    const result = transact(
+      attachedRouteEdits.length > 0
+        ? attachedRouteEdits
+        : [{ kind: "remove_junction", junctionId }],
+    );
     if (result.ok) {
       setSelectedEndpoint(null);
       setStatus(
@@ -4746,10 +4775,7 @@ export function App({ project: initialProject }: AppProps) {
                   Add current arrow
                 </button>
                 <button type="button" onClick={deleteSelectedRouteConnection}>
-                  Delete electrical connection
-                </button>
-                <button type="button" onClick={removeSelectedRouteGeometry}>
-                  Unroute (keep electrical connection)
+                  Delete electrical branch
                 </button>
               </section>
             ) : null}
@@ -5017,16 +5043,28 @@ export function App({ project: initialProject }: AppProps) {
             />
           ) : null}
           <g data-layer="editor-overlay">
-            {flightlines.map((flightline) => (
-              <line
-                key={flightline.id}
-                data-testid="flightline"
-                className="flightline"
-                x1={flightline.fromPoint.x}
-                y1={flightline.fromPoint.y}
-                x2={flightline.toPoint.x}
-                y2={flightline.toPoint.y}
-              />
+            {displayedFlightlines.map((flightline) => (
+              <g key={flightline.id}>
+                <line
+                  data-testid="flightline-hit"
+                  className="flightline-hit"
+                  data-net-id={flightline.netId}
+                  x1={flightline.fromPoint.x}
+                  y1={flightline.fromPoint.y}
+                  x2={flightline.toPoint.x}
+                  y2={flightline.toPoint.y}
+                  onClick={(event) => handleFlightline(event, flightline)}
+                />
+                <line
+                  data-testid="flightline"
+                  className="flightline"
+                  data-net-id={flightline.netId}
+                  x1={flightline.fromPoint.x}
+                  y1={flightline.fromPoint.y}
+                  x2={flightline.toPoint.x}
+                  y2={flightline.toPoint.y}
+                />
+              </g>
             ))}
             {wireDraftPoints.length >= 2 ? (
               <polyline

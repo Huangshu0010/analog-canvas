@@ -44,7 +44,7 @@ interface EditTransaction {
 The executable union contains `noop`, `add_instance`, `remove_instance`,
 `set_instance_symbol`, `place_instance`, `move_instance`,
 `rotate_instance`, `mirror_instance`, `set_route_points`, `add_junction`,
-`remove_junction`, `move_junction`, `make_flightline`, `connect_endpoints`,
+`remove_junction`, `move_junction`, `cut_connection`, `make_flightline`, `connect_endpoints`,
 `merge_nets`, `set_net_name`, `disconnect_endpoint`, `upsert_annotation`,
 `remove_annotation`, `set_layout_group`, `remove_layout_group`,
 `set_layout_constraint`, `remove_layout_constraint`, `align_instances`,
@@ -138,6 +138,17 @@ Phase 8 topology operations have these preconditions:
   before removing the source Net.
 - `disconnect_endpoint` requires all route geometry that uses the endpoint to
   be removed explicitly first.
+- `cut_connection` requires one existing unlocked Route. If the Net is fully
+  routed, removing a bridge deterministically partitions its endpoints,
+  Junctions, and remaining Routes into local Nets; removing a redundant cycle
+  keeps the original Net. The operation rejects global-Net partitioning and
+  partially routed Nets whose pre-existing disconnected members make the cut
+  ambiguous. Newly orphaned Junction endpoints of the deleted branch are
+  removed, an empty local Net is removed, and attached annotations follow the
+  normal unresolved-anchor fallback rule.
+- `make_flightline` remains the explicit geometry-only operation: it removes a
+  Route while preserving its logical Net membership. It is intended for
+  advanced rerouting clients, not ordinary Delete.
 - symbol and Port edits honor the same locked layout groups/constraints as
   instance transforms and reject the complete transaction on conflict.
 

@@ -253,9 +253,11 @@ second mirror enum, a new stored field, or an Agent API operation.
 - Instance labels remain draggable only within a bounded neighborhood of the
   owning symbol. Net labels remain draggable only near their attached Route;
   plain text may move freely.
-- Route or endpoint removal uses distinct context commands: `Remove route
-geometry`, `Disconnect endpoint`, and `Delete connection`. These operations
-  must not be represented by one ambiguous Detach command.
+- Ordinary Route deletion is one command, `Delete electrical branch`, backed
+  by `cut_connection`. The editor does not expose geometry-only Unroute as a
+  competing normal action. Explicit endpoint disconnection remains available
+  when the user selects a pin or port; advanced Agent/API rerouting may still
+  use `make_flightline` without changing Net membership.
 
 ## Manual component authoring
 
@@ -311,12 +313,20 @@ The core rule is:
   splits the route as needed and creates or reuses a junction atomically.
 - Passing over or crossing a route without ending there creates no junction,
   no dot, and no connectivity.
+- A flightline is a non-persisted routing hint. Clicking its wide invisible
+  hit area starts Wire at one proposed frontier endpoint and previews the
+  other; clicking a flightline during an active Wire session commits toward
+  the opposite proposed endpoint.
 - A wire end that geometrically hits more than one route segment is rejected as
   ambiguous. The user must choose one conductor away from the crossing.
 - Deleting a connected instance converts each routed pin endpoint into a
   Junction at the former pin coordinate, removes that terminal from its Net,
   and removes the instance atomically. Remaining Route geometry and Net
   identity are preserved as dangling wiring.
+- Deleting a Route invokes `cut_connection`: a redundant path removes only
+  geometry, while an unambiguous bridge partitions the local Net. A cut is
+  rejected when partially routed logical membership or a global Net makes the
+  intended electrical partition ambiguous.
 
 ### Net semantics
 

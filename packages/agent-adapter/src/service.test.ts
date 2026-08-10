@@ -81,6 +81,7 @@ describe("Agent Circuit API v1 service", () => {
         editKinds: expect.arrayContaining([
           "add_instance",
           "connect_endpoints",
+          "cut_connection",
           "merge_nets",
           "move_junction",
           "route_orthogonal",

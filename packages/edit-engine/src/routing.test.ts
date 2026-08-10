@@ -915,4 +915,176 @@ describe("routing Edit Engine", () => {
       beforeFlightlines.length,
     );
   });
+
+  it("cuts a fully routed electrical branch and partitions its Net", () => {
+    const document = documentFixture();
+    document.routes = [
+      {
+        id: "route-v",
+        netId: "net-v",
+        from: terminal("C"),
+        to: terminal("D"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-v" },
+      ]),
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toEqual([]);
+    expect(
+      result.document.nets
+        .filter((net) =>
+          net.terminals.some((terminal) =>
+            ["C", "D"].includes(terminal.instanceId),
+          ),
+        )
+        .map((net) => net.terminals.map((terminal) => terminal.instanceId)),
+    ).toEqual([["C"], ["D"]]);
+    expect(deriveFlightlines(result.document, resolver)).toHaveLength(2);
+    expect(
+      deriveFlightlines(result.document, resolver).filter((flightline) =>
+        ["C", "D"].includes(
+          flightline.from.kind === "terminal" ? flightline.from.instanceId : "",
+        ),
+      ),
+    ).toEqual([]);
+    expect(result.document.sourceStatus).toBe("connectivity-modified");
+  });
+
+  it("removes redundant cycle geometry without splitting the Net", () => {
+    const document = documentFixture();
+    document.routes = [
+      {
+        id: "route-v-direct",
+        netId: "net-v",
+        from: terminal("C"),
+        to: terminal("D"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-v-loop",
+        netId: "net-v",
+        from: terminal("C"),
+        to: terminal("D"),
+        waypoints: [
+          { x: 340, y: 100 },
+          { x: 340, y: 500 },
+        ],
+        segmentModes: ["manual", "manual", "manual"],
+      },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-v-direct" },
+      ]),
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes.map((route) => route.id)).toEqual([
+      "route-v-loop",
+    ]);
+    expect(
+      result.document.nets.find((net) => net.id === "net-v")?.terminals,
+    ).toEqual(document.nets.find((net) => net.id === "net-v")?.terminals);
+    expect(result.document.sourceStatus).toBe("geometry-only-changed");
+  });
+
+  it("removes the empty local Net left by an isolated free wire", () => {
+    const document = documentFixture();
+    document.nets.push({
+      id: "net-free",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    });
+    document.junctions.push(
+      {
+        id: "junction-free-a",
+        netId: "net-free",
+        position: { x: 600, y: 500 },
+        role: "route-anchor",
+      },
+      {
+        id: "junction-free-b",
+        netId: "net-free",
+        position: { x: 700, y: 500 },
+        role: "route-anchor",
+      },
+    );
+    document.routes = [
+      {
+        id: "route-free",
+        netId: "net-free",
+        from: { kind: "junction", junctionId: "junction-free-a" },
+        to: { kind: "junction", junctionId: "junction-free-b" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-free" },
+      ]),
+      context,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toEqual([]);
+    expect(
+      result.document.junctions.filter((junction) =>
+        junction.id.startsWith("junction-free-"),
+      ),
+    ).toEqual([]);
+    expect(result.document.nets.some((net) => net.id === "net-free")).toBe(
+      false,
+    );
+  });
+
+  it("rejects a cut while imported Net members remain unrouted", () => {
+    const document = documentFixture();
+    document.routes = [
+      {
+        id: "route-partial",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        { kind: "cut_connection", routeId: "route-partial" },
+      ]),
+      context,
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "EDIT_PRECONDITION",
+        message: expect.stringContaining("disconnect a pin explicitly"),
+      },
+      document,
+    });
+  });
 });

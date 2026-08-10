@@ -4079,3 +4079,19 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   existing large-chunk warning remains.
 - Commit status: ready to commit directly on local `main` as
   `refactor(editor): organize source by domain`; remote push remains pending.
+
+## 2026-08-10 - Simplify wire deletion and flightline guidance
+
+- Target: replace competing Delete/Unroute behavior with one safe human-facing
+  electrical branch deletion and make derived flightlines actionable guidance.
+- Changed areas: added deterministic `cut_connection` Net partitioning and
+  Agent API artifacts; routed GUI Route/Junction/mixed deletion through it;
+  removed Unroute from the inspector; changed flightlines to nearest-frontier
+  straight-line MST hints with clickable Wire targets and selected-Net display
+  for SPICE-bound Documents; updated routing specifications and regressions.
+- Validation: 43 focused Vitest tests, four focused Playwright flows,
+  repository typecheck, affected package/editor builds, Agent API artifact
+  check, and `git diff --check` passed. The existing large-chunk warning
+  remains.
+- Commit status: ready to commit on `main` as
+  `fix(editor): simplify wire deletion and flightline guidance`.

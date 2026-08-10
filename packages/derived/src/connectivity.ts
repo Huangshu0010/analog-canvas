@@ -151,31 +151,27 @@ export function deriveVisibleConnectivity(
     .map((net) => deriveNetConnectivity(document, resolver, net));
 }
 
-function manhattan(left: Point, right: Point): number {
-  return Math.abs(left.x - right.x) + Math.abs(left.y - right.y);
+function straightLineDistance(left: Point, right: Point): number {
+  return Math.hypot(left.x - right.x, left.y - right.y);
 }
 
-function componentAnchor(
-  component: RoutedComponent,
-): VisibleConnectivityNode | null {
-  const positioned = component.nodes.filter(
-    (node): node is VisibleConnectivityNode & { point: Point } =>
-      node.point !== null,
+function flightlineNodePriority(
+  document: SchematicDocument,
+  node: VisibleConnectivityNode,
+): number {
+  if (node.endpoint.kind !== "junction") return 1;
+  const junctionId = node.endpoint.junctionId;
+  const junction = document.junctions.find(
+    (candidate) => candidate.id === junctionId,
   );
-  if (positioned.length === 0) return null;
-  return positioned
-    .map((candidate) => ({
-      candidate,
-      cost: positioned.reduce(
-        (sum, other) => sum + manhattan(candidate.point, other.point),
-        0,
-      ),
-    }))
-    .sort(
-      (left, right) =>
-        left.cost - right.cost ||
-        left.candidate.key.localeCompare(right.candidate.key, "en"),
-    )[0]!.candidate;
+  const degree = document.routes.filter(
+    (route) =>
+      (route.from.kind === "junction" &&
+        route.from.junctionId === junctionId) ||
+      (route.to.kind === "junction" &&
+        route.to.junctionId === junctionId),
+  ).length;
+  return junction?.role === "route-anchor" && degree <= 1 ? 0 : 2;
 }
 
 export function deriveFlightlines(
@@ -186,36 +182,70 @@ export function deriveFlightlines(
   for (const net of [...document.nets].sort((left, right) =>
     left.id.localeCompare(right.id, "en"),
   )) {
-    const anchors = deriveNetConnectivity(document, resolver, net)
-      .components.map(componentAnchor)
-      .filter(
-        (anchor): anchor is VisibleConnectivityNode & { point: Point } =>
-          anchor !== null,
-      );
-    if (anchors.length < 2) continue;
-    const edges = [];
-    for (let left = 0; left < anchors.length; left += 1) {
-      for (let right = left + 1; right < anchors.length; right += 1) {
-        const from = anchors[left]!;
-        const to = anchors[right]!;
+    const components = deriveNetConnectivity(document, resolver, net)
+      .components.map((component) => ({
+        ...component,
+        nodes: component.nodes.filter(
+          (node): node is VisibleConnectivityNode & { point: Point } =>
+            node.point !== null,
+        ),
+      }))
+      .filter((component) => component.nodes.length > 0);
+    if (components.length < 2) continue;
+    const edges: Array<{
+      fromComponentId: string;
+      toComponentId: string;
+      from: VisibleConnectivityNode & { point: Point };
+      to: VisibleConnectivityNode & { point: Point };
+      distance: number;
+      priority: number;
+    }> = [];
+    for (let left = 0; left < components.length; left += 1) {
+      for (let right = left + 1; right < components.length; right += 1) {
+        const fromComponent = components[left]!;
+        const toComponent = components[right]!;
+        const best = fromComponent.nodes
+          .flatMap((from) =>
+            toComponent.nodes.map((to) => ({
+              from,
+              to,
+              distance: straightLineDistance(from.point, to.point),
+              priority:
+                flightlineNodePriority(document, from) +
+                flightlineNodePriority(document, to),
+            })),
+          )
+          .sort(
+            (leftCandidate, rightCandidate) =>
+              leftCandidate.distance - rightCandidate.distance ||
+              leftCandidate.priority - rightCandidate.priority ||
+              leftCandidate.from.key.localeCompare(
+                rightCandidate.from.key,
+                "en",
+              ) ||
+              leftCandidate.to.key.localeCompare(rightCandidate.to.key, "en"),
+          )[0]!;
         edges.push({
-          from,
-          to,
-          distance: manhattan(from.point, to.point),
+          fromComponentId: fromComponent.id,
+          toComponentId: toComponent.id,
+          ...best,
         });
       }
     }
     edges.sort(
       (left, right) =>
         left.distance - right.distance ||
+        left.priority - right.priority ||
         left.from.key.localeCompare(right.from.key, "en") ||
         left.to.key.localeCompare(right.to.key, "en"),
     );
     const sets = new DisjointSet();
-    for (const anchor of anchors) sets.add(anchor.key);
+    for (const component of components) sets.add(component.id);
     for (const edge of edges) {
-      if (sets.find(edge.from.key) === sets.find(edge.to.key)) continue;
-      sets.union(edge.from.key, edge.to.key);
+      if (sets.find(edge.fromComponentId) === sets.find(edge.toComponentId)) {
+        continue;
+      }
+      sets.union(edge.fromComponentId, edge.toComponentId);
       result.push({
         id: deriveStableId("flightline", net.id, edge.from.key, edge.to.key),
         netId: net.id,

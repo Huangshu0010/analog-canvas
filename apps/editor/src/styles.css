@@ -812,6 +812,14 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
+.flightline-hit {
+  stroke: rgb(0 0 0 / 0.001);
+  stroke-width: 12;
+  pointer-events: stroke;
+  cursor: crosshair;
+  vector-effect: non-scaling-stroke;
+}
+
 .wire-preview {
   fill: none;
   stroke: var(--icm-accent);

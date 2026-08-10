@@ -55,16 +55,20 @@ Flightlines are derived overlay edges and are never persisted or formally
 exported.
 
 1. Resolve positioned graph nodes and explicit routed components.
-2. Choose each component anchor as the positioned node with minimum total
-   Manhattan distance to other positioned nodes in that component; break ties
-   by endpoint key.
-3. Form the complete weighted graph of component anchors.
-4. Run Kruskal MST ordered by Manhattan distance and then the two endpoint
-   keys.
+2. For every component pair, evaluate every positioned endpoint pair and keep
+   the shortest straight-line candidate. At equal distance, prefer an open
+   route-anchor Junction, then a terminal or port, then another Junction;
+   endpoint keys provide the final stable tie-break.
+3. Form the complete weighted graph from those nearest frontier pairs.
+4. Run Kruskal MST ordered by straight-line distance, endpoint priority, and
+   endpoint keys.
 
 A net with zero or one positioned component has no flightline. Adding a Route
-may merge components and remove flightlines; detaching a Route may restore
-them.
+may merge components and remove flightlines. Flightlines are routing guidance:
+they can start or finish a Wire operation but cannot be selected or deleted.
+For a SPICE-bound Document, the editor shows them only for the currently
+selected Route, endpoint, Junction, or instance Nets; an unselected imported
+Document does not display every unresolved Net at once.
 
 Flightlines never request routing for implicit terminals. Hiding a terminal
 cannot remove or rewrite its logical terminal record, merge its Net with
@@ -119,7 +123,14 @@ preserving the explicit graph unchanged.
 - `remove_junction` removes an unused Junction.
 - `move_junction` changes a Junction coordinate without changing Net
   membership; the caller includes corresponding Route replacements atomically.
-- `make_flightline` deletes one RouteBranch and retains its logical Net.
+- `cut_connection` is the ordinary Delete semantic for a RouteBranch. It
+  removes the branch and, when that removal divides a fully routed local Net,
+  deterministically partitions the Net records. A redundant cycle retains one
+  Net. A global Net or a partially routed/imported Net with ambiguous unrouted
+  members rejects the cut instead of guessing.
+- `make_flightline` removes only Route geometry and retains its logical Net.
+  It is an advanced API operation for rerouting workflows and is not exposed
+  as the ordinary GUI Delete action.
 - `connect_endpoints`, `merge_nets`, and `disconnect_endpoint` author logical
   membership independently of route geometry.
 - `set_net_name` assigns one non-empty logical Net name. Reusing a name is not

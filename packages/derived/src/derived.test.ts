@@ -112,13 +112,15 @@ describe("derived connectivity and route geometry", () => {
         line.netId,
         line.from.kind === "terminal" ? line.from.instanceId : "other",
         line.to.kind === "terminal" ? line.to.instanceId : "other",
-        line.distance,
       ]),
     ).toEqual([
-      ["net-h", "B", "E", 260],
-      ["net-h", "A", "E", 340],
-      ["net-v", "C", "D", 400],
+      ["net-h", "B", "E"],
+      ["net-h", "A", "E"],
+      ["net-v", "C", "D"],
     ]);
+    expect(flightlines[0]!.distance).toBeCloseTo(Math.hypot(160, 100));
+    expect(flightlines[1]!.distance).toBeCloseTo(260);
+    expect(flightlines[2]!.distance).toBeCloseTo(400);
     expect(deriveFlightlines(document, resolver)).toEqual(flightlines);
   });
 
@@ -159,7 +161,12 @@ describe("derived connectivity and route geometry", () => {
     expect(
       connectivity.find((net) => net.netId === "net-v")?.components,
     ).toHaveLength(1);
-    expect(deriveFlightlines(document, resolver)).toHaveLength(1);
+    const remaining = deriveFlightlines(document, resolver);
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]).toMatchObject({
+      from: { kind: "terminal", instanceId: "B" },
+      to: { kind: "terminal", instanceId: "E" },
+    });
   });
 
   it("keeps MOS bulk electrical truth while excluding an implicit bulk from flightlines", () => {

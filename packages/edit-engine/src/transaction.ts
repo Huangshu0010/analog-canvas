@@ -15,6 +15,7 @@ import {
   SegmentModeSchema,
   SchematicDocumentSchema,
   StableIdSchema,
+  deriveStableId,
   inverseTransformPoint,
   transformPoint,
 } from "@icm/model";
@@ -34,6 +35,7 @@ import {
   inferInstanceLabelSide,
   isOrthogonal,
   isMosSymbol,
+  netEndpoints,
   normalizeRouteGeometry,
   placeUprightInstanceLabel,
   resolveEndpointOutwardDirection,
@@ -143,6 +145,10 @@ export const MoveJunctionEditSchema = z.strictObject({
 });
 export const MakeFlightlineEditSchema = z.strictObject({
   kind: z.literal("make_flightline"),
+  routeId: StableIdSchema,
+});
+export const CutConnectionEditSchema = z.strictObject({
+  kind: z.literal("cut_connection"),
   routeId: StableIdSchema,
 });
 export const ConnectEndpointsEditSchema = z.strictObject({
@@ -255,6 +261,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   RemoveJunctionEditSchema,
   MoveJunctionEditSchema,
   MakeFlightlineEditSchema,
+  CutConnectionEditSchema,
   ConnectEndpointsEditSchema,
   MergeNetsEditSchema,
   SetNetNameEditSchema,
@@ -457,6 +464,50 @@ function endpointOwnerNetId(
         )?.netId ?? null
       );
   }
+}
+
+function netEndpointGroups(
+  document: SchematicDocument,
+  netId: string,
+): string[][] {
+  const net = document.nets.find((candidate) => candidate.id === netId);
+  if (!net) return [];
+  const keys = netEndpoints(document, net).map(endpointKey);
+  const parent = new Map(keys.map((key) => [key, key]));
+  const find = (key: string): string => {
+    const current = parent.get(key);
+    if (!current) throw new Error(`Unknown Net endpoint ${key}`);
+    if (current === key) return key;
+    const root = find(current);
+    parent.set(key, root);
+    return root;
+  };
+  const union = (left: string, right: string): void => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot === rightRoot) return;
+    const [first, second] = [leftRoot, rightRoot].sort((a, b) =>
+      a.localeCompare(b, "en"),
+    );
+    parent.set(second!, first!);
+  };
+  for (const route of document.routes.filter(
+    (candidate) => candidate.netId === netId,
+  )) {
+    union(endpointKey(route.from), endpointKey(route.to));
+  }
+  const grouped = new Map<string, string[]>();
+  for (const key of keys) {
+    const root = find(key);
+    const group = grouped.get(root) ?? [];
+    group.push(key);
+    grouped.set(root, group);
+  }
+  return [...grouped.values()]
+    .map((group) =>
+      group.sort((left, right) => left.localeCompare(right, "en")),
+    )
+    .sort((left, right) => left[0]!.localeCompare(right[0]!, "en"));
 }
 
 function validateConnectableEndpoint(
@@ -2075,6 +2126,185 @@ export function executeTransaction(
         }
         draft.routes.splice(routeIndex, 1);
         changedObjectIds.add(edit.routeId);
+        break;
+      }
+      case "cut_connection": {
+        const routeIndex = draft.routes.findIndex(
+          (route) => route.id === edit.routeId,
+        );
+        const route = draft.routes[routeIndex];
+        if (!route) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Route does not exist: ${edit.routeId}`,
+          );
+        }
+        if (routeIsProtected(route)) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Route contains a locked segment: ${route.id}`,
+          );
+        }
+        const net = draft.nets.find(
+          (candidate) => candidate.id === route.netId,
+        );
+        if (!net) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Route Net does not exist: ${route.netId}`,
+          );
+        }
+        const beforeGroups = netEndpointGroups(draft, net.id);
+        if (beforeGroups.length > 1) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Cannot cut ${route.id}: Net ${net.id} still has unrouted members; disconnect a pin explicitly`,
+            [],
+            [route.id, net.id],
+          );
+        }
+
+        const candidateOrphanJunctionIds = new Set(
+          [route.from, route.to].flatMap((endpoint) =>
+            endpoint.kind === "junction" ? [endpoint.junctionId] : [],
+          ),
+        );
+        draft.routes.splice(routeIndex, 1);
+        changedObjectIds.add(route.id);
+
+        const referencedJunctionIds = new Set(
+          draft.routes.flatMap((candidate) =>
+            [candidate.from, candidate.to].flatMap((endpoint) =>
+              endpoint.kind === "junction" ? [endpoint.junctionId] : [],
+            ),
+          ),
+        );
+        const preservedObjectIds = new Set([
+          ...draft.annotations.flatMap((annotation) =>
+            annotation.attachedObjectId ? [annotation.attachedObjectId] : [],
+          ),
+          ...draft.layoutGroups.flatMap((group) => group.objectIds),
+          ...draft.constraints.flatMap((constraint) => constraint.objectIds),
+        ]);
+        const removedJunctionIds = draft.junctions
+          .filter(
+            (junction) =>
+              junction.netId === net.id &&
+              candidateOrphanJunctionIds.has(junction.id) &&
+              !referencedJunctionIds.has(junction.id) &&
+              !preservedObjectIds.has(junction.id),
+          )
+          .map((junction) => junction.id);
+        draft.junctions = draft.junctions.filter(
+          (junction) => !removedJunctionIds.includes(junction.id),
+        );
+        for (const junctionId of removedJunctionIds) {
+          changedObjectIds.add(junctionId);
+        }
+
+        const groups = netEndpointGroups(draft, net.id);
+        if (groups.length === 0 && net.scope === "local") {
+          draft.nets = draft.nets.filter(
+            (candidate) => candidate.id !== net.id,
+          );
+          changedObjectIds.add(net.id);
+          connectivityChanged = true;
+          break;
+        }
+        if (groups.length > 1 && net.scope === "global") {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Cannot split global Net ${net.id}; disconnect a pin explicitly`,
+            [],
+            [route.id, net.id],
+          );
+        }
+        if (groups.length > 1) {
+          const netIdByEndpoint = new Map<string, string>();
+          const splitNetIds = groups
+            .slice(1)
+            .map((group) =>
+              deriveStableId("net-split", net.id, route.id, group[0]!),
+            );
+          const collidingNetId = splitNetIds.find((splitNetId) =>
+            draft.nets.some((candidate) => candidate.id === splitNetId),
+          );
+          if (collidingNetId) {
+            return rejectAt(
+              "EDIT_PRECONDITION",
+              `Derived split Net already exists: ${collidingNetId}`,
+              [],
+              [collidingNetId],
+            );
+          }
+          groups.forEach((group, index) => {
+            const groupNetId =
+              index === 0
+                ? net.id
+                : deriveStableId("net-split", net.id, route.id, group[0]!);
+            for (const key of group) netIdByEndpoint.set(key, groupNetId);
+          });
+          const originalTerminals = [...net.terminals];
+          const originalPorts = [...net.ports];
+          const terminalsFor = (groupNetId: string) =>
+            originalTerminals.filter(
+              (terminal) =>
+                netIdByEndpoint.get(
+                  endpointKey({ kind: "terminal", ...terminal }),
+                ) === groupNetId,
+            );
+          const portsFor = (groupNetId: string) =>
+            originalPorts.filter(
+              (portId) =>
+                netIdByEndpoint.get(endpointKey({ kind: "port", portId })) ===
+                groupNetId,
+            );
+          net.terminals = terminalsFor(net.id);
+          net.ports = portsFor(net.id);
+          changedObjectIds.add(net.id);
+          for (const group of groups.slice(1)) {
+            const groupNetId = netIdByEndpoint.get(group[0]!)!;
+            draft.nets.push({
+              id: groupNetId,
+              scope: "local",
+              terminals: terminalsFor(groupNetId),
+              ports: portsFor(groupNetId),
+            });
+            changedObjectIds.add(groupNetId);
+          }
+          for (const junction of draft.junctions.filter(
+            (candidate) => candidate.netId === net.id,
+          )) {
+            const groupNetId = netIdByEndpoint.get(
+              endpointKey({ kind: "junction", junctionId: junction.id }),
+            );
+            if (groupNetId && groupNetId !== junction.netId) {
+              junction.netId = groupNetId;
+              changedObjectIds.add(junction.id);
+            }
+          }
+          for (const remainingRoute of draft.routes.filter(
+            (candidate) => candidate.netId === net.id,
+          )) {
+            const fromNetId = netIdByEndpoint.get(
+              endpointKey(remainingRoute.from),
+            );
+            const toNetId = netIdByEndpoint.get(endpointKey(remainingRoute.to));
+            if (!fromNetId || fromNetId !== toNetId) {
+              return rejectAt(
+                "INVALID_RESULT",
+                `Cut leaves Route ${remainingRoute.id} across split Nets`,
+                [],
+                [remainingRoute.id],
+              );
+            }
+            if (remainingRoute.netId !== fromNetId) {
+              remainingRoute.netId = fromNetId;
+              changedObjectIds.add(remainingRoute.id);
+            }
+          }
+          connectivityChanged = true;
+        }
         break;
       }
       case "connect_endpoints": {
