@@ -314,7 +314,7 @@ describe("drafting and guide edits", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("accepts a decorative floating symbol and rejects a terminal-bearing one", () => {
+  it("rejects removed decorative and terminal-bearing floating symbols", () => {
     const resolver = new InMemorySymbolResolver(builtInSymbols);
     const document = createEmptyDocument("doc", "Floating");
     const decorative = executeTransaction(
@@ -335,7 +335,7 @@ describe("drafting and guide edits", () => {
       ]),
       { symbolResolver: resolver },
     );
-    expect(decorative.ok).toBe(true);
+    expect(decorative.ok).toBe(false);
 
     const terminal = executeTransaction(
       document,

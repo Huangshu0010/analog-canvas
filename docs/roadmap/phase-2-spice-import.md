@@ -113,12 +113,12 @@ Import an X instance whose symbol is unknown
 
 ## Risks and decisions
 
-| Risk or decision | Handling |
-|---|---|
-| Parser overfits examples | Separate current acceptance coverage from Phase 4 corpus |
-| Pin order is guessed | Require explicit device/subcircuit terminal schemas |
-| Unknown devices are dropped | Generic fallback and opaque preservation are mandatory |
-| Includes escape project scope | Make copy/reference policy and allowed roots explicit |
+| Risk or decision              | Handling                                                 |
+| ----------------------------- | -------------------------------------------------------- |
+| Parser overfits examples      | Separate current acceptance coverage from Phase 4 corpus |
+| Pin order is guessed          | Require explicit device/subcircuit terminal schemas      |
+| Unknown devices are dropped   | Generic fallback and opaque preservation are mandatory   |
+| Includes escape project scope | Make copy/reference policy and allowed roots explicit    |
 
 ## Exit gate
 
@@ -141,10 +141,11 @@ Completed on `2026-08-07`.
 - All seven `circuit.spi` entries imported successfully: 24 cells, 127
   instances, ordered ports/terminals, hierarchy, raw parameters, four included
   models, and connectivity hashes match the committed corpus golden.
-- The importer creates schema-valid unplaced Documents, source bindings and
-  manifests, logical nets, raw SPICE properties, and pin-count-matched
-  `generic-block-N` fallbacks. A canonical imported RLC Project matches its
-  committed golden byte-for-byte.
+- Historical result at phase completion: the importer created schema-valid
+  unplaced Documents and generic fallback symbols. This behavior was removed
+  by the Razavi-only product contract on 2026-08-10. Current imports return
+  `SPICE_IMPORT_UNSUPPORTED_SYMBOL` and no Project when any visible device lacks
+  an approved Razavi catalog entry.
 - The editor imported the real mixed-device `circuit.spi` plus `models.inc`
   into 8 Documents and 32 unplaced instances through the browser file control.
   Saved JSON excludes source text, syntax, IR, and diagnostics.

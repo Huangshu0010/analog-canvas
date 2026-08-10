@@ -156,13 +156,13 @@ A Razavi palette entry is eligible only when all conditions hold:
 3. `palette` is true and `visualAuthority.kind` is
    `"razavi-reference-v1"`;
 4. referenced rasters and measurements are present and hash-checked;
-5. the symbol is registered in `builtInSymbols`.
+5. the symbol is present in `razaviProductSymbols`.
 
-`razaviReferencePaletteSymbols` is the sole selector for the Razavi palette.
-Legacy compatibility symbols may remain resolvable for old documents or SPICE
-mapping but cannot enter that selector. PDK mappings separately declare model
-scope, terminal count, and complete ordered pin lists; a visual name never
-implies electrical pin order.
+`razaviProductSymbols` is the sole runtime device collection and the sole
+Component Library source. Legacy symbols are not retained or resolvable. An
+unsupported SPICE device blocks import with an explicit diagnostic. PDK
+mappings separately declare model scope, terminal count, and complete ordered
+pin lists; a visual name never implies electrical pin order.
 
 ## Pixel-alignment and IoU contract
 

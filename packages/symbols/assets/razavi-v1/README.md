@@ -10,16 +10,17 @@ it is both `reviewed` and has:
 "visualAuthority": { "kind": "razavi-reference-v1", "...": "..." }
 ```
 
-The active Reference-calibrated set is:
+The product set is exactly the reviewed, Reference-calibrated entries:
 
-- `nmos`, `pmos`, `ground`, `voltage-source`, `current-source`;
-- `resistor`, `capacitor`, and `port`.
+- `nmos`, `pmos`, `ground`, `vdd`;
+- `voltage-source`, `current-source`;
+- `resistor`, `capacitor`, `port`, and `port-filled`.
 
 `nmos3` and `pmos3` use the same visual authority but remain provisional and
-are deliberately excluded from the palette. `inductor`, `diode`, `npn`, and
-`pnp` are `legacy-compatibility` symbols: they remain resolvable so existing
-documents and SPICE imports retain electrical identity, but must never be
-offered under Razavi style until a Reference calibration is added.
+are deliberately excluded from the product set. There is no legacy symbol
+catalog and no generic fallback. A device without a reviewed Razavi symbol is
+an unsupported import error until its Reference calibration is approved and
+added here.
 
 The catalog records only runtime electrical pin order and visual authority.
 It does not read or cite VSS/Visio. Historic VSS material is archival evidence

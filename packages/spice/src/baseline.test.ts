@@ -102,43 +102,13 @@ describe("ngspice 46 core structural baseline", () => {
     expect(ir.unresolvedStatements).toEqual([]);
 
     const imported = importCompileResult(result);
-    expect(imported.successful).toBe(true);
-    expect(imported.project?.source.dialect).toBe("ngspice-46-core");
-    const hierarchicalInstance = imported
-      .project!.documents.flatMap((document) => document.instances)
-      .find(
-        (instance) =>
-          instance.properties["spice.target"] === "subcircuit:child",
-      );
-    if (!hierarchicalInstance)
-      throw new Error("Expected imported child instance");
-    const childDocument = imported.project!.documents.find(
-      (document) => document.sourceBinding?.cellName.toLowerCase() === "child",
-    );
-    expect(hierarchicalInstance.properties["spice.childDocumentId"]).toBe(
-      childDocument?.id,
-    );
+    expect(imported.successful).toBe(false);
+    expect(imported.project).toBeNull();
     expect(
-      Object.fromEntries(
-        imported
-          .project!.documents.flatMap((document) => document.instances)
-          .filter((instance) =>
-            ["D1", "Q1", "M1", "VBIAS", "I1"].includes(instance.id),
-          )
-          .map((instance) => [instance.id, instance.symbolId]),
-      ),
-    ).toEqual({
-      D1: "diode",
-      I1: "current-source",
-      M1: "nmos",
-      Q1: "npn",
-      VBIAS: "voltage-source",
-    });
-    expect(
-      imported.project?.documents
-        .flatMap((document) => document.instances)
-        .some((instance) => instance.id === "K12"),
-    ).toBe(false);
+      imported.diagnostics.filter(
+        (item) => item.code === "SPICE_IMPORT_UNSUPPORTED_SYMBOL",
+      ).length,
+    ).toBeGreaterThan(0);
     expect(imported.diagnostics.map((item) => item.code)).toContain(
       "SPICE_IMPORT_NON_VISUAL_INSTANCE",
     );

@@ -341,9 +341,7 @@ describe("textbook monochrome SVG renderer", () => {
         expect(scene.formalBody).toContain(
           `transform="translate(100 80) rotate(${rotation})${expectedMirror}"`,
         );
-        expect(scene.formalBody).toMatch(
-          /<text x="[^"]+" y="[^"]+" text-anchor="(?:start|middle|end)">M1<\/text>/u,
-        );
+        expect(scene.formalBody).toContain('data-text-run="subscript"');
         expect(scene.viewBox.width).toBeGreaterThan(0);
         expect(scene.viewBox.height).toBeGreaterThan(0);
       }
@@ -363,7 +361,7 @@ describe("textbook monochrome SVG renderer", () => {
     const terminal = (instanceId: string) => ({
       kind: "terminal" as const,
       instanceId,
-      pinName: "P1",
+      pinName: "P",
     });
     project.documents[0]!.routes = [
       {

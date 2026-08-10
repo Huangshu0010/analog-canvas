@@ -1,44 +1,24 @@
 import { useMemo, useState } from "react";
 
 import { renderSymbolDefinitionBody } from "@icm/render-svg";
-import { builtInSymbols, razaviReferencePaletteSymbols } from "@icm/symbols";
+import { razaviProductSymbols } from "@icm/symbols";
 import type { SymbolDefinition } from "@icm/symbols";
 
 import { defaultRazaviSymbolVariantId } from "../presentation/razavi-presentation";
 
-const RETIRED_RAZAVI_SYMBOL_IDS = new Set(["nmos3", "pmos3"]);
-
 export interface ComponentLibraryProps {
-  styleProfileId: string;
   onPlace(symbolId: string, symbolName: string): void;
 }
 
 function symbolCategory(symbolId: string): string {
-  if (["nmos", "pmos", "nmos3", "pmos3", "npn", "pnp"].includes(symbolId)) {
+  if (["nmos", "pmos"].includes(symbolId)) {
     return "Transistors";
   }
-  if (
-    ["resistor", "capacitor", "inductor", "crystal", "transformer"].includes(
-      symbolId,
-    )
-  ) {
+  if (["resistor", "capacitor"].includes(symbolId)) {
     return "Passives";
   }
-  if (
-    [
-      "voltage-source",
-      "current-source",
-      "ac-voltage-source",
-      "pulse-voltage-source",
-    ].includes(symbolId)
-  ) {
+  if (["voltage-source", "current-source"].includes(symbolId)) {
     return "Sources";
-  }
-  if (["diode", "zener", "schottky", "led"].includes(symbolId)) {
-    return "Diodes";
-  }
-  if (["opamp", "switch-open", "switch-closed"].includes(symbolId)) {
-    return "Functional";
   }
   return "Power and Ports";
 }
@@ -75,25 +55,15 @@ function SymbolThumbnail({ symbol }: { symbol: SymbolDefinition }) {
   );
 }
 
-export function ComponentLibrary({
-  styleProfileId,
-  onPlace,
-}: ComponentLibraryProps) {
+export function ComponentLibrary({ onPlace }: ComponentLibraryProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(true);
   const groups = useMemo(() => {
-    const paletteSource =
-      styleProfileId === "razavi-textbook-v1"
-        ? razaviReferencePaletteSymbols
-        : builtInSymbols;
     const normalizedQuery = query.trim().toLowerCase();
-    const symbols = paletteSource.filter(
-      (symbol) =>
-        symbol.id !== "generic-block" &&
-        !RETIRED_RAZAVI_SYMBOL_IDS.has(symbol.id) &&
-        `${symbol.name} ${symbol.id} ${symbol.aliases.join(" ")}`
-          .toLowerCase()
-          .includes(normalizedQuery),
+    const symbols = razaviProductSymbols.filter((symbol) =>
+      `${symbol.name} ${symbol.id} ${symbol.aliases.join(" ")}`
+        .toLowerCase()
+        .includes(normalizedQuery),
     );
 
     return [...new Set(symbols.map((symbol) => symbolCategory(symbol.id)))].map(
@@ -104,7 +74,7 @@ export function ComponentLibrary({
         ),
       }),
     );
-  }, [query, styleProfileId]);
+  }, [query]);
 
   return (
     <div className="library-panel">

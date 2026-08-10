@@ -42,6 +42,7 @@ import type {
 import { buildSvgScene, resolveSchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
+import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
 import { copySelection, proposePaste } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
@@ -1916,29 +1917,14 @@ export function App({ project: initialProject }: AppProps) {
     const prefix: Record<string, string> = {
       resistor: "R",
       capacitor: "C",
-      inductor: "L",
       nmos: "M",
       pmos: "M",
-      nmos3: "M",
-      pmos3: "M",
-      npn: "Q",
-      pnp: "Q",
-      diode: "D",
-      zener: "D",
-      schottky: "D",
-      led: "D",
       "voltage-source": "V",
       "current-source": "I",
-      "ac-voltage-source": "V",
-      "pulse-voltage-source": "V",
-      opamp: "U",
-      "switch-open": "S",
-      "switch-closed": "S",
-      crystal: "Y",
-      transformer: "T",
       ground: "GND",
       vdd: "VDD",
       port: "P",
+      "port-filled": "P",
     };
     let id = `${prefix[symbolId] ?? "X"}${instanceCounter.current}`;
     while (document.instances.some((instance) => instance.id === id)) {
@@ -2332,6 +2318,18 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function restoreRecovery(): void {
+    if (recoveryCandidate) {
+      const unsupported = findUnsupportedProjectSymbolIds(
+        recoveryCandidate,
+        builtInSymbols,
+      );
+      if (unsupported.length > 0) {
+        setStatus(
+          `Recovery uses unsupported non-Razavi symbols: ${unsupported.join(", ")}`,
+        );
+        return;
+      }
+    }
     const recoveredProject = consumeRecoveryCandidate();
     if (!recoveredProject) return;
     const recoveredDocument = replaceActiveProject(recoveredProject);
@@ -2347,6 +2345,15 @@ export function App({ project: initialProject }: AppProps) {
     if (!file) return;
     try {
       const opened = parseProject(await file.text());
+      const unsupported = findUnsupportedProjectSymbolIds(
+        opened,
+        builtInSymbols,
+      );
+      if (unsupported.length > 0) {
+        throw new Error(
+          `Project uses unsupported non-Razavi symbols: ${unsupported.join(", ")}`,
+        );
+      }
       const openedDocument = opened.documents.find(
         (candidate) => candidate.id === opened.topDocumentId,
       )!;
@@ -2840,34 +2847,6 @@ export function App({ project: initialProject }: AppProps) {
       },
     ]);
     if (result.ok) setStatus(`Added free arrow ${id}`);
-  }
-
-  function addFloatingSymbol(): void {
-    uniqueSuffixCounter.current += 1;
-    const id = `floating-${uniqueSuffixCounter.current}`;
-    const position = {
-      x: Math.round(viewBox.x + viewBox.width / 2),
-      y: Math.round(viewBox.y + viewBox.height / 2),
-    };
-    const result = transact([
-      {
-        kind: "upsert_drafting_object",
-        object: {
-          id,
-          kind: "floating-symbol",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position },
-          symbolId: "decorative-note-box",
-          transform: { rotation: 0, mirror: "none" },
-        },
-      },
-    ]);
-    if (result.ok) {
-      setStatus(`Added floating symbol ${id}`);
-    } else {
-      setStatus("Floating symbol requires a decorative catalog entry");
-    }
   }
 
   function addCurrentArrow(): void {
@@ -3382,15 +3361,10 @@ export function App({ project: initialProject }: AppProps) {
         (count, candidate) => count + candidate.instances.length,
         0,
       );
-      const genericCount = result.project.documents
-        .flatMap((candidate) => candidate.instances)
-        .filter((instance) =>
-          instance.symbolId.startsWith("generic-block-"),
-        ).length;
       replaceActiveProject(result.project);
       stageRecovery(result.project);
       setStatus(
-        `Imported ${result.project.documents.length} Documents and ${instanceCount} instances; ${genericCount} generic symbols`,
+        `Imported ${result.project.documents.length} Documents and ${instanceCount} Razavi-supported instances`,
       );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "SPICE import failed");
@@ -4677,7 +4651,6 @@ export function App({ project: initialProject }: AppProps) {
         role="complementary"
       >
         <ComponentLibrary
-          styleProfileId={document.presentation.styleProfileId}
           onPlace={(symbolId, symbolName) => {
             beginComponentPlacement(symbolId);
             setStatus(`Place ${symbolName} on the canvas`);

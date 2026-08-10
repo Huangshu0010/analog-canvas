@@ -36,7 +36,7 @@
       "presentation": {
         "compactness": "normal",
         "grid": 10,
-        "styleProfileId": "textbook-monochrome-v1"
+        "styleProfileId": "razavi-textbook-v1"
       },
       "revision": 0,
       "routes": [],
@@ -53,9 +53,9 @@
     "sourcePolicy": "copy"
   },
   "symbolLibrary": {
-    "hash": "phase-1-builtins",
-    "id": "builtin-analog",
-    "version": "0.1.0"
+    "hash": "razavi-reference-v1",
+    "id": "razavi-symbols",
+    "version": "1"
   },
   "topDocumentId": "document-main"
 }

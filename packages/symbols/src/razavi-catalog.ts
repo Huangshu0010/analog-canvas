@@ -11,17 +11,12 @@ export interface RazaviSymbolCatalogEntry {
   name: string;
   category: string;
   reviewStatus: "reviewed" | "provisional";
-  visualAuthority:
-    | {
-        kind: "razavi-reference-v1";
-        referenceManifestPath: string;
-        referencePaths: string[];
-        calibrationPath?: string;
-      }
-    | {
-        kind: "legacy-compatibility";
-        reason: string;
-      };
+  visualAuthority: {
+    kind: "razavi-reference-v1";
+    referenceManifestPath: string;
+    referencePaths: string[];
+    calibrationPath?: string;
+  };
   pinOrder: string[];
   palette: boolean;
   automaticMappings: string[];
@@ -56,7 +51,7 @@ const entriesById = new Map(
   razaviSymbolCatalogEntries.map((entry) => [entry.symbolId, entry]),
 );
 
-export function isRazaviReferencePaletteEntry(
+export function isRazaviProductCatalogEntry(
   entry: RazaviSymbolCatalogEntry,
 ): boolean {
   return (
@@ -66,9 +61,9 @@ export function isRazaviReferencePaletteEntry(
   );
 }
 
-export const razaviReferencePaletteSymbols: readonly SymbolDefinition[] =
+export const razaviProductSymbols: readonly SymbolDefinition[] =
   razaviSymbolCatalogEntries
-    .filter(isRazaviReferencePaletteEntry)
+    .filter(isRazaviProductCatalogEntry)
     .map((entry) => symbolsById.get(entry.symbolId)!)
     .filter((symbol): symbol is SymbolDefinition => symbol !== undefined);
 
@@ -95,4 +90,9 @@ export function getRazaviCatalogEntry(
   symbolId: string,
 ): RazaviSymbolCatalogEntry | undefined {
   return entriesById.get(symbolId);
+}
+
+export function isRazaviProductSymbolId(symbolId: string): boolean {
+  const entry = entriesById.get(symbolId);
+  return entry !== undefined && isRazaviProductCatalogEntry(entry);
 }

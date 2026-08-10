@@ -52,7 +52,7 @@ function documentFixture() {
 const terminal = (instanceId: string) => ({
   kind: "terminal" as const,
   instanceId,
-  pinName: "P1",
+  pinName: "P",
 });
 
 describe("expandRouteGraph → transact → actual geometry consistency", () => {
@@ -108,8 +108,8 @@ describe("expandRouteGraph → transact → actual geometry consistency", () => 
     const pointA = resolveEndpointPoint(doc, resolver, epA)!;
     const outwardA = resolveEndpointOutwardDirection(doc, resolver, epA);
 
-    // Place a tap aligned with A on y, to the west of A.
-    const tapX = pointA.x - 80;
+    // Place a tap aligned with A on y, in the pin's outward direction.
+    const tapX = pointA.x + 80;
     const graph: RouteGraph = {
       documentId: doc.id,
       revision: 0,

@@ -31,7 +31,7 @@ function documentFixture() {
 const terminal = (instanceId: string) => ({
   kind: "terminal" as const,
   instanceId,
-  pinName: "P1",
+  pinName: "P",
 });
 
 function transaction(documentId: string, revision: number, edits: unknown[]) {
@@ -68,12 +68,8 @@ describe("routing Edit Engine", () => {
     expect(route.segmentModes[0]).toBe("escape");
     expect(route.segmentModes.at(-1)).toBe("escape");
     expect(routePolyline(result.document, resolver, route)?.points).toEqual([
-      { x: 100, y: 300 },
-      { x: 80, y: 300 },
-      { x: 80, y: 320 },
-      { x: 520, y: 320 },
-      { x: 520, y: 300 },
-      { x: 500, y: 300 },
+      { x: 150, y: 300 },
+      { x: 450, y: 300 },
     ]);
   });
 
@@ -183,8 +179,8 @@ describe("routing Edit Engine", () => {
           from: terminal("A"),
           to: terminal("B"),
           waypoints: [
-            { x: 100, y: 340 },
-            { x: 500, y: 340 },
+            { x: 150, y: 340 },
+            { x: 450, y: 340 },
           ],
           segmentModes: ["manual", "manual", "manual"],
         },
@@ -258,9 +254,9 @@ describe("routing Edit Engine", () => {
         moved.document.routes.find((route) => route.id === "route-h")!,
       )?.points,
     ).toEqual([
-      { x: 120, y: 320 },
-      { x: 500, y: 320 },
-      { x: 500, y: 300 },
+      { x: 170, y: 320 },
+      { x: 450, y: 320 },
+      { x: 450, y: 300 },
     ]);
     expect(
       moved.document.annotations.find(
@@ -288,18 +284,18 @@ describe("routing Edit Engine", () => {
         rotated.document.routes.find((route) => route.id === "route-h")!,
       )?.points,
     ).toEqual([
-      { x: 160, y: 280 },
-      { x: 500, y: 280 },
-      { x: 500, y: 300 },
+      { x: 160, y: 330 },
+      { x: 450, y: 330 },
+      { x: 450, y: 300 },
     ]);
     expect(
       rotated.document.annotations.find(
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 180, y: 274 },
+      position: { x: 180, y: 279 },
       offset: { x: 20, y: -41 },
-      alignment: "middle",
+      alignment: "start",
       rotation: 0,
     });
 
@@ -319,18 +315,18 @@ describe("routing Edit Engine", () => {
         mirrored.document.routes.find((route) => route.id === "route-h")!,
       )?.points,
     ).toEqual([
-      { x: 160, y: 360 },
-      { x: 500, y: 360 },
-      { x: 500, y: 300 },
+      { x: 160, y: 310 },
+      { x: 450, y: 310 },
+      { x: 450, y: 300 },
     ]);
     expect(
       mirrored.document.annotations.find(
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 180, y: 377 },
+      position: { x: 180, y: 361 },
       offset: { x: 20, y: 41 },
-      alignment: "middle",
+      alignment: "start",
       rotation: 0,
     });
     expect(mirrored.diff.changedObjectIds).toEqual(
@@ -338,7 +334,7 @@ describe("routing Edit Engine", () => {
     );
   });
 
-  it.each(["nmos", "pmos", "nmos3", "pmos3"])(
+  it.each(["nmos", "pmos"])(
     "preserves a materialized %s label side through a full rotation",
     (symbolId) => {
       const document = documentFixture();
@@ -517,6 +513,11 @@ describe("routing Edit Engine", () => {
 
   it("rotates a terminal escape with the pin instead of rejecting the Route", () => {
     const document = documentFixture();
+    const endpointB = document.instances.find(
+      (instance) => instance.id === "B",
+    );
+    if (!endpointB?.placement) throw new Error("Fixture B must be placed");
+    endpointB.placement.position.y = 360;
     const routed = executeTransaction(
       document,
       transaction(document.id, 0, [
@@ -546,8 +547,7 @@ describe("routing Edit Engine", () => {
       (candidate) => candidate.id === "route-agent",
     )!;
     const points = routePolyline(rotated.document, resolver, route)?.points;
-    expect(points?.[0]).toEqual({ x: 140, y: 260 });
-    expect(points?.[1]).toEqual({ x: 140, y: 240 });
+    expect(points?.[0]).toEqual({ x: 140, y: 310 });
     expect(points && isOrthogonal(points)).toBe(true);
   });
 
@@ -616,8 +616,12 @@ describe("routing Edit Engine", () => {
           netId: "net-h",
           from: terminal("A"),
           to: terminal("B"),
-          waypoints: [],
-          segmentModes: ["escape"],
+          waypoints: [
+            { x: 130, y: 300 },
+            { x: 130, y: 320 },
+            { x: 450, y: 320 },
+          ],
+          segmentModes: ["escape", "manual", "manual", "manual"],
         },
       ]),
       context,
@@ -627,7 +631,7 @@ describe("routing Edit Engine", () => {
       ok: false,
       error: {
         code: "EDIT_PRECONDITION",
-        message: expect.stringContaining("must leave A.P1 outward"),
+        message: expect.stringContaining("must leave A.P outward"),
       },
     });
   });
@@ -729,8 +733,8 @@ describe("routing Edit Engine", () => {
         from: terminal("A"),
         to: terminal("B"),
         waypoints: [
-          { x: 100, y: 200 },
-          { x: 500, y: 200 },
+          { x: 150, y: 200 },
+          { x: 450, y: 200 },
         ],
         segmentModes: ["manual", "manual", "manual"],
       },
@@ -742,7 +746,7 @@ describe("routing Edit Engine", () => {
           kind: "add_junction",
           junctionId: "junction-bend",
           netId: "net-h",
-          position: { x: 100, y: 200 },
+          position: { x: 150, y: 200 },
           split: {
             routeId: "route-bend",
             firstRouteId: "route-bend-a",
@@ -763,16 +767,16 @@ describe("routing Edit Engine", () => {
       routePolyline(result.document, resolver, result.document.routes[0]!)
         ?.points,
     ).toEqual([
-      { x: 100, y: 300 },
-      { x: 100, y: 200 },
+      { x: 150, y: 300 },
+      { x: 150, y: 200 },
     ]);
     expect(
       routePolyline(result.document, resolver, result.document.routes[1]!)
         ?.points,
     ).toEqual([
-      { x: 100, y: 200 },
-      { x: 500, y: 200 },
-      { x: 500, y: 300 },
+      { x: 150, y: 200 },
+      { x: 450, y: 200 },
+      { x: 450, y: 300 },
     ]);
   });
 

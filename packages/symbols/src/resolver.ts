@@ -1,10 +1,6 @@
 import { SymbolDefinitionSchema } from "./schema.js";
 import type { SymbolDefinition, SymbolVariant } from "./schema.js";
 import type { CircuitProject } from "@icm/model";
-import {
-  createGenericBlockSymbol,
-  genericBlockPinCount,
-} from "./generic-block.js";
 import { createProjectHierarchicalSymbols } from "./hierarchical-block.js";
 
 export interface ResolvedSymbol {
@@ -19,7 +15,6 @@ export interface SymbolResolver {
 export class InMemorySymbolResolver implements SymbolResolver {
   readonly #symbols = new Map<string, SymbolDefinition>();
   readonly #aliases = new Map<string, string>();
-  readonly #generated = new Map<string, SymbolDefinition>();
 
   constructor(definitions: readonly SymbolDefinition[]) {
     for (const input of definitions) {
@@ -42,15 +37,7 @@ export class InMemorySymbolResolver implements SymbolResolver {
 
   resolve(symbolId: string, variantId?: string): ResolvedSymbol | undefined {
     const canonicalId = this.#aliases.get(symbolId) ?? symbolId;
-    let definition =
-      this.#symbols.get(canonicalId) ?? this.#generated.get(canonicalId);
-    if (!definition) {
-      const pinCount = genericBlockPinCount(canonicalId);
-      if (pinCount !== null) {
-        definition = createGenericBlockSymbol(pinCount);
-        this.#generated.set(canonicalId, definition);
-      }
-    }
+    const definition = this.#symbols.get(canonicalId);
     if (!definition) {
       return undefined;
     }
@@ -72,4 +59,28 @@ export function createProjectSymbolResolver(
     ...baseDefinitions,
     ...createProjectHierarchicalSymbols(project),
   ]);
+}
+
+export function findUnsupportedProjectSymbolIds(
+  project: Pick<CircuitProject, "documents">,
+  baseDefinitions: readonly SymbolDefinition[],
+): string[] {
+  const resolver = createProjectSymbolResolver(project, baseDefinitions);
+  const unsupported = new Set<string>();
+  for (const document of project.documents) {
+    for (const instance of document.instances) {
+      if (!resolver.resolve(instance.symbolId, instance.symbolVariantId)) {
+        unsupported.add(instance.symbolId);
+      }
+    }
+    for (const object of document.drafting?.objects ?? []) {
+      if (
+        object.kind === "floating-symbol" &&
+        !resolver.resolve(object.symbolId)
+      ) {
+        unsupported.add(object.symbolId);
+      }
+    }
+  }
+  return [...unsupported].sort();
 }

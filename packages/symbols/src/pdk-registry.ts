@@ -1,3 +1,5 @@
+import { isRazaviProductSymbolId } from "./razavi-catalog.js";
+
 export interface PdkSymbolMapping {
   symbolId: string;
   pinNames: readonly string[];
@@ -36,13 +38,6 @@ const pdkRules: readonly PdkMappingRule[] = [
     symbolId: "pmos",
     pinNames: ["D", "G", "S", "B"],
   },
-  {
-    id: "sky130-high-po-three-terminal",
-    pattern: /^sky130_fd_pr__res_high_po$/u,
-    terminalCount: 3,
-    symbolId: "poly-resistor",
-    pinNames: ["1", "2", "B"],
-  },
 ];
 
 export function resolvePdkSymbolMapping(
@@ -57,7 +52,7 @@ export function resolvePdkSymbolMapping(
       candidate.terminalCount === terminalCount &&
       candidate.pinNames.length === terminalCount,
   );
-  if (exact) {
+  if (exact && isRazaviProductSymbolId(exact.symbolId)) {
     return {
       symbolId: exact.symbolId,
       pinNames: [...exact.pinNames],
@@ -70,7 +65,7 @@ export function resolvePdkSymbolMapping(
       candidate.terminalCount === terminalCount &&
       candidate.pattern.test(normalized),
   );
-  return rule
+  return rule && isRazaviProductSymbolId(rule.symbolId)
     ? {
         symbolId: rule.symbolId,
         pinNames: [...rule.pinNames],

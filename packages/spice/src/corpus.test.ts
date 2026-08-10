@@ -43,7 +43,7 @@ function connectivityHash(
 }
 
 describe("current netlist corpus", () => {
-  it("imports every entry without silent statement or connectivity loss", async () => {
+  it("compiles every entry and rejects unsupported Razavi devices explicitly", async () => {
     const summary = [];
     let totalInstances = 0;
     for (const directory of entries) {
@@ -63,22 +63,38 @@ describe("current netlist corpus", () => {
       expect(compiled.ir, directory).not.toBeNull();
       const ir = compiled.ir!;
       const imported = importCompileResult(compiled);
-      expect(imported.project, directory).not.toBeNull();
-      expect(
-        CircuitProjectSchema.safeParse(imported.project).success,
-        directory,
-      ).toBe(true);
+      if (imported.project) {
+        expect(
+          CircuitProjectSchema.safeParse(imported.project).success,
+          directory,
+        ).toBe(true);
+        expect(
+          imported.project.documents
+            .flatMap((document) => document.instances)
+            .every((instance) => instance.placement === null),
+          directory,
+        ).toBe(true);
+        expect(
+          imported.project.documents
+            .flatMap((document) => document.instances)
+            .some((instance) => instance.symbolId.startsWith("generic-block-")),
+          directory,
+        ).toBe(false);
+      } else {
+        expect(
+          imported.diagnostics.some(
+            (item) =>
+              item.code === "SPICE_IMPORT_UNSUPPORTED_SYMBOL" &&
+              item.severity === "error",
+          ),
+          directory,
+        ).toBe(true);
+      }
       expect(ir.unresolvedStatements, directory).toEqual([]);
       expect(
         compiled.bundle.syntaxFiles.every(
           (file) => file.statements.length === file.logicalLines.length,
         ),
-        directory,
-      ).toBe(true);
-      expect(
-        imported
-          .project!.documents.flatMap((document) => document.instances)
-          .every((instance) => instance.placement === null),
         directory,
       ).toBe(true);
       const instances = ir.cells.reduce(
@@ -98,10 +114,7 @@ describe("current netlist corpus", () => {
         parameters:
           ir.parameters.length +
           ir.cells.reduce((count, cell) => count + cell.parameters.length, 0),
-        genericSymbols: imported
-          .project!.documents.flatMap((document) => document.instances)
-          .filter((instance) => instance.symbolId.startsWith("generic-block-"))
-          .length,
+        genericSymbols: 0,
         connectivitySha256: connectivityHash(ir),
       });
     }

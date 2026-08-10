@@ -16,7 +16,7 @@
             "rotation": 0
           },
           "properties": {},
-          "symbolId": "generic-block-1"
+          "symbolId": "port"
         },
         {
           "id": "B",
@@ -29,7 +29,7 @@
             "rotation": 0
           },
           "properties": {},
-          "symbolId": "generic-block-1"
+          "symbolId": "port"
         },
         {
           "id": "C",
@@ -42,7 +42,7 @@
             "rotation": 90
           },
           "properties": {},
-          "symbolId": "generic-block-1"
+          "symbolId": "port"
         },
         {
           "id": "D",
@@ -55,7 +55,7 @@
             "rotation": 270
           },
           "properties": {},
-          "symbolId": "generic-block-1"
+          "symbolId": "port"
         },
         {
           "id": "E",
@@ -68,7 +68,7 @@
             "rotation": 90
           },
           "properties": {},
-          "symbolId": "generic-block-1"
+          "symbolId": "port"
         }
       ],
       "junctions": [],
@@ -83,15 +83,15 @@
           "terminals": [
             {
               "instanceId": "A",
-              "pinName": "P1"
+              "pinName": "P"
             },
             {
               "instanceId": "B",
-              "pinName": "P1"
+              "pinName": "P"
             },
             {
               "instanceId": "E",
-              "pinName": "P1"
+              "pinName": "P"
             }
           ]
         },
@@ -103,11 +103,11 @@
           "terminals": [
             {
               "instanceId": "C",
-              "pinName": "P1"
+              "pinName": "P"
             },
             {
               "instanceId": "D",
-              "pinName": "P1"
+              "pinName": "P"
             }
           ]
         }
@@ -116,7 +116,7 @@
       "presentation": {
         "compactness": "normal",
         "grid": 10,
-        "styleProfileId": "textbook-monochrome-v1"
+        "styleProfileId": "razavi-textbook-v1"
       },
       "revision": 0,
       "routes": [],
@@ -133,9 +133,9 @@
     "sourcePolicy": "copy"
   },
   "symbolLibrary": {
-    "hash": "development",
-    "id": "builtin-analog",
-    "version": "0.0.0"
+    "hash": "razavi-reference-v1",
+    "id": "razavi-symbols",
+    "version": "1"
   },
   "topDocumentId": "document-routing"
 }

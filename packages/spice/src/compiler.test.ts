@@ -1,11 +1,4 @@
 import { resolve } from "node:path";
-import { readFile } from "node:fs/promises";
-
-import {
-  CircuitProjectSchema,
-  deriveStableId,
-  serializeProject,
-} from "@icm/model";
 import { describe, expect, it } from "vitest";
 
 import { compileSourceBundle } from "./compiler.js";
@@ -13,7 +6,7 @@ import { importCompileResult } from "./importer.js";
 import { loadSourceBundleFromFile } from "./node-source.js";
 
 describe("SPICE elaboration and Project import", () => {
-  it("preserves the mixed-device hierarchy, parameters, models, and connectivity", async () => {
+  it("preserves mixed-device IR but rejects devices outside the Razavi catalog", async () => {
     const entry = resolve(
       process.cwd(),
       "netlists/mixed-device-acceptance/circuit.spi",
@@ -48,45 +41,19 @@ describe("SPICE elaboration and Project import", () => {
     ).toEqual(["IN", "OUT", "VSS"]);
 
     const imported = importCompileResult(compiled);
-    expect(imported.project).not.toBeNull();
-    expect(CircuitProjectSchema.parse(imported.project)).toEqual(
-      imported.project,
+    expect(imported.successful).toBe(false);
+    expect(imported.project).toBeNull();
+    const unsupported = imported.diagnostics.filter(
+      (item) => item.code === "SPICE_IMPORT_UNSUPPORTED_SYMBOL",
     );
-    expect(imported.project!.source.files.map((file) => file.path)).toEqual([
-      "circuit.spi",
-      "models.inc",
-    ]);
-    expect(imported.project!.documents).toHaveLength(8);
-    const importedTop = imported.project!.documents.find(
-      (document) => document.name === "mixed_device_acceptance",
-    )!;
-    const importedFilter = importedTop.instances.find(
-      (instance) => instance.id === "XFILTER",
-    )!;
-    expect(importedFilter.symbolId).toBe(
-      deriveStableId("hierarchical-symbol", "mixed_passive_cell"),
+    expect(unsupported.length).toBeGreaterThan(0);
+    expect(unsupported.every((item) => item.severity === "error")).toBe(true);
+    expect(unsupported.some((item) => item.message.includes("Razavi"))).toBe(
+      true,
     );
-    expect(importedFilter.properties["spice.pin.P1"]).toBe("IN");
-    expect(
-      importedTop.nets
-        .flatMap((net) => net.terminals)
-        .find((terminal) => terminal.instanceId === "XFILTER")?.pinName,
-    ).toBe("IN");
-    expect(
-      imported
-        .project!.documents.flatMap((document) => document.instances)
-        .every((instance) => instance.placement === null),
-    ).toBe(true);
-    expect(
-      imported.diagnostics.some(
-        (item) =>
-          item.code === "SPICE_IMPORT_GENERIC_SYMBOL" &&
-          item.message.includes("XFILTER"),
-      ),
-    ).toBe(false);
   });
 
-  it("matches the canonical imported Project golden", async () => {
+  it("rejects an inductor instead of generating a fallback symbol", async () => {
     const entry = resolve(
       process.cwd(),
       "netlists/rlc-broadband-50-to-200-match/circuit.spi",
@@ -94,14 +61,18 @@ describe("SPICE elaboration and Project import", () => {
     const imported = importCompileResult(
       compileSourceBundle(await loadSourceBundleFromFile(entry)),
     );
-    const golden = await readFile(
-      resolve(
-        process.cwd(),
-        "fixtures/projects/phase-2-imported-rlc/project.icproj.json",
+    expect(imported.project).toBeNull();
+    expect(imported.successful).toBe(false);
+    expect(
+      imported.diagnostics.find(
+        (item) =>
+          item.code === "SPICE_IMPORT_UNSUPPORTED_SYMBOL" &&
+          item.message.includes("L1"),
       ),
-      "utf8",
-    );
-    expect(serializeProject(imported.project!)).toBe(golden);
+    ).toMatchObject({
+      severity: "error",
+      stage: "import",
+    });
   });
 
   it("normalizes reviewed SKY130 MOS models without losing source facts", async () => {
@@ -115,7 +86,7 @@ describe("SPICE elaboration and Project import", () => {
     expect(imported.successful).toBe(true);
     expect(
       imported.diagnostics.filter(
-        (diagnostic) => diagnostic.code === "SPICE_IMPORT_GENERIC_SYMBOL",
+        (diagnostic) => diagnostic.code === "SPICE_IMPORT_UNSUPPORTED_SYMBOL",
       ),
     ).toEqual([]);
     const document = imported.project!.documents[0]!;
@@ -145,7 +116,7 @@ describe("SPICE elaboration and Project import", () => {
     ).toEqual(expect.arrayContaining(["D", "G", "S", "B"]));
   });
 
-  it("applies an explicit model mapping before the built-in PDK rule", async () => {
+  it("ignores an explicit mapping to a removed compatibility symbol", async () => {
     const entry = resolve(
       process.cwd(),
       "netlists/sky130-ota-5t-gain40-pm60-noise50uv-pvt/circuit.spi",
@@ -169,18 +140,18 @@ describe("SPICE elaboration and Project import", () => {
       (candidate) => candidate.properties["spice.name"] === "XM1",
     )!;
     expect(instance).toMatchObject({
-      symbolId: "generic-block-4",
+      symbolId: "nmos",
       properties: {
-        "spice.pin.P1": "DRAIN",
-        "spice.pin.P2": "GATE",
-        "spice.pin.P3": "SOURCE",
-        "spice.pin.P4": "BULK",
-        "symbol.mapping.registry": "project:reviewed-nfet",
+        "spice.pin.P1": "D",
+        "spice.pin.P2": "G",
+        "spice.pin.P3": "S",
+        "spice.pin.P4": "B",
+        "symbol.mapping.registry": "sky130-nfet-four-terminal",
       },
     });
     expect(
       imported.diagnostics.filter(
-        (diagnostic) => diagnostic.code === "SPICE_IMPORT_GENERIC_SYMBOL",
+        (diagnostic) => diagnostic.code === "SPICE_IMPORT_UNSUPPORTED_SYMBOL",
       ),
     ).toEqual([]);
   });

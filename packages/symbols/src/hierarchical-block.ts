@@ -1,7 +1,7 @@
 import { deriveStableId } from "@icm/model";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 
-import { createGenericBlockSymbol } from "./generic-block.js";
+import { createHierarchicalBlockGeometry } from "./hierarchical-block-geometry.js";
 import { SymbolDefinitionSchema } from "./schema.js";
 import type { SymbolDefinition } from "./schema.js";
 
@@ -14,7 +14,7 @@ export function createHierarchicalBlockSymbol(
 ): SymbolDefinition | null {
   const cellName = document.sourceBinding?.cellName;
   if (!cellName || document.ports.length === 0) return null;
-  const positional = createGenericBlockSymbol(document.ports.length);
+  const positional = createHierarchicalBlockGeometry(document.ports.length);
   const implicitSupplyPins = document.ports
     .map((port) => port.name)
     .filter((name) => /^(?:gnd|ground|vcc|vdd|vee|vss)$/iu.test(name));

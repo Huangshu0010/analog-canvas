@@ -126,39 +126,35 @@ for (const entry of catalog.entries) {
   ) {
     fail(`${entry.symbolId} is unreachable and lacks a manual-only reason`);
   }
-  if (entry.visualAuthority.kind === "razavi-reference-v1") {
-    const manifestPath = resolve(
-      root,
-      entry.visualAuthority.referenceManifestPath,
-    );
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-    if (
-      manifest.id !== "razavi-reference-v1" ||
-      manifest.visualAuthority !== "sole"
-    ) {
-      fail(`invalid Razavi Reference authority for ${entry.symbolId}`);
-    }
-    if (entry.visualAuthority.referencePaths.length === 0) {
-      fail(`missing Razavi Reference path for ${entry.symbolId}`);
-    }
-    for (const referencePath of entry.visualAuthority.referencePaths) {
-      if (
-        !referencePath.startsWith(
-          "fixtures/visual-reference/razavi-reference-v1/",
-        )
-      ) {
-        fail(`reference path escapes Razavi authority for ${entry.symbolId}`);
-      }
-      await readFile(resolve(root, referencePath));
-    }
-    if (entry.visualAuthority.calibrationPath) {
-      await readFile(resolve(root, entry.visualAuthority.calibrationPath));
-    }
-  } else if (
-    entry.visualAuthority.kind !== "legacy-compatibility" ||
-    entry.visualAuthority.reason.trim() === ""
-  ) {
+  if (entry.visualAuthority.kind !== "razavi-reference-v1") {
     fail(`invalid visual authority for ${entry.symbolId}`);
+  }
+  const manifestPath = resolve(
+    root,
+    entry.visualAuthority.referenceManifestPath,
+  );
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  if (
+    manifest.id !== "razavi-reference-v1" ||
+    manifest.visualAuthority !== "sole"
+  ) {
+    fail(`invalid Razavi Reference authority for ${entry.symbolId}`);
+  }
+  if (entry.visualAuthority.referencePaths.length === 0) {
+    fail(`missing Razavi Reference path for ${entry.symbolId}`);
+  }
+  for (const referencePath of entry.visualAuthority.referencePaths) {
+    if (
+      !referencePath.startsWith(
+        "fixtures/visual-reference/razavi-reference-v1/",
+      )
+    ) {
+      fail(`reference path escapes Razavi authority for ${entry.symbolId}`);
+    }
+    await readFile(resolve(root, referencePath));
+  }
+  if (entry.visualAuthority.calibrationPath) {
+    await readFile(resolve(root, entry.visualAuthority.calibrationPath));
   }
   if (assetPaths.has(entry.assetPath)) {
     fail(`duplicate asset path ${entry.assetPath}`);

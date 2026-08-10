@@ -13,7 +13,7 @@ function instance(
 ): Instance {
   return {
     id,
-    symbolId: "generic-block-1",
+    symbolId: "port",
     placement: { position: { x, y }, rotation, mirror },
     properties: {},
   };
@@ -26,9 +26,9 @@ export function createRoutingDemoProject(): CircuitProject {
     name: "Phase 3 Routing Demo",
     source: { entry: null, dialect: "none", sourcePolicy: "copy", files: [] },
     symbolLibrary: {
-      id: "builtin-analog",
-      version: "0.0.0",
-      hash: "development",
+      id: "razavi-symbols",
+      version: "1",
+      hash: "razavi-reference-v1",
     },
     topDocumentId: "document-routing",
     documents: [
@@ -52,7 +52,7 @@ export function createRoutingDemoProject(): CircuitProject {
             scope: "local",
             terminals: ["A", "B", "E"].map((instanceId) => ({
               instanceId,
-              pinName: "P1",
+              pinName: "P",
             })),
             ports: [],
           },
@@ -62,7 +62,7 @@ export function createRoutingDemoProject(): CircuitProject {
             scope: "local",
             terminals: ["C", "D"].map((instanceId) => ({
               instanceId,
-              pinName: "P1",
+              pinName: "P",
             })),
             ports: [],
           },
@@ -71,7 +71,7 @@ export function createRoutingDemoProject(): CircuitProject {
         junctions: [],
         annotations: [],
         presentation: {
-          styleProfileId: "textbook-monochrome-v1",
+          styleProfileId: "razavi-textbook-v1",
           grid: 10,
           compactness: "normal",
         },

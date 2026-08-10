@@ -4,6 +4,7 @@ import { createEmptyProject } from "@icm/model";
 import { hierarchicalSymbolId } from "./hierarchical-block.js";
 import {
   createProjectSymbolResolver,
+  findUnsupportedProjectSymbolIds,
   InMemorySymbolResolver,
 } from "./resolver.js";
 import { SymbolDefinitionSchema } from "./schema.js";
@@ -63,17 +64,9 @@ describe("Symbol Resolver boundary", () => {
     expect(hidden.pins.map((pin) => pin.name)).toEqual(["1", "2"]);
   });
 
-  it("generates a deterministic positional block for every imported terminal", () => {
+  it("does not generate a compatibility block for an unknown symbol", () => {
     const resolver = new InMemorySymbolResolver([resistor]);
-    const generated = resolver.resolve("generic-block-5")?.definition;
-    expect(generated?.pins.map((pin) => pin.name)).toEqual([
-      "P1",
-      "P2",
-      "P3",
-      "P4",
-      "P5",
-    ]);
-    expect(resolver.resolve("generic-block-5")?.definition).toBe(generated);
+    expect(resolver.resolve("generic-block-5")).toBeUndefined();
     expect(resolver.resolve("generic-block-0")).toBeUndefined();
   });
 
@@ -109,5 +102,18 @@ describe("Symbol Resolver boundary", () => {
     expect(definition?.pins.every((pin) => pin.presentation.showName)).toBe(
       true,
     );
+  });
+
+  it("reports unsupported Project device symbols without rejecting hierarchy", () => {
+    const project = createEmptyProject("coverage", "Coverage");
+    project.documents[0]!.instances.push({
+      id: "D1",
+      symbolId: "diode",
+      placement: null,
+      properties: {},
+    });
+    expect(findUnsupportedProjectSymbolIds(project, [resistor])).toEqual([
+      "diode",
+    ]);
   });
 });

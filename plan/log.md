@@ -4095,3 +4095,20 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   remains.
 - Commit status: ready to commit on `main` as
   `fix(editor): simplify wire deletion and flightline guidance`.
+
+## 2026-08-10 - Enforce a Razavi-only product symbol catalog
+
+- Target: remove the second/legacy device library and fail visibly instead of
+  silently substituting an unapproved symbol during SPICE import.
+- Changed areas: reduced the runtime and Component Library to ten reviewed
+  Razavi symbols; deleted legacy diode/inductor/BJT assets and generic-block
+  generation; restricted PDK/import mappings; rejected unsupported Project
+  open/recovery; updated routing fixtures, visual goldens, specifications, and
+  browser/unit regressions.
+- Validation: 440 workspace unit tests, repository typecheck, full build,
+  focused unsupported-import Playwright flow, Razavi catalog and visual-golden
+  checks, changed-file Prettier, and `git diff --check` passed. The broad
+  formatter still reports the pre-existing untouched
+  `packages/derived/src/connectivity.ts`.
+- Commit status: ready to commit on `main` as
+  `refactor(symbols): enforce Razavi-only product catalog`.

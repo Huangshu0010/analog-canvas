@@ -29,7 +29,7 @@ describe("editor session project helpers", () => {
     );
   });
 
-  it("prefers a stable child id and supports legacy SPICE targets", () => {
+  it("uses only a stable child document id", () => {
     const project = createEmptyProject("session", "Session");
     const top = project.documents[0]!;
     const child = { ...top, id: "child", name: "GainCell" };
@@ -38,18 +38,18 @@ describe("editor session project helpers", () => {
     expect(
       referencedDocumentId(project, {
         id: "Xstable",
-        symbolId: "generic-block-2",
+        symbolId: "hierarchical-gain-cell",
         placement: null,
         properties: { "spice.childDocumentId": child.id },
       }),
     ).toBe(child.id);
     expect(
       referencedDocumentId(project, {
-        id: "Xlegacy",
-        symbolId: "generic-block-2",
+        id: "XwithoutStableLink",
+        symbolId: "hierarchical-gain-cell",
         placement: null,
         properties: { "spice.target": "subcircuit:gaincell" },
       }),
-    ).toBe(child.id);
+    ).toBeNull();
   });
 });

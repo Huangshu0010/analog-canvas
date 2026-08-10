@@ -15,9 +15,9 @@ const demoProject = CircuitProjectSchema.parse({
     files: [],
   },
   symbolLibrary: {
-    id: "builtin-analog",
-    version: "0.1.0",
-    hash: "phase-1-builtins",
+    id: "razavi-symbols",
+    version: "1",
+    hash: "razavi-reference-v1",
   },
   topDocumentId: "document-main",
   documents: [
@@ -54,7 +54,7 @@ const demoProject = CircuitProjectSchema.parse({
       junctions: [],
       annotations: [],
       presentation: {
-        styleProfileId: "textbook-monochrome-v1",
+        styleProfileId: "razavi-textbook-v1",
         grid: 10,
         compactness: "normal",
       },

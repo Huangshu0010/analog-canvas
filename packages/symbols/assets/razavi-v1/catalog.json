@@ -49,21 +49,6 @@
       }
     },
     {
-      "symbolId": "diode",
-      "name": "Diode",
-      "category": "semiconductor",
-      "reviewStatus": "reviewed",
-      "pinOrder": ["A", "K"],
-      "palette": true,
-      "automaticMappings": ["spice:D"],
-      "assetPath": "diode.symbol.json",
-      "assetHash": "00214f1176f51b1b18b216dbcb6850e750ebe2e6a4403267499002f298b214c3",
-      "visualAuthority": {
-        "kind": "legacy-compatibility",
-        "reason": "No approved Razavi Reference calibration exists for this symbol."
-      }
-    },
-    {
       "symbolId": "ground",
       "name": "Ground",
       "category": "power",
@@ -87,21 +72,6 @@
         "referencePath": "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
         "converterPath": "scripts/generate-razavi-peripheral-assets.mjs",
         "converterVersion": 1
-      }
-    },
-    {
-      "symbolId": "inductor",
-      "name": "Inductor",
-      "category": "passive",
-      "reviewStatus": "reviewed",
-      "pinOrder": ["1", "2"],
-      "palette": true,
-      "automaticMappings": ["spice:L"],
-      "assetPath": "inductor.symbol.json",
-      "assetHash": "5ccd24ed9f701ce4fdb46a921a21045f1e882d2b6302ff885dea8ba2a09026f8",
-      "visualAuthority": {
-        "kind": "legacy-compatibility",
-        "reason": "No approved Razavi Reference calibration exists for this symbol."
       }
     },
     {
@@ -143,21 +113,6 @@
       "assetHash": "93636dfafd0690edaa7a9402e3bc2da014d048a404a558e8d3765c3c30126cc8"
     },
     {
-      "symbolId": "npn",
-      "name": "NPN Bipolar Transistor",
-      "category": "transistor",
-      "reviewStatus": "reviewed",
-      "pinOrder": ["C", "B", "E"],
-      "palette": true,
-      "automaticMappings": ["spice:Q:npn", "pdk:model-type:npn"],
-      "assetPath": "npn.symbol.json",
-      "assetHash": "1d4fdd28de656b9970e68823bf33a7d55de0acf78f77d1c8a32986f3da1b882c",
-      "visualAuthority": {
-        "kind": "legacy-compatibility",
-        "reason": "No approved Razavi Reference calibration exists for this symbol."
-      }
-    },
-    {
       "symbolId": "pmos",
       "name": "PMOS",
       "category": "transistor",
@@ -194,21 +149,6 @@
       "automaticMappings": [],
       "assetPath": "pmos3.symbol.json",
       "assetHash": "d2416d0a22a651dbac75d94bfa57c63aa1a792dc88e275256f066ad9717165ba"
-    },
-    {
-      "symbolId": "pnp",
-      "name": "PNP Bipolar Transistor",
-      "category": "transistor",
-      "reviewStatus": "reviewed",
-      "pinOrder": ["C", "B", "E"],
-      "palette": true,
-      "automaticMappings": ["spice:Q:pnp", "pdk:model-type:pnp"],
-      "assetPath": "pnp.symbol.json",
-      "assetHash": "17468fc70fb516aa16a9963b0388bd0732793dbf92ada73b7acc767bac7ec7d3",
-      "visualAuthority": {
-        "kind": "legacy-compatibility",
-        "reason": "No approved Razavi Reference calibration exists for this symbol."
-      }
     },
     {
       "symbolId": "port",

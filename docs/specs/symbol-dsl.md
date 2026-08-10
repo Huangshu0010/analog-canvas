@@ -18,8 +18,8 @@ runtime symbols.
 
 - symbol compiler and resolver
 - SVG renderer
-- SPICE importer fallback mapping
-- VSS extraction and review tools
+- SPICE importer symbol validation
+- Razavi catalog generation and review tools
 
 ## Terminology
 
@@ -44,25 +44,24 @@ The renderer resolves that role through the Document's style profile. Numeric
 `strokeWidth` remains a mutually exclusive legacy compatibility field for
 assets not yet migrated to a catalog role.
 
-The reviewed production set contains resistor, capacitor, inductor, NMOS,
-PMOS, ground, port, independent voltage/current source, diode, NPN, and PNP.
-The runtime library additionally contains explicitly marked VSS migration
-candidates such as three-terminal MOS devices, diode variants, source variants,
-op-amp, switches, crystal, transformer, and VDD. Procedural `generic-block-N`
-definitions preserve unsupported terminal counts.
+The product library contains exactly the reviewed, Reference-calibrated Razavi
+catalog entries: resistor, capacitor, NMOS, PMOS, ground, VDD, port, filled
+port, and independent voltage/current source. Provisional catalog entries are
+not runtime product symbols. There is no legacy compatibility library and no
+procedural generic device fallback.
 
 `SymbolResolver.resolve(symbolId, variantId?)` returns one validated definition
 and optional variant, or `undefined`. Resolution never silently substitutes a
 different electrical pin order.
 
 The PDK registry is a separate reviewed mapping from source model name and
-terminal count to `symbolId` plus an explicit ordered pin list. Exact overrides
-take priority over PDK-scoped namespace rules. The initial reviewed rules map
-four-terminal SKY130 `sky130_fd_pr__nfet_*` and `pfet_*` models to NMOS/PMOS
-with D/G/S/B order. A namespace or terminal-count mismatch returns no mapping;
-the importer preserves the source model/parameters and uses `generic-block-N`.
-Successful mappings persist their registry ID in instance properties so a
-Snapshot and later audit can explain the choice.
+terminal count to `symbolId` plus an explicit ordered pin list. An exact
+override is accepted only when it names an approved Razavi product symbol;
+otherwise it is ignored. The initial reviewed rules map four-terminal SKY130
+`sky130_fd_pr__nfet_*` and `pfet_*` models to NMOS/PMOS with D/G/S/B order. A
+namespace or terminal-count mismatch returns no mapping; the importer returns
+`SPICE_IMPORT_UNSUPPORTED_SYMBOL` as a blocking error and does not produce a
+Project. Successful mappings persist their registry ID in instance properties.
 
 ## Invariants
 

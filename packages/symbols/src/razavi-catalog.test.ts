@@ -7,10 +7,10 @@ import { describe, expect, it } from "vitest";
 import { builtInSymbols } from "./builtins.js";
 import {
   getRazaviCatalogEntry,
-  isRazaviReferencePaletteEntry,
+  isRazaviProductCatalogEntry,
   requireRazaviCatalogSymbol,
   razaviCatalogSymbols,
-  razaviReferencePaletteSymbols,
+  razaviProductSymbols,
   razaviSemanticPrimitives,
   razaviSymbolCatalogEntries,
   razaviSymbolCatalogIdentity,
@@ -106,15 +106,11 @@ describe("Razavi symbol catalog", () => {
     ).toEqual([
       ["capacitor", "reviewed", "razavi-reference-v1"],
       ["current-source", "reviewed", "razavi-reference-v1"],
-      ["diode", "reviewed", "legacy-compatibility"],
       ["ground", "reviewed", "razavi-reference-v1"],
-      ["inductor", "reviewed", "legacy-compatibility"],
       ["nmos", "reviewed", "razavi-reference-v1"],
       ["nmos3", "provisional", "razavi-reference-v1"],
-      ["npn", "reviewed", "legacy-compatibility"],
       ["pmos", "reviewed", "razavi-reference-v1"],
       ["pmos3", "provisional", "razavi-reference-v1"],
-      ["pnp", "reviewed", "legacy-compatibility"],
       ["port", "reviewed", "razavi-reference-v1"],
       ["port-filled", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
@@ -166,9 +162,9 @@ describe("Razavi symbol catalog", () => {
     expect(invalid.success).toBe(false);
   });
 
-  it("uses catalog objects in the built-in compatibility library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(16);
-    for (const catalogSymbol of razaviCatalogSymbols) {
+  it("uses reviewed catalog objects as the sole built-in product library", () => {
+    expect(razaviCatalogSymbols).toHaveLength(12);
+    for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
       ).toBe(catalogSymbol);
@@ -177,8 +173,8 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
-  it("lists only reviewed Reference-calibrated assets in the Razavi palette", () => {
-    expect(razaviReferencePaletteSymbols.map((symbol) => symbol.id)).toEqual([
+  it("lists only reviewed Reference-calibrated assets in the product library", () => {
+    expect(razaviProductSymbols.map((symbol) => symbol.id)).toEqual([
       "capacitor",
       "current-source",
       "ground",
@@ -191,10 +187,8 @@ describe("Razavi symbol catalog", () => {
       "vdd",
     ]);
     for (const entry of razaviSymbolCatalogEntries) {
-      expect(isRazaviReferencePaletteEntry(entry)).toBe(
-        razaviReferencePaletteSymbols.some(
-          (symbol) => symbol.id === entry.symbolId,
-        ),
+      expect(isRazaviProductCatalogEntry(entry)).toBe(
+        razaviProductSymbols.some((symbol) => symbol.id === entry.symbolId),
       );
     }
   });
@@ -212,14 +206,12 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
-  it("retains only unmigrated assets as legacy compatibility symbols", () => {
+  it("contains no removed legacy compatibility symbols", () => {
     for (const symbolId of ["inductor", "diode", "npn", "pnp"]) {
-      expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
-        reviewStatus: "reviewed",
-        visualAuthority: {
-          kind: "legacy-compatibility",
-        },
-      });
+      expect(getRazaviCatalogEntry(symbolId)).toBeUndefined();
+      expect(builtInSymbols.some((symbol) => symbol.id === symbolId)).toBe(
+        false,
+      );
     }
   });
 
@@ -256,18 +248,6 @@ describe("Razavi symbol catalog", () => {
       { name: "1", at: { x: 0, y: -20 }, direction: "north" },
       { name: "2", at: { x: 0, y: 20 }, direction: "south" },
     ]);
-    expect(requireRazaviCatalogSymbol("diode").pins).toMatchObject([
-      { name: "A", direction: "west" },
-      { name: "K", direction: "east" },
-    ]);
-    expect(requireRazaviCatalogSymbol("inductor").primitives).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "path",
-          data: expect.stringMatching(/^M /u),
-        }),
-      ]),
-    );
     expect(requireRazaviCatalogSymbol("port").primitives).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

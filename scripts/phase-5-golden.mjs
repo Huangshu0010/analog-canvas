@@ -15,6 +15,12 @@ const fixtures = [
     title: null,
   },
   {
+    input: "fixtures/projects/phase-3-routing/project.icproj.json",
+    output: "fixtures/visual-golden/phase-3-crossing.svg",
+    title: "Phase 3 Crossing",
+    crossingRoutes: true,
+  },
+  {
     input: "fixtures/projects/phase-5-dense-analog/project.icproj.json",
     output: "fixtures/visual-golden/phase-5-dense-analog.svg",
     title: "project",
@@ -29,8 +35,35 @@ for (const fixture of fixtures) {
     (candidate) => candidate.id === project.topDocumentId,
   );
   if (!document) throw new Error(`${fixture.input} has no top Document`);
+  if (fixture.crossingRoutes) {
+    const terminal = (instanceId) => ({
+      kind: "terminal",
+      instanceId,
+      pinName: "P",
+    });
+    document.routes = [
+      {
+        id: "route-h",
+        netId: "net-h",
+        from: terminal("A"),
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-v",
+        netId: "net-v",
+        from: terminal("C"),
+        to: terminal("D"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+  }
   const svg = renderDocumentSvg(document, resolver, {
-    ...(fixture.title === "project" ? { title: project.name } : {}),
+    ...(fixture.title
+      ? { title: fixture.title === "project" ? project.name : fixture.title }
+      : {}),
   });
   if (process.argv.includes("--check")) {
     if (readFileSync(output, "utf8") !== svg) {
@@ -42,5 +75,5 @@ for (const fixture of fixtures) {
   }
 }
 if (process.argv.includes("--check")) {
-  console.log(`Validated ${fixtures.length} Phase 1/5 visual goldens`);
+  console.log(`Validated ${fixtures.length} Phase 1/3/5 visual goldens`);
 }

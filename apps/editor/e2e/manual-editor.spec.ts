@@ -982,7 +982,7 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await expect(page.getByTestId("revision")).toHaveText("4");
 });
 
-test("imports the SPICE baseline through the grouped File menu", async ({
+test("rejects a SPICE netlist that needs unsupported symbols", async ({
   page,
 }) => {
   await page.goto("/");
@@ -994,42 +994,11 @@ test("imports the SPICE baseline through the grouped File menu", async ({
       resolve(process.cwd(), "netlists/mixed-device-acceptance/models.inc"),
     ]);
 
-  await expect(page.getByTestId("status")).toHaveText(
-    "Imported 8 Documents and 32 instances; 5 generic symbols",
+  await expect(page.getByTestId("status")).toContainText(
+    "approved Razavi catalog has no symbol",
   );
-  await expect(page.getByTestId("document-count")).toHaveText("8");
-  await expect(page.getByTestId("instance-count")).toHaveText("32");
-  await expect(page.getByTestId("unplaced-XFILTER")).toBeVisible();
-  const topDocumentId = await page
-    .getByTestId("active-document-id")
-    .textContent();
-  expect(topDocumentId).toBeTruthy();
-
-  await page.getByTestId("unplaced-XFILTER").click();
-  await expect(page.getByTestId("cell-navigation")).toBeVisible();
-  await page.getByRole("button", { name: "Enter Cell", exact: true }).click();
-  await expect(page.getByTestId("active-document-name")).toHaveText(
-    "mixed_passive_cell",
-  );
-  await expect(page.getByTestId("active-instance-count")).toHaveText("3");
-  await page.getByRole("button", { name: "Up", exact: true }).click();
-  await expect(page.getByTestId("active-document-name")).toHaveText(
-    "mixed_device_acceptance",
-  );
-
-  await page
-    .getByTestId("document-selector")
-    .selectOption({ label: "mixed_diode_cell" });
-  await expect(page.getByTestId("active-document-name")).toHaveText(
-    "mixed_diode_cell",
-  );
-  await page.locator('[data-testid^="unplaced-port-"]').first().click();
-  await expect(page.getByTestId("revision")).toHaveText("1");
-
-  const projectBytes = await downloadBytes(page, "File", "Save Project");
-  expect(JSON.parse(projectBytes.toString("utf8")).topDocumentId).toBe(
-    topDocumentId,
-  );
+  await expect(page.getByTestId("document-count")).toHaveText("1");
+  await expect(page.getByTestId("instance-count")).toHaveText("0");
 });
 
 test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({

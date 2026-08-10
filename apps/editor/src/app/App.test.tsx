@@ -114,7 +114,7 @@ describe("editor shell", () => {
     };
     topDocument.instances.push({
       id: "X1",
-      symbolId: "generic-block-2",
+      symbolId: "hierarchical-child",
       placement: null,
       properties: {
         "spice.target": "subcircuit:child",

@@ -3,7 +3,7 @@ import {
   CircuitProjectSchema,
   deriveStableId,
 } from "@icm/model";
-import { resolvePdkSymbolMapping } from "@icm/symbols";
+import { isRazaviProductSymbolId, resolvePdkSymbolMapping } from "@icm/symbols";
 import type { PdkSymbolMappingOverride } from "@icm/symbols";
 import type {
   CircuitProject,
@@ -63,16 +63,6 @@ function symbolFor(
     const modelType = modelTypeByName.get(
       instance.target.modelName.toLowerCase(),
     );
-    if (
-      instance.terminals.length === 2 &&
-      (modelType === "d" || instance.name[0]?.toLowerCase() === "d")
-    ) {
-      return { symbolId: "diode", pinNames: ["A", "K"] };
-    }
-    if (instance.terminals.length === 3 && modelType === "npn")
-      return { symbolId: "npn", pinNames: ["C", "B", "E"] };
-    if (instance.terminals.length === 3 && modelType === "pnp")
-      return { symbolId: "pnp", pinNames: ["C", "B", "E"] };
     if (instance.terminals.length === 4 && modelType === "nmos")
       return { symbolId: "nmos", pinNames: ["D", "G", "S", "B"] };
     if (instance.terminals.length === 4 && modelType === "pmos")
@@ -97,15 +87,13 @@ function symbolFor(
   const symbols: Record<string, string> = {
     resistor: "resistor",
     capacitor: "capacitor",
-    inductor: "inductor",
     nmos: "nmos",
     pmos: "pmos",
     "voltage-source": "voltage-source",
     "current-source": "current-source",
-    diode: "diode",
   };
   const symbolId = symbols[instance.target.family];
-  return symbolId ? { symbolId } : null;
+  return symbolId && isRazaviProductSymbolId(symbolId) ? { symbolId } : null;
 }
 
 function targetDescription(
@@ -135,20 +123,19 @@ function importInstance(
   diagnostics: SpiceDiagnostic[],
   modelTypeByName: ReadonlyMap<string, string>,
   symbolMappings: readonly PdkSymbolMappingOverride[],
-): Instance {
+): Instance | null {
   const mapping = symbolFor(instance, modelTypeByName, symbolMappings);
-  const symbolId =
-    mapping?.symbolId ?? `generic-block-${instance.terminals.length}`;
   if (!mapping) {
     diagnostics.push(
       diagnostic(
-        "SPICE_IMPORT_GENERIC_SYMBOL",
-        "warning",
+        "SPICE_IMPORT_UNSUPPORTED_SYMBOL",
+        "error",
         "import",
-        `No product symbol is mapped for ${instance.name} (${targetDescription(instance, symbolMappings)}); using generic-block`,
+        `Unsupported SPICE device ${instance.name} (${targetDescription(instance, symbolMappings)}): the approved Razavi catalog has no symbol. Add and review a Razavi symbol mapping before importing.`,
         instance.sourceRef,
       ),
     );
+    return null;
   }
   const properties: Instance["properties"] = {
     "spice.name": instance.name,
@@ -168,7 +155,7 @@ function importInstance(
   }
   return {
     id: instance.id,
-    symbolId,
+    symbolId: mapping.symbolId,
     sourceRef: instance.sourceRef,
     placement: null,
     properties,
@@ -194,9 +181,11 @@ function importDocument(
     );
     return false;
   });
-  const instances = visibleInstances.map((instance) =>
-    importInstance(instance, diagnostics, modelTypeByName, symbolMappings),
-  );
+  const instances = visibleInstances
+    .map((instance) =>
+      importInstance(instance, diagnostics, modelTypeByName, symbolMappings),
+    )
+    .filter((instance): instance is Instance => instance !== null);
   const importedInstanceById = new Map(
     instances.map((instance) => [instance.id, instance]),
   );
@@ -214,18 +203,20 @@ function importDocument(
     id: net.id,
     name: net.name,
     scope: net.scope,
-    terminals: visibleInstances.flatMap((instance) =>
-      instance.terminals
-        .filter((terminal) => terminal.netId === net.id)
-        .map((terminal) => ({
-          instanceId: instance.id,
-          pinName: String(
-            importedInstanceById.get(instance.id)?.properties[
-              `spice.pin.P${terminal.position + 1}`
-            ] ?? `P${terminal.position + 1}`,
-          ),
-        })),
-    ),
+    terminals: visibleInstances
+      .filter((instance) => importedInstanceById.has(instance.id))
+      .flatMap((instance) =>
+        instance.terminals
+          .filter((terminal) => terminal.netId === net.id)
+          .map((terminal) => ({
+            instanceId: instance.id,
+            pinName: String(
+              importedInstanceById.get(instance.id)?.properties[
+                `spice.pin.P${terminal.position + 1}`
+              ] ?? `P${terminal.position + 1}`,
+            ),
+          })),
+      ),
     ports: importedPorts
       .filter(({ source: port }) => port.netId === net.id)
       .map(({ id }) => id),
@@ -243,7 +234,7 @@ function importDocument(
     junctions: [],
     annotations: [],
     presentation: {
-      styleProfileId: "textbook-monochrome-v1",
+      styleProfileId: "razavi-textbook-v1",
       grid: 10,
       compactness: "normal",
     },
@@ -342,9 +333,9 @@ export function importCircuitIR(
       })),
     },
     symbolLibrary: {
-      id: "builtin-analog",
-      version: "0.0.0",
-      hash: "development",
+      id: "razavi-symbols",
+      version: "1",
+      hash: "razavi-reference-v1",
     },
     topDocumentId: topDocument.id,
     documents,
@@ -364,13 +355,14 @@ export function importCompileResult(
       result.diagnostics,
       options,
     );
+    const hasErrors = imported.diagnostics.some(
+      (item) => item.severity === "error",
+    );
     return {
       ...result,
-      project: imported.project,
+      project: hasErrors ? null : imported.project,
       diagnostics: imported.diagnostics,
-      successful: !imported.diagnostics.some(
-        (item) => item.severity === "error",
-      ),
+      successful: !hasErrors,
     };
   } catch (error) {
     const diagnostics = [

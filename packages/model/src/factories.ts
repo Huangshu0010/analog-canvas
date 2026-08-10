@@ -46,9 +46,9 @@ export function createEmptyProject(
       files: [],
     },
     symbolLibrary: {
-      id: "builtin-analog",
-      version: "0.0.0",
-      hash: "development",
+      id: "razavi-symbols",
+      version: "1",
+      hash: "razavi-reference-v1",
     },
     topDocumentId: documentId,
     documents: [createEmptyDocument(documentId, "Main")],

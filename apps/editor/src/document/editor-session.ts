@@ -27,7 +27,7 @@ export function resolveActiveDocument(
   );
 }
 
-/** Resolve stable imported hierarchy links with read-only legacy fallback. */
+/** Resolve only the stable imported hierarchy link written by the importer. */
 export function referencedDocumentId(
   project: CircuitProject,
   instance: SchematicDocument["instances"][number],
@@ -42,16 +42,5 @@ export function referencedDocumentId(
     return stableChildDocumentId;
   }
 
-  const target = instance.properties["spice.target"];
-  if (typeof target !== "string" || !target.startsWith("subcircuit:")) {
-    return null;
-  }
-  const name = target.slice("subcircuit:".length).toLowerCase();
-  return (
-    project.documents.find(
-      (candidate) =>
-        candidate.name.toLowerCase() === name ||
-        candidate.sourceBinding?.cellName.toLowerCase() === name,
-    )?.id ?? null
-  );
+  return null;
 }

@@ -396,50 +396,6 @@ describe("resolveDraftingObjectGeometry", () => {
     expect(fg.rotation).toBe(90);
   });
 
-  it("transforms floating-symbol viewBox corners for rotation and mirror", () => {
-    const document = documentWithRoute();
-    const base: Extract<DraftingObject, { kind: "floating-symbol" }> = {
-      id: "fs1",
-      kind: "floating-symbol",
-      locked: false,
-      zIndex: 0,
-      anchor: { kind: "free", position: { x: 0, y: 0 } },
-      symbolId: "decorative-note-box",
-      transform: { rotation: 0, mirror: "none" },
-    };
-    const unrotated = resolveDraftingObjectGeometry(document, resolver, base);
-    if (unrotated.kind !== "floating-symbol") return;
-    // decorative-note-box viewBox is {x:-30,y:-14,width:60,height:28}.
-    expect(unrotated.bounds).toMatchObject({
-      x: -30,
-      y: -14,
-      width: 60,
-      height: 28,
-    });
-
-    // Rotated 90 swaps width/height around the anchor.
-    const rotated = resolveDraftingObjectGeometry(document, resolver, {
-      ...base,
-      transform: { rotation: 90, mirror: "none" },
-    });
-    if (rotated.kind !== "floating-symbol") return;
-    expect(rotated.bounds.width).toBeCloseTo(28, 0);
-    expect(rotated.bounds.height).toBeCloseTo(60, 0);
-
-    // Mirror-x keeps the bounds centered on the anchor (AABB symmetric).
-    const mirrored = resolveDraftingObjectGeometry(document, resolver, {
-      ...base,
-      transform: { rotation: 0, mirror: "x" },
-    });
-    if (mirrored.kind !== "floating-symbol") return;
-    expect(mirrored.bounds).toMatchObject({
-      x: -30,
-      y: -14,
-      width: 60,
-      height: 28,
-    });
-  });
-
   it("measures multi-line text bounds with per-line height", () => {
     const document = documentWithRoute();
     const object: Extract<DraftingObject, { kind: "text" }> = {
