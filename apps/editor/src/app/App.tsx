@@ -44,7 +44,12 @@ import { buildSvgScene, resolveSchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
 import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
-import { copySelection, proposePaste } from "../features/clipboard/clipboard";
+import {
+  clipboardPlacementAnchor,
+  clipboardPreviewDocument,
+  copySelection,
+  proposePaste,
+} from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
 import type { CanvasDragSession } from "../canvas/canvas-drag-session";
@@ -181,6 +186,11 @@ interface PanPreview {
   clientStart: Point;
   viewBoxStart: Rect;
   pointerId: number;
+}
+
+interface CopyPlacement {
+  clipboard: SchematicClipboard;
+  anchor: Point;
 }
 
 interface RouteStretchPreview {
@@ -591,8 +601,11 @@ export function App({ project: initialProject }: AppProps) {
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const instanceCounter = useRef(0);
-  const clipboard = useRef<SchematicClipboard | null>(null);
-  const pasteCounter = useRef(0);
+  const copyCounter = useRef(0);
+  const [copyPlacement, setCopyPlacement] = useState<CopyPlacement | null>(
+    null,
+  );
+  const [copyPreviewPoint, setCopyPreviewPoint] = useState<Point | null>(null);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const selectionShelfRef = useRef<HTMLButtonElement>(null);
@@ -631,6 +644,18 @@ export function App({ project: initialProject }: AppProps) {
     () => buildSvgScene(renderedDocument, resolver, { bounds: viewBox }),
     [renderedDocument, resolver, viewBox],
   );
+  const copyPreviewScene = useMemo(() => {
+    if (!copyPlacement || !copyPreviewPoint) return null;
+    const offset = {
+      x: copyPreviewPoint.x - copyPlacement.anchor.x,
+      y: copyPreviewPoint.y - copyPlacement.anchor.y,
+    };
+    return buildSvgScene(
+      clipboardPreviewDocument(document, copyPlacement.clipboard, offset),
+      resolver,
+      { bounds: viewBox },
+    );
+  }, [copyPlacement, copyPreviewPoint, document, resolver, viewBox]);
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
@@ -3830,7 +3855,11 @@ export function App({ project: initialProject }: AppProps) {
     // Placement deliberately commits on the matching click below. Pointer-down
     // must not start the normal selection/move gesture while that click is
     // pending, regardless of which SVG child was hit.
-    if (pendingSymbolId && pendingComponentPlacement) return;
+    if (
+      (pendingSymbolId && pendingComponentPlacement) ||
+      copyPlacement !== null
+    )
+      return;
     const point = pointFromClient(
       event.clientX,
       event.clientY,
@@ -3904,6 +3933,13 @@ export function App({ project: initialProject }: AppProps) {
     );
     if (pendingSymbolId) {
       setComponentPreviewPoint(point);
+      return;
+    }
+    if (copyPlacement) {
+      setCopyPreviewPoint({
+        x: snapCoordinate(point.x, document.presentation.grid),
+        y: snapCoordinate(point.y, document.presentation.grid),
+      });
       return;
     }
     if (boxPreview?.pointerId === event.pointerId) {
@@ -4494,37 +4530,51 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
-  function copySelected(): void {
+  function beginCopyPlacement(): void {
     const copied = copySelection(document, selectedIds);
     if (!copied) {
       setStatus("Select at least one component to copy");
       return;
     }
-    clipboard.current = copied;
-    pasteCounter.current = 0;
+    const anchor = clipboardPlacementAnchor(copied);
+    if (!anchor) {
+      setStatus("Selected components have no placeable origin");
+      return;
+    }
+    cancelInteraction();
+    setCopyPlacement({ clipboard: copied, anchor });
+    setCopyPreviewPoint(null);
     setStatus(
-      `Copied ${copied.instances.length} components and ${copied.routes.length} internal routes`,
+      `Place copy of ${copied.instances.length} components · Esc cancels`,
     );
   }
 
-  function pasteCopied(): void {
-    if (!clipboard.current) {
-      setStatus("Clipboard is empty");
-      return;
-    }
-    pasteCounter.current += 1;
-    const distance = document.presentation.grid * 2 * pasteCounter.current;
+  function commitCopyPlacement(point: Point): void {
+    if (!copyPlacement) return;
+    copyCounter.current += 1;
     const proposal = proposePaste(
       document,
-      clipboard.current,
-      { x: distance, y: distance },
-      pasteCounter.current,
+      copyPlacement.clipboard,
+      {
+        x: point.x - copyPlacement.anchor.x,
+        y: point.y - copyPlacement.anchor.y,
+      },
+      copyCounter.current,
     );
     const result = transact(proposal.edits);
     if (result.ok) {
       selectOnly("instance", proposal.instanceIds);
-      setStatus(`Pasted ${proposal.instanceIds.length} components`);
+      setCopyPlacement(null);
+      setCopyPreviewPoint(null);
+      setStatus(`Copied ${proposal.instanceIds.length} components`);
     }
+  }
+
+  function cancelCopyPlacement(): void {
+    if (!copyPlacement) return;
+    setCopyPlacement(null);
+    setCopyPreviewPoint(null);
+    setStatus("Copy placement cancelled");
   }
 
   useEffect(() => {
@@ -4595,7 +4645,8 @@ export function App({ project: initialProject }: AppProps) {
           draftingSource !== null,
         helpOpen,
         canvasDragActive: canvasDragSessionRef.current !== null,
-        interactionActive: interactionState.kind !== "idle",
+        interactionActive:
+          interactionState.kind !== "idle" || copyPlacement !== null,
         hasClearableDraftingSelection:
           selectedDrafting?.kind === "arrow" ||
           selectedDrafting?.kind === "construction-line" ||
@@ -4620,10 +4671,7 @@ export function App({ project: initialProject }: AppProps) {
           transact([{ kind: shortcut.kind }]);
           return;
         case "copy":
-          copySelected();
-          return;
-        case "paste":
-          pasteCopied();
+          beginCopyPlacement();
           return;
         case "save":
           saveProjectFile();
@@ -4658,6 +4706,9 @@ export function App({ project: initialProject }: AppProps) {
           return;
         case "rotate":
           rotateSelected(shortcut.deltaDegrees);
+          return;
+        case "mirror":
+          mirrorSelected(shortcut.direction);
           return;
         case "activate-tool":
           activateTool(shortcut.tool);
@@ -4717,6 +4768,10 @@ export function App({ project: initialProject }: AppProps) {
           setStatus("Cancelled canvas drag");
           return;
         case "cancel-interaction":
+          if (copyPlacement) {
+            cancelCopyPlacement();
+            return;
+          }
           cancelInteraction();
           setComponentPreviewPoint(null);
           setComponentPlacementRotation(0);
@@ -4958,20 +5013,6 @@ export function App({ project: initialProject }: AppProps) {
               </button>
               <button
                 type="button"
-                onClick={copySelected}
-                disabled={selectedIds.length === 0}
-              >
-                Copy
-              </button>
-              <button
-                type="button"
-                onClick={pasteCopied}
-                disabled={!clipboard.current}
-              >
-                Paste
-              </button>
-              <button
-                type="button"
                 onClick={deleteSelection}
                 disabled={
                   !hasVisualSelection(visualSelection) && !selectedEndpoint
@@ -5028,8 +5069,8 @@ export function App({ project: initialProject }: AppProps) {
                 Guide tool (G)
               </button>
               <small>
-                I insert · Ctrl+C/V copy/paste · R rotate · W wire · G guide ·
-                Home fit · wheel zoom · middle-drag pan · Enter finish
+                I insert · C copy · R rotate · W wire · G guide · Home fit ·
+                wheel zoom · middle-drag pan · Enter finish
               </small>
             </div>
           </details>
@@ -5799,10 +5840,23 @@ export function App({ project: initialProject }: AppProps) {
           onPointerMove={continueCanvasGesture}
           onPointerLeave={() => {
             if (pendingSymbolId) setComponentPreviewPoint(null);
+            if (copyPlacement) setCopyPreviewPoint(null);
           }}
           onPointerUp={finishCanvasGesture}
           onPointerCancel={finishCanvasGesture}
           onClick={(event) => {
+            if (copyPlacement) {
+              const point = pointFromClient(
+                event.clientX,
+                event.clientY,
+                event.currentTarget,
+              );
+              commitCopyPlacement({
+                x: snapCoordinate(point.x, document.presentation.grid),
+                y: snapCoordinate(point.y, document.presentation.grid),
+              });
+              return;
+            }
             if (pendingSymbolId && pendingComponentPlacement) {
               placeNewComponent(
                 pendingSymbolId,
@@ -5941,6 +5995,13 @@ export function App({ project: initialProject }: AppProps) {
             fill="url(#grid)"
           />
           <g dangerouslySetInnerHTML={{ __html: scene.formalBody }} />
+          {copyPreviewScene ? (
+            <g
+              data-testid="copy-placement-preview"
+              className="copy-placement-preview"
+              dangerouslySetInnerHTML={{ __html: copyPreviewScene.formalBody }}
+            />
+          ) : null}
           {tool === "wire" ? (
             <rect
               data-testid="wire-input-plane"
@@ -5951,9 +6012,13 @@ export function App({ project: initialProject }: AppProps) {
               height={viewBox.height}
             />
           ) : null}
-          {pendingSymbolId ? (
+          {pendingSymbolId || copyPlacement ? (
             <rect
-              data-testid="component-input-plane"
+              data-testid={
+                copyPlacement
+                  ? "copy-placement-input-plane"
+                  : "component-input-plane"
+              }
               className="component-input-plane"
               x={viewBox.x}
               y={viewBox.y}

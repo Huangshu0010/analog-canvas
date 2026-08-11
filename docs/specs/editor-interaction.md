@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.5`
+Version: `1.6`
 
 Owning phase: `Phase 8`
 
@@ -57,7 +57,7 @@ the information architecture is normative:
 | Group | Commands                                                              |
 | ----- | --------------------------------------------------------------------- |
 | File  | Open, Save, Import, Export, and recent/example documents              |
-| Edit  | Undo, Redo, Copy, Paste, Delete, and contextual Align                 |
+| Edit  | Undo, Redo, Delete, and contextual Align                              |
 | Draw  | Insert Component; Wire, Text, Arrow, Construction line, and Rectangle |
 | More  | Guides and shortcut reference; diagnostics remain in Import Review    |
 
@@ -75,7 +75,7 @@ categorised list is collapsed by default and expands only inside that picker.
 The right column always shows the currently selected symbol's full preview.
 Arrow keys move the current option, `Enter` or `Apply` starts single-shot
 placement, and `Escape` cancels. During placement the resolved symbol follows
-the pointer; `R`/`Shift+R` rotates it before the placement click. Recent symbols
+the pointer; `R` rotates it before the placement click. Recent symbols
 are promoted only inside their existing category. The dialog reuses the Symbol
 DSL renderer and owns no separate thumbnail assets.
 
@@ -110,8 +110,9 @@ route-attached annotation and Guide commands:
 `R` is context-dispatched on the unified canvas: it rotates a selected placed
 component, arrow, construction line, or rectangle by +90 degrees; when there is
 no rotatable selection it follows Virtuoso Layout by entering Rectangle mode.
-`Shift+R` rotates the same selection by -90 degrees. `W`, undo/redo, and the
-rest of the keyboard contract are unchanged. Canvas shortcuts must not fire
+`Shift+R` mirrors a selected object or group left/right; `Shift+V` mirrors it
+top/bottom. `W`, undo/redo, and the rest of the keyboard contract are unchanged.
+Canvas shortcuts must not fire
 while a rich-text editor, input, or search field has focus.
 
 Rich text is edited in place: selecting `Text` and clicking canvas/Route/object
@@ -169,7 +170,8 @@ component or short Route drag.
 | Input                      | Action                                                                             |
 | -------------------------- | ---------------------------------------------------------------------------------- |
 | `R`                        | Rotate a rotatable selection +90°; otherwise enter Rectangle mode.                 |
-| `Shift+R`                  | Rotate the selected placeable objects by -90 degrees.                              |
+| `Shift+R`                  | Mirror selected objects left/right.                                                |
+| `Shift+V`                  | Mirror selected objects top/bottom.                                                |
 | `F`                        | Fit the active Document in the viewport.                                           |
 | `W`                        | Enter or continue Wire mode.                                                       |
 | `L`                        | Edit/create the selected Route's electrical Net Label.                             |
@@ -183,8 +185,7 @@ component or short Route drag.
 | `Ctrl+S`                   | Save the current Project.                                                          |
 | `Ctrl+O`                   | Open a Project.                                                                    |
 | `Ctrl+A`                   | Select all selectable objects in the active Document.                              |
-| `Ctrl+C`                   | Copy selected instances plus their wholly internal routed subgraph.                |
-| `Ctrl+V`                   | Paste the internal clipboard with fresh IDs and a deterministic grid offset.       |
+| `C`                        | Start one mouse-following copy placement of the selected routed subgraph.          |
 | `Home`                     | Fit the active Document in the viewport (compatible alias).                        |
 
 Letter and editing shortcuts must not fire while focus is in a text input,
@@ -192,11 +193,10 @@ text editor, searchable palette field, or another control that consumes the
 key. Browser-reserved shortcuts must not be intercepted unless the application
 can complete the named operation safely.
 
-Mirror remains available from the contextual Properties controls while its
-keyboard convention is under review. The persisted orientation remains the
-compact `rotation + mirror: "x"` representation: the editor composes its two
-existing typed edits atomically rather than adding a second mirror enum, a new
-stored field, or an Agent API operation.
+The persisted orientation remains the compact `rotation + mirror: "x"`
+representation: the editor composes its two existing typed edits atomically
+rather than adding a second mirror enum, a new stored field, or an Agent API
+operation.
 
 ## Pointer and viewport contract
 
@@ -314,10 +314,12 @@ attached `instance-label`: an empty attached label deliberately suppresses the
 renderer-owned default reference, rather than introducing a hidden editor-only
 flag.
 
-Copy captures selected instances and only Nets, Routes, Junctions, and attached
-annotations wholly internal to that selection. Paste creates fresh stable IDs
-and commits the duplicated subgraph atomically. A copied named Net reconnects
-to the existing same-name Net; unnamed Nets are duplicated.
+`C` captures selected instances and only Nets, Routes, Junctions, and attached
+annotations wholly internal to that selection. It shows a non-interactive,
+mouse-following formal ghost; its next canvas click creates fresh stable IDs and
+commits the duplicated subgraph atomically, while `Escape` discards it without a
+revision. A copied named Net reconnects to the existing same-name Net; unnamed
+Nets are duplicated. Browser `Ctrl+C` and `Ctrl+V` are not editor commands.
 
 Phase 8 requires typed Edit Engine operations equivalent to:
 

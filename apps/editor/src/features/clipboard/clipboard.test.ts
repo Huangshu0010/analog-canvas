@@ -3,7 +3,12 @@ import { createEmptyDocument } from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
-import { copySelection, proposePaste } from "./clipboard";
+import {
+  clipboardPlacementAnchor,
+  clipboardPreviewDocument,
+  copySelection,
+  proposePaste,
+} from "./clipboard";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -77,5 +82,35 @@ describe("schematic clipboard", () => {
       to: { instanceId: "R2-copy-1" },
     });
     expect(result.document.routes[1]?.waypoints).toEqual([{ x: 120, y: 100 }]);
+  });
+
+  it("creates an isolated translated document for a copy-placement ghost", () => {
+    const document = createEmptyDocument("document-main", "Preview");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    const clipboard = copySelection(document, ["R1"]);
+    expect(clipboard).not.toBeNull();
+    expect(clipboardPlacementAnchor(clipboard!)).toEqual({ x: 100, y: 100 });
+
+    const preview = clipboardPreviewDocument(document, clipboard!, {
+      x: 40,
+      y: -20,
+    });
+    expect(preview.instances[0]?.placement?.position).toEqual({
+      x: 140,
+      y: 80,
+    });
+    expect(document.instances[0]?.placement?.position).toEqual({
+      x: 100,
+      y: 100,
+    });
   });
 });

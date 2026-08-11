@@ -76,12 +76,14 @@ export function EditorHelpDialog({
             <h3>View and drawing tools</h3>
             <p>
               With the pointer over the canvas, use the mouse wheel to zoom and
-              middle-drag to pan; <kbd>Home</kbd> fits the circuit in view. Draw
+              middle-drag to pan; <kbd>F</kbd> fits the circuit in view. Draw
               also contains Wire, Text, Arrow, Construction line, and Rectangle.
               With no rotatable selection, <kbd>R</kbd> starts Rectangle; with a
               component or drawing selected it rotates clockwise.{" "}
-              <kbd>Shift+R</kbd> rotates counter-clockwise. Guides are available
-              from More and can be shown, cleared, or locked for alignment.
+              <kbd>Shift+R</kbd> mirrors left/right; <kbd>Shift+V</kbd> mirrors
+              top/bottom. Guides are available from More and can be shown,
+              cleared, or locked for alignment. <kbd>C</kbd> starts a
+              mouse-following copy; click places it and <kbd>Esc</kbd> cancels.
             </p>
           </section>
           <section id="help-shortcuts" className="help-shortcuts">
@@ -101,9 +103,9 @@ export function EditorHelpDialog({
                 <dt>Selection and edit</dt>
                 <dd>
                   <kbd>Ctrl</kbd> + <kbd>A</kbd> selects all placed components;
-                  <kbd>Ctrl</kbd> + <kbd>C</kbd> copy; <kbd>Ctrl</kbd> +
-                  <kbd>V</kbd> paste; <kbd>R</kbd> rotate; <kbd>F</kbd> flip
-                  left/right; <kbd>Shift</kbd> + <kbd>F</kbd> flip top/bottom;
+                  <kbd>C</kbd> copy-place; <kbd>R</kbd> rotate; <kbd>Shift</kbd>
+                  + <kbd>R</kbd> mirror left/right; <kbd>Shift</kbd> +
+                  <kbd>V</kbd> mirror top/bottom; <kbd>F</kbd> fit view;
                   <kbd>Delete</kbd> or <kbd>Backspace</kbd> delete.
                 </dd>
               </div>

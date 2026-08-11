@@ -1,4 +1,5 @@
 import type { EditorTool } from "./interaction-state";
+import type { ScreenFlip } from "./shortcut-orientation";
 
 export interface EditorShortcutKey {
   key: string;
@@ -28,7 +29,7 @@ export interface EditorShortcutContext {
 
 export type EditorShortcutIntent =
   | { kind: "undo" | "redo" }
-  | { kind: "copy" | "paste" | "save" | "open" | "select-all" }
+  | { kind: "copy" | "save" | "open" | "select-all" }
   | { kind: "reverse-current-marker" }
   | { kind: "open-component-insert" }
   | { kind: "rotate-placement"; deltaDegrees: 90 | -90 }
@@ -37,6 +38,7 @@ export type EditorShortcutIntent =
   | { kind: "add-text" }
   | { kind: "open-properties" | "property-selection-required" }
   | { kind: "edit-net-label" | "net-label-selection-required" }
+  | { kind: "mirror"; direction: ScreenFlip }
   | { kind: "fit-view" }
   | {
       kind: "step-drafting-style";
@@ -81,8 +83,6 @@ export function resolveEditorShortcut(
     return { kind: event.shiftKey ? "redo" : "undo" };
   }
   if (event.ctrlKey && key === "y") return { kind: "redo" };
-  if (event.ctrlKey && key === "c") return { kind: "copy" };
-  if (event.ctrlKey && key === "v") return { kind: "paste" };
   if (event.ctrlKey && key === "s") return { kind: "save" };
   if (event.ctrlKey && key === "o") return { kind: "open" };
   if (event.ctrlKey && key === "a") return { kind: "select-all" };
@@ -90,19 +90,28 @@ export function resolveEditorShortcut(
   if (plain && key === "x" && context.hasRoutedMarkerSelection) {
     return { kind: "reverse-current-marker" };
   }
+  if (plain && key === "c") return { kind: "copy" };
   if (plain && key === "i") return { kind: "open-component-insert" };
   if (plain && key === "r") {
     if (context.componentPlacementActive) {
       return {
         kind: "rotate-placement",
-        deltaDegrees: event.shiftKey ? -90 : 90,
+        deltaDegrees: 90,
       };
     }
-    return event.shiftKey
-      ? { kind: "rotate", deltaDegrees: -90 }
-      : context.hasRotatableSelection
-        ? { kind: "rotate", deltaDegrees: 90 }
-        : { kind: "activate-tool", tool: "rectangle" };
+    if (event.shiftKey) {
+      return context.hasRotatableSelection
+        ? { kind: "mirror", direction: "left-right" }
+        : null;
+    }
+    return context.hasRotatableSelection
+      ? { kind: "rotate", deltaDegrees: 90 }
+      : { kind: "activate-tool", tool: "rectangle" };
+  }
+  if (plain && key === "v" && event.shiftKey) {
+    return context.hasRotatableSelection
+      ? { kind: "mirror", direction: "top-bottom" }
+      : null;
   }
   if (plain && key === "w") {
     return { kind: "activate-tool", tool: "wire" };

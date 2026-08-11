@@ -50,7 +50,7 @@ function resolve(
 }
 
 describe("editor shortcut contract", () => {
-  it("maps history and file chord shortcuts without stealing Meta chords", () => {
+  it("maps history and file chord shortcuts without stealing copy/paste chords", () => {
     expect(resolve("u")).toEqual({ kind: "undo" });
     expect(resolve("u", {}, { shiftKey: true })).toEqual({ kind: "redo" });
     expect(resolve("z", {}, { ctrlKey: true })).toEqual({ kind: "undo" });
@@ -59,9 +59,11 @@ describe("editor shortcut contract", () => {
     });
     expect(resolve("s", {}, { ctrlKey: true })).toEqual({ kind: "save" });
     expect(resolve("s", {}, { metaKey: true })).toBeNull();
+    expect(resolve("c", {}, { ctrlKey: true })).toBeNull();
+    expect(resolve("v", {}, { ctrlKey: true })).toBeNull();
   });
 
-  it("resolves R from selection context and preserves Shift rotation", () => {
+  it("resolves R rotation and the two agreed mirror shortcuts", () => {
     expect(resolve("r")).toEqual({
       kind: "activate-tool",
       tool: "rectangle",
@@ -70,9 +72,17 @@ describe("editor shortcut contract", () => {
       kind: "rotate",
       deltaDegrees: 90,
     });
-    expect(resolve("r", {}, { shiftKey: true })).toEqual({
-      kind: "rotate",
-      deltaDegrees: -90,
+    expect(
+      resolve("r", { hasRotatableSelection: true }, { shiftKey: true }),
+    ).toEqual({
+      kind: "mirror",
+      direction: "left-right",
+    });
+    expect(
+      resolve("v", { hasRotatableSelection: true }, { shiftKey: true }),
+    ).toEqual({
+      kind: "mirror",
+      direction: "top-bottom",
     });
   });
 
@@ -86,7 +96,7 @@ describe("editor shortcut contract", () => {
     ).toEqual({ kind: "rotate-placement", deltaDegrees: 90 });
     expect(
       resolve("r", { componentPlacementActive: true }, { shiftKey: true }),
-    ).toEqual({ kind: "rotate-placement", deltaDegrees: -90 });
+    ).toEqual({ kind: "rotate-placement", deltaDegrees: 90 });
   });
 
   it("maps creation, fit, and marker commands", () => {

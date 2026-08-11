@@ -1560,6 +1560,11 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
+.copy-placement-preview {
+  opacity: 0.48;
+  pointer-events: none;
+}
+
 .schematic-canvas.component-mode .hit-target,
 .schematic-canvas.component-mode .route-hit,
 .schematic-canvas.component-mode .annotation-hit,

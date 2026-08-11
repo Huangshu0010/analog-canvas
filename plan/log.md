@@ -4512,3 +4512,16 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   editor build, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `fix(editor): restore F fit view shortcut`.
+
+## 2026-08-11 - Virtuoso-Style Copy Placement and Mirror Shortcuts
+
+- Target: adopt R/Shift+R/Shift+V mirrors and replace Ctrl+C/Ctrl+V with a
+  mouse-following `C` copy placement.
+- Changed areas: shortcut resolver, clipboard preview helper, transient copy
+  placement in the canvas, Edit menu/help/contract, and group-copy/mirror/Esc
+  regressions.
+- Validation: focused tests (23), key manual-editor E2E (4), workspace
+  typecheck, production build, complete editor E2E (72), and `git diff --check`
+  passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `feat(editor): add copy placement shortcuts`.

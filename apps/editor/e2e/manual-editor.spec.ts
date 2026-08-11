@@ -20,6 +20,20 @@ async function placeComponent(
   await page.getByTestId("schematic-canvas").click({ position });
 }
 
+async function copySelectionAt(
+  page: Page,
+  position: { x: number; y: number },
+): Promise<void> {
+  const canvas = page.getByTestId("schematic-canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Canvas is not measurable");
+  await page.keyboard.press("c");
+  await page.mouse.move(box.x + position.x, box.y + position.y);
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+  await canvas.click({ position });
+  await expect(page.getByTestId("copy-placement-preview")).toHaveCount(0);
+}
+
 async function openSelectionShelf(page: Page): Promise<void> {
   const shelf = page.getByTestId("selection-shelf");
   await expect(shelf).toBeVisible();
@@ -607,8 +621,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
   await page.getByTestId("terminal-M2-D").click();
 
   await page.keyboard.press("Control+a");
-  await page.keyboard.press("Control+c");
-  await page.keyboard.press("Control+v");
+  await copySelectionAt(page, { x: 560, y: 300 });
   await expect(page.getByTestId("instance-count")).toHaveText("4");
 
   await page.reload();
@@ -714,8 +727,7 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   expect(firstAfter?.x).not.toBe(firstBefore?.x);
   expect(firstAfter?.y).not.toBe(firstBefore?.y);
 
-  await page.keyboard.press("Control+c");
-  await page.keyboard.press("Control+v");
+  await copySelectionAt(page, { x: 640, y: 380 });
   await expect(page.getByTestId("instance-count")).toHaveText("4");
   await expect(page.getByTestId("net-count")).toHaveText("2");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(2);
@@ -1142,6 +1154,34 @@ test("R rotates a selected component instead of entering Rectangle", async ({
 
   await expect(page.getByTestId("revision")).toHaveText("2");
   await expect(page.locator('[data-kind="draft-rectangle"]')).toHaveCount(0);
+
+  await page.keyboard.press("Shift+R");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  await page.keyboard.press("Shift+V");
+  await expect(page.getByTestId("revision")).toHaveText("4");
+});
+
+test("C previews one copy and Escape cancels without a revision", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 360, y: 220 });
+  await page.getByTestId("hit-R1").click();
+
+  const canvas = page.getByTestId("schematic-canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Canvas is not measurable");
+  await page.keyboard.press("c");
+  await page.mouse.move(box.x + 560, box.y + 340);
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByTestId("copy-placement-preview")).toHaveCount(0);
+  await expect(page.getByTestId("instance-count")).toHaveText("1");
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByTestId("status")).toContainText(
+    "Copy placement cancelled",
+  );
 });
 
 test("derives crossings and creates junctions only when a wire ends on a route", async ({

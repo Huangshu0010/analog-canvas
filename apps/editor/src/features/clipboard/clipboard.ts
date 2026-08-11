@@ -23,6 +23,73 @@ export interface PasteProposal {
   instanceIds: string[];
 }
 
+/**
+ * Returns the stable local origin used to attach a copied subgraph to the
+ * pointer. Prefer an instance origin because it is also the point designers
+ * intuitively grab when duplicating a component group.
+ */
+export function clipboardPlacementAnchor(
+  clipboard: SchematicClipboard,
+): Point | null {
+  return (
+    clipboard.instances.find((instance) => instance.placement)?.placement
+      ?.position ??
+    clipboard.junctions[0]?.position ??
+    clipboard.routes[0]?.waypoints[0] ??
+    clipboard.annotations[0]?.position ??
+    null
+  );
+}
+
+/**
+ * Builds an isolated, translated formal document for the canvas-only copy
+ * ghost. It never enters persistence or the edit engine; the final click still
+ * uses proposePaste() below to create stable IDs and typed edits.
+ */
+export function clipboardPreviewDocument(
+  base: SchematicDocument,
+  clipboard: SchematicClipboard,
+  offset: Point,
+): SchematicDocument {
+  const annotations = clipboard.annotations.map((annotation) => {
+    const preview = structuredClone(annotation);
+    preview.position = movePoint(preview.position, offset);
+    if (preview.anchor?.kind === "free") {
+      preview.anchor.position = movePoint(preview.anchor.position, offset);
+    } else if (preview.anchor && "fallbackPosition" in preview.anchor) {
+      preview.anchor.fallbackPosition = movePoint(
+        preview.anchor.fallbackPosition,
+        offset,
+      );
+    }
+    return preview;
+  });
+  return {
+    ...base,
+    instances: clipboard.instances.map((instance) => ({
+      ...structuredClone(instance),
+      placement: instance.placement
+        ? {
+            ...instance.placement,
+            position: movePoint(instance.placement.position, offset),
+          }
+        : null,
+    })),
+    nets: structuredClone(clipboard.nets),
+    routes: clipboard.routes.map((route) => ({
+      ...structuredClone(route),
+      waypoints: route.waypoints.map((point) => movePoint(point, offset)),
+    })),
+    junctions: clipboard.junctions.map((junction) => ({
+      ...structuredClone(junction),
+      position: movePoint(junction.position, offset),
+    })),
+    ports: [],
+    annotations,
+    drafting: undefined,
+  };
+}
+
 export function copySelection(
   document: SchematicDocument,
   instanceIds: readonly string[],
