@@ -1019,6 +1019,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function resetInteractionState(): void {
+    clearTransientCanvasState();
     resetSelection();
     setSelectedRouteSegmentIndex(null);
     setTextEditing(null);
@@ -1164,6 +1165,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function activateTool(nextTool: EditorTool): void {
+    paintSnapGuides([]);
     setTool(nextTool);
     if (nextTool !== "pointer") {
       replaceSelectionKind("route", []);
@@ -1183,6 +1185,7 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function openInsertComponentDialog(): void {
+    clearTransientCanvasState();
     cancelInteraction();
     setComponentPreviewPoint(null);
     setComponentPlacementRotation(0);
@@ -1953,6 +1956,37 @@ export function App({ project: initialProject }: AppProps) {
       }),
     );
   }
+
+  /**
+   * Editor-only visual state must never outlive the interaction that produced
+   * it. In particular, Smart Snap guides are imperative SVG children so React
+   * does not remove them when a document or tool state changes underneath a
+   * pointer session.
+   */
+  function clearTransientCanvasState(): void {
+    canvasDragSessionRef.current?.cancel();
+    canvasDragSessionRef.current = null;
+    paintSnapGuides([]);
+  }
+
+  useEffect(() => {
+    const cancelWhenHidden = () => {
+      if (globalThis.document.visibilityState === "hidden") {
+        clearTransientCanvasState();
+      }
+    };
+    const cancelOnPageHide = () => clearTransientCanvasState();
+    globalThis.document.addEventListener("visibilitychange", cancelWhenHidden);
+    globalThis.window.addEventListener("pagehide", cancelOnPageHide);
+    return () => {
+      globalThis.document.removeEventListener(
+        "visibilitychange",
+        cancelWhenHidden,
+      );
+      globalThis.window.removeEventListener("pagehide", cancelOnPageHide);
+      clearTransientCanvasState();
+    };
+  }, []);
 
   function resolveWireCanvasSnap(
     point: Point,
@@ -4772,6 +4806,7 @@ export function App({ project: initialProject }: AppProps) {
             cancelCopyPlacement();
             return;
           }
+          clearTransientCanvasState();
           cancelInteraction();
           setComponentPreviewPoint(null);
           setComponentPlacementRotation(0);
@@ -4788,6 +4823,7 @@ export function App({ project: initialProject }: AppProps) {
           return;
         case "cancel-passive":
           setBoxPreview(null);
+          paintSnapGuides([]);
           setStatus("Cancelled");
           return;
         case "remove-wire-waypoint":

@@ -15,6 +15,19 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-12 - Bound transient canvas state and runtime caches
+
+- Target: remove stale Smart Snap guide remnants and bound audit-identified
+  runtime retention paths without persisting editor state.
+- Changed areas: unified transient canvas cleanup, bounded Document undo/redo
+  history, build-versioned Service Worker static cache, and focused unit/E2E
+  coverage; documented the resulting interaction and history contracts.
+- Validation: focused canvas/history Vitest 11/11, Smart Snap Escape Playwright
+  scenario, editor production build, workspace typecheck, targeted Prettier,
+  and `git diff --check` passed. Repository-wide format check remains blocked
+  only by three pre-existing unrelated files recorded in the target plan.
+- Commit status: ready to commit.
+
 ## 2026-08-10 - Measured Razavi capacitor refinement
 
 - Target: replace the initial approximate 10% capacitor reduction with the

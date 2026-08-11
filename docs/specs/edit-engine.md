@@ -204,5 +204,8 @@ change electrical topology or rewrite SPICE.
 
 ## Open decisions
 
+- In-memory `DocumentHistory` retains at most 64 undo or redo snapshots per
+  opened Document. It is a session-memory budget, not persisted Project data;
+  callers may supply a smaller or larger positive limit for a constrained host.
 - Persistent history, history compaction, and recovery integration remain
   deferred; Phase 1 history is validated in-memory session state.

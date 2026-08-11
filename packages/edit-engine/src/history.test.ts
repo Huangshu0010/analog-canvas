@@ -119,4 +119,55 @@ describe("DocumentHistory", () => {
       error: { code: "HISTORY_EMPTY" },
     });
   });
+
+  it("retains a bounded undo window", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: null,
+      properties: {},
+    });
+    const history = new DocumentHistory(document, {}, 2);
+
+    for (let revision = 0; revision < 3; revision += 1) {
+      expect(
+        history.transact(
+          transaction(revision, [
+            {
+              kind: "patch_instance_properties",
+              instanceId: "R1",
+              set: { value: `${revision}` },
+            },
+          ]),
+        ),
+      ).toMatchObject({ ok: true, revision: revision + 1 });
+    }
+
+    expect(history.transact(transaction(3, [{ kind: "undo" }]))).toMatchObject({
+      ok: true,
+      revision: 4,
+    });
+    expect(history.document.instances[0]!.properties.value).toBe("1");
+    expect(history.transact(transaction(4, [{ kind: "undo" }]))).toMatchObject({
+      ok: true,
+      revision: 5,
+    });
+    expect(history.document.instances[0]!.properties.value).toBe("0");
+    expect(history.transact(transaction(5, [{ kind: "undo" }]))).toMatchObject({
+      ok: false,
+      error: { code: "HISTORY_EMPTY" },
+    });
+  });
+
+  it("rejects an invalid history limit", () => {
+    expect(
+      () =>
+        new DocumentHistory(
+          createEmptyDocument("document-main", "Main"),
+          {},
+          0,
+        ),
+    ).toThrow("Document history limit must be a positive integer");
+  });
 });

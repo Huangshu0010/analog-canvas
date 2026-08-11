@@ -14,6 +14,14 @@ import type {
   EditTransactionResult,
 } from "./transaction.js";
 
+/**
+ * The editor stores immutable document snapshots for undo/redo. Keeping every
+ * revision indefinitely turns a long editing session into an unbounded heap
+ * retention path, so retain a deliberately modest default window. Callers
+ * that need a different offline-session budget can opt in explicitly.
+ */
+export const DEFAULT_DOCUMENT_HISTORY_LIMIT = 64;
+
 function collectObjects(document: SchematicDocument): Map<string, unknown> {
   return new Map(
     [
@@ -50,10 +58,19 @@ export class DocumentHistory {
   readonly #undoStack: SchematicDocument[] = [];
   readonly #redoStack: SchematicDocument[] = [];
   readonly #context: EditExecutionContext;
+  readonly #historyLimit: number;
 
-  constructor(document: SchematicDocument, context: EditExecutionContext = {}) {
+  constructor(
+    document: SchematicDocument,
+    context: EditExecutionContext = {},
+    historyLimit = DEFAULT_DOCUMENT_HISTORY_LIMIT,
+  ) {
+    if (!Number.isSafeInteger(historyLimit) || historyLimit < 1) {
+      throw new Error("Document history limit must be a positive integer");
+    }
     this.#document = SchematicDocumentSchema.parse(document);
     this.#context = context;
+    this.#historyLimit = historyLimit;
   }
 
   get document(): SchematicDocument {
@@ -88,6 +105,9 @@ export class DocumentHistory {
       const result = executeTransaction(before, transaction, this.#context);
       if (result.ok && result.applied) {
         this.#undoStack.push(before);
+        if (this.#undoStack.length > this.#historyLimit) {
+          this.#undoStack.shift();
+        }
         this.#redoStack.length = 0;
         this.#document = result.document;
       }
@@ -155,6 +175,9 @@ export class DocumentHistory {
 
     sourceStack.pop();
     destinationStack.push(this.#document);
+    if (destinationStack.length > this.#historyLimit) {
+      destinationStack.shift();
+    }
     this.#document = restored;
     return {
       ok: true,

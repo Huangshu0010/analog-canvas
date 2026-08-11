@@ -1,6 +1,9 @@
 // This worker owns only the static application shell. User Projects and
 // browser recovery records are deliberately outside Cache Storage.
-const CACHE = "icm-static-shell-v1";
+// Replaced by the Vite build with a digest of the emitted index.html. This
+// changes when its content-hashed application asset graph changes, allowing
+// activate() to remove the prior shell instead of retaining it indefinitely.
+const CACHE = "icm-static-shell-__ICM_BUILD_ID__";
 
 function scopeUrl() {
   return new URL(self.registration.scope);

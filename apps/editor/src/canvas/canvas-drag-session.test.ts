@@ -139,6 +139,30 @@ describe("canvas drag session", () => {
     expect(target.captured).toBeNull();
   });
 
+  it("cancels when pointer capture is lost", () => {
+    const source = new FakeEvents();
+    const target = new FakeTarget();
+    const cancel = vi.fn();
+    const session = startCanvasDragSession({
+      target,
+      pointerId: 8,
+      startClient: { x: 0, y: 0 },
+      thresholdPx: 4,
+      onPreview: vi.fn(),
+      onFinish: vi.fn(),
+      onCancel: cancel,
+      eventSource: source,
+      requestFrame: () => 1,
+      cancelFrame: vi.fn(),
+    });
+
+    target.emit("lostpointercapture", pointer(8, 0, 0));
+    session.cancel();
+
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(target.captured).toBeNull();
+  });
+
   it("carries the live Alt snap-suppression modifier", () => {
     const source = new FakeEvents();
     const target = new FakeTarget();

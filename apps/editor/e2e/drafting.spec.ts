@@ -341,6 +341,48 @@ test("Escape cancels an existing text drag without a revision", async ({
   await expect(page.getByTestId("status")).toHaveText("Cancelled canvas drag");
 });
 
+test("Escape removes Smart Snap guides from a cancelled component drag", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await chooseComponent(page, "resistor");
+  await page.getByTestId("schematic-canvas").click({
+    position: { x: 300, y: 240 },
+  });
+  await chooseComponent(page, "resistor");
+  await page.getByTestId("schematic-canvas").click({
+    position: { x: 560, y: 360 },
+  });
+
+  const moving = page.getByTestId("hit-R1");
+  const target = page.getByTestId("hit-R2");
+  const movingBox = await moving.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (!movingBox || !targetBox) {
+    throw new Error("Component hit targets are not measurable");
+  }
+  const start = {
+    x: movingBox.x + movingBox.width / 2,
+    y: movingBox.y + movingBox.height / 2,
+  };
+  const end = {
+    x: targetBox.x + targetBox.width / 2,
+    y: targetBox.y + targetBox.height / 2,
+  };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, { steps: 6 });
+
+  const snapGuides = page.locator(
+    '[data-layer="snap-guides"] .smart-snap-guide',
+  );
+  await expect.poll(async () => snapGuides.count()).toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await expect(snapGuides).toHaveCount(0);
+  await page.mouse.up();
+  await expect(page.getByTestId("revision")).toHaveText("2");
+});
+
 // Creating a construction line commits one object.
 test("two-phase click-creates a construction line", async ({ page }) => {
   await page.goto("/");

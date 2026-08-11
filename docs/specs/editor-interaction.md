@@ -235,7 +235,9 @@ operation.
   object and its hit outline share one temporary SVG transform/geometry preview,
   which is restored before the single typed transaction is committed. Snap
   matches and extension lines are transient editor state and are never persisted
-  or added to the Edit Engine or Agent API.
+  or added to the Edit Engine or Agent API. They are cleared when their canvas
+  drag is cancelled or completed, the interaction/tool is reset, the page is
+  hidden, or the editor unmounts.
 - High-frequency pointer movement must not rebuild the formal scene or rerun
   crossings, flightlines, or visual diagnostics. These derived results are
   memoized by Document/view revision; transient previews update at most once
