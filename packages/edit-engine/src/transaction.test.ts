@@ -1,7 +1,14 @@
 import { createEmptyDocument } from "@icm/model";
+import {
+  defaultInstanceLabelPlacement,
+  resolveSchematicStyleProfile,
+} from "@icm/derived";
+import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { executeTransaction } from "./transaction.js";
+
+const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 function documentWithInstance() {
   const document = createEmptyDocument("document-main", "Main");
@@ -134,6 +141,63 @@ describe("Edit Transaction envelope", () => {
           },
         ],
       },
+    });
+  });
+
+  it("reuses upright label placement when a BJT rotates", () => {
+    const document = createEmptyDocument("document-main", "BJT label");
+    const instance = {
+      id: "Q1",
+      symbolId: "npn",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    };
+    document.instances.push(instance);
+    const resolved = resolver.resolve("npn");
+    if (!resolved) throw new Error("missing npn");
+    const profile = resolveSchematicStyleProfile(
+      document.presentation.styleProfileId,
+    );
+    const initial = defaultInstanceLabelPlacement(instance, resolved, profile);
+    if (!initial) throw new Error("missing default label placement");
+    document.annotations.push({
+      id: "instance-label-Q1",
+      kind: "instance-label",
+      text: "Q1",
+      position: initial.position,
+      offset: {
+        x: initial.semanticPosition.x - instance.placement.position.x,
+        y: initial.semanticPosition.y - instance.placement.position.y,
+      },
+      attachedObjectId: "Q1",
+      alignment: initial.alignment,
+      rotation: 0,
+      locked: false,
+    });
+
+    const rotated = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [{ kind: "rotate_instance", instanceId: "Q1", rotation: 90 }],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(rotated.ok).toBe(true);
+    if (!rotated.ok) return;
+    const expected = defaultInstanceLabelPlacement(
+      rotated.document.instances[0]!,
+      resolved,
+      profile,
+    );
+    expect(rotated.document.annotations[0]).toMatchObject({
+      position: expected?.position,
+      alignment: expected?.alignment,
+      rotation: 0,
     });
   });
 

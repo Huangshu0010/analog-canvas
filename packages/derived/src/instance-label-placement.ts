@@ -28,6 +28,13 @@ export function isMosSymbol(resolved: ResolvedSymbol): boolean {
   return roles.has("gate") && roles.has("drain") && roles.has("source");
 }
 
+export function isBjtSymbol(resolved: ResolvedSymbol): boolean {
+  const roles = new Set(resolved.definition.pins.map((pin) => pin.role));
+  return (
+    roles.has("base") && roles.has("collector") && roles.has("emitter")
+  );
+}
+
 function transformedBounds(
   localBounds: Rect,
   instance: SchematicDocument["instances"][number],
@@ -182,11 +189,11 @@ export function placeUprightInstanceLabel(
   }
 }
 
-function localRightmostChannelPin(resolved: ResolvedSymbol): number {
-  const channelPins = resolved.definition.pins.filter(
+function localRightmostActivePin(resolved: ResolvedSymbol): number {
+  const activePins = resolved.definition.pins.filter(
     (pin) => pin.role !== "bulk",
   );
-  return Math.max(...channelPins.map((pin) => pin.at.x));
+  return Math.max(...activePins.map((pin) => pin.at.x));
 }
 
 /** Supplies canonical placement for renderer-owned instance labels. */
@@ -207,33 +214,22 @@ export function defaultInstanceLabelPlacement(
       x: viewBox.x - compactSideGap,
       y: middleY + baselineOffset,
     };
-    const position = transformPoint(
+    return placeUprightInstanceLabel(
+      instance,
+      resolved,
+      profile,
       localPosition,
-      instance.placement.position,
-      instance.placement,
+      "left",
     );
-    return {
-      position: { x: Math.round(position.x), y: Math.round(position.y) },
-      semanticPosition: {
-        x: Math.round(position.x),
-        y: Math.round(position.y),
-      },
-      alignment:
-        transformedSide("left", instance) === "left"
-          ? "end"
-          : transformedSide("left", instance) === "right"
-            ? "start"
-            : "middle",
-    };
   }
 
-  if (isMosSymbol(resolved)) {
+  if (isMosSymbol(resolved) || isBjtSymbol(resolved)) {
     const mosSideGap = Math.max(
       8,
       profile.typography.labelGap + profile.typography.instanceFontSize * 0.3,
     );
     const localPosition = {
-      x: localRightmostChannelPin(resolved) + mosSideGap * 0.6,
+      x: localRightmostActivePin(resolved) + mosSideGap * 0.6,
       y: middleY + profile.typography.instanceFontSize * 0.55,
     };
     return placeUprightInstanceLabel(
@@ -250,38 +246,24 @@ export function defaultInstanceLabelPlacement(
       x: viewBox.x + viewBox.width + compactSideGap,
       y: middleY + baselineOffset,
     };
-    const position = transformPoint(
+    return placeUprightInstanceLabel(
+      instance,
+      resolved,
+      profile,
       localPosition,
-      instance.placement.position,
-      instance.placement,
+      "right",
     );
-    const side = transformedSide("right", instance);
-    return {
-      position: { x: Math.round(position.x), y: Math.round(position.y) },
-      semanticPosition: {
-        x: Math.round(position.x),
-        y: Math.round(position.y),
-      },
-      alignment:
-        side === "right" ? "start" : side === "left" ? "end" : "middle",
-    };
   }
 
   const bottomGap =
     profile.id === "textbook-monochrome-v1"
       ? 14
       : profile.typography.labelGap + profile.typography.instanceFontSize;
-  const position = transformPoint(
+  return placeUprightInstanceLabel(
+    instance,
+    resolved,
+    profile,
     { x: middleX, y: viewBox.y + viewBox.height + bottomGap },
-    instance.placement.position,
-    instance.placement,
+    "bottom",
   );
-  return {
-    position: { x: Math.round(position.x), y: Math.round(position.y) },
-    semanticPosition: {
-      x: Math.round(position.x),
-      y: Math.round(position.y),
-    },
-    alignment: "middle",
-  };
 }

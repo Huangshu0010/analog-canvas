@@ -34,7 +34,6 @@ import {
   endpointBelongsToNet,
   inferInstanceLabelSide,
   isOrthogonal,
-  isMosSymbol,
   netEndpoints,
   normalizeRouteGeometry,
   placeUprightInstanceLabel,
@@ -1431,7 +1430,6 @@ function followAttachedAnnotations(
   const resolved = instance
     ? resolver?.resolve(instance.symbolId, instance.symbolVariantId)
     : undefined;
-  const definition = resolved?.definition;
   for (const annotation of draft.annotations) {
     if (annotation.attachedObjectId !== instanceId) continue;
     const hasRecordedOffset =
@@ -1456,103 +1454,29 @@ function followAttachedAnnotations(
       newOrientation,
     );
     let position = transformedAnchor;
-    let transformedSide: Point | null = null;
     let transformedAlignment: "start" | "middle" | "end" | null = null;
-    if (annotation.kind === "instance-label" && definition) {
-      if (instance && resolved && isMosSymbol(resolved)) {
-        const localSide = inferInstanceLabelSide(
-          local,
-          visibleSymbolLocalBounds(resolved),
-        );
-        if (localSide) {
-          try {
-            const placement = placeUprightInstanceLabel(
-              instance,
-              resolved,
-              resolveSchematicStyleProfile(draft.presentation.styleProfileId),
-              local,
-              localSide,
-              annotation.sizeScale,
-            );
-            if (placement) {
-              position = placement.position;
-              transformedAlignment = placement.alignment;
-            }
-          } catch {
-            // Keep the rigid semantic transform for a legacy/unknown profile;
-            // formal rendering reports the invalid profile separately.
-          }
-        }
-      } else {
-        const box = definition.viewBox;
-        const edges = {
-          left: box.x,
-          right: box.x + box.width,
-          top: box.y,
-          bottom: box.y + box.height,
-        };
-        const candidates = [
-          ...(local.x < edges.left
-            ? [{ side: { x: -1, y: 0 }, gap: edges.left - local.x }]
-            : []),
-          ...(local.x > edges.right
-            ? [{ side: { x: 1, y: 0 }, gap: local.x - edges.right }]
-            : []),
-          ...(local.y < edges.top
-            ? [{ side: { x: 0, y: -1 }, gap: edges.top - local.y }]
-            : []),
-          ...(local.y > edges.bottom
-            ? [{ side: { x: 0, y: 1 }, gap: local.y - edges.bottom }]
-            : []),
-        ].sort((left, right) => left.gap - right.gap);
-        const reference = candidates[0];
-        if (reference) {
-          const edgeSide = transformPoint(
-            reference.side,
-            origin,
-            newOrientation,
+    if (annotation.kind === "instance-label" && instance && resolved) {
+      const localSide = inferInstanceLabelSide(
+        local,
+        visibleSymbolLocalBounds(resolved),
+      );
+      if (localSide) {
+        try {
+          const placement = placeUprightInstanceLabel(
+            instance,
+            resolved,
+            resolveSchematicStyleProfile(draft.presentation.styleProfileId),
+            local,
+            localSide,
+            annotation.sizeScale,
           );
-          transformedSide = edgeSide;
-          const corners = [
-            { x: edges.left, y: edges.top },
-            { x: edges.right, y: edges.top },
-            { x: edges.right, y: edges.bottom },
-            { x: edges.left, y: edges.bottom },
-          ].map((corner) =>
-            transformPoint(corner, newPosition, newOrientation),
-          );
-          const bounds = {
-            left: Math.min(...corners.map((corner) => corner.x)),
-            right: Math.max(...corners.map((corner) => corner.x)),
-            top: Math.min(...corners.map((corner) => corner.y)),
-            bottom: Math.max(...corners.map((corner) => corner.y)),
-          };
-          let fontSize = 15.116 * (annotation.sizeScale ?? 1);
-          try {
-            fontSize =
-              resolveSchematicStyleProfile(draft.presentation.styleProfileId)
-                .typography.instanceFontSize * (annotation.sizeScale ?? 1);
-          } catch {
-            // Keep a deterministic typography fallback for a legacy/unknown
-            // profile; formal rendering reports the invalid profile separately.
+          if (placement) {
+            position = placement.position;
+            transformedAlignment = placement.alignment;
           }
-          if (edgeSide.x > 0) {
-            position = { x: bounds.right + reference.gap, y: position.y };
-          } else if (edgeSide.x < 0) {
-            position = { x: bounds.left - reference.gap, y: position.y };
-          } else if (edgeSide.y > 0) {
-            // SVG y is a baseline. Preserve the visual gap from the glyph top.
-            position = {
-              x: position.x,
-              y: bounds.bottom + reference.gap + fontSize * 1.05,
-            };
-          } else {
-            // Preserve the visual gap from the glyph bottom.
-            position = {
-              x: position.x,
-              y: bounds.top - reference.gap - fontSize * 0.3,
-            };
-          }
+        } catch {
+          // Keep the rigid semantic transform for a legacy/unknown profile;
+          // formal rendering reports the invalid profile separately.
         }
       }
     }
@@ -1566,15 +1490,7 @@ function followAttachedAnnotations(
     };
     if (annotation.kind === "instance-label") {
       annotation.rotation = 0;
-      annotation.alignment =
-        transformedAlignment ??
-        (transformedSide
-          ? transformedSide.x > 0
-            ? "start"
-            : transformedSide.x < 0
-              ? "end"
-              : "middle"
-          : "middle");
+      annotation.alignment = transformedAlignment ?? "middle";
     } else {
       const oldDirection = directionForRotation(annotation.rotation);
       const localDirection = inverseTransformPoint(

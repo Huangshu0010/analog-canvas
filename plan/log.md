@@ -4413,3 +4413,16 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   passed.
 - Commit status: ready to commit on `main` as
   `fix(symbols): calibrate diode and voltage amplifier geometry`.
+
+## 2026-08-11 - Stabilize default instance-label placement
+
+- Target: stop default labels from changing clearance under component rotation
+  and give NPN/PNP the same non-wiring-side placement as MOS names, without
+  altering annotation persistence or schema.
+- Changed areas: shared derived label-placement helper, attached-label
+  rotation path, and focused BJT/default-label regressions.
+- Validation: 14 focused derived/editor/edit-engine tests, derived and
+  edit-engine TypeScript builds, editor Vite production build, and `git diff
+  --check` passed.
+- Commit status: ready to commit on `main` as
+  `fix(labels): stabilize default instance text placement`.
