@@ -89,7 +89,7 @@ describe("editor shortcut contract", () => {
     ).toEqual({ kind: "rotate-placement", deltaDegrees: -90 });
   });
 
-  it("maps creation, mirror, fit, and marker commands", () => {
+  it("maps creation, fit, and marker commands", () => {
     expect(resolve("w")).toEqual({ kind: "activate-tool", tool: "wire" });
     expect(resolve("a")).toEqual({ kind: "activate-tool", tool: "arrow" });
     expect(resolve("p")).toEqual({
@@ -109,10 +109,8 @@ describe("editor shortcut contract", () => {
     });
     expect(resolve("g")).toEqual({ kind: "activate-tool", tool: "guide" });
     expect(resolve("t")).toEqual({ kind: "add-text" });
-    expect(resolve("f", {}, { shiftKey: true })).toEqual({
-      kind: "mirror",
-      direction: "top-bottom",
-    });
+    expect(resolve("f")).toEqual({ kind: "fit-view" });
+    expect(resolve("f", {}, { shiftKey: true })).toBeNull();
     expect(resolve("Home")).toEqual({ kind: "fit-view" });
     expect(resolve("x", { hasRoutedMarkerSelection: true })).toEqual({
       kind: "reverse-current-marker",

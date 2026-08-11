@@ -170,7 +170,7 @@ component or short Route drag.
 | -------------------------- | ---------------------------------------------------------------------------------- |
 | `R`                        | Rotate a rotatable selection +90°; otherwise enter Rectangle mode.                 |
 | `Shift+R`                  | Rotate the selected placeable objects by -90 degrees.                              |
-| `F` / `Shift+F`            | Flip selected instances left/right or top/bottom in screen space.                  |
+| `F`                        | Fit the active Document in the viewport.                                           |
 | `W`                        | Enter or continue Wire mode.                                                       |
 | `L`                        | Edit/create the selected Route's electrical Net Label.                             |
 | `P`                        | Enter Construction line mode.                                                      |
@@ -185,18 +185,18 @@ component or short Route drag.
 | `Ctrl+A`                   | Select all selectable objects in the active Document.                              |
 | `Ctrl+C`                   | Copy selected instances plus their wholly internal routed subgraph.                |
 | `Ctrl+V`                   | Paste the internal clipboard with fresh IDs and a deterministic grid offset.       |
-| `Home`                     | Fit the active Document in the viewport.                                           |
+| `Home`                     | Fit the active Document in the viewport (compatible alias).                        |
 
 Letter and editing shortcuts must not fire while focus is in a text input,
 text editor, searchable palette field, or another control that consumes the
 key. Browser-reserved shortcuts must not be intercepted unless the application
 can complete the named operation safely.
 
-`F` and `Shift+F` are display-space actions, explicitly named in the UI as
-“Flip horizontal (left/right)” and “Flip vertical (top/bottom)”. The persisted
-orientation remains the compact `rotation + mirror: "x"` representation: the
-editor composes its two existing typed edits atomically rather than adding a
-second mirror enum, a new stored field, or an Agent API operation.
+Mirror remains available from the contextual Properties controls while its
+keyboard convention is under review. The persisted orientation remains the
+compact `rotation + mirror: "x"` representation: the editor composes its two
+existing typed edits atomically rather than adding a second mirror enum, a new
+stored field, or an Agent API operation.
 
 ## Pointer and viewport contract
 

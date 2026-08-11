@@ -4501,3 +4501,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   typecheck, production editor build, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `refactor(editor): compact component properties`.
+
+## 2026-08-11 - Restore Fit View Shortcut
+
+- Target: restore `F` as the primary Fit View shortcut without prematurely
+  choosing a replacement mirror bindkey.
+- Changed areas: shortcut resolver/tests, unreachable mirror shortcut dispatch,
+  and interaction contract.
+- Validation: focused shortcut/App tests (21), workspace typecheck, production
+  editor build, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `fix(editor): restore F fit view shortcut`.

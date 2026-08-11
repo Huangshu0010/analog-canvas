@@ -4677,9 +4677,6 @@ export function App({ project: initialProject }: AppProps) {
         case "net-label-selection-required":
           setStatus("Select a wire segment before adding a Net Label");
           return;
-        case "mirror":
-          mirrorSelected(shortcut.direction);
-          return;
         case "fit-view":
           fitView();
           return;

@@ -1,5 +1,4 @@
 import type { EditorTool } from "./interaction-state";
-import type { ScreenFlip } from "./shortcut-orientation";
 
 export interface EditorShortcutKey {
   key: string;
@@ -38,7 +37,6 @@ export type EditorShortcutIntent =
   | { kind: "add-text" }
   | { kind: "open-properties" | "property-selection-required" }
   | { kind: "edit-net-label" | "net-label-selection-required" }
-  | { kind: "mirror"; direction: ScreenFlip }
   | { kind: "fit-view" }
   | {
       kind: "step-drafting-style";
@@ -129,12 +127,7 @@ export function resolveEditorShortcut(
   if (plain && key === "g") {
     return { kind: "activate-tool", tool: "guide" };
   }
-  if (plain && key === "f") {
-    return {
-      kind: "mirror",
-      direction: event.shiftKey ? "top-bottom" : "left-right",
-    };
-  }
+  if (plain && key === "f" && !event.shiftKey) return { kind: "fit-view" };
   if (plain && key === "home") return { kind: "fit-view" };
   if (
     plain &&
