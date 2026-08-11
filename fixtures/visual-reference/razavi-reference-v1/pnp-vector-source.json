@@ -236,8 +236,8 @@
           "kind": "polyline",
           "points": [
             {
-              "x": -11.64742,
-              "y": -9.988285
+              "x": -10.14795,
+              "y": -10.579168
             },
             {
               "x": 0.0,
@@ -280,12 +280,12 @@
           "kind": "polygon",
           "points": [
             {
-              "x": -13.31325,
-              "y": -13.315481
+              "x": -12.110996,
+              "y": -14.503944
             },
             {
-              "x": -9.98159,
-              "y": -6.661088
+              "x": -8.184904,
+              "y": -6.654393
             },
             {
               "x": -19.96318,
@@ -332,6 +332,7 @@
   "derivation": {
     "geometry": "uniformly scaled from Figure 12.11 Q1 native vectors",
     "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
-    "arrowCleanup": "PMOS-style support topology without changing the measured arrow artwork: the PNP triangle is rigidly translated so its true left-pointing tip meets the base bar, with no tip-side centerline and one rear support from the opposite edge to the emitter lead"
+    "arrowCleanup": "PMOS-style support topology: the PNP triangle's true left-pointing tip meets the base bar, with no tip-side centerline and one rear support from the opposite edge to the emitter lead",
+    "arrowCalibration": "horizontal mirror of the shared Figure 12.6 triangle template, enlarged 1.18x from direct-PDF arrow ink measurement"
   }
 }

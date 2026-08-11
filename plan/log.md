@@ -4382,3 +4382,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   visual calibration rather than synthetic-score masking.
 - Commit status: ready to commit on `main` as
   `fix(symbols): use source PDF crops for common fidelity baselines`.
+
+## 2026-08-11 - Calibrate shared Razavi BJT arrow template
+
+- Target: correct under-sized NPN/PNP GUI arrows and prevent the two polarity
+  variants from drifting into different triangle shapes.
+- Changed areas: one Figure 12.6-derived arrow template, a measured 1.18x
+  magnification, mirrored PNP placement, regenerated BJT evidence/assets and
+  catalog, plus a congruence regression for the two arrow triangles.
+- Validation: Python compilation, common/catalog stale checks, symbols build,
+  23 focused tests, NPN/PNP direct-PDF fidelity reports, and `git diff --check`
+  passed. Arrow-region black-pixel deficit improved from 25% to 5% for NPN and
+  from 33% to 16% for PNP; full-symbol IoU improved to 0.6436 and 0.5471.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): unify Razavi BJT arrow geometry`.

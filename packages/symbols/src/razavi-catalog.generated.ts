@@ -282,7 +282,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:npn", "pdk:model-type:npn"],
     assetPath: "npn.symbol.json",
     assetHash:
-      "820e3bd3f13cb9d0b8323facb82f1d113af41e25dda4d9212fa7340e02866c32",
+      "c7330d7e9a9d69801f37584377b4d39bb6f7c28eb830dc15020c26dcee1dba7f",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -392,7 +392,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:pnp", "pdk:model-type:pnp"],
     assetPath: "pnp.symbol.json",
     assetHash:
-      "214838641fd786976d6a368f1543195c9df46d1a096e7ee45cb8e4e602818990",
+      "8d9d61bde7cb0cf92a10ec86b37272ee7b76be0d69da9516e2edd1e1e29c1266",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -1914,8 +1914,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 6.656625,
         },
         to: {
-          x: -7.152963,
-          y: 11.992067,
+          x: -8.639893,
+          y: 11.372762,
         },
         style: {
           strokeRole: "normal",
@@ -1949,11 +1949,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -6.654393,
-            y: 8.319107,
+            x: -7.852184,
+            y: 7.121718,
           },
           {
-            x: -9.98159,
+            x: -11.778276,
             y: 14.971269,
           },
           {
@@ -2669,8 +2669,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polyline",
         points: [
           {
-            x: -11.64742,
-            y: -9.988285,
+            x: -10.14795,
+            y: -10.579168,
           },
           {
             x: 0,
@@ -2713,12 +2713,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -13.31325,
-            y: -13.315481,
+            x: -12.110996,
+            y: -14.503944,
           },
           {
-            x: -9.98159,
-            y: -6.661088,
+            x: -8.184904,
+            y: -6.654393,
           },
           {
             x: -19.96318,

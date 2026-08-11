@@ -261,8 +261,8 @@
             "y": 6.656625
           },
           "to": {
-            "x": -7.152963,
-            "y": 11.992067
+            "x": -8.639893,
+            "y": 11.372762
           },
           "style": {
             "strokeRole": "normal",
@@ -296,11 +296,11 @@
           "kind": "polygon",
           "points": [
             {
-              "x": -6.654393,
-              "y": 8.319107
+              "x": -7.852184,
+              "y": 7.121718
             },
             {
-              "x": -9.98159,
+              "x": -11.778276,
               "y": 14.971269
             },
             {
@@ -348,6 +348,7 @@
   "derivation": {
     "geometry": "uniformly scaled from Figure 12.6 Q1 native vectors",
     "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
-    "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon, overlapped 1.2 logical units inside its fill to suppress raster seams, and the arrow is rendered last"
+    "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon, overlapped 1.2 logical units inside its fill to suppress raster seams, and the arrow is rendered last",
+    "arrowCalibration": "shared Figure 12.6 triangle template enlarged 1.18x from direct-PDF arrow ink measurement"
   }
 }

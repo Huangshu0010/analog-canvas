@@ -29,6 +29,10 @@ TITLE = "Design of Analog CMOS Integrated Circuits, Second Edition"
 RASTER_DPI = 300.0
 PIXELS_PER_LOGICAL = 2.4
 RAZAVI_NORMAL_STROKE = 1.6
+BJT_ARROW_MAGNIFICATION = 1.18
+# Native Figure 12.6 NPN arrow coordinates relative to its true tip. Figure
+# 12.11 PNP is the same triangle mirrored along the local y axis.
+BJT_ARROW_TEMPLATE_PDF = [(-2.982, -2.981), (-4.473, 0), (0, 0)]
 
 NORMAL = {"strokeRole": "normal", "lineCap": "butt", "lineJoin": "miter"}
 EMPHASIS = {"strokeRole": "emphasis", "lineCap": "butt", "lineJoin": "miter"}
@@ -176,6 +180,21 @@ def rear_supported_arrow_branch(
     return [polyline([base_center, junction, pin_point])], arrow
 
 
+def shared_bjt_arrow(
+    tip: tuple[float, float],
+    native_to_logical: float,
+    mirror_x: bool,
+) -> list[tuple[float, float]]:
+    direction = -1 if mirror_x else 1
+    return [
+        (
+            rounded(tip[0] + direction * x * native_to_logical * BJT_ARROW_MAGNIFICATION),
+            rounded(tip[1] + y * native_to_logical * BJT_ARROW_MAGNIFICATION),
+        )
+        for x, y in BJT_ARROW_TEMPLATE_PDF
+    ]
+
+
 def bjt_definition(kind: str) -> dict[str, Any]:
     # Both source figures use 0.717 pt normal strokes.  Scale every native
     # coordinate by the same ratio that maps that stroke to the product's
@@ -191,7 +210,7 @@ def bjt_definition(kind: str) -> dict[str, Any]:
         base_top, base_bottom = point(0, -6.645)[1], point(0, 6.637)[1]
         upper_base, upper_junction = point(-8.946, -2.982), point(0, -6.710)
         lower_base, lower_junction = point(-8.946, 2.983), point(0, 6.709)
-        arrow = [point(-2.982, 3.728), point(-4.473, 6.709), point(0, 6.709)]
+        arrow = shared_bjt_arrow(lower_junction, scale, mirror_x=False)
         primitives = [
             line(-40, 0, base_x, 0),
             line(base_x, base_top, base_x, base_bottom, EMPHASIS),
@@ -210,7 +229,7 @@ def bjt_definition(kind: str) -> dict[str, Any]:
         base_top, base_bottom = point(0, -6.639)[1], point(0, 6.643)[1]
         upper_base, upper_junction = point(-8.946, -2.982), point(0, -6.710)
         lower_base, lower_junction = point(-8.946, 2.982), point(0, 6.709)
-        source_arrow = [point(-5.126, -6.338), point(-3.633, -3.356), point(-8.106, -3.353)]
+        source_arrow = shared_bjt_arrow(upper_base, scale, mirror_x=True)
         arrow_support, arrow = rear_supported_arrow_branch(
             upper_base,
             upper_junction,
@@ -259,7 +278,8 @@ SPECS: dict[str, dict[str, Any]] = {
         "derivation": {
             "geometry": "uniformly scaled from Figure 12.11 Q1 native vectors",
             "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
-            "arrowCleanup": "PMOS-style support topology without changing the measured arrow artwork: the PNP triangle is rigidly translated so its true left-pointing tip meets the base bar, with no tip-side centerline and one rear support from the opposite edge to the emitter lead",
+            "arrowCleanup": "PMOS-style support topology: the PNP triangle's true left-pointing tip meets the base bar, with no tip-side centerline and one rear support from the opposite edge to the emitter lead",
+            "arrowCalibration": "horizontal mirror of the shared Figure 12.6 triangle template, enlarged 1.18x from direct-PDF arrow ink measurement",
         },
     },
     "npn": {
@@ -274,6 +294,7 @@ SPECS: dict[str, dict[str, Any]] = {
             "geometry": "uniformly scaled from Figure 12.6 Q1 native vectors",
             "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
             "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon, overlapped 1.2 logical units inside its fill to suppress raster seams, and the arrow is rendered last",
+            "arrowCalibration": "shared Figure 12.6 triangle template enlarged 1.18x from direct-PDF arrow ink measurement",
         },
     },
     "diode": {

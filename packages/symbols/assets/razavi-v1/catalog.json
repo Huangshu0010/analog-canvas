@@ -231,7 +231,7 @@
       "palette": true,
       "automaticMappings": ["spice:Q:npn", "pdk:model-type:npn"],
       "assetPath": "npn.symbol.json",
-      "assetHash": "820e3bd3f13cb9d0b8323facb82f1d113af41e25dda4d9212fa7340e02866c32",
+      "assetHash": "c7330d7e9a9d69801f37584377b4d39bb6f7c28eb830dc15020c26dcee1dba7f",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -324,7 +324,7 @@
       "palette": true,
       "automaticMappings": ["spice:Q:pnp", "pdk:model-type:pnp"],
       "assetPath": "pnp.symbol.json",
-      "assetHash": "214838641fd786976d6a368f1543195c9df46d1a096e7ee45cb8e4e602818990",
+      "assetHash": "8d9d61bde7cb0cf92a10ec86b37272ee7b76be0d69da9516e2edd1e1e29c1266",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

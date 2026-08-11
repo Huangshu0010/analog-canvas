@@ -499,74 +499,37 @@ describe("Razavi symbol catalog", () => {
       { name: "B", at: { x: -40, y: 0 }, direction: "west" },
       { name: "E", at: { x: 0, y: 30 }, direction: "south" },
     ]);
-    expect(npn.primitives.at(-1)).toEqual(
-      expect.objectContaining({
-        kind: "polygon",
-        points: [
-          { x: -6.654393, y: 8.319107 },
-          { x: -9.98159, y: 14.971269 },
-          { x: 0, y: 14.971269 },
-        ],
-        fill: "foreground",
-        stroke: "none",
-      }),
-    );
-    expect(npn.primitives).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "polyline",
-          points: [
-            { x: -19.96318, y: -6.654393 },
-            { x: 0, y: -14.973501 },
-            { x: 0, y: -30 },
-          ],
-        }),
-        expect.objectContaining({
-          kind: "line",
-          from: { x: -19.96318, y: 6.656625 },
-          to: { x: -7.152963, y: 11.992067 },
-        }),
-        expect.objectContaining({
-          kind: "polyline",
-          points: [
-            { x: -1.107758, y: 14.509889 },
-            { x: 0, y: 14.971269 },
-            { x: 0, y: 30 },
-          ],
-        }),
-      ]),
-    );
-
     const pnp = requireRazaviCatalogSymbol("pnp");
     expect(pnp.pins).toMatchObject([
       { name: "C", at: { x: 0, y: 30 }, direction: "south" },
       { name: "B", at: { x: -40, y: 0 }, direction: "west" },
       { name: "E", at: { x: 0, y: -30 }, direction: "north" },
     ]);
-    expect(pnp.primitives.at(-1)).toEqual(
-      expect.objectContaining({
-        kind: "polygon",
-        points: [
-          { x: -13.31325, y: -13.315481 },
-          { x: -9.98159, y: -6.661088 },
-          { x: -19.96318, y: -6.654393 },
-        ],
-        fill: "foreground",
-        stroke: "none",
-      }),
+    const arrowPoints = (symbol: typeof npn) => {
+      const arrow = symbol.primitives.at(-1);
+      if (arrow?.kind !== "polygon") throw new Error("missing BJT arrow");
+      expect(arrow).toMatchObject({ fill: "foreground", stroke: "none" });
+      return arrow.points;
+    };
+    const npnArrow = arrowPoints(npn);
+    const pnpArrow = arrowPoints(pnp);
+    const squaredDistancesFromTip = (
+      points: typeof npnArrow,
+    ) =>
+      points
+        .slice(0, -1)
+        .map((point) => {
+          const tip = points.at(-1)!;
+          return Math.round(
+            ((point.x - tip.x) ** 2 + (point.y - tip.y) ** 2) * 1_000_000,
+          ) / 1_000_000;
+        })
+        .sort((left, right) => left - right);
+    expect(squaredDistancesFromTip(pnpArrow)).toEqual(
+      squaredDistancesFromTip(npnArrow),
     );
-    expect(pnp.primitives).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "polyline",
-          points: [
-            { x: -11.64742, y: -9.988285 },
-            { x: 0, y: -14.973501 },
-            { x: 0, y: -30 },
-          ],
-        }),
-      ]),
-    );
+    expect(npnArrow.at(-1)).toEqual({ x: 0, y: 14.971269 });
+    expect(pnpArrow.at(-1)).toEqual({ x: -19.96318, y: -6.654393 });
     expect(
       pnp.primitives.some(
         (primitive) =>
