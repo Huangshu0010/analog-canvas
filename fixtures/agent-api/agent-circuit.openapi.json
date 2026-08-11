@@ -809,6 +809,53 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
+                                  "const": "patch_instance_properties"
+                                },
+                                "instanceId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "set": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "unset": {
+                                  "maxItems": 64,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "instanceId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
                                   "const": "place_port"
                                 },
                                 "portId": {
@@ -64973,6 +65020,53 @@
                                 "kind",
                                 "instanceId",
                                 "mirror"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "patch_instance_properties"
+                                },
+                                "instanceId": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
+                                },
+                                "set": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "unset": {
+                                  "maxItems": 64,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "instanceId"
                               ],
                               "additionalProperties": false
                             },

@@ -20,6 +20,8 @@ describe("InsertComponentDialog", () => {
     expect(markup).toContain('aria-label="Component choices"');
     expect(markup).toContain('data-testid="insert-component-nmos"');
     expect(markup).toContain('class="insert-symbol-artwork"');
+    expect(markup).toContain('aria-label="Component value"');
+    expect(markup).toContain("Value (optional)");
     expect(markup).not.toContain("library-component-");
   });
 

@@ -3,6 +3,7 @@ import {
   DraftingObjectSchema,
   GuideSchema,
   InstanceSchema,
+  InstancePropertyValueSchema,
   JunctionRoleSchema,
   JunctionSchema,
   LayoutConstraintSchema,
@@ -89,6 +90,12 @@ export const MirrorInstanceEditSchema = z.strictObject({
   kind: z.literal("mirror_instance"),
   instanceId: StableIdSchema,
   mirror: MirrorSchema,
+});
+export const PatchInstancePropertiesEditSchema = z.strictObject({
+  kind: z.literal("patch_instance_properties"),
+  instanceId: StableIdSchema,
+  set: z.record(z.string().min(1), InstancePropertyValueSchema).optional(),
+  unset: z.array(z.string().min(1)).max(64).optional(),
 });
 export const PlacePortEditSchema = z.strictObject({
   kind: z.literal("place_port"),
@@ -252,6 +259,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MoveInstanceEditSchema,
   RotateInstanceEditSchema,
   MirrorInstanceEditSchema,
+  PatchInstancePropertiesEditSchema,
   PlacePortEditSchema,
   MovePortEditSchema,
   SetRoutePointsEditSchema,
@@ -1967,6 +1975,72 @@ export function executeTransaction(
           )) {
             changedObjectIds.add(routeId);
           }
+        }
+        changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "patch_instance_properties": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
+          );
+        }
+        const set = edit.set ?? {};
+        const unset = edit.unset ?? [];
+        if (Object.keys(set).length === 0 && unset.length === 0) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Property patch must set or unset at least one property",
+            [],
+            [edit.instanceId],
+          );
+        }
+        const duplicateUnset = new Set(unset);
+        if (duplicateUnset.size !== unset.length) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Property patch cannot unset the same property more than once",
+            [],
+            [edit.instanceId],
+          );
+        }
+        const conflictingKey = Object.keys(set).find((key) =>
+          duplicateUnset.has(key),
+        );
+        if (conflictingKey) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Property patch cannot set and unset ${conflictingKey}`,
+            [],
+            [edit.instanceId],
+          );
+        }
+        let changed = false;
+        for (const [key, value] of Object.entries(set)) {
+          if (instance.properties[key] !== value) {
+            instance.properties[key] = value;
+            changed = true;
+          }
+        }
+        for (const key of unset) {
+          if (key in instance.properties) {
+            delete instance.properties[key];
+            changed = true;
+          }
+        }
+        if (!changed) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Property patch does not change the instance",
+            [],
+            [edit.instanceId],
+          );
         }
         changedObjectIds.add(edit.instanceId);
         break;

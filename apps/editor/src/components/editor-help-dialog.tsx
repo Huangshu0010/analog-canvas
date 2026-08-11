@@ -76,7 +76,7 @@ export function EditorHelpDialog({
             <h3>View and drawing tools</h3>
             <p>
               With the pointer over the canvas, use the mouse wheel to zoom and
-              middle-drag to pan; <kbd>F</kbd> fits the circuit in view. Draw
+              middle-drag to pan; <kbd>Home</kbd> fits the circuit in view. Draw
               also contains Wire, Text, Arrow, Construction line, and Rectangle.
               With no rotatable selection, <kbd>R</kbd> starts Rectangle; with a
               component or drawing selected it rotates clockwise.{" "}
@@ -110,8 +110,10 @@ export function EditorHelpDialog({
               <div>
                 <dt>Tools and view</dt>
                 <dd>
-                  <kbd>W</kbd> wire; <kbd>T</kbd> text; <kbd>A</kbd> arrow;
-                  <kbd>L</kbd> construction line; <kbd>G</kbd> guide;
+                  <kbd>W</kbd> wire; <kbd>L</kbd> edits a selected Net Label;
+                  <kbd>T</kbd> text; <kbd>A</kbd> arrow; <kbd>P</kbd>
+                  construction line; <kbd>Q</kbd> Properties; <kbd>G</kbd>{" "}
+                  guide;
                   <kbd>Home</kbd> fit view; <kbd>X</kbd> reverses a selected
                   current arrow.
                 </dd>

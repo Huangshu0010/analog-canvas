@@ -80,6 +80,7 @@ describe("Agent Circuit API v1 service", () => {
         operations: ["capabilities", "query", "transact", "render"],
         editKinds: expect.arrayContaining([
           "add_instance",
+          "patch_instance_properties",
           "connect_endpoints",
           "cut_connection",
           "merge_nets",
@@ -232,6 +233,38 @@ describe("Agent Circuit API v1 service", () => {
     expect(direct.ok).toBe(true);
     expect(fixture.getDocument()).toEqual(direct.document);
     expect(fixture.getDocument().sourceStatus).toBe("connectivity-modified");
+  });
+
+  it("applies an instance property patch through the same presentation boundary", () => {
+    const fixture = serviceFixture();
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "property-patch",
+      operation: "transact",
+      documentId: "document-differential-stage",
+      transactionId: "property-patch",
+      expectedRevision: 0,
+      edits: [
+        {
+          kind: "patch_instance_properties",
+          instanceId: "M1",
+          set: { value: "12u" },
+        },
+      ],
+    });
+
+    expect(response).toMatchObject({
+      ok: true,
+      revision: 1,
+      diff: {
+        editKinds: ["patch_instance_properties"],
+        changedObjectIds: ["M1"],
+      },
+    });
+    expect(
+      fixture.getDocument().instances.find((item) => item.id === "M1")
+        ?.properties,
+    ).toMatchObject({ value: "12u" });
   });
 
   it("keeps symbol remapping and port placement identical to direct Edit Engine execution", () => {

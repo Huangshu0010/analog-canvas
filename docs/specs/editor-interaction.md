@@ -59,7 +59,7 @@ the information architecture is normative:
 | File  | Open, Save, Import, Export, and recent/example documents              |
 | Edit  | Undo, Redo, Copy, Paste, Delete, and contextual Align                 |
 | Draw  | Insert Component; Wire, Text, Arrow, Construction line, and Rectangle |
-| More  | Guides and shortcut reference; diagnostics remain in Inspector        |
+| More  | Guides and shortcut reference; diagnostics remain in Import Review    |
 
 The following are not permanent production toolbar modes:
 
@@ -168,6 +168,9 @@ component or short Route drag.
 | `Shift+R`                  | Rotate the selected placeable objects by -90 degrees.                              |
 | `F` / `Shift+F`            | Flip selected instances left/right or top/bottom in screen space.                  |
 | `W`                        | Enter or continue Wire mode.                                                       |
+| `L`                        | Edit/create the selected Route's electrical Net Label.                             |
+| `P`                        | Enter Construction line mode.                                                      |
+| `Q`                        | Open Properties for the selected object and focus its primary editor.              |
 | `Escape`                   | Cancel the active gesture, then return to Pointer mode.                            |
 | `Delete` / `Backspace`     | Delete the selected object after applying the selection-specific semantic command. |
 | `U` / `Shift+U`            | Undo / redo one committed transaction.                                             |
@@ -253,11 +256,11 @@ second mirror enum, a new stored field, or an Agent API operation.
 - Component selection is transient in the `I` insertion dialog. No permanent
   component library consumes canvas width or duplicates the Draw command
   surface.
-- Object inspection lives in a floating left `Inspect` shelf. It is collapsed
+- Object properties live in a floating left `Properties` shelf. It is collapsed
   by default, expands only after an explicit user action, overlays rather than
   resizes the canvas, and scrolls internally when its details overflow.
 - In-place rich-text editing is unchanged: double-clicking editable text on the
-  canvas opens the existing canvas RichText editor. The `Inspect` tab does not
+  canvas opens the existing canvas RichText editor. The `Properties` shelf does not
   replace in-place text editing.
 
 ### Contextual manipulation

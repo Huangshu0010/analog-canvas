@@ -63,6 +63,7 @@ import {
   ComponentPlacementPreview,
   InsertComponentDialog,
 } from "../features/component-insert/insert-component-dialog";
+import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
 import { useDocumentController } from "../document/document-controller";
 import {
@@ -518,6 +519,7 @@ export function App({ project: initialProject }: AppProps) {
   const [importDiagnostics, setImportDiagnostics] = useState<SpiceDiagnostic[]>(
     [],
   );
+  const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [routeStretchPreview, setRouteStretchPreview] =
@@ -531,6 +533,7 @@ export function App({ project: initialProject }: AppProps) {
     state: interactionState,
     tool,
     pendingSymbolId,
+    pendingComponentValue,
     wireSource,
     wirePreviewPoint,
     wireWaypoints,
@@ -569,6 +572,14 @@ export function App({ project: initialProject }: AppProps) {
     null,
   );
   const [netLabelDraft, setNetLabelDraft] = useState("");
+  const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
+  const [instancePropertyDraft, setInstancePropertyDraft] = useState<{
+    instanceId: string | null;
+    value: string;
+    x: string;
+    y: string;
+    rotation: "0" | "90" | "180" | "270";
+  }>({ instanceId: null, value: "", x: "", y: "", rotation: "0" });
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
@@ -580,6 +591,10 @@ export function App({ project: initialProject }: AppProps) {
   const pasteCounter = useRef(0);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const selectionShelfRef = useRef<HTMLButtonElement>(null);
+  const instanceValueInputRef = useRef<HTMLInputElement>(null);
+  const netLabelPropertyInputRef = useRef<HTMLInputElement>(null);
+  const netLabelEditorInputRef = useRef<HTMLInputElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const helpCloseRef = useRef<HTMLButtonElement>(null);
   const documentViewBoxes = useRef(new Map<string, Rect>());
@@ -921,6 +936,7 @@ export function App({ project: initialProject }: AppProps) {
   useEffect(() => {
     if (!selectedRoute) {
       setNetLabelDraft("");
+      setNetLabelEditorOpen(false);
       return;
     }
     const net = document.nets.find(
@@ -928,6 +944,53 @@ export function App({ project: initialProject }: AppProps) {
     );
     setNetLabelDraft(net?.name ?? "");
   }, [document.nets, selectedRoute]);
+
+  useEffect(() => {
+    if (!selectedInstance) {
+      setInstancePropertyDraft({
+        instanceId: null,
+        value: "",
+        x: "",
+        y: "",
+        rotation: "0",
+      });
+      return;
+    }
+    const explicitValue = selectedInstance.properties.value;
+    const sourceValue = selectedInstance.properties["spice.param.value"];
+    const value =
+      typeof explicitValue === "string"
+        ? explicitValue
+        : typeof sourceValue === "string"
+          ? sourceValue
+          : "";
+    setInstancePropertyDraft({
+      instanceId: selectedInstance.id,
+      value,
+      x: selectedInstance.placement
+        ? String(selectedInstance.placement.position.x)
+        : "",
+      y: selectedInstance.placement
+        ? String(selectedInstance.placement.position.y)
+        : "",
+      rotation: String(selectedInstance.placement?.rotation ?? 0) as
+        "0" | "90" | "180" | "270",
+    });
+  }, [selectedInstance]);
+
+  function openProperties(): void {
+    setImportReviewOpen(false);
+    setSelectionOpen(true);
+    requestAnimationFrame(() => {
+      if (selectedRoute) {
+        netLabelPropertyInputRef.current?.focus();
+      } else if (selectedInstance) {
+        instanceValueInputRef.current?.focus();
+      } else {
+        selectionShelfRef.current?.focus();
+      }
+    });
+  }
 
   function resetInteractionState(): void {
     resetSelection();
@@ -1102,9 +1165,9 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function beginInsertedComponentPlacement(
-    symbolId: string,
-    symbolName: string,
+    request: ComponentInsertRequest,
   ): void {
+    const { symbolId, symbolName, value } = request;
     const nextRecent = [
       symbolId,
       ...recentSymbolIds.filter((candidate) => candidate !== symbolId),
@@ -1122,7 +1185,7 @@ export function App({ project: initialProject }: AppProps) {
     setInsertDialogOpen(false);
     setComponentPlacementRotation(0);
     setComponentPreviewPoint(null);
-    beginComponentPlacement(symbolId);
+    beginComponentPlacement(symbolId, value);
     setStatus(`Place ${symbolName} on the canvas · R rotates · Esc cancels`);
   }
 
@@ -2074,7 +2137,11 @@ export function App({ project: initialProject }: AppProps) {
     selectOnly("instance", [instanceId]);
   }
 
-  function placeNewComponent(symbolId: string, position: Point): void {
+  function placeNewComponent(
+    symbolId: string,
+    position: Point,
+    value: string | null,
+  ): void {
     instanceCounter.current += 1;
     const prefix: Record<string, string> = {
       resistor: "R",
@@ -2103,7 +2170,7 @@ export function App({ project: initialProject }: AppProps) {
         rotation: componentPlacementRotation,
         mirror: "none" as const,
       },
-      properties: {},
+      properties: value === null ? {} : { value },
     };
     // New authoring never relies on the renderer-only default label. The
     // explicit annotation is the one editable text object for all ordinary
@@ -2553,6 +2620,7 @@ export function App({ project: initialProject }: AppProps) {
       )!;
       replaceActiveProject(opened);
       setImportDiagnostics([]);
+      setImportReviewOpen(false);
       clearRecovery();
       setStatus(`Opened ${file.name} at revision ${openedDocument.revision}`);
     } catch (error) {
@@ -3162,6 +3230,108 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
+  function applyInstanceProperties(): void {
+    if (
+      !selectedInstance ||
+      instancePropertyDraft.instanceId !== selectedInstance.id
+    ) {
+      return;
+    }
+    const edits: SchematicEdit[] = [];
+    const value = instancePropertyDraft.value.trim();
+    const storedValue = selectedInstance.properties.value;
+    if (value === "" && storedValue !== undefined) {
+      edits.push({
+        kind: "patch_instance_properties",
+        instanceId: selectedInstance.id,
+        unset: ["value"],
+      });
+    } else if (value !== "" && storedValue !== value) {
+      edits.push({
+        kind: "patch_instance_properties",
+        instanceId: selectedInstance.id,
+        set: { value },
+      });
+    }
+
+    if (selectedInstance.placement) {
+      const x = Number(instancePropertyDraft.x);
+      const y = Number(instancePropertyDraft.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        setStatus("Position must contain finite X and Y coordinates");
+        return;
+      }
+      const position = {
+        x: snapCoordinate(x, document.presentation.grid),
+        y: snapCoordinate(y, document.presentation.grid),
+      };
+      if (
+        position.x !== selectedInstance.placement.position.x ||
+        position.y !== selectedInstance.placement.position.y
+      ) {
+        edits.push({
+          kind: "move_instance",
+          instanceId: selectedInstance.id,
+          position,
+        });
+      }
+      const rotation = Number(instancePropertyDraft.rotation) as
+        0 | 90 | 180 | 270;
+      if (rotation !== selectedInstance.placement.rotation) {
+        edits.push({
+          kind: "rotate_instance",
+          instanceId: selectedInstance.id,
+          rotation,
+        });
+      }
+    }
+
+    if (edits.length === 0) {
+      setStatus("Component properties are unchanged");
+      return;
+    }
+    const result = transact(edits);
+    if (result.ok) setStatus(`Updated properties for ${selectedInstance.id}`);
+  }
+
+  function discardInstancePropertyDraft(): void {
+    if (!selectedInstance) return;
+    const explicitValue = selectedInstance.properties.value;
+    const sourceValue = selectedInstance.properties["spice.param.value"];
+    setInstancePropertyDraft({
+      instanceId: selectedInstance.id,
+      value:
+        typeof explicitValue === "string"
+          ? explicitValue
+          : typeof sourceValue === "string"
+            ? sourceValue
+            : "",
+      x: selectedInstance.placement
+        ? String(selectedInstance.placement.position.x)
+        : "",
+      y: selectedInstance.placement
+        ? String(selectedInstance.placement.position.y)
+        : "",
+      rotation: String(selectedInstance.placement?.rotation ?? 0) as
+        "0" | "90" | "180" | "270",
+    });
+    setStatus(`Discarded property edits for ${selectedInstance.id}`);
+  }
+
+  function beginNetLabelEditing(): void {
+    if (!selectedRoute || wireSource) {
+      setStatus("Select a wire segment before adding a Net Label");
+      return;
+    }
+    setNetLabelEditorOpen(true);
+    requestAnimationFrame(() => netLabelEditorInputRef.current?.focus());
+  }
+
+  function commitNetLabelEditing(): void {
+    applyNetLabel();
+    setNetLabelEditorOpen(false);
+  }
+
   function beginAnnotationTextEditing(annotation: Annotation): void {
     selectOnly("annotation", [annotation.id]);
     setTextEditing(
@@ -3528,6 +3698,8 @@ export function App({ project: initialProject }: AppProps) {
       );
       replaceActiveProject(result.project);
       stageRecovery(result.project);
+      setImportReviewOpen(true);
+      setSelectionOpen(true);
       setStatus(
         `Imported ${result.project.documents.length} Documents and ${instanceCount} Razavi-supported instances`,
       );
@@ -3642,7 +3814,7 @@ export function App({ project: initialProject }: AppProps) {
       event.currentTarget,
     );
     if (pendingSymbolId) {
-      placeNewComponent(pendingSymbolId, point);
+      placeNewComponent(pendingSymbolId, point, pendingComponentValue);
       return;
     }
     if (tool === "wire") return;
@@ -4388,6 +4560,9 @@ export function App({ project: initialProject }: AppProps) {
         ),
         hasRotatableSelection,
         hasDraftingSelection: Boolean(selectedDrafting),
+        hasInspectableSelection,
+        hasRouteSelection: Boolean(selectedRoute),
+        wireSessionActive: Boolean(wireSource),
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
         draftingReadyToFinish:
           (tool === "arrow" ||
@@ -4465,6 +4640,18 @@ export function App({ project: initialProject }: AppProps) {
           return;
         case "add-text":
           addPlainText();
+          return;
+        case "open-properties":
+          openProperties();
+          return;
+        case "property-selection-required":
+          setStatus("Select an object before opening Properties");
+          return;
+        case "edit-net-label":
+          beginNetLabelEditing();
+          return;
+        case "net-label-selection-required":
+          setStatus("Select a wire segment before adding a Net Label");
           return;
         case "mirror":
           mirrorSelected(shortcut.direction);
@@ -4659,7 +4846,7 @@ export function App({ project: initialProject }: AppProps) {
                 onClick={() => activateTool("construction-line")}
               >
                 <ToolIcon name="line" />
-                Construction line (L)
+                Construction line (P)
               </button>
               <button
                 type="button"
@@ -4839,6 +5026,37 @@ export function App({ project: initialProject }: AppProps) {
         <p className="editor-status" data-testid="status" aria-live="polite">
           {status}
         </p>
+        <div data-testid="editor-test-telemetry" hidden>
+          <output data-testid="selected-internal-route-count">
+            {internalSelection.routeIds.length}
+          </output>
+          <output data-testid="revision">{document.revision}</output>
+          <output data-testid="source-status">{document.sourceStatus}</output>
+          <output data-testid="document-count">
+            {project.documents.length}
+          </output>
+          <output data-testid="active-document-id">{document.id}</output>
+          <output data-testid="active-instance-count">
+            {document.instances.length}
+          </output>
+          <output data-testid="instance-count">{projectInstanceCount}</output>
+          <output data-testid="net-count">{document.nets.length}</output>
+          <output data-testid="active-tool">{tool}</output>
+          <output data-testid="flightline-count">{flightlines.length}</output>
+          <output data-testid="crossing-count">{crossings.length}</output>
+          <output data-testid="annotation-count">
+            {document.annotations.length}
+          </output>
+          <output data-testid="structural-diagnostic-count">
+            {visualDiagnosticSummary.structural.length}
+          </output>
+          <output data-testid="visual-diagnostic-count">
+            {visualDiagnosticSummary.observations.length}
+          </output>
+          <output data-testid="blocking-diagnostic-count">
+            {visualDiagnosticSummary.blockingCount}
+          </output>
+        </div>
       </header>
       {helpOpen ? (
         <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
@@ -4852,20 +5070,24 @@ export function App({ project: initialProject }: AppProps) {
       />
       <aside
         className={selectionOpen ? "selection-dock open" : "selection-dock"}
-        aria-label="Selection inspector"
+        aria-label="Properties"
         role="complementary"
       >
         <section className="selection-shelf" aria-label="Selection">
           <button
             type="button"
+            ref={selectionShelfRef}
             className="selection-shelf-header"
             data-testid="selection-shelf"
             aria-expanded={selectionOpen}
-            onClick={() => setSelectionOpen((current) => !current)}
+            onClick={() => {
+              setSelectionOpen((current) => !current);
+              if (selectionOpen) setImportReviewOpen(false);
+            }}
           >
             <span className="selection-shelf-title">
               <ToolIcon name="inspect" />
-              <span>Inspect</span>
+              <span>Properties</span>
             </span>
             <span className="selection-shelf-summary">
               {selectedIds.length > 0
@@ -4910,6 +5132,111 @@ export function App({ project: initialProject }: AppProps) {
                 </dl>
               </section>
             ) : null}
+            {selectedInstance ? (
+              <section
+                className="context-actions"
+                aria-label="Component properties"
+              >
+                <h2>Component properties</h2>
+                <label>
+                  Value
+                  <input
+                    ref={instanceValueInputRef}
+                    aria-label="Component value"
+                    value={instancePropertyDraft.value}
+                    onChange={(event) => {
+                      const value = event.currentTarget.value;
+                      setInstancePropertyDraft((current) => ({
+                        ...current,
+                        value,
+                      }));
+                    }}
+                  />
+                </label>
+                {typeof selectedInstance.properties["spice.target"] ===
+                "string" ? (
+                  <p className="property-source-fact">
+                    Model: {selectedInstance.properties["spice.target"]}
+                  </p>
+                ) : null}
+                {selectedInstance.placement ? (
+                  <>
+                    <label>
+                      X
+                      <input
+                        aria-label="Component X position"
+                        inputMode="decimal"
+                        value={instancePropertyDraft.x}
+                        onChange={(event) => {
+                          const x = event.currentTarget.value;
+                          setInstancePropertyDraft((current) => ({
+                            ...current,
+                            x,
+                          }));
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Y
+                      <input
+                        aria-label="Component Y position"
+                        inputMode="decimal"
+                        value={instancePropertyDraft.y}
+                        onChange={(event) => {
+                          const y = event.currentTarget.value;
+                          setInstancePropertyDraft((current) => ({
+                            ...current,
+                            y,
+                          }));
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Rotation
+                      <select
+                        aria-label="Component rotation"
+                        value={instancePropertyDraft.rotation}
+                        onChange={(event) => {
+                          const rotation = event.currentTarget.value as
+                            "0" | "90" | "180" | "270";
+                          setInstancePropertyDraft((current) => ({
+                            ...current,
+                            rotation,
+                          }));
+                        }}
+                      >
+                        <option value="0">0°</option>
+                        <option value="90">90°</option>
+                        <option value="180">180°</option>
+                        <option value="270">270°</option>
+                      </select>
+                    </label>
+                  </>
+                ) : null}
+                <button type="button" onClick={applyInstanceProperties}>
+                  Apply component properties
+                </button>
+                <button type="button" onClick={discardInstancePropertyDraft}>
+                  Cancel property edits
+                </button>
+                {selectedInstance.placement ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => mirrorSelected("left-right")}
+                    >
+                      Mirror horizontal (F)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mirrorSelected("top-bottom")}
+                    >
+                      Mirror vertical (Shift+F)
+                    </button>
+                  </>
+                ) : null}
+              </section>
+            ) : null}
             {selectedRoute ? (
               <section className="selection-overview">
                 <span>Electrical route</span>
@@ -4949,6 +5276,288 @@ export function App({ project: initialProject }: AppProps) {
                 </dl>
               </section>
             ) : null}
+            {selectedDrafting
+              ? (() => {
+                  const geometry = resolveDraftingObjectGeometry(
+                    document,
+                    resolver,
+                    selectedDrafting,
+                  );
+                  if (
+                    geometry.kind !== "arrow" &&
+                    geometry.kind !== "construction-line" &&
+                    geometry.kind !== "rectangle"
+                  ) {
+                    return null;
+                  }
+                  const lineStyle =
+                    selectedDrafting.styleOverride?.lineStyle ??
+                    (selectedDrafting.kind === "construction-line" ||
+                    selectedDrafting.kind === "rectangle"
+                      ? selectedDrafting.lineStyle
+                      : "solid");
+                  const isRectangle = geometry.kind === "rectangle";
+                  const points = isRectangle
+                    ? geometry.corners
+                    : geometry.points;
+                  const curveControls = isRectangle
+                    ? points.slice(0, -1).map(() => null)
+                    : geometry.curveControls;
+                  const segmentIndex =
+                    draftingInspectorSegment?.objectId === selectedDrafting.id
+                      ? draftingInspectorSegment.index
+                      : Math.max(0, curveControls.findIndex(Boolean));
+                  const tangentAngle = isRectangle
+                    ? 0
+                    : quadraticTangentAngle(
+                        points[segmentIndex]!,
+                        curveControls[segmentIndex] ?? null,
+                        points[segmentIndex + 1]!,
+                      );
+                  const tangentInputKey = `${selectedDrafting.id}:${segmentIndex}`;
+                  const realizedAngleText = String(
+                    Math.round(tangentAngle * 10) / 10,
+                  );
+                  const tangentInputValue =
+                    draftingTangentInput?.key === tangentInputKey
+                      ? draftingTangentInput.value
+                      : realizedAngleText;
+                  const bearing = isRectangle
+                    ? geometry.rotation
+                    : normalizedBearing(points[0]!, points[1]!);
+                  const realizedBearingText = String(
+                    Math.round(bearing * 10) / 10,
+                  );
+                  const bearingInputValue =
+                    draftingBearingInput?.objectId === selectedDrafting.id
+                      ? draftingBearingInput.value
+                      : realizedBearingText;
+                  return (
+                    <section
+                      className="context-actions drawing-properties"
+                      aria-label="Drawing style"
+                      data-testid="drafting-properties"
+                    >
+                      <h2>Drawing style</h2>
+                      <label>
+                        Line style
+                        <select
+                          aria-label="Line style"
+                          value={lineStyle}
+                          disabled={selectedDrafting.locked}
+                          onChange={(event) =>
+                            setDraftingStyle({
+                              lineStyle: event.currentTarget.value as
+                                "solid" | "dashed" | "dotted",
+                            })
+                          }
+                        >
+                          <option value="solid">Solid</option>
+                          <option value="dashed">Dashed</option>
+                          <option value="dotted">Dotted</option>
+                        </select>
+                      </label>
+                      <label>
+                        Stroke width
+                        <select
+                          aria-label="Stroke width"
+                          value={String(
+                            selectedDrafting.styleOverride?.strokeScale ?? 1,
+                          )}
+                          disabled={selectedDrafting.locked}
+                          onChange={(event) =>
+                            setDraftingStyle({
+                              strokeScale: Number(event.currentTarget.value) as
+                                0.75 | 1 | 1.5 | 2,
+                            })
+                          }
+                        >
+                          <option value="0.75">0.75×</option>
+                          <option value="1">1×</option>
+                          <option value="1.5">1.5×</option>
+                          <option value="2">2×</option>
+                        </select>
+                      </label>
+                      {selectedDrafting.kind === "construction-line" &&
+                      points.length > 2 ? (
+                        <label>
+                          Curve segment
+                          <select
+                            aria-label="Curve segment"
+                            value={String(segmentIndex)}
+                            disabled={selectedDrafting.locked}
+                            onChange={(event) => {
+                              setDraftingInspectorSegment({
+                                objectId: selectedDrafting.id,
+                                index: Number(event.currentTarget.value),
+                              });
+                              setDraftingTangentInput(null);
+                            }}
+                          >
+                            {points.slice(0, -1).map((_, index) => (
+                              <option key={index} value={index}>
+                                Segment {index + 1}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                      {!isRectangle ? (
+                        <label>
+                          Tangent angle (°)
+                          <input
+                            aria-label="Tangent angle"
+                            type="number"
+                            min="0"
+                            max="170"
+                            step="1"
+                            value={tangentInputValue}
+                            disabled={selectedDrafting.locked}
+                            placeholder={realizedAngleText}
+                            onFocus={() => {
+                              setDraftingTangentInput({
+                                key: tangentInputKey,
+                                value: "",
+                              });
+                            }}
+                            onChange={(event) => {
+                              const value = event.currentTarget.value;
+                              setDraftingTangentInput({
+                                key: tangentInputKey,
+                                value,
+                              });
+                              const angle = Number(value);
+                              if (value !== "" && Number.isFinite(angle)) {
+                                setDraftingTangentAngle(angle);
+                              }
+                            }}
+                            onBlur={() => setDraftingTangentInput(null)}
+                          />
+                        </label>
+                      ) : null}
+                      <label>
+                        Bearing (°)
+                        <input
+                          aria-label="Drawing bearing"
+                          type="number"
+                          min="0"
+                          max="359"
+                          step="1"
+                          value={bearingInputValue}
+                          disabled={selectedDrafting.locked}
+                          placeholder={realizedBearingText}
+                          onFocus={() =>
+                            setDraftingBearingInput({
+                              objectId: selectedDrafting.id,
+                              value: "",
+                            })
+                          }
+                          onChange={(event) => {
+                            const value = event.currentTarget.value;
+                            setDraftingBearingInput({
+                              objectId: selectedDrafting.id,
+                              value,
+                            });
+                            const bearing = Number(value);
+                            if (value !== "" && Number.isFinite(bearing)) {
+                              setDraftingBearing(bearing);
+                            }
+                          }}
+                          onBlur={() => setDraftingBearingInput(null)}
+                        />
+                      </label>
+                      {selectedDrafting.kind === "arrow" ? (
+                        <>
+                          <label>
+                            Arrow head
+                            <select
+                              aria-label="Arrow head"
+                              value={
+                                selectedDrafting.styleOverride?.arrowHead ??
+                                "filled"
+                              }
+                              disabled={selectedDrafting.locked}
+                              onChange={(event) =>
+                                setDraftingStyle({
+                                  arrowHead: event.currentTarget.value as
+                                    "none" | "filled" | "open",
+                                })
+                              }
+                            >
+                              <option value="none">No head</option>
+                              <option value="filled">Filled</option>
+                              <option value="open">Open</option>
+                            </select>
+                          </label>
+                          <label>
+                            Arrow head size
+                            <select
+                              aria-label="Arrow head size"
+                              value={String(
+                                selectedDrafting.styleOverride
+                                  ?.arrowHeadScale ?? 1,
+                              )}
+                              disabled={selectedDrafting.locked}
+                              onChange={(event) =>
+                                setDraftingStyle({
+                                  arrowHeadScale: Number(
+                                    event.currentTarget.value,
+                                  ) as 0.75 | 1 | 1.25 | 1.5,
+                                })
+                              }
+                            >
+                              <option value="0.75">0.75×</option>
+                              <option value="1">1×</option>
+                              <option value="1.25">1.25×</option>
+                              <option value="1.5">1.5×</option>
+                            </select>
+                          </label>
+                          <button
+                            type="button"
+                            disabled={selectedDrafting.locked}
+                            onClick={() => {
+                              const { from, to } = selectedDrafting;
+                              transact([
+                                {
+                                  kind: "upsert_drafting_object",
+                                  object: {
+                                    ...selectedDrafting,
+                                    from: to,
+                                    to: from,
+                                    waypoints: [
+                                      ...(selectedDrafting.waypoints ?? []),
+                                    ].reverse(),
+                                    curveControls: [
+                                      ...(selectedDrafting.curveControls ?? []),
+                                    ].reverse(),
+                                  },
+                                },
+                              ]);
+                            }}
+                          >
+                            Reverse
+                          </button>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={selectedDrafting.locked}
+                        onClick={() => rotateSelected()}
+                      >
+                        <ToolIcon name="rotate" />
+                        Rotate
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleDraftingLock(selectedDrafting)}
+                      >
+                        <ToolIcon name="lock" />
+                        {selectedDrafting.locked ? "Unlock" : "Lock"}
+                      </button>
+                    </section>
+                  );
+                })()
+              : null}
             {unplaced.length > 0 ? <h3>Unplaced Instances</h3> : null}
             {unplaced.map((instance) => (
               <button
@@ -5002,6 +5611,7 @@ export function App({ project: initialProject }: AppProps) {
                 <label>
                   Electrical Net label
                   <input
+                    ref={netLabelPropertyInputRef}
                     aria-label="Electrical Net label"
                     value={netLabelDraft}
                     onChange={(event) =>
@@ -5075,30 +5685,35 @@ export function App({ project: initialProject }: AppProps) {
                 </button>
               </section>
             ) : null}
-            <SelectionInspectorDetails
-              snapshot={{
-                selected:
-                  selectedIds.length > 0
-                    ? selectedIds.join(", ")
-                    : (selectedRouteId ?? selectedAnnotationId ?? "None"),
-                internalRouteCount: internalSelection.routeIds.length,
-                revision: document.revision,
-                sourceStatus: document.sourceStatus,
-                documentCount: project.documents.length,
-                activeDocumentId: document.id,
-                activeInstanceCount: document.instances.length,
-                projectInstanceCount,
-                netCount: document.nets.length,
-                tool,
-                flightlineCount: flightlines.length,
-                crossingCount: crossings.length,
-                annotationCount: document.annotations.length,
-                status,
-              }}
-              importDiagnostics={importDiagnostics}
-              visualSummary={visualDiagnosticSummary}
-              onSelectVisualDiagnostic={jumpToVisualDiagnostic}
-            />
+            {importReviewOpen ? (
+              <section className="import-review" aria-label="Import Review">
+                <h2>Import Review</h2>
+                <SelectionInspectorDetails
+                  snapshot={{
+                    selected:
+                      selectedIds.length > 0
+                        ? selectedIds.join(", ")
+                        : (selectedRouteId ?? selectedAnnotationId ?? "None"),
+                    internalRouteCount: internalSelection.routeIds.length,
+                    revision: document.revision,
+                    sourceStatus: document.sourceStatus,
+                    documentCount: project.documents.length,
+                    activeDocumentId: document.id,
+                    activeInstanceCount: document.instances.length,
+                    projectInstanceCount,
+                    netCount: document.nets.length,
+                    tool,
+                    flightlineCount: flightlines.length,
+                    crossingCount: crossings.length,
+                    annotationCount: document.annotations.length,
+                    status,
+                  }}
+                  importDiagnostics={importDiagnostics}
+                  visualSummary={visualDiagnosticSummary}
+                  onSelectVisualDiagnostic={jumpToVisualDiagnostic}
+                />
+              </section>
+            ) : null}
           </div>
         </section>
       </aside>
@@ -5137,7 +5752,6 @@ export function App({ project: initialProject }: AppProps) {
               (selectedDrafting.kind === "arrow" ||
                 selectedDrafting.kind === "construction-line" ||
                 selectedDrafting.kind === "rectangle") &&
-              !target.closest('[data-testid="drafting-inline-inspector"]') &&
               !target.closest(
                 `[data-testid="drafting-hit-${selectedDrafting.id}"]`,
               ) &&
@@ -5312,6 +5926,57 @@ export function App({ project: initialProject }: AppProps) {
                 rotation={componentPlacementRotation}
               />
             ) : null}
+            {netLabelEditorOpen && selectedRoute
+              ? (() => {
+                  const polyline = routePolyline(
+                    document,
+                    resolver,
+                    selectedRoute,
+                  );
+                  if (!polyline) return null;
+                  const segmentIndex = Math.min(
+                    selectedRouteSegmentIndex ?? 0,
+                    polyline.points.length - 2,
+                  );
+                  const from = polyline.points[segmentIndex]!;
+                  const to = polyline.points[segmentIndex + 1]!;
+                  const x = Math.round((from.x + to.x) / 2 - 58);
+                  const y = Math.round((from.y + to.y) / 2 - 34);
+                  return (
+                    <foreignObject
+                      data-testid="net-label-editor"
+                      x={x}
+                      y={y}
+                      width="116"
+                      height="32"
+                    >
+                      <form
+                        className="net-label-editor"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          commitNetLabelEditing();
+                        }}
+                      >
+                        <input
+                          ref={netLabelEditorInputRef}
+                          aria-label="Net Label"
+                          value={netLabelDraft}
+                          onChange={(event) =>
+                            setNetLabelDraft(event.currentTarget.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              setNetLabelEditorOpen(false);
+                            }
+                          }}
+                        />
+                      </form>
+                    </foreignObject>
+                  );
+                })()
+              : null}
             {displayedFlightlines.map((flightline) => (
               <g key={flightline.id}>
                 <line
@@ -6045,304 +6710,6 @@ export function App({ project: initialProject }: AppProps) {
                     );
                   }
                   return null;
-                })()
-              : null}
-            {selectedDrafting &&
-            (selectedDrafting.kind === "arrow" ||
-              selectedDrafting.kind === "construction-line" ||
-              selectedDrafting.kind === "rectangle")
-              ? (() => {
-                  const geometry = resolveDraftingObjectGeometry(
-                    document,
-                    resolver,
-                    selectedDrafting,
-                  );
-                  if (
-                    geometry.kind !== "arrow" &&
-                    geometry.kind !== "construction-line" &&
-                    geometry.kind !== "rectangle"
-                  ) {
-                    return null;
-                  }
-                  const inspectorWidth =
-                    selectedDrafting.kind === "arrow" ? 560 : 360;
-                  const inspectorHeight =
-                    selectedDrafting.kind === "arrow" ? 112 : 88;
-                  const inspectorX = Math.max(
-                    viewBox.x + 8,
-                    Math.min(
-                      viewBox.x + viewBox.width - inspectorWidth - 8,
-                      geometry.bounds.x + geometry.bounds.width + 12,
-                    ),
-                  );
-                  const inspectorY = Math.max(
-                    viewBox.y + 8,
-                    Math.min(
-                      viewBox.y + viewBox.height - inspectorHeight - 8,
-                      geometry.bounds.y - 4,
-                    ),
-                  );
-                  const lineStyle =
-                    selectedDrafting.styleOverride?.lineStyle ??
-                    (selectedDrafting.kind === "construction-line" ||
-                    selectedDrafting.kind === "rectangle"
-                      ? selectedDrafting.lineStyle
-                      : "solid");
-                  const isRectangle = geometry.kind === "rectangle";
-                  const geometryPoints = isRectangle
-                    ? geometry.corners
-                    : geometry.points;
-                  const curveControls = isRectangle
-                    ? geometryPoints.slice(0, -1).map(() => null)
-                    : geometry.curveControls;
-                  const segmentIndex =
-                    draftingInspectorSegment?.objectId === selectedDrafting.id
-                      ? draftingInspectorSegment.index
-                      : Math.max(0, curveControls.findIndex(Boolean));
-                  const tangentAngle = isRectangle
-                    ? 0
-                    : quadraticTangentAngle(
-                        geometryPoints[segmentIndex]!,
-                        curveControls[segmentIndex] ?? null,
-                        geometryPoints[segmentIndex + 1]!,
-                      );
-                  const tangentInputKey = `${selectedDrafting.id}:${segmentIndex}`;
-                  const realizedAngleText = String(
-                    Math.round(tangentAngle * 10) / 10,
-                  );
-                  const tangentInputValue =
-                    draftingTangentInput?.key === tangentInputKey
-                      ? draftingTangentInput.value
-                      : realizedAngleText;
-                  const bearing = isRectangle
-                    ? geometry.rotation
-                    : normalizedBearing(geometryPoints[0]!, geometryPoints[1]!);
-                  const realizedBearingText = String(
-                    Math.round(bearing * 10) / 10,
-                  );
-                  const bearingInputValue =
-                    draftingBearingInput?.objectId === selectedDrafting.id
-                      ? draftingBearingInput.value
-                      : realizedBearingText;
-                  return (
-                    <foreignObject
-                      data-testid="drafting-inline-inspector"
-                      x={inspectorX}
-                      y={inspectorY}
-                      width={inspectorWidth}
-                      height={inspectorHeight}
-                    >
-                      <div
-                        className="drafting-inline-inspector"
-                        data-drafting-kind={selectedDrafting.kind}
-                        onPointerDown={(event) => event.stopPropagation()}
-                      >
-                        <select
-                          aria-label="Inline line style"
-                          value={lineStyle}
-                          disabled={selectedDrafting.locked}
-                          onChange={(event) =>
-                            setDraftingStyle({
-                              lineStyle: event.currentTarget.value as
-                                "solid" | "dashed" | "dotted",
-                            })
-                          }
-                        >
-                          <option value="solid">Solid</option>
-                          <option value="dashed">Dashed</option>
-                          <option value="dotted">Dotted</option>
-                        </select>
-                        <select
-                          aria-label="Inline stroke width"
-                          value={String(
-                            selectedDrafting.styleOverride?.strokeScale ?? 1,
-                          )}
-                          disabled={selectedDrafting.locked}
-                          onChange={(event) =>
-                            setDraftingStyle({
-                              strokeScale: Number(event.currentTarget.value) as
-                                0.75 | 1 | 1.5 | 2,
-                            })
-                          }
-                        >
-                          <option value="0.75">0.75×</option>
-                          <option value="1">1×</option>
-                          <option value="1.5">1.5×</option>
-                          <option value="2">2×</option>
-                        </select>
-                        {selectedDrafting.kind === "construction-line" &&
-                        geometryPoints.length > 2 ? (
-                          <select
-                            aria-label="Curve segment"
-                            value={String(segmentIndex)}
-                            disabled={selectedDrafting.locked}
-                            onChange={(event) => {
-                              setDraftingInspectorSegment({
-                                objectId: selectedDrafting.id,
-                                index: Number(event.currentTarget.value),
-                              });
-                              setDraftingTangentInput(null);
-                            }}
-                          >
-                            {geometryPoints.slice(0, -1).map((_, index) => (
-                              <option key={index} value={index}>
-                                Segment {index + 1}
-                              </option>
-                            ))}
-                          </select>
-                        ) : null}
-                        {!isRectangle ? (
-                          <label className="drafting-tangent-angle">
-                            Tangent ∠
-                            <input
-                              aria-label="Tangent angle"
-                              type="number"
-                              min="0"
-                              max="170"
-                              step="1"
-                              value={tangentInputValue}
-                              disabled={selectedDrafting.locked}
-                              placeholder={realizedAngleText}
-                              onFocus={() => {
-                                setDraftingTangentInput({
-                                  key: tangentInputKey,
-                                  value: "",
-                                });
-                              }}
-                              onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                setDraftingTangentInput({
-                                  key: tangentInputKey,
-                                  value,
-                                });
-                                const angle = Number(value);
-                                if (value !== "" && Number.isFinite(angle)) {
-                                  setDraftingTangentAngle(angle);
-                                }
-                              }}
-                              onBlur={() => setDraftingTangentInput(null)}
-                            />
-                            °
-                          </label>
-                        ) : null}
-                        <label className="drafting-tangent-angle">
-                          Bearing
-                          <input
-                            aria-label="Drawing bearing"
-                            type="number"
-                            min="0"
-                            max="359"
-                            step="1"
-                            value={bearingInputValue}
-                            disabled={selectedDrafting.locked}
-                            placeholder={realizedBearingText}
-                            onFocus={() =>
-                              setDraftingBearingInput({
-                                objectId: selectedDrafting.id,
-                                value: "",
-                              })
-                            }
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              setDraftingBearingInput({
-                                objectId: selectedDrafting.id,
-                                value,
-                              });
-                              const bearing = Number(value);
-                              if (value !== "" && Number.isFinite(bearing)) {
-                                setDraftingBearing(bearing);
-                              }
-                            }}
-                            onBlur={() => setDraftingBearingInput(null)}
-                          />
-                          °
-                        </label>
-                        {selectedDrafting.kind === "arrow" ? (
-                          <>
-                            <select
-                              aria-label="Inline arrow head"
-                              value={
-                                selectedDrafting.styleOverride?.arrowHead ??
-                                "filled"
-                              }
-                              disabled={selectedDrafting.locked}
-                              onChange={(event) =>
-                                setDraftingStyle({
-                                  arrowHead: event.currentTarget.value as
-                                    "none" | "filled" | "open",
-                                })
-                              }
-                            >
-                              <option value="none">No head</option>
-                              <option value="filled">Filled</option>
-                              <option value="open">Open</option>
-                            </select>
-                            <select
-                              aria-label="Inline arrow head size"
-                              value={String(
-                                selectedDrafting.styleOverride
-                                  ?.arrowHeadScale ?? 1,
-                              )}
-                              disabled={selectedDrafting.locked}
-                              onChange={(event) =>
-                                setDraftingStyle({
-                                  arrowHeadScale: Number(
-                                    event.currentTarget.value,
-                                  ) as 0.75 | 1 | 1.25 | 1.5,
-                                })
-                              }
-                            >
-                              <option value="0.75">0.75× head</option>
-                              <option value="1">1× head</option>
-                              <option value="1.25">1.25× head</option>
-                              <option value="1.5">1.5× head</option>
-                            </select>
-                            <button
-                              type="button"
-                              disabled={selectedDrafting.locked}
-                              onClick={() => {
-                                const { from, to } = selectedDrafting;
-                                transact([
-                                  {
-                                    kind: "upsert_drafting_object",
-                                    object: {
-                                      ...selectedDrafting,
-                                      from: to,
-                                      to: from,
-                                      waypoints: [
-                                        ...(selectedDrafting.waypoints ?? []),
-                                      ].reverse(),
-                                      curveControls: [
-                                        ...(selectedDrafting.curveControls ??
-                                          []),
-                                      ].reverse(),
-                                    },
-                                  },
-                                ]);
-                              }}
-                            >
-                              Reverse
-                            </button>
-                          </>
-                        ) : null}
-                        <button
-                          type="button"
-                          disabled={selectedDrafting.locked}
-                          onClick={() => rotateSelected()}
-                        >
-                          <ToolIcon name="rotate" />
-                          Rotate
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleDraftingLock(selectedDrafting)}
-                        >
-                          <ToolIcon name="lock" />
-                          {selectedDrafting.locked ? "Unlock" : "Lock"}
-                        </button>
-                      </div>
-                    </foreignObject>
-                  );
                 })()
               : null}
             {boxPreview ? (

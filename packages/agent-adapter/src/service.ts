@@ -59,6 +59,7 @@ export const AGENT_EDIT_KINDS = [
   "move_instance",
   "rotate_instance",
   "mirror_instance",
+  "patch_instance_properties",
   "place_port",
   "move_port",
   "set_route_points",
@@ -453,6 +454,8 @@ function editCategory(
     case "move_junction":
     case "align_instances":
       return "geometry";
+    case "patch_instance_properties":
+      return "presentation";
     case "set_route_points":
     case "route_orthogonal":
     case "add_junction":

@@ -12,6 +12,9 @@ const baseContext: EditorShortcutContext = {
   hasRoutedMarkerSelection: false,
   hasRotatableSelection: false,
   hasDraftingSelection: false,
+  hasInspectableSelection: false,
+  hasRouteSelection: false,
+  wireSessionActive: false,
   wireReadyToFinish: false,
   draftingReadyToFinish: false,
   helpOpen: false,
@@ -89,9 +92,20 @@ describe("editor shortcut contract", () => {
   it("maps creation, mirror, fit, and marker commands", () => {
     expect(resolve("w")).toEqual({ kind: "activate-tool", tool: "wire" });
     expect(resolve("a")).toEqual({ kind: "activate-tool", tool: "arrow" });
-    expect(resolve("l")).toEqual({
+    expect(resolve("p")).toEqual({
       kind: "activate-tool",
       tool: "construction-line",
+    });
+    expect(resolve("l")).toEqual({ kind: "net-label-selection-required" });
+    expect(resolve("l", { hasRouteSelection: true })).toEqual({
+      kind: "edit-net-label",
+    });
+    expect(
+      resolve("l", { hasRouteSelection: true, wireSessionActive: true }),
+    ).toBeNull();
+    expect(resolve("q")).toEqual({ kind: "property-selection-required" });
+    expect(resolve("q", { hasInspectableSelection: true })).toEqual({
+      kind: "open-properties",
     });
     expect(resolve("g")).toEqual({ kind: "activate-tool", tool: "guide" });
     expect(resolve("t")).toEqual({ kind: "add-text" });

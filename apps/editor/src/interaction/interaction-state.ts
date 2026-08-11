@@ -17,7 +17,11 @@ export type DrawingTool = Extract<
 
 export type InteractionState =
   | { kind: "idle" }
-  | { kind: "placing-component"; symbolId: string }
+  | {
+      kind: "placing-component";
+      symbolId: string;
+      initialValue: string | null;
+    }
   | {
       kind: "wire";
       source: WireSource | null;
@@ -36,7 +40,7 @@ export type InteractionState =
 
 export type InteractionAction =
   | { type: "activate-tool"; tool: EditorTool }
-  | { type: "place-component"; symbolId: string }
+  | { type: "place-component"; symbolId: string; initialValue: string | null }
   | { type: "set-wire-source"; source: WireSource | null }
   | { type: "set-wire-preview"; point: Point | null }
   | { type: "set-wire-waypoints"; update: SetStateAction<Point[]> }
@@ -94,7 +98,11 @@ export function interactionReducer(
     case "activate-tool":
       return activateInteractionTool(action.tool);
     case "place-component":
-      return { kind: "placing-component", symbolId: action.symbolId };
+      return {
+        kind: "placing-component",
+        symbolId: action.symbolId,
+        initialValue: action.initialValue,
+      };
     case "set-wire-source":
       return state.kind === "wire"
         ? { ...state, source: action.source }
@@ -153,6 +161,8 @@ export function useInteractionState() {
     state,
     tool: interactionTool(state),
     pendingSymbolId: state.kind === "placing-component" ? state.symbolId : null,
+    pendingComponentValue:
+      state.kind === "placing-component" ? state.initialValue : null,
     wireSource: state.kind === "wire" ? state.source : null,
     wirePreviewPoint: state.kind === "wire" ? state.previewPoint : null,
     wireWaypoints: state.kind === "wire" ? state.waypoints : [],
@@ -161,8 +171,8 @@ export function useInteractionState() {
     draftingWaypoints: state.kind === "drawing" ? state.waypoints : [],
     draftingSnapPoint: state.kind === "drawing" ? state.snapPoint : null,
     setTool: (tool: EditorTool) => dispatch({ type: "activate-tool", tool }),
-    beginComponentPlacement: (symbolId: string) =>
-      dispatch({ type: "place-component", symbolId }),
+    beginComponentPlacement: (symbolId: string, initialValue: string | null) =>
+      dispatch({ type: "place-component", symbolId, initialValue }),
     setWireSource: (source: WireSource | null) =>
       dispatch({ type: "set-wire-source", source }),
     setWirePreviewPoint: (point: Point | null) =>

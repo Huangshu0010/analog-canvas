@@ -165,6 +165,14 @@ Capability edit kinds are the shared Edit Engine schemas. Phase 9 adds generic
 symbol/port edits only through that shared boundary; GUI and Agent must validate
 identically.
 
+`patch_instance_properties` is the single typed property edit. It accepts an
+instance ID plus a primitive `set` record and/or an `unset` key list, rejects an
+empty or self-conflicting patch atomically, and reports the instance in the
+resulting diff. The API does not grow per-field operations such as `set_value`
+or `set_w`. A property-only edit follows the existing non-connectivity
+source-status convention: an imported `in-sync` Document becomes
+`geometry-only-changed`; its original SPICE source facts remain present.
+
 `set_instance_symbol` accepts an explicit source-to-target `pinMap` when names
 differ and rejects missing, duplicate, or unknown target pins atomically.
 `place_port` and `move_port` expose Port geometry without changing its Net.

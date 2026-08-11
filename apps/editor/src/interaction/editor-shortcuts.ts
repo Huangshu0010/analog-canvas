@@ -15,6 +15,9 @@ export interface EditorShortcutContext {
   hasRoutedMarkerSelection: boolean;
   hasRotatableSelection: boolean;
   hasDraftingSelection: boolean;
+  hasInspectableSelection: boolean;
+  hasRouteSelection: boolean;
+  wireSessionActive: boolean;
   wireReadyToFinish: boolean;
   draftingReadyToFinish: boolean;
   helpOpen: boolean;
@@ -33,6 +36,8 @@ export type EditorShortcutIntent =
   | { kind: "rotate"; deltaDegrees: 90 | -90 }
   | { kind: "activate-tool"; tool: EditorTool }
   | { kind: "add-text" }
+  | { kind: "open-properties" | "property-selection-required" }
+  | { kind: "edit-net-label" | "net-label-selection-required" }
   | { kind: "mirror"; direction: ScreenFlip }
   | { kind: "fit-view" }
   | {
@@ -108,8 +113,18 @@ export function resolveEditorShortcut(
   if (plain && key === "a") {
     return { kind: "activate-tool", tool: "arrow" };
   }
-  if (plain && key === "l") {
+  if (plain && key === "l" && !context.wireSessionActive) {
+    return context.hasRouteSelection
+      ? { kind: "edit-net-label" }
+      : { kind: "net-label-selection-required" };
+  }
+  if (plain && key === "p") {
     return { kind: "activate-tool", tool: "construction-line" };
+  }
+  if (plain && key === "q") {
+    return context.hasInspectableSelection
+      ? { kind: "open-properties" }
+      : { kind: "property-selection-required" };
   }
   if (plain && key === "g") {
     return { kind: "activate-tool", tool: "guide" };

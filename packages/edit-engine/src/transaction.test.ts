@@ -145,6 +145,69 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("patches instance properties atomically and records a non-source edit", () => {
+    const document = documentWithInstance();
+    document.instances[0]!.properties = {
+      "spice.param.value": "10k",
+      value: "8k",
+    };
+    document.sourceStatus = "in-sync";
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "patch_instance_properties",
+          instanceId: "M1",
+          set: { value: "12k", enabled: true },
+          unset: ["spice.param.value"],
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      revision: 1,
+      diff: { changedObjectIds: ["M1"] },
+      document: {
+        sourceStatus: "geometry-only-changed",
+        instances: [
+          {
+            properties: { value: "12k", enabled: true },
+          },
+        ],
+      },
+    });
+    expect(document.instances[0]!.properties).toEqual({
+      "spice.param.value": "10k",
+      value: "8k",
+    });
+  });
+
+  it("rejects an invalid property patch without partially changing the instance", () => {
+    const document = documentWithInstance();
+    document.instances[0]!.properties = { value: "10k" };
+
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "patch_instance_properties",
+          instanceId: "M1",
+          set: { value: "12k" },
+          unset: ["value"],
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      applied: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+    expect(document.instances[0]!.properties).toEqual({ value: "10k" });
+  });
+
   it("reuses upright label placement when a BJT rotates", () => {
     const document = createEmptyDocument("document-main", "BJT label");
     const instance = {

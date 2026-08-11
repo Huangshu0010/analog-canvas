@@ -215,7 +215,7 @@ test("export includes drafting bounds and never emits guides", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (L)");
+  await clickCommand(page, "Draw", "Construction line (P)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
   await clickCommand(page, "More", "Add vertical guide");
@@ -344,7 +344,7 @@ test("Escape cancels an existing text drag without a revision", async ({
 // Creating a construction line commits one object.
 test("two-phase click-creates a construction line", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (L)");
+  await clickCommand(page, "Draw", "Construction line (P)");
   await expect(page.getByTestId("active-tool")).toHaveText("construction-line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
@@ -373,7 +373,7 @@ test("construction line uses stroke-based hit, not a blocking rect", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (L)");
+  await clickCommand(page, "Draw", "Construction line (P)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -549,14 +549,16 @@ test("R creates a selectable, styleable rectangle with four resize handles", asy
   await expect(
     page.locator('[data-testid^="draft-handle-corner-"]'),
   ).toHaveCount(4);
+  await page.keyboard.press("q");
 
   await page
-    .getByRole("combobox", { name: "Inline line style" })
+    .getByRole("combobox", { name: "Line style" })
     .selectOption("dotted");
   await expect(rectangle).toHaveAttribute("stroke-dasharray", "2 3");
   await expect(page.getByTestId("revision")).toHaveText("3");
 
   const pointsBeforeResize = await rectangle.getAttribute("points");
+  await page.getByTestId("selection-shelf").click();
   await dragLocator(page.getByTestId(/^draft-handle-corner-0-/), {
     x: -20,
     y: -10,
@@ -584,7 +586,7 @@ test("arrow endpoint handle drag moves the tip", async ({ page }) => {
 // vertex below the two-vertex floor is refused.
 test("construction line vertex insert via double-click", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (L)");
+  await clickCommand(page, "Draw", "Construction line (P)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -606,7 +608,7 @@ test("construction line vertex insert via double-click", async ({ page }) => {
 // revision each.
 test("bracket shortcuts step stroke width", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (L)");
+  await clickCommand(page, "Draw", "Construction line (P)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-construction-/).click({ force: true });
   await page.keyboard.press("]");
@@ -615,32 +617,31 @@ test("bracket shortcuts step stroke width", async ({ page }) => {
   await expect(page.getByTestId("revision")).toHaveText("3");
 });
 
-// The canvas inspector is the only line-style editing surface.
-test("floating inspector changes line style without a Selection duplicate", async ({
-  page,
-}) => {
+// Drawing style lives in Properties; it is not a second floating canvas UI.
+test("Properties changes drawing line style", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (L)");
+  await clickCommand(page, "Draw", "Construction line (P)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-construction-/).click({ force: true });
+  await page.keyboard.press("q");
   await page
-    .getByRole("combobox", { name: "Inline line style" })
+    .getByRole("combobox", { name: "Line style" })
     .selectOption("solid");
   await expect(page.getByTestId("revision")).toHaveText("2");
-  await expect(page.locator('[aria-label="Drawing style"]')).toHaveCount(0);
+  await expect(page.locator('[aria-label="Drawing style"]')).toHaveCount(1);
+  await expect(page.getByTestId("drafting-inline-inspector")).toHaveCount(0);
 });
 
-test("floating inspector renders an arrow line-style override", async ({
-  page,
-}) => {
+test("Properties renders an arrow line-style override", async ({ page }) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Arrow (A)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-arrow-/).click({ force: true });
+  await page.keyboard.press("q");
   const commandBar = page.getByRole("navigation", { name: "Editor commands" });
   const commandBarBefore = await commandBar.boundingBox();
   await page
-    .getByRole("combobox", { name: "Inline line style" })
+    .getByRole("combobox", { name: "Line style" })
     .selectOption("dotted");
   await expect(
     page.locator('[data-kind="draft-arrow"] > polyline'),
@@ -648,35 +649,33 @@ test("floating inspector renders an arrow line-style override", async ({
   expect(await commandBar.boundingBox()).toEqual(commandBarBefore);
 });
 
-test("floating arrow inspector fits and omits the Segment selector", async ({
-  page,
-}) => {
+test("arrow Properties omits the Segment selector", async ({ page }) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Arrow (A)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-arrow-/).click({ force: true });
+  await page.keyboard.press("q");
   const shaft = page.locator('[data-kind="draft-arrow"] > polyline');
   const head = page.locator('[data-kind="draft-arrow"] > polygon');
   const originalPoints = await head.getAttribute("points");
 
-  const inspector = page.getByTestId("drafting-inline-inspector");
-  await expectForeignObjectContentsContained(inspector);
+  const properties = page.getByTestId("drafting-properties");
   await expect(
-    inspector.getByRole("combobox", { name: "Curve segment" }),
+    properties.getByRole("combobox", { name: "Curve segment" }),
   ).toHaveCount(0);
 
-  await inspector
-    .getByRole("combobox", { name: "Inline stroke width" })
+  await properties
+    .getByRole("combobox", { name: "Stroke width" })
     .selectOption("2");
   await expect(shaft).toHaveAttribute("stroke-width", "3.2");
 
-  await inspector
-    .getByRole("combobox", { name: "Inline arrow head size" })
+  await properties
+    .getByRole("combobox", { name: "Arrow head size" })
     .selectOption("1.5");
   expect(await head.getAttribute("points")).not.toBe(originalPoints);
 });
 
-test("drafting floating inspector closes on Escape or a background pointer", async ({
+test("drawing Properties follows selection and closes with the dock", async ({
   page,
 }) => {
   await page.goto("/");
@@ -684,30 +683,33 @@ test("drafting floating inspector closes on Escape or a background pointer", asy
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   const hit = page.getByTestId(/^drafting-hit-arrow-/);
   await hit.click({ force: true });
-  await expect(page.getByTestId("drafting-inline-inspector")).toBeVisible();
+  await page.keyboard.press("q");
+  await expect(page.getByTestId("drafting-properties")).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("drafting-inline-inspector")).toHaveCount(0);
+  await expect(page.getByTestId("drafting-properties")).toHaveCount(0);
 
   await hit.click({ force: true });
-  await expect(page.getByTestId("drafting-inline-inspector")).toBeVisible();
+  await page.keyboard.press("q");
+  await expect(page.getByTestId("drafting-properties")).toBeVisible();
   await page
     .getByTestId("schematic-canvas")
     .click({ position: { x: 820, y: 520 } });
-  await expect(page.getByTestId("drafting-inline-inspector")).toHaveCount(0);
+  await expect(page.getByTestId("drafting-properties")).toHaveCount(0);
 });
 
 // Lock protects in-place edits but Delete has priority and remains available.
-test("floating inspector unlocks a protected drawing and Delete overrides its lock", async ({
+test("drawing Properties unlocks a protected drawing and Delete overrides its lock", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (L)");
+  await clickCommand(page, "Draw", "Construction line (P)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   const drawing = page.getByTestId(/^drafting-hit-construction-/);
   await drawing.click({ force: true });
+  await page.keyboard.press("q");
 
   await page
-    .getByRole("combobox", { name: "Inline line style" })
+    .getByRole("combobox", { name: "Line style" })
     .selectOption("dotted");
   const styledProject = JSON.parse(
     (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
@@ -720,7 +722,7 @@ test("floating inspector unlocks a protected drawing and Delete overrides its lo
   await expect(
     page.getByRole("button", { name: "Unlock", exact: true }),
   ).toBeVisible();
-  await expect(page.locator('[aria-label="Drawing style"]')).toHaveCount(0);
+  await expect(page.locator('[aria-label="Drawing style"]')).toHaveCount(1);
   await page.getByRole("button", { name: "Unlock", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Lock", exact: true }),

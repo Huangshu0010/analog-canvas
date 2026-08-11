@@ -4437,3 +4437,19 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   production build, and `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `fix(labels): correct rotated text side and clearance`.
+
+## 2026-08-11 - Contextual Properties and Net Labels
+
+- Target: add the smallest durable component Value path and make the editor's
+  contextual Properties, Net Label, and construction-line shortcuts coherent.
+- Changed areas: typed property patch/undo/Agent capability artifacts; manual
+  insert Value handoff; fixed Properties dock for component and drawing edits;
+  route-anchored `L` Net Label editor; `P` construction line; import-only
+  review; specs and focused UI regressions.
+- Validation: 50 focused Vitest tests, workspace typecheck, regenerated Agent
+  API artifacts, production editor build, and 69 E2E tests passed. Full
+  `pnpm test` is blocked by eight unrelated render/symbol golden failures;
+  repository-wide format check is blocked by three unrelated pre-existing
+  formatting findings.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `feat(editor): add contextual properties and net labels`.

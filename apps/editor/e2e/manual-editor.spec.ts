@@ -995,6 +995,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
     "Vref",
   );
+  await page.getByTestId("selection-shelf").click();
 
   await placeComponent(page, "resistor", { x: 280, y: 320 });
   await placeComponent(page, "resistor", { x: 480, y: 320 });
@@ -1030,6 +1031,51 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   });
   const afterBox = await noteHandle.boundingBox();
   expect(afterBox?.x).not.toBe(beforeBox.x);
+});
+
+test("L edits a selected route Net Label without opening Properties", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 280, y: 180 });
+  await placeComponent(page, "resistor", { x: 480, y: 180 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await page.keyboard.press("l");
+  const editor = page.getByTestId("net-label-editor");
+  await expect(editor).toBeVisible();
+  await editor.getByRole("textbox", { name: "Net Label" }).fill("SIGNAL");
+  await editor.getByRole("textbox", { name: "Net Label" }).press("Enter");
+  await expect(page.locator('[data-layer="annotations"]')).toContainText(
+    "SIGNAL",
+  );
+
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await page.keyboard.press("l");
+  await editor.getByRole("textbox", { name: "Net Label" }).fill("VREF");
+  await editor.getByRole("textbox", { name: "Net Label" }).press("Enter");
+  await expect(page.locator('[data-layer="annotations"]')).toContainText(
+    "VREF",
+  );
+
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await page.keyboard.press("l");
+  await editor.getByRole("textbox", { name: "Net Label" }).fill("");
+  await editor.getByRole("textbox", { name: "Net Label" }).press("Enter");
+  await expect(
+    page.getByTestId("annotation-hit-net-label-route-ui-1"),
+  ).toHaveCount(0);
+
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await page.keyboard.press("l");
+  await editor.getByRole("textbox", { name: "Net Label" }).fill("CANCEL");
+  await editor.getByRole("textbox", { name: "Net Label" }).press("Escape");
+  await expect(
+    page.getByTestId("annotation-hit-net-label-route-ui-1"),
+  ).toHaveCount(0);
 });
 
 test("selects and moves multiple instances while viewport gestures stay transient", async ({
@@ -1232,7 +1278,7 @@ test("keeps component insertion and inspection from resizing the canvas", async 
   await canvas.click({ position: { x: 420, y: 260 } });
 
   await expect(
-    page.getByRole("complementary", { name: "Selection inspector" }),
+    page.getByRole("complementary", { name: "Properties" }),
   ).toBeVisible();
   await page.getByTestId("selection-shelf").click();
   const afterCanvas = await canvas.boundingBox();

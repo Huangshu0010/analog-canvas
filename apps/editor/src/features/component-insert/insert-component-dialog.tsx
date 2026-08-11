@@ -14,8 +14,14 @@ export interface InsertComponentDialogProps {
   open: boolean;
   styleProfileId: string;
   recentSymbolIds: readonly string[];
-  onApply(symbolId: string, symbolName: string): void;
+  onApply(request: ComponentInsertRequest): void;
   onCancel(): void;
+}
+
+export interface ComponentInsertRequest {
+  symbolId: string;
+  symbolName: string;
+  value: string | null;
 }
 
 export function SymbolArtwork({
@@ -113,6 +119,7 @@ export function InsertComponentDialog({
   const [selectedId, setSelectedId] = useState(
     () => initialSymbols[0]?.id ?? null,
   );
+  const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const groups = useMemo(
     () => componentCatalog(styleProfileId, query, recentSymbolIds),
@@ -126,12 +133,17 @@ export function InsertComponentDialog({
     if (!open) return;
     setQuery("");
     setSelectedId(initialSymbols[0]?.id ?? null);
+    setValue("");
     const frame = requestAnimationFrame(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     });
     return () => cancelAnimationFrame(frame);
   }, [initialSymbols, open]);
+
+  useEffect(() => {
+    setValue("");
+  }, [selected?.id]);
 
   useEffect(() => {
     if (symbols.length === 0) {
@@ -154,7 +166,13 @@ export function InsertComponentDialog({
   };
 
   const apply = (): void => {
-    if (selected) onApply(selected.id, selected.name);
+    if (!selected) return;
+    const trimmedValue = value.trim();
+    onApply({
+      symbolId: selected.id,
+      symbolName: selected.name,
+      value: trimmedValue === "" ? null : trimmedValue,
+    });
   };
 
   return (
@@ -269,6 +287,16 @@ export function InsertComponentDialog({
             )}
           </section>
         </div>
+
+        <label className="insert-value-field">
+          <span>Value (optional)</span>
+          <input
+            aria-label="Component value"
+            value={value}
+            placeholder="10k, 2p, VBIAS…"
+            onChange={(event) => setValue(event.currentTarget.value)}
+          />
+        </label>
 
         <footer className="insert-dialog-actions">
           <small>↑↓ choose · Enter place · Esc cancel</small>

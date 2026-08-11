@@ -84,6 +84,33 @@ describe("DocumentHistory", () => {
     expect(history.document.revision).toBe(1);
   });
 
+  it("undoes and redoes a property patch", () => {
+    const history = historyFixture();
+    const patched = history.transact(
+      transaction(0, [
+        {
+          kind: "patch_instance_properties",
+          instanceId: "R1",
+          set: { value: "10k" },
+        },
+      ]),
+    );
+    expect(patched).toMatchObject({ ok: true, revision: 1 });
+    expect(history.document.instances[0]!.properties).toEqual({ value: "10k" });
+
+    expect(history.transact(transaction(1, [{ kind: "undo" }]))).toMatchObject({
+      ok: true,
+      revision: 2,
+    });
+    expect(history.document.instances[0]!.properties).toEqual({});
+
+    expect(history.transact(transaction(2, [{ kind: "redo" }]))).toMatchObject({
+      ok: true,
+      revision: 3,
+    });
+    expect(history.document.instances[0]!.properties).toEqual({ value: "10k" });
+  });
+
   it("rejects undo when no prior state exists", () => {
     const history = historyFixture();
     const result = history.transact(transaction(0, [{ kind: "undo" }]));

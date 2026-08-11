@@ -62,6 +62,35 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
   );
 });
 
+test("carries a manual Value through placement and Q property editing", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByRole("combobox").fill("resistor");
+  await dialog.getByLabel("Component value").fill("10k");
+  await dialog.getByRole("button", { name: "Apply" }).click();
+
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 360, y: 230 } });
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  await page.keyboard.press("q");
+  const propertyValue = page.getByLabel("Component value");
+  await expect(propertyValue).toBeFocused();
+  await expect(propertyValue).toHaveValue("10k");
+  await propertyValue.fill("12k");
+  await page
+    .getByRole("button", { name: "Apply component properties" })
+    .click();
+  await expect(page.getByTestId("revision")).toHaveText("2");
+
+  await page.keyboard.press("u");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  await expect(propertyValue).toHaveValue("10k");
+});
+
 test("keeps the workspace inside the viewport and exposes low-interference zoom controls", async ({
   page,
 }) => {
