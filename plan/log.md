@@ -4333,3 +4333,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   anti-alias contour, and `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `fix(symbols): use PMOS-style PNP arrow support`.
+
+## 2026-08-11 - Add Razavi closed switch
+
+- Target: add a reviewed two-terminal closed switch sourced from the approved
+  textbook's Figure 13.5 S2 on printed page 542.
+- Changed areas: isolated PDF-vector evidence and witness, contact-clipped
+  closed geometry, common measurement and fidelity registration, palette and
+  runtime catalog, plus focused geometry assertions.
+- Validation: source object topology and authority hashes, common/catalog stale
+  checks, symbols build, 23 focused tests, enlarged raster inspection, closed
+  switch fidelity IoU 0.9866 with anti-alias-only residuals, and `git diff
+  --check` passed.
+- Commit status: ready to commit on `main` as
+  `feat(symbols): add Razavi closed switch`.

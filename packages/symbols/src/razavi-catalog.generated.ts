@@ -35,6 +35,40 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     },
   },
   {
+    symbolId: "closed-switch",
+    name: "Closed Switch",
+    category: "switch",
+    reviewStatus: "reviewed",
+    pinOrder: ["1", "2"],
+    palette: true,
+    automaticMappings: [],
+    manualOnlyReason:
+      "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
+    assetPath: "closed-switch.symbol.json",
+    assetHash:
+      "57b91e80a24f50d6707afcb6370fc42cf480c0d840d0aab0f7a17c7cc8d8cb23",
+    visualAuthority: {
+      kind: "razavi-reference-v1",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePaths: [
+        "fixtures/visual-reference/razavi-reference-v1/closed-switch-vector-source.json",
+        "fixtures/visual-reference/razavi-reference-v1/closed-switch-reference.png",
+      ],
+      calibrationPath:
+        "fixtures/visual-reference/razavi-reference-v1/common-symbol-geometry.json",
+    },
+    generation: {
+      kind: "razavi-pdf-vector-reference",
+      referenceManifestPath:
+        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
+      referencePath:
+        "fixtures/visual-reference/razavi-reference-v1/closed-switch-vector-source.json",
+      converterPath: "scripts/generate-razavi-common-assets.mjs",
+      converterVersion: 1,
+    },
+  },
+  {
     symbolId: "current-source",
     name: "Independent Current Source",
     category: "source",
@@ -659,6 +693,127 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     variants: [],
     aliases: [],
+  },
+  {
+    schemaVersion: 1,
+    id: "closed-switch",
+    name: "Closed Switch",
+    viewBox: {
+      x: -34,
+      y: -10,
+      width: 68,
+      height: 20,
+    },
+    pins: [
+      {
+        name: "1",
+        role: "passive",
+        at: {
+          x: -30,
+          y: 0,
+        },
+        direction: "west",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+      {
+        name: "2",
+        role: "passive",
+        at: {
+          x: 30,
+          y: 0,
+        },
+        direction: "east",
+        presentation: {
+          visibility: "visible",
+          leadLength: 10,
+        },
+      },
+    ],
+    primitives: [
+      {
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -15.972106,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: -12.773222,
+          y: 0,
+        },
+        radius: 3.198884,
+        fill: "none",
+        stroke: "foreground",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -9.574338,
+          y: 0,
+        },
+        to: {
+          x: 9.574338,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "circle",
+        center: {
+          x: 12.773222,
+          y: 0,
+        },
+        radius: 3.198884,
+        fill: "none",
+        stroke: "foreground",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: 15.972106,
+          y: 0,
+        },
+        to: {
+          x: 30,
+          y: 0,
+        },
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+    ],
+    variants: [],
+    aliases: ["switch-closed", "two-terminal-closed-switch"],
   },
   {
     schemaVersion: 1,

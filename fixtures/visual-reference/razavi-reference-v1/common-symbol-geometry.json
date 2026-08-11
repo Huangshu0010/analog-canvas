@@ -71,6 +71,20 @@
         "minX": -34,
         "minY": -18
       }
+    },
+    "closed-switch": {
+      "assetPath": "closed-switch-reference.png",
+      "pixelsPerLogical": 2.4,
+      "originPx": {
+        "x": 81.6,
+        "y": 24.0
+      },
+      "window": {
+        "width": 164,
+        "height": 48,
+        "minX": -34,
+        "minY": -10
+      }
     }
   }
 }

@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "id": "closed-switch",
+  "name": "Closed Switch",
+  "viewBox": {
+    "x": -34,
+    "y": -10,
+    "width": 68,
+    "height": 20
+  },
+  "pins": [
+    {
+      "name": "1",
+      "role": "passive",
+      "at": {
+        "x": -30,
+        "y": 0
+      },
+      "direction": "west",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    },
+    {
+      "name": "2",
+      "role": "passive",
+      "at": {
+        "x": 30,
+        "y": 0
+      },
+      "direction": "east",
+      "presentation": {
+        "visibility": "visible",
+        "leadLength": 10
+      }
+    }
+  ],
+  "primitives": [
+    {
+      "kind": "line",
+      "from": {
+        "x": -30,
+        "y": 0
+      },
+      "to": {
+        "x": -15.972106,
+        "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "circle",
+      "center": {
+        "x": -12.773222,
+        "y": 0
+      },
+      "radius": 3.198884,
+      "fill": "none",
+      "stroke": "foreground",
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": -9.574338,
+        "y": 0
+      },
+      "to": {
+        "x": 9.574338,
+        "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "circle",
+      "center": {
+        "x": 12.773222,
+        "y": 0
+      },
+      "radius": 3.198884,
+      "fill": "none",
+      "stroke": "foreground",
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
+      "kind": "line",
+      "from": {
+        "x": 15.972106,
+        "y": 0
+      },
+      "to": {
+        "x": 30,
+        "y": 0
+      },
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    }
+  ],
+  "variants": [],
+  "aliases": ["switch-closed", "two-terminal-closed-switch"]
+}

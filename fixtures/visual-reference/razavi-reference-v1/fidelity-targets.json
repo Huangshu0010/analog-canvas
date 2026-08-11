@@ -148,6 +148,13 @@
       "useVariant": false
     },
     {
+      "id": "closed-switch",
+      "measurementPath": "common-symbol-geometry.json",
+      "measurementKey": "closed-switch",
+      "symbolId": "closed-switch",
+      "useVariant": false
+    },
+    {
       "id": "diode",
       "measurementPath": "common-symbol-geometry.json",
       "measurementKey": "diode",

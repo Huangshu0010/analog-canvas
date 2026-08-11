@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "id": "razavi-textbook-closed-switch",
+  "kind": "pdf-vector-extract",
+  "source": {
+    "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+    "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+    "pdfPage": 561,
+    "printedPage": 542,
+    "figure": "13.5 (S2)"
+  },
+  "selection": {
+    "method": "direct-device-vector-normalization-with-contact-clipping",
+    "boundsPdf": {
+      "left": 307.5,
+      "top": 97.5,
+      "right": 323.5,
+      "bottom": 102.5
+    },
+    "nativeObjectCount": 3,
+    "nativeObjectSha256": "ebb181c68893d74aafbcf5a86fc9f7c2a74d7c2ca9d2156bbf5f12424c991d96",
+    "nativeObjectSample": [
+      {
+        "objectType": "line",
+        "linewidth": 0.717,
+        "x0": 310.135,
+        "top": 100.5252,
+        "x1": 321.605,
+        "bottom": 100.5252,
+        "pathCommandCount": 2,
+        "pathSha256": "518fcf9ea863ebd6ce967a554dc26208fb435fe24e50ff139abf1a9df9a995e3"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 0.717,
+        "x0": 308.659,
+        "top": 98.8522,
+        "x1": 311.526,
+        "bottom": 101.7192,
+        "pathCommandCount": 5,
+        "pathSha256": "698b09b381402a6868523a5bdd864f04a453cb07a29127fe6ef85de623eee854"
+      },
+      {
+        "objectType": "curve",
+        "linewidth": 0.717,
+        "x0": 320.107,
+        "top": 98.8522,
+        "x1": 322.974,
+        "bottom": 101.7192,
+        "pathCommandCount": 5,
+        "pathSha256": "458cd6078193748f28778d85d15f7ae8e64b88d1c8c2bbe79effc8197fa3e430"
+      }
+    ]
+  },
+  "normalization": {
+    "pinAnchorsLogical": [
+      {
+        "name": "1",
+        "x": -30,
+        "y": 0
+      },
+      {
+        "name": "2",
+        "x": 30,
+        "y": 0
+      }
+    ],
+    "strokeMapping": {
+      "normal": {
+        "targetRole": "normal"
+      },
+      "emphasis": {
+        "targetRole": "emphasis"
+      }
+    },
+    "symbolDefinition": {
+      "schemaVersion": 1,
+      "id": "closed-switch",
+      "name": "Closed Switch",
+      "viewBox": {
+        "x": -34,
+        "y": -10,
+        "width": 68,
+        "height": 20
+      },
+      "pins": [
+        {
+          "name": "1",
+          "role": "passive",
+          "at": {
+            "x": -30,
+            "y": 0
+          },
+          "direction": "west",
+          "presentation": {
+            "visibility": "visible",
+            "leadLength": 10
+          }
+        },
+        {
+          "name": "2",
+          "role": "passive",
+          "at": {
+            "x": 30,
+            "y": 0
+          },
+          "direction": "east",
+          "presentation": {
+            "visibility": "visible",
+            "leadLength": 10
+          }
+        }
+      ],
+      "primitives": [
+        {
+          "kind": "line",
+          "from": {
+            "x": -30,
+            "y": 0
+          },
+          "to": {
+            "x": -15.972106,
+            "y": 0
+          },
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "circle",
+          "center": {
+            "x": -12.773222,
+            "y": 0.0
+          },
+          "radius": 3.198884,
+          "fill": "none",
+          "stroke": "foreground",
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "line",
+          "from": {
+            "x": -9.574338,
+            "y": 0
+          },
+          "to": {
+            "x": 9.574338,
+            "y": 0
+          },
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "circle",
+          "center": {
+            "x": 12.773222,
+            "y": 0.0
+          },
+          "radius": 3.198884,
+          "fill": "none",
+          "stroke": "foreground",
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "line",
+          "from": {
+            "x": 15.972106,
+            "y": 0
+          },
+          "to": {
+            "x": 30,
+            "y": 0
+          },
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        }
+      ],
+      "variants": [],
+      "aliases": ["switch-closed", "two-terminal-closed-switch"]
+    }
+  },
+  "rasterWitness": {
+    "kind": "isolated-normalized-pdf-family",
+    "dpi": 300.0,
+    "pixels": {
+      "width": 164,
+      "height": 48
+    },
+    "pixelsPerLogical": 2.4,
+    "originPx": {
+      "x": 81.6,
+      "y": 24.0
+    },
+    "assetPath": "closed-switch-reference.png",
+    "threshold": 160
+  },
+  "derivation": {
+    "geometry": "uniformly normalized from Figure 13.5 S2 native closure line and two contact outlines",
+    "scale": "native 0.717 pt stroke mapped to the Razavi normal 1.6 logical-unit stroke",
+    "pinExtension": "native circuit wiring is excluded; isolated horizontal leads extend to symmetric 10-unit anchors at x=-30 and x=30",
+    "contactClipping": "the source closure centerline passes behind white-filled hollow contacts; the normalized line is clipped to their outer boundaries so the Symbol DSL preserves hollow interiors without a background-mask primitive"
+  }
+}

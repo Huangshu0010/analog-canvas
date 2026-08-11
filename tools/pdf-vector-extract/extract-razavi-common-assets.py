@@ -308,6 +308,21 @@ SPECS: dict[str, dict[str, Any]] = {
             "pinExtension": "native horizontal leads extended only to the nearest symmetric 10-unit anchors at x=-30 and x=30",
         },
     },
+    "closed-switch": {
+        "pdfPage": 561, "printedPage": 542, "figure": "13.5 (S2)",
+        # The S2 contact pair is natively closed: one horizontal blade runs
+        # between its two hollow contacts.  Circuit wiring outside this tight
+        # box is intentionally excluded; isolated pin leads are added below.
+        "crop": (307.5, 97.5, 323.5, 102.5),
+        "method": "direct-device-vector-normalization-with-contact-clipping",
+        "witnessStrokeWidths": {"normal": RAZAVI_NORMAL_STROKE},
+        "derivation": {
+            "geometry": "uniformly normalized from Figure 13.5 S2 native closure line and two contact outlines",
+            "scale": "native 0.717 pt stroke mapped to the Razavi normal 1.6 logical-unit stroke",
+            "pinExtension": "native circuit wiring is excluded; isolated horizontal leads extend to symmetric 10-unit anchors at x=-30 and x=30",
+            "contactClipping": "the source closure centerline passes behind white-filled hollow contacts; the normalized line is clipped to their outer boundaries so the Symbol DSL preserves hollow interiors without a background-mask primitive",
+        },
+    },
 }
 
 
@@ -387,6 +402,31 @@ def ideal_switch_objects(page: Any, crop: tuple[float, float, float, float]) -> 
     return selected
 
 
+def closed_switch_objects(page: Any, crop: tuple[float, float, float, float]) -> list[dict[str, Any]]:
+    candidates = [obj for obj in [*page.lines, *page.curves] if inside(obj, crop)]
+    lines = [obj for obj in candidates if obj.get("object_type") == "line"]
+    circles = [
+        obj for obj in candidates
+        if obj.get("object_type") == "curve"
+        and obj.get("stroke") is True
+        and obj.get("fill") is False
+        and 2.8 <= float(obj.get("x1", 0)) - float(obj.get("x0", 0)) <= 2.9
+        and 2.8 <= float(obj.get("bottom", 0)) - float(obj.get("top", 0)) <= 2.9
+    ]
+    if len(lines) != 1 or len(circles) != 2:
+        raise RuntimeError(
+            f"Razavi common extraction: expected one closure line and two contacts for closed-switch, got {len(lines)} and {len(circles)}"
+        )
+    closure = lines[0]
+    if not math.isclose(float(closure["top"]), float(closure["bottom"]), abs_tol=1e-6):
+        raise RuntimeError("Razavi common extraction: closed-switch closure is not horizontal")
+    selected = [closure, *circles]
+    widths = {rounded(value.get("linewidth", 0) or 0) for value in selected}
+    if widths != {0.717}:
+        raise RuntimeError(f"Razavi common extraction: unexpected closed-switch stroke widths {sorted(widths)}")
+    return selected
+
+
 def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
     lines = [value for value in objects if value.get("object_type") == "line"]
     contacts = sorted(
@@ -450,6 +490,60 @@ def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
         [pin("1", "passive", -30, 0, "west"), pin("2", "passive", 30, 0, "east")],
         primitives,
         ["switch-open", "two-terminal-switch"],
+    )
+
+
+def closed_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
+    closure = next(value for value in objects if value.get("object_type") == "line")
+    contacts = sorted(
+        [value for value in objects if value.get("object_type") == "curve"],
+        key=lambda value: float(value["x0"]),
+    )
+    native_stroke = float(closure["linewidth"])
+    scale = RAZAVI_NORMAL_STROKE / native_stroke
+    centers = [
+        (
+            (float(value["x0"]) + float(value["x1"])) / 2,
+            (float(value["top"]) + float(value["bottom"])) / 2,
+        )
+        for value in contacts
+    ]
+    origin_x = (centers[0][0] + centers[1][0]) / 2
+    baseline_y = sum(center[1] for center in centers) / len(centers)
+
+    def nx(value: float) -> float:
+        return rounded((value - origin_x) * scale)
+
+    def ny(value: float) -> float:
+        return rounded((value - baseline_y) * scale)
+
+    def normalized_circle(value: dict[str, Any]) -> dict[str, Any]:
+        center_x = (float(value["x0"]) + float(value["x1"])) / 2
+        center_y = (float(value["top"]) + float(value["bottom"])) / 2
+        diameter = (
+            float(value["x1"]) - float(value["x0"])
+            + float(value["bottom"]) - float(value["top"])
+        ) / 2
+        return circle(nx(center_x), ny(center_y), rounded(diameter * scale / 2))
+
+    left_contact, right_contact = [normalized_circle(value) for value in contacts]
+    left_outer = rounded(left_contact["center"]["x"] - left_contact["radius"])
+    left_inner = rounded(left_contact["center"]["x"] + left_contact["radius"])
+    right_inner = rounded(right_contact["center"]["x"] - right_contact["radius"])
+    right_outer = rounded(right_contact["center"]["x"] + right_contact["radius"])
+    return symbol(
+        "closed-switch",
+        "Closed Switch",
+        (-34, -10, 68, 20),
+        [pin("1", "passive", -30, 0, "west"), pin("2", "passive", 30, 0, "east")],
+        [
+            line(-30, 0, left_outer, 0),
+            left_contact,
+            line(left_inner, 0, right_inner, 0),
+            right_contact,
+            line(right_outer, 0, 30, 0),
+        ],
+        ["switch-closed", "two-terminal-closed-switch"],
     )
 
 
@@ -544,6 +638,9 @@ def extract_one(pdf_path: Path, output_root: Path, asset_id: str, pdftoppm: str,
     if asset_id == "ideal-switch":
         source_objects = ideal_switch_objects(page, spec["crop"])
         definition = ideal_switch_definition(source_objects)
+    elif asset_id == "closed-switch":
+        source_objects = closed_switch_objects(page, spec["crop"])
+        definition = closed_switch_definition(source_objects)
     else:
         selector = inside if spec.get("selectionMode") == "inside" else overlaps
         source_objects = [obj for obj in [*page.lines, *page.curves, *page.rects] if selector(obj, spec["crop"])]

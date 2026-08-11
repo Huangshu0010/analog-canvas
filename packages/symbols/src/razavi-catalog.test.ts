@@ -105,6 +105,7 @@ describe("Razavi symbol catalog", () => {
       ]),
     ).toEqual([
       ["capacitor", "reviewed", "razavi-reference-v1"],
+      ["closed-switch", "reviewed", "razavi-reference-v1"],
       ["current-source", "reviewed", "razavi-reference-v1"],
       ["diode", "reviewed", "razavi-reference-v1"],
       ["ground", "reviewed", "razavi-reference-v1"],
@@ -170,7 +171,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(19);
+    expect(razaviCatalogSymbols).toHaveLength(20);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -183,6 +184,7 @@ describe("Razavi symbol catalog", () => {
   it("lists only reviewed Reference-calibrated assets in the product library", () => {
     expect(razaviProductSymbols.map((symbol) => symbol.id)).toEqual([
       "capacitor",
+      "closed-switch",
       "current-source",
       "diode",
       "ground",
@@ -236,6 +238,7 @@ describe("Razavi symbol catalog", () => {
       "inductor",
       "opamp",
       "diode",
+      "closed-switch",
       "ideal-switch",
       "npn",
       "pnp",
@@ -603,6 +606,30 @@ describe("Razavi symbol catalog", () => {
           kind: "line",
           from: { x: 14.403348, y: 0 },
           to: { x: 30, y: 0 },
+        }),
+      ]),
+    );
+    const closedSwitch = requireRazaviCatalogSymbol("closed-switch");
+    expect(closedSwitch.pins.map((pin) => pin.at.x)).toEqual([-30, 30]);
+    expect(closedSwitch.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "circle",
+          center: { x: -12.773222, y: 0 },
+          radius: 3.198884,
+          fill: "none",
+        }),
+        expect.objectContaining({
+          kind: "circle",
+          center: { x: 12.773222, y: 0 },
+          radius: 3.198884,
+          fill: "none",
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -9.574338, y: 0 },
+          to: { x: 9.574338, y: 0 },
+          style: expect.objectContaining({ strokeRole: "normal" }),
         }),
       ]),
     );

@@ -19,6 +19,7 @@ const normalize = (value) => `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 
 const entries = [
+  ["closed-switch", "Closed Switch", "switch", ["1", "2"], []],
   ["diode", "Diode", "passive", ["A", "K"], ["spice:D"]],
   ["ideal-switch", "Ideal Switch", "switch", ["1", "2"], []],
   [
@@ -80,7 +81,7 @@ for (const [symbolId, name, category, pinOrder, automaticMappings] of entries) {
     ...(automaticMappings.length === 0
       ? {
           manualOnlyReason:
-            symbolId === "ideal-switch"
+            symbolId === "ideal-switch" || symbolId === "closed-switch"
               ? "Two-terminal Razavi switch; SPICE S has a four-terminal control contract."
               : "Textbook gain block has implicit reference nodes and no exact primitive SPICE terminal contract.",
         }

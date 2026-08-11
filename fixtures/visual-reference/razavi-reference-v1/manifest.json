@@ -62,6 +62,25 @@
       ]
     },
     {
+      "id": "razavi-textbook-closed-switch",
+      "kind": "pdf-vector-extract",
+      "source": {
+        "title": "Design of Analog CMOS Integrated Circuits, Second Edition",
+        "sha256": "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739",
+        "pdfPage": 561,
+        "printedPage": 542,
+        "figure": "13.5 (S2)"
+      },
+      "extractPath": "closed-switch-vector-source.json",
+      "extractSha256": "e7340f9ca9df0c16056cb6830d3001fc1e886ee1c38486e6d67a7246f58e1f38",
+      "rasterPath": "closed-switch-reference.png",
+      "rasterSha256": "a4daecbb6a959d9ed3418f56bb74d0f56ada44d8a60e951c5cf29206d2c99032",
+      "scope": [
+        "two-terminal closed switch geometry",
+        "hollow-contact closure treatment"
+      ]
+    },
+    {
       "id": "razavi-textbook-diode",
       "kind": "pdf-vector-extract",
       "source": {
@@ -159,9 +178,9 @@
   "opampGeometryPath": "opamp-geometry.json",
   "opampGeometrySha256": "51003a9dbe09ea8b9d3a346489d9777c4019a57466bac10dbfdc5b9e8d0390ba",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
-  "commonSymbolGeometrySha256": "5482a5e8af89f8ddf1b43a77bc8b0a7bf105717454f262e1377d6e771c1ec227",
+  "commonSymbolGeometrySha256": "9a8c01ae443dc9dcb8f7f428d4d929ce3a0ea397d0fd4955cbda5e0b10f5d3e4",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "f22750d6febb521ce3ce93c0b3e5f7bce3af397e6d941da3720443c2d74d1158",
+  "fidelityTargetsSha256": "76710f149665c830546f1d8df1bb97dadaaeec52ce7ff66f687d70586302d2d7",
   "pixels": {
     "width": 1204,
     "height": 794
