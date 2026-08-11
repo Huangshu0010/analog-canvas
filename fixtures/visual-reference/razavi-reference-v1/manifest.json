@@ -72,9 +72,9 @@
         "figure": "13.5 (S2)"
       },
       "extractPath": "closed-switch-vector-source.json",
-      "extractSha256": "e7340f9ca9df0c16056cb6830d3001fc1e886ee1c38486e6d67a7246f58e1f38",
+      "extractSha256": "a21aae33f6252ffccc1f60a064a447b042f731c2ea88e9c7859b144ddd409132",
       "rasterPath": "closed-switch-reference.png",
-      "rasterSha256": "a4daecbb6a959d9ed3418f56bb74d0f56ada44d8a60e951c5cf29206d2c99032",
+      "rasterSha256": "f362378d17b4090873eb844121bc926a5ffe42137d02f9fca404d51bdf9d8986",
       "scope": [
         "two-terminal closed switch geometry",
         "hollow-contact closure treatment"
@@ -178,7 +178,7 @@
   "opampGeometryPath": "opamp-geometry.json",
   "opampGeometrySha256": "51003a9dbe09ea8b9d3a346489d9777c4019a57466bac10dbfdc5b9e8d0390ba",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
-  "commonSymbolGeometrySha256": "9a8c01ae443dc9dcb8f7f428d4d929ce3a0ea397d0fd4955cbda5e0b10f5d3e4",
+  "commonSymbolGeometrySha256": "c72117b9d8d836dc687b7556e9c4334ebf91b6ac80fa747bb815ebc7933c5cfd",
   "fidelityTargetsPath": "fidelity-targets.json",
   "fidelityTargetsSha256": "76710f149665c830546f1d8df1bb97dadaaeec52ce7ff66f687d70586302d2d7",
   "pixels": {

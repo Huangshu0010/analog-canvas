@@ -64,6 +64,21 @@ const mosGeometry = JSON.parse(
     }
   >;
 };
+const closedSwitchEvidence = JSON.parse(
+  readFileSync(
+    resolve(
+      process.cwd(),
+      "fixtures/visual-reference/razavi-reference-v1/closed-switch-vector-source.json",
+    ),
+    "utf8",
+  ),
+) as {
+  selection: { nativeObjectCount: number };
+  rasterWitness: {
+    kind: string;
+    window: { width: number; height: number; minX: number; minY: number };
+  };
+};
 const normalize = (value: string) =>
   `${value.replaceAll("\r\n", "\n").trimEnd()}\n`;
 const logicalPoint = (
@@ -610,25 +625,32 @@ describe("Razavi symbol catalog", () => {
       ]),
     );
     const closedSwitch = requireRazaviCatalogSymbol("closed-switch");
+    expect(closedSwitchEvidence).toMatchObject({
+      selection: { nativeObjectCount: 5 },
+      rasterWitness: {
+        kind: "source-pdf-crop",
+        window: { width: 96, height: 48, minX: -20, minY: -8 },
+      },
+    });
     expect(closedSwitch.pins.map((pin) => pin.at.x)).toEqual([-30, 30]);
     expect(closedSwitch.primitives).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           kind: "circle",
-          center: { x: -12.773222, y: 0 },
+          center: { x: -10.36318, y: 0 },
           radius: 3.198884,
           fill: "none",
         }),
         expect.objectContaining({
           kind: "circle",
-          center: { x: 12.773222, y: 0 },
+          center: { x: 10.36318, y: 0 },
           radius: 3.198884,
           fill: "none",
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -9.574338, y: 0 },
-          to: { x: 9.574338, y: 0 },
+          from: { x: -7.186611, y: -1.496234 },
+          to: { x: 13.608926, y: -4.694003 },
           style: expect.objectContaining({ strokeRole: "normal" }),
         }),
       ]),

@@ -76,14 +76,14 @@
       "assetPath": "closed-switch-reference.png",
       "pixelsPerLogical": 2.4,
       "originPx": {
-        "x": 81.6,
-        "y": 24.0
+        "x": 48.162745,
+        "y": 19.604184
       },
       "window": {
-        "width": 164,
+        "width": 96,
         "height": 48,
-        "minX": -34,
-        "minY": -10
+        "minX": -20,
+        "minY": -8
       }
     }
   }

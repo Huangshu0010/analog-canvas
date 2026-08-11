@@ -32,7 +32,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
       "assetPath": "closed-switch.symbol.json",
-      "assetHash": "57b91e80a24f50d6707afcb6370fc42cf480c0d840d0aab0f7a17c7cc8d8cb23",
+      "assetHash": "6b442ab974c708010a53cd9365a484b70dd93f1e816bdfca613e6b29da85b09f",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

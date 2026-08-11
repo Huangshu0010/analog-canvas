@@ -4347,3 +4347,20 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   --check` passed.
 - Commit status: ready to commit on `main` as
   `feat(symbols): add Razavi closed switch`.
+- Correction: this first baseline used candidate-generated witness artwork and
+  misidentified a nearby horizontal wire; it is superseded by the direct source
+  crop correction below.
+
+## 2026-08-11 - Correct closed-switch PDF crop
+
+- Target: replace the false closed-switch proxy with the exact Figure 13.5 S2
+  source geometry from printed page 542.
+- Changed areas: direct PDF crop witness, exact two-lead/two-contact/angled
+  blade extraction, witness-owned fidelity window propagation, regenerated
+  Symbol/catalog output, and a regression asserting source-PDF witness kind.
+- Validation: native object fingerprint (5 objects), source crop inspection,
+  common/catalog stale checks, symbols build, 23 focused tests, Python compile,
+  enlarged reference/render/diff inspection, fidelity IoU 0.9854 with
+  anti-alias-only residuals, and `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): correct Razavi closed switch evidence`.

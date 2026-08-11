@@ -310,17 +310,17 @@ SPECS: dict[str, dict[str, Any]] = {
     },
     "closed-switch": {
         "pdfPage": 561, "printedPage": 542, "figure": "13.5 (S2)",
-        # The S2 contact pair is natively closed: one horizontal blade runs
-        # between its two hollow contacts.  Circuit wiring outside this tight
-        # box is intentionally excluded; isolated pin leads are added below.
-        "crop": (307.5, 97.5, 323.5, 102.5),
-        "method": "direct-device-vector-normalization-with-contact-clipping",
+        # S2 has two native horizontal lead segments, two hollow contacts, and
+        # one native angled blade. Keep the selection tight enough to exclude
+        # the surrounding feedback loop and C2.
+        "crop": (272.5, 52.0, 299.0, 56.3),
+        "method": "direct-device-vector-normalization",
         "witnessStrokeWidths": {"normal": RAZAVI_NORMAL_STROKE},
         "derivation": {
-            "geometry": "uniformly normalized from Figure 13.5 S2 native closure line and two contact outlines",
+            "geometry": "uniformly normalized from Figure 13.5 S2 native lead segments, hollow contacts, and angled blade",
             "scale": "native 0.717 pt stroke mapped to the Razavi normal 1.6 logical-unit stroke",
             "pinExtension": "native circuit wiring is excluded; isolated horizontal leads extend to symmetric 10-unit anchors at x=-30 and x=30",
-            "contactClipping": "the source closure centerline passes behind white-filled hollow contacts; the normalized line is clipped to their outer boundaries so the Symbol DSL preserves hollow interiors without a background-mask primitive",
+            "rasterWitness": "direct source-PDF crop registered around the measured contact midpoint; it is not candidate-generated artwork",
         },
     },
 }
@@ -413,14 +413,19 @@ def closed_switch_objects(page: Any, crop: tuple[float, float, float, float]) ->
         and 2.8 <= float(obj.get("x1", 0)) - float(obj.get("x0", 0)) <= 2.9
         and 2.8 <= float(obj.get("bottom", 0)) - float(obj.get("top", 0)) <= 2.9
     ]
-    if len(lines) != 1 or len(circles) != 2:
+    if len(lines) != 3 or len(circles) != 2:
         raise RuntimeError(
-            f"Razavi common extraction: expected one closure line and two contacts for closed-switch, got {len(lines)} and {len(circles)}"
+            f"Razavi common extraction: expected two leads, one blade, and two contacts for closed-switch, got {len(lines)} and {len(circles)}"
         )
-    closure = lines[0]
-    if not math.isclose(float(closure["top"]), float(closure["bottom"]), abs_tol=1e-6):
-        raise RuntimeError("Razavi common extraction: closed-switch closure is not horizontal")
-    selected = [closure, *circles]
+    horizontal = [
+        value
+        for value in lines
+        if math.isclose(float(value["top"]), float(value["bottom"]), abs_tol=1e-6)
+    ]
+    blade = [value for value in lines if value not in horizontal]
+    if len(horizontal) != 2 or len(blade) != 1:
+        raise RuntimeError("Razavi common extraction: closed-switch object topology changed")
+    selected = [*horizontal, blade[0], *circles]
     widths = {rounded(value.get("linewidth", 0) or 0) for value in selected}
     if widths != {0.717}:
         raise RuntimeError(f"Razavi common extraction: unexpected closed-switch stroke widths {sorted(widths)}")
@@ -494,12 +499,23 @@ def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def closed_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
-    closure = next(value for value in objects if value.get("object_type") == "line")
+    lines = [value for value in objects if value.get("object_type") == "line"]
+    horizontal = sorted(
+        [
+            value
+            for value in lines
+            if math.isclose(float(value["top"]), float(value["bottom"]), abs_tol=1e-6)
+        ],
+        key=lambda value: float(value["x0"]),
+    )
+    blade = next(value for value in lines if value not in horizontal)
+    if len(horizontal) != 2:
+        raise RuntimeError("Razavi common extraction: closed-switch lead topology changed")
     contacts = sorted(
         [value for value in objects if value.get("object_type") == "curve"],
         key=lambda value: float(value["x0"]),
     )
-    native_stroke = float(closure["linewidth"])
+    native_stroke = float(blade["linewidth"])
     scale = RAZAVI_NORMAL_STROKE / native_stroke
     centers = [
         (
@@ -526,24 +542,57 @@ def closed_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
         ) / 2
         return circle(nx(center_x), ny(center_y), rounded(diameter * scale / 2))
 
+    left_lead, right_lead = horizontal
     left_contact, right_contact = [normalized_circle(value) for value in contacts]
-    left_outer = rounded(left_contact["center"]["x"] - left_contact["radius"])
-    left_inner = rounded(left_contact["center"]["x"] + left_contact["radius"])
-    right_inner = rounded(right_contact["center"]["x"] - right_contact["radius"])
-    right_outer = rounded(right_contact["center"]["x"] + right_contact["radius"])
+    blade_path = blade.get("path") or []
+    if len(blade_path) != 2:
+        raise RuntimeError("Razavi common extraction: closed-switch blade path changed")
+    blade_start = blade_path[0][1]
+    blade_end = blade_path[1][1]
+
+    def native_point(value: tuple[float, float]) -> tuple[float, float]:
+        return (nx(float(value[0])), ny(float(value[1])))
+
+    def normalized_lead_points(value: dict[str, Any]) -> list[tuple[float, float]]:
+        path = value.get("path") or []
+        if len(path) != 2:
+            raise RuntimeError("Razavi common extraction: closed-switch lead path changed")
+        return sorted(
+            [native_point(path[0][1]), native_point(path[1][1])],
+            key=lambda point_value: point_value[0],
+        )
+
     return symbol(
         "closed-switch",
         "Closed Switch",
-        (-34, -10, 68, 20),
+        (-34, -12, 68, 24),
         [pin("1", "passive", -30, 0, "west"), pin("2", "passive", 30, 0, "east")],
         [
-            line(-30, 0, left_outer, 0),
+            polyline([(-30, 0), *normalized_lead_points(left_lead)]),
             left_contact,
-            line(left_inner, 0, right_inner, 0),
+            line(*native_point(blade_start), *native_point(blade_end)),
             right_contact,
-            line(right_outer, 0, 30, 0),
+            polyline([*normalized_lead_points(right_lead), (30, 0)]),
         ],
         ["switch-closed", "two-terminal-closed-switch"],
+    )
+
+
+def closed_switch_origin(objects: list[dict[str, Any]]) -> tuple[float, float]:
+    contacts = sorted(
+        [value for value in objects if value.get("object_type") == "curve"],
+        key=lambda value: float(value["x0"]),
+    )
+    centers = [
+        (
+            (float(value["x0"]) + float(value["x1"])) / 2,
+            (float(value["top"]) + float(value["bottom"])) / 2,
+        )
+        for value in contacts
+    ]
+    return (
+        (centers[0][0] + centers[1][0]) / 2,
+        sum(center[1] for center in centers) / len(centers),
     )
 
 
@@ -632,6 +681,72 @@ def render_witness(
     return {"kind": "isolated-normalized-pdf-family", "dpi": RASTER_DPI, "pixels": pixels, "pixelsPerLogical": PIXELS_PER_LOGICAL, "originPx": origin, "assetPath": output.name, "threshold": 160}
 
 
+def render_source_crop_witness(
+    pdf_path: Path,
+    page: Any,
+    origin_pdf: tuple[float, float],
+    output: Path,
+    pdftoppm: str,
+) -> dict[str, Any]:
+    # The source coordinates are uniformly mapped from native points to logical
+    # units. Render the original PDF at the matching native-points-to-pixels
+    # scale and crop a fixed logical window around that origin. Unlike the
+    # older helper above, this image is direct source evidence, never a Symbol
+    # rendering disguised as a reference.
+    scale = RAZAVI_NORMAL_STROKE / 0.717
+    pixels_per_point = PIXELS_PER_LOGICAL * scale
+    dpi = 72 * pixels_per_point
+    # Restrict the comparison to S2's own contacts, blade, and native short
+    # lead segments. The surrounding feedback loop enters the same baseline
+    # immediately outside these bounds and is not part of an isolated symbol.
+    window = {"width": 96, "height": 48, "minX": -20, "minY": -8}
+    media_left, media_top, _, _ = page.mediabox
+    origin_full = {
+        "x": (origin_pdf[0] - float(media_left)) * pixels_per_point,
+        "y": (origin_pdf[1] - float(media_top)) * pixels_per_point,
+    }
+    crop_x = math.floor(origin_full["x"] + window["minX"] * PIXELS_PER_LOGICAL)
+    crop_y = math.floor(origin_full["y"] + window["minY"] * PIXELS_PER_LOGICAL)
+    executable = shutil.which(pdftoppm) or pdftoppm
+    with tempfile.TemporaryDirectory(prefix="razavi-source-crop-") as temp_dir:
+        raster_base = Path(temp_dir) / "source"
+        subprocess.run(
+            [
+                executable,
+                "-f", str(page.page_number), "-l", str(page.page_number),
+                "-r", f"{dpi:.9f}", "-png", "-singlefile",
+                "-x", str(crop_x), "-y", str(crop_y),
+                "-W", str(window["width"]), "-H", str(window["height"]),
+                str(pdf_path), str(raster_base),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        rendered = raster_base.with_suffix(".png")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(rendered) as image:
+            rgba = image.convert("RGBA")
+            if rgba.size != (window["width"], window["height"]):
+                raise RuntimeError(
+                    f"Razavi common extraction: source crop size {rgba.size} != {(window['width'], window['height'])}"
+                )
+            rgba.save(output, format="PNG", optimize=False)
+    return {
+        "kind": "source-pdf-crop",
+        "dpi": rounded(dpi),
+        "pixels": {"width": window["width"], "height": window["height"]},
+        "pixelsPerLogical": PIXELS_PER_LOGICAL,
+        "originPx": {
+            "x": rounded(origin_full["x"] - crop_x),
+            "y": rounded(origin_full["y"] - crop_y),
+        },
+        "window": window,
+        "sourceCropPx": {"x": crop_x, "y": crop_y},
+        "assetPath": output.name,
+        "threshold": 160,
+    }
+
+
 def extract_one(pdf_path: Path, output_root: Path, asset_id: str, pdftoppm: str, source_hash: str, pdf: Any) -> None:
     spec = SPECS[asset_id]
     page = pdf.pages[spec["pdfPage"] - 1]
@@ -650,7 +765,17 @@ def extract_one(pdf_path: Path, output_root: Path, asset_id: str, pdftoppm: str,
         raise RuntimeError(f"Razavi common extraction: no native vector objects found for {asset_id}")
     selected_hash = hashlib.sha256(json.dumps(selected, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
     png_path = output_root / f"{asset_id}-reference.png"
-    raster = render_witness(definition, png_path, pdftoppm, spec.get("witnessStrokeWidths"))
+    raster = (
+        render_source_crop_witness(
+            pdf_path,
+            page,
+            closed_switch_origin(source_objects),
+            png_path,
+            pdftoppm,
+        )
+        if asset_id == "closed-switch"
+        else render_witness(definition, png_path, pdftoppm, spec.get("witnessStrokeWidths"))
+    )
     evidence = {
         "schemaVersion": 1,
         "id": f"razavi-textbook-{asset_id}",
@@ -675,11 +800,12 @@ def write_geometry_registry(output_root: Path) -> None:
     for asset_id in SPECS:
         evidence = json.loads((output_root / f"{asset_id}-vector-source.json").read_text(encoding="utf-8"))
         witness = evidence["rasterWitness"]
+        witness_window = witness.get("window")
         symbols[asset_id] = {
             "assetPath": witness["assetPath"],
             "pixelsPerLogical": witness["pixelsPerLogical"],
             "originPx": witness["originPx"],
-            "window": {
+            "window": witness_window or {
                 "width": witness["pixels"]["width"],
                 "height": witness["pixels"]["height"],
                 "minX": evidence["normalization"]["symbolDefinition"]["viewBox"]["x"],
