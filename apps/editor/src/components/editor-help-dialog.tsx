@@ -81,9 +81,10 @@ export function EditorHelpDialog({
               With no rotatable selection, <kbd>R</kbd> starts Rectangle; with a
               component or drawing selected it rotates clockwise.{" "}
               <kbd>Shift+R</kbd> mirrors left/right; <kbd>Shift+V</kbd> mirrors
-              top/bottom. Guides are available from More and can be shown,
-              cleared, or locked for alignment. <kbd>C</kbd> starts a
-              mouse-following copy; click places it and <kbd>Esc</kbd> cancels.
+              top/bottom. <kbd>F</kbd> always fits the circuit in view. Guides
+              are available from More and can be shown, cleared, or locked for
+              alignment. <kbd>C</kbd> starts a mouse-following copy; click
+              places it and <kbd>Esc</kbd> cancels.
             </p>
           </section>
           <section id="help-shortcuts" className="help-shortcuts">
@@ -103,9 +104,10 @@ export function EditorHelpDialog({
                 <dt>Selection and edit</dt>
                 <dd>
                   <kbd>Ctrl</kbd> + <kbd>A</kbd> selects all placed components;
-                  <kbd>C</kbd> copy-place; <kbd>R</kbd> rotate; <kbd>Shift</kbd>
-                  + <kbd>R</kbd> mirror left/right; <kbd>Shift</kbd> +
-                  <kbd>V</kbd> mirror top/bottom; <kbd>F</kbd> fit view;
+                  <kbd>C</kbd> copy-place (click to place, <kbd>Esc</kbd> to
+                  cancel); <kbd>R</kbd> rotate; <kbd>Shift</kbd> + <kbd>R</kbd>
+                  mirror left/right; <kbd>Shift</kbd> + <kbd>V</kbd> mirror
+                  top/bottom; <kbd>F</kbd> fit view;
                   <kbd>Delete</kbd> or <kbd>Backspace</kbd> delete.
                 </dd>
               </div>

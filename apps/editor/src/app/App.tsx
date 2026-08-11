@@ -5033,14 +5033,14 @@ export function App({ project: initialProject }: AppProps) {
                 onClick={() => mirrorSelected("left-right")}
                 disabled={selectedIds.length === 0}
               >
-                Flip horizontal (F)
+                Mirror left/right (Shift+R)
               </button>
               <button
                 type="button"
                 onClick={() => mirrorSelected("top-bottom")}
                 disabled={selectedIds.length === 0}
               >
-                Flip vertical (Shift+F)
+                Mirror top/bottom (Shift+V)
               </button>
               {selectedIds.length > 1 ? (
                 <button type="button" onClick={alignSelectedInstances}>
@@ -5298,13 +5298,13 @@ export function App({ project: initialProject }: AppProps) {
                       type="button"
                       onClick={() => mirrorSelected("left-right")}
                     >
-                      Mirror horizontal (F)
+                      Mirror left/right (Shift+R)
                     </button>
                     <button
                       type="button"
                       onClick={() => mirrorSelected("top-bottom")}
                     >
-                      Mirror vertical (Shift+F)
+                      Mirror top/bottom (Shift+V)
                     </button>
                   </>
                 ) : null}

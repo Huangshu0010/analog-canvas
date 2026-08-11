@@ -4525,3 +4525,15 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   passed.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `feat(editor): add copy placement shortcuts`.
+
+## 2026-08-11 - Correct Mirror Shortcut Copy
+
+- Target: reconcile visible Edit, Properties, and Help text with the implemented
+  mirror and copy-placement shortcut map.
+- Changed areas: Edit mirror actions, selected-component Properties actions,
+  Help guidance, and the target record. The interaction specification already
+  had the correct mapping and was inspected without modification.
+- Validation: obsolete-label search, production editor build, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `fix(editor): correct mirror shortcut labels`.
