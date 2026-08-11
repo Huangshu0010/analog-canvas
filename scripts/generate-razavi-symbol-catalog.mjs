@@ -69,6 +69,9 @@ for (const target of fidelityRegistry.targets) {
   ) {
     fail(`invalid or duplicate fidelity target ${target.id ?? "<unknown>"}`);
   }
+  if (target.rotation !== undefined && !Number.isFinite(target.rotation)) {
+    fail(`invalid rotation for fidelity target ${target.id}`);
+  }
   fidelityTargetIds.add(target.id);
   const hasSymbol = typeof target.symbolId === "string";
   const hasFormal = formalKinds.has(target.formalKind);

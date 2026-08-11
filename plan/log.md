@@ -4396,3 +4396,20 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   from 33% to 16% for PNP; full-symbol IoU improved to 0.6436 and 0.5471.
 - Commit status: ready to commit on `main` as
   `fix(symbols): unify Razavi BJT arrow geometry`.
+
+## 2026-08-11 - Calibrate diode and voltage-amplifier PDF geometry
+
+- Target: correct the diode fidelity orientation and align the voltage-amplifier
+  frame to the approved textbook's native vector geometry without changing
+  either symbol's electrical anchors.
+- Changed areas: source-PDF witness windows/origins, diode body scale and
+  target rotation, direct-vector voltage-amplifier triangle coordinates,
+  manifest-pinned evidence/catalog output, fidelity runner registration
+  reporting/target validation, and focused catalog assertions.
+- Validation: Python compile, common/catalog stale checks, symbols build, 24
+  focused tests, and direct-PDF fidelity reports. Diode reached IoU 0.8800
+  with no registration translation; voltage amplifier reached 0.7381, with
+  remaining error confined to its anti-alias contour. `git diff --check`
+  passed.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): calibrate diode and voltage amplifier geometry`.

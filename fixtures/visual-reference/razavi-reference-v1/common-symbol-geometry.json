@@ -34,27 +34,27 @@
       "assetPath": "diode-reference.png",
       "pixelsPerLogical": 2.4,
       "originPx": {
-        "x": 58.584502,
-        "y": 24.275582
+        "x": 24.584502,
+        "y": 48.073238
       },
       "window": {
-        "width": 116,
-        "height": 48,
-        "minX": -24,
-        "minY": -10
+        "width": 48,
+        "height": 96,
+        "minX": -10,
+        "minY": -20
       }
     },
     "voltage-amplifier": {
       "assetPath": "voltage-amplifier-reference.png",
       "pixelsPerLogical": 2.4,
       "originPx": {
-        "x": 106.298812,
-        "y": 67.46872
+        "x": 63.298812,
+        "y": 67.588452
       },
       "window": {
-        "width": 212,
+        "width": 125,
         "height": 135,
-        "minX": -44,
+        "minX": -26,
         "minY": -28
       }
     },

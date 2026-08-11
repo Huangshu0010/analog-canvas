@@ -85,7 +85,7 @@
       "palette": true,
       "automaticMappings": ["spice:D"],
       "assetPath": "diode.symbol.json",
-      "assetHash": "8e89c123c3a5e69b03e15d1cf76e3d06c3f1d6c88070cd6ea3993004bc2233f9",
+      "assetHash": "8bf77cb8f9988277a8e915132c1f1cae37c1d177e9db9278bbd4924d8ae58f83",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -429,7 +429,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Textbook gain block has implicit reference nodes and no exact primitive SPICE terminal contract.",
       "assetPath": "voltage-amplifier.symbol.json",
-      "assetHash": "42bd3e0e3740536979a04b9ecb0a26f8509674bd59538e4003b6cb059ebc253c",
+      "assetHash": "cea1803199391aac352d037d820be8f5bdc69c878d128184eed2575193fc8bf7",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

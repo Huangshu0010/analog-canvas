@@ -553,13 +553,24 @@ describe("Razavi symbol catalog", () => {
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: 5.333333, y: -5.866667 },
-          to: { x: 5.333333, y: 5.866667 },
+          from: { x: 6.666666, y: -7.333334 },
+          to: { x: 6.666666, y: 7.333334 },
           style: expect.objectContaining({ strokeRole: "emphasis" }),
         }),
       ]),
     );
     expect(diode.pins.map((pin) => pin.at.x)).toEqual([-20, 20]);
+    const voltageAmplifier = requireRazaviCatalogSymbol("voltage-amplifier");
+    expect(voltageAmplifier.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "path",
+          data: "M -23.63 -28.62 L -23.63 28.62 L 23.63 0 Z",
+          style: expect.objectContaining({ strokeRole: "emphasis" }),
+        }),
+      ]),
+    );
+    expect(voltageAmplifier.pins.map((pin) => pin.at.x)).toEqual([-40, 40]);
     const idealSwitch = requireRazaviCatalogSymbol("ideal-switch");
     expect(idealSwitch.pins.map((pin) => pin.at.x)).toEqual([-30, 30]);
     expect(idealSwitch.primitives).toEqual(

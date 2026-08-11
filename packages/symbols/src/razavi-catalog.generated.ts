@@ -109,7 +109,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:D"],
     assetPath: "diode.symbol.json",
     assetHash:
-      "8e89c123c3a5e69b03e15d1cf76e3d06c3f1d6c88070cd6ea3993004bc2233f9",
+      "8bf77cb8f9988277a8e915132c1f1cae37c1d177e9db9278bbd4924d8ae58f83",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -516,7 +516,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Textbook gain block has implicit reference nodes and no exact primitive SPICE terminal contract.",
     assetPath: "voltage-amplifier.symbol.json",
     assetHash:
-      "42bd3e0e3740536979a04b9ecb0a26f8509674bd59538e4003b6cb059ebc253c",
+      "cea1803199391aac352d037d820be8f5bdc69c878d128184eed2575193fc8bf7",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -996,7 +996,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         to: {
-          x: -6.666667,
+          x: -8.333334,
           y: 0,
         },
         style: {
@@ -1009,15 +1009,15 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -6.666667,
-            y: -5.4,
+            x: -8.333334,
+            y: -6.75,
           },
           {
-            x: -6.666667,
-            y: 5.4,
+            x: -8.333334,
+            y: 6.75,
           },
           {
-            x: 4.666667,
+            x: 5.833334,
             y: 0,
           },
         ],
@@ -1032,12 +1032,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 5.333333,
-          y: -5.866667,
+          x: 6.666666,
+          y: -7.333334,
         },
         to: {
-          x: 5.333333,
-          y: 5.866667,
+          x: 6.666666,
+          y: 7.333334,
         },
         style: {
           strokeRole: "emphasis",
@@ -1048,7 +1048,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 5.333333,
+          x: 6.666666,
           y: 0,
         },
         to: {
@@ -3023,7 +3023,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         to: {
-          x: -22,
+          x: -23.63,
           y: 0,
         },
         style: {
@@ -3034,7 +3034,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
       {
         kind: "path",
-        data: "M -22 -24 L -22 24 L 22 0 Z",
+        data: "M -23.63 -28.62 L -23.63 28.62 L 23.63 0 Z",
         style: {
           strokeRole: "emphasis",
           lineCap: "butt",
@@ -3044,7 +3044,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 22,
+          x: 23.63,
           y: 0,
         },
         to: {

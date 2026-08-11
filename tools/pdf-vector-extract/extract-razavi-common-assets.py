@@ -303,15 +303,21 @@ SPECS: dict[str, dict[str, Any]] = {
         "definition": symbol(
             "diode", "Diode", (-24, -10, 48, 20),
             [pin("A", "anode", -20, 0, "west"), pin("K", "cathode", 20, 0, "east")],
-            [line(-20, 0, -6.666667, 0), outline_polygon([(-6.666667, -5.4), (-6.666667, 5.4), (4.666667, 0)]), line(5.333333, -5.866667, 5.333333, 5.866667, EMPHASIS), line(5.333333, 0, 20, 0)],
+            [line(-20, 0, -8.333334, 0), outline_polygon([(-8.333334, -6.75), (-8.333334, 6.75), (5.833334, 0)]), line(6.666666, -7.333334, 6.666666, 7.333334, EMPHASIS), line(6.666666, 0, 20, 0)],
             ["pn-diode", "rectifier-diode"],
         ),
         # Figure 15.54 D2 is a vertical diode.  The generated product symbol
         # is a horizontal presentation of that source form, so its fidelity
         # diff is intentionally allowed to reveal orientation/normalization
         # divergence rather than silently comparing against a redrawn proxy.
-        "sourceOriginPdf": (275.739, 99.913),
-        "witnessWindow": {"width": 116, "height": 48, "minX": -24, "minY": -10},
+        # Refined against the native cathode bar centreline.  The initial
+        # reading sat about two witness pixels low, which made a correctly
+        # scaled candidate require the maximum registration translation.
+        "sourceOriginPdf": (275.739, 102.676),
+        # Keep the witness bounded by the two declared +/-20-unit pin anchors.
+        # The old 48x116 crop included neighbouring circuit wire beyond those
+        # anchors, so a correct product lead was mis-scored as too short.
+        "witnessWindow": {"width": 48, "height": 96, "minX": -10, "minY": -20},
     },
     "voltage-amplifier": {
         "pdfPage": 307, "printedPage": 288, "figure": "8.24",
@@ -319,11 +325,18 @@ SPECS: dict[str, dict[str, Any]] = {
         "definition": symbol(
             "voltage-amplifier", "Voltage Amplifier", (-44, -28, 88, 56),
             [pin("IN", "input", -40, 0, "west", 20), pin("OUT", "output", 40, 0, "east", 20)],
-            [line(-40, 0, -22, 0), {"kind": "path", "data": "M -22 -24 L -22 24 L 22 0 Z", "style": EMPHASIS}, line(22, 0, 40, 0)],
+            # Figure 8.24 native triangle vertices, normalized through the
+            # 0.717 pt -> 1.6 logical-unit normal-stroke scale.  Its height is
+            # intentionally greater than its width; do not uniform-scale it.
+            [line(-40, 0, -23.63, 0), {"kind": "path", "data": "M -23.63 -28.62 L -23.63 28.62 L 23.63 0 Z", "style": EMPHASIS}, line(23.63, 0, 40, 0)],
             ["gain-block", "voltage-gain", "a0"],
         ),
-        "sourceOriginPdf": (248.238, 61.485),
-        "witnessWindow": {"width": 212, "height": 135, "minX": -44, "minY": -28},
+        "sourceOriginPdf": (248.238, 60.9472),
+        # Figure 8.24 places the context labels e and v_pi beside the native
+        # block.  The fidelity witness deliberately covers the triangle and
+        # its immediate leads only; those labels are circuit annotations, not
+        # part of the reusable voltage-amplifier symbol.
+        "witnessWindow": {"width": 125, "height": 135, "minX": -26, "minY": -28},
     },
     "ideal-switch": {
         "pdfPage": 560, "printedPage": 541, "figure": "13.4",

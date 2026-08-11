@@ -105,6 +105,7 @@ for (const target of registry.targets) {
     label: target.label,
     formal: target.formalKind,
     window: target.window,
+    rotation: target.rotation,
   };
 }
 
@@ -334,7 +335,7 @@ for (const deviceId of targets) {
     originPx: measurement.originPx ?? measurement.centerPx,
     threshold: resolvedThreshold,
     useVariant: meta.useVariant,
-    rotation: measurement.rotation ?? 0,
+    rotation: meta.rotation ?? measurement.rotation ?? 0,
     window: meta.window ?? measurement.window ?? measurement.cropWindowPx,
     antiAliasSensitive: Boolean(meta.formal),
     rasterize: meta.formal
@@ -371,6 +372,7 @@ const cols = [
   ["IoU", 7],
   ["softIoU", 8],
   ["regLift", 8],
+  ["shift", 8],
   ["edge%", 6],
   ["verdict", 11],
 ];
@@ -385,6 +387,7 @@ for (const r of reports) {
       r.iou.toFixed(4).padStart(7),
       r.softIou.toFixed(4).padStart(8),
       ("+" + r.regLift.toFixed(3)).padStart(8),
+      `${r.regBestShift.dx},${r.regBestShift.dy}`.padStart(8),
       (r.edgeShellRatio * 100).toFixed(0).padStart(5) + "%",
       r.verdict.padEnd(11),
     ].join(" "),

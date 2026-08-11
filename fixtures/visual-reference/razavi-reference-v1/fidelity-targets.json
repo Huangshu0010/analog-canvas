@@ -159,7 +159,8 @@
       "measurementPath": "common-symbol-geometry.json",
       "measurementKey": "diode",
       "symbolId": "diode",
-      "useVariant": false
+      "useVariant": false,
+      "rotation": -90
     },
     {
       "id": "ideal-switch",

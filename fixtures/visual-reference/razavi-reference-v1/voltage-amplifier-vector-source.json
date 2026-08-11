@@ -209,7 +209,7 @@
             "y": 0
           },
           "to": {
-            "x": -22,
+            "x": -23.63,
             "y": 0
           },
           "style": {
@@ -220,7 +220,7 @@
         },
         {
           "kind": "path",
-          "data": "M -22 -24 L -22 24 L 22 0 Z",
+          "data": "M -23.63 -28.62 L -23.63 28.62 L 23.63 0 Z",
           "style": {
             "strokeRole": "emphasis",
             "lineCap": "butt",
@@ -230,7 +230,7 @@
         {
           "kind": "line",
           "from": {
-            "x": 22,
+            "x": 23.63,
             "y": 0
           },
           "to": {
@@ -257,23 +257,23 @@
     "sourcePdfPage": 307,
     "dpi": 385.606695,
     "pixels": {
-      "width": 212,
+      "width": 125,
       "height": 135
     },
     "pixelsPerLogical": 2.4,
     "originPx": {
-      "x": 106.298812,
-      "y": 67.46872
+      "x": 63.298812,
+      "y": 67.588452
     },
     "window": {
-      "width": 212,
+      "width": 125,
       "height": 135,
-      "minX": -44,
+      "minX": -26,
       "minY": -28
     },
     "sourceCropPx": {
-      "x": 1041,
-      "y": 444
+      "x": 1084,
+      "y": 441
     },
     "assetPath": "voltage-amplifier-reference.png",
     "threshold": 160

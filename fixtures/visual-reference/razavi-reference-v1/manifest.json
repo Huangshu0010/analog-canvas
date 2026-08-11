@@ -99,9 +99,9 @@
         "figure": "15.54"
       },
       "extractPath": "diode-vector-source.json",
-      "extractSha256": "5ef3a805cb1832f07fc18797dee149a86eb5d8c22dabcb0b4a7cb79f8b4124ea",
+      "extractSha256": "6f4914befafb3340b9d8544625c15ad7fa381ecb0f7fac67e2a5c07817ad3d41",
       "rasterPath": "diode-reference.png",
-      "rasterSha256": "5914a71059241e911f39df87ff7d007d0063efd969b2949e32653799a87079bf",
+      "rasterSha256": "2b098110b525242efcb3f7d27e1856ef484c475f6e7c365c128a6a4c63a10c03",
       "scope": [
         "outline diode geometry",
         "double-width cathode bar"
@@ -172,9 +172,9 @@
         "figure": "8.24"
       },
       "extractPath": "voltage-amplifier-vector-source.json",
-      "extractSha256": "069f38d2962f17078223152cab7c2f554864ddcc024701cdab9c81c6d53c9001",
+      "extractSha256": "b2b2eee81b7e7ce00bc21bd30f84291be8b39b9e8c5b873b1a65fe59e3dce564",
       "rasterPath": "voltage-amplifier-reference.png",
-      "rasterSha256": "6b900510316122c9c8cd2cf2e380a51804c45ea66ec1a9f3b3c06c1ec5009872",
+      "rasterSha256": "f111f61f91eb2d45fb909c68eae62d083716a1be4a3865ce0ee2dcaf51c070f1",
       "scope": [
         "single-ended voltage-gain block geometry"
       ]
@@ -197,9 +197,9 @@
   "opampGeometryPath": "opamp-geometry.json",
   "opampGeometrySha256": "cc0b623c3620cf70161f353f7abcfa01b1f14daa5108d23f3800c0ca9c202c06",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
-  "commonSymbolGeometrySha256": "79c2a35185ee0531625435f730e33bbff9212e57a409de9ecf666a3b1ccd4a68",
+  "commonSymbolGeometrySha256": "de9531139628f23ecdadf7dbc51d64ad176d790cb17f6929ef7fbaae597c398a",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "76710f149665c830546f1d8df1bb97dadaaeec52ce7ff66f687d70586302d2d7",
+  "fidelityTargetsSha256": "e5cea73042d07f4169782d1a95f3b29c6ae8170a59e8a272487bf6e68ea30165",
   "pixels": {
     "width": 1204,
     "height": 794
