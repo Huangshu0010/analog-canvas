@@ -4466,3 +4466,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   build, complete editor E2E suite (70), and `git diff --check` passed.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `feat(editor): refine Virtuoso-style component insertion`.
+
+## 2026-08-11 - Component Placement Event Capture
+
+- Target: make pending component placement independent of SVG child hit target
+  and input-event detail.
+- Changed areas: canvas gesture precedence, click-time placement commit, and a
+  semantic-click E2E regression.
+- Validation: component insertion E2E (6), workspace typecheck, production
+  editor build, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `fix(editor): capture all component placement clicks`.

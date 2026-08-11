@@ -229,3 +229,26 @@ test("places MOS parameters and orientation while preserving deliberate referenc
   );
   await expect(page.getByLabel("Component rotation")).toHaveValue("90");
 });
+
+test("commits a pending component from a semantic canvas click", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByRole("combobox").fill("resistor");
+  await dialog.getByRole("button", { name: "Apply" }).click();
+
+  const canvas = page.getByTestId("schematic-canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Canvas is not measurable");
+  await canvas.dispatchEvent("click", {
+    bubbles: true,
+    detail: 0,
+    clientX: box.x + 360,
+    clientY: box.y + 230,
+  });
+
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
+});

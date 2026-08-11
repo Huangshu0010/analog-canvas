@@ -3826,21 +3826,21 @@ export function App({ project: initialProject }: AppProps) {
       });
       return;
     }
-    if (
-      event.button !== 0 ||
-      (event.target !== event.currentTarget &&
-        (event.target as Element).tagName !== "rect")
-    )
-      return;
+    if (event.button !== 0) return;
+    // Placement deliberately commits on the matching click below. Pointer-down
+    // must not start the normal selection/move gesture while that click is
+    // pending, regardless of which SVG child was hit.
+    if (pendingSymbolId && pendingComponentPlacement) return;
     const point = pointFromClient(
       event.clientX,
       event.clientY,
       event.currentTarget,
     );
-    if (pendingSymbolId && pendingComponentPlacement) {
-      placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
+    if (
+      event.target !== event.currentTarget &&
+      (event.target as Element).tagName !== "rect"
+    )
       return;
-    }
     if (tool === "wire") return;
     // Arrow / Construction line use a two-phase click model (mirroring wire):
     // click to set the start, hover to preview, click to commit. They bypass the
@@ -5807,6 +5807,18 @@ export function App({ project: initialProject }: AppProps) {
           onPointerUp={finishCanvasGesture}
           onPointerCancel={finishCanvasGesture}
           onClick={(event) => {
+            if (pendingSymbolId && pendingComponentPlacement) {
+              placeNewComponent(
+                pendingSymbolId,
+                pointFromClient(
+                  event.clientX,
+                  event.clientY,
+                  event.currentTarget,
+                ),
+                pendingComponentPlacement,
+              );
+              return;
+            }
             const target = event.target as Element;
             const onBackground =
               target === event.currentTarget || target.tagName === "rect";
