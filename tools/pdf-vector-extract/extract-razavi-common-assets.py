@@ -35,6 +35,10 @@ NORMAL = {"strokeRole": "normal", "lineCap": "butt", "lineJoin": "miter"}
 EMPHASIS = {"strokeRole": "emphasis", "lineCap": "butt", "lineJoin": "miter"}
 
 
+def rounded(value: float) -> float:
+    return round(float(value), 6)
+
+
 def pin(name: str, role: str, x: int, y: int, direction: str, lead: int = 10) -> dict[str, Any]:
     return {
         "name": name,
@@ -47,6 +51,10 @@ def pin(name: str, role: str, x: int, y: int, direction: str, lead: int = 10) ->
 
 def line(x1: float, y1: float, x2: float, y2: float, style: dict[str, Any] = NORMAL) -> dict[str, Any]:
     return {"kind": "line", "from": {"x": x1, "y": y1}, "to": {"x": x2, "y": y2}, "style": style}
+
+
+def polyline(points: list[tuple[float, float]], style: dict[str, Any] = NORMAL) -> dict[str, Any]:
+    return {"kind": "polyline", "points": [{"x": x, "y": y} for x, y in points], "style": style}
 
 
 def circle(x: float, y: float, radius: float, fill: str = "none") -> dict[str, Any]:
@@ -75,62 +83,143 @@ def symbol(symbol_id: str, name: str, view_box: tuple[float, float, float, float
     }
 
 
+def segment_polygon_intersections(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    polygon_points: list[tuple[float, float]],
+) -> list[tuple[float, tuple[float, float]]]:
+    def cross(left: tuple[float, float], right: tuple[float, float]) -> float:
+        return left[0] * right[1] - left[1] * right[0]
+
+    direction = (end[0] - start[0], end[1] - start[1])
+    intersections: list[tuple[float, tuple[float, float]]] = []
+    edges = zip(polygon_points, [*polygon_points[1:], polygon_points[0]])
+    for edge_start, edge_end in edges:
+        edge = (edge_end[0] - edge_start[0], edge_end[1] - edge_start[1])
+        denominator = cross(direction, edge)
+        if math.isclose(denominator, 0, abs_tol=1e-9):
+            continue
+        offset = (edge_start[0] - start[0], edge_start[1] - start[1])
+        t = cross(offset, edge) / denominator
+        u = cross(offset, direction) / denominator
+        if -1e-9 <= t <= 1 + 1e-9 and -1e-9 <= u <= 1 + 1e-9:
+            point_value = (start[0] + t * direction[0], start[1] + t * direction[1])
+            if not any(math.isclose(t, existing[0], abs_tol=1e-7) for existing in intersections):
+                intersections.append((t, point_value))
+    return sorted(intersections, key=lambda value: value[0])
+
+
+def clipped_arrow_branch(
+    base: tuple[float, float],
+    junction: tuple[float, float],
+    pin_point: tuple[float, float],
+    arrow: list[tuple[float, float]],
+) -> list[dict[str, Any]]:
+    intersections = segment_polygon_intersections(base, junction, arrow)
+    if len(intersections) != 2:
+        raise RuntimeError(f"Razavi common extraction: expected two BJT arrow intersections, got {len(intersections)}")
+    entry = tuple(rounded(value) for value in intersections[0][1])
+    exit_point = tuple(rounded(value) for value in intersections[1][1])
+    result = [line(base[0], base[1], entry[0], entry[1])]
+    if not (
+        math.isclose(exit_point[0], junction[0], abs_tol=1e-6)
+        and math.isclose(exit_point[1], junction[1], abs_tol=1e-6)
+    ):
+        result.append(polyline([exit_point, junction, pin_point]))
+    else:
+        result.append(line(junction[0], junction[1], pin_point[0], pin_point[1]))
+    return result
+
+
+def bjt_definition(kind: str) -> dict[str, Any]:
+    # Both source figures use 0.717 pt normal strokes.  Scale every native
+    # coordinate by the same ratio that maps that stroke to the product's
+    # Razavi 1.6-unit normal role; this retains arrow/body proportions instead
+    # of making the arrow appear half-sized beside a doubled line weight.
+    scale = RAZAVI_NORMAL_STROKE / 0.717
+
+    def point(x: float, y: float) -> tuple[float, float]:
+        return (rounded(x * scale), rounded(y * scale))
+
+    base_x = point(-8.946, 0)[0]
+    if kind == "npn":
+        base_top, base_bottom = point(0, -6.645)[1], point(0, 6.637)[1]
+        upper_base, upper_junction = point(-8.946, -2.982), point(0, -6.710)
+        lower_base, lower_junction = point(-8.946, 2.983), point(0, 6.709)
+        arrow = [point(-2.982, 3.728), point(-4.473, 6.709), point(0, 6.709)]
+        primitives = [
+            line(-40, 0, base_x, 0),
+            line(base_x, base_top, base_x, base_bottom, EMPHASIS),
+            polyline([upper_base, upper_junction, (0, -30)]),
+            *clipped_arrow_branch(lower_base, lower_junction, (0, 30), arrow),
+            polygon(arrow),
+        ]
+        pins = [
+            pin("C", "collector", 0, -30, "north"),
+            pin("B", "base", -40, 0, "west"),
+            pin("E", "emitter", 0, 30, "south"),
+        ]
+        name = "NPN Bipolar Transistor"
+        aliases = ["bjt-npn", "bipolar-npn"]
+    elif kind == "pnp":
+        base_top, base_bottom = point(0, -6.639)[1], point(0, 6.643)[1]
+        upper_base, upper_junction = point(-8.946, -2.982), point(0, -6.710)
+        lower_base, lower_junction = point(-8.946, 2.982), point(0, 6.709)
+        arrow = [point(-5.126, -6.338), point(-3.633, -3.356), point(-8.106, -3.353)]
+        primitives = [
+            line(-40, 0, base_x, 0),
+            line(base_x, base_top, base_x, base_bottom, EMPHASIS),
+            *clipped_arrow_branch(upper_base, upper_junction, (0, -30), arrow),
+            polyline([lower_base, lower_junction, (0, 30)]),
+            polygon(arrow),
+        ]
+        pins = [
+            pin("C", "collector", 0, 30, "south"),
+            pin("B", "base", -40, 0, "west"),
+            pin("E", "emitter", 0, -30, "north"),
+        ]
+        name = "PNP Bipolar Transistor"
+        aliases = ["bjt-pnp", "bipolar-pnp"]
+    else:
+        raise RuntimeError(f"Unsupported BJT kind {kind}")
+
+    return symbol(kind, name, (-44, -34, 52, 68), pins, primitives, aliases)
+
+
 def npn_bjt() -> dict[str, Any]:
-    # Figure 12.6 Q1, normalized from its native PDF objects around
-    # (216.54, 233.936).  The filled arrow is deliberately emitted after the
-    # emitter branch so it masks the centerline exactly as in the source.
-    primitives = [
-        line(-20, 0, -8.946667, 0),
-        line(-8.946667, -6.64, -8.946667, 6.64, EMPHASIS),
-        line(-8.946667, -2.98, 0, -6.706667),
-        line(0, -6.706667, 0, -20),
-        line(-8.946667, 2.98, 0, 6.706667),
-        line(0, 6.706667, 0, 20),
-        polygon([(-2.98, 3.726667), (-4.473333, 6.706667), (0, 6.706667)]),
-    ]
-    return symbol(
-        "npn",
-        "NPN Bipolar Transistor",
-        (-24, -24, 32, 48),
-        [pin("C", "collector", 0, -20, "north"), pin("B", "base", -20, 0, "west"), pin("E", "emitter", 0, 20, "south")],
-        primitives,
-        ["bjt-npn", "bipolar-npn"],
-    )
+    # Figure 12.6 Q1, origin (216.540, 233.9362).
+    return bjt_definition("npn")
 
 
 def pnp_bjt() -> dict[str, Any]:
-    # Figure 12.11 Q1, normalized from its own native PDF objects around
-    # (198.383, 592.511).  Unlike the NPN, the directly observed emitter and
-    # its inward arrow are on the upper branch.
-    primitives = [
-        line(-20, 0, -8.946667, 0),
-        line(-8.946667, -6.64, -8.946667, 6.64, EMPHASIS),
-        line(-8.946667, -2.98, 0, -6.706667),
-        line(0, -6.706667, 0, -20),
-        line(-8.946667, 2.98, 0, 6.706667),
-        line(0, 6.706667, 0, 20),
-        polygon([(-5.126667, -6.34), (-3.633333, -3.353333), (-8.106667, -3.353333)]),
-    ]
-    return symbol(
-        "pnp",
-        "PNP Bipolar Transistor",
-        (-24, -24, 32, 48),
-        [pin("C", "collector", 0, 20, "south"), pin("B", "base", -20, 0, "west"), pin("E", "emitter", 0, -20, "north")],
-        primitives,
-        ["bjt-pnp", "bipolar-pnp"],
-    )
+    # Figure 12.11 Q1, origin (198.382, 261.6822).
+    return bjt_definition("pnp")
 
 
 SPECS: dict[str, dict[str, Any]] = {
     "pnp": {
         "pdfPage": 537, "printedPage": 518, "figure": "12.11",
-        "crop": (178.0, 578.0, 202.0, 607.0), "method": "direct-device-vector-normalization",
+        "crop": (180.4, 248.9, 198.5, 274.5), "method": "direct-device-vector-normalization",
         "definition": pnp_bjt(),
+        "selectionMode": "inside",
+        "witnessStrokeWidths": {"normal": RAZAVI_NORMAL_STROKE, "emphasis": 2.4},
+        "derivation": {
+            "geometry": "uniformly scaled from Figure 12.11 Q1 native vectors",
+            "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
+            "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon and the arrow is rendered last",
+        },
     },
     "npn": {
         "pdfPage": 533, "printedPage": 514, "figure": "12.6",
-        "crop": (198.0, 220.0, 222.0, 250.0), "method": "direct-device-vector-normalization",
+        "crop": (198.5, 221.0, 216.7, 246.8), "method": "direct-device-vector-normalization",
         "definition": npn_bjt(),
+        "selectionMode": "inside",
+        "witnessStrokeWidths": {"normal": RAZAVI_NORMAL_STROKE, "emphasis": 2.4},
+        "derivation": {
+            "geometry": "uniformly scaled from Figure 12.6 Q1 native vectors",
+            "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
+            "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon and the arrow is rendered last",
+        },
     },
     "diode": {
         "pdfPage": 661, "printedPage": 642, "figure": "15.54",
@@ -178,10 +267,6 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def rounded(value: float) -> float:
-    return round(float(value), 6)
-
-
 def object_fingerprint(obj: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {"objectType": obj.get("object_type"), "linewidth": rounded(obj.get("linewidth", 0) or 0)}
     for key in ("x0", "top", "x1", "bottom"):
@@ -205,6 +290,16 @@ def compact_fingerprint(value: dict[str, Any]) -> dict[str, Any]:
 def overlaps(obj: dict[str, Any], crop: tuple[float, float, float, float]) -> bool:
     left, top, right, bottom = crop
     return not (float(obj.get("x1", -math.inf)) < left or float(obj.get("x0", math.inf)) > right or float(obj.get("bottom", -math.inf)) < top or float(obj.get("top", math.inf)) > bottom)
+
+
+def inside(obj: dict[str, Any], crop: tuple[float, float, float, float]) -> bool:
+    left, top, right, bottom = crop
+    return (
+        float(obj.get("x0", -math.inf)) >= left
+        and float(obj.get("x1", math.inf)) <= right
+        and float(obj.get("top", -math.inf)) >= top
+        and float(obj.get("bottom", math.inf)) <= bottom
+    )
 
 
 def ideal_switch_objects(page: Any, crop: tuple[float, float, float, float]) -> list[dict[str, Any]]:
@@ -283,14 +378,18 @@ def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
         raise RuntimeError("Razavi common extraction: ideal-switch blade path changed")
     blade_start = blade_path[0][1]
     blade_end = blade_path[1][1]
+    left_contact = normalized_circle(contacts[0])
+    right_contact = normalized_circle(contacts[1])
     primitives = [
         # Merge the small semantic extension into each source lead so butt caps
-        # cannot create a raster seam at the on-grid pin anchor.
-        line(-30, 0, nx(left_lead["x1"]), 0),
-        normalized_circle(contacts[0]),
+        # cannot create a raster seam at the on-grid pin anchor.  Stop its
+        # centerline at the circle centerline boundary, never inside the hollow
+        # contact where a butt cap would show as a protrusion.
+        line(-30, 0, rounded(left_contact["center"]["x"] - left_contact["radius"]), 0),
+        left_contact,
         line(nx(blade_start[0]), ny(blade_start[1]), nx(blade_end[0]), ny(blade_end[1])),
-        normalized_circle(contacts[1]),
-        line(nx(right_lead["x0"]), 0, 30, 0),
+        right_contact,
+        line(rounded(right_contact["center"]["x"] + right_contact["radius"]), 0, 30, 0),
     ]
     return symbol(
         "ideal-switch",
@@ -331,6 +430,13 @@ def render_witness(
             if kind == "line":
                 start, end = xy(primitive["from"]), xy(primitive["to"])
                 drawing.line(start[0], start[1], end[0], end[1])
+            elif kind == "polyline":
+                path = drawing.beginPath()
+                points = primitive["points"]
+                path.moveTo(*xy(points[0]))
+                for value in points[1:]:
+                    path.lineTo(*xy(value))
+                drawing.drawPath(path, stroke=1, fill=0)
             elif kind == "circle":
                 center = xy(primitive["center"])
                 drawing.circle(center[0], center[1], primitive["radius"] * scale, stroke=primitive.get("stroke") != "none", fill=primitive.get("fill") == "foreground")
@@ -387,7 +493,8 @@ def extract_one(pdf_path: Path, output_root: Path, asset_id: str, pdftoppm: str,
         source_objects = ideal_switch_objects(page, spec["crop"])
         definition = ideal_switch_definition(source_objects)
     else:
-        source_objects = [obj for obj in [*page.lines, *page.curves, *page.rects] if overlaps(obj, spec["crop"])]
+        selector = inside if spec.get("selectionMode") == "inside" else overlaps
+        source_objects = [obj for obj in [*page.lines, *page.curves, *page.rects] if selector(obj, spec["crop"])]
         definition = spec["definition"]
     selected = [object_fingerprint(obj) for obj in source_objects]
     if not selected:

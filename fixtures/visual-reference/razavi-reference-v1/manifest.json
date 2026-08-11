@@ -88,7 +88,7 @@
         "figure": "13.4"
       },
       "extractPath": "ideal-switch-vector-source.json",
-      "extractSha256": "2276f40deb1d9451447a229adcbf630a74e72837e9585dfb9f0e0405270b2a4a",
+      "extractSha256": "66804e2000ad8cb1dea26b1b7883d0e82fd7c50d609d3e9c2a0426a630172c72",
       "rasterPath": "ideal-switch-reference.png",
       "rasterSha256": "664871b3e433dc06757b0753db60fb40aaeef86489c280a44870d59945d56c37",
       "scope": ["two-terminal ideal switch geometry"]
@@ -104,9 +104,9 @@
         "figure": "12.6"
       },
       "extractPath": "npn-vector-source.json",
-      "extractSha256": "b52b9a80e5dca81bc938ee81b9092c81981a07b18c9d13d671438c92a27d8649",
+      "extractSha256": "626e3a335c5f958601c776811eeb1f7b8c8c59946b4edbf9763fac728ba77ec2",
       "rasterPath": "npn-reference.png",
-      "rasterSha256": "973f796d6d57fae6d149aa16a71579605207eb71e67639c8c68029058c79a47a",
+      "rasterSha256": "121553e80145d7294a5e25aa074892bd528b04da716bcf14914053a54dbf99ab",
       "scope": ["direct NPN body and outward emitter arrow"]
     },
     {
@@ -120,9 +120,9 @@
         "figure": "12.11"
       },
       "extractPath": "pnp-vector-source.json",
-      "extractSha256": "607d0c8d70e1aec4725f3f631466827f70d78d038f090f7dff5407dcda1d59cf",
+      "extractSha256": "21aaa5a728e6ff7c20c8e7a3b5ae707f9779f781f5735be32a267f2f2df5b137",
       "rasterPath": "pnp-reference.png",
-      "rasterSha256": "8abbd1b3388b3fe969f576d11c35bf7a05a1abc686c65dfdb07dc6e1693486fb",
+      "rasterSha256": "219824e958f4139674239aafcc0cbab16e4a5d442499804d99b13877661a8fb2",
       "scope": ["direct PNP body and inward upper-emitter arrow"]
     },
     {
@@ -159,7 +159,7 @@
   "opampGeometryPath": "opamp-geometry.json",
   "opampGeometrySha256": "51003a9dbe09ea8b9d3a346489d9777c4019a57466bac10dbfdc5b9e8d0390ba",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
-  "commonSymbolGeometrySha256": "6c5860ea0692c32974c6f08133a3445a217f90c130a51ddd4512ef52ad5f5e14",
+  "commonSymbolGeometrySha256": "5482a5e8af89f8ddf1b43a77bc8b0a7bf105717454f262e1377d6e771c1ec227",
   "fidelityTargetsPath": "fidelity-targets.json",
   "fidelityTargetsSha256": "f22750d6febb521ce3ce93c0b3e5f7bce3af397e6d941da3720443c2d74d1158",
   "pixels": {

@@ -3,10 +3,10 @@
   "id": "npn",
   "name": "NPN Bipolar Transistor",
   "viewBox": {
-    "x": -24,
-    "y": -24,
-    "width": 32,
-    "height": 48
+    "x": -44,
+    "y": -34,
+    "width": 52,
+    "height": 68
   },
   "pins": [
     {
@@ -14,7 +14,7 @@
       "role": "collector",
       "at": {
         "x": 0,
-        "y": -20
+        "y": -30
       },
       "direction": "north",
       "presentation": {
@@ -26,7 +26,7 @@
       "name": "B",
       "role": "base",
       "at": {
-        "x": -20,
+        "x": -40,
         "y": 0
       },
       "direction": "west",
@@ -40,7 +40,7 @@
       "role": "emitter",
       "at": {
         "x": 0,
-        "y": 20
+        "y": 30
       },
       "direction": "south",
       "presentation": {
@@ -53,11 +53,11 @@
     {
       "kind": "line",
       "from": {
-        "x": -20,
+        "x": -40,
         "y": 0
       },
       "to": {
-        "x": -8.946667,
+        "x": -19.96318,
         "y": 0
       },
       "style": {
@@ -69,12 +69,12 @@
     {
       "kind": "line",
       "from": {
-        "x": -8.946667,
-        "y": -6.64
+        "x": -19.96318,
+        "y": -14.828452
       },
       "to": {
-        "x": -8.946667,
-        "y": 6.64
+        "x": -19.96318,
+        "y": 14.8106
       },
       "style": {
         "strokeRole": "emphasis",
@@ -83,14 +83,36 @@
       }
     },
     {
+      "kind": "polyline",
+      "points": [
+        {
+          "x": -19.96318,
+          "y": -6.654393
+        },
+        {
+          "x": 0,
+          "y": -14.973501
+        },
+        {
+          "x": 0,
+          "y": -30
+        }
+      ],
+      "style": {
+        "strokeRole": "normal",
+        "lineCap": "butt",
+        "lineJoin": "miter"
+      }
+    },
+    {
       "kind": "line",
       "from": {
-        "x": -8.946667,
-        "y": -2.98
+        "x": -19.96318,
+        "y": 6.656625
       },
       "to": {
-        "x": 0,
-        "y": -6.706667
+        "x": -8.260722,
+        "y": 11.530687
       },
       "style": {
         "strokeRole": "normal",
@@ -102,43 +124,11 @@
       "kind": "line",
       "from": {
         "x": 0,
-        "y": -6.706667
+        "y": 14.971269
       },
       "to": {
         "x": 0,
-        "y": -20
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "butt",
-        "lineJoin": "miter"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": -8.946667,
-        "y": 2.98
-      },
-      "to": {
-        "x": 0,
-        "y": 6.706667
-      },
-      "style": {
-        "strokeRole": "normal",
-        "lineCap": "butt",
-        "lineJoin": "miter"
-      }
-    },
-    {
-      "kind": "line",
-      "from": {
-        "x": 0,
-        "y": 6.706667
-      },
-      "to": {
-        "x": 0,
-        "y": 20
+        "y": 30
       },
       "style": {
         "strokeRole": "normal",
@@ -150,16 +140,16 @@
       "kind": "polygon",
       "points": [
         {
-          "x": -2.98,
-          "y": 3.726667
+          "x": -6.654393,
+          "y": 8.319107
         },
         {
-          "x": -4.473333,
-          "y": 6.706667
+          "x": -9.98159,
+          "y": 14.971269
         },
         {
           "x": 0,
-          "y": 6.706667
+          "y": 14.971269
         }
       ],
       "fill": "foreground",

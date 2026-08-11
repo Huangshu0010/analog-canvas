@@ -4288,3 +4288,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   residuals, and `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `fix(symbols): calibrate Razavi ideal switch`.
+
+## 2026-08-11 - Repair switch and BJT joints
+
+- Target: remove switch-contact protrusions and correct BJT arrow proportion,
+  tip occlusion, and diagonal-to-lead gaps.
+- Changed areas: contact-boundary lead termination; corrected PNP Figure 12.11
+  selection; uniformly scaled NPN/PNP source geometry; arrow-polygon clipping;
+  joined branch/lead polylines; regenerated evidence, witnesses, catalog, and
+  runtime registration; focused geometry regressions.
+- Validation: common/catalog stale checks, symbols build, 23 focused tests,
+  Python compile and focused formatting checks, fidelity IoU 0.9814/0.9846/
+  0.9901 for switch/NPN/PNP with anti-alias-only residuals, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): repair switch and BJT joints`.

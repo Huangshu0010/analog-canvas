@@ -111,7 +111,7 @@
       "automaticMappings": [],
       "manualOnlyReason": "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
       "assetPath": "ideal-switch.symbol.json",
-      "assetHash": "f2b92985026ce7a79cb91ffa4a8ec7ee52d55ea3f4dffabd67ddb9415dc2d43e",
+      "assetHash": "79e6ab20446f11e1e8f75e294e7d4d55eaeba9d892b5c793c275865fb6b17d8e",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -203,7 +203,7 @@
       "palette": true,
       "automaticMappings": ["spice:Q:npn", "pdk:model-type:npn"],
       "assetPath": "npn.symbol.json",
-      "assetHash": "e406e2ce0043b3bbb7afea8fac2044b5afc0e65058506ae4580d92672dc2a941",
+      "assetHash": "58651c80a574c866502f1697488068ae4abd9838458178ab94a26e9585c8d8cb",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
@@ -296,7 +296,7 @@
       "palette": true,
       "automaticMappings": ["spice:Q:pnp", "pdk:model-type:pnp"],
       "assetPath": "pnp.symbol.json",
-      "assetHash": "226d0967e7b23a490144bcc892701a03dbce2e5af92aeb9227fe5028825eb5ca",
+      "assetHash": "4cfc25c6c8c98bb13d5631312ac0148aae25eef8790bd3546efbfb80c14ed648",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

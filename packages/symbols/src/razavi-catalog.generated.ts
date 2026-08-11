@@ -140,7 +140,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
     assetPath: "ideal-switch.symbol.json",
     assetHash:
-      "f2b92985026ce7a79cb91ffa4a8ec7ee52d55ea3f4dffabd67ddb9415dc2d43e",
+      "79e6ab20446f11e1e8f75e294e7d4d55eaeba9d892b5c793c275865fb6b17d8e",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -248,7 +248,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:npn", "pdk:model-type:npn"],
     assetPath: "npn.symbol.json",
     assetHash:
-      "e406e2ce0043b3bbb7afea8fac2044b5afc0e65058506ae4580d92672dc2a941",
+      "58651c80a574c866502f1697488068ae4abd9838458178ab94a26e9585c8d8cb",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -358,7 +358,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:pnp", "pdk:model-type:pnp"],
     assetPath: "pnp.symbol.json",
     assetHash:
-      "226d0967e7b23a490144bcc892701a03dbce2e5af92aeb9227fe5028825eb5ca",
+      "4cfc25c6c8c98bb13d5631312ac0148aae25eef8790bd3546efbfb80c14ed648",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -1039,7 +1039,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
           y: 0,
         },
         to: {
-          x: -12.810042,
+          x: -12.726917,
           y: 0,
         },
         style: {
@@ -1097,7 +1097,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 14.410042,
+          x: 14.403348,
           y: 0,
         },
         to: {
@@ -1639,10 +1639,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "npn",
     name: "NPN Bipolar Transistor",
     viewBox: {
-      x: -24,
-      y: -24,
-      width: 32,
-      height: 48,
+      x: -44,
+      y: -34,
+      width: 52,
+      height: 68,
     },
     pins: [
       {
@@ -1650,7 +1650,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "collector",
         at: {
           x: 0,
-          y: -20,
+          y: -30,
         },
         direction: "north",
         presentation: {
@@ -1662,7 +1662,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "B",
         role: "base",
         at: {
-          x: -20,
+          x: -40,
           y: 0,
         },
         direction: "west",
@@ -1676,7 +1676,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "emitter",
         at: {
           x: 0,
-          y: 20,
+          y: 30,
         },
         direction: "south",
         presentation: {
@@ -1689,11 +1689,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -20,
+          x: -40,
           y: 0,
         },
         to: {
-          x: -8.946667,
+          x: -19.96318,
           y: 0,
         },
         style: {
@@ -1705,12 +1705,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -8.946667,
-          y: -6.64,
+          x: -19.96318,
+          y: -14.828452,
         },
         to: {
-          x: -8.946667,
-          y: 6.64,
+          x: -19.96318,
+          y: 14.8106,
         },
         style: {
           strokeRole: "emphasis",
@@ -1719,14 +1719,36 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
+        kind: "polyline",
+        points: [
+          {
+            x: -19.96318,
+            y: -6.654393,
+          },
+          {
+            x: 0,
+            y: -14.973501,
+          },
+          {
+            x: 0,
+            y: -30,
+          },
+        ],
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
         kind: "line",
         from: {
-          x: -8.946667,
-          y: -2.98,
+          x: -19.96318,
+          y: 6.656625,
         },
         to: {
-          x: 0,
-          y: -6.706667,
+          x: -8.260722,
+          y: 11.530687,
         },
         style: {
           strokeRole: "normal",
@@ -1738,43 +1760,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "line",
         from: {
           x: 0,
-          y: -6.706667,
+          y: 14.971269,
         },
         to: {
           x: 0,
-          y: -20,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -8.946667,
-          y: 2.98,
-        },
-        to: {
-          x: 0,
-          y: 6.706667,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 0,
-          y: 6.706667,
-        },
-        to: {
-          x: 0,
-          y: 20,
+          y: 30,
         },
         style: {
           strokeRole: "normal",
@@ -1786,16 +1776,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -2.98,
-            y: 3.726667,
+            x: -6.654393,
+            y: 8.319107,
           },
           {
-            x: -4.473333,
-            y: 6.706667,
+            x: -9.98159,
+            y: 14.971269,
           },
           {
             x: 0,
-            y: 6.706667,
+            y: 14.971269,
           },
         ],
         fill: "foreground",
@@ -2423,10 +2413,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "pnp",
     name: "PNP Bipolar Transistor",
     viewBox: {
-      x: -24,
-      y: -24,
-      width: 32,
-      height: 48,
+      x: -44,
+      y: -34,
+      width: 52,
+      height: 68,
     },
     pins: [
       {
@@ -2434,7 +2424,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "collector",
         at: {
           x: 0,
-          y: 20,
+          y: 30,
         },
         direction: "south",
         presentation: {
@@ -2446,7 +2436,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "B",
         role: "base",
         at: {
-          x: -20,
+          x: -40,
           y: 0,
         },
         direction: "west",
@@ -2460,7 +2450,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "emitter",
         at: {
           x: 0,
-          y: -20,
+          y: -30,
         },
         direction: "north",
         presentation: {
@@ -2473,11 +2463,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -20,
+          x: -40,
           y: 0,
         },
         to: {
-          x: -8.946667,
+          x: -19.96318,
           y: 0,
         },
         style: {
@@ -2489,12 +2479,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -8.946667,
-          y: -6.64,
+          x: -19.96318,
+          y: -14.815063,
         },
         to: {
-          x: -8.946667,
-          y: 6.64,
+          x: -19.96318,
+          y: 14.823989,
         },
         style: {
           strokeRole: "emphasis",
@@ -2505,12 +2495,12 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -8.946667,
-          y: -2.98,
+          x: -19.96318,
+          y: -6.654393,
         },
         to: {
-          x: 0,
-          y: -6.706667,
+          x: -17.97632,
+          y: -7.482362,
         },
         style: {
           strokeRole: "normal",
@@ -2519,15 +2509,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
-        kind: "line",
-        from: {
-          x: 0,
-          y: -6.706667,
-        },
-        to: {
-          x: 0,
-          y: -20,
-        },
+        kind: "polyline",
+        points: [
+          {
+            x: -9.808036,
+            y: -10.886271,
+          },
+          {
+            x: 0,
+            y: -14.973501,
+          },
+          {
+            x: 0,
+            y: -30,
+          },
+        ],
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -2535,31 +2531,21 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
-        kind: "line",
-        from: {
-          x: -8.946667,
-          y: 2.98,
-        },
-        to: {
-          x: 0,
-          y: 6.706667,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: 0,
-          y: 6.706667,
-        },
-        to: {
-          x: 0,
-          y: 20,
-        },
+        kind: "polyline",
+        points: [
+          {
+            x: -19.96318,
+            y: 6.654393,
+          },
+          {
+            x: 0,
+            y: 14.971269,
+          },
+          {
+            x: 0,
+            y: 30,
+          },
+        ],
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -2570,16 +2556,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -5.126667,
-            y: -6.34,
+            x: -11.438773,
+            y: -14.143375,
           },
           {
-            x: -3.633333,
-            y: -3.353333,
+            x: -8.107113,
+            y: -7.488982,
           },
           {
-            x: -8.106667,
-            y: -3.353333,
+            x: -18.088703,
+            y: -7.482287,
           },
         ],
         fill: "foreground",

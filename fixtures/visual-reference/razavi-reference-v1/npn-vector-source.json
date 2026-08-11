@@ -12,13 +12,13 @@
   "selection": {
     "method": "direct-device-vector-normalization",
     "boundsPdf": {
-      "left": 198.0,
-      "top": 220.0,
-      "right": 222.0,
-      "bottom": 250.0
+      "left": 198.5,
+      "top": 221.0,
+      "right": 216.7,
+      "bottom": 246.8
     },
-    "nativeObjectCount": 14,
-    "nativeObjectSha256": "312f85fc06b40fb4bba9aec1434802692d7dcbcb7e33de795ec0e0ca8f7a506b",
+    "nativeObjectCount": 10,
+    "nativeObjectSha256": "a9eec2e6012972aef28099bdd237aff2c8da4426d088f2d81b80c59f90b92091",
     "nativeObjectSample": [
       {
         "objectType": "line",
@@ -101,38 +101,18 @@
         "pathSha256": "d820093f2800360d98176f4c9f74c4c7eee560329609afecc7067674c80ceddc"
       },
       {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 216.54,
-        "top": 192.1882,
+        "objectType": "curve",
+        "linewidth": 1.434,
+        "x0": 212.067,
+        "top": 237.6642,
         "x1": 216.54,
-        "bottom": 222.0072,
-        "pathCommandCount": 2,
-        "pathSha256": "83eeb057e60b5b3851e9683ea4f61783858981fbf298af1e8ecf33ee07219baf"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 216.54,
-        "top": 249.3592,
-        "x1": 216.54,
-        "bottom": 253.8312,
-        "pathCommandCount": 2,
-        "pathSha256": "ff7b2c405f3074dc69cdcb855325cd132fb064a55721a19b63395bba9d740ebd"
-      },
-      {
-        "objectType": "line",
-        "linewidth": 0.717,
-        "x0": 216.54,
-        "top": 245.8642,
-        "x1": 216.54,
-        "bottom": 251.8282,
-        "pathCommandCount": 2,
-        "pathSha256": "d0a0077ae27de135b62667a542c8e766e1352830de38d1b14d68179e42c9debf"
+        "bottom": 240.6452,
+        "pathCommandCount": 3,
+        "pathSha256": "be7b0dc754a0ff246fe1250d4ae2bbafdd6ad46070a2f32df511f1db03bfc8ea"
       },
       {
         "objectType": "curve",
-        "linewidth": 1.434,
+        "linewidth": 0.717,
         "x0": 212.067,
         "top": 237.6642,
         "x1": 216.54,
@@ -147,17 +127,17 @@
       {
         "name": "C",
         "x": 0,
-        "y": -20
+        "y": -30
       },
       {
         "name": "B",
-        "x": -20,
+        "x": -40,
         "y": 0
       },
       {
         "name": "E",
         "x": 0,
-        "y": 20
+        "y": 30
       }
     ],
     "strokeMapping": {
@@ -173,10 +153,10 @@
       "id": "npn",
       "name": "NPN Bipolar Transistor",
       "viewBox": {
-        "x": -24,
-        "y": -24,
-        "width": 32,
-        "height": 48
+        "x": -44,
+        "y": -34,
+        "width": 52,
+        "height": 68
       },
       "pins": [
         {
@@ -184,7 +164,7 @@
           "role": "collector",
           "at": {
             "x": 0,
-            "y": -20
+            "y": -30
           },
           "direction": "north",
           "presentation": {
@@ -196,7 +176,7 @@
           "name": "B",
           "role": "base",
           "at": {
-            "x": -20,
+            "x": -40,
             "y": 0
           },
           "direction": "west",
@@ -210,7 +190,7 @@
           "role": "emitter",
           "at": {
             "x": 0,
-            "y": 20
+            "y": 30
           },
           "direction": "south",
           "presentation": {
@@ -223,11 +203,11 @@
         {
           "kind": "line",
           "from": {
-            "x": -20,
+            "x": -40,
             "y": 0
           },
           "to": {
-            "x": -8.946667,
+            "x": -19.96318,
             "y": 0
           },
           "style": {
@@ -239,12 +219,12 @@
         {
           "kind": "line",
           "from": {
-            "x": -8.946667,
-            "y": -6.64
+            "x": -19.96318,
+            "y": -14.828452
           },
           "to": {
-            "x": -8.946667,
-            "y": 6.64
+            "x": -19.96318,
+            "y": 14.8106
           },
           "style": {
             "strokeRole": "emphasis",
@@ -253,14 +233,36 @@
           }
         },
         {
+          "kind": "polyline",
+          "points": [
+            {
+              "x": -19.96318,
+              "y": -6.654393
+            },
+            {
+              "x": 0.0,
+              "y": -14.973501
+            },
+            {
+              "x": 0,
+              "y": -30
+            }
+          ],
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
           "kind": "line",
           "from": {
-            "x": -8.946667,
-            "y": -2.98
+            "x": -19.96318,
+            "y": 6.656625
           },
           "to": {
-            "x": 0,
-            "y": -6.706667
+            "x": -8.260722,
+            "y": 11.530687
           },
           "style": {
             "strokeRole": "normal",
@@ -271,44 +273,12 @@
         {
           "kind": "line",
           "from": {
-            "x": 0,
-            "y": -6.706667
+            "x": 0.0,
+            "y": 14.971269
           },
           "to": {
             "x": 0,
-            "y": -20
-          },
-          "style": {
-            "strokeRole": "normal",
-            "lineCap": "butt",
-            "lineJoin": "miter"
-          }
-        },
-        {
-          "kind": "line",
-          "from": {
-            "x": -8.946667,
-            "y": 2.98
-          },
-          "to": {
-            "x": 0,
-            "y": 6.706667
-          },
-          "style": {
-            "strokeRole": "normal",
-            "lineCap": "butt",
-            "lineJoin": "miter"
-          }
-        },
-        {
-          "kind": "line",
-          "from": {
-            "x": 0,
-            "y": 6.706667
-          },
-          "to": {
-            "x": 0,
-            "y": 20
+            "y": 30
           },
           "style": {
             "strokeRole": "normal",
@@ -320,16 +290,16 @@
           "kind": "polygon",
           "points": [
             {
-              "x": -2.98,
-              "y": 3.726667
+              "x": -6.654393,
+              "y": 8.319107
             },
             {
-              "x": -4.473333,
-              "y": 6.706667
+              "x": -9.98159,
+              "y": 14.971269
             },
             {
-              "x": 0,
-              "y": 6.706667
+              "x": 0.0,
+              "y": 14.971269
             }
           ],
           "fill": "foreground",
@@ -347,15 +317,20 @@
     "kind": "isolated-normalized-pdf-family",
     "dpi": 300.0,
     "pixels": {
-      "width": 77,
-      "height": 116
+      "width": 125,
+      "height": 164
     },
     "pixelsPerLogical": 2.4,
     "originPx": {
-      "x": 57.6,
-      "y": 57.6
+      "x": 105.6,
+      "y": 81.6
     },
     "assetPath": "npn-reference.png",
     "threshold": 160
+  },
+  "derivation": {
+    "geometry": "uniformly scaled from Figure 12.6 Q1 native vectors",
+    "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
+    "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon and the arrow is rendered last"
   }
 }
