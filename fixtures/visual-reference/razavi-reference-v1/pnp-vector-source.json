@@ -239,8 +239,8 @@
             "y": -6.654393
           },
           "to": {
-            "x": -17.97632,
-            "y": -7.482362
+            "x": -16.86865,
+            "y": -7.943954
           },
           "style": {
             "strokeRole": "normal",
@@ -252,8 +252,8 @@
           "kind": "polyline",
           "points": [
             {
-              "x": -9.808036,
-              "y": -10.886271
+              "x": -10.915706,
+              "y": -10.42468
             },
             {
               "x": 0.0,
@@ -337,6 +337,6 @@
   "derivation": {
     "geometry": "uniformly scaled from Figure 12.11 Q1 native vectors",
     "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
-    "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon and the arrow is rendered last"
+    "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon, overlapped 1.2 logical units inside its fill to suppress raster seams, and the arrow is rendered last"
   }
 }

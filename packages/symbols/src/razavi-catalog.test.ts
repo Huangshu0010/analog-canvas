@@ -506,7 +506,15 @@ describe("Razavi symbol catalog", () => {
         expect.objectContaining({
           kind: "line",
           from: { x: -19.96318, y: 6.656625 },
-          to: { x: -8.260722, y: 11.530687 },
+          to: { x: -7.152963, y: 11.992067 },
+        }),
+        expect.objectContaining({
+          kind: "polyline",
+          points: [
+            { x: -1.107758, y: 14.509889 },
+            { x: 0, y: 14.971269 },
+            { x: 0, y: 30 },
+          ],
         }),
       ]),
     );
@@ -534,12 +542,12 @@ describe("Razavi symbol catalog", () => {
         expect.objectContaining({
           kind: "line",
           from: { x: -19.96318, y: -6.654393 },
-          to: { x: -17.97632, y: -7.482362 },
+          to: { x: -16.86865, y: -7.943954 },
         }),
         expect.objectContaining({
           kind: "polyline",
           points: [
-            { x: -9.808036, y: -10.886271 },
+            { x: -10.915706, y: -10.42468 },
             { x: 0, y: -14.973501 },
             { x: 0, y: -30 },
           ],

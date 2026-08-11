@@ -4303,3 +4303,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `fix(symbols): repair switch and BJT joints`.
+
+## 2026-08-11 - Close BJT arrow seams
+
+- Target: eliminate the remaining PNP base-side arrow gap and make the NPN
+  emitter arrow continuous with both adjoining line sections at GUI zoom.
+- Changed areas: bounded 1.2-unit centerline overlap inside both native arrow
+  polygons, regenerated NPN/PNP evidence and witnesses, catalog/runtime output,
+  and focused overlap-coordinate assertions.
+- Validation: common/catalog stale checks, symbols build, 23 focused tests,
+  focused formatting and Python compile checks, GUI-equivalent 8x visual
+  inspection, fidelity IoU 0.9861/0.9909 for NPN/PNP with anti-alias-only
+  residuals, and `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): close BJT arrow seams`.

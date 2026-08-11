@@ -104,9 +104,9 @@
         "figure": "12.6"
       },
       "extractPath": "npn-vector-source.json",
-      "extractSha256": "626e3a335c5f958601c776811eeb1f7b8c8c59946b4edbf9763fac728ba77ec2",
+      "extractSha256": "30dabbfa7f5d5ab05768970004487903068d8cfe235a4e1a63ca205d046489ce",
       "rasterPath": "npn-reference.png",
-      "rasterSha256": "121553e80145d7294a5e25aa074892bd528b04da716bcf14914053a54dbf99ab",
+      "rasterSha256": "4a19384eff9d9832bfea6ccc33fe9460eb38da9df6ef6823ab8a91abd249bcc7",
       "scope": ["direct NPN body and outward emitter arrow"]
     },
     {
@@ -120,9 +120,9 @@
         "figure": "12.11"
       },
       "extractPath": "pnp-vector-source.json",
-      "extractSha256": "21aaa5a728e6ff7c20c8e7a3b5ae707f9779f781f5735be32a267f2f2df5b137",
+      "extractSha256": "b66ba3ba485b2e1ca16c4740c803ad61bd31d09490fa6d5317658c7992415c94",
       "rasterPath": "pnp-reference.png",
-      "rasterSha256": "219824e958f4139674239aafcc0cbab16e4a5d442499804d99b13877661a8fb2",
+      "rasterSha256": "7e565027d1955ca2b8a0c131cb0ef0a5177850b3cc0876f9590420a77ef53ddb",
       "scope": ["direct PNP body and inward upper-emitter arrow"]
     },
     {

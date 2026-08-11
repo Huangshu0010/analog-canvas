@@ -118,8 +118,30 @@ def clipped_arrow_branch(
     intersections = segment_polygon_intersections(base, junction, arrow)
     if len(intersections) != 2:
         raise RuntimeError(f"Razavi common extraction: expected two BJT arrow intersections, got {len(intersections)}")
-    entry = tuple(rounded(value) for value in intersections[0][1])
-    exit_point = tuple(rounded(value) for value in intersections[1][1])
+    direction = (junction[0] - base[0], junction[1] - base[1])
+    branch_length = math.hypot(*direction)
+    # A centerline that stops exactly at a filled polygon boundary can expose a
+    # one-pixel white seam after SVG antialiasing.  Carry each side 0.75 stroke
+    # widths into the black arrow interior.  The overlap remains bounded by the
+    # two polygon intersections, so it cannot flatten or pass beyond the tip.
+    overlap_t = RAZAVI_NORMAL_STROKE * 0.75 / branch_length
+    entry_t = min(
+        intersections[0][0] + overlap_t,
+        (intersections[0][0] + intersections[1][0]) / 2,
+    )
+    exit_t = max(
+        intersections[1][0] - overlap_t,
+        (intersections[0][0] + intersections[1][0]) / 2,
+    )
+
+    def at(t: float) -> tuple[float, float]:
+        return (
+            rounded(base[0] + t * direction[0]),
+            rounded(base[1] + t * direction[1]),
+        )
+
+    entry = at(entry_t)
+    exit_point = at(exit_t)
     result = [line(base[0], base[1], entry[0], entry[1])]
     if not (
         math.isclose(exit_point[0], junction[0], abs_tol=1e-6)
@@ -206,7 +228,7 @@ SPECS: dict[str, dict[str, Any]] = {
         "derivation": {
             "geometry": "uniformly scaled from Figure 12.11 Q1 native vectors",
             "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
-            "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon and the arrow is rendered last",
+            "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon, overlapped 1.2 logical units inside its fill to suppress raster seams, and the arrow is rendered last",
         },
     },
     "npn": {
@@ -218,7 +240,7 @@ SPECS: dict[str, dict[str, Any]] = {
         "derivation": {
             "geometry": "uniformly scaled from Figure 12.6 Q1 native vectors",
             "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
-            "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon and the arrow is rendered last",
+            "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon, overlapped 1.2 logical units inside its fill to suppress raster seams, and the arrow is rendered last",
         },
     },
     "diode": {
