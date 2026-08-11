@@ -29,6 +29,10 @@ TITLE = "Design of Analog CMOS Integrated Circuits, Second Edition"
 RASTER_DPI = 300.0
 PIXELS_PER_LOGICAL = 2.4
 RAZAVI_NORMAL_STROKE = 1.6
+# Figure 13.5 closed-switch blade: its centreline starts 0.312427 logical
+# units beyond the pivot-circle centreline.  This deliberately overlaps the
+# circle's visible ring while remaining outside its hollow interior.
+SWITCH_BLADE_CONTACT_CLEARANCE = 0.312427
 BJT_ARROW_MAGNIFICATION = 1.18
 # Native Figure 12.6 NPN arrow coordinates relative to its true tip. Figure
 # 12.11 PNP is the same triangle mirrored along the local y axis.
@@ -531,13 +535,12 @@ def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
         end: tuple[float, float],
         contact: dict[str, Any],
     ) -> tuple[float, float]:
-        # The source blade begins inside the hollow pivot circle.  A schematic
-        # stroke must instead begin outside its visible ink, otherwise the
-        # blade fills the contact centre.  Clip against the circle centreline
-        # plus half the normal stroke width so the two butt-capped strokes do
-        # not overlap after rasterization.
+        # The source blade begins inside the hollow pivot circle. Clip it to
+        # the same centreline clearance as the closed-switch blade. This
+        # overlaps the circle ring continuously but stays well outside the
+        # hollow inner void; clipping at the outer ink edge creates a gap.
         center = contact["center"]
-        radius = float(contact["radius"]) + RAZAVI_NORMAL_STROKE / 2
+        radius = float(contact["radius"]) + SWITCH_BLADE_CONTACT_CLEARANCE
         dx, dy = end[0] - start[0], end[1] - start[1]
         ox, oy = start[0] - center["x"], start[1] - center["y"]
         quadratic_a = dx * dx + dy * dy

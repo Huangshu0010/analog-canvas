@@ -4453,6 +4453,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `codex/contextual-properties-net-labels`
   as `fix(symbols): align Razavi switch leads and contacts`.
 
+## 2026-08-11 - Close ideal-switch blade/contact gap
+
+- Target: replace the over-cropped ideal-switch blade with the same controlled
+  contact-ring overlap as the closed switch.
+- Changed areas: common switch extraction constant/clip, regenerated
+  ideal-switch evidence/catalog output, and exact clearance regression.
+- Validation: Python compile, common/catalog stale checks, symbols build, 23
+  focused tests, direct-PDF fidelity report, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels`
+  as `fix(symbols): close ideal switch blade contact gap`.
+
 ## 2026-08-11 - Contextual Properties and Net Labels
 
 - Target: add the smallest durable component Value path and make the editor's

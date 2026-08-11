@@ -582,7 +582,7 @@ describe("Razavi symbol catalog", () => {
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -6.567474, y: -2.718328 },
+          from: { x: -6.953731, y: -2.417959 },
           to: { x: 6.405579, y: -12.806695 },
           style: expect.objectContaining({ strokeRole: "normal" }),
         }),
@@ -618,7 +618,13 @@ describe("Razavi symbol catalog", () => {
         idealBlade.from.x - idealPivot.center.x,
         idealBlade.from.y - idealPivot.center.y,
       ),
-    ).toBeGreaterThanOrEqual(idealPivot.radius + 0.8 - 0.000001);
+    ).toBeGreaterThanOrEqual(idealPivot.radius + 0.312427 - 0.000001);
+    expect(
+      Math.hypot(
+        idealBlade.from.x - idealPivot.center.x,
+        idealBlade.from.y - idealPivot.center.y,
+      ),
+    ).toBeLessThanOrEqual(idealPivot.radius + 0.312427 + 0.000001);
     const closedSwitch = requireRazaviCatalogSymbol("closed-switch");
     expect(closedSwitchEvidence).toMatchObject({
       selection: { nativeObjectCount: 5 },

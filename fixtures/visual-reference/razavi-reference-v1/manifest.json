@@ -118,7 +118,7 @@
         "figure": "13.4"
       },
       "extractPath": "ideal-switch-vector-source.json",
-      "extractSha256": "8c74a5692d801a13f4c3537cf43c08f0244ef123fcfe363ed16986b94bef84e0",
+      "extractSha256": "e039a871781d745485559ade6cc222cac790bfe836641b0b822ab56baaadfcc6",
       "rasterPath": "ideal-switch-reference.png",
       "rasterSha256": "22cca5b94043dc9163c146ef615441c0f376804accf422f3c0d2bdfe03a3b2c7",
       "scope": [
