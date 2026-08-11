@@ -4317,3 +4317,19 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   residuals, and `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `fix(symbols): close BJT arrow seams`.
+
+## 2026-08-11 - Use PMOS-style PNP arrow support
+
+- Target: prevent any PNP centerline from reaching the arrow tip by adopting
+  the established PMOS tip/head/rear-support topology without changing the
+  source arrow artwork.
+- Changed areas: rigidly translated, source-orientation-preserving PNP arrow
+  with its true tip at the base bar, single rear support to the emitter lead,
+  regenerated evidence/witness/catalog/runtime output, and a no-tip-line
+  regression.
+- Validation: common/catalog stale checks, symbols build, 23 focused tests,
+  focused formatting and Python compile checks, GUI-equivalent 8x visual
+  inspection, PNP fidelity IoU 0.9880 with all residual pixels confined to the
+  anti-alias contour, and `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): use PMOS-style PNP arrow support`.

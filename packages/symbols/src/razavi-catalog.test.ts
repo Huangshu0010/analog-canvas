@@ -529,9 +529,9 @@ describe("Razavi symbol catalog", () => {
       expect.objectContaining({
         kind: "polygon",
         points: [
-          { x: -11.438773, y: -14.143375 },
-          { x: -8.107113, y: -7.488982 },
-          { x: -18.088703, y: -7.482287 },
+          { x: -13.31325, y: -13.315481 },
+          { x: -9.98159, y: -6.661088 },
+          { x: -19.96318, y: -6.654393 },
         ],
         fill: "foreground",
         stroke: "none",
@@ -540,20 +540,26 @@ describe("Razavi symbol catalog", () => {
     expect(pnp.primitives).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kind: "line",
-          from: { x: -19.96318, y: -6.654393 },
-          to: { x: -16.86865, y: -7.943954 },
-        }),
-        expect.objectContaining({
           kind: "polyline",
           points: [
-            { x: -10.915706, y: -10.42468 },
+            { x: -11.64742, y: -9.988285 },
             { x: 0, y: -14.973501 },
             { x: 0, y: -30 },
           ],
         }),
       ]),
     );
+    expect(
+      pnp.primitives.some(
+        (primitive) =>
+          (primitive.kind === "line" &&
+            primitive.from.x === -19.96318 &&
+            primitive.from.y === -6.654393) ||
+          (primitive.kind === "polyline" &&
+            primitive.points[0]?.x === -19.96318 &&
+            primitive.points[0]?.y === -6.654393),
+      ),
+    ).toBe(false);
 
     const diode = requireRazaviCatalogSymbol("diode");
     expect(diode.primitives).toEqual(

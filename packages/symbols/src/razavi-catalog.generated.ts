@@ -358,7 +358,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:pnp", "pdk:model-type:pnp"],
     assetPath: "pnp.symbol.json",
     assetHash:
-      "728a3cad5611ba5744338b1037c1e74f4d9ffc79818315921fa2f1fb9d2c312e",
+      "214838641fd786976d6a368f1543195c9df46d1a096e7ee45cb8e4e602818990",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -2499,27 +2499,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
-        kind: "line",
-        from: {
-          x: -19.96318,
-          y: -6.654393,
-        },
-        to: {
-          x: -16.86865,
-          y: -7.943954,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
         kind: "polyline",
         points: [
           {
-            x: -10.915706,
-            y: -10.42468,
+            x: -11.64742,
+            y: -9.988285,
           },
           {
             x: 0,
@@ -2562,16 +2546,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         kind: "polygon",
         points: [
           {
-            x: -11.438773,
-            y: -14.143375,
+            x: -13.31325,
+            y: -13.315481,
           },
           {
-            x: -8.107113,
-            y: -7.488982,
+            x: -9.98159,
+            y: -6.661088,
           },
           {
-            x: -18.088703,
-            y: -7.482287,
+            x: -19.96318,
+            y: -6.654393,
           },
         ],
         fill: "foreground",

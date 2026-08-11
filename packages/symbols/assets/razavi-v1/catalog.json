@@ -296,7 +296,7 @@
       "palette": true,
       "automaticMappings": ["spice:Q:pnp", "pdk:model-type:pnp"],
       "assetPath": "pnp.symbol.json",
-      "assetHash": "728a3cad5611ba5744338b1037c1e74f4d9ffc79818315921fa2f1fb9d2c312e",
+      "assetHash": "214838641fd786976d6a368f1543195c9df46d1a096e7ee45cb8e4e602818990",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

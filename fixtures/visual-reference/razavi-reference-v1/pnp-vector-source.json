@@ -233,27 +233,11 @@
           }
         },
         {
-          "kind": "line",
-          "from": {
-            "x": -19.96318,
-            "y": -6.654393
-          },
-          "to": {
-            "x": -16.86865,
-            "y": -7.943954
-          },
-          "style": {
-            "strokeRole": "normal",
-            "lineCap": "butt",
-            "lineJoin": "miter"
-          }
-        },
-        {
           "kind": "polyline",
           "points": [
             {
-              "x": -10.915706,
-              "y": -10.42468
+              "x": -11.64742,
+              "y": -9.988285
             },
             {
               "x": 0.0,
@@ -296,16 +280,16 @@
           "kind": "polygon",
           "points": [
             {
-              "x": -11.438773,
-              "y": -14.143375
+              "x": -13.31325,
+              "y": -13.315481
             },
             {
-              "x": -8.107113,
-              "y": -7.488982
+              "x": -9.98159,
+              "y": -6.661088
             },
             {
-              "x": -18.088703,
-              "y": -7.482287
+              "x": -19.96318,
+              "y": -6.654393
             }
           ],
           "fill": "foreground",
@@ -337,6 +321,6 @@
   "derivation": {
     "geometry": "uniformly scaled from Figure 12.11 Q1 native vectors",
     "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
-    "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon, overlapped 1.2 logical units inside its fill to suppress raster seams, and the arrow is rendered last"
+    "arrowCleanup": "PMOS-style support topology without changing the measured arrow artwork: the PNP triangle is rigidly translated so its true left-pointing tip meets the base bar, with no tip-side centerline and one rear support from the opposite edge to the emitter lead"
   }
 }

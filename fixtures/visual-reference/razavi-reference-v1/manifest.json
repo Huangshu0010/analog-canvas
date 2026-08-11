@@ -120,9 +120,9 @@
         "figure": "12.11"
       },
       "extractPath": "pnp-vector-source.json",
-      "extractSha256": "b66ba3ba485b2e1ca16c4740c803ad61bd31d09490fa6d5317658c7992415c94",
+      "extractSha256": "cb664fe9fc50e1cc2ef2a9305f77c9a9c1cad4907de25f3f1c4aa5ae9d8d4ca4",
       "rasterPath": "pnp-reference.png",
-      "rasterSha256": "7e565027d1955ca2b8a0c131cb0ef0a5177850b3cc0876f9590420a77ef53ddb",
+      "rasterSha256": "2017b76b6853d07caaeea6ffc2489a1a626168fb21d99312d031da1cf0655019",
       "scope": ["direct PNP body and inward upper-emitter arrow"]
     },
     {

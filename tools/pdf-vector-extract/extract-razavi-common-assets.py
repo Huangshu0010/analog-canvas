@@ -153,6 +153,30 @@ def clipped_arrow_branch(
     return result
 
 
+def rear_supported_arrow_branch(
+    tip: tuple[float, float],
+    junction: tuple[float, float],
+    pin_point: tuple[float, float],
+    source_arrow: list[tuple[float, float]],
+) -> tuple[list[dict[str, Any]], list[tuple[float, float]]]:
+    # Match the established PMOS support topology without changing the source
+    # arrow artwork.  In the native PNP polygon source_arrow[2] is the true
+    # left-pointing tip.  Move all three vertices by one common delta so that
+    # tip touches the base bar; rotation or independent rescaling would change
+    # the arrow style.  The only support begins at the opposite edge midpoint.
+    source_tip = source_arrow[2]
+    delta = (tip[0] - source_tip[0], tip[1] - source_tip[1])
+    arrow = [
+        (rounded(point[0] + delta[0]), rounded(point[1] + delta[1]))
+        for point in source_arrow
+    ]
+    base_center = (
+        rounded((arrow[0][0] + arrow[1][0]) / 2),
+        rounded((arrow[0][1] + arrow[1][1]) / 2),
+    )
+    return [polyline([base_center, junction, pin_point])], arrow
+
+
 def bjt_definition(kind: str) -> dict[str, Any]:
     # Both source figures use 0.717 pt normal strokes.  Scale every native
     # coordinate by the same ratio that maps that stroke to the product's
@@ -187,11 +211,17 @@ def bjt_definition(kind: str) -> dict[str, Any]:
         base_top, base_bottom = point(0, -6.639)[1], point(0, 6.643)[1]
         upper_base, upper_junction = point(-8.946, -2.982), point(0, -6.710)
         lower_base, lower_junction = point(-8.946, 2.982), point(0, 6.709)
-        arrow = [point(-5.126, -6.338), point(-3.633, -3.356), point(-8.106, -3.353)]
+        source_arrow = [point(-5.126, -6.338), point(-3.633, -3.356), point(-8.106, -3.353)]
+        arrow_support, arrow = rear_supported_arrow_branch(
+            upper_base,
+            upper_junction,
+            (0, -30),
+            source_arrow,
+        )
         primitives = [
             line(-40, 0, base_x, 0),
             line(base_x, base_top, base_x, base_bottom, EMPHASIS),
-            *clipped_arrow_branch(upper_base, upper_junction, (0, -30), arrow),
+            *arrow_support,
             polyline([lower_base, lower_junction, (0, 30)]),
             polygon(arrow),
         ]
@@ -228,7 +258,7 @@ SPECS: dict[str, dict[str, Any]] = {
         "derivation": {
             "geometry": "uniformly scaled from Figure 12.11 Q1 native vectors",
             "junctionCleanup": "collector/emitter diagonal and vertical leads are emitted as joined polylines",
-            "arrowCleanup": "the emitter centerline is clipped at the native arrow polygon, overlapped 1.2 logical units inside its fill to suppress raster seams, and the arrow is rendered last",
+            "arrowCleanup": "PMOS-style support topology without changing the measured arrow artwork: the PNP triangle is rigidly translated so its true left-pointing tip meets the base bar, with no tip-side centerline and one rear support from the opposite edge to the emitter lead",
         },
     },
     "npn": {
