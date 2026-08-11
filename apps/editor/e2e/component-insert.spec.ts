@@ -86,6 +86,10 @@ test("carries a manual Value through placement and Q property editing", async ({
     "aria-expanded",
     "true",
   );
+  await expect(page.getByLabel("Component geometry")).toContainText("XYRotate");
+  await expect(
+    page.locator(".selection-overview").filter({ hasText: "ComponentR1" }),
+  ).not.toContainText("Position");
   const propertyValue = page.getByLabel("Component value");
   await expect(propertyValue).toBeFocused();
   await expect(propertyValue).toHaveValue("10k");

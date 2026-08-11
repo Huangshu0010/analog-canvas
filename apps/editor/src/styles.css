@@ -1103,6 +1103,35 @@ body {
   font: inherit;
 }
 
+.property-parameter-name {
+  color: var(--icm-text);
+  font-weight: 650;
+}
+
+.property-parameter-name em {
+  margin-left: 0.25rem;
+  color: var(--icm-text-muted);
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.component-geometry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.3fr);
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.component-geometry-row label {
+  min-width: 0;
+}
+
+.component-geometry-row select,
+.component-geometry-row input {
+  width: 100%;
+}
+
 .property-source-fact {
   margin: 0.5rem 0 0;
   color: var(--icm-text-muted);

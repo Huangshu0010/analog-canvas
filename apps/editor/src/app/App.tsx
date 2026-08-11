@@ -5146,13 +5146,6 @@ export function App({ project: initialProject }: AppProps) {
                 <dl>
                   <dt>Symbol</dt>
                   <dd>{selectedInstance.symbolId}</dd>
-                  <dt>Position</dt>
-                  <dd>
-                    {selectedInstance.placement.position.x},{" "}
-                    {selectedInstance.placement.position.y}
-                  </dd>
-                  <dt>Rotation</dt>
-                  <dd>{selectedInstance.placement.rotation}°</dd>
                 </dl>
               </section>
             ) : null}
@@ -5165,7 +5158,11 @@ export function App({ project: initialProject }: AppProps) {
                 {componentParameters(selectedInstance.symbolId).map(
                   (parameter, index) => (
                     <label key={parameter.key} title={parameter.help}>
-                      {parameter.label}
+                      <span className="property-parameter-name">
+                        {parameter.label}
+                        {parameter.unit ? ` / ${parameter.unit}` : ""}
+                        <em>({parameter.help})</em>
+                      </span>
                       <input
                         ref={index === 0 ? instanceValueInputRef : undefined}
                         aria-label={`Component ${parameter.label.toLowerCase()}`}
@@ -5185,7 +5182,6 @@ export function App({ project: initialProject }: AppProps) {
                           }));
                         }}
                       />
-                      <small>{parameter.help}</small>
                     </label>
                   ),
                 )}
@@ -5196,7 +5192,10 @@ export function App({ project: initialProject }: AppProps) {
                   </p>
                 ) : null}
                 {selectedInstance.placement ? (
-                  <>
+                  <div
+                    className="component-geometry-row"
+                    aria-label="Component geometry"
+                  >
                     <label>
                       X
                       <input
@@ -5228,7 +5227,7 @@ export function App({ project: initialProject }: AppProps) {
                       />
                     </label>
                     <label>
-                      Rotation
+                      Rotate
                       <select
                         aria-label="Component rotation"
                         value={instancePropertyDraft.rotation}
@@ -5247,7 +5246,7 @@ export function App({ project: initialProject }: AppProps) {
                         <option value="270">270°</option>
                       </select>
                     </label>
-                  </>
+                  </div>
                 ) : null}
                 <button type="button" onClick={applyInstanceProperties}>
                   Apply component properties

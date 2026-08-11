@@ -4489,3 +4489,15 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   build, complete editor E2E suite (71), and `git diff --check` passed.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `refactor(editor): compact component insertion controls`.
+
+## 2026-08-11 - Compact Component Properties
+
+- Target: apply the compact insert-control language to the `Q` Component
+  Properties surface and remove repeated geometry display.
+- Changed areas: instance overview, inline parameter labels, one-row X/Y/Rotate
+  controls, compact property styles, interaction specification, and focused
+  Properties regression.
+- Validation: focused Vitest tests (16), component insertion E2E (6), workspace
+  typecheck, production editor build, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `refactor(editor): compact component properties`.

@@ -264,6 +264,9 @@ second mirror enum, a new stored field, or an Agent API operation.
   by default; direct selection never opens it. `Q`, a direct click on the shelf,
   and the explicit Import Review exception can expand it. It overlays rather
   than resizes the canvas and scrolls internally when its details overflow.
+- A component's identity card shows only its reference and symbol. Editable
+  `X`, `Y`, and `Rotate` appear once in a compact Properties row; device
+  parameters use the same inline symbol/unit/explanation notation as `I`.
 - In-place rich-text editing is unchanged: double-clicking editable text on the
   canvas opens the existing canvas RichText editor. The `Properties` shelf does not
   replace in-place text editing.
