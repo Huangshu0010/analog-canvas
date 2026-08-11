@@ -4426,3 +4426,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   --check` passed.
 - Commit status: ready to commit on `main` as
   `fix(labels): stabilize default instance text placement`.
+
+## 2026-08-11 - Correct label side inference and clearance
+
+- Target: prevent rotated instance labels from selecting the wrong reference
+  side and bring default names to a uniform 1.5-unit visible-geometry gap.
+- Changed areas: derived side inference/default anchors, BJT clearance and
+  rotation regressions, plus adjusted legacy MOS default-label expectation.
+- Validation: 14 focused tests, derived/edit-engine TypeScript builds, editor
+  production build, and `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `fix(labels): correct rotated text side and clearance`.

@@ -62,6 +62,51 @@ export function inferInstanceLabelSide(
   localAnchor: Point,
   localBounds: Rect,
 ): InstanceLabelSide | null {
+  // A renderer-owned label is normally just outside exactly one edge.  That
+  // exterior relationship is authoritative: a baseline/optical y offset must
+  // not turn a right-side label into a bottom-side label when the instance is
+  // rotated.  Only labels entirely inside the bounds need centre-based
+  // fallback (for legacy/manual placements).
+  const exteriorSides = [
+    ...(localAnchor.x < localBounds.x
+      ? ([
+          {
+            side: "left" as const,
+            clearance: localBounds.x - localAnchor.x,
+          },
+        ] as const)
+      : []),
+    ...(localAnchor.x > localBounds.x + localBounds.width
+      ? ([
+          {
+            side: "right" as const,
+            clearance: localAnchor.x - (localBounds.x + localBounds.width),
+          },
+        ] as const)
+      : []),
+    ...(localAnchor.y < localBounds.y
+      ? ([
+          {
+            side: "top" as const,
+            clearance: localBounds.y - localAnchor.y,
+          },
+        ] as const)
+      : []),
+    ...(localAnchor.y > localBounds.y + localBounds.height
+      ? ([
+          {
+            side: "bottom" as const,
+            clearance: localAnchor.y - (localBounds.y + localBounds.height),
+          },
+        ] as const)
+      : []),
+  ];
+  if (exteriorSides.length === 1) return exteriorSides[0]!.side;
+  if (exteriorSides.length > 1) {
+    return exteriorSides.sort(
+      (left, right) => left.clearance - right.clearance,
+    )[0]!.side;
+  }
   const center = {
     x: localBounds.x + localBounds.width / 2,
     y: localBounds.y + localBounds.height / 2,
@@ -189,13 +234,6 @@ export function placeUprightInstanceLabel(
   }
 }
 
-function localRightmostActivePin(resolved: ResolvedSymbol): number {
-  const activePins = resolved.definition.pins.filter(
-    (pin) => pin.role !== "bulk",
-  );
-  return Math.max(...activePins.map((pin) => pin.at.x));
-}
-
 /** Supplies canonical placement for renderer-owned instance labels. */
 export function defaultInstanceLabelPlacement(
   instance: SchematicDocument["instances"][number],
@@ -203,15 +241,15 @@ export function defaultInstanceLabelPlacement(
   profile: SchematicStyleProfile,
 ): InstanceLabelPlacement | null {
   if (!instance.placement) return null;
-  const viewBox = resolved.definition.viewBox;
-  const middleY = viewBox.y + viewBox.height / 2;
-  const middleX = viewBox.x + viewBox.width / 2;
+  const localBounds = visibleSymbolLocalBounds(resolved);
+  const middleY = localBounds.y + localBounds.height / 2;
+  const middleX = localBounds.x + localBounds.width / 2;
   const compactSideGap = 1.5;
   const baselineOffset = profile.typography.instanceFontSize * 0.35;
 
   if (instance.symbolId === "port" || instance.symbolId === "port-filled") {
     const localPosition = {
-      x: viewBox.x - compactSideGap,
+      x: localBounds.x - compactSideGap,
       y: middleY + baselineOffset,
     };
     return placeUprightInstanceLabel(
@@ -224,12 +262,8 @@ export function defaultInstanceLabelPlacement(
   }
 
   if (isMosSymbol(resolved) || isBjtSymbol(resolved)) {
-    const mosSideGap = Math.max(
-      8,
-      profile.typography.labelGap + profile.typography.instanceFontSize * 0.3,
-    );
     const localPosition = {
-      x: localRightmostActivePin(resolved) + mosSideGap * 0.6,
+      x: localBounds.x + localBounds.width + compactSideGap,
       y: middleY + profile.typography.instanceFontSize * 0.55,
     };
     return placeUprightInstanceLabel(
@@ -243,7 +277,7 @@ export function defaultInstanceLabelPlacement(
 
   if (SIDE_LABEL_SYMBOLS.has(instance.symbolId)) {
     const localPosition = {
-      x: viewBox.x + viewBox.width + compactSideGap,
+      x: localBounds.x + localBounds.width + compactSideGap,
       y: middleY + baselineOffset,
     };
     return placeUprightInstanceLabel(
@@ -255,15 +289,11 @@ export function defaultInstanceLabelPlacement(
     );
   }
 
-  const bottomGap =
-    profile.id === "textbook-monochrome-v1"
-      ? 14
-      : profile.typography.labelGap + profile.typography.instanceFontSize;
   return placeUprightInstanceLabel(
     instance,
     resolved,
     profile,
-    { x: middleX, y: viewBox.y + viewBox.height + bottomGap },
+    { x: middleX, y: localBounds.y + localBounds.height + compactSideGap },
     "bottom",
   );
 }

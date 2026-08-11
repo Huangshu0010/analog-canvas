@@ -1,7 +1,8 @@
-import { createEmptyDocument } from "@icm/model";
+import { createEmptyDocument, transformPoint } from "@icm/model";
 import {
   defaultInstanceLabelPlacement,
   resolveSchematicStyleProfile,
+  visibleSymbolLocalBounds,
 } from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
@@ -189,16 +190,34 @@ describe("Edit Transaction envelope", () => {
     );
     expect(rotated.ok).toBe(true);
     if (!rotated.ok) return;
-    const expected = defaultInstanceLabelPlacement(
-      rotated.document.instances[0]!,
-      resolved,
-      profile,
+    const rotatedInstance = rotated.document.instances[0]!;
+    const localBounds = visibleSymbolLocalBounds(resolved);
+    const worldCorners = [
+      { x: localBounds.x, y: localBounds.y },
+      { x: localBounds.x + localBounds.width, y: localBounds.y },
+      {
+        x: localBounds.x + localBounds.width,
+        y: localBounds.y + localBounds.height,
+      },
+      { x: localBounds.x, y: localBounds.y + localBounds.height },
+    ].map((point) =>
+      transformPoint(
+        point,
+        rotatedInstance.placement!.position,
+        rotatedInstance.placement!,
+      ),
     );
-    expect(rotated.document.annotations[0]).toMatchObject({
-      position: expected?.position,
-      alignment: expected?.alignment,
-      rotation: 0,
-    });
+    const bottom = Math.max(...worldCorners.map((point) => point.y));
+    const label = rotated.document.annotations[0]!;
+    expect(label).toMatchObject({ alignment: "middle", rotation: 0 });
+    // The persisted semantic anchor is integer-rounded, so permit the one
+    // pixel rounding difference while requiring the glyph edge to stay clear.
+    expect(label.position.y).toBeGreaterThanOrEqual(
+      Math.floor(bottom + profile.typography.instanceFontSize * 1.05 + 1.5),
+    );
+    expect(label.position.y).toBeLessThanOrEqual(
+      Math.ceil(bottom + profile.typography.instanceFontSize * 1.05 + 2.5),
+    );
   });
 
   it("rejects a multi-edit transaction atomically after a later precondition failure", () => {

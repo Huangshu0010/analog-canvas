@@ -8,6 +8,7 @@ import {
   isMosSymbol,
 } from "./instance-label-placement.js";
 import { resolveSchematicStyleProfile } from "./style-profile.js";
+import { visibleSymbolLocalBounds } from "./visual.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 const profile = resolveSchematicStyleProfile("razavi-textbook-v1");
@@ -36,18 +37,23 @@ describe("instance label placement", () => {
 
       expect(isBjtSymbol(resolved)).toBe(true);
       expect(isMosSymbol(resolved)).toBe(false);
-      expect(
-        defaultInstanceLabelPlacement(instance, resolved, profile),
-      ).toMatchObject({
+      const label = defaultInstanceLabelPlacement(instance, resolved, profile);
+      expect(label).toMatchObject({
         alignment: "start",
         position: {
           x: expect.any(Number),
           y: expect.any(Number),
         },
       });
-      expect(
-        defaultInstanceLabelPlacement(instance, resolved, profile)!.position.x,
-      ).toBeGreaterThan(instance.placement.position.x);
+      const localBounds = visibleSymbolLocalBounds(resolved);
+      expect(label!.position.x).toBe(
+        Math.round(
+          instance.placement.position.x +
+            localBounds.x +
+            localBounds.width +
+            1.5,
+        ),
+      );
     }
   });
 

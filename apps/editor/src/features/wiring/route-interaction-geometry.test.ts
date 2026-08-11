@@ -214,8 +214,8 @@ describe("route interaction geometry", () => {
     expect(
       defaultInstanceLabel(document, instance, resolver, profile),
     ).toMatchObject({
-      position: { x: 92, y: 132 },
-      offset: { x: -8, y: 16 },
+      position: { x: 92, y: 129 },
+      offset: { x: -8, y: 13 },
       alignment: "middle",
     });
   });
