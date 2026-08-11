@@ -46,7 +46,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
     assetPath: "closed-switch.symbol.json",
     assetHash:
-      "6b442ab974c708010a53cd9365a484b70dd93f1e816bdfca613e6b29da85b09f",
+      "f6ee7f08ec2d454978e26bb845645c95bc06184b5cd24befe443478581656fd0",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -174,7 +174,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
     assetPath: "ideal-switch.symbol.json",
     assetHash:
-      "79e6ab20446f11e1e8f75e294e7d4d55eaeba9d892b5c793c275865fb6b17d8e",
+      "ba025c56ad4654a5f866cd215ecaa1a3321ee754a8c3f117a5082afd4fa4805d",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -734,21 +734,15 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     ],
     primitives: [
       {
-        kind: "polyline",
-        points: [
-          {
-            x: -30,
-            y: 0,
-          },
-          {
-            x: -29.579916,
-            y: 0.103766,
-          },
-          {
-            x: -13.584379,
-            y: 0.103766,
-          },
-        ],
+        kind: "line",
+        from: {
+          x: -30,
+          y: 0,
+        },
+        to: {
+          x: -13.562064,
+          y: 0,
+        },
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -802,21 +796,15 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
       },
       {
-        kind: "polyline",
-        points: [
-          {
-            x: 13.608926,
-            y: 0.103766,
-          },
-          {
-            x: 28.004463,
-            y: 0.103766,
-          },
-          {
-            x: 30,
-            y: 0,
-          },
-        ],
+        kind: "line",
+        from: {
+          x: 13.562064,
+          y: 0,
+        },
+        to: {
+          x: 30,
+          y: 0,
+        },
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -1233,8 +1221,8 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -8.005579,
-          y: -1.6,
+          x: -6.567474,
+          y: -2.718328,
         },
         to: {
           x: 6.405579,

@@ -4438,6 +4438,21 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `main` as
   `fix(labels): correct rotated text side and clearance`.
 
+## 2026-08-11 - Correct Razavi switch lead and contact geometry
+
+- Target: remove visible closed-switch lead steps at wire joins and prevent the
+  ideal-switch blade from entering its hollow pivot contact.
+- Changed areas: common PDF-vector switch normalization, direct-PDF evidence
+  and manifest hashes, generated assets/catalog, and focused switch geometry
+  assertions.
+- Validation: Python compile, common/catalog stale checks, symbols build, 23
+  focused tests, direct-PDF switch diffs, and `git diff --check` passed.
+  Closed-switch IoU is 0.9840; ideal-switch residual is expected because the
+  product now deliberately excludes the source blade segment inside the hollow
+  contact.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels`
+  as `fix(symbols): align Razavi switch leads and contacts`.
+
 ## 2026-08-11 - Contextual Properties and Net Labels
 
 - Target: add the smallest durable component Value path and make the editor's

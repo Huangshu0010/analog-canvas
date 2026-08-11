@@ -80,7 +80,7 @@
         "figure": "13.5 (S2)"
       },
       "extractPath": "closed-switch-vector-source.json",
-      "extractSha256": "acf01434d372f0c2723768f7e1c62dd7e769da6c30d4241ace820d8f2c28ec14",
+      "extractSha256": "19b8e3a8663b6198408b964b0dc39ca7a7fd803eb9a30c06aa14936fa160b626",
       "rasterPath": "closed-switch-reference.png",
       "rasterSha256": "f362378d17b4090873eb844121bc926a5ffe42137d02f9fca404d51bdf9d8986",
       "scope": [
@@ -118,7 +118,7 @@
         "figure": "13.4"
       },
       "extractPath": "ideal-switch-vector-source.json",
-      "extractSha256": "9f2cbfcaaf4456a04078c3a5583d28382f6033dd2cf3755e9612ef98cd086357",
+      "extractSha256": "8c74a5692d801a13f4c3537cf43c08f0244ef123fcfe363ed16986b94bef84e0",
       "rasterPath": "ideal-switch-reference.png",
       "rasterSha256": "22cca5b94043dc9163c146ef615441c0f376804accf422f3c0d2bdfe03a3b2c7",
       "scope": [

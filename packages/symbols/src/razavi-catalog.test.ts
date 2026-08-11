@@ -582,7 +582,7 @@ describe("Razavi symbol catalog", () => {
         }),
         expect.objectContaining({
           kind: "line",
-          from: { x: -8.005579, y: -1.6 },
+          from: { x: -6.567474, y: -2.718328 },
           to: { x: 6.405579, y: -12.806695 },
           style: expect.objectContaining({ strokeRole: "normal" }),
         }),
@@ -598,6 +598,27 @@ describe("Razavi symbol catalog", () => {
         }),
       ]),
     );
+    const idealPivot = idealSwitch.primitives.find(
+      (primitive) =>
+        primitive.kind === "circle" &&
+        primitive.center.x === -9.524128 &&
+        primitive.center.y === -0.020084,
+    );
+    const idealBlade = idealSwitch.primitives.find(
+      (primitive) =>
+        primitive.kind === "line" &&
+        primitive.to.x === 6.405579 &&
+        primitive.to.y === -12.806695,
+    );
+    if (!idealPivot || idealPivot.kind !== "circle" || !idealBlade || idealBlade.kind !== "line") {
+      throw new Error("missing ideal-switch pivot or blade");
+    }
+    expect(
+      Math.hypot(
+        idealBlade.from.x - idealPivot.center.x,
+        idealBlade.from.y - idealPivot.center.y,
+      ),
+    ).toBeGreaterThanOrEqual(idealPivot.radius + 0.8 - 0.000001);
     const closedSwitch = requireRazaviCatalogSymbol("closed-switch");
     expect(closedSwitchEvidence).toMatchObject({
       selection: { nativeObjectCount: 5 },
@@ -626,6 +647,16 @@ describe("Razavi symbol catalog", () => {
           from: { x: -7.186611, y: -1.496234 },
           to: { x: 13.608926, y: -4.694003 },
           style: expect.objectContaining({ strokeRole: "normal" }),
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -30, y: 0 },
+          to: { x: -13.562064, y: 0 },
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: 13.562064, y: 0 },
+          to: { x: 30, y: 0 },
         }),
       ]),
     );

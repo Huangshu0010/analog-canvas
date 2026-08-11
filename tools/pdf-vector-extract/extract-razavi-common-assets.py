@@ -523,6 +523,47 @@ def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
     blade_end = blade_path[1][1]
     left_contact = normalized_circle(contacts[0])
     right_contact = normalized_circle(contacts[1])
+    blade_start_normalized = (nx(blade_start[0]), ny(blade_start[1]))
+    blade_end_normalized = (nx(blade_end[0]), ny(blade_end[1]))
+
+    def clip_start_outside_contact(
+        start: tuple[float, float],
+        end: tuple[float, float],
+        contact: dict[str, Any],
+    ) -> tuple[float, float]:
+        # The source blade begins inside the hollow pivot circle.  A schematic
+        # stroke must instead begin outside its visible ink, otherwise the
+        # blade fills the contact centre.  Clip against the circle centreline
+        # plus half the normal stroke width so the two butt-capped strokes do
+        # not overlap after rasterization.
+        center = contact["center"]
+        radius = float(contact["radius"]) + RAZAVI_NORMAL_STROKE / 2
+        dx, dy = end[0] - start[0], end[1] - start[1]
+        ox, oy = start[0] - center["x"], start[1] - center["y"]
+        quadratic_a = dx * dx + dy * dy
+        quadratic_b = 2 * (ox * dx + oy * dy)
+        quadratic_c = ox * ox + oy * oy - radius * radius
+        discriminant = quadratic_b * quadratic_b - 4 * quadratic_a * quadratic_c
+        if quadratic_a <= 0 or discriminant < 0:
+            raise RuntimeError("Razavi common extraction: cannot clip ideal-switch blade")
+        intersections = sorted(
+            value
+            for value in (
+                (-quadratic_b - math.sqrt(discriminant)) / (2 * quadratic_a),
+                (-quadratic_b + math.sqrt(discriminant)) / (2 * quadratic_a),
+            )
+            if 0 <= value <= 1
+        )
+        if not intersections:
+            raise RuntimeError("Razavi common extraction: ideal-switch blade misses pivot contact")
+        t = intersections[-1]
+        return (rounded(start[0] + t * dx), rounded(start[1] + t * dy))
+
+    clipped_blade_start = clip_start_outside_contact(
+        blade_start_normalized,
+        blade_end_normalized,
+        left_contact,
+    )
     primitives = [
         # Merge the small semantic extension into each source lead so butt caps
         # cannot create a raster seam at the on-grid pin anchor.  Stop its
@@ -530,7 +571,7 @@ def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
         # contact where a butt cap would show as a protrusion.
         line(-30, 0, rounded(left_contact["center"]["x"] - left_contact["radius"]), 0),
         left_contact,
-        line(nx(blade_start[0]), ny(blade_start[1]), nx(blade_end[0]), ny(blade_end[1])),
+        line(*clipped_blade_start, *blade_end_normalized),
         right_contact,
         line(rounded(right_contact["center"]["x"] + right_contact["radius"]), 0, 30, 0),
     ]
@@ -588,7 +629,6 @@ def closed_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
         ) / 2
         return circle(nx(center_x), ny(center_y), rounded(diameter * scale / 2))
 
-    left_lead, right_lead = horizontal
     left_contact, right_contact = [normalized_circle(value) for value in contacts]
     blade_path = blade.get("path") or []
     if len(blade_path) != 2:
@@ -599,26 +639,20 @@ def closed_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
     def native_point(value: tuple[float, float]) -> tuple[float, float]:
         return (nx(float(value[0])), ny(float(value[1])))
 
-    def normalized_lead_points(value: dict[str, Any]) -> list[tuple[float, float]]:
-        path = value.get("path") or []
-        if len(path) != 2:
-            raise RuntimeError("Razavi common extraction: closed-switch lead path changed")
-        return sorted(
-            [native_point(path[0][1]), native_point(path[1][1])],
-            key=lambda point_value: point_value[0],
-        )
-
     return symbol(
         "closed-switch",
         "Closed Switch",
         (-34, -12, 68, 24),
         [pin("1", "passive", -30, 0, "west"), pin("2", "passive", 30, 0, "east")],
         [
-            polyline([(-30, 0), *normalized_lead_points(left_lead)]),
+            # Native leads are 0.10 unit above the contact axis.  Preserve
+            # their x extent but normalize y to the two pin anchors so the
+            # symbol joins an external wire on one exact centreline.
+            line(-30, 0, rounded(left_contact["center"]["x"] - left_contact["radius"]), 0),
             left_contact,
             line(*native_point(blade_start), *native_point(blade_end)),
             right_contact,
-            polyline([*normalized_lead_points(right_lead), (30, 0)]),
+            line(rounded(right_contact["center"]["x"] + right_contact["radius"]), 0, 30, 0),
         ],
         ["switch-closed", "two-terminal-closed-switch"],
     )
