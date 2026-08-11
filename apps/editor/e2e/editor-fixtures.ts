@@ -24,7 +24,7 @@ export async function chooseComponent(
 ): Promise<void> {
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await dialog.getByRole("combobox").fill(symbolId);
+  await dialog.getByLabel("Component search").fill(symbolId);
   await dialog.getByTestId(`insert-component-${symbolId}`).click();
   await dialog.getByRole("button", { name: "Apply" }).click();
 }

@@ -4477,3 +4477,15 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   editor build, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `fix(editor): capture all component placement clicks`.
+
+## 2026-08-11 - Compact Insert-Control Layout
+
+- Target: reduce the `I` dialog's left-column visual weight without changing
+  placement data or raw parameter semantics.
+- Changed areas: compact rotation/label/name row, inline parameter unit/help
+  labels, explicit component-search accessibility name, dialog styles/spec,
+  and affected insertion helpers/regressions.
+- Validation: focused Vitest tests, workspace typecheck, production editor
+  build, complete editor E2E suite (71), and `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `refactor(editor): compact component insertion controls`.

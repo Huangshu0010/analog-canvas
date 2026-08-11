@@ -259,6 +259,7 @@ export function InsertComponentDialog({
                   <input
                     ref={inputRef}
                     role="combobox"
+                    aria-label="Component search"
                     aria-autocomplete="list"
                     aria-expanded={pickerOpen}
                     aria-controls="insert-component-options"
@@ -330,56 +331,47 @@ export function InsertComponentDialog({
             </section>
 
             <section
-              className="insert-control-section"
-              aria-label="Orientation"
+              className="insert-placement-options"
+              aria-label="Placement options"
             >
-              <h3>Orientation</h3>
-              <div
-                className="insert-rotation-options"
-                role="group"
-                aria-label="Initial rotation"
-              >
-                {([0, 90, 180, 270] as const).map((rotation) => (
-                  <button
-                    type="button"
-                    key={rotation}
-                    aria-pressed={initialRotation === rotation}
-                    onClick={() => setInitialRotation(rotation)}
-                  >
-                    {rotation}°
-                  </button>
-                ))}
-              </div>
-              <small>R rotates the preview before placement.</small>
-            </section>
-
-            <section
-              className="insert-control-section"
-              aria-label="Reference annotation"
-            >
-              <h3>Reference annotation</h3>
-              <label className="insert-reference-toggle">
-                <input
-                  type="checkbox"
-                  checked={showReference}
+              <label className="insert-rotation-control">
+                <span>Rotate</span>
+                <select
+                  aria-label="Initial rotation"
+                  value={initialRotation}
                   onChange={(event) =>
-                    setShowReference(event.currentTarget.checked)
+                    setInitialRotation(
+                      Number(event.currentTarget.value) as 0 | 90 | 180 | 270,
+                    )
                   }
-                />
-                <span>Show reference</span>
+                >
+                  <option value="0">0°</option>
+                  <option value="90">90°</option>
+                  <option value="180">180°</option>
+                  <option value="270">270°</option>
+                </select>
               </label>
-              <label>
-                <span>Reference text (optional)</span>
+              <div className="insert-label-control">
+                <label className="insert-reference-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showReference}
+                    onChange={(event) =>
+                      setShowReference(event.currentTarget.checked)
+                    }
+                  />
+                  <span>Label</span>
+                </label>
                 <input
-                  aria-label="Reference text"
+                  aria-label="Label name"
                   value={referenceText}
                   disabled={!showReference}
-                  placeholder="Automatic instance name"
+                  placeholder="Name (auto)"
                   onChange={(event) =>
                     setReferenceText(event.currentTarget.value)
                   }
                 />
-              </label>
+              </div>
             </section>
 
             {parameters.length > 0 ? (
@@ -390,7 +382,11 @@ export function InsertComponentDialog({
                 <h3>Device parameters</h3>
                 {parameters.map((parameter) => (
                   <label key={parameter.key} title={parameter.help}>
-                    <span>{parameter.label}</span>
+                    <span className="insert-parameter-name">
+                      {parameter.label}
+                      {parameter.unit ? ` / ${parameter.unit}` : ""}
+                      <em>({parameter.help})</em>
+                    </span>
                     <input
                       aria-label={`Component ${parameter.label.toLowerCase()}`}
                       inputMode={parameter.inputMode}
@@ -404,7 +400,6 @@ export function InsertComponentDialog({
                         }));
                       }}
                     />
-                    <small>{parameter.help}</small>
                   </label>
                 ))}
               </section>

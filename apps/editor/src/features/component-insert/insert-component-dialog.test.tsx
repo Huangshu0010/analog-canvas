@@ -17,13 +17,18 @@ describe("InsertComponentDialog", () => {
 
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('role="combobox"');
+    expect(markup).toContain('aria-label="Component search"');
     expect(markup).toContain('aria-expanded="false"');
     expect(markup).toContain('aria-label="Expand component list"');
     expect(markup).toContain('class="insert-symbol-artwork"');
     expect(markup).toContain('aria-label="Component w"');
     expect(markup).toContain('aria-label="Component l"');
     expect(markup).toContain('aria-label="Component m"');
-    expect(markup).toContain('aria-label="Reference annotation"');
+    expect(markup).toContain('aria-label="Placement options"');
+    expect(markup).toContain('aria-label="Initial rotation"');
+    expect(markup).toContain('aria-label="Label name"');
+    expect(markup).toContain("W / m");
+    expect(markup).toContain("(Channel width)");
     expect(markup).not.toContain("library-component-");
   });
 

@@ -10,7 +10,7 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
 
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  const search = dialog.getByRole("combobox");
+  const search = dialog.getByLabel("Component search");
   await expect(search).toBeFocused();
   await search.fill("not-a-real-component");
   await expect(dialog.getByRole("button", { name: "Apply" })).toBeDisabled();
@@ -69,7 +69,7 @@ test("carries a manual Value through placement and Q property editing", async ({
   await page.goto("/");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await dialog.getByRole("combobox").fill("resistor");
+  await dialog.getByLabel("Component search").fill("resistor");
   await dialog.getByLabel("Component value").fill("10k");
   await dialog.getByRole("button", { name: "Apply" }).click();
 
@@ -193,15 +193,18 @@ test("places MOS parameters and orientation while preserving deliberate referenc
   await page.keyboard.press("i");
 
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await dialog.getByRole("combobox").fill("nmos");
+  await dialog.getByLabel("Component search").fill("nmos");
   await expect(
     dialog.getByLabel("Component w", { exact: true }),
   ).toHaveAttribute("placeholder", "1u");
   await dialog.getByLabel("Component w", { exact: true }).fill("2u");
   await dialog.getByLabel("Component l", { exact: true }).fill("180n");
   await dialog.getByLabel("Component m", { exact: true }).fill("4");
-  await dialog.getByRole("button", { name: "90°" }).click();
-  await dialog.getByRole("checkbox", { name: "Show reference" }).uncheck();
+  await dialog.getByLabel("Initial rotation").selectOption("90");
+  await dialog.getByRole("checkbox", { name: "Label" }).uncheck();
+  await expect(dialog.locator(".insert-parameter-name").first()).toHaveText(
+    "W / m(Channel width)",
+  );
   await dialog.getByRole("button", { name: "Apply" }).click();
 
   const canvas = page.getByTestId("schematic-canvas");
@@ -236,7 +239,7 @@ test("commits a pending component from a semantic canvas click", async ({
   await page.goto("/");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await dialog.getByRole("combobox").fill("resistor");
+  await dialog.getByLabel("Component search").fill("resistor");
   await dialog.getByRole("button", { name: "Apply" }).click();
 
   const canvas = page.getByTestId("schematic-canvas");

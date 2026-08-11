@@ -192,7 +192,7 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   await page.goto("/");
   await page.keyboard.press("i");
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  const search = dialog.getByRole("combobox");
+  const search = dialog.getByLabel("Component search");
   const preview = dialog.locator("svg.insert-symbol-artwork");
   for (const symbolId of [
     "capacitor",
@@ -1249,9 +1249,7 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
   await expect(page.getByTestId("revision")).toHaveText("1");
 
   await page.keyboard.press("i");
-  const search = page.getByRole("combobox", {
-    name: "Component",
-  });
+  const search = page.getByLabel("Component search");
   await search.fill("r");
   await page.keyboard.press("r");
   await expect(page.getByTestId("revision")).toHaveText("1");
@@ -1271,7 +1269,7 @@ test("keeps component insertion and inspection from resizing the canvas", async 
   ).toBeVisible();
   expect((await canvas.boundingBox())?.width).toBe(beforePlaceCanvas.width);
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  await dialog.getByRole("combobox").fill("pmos");
+  await dialog.getByLabel("Component search").fill("pmos");
   await dialog.getByTestId("insert-component-pmos").click();
   await dialog.getByRole("button", { name: "Apply" }).click();
 

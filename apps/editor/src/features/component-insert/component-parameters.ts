@@ -3,17 +3,19 @@ import type { Instance } from "@icm/model";
 export interface ComponentParameter {
   key: string;
   label: string;
+  unit?: string;
   sourceKey?: string;
   placeholder: string;
   help: string;
   inputMode?: "decimal" | "text";
 }
 
-const passiveValue = (label: string, help: string, placeholder: string) =>
+const passiveValue = (unit: string, help: string, placeholder: string) =>
   [
     {
       key: "value",
-      label,
+      label: "Value",
+      unit,
       sourceKey: "spice.param.value",
       placeholder,
       help,
@@ -25,17 +27,19 @@ const MOS_PARAMETERS = [
   {
     key: "w",
     label: "W",
+    unit: "m",
     sourceKey: "spice.param.w",
     placeholder: "1u",
-    help: "Channel width (m)",
+    help: "Channel width",
     inputMode: "text" as const,
   },
   {
     key: "l",
     label: "L",
+    unit: "m",
     sourceKey: "spice.param.l",
     placeholder: "150n",
-    help: "Channel length (m)",
+    help: "Channel length",
     inputMode: "text" as const,
   },
   {
@@ -51,9 +55,9 @@ const MOS_PARAMETERS = [
 const PARAMETERS_BY_SYMBOL: Readonly<
   Record<string, readonly ComponentParameter[]>
 > = {
-  resistor: passiveValue("Value", "Resistance (Ω); for example 10k", "10k"),
-  capacitor: passiveValue("Value", "Capacitance (F); for example 2p", "2p"),
-  inductor: passiveValue("Value", "Inductance (H); for example 3n", "3n"),
+  resistor: passiveValue("Ohm", "Resistance", "10k"),
+  capacitor: passiveValue("F", "Capacitance", "2p"),
+  inductor: passiveValue("H", "Inductance", "3n"),
   nmos: MOS_PARAMETERS,
   pmos: MOS_PARAMETERS,
 };

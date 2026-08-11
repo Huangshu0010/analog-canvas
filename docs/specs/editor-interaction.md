@@ -69,7 +69,8 @@ The following are not permanent production toolbar modes:
 
 `I` or `Draw > Insert component` opens one stable two-column dialog. Its left
 setup column contains one compact searchable component picker, device-specific
-parameters, initial orientation, and reference annotation controls; the
+parameters, and one compact placement row for initial rotation plus an optional
+label/name; the
 categorised list is collapsed by default and expands only inside that picker.
 The right column always shows the currently selected symbol's full preview.
 Arrow keys move the current option, `Enter` or `Apply` starts single-shot

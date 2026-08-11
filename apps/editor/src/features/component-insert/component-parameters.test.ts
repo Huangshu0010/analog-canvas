@@ -10,13 +10,13 @@ import {
 describe("component parameter catalogue", () => {
   it("keeps R/L/C values as raw strings with their physical unit hints", () => {
     expect(componentParameters("resistor")).toMatchObject([
-      { key: "value", help: expect.stringContaining("Ω") },
+      { key: "value", unit: "Ohm", help: "Resistance" },
     ]);
     expect(componentParameters("capacitor")).toMatchObject([
-      { key: "value", help: expect.stringContaining("F") },
+      { key: "value", unit: "F", help: "Capacitance" },
     ]);
     expect(componentParameters("inductor")).toMatchObject([
-      { key: "value", help: expect.stringContaining("H") },
+      { key: "value", unit: "H", help: "Inductance" },
     ]);
   });
 
