@@ -320,16 +320,27 @@
     }
   },
   "rasterWitness": {
-    "kind": "isolated-normalized-pdf-family",
-    "dpi": 300.0,
+    "kind": "source-pdf-crop",
+    "sourcePdfPage": 533,
+    "dpi": 385.606695,
     "pixels": {
       "width": 125,
       "height": 164
     },
     "pixelsPerLogical": 2.4,
     "originPx": {
-      "x": 105.6,
-      "y": 81.6
+      "x": 106.535464,
+      "y": 82.056736
+    },
+    "window": {
+      "width": 125,
+      "height": 164,
+      "minX": -44,
+      "minY": -34
+    },
+    "sourceCropPx": {
+      "x": 871,
+      "y": 1353
     },
     "assetPath": "npn-reference.png",
     "threshold": 160

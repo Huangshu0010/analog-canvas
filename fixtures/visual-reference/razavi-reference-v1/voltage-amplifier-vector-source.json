@@ -253,16 +253,27 @@
     }
   },
   "rasterWitness": {
-    "kind": "isolated-normalized-pdf-family",
-    "dpi": 300.0,
+    "kind": "source-pdf-crop",
+    "sourcePdfPage": 307,
+    "dpi": 385.606695,
     "pixels": {
       "width": 212,
       "height": 135
     },
     "pixelsPerLogical": 2.4,
     "originPx": {
-      "x": 105.6,
-      "y": 67.2
+      "x": 106.298812,
+      "y": 67.46872
+    },
+    "window": {
+      "width": 212,
+      "height": 135,
+      "minX": -44,
+      "minY": -28
+    },
+    "sourceCropPx": {
+      "x": 1041,
+      "y": 444
     },
     "assetPath": "voltage-amplifier-reference.png",
     "threshold": 160

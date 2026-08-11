@@ -25,9 +25,11 @@ evidence inside the same authority, not competing authorities.
 Existing raster targets remain raster-owned. A `pdf-vector-extract` entry is
 allowed only when the approved raster set lacks the component and the manifest
 records the source PDF SHA-256, PDF page, printed page, figure, extracted JSON,
-and a raster witness. The source PDF is external evidence; the committed,
+and a direct source-PDF crop witness. The source PDF is external evidence; the committed,
 hash-pinned extract is the reproducible geometry input. Its raster witness
 keeps final validation on the same diff protocol as raster-owned assets.
+Candidate Symbol rendering, manually reconstructed selection PDFs, and other
+derived artwork must never serve as the raster witness.
 
 VSS, Visio, decoded master IR, historical generators, legacy assets, and the
 current candidate rendering are not visual evidence. If the authority lacks a

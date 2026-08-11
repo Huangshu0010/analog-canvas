@@ -22,7 +22,6 @@ from typing import Any
 
 import pdfplumber
 from PIL import Image
-from reportlab.pdfgen import canvas
 
 
 EXPECTED_PDF_SHA256 = "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7cb0f739"
@@ -254,6 +253,8 @@ SPECS: dict[str, dict[str, Any]] = {
         "crop": (180.4, 248.9, 198.5, 274.5), "method": "direct-device-vector-normalization",
         "definition": pnp_bjt(),
         "selectionMode": "inside",
+        "sourceOriginPdf": (198.382, 261.6822),
+        "witnessWindow": {"width": 125, "height": 164, "minX": -44, "minY": -34},
         "witnessStrokeWidths": {"normal": RAZAVI_NORMAL_STROKE, "emphasis": 2.4},
         "derivation": {
             "geometry": "uniformly scaled from Figure 12.11 Q1 native vectors",
@@ -266,6 +267,8 @@ SPECS: dict[str, dict[str, Any]] = {
         "crop": (198.5, 221.0, 216.7, 246.8), "method": "direct-device-vector-normalization",
         "definition": npn_bjt(),
         "selectionMode": "inside",
+        "sourceOriginPdf": (216.54, 233.9362),
+        "witnessWindow": {"width": 125, "height": 164, "minX": -44, "minY": -34},
         "witnessStrokeWidths": {"normal": RAZAVI_NORMAL_STROKE, "emphasis": 2.4},
         "derivation": {
             "geometry": "uniformly scaled from Figure 12.6 Q1 native vectors",
@@ -282,6 +285,12 @@ SPECS: dict[str, dict[str, Any]] = {
             [line(-20, 0, -6.666667, 0), outline_polygon([(-6.666667, -5.4), (-6.666667, 5.4), (4.666667, 0)]), line(5.333333, -5.866667, 5.333333, 5.866667, EMPHASIS), line(5.333333, 0, 20, 0)],
             ["pn-diode", "rectifier-diode"],
         ),
+        # Figure 15.54 D2 is a vertical diode.  The generated product symbol
+        # is a horizontal presentation of that source form, so its fidelity
+        # diff is intentionally allowed to reveal orientation/normalization
+        # divergence rather than silently comparing against a redrawn proxy.
+        "sourceOriginPdf": (275.739, 99.913),
+        "witnessWindow": {"width": 116, "height": 48, "minX": -24, "minY": -10},
     },
     "voltage-amplifier": {
         "pdfPage": 307, "printedPage": 288, "figure": "8.24",
@@ -292,6 +301,8 @@ SPECS: dict[str, dict[str, Any]] = {
             [line(-40, 0, -22, 0), {"kind": "path", "data": "M -22 -24 L -22 24 L 22 0 Z", "style": EMPHASIS}, line(22, 0, 40, 0)],
             ["gain-block", "voltage-gain", "a0"],
         ),
+        "sourceOriginPdf": (248.238, 61.485),
+        "witnessWindow": {"width": 212, "height": 135, "minX": -44, "minY": -28},
     },
     "ideal-switch": {
         "pdfPage": 560, "printedPage": 541, "figure": "13.4",
@@ -302,6 +313,7 @@ SPECS: dict[str, dict[str, Any]] = {
         "crop": (235.0, 446.5, 262.0, 454.8),
         "method": "direct-device-vector-normalization",
         "witnessStrokeWidths": {"normal": RAZAVI_NORMAL_STROKE},
+        "witnessWindow": {"width": 164, "height": 72, "minX": -34, "minY": -18},
         "derivation": {
             "geometry": "uniformly normalized from the five native Figure 13.4 switch objects",
             "scale": "native 0.717 pt stroke mapped to the Razavi normal 1.6 logical-unit stroke",
@@ -596,89 +608,22 @@ def closed_switch_origin(objects: list[dict[str, Any]]) -> tuple[float, float]:
     )
 
 
-def render_witness(
-    definition: dict[str, Any],
-    output: Path,
-    pdftoppm: str,
-    stroke_widths: dict[str, float] | None = None,
-) -> dict[str, Any]:
-    view = definition["viewBox"]
-    width_pt = view["width"] * 72 / RASTER_DPI * PIXELS_PER_LOGICAL
-    height_pt = view["height"] * 72 / RASTER_DPI * PIXELS_PER_LOGICAL
-    scale = width_pt / view["width"]
-    with tempfile.TemporaryDirectory(prefix="razavi-common-") as temp_dir:
-        vector_path = Path(temp_dir) / "symbol.pdf"
-        drawing = canvas.Canvas(str(vector_path), pagesize=(width_pt, height_pt), pageCompression=0)
-        drawing.setStrokeColorRGB(0, 0, 0)
-        drawing.setFillColorRGB(0, 0, 0)
-
-        def xy(point_value: dict[str, float]) -> tuple[float, float]:
-            return ((point_value["x"] - view["x"]) * scale, height_pt - (point_value["y"] - view["y"]) * scale)
-
-        resolved_strokes = {"normal": 0.9, "emphasis": 1.35, **(stroke_widths or {})}
-        for primitive in definition["primitives"]:
-            role = primitive.get("style", {}).get("strokeRole", "normal")
-            drawing.setLineWidth(resolved_strokes.get(role, resolved_strokes["normal"]) * scale)
-            drawing.setLineCap(1 if primitive.get("style", {}).get("lineCap") == "round" else 0)
-            drawing.setLineJoin(1 if primitive.get("style", {}).get("lineJoin") == "round" else 0)
-            kind = primitive["kind"]
-            if kind == "line":
-                start, end = xy(primitive["from"]), xy(primitive["to"])
-                drawing.line(start[0], start[1], end[0], end[1])
-            elif kind == "polyline":
-                path = drawing.beginPath()
-                points = primitive["points"]
-                path.moveTo(*xy(points[0]))
-                for value in points[1:]:
-                    path.lineTo(*xy(value))
-                drawing.drawPath(path, stroke=1, fill=0)
-            elif kind == "circle":
-                center = xy(primitive["center"])
-                drawing.circle(center[0], center[1], primitive["radius"] * scale, stroke=primitive.get("stroke") != "none", fill=primitive.get("fill") == "foreground")
-            elif kind == "polygon":
-                path = drawing.beginPath()
-                points = primitive["points"]
-                path.moveTo(*xy(points[0]))
-                for value in points[1:]:
-                    path.lineTo(*xy(value))
-                path.close()
-                drawing.drawPath(path, stroke=primitive.get("stroke") == "foreground", fill=primitive.get("fill") == "foreground")
-            elif kind == "path":
-                # The normalized paths use only M/L/C/Z tokens.
-                tokens = primitive["data"].split()
-                path = drawing.beginPath()
-                index = 0
-                while index < len(tokens):
-                    command = tokens[index]
-                    index += 1
-                    if command == "M" or command == "L":
-                        point_value = {"x": float(tokens[index]), "y": float(tokens[index + 1])}
-                        index += 2
-                        (path.moveTo if command == "M" else path.lineTo)(*xy(point_value))
-                    elif command == "C":
-                        values = [float(value) for value in tokens[index:index + 6]]
-                        index += 6
-                        p1, p2, p3 = xy({"x": values[0], "y": values[1]}), xy({"x": values[2], "y": values[3]}), xy({"x": values[4], "y": values[5]})
-                        path.curveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1])
-                    elif command == "Z":
-                        path.close()
-                    else:
-                        raise RuntimeError(f"Unsupported path token {command}")
-                drawing.drawPath(path, stroke=1, fill=0)
-        drawing.showPage()
-        drawing.save()
-
-        raster_base = Path(temp_dir) / "symbol"
-        executable = shutil.which(pdftoppm) or pdftoppm
-        subprocess.run([executable, "-f", "1", "-l", "1", "-r", f"{RASTER_DPI:g}", "-png", "-singlefile", str(vector_path), str(raster_base)], check=True, capture_output=True)
-        rendered = raster_base.with_suffix(".png")
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with Image.open(rendered) as image:
-            rgba = image.convert("RGBA")
-            rgba.save(output, format="PNG", optimize=False)
-            pixels = {"width": rgba.width, "height": rgba.height}
-    origin = {"x": rounded(-view["x"] * PIXELS_PER_LOGICAL), "y": rounded(-view["y"] * PIXELS_PER_LOGICAL)}
-    return {"kind": "isolated-normalized-pdf-family", "dpi": RASTER_DPI, "pixels": pixels, "pixelsPerLogical": PIXELS_PER_LOGICAL, "originPx": origin, "assetPath": output.name, "threshold": 160}
+def ideal_switch_origin(objects: list[dict[str, Any]]) -> tuple[float, float]:
+    contacts = sorted(
+        [value for value in objects if value.get("object_type") == "curve"],
+        key=lambda value: float(value["x0"]),
+    )
+    centers = [
+        (
+            (float(value["x0"]) + float(value["x1"])) / 2,
+            (float(value["top"]) + float(value["bottom"])) / 2,
+        )
+        for value in contacts
+    ]
+    return (
+        (centers[0][0] + centers[1][0]) / 2,
+        sum(center[1] for center in centers) / len(centers),
+    )
 
 
 def render_source_crop_witness(
@@ -687,6 +632,7 @@ def render_source_crop_witness(
     origin_pdf: tuple[float, float],
     output: Path,
     pdftoppm: str,
+    window: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     # The source coordinates are uniformly mapped from native points to logical
     # units. Render the original PDF at the matching native-points-to-pixels
@@ -696,10 +642,11 @@ def render_source_crop_witness(
     scale = RAZAVI_NORMAL_STROKE / 0.717
     pixels_per_point = PIXELS_PER_LOGICAL * scale
     dpi = 72 * pixels_per_point
-    # Restrict the comparison to S2's own contacts, blade, and native short
-    # lead segments. The surrounding feedback loop enters the same baseline
-    # immediately outside these bounds and is not part of an isolated symbol.
-    window = {"width": 96, "height": 48, "minX": -20, "minY": -8}
+    # The witness always comes from the source PDF.  Its crop is fixed in the
+    # source-derived logical coordinates recorded in evidence, never inferred
+    # from a candidate Symbol render.
+    if window is None:
+        window = {"width": 96, "height": 48, "minX": -20, "minY": -8}
     media_left, media_top, _, _ = page.mediabox
     origin_full = {
         "x": (origin_pdf[0] - float(media_left)) * pixels_per_point,
@@ -733,6 +680,7 @@ def render_source_crop_witness(
             rgba.save(output, format="PNG", optimize=False)
     return {
         "kind": "source-pdf-crop",
+        "sourcePdfPage": page.page_number,
         "dpi": rounded(dpi),
         "pixels": {"width": window["width"], "height": window["height"]},
         "pixelsPerLogical": PIXELS_PER_LOGICAL,
@@ -765,16 +713,25 @@ def extract_one(pdf_path: Path, output_root: Path, asset_id: str, pdftoppm: str,
         raise RuntimeError(f"Razavi common extraction: no native vector objects found for {asset_id}")
     selected_hash = hashlib.sha256(json.dumps(selected, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
     png_path = output_root / f"{asset_id}-reference.png"
-    raster = (
-        render_source_crop_witness(
-            pdf_path,
-            page,
-            closed_switch_origin(source_objects),
-            png_path,
-            pdftoppm,
-        )
+    source_origin = (
+        closed_switch_origin(source_objects)
         if asset_id == "closed-switch"
-        else render_witness(definition, png_path, pdftoppm, spec.get("witnessStrokeWidths"))
+        else ideal_switch_origin(source_objects)
+        if asset_id == "ideal-switch"
+        else spec["sourceOriginPdf"]
+        if "sourceOriginPdf" in spec
+        else (
+            (float(source_objects[0]["x0"]) + float(source_objects[0]["x1"])) / 2,
+            (float(source_objects[0]["top"]) + float(source_objects[0]["bottom"])) / 2,
+        )
+    )
+    raster = render_source_crop_witness(
+        pdf_path,
+        page,
+        source_origin,
+        png_path,
+        pdftoppm,
+        None if asset_id == "closed-switch" else spec["witnessWindow"],
     )
     evidence = {
         "schemaVersion": 1,

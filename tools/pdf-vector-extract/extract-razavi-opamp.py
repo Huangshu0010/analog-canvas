@@ -15,7 +15,6 @@ from typing import Any
 
 import pdfplumber
 from PIL import Image
-from reportlab.pdfgen import canvas
 
 
 EXPECTED_PDF_SHA256 = (
@@ -127,55 +126,19 @@ def find_line(
 
 
 def render_crop(
-    triangle: dict[str, Any],
-    lines: dict[str, dict[str, Any]],
+    pdf_path: Path,
+    page: Any,
     selected_points: list[tuple[float, float]],
     output_path: Path,
     pdftoppm: str,
 ) -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix="razavi-opamp-") as temp_dir:
-        min_x = min(value[0] for value in selected_points) - RASTER_PADDING_X_PT
-        max_x = max(value[0] for value in selected_points) + RASTER_PADDING_X_PT
-        min_y = min(value[1] for value in selected_points) - RASTER_PADDING_Y_PT
-        max_y = max(value[1] for value in selected_points) + RASTER_PADDING_Y_PT
-        page_width_pt = max_x - min_x
-        page_height_pt = max_y - min_y
-        selection_pdf = Path(temp_dir) / "selection.pdf"
-        selection = canvas.Canvas(
-            str(selection_pdf),
-            pagesize=(page_width_pt, page_height_pt),
-            pageCompression=0,
-        )
-        selection.setStrokeColorRGB(0, 0, 0)
-        selection.setFillColorRGB(0, 0, 0)
-        selection.setLineCap(0)
-        selection.setLineJoin(0)
-
-        def canvas_point(raw: tuple[float, float]) -> tuple[float, float]:
-            return raw[0] - min_x, page_height_pt - (raw[1] - min_y)
-
-        # The source page contains the same triangle path twice in opposite
-        # directions. Preserve both strokes in the raster witness, but keep one
-        # canonical path in the vector evidence and generated Symbol.
-        for _ in range(2):
-            selection.setLineWidth(TRIANGLE_LINE_WIDTH_PT)
-            path = selection.beginPath()
-            first = canvas_point(TRIANGLE_POINTS[0])
-            path.moveTo(*first)
-            for raw in TRIANGLE_POINTS[1:]:
-                path.lineTo(*canvas_point(raw))
-            selection.drawPath(path, stroke=1, fill=0)
-
-        selection.setLineWidth(NORMAL_LINE_WIDTH_PT)
-        for line in lines.values():
-            raw = path_points(line["path"])
-            start = canvas_point(raw[0])
-            end = canvas_point(raw[1])
-            selection.line(start[0], start[1], end[0], end[1])
-        selection.showPage()
-        selection.save()
-
-        raster_base = Path(temp_dir) / "selection"
+    """Render the original approved PDF and crop the selected source region."""
+    min_x = min(value[0] for value in selected_points) - RASTER_PADDING_X_PT
+    max_x = max(value[0] for value in selected_points) + RASTER_PADDING_X_PT
+    min_y = min(value[1] for value in selected_points) - RASTER_PADDING_Y_PT
+    max_y = max(value[1] for value in selected_points) + RASTER_PADDING_Y_PT
+    with tempfile.TemporaryDirectory(prefix="razavi-opamp-source-") as temp_dir:
+        raster_base = Path(temp_dir) / "source"
         executable = (
             shutil.which(f"{pdftoppm}.exe")
             if Path(pdftoppm).suffix == ""
@@ -184,44 +147,38 @@ def render_crop(
         subprocess.run(
             [
                 executable,
-                "-f",
-                "1",
-                "-l",
-                "1",
-                "-r",
-                f"{RASTER_DPI:g}",
-                "-png",
-                "-singlefile",
-                str(selection_pdf),
-                str(raster_base),
+                "-f", str(page.page_number), "-l", str(page.page_number),
+                "-r", f"{RASTER_DPI:g}", "-png", "-singlefile",
+                str(pdf_path), str(raster_base),
             ],
             check=True,
             capture_output=True,
         )
-        rendered_path = raster_base.with_suffix(".png")
-        with Image.open(rendered_path) as rendered:
-            width_px, height_px = rendered.size
-            scale_x = width_px / page_width_pt
-            scale_y = height_px / page_height_pt
+        with Image.open(raster_base.with_suffix(".png")) as rendered:
+            scale_x = rendered.width / float(page.width)
+            scale_y = rendered.height / float(page.height)
+            page_left, page_top = float(page.bbox[0]), float(page.bbox[1])
+            crop_box = (
+                math.floor((min_x - page_left) * scale_x),
+                math.floor((min_y - page_top) * scale_y),
+                math.ceil((max_x - page_left) * scale_x),
+                math.ceil((max_y - page_top) * scale_y),
+            )
+            crop = rendered.convert("RGBA").crop(crop_box)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            rendered.convert("RGBA").save(output_path, format="PNG", optimize=False)
+            crop.save(output_path, format="PNG", optimize=False)
     return {
-        "kind": "isolated-selected-pdf-objects",
+        "kind": "source-pdf-crop",
+        "sourcePdfPage": page.page_number,
         "dpi": RASTER_DPI,
         "selectionBoundsPdf": {
-            "left": rounded(min_x),
-            "top": rounded(min_y),
-            "right": rounded(max_x),
-            "bottom": rounded(max_y),
+            "left": rounded(min_x), "top": rounded(min_y),
+            "right": rounded(max_x), "bottom": rounded(max_y),
         },
-        "selectionSizePdfPt": {
-            "width": rounded(page_width_pt),
-            "height": rounded(page_height_pt),
-        },
-        "pixels": {"width": width_px, "height": height_px},
+        "pixels": {"width": crop_box[2] - crop_box[0], "height": crop_box[3] - crop_box[1]},
         "pixelsPerPdfPoint": {"x": scale_x, "y": scale_y},
+        "cropBoxPx": {"left": crop_box[0], "top": crop_box[1], "right": crop_box[2], "bottom": crop_box[3]},
     }
-
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -300,8 +257,8 @@ def main() -> None:
         for line in lines.values():
             selected_points.extend(path_points(line["path"]))
         raster = render_crop(
-            triangle,
-            lines,
+            pdf_path,
+            page,
             selected_points,
             args.output_png.resolve(),
             args.pdftoppm,

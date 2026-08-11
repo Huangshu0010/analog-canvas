@@ -204,7 +204,8 @@
     }
   },
   "rasterWitness": {
-    "kind": "isolated-selected-pdf-objects",
+    "kind": "source-pdf-crop",
+    "sourcePdfPage": 308,
     "dpi": 300.0,
     "selectionBoundsPdf": {
       "left": 383.891,
@@ -212,24 +213,26 @@
       "right": 437.857,
       "bottom": 381.4152
     },
-    "selectionSizePdfPt": {
-      "width": 53.966,
-      "height": 33.699
-    },
     "pixels": {
-      "width": 225,
+      "width": 226,
       "height": 141
     },
     "pixelsPerPdfPoint": {
-      "x": 4.169291776303598,
-      "y": 4.18410041841004
+      "x": 4.167616341344726,
+      "y": 4.168054397762668
+    },
+    "cropBoxPx": {
+      "left": 1458,
+      "top": 1591,
+      "right": 1684,
+      "bottom": 1732
     },
     "assetPath": "opamp-reference.png",
     "originPx": {
-      "x": 124.465867,
-      "y": 70.497908
+      "x": 124.415851,
+      "y": 70.227549
     },
-    "pixelsPerLogical": 2.397424,
+    "pixelsPerLogical": 2.392338,
     "threshold": 160
   }
 }

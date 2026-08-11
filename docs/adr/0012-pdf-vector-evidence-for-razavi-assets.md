@@ -62,7 +62,7 @@ PDF extract.
 ## Op-amp mapping
 
 The Figure 8.26 triangle, three terminal leads, and polarity marks are retained
-as selected PDF vector objects. A selection-only raster witness excludes the
+as selected PDF vector objects. A direct source-PDF crop witness excludes the
 surrounding feedback circuit and junction dots. The reviewed Symbol exposes
 `IN+`, `IN-`, and `OUT` on the 10-unit grid, matching the ideal textbook symbol.
 It has no implicit supply pins and no automatic SPICE mapping; a real op-amp
@@ -71,7 +71,9 @@ subcircuit requires an explicit complete pin contract.
 ## Common-device mapping
 
 The common-device extractor fingerprints native objects in a tight page/figure
-region and commits a normalized SymbolDefinition with an isolated witness.
+region and commits a normalized SymbolDefinition with a direct source-PDF crop
+witness. Candidate rendering or a reconstructed selection PDF cannot be used
+as a witness.
 The NPN body and outward emitter arrow are directly normalized from Figure
 12.6. The PNP body and inward upper-emitter arrow are separately normalized
 from Figure 12.11; neither arrow is a hand-drawn polarity reversal. The

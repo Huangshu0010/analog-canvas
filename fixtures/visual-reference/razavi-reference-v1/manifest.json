@@ -8,7 +8,10 @@
     {
       "path": "capacitor-reference.png",
       "sha256": "e2b13a01eed7e7565080bc9d0d7c98bc8dc6714ceed3c7159096c8b5deb3dcbc",
-      "scope": ["capacitor geometry", "capacitor stroke treatment"]
+      "scope": [
+        "capacitor geometry",
+        "capacitor stroke treatment"
+      ]
     },
     {
       "path": "current-port-reference.png",
@@ -22,7 +25,9 @@
     {
       "path": "vdd-reference.png",
       "sha256": "fae2ed83a534e62bfdb9f0f7cef97892ef46fa8630be481ad1d8a83611361f84",
-      "scope": ["VDD supply marker geometry"]
+      "scope": [
+        "VDD supply marker geometry"
+      ]
     }
   ],
   "vectorEvidence": [
@@ -37,10 +42,13 @@
         "figure": "15.21"
       },
       "extractPath": "inductor-vector-source.json",
-      "extractSha256": "03641ab7a6d2f96edb57769f0c07c919f043b5ac584c2dfd34908bc8b61310f5",
+      "extractSha256": "ee09b0e94c9e539cea13fa10f5986776ce9a16e18689d0d0fd61f99e5dc2a903",
       "rasterPath": "inductor-reference.png",
       "rasterSha256": "f3327aecd75ddc7231a0e90117904d2815ba07c30e1761eccfdb7f27bb471070",
-      "scope": ["inductor geometry", "inductor stroke treatment"]
+      "scope": [
+        "inductor geometry",
+        "inductor stroke treatment"
+      ]
     },
     {
       "id": "razavi-textbook-figure-8-26-opamp",
@@ -53,9 +61,9 @@
         "figure": "8.26"
       },
       "extractPath": "opamp-vector-source.json",
-      "extractSha256": "f38b0da4e111e82f913780418607391de8e455ff0974f0374a96129048001c81",
+      "extractSha256": "e89450feb7a2f5eb351d6b6415e07f19e851673e14d8847554cbe2e8ae7742cb",
       "rasterPath": "opamp-reference.png",
-      "rasterSha256": "435ee2e733c865a35ba1a9a16d5a17afdfda0b41893ccf82ca26bb07db28436e",
+      "rasterSha256": "77af2fb4d00f62f1e83580d21ac04a95dc41a7d7072d738dc70248373178083f",
       "scope": [
         "three-terminal op-amp geometry",
         "op-amp polarity marks and stroke hierarchy"
@@ -72,7 +80,7 @@
         "figure": "13.5 (S2)"
       },
       "extractPath": "closed-switch-vector-source.json",
-      "extractSha256": "a21aae33f6252ffccc1f60a064a447b042f731c2ea88e9c7859b144ddd409132",
+      "extractSha256": "acf01434d372f0c2723768f7e1c62dd7e769da6c30d4241ace820d8f2c28ec14",
       "rasterPath": "closed-switch-reference.png",
       "rasterSha256": "f362378d17b4090873eb844121bc926a5ffe42137d02f9fca404d51bdf9d8986",
       "scope": [
@@ -91,10 +99,13 @@
         "figure": "15.54"
       },
       "extractPath": "diode-vector-source.json",
-      "extractSha256": "6a0fab299cfae432358bb6bdb4ab11c3c0f7845c481dafac0f8f0a589fdc1883",
+      "extractSha256": "5ef3a805cb1832f07fc18797dee149a86eb5d8c22dabcb0b4a7cb79f8b4124ea",
       "rasterPath": "diode-reference.png",
-      "rasterSha256": "340af471b836ec73dbcf66d9be04c470c7f15c7c92231feacfe678d8c4178893",
-      "scope": ["outline diode geometry", "double-width cathode bar"]
+      "rasterSha256": "5914a71059241e911f39df87ff7d007d0063efd969b2949e32653799a87079bf",
+      "scope": [
+        "outline diode geometry",
+        "double-width cathode bar"
+      ]
     },
     {
       "id": "razavi-textbook-ideal-switch",
@@ -107,10 +118,12 @@
         "figure": "13.4"
       },
       "extractPath": "ideal-switch-vector-source.json",
-      "extractSha256": "66804e2000ad8cb1dea26b1b7883d0e82fd7c50d609d3e9c2a0426a630172c72",
+      "extractSha256": "9f2cbfcaaf4456a04078c3a5583d28382f6033dd2cf3755e9612ef98cd086357",
       "rasterPath": "ideal-switch-reference.png",
-      "rasterSha256": "664871b3e433dc06757b0753db60fb40aaeef86489c280a44870d59945d56c37",
-      "scope": ["two-terminal ideal switch geometry"]
+      "rasterSha256": "22cca5b94043dc9163c146ef615441c0f376804accf422f3c0d2bdfe03a3b2c7",
+      "scope": [
+        "two-terminal ideal switch geometry"
+      ]
     },
     {
       "id": "razavi-textbook-npn",
@@ -123,10 +136,12 @@
         "figure": "12.6"
       },
       "extractPath": "npn-vector-source.json",
-      "extractSha256": "30dabbfa7f5d5ab05768970004487903068d8cfe235a4e1a63ca205d046489ce",
+      "extractSha256": "0637cc3a590e53b6c4e7322228fbde9ead82d7a335447e39becc9258c03fc28f",
       "rasterPath": "npn-reference.png",
-      "rasterSha256": "4a19384eff9d9832bfea6ccc33fe9460eb38da9df6ef6823ab8a91abd249bcc7",
-      "scope": ["direct NPN body and outward emitter arrow"]
+      "rasterSha256": "9d8cde835580aefdf0bb7f1b2f3d06b751ef2c986897507bfe31fffff5c275e0",
+      "scope": [
+        "direct NPN body and outward emitter arrow"
+      ]
     },
     {
       "id": "razavi-textbook-pnp",
@@ -139,10 +154,12 @@
         "figure": "12.11"
       },
       "extractPath": "pnp-vector-source.json",
-      "extractSha256": "cb664fe9fc50e1cc2ef2a9305f77c9a9c1cad4907de25f3f1c4aa5ae9d8d4ca4",
+      "extractSha256": "176f5722461c850ffa513bacc9ae6081c80a01c3935c6d4002aacca588814835",
       "rasterPath": "pnp-reference.png",
-      "rasterSha256": "2017b76b6853d07caaeea6ffc2489a1a626168fb21d99312d031da1cf0655019",
-      "scope": ["direct PNP body and inward upper-emitter arrow"]
+      "rasterSha256": "c0b3a2efb8ecddf8db9020c7f8734408fbc02e6010dba6cc17802efe839ff19d",
+      "scope": [
+        "direct PNP body and inward upper-emitter arrow"
+      ]
     },
     {
       "id": "razavi-textbook-voltage-amplifier",
@@ -155,10 +172,12 @@
         "figure": "8.24"
       },
       "extractPath": "voltage-amplifier-vector-source.json",
-      "extractSha256": "3f1488f44c704e6602dcf348c460172c89e7b1b933b8b0a210337e05be700609",
+      "extractSha256": "069f38d2962f17078223152cab7c2f554864ddcc024701cdab9c81c6d53c9001",
       "rasterPath": "voltage-amplifier-reference.png",
-      "rasterSha256": "fdb61fc08f73fe657ee9deafa6251149262adcd03a3ea62beaeda11a24e43c59",
-      "scope": ["single-ended voltage-gain block geometry"]
+      "rasterSha256": "6b900510316122c9c8cd2cf2e380a51804c45ea66ec1a9f3b3c06c1ec5009872",
+      "scope": [
+        "single-ended voltage-gain block geometry"
+      ]
     }
   ],
   "mosGeometryPath": "mos-geometry.json",
@@ -174,11 +193,11 @@
   "vddGeometryPath": "vdd-geometry.json",
   "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
   "inductorGeometryPath": "inductor-geometry.json",
-  "inductorGeometrySha256": "f718ef7c95303335ca752aed2a391eb41b38116ffd19251e340076988fa7e863",
+  "inductorGeometrySha256": "a45c05a9335545e202626bae7e0da1bcbbc314ab46e0b964522dccd0cee55b19",
   "opampGeometryPath": "opamp-geometry.json",
-  "opampGeometrySha256": "51003a9dbe09ea8b9d3a346489d9777c4019a57466bac10dbfdc5b9e8d0390ba",
+  "opampGeometrySha256": "cc0b623c3620cf70161f353f7abcfa01b1f14daa5108d23f3800c0ca9c202c06",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
-  "commonSymbolGeometrySha256": "c72117b9d8d836dc687b7556e9c4334ebf91b6ac80fa747bb815ebc7933c5cfd",
+  "commonSymbolGeometrySha256": "79c2a35185ee0531625435f730e33bbff9212e57a409de9ecf666a3b1ccd4a68",
   "fidelityTargetsPath": "fidelity-targets.json",
   "fidelityTargetsSha256": "76710f149665c830546f1d8df1bb97dadaaeec52ce7ff66f687d70586302d2d7",
   "pixels": {

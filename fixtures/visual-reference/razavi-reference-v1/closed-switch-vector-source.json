@@ -224,11 +224,15 @@
         }
       ],
       "variants": [],
-      "aliases": ["switch-closed", "two-terminal-closed-switch"]
+      "aliases": [
+        "switch-closed",
+        "two-terminal-closed-switch"
+      ]
     }
   },
   "rasterWitness": {
     "kind": "source-pdf-crop",
+    "sourcePdfPage": 561,
     "dpi": 385.606695,
     "pixels": {
       "width": 96,

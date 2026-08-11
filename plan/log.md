@@ -4364,3 +4364,21 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   anti-alias-only residuals, and `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `fix(symbols): correct Razavi closed switch evidence`.
+
+## 2026-08-11 - Correct PDF-derived fidelity baselines
+
+- Target: put closed switch in the editor's switch group and replace synthetic
+  PDF-derived fidelity witnesses with direct textbook-PDF crops.
+- Changed areas: explicit source-page crop protocol and fixed witness windows
+  for common assets, source-PDF witnesses for op-amp and inductor, manifest
+  hashes/measurements, authority enforcement, visual-contract/ADR wording,
+  and editor palette grouping.
+- Validation: Python compilation, common/inductor/op-amp/catalog stale checks,
+  symbols build, 27 focused tests, eight PDF-derived fidelity reports, and
+  `git diff --check` passed. The direct references reveal real IoUs of 0.7849
+  (inductor), 0.6769 (op-amp), 0.6430 (NPN), 0.5284 (PNP), 0.1514 (diode),
+  0.1957 (voltage amplifier), 0.6342 (ideal switch), and 0.9854 (closed
+  switch); the weak diode/voltage-amplifier source selections require later
+  visual calibration rather than synthetic-score masking.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): use source PDF crops for common fidelity baselines`.

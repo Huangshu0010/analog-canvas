@@ -42,7 +42,11 @@ async function fixture({ vector = false } = {}) {
         id: "inductor",
         kind: "pdf-vector-extract",
         source,
-        rasterWitness: { assetPath: "inductor.png" },
+        rasterWitness: {
+          kind: "source-pdf-crop",
+          sourcePdfPage: source.pdfPage,
+          assetPath: "inductor.png",
+        },
       })}\n`,
     );
     const witness = Buffer.from("witness");

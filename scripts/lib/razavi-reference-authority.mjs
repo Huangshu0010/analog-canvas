@@ -109,7 +109,9 @@ export async function loadRazaviReferenceAuthority(referenceRoot) {
       extract.source?.pdfPage !== evidence.source.pdfPage ||
       extract.source?.printedPage !== evidence.source.printedPage ||
       extract.source?.figure !== evidence.source.figure ||
-      extract.rasterWitness?.assetPath !== evidence.rasterPath
+      extract.rasterWitness?.assetPath !== evidence.rasterPath ||
+      extract.rasterWitness?.kind !== "source-pdf-crop" ||
+      extract.rasterWitness?.sourcePdfPage !== evidence.source.pdfPage
     ) {
       fail(`vector extract contract mismatch for ${evidence.id}`);
     }

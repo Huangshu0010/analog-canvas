@@ -24,6 +24,7 @@ describe("component insertion catalog", () => {
     expect(symbolCategory("npn")).toBe("Transistors");
     expect(symbolCategory("diode")).toBe("Passives");
     expect(symbolCategory("ideal-switch")).toBe("Switches");
+    expect(symbolCategory("closed-switch")).toBe("Switches");
   });
 
   it("searches names, ids, and aliases without exposing retired MOS entries", () => {

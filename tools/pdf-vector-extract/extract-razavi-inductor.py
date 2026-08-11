@@ -197,6 +197,8 @@ def render_crop(
             output_path.parent.mkdir(parents=True, exist_ok=True)
             crop.save(output_path, format="PNG", optimize=False)
     return {
+        "kind": "source-pdf-crop",
+        "sourcePdfPage": PDF_PAGE,
         "dpi": RASTER_DPI,
         "pagePixels": {"width": page_width_px, "height": page_height_px},
         "cropBoxPx": {

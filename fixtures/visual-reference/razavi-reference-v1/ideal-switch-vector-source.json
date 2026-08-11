@@ -219,16 +219,27 @@
     }
   },
   "rasterWitness": {
-    "kind": "isolated-normalized-pdf-family",
-    "dpi": 300.0,
+    "kind": "source-pdf-crop",
+    "sourcePdfPage": 560,
+    "dpi": 385.606695,
     "pixels": {
       "width": 164,
       "height": 72
     },
     "pixelsPerLogical": 2.4,
     "originPx": {
-      "x": 81.6,
-      "y": 43.2
+      "x": 81.958059,
+      "y": 43.366862
+    },
+    "window": {
+      "width": 164,
+      "height": 72,
+      "minX": -34,
+      "minY": -18
+    },
+    "sourceCropPx": {
+      "x": 1069,
+      "y": 2565
     },
     "assetPath": "ideal-switch-reference.png",
     "threshold": 160
