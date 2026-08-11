@@ -140,7 +140,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
     assetPath: "ideal-switch.symbol.json",
     assetHash:
-      "5ee34dd634e550923d87ab037882e2f3dde7ad578e74323e0b5c7ced349d26d7",
+      "f2b92985026ce7a79cb91ffa4a8ec7ee52d55ea3f4dffabd67ddb9415dc2d43e",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -998,17 +998,17 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
     id: "ideal-switch",
     name: "Ideal Switch",
     viewBox: {
-      x: -24,
-      y: -12,
-      width: 48,
-      height: 24,
+      x: -34,
+      y: -18,
+      width: 68,
+      height: 30,
     },
     pins: [
       {
         name: "1",
         role: "passive",
         at: {
-          x: -20,
+          x: -30,
           y: 0,
         },
         direction: "west",
@@ -1021,7 +1021,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         name: "2",
         role: "passive",
         at: {
-          x: 20,
+          x: 30,
           y: 0,
         },
         direction: "east",
@@ -1035,11 +1035,11 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: -20,
+          x: -30,
           y: 0,
         },
         to: {
-          x: -7.333333,
+          x: -12.810042,
           y: 0,
         },
         style: {
@@ -1051,12 +1051,28 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "circle",
         center: {
-          x: -6,
-          y: 0,
+          x: -9.524128,
+          y: -0.020084,
         },
-        radius: 1.333333,
+        radius: 3.202789,
         fill: "none",
         stroke: "foreground",
+        style: {
+          strokeRole: "normal",
+          lineCap: "butt",
+          lineJoin: "miter",
+        },
+      },
+      {
+        kind: "line",
+        from: {
+          x: -8.005579,
+          y: -1.6,
+        },
+        to: {
+          x: 6.405579,
+          y: -12.806695,
+        },
         style: {
           strokeRole: "normal",
           lineCap: "butt",
@@ -1066,10 +1082,10 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "circle",
         center: {
-          x: 6,
-          y: 0,
+          x: 11.201116,
+          y: -0.020084,
         },
-        radius: 1.333333,
+        radius: 3.202232,
         fill: "none",
         stroke: "foreground",
         style: {
@@ -1081,31 +1097,15 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         kind: "line",
         from: {
-          x: 7.333333,
+          x: 14.410042,
           y: 0,
         },
         to: {
-          x: 20,
+          x: 30,
           y: 0,
         },
         style: {
           strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "line",
-        from: {
-          x: -5,
-          y: -1,
-        },
-        to: {
-          x: 5,
-          y: -8,
-        },
-        style: {
-          strokeRole: "emphasis",
           lineCap: "butt",
           lineJoin: "miter",
         },

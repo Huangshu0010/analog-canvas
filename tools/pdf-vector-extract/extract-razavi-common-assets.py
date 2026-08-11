@@ -29,6 +29,7 @@ EXPECTED_PDF_SHA256 = "a6031d1149c2c6191a1f0e541065165b72dafc4bc4ab4b0ea37af41b7
 TITLE = "Design of Analog CMOS Integrated Circuits, Second Edition"
 RASTER_DPI = 300.0
 PIXELS_PER_LOGICAL = 2.4
+RAZAVI_NORMAL_STROKE = 1.6
 
 NORMAL = {"strokeRole": "normal", "lineCap": "butt", "lineJoin": "miter"}
 EMPHASIS = {"strokeRole": "emphasis", "lineCap": "butt", "lineJoin": "miter"}
@@ -153,13 +154,18 @@ SPECS: dict[str, dict[str, Any]] = {
     },
     "ideal-switch": {
         "pdfPage": 560, "printedPage": 541, "figure": "13.4",
-        "crop": (225.0, 420.0, 280.0, 455.0), "method": "direct-family-observation",
-        "definition": symbol(
-            "ideal-switch", "Ideal Switch", (-24, -12, 48, 24),
-            [pin("1", "passive", -20, 0, "west"), pin("2", "passive", 20, 0, "east")],
-            [line(-20, 0, -7.333333, 0), circle(-6, 0, 1.333333), circle(6, 0, 1.333333), line(7.333333, 0, 20, 0), line(-5, -1, 5, -8, EMPHASIS)],
-            ["switch-open", "two-terminal-switch"],
-        ),
+        # This tight region contains exactly the three native switch lines and
+        # two contact circles.  The previous broad region started at y=420 and
+        # accidentally fingerprinted the S2 label and adjacent feedback
+        # wiring, then rendered a hand-authored proxy with the wrong scale.
+        "crop": (235.0, 446.5, 262.0, 454.8),
+        "method": "direct-device-vector-normalization",
+        "witnessStrokeWidths": {"normal": RAZAVI_NORMAL_STROKE},
+        "derivation": {
+            "geometry": "uniformly normalized from the five native Figure 13.4 switch objects",
+            "scale": "native 0.717 pt stroke mapped to the Razavi normal 1.6 logical-unit stroke",
+            "pinExtension": "native horizontal leads extended only to the nearest symmetric 10-unit anchors at x=-30 and x=30",
+        },
     },
 }
 
@@ -201,7 +207,107 @@ def overlaps(obj: dict[str, Any], crop: tuple[float, float, float, float]) -> bo
     return not (float(obj.get("x1", -math.inf)) < left or float(obj.get("x0", math.inf)) > right or float(obj.get("bottom", -math.inf)) < top or float(obj.get("top", math.inf)) > bottom)
 
 
-def render_witness(definition: dict[str, Any], output: Path, pdftoppm: str) -> dict[str, Any]:
+def ideal_switch_objects(page: Any, crop: tuple[float, float, float, float]) -> list[dict[str, Any]]:
+    candidates = [obj for obj in [*page.lines, *page.curves] if overlaps(obj, crop)]
+    lines = [
+        obj for obj in candidates
+        if obj.get("object_type") == "line"
+        and float(obj.get("x0", 0)) >= crop[0]
+        and float(obj.get("x1", 0)) <= crop[2]
+        and float(obj.get("top", 0)) >= crop[1]
+        and float(obj.get("bottom", 0)) <= crop[3]
+    ]
+    circles = [
+        obj for obj in candidates
+        if obj.get("object_type") == "curve"
+        and obj.get("stroke") is True
+        and obj.get("fill") is False
+        and 2.8 <= float(obj.get("x1", 0)) - float(obj.get("x0", 0)) <= 2.9
+        and 2.8 <= float(obj.get("bottom", 0)) - float(obj.get("top", 0)) <= 2.9
+        and float(obj.get("x0", 0)) >= crop[0]
+        and float(obj.get("x1", 0)) <= crop[2]
+        and float(obj.get("top", 0)) >= crop[1]
+        and float(obj.get("bottom", 0)) <= crop[3]
+    ]
+    if len(lines) != 3 or len(circles) != 2:
+        raise RuntimeError(
+            f"Razavi common extraction: expected 3 lines and 2 circles for ideal-switch, got {len(lines)} and {len(circles)}"
+        )
+    selected = [*lines, *circles]
+    widths = {rounded(value.get("linewidth", 0) or 0) for value in selected}
+    if widths != {0.717}:
+        raise RuntimeError(f"Razavi common extraction: unexpected ideal-switch stroke widths {sorted(widths)}")
+    return selected
+
+
+def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
+    lines = [value for value in objects if value.get("object_type") == "line"]
+    contacts = sorted(
+        [value for value in objects if value.get("object_type") == "curve"],
+        key=lambda value: float(value["x0"]),
+    )
+    horizontal = sorted(
+        [value for value in lines if math.isclose(float(value["top"]), float(value["bottom"]), abs_tol=1e-6)],
+        key=lambda value: float(value["x0"]),
+    )
+    blades = [value for value in lines if value not in horizontal]
+    if len(horizontal) != 2 or len(blades) != 1:
+        raise RuntimeError("Razavi common extraction: ideal-switch object topology changed")
+
+    left_lead, right_lead = horizontal
+    blade = blades[0]
+    native_stroke = float(blade["linewidth"])
+    scale = RAZAVI_NORMAL_STROKE / native_stroke
+    source_left = float(left_lead["x0"])
+    source_right = float(right_lead["x1"])
+    origin_x = (source_left + source_right) / 2
+    baseline_y = sum(float(value["top"]) for value in horizontal) / len(horizontal)
+
+    def nx(value: float) -> float:
+        return rounded((float(value) - origin_x) * scale)
+
+    def ny(value: float) -> float:
+        return rounded((float(value) - baseline_y) * scale)
+
+    def normalized_circle(value: dict[str, Any]) -> dict[str, Any]:
+        center_x = (float(value["x0"]) + float(value["x1"])) / 2
+        center_y = (float(value["top"]) + float(value["bottom"])) / 2
+        diameter = (
+            float(value["x1"]) - float(value["x0"])
+            + float(value["bottom"]) - float(value["top"])
+        ) / 2
+        return circle(nx(center_x), ny(center_y), rounded(diameter * scale / 2))
+
+    blade_path = blade.get("path") or []
+    if len(blade_path) != 2:
+        raise RuntimeError("Razavi common extraction: ideal-switch blade path changed")
+    blade_start = blade_path[0][1]
+    blade_end = blade_path[1][1]
+    primitives = [
+        # Merge the small semantic extension into each source lead so butt caps
+        # cannot create a raster seam at the on-grid pin anchor.
+        line(-30, 0, nx(left_lead["x1"]), 0),
+        normalized_circle(contacts[0]),
+        line(nx(blade_start[0]), ny(blade_start[1]), nx(blade_end[0]), ny(blade_end[1])),
+        normalized_circle(contacts[1]),
+        line(nx(right_lead["x0"]), 0, 30, 0),
+    ]
+    return symbol(
+        "ideal-switch",
+        "Ideal Switch",
+        (-34, -18, 68, 30),
+        [pin("1", "passive", -30, 0, "west"), pin("2", "passive", 30, 0, "east")],
+        primitives,
+        ["switch-open", "two-terminal-switch"],
+    )
+
+
+def render_witness(
+    definition: dict[str, Any],
+    output: Path,
+    pdftoppm: str,
+    stroke_widths: dict[str, float] | None = None,
+) -> dict[str, Any]:
     view = definition["viewBox"]
     width_pt = view["width"] * 72 / RASTER_DPI * PIXELS_PER_LOGICAL
     height_pt = view["height"] * 72 / RASTER_DPI * PIXELS_PER_LOGICAL
@@ -215,9 +321,10 @@ def render_witness(definition: dict[str, Any], output: Path, pdftoppm: str) -> d
         def xy(point_value: dict[str, float]) -> tuple[float, float]:
             return ((point_value["x"] - view["x"]) * scale, height_pt - (point_value["y"] - view["y"]) * scale)
 
+        resolved_strokes = {"normal": 0.9, "emphasis": 1.35, **(stroke_widths or {})}
         for primitive in definition["primitives"]:
             role = primitive.get("style", {}).get("strokeRole", "normal")
-            drawing.setLineWidth((1.35 if role == "emphasis" else 0.9) * scale)
+            drawing.setLineWidth(resolved_strokes.get(role, resolved_strokes["normal"]) * scale)
             drawing.setLineCap(1 if primitive.get("style", {}).get("lineCap") == "round" else 0)
             drawing.setLineJoin(1 if primitive.get("style", {}).get("lineJoin") == "round" else 0)
             kind = primitive["kind"]
@@ -276,20 +383,25 @@ def render_witness(definition: dict[str, Any], output: Path, pdftoppm: str) -> d
 def extract_one(pdf_path: Path, output_root: Path, asset_id: str, pdftoppm: str, source_hash: str, pdf: Any) -> None:
     spec = SPECS[asset_id]
     page = pdf.pages[spec["pdfPage"] - 1]
-    objects = [*page.lines, *page.curves, *page.rects]
-    selected = [object_fingerprint(obj) for obj in objects if overlaps(obj, spec["crop"])]
+    if asset_id == "ideal-switch":
+        source_objects = ideal_switch_objects(page, spec["crop"])
+        definition = ideal_switch_definition(source_objects)
+    else:
+        source_objects = [obj for obj in [*page.lines, *page.curves, *page.rects] if overlaps(obj, spec["crop"])]
+        definition = spec["definition"]
+    selected = [object_fingerprint(obj) for obj in source_objects]
     if not selected:
         raise RuntimeError(f"Razavi common extraction: no native vector objects found for {asset_id}")
     selected_hash = hashlib.sha256(json.dumps(selected, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
     png_path = output_root / f"{asset_id}-reference.png"
-    raster = render_witness(spec["definition"], png_path, pdftoppm)
+    raster = render_witness(definition, png_path, pdftoppm, spec.get("witnessStrokeWidths"))
     evidence = {
         "schemaVersion": 1,
         "id": f"razavi-textbook-{asset_id}",
         "kind": "pdf-vector-extract",
         "source": {"title": TITLE, "sha256": source_hash, "pdfPage": spec["pdfPage"], "printedPage": spec["printedPage"], "figure": spec["figure"]},
         "selection": {"method": spec["method"], "boundsPdf": {"left": spec["crop"][0], "top": spec["crop"][1], "right": spec["crop"][2], "bottom": spec["crop"][3]}, "nativeObjectCount": len(selected), "nativeObjectSha256": selected_hash, "nativeObjectSample": [compact_fingerprint(value) for value in selected[:12]]},
-        "normalization": {"pinAnchorsLogical": [{"name": value["name"], **value["at"]} for value in spec["definition"]["pins"]], "strokeMapping": {"normal": {"targetRole": "normal"}, "emphasis": {"targetRole": "emphasis"}}, "symbolDefinition": spec["definition"]},
+        "normalization": {"pinAnchorsLogical": [{"name": value["name"], **value["at"]} for value in definition["pins"]], "strokeMapping": {"normal": {"targetRole": "normal"}, "emphasis": {"targetRole": "emphasis"}}, "symbolDefinition": definition},
         "rasterWitness": raster,
     }
     if "derivation" in spec:
@@ -314,8 +426,8 @@ def write_geometry_registry(output_root: Path) -> None:
             "window": {
                 "width": witness["pixels"]["width"],
                 "height": witness["pixels"]["height"],
-                "minX": SPECS[asset_id]["definition"]["viewBox"]["x"],
-                "minY": SPECS[asset_id]["definition"]["viewBox"]["y"],
+                "minX": evidence["normalization"]["symbolDefinition"]["viewBox"]["x"],
+                "minY": evidence["normalization"]["symbolDefinition"]["viewBox"]["y"],
             },
         }
     registry = {"schemaVersion": 1, "referenceId": "razavi-reference-v1", "symbols": symbols}

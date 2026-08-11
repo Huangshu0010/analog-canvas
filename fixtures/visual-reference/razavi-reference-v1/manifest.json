@@ -88,9 +88,9 @@
         "figure": "13.4"
       },
       "extractPath": "ideal-switch-vector-source.json",
-      "extractSha256": "fce6a21907246daf9f425ab80704ba8082b98ed0a06fd5409c30d762832d7d9a",
+      "extractSha256": "2276f40deb1d9451447a229adcbf630a74e72837e9585dfb9f0e0405270b2a4a",
       "rasterPath": "ideal-switch-reference.png",
-      "rasterSha256": "8f3952ba941067ef47ea3e3983f6211207a5929ca33f7472438b8364bbf0a49b",
+      "rasterSha256": "664871b3e433dc06757b0753db60fb40aaeef86489c280a44870d59945d56c37",
       "scope": ["two-terminal ideal switch geometry"]
     },
     {
@@ -159,7 +159,7 @@
   "opampGeometryPath": "opamp-geometry.json",
   "opampGeometrySha256": "51003a9dbe09ea8b9d3a346489d9777c4019a57466bac10dbfdc5b9e8d0390ba",
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
-  "commonSymbolGeometrySha256": "becc28ce70dd4bf7bfe0027108651dfbf04d83fbba255f72f5baba805ac8f98f",
+  "commonSymbolGeometrySha256": "6c5860ea0692c32974c6f08133a3445a217f90c130a51ddd4512ef52ad5f5e14",
   "fidelityTargetsPath": "fidelity-targets.json",
   "fidelityTargetsSha256": "f22750d6febb521ce3ce93c0b3e5f7bce3af397e6d941da3720443c2d74d1158",
   "pixels": {

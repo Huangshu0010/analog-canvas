@@ -4274,3 +4274,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   build retains its existing large-chunk warning.
 - Commit status: ready to commit on `main` as
   `fix(symbols): remove VCCS and normalize device scale`.
+
+## 2026-08-11 - Calibrate Razavi ideal switch
+
+- Target: correct the ideal switch's line weight and proportions against the
+  native Figure 13.4 vector objects.
+- Changed areas: corrected PDF selection bounds and five-object fingerprint,
+  source-stroke normalization, 60-unit pin span, contact/blade geometry,
+  raster witness, authority hashes, generated Symbol/catalog registration,
+  and focused regression expectations.
+- Validation: common/catalog stale checks, symbols build, 23 focused tests,
+  Python compile check, ideal-switch fidelity IoU 0.9814 with anti-alias-only
+  residuals, and `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `fix(symbols): calibrate Razavi ideal switch`.

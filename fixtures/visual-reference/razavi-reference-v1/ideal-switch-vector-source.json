@@ -10,15 +10,15 @@
     "figure": "13.4"
   },
   "selection": {
-    "method": "direct-family-observation",
+    "method": "direct-device-vector-normalization",
     "boundsPdf": {
-      "left": 225.0,
-      "top": 420.0,
-      "right": 280.0,
-      "bottom": 455.0
+      "left": 235.0,
+      "top": 446.5,
+      "right": 262.0,
+      "bottom": 454.8
     },
-    "nativeObjectCount": 7,
-    "nativeObjectSha256": "3534ae8a5c5775e6699a24f19260e76e61245f9ee3894348db6b4eeffb51cadd",
+    "nativeObjectCount": 5,
+    "nativeObjectSha256": "64ace81bb14acbebea4e37988d5d5013c18109365acf7779ddbe1077ee9364a7",
     "nativeObjectSample": [
       {
         "objectType": "line",
@@ -53,26 +53,6 @@
       {
         "objectType": "curve",
         "linewidth": 0.717,
-        "x0": 258.68,
-        "top": 453.0242,
-        "x1": 270.16,
-        "bottom": 475.9842,
-        "pathCommandCount": 3,
-        "pathSha256": "911561ea6f0f854f75fd6bd10d479905ba963c2a8945b48d03ff20eda32f17b4"
-      },
-      {
-        "objectType": "curve",
-        "linewidth": 0.717,
-        "x0": 224.241,
-        "top": 453.0242,
-        "x1": 235.72,
-        "bottom": 475.9842,
-        "pathCommandCount": 3,
-        "pathSha256": "de58aced7c6488906f9921eb7affc2c4d3fd0c482d920093bb4d1591031e6cd8"
-      },
-      {
-        "objectType": "curve",
-        "linewidth": 0.717,
         "x0": 252.13,
         "top": 451.5802,
         "x1": 255.0,
@@ -96,12 +76,12 @@
     "pinAnchorsLogical": [
       {
         "name": "1",
-        "x": -20,
+        "x": -30,
         "y": 0
       },
       {
         "name": "2",
-        "x": 20,
+        "x": 30,
         "y": 0
       }
     ],
@@ -118,17 +98,17 @@
       "id": "ideal-switch",
       "name": "Ideal Switch",
       "viewBox": {
-        "x": -24,
-        "y": -12,
-        "width": 48,
-        "height": 24
+        "x": -34,
+        "y": -18,
+        "width": 68,
+        "height": 30
       },
       "pins": [
         {
           "name": "1",
           "role": "passive",
           "at": {
-            "x": -20,
+            "x": -30,
             "y": 0
           },
           "direction": "west",
@@ -141,7 +121,7 @@
           "name": "2",
           "role": "passive",
           "at": {
-            "x": 20,
+            "x": 30,
             "y": 0
           },
           "direction": "east",
@@ -155,11 +135,11 @@
         {
           "kind": "line",
           "from": {
-            "x": -20,
+            "x": -30,
             "y": 0
           },
           "to": {
-            "x": -7.333333,
+            "x": -12.810042,
             "y": 0
           },
           "style": {
@@ -171,12 +151,28 @@
         {
           "kind": "circle",
           "center": {
-            "x": -6,
-            "y": 0
+            "x": -9.524128,
+            "y": -0.020084
           },
-          "radius": 1.333333,
+          "radius": 3.202789,
           "fill": "none",
           "stroke": "foreground",
+          "style": {
+            "strokeRole": "normal",
+            "lineCap": "butt",
+            "lineJoin": "miter"
+          }
+        },
+        {
+          "kind": "line",
+          "from": {
+            "x": -8.005579,
+            "y": -1.6
+          },
+          "to": {
+            "x": 6.405579,
+            "y": -12.806695
+          },
           "style": {
             "strokeRole": "normal",
             "lineCap": "butt",
@@ -186,10 +182,10 @@
         {
           "kind": "circle",
           "center": {
-            "x": 6,
-            "y": 0
+            "x": 11.201116,
+            "y": -0.020084
           },
-          "radius": 1.333333,
+          "radius": 3.202232,
           "fill": "none",
           "stroke": "foreground",
           "style": {
@@ -201,31 +197,15 @@
         {
           "kind": "line",
           "from": {
-            "x": 7.333333,
+            "x": 14.410042,
             "y": 0
           },
           "to": {
-            "x": 20,
+            "x": 30,
             "y": 0
           },
           "style": {
             "strokeRole": "normal",
-            "lineCap": "butt",
-            "lineJoin": "miter"
-          }
-        },
-        {
-          "kind": "line",
-          "from": {
-            "x": -5,
-            "y": -1
-          },
-          "to": {
-            "x": 5,
-            "y": -8
-          },
-          "style": {
-            "strokeRole": "emphasis",
             "lineCap": "butt",
             "lineJoin": "miter"
           }
@@ -242,15 +222,20 @@
     "kind": "isolated-normalized-pdf-family",
     "dpi": 300.0,
     "pixels": {
-      "width": 116,
-      "height": 58
+      "width": 164,
+      "height": 72
     },
     "pixelsPerLogical": 2.4,
     "originPx": {
-      "x": 57.6,
-      "y": 28.8
+      "x": 81.6,
+      "y": 43.2
     },
     "assetPath": "ideal-switch-reference.png",
     "threshold": 160
+  },
+  "derivation": {
+    "geometry": "uniformly normalized from the five native Figure 13.4 switch objects",
+    "scale": "native 0.717 pt stroke mapped to the Razavi normal 1.6 logical-unit stroke",
+    "pinExtension": "native horizontal leads extended only to the nearest symmetric 10-unit anchors at x=-30 and x=30"
   }
 }

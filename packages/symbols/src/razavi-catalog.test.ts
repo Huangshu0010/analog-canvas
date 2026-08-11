@@ -531,9 +531,23 @@ describe("Razavi symbol catalog", () => {
       ]),
     );
     expect(diode.pins.map((pin) => pin.at.x)).toEqual([-20, 20]);
-    expect(
-      requireRazaviCatalogSymbol("ideal-switch").pins.map((pin) => pin.at.x),
-    ).toEqual([-20, 20]);
+    const idealSwitch = requireRazaviCatalogSymbol("ideal-switch");
+    expect(idealSwitch.pins.map((pin) => pin.at.x)).toEqual([-30, 30]);
+    expect(idealSwitch.primitives).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "circle",
+          radius: 3.202789,
+          style: expect.objectContaining({ strokeRole: "normal" }),
+        }),
+        expect.objectContaining({
+          kind: "line",
+          from: { x: -8.005579, y: -1.6 },
+          to: { x: 6.405579, y: -12.806695 },
+          style: expect.objectContaining({ strokeRole: "normal" }),
+        }),
+      ]),
+    );
     expect(getRazaviCatalogEntry("transformer")).toBeUndefined();
     expect(getRazaviCatalogEntry("vccs")).toBeUndefined();
   });

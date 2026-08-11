@@ -62,14 +62,14 @@
       "assetPath": "ideal-switch-reference.png",
       "pixelsPerLogical": 2.4,
       "originPx": {
-        "x": 57.6,
-        "y": 28.8
+        "x": 81.6,
+        "y": 43.2
       },
       "window": {
-        "width": 116,
-        "height": 58,
-        "minX": -24,
-        "minY": -12
+        "width": 164,
+        "height": 72,
+        "minX": -34,
+        "minY": -18
       }
     }
   }
