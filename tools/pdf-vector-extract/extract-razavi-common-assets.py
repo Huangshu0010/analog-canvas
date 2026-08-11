@@ -580,7 +580,7 @@ def ideal_switch_definition(objects: list[dict[str, Any]]) -> dict[str, Any]:
     ]
     return symbol(
         "ideal-switch",
-        "Ideal Switch",
+        "Open Switch",
         (-34, -18, 68, 30),
         [pin("1", "passive", -30, 0, "west"), pin("2", "passive", 30, 0, "east")],
         primitives,

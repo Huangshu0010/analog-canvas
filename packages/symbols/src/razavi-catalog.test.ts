@@ -572,6 +572,7 @@ describe("Razavi symbol catalog", () => {
     );
     expect(voltageAmplifier.pins.map((pin) => pin.at.x)).toEqual([-40, 40]);
     const idealSwitch = requireRazaviCatalogSymbol("ideal-switch");
+    expect(idealSwitch.name).toBe("Open Switch");
     expect(idealSwitch.pins.map((pin) => pin.at.x)).toEqual([-30, 30]);
     expect(idealSwitch.primitives).toEqual(
       expect.arrayContaining([

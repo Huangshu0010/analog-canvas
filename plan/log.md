@@ -4464,6 +4464,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `codex/contextual-properties-net-labels`
   as `fix(symbols): close ideal switch blade contact gap`.
 
+## 2026-08-11 - Rename ideal switch as open switch
+
+- Target: change the user-facing component name while retaining the stable
+  `ideal-switch` persistence ID.
+- Changed areas: common source definition, regenerated source evidence/catalog,
+  and catalog name regression.
+- Validation: Python compile, common/catalog stale checks, symbols build, 23
+  focused tests, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels`
+  as `fix(symbols): rename ideal switch as open switch`.
+
 ## 2026-08-11 - Contextual Properties and Net Labels
 
 - Target: add the smallest durable component Value path and make the editor's

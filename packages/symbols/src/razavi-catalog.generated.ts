@@ -174,7 +174,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
     assetPath: "ideal-switch.symbol.json",
     assetHash:
-      "7eb9a5b914ddd35abc11a0f6f741c3b33d1e79afce822bbbe90c57de3eb44156",
+      "ff8579302d5566296ceafdc1711554c5f42a4c04e16b6d7366101cc1e1ba91a7",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -1151,7 +1151,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
   {
     schemaVersion: 1,
     id: "ideal-switch",
-    name: "Ideal Switch",
+    name: "Open Switch",
     viewBox: {
       x: -34,
       y: -18,

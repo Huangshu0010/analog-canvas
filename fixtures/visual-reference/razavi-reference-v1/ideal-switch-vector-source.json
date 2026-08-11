@@ -96,7 +96,7 @@
     "symbolDefinition": {
       "schemaVersion": 1,
       "id": "ideal-switch",
-      "name": "Ideal Switch",
+      "name": "Open Switch",
       "viewBox": {
         "x": -34,
         "y": -18,
