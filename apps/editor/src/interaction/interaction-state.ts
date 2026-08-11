@@ -15,12 +15,19 @@ export type DrawingTool = Extract<
   "construction-line" | "arrow" | "rectangle"
 >;
 
+export interface PendingComponentPlacement {
+  symbolId: string;
+  properties: Record<string, string>;
+  initialRotation: 0 | 90 | 180 | 270;
+  showReference: boolean;
+  referenceText: string | null;
+}
+
 export type InteractionState =
   | { kind: "idle" }
   | {
       kind: "placing-component";
-      symbolId: string;
-      initialValue: string | null;
+      placement: PendingComponentPlacement;
     }
   | {
       kind: "wire";
@@ -40,7 +47,7 @@ export type InteractionState =
 
 export type InteractionAction =
   | { type: "activate-tool"; tool: EditorTool }
-  | { type: "place-component"; symbolId: string; initialValue: string | null }
+  | { type: "place-component"; placement: PendingComponentPlacement }
   | { type: "set-wire-source"; source: WireSource | null }
   | { type: "set-wire-preview"; point: Point | null }
   | { type: "set-wire-waypoints"; update: SetStateAction<Point[]> }
@@ -100,8 +107,7 @@ export function interactionReducer(
     case "place-component":
       return {
         kind: "placing-component",
-        symbolId: action.symbolId,
-        initialValue: action.initialValue,
+        placement: action.placement,
       };
     case "set-wire-source":
       return state.kind === "wire"
@@ -160,9 +166,10 @@ export function useInteractionState() {
   return {
     state,
     tool: interactionTool(state),
-    pendingSymbolId: state.kind === "placing-component" ? state.symbolId : null,
-    pendingComponentValue:
-      state.kind === "placing-component" ? state.initialValue : null,
+    pendingSymbolId:
+      state.kind === "placing-component" ? state.placement.symbolId : null,
+    pendingComponentPlacement:
+      state.kind === "placing-component" ? state.placement : null,
     wireSource: state.kind === "wire" ? state.source : null,
     wirePreviewPoint: state.kind === "wire" ? state.previewPoint : null,
     wireWaypoints: state.kind === "wire" ? state.waypoints : [],
@@ -171,8 +178,8 @@ export function useInteractionState() {
     draftingWaypoints: state.kind === "drawing" ? state.waypoints : [],
     draftingSnapPoint: state.kind === "drawing" ? state.snapPoint : null,
     setTool: (tool: EditorTool) => dispatch({ type: "activate-tool", tool }),
-    beginComponentPlacement: (symbolId: string, initialValue: string | null) =>
-      dispatch({ type: "place-component", symbolId, initialValue }),
+    beginComponentPlacement: (placement: PendingComponentPlacement) =>
+      dispatch({ type: "place-component", placement }),
     setWireSource: (source: WireSource | null) =>
       dispatch({ type: "set-wire-source", source }),
     setWirePreviewPoint: (point: Point | null) =>

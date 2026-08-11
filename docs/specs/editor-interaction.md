@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.4`
+Version: `1.5`
 
 Owning phase: `Phase 8`
 
@@ -67,9 +67,12 @@ The following are not permanent production toolbar modes:
 - Save snapshot and Reopen snapshot; recovery is automatic infrastructure.
 - Phase/demo actions; examples belong in File/Open Example or development mode.
 
-`I` or `Draw > Insert component` opens one dialog: a searchable categorized
-text list on the left and the currently selected symbol's full preview on the
-right. Arrow keys move the current option, `Enter` or `Apply` starts single-shot
+`I` or `Draw > Insert component` opens one stable two-column dialog. Its left
+setup column contains one compact searchable component picker, device-specific
+parameters, initial orientation, and reference annotation controls; the
+categorised list is collapsed by default and expands only inside that picker.
+The right column always shows the currently selected symbol's full preview.
+Arrow keys move the current option, `Enter` or `Apply` starts single-shot
 placement, and `Escape` cancels. During placement the resolved symbol follows
 the pointer; `R`/`Shift+R` rotates it before the placement click. Recent symbols
 are promoted only inside their existing category. The dialog reuses the Symbol
@@ -257,8 +260,9 @@ second mirror enum, a new stored field, or an Agent API operation.
   component library consumes canvas width or duplicates the Draw command
   surface.
 - Object properties live in a floating left `Properties` shelf. It is collapsed
-  by default, expands only after an explicit user action, overlays rather than
-  resizes the canvas, and scrolls internally when its details overflow.
+  by default; direct selection never opens it. `Q`, a direct click on the shelf,
+  and the explicit Import Review exception can expand it. It overlays rather
+  than resizes the canvas and scrolls internally when its details overflow.
 - In-place rich-text editing is unchanged: double-clicking editable text on the
   canvas opens the existing canvas RichText editor. The `Properties` shelf does not
   replace in-place text editing.
@@ -288,12 +292,23 @@ second mirror enum, a new stored field, or an Agent API operation.
 
 ## Manual component authoring
 
-The Add Component entry and `I` shortcut open the searchable master/detail
-insertion dialog grouped by device family.
+The Add Component entry and `I` shortcut open the compact component setup
+dialog, whose grouped device picker is expandable within its own left-column
+frame.
 Every entry includes a deterministic preview rendered from the same Symbol DSL
 definition used by the canvas. Choosing a symbol starts single-shot placement
 and the next canvas click places an instance. Placement is possible in a new
 empty Document without importing SPICE first.
+
+Manual resistor, capacitor, and inductor authoring exposes a raw SPICE-style
+`Value` stored in `Instance.properties.value`; the editor gives only unit-aware
+hints (Ohm, F, H) and never evaluates or converts the text. Manual NMOS and
+PMOS authoring exposes raw `W`, `L`, and `M` overrides in `properties.w`,
+`properties.l`, and `properties.m`; imported `spice.param.w/l/m` values are
+read-only fallbacks in Properties. Reference visibility uses the ordinary
+attached `instance-label`: an empty attached label deliberately suppresses the
+renderer-owned default reference, rather than introducing a hidden editor-only
+flag.
 
 Copy captures selected instances and only Nets, Routes, Junctions, and attached
 annotations wholly internal to that selection. Paste creates fresh stable IDs

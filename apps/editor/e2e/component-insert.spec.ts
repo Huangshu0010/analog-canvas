@@ -53,6 +53,7 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
 
   await page.keyboard.press("i");
   const reopened = page.getByRole("dialog", { name: "Insert Component" });
+  await reopened.getByRole("button", { name: "Expand component list" }).click();
   const passives = reopened
     .locator(".insert-option-group")
     .filter({ hasText: "Passives" });
@@ -75,8 +76,16 @@ test("carries a manual Value through placement and Q property editing", async ({
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 360, y: 230 } });
   await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByTestId("selection-shelf")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
 
   await page.keyboard.press("q");
+  await expect(page.getByTestId("selection-shelf")).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   const propertyValue = page.getByLabel("Component value");
   await expect(propertyValue).toBeFocused();
   await expect(propertyValue).toHaveValue("10k");
@@ -119,7 +128,7 @@ test("keeps the workspace inside the viewport and exposes low-interference zoom 
   expect(canvasAfter?.width).toBe(canvasBefore?.width);
 });
 
-test("keeps insert actions and preview fixed while the catalog scrolls", async ({
+test("keeps preview fixed while the compact catalog expands and collapses", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1100, height: 720 });
@@ -127,10 +136,10 @@ test("keeps insert actions and preview fixed while the catalog scrolls", async (
   await page.keyboard.press("i");
 
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
-  const options = dialog.locator(".insert-component-options");
   const artwork = dialog.locator(".insert-symbol-artwork");
   const cancel = dialog.getByRole("button", { name: "Cancel" });
   const apply = dialog.getByRole("button", { name: "Apply" });
+  const toggle = dialog.getByRole("button", { name: "Expand component list" });
 
   const measure = () =>
     dialog.evaluate((element) => {
@@ -143,18 +152,11 @@ test("keeps insert actions and preview fixed while the catalog scrolls", async (
           height: rect.height,
         };
       };
-      const list = element.querySelector(".insert-component-options")!;
       const preview = element.querySelector(".insert-component-preview")!;
       const artwork = element.querySelector(".insert-symbol-artwork")!;
       const footer = element.querySelector(".insert-dialog-actions")!;
       return {
         dialog: bounds(element),
-        list: {
-          ...bounds(list),
-          clientHeight: list.clientHeight,
-          scrollHeight: list.scrollHeight,
-          overflowY: getComputedStyle(list).overflowY,
-        },
         preview: bounds(preview),
         artwork: bounds(artwork),
         footer: bounds(footer),
@@ -165,17 +167,65 @@ test("keeps insert actions and preview fixed while the catalog scrolls", async (
   await expect(cancel).toBeVisible();
   await expect(apply).toBeVisible();
   expect(before.footer.bottom).toBeLessThanOrEqual(before.dialog.bottom);
-  expect(before.list.overflowY).toBe("auto");
-  expect(before.list.scrollHeight).toBeGreaterThan(before.list.clientHeight);
+  await expect(dialog.locator(".insert-component-options")).toHaveCount(0);
 
+  await toggle.click();
+  const options = dialog.locator(".insert-component-options");
+  await expect(options).toBeVisible();
+  expect(
+    await options.evaluate((element) => getComputedStyle(element).overflowY),
+  ).toBe("auto");
   await dialog.getByTestId("insert-component-inductor").click();
   const after = await measure();
   expect(after.dialog.height).toBeCloseTo(before.dialog.height, 0);
-  expect(after.list.height).toBeCloseTo(before.list.height, 0);
   expect(after.preview.width).toBeCloseTo(before.preview.width, 0);
   expect(after.preview.height).toBeCloseTo(before.preview.height, 0);
   expect(after.artwork.width).toBeCloseTo(before.artwork.width, 0);
   expect(after.artwork.height).toBeCloseTo(before.artwork.height, 0);
   expect(after.footer.top).toBeCloseTo(before.footer.top, 0);
   expect(after.footer.bottom).toBeLessThanOrEqual(after.dialog.bottom);
+});
+
+test("places MOS parameters and orientation while preserving deliberate reference visibility", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("i");
+
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByRole("combobox").fill("nmos");
+  await expect(
+    dialog.getByLabel("Component w", { exact: true }),
+  ).toHaveAttribute("placeholder", "1u");
+  await dialog.getByLabel("Component w", { exact: true }).fill("2u");
+  await dialog.getByLabel("Component l", { exact: true }).fill("180n");
+  await dialog.getByLabel("Component m", { exact: true }).fill("4");
+  await dialog.getByRole("button", { name: "90°" }).click();
+  await dialog.getByRole("checkbox", { name: "Show reference" }).uncheck();
+  await dialog.getByRole("button", { name: "Apply" }).click();
+
+  const canvas = page.getByTestId("schematic-canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Canvas is not measurable");
+  await page.mouse.move(box.x + 360, box.y + 230);
+  await expect(page.getByTestId("component-placement-preview")).toHaveAttribute(
+    "transform",
+    /rotate\(90\)/u,
+  );
+  await canvas.click({ position: { x: 360, y: 230 } });
+
+  await expect(page.locator('[data-object-id="instance-label-M1"]')).toHaveText(
+    "",
+  );
+  await page.keyboard.press("q");
+  await expect(page.getByLabel("Component w", { exact: true })).toHaveValue(
+    "2u",
+  );
+  await expect(page.getByLabel("Component l", { exact: true })).toHaveValue(
+    "180n",
+  );
+  await expect(page.getByLabel("Component m", { exact: true })).toHaveValue(
+    "4",
+  );
+  await expect(page.getByLabel("Component rotation")).toHaveValue("90");
 });

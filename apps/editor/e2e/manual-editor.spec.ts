@@ -1250,7 +1250,7 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
 
   await page.keyboard.press("i");
   const search = page.getByRole("combobox", {
-    name: "Search or choose a component",
+    name: "Component",
   });
   await search.fill("r");
   await page.keyboard.press("r");

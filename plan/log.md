@@ -4344,7 +4344,7 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Validation: source object topology and authority hashes, common/catalog stale
   checks, symbols build, 23 focused tests, enlarged raster inspection, closed
   switch fidelity IoU 0.9866 with anti-alias-only residuals, and `git diff
-  --check` passed.
+--check` passed.
 - Commit status: ready to commit on `main` as
   `feat(symbols): add Razavi closed switch`.
 - Correction: this first baseline used candidate-generated witness artwork and
@@ -4423,7 +4423,7 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   rotation path, and focused BJT/default-label regressions.
 - Validation: 14 focused derived/editor/edit-engine tests, derived and
   edit-engine TypeScript builds, editor Vite production build, and `git diff
-  --check` passed.
+--check` passed.
 - Commit status: ready to commit on `main` as
   `fix(labels): stabilize default instance text placement`.
 
@@ -4453,3 +4453,16 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   formatting findings.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `feat(editor): add contextual properties and net labels`.
+
+## 2026-08-11 - Virtuoso-style Insert Dialog and Explicit Properties
+
+- Target: make manual insertion compact and parameter-first while reserving
+  Properties expansion for explicit `Q` or shelf actions.
+- Changed areas: shared R/L/C and MOS parameter catalogue; temporary placement
+  request; collapsed in-column component picker; orientation/reference setup;
+  component Properties fields; reference-label suppression; interaction spec;
+  and targeted E2E regressions.
+- Validation: focused Vitest tests (20), workspace typecheck, production editor
+  build, complete editor E2E suite (70), and `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `feat(editor): refine Virtuoso-style component insertion`.

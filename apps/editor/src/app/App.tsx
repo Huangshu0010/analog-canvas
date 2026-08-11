@@ -64,6 +64,10 @@ import {
   InsertComponentDialog,
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
+import {
+  componentParameters,
+  effectiveComponentParameterValue,
+} from "../features/component-insert/component-parameters";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
 import { useDocumentController } from "../document/document-controller";
 import {
@@ -533,7 +537,7 @@ export function App({ project: initialProject }: AppProps) {
     state: interactionState,
     tool,
     pendingSymbolId,
-    pendingComponentValue,
+    pendingComponentPlacement,
     wireSource,
     wirePreviewPoint,
     wireWaypoints,
@@ -575,11 +579,11 @@ export function App({ project: initialProject }: AppProps) {
   const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
   const [instancePropertyDraft, setInstancePropertyDraft] = useState<{
     instanceId: string | null;
-    value: string;
+    parameters: Record<string, string>;
     x: string;
     y: string;
     rotation: "0" | "90" | "180" | "270";
-  }>({ instanceId: null, value: "", x: "", y: "", rotation: "0" });
+  }>({ instanceId: null, parameters: {}, x: "", y: "", rotation: "0" });
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
@@ -949,24 +953,21 @@ export function App({ project: initialProject }: AppProps) {
     if (!selectedInstance) {
       setInstancePropertyDraft({
         instanceId: null,
-        value: "",
+        parameters: {},
         x: "",
         y: "",
         rotation: "0",
       });
       return;
     }
-    const explicitValue = selectedInstance.properties.value;
-    const sourceValue = selectedInstance.properties["spice.param.value"];
-    const value =
-      typeof explicitValue === "string"
-        ? explicitValue
-        : typeof sourceValue === "string"
-          ? sourceValue
-          : "";
     setInstancePropertyDraft({
       instanceId: selectedInstance.id,
-      value,
+      parameters: Object.fromEntries(
+        componentParameters(selectedInstance.symbolId).map((parameter) => [
+          parameter.key,
+          effectiveComponentParameterValue(selectedInstance, parameter),
+        ]),
+      ),
       x: selectedInstance.placement
         ? String(selectedInstance.placement.position.x)
         : "",
@@ -1167,7 +1168,7 @@ export function App({ project: initialProject }: AppProps) {
   function beginInsertedComponentPlacement(
     request: ComponentInsertRequest,
   ): void {
-    const { symbolId, symbolName, value } = request;
+    const { symbolId, symbolName, initialRotation } = request;
     const nextRecent = [
       symbolId,
       ...recentSymbolIds.filter((candidate) => candidate !== symbolId),
@@ -1183,9 +1184,9 @@ export function App({ project: initialProject }: AppProps) {
       // convenience-only and must never block component placement.
     }
     setInsertDialogOpen(false);
-    setComponentPlacementRotation(0);
+    setComponentPlacementRotation(initialRotation);
     setComponentPreviewPoint(null);
-    beginComponentPlacement(symbolId, value);
+    beginComponentPlacement(request);
     setStatus(`Place ${symbolName} on the canvas · R rotates · Esc cancels`);
   }
 
@@ -2140,7 +2141,7 @@ export function App({ project: initialProject }: AppProps) {
   function placeNewComponent(
     symbolId: string,
     position: Point,
-    value: string | null,
+    placementRequest: NonNullable<typeof pendingComponentPlacement>,
   ): void {
     instanceCounter.current += 1;
     const prefix: Record<string, string> = {
@@ -2170,17 +2171,30 @@ export function App({ project: initialProject }: AppProps) {
         rotation: componentPlacementRotation,
         mirror: "none" as const,
       },
-      properties: value === null ? {} : { value },
+      properties: placementRequest.properties,
     };
     // New authoring never relies on the renderer-only default label. The
     // explicit annotation is the one editable text object for all ordinary
     // components, including independent voltage sources.
-    const instanceLabel = defaultInstanceLabel(
+    const defaultLabel = defaultInstanceLabel(
       document,
       instance,
       resolver,
       styleProfile,
     );
+    // The renderer supplies an implicit reference when no instance-label is
+    // present. A deliberately hidden reference therefore needs the established
+    // empty, attached label suppressor rather than simply omitting an
+    // annotation. It remains an ordinary annotation: no hidden UI-only state
+    // or special persistence field is introduced.
+    const instanceLabel = defaultLabel
+      ? {
+          ...defaultLabel,
+          text: placementRequest.showReference
+            ? (placementRequest.referenceText ?? defaultLabel.text)
+            : "",
+        }
+      : null;
     const result = transact([
       {
         kind: "add_instance",
@@ -3238,19 +3252,31 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     const edits: SchematicEdit[] = [];
-    const value = instancePropertyDraft.value.trim();
-    const storedValue = selectedInstance.properties.value;
-    if (value === "" && storedValue !== undefined) {
+    const set: Record<string, string> = {};
+    const unset: string[] = [];
+    for (const parameter of componentParameters(selectedInstance.symbolId)) {
+      const value = (
+        instancePropertyDraft.parameters[parameter.key] ?? ""
+      ).trim();
+      const explicit = selectedInstance.properties[parameter.key];
+      const effective = effectiveComponentParameterValue(
+        selectedInstance,
+        parameter,
+      );
+      if (explicit === undefined) {
+        if (value !== "" && value !== effective) set[parameter.key] = value;
+      } else if (value === "") {
+        unset.push(parameter.key);
+      } else if (String(explicit) !== value) {
+        set[parameter.key] = value;
+      }
+    }
+    if (Object.keys(set).length > 0 || unset.length > 0) {
       edits.push({
         kind: "patch_instance_properties",
         instanceId: selectedInstance.id,
-        unset: ["value"],
-      });
-    } else if (value !== "" && storedValue !== value) {
-      edits.push({
-        kind: "patch_instance_properties",
-        instanceId: selectedInstance.id,
-        set: { value },
+        ...(Object.keys(set).length > 0 ? { set } : {}),
+        ...(unset.length > 0 ? { unset } : {}),
       });
     }
 
@@ -3296,16 +3322,14 @@ export function App({ project: initialProject }: AppProps) {
 
   function discardInstancePropertyDraft(): void {
     if (!selectedInstance) return;
-    const explicitValue = selectedInstance.properties.value;
-    const sourceValue = selectedInstance.properties["spice.param.value"];
     setInstancePropertyDraft({
       instanceId: selectedInstance.id,
-      value:
-        typeof explicitValue === "string"
-          ? explicitValue
-          : typeof sourceValue === "string"
-            ? sourceValue
-            : "",
+      parameters: Object.fromEntries(
+        componentParameters(selectedInstance.symbolId).map((parameter) => [
+          parameter.key,
+          effectiveComponentParameterValue(selectedInstance, parameter),
+        ]),
+      ),
       x: selectedInstance.placement
         ? String(selectedInstance.placement.position.x)
         : "",
@@ -3813,8 +3837,8 @@ export function App({ project: initialProject }: AppProps) {
       event.clientY,
       event.currentTarget,
     );
-    if (pendingSymbolId) {
-      placeNewComponent(pendingSymbolId, point, pendingComponentValue);
+    if (pendingSymbolId && pendingComponentPlacement) {
+      placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
       return;
     }
     if (tool === "wire") return;
@@ -5138,21 +5162,33 @@ export function App({ project: initialProject }: AppProps) {
                 aria-label="Component properties"
               >
                 <h2>Component properties</h2>
-                <label>
-                  Value
-                  <input
-                    ref={instanceValueInputRef}
-                    aria-label="Component value"
-                    value={instancePropertyDraft.value}
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      setInstancePropertyDraft((current) => ({
-                        ...current,
-                        value,
-                      }));
-                    }}
-                  />
-                </label>
+                {componentParameters(selectedInstance.symbolId).map(
+                  (parameter, index) => (
+                    <label key={parameter.key} title={parameter.help}>
+                      {parameter.label}
+                      <input
+                        ref={index === 0 ? instanceValueInputRef : undefined}
+                        aria-label={`Component ${parameter.label.toLowerCase()}`}
+                        inputMode={parameter.inputMode}
+                        value={
+                          instancePropertyDraft.parameters[parameter.key] ?? ""
+                        }
+                        placeholder={parameter.placeholder}
+                        onChange={(event) => {
+                          const value = event.currentTarget.value;
+                          setInstancePropertyDraft((current) => ({
+                            ...current,
+                            parameters: {
+                              ...current.parameters,
+                              [parameter.key]: value,
+                            },
+                          }));
+                        }}
+                      />
+                      <small>{parameter.help}</small>
+                    </label>
+                  ),
+                )}
                 {typeof selectedInstance.properties["spice.target"] ===
                 "string" ? (
                   <p className="property-source-fact">

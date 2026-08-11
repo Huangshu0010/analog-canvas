@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { InsertComponentDialog } from "./insert-component-dialog";
 
 describe("InsertComponentDialog", () => {
-  it("renders one categorized text selector and one authoritative preview", () => {
+  it("renders a collapsed picker, device controls, and one authoritative preview", () => {
     const markup = renderToStaticMarkup(
       <InsertComponentDialog
         open
@@ -17,11 +17,13 @@ describe("InsertComponentDialog", () => {
 
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('role="combobox"');
-    expect(markup).toContain('aria-label="Component choices"');
-    expect(markup).toContain('data-testid="insert-component-nmos"');
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).toContain('aria-label="Expand component list"');
     expect(markup).toContain('class="insert-symbol-artwork"');
-    expect(markup).toContain('aria-label="Component value"');
-    expect(markup).toContain("Value (optional)");
+    expect(markup).toContain('aria-label="Component w"');
+    expect(markup).toContain('aria-label="Component l"');
+    expect(markup).toContain('aria-label="Component m"');
+    expect(markup).toContain('aria-label="Reference annotation"');
     expect(markup).not.toContain("library-component-");
   });
 

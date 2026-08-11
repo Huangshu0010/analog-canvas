@@ -59,4 +59,33 @@ describe("editor interaction state", () => {
       snapPoint: null,
     });
   });
+
+  it("carries component parameters and annotation choices only while placing", () => {
+    const state = interactionReducer(
+      { kind: "idle" },
+      {
+        type: "place-component",
+        placement: {
+          symbolId: "nmos",
+          properties: { w: "2u", l: "150n", m: "2" },
+          initialRotation: 90,
+          showReference: false,
+          referenceText: "MIN",
+        },
+      },
+    );
+    expect(state).toEqual({
+      kind: "placing-component",
+      placement: {
+        symbolId: "nmos",
+        properties: { w: "2u", l: "150n", m: "2" },
+        initialRotation: 90,
+        showReference: false,
+        referenceText: "MIN",
+      },
+    });
+    expect(interactionReducer(state, { type: "cancel" })).toEqual({
+      kind: "idle",
+    });
+  });
 });
