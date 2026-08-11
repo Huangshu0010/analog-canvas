@@ -4537,3 +4537,13 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   `git diff --check` passed.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `fix(editor): correct mirror shortcut labels`.
+
+## 2026-08-11 - Compact Properties Mirror Actions
+
+- Target: group the two component mirror actions directly under geometry fields
+  without changing their behavior.
+- Changed areas: selected-component Properties markup and compact mirror-row
+  styles, plus target records.
+- Validation: production editor build and `git diff --check` passed.
+- Commit status: ready to commit on `codex/contextual-properties-net-labels` as
+  `refactor(editor): compact properties mirror actions`.

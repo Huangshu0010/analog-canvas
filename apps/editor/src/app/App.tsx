@@ -5230,61 +5230,84 @@ export function App({ project: initialProject }: AppProps) {
                   </p>
                 ) : null}
                 {selectedInstance.placement ? (
-                  <div
-                    className="component-geometry-row"
-                    aria-label="Component geometry"
-                  >
-                    <label>
-                      X
-                      <input
-                        aria-label="Component X position"
-                        inputMode="decimal"
-                        value={instancePropertyDraft.x}
-                        onChange={(event) => {
-                          const x = event.currentTarget.value;
-                          setInstancePropertyDraft((current) => ({
-                            ...current,
-                            x,
-                          }));
-                        }}
-                      />
-                    </label>
-                    <label>
-                      Y
-                      <input
-                        aria-label="Component Y position"
-                        inputMode="decimal"
-                        value={instancePropertyDraft.y}
-                        onChange={(event) => {
-                          const y = event.currentTarget.value;
-                          setInstancePropertyDraft((current) => ({
-                            ...current,
-                            y,
-                          }));
-                        }}
-                      />
-                    </label>
-                    <label>
-                      Rotate
-                      <select
-                        aria-label="Component rotation"
-                        value={instancePropertyDraft.rotation}
-                        onChange={(event) => {
-                          const rotation = event.currentTarget.value as
-                            "0" | "90" | "180" | "270";
-                          setInstancePropertyDraft((current) => ({
-                            ...current,
-                            rotation,
-                          }));
-                        }}
+                  <>
+                    <div
+                      className="component-geometry-row"
+                      aria-label="Component geometry"
+                    >
+                      <label>
+                        X
+                        <input
+                          aria-label="Component X position"
+                          inputMode="decimal"
+                          value={instancePropertyDraft.x}
+                          onChange={(event) => {
+                            const x = event.currentTarget.value;
+                            setInstancePropertyDraft((current) => ({
+                              ...current,
+                              x,
+                            }));
+                          }}
+                        />
+                      </label>
+                      <label>
+                        Y
+                        <input
+                          aria-label="Component Y position"
+                          inputMode="decimal"
+                          value={instancePropertyDraft.y}
+                          onChange={(event) => {
+                            const y = event.currentTarget.value;
+                            setInstancePropertyDraft((current) => ({
+                              ...current,
+                              y,
+                            }));
+                          }}
+                        />
+                      </label>
+                      <label>
+                        Rotate
+                        <select
+                          aria-label="Component rotation"
+                          value={instancePropertyDraft.rotation}
+                          onChange={(event) => {
+                            const rotation = event.currentTarget.value as
+                              "0" | "90" | "180" | "270";
+                            setInstancePropertyDraft((current) => ({
+                              ...current,
+                              rotation,
+                            }));
+                          }}
+                        >
+                          <option value="0">0°</option>
+                          <option value="90">90°</option>
+                          <option value="180">180°</option>
+                          <option value="270">270°</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div
+                      className="component-mirror-row"
+                      aria-label="Mirror component"
+                    >
+                      <button
+                        type="button"
+                        aria-label="Mirror component left to right, Shift+R"
+                        title="Mirror left/right (Shift+R)"
+                        onClick={() => mirrorSelected("left-right")}
                       >
-                        <option value="0">0°</option>
-                        <option value="90">90°</option>
-                        <option value="180">180°</option>
-                        <option value="270">270°</option>
-                      </select>
-                    </label>
-                  </div>
+                        ↔ Shift+R
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Mirror component top to bottom, Shift+V"
+                        title="Mirror top/bottom (Shift+V)"
+                        onClick={() => mirrorSelected("top-bottom")}
+                      >
+                        ↕ Shift+V
+                      </button>
+                    </div>
+                  </>
                 ) : null}
                 <button type="button" onClick={applyInstanceProperties}>
                   Apply component properties
@@ -5292,22 +5315,6 @@ export function App({ project: initialProject }: AppProps) {
                 <button type="button" onClick={discardInstancePropertyDraft}>
                   Cancel property edits
                 </button>
-                {selectedInstance.placement ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => mirrorSelected("left-right")}
-                    >
-                      Mirror left/right (Shift+R)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => mirrorSelected("top-bottom")}
-                    >
-                      Mirror top/bottom (Shift+V)
-                    </button>
-                  </>
-                ) : null}
               </section>
             ) : null}
             {selectedRoute ? (
