@@ -4678,3 +4678,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): add ResolvedRouteGeometry with endpoint join ingredients
   (WP-R3)`.
+
+## 2026-08-12 - WP-R4 Route-Tap Planner Extraction (App thin-out step 1)
+
+- Target: begin the App thin-out by extracting the route-tap hit resolver
+  inlined in `App.tsx` into a pure, unit-tested wiring-feature module.
+  Behavior-preserving. Stretch/group-move wrapper extractions deferred to R10
+  (e2e-gated).
+- Changed areas: new `apps/editor/src/features/wiring/route-tap.ts` and
+  `route-tap.test.ts` (6 tests); `apps/editor/src/app/App.tsx` imports the
+  resolver instead of inlining it; target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run route-tap.test.ts` (6) and
+  `App.test.tsx` (11); `prettier --check` on changed files; `git diff --check`.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(editor): extract route-tap resolver from App into wiring feature
+  (WP-R4)`.
