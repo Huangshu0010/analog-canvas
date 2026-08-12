@@ -71,6 +71,12 @@ adaptation, and editor body isolation changed. Added the matching theme preload
 and mono font, plus browser coverage for date controls, theme switching, and
 breakdown expansion.
 
+Post-deployment computed-style comparison found that the editor's global CSS
+still overrode Arena's reset for subtitle spacing, zero-width border style, and
+native date/button appearance. The target was reopened to isolate those reset
+differences inside `.analytics-shell`; the shared geometry now matches Arena's
+computed layout exactly in Chromium for the compared page sections and controls.
+
 Focused typecheck, editor build, and analytics Playwright passed. The canonical
 install and static/unit/release gates passed locally. Local E2E passed 72/74,
 with the two pre-existing drafting rich-text `span` assertions failing; all five
