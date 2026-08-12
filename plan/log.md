@@ -5309,6 +5309,17 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `feat(editor): strengthen Net highlighting and flightline policy`.
 
+## 2026-08-12 - Import-only flightlines and Net Label removal
+
+- Target: keep dashed flightlines exclusively as untouched SPICE-import review
+  guidance and expose a clear deletion action for a Route Net Label.
+- Changed areas: editor flightline display policy, Route action shelf, focused
+  browser tests, target plan.
+- Validation: workspace `pnpm typecheck`; four focused browser E2E flows;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): limit flightlines to untouched imports`.
+
 ## 2026-08-12 - Symbol-defined power-Net normalization
 
 - Target: make VDD/GND marker terminal membership authoritative for power-Net

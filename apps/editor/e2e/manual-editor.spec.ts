@@ -345,7 +345,7 @@ test("deletes a wire without exposing Unroute", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("deletes a routed part of an imported Net that still has flightlines", async ({
+test("hides flightlines after manually deleting an imported Route", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
@@ -376,15 +376,17 @@ test("deletes a routed part of an imported Net that still has flightlines", asyn
   });
 
   await clickRoute(page, "route-imported-partial");
-  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
   await page.keyboard.press("Delete");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
   await expect(page.getByTestId("status")).toContainText(
     "Deleted wire route-imported-partial",
   );
 
-  await page.getByTestId("hit-A").click();
-  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await expect(page.getByTestId("source-status")).toHaveText(
+    "geometry-only-changed",
+  );
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
 });
 
 test("normalizes a legacy VDD Net and completes its PMOS bulk", async ({
@@ -437,11 +439,20 @@ test("normalizes a legacy VDD Net and completes its PMOS bulk", async ({
 });
 
 test("uses a flightline as direct Wire guidance", async ({ page }) => {
+  const project = createRoutingDemoProject();
+  project.documents[0]!.sourceBinding = {
+    cellName: "routing_demo",
+    sourceRef: {
+      fileId: "source-routing-demo",
+      start: { offset: 0, line: 1, column: 1 },
+      end: { offset: 1, line: 1, column: 2 },
+    },
+  };
   await page.goto("/");
   await page.getByTestId("project-file").setInputFiles({
     name: "routing-flightlines.icproj.json",
     mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(createRoutingDemoProject())),
+    buffer: Buffer.from(JSON.stringify(project)),
   });
 
   await expect(page.getByTestId("flightline")).toHaveCount(3);
@@ -455,7 +466,7 @@ test("uses a flightline as direct Wire guidance", async ({ page }) => {
   await hint.click({ force: true });
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
-  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
 });
 
 test("focuses imported flightlines on the selected Net", async ({ page }) => {
@@ -483,20 +494,18 @@ test("focuses imported flightlines on the selected Net", async ({ page }) => {
     buffer: Buffer.from(JSON.stringify(project)),
   });
 
-  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
   await clickRoute(page, "route-imported-h");
-  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
   await page.keyboard.press("h");
   await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
     "data-net-id",
     "net-h",
   );
-  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
   await page.keyboard.press("h");
   await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
-  await expect(page.getByTestId("flightline")).toHaveCount(1);
-  await page.getByTestId("hit-C").click();
-  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
 });
 
 test("turns an off-axis tap near a route bend into an exact junction", async ({
@@ -1131,6 +1140,13 @@ test("L edits a selected route Net Label without opening Properties", async ({
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
     "SIGNAL",
   );
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Delete Net label" }).click();
+  await expect(
+    page.getByTestId("annotation-hit-net-label-route-ui-1"),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
 
   await clickRoute(page, "route-ui-1", 0.5, 0);
   await page.keyboard.press("l");

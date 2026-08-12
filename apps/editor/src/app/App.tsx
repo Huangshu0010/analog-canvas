@@ -753,6 +753,13 @@ export function App({ project: initialProject }: AppProps) {
     [document.id, document.nets, projectConnectivityIndex],
   );
   const displayedFlightlines = useMemo(() => {
+    // Flightlines are migration guidance for an untouched SPICE import only.
+    // A human-created document has no source binding, and any later edit of an
+    // import changes sourceStatus; neither state should be cluttered with
+    // inferred dashed connectivity.
+    if (!document.sourceBinding || document.sourceStatus !== "in-sync") {
+      return [];
+    }
     // A highlighted Net is already presented as a strong complete conductor
     // overlay. Do not also draw its dashed incomplete-routing guidance.
     const unhighlightedFlightlines = highlightedNetId
@@ -760,41 +767,8 @@ export function App({ project: initialProject }: AppProps) {
           (flightline) => flightline.netId !== highlightedNetId,
         )
       : flightlines;
-    if (!document.sourceBinding) return unhighlightedFlightlines;
-    const focusedNetIds = new Set<string>();
-    if (selectedRoute) focusedNetIds.add(selectedRoute.netId);
-    if (highlightedNetId) focusedNetIds.add(highlightedNetId);
-    if (selectedEndpoint) {
-      const netId = endpointNetId(document, selectedEndpoint.endpoint);
-      if (netId) focusedNetIds.add(netId);
-    }
-    for (const net of document.nets) {
-      if (
-        net.terminals.some((terminal) =>
-          selectedIds.includes(terminal.instanceId),
-        ) ||
-        visualSelection.junctionIds.some((junctionId) =>
-          document.junctions.some(
-            (junction) =>
-              junction.id === junctionId && junction.netId === net.id,
-          ),
-        )
-      ) {
-        focusedNetIds.add(net.id);
-      }
-    }
-    return unhighlightedFlightlines.filter((flightline) =>
-      focusedNetIds.has(flightline.netId),
-    );
-  }, [
-    document,
-    flightlines,
-    selectedEndpoint,
-    highlightedNetId,
-    selectedIds,
-    selectedRoute,
-    visualSelection.junctionIds,
-  ]);
+    return unhighlightedFlightlines;
+  }, [document, flightlines, highlightedNetId]);
   const crossings = useMemo(
     () => deriveCrossings(document, resolver),
     [document, resolver],
@@ -3473,6 +3447,25 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
+  function deleteSelectedRouteNetLabel(): void {
+    if (!selectedRoute) return;
+    const labelId = `net-label-${selectedRoute.id}`;
+    const label = document.annotations.find(
+      (annotation) => annotation.id === labelId,
+    );
+    if (!label) {
+      setStatus("Selected Route has no Net Label");
+      return;
+    }
+    const result = transact([
+      { kind: "remove_annotation", annotationId: label.id },
+    ]);
+    if (result.ok) {
+      setNetLabelDraft("");
+      setStatus(`Deleted Net Label ${label.text}`);
+    }
+  }
+
   function applyInstanceProperties(): void {
     if (
       !selectedInstance ||
@@ -6013,6 +6006,9 @@ export function App({ project: initialProject }: AppProps) {
                 </label>
                 <button type="button" onClick={applyNetLabel}>
                   Apply Net label
+                </button>
+                <button type="button" onClick={deleteSelectedRouteNetLabel}>
+                  Delete Net label
                 </button>
                 <button type="button" onClick={addCurrentArrow}>
                   Add current arrow
