@@ -422,6 +422,12 @@ regenerated.
 
 ### WP-WA7 — Delivery hardening and measured rollout
 
+Status: `local gate green; remote/deployment deferred` — frozen install,
+`format:check`, `references:check`, `typecheck`, full unit suite (108 files /
+656 tests), and `agent-api:artifacts:check` pass on the branch. GitHub Actions,
+Playwright e2e, the Cloudflare Durable Object + WebSocket deployment, and
+performance/no-retention validation remain the user's mainline gate.
+
 - Goal: Validate security, performance, reliability, and production delivery
   before enabling the feature by default.
 - Main modules: end-to-end fixtures, performance scripts, release/Worker config,

@@ -5713,3 +5713,17 @@ contracts (WP-R1)`.
 - Limitation: end-to-end external HTTP test needs the deployed relay (WP-WA7).
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `docs(agent): external web-session client contract (WP-WA6)`.
+
+## 2026-08-12 - WP-WA7 delivery gate
+
+- Target: validate the local delivery gate for WP-WA0–WA6 and record the
+  remote/deployment gate.
+- Changed areas: `pnpm-lock.yaml` Prettier reformat; delivery-gate plan; roadmap
+  exit-gate status.
+- Validation (local, green): frozen-lockfile install; `format:check`;
+  `references:check`; `typecheck`; full unit suite (108 files / 656 tests);
+  `agent-api:artifacts:check`.
+- Deferred (need user/CI/deployment): GitHub Actions required checks; Playwright
+  e2e; Cloudflare DO + WebSocket transport; perf budgets; relay no-retention.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `chore(agent): format lockfile and record delivery gate (WP-WA7)`.
