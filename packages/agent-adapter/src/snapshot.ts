@@ -383,6 +383,9 @@ function documentSnapshot(
     junctions: [...document.junctions]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
       .map((junction) => structuredClone(junction)),
+    noConnects: [...document.noConnects]
+      .sort((left, right) => left.id.localeCompare(right.id, "en"))
+      .map((noConnect) => structuredClone(noConnect)),
     annotations: [...document.annotations]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
       .map((annotation) => structuredClone(annotation)),

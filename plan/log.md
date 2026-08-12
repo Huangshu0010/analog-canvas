@@ -4808,3 +4808,15 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(derived): unify locator and diagnostic protocols`.
+
+## 2026-08-12 - Connectivity Recovery C2a: NoConnect electrical lifecycle
+
+- Target: make persisted NoConnect facts editable and observable without
+  overstating the unfinished clipboard/renderer/editor lifecycle.
+- Changed areas: typed edit-engine add/remove operations and deletion guard;
+  topology hash; Agent Snapshot schema/builder and edit classification; target
+  plan and log.
+- Validation: workspace `pnpm typecheck`; 20 focused topology-hash, Snapshot
+  and transaction tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(noconnect): add editable electrical lifecycle core`.

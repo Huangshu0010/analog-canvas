@@ -9,6 +9,7 @@ import {
   LayoutConstraintSchema,
   LayoutGroupSchema,
   MirrorSchema,
+  NoConnectSchema,
   PlacementSchema,
   PointSchema,
   RouteEndpointSchema,
@@ -185,6 +186,14 @@ export const DisconnectEndpointEditSchema = z.strictObject({
     z.strictObject({ kind: z.literal("port"), portId: StableIdSchema }),
   ]),
 });
+export const AddNoConnectEditSchema = z.strictObject({
+  kind: z.literal("add_no_connect"),
+  noConnect: NoConnectSchema,
+});
+export const RemoveNoConnectEditSchema = z.strictObject({
+  kind: z.literal("remove_no_connect"),
+  noConnectId: StableIdSchema,
+});
 export const UpsertAnnotationEditSchema = z.strictObject({
   kind: z.literal("upsert_annotation"),
   annotation: AnnotationSchema,
@@ -273,6 +282,8 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MergeNetsEditSchema,
   SetNetNameEditSchema,
   DisconnectEndpointEditSchema,
+  AddNoConnectEditSchema,
+  RemoveNoConnectEditSchema,
   UpsertAnnotationEditSchema,
   RemoveAnnotationEditSchema,
   SetPresentationStyleEditSchema,
@@ -1620,6 +1631,7 @@ export function executeTransaction(
           ...draft.nets,
           ...draft.routes,
           ...draft.junctions,
+          ...draft.noConnects,
           ...draft.annotations,
           ...draft.layoutGroups,
           ...draft.constraints,
@@ -1665,6 +1677,11 @@ export function executeTransaction(
               (terminal) => terminal.instanceId === edit.instanceId,
             ),
           ) ||
+          draft.noConnects.some(
+            (noConnect) =>
+              noConnect.endpoint.kind === "terminal" &&
+              noConnect.endpoint.instanceId === edit.instanceId,
+          ) ||
           draft.annotations.some(
             (annotation) => annotation.attachedObjectId === edit.instanceId,
           ) ||
@@ -1682,6 +1699,46 @@ export function executeTransaction(
         }
         draft.instances.splice(index, 1);
         changedObjectIds.add(edit.instanceId);
+        connectivityChanged = true;
+        break;
+      }
+      case "add_no_connect": {
+        const idExists = [
+          ...draft.ports,
+          ...draft.instances,
+          ...draft.nets,
+          ...draft.routes,
+          ...draft.junctions,
+          ...draft.noConnects,
+          ...draft.annotations,
+          ...draft.layoutGroups,
+          ...draft.constraints,
+        ].some((candidate) => candidate.id === edit.noConnect.id);
+        if (idExists) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Object ID already exists: ${edit.noConnect.id}`,
+          );
+        }
+        draft.noConnects.push(NoConnectSchema.parse(edit.noConnect));
+        changedObjectIds.add(edit.noConnect.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "remove_no_connect": {
+        const index = draft.noConnects.findIndex(
+          (candidate) => candidate.id === edit.noConnectId,
+        );
+        if (index < 0) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `NoConnect does not exist: ${edit.noConnectId}`,
+            [],
+            [edit.noConnectId],
+          );
+        }
+        draft.noConnects.splice(index, 1);
+        changedObjectIds.add(edit.noConnectId);
         connectivityChanged = true;
         break;
       }

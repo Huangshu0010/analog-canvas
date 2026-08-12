@@ -5,6 +5,7 @@ import {
   LayoutConstraintSchema,
   LayoutGroupSchema,
   JunctionRoleSchema,
+  NoConnectSchema,
   PlacementSchema,
   PointSchema,
   ResolvedDraftingGeometrySchema,
@@ -259,6 +260,8 @@ export const AgentSnapshotJunctionSchema = z.strictObject({
   role: JunctionRoleSchema.optional(),
 });
 
+export const AgentSnapshotNoConnectSchema = NoConnectSchema;
+
 export const AgentSnapshotDocumentSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1),
@@ -281,6 +284,7 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
   nets: z.array(AgentSnapshotNetSchema),
   routes: z.array(AgentSnapshotRouteSchema),
   junctions: z.array(AgentSnapshotJunctionSchema),
+  noConnects: z.array(AgentSnapshotNoConnectSchema),
   annotations: z.array(AnnotationSchema),
   // ADR 0010 WP-R4: each drafting object carries its canonical shape plus the
   // derived resolved geometry (position(s)/bounds/diagnostics) computed from

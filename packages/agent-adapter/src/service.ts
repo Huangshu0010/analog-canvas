@@ -466,6 +466,8 @@ function editCategory(
     case "merge_nets":
     case "set_net_name":
     case "disconnect_endpoint":
+    case "add_no_connect":
+    case "remove_no_connect":
       return "connectivity";
     case "upsert_annotation":
     case "remove_annotation":
