@@ -1,8 +1,14 @@
-import type { Diagnostic, ErcDiagnostic, VisualDiagnostic } from "@icm/derived";
+import type {
+  Diagnostic,
+  ErcDiagnostic,
+  HierarchyNetTrace,
+  VisualDiagnostic,
+} from "@icm/derived";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
+  NetTraceSection,
   ProjectDiagnosticsSection,
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
@@ -128,5 +134,68 @@ describe("selection inspector details", () => {
     expect(markup).toContain("Cell: Bias Child Cell");
     expect(markup).toContain("ERC / ERC_UNCONNECTED_PIN");
     expect(markup).toContain("VISUAL / VISUAL_SHORT_SEGMENT");
+  });
+
+  it("renders concrete, navigable hierarchy Net hops", () => {
+    const trace: HierarchyNetTrace = {
+      primary: {
+        documentId: "document-top",
+        netId: "net-top",
+        visibleEndpoints: [],
+        routes: [],
+        junctions: [],
+        virtualEdges: [],
+        flightlines: [],
+      },
+      highlights: [
+        {
+          documentId: "document-top",
+          netId: "net-top",
+          visibleEndpoints: [],
+          routes: [],
+          junctions: [],
+          virtualEdges: [],
+          flightlines: [],
+        },
+        {
+          documentId: "document-child",
+          netId: "net-child",
+          visibleEndpoints: [],
+          routes: [],
+          junctions: [],
+          virtualEdges: [],
+          flightlines: [],
+        },
+      ],
+      hops: [
+        {
+          direction: "down",
+          from: { documentId: "document-top", netId: "net-top" },
+          to: { documentId: "document-child", netId: "net-child" },
+          frame: {
+            parentDocumentId: "document-top",
+            instanceId: "XBIAS",
+            parentPinName: "OUT",
+            childDocumentId: "document-child",
+            childPortId: "port-out",
+            childNetId: "net-child",
+          },
+        },
+      ],
+    };
+    const markup = renderToStaticMarkup(
+      <NetTraceSection
+        trace={trace}
+        documentLabel={(documentId) =>
+          documentId === "document-child" ? "Bias Child Cell" : "Top Cell"
+        }
+        onNavigateHop={() => undefined}
+      />,
+    );
+    expect(markup).toContain('data-testid="net-trace-hops"');
+    expect(markup).toContain('data-testid="net-trace-hop-0"');
+    expect(markup).toContain("Enter");
+    expect(markup).toContain("XBIAS.OUT");
+    expect(markup).toContain("Bias Child Cell / net-child");
   });
 });

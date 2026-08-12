@@ -3,33 +3,60 @@ status: completed
 experience: none
 ---
 
-# Connectivity recovery C6a — canonical project search backend
+# Surface hierarchical Net trace paths in the editor
 
 ## Goal
 
-Make project search consume the C1/C4 object-index protocol rather than build a
-second locator, and search both property keys and values. This is the backend
-slice only; editor Ctrl+F and `navigateTo()` own a separate UI/navigation
-boundary.
+Expose the existing bidirectional hierarchy Net trace as a compact, navigable
+path list once a Net is highlighted, so users can see each concrete caller
+instance and traverse to the corresponding Cell/Net.
 
-## State and ownership
+## State and Ownership
 
-The worktree is clean after C5a. This target owns derived project-search code,
-tests, plan and log. Connectivity Index is a read-only C4 dependency; no
-editor, schema or hierarchy traversal change occurs here.
+Start state from `git status --short --branch`:
+
+```text
+## roadmap/connectivity-routing-debugging...origin/roadmap/connectivity-routing-debugging
+```
+
+The worktree is clean. This target owns only presentation/navigation of the
+already-tested trace model; hierarchy derivation and highlight overlay stay
+read-only.
+
+- `apps/editor/src/app/App.tsx`
+- `apps/editor/src/features/selection/selection-inspector-details.tsx`
+- `apps/editor/src/features/selection/selection-inspector-details.test.tsx`
+- `apps/editor/e2e/manual-editor.spec.ts`
+- `docs/roadmap/connectivity-recovery-status.md`
+- `plan/2026-08-12-connectivity-recovery-c6a/plan.md`
+- `plan/log.md`
+
+## Work
+
+1. Render trace hop direction, instance/pin and destination Cell/Net in the
+   persistent selection workbench.
+2. Navigate a hop through the canonical locator path and retain highlight.
+3. Add unit/browser regression coverage for trace presentation and navigation.
+4. Update factual trace status after the UI exit condition is verified.
 
 ## Validation
 
-Focused search/connectivity-index tests, workspace typecheck, Prettier and
-`git diff --check`.
+- focused selection/trace tests and browser navigation flow
+- workspace typecheck
+- `git diff --check` and status
+
+## Commit Intent
+
+```text
+feat(editor): navigate hierarchy Net trace paths
+```
 
 ## Outcome
 
-Project search now optionally consumes C4's object index and preserves its
-canonical locators; the fallback is retained for callers that deliberately do
-not build connectivity data. Both instance property keys and values participate
-in deterministic matching. Ctrl+F and frame-stack navigation remain separate
-editor work and are not claimed by this backend completion.
+The selection workbench now shows each concrete up/down hierarchy hop for a
+highlighted Net and navigates the destination with the canonical locator. The
+browser regression verifies entering a child Cell and retaining its Net
+highlight after clicking the visible path.
 
-Validation: workspace typecheck; 19 focused search/connectivity-index tests;
-targeted Prettier and `git diff --check`.
+Validation passed: nine focused selection/trace tests, focused browser trace
+navigation, workspace typecheck, targeted Prettier, and `git diff --check`.

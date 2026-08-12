@@ -39,6 +39,7 @@ import type {
   Diagnostic,
   Flightline,
   HierarchyFrame,
+  HierarchyNetTraceHop,
   ObjectLocator,
   RoutePolyline,
   SearchResult,
@@ -141,6 +142,7 @@ import { createVisualDemoProject } from "../demos/visual-demo";
 import { useProjectRecovery } from "../document/project-recovery";
 import { useSelectionController } from "../features/selection/selection-controller";
 import {
+  NetTraceSection,
   ProjectDiagnosticsSection,
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
@@ -4979,6 +4981,18 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(`Highlighted Net ${netId}`);
   }
 
+  function navigateTraceHop(hop: HierarchyNetTraceHop): void {
+    navigateToLocator(
+      {
+        documentId: hop.to.documentId,
+        hierarchyPath: [],
+        kind: "net",
+        objectId: hop.to.netId,
+      },
+      `Traced Net ${hop.to.netId} via ${hop.frame.instanceId}.${hop.frame.parentPinName}`,
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -5978,6 +5992,17 @@ export function App({ project: initialProject }: AppProps) {
                   )?.name ?? documentId
                 }
                 onSelectDiagnostic={jumpToProjectDiagnostic}
+              />
+            ) : null}
+            {highlightedTrace && highlightedTrace.hops.length > 0 ? (
+              <NetTraceSection
+                trace={highlightedTrace}
+                documentLabel={(documentId) =>
+                  project.documents.find(
+                    (candidate) => candidate.id === documentId,
+                  )?.name ?? documentId
+                }
+                onNavigateHop={navigateTraceHop}
               />
             ) : null}
             {importReviewOpen ? (

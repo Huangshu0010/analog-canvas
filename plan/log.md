@@ -5213,3 +5213,15 @@ contracts (WP-R1)`.
 - Validation: static App/planner ownership audit; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `docs(roadmap): record routing planner migration`.
+
+## 2026-08-12 - Connectivity Recovery C6a: hierarchy Net trace presentation
+
+- Target: present concrete hierarchy Net hops with caller instance/pin and
+  canonical navigation to the destination Cell/Net.
+- Changed areas: selection trace panel/tests, editor navigation, browser
+  hierarchy fixture flow, recovery status, target plan and log.
+- Validation: nine focused selection/trace tests; focused browser trace
+  navigation; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): navigate hierarchy Net trace paths`.

@@ -1539,6 +1539,73 @@ test("highlights the complete current-document Net from a selected route", async
   );
 });
 
+test("navigates a visible hierarchy Net trace hop into its child Cell", async ({
+  page,
+}) => {
+  const project = createRoutingDemoProject();
+  const top = project.documents[0]!;
+  top.instances.find((instance) => instance.id === "A")!.properties[
+    "spice.childDocumentId"
+  ] = "document-trace-child";
+  top.routes.push({
+    id: "route-trace",
+    netId: "net-h",
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
+    waypoints: [],
+    segmentModes: ["manual"],
+  });
+  const child = structuredClone(top);
+  child.id = "document-trace-child";
+  child.name = "Trace Child Cell";
+  child.instances = [];
+  child.ports = [
+    {
+      id: "port-trace",
+      name: "P",
+      direction: "passive",
+      position: { x: 120, y: 200 },
+    },
+  ];
+  child.nets = [
+    {
+      id: "net-child-trace",
+      name: "CHILD_TRACE",
+      scope: "local",
+      terminals: [],
+      ports: ["port-trace"],
+    },
+  ];
+  child.routes = [];
+  child.junctions = [];
+  child.annotations = [];
+  child.layoutGroups = [];
+  child.constraints = [];
+  project.documents.push(child);
+
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "trace.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await clickRoute(page, "route-trace");
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Highlight Net" }).click();
+  await expect(page.getByTestId("net-trace-hops")).toContainText("A.P");
+  const traceHop = page.getByTestId("net-trace-hop-0");
+  await traceHop.scrollIntoViewIfNeeded();
+  await traceHop.click();
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "Trace Child Cell",
+  );
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
+    "data-net-id",
+    "net-child-trace",
+  );
+  await expect(page.getByTestId("status")).toContainText("Traced Net");
+});
+
 test("marks and clears an unconnected endpoint as No Connect", async ({
   page,
 }) => {

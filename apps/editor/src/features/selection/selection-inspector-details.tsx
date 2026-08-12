@@ -3,6 +3,8 @@ import type {
   Diagnostic,
   DiagnosticDomain,
   DiagnosticSeverity,
+  HierarchyNetTrace,
+  HierarchyNetTraceHop,
   VisualDiagnostic,
 } from "@icm/derived";
 import { useMemo, useState } from "react";
@@ -187,6 +189,45 @@ export interface ProjectDiagnosticsSectionProps {
   diagnostics: readonly Diagnostic[];
   documentLabel(documentId: string): string;
   onSelectDiagnostic(diagnostic: Diagnostic): void;
+}
+
+export interface NetTraceSectionProps {
+  trace: HierarchyNetTrace;
+  documentLabel(documentId: string): string;
+  onNavigateHop(hop: HierarchyNetTraceHop): void;
+}
+
+/** Concrete hierarchy edges for the currently highlighted logical Net. */
+export function NetTraceSection({
+  trace,
+  documentLabel,
+  onNavigateHop,
+}: NetTraceSectionProps) {
+  return (
+    <section
+      aria-label="Hierarchy Net trace"
+      className="diagnostics erc-diagnostics net-trace"
+    >
+      <h2>Hierarchy Net trace ({trace.highlights.length} Cells)</h2>
+      <ul data-testid="net-trace-hops">
+        {trace.hops.map((hop, index) => (
+          <li
+            key={`${hop.direction}-${hop.from.documentId}-${hop.from.netId}-${hop.frame.instanceId}-${hop.frame.parentPinName}-${index}`}
+          >
+            <button
+              type="button"
+              data-testid={`net-trace-hop-${index}`}
+              onClick={() => onNavigateHop(hop)}
+            >
+              <strong>{hop.direction === "down" ? "Enter" : "Return"}</strong>:{" "}
+              {hop.frame.instanceId}.{hop.frame.parentPinName} →{" "}
+              {documentLabel(hop.to.documentId)} / {hop.to.netId}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 type DiagnosticSeverityFilter = "all" | DiagnosticSeverity;
