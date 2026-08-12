@@ -197,6 +197,44 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).not.toContain('data-object-id="junction-legacy-loose"');
   });
 
+  it("renders terminal and port No Connect declarations in the formal scene", () => {
+    const project = createEmptyProject("project-no-connect", "No Connect");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.ports.push({
+      id: "port-a",
+      name: "A",
+      direction: "passive",
+      position: { x: 180, y: 100 },
+    });
+    document.noConnects.push(
+      {
+        id: "nc-terminal",
+        endpoint: { kind: "terminal", instanceId: "R1", pinName: "1" },
+      },
+      {
+        id: "nc-port",
+        endpoint: { kind: "port", portId: "port-a" },
+      },
+    );
+
+    const scene = buildSvgScene(document, resolver);
+
+    expect(scene.formalBody).toContain('data-layer="no-connects"');
+    expect(scene.formalBody).toContain('data-object-id="nc-terminal"');
+    expect(scene.formalBody).toContain('data-object-id="nc-port"');
+    expect(scene.formalBody.match(/data-role="no-connect"/g)).toHaveLength(2);
+  });
+
   it("renders formal symbols deterministically without editor overlays", () => {
     const project = parseProject(
       readFileSync(

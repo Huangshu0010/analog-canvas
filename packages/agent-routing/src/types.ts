@@ -74,8 +74,8 @@ export interface RouteGraphEdge {
   from: string;
   to: string;
   role: RouteEdgeRole;
-  /** For role:"label": the label text and the object the label attaches to. */
-  label?: { text: string; attachedObjectId: string };
+  /** For role:"label": text only; electrical binding is graph.netId. */
+  label?: { text: string };
   /** For role:"link"|"trunk": the segment mode (default "auto"/"trunk"). */
   segmentMode?: SegmentMode;
 }

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
+import { createEmptyProject } from "@icm/model";
 
 import { createRoutingDemoProject } from "../src/demos/routing-demo.js";
 import {
@@ -344,7 +345,7 @@ test("deletes a wire without exposing Unroute", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("deletes a routed part of an imported Net that still has flightlines", async ({
+test("hides flightlines after manually deleting an imported Route", async ({
   page,
 }) => {
   const project = createRoutingDemoProject();
@@ -375,23 +376,83 @@ test("deletes a routed part of an imported Net that still has flightlines", asyn
   });
 
   await clickRoute(page, "route-imported-partial");
-  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
   await page.keyboard.press("Delete");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
   await expect(page.getByTestId("status")).toContainText(
     "Deleted wire route-imported-partial",
   );
 
-  await page.getByTestId("hit-A").click();
-  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await expect(page.getByTestId("source-status")).toHaveText(
+    "geometry-only-changed",
+  );
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
+});
+
+test("normalizes a legacy VDD Net and completes its PMOS bulk", async ({
+  page,
+}) => {
+  const project = createEmptyProject("legacy-contact", "Legacy contact");
+  const document = project.documents[0]!;
+  document.instances.push(
+    {
+      id: "M4",
+      symbolId: "pmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: {
+        position: { x: 90, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    },
+    {
+      id: "VDD9",
+      symbolId: "vdd",
+      placement: {
+        position: { x: 100, y: 80 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    },
+  );
+  document.nets.push({
+    id: "net-ui-2",
+    scope: "local",
+    terminals: [
+      { instanceId: "M4", pinName: "S" },
+      { instanceId: "VDD9", pinName: "P" },
+    ],
+    ports: [],
+  });
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "legacy-contact.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+
+  await expect(page.getByTestId("status")).toContainText(
+    "Normalized 1 power-Net rule(s), reconciled 0 visible power contact(s), and added 1 Razavi bulk connection(s)",
+  );
 });
 
 test("uses a flightline as direct Wire guidance", async ({ page }) => {
+  const project = createRoutingDemoProject();
+  project.documents[0]!.sourceBinding = {
+    cellName: "routing_demo",
+    sourceRef: {
+      fileId: "source-routing-demo",
+      start: { offset: 0, line: 1, column: 1 },
+      end: { offset: 1, line: 1, column: 2 },
+    },
+  };
   await page.goto("/");
   await page.getByTestId("project-file").setInputFiles({
     name: "routing-flightlines.icproj.json",
     mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(createRoutingDemoProject())),
+    buffer: Buffer.from(JSON.stringify(project)),
   });
 
   await expect(page.getByTestId("flightline")).toHaveCount(3);
@@ -405,11 +466,19 @@ test("uses a flightline as direct Wire guidance", async ({ page }) => {
   await hint.click({ force: true });
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
-  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
 });
 
 test("focuses imported flightlines on the selected Net", async ({ page }) => {
   const project = createRoutingDemoProject();
+  project.documents[0]!.routes.push({
+    id: "route-imported-h",
+    netId: "net-h",
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
+    waypoints: [],
+    segmentModes: ["manual"],
+  });
   project.documents[0]!.sourceBinding = {
     cellName: "routing_demo",
     sourceRef: {
@@ -425,11 +494,18 @@ test("focuses imported flightlines on the selected Net", async ({ page }) => {
     buffer: Buffer.from(JSON.stringify(project)),
   });
 
-  await expect(page.getByTestId("flightline")).toHaveCount(0);
-  await page.getByTestId("hit-A").click();
   await expect(page.getByTestId("flightline")).toHaveCount(2);
-  await page.getByTestId("hit-C").click();
+  await clickRoute(page, "route-imported-h");
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
+    "data-net-id",
+    "net-h",
+  );
   await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
 });
 
 test("turns an off-axis tap near a route bend into an exact junction", async ({
@@ -1064,6 +1140,13 @@ test("L edits a selected route Net Label without opening Properties", async ({
   await expect(page.locator('[data-layer="annotations"]')).toContainText(
     "SIGNAL",
   );
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Delete Net label" }).click();
+  await expect(
+    page.getByTestId("annotation-hit-net-label-route-ui-1"),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
 
   await clickRoute(page, "route-ui-1", 0.5, 0);
   await page.keyboard.press("l");
@@ -1182,6 +1265,92 @@ test("C previews one copy and Escape cancels without a revision", async ({
   await expect(page.getByTestId("status")).toContainText(
     "Copy placement cancelled",
   );
+});
+
+test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
+  const project = createRoutingDemoProject();
+  const document = project.documents[0]!;
+  document.routes.push({
+    id: "route-imported-h",
+    netId: "net-h",
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
+    waypoints: [],
+    segmentModes: ["manual"],
+  });
+  document.annotations.push({
+    id: "imported-label-horizontal",
+    kind: "net-label",
+    text: "HORIZONTAL",
+    position: { x: 300, y: 280 },
+    attachedObjectId: "net-h",
+    offset: { x: 0, y: -8 },
+    alignment: "middle",
+    rotation: 0,
+    locked: false,
+  });
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "legacy-net-label.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+
+  const importedLabel = page.getByTestId(
+    "annotation-hit-imported-label-horizontal",
+  );
+  await importedLabel.click();
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
+    "data-net-id",
+    "net-h",
+  );
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-core"),
+  ).toHaveCount(1);
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
+  await page.keyboard.press("Delete");
+  await expect(importedLabel).toHaveCount(0);
+  await page.keyboard.press("Control+z");
+  await expect(importedLabel).toHaveCount(1);
+
+  await clickRoute(page, "route-imported-h");
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Delete Net label" }).click();
+  await expect(
+    page.getByTestId("annotation-hit-imported-label-horizontal"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Electrical Net label" }),
+  ).toHaveValue("");
+
+  // The label was selected alongside the Route. Its deleted annotation id
+  // must not poison the following atomic Wire deletion.
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("route-hit-route-imported-h")).toHaveCount(0);
+  await expect(page.getByTestId("status")).toContainText(
+    "Deleted wire route-imported-h",
+  );
+  await page.keyboard.press("Control+z");
+
+  const savedWithoutLabel = await downloadBytes(page, "File", "Save Project");
+  const savedDocument = JSON.parse(savedWithoutLabel.toString("utf8"))
+    .documents[0];
+  expect(savedDocument.annotations).toHaveLength(0);
+  expect(
+    savedDocument.nets.find((net: { id: string }) => net.id === "net-h"),
+  ).toMatchObject({ name: "HORIZONTAL" });
+  await page.getByTestId("project-file").setInputFiles({
+    name: "legacy-net-label-reopened.icproj.json",
+    mimeType: "application/json",
+    buffer: savedWithoutLabel,
+  });
+  await clickRoute(page, "route-imported-h");
+  await openSelectionShelf(page);
+  await expect(
+    page.getByRole("textbox", { name: "Electrical Net label" }),
+  ).toHaveValue("");
 });
 
 test("derives crossings and creates junctions only when a wire ends on a route", async ({
@@ -1527,4 +1696,349 @@ test("selecting an object does not change canvas width", async ({ page }) => {
 
   const widthAfter = (await canvas.boundingBox())!.width;
   expect(widthAfter).toBe(widthBefore);
+});
+
+test("opens project search with Ctrl+F and selects a matching component", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 420, y: 260 });
+  await page.keyboard.press("Control+f");
+  const input = page.getByTestId("project-search-input");
+  await expect(input).toBeFocused();
+  await input.fill("R1");
+  await page.getByTestId("project-search-result-R1").click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Selected instance R1",
+  );
+  await expect(page.getByTestId("project-search-input")).toHaveCount(0);
+});
+
+test("navigates a project-search locator into an imported child Cell", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByTestId("project-file")
+    .setInputFiles(
+      resolve(
+        process.cwd(),
+        "fixtures/projects/hierarchy-navigation/project.icproj.json",
+      ),
+    );
+
+  await page.keyboard.press("Control+f");
+  await page.getByTestId("project-search-input").fill("RCHILD");
+  await page.locator('[data-testid^="project-search-result-RCHILD-"]').click();
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "Bias Child Cell",
+  );
+  await expect(page.getByTestId("status")).toContainText(
+    "Selected instance RCHILD",
+  );
+
+  await page.getByRole("button", { name: "Up" }).click();
+  await expect(page.getByTestId("active-document-name")).toHaveText("Top Cell");
+});
+
+test("navigates a project ERC diagnostic into its imported child Cell", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByTestId("project-file")
+    .setInputFiles(
+      resolve(
+        process.cwd(),
+        "fixtures/projects/hierarchy-navigation/project.icproj.json",
+      ),
+    );
+  await openSelectionShelf(page);
+
+  const childDiagnostic = page
+    .locator(
+      '[data-testid="project-diagnostics"] li[data-document-id="document-child"] button',
+    )
+    .first();
+  await expect(childDiagnostic).toContainText("Cell: Bias Child Cell");
+  await childDiagnostic.click();
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "Bias Child Cell",
+  );
+  await expect(page.getByTestId("status")).toContainText("ERC_");
+  await expect(
+    page.getByRole("region", { name: "Endpoint actions" }),
+  ).toBeVisible();
+});
+
+test("highlights the complete current-document Net from a selected route", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 380, y: 260 });
+  await placeComponent(page, "resistor", { x: 600, y: 260 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await clickRoute(page, "route-ui-1");
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Highlight Net (H)" }).click();
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
+    "data-net-id",
+    "net-ui-1",
+  );
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-core"),
+  ).toHaveCount(1);
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-endpoint"),
+  ).toHaveCount(2);
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
+});
+
+test("recomputes highlighted routed components after a Net Label is deleted", async ({
+  page,
+}) => {
+  const project = createEmptyProject(
+    "label-highlight",
+    "Label Highlight",
+    "main",
+  );
+  const document = project.documents[0]!;
+  document.nets = [
+    {
+      id: "net-historically-merged",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    },
+  ];
+  document.junctions = [
+    {
+      id: "left-a",
+      netId: "net-historically-merged",
+      position: { x: 180, y: 260 },
+    },
+    {
+      id: "left-b",
+      netId: "net-historically-merged",
+      position: { x: 320, y: 260 },
+    },
+    {
+      id: "right-a",
+      netId: "net-historically-merged",
+      position: { x: 480, y: 260 },
+    },
+    {
+      id: "right-b",
+      netId: "net-historically-merged",
+      position: { x: 620, y: 260 },
+    },
+  ];
+  document.routes = [
+    {
+      id: "route-left-label",
+      netId: "net-historically-merged",
+      from: { kind: "junction", junctionId: "left-a" },
+      to: { kind: "junction", junctionId: "left-b" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+    {
+      id: "route-right-label",
+      netId: "net-historically-merged",
+      from: { kind: "junction", junctionId: "right-a" },
+      to: { kind: "junction", junctionId: "right-b" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+  ];
+  document.annotations = [
+    {
+      id: "label-left-component",
+      kind: "net-label",
+      text: "SIGNAL",
+      position: { x: 250, y: 250 },
+      attachedObjectId: "net-historically-merged",
+      offset: { x: 0, y: -8 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    },
+    {
+      id: "label-right-component",
+      kind: "net-label",
+      text: "SIGNAL",
+      position: { x: 550, y: 250 },
+      attachedObjectId: "net-historically-merged",
+      offset: { x: 0, y: -8 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    },
+  ];
+
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "label-highlight.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await page.getByTestId("annotation-hit-label-left-component").click();
+  await page.keyboard.press("h");
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-core"),
+  ).toHaveCount(2);
+  await page.keyboard.press("h");
+
+  await page.getByTestId("annotation-hit-label-right-component").click();
+  await page.keyboard.press("Delete");
+  await clickRoute(page, "route-left-label");
+  await page.keyboard.press("h");
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-core"),
+  ).toHaveCount(1);
+  await expect(
+    page.locator(
+      '.net-highlight-overlay .net-highlight-core[points="180,260 320,260"]',
+    ),
+  ).toHaveCount(1);
+});
+
+test("navigates a visible hierarchy Net trace hop into its child Cell", async ({
+  page,
+}) => {
+  const project = createRoutingDemoProject();
+  const top = project.documents[0]!;
+  top.instances.find((instance) => instance.id === "A")!.properties[
+    "spice.childDocumentId"
+  ] = "document-trace-child";
+  top.routes.push({
+    id: "route-trace",
+    netId: "net-h",
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
+    waypoints: [],
+    segmentModes: ["manual"],
+  });
+  const child = structuredClone(top);
+  child.id = "document-trace-child";
+  child.name = "Trace Child Cell";
+  child.instances = [];
+  child.ports = [
+    {
+      id: "port-trace",
+      name: "P",
+      direction: "passive",
+      position: { x: 120, y: 200 },
+    },
+  ];
+  child.nets = [
+    {
+      id: "net-child-trace",
+      name: "CHILD_TRACE",
+      scope: "local",
+      terminals: [],
+      ports: ["port-trace"],
+    },
+  ];
+  child.routes = [];
+  child.junctions = [];
+  child.annotations = [];
+  child.layoutGroups = [];
+  child.constraints = [];
+  project.documents.push(child);
+
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "trace.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await clickRoute(page, "route-trace");
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Highlight Net" }).click();
+  await expect(page.getByTestId("net-trace-hops")).toContainText("A.P");
+  const traceHop = page.getByTestId("net-trace-hop-0");
+  await traceHop.scrollIntoViewIfNeeded();
+  await traceHop.click();
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "Trace Child Cell",
+  );
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
+    "data-net-id",
+    "net-child-trace",
+  );
+  await expect(page.getByTestId("status")).toContainText("Traced Net");
+});
+
+test("marks and clears an unconnected endpoint as No Connect", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 380, y: 260 });
+
+  await page.getByTestId("terminal-R1-1").click({ button: "right" });
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Mark No Connect" }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Marked terminal-R1-1 No Connect",
+  );
+  await expect(page.locator('[data-role="no-connect"]')).toHaveCount(1);
+
+  await page.getByTestId("terminal-R1-1").click({ button: "right" });
+  await page.getByRole("button", { name: "Clear No Connect" }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Cleared No Connect on terminal-R1-1",
+  );
+  await expect(page.locator('[data-role="no-connect"]')).toHaveCount(0);
+});
+
+test("surfaces and locates current-document ERC diagnostics", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 380, y: 260 });
+  await openSelectionShelf(page);
+
+  await expect(page.getByTestId("project-diagnostics")).toContainText(
+    "ERC_UNCONNECTED_PIN",
+  );
+  await page.getByTestId("diagnostic-domain-erc").click();
+  await page.getByTestId("diagnostic-severity-error").click();
+  await expect(page.getByTestId("project-diagnostics")).toHaveText("");
+  await page.getByTestId("diagnostic-severity-warning").click();
+  await expect(page.getByTestId("project-diagnostics")).toContainText(
+    "ERC_UNCONNECTED_PIN",
+  );
+  await page
+    .getByTestId("project-diagnostics")
+    .getByRole("button", { name: /ERC_UNCONNECTED_PIN/ })
+    .first()
+    .click();
+  await expect(page.getByTestId("status")).toContainText("ERC_UNCONNECTED_PIN");
+  await expect(
+    page.getByRole("region", { name: "Endpoint actions" }),
+  ).toBeVisible();
+});
+
+test("filters and navigates locator-backed visual diagnostics", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 420, y: 300 });
+  await placeComponent(page, "resistor", { x: 420, y: 300 });
+  await openSelectionShelf(page);
+
+  await page.getByTestId("diagnostic-domain-visual").click();
+  const diagnostics = page.getByTestId("project-diagnostics");
+  await expect(diagnostics).toContainText("VISUAL_SYMBOL_OVERLAP");
+  await diagnostics
+    .getByRole("button", { name: /VISUAL_SYMBOL_OVERLAP/ })
+    .click();
+  await expect(page.getByTestId("status")).toContainText(
+    "VISUAL VISUAL_SYMBOL_OVERLAP",
+  );
 });

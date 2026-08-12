@@ -3,12 +3,15 @@ import type { SymbolResolver } from "@icm/symbols";
 
 import { resolveEndpointPoint } from "./endpoint.js";
 import {
+  resolveDocumentRoutingGeometry,
+  type ResolvedDocumentRoutingGeometry,
+} from "./resolved-route-geometry.js";
+import {
   isOrthogonal,
   moveRouteSegment,
   normalizeRouteGeometry,
-  routePolyline,
 } from "./routes.js";
-import type { SegmentMode } from "./routes.js";
+import type { RoutePolyline, SegmentMode } from "./routes.js";
 
 export interface RouteStretchProposal {
   routeId: string;
@@ -90,6 +93,20 @@ function protectedMode(mode: SegmentMode | undefined): boolean {
   return mode === "locked" || mode === "trunk";
 }
 
+function routePolylineFromGeometry(
+  routingGeometry: ResolvedDocumentRoutingGeometry,
+  routeId: string,
+): RoutePolyline | null {
+  const geometry = routingGeometry.routes.get(routeId);
+  if (!geometry) return null;
+  return {
+    routeId: geometry.routeId,
+    netId: geometry.netId,
+    points: [...geometry.centerline],
+    segmentModes: geometry.segments.map((segment) => segment.mode),
+  };
+}
+
 function normalizeProposal(
   routeId: string,
   points: readonly Point[],
@@ -165,7 +182,8 @@ export function proposeWireSegmentDrag(
 ): WireSegmentDragProposal {
   const selectedRoute = document.routes.find((route) => route.id === routeId);
   if (!selectedRoute) throw new Error(`Route not found: ${routeId}`);
-  const selectedPolyline = routePolyline(document, resolver, selectedRoute);
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
+  const selectedPolyline = routePolylineFromGeometry(routingGeometry, routeId);
   if (!selectedPolyline)
     throw new Error(`Route ${routeId} has unresolved geometry`);
   if (segmentIndex < 0 || segmentIndex >= selectedPolyline.points.length - 1) {
@@ -271,7 +289,7 @@ export function proposeWireSegmentDrag(
     const movedFrom = fromAnchor ? movedJunctions.get(fromAnchor) : undefined;
     const movedTo = toAnchor ? movedJunctions.get(toAnchor) : undefined;
     if (!movedFrom && !movedTo) continue;
-    const polyline = routePolyline(document, resolver, route);
+    const polyline = routePolylineFromGeometry(routingGeometry, route.id);
     if (!polyline) throw new Error(`Route ${route.id} has unresolved geometry`);
     const points = polyline.points.map((point) => ({ ...point }));
     const modes = [...polyline.segmentModes];
@@ -360,6 +378,7 @@ export function proposeLocalStretch(
     (candidate) => candidate.id === instanceId,
   )!;
   movedInstance.placement!.position = { ...newPosition };
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
   const proposals: RouteStretchProposal[] = [];
 
   for (const route of document.routes) {
@@ -368,7 +387,7 @@ export function proposeLocalStretch(
     const movesTo =
       route.to.kind === "terminal" && route.to.instanceId === instanceId;
     if (!movesFrom && !movesTo) continue;
-    const original = routePolyline(document, resolver, route);
+    const original = routePolylineFromGeometry(routingGeometry, route.id);
     const newFrom = resolveEndpointPoint(movedDocument, resolver, route.from);
     const newTo = resolveEndpointPoint(movedDocument, resolver, route.to);
     if (!original || !newFrom || !newTo) continue;

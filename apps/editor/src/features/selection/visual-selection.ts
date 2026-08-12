@@ -1,3 +1,5 @@
+import type { SchematicDocument } from "@icm/model";
+
 export type VisualSelectionKind =
   "instance" | "route" | "junction" | "annotation" | "drafting";
 
@@ -69,4 +71,37 @@ export function clearVisualSelectionKinds(
 
 export function hasVisualSelection(selection: VisualSelection): boolean {
   return Object.values(selection).some((ids) => ids.length > 0);
+}
+
+/**
+ * Removes IDs whose persisted objects no longer exist after a committed edit.
+ * Selection is transient editor state, so it must never outlive its model
+ * object or leak a second removal into the next atomic transaction.
+ */
+export function pruneVisualSelection(
+  selection: VisualSelection,
+  document: SchematicDocument,
+): VisualSelection {
+  const instanceIds = new Set(document.instances.map((item) => item.id));
+  const routeIds = new Set(document.routes.map((item) => item.id));
+  const junctionIds = new Set(document.junctions.map((item) => item.id));
+  const annotationIds = new Set(document.annotations.map((item) => item.id));
+  const draftingIds = new Set(
+    (document.drafting?.objects ?? []).map((item) => item.id),
+  );
+  const next: VisualSelection = {
+    instanceIds: selection.instanceIds.filter((id) => instanceIds.has(id)),
+    routeIds: selection.routeIds.filter((id) => routeIds.has(id)),
+    junctionIds: selection.junctionIds.filter((id) => junctionIds.has(id)),
+    annotationIds: selection.annotationIds.filter((id) =>
+      annotationIds.has(id),
+    ),
+    draftingIds: selection.draftingIds.filter((id) => draftingIds.has(id)),
+  };
+  const unchanged = (Object.keys(next) as (keyof VisualSelection)[]).every(
+    (key) =>
+      next[key].length === selection[key].length &&
+      next[key].every((id, index) => id === selection[key][index]),
+  );
+  return unchanged ? selection : next;
 }

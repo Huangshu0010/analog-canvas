@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 import { parseProject } from "@icm/model";
 import type { CircuitProject } from "@icm/model";
+import { resolveDocumentRoutingGeometry } from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
@@ -49,6 +50,12 @@ describe("Agent Document Snapshot", () => {
       segmentModes: expect.any(Array),
       polyline: expect.any(Array),
     });
+    const snapshotRoute = snapshot.document.routes[0]!;
+    expect(snapshotRoute.polyline).toEqual(
+      resolveDocumentRoutingGeometry(document, resolver).routes.get(
+        snapshotRoute.id,
+      )?.centerline ?? null,
+    );
     expect(snapshot.document.layoutGroups[0]?.objectIds.length).toBeGreaterThan(
       0,
     );

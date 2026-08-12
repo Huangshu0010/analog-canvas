@@ -1,5 +1,38 @@
 # Maintenance Log
 
+## 2026-08-12 - Net deletion selection closure
+
+- Target: prevent a removed Net Label's stale selection ID from rolling back
+  the next Wire deletion transaction, while auditing the full Net protocol.
+- Changed areas: model-bound visual-selection pruning, Label delete cleanup,
+  focused unit/browser regressions, and target audit record.
+- Validation: 3 focused selection unit tests; 2 Net Label browser flows;
+  workspace typecheck; `git diff --check`.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): reconcile selection after Net deletion`.
+
+## 2026-08-12 - Reliable imported Net-label deletion
+
+- Target: make Net-label deletion work consistently for current-editor and
+  imported/legacy annotation identities.
+- Changed areas: Route label lookup/actions, explicit annotation deletion
+  action, and focused browser regression coverage.
+- Validation: `corepack pnpm exec playwright test apps/editor/e2e/manual-editor.spec.ts --grep "Net Label"` (2 passed),
+  `corepack pnpm typecheck`, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): delete imported Net labels reliably`.
+
+## 2026-08-12 - Move Construction Line to K
+
+- Target: reserve `P` for a future schematic Port command and use `K` for
+  Construction line.
+- Changed areas: editor shortcut resolver/regression, Draw menu, Help,
+  interaction contract, and drafting command-menu E2E references.
+- Validation: shortcut unit tests (10), drafting E2E suite (25), production
+  editor build, obsolete-label search, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): reserve P for future port insertion`.
+
 This file records factual, accepted project maintenance history.
 
 Use concise entries:
@@ -4501,6 +4534,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `codex/contextual-properties-net-labels`
   as `fix(symbols): rename ideal switch as open switch`.
 
+## 2026-08-12 - Close VDD stem/bar seam
+
+- Target: remove the visible VDD power-port gap between the vertical stem and
+  filled horizontal bar without changing its pin or power-label semantics.
+- Changed areas: VDD asset, regenerated catalog output/hash, and an interior
+  stem/bar-overlap regression.
+- Validation: catalog stale check, symbols build, 20 focused catalog tests,
+  and `git diff --check` passed. The branch-local commit remains subject to
+  the required clean-state CI and remote Actions gate before main delivery.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `fix(symbols): close VDD stem and bar seam`.
+
 ## 2026-08-11 - Contextual Properties and Net Labels
 
 - Target: add the smallest durable component Value path and make the editor's
@@ -4657,3 +4702,745 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   passed.
 - Commit status: merged through pull request #8 as `4b9a09e`; production is
   live at `https://analog-canvas.tokenzhang.com/analytics`.
+
+## 2026-08-12 - WP-R0 Connectivity/Routing Behavioral Baseline
+
+- Target: first work package of the connectivity-routing-debugging roadmap —
+  pin current behavior before any refactor. Additive characterization tests
+  plus a historical doc note; no production code change.
+- Changed areas: new `packages/derived/src/endpoint.test.ts` (14 tests) and
+  `packages/derived/src/routes.test.ts` (7 tests) covering `endpointKey`,
+  endpoint visibility/point/outward-direction, `routePolyline`, `deriveCrossings`
+  overlap and shared-endpoint exclusion, and storage-partition characterization;
+  historical note on `docs/roadmap/phase-3-connectivity-and-routing.md` Detach
+  scenario; target plan and this log.
+- Validation: workspace `pnpm typecheck`, `vitest run packages/derived/src/`
+  (76 tests, was 55), `prettier --check` on owned files, and `git diff --check`
+  passed. Full-repo/e2e deferred (additive tests + doc note only).
+- Finding: current `deriveFlightlines` from/to direction (and derived id) is
+  NOT partition-invariant — pinned for R2 to address consciously.
+- Note: an unrelated dirty target (`plan/2026-08-12-ci-delivery-and-archive-
+governance`) coexists; only owned paths were staged.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `test(derived): characterize endpoint/route primitives and partition
+invariance (WP-R0)`.
+
+## 2026-08-12 - WP-R1 ADR and Spec Freeze
+
+- Target: freeze cross-module contracts before code migration. Documentation-
+  only; no code, schema, fixture, or Project-file change.
+- Changed areas: new ADRs 0013 (Project Connectivity Index), 0014 (Resolved
+  Route Geometry), 0015 (Object Locator + Diagnostic Envelope); schematic-model
+  spec proposed NoConnect + binding-evidence subsection; connectivity-and-
+  routing spec proposed unified-read-models subsection, compatibility/deletion
+  threshold, and corrected `cut_connection` validation bullet; one-line ADR
+  forward-references added to edit-engine, editor-interaction, agent-api, and
+  export specs.
+- Validation: cross-link audit (12/12 referenced paths resolve); `git diff
+--check` clean. Markdown outside the `format:check` glob; no code surface
+  changed.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(adr): freeze connectivity index, resolved geometry, and locator
+contracts (WP-R1)`.
+
+## 2026-08-12 - WP-R2 Additive Project Connectivity Index
+
+- Target: implement the unified read-only `ProjectConnectivityIndex` (ADR 0013)
+  additively as a facade over existing `derive*` primitives, with partition-
+  invariant flightline normalization, typed virtual edges, hierarchy edges, and
+  a project object index. No production consumer switch.
+- Changed areas: new `packages/derived/src/connectivity-index.ts` and
+  `connectivity-index.test.ts` (9 tests); `packages/derived/src/index.ts`
+  re-export; target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (85 tests, was 76); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add ProjectConnectivityIndex with flightline normalization
+(WP-R2)`.
+
+## 2026-08-12 - WP-R3 Additive Resolved Route Geometry
+
+- Target: implement the unified `ResolvedRouteGeometry` (ADR 0014) additively,
+  with typed segments/vertices, bounds, hit segments, and profile-independent
+  endpoint joins (raw direction ingredients for the renderer's terminal and
+  route-anchor miter bridges). No production consumer switch.
+- Changed areas: new `packages/derived/src/resolved-route-geometry.ts` and
+  `resolved-route-geometry.test.ts` (7 tests); `packages/derived/src/index.ts`
+  re-export; target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (92 tests, was 85); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add ResolvedRouteGeometry with endpoint join ingredients
+(WP-R3)`.
+
+## 2026-08-12 - WP-R4 Route-Tap Planner Extraction (App thin-out step 1)
+
+- Target: begin the App thin-out by extracting the route-tap hit resolver
+  inlined in `App.tsx` into a pure, unit-tested wiring-feature module.
+  Behavior-preserving. Stretch/group-move wrapper extractions deferred to R10
+  (e2e-gated).
+- Changed areas: new `apps/editor/src/features/wiring/route-tap.ts` and
+  `route-tap.test.ts` (6 tests); `apps/editor/src/app/App.tsx` imports the
+  resolver instead of inlining it; target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run route-tap.test.ts` (6) and
+  `App.test.tsx` (11); `prettier --check` on changed files; `git diff --check`.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(editor): extract route-tap resolver from App into wiring feature
+(WP-R4)`.
+
+## 2026-08-12 - WP-R5 Project Search Index (core)
+
+- Target: deterministic project search index (ADR 0015 locator backend) over
+  instances/nets/ports, exact > prefix > substring, no fuzzy ranking. Pure
+  backend; Ctrl+F UI and HierarchyFrame document-stack migration deferred to
+  R9/R10 (e2e-gated).
+- Changed areas: new `packages/derived/src/project-search.ts` and
+  `project-search.test.ts` (7 tests); `packages/derived/src/index.ts` re-export;
+  target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (99 tests, was 92); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add deterministic project search index (WP-R5)`.
+
+## 2026-08-12 - WP-R6 Net Highlight and Cross-Cell Trace (core)
+
+- Target: compute net highlight and cross-cell trace from the
+  ProjectConnectivityIndex (R2). Pure computation; overlay rendering deferred
+  to R9 (e2e-gated UI).
+- Changed areas: new `packages/derived/src/net-highlight.ts` and
+  `net-highlight.test.ts` (4 tests); `packages/derived/src/index.ts` re-export;
+  target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (103 tests, was 99); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): compute net highlight and cross-cell trace from the index
+(WP-R6)`.
+
+## 2026-08-12 - WP-R7 NoConnect Schema and v2 -> v3 Migration
+
+- Target: persisted NoConnect record + schema version 2 -> 3 + idempotent
+  backfill migration + schema-level invariants. Foundation for the ERC engine
+  (WP-R8). Edit/importer/Agent/visual sub-steps deferred.
+- Changed areas: `packages/model/src/schema.ts` (NoConnect, version 3, invariant,
+  types); new `migration-v2-to-v3.ts` + test; `persistence.ts` registration;
+  cascade `noConnects: []` added to typed document literals (`factories`,
+  `importer`, 3 test helpers), `persistence.test` migration chain, `platform-web`
+  assertion, and regenerated v3 fixtures (minimal, phase-1-manual, phase-3-
+  routing).
+- Validation: workspace `pnpm typecheck`; full `pnpm test` — 524 passed, 8
+  failed. The 8 failures are pre-existing and unrelated (confirmed by stashing
+  R7 — same 8 fail on clean branch): instance-label/golden/Razavi-catalog
+  regeneration in flight on the separate `codex/ci-delivery-gate` target. R7
+  adds no new failures. `prettier --check`; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(model): add NoConnect record with v2->v3 schema migration (WP-R7)`.
+
+## 2026-08-12 - WP-R8 ERC Engine (framework + core rules)
+
+- Target: ERC engine emitting the ADR 0015 diagnostic envelope (domain "erc"),
+  driven by the ProjectConnectivityIndex (R2) and NoConnect (R7). Framework plus
+  duplicate-instance-name, duplicate-net-name, no-connect-conflict, and
+  unconnected-pin rules. Role/hierarchy/model rules deferred.
+- Changed areas: new `packages/derived/src/diagnostics/erc.ts` and `erc.test.ts`
+  (6 tests); `packages/derived/src/index.ts` re-export; target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (109 tests, was 103); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add ERC engine emitting the unified diagnostic envelope
+(WP-R8)`.
+
+## 2026-08-12 - WP-R9 Diagnostic Aggregation (data layer)
+
+- Target: unified Diagnostic envelope + aggregation merging ERC (R8) with
+  adapted VisualDiagnostic observations into one domain-tagged sorted list. Data
+  layer for the diagnostic UI; the React panel + navigateTo are deferred
+  (e2e-gated).
+- Changed areas: new `packages/derived/src/diagnostics/diagnostic.ts` and
+  `diagnostic.test.ts` (3 tests); `packages/derived/src/index.ts` re-export;
+  target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (112 tests, was 109); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): unify diagnostics into a single sorted envelope (WP-R9)`.
+
+## 2026-08-12 - WP-R10 Deletion-Gate Parity and Migration Gate Status
+
+- Target: establish the §13 deletion-gate characterization tests (old/new
+  parity) and record the migration gate status. Old production read models are
+  NOT deleted — deletion is gated on e2e + pre-existing-failure resolution +
+  performance baseline, none of which this session can run/resolve.
+- Changed areas: new `packages/derived/src/deletion-gate-parity.test.ts`
+  (8 tests: flightline content + route centerline parity across four fixtures);
+  target plan (gate-status record + ordered switch plan); this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (120 tests, was 112); `prettier --check` on new file; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `test(derived): add old/new deletion-gate parity tests (WP-R10)`.
+
+## 2026-08-12 - Connectivity Recovery C0: status and contract reconciliation
+
+- Target: reconcile the accepted connectivity/routing roadmap with actual
+  additive-prototype delivery; preserve history while making incomplete exit
+  conditions explicit.
+- Changed areas: roadmap status matrix and C0–C10 recovery waves; ADR 0013–0015
+  amendments for staged index/cache, route-geometry/remap, and canonical
+  locator/diagnostic ownership; target plan and this log.
+- Validation: reviewed cross-references and ran `git diff --check`; no runtime
+  or schema behavior changed.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): reconcile connectivity delivery status`.
+
+## 2026-08-12 - Connectivity Recovery C1: canonical locator and diagnostic
+
+- Target: replace incompatible index/search/ERC locator declarations and the
+  ERC-coupled diagnostic definition with the single ADR 0015 public protocol.
+- Changed areas: new `object-locator.ts`; connectivity index, search, ERC and
+  visual diagnostic adaptation; focused locator-shape tests; target plan and
+  this log.
+- Validation: workspace `pnpm typecheck`; 25 focused derived tests; targeted
+  Prettier; `rg` confirmed no production private locator declaration; `git diff
+--check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): unify locator and diagnostic protocols`.
+
+## 2026-08-12 - Connectivity Recovery C2a: NoConnect electrical lifecycle
+
+- Target: make persisted NoConnect facts editable and observable without
+  overstating the unfinished clipboard/renderer/editor lifecycle.
+- Changed areas: typed edit-engine add/remove operations and deletion guard;
+  topology hash; Agent Snapshot schema/builder and edit classification; target
+  plan and log.
+- Validation: workspace `pnpm typecheck`; 20 focused topology-hash, Snapshot
+  and transaction tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(noconnect): add editable electrical lifecycle core`.
+
+## 2026-08-12 - Connectivity Recovery C2b: NoConnect clipboard transfer
+
+- Target: preserve and remap selected-instance terminal NoConnect declarations
+  through clipboard preview and paste.
+- Changed areas: editor clipboard data/proposal and regression test; target
+  plan and this log.
+- Validation: workspace `pnpm typecheck`; 12 focused clipboard/transaction
+  tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): preserve NoConnect declarations through clipboard paste`.
+
+## 2026-08-12 - Connectivity Recovery C3: route geometry semantics
+
+- Target: correct misleading segment-identity semantics and make route-anchor
+  joins part of one document-level pure geometry read model.
+- Changed areas: resolved route geometry types/resolver/tests; target plan and
+  this log.
+- Validation: workspace `pnpm typecheck`; 16 focused resolved-geometry and
+  deletion-parity tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): clarify route geometry identity and joins`.
+
+## 2026-08-12 - Connectivity Recovery C4: complete document index
+
+- Target: materialise document route geometry, remove per-Net full-document
+  flightline derivation, and add non-persisted revision-scoped document caching.
+- Changed areas: connectivity index and focused tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 18 focused connectivity-index and
+  deletion-parity tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `perf(derived): complete cached document connectivity index`.
+
+## 2026-08-12 - Connectivity Recovery C5a: Wire commit planner boundary
+
+- Target: move pure wire path/commit and junction-anchor proposal logic out of
+  editor interaction code into the edit-engine boundary.
+- Changed areas: new edit-engine routing planner and export; editor
+  compatibility re-exports; target plan and log.
+- Validation: workspace `pnpm typecheck`; 16 focused wire-path, wire-editing
+  and transaction tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(wiring): move wire proposals into edit engine`.
+
+## 2026-08-12 - Connectivity Recovery C6a: canonical project search backend
+
+- Target: have search consume the shared object index and match property keys
+  as well as values, without claiming the unfinished Ctrl+F/navigation UI.
+- Changed areas: project search and tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 19 focused search/connectivity-index
+  tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(search): use canonical locators and property keys`.
+
+## 2026-08-12 - Connectivity Recovery C7a: bidirectional hierarchy Net trace
+
+- Target: add a recursive pure Net trace graph without destabilising the legacy
+  one-hop API or overstating unfinished editor highlighting.
+- Changed areas: derived Net trace and tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 15 focused trace/index tests;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add bidirectional hierarchy Net trace`.
+
+## 2026-08-12 - Connectivity Recovery C8a: ERC symbol and hierarchy interface
+
+- Target: add only deterministic resolver/model hierarchy checks without
+  inferring missing foundry-model or pin-role semantics.
+- Changed areas: derived ERC and tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 18 focused ERC/index tests; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): diagnose symbols and hierarchy interface mismatches`.
+
+## 2026-08-12 - Connectivity Recovery C5b: route deletion planner boundary
+
+- Target: centralise visual route/junction deletion closure and preserve the
+  established cut-versus-electrical-Net semantics.
+- Changed areas: edit-engine routing planner, App Delete consumers, selection
+  compatibility adapter/tests, target plan and log.
+- Validation: workspace `pnpm typecheck`; 17 focused selection/wiring/
+  transaction tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(wiring): centralize visual route deletion planning`.
+
+## 2026-08-12 - Connectivity Recovery C6b: project search UI
+
+- Target: expose canonical project search by Ctrl+F without falsely claiming
+  hierarchy-frame navigation or Net highlight completion.
+- Changed areas: editor search dialog, App integration/styles and focused E2E;
+  target plan and log.
+- Validation: workspace `pnpm typecheck`; focused Playwright search flow;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): add Ctrl+F project search`.
+
+## 2026-08-12 - Connectivity Recovery C7b: current-document Net highlight
+
+- Target: surface C4 indexed Net membership in a non-mutating editor overlay,
+  without claiming cross-Cell rendering/navigation.
+- Changed areas: App highlight state/overlay and styles; focused E2E; target
+  plan and log.
+- Validation: workspace `pnpm typecheck`; two focused Playwright search and
+  highlight flows; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): highlight current-document Net membership`.
+
+## 2026-08-12 - Connectivity Recovery C2c: formal NoConnect rendering
+
+- Target: render persisted terminal and port NoConnect declarations in the
+  shared formal SVG scene used by canvas and export.
+- Changed areas: SVG renderer and regression test; target plan and log.
+- Validation: workspace `pnpm typecheck`; 24 focused render tests; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(render): render explicit NoConnect markers`.
+
+## 2026-08-12 - Connectivity Recovery C2d: NoConnect endpoint editing
+
+- Target: create and clear NoConnect declarations through existing selected
+  terminal/port Endpoint actions.
+- Changed areas: editor endpoint action and focused browser regression; target
+  plan and log.
+- Validation: workspace `pnpm typecheck`; focused Playwright mark/clear flow;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): edit NoConnect declarations from endpoints`.
+
+## 2026-08-12 - Connectivity Recovery C8b: role-sensitive ERC policy
+
+- Target: diagnose floating gate and hidden/unconnected bulk conditions from
+  reviewed pin roles without changing topology.
+- Changed areas: derived ERC policy and role/NoConnect/hidden-variant tests;
+  target plan and log.
+- Validation: workspace `pnpm typecheck`; 11 focused ERC tests; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): diagnose floating gates and hidden bulk risks`.
+
+## 2026-08-12 - Connectivity Recovery C9a: current-document ERC inspector
+
+- Target: show active-document ERC separately in the Properties shelf and
+  navigate its primary target without changing visual/import review semantics.
+- Changed areas: editor diagnostic derivation/navigation, Inspector section,
+  scoped CSS, and focused component/browser tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 2 focused Inspector tests; focused
+  Playwright ERC flow; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): surface current-document ERC diagnostics`.
+
+## 2026-08-12 - Connectivity Recovery C8c: typed source binding evidence
+
+- Target: persist explicit import binding facts and derive missing/unsupported
+  model ERC only from those facts.
+- Changed areas: model instance schema, SPICE importer evidence, ERC policy,
+  model spec, and focused importer/ERC tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 23 focused model/SPICE/ERC tests;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): consume typed source binding evidence`.
+
+## 2026-08-12 - Connectivity Recovery C6c: canonical hierarchy navigation
+
+- Target: replace document-id navigation with canonical hierarchy frames and
+  migrate search/ERC target jumps through one locator navigator.
+- Changed areas: derived path resolver, editor navigation state/consumers, and
+  focused hierarchy/App/browser regressions; target plan and log.
+- Validation: workspace `pnpm typecheck`; 17 focused derived/App tests; two
+  focused Playwright search/ERC flows; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): navigate canonical locators across hierarchy`.
+
+## 2026-08-12 - Connectivity Recovery C7c: hierarchy-aware Net highlight
+
+- Target: retain a logical Net highlight by its origin Cell/Net pair and
+  resolve the active Cell overlay from the bidirectional hierarchy trace.
+- Changed areas: editor highlight state/trace consumer; target plan and log.
+- Validation: workspace `pnpm typecheck`; 16 focused Net/App tests; focused
+  Playwright Net-highlight flow; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): retain Net highlights across hierarchy Cells`.
+
+## 2026-08-12 - Connectivity Recovery C8d: imported pin mapping ERC
+
+- Target: detect persisted positional SPICE pin facts that no longer map
+  uniquely to the resolved symbol.
+- Changed areas: derived ERC mapping policy and regression tests; target plan
+  and log.
+- Validation: workspace `pnpm typecheck`; 13 focused ERC tests; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): diagnose stale imported pin mappings`.
+
+## 2026-08-12 - Connectivity Recovery C6d: cross-Cell locator browser coverage
+
+- Target: prove editor navigation from a child-Cell project-search locator and
+  the retained parent `Up` frame.
+- Changed areas: minimal imported hierarchy fixture, editor Playwright flow,
+  target plan and log.
+- Validation: focused Playwright hierarchy navigation; 12 focused
+  hierarchy/App unit tests; workspace `pnpm typecheck`; targeted Prettier;
+  `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `test(editor): cover cross-Cell locator navigation`.
+
+## 2026-08-12 - Connectivity Recovery C9b: project ERC diagnostic navigation
+
+- Target: surface the full project ERC envelope in the editor and navigate an
+  off-Cell diagnostic via its canonical locator.
+- Changed areas: editor ERC shelf presentation and focused selection/browser
+  tests; target plan and log.
+- Validation: 14 focused selection/App unit tests; focused Playwright child
+  ERC navigation; workspace `pnpm typecheck`; targeted Prettier; `git diff
+--check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): navigate project ERC diagnostics`.
+
+## 2026-08-12 - Connectivity Recovery C3d: formal render geometry consumer
+
+- Target: migrate formal SVG route, bridge, marker attachment, and bounds
+  consumers to resolved document routing geometry.
+- Changed areas: `@icm/render-svg` route rendering; target plan and log.
+- Validation: 32 focused render/geometry tests including existing SVG goldens;
+  workspace `pnpm typecheck`; static no-direct-`routePolyline` audit;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(render): consume resolved route geometry`.
+
+## 2026-08-12 - Connectivity Recovery C3e: editor geometry read consumer
+
+- Target: adapt editor route hit/display/marker/highlight records from the
+  active document's resolved route geometry.
+- Changed areas: editor route read model; target plan and log.
+- Validation: 16 focused App/interaction tests; two focused Playwright route
+  flows; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(editor): consume resolved route geometry for hits`.
+
+## 2026-08-12 - Connectivity Recovery C8e: stale hierarchy interface ERC
+
+- Target: aggregate incompatible child-Cell interfaces into a repair-oriented
+  diagnostic with child primary and all stale callers related.
+- Changed areas: derived ERC hierarchy policy and regression tests; target plan
+  and log.
+- Validation: 14 focused ERC tests; workspace `pnpm typecheck`; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): aggregate stale hierarchy interfaces`.
+
+## 2026-08-12 - Connectivity Recovery C2e: editor indexed flightlines
+
+- Target: migrate editor flightline count and overlay to the active document's
+  `ProjectConnectivityIndex` record rather than direct derivation.
+- Changed areas: editor flightline read consumer; target plan and log.
+- Validation: 21 focused App/index tests; three focused Playwright flightline
+  flows; workspace `pnpm typecheck`; static no-direct-derivation audit;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(editor): consume indexed flightlines`.
+
+## 2026-08-12 - Connectivity Recovery C3f: remaining editor geometry reads
+
+- Target: remove the last direct editor `routePolyline` reads for Net focus
+  and Net-label placement.
+- Changed areas: editor navigation and Net-label read consumers; target plan
+  and log.
+- Validation: 19 focused App/geometry tests; two focused Playwright
+  label/search flows; workspace `pnpm typecheck`; static no-direct-call audit;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(editor): finish resolved route reads`.
+
+## 2026-08-12 - Connectivity Recovery C10a: factual recovery status
+
+- Target: record verified consumer migration, remaining compatibility gates,
+  and broad validation evidence without overwriting the roadmap's historical
+  recovery audit.
+- Changed areas: connectivity recovery status document; target plan and log.
+- Validation: source consumer audit; full unit suite 568/568; full editor E2E
+  79/79; 500-instance performance check passed; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): record connectivity recovery status`.
+
+## 2026-08-12 - Connectivity Recovery C9c: ERC severity filter
+
+- Target: allow the project ERC shelf to focus an explicit severity without
+  hiding or mutating diagnostic facts.
+- Changed areas: ERC presentation filters and selection/browser tests; target
+  plan and log.
+- Validation: 14 focused selection/App tests; two focused Playwright ERC
+  flows; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): filter project ERC diagnostics`.
+
+## 2026-08-12 - Connectivity Recovery C9d: unified diagnostic workbench
+
+- Target: present locator-backed ERC and visual diagnostics in one persistent
+  project panel with domain/severity filtering and canonical navigation.
+- Changed areas: editor diagnostic derivation/panel, selection and browser
+  coverage, recovery status, target plan and log.
+- Validation: 20 focused diagnostic/selection tests; three focused Playwright
+  cross-Cell/ERC/visual flows; workspace `pnpm typecheck`; targeted Prettier;
+  `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): unify ERC and visual diagnostics`.
+
+## 2026-08-12 - Connectivity Recovery C3g: Agent resolved geometry reads
+
+- Target: migrate Agent snapshot, resolved-route response and region query
+  reads to document-level resolved routing geometry without schema changes.
+- Changed areas: Agent read consumers and parity tests; target plan and log.
+- Validation: 21 focused Agent snapshot/service tests; workspace
+  `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(agent): consume resolved route geometry`.
+
+## 2026-08-12 - Connectivity Recovery C3h: visual resolved geometry reads
+
+- Target: unify visual route diagnostics on one document-level resolved
+  geometry pass without changing diagnostic facts.
+- Changed areas: derived visual diagnostic route reads and target plan/log.
+- Validation: 16 focused visual/geometry/diagnostic tests; workspace
+  `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): consume resolved route geometry in visuals`.
+
+## 2026-08-12 - Connectivity Recovery C3i: stretch resolved geometry reads
+
+- Target: make direct segment drag and local stretch derive their existing
+  route centerlines from shared resolved document geometry.
+- Changed areas: derived stretch read inputs and target plan/log.
+- Validation: 15 focused stretch/geometry tests; workspace `pnpm typecheck`;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): consume resolved route geometry in stretch`.
+
+## 2026-08-12 - Connectivity Recovery C10b: resolved-geometry audit
+
+- Target: audit consumer migration with broad gates and repair an observed
+  visual-envelope identity collision without deleting lower-level primitives.
+- Changed areas: visual diagnostic identity/test and factual recovery status;
+  target plan and log.
+- Validation: 569 workspace unit tests; 80 editor E2E tests; 500-instance
+  performance gate; workspace `pnpm typecheck`; static consumer audit;
+  `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): audit resolved geometry migration`.
+
+## 2026-08-12 - Connectivity Recovery C3j: drafting anchor geometry reads
+
+- Target: migrate route-anchor and drafting reads to shared resolved document
+  geometry and record the narrowed compatibility boundary.
+- Changed areas: derived anchor/drafting resolution, anchor parity test,
+  recovery status, target plan and log.
+- Validation: 29 focused anchor/drafting/geometry tests; workspace
+  `pnpm typecheck`; targeted Prettier; static consumer audit;
+  `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): consume resolved geometry in drafting anchors`.
+
+## 2026-08-12 - Connectivity Recovery C5a: committed wire manipulation planner
+
+- Target: move committed segment drag and loose-route translation topology
+  edits from editor orchestration into typed Edit Engine proposals.
+- Changed areas: routing planner/tests, editor commit path, target plan and log.
+- Validation: 31 focused routing/stretch tests; two focused editor E2E flows;
+  workspace `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(routing): plan committed wire manipulation in engine`.
+
+## 2026-08-12 - Connectivity Recovery C5b: group move planner
+
+- Target: move committed group instance/route/Junction/annotation edit
+  assembly into the Edit Engine routing planner.
+- Changed areas: routing planner/tests, editor group commit path, target plan
+  and log.
+- Validation: 32 focused routing/stretch tests; two focused editor group-move
+  E2E flows; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(routing): plan group move edits in engine`.
+
+## 2026-08-12 - Connectivity Recovery C5c: routing planner status
+
+- Target: record verified committed-routing planner ownership and retain the
+  intentional editor session/Snap boundary.
+- Changed areas: recovery status, target plan and log.
+- Validation: static App/planner ownership audit; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): record routing planner migration`.
+
+## 2026-08-12 - Connectivity Recovery C6a: hierarchy Net trace presentation
+
+- Target: present concrete hierarchy Net hops with caller instance/pin and
+  canonical navigation to the destination Cell/Net.
+- Changed areas: selection trace panel/tests, editor navigation, browser
+  hierarchy fixture flow, recovery status, target plan and log.
+- Validation: nine focused selection/trace tests; focused browser trace
+  navigation; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): navigate hierarchy Net trace paths`.
+
+## 2026-08-12 - Connectivity Recovery C9e: routing diagnostic domain
+
+- Target: classify route-quality observations as `routing` rather than
+  overloading `visual` in the unified diagnostic envelope.
+- Changed areas: diagnostic adapter/tests, recovery status, target plan and
+  log.
+- Validation: 14 focused diagnostic/selection/visual tests; workspace
+  `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(diagnostics): classify routing observations separately`.
+
+## 2026-08-12 - Connectivity Recovery C5d: concrete search caller paths
+
+- Target: expand reused child Cell search results into explicit canonical
+  caller paths and display the path in the search dialog.
+- Changed areas: hierarchy path enumeration/tests, project search/tests,
+  dialog/test, browser selector regression, recovery status, target plan/log.
+- Validation: 12 focused hierarchy/search/dialog tests; two focused browser
+  search flows; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(search): expose concrete hierarchy caller paths`.
+
+## 2026-08-12 - Connectivity Recovery final acceptance audit
+
+- Target: verify the complete recovered connectivity/routing/debugging boundary
+  and refresh stale generated artifacts exposed by explicit check gates.
+- Changed areas: generated Agent API schemas/OpenAPI, current-arrow formal SVG
+  golden, recovery status, target plan and log.
+- Validation: format/reference/type checks; 576 unit tests; 81 E2E tests;
+  performance gate; Agent API artifact; Phase 5/current-arrow goldens;
+  production smoke; static geometry/planner consumer audit; `git diff --check`.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): record final connectivity acceptance audit`.
+
+## 2026-08-12 - Electrical contact integrity for Razavi MOS
+
+- Target: make exact manual power-symbol contacts electrically truthful,
+  reconcile safe legacy contacts, preserve hidden bulk semantics, and correct
+  PMOS source/drain presentation roles.
+- Changed areas: editor placement/reconciliation and bulk policy, typed
+  connect-endpoint Net scope, Razavi PMOS catalog/source, API/visual/formal
+  generated artifacts, focused unit and browser regressions, target plan.
+- Validation: frozen install; complete `pnpm ci:check` (583 unit tests, 82
+  browser E2E tests, release/performance/export/production-smoke gates);
+  catalog/API/Phase-5 checks; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): preserve electrical truth at Razavi MOS contacts`.
+
+## 2026-08-12 - Net highlight and flightline clarity
+
+- Target: make an active Net visually unambiguous, add keyboard toggling, and
+  prevent its visual routing overlay from competing with dashed flightlines.
+- Changed areas: editor Net overlay/flightline policy, `H` shortcut and
+  focused unit/browser coverage, target plan.
+- Validation: 10 shortcut unit tests; two focused browser E2E flows; workspace
+  `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `feat(editor): strengthen Net highlighting and flightline policy`.
+
+## 2026-08-12 - Import-only flightlines and Net Label removal
+
+- Target: keep dashed flightlines exclusively as untouched SPICE-import review
+  guidance and expose a clear deletion action for a Route Net Label.
+- Changed areas: editor flightline display policy, Route action shelf, focused
+  browser tests, target plan.
+- Validation: workspace `pnpm typecheck`; four focused browser E2E flows;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): limit flightlines to untouched imports`.
+
+## 2026-08-12 - Symbol-defined power-Net normalization
+
+- Target: make VDD/GND marker terminal membership authoritative for power-Net
+  scope and safe Razavi bulk presentation, while eliminating only the valid
+  power-marker contact overlap false positive.
+- Changed areas: model power-domain facts; edit transaction and Agent schema;
+  editor legacy normalization/bulk policy; ERC/visual diagnostics; generated
+  Agent API artifacts; focused unit/browser regressions and target plan.
+- Validation: 51 focused tests; supplied-legacy-topology browser regression;
+  typecheck; format and Agent artifact checks; frozen install; `git diff
+--check`. Complete static/unit/release CI stages passed (589 unit tests).
+  Two full 16-worker E2E attempts each had unrelated, non-repeatable timeout
+  failures; all three affected existing cases passed in isolated single-worker
+  reruns.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(connectivity): normalize symbol-defined power Nets`.
+
+## 2026-08-12 - Unified Net Label binding and deletion
+
+- Target: eliminate conflicting Route/Junction/Net interpretations of Label
+  attachment and stop Properties from recreating deleted labels from Net names.
+- Changed areas: accepted connectivity contract; shared Derived Label resolver;
+  Connectivity Index; Edit Engine validation; Agent routing expansion; editor
+  Route Properties and browser regressions; target plan.
+- Validation: 45 focused Derived/Edit Engine/Agent routing tests; two focused
+  Net Label browser flows including delete/save/reopen; workspace typecheck;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(connectivity): unify Net label binding semantics`.
+
+## 2026-08-12 - Net Label highlight alignment
+
+- Target: make the unified Net-id Label binding participate in the same full
+  Net highlight interaction as Route and endpoint selection.
+- Changed areas: editor highlight-selection adapter and annotation action;
+  focused Label/Route browser regression; target plan.
+- Validation: three focused browser flows; workspace typecheck; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): align Net Label highlight selection`.
+
+## 2026-08-12 - Component-aware Net highlight
+
+- Target: remove raw persisted-Net assumptions from highlight and make it a
+  pure consumer of seeded routed-component connectivity.
+- Changed areas: routed component Route membership; Derived Net highlight API;
+  editor typed highlight origin; accepted connectivity contract; focused unit
+  and browser regressions; target plan.
+- Validation: 24 focused Derived tests; four focused browser flows including
+  Label deletion splitting a historic merged-Net highlight; workspace
+  typecheck; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(connectivity): highlight routed components through the index`.

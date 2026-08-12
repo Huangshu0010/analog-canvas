@@ -22,11 +22,11 @@ Agent edits, import, derived state, and rendering.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| Logical connectivity | Net membership expressed by terminals and ports |
+| Term                 | Meaning                                                                 |
+| -------------------- | ----------------------------------------------------------------------- |
+| Logical connectivity | Net membership expressed by terminals and ports                         |
 | Visible connectivity | Route branches and junctions that visibly express part of a logical net |
-| Derived state | Pin coordinates, indexes, flightlines, diagnostics, and render scenes |
+| Derived state        | Pin coordinates, indexes, flightlines, diagnostics, and render scenes   |
 
 ## Data model or interface
 
@@ -43,11 +43,11 @@ lands in WP-A1.
 
 The model separates three non-electrical concerns from electrical truth:
 
-| Layer            | Contents                                                       | Changes SPICE/connectivity | Enters formal SVG/PNG/PDF |
-| ---------------- | -------------------------------------------------------------- | :------------------------: | :-----------------------: |
-| SchematicAnnotation | instance-label, net-label, power-label, route-marker         | only defined net-name action |          yes             |
-| DraftingObject   | text, arrow, leader, callout, construction-line, floating-symbol |            no             |          yes             |
-| Guide            | horizontal/vertical editor reference line                      |            no             |           no             |
+| Layer               | Contents                                                         |  Changes SPICE/connectivity  | Enters formal SVG/PNG/PDF |
+| ------------------- | ---------------------------------------------------------------- | :--------------------------: | :-----------------------: |
+| SchematicAnnotation | instance-label, net-label, power-label, route-marker             | only defined net-name action |            yes            |
+| DraftingObject      | text, arrow, leader, callout, construction-line, floating-symbol |              no              |            yes            |
+| Guide               | horizontal/vertical editor reference line                        |              no              |            no             |
 
 `annotations` narrows to `instance-label | net-label | power-label |
 route-marker`, where `route-marker.markerKind` is `current | voltage`. The old
@@ -56,7 +56,7 @@ route-marker`, where `route-marker.markerKind` is `current | voltage`. The old
 ```typescript
 interface DraftingLayer {
   objects: DraftingObject[]; // persistent, exported
-  guides: Guide[];           // persistent, always export: false
+  guides: Guide[]; // persistent, always export: false
 }
 ```
 
@@ -67,9 +67,16 @@ exactly four `RichTextRun` node kinds; `span` has four styles:
 type RichTextRun =
   | { kind: "text"; value: string }
   | { kind: "line-break" }
-  | { kind: "span"; style: "italic" | "bold" | "subscript" | "superscript";
-      children: RichTextRun[] }
-  | { kind: "fraction"; numerator: RichTextDocument; denominator: RichTextDocument };
+  | {
+      kind: "span";
+      style: "italic" | "bold" | "subscript" | "superscript";
+      children: RichTextRun[];
+    }
+  | {
+      kind: "fraction";
+      numerator: RichTextDocument;
+      denominator: RichTextDocument;
+    };
 ```
 
 Resource bounds are part of the contract: maximum nesting depth 4, maximum 64
@@ -87,11 +94,22 @@ resolved point):
 ```typescript
 type VisualAnchor =
   | { kind: "free"; position: Point }
-  | { kind: "object"; objectId: StableId; localOffset: Point;
-      fallbackPosition: Point }
-  | { kind: "route"; routeId: StableId; segmentIndex: number; t: number;
-      normalOffset: number; direction: "forward" | "reverse";
-      orientation: "follow" | "horizontal"; fallbackPosition: Point };
+  | {
+      kind: "object";
+      objectId: StableId;
+      localOffset: Point;
+      fallbackPosition: Point;
+    }
+  | {
+      kind: "route";
+      routeId: StableId;
+      segmentIndex: number;
+      t: number;
+      normalOffset: number;
+      direction: "forward" | "reverse";
+      orientation: "follow" | "horizontal";
+      fallbackPosition: Point;
+    };
 ```
 
 This generalizes the existing `RouteAnnotationAttachment`. Anchor resolution
@@ -117,8 +135,12 @@ target's own lock.
 
 ```typescript
 type DraftingObject =
-  | DraftText | DraftArrow | DraftLeader | DraftCallout
-  | DraftConstructionLine | DraftFloatingSymbol;
+  | DraftText
+  | DraftArrow
+  | DraftLeader
+  | DraftCallout
+  | DraftConstructionLine
+  | DraftFloatingSymbol;
 
 interface Guide {
   id: StableId;
@@ -144,6 +166,57 @@ An Instance placement is either `null` or a position plus rotation
 `0|90|180|270` and mirror `none|x`. Mirror `x` negates the local x-coordinate
 before rotation. Route waypoints exclude endpoints; endpoint coordinates are
 derived from terminals, ports, or Junction objects.
+
+## NoConnect and source binding evidence
+
+This section is owned by `packages/model` and implemented incrementally by
+WP-R7/WP-R8 of the connectivity-routing-debugging roadmap. It does not change
+the accepted v1.2 Net/Route/Junction contract.
+
+Two new persisted electrical record kinds are added so ERC and model binding can
+rely on facts that cannot be re-derived from `spice.target` strings or from
+ordinary annotations.
+
+```typescript
+interface NoConnect {
+  id: StableId;
+  endpoint: TerminalEndpoint | PortEndpoint; // the Pin/Port intentionally left open
+  reason?: string;
+}
+
+interface SourceBindingEvidence {
+  kind: "primitive" | "model" | "subcircuit" | "opaque";
+  name: string;
+  status: "resolved" | "missing" | "unsupported";
+  modelType?: string;
+  childDocumentId?: StableId; // present for subcircuit bindings
+  sourceRef?: SourceSpan; // present for SPICE-originated bindings
+}
+```
+
+Invariants (frozen):
+
+- A `NoConnect.endpoint` must not simultaneously belong to a Net, a Route, or
+  another `NoConnect`. The Edit Engine rejects the conflicting combination
+  atomically; it is not a derived warning.
+- A hidden or implicit Pin is never auto-promoted to a `NoConnect` because it is
+  not visible. SPICE Nets named `NC`, `N/C`, or `0` are never auto-interpreted
+  as `NoConnect`.
+- `NoConnect` is a first-class electrical record: it has typed edits,
+  undo/redo, clipboard, delete, save/reopen, a fixed formal marker in the Razavi
+  visual language, and participates in formal export. It is not an annotation.
+- `SourceBindingEvidence` captures the stable import-time fact about an
+  instance's model or subcircuit binding. The implementation may continue to
+  read existing `spice.name`/`spice.target`/`spice.pin.*`/`spice.param.*`/
+  `spice.childDocumentId` properties for compatibility, but the normative target
+  is the typed record.
+- Binding evidence is optional for legacy instances. A migration never invents
+  an evidence status from `spice.target`; only a current importer or an
+  explicit typed edit may write it. Therefore old Projects retain their
+  previous behavior and do not receive speculative model ERC.
+
+These records are the input the unified connectivity index (ADR 0013) and the
+ERC engine consume; they are not derived state.
 
 ## Invariants
 

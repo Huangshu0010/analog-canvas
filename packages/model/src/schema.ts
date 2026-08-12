@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 2;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 3;
 
 export const StableIdSchema = z.string().min(1).max(256);
 export const PointSchema = z.strictObject({
@@ -81,11 +81,25 @@ export const InstancePropertyValueSchema = z.union([
   z.number().finite(),
   z.boolean(),
 ]);
+// Stable import-time evidence for a model/subcircuit binding. It intentionally
+// does not replace the lossless `spice.*` compatibility properties; consumers
+// such as ERC must use this fact rather than attempt to re-parse those strings.
+// Optional presence keeps pre-evidence Project files valid without guessing a
+// status during migration.
+export const SourceBindingEvidenceSchema = z.strictObject({
+  kind: z.enum(["primitive", "model", "subcircuit", "opaque"]),
+  name: z.string().min(1),
+  status: z.enum(["resolved", "missing", "unsupported"]),
+  modelType: z.string().min(1).optional(),
+  childDocumentId: StableIdSchema.optional(),
+  sourceRef: SourceSpanSchema.optional(),
+});
 export const InstanceSchema = z.strictObject({
   id: StableIdSchema,
   symbolId: StableIdSchema,
   symbolVariantId: StableIdSchema.optional(),
   sourceRef: SourceSpanSchema.optional(),
+  binding: SourceBindingEvidenceSchema.optional(),
   placement: PlacementSchema.nullable(),
   properties: z.record(z.string(), InstancePropertyValueSchema),
 });
@@ -149,6 +163,24 @@ export const JunctionSchema = z.strictObject({
   // Older Projects predate explicit Junction roles. Consumers must preserve
   // their behavior by treating an omitted role as an intentional branch dot.
   role: JunctionRoleSchema.optional(),
+});
+// ADR 0013 / WP-R7 NoConnect: an explicit electrical declaration that a Pin or
+// Port is intentionally left open. It is a first-class electrical record (typed
+// edits, undo/redo, clipboard, export), not an annotation. A NoConnect endpoint
+// must not also belong to a Net, Route, or another NoConnect (enforced in the
+// document superRefine).
+export const NoConnectEndpointSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("terminal"),
+    instanceId: StableIdSchema,
+    pinName: z.string().min(1),
+  }),
+  z.strictObject({ kind: z.literal("port"), portId: StableIdSchema }),
+]);
+export const NoConnectSchema = z.strictObject({
+  id: StableIdSchema,
+  endpoint: NoConnectEndpointSchema,
+  reason: z.string().optional(),
 });
 
 export const AnnotationKindSchema = z.enum([
@@ -448,6 +480,7 @@ const SchematicDocumentBaseSchema = z.strictObject({
   presentation: PresentationIntentSchema,
   layoutGroups: z.array(LayoutGroupSchema),
   constraints: z.array(LayoutConstraintSchema),
+  noConnects: z.array(NoConnectSchema).default([]),
   // ADR 0010 drafting layer. Optional in A1a so schema-1 Projects (which have
   // no drafting container) still validate; the integration gate makes it
   // required and the migration backfills it for all loaded Projects.
@@ -612,6 +645,49 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       }
     }
 
+    const noConnectEndpointKeys = new Set<string>();
+    for (const [noConnectIndex, noConnect] of document.noConnects.entries()) {
+      const endpoint = noConnect.endpoint;
+      let key: string;
+      let netOwner: string | undefined;
+      if (endpoint.kind === "terminal") {
+        if (!instanceIds.has(endpoint.instanceId)) {
+          context.addIssue({
+            code: "custom",
+            message: `Unknown NoConnect terminal instance: ${endpoint.instanceId}`,
+            path: ["noConnects", noConnectIndex, "endpoint", "instanceId"],
+          });
+        }
+        key = `${endpoint.instanceId}\u0000${endpoint.pinName}`;
+        netOwner = terminalNetByKey.get(key);
+      } else {
+        if (!portIds.has(endpoint.portId)) {
+          context.addIssue({
+            code: "custom",
+            message: `Unknown NoConnect port: ${endpoint.portId}`,
+            path: ["noConnects", noConnectIndex, "endpoint", "portId"],
+          });
+        }
+        key = endpoint.portId;
+        netOwner = portNetById.get(endpoint.portId);
+      }
+      if (netOwner) {
+        context.addIssue({
+          code: "custom",
+          message: `NoConnect endpoint is already connected to net: ${netOwner}`,
+          path: ["noConnects", noConnectIndex, "endpoint"],
+        });
+      }
+      if (noConnectEndpointKeys.has(key)) {
+        context.addIssue({
+          code: "custom",
+          message: "Duplicate NoConnect on the same endpoint",
+          path: ["noConnects", noConnectIndex, "endpoint"],
+        });
+      }
+      noConnectEndpointKeys.add(key);
+    }
+
     for (const [junctionIndex, junction] of document.junctions.entries()) {
       if (!netIds.has(junction.netId)) {
         context.addIssue({
@@ -743,6 +819,7 @@ export type SourcePosition = z.infer<typeof SourcePositionSchema>;
 export type SourceSpan = z.infer<typeof SourceSpanSchema>;
 export type SourceManifest = z.infer<typeof SourceManifestSchema>;
 export type SymbolLibraryLock = z.infer<typeof SymbolLibraryLockSchema>;
+export type SourceBindingEvidence = z.infer<typeof SourceBindingEvidenceSchema>;
 export type TerminalRef = z.infer<typeof TerminalRefSchema>;
 export type Instance = z.infer<typeof InstanceSchema>;
 export type Port = z.infer<typeof PortSchema>;
@@ -750,6 +827,8 @@ export type Net = z.infer<typeof NetSchema>;
 export type RouteEndpoint = z.infer<typeof RouteEndpointSchema>;
 export type RouteBranch = z.infer<typeof RouteBranchSchema>;
 export type Junction = z.infer<typeof JunctionSchema>;
+export type NoConnectEndpoint = z.infer<typeof NoConnectEndpointSchema>;
+export type NoConnect = z.infer<typeof NoConnectSchema>;
 export type JunctionRole = z.infer<typeof JunctionRoleSchema>;
 export type AnnotationKind = z.infer<typeof AnnotationKindSchema>;
 export type RouteMarkerKind = z.infer<typeof RouteMarkerKindSchema>;

@@ -112,6 +112,7 @@
           ]
         }
       ],
+      "noConnects": [],
       "ports": [],
       "presentation": {
         "compactness": "normal",
@@ -125,7 +126,7 @@
   ],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "source": {
     "dialect": "none",
     "entry": null,

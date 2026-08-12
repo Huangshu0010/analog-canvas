@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { createEmptyDocument } from "@icm/model";
 
 import {
   EMPTY_VISUAL_SELECTION,
   clearVisualSelectionKinds,
   hasVisualSelection,
   normalizeVisualSelection,
+  pruneVisualSelection,
   replaceVisualSelectionKind,
 } from "./visual-selection";
+import type { VisualSelection } from "./visual-selection";
 
 describe("VisualSelection", () => {
   it("normalizes each visual object kind independently", () => {
@@ -49,5 +52,40 @@ describe("VisualSelection", () => {
     ).toEqual({ ...EMPTY_VISUAL_SELECTION, instanceIds: ["M1"] });
     expect(hasVisualSelection(EMPTY_VISUAL_SELECTION)).toBe(false);
     expect(hasVisualSelection(selected)).toBe(true);
+  });
+
+  it("prunes transient IDs after their model objects are removed", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.routes.push({
+      id: "route-1",
+      netId: "net-1",
+      from: { kind: "junction", junctionId: "junction-1" },
+      to: { kind: "junction", junctionId: "junction-2" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    document.annotations.push({
+      id: "label-1",
+      kind: "net-label",
+      text: "SIGNAL",
+      position: { x: 0, y: 0 },
+      offset: { x: 0, y: 0 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+    const selected: VisualSelection = {
+      ...EMPTY_VISUAL_SELECTION,
+      routeIds: ["route-1"],
+      annotationIds: ["label-1", "label-deleted"],
+    };
+
+    const pruned = pruneVisualSelection(selected, document);
+    expect(pruned).toEqual({
+      ...EMPTY_VISUAL_SELECTION,
+      routeIds: ["route-1"],
+      annotationIds: ["label-1"],
+    });
+    expect(pruneVisualSelection(pruned, document)).toBe(pruned);
   });
 });

@@ -4,7 +4,7 @@ import {
   diagnoseVisualQuality,
   electricalTopologyHash,
   resolveDraftingObjectGeometry,
-  routePolyline,
+  resolveDocumentRoutingGeometry,
 } from "@icm/derived";
 import { transformPoint } from "@icm/model";
 import type {
@@ -301,17 +301,21 @@ function documentSnapshot(
       };
     });
 
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
   const routes = [...document.routes]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
-    .map((route) => ({
-      id: route.id,
-      netId: route.netId,
-      from: structuredClone(route.from),
-      to: structuredClone(route.to),
-      waypoints: structuredClone(route.waypoints),
-      segmentModes: [...route.segmentModes],
-      polyline: routePolyline(document, resolver, route)?.points ?? null,
-    }));
+    .map((route) => {
+      const geometry = routingGeometry.routes.get(route.id);
+      return {
+        id: route.id,
+        netId: route.netId,
+        from: structuredClone(route.from),
+        to: structuredClone(route.to),
+        waypoints: structuredClone(route.waypoints),
+        segmentModes: [...route.segmentModes],
+        polyline: geometry ? [...geometry.centerline] : null,
+      };
+    });
 
   const bounds = enclosingBounds([
     ...instances.flatMap((instance) =>
@@ -383,6 +387,9 @@ function documentSnapshot(
     junctions: [...document.junctions]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
       .map((junction) => structuredClone(junction)),
+    noConnects: [...document.noConnects]
+      .sort((left, right) => left.id.localeCompare(right.id, "en"))
+      .map((noConnect) => structuredClone(noConnect)),
     annotations: [...document.annotations]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
       .map((annotation) => structuredClone(annotation)),

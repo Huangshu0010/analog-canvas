@@ -27,11 +27,39 @@ Q2 collector base emitter QPREF
       imported.project?.documents[0]?.instances.map((instance) => [
         instance.properties["spice.name"],
         instance.symbolId,
+        instance.binding,
       ]),
     ).toEqual([
-      ["D1", "diode"],
-      ["Q1", "npn"],
-      ["Q2", "pnp"],
+      [
+        "D1",
+        "diode",
+        expect.objectContaining({
+          kind: "model",
+          name: "DREF",
+          status: "resolved",
+          modelType: "d",
+        }),
+      ],
+      [
+        "Q1",
+        "npn",
+        expect.objectContaining({
+          kind: "model",
+          name: "QNREF",
+          status: "resolved",
+          modelType: "npn",
+        }),
+      ],
+      [
+        "Q2",
+        "pnp",
+        expect.objectContaining({
+          kind: "model",
+          name: "QPREF",
+          status: "resolved",
+          modelType: "pnp",
+        }),
+      ],
     ]);
   });
 
@@ -166,6 +194,14 @@ Q2 collector base emitter QPREF
       "spice.pin.P3": "S",
       "spice.pin.P4": "B",
       "symbol.mapping.registry": "sky130-nfet-four-terminal",
+    });
+    expect(document.instances[0]!.binding).toMatchObject({
+      // SKY130 uses an external PDK model name: the compiler preserves it as
+      // opaque IR and the reviewed registry supplies the successful mapping.
+      kind: "opaque",
+      name: "sky130_fd_pr__nfet_01v8",
+      status: "resolved",
+      sourceRef: document.instances[0]!.sourceRef,
     });
     expect(
       document.nets

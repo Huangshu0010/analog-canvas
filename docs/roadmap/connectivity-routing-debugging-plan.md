@@ -1,6 +1,6 @@
 # 连通性、走线与电气调试统一实施方案
 
-状态：`proposed`
+状态：`active`（2026-08-12 起按下方恢复波次执行）
 优先级：`P0 foundation`
 建议位置：Phase 9 之后、ERC 与全局搜索/Net 追踪之前的横向重构阶段
 
@@ -382,6 +382,53 @@ Parent subcircuit instance pin 与 child Document port 的映射以导入时的�
 | Recovery/save/reopen            | persistence/controller                | unchanged                          | 新 schema migration 后 undo/save/reopen 正常         |
 
 每一行在旧实现删除前必须至少有一个 deterministic regression；只靠肉眼验收不允许删除兼容分支。
+
+## 7.1 2026-08-12 实施状态与恢复波次
+
+本路线图的 R0–R10 曾产生一批 **additive prototype** 提交。它们是后续
+重构可复用的基础，但不等同于各原始工作包的退出条件已经满足；历史 target
+plan 中的 `completed` 仅表示该 target 自己声明的窄范围工作结束，不能作为本
+路线图的验收结论。不得重写或删除这些历史记录，而应由本节的状态和恢复波次
+表达当前事实。
+
+| 原工作包 | 已交付的可保留基础 | 当前状态与尚缺退出条件 |
+| --- | --- | --- |
+| R0 characterization | 现状/特征测试 | **active**：需补齐保留矩阵和迁移前后的行为证据。 |
+| R1 ADR/spec | ADR 0013–0015 初稿 | **active**：已接受的目标契约仍有效，但须以 amendment 纠正实现状态。 |
+| R2 connectivity index | 可查询的 additive index 原型 | **active**：缺 route geometry、revision cache 和单次 flightline 派生。 |
+| R3 geometry | centerline、bridge 与 anchor-join ingredients | **active**：缺 revision-scoped segment ref、remap、统一 document geometry 和消费者迁移。 |
+| R4 routing planners | route-tap 提取 | **active**：Wire/Delete/Junction/group 尚未统一到 planner。 |
+| R5 search/navigation | 项目搜索 backend | **active**：缺 `HierarchyFrame`、公共 locator 与 `navigateTo()`/Ctrl+F。 |
+| R6 net trace | 单层向下 trace 原型 | **active**：缺递归双向层次路径、完整高亮和 GUI 消费。 |
+| R7 NoConnect | schema v3 及少量验证 | **active**：缺 edit 生命周期、clipboard/render/export/Agent/topology 闭环。 |
+| R8 ERC | 四条基础规则 | **active**：缺模型、层次、gate/bulk、pin mapping 等规则和完整 fixtures。 |
+| R9 diagnostics | 跨 domain 的数据聚合 | **active**：缺诊断 UI 与导航。 |
+| R10 migration/cleanup | deletion parity tests | **blocked by consumers**：不得删 compatibility logic，直至所有消费者迁移并有性能基线。 |
+
+恢复工作按下列波次进行。每一波次须有独立 target plan、可验证退出条件和提交；
+不得再将“新建基础模块”误报为“原工作包完成”。
+
+1. **C0 — 状态与契约校正：** 本节及 ADR amendment，冻结“原型 vs. 完成”的
+   用语和恢复顺序。
+2. **C1 — 公共 Locator/Diagnostic：** 在 `packages/derived` 建立唯一
+   `ObjectLocator`、`HierarchyFrame`、`Diagnostic` 类型；迁移 index/search/ERC，
+   消除私有 locator。
+3. **C2 — NoConnect 最小闭环：** typed add/remove、引用清理、undo/redo、
+   clipboard、topology hash、snapshot/export 与最小 renderer/hit lifecycle。
+4. **C3 — 几何语义：** revision-scoped segment reference、edit remap、统一
+   document routing geometry 和 endpoint/corner 连接语义。
+5. **C4 — Connectivity Index：** document route geometry、按 document revision
+   缓存、单次 flightline 派生与性能回归。
+6. **C5 — Routing planners：** 将 Wire、Delete/Unroute、Junction、segment drag、
+   group move 的 topology planning 收口；UI 只保留 session 与 interaction。
+7. **C6 — 搜索与导航：** `HierarchyFrame` stack、`navigateTo()`、Ctrl+F 和诊断
+   target focus。
+8. **C7 — Net trace/highlight：** 递归双向层次 trace、同 Net 高亮和 editor
+   selection overlay。
+9. **C8 — ERC：** 完整规则集、NoConnect/hidden-pin policy、hierarchy fixtures。
+10. **C9 — Diagnostics UI：** 分组面板、导航、source reference 和筛选。
+11. **C10 — 消费者迁移与清理：** 仅在 compatibility/parity/performance gate 满足后
+    删除旧 adapter。
 
 ## 8. 工作包与顺序
 

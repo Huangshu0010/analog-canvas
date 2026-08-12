@@ -127,13 +127,19 @@ function electricalProjection(document: SchematicDocument): unknown {
       ),
       ports: [...net.ports].sort((left, right) => left.localeCompare(right)),
     }));
-  return { instances, ports, nets };
+  const noConnects = [...document.noConnects]
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((noConnect) => ({
+      id: noConnect.id,
+      endpoint: noConnect.endpoint,
+    }));
+  return { instances, ports, nets, noConnects };
 }
 
 /**
  * Compute a lowercase SHA-256 electrical topology hash for a Project. Two
- * Projects with identical electrical facts (instances, ports, Nets and their
- * membership, document identity) produce the same hash regardless of
+ * Projects with identical electrical facts (instances, ports, Nets, explicit
+ * NoConnect declarations and document identity) produce the same hash regardless of
  * placement, routing geometry, annotations, or drafting.
  */
 export function electricalTopologyHash(

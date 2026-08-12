@@ -13,6 +13,7 @@
       "layoutGroups": [],
       "name": "Main",
       "nets": [],
+      "noConnects": [],
       "ports": [],
       "presentation": {
         "compactness": "normal",
@@ -26,7 +27,7 @@
   ],
   "id": "project-minimal",
   "name": "Minimal Project",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "source": {
     "dialect": "none",
     "entry": null,

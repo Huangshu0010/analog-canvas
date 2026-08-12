@@ -113,4 +113,42 @@ describe("schematic clipboard", () => {
       y: 100,
     });
   });
+
+  it("remaps an internal NoConnect to the copied instance", () => {
+    const document = createEmptyDocument("document-main", "NoConnect copy");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.noConnects.push({
+      id: "nc-r1-1",
+      endpoint: { kind: "terminal", instanceId: "R1", pinName: "1" },
+    });
+
+    const copied = copySelection(document, ["R1"]);
+    expect(copied?.noConnects).toEqual(document.noConnects);
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "paste-no-connect",
+        documentId: document.id,
+        expectedRevision: 0,
+        actor: { kind: "human", id: "test" },
+        edits: proposePaste(document, copied!, { x: 20, y: 0 }, 1).edits,
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.noConnects).toContainEqual({
+      id: "nc-r1-1-copy-1",
+      endpoint: { kind: "terminal", instanceId: "R1-copy-1", pinName: "1" },
+    });
+  });
 });
