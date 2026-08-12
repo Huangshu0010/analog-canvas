@@ -7,12 +7,9 @@ import type { ProjectConnectivityIndex } from "./connectivity-index.js";
  * rather than a lossy list of document ids. Breadth-first search selects the
  * shortest path and the stable edge order makes ties repeatable.
  */
-export function findHierarchyPath(
+function hierarchyFramesByParent(
   index: ProjectConnectivityIndex,
-  rootDocumentId: string,
-  targetDocumentId: string,
-): readonly HierarchyFrame[] | undefined {
-  if (rootDocumentId === targetDocumentId) return [];
+): ReadonlyMap<string, readonly HierarchyFrame[]> {
   const edges = [...index.hierarchy.edges]
     .sort(
       (left, right) =>
@@ -40,19 +37,50 @@ export function findHierarchyPath(
     }
     byParent.set(frame.parentDocumentId, frames);
   }
+  return byParent;
+}
 
-  const queue: Array<{ documentId: string; path: readonly HierarchyFrame[] }> =
-    [{ documentId: rootDocumentId, path: [] }];
-  const visited = new Set<string>([rootDocumentId]);
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    for (const frame of byParent.get(current.documentId) ?? []) {
-      if (visited.has(frame.childDocumentId)) continue;
-      const path = [...current.path, frame];
-      if (frame.childDocumentId === targetDocumentId) return path;
-      visited.add(frame.childDocumentId);
-      queue.push({ documentId: frame.childDocumentId, path });
+/**
+ * Enumerate every concrete caller path from root to a target Cell. Cycles are
+ * cut at the current document chain rather than globally, so distinct valid
+ * callers of the same reusable Cell remain visible.
+ */
+export function findHierarchyPaths(
+  index: ProjectConnectivityIndex,
+  rootDocumentId: string,
+  targetDocumentId: string,
+): readonly (readonly HierarchyFrame[])[] | undefined {
+  if (rootDocumentId === targetDocumentId) return [[]];
+  const byParent = hierarchyFramesByParent(index);
+  const paths: HierarchyFrame[][] = [];
+  const visit = (
+    documentId: string,
+    path: readonly HierarchyFrame[],
+    ancestry: ReadonlySet<string>,
+  ) => {
+    for (const frame of byParent.get(documentId) ?? []) {
+      if (ancestry.has(frame.childDocumentId)) continue;
+      const next = [...path, frame];
+      if (frame.childDocumentId === targetDocumentId) {
+        paths.push(next);
+        continue;
+      }
+      visit(
+        frame.childDocumentId,
+        next,
+        new Set([...ancestry, frame.childDocumentId]),
+      );
     }
-  }
-  return undefined;
+  };
+  visit(rootDocumentId, [], new Set([rootDocumentId]));
+  return paths.length > 0 ? paths : undefined;
+}
+
+export function findHierarchyPath(
+  index: ProjectConnectivityIndex,
+  rootDocumentId: string,
+  targetDocumentId: string,
+): readonly HierarchyFrame[] | undefined {
+  const paths = findHierarchyPaths(index, rootDocumentId, targetDocumentId);
+  return paths?.[0];
 }

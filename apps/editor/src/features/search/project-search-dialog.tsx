@@ -72,14 +72,17 @@ export function ProjectSearchDialog({
             results.map((result) => (
               <button
                 type="button"
-                key={`${result.locator.documentId}:${result.locator.kind}:${result.locator.objectId}`}
-                data-testid={`project-search-result-${result.locator.objectId}`}
+                key={`${result.locator.documentId}:${result.locator.kind}:${result.locator.objectId}:${result.locator.hierarchyPath.map((frame) => frame.instanceId).join("/")}`}
+                data-testid={`project-search-result-${result.locator.objectId}${result.locator.hierarchyPath.length > 0 ? `-${result.locator.hierarchyPath.map((frame) => frame.instanceId).join("-")}` : ""}`}
                 onClick={() => onSelect(result)}
               >
                 <strong>{result.label}</strong>
                 <small>
                   {result.locator.kind} · {result.locator.documentId} ·{" "}
                   {result.field}
+                  {result.locator.hierarchyPath.length > 0
+                    ? ` · via ${result.locator.hierarchyPath.map((frame) => frame.instanceId).join(" / ")}`
+                    : ""}
                 </small>
               </button>
             ))

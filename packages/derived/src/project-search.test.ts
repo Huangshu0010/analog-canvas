@@ -7,6 +7,25 @@ import {
   buildProjectSearchIndex,
 } from "./index.js";
 
+const dual = {
+  schemaVersion: 1 as const,
+  id: "dual",
+  name: "Dual",
+  viewBox: { x: -20, y: -20, width: 40, height: 40 },
+  pins: [
+    {
+      name: "L",
+      role: "passive",
+      at: { x: -20, y: 0 },
+      direction: "west" as const,
+      presentation: { visibility: "visible" as const },
+    },
+  ],
+  primitives: [],
+  variants: [],
+  aliases: [],
+};
+
 function searchProject(): CircuitProject {
   const project = createEmptyProject("s", "S", "doc");
   const document = project.documents[0]!;
@@ -31,6 +50,32 @@ function searchProject(): CircuitProject {
   document.ports = [
     { id: "port-in", name: "IN", direction: "input", position: { x: 0, y: 0 } },
   ];
+  return project;
+}
+
+function multiCallerSearchProject(): CircuitProject {
+  const project = createEmptyProject("multi", "Multi", "top");
+  const top = project.documents[0]!;
+  top.instances = ["X1", "X2"].map((id) => ({
+    id,
+    symbolId: "dual",
+    placement: null,
+    properties: { "spice.childDocumentId": "child" },
+  }));
+  const child = createEmptyProject("child-project", "Child", "child")
+    .documents[0]!;
+  child.ports = [
+    { id: "child-l", name: "L", direction: "passive", position: null },
+  ];
+  child.instances = [
+    {
+      id: "RCHILD",
+      symbolId: "resistor",
+      placement: null,
+      properties: { "spice.name": "RCHILD" },
+    },
+  ];
+  project.documents.push(child);
   return project;
 }
 
@@ -106,6 +151,23 @@ describe("buildProjectSearchIndex", () => {
     expect(result?.locator).toStrictEqual(
       connectivityIndex.objectIndex.resolve("doc", "net-in"),
     );
+  });
+
+  it("expands a reused child object into one result for every caller path", () => {
+    const project = multiCallerSearchProject();
+    const connectivityIndex = buildProjectConnectivityIndex(
+      project,
+      new InMemorySymbolResolver([dual]),
+    );
+    const results = buildProjectSearchIndex(project, { connectivityIndex })
+      .search("rchild")
+      .filter((result) => result.locator.objectId === "RCHILD");
+    expect(results).toHaveLength(2);
+    expect(
+      results.map((result) =>
+        result.locator.hierarchyPath.map((frame) => frame.instanceId),
+      ),
+    ).toEqual([["X1"], ["X2"]]);
   });
 
   it("matches spice.name and uses it as the instance label", () => {

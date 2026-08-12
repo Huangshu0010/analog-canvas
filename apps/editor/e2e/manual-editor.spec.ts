@@ -1479,7 +1479,7 @@ test("navigates a project-search locator into an imported child Cell", async ({
 
   await page.keyboard.press("Control+f");
   await page.getByTestId("project-search-input").fill("RCHILD");
-  await page.getByTestId("project-search-result-RCHILD").click();
+  await page.locator('[data-testid^="project-search-result-RCHILD-"]').click();
   await expect(page.getByTestId("active-document-name")).toHaveText(
     "Bias Child Cell",
   );

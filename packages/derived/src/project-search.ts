@@ -1,6 +1,7 @@
 import type { CircuitProject } from "@icm/model";
 
 import type { ProjectConnectivityIndex } from "./connectivity-index.js";
+import { findHierarchyPaths } from "./hierarchy-navigation.js";
 import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
 
 /**
@@ -215,12 +216,21 @@ export function buildProjectSearchIndex(
       }
 
       return [...bestByObject.values()]
-        .map(({ candidate, match }): SearchResult => ({
-          locator: candidate.locator,
-          label: candidate.label,
-          field: candidate.field,
-          matchType: match,
-        }))
+        .flatMap(({ candidate, match }): SearchResult[] => {
+          const paths = options.connectivityIndex
+            ? (findHierarchyPaths(
+                options.connectivityIndex,
+                project.topDocumentId,
+                candidate.locator.documentId,
+              ) ?? [candidate.locator.hierarchyPath])
+            : [candidate.locator.hierarchyPath];
+          return paths.map((hierarchyPath) => ({
+            locator: { ...candidate.locator, hierarchyPath },
+            label: candidate.label,
+            field: candidate.field,
+            matchType: match,
+          }));
+        })
         .sort(
           (left, right) =>
             MATCH_RANK[left.matchType] - MATCH_RANK[right.matchType] ||
@@ -229,7 +239,16 @@ export function buildProjectSearchIndex(
               "en",
             ) ||
             KIND_RANK[left.locator.kind] - KIND_RANK[right.locator.kind] ||
-            left.locator.objectId.localeCompare(right.locator.objectId, "en"),
+            left.locator.objectId.localeCompare(right.locator.objectId, "en") ||
+            left.locator.hierarchyPath
+              .map((frame) => frame.instanceId)
+              .join("\u0000")
+              .localeCompare(
+                right.locator.hierarchyPath
+                  .map((frame) => frame.instanceId)
+                  .join("\u0000"),
+                "en",
+              ),
         );
     },
   };

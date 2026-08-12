@@ -3,7 +3,10 @@ import { InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { buildProjectConnectivityIndex } from "./connectivity-index.js";
-import { findHierarchyPath } from "./hierarchy-navigation.js";
+import {
+  findHierarchyPath,
+  findHierarchyPaths,
+} from "./hierarchy-navigation.js";
 
 const dual = {
   schemaVersion: 1 as const,
@@ -65,5 +68,9 @@ describe("hierarchy navigation", () => {
     ]);
     expect(findHierarchyPath(index, "top", "top")).toEqual([]);
     expect(findHierarchyPath(index, "top", "missing")).toBeUndefined();
+    expect(findHierarchyPaths(index, "top", "child")).toEqual([
+      [{ parentDocumentId: "top", instanceId: "X1", childDocumentId: "child" }],
+      [{ parentDocumentId: "top", instanceId: "X2", childDocumentId: "child" }],
+    ]);
   });
 });

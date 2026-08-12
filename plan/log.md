@@ -5236,3 +5236,15 @@ contracts (WP-R1)`.
   `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(diagnostics): classify routing observations separately`.
+
+## 2026-08-12 - Connectivity Recovery C5d: concrete search caller paths
+
+- Target: expand reused child Cell search results into explicit canonical
+  caller paths and display the path in the search dialog.
+- Changed areas: hierarchy path enumeration/tests, project search/tests,
+  dialog/test, browser selector regression, recovery status, target plan/log.
+- Validation: 12 focused hierarchy/search/dialog tests; two focused browser
+  search flows; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(search): expose concrete hierarchy caller paths`.
