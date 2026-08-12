@@ -470,6 +470,89 @@ export function runErcChecks(
     }
   }
 
+  // A child interface can be shared by several parent instances. Preserve the
+  // per-instance mismatch rules above for compatibility, then provide one
+  // repair-oriented diagnostic rooted at the child interface with every stale
+  // caller as a related location.
+  const staleCallersByChild = new Map<
+    string,
+    {
+      child: CircuitProject["documents"][number];
+      callers: Array<{
+        parentDocumentId: string;
+        instanceId: string;
+        pinNames: ReadonlySet<string>;
+      }>;
+    }
+  >();
+  for (const parent of documents) {
+    for (const instance of [...parent.instances].sort((left, right) =>
+      left.id.localeCompare(right.id, "en"),
+    )) {
+      const childDocumentId = instance.properties["spice.childDocumentId"];
+      if (typeof childDocumentId !== "string") continue;
+      const child = project.documents.find(
+        (candidate) => candidate.id === childDocumentId,
+      );
+      const resolved = resolver.resolve(
+        instance.symbolId,
+        instance.symbolVariantId,
+      );
+      if (!child || !resolved) continue;
+      const pinNames = new Set(resolved.definition.pins.map((pin) => pin.name));
+      const childPortNames = new Set(child.ports.map((port) => port.name));
+      const compatible =
+        pinNames.size === childPortNames.size &&
+        [...pinNames].every((pinName) => childPortNames.has(pinName));
+      if (compatible) continue;
+      const group = staleCallersByChild.get(child.id) ?? {
+        child,
+        callers: [],
+      };
+      group.callers.push({
+        parentDocumentId: parent.id,
+        instanceId: instance.id,
+        pinNames,
+      });
+      staleCallersByChild.set(child.id, group);
+    }
+  }
+  for (const [childDocumentId, group] of [
+    ...staleCallersByChild.entries(),
+  ].sort(([left], [right]) => left.localeCompare(right, "en"))) {
+    const expectedNames = new Set(
+      group.callers.flatMap((caller) => [...caller.pinNames]),
+    );
+    const mismatchedPort = [...group.child.ports]
+      .filter((port) => !expectedNames.has(port.name))
+      .sort((left, right) => left.id.localeCompare(right.id, "en"))[0];
+    const primary = mismatchedPort
+      ? directObjectLocator(group.child.id, "port", mismatchedPort.id)
+      : directObjectLocator(group.child.id, "document", group.child.id);
+    diagnostics.push({
+      id: `erc:hierarchy-interface-stale:${childDocumentId}`,
+      domain: "erc",
+      code: "ERC_HIERARCHY_INTERFACE_STALE",
+      severity: "error",
+      confidence: "high",
+      gateEligible: true,
+      message: `Child document ${childDocumentId} interface does not match ${group.callers.length} caller instance${group.callers.length === 1 ? "" : "s"}`,
+      primary,
+      related: group.callers.map((caller) =>
+        directObjectLocator(
+          caller.parentDocumentId,
+          "instance",
+          caller.instanceId,
+        ),
+      ),
+      parameters: {
+        childDocumentId,
+        callerCount: group.callers.length,
+        ...(mismatchedPort ? { childPortId: mismatchedPort.id } : {}),
+      },
+    });
+  }
+
   return diagnostics.sort(
     (a, b) =>
       a.primary.documentId.localeCompare(b.primary.documentId, "en") ||

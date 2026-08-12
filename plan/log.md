@@ -5059,3 +5059,14 @@ contracts (WP-R1)`.
   clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(editor): consume resolved route geometry for hits`.
+
+## 2026-08-12 - Connectivity Recovery C8e: stale hierarchy interface ERC
+
+- Target: aggregate incompatible child-Cell interfaces into a repair-oriented
+  diagnostic with child primary and all stale callers related.
+- Changed areas: derived ERC hierarchy policy and regression tests; target plan
+  and log.
+- Validation: 14 focused ERC tests; workspace `pnpm typecheck`; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): aggregate stale hierarchy interfaces`.

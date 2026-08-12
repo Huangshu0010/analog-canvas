@@ -524,4 +524,44 @@ describe("ERC engine", () => {
       ]),
     );
   });
+
+  it("aggregates stale child interfaces around the child port and all callers", () => {
+    const project = emptyProject();
+    const parent = project.documents[0]!;
+    parent.instances = [
+      {
+        ...instance("X1"),
+        properties: { "spice.childDocumentId": "child" },
+      },
+      {
+        ...instance("X2"),
+        properties: { "spice.childDocumentId": "child" },
+      },
+    ];
+    const child = createEmptyProject("child-project", "Child", "child")
+      .documents[0]!;
+    child.ports = [
+      {
+        id: "port-a",
+        name: "A",
+        direction: "passive",
+        position: { x: 0, y: 0 },
+      },
+    ];
+    project.documents.push(child);
+
+    const stale = run(project).find(
+      (diagnostic) => diagnostic.code === "ERC_HIERARCHY_INTERFACE_STALE",
+    );
+    expect(stale?.primary).toMatchObject({
+      documentId: "child",
+      kind: "port",
+      objectId: "port-a",
+    });
+    expect(stale?.related).toEqual([
+      expect.objectContaining({ documentId: "doc", objectId: "X1" }),
+      expect.objectContaining({ documentId: "doc", objectId: "X2" }),
+    ]);
+    expect(stale?.parameters).toMatchObject({ callerCount: 2 });
+  });
 });
