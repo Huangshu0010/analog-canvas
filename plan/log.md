@@ -4740,3 +4740,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   adds no new failures. `prettier --check`; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(model): add NoConnect record with v2->v3 schema migration (WP-R7)`.
+
+## 2026-08-12 - WP-R8 ERC Engine (framework + core rules)
+
+- Target: ERC engine emitting the ADR 0015 diagnostic envelope (domain "erc"),
+  driven by the ProjectConnectivityIndex (R2) and NoConnect (R7). Framework plus
+  duplicate-instance-name, duplicate-net-name, no-connect-conflict, and
+  unconnected-pin rules. Role/hierarchy/model rules deferred.
+- Changed areas: new `packages/derived/src/diagnostics/erc.ts` and `erc.test.ts`
+  (6 tests); `packages/derived/src/index.ts` re-export; target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (109 tests, was 103); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add ERC engine emitting the unified diagnostic envelope
+  (WP-R8)`.
