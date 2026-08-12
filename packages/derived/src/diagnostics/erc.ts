@@ -3,6 +3,7 @@ import type { CircuitProject } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { ProjectConnectivityIndex } from "../connectivity-index.js";
+import { resolveMosBulkConnection } from "../mos-bulk.js";
 import { directObjectLocator, type ObjectLocator } from "../object-locator.js";
 import type { Diagnostic, DiagnosticSeverity } from "./diagnostic.js";
 
@@ -44,23 +45,6 @@ function terminalLocator(
   };
 }
 
-const SAFE_BULK_NET_NAMES = new Set([
-  "0",
-  "gnd",
-  "vss",
-  "vssa",
-  "vssd",
-  "vee",
-  "vdd",
-  "vdda",
-  "vddd",
-  "vcc",
-]);
-
-function normalizedNetName(name: string): string {
-  return name.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
-}
-
 function endpointHasOnlyInternalMembership(
   document: CircuitProject["documents"][number],
   netId: string,
@@ -74,24 +58,6 @@ function endpointHasOnlyInternalMembership(
     net.terminals.length === 1 &&
     net.terminals[0]?.instanceId === instanceId &&
     net.terminals[0]?.pinName === pinName,
-  );
-}
-
-function isSafeBulkNet(
-  document: CircuitProject["documents"][number],
-  netId: string,
-  expectedDomain: "vdd" | "ground" | undefined,
-): boolean {
-  const net = document.nets.find((candidate) => candidate.id === netId);
-  if (!net) return false;
-  const symbolDomain = powerDomainForNet(document, net);
-  if (symbolDomain === "conflict") return false;
-  if (symbolDomain === "vdd" || symbolDomain === "ground") {
-    return expectedDomain === undefined || symbolDomain === expectedDomain;
-  }
-  return (
-    net.scope === "global" ||
-    SAFE_BULK_NET_NAMES.has(normalizedNetName(net.name ?? net.id))
   );
 }
 
@@ -438,41 +404,27 @@ export function runErcChecks(
         }
 
         if (role === "bulk") {
-          const isThreeTerminalHidden = hidden.has(pin.name);
-          const expectedDomain =
-            instance.symbolId === "pmos"
-              ? "vdd"
-              : instance.symbolId === "nmos"
-                ? "ground"
-                : undefined;
-          const unsafeHiddenNet =
-            isThreeTerminalHidden &&
-            netId &&
-            !isSafeBulkNet(document, netId, expectedDomain);
+          const resolution = resolveMosBulkConnection(document, instance);
           if (
             !explicitlyNoConnect &&
-            (!netId || unsafeHiddenNet) &&
+            !netId &&
+            (!resolution || resolution.status === "unresolved") &&
             pin.presentation.visibility !== "implicit"
           ) {
             diagnostics.push({
-              id: `erc:floating-bulk:${document.id}:${instance.id}:${pin.name}`,
+              id: `erc:bulk-unresolved:${document.id}:${instance.id}:${pin.name}`,
               domain: "erc",
-              code: "ERC_FLOATING_BULK",
+              code: "ERC_BULK_UNRESOLVED",
               severity: "warning",
               confidence: "high",
               gateEligible: false,
-              message: !netId
-                ? `Bulk ${instance.id}.${pin.name} is not connected and has no NoConnect`
-                : `Hidden bulk ${instance.id}.${pin.name} is connected to non-safe net ${netId}`,
+              message: `Bulk ${instance.id}.${pin.name} has no explicit, cell-default, or product-fallback connection`,
               primary: terminalLocator(document.id, instance.id, pin.name),
-              related: netId
-                ? [directObjectLocator(document.id, "net", netId)]
-                : [],
+              related: [],
               parameters: {
                 instanceId: instance.id,
                 pinName: pin.name,
-                hidden: isThreeTerminalHidden,
-                ...(netId ? { netId } : {}),
+                hidden: hidden.has(pin.name),
               },
             });
           }

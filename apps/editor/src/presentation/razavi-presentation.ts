@@ -1,161 +1,110 @@
-import type { SchematicEdit } from "@icm/edit-engine";
-import { powerDomainForNet } from "@icm/model";
-import type { RouteEndpoint, SchematicDocument } from "@icm/model";
+import { executeTransaction, type SchematicEdit } from "@icm/edit-engine";
+import { mosBulkShouldBeVisible, resolveMosBulkConnection } from "@icm/derived";
+import { replaceProjectDocument } from "../document/editor-session";
+import type { CircuitProject, SchematicDocument } from "@icm/model";
+import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
 
 const DEFAULT_SYMBOL_VARIANTS: Readonly<Record<string, string>> = {
   nmos: "textbook-3terminal",
   pmos: "textbook-3terminal",
 };
 
-const IMPLICIT_BULK_NET_NAMES = new Set([
-  "0",
-  "gnd",
-  "vss",
-  "vdd",
-  "vssa",
-  "vdda",
-  "vgnd",
-  "vpwr",
-]);
-
-const BULK_SUPPLY_BY_SYMBOL: Readonly<Record<string, "VDD" | "0">> = {
-  pmos: "VDD",
-  nmos: "0",
-};
-
-function normalizedSupplyName(value: string | undefined): string | undefined {
-  return value?.toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
-}
-
-function endpointForNet(
-  net: SchematicDocument["nets"][number],
-): RouteEndpoint | undefined {
-  const terminal = net.terminals[0];
-  if (terminal) return { kind: "terminal", ...terminal };
-  const portId = net.ports[0];
-  return portId ? { kind: "port", portId } : undefined;
-}
-
-function endpointHasNoConnect(
-  document: SchematicDocument,
-  instanceId: string,
-  pinName: string,
-): boolean {
-  return document.noConnects.some(
-    (noConnect) =>
-      noConnect.endpoint.kind === "terminal" &&
-      noConnect.endpoint.instanceId === instanceId &&
-      noConnect.endpoint.pinName === pinName,
-  );
-}
-
-function endpointNet(
-  document: SchematicDocument,
-  instanceId: string,
-  pinName: string,
-): SchematicDocument["nets"][number] | undefined {
-  return document.nets.find((net) =>
-    net.terminals.some(
-      (terminal) =>
-        terminal.instanceId === instanceId && terminal.pinName === pinName,
-    ),
-  );
-}
-
-function matchingGlobalSupply(
-  document: SchematicDocument,
-  supplyName: "VDD" | "0",
-): SchematicDocument["nets"][number] | undefined {
-  const canonicalNames =
-    supplyName === "VDD"
-      ? new Set(["vdd", "vdda", "vddd", "vcc", "vpwr"])
-      : new Set(["0", "gnd", "vss", "vssa", "vssd", "vee", "vgnd"]);
-  return document.nets.find(
-    (net) =>
-      powerDomainForNet(document, net) ===
-        (supplyName === "VDD" ? "vdd" : "ground") ||
-      (net.scope === "global" &&
-        [net.name, net.id]
-          .map(normalizedSupplyName)
-          .some((name) => name !== undefined && canonicalNames.has(name))),
-  );
-}
-
-/**
- * Textbook MOS artwork can hide B, never erase it. New manually authored MOS
- * may join an already explicit matching global supply, but imported/source-bound
- * devices, NoConnect declarations, body-bias Nets, and missing supplies remain
- * untouched so the electrical model cannot be silently guessed.
- */
-export function razaviManualBulkConnectionEdits(
-  document: SchematicDocument,
-  instances: readonly SchematicDocument["instances"][number][],
-): SchematicEdit[] {
-  return instances.flatMap((instance) => {
-    const supplyName = BULK_SUPPLY_BY_SYMBOL[instance.symbolId];
-    if (
-      !supplyName ||
-      instance.sourceRef ||
-      instance.binding ||
-      endpointNet(document, instance.id, "B") ||
-      endpointHasNoConnect(document, instance.id, "B")
-    ) {
-      return [];
-    }
-    const supply = matchingGlobalSupply(document, supplyName);
-    const target = supply && endpointForNet(supply);
-    return target
-      ? [
-          {
-            kind: "connect_endpoints" as const,
-            from: {
-              kind: "terminal" as const,
-              instanceId: instance.id,
-              pinName: "B",
-            },
-            to: target,
-          },
-        ]
-      : [];
-  });
-}
-
-/**
- * Razavi is the sole current presentation family. Canonical MOS definitions
- * retain D/G/S/B electrically, while this variant controls the approved
- * visible three-terminal body and source arrow.
- */
 export function defaultRazaviSymbolVariantId(
   symbolId: string,
 ): string | undefined {
   return DEFAULT_SYMBOL_VARIANTS[symbolId];
 }
 
+/** Compatibility helper: explicit body-bias is information, never an error. */
 export function razaviHiddenBulkRisk(
   document: SchematicDocument,
   instanceId: string,
 ): SchematicDocument["nets"][number] | undefined {
-  const bulkNet = document.nets.find((net) =>
-    net.terminals.some(
-      (terminal) =>
-        terminal.instanceId === instanceId && terminal.pinName === "B",
-    ),
-  );
-  if (!bulkNet || powerDomainForNet(document, bulkNet) !== "none") {
-    return undefined;
-  }
+  const resolution = resolveMosBulkConnection(document, instanceId);
+  return resolution?.status === "explicit" &&
+    mosBulkShouldBeVisible(document, instanceId)
+    ? resolution.net
+    : undefined;
+}
 
-  const isImplicitSupply = [bulkNet.name, bulkNet.id]
-    .filter((name): name is string => Boolean(name))
-    .map((name) => name.toLowerCase().replaceAll(/[^a-z0-9]/gu, ""))
-    .some((name) => IMPLICIT_BULK_NET_NAMES.has(name));
-  return isImplicitSupply ? undefined : bulkNet;
+/** One Edit-Engine operation owns all manual MOS default/fallback materialization. */
+export function razaviManualBulkConnectionEdits(
+  document: SchematicDocument,
+  instances: readonly SchematicDocument["instances"][number][],
+): SchematicEdit[] {
+  const instanceIds = instances
+    .filter((instance) => {
+      const resolution = resolveMosBulkConnection(document, instance);
+      return Boolean(
+        resolution &&
+        !resolution.materialized &&
+        (resolution.status === "cell-default" ||
+          resolution.status === "product-fallback"),
+      );
+    })
+    .map((instance) => instance.id);
+  return instanceIds.length > 0
+    ? [{ kind: "reconcile_mos_bulk", instanceIds }]
+    : [];
 }
 
 /**
- * The B terminal stays in electrical/SPICE data; non-supply B connections are
- * surfaced as hidden-bulk risks instead of changing the visible artwork.
+ * Upgrade manual-authoring bulk defaults at a Project entry boundary. This is
+ * intentionally performed before the editor history/recovery graph is
+ * installed, so compatibility materialization is not presented as a human
+ * edit or stored as a spurious unsaved recovery.
  */
+export function materializeRazaviProjectBulkConnections(
+  project: CircuitProject,
+): { project: CircuitProject; instanceCount: number } {
+  let nextProject = structuredClone(project);
+  let instanceCount = 0;
+  for (const sourceDocument of [...nextProject.documents]) {
+    const edits = razaviManualBulkConnectionEdits(
+      sourceDocument,
+      sourceDocument.instances,
+    );
+    if (edits.length === 0) continue;
+    const affectedCount =
+      edits[0]?.kind === "reconcile_mos_bulk"
+        ? (edits[0].instanceIds?.length ?? sourceDocument.instances.length)
+        : 0;
+    const result = executeTransaction(
+      sourceDocument,
+      {
+        transactionId: `razavi-bulk-entry-${sourceDocument.id}`,
+        documentId: sourceDocument.id,
+        expectedRevision: sourceDocument.revision,
+        // This is a deterministic editor compatibility transform, not an
+        // Agent request. It executes before user history is installed.
+        actor: { kind: "human", id: "razavi-bulk-entry" },
+        edits,
+      },
+      {
+        symbolResolver: createProjectSymbolResolver(
+          nextProject,
+          builtInSymbols,
+        ),
+      },
+    );
+    if (!result.ok) {
+      throw new Error(
+        `Cannot materialize Razavi bulk defaults for ${sourceDocument.id}: ${result.error.message}`,
+      );
+    }
+    nextProject = replaceProjectDocument(nextProject, result.document);
+    instanceCount += affectedCount;
+  }
+  return { project: nextProject, instanceCount };
+}
+
+export function razaviBulkAnchorIsVisible(
+  document: SchematicDocument,
+  instanceId: string,
+): boolean {
+  return mosBulkShouldBeVisible(document, instanceId);
+}
+
 export function razaviMosPresentationEdits(
   document: SchematicDocument,
 ): SchematicEdit[] {

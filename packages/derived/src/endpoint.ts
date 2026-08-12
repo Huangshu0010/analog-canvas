@@ -1,6 +1,7 @@
 import { transformPoint } from "@icm/model";
 import type { Net, Point, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
+import { mosBulkShouldBeVisible } from "./mos-bulk.js";
 
 export function endpointKey(endpoint: RouteEndpoint): string {
   switch (endpoint.kind) {
@@ -42,7 +43,13 @@ export function isVisibleEndpoint(
     instance.symbolVariantId,
   );
   if (!resolved) return false;
-  if (resolved.variant?.hiddenPinNames.includes(endpoint.pinName)) return false;
+  if (resolved.variant?.hiddenPinNames.includes(endpoint.pinName)) {
+    return Boolean(
+      endpoint.pinName === "B" &&
+      resolved.variant.auxiliaryPins?.some((pin) => pin.name === "B") &&
+      mosBulkShouldBeVisible(document, instance),
+    );
+  }
   const pin = resolved.definition.pins.find(
     (candidate) => candidate.name === endpoint.pinName,
   );
@@ -75,10 +82,14 @@ export function resolveEndpointPoint(
         instance.symbolId,
         instance.symbolVariantId,
       );
-      const pin = symbol?.definition.pins.find(
+      const basePin = symbol?.definition.pins.find(
         (candidate) => candidate.name === endpoint.pinName,
       );
-      if (!pin) return null;
+      if (!basePin) return null;
+      const auxiliary = symbol?.variant?.auxiliaryPins?.find(
+        (candidate) => candidate.name === endpoint.pinName,
+      );
+      const pin = auxiliary ?? basePin;
       return transformPoint(
         pin.at,
         instance.placement.position,
@@ -99,10 +110,14 @@ export function resolveEndpointOutwardDirection(
   );
   if (!instance?.placement) return null;
   const symbol = resolver.resolve(instance.symbolId, instance.symbolVariantId);
-  const pin = symbol?.definition.pins.find(
+  const basePin = symbol?.definition.pins.find(
     (candidate) => candidate.name === endpoint.pinName,
   );
-  if (!pin) return null;
+  if (!basePin) return null;
+  const auxiliary = symbol?.variant?.auxiliaryPins?.find(
+    (candidate) => candidate.name === endpoint.pinName,
+  );
+  const pin = auxiliary ?? basePin;
   const localDirection = {
     north: { x: 0, y: -1 },
     east: { x: 1, y: 0 },

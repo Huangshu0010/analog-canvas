@@ -434,8 +434,57 @@ test("normalizes a legacy VDD Net and completes its PMOS bulk", async ({
   });
 
   await expect(page.getByTestId("status")).toContainText(
-    "Normalized 1 power-Net rule(s), reconciled 0 visible power contact(s), and added 1 Razavi bulk connection(s)",
+    "Opened legacy-contact.icproj.json",
   );
+  await page.getByTestId("hit-M4").click();
+  await openSelectionShelf(page);
+  await expect(page.getByText(/M4\.B → VDD · product-fallback/u)).toBeVisible();
+});
+
+test("draws and deletes one Razavi bulk route through the normal Wire workflow", async ({
+  page,
+}) => {
+  const project = createEmptyProject("bulk-route", "Bulk route");
+  const document = project.documents[0]!;
+  document.instances.push({
+    id: "M1",
+    symbolId: "nmos",
+    symbolVariantId: "textbook-3terminal",
+    placement: {
+      position: { x: 200, y: 160 },
+      rotation: 0,
+      mirror: "none",
+    },
+    properties: {},
+  });
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "bulk-route.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await page.getByTestId("hit-M1").click();
+  await openSelectionShelf(page);
+  await expect(page.getByText(/M1\.B → 0 · product-fallback/u)).toBeVisible();
+  await page.getByRole("button", { name: "Draw bulk connection" }).click();
+  await expect(page.getByTestId("terminal-M1-B")).toBeVisible();
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.dblclick({ position: { x: 320, y: 160 } });
+
+  const route = page.locator(
+    '[data-layer="routes"] [data-route-presentation="bulk-dashed"]',
+  );
+  await expect(route).toHaveCount(1);
+  const routeId = await onlyRouteId(page);
+  // Select away from the MOS hit box; the route intentionally starts at an
+  // internal body anchor below the instance selection surface.
+  await clickRoute(page, routeId, 0.85);
+  await page.keyboard.press("Delete");
+  await expect(route).toHaveCount(0);
+
+  await page.getByTestId("hit-M1").click();
+  await openSelectionShelf(page);
+  await expect(page.getByText(/M1\.B → 0 · product-fallback/u)).toBeVisible();
 });
 
 test("uses a flightline as direct Wire guidance", async ({ page }) => {

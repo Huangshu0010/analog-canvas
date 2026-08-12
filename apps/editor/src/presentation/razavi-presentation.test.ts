@@ -1,7 +1,10 @@
-import { createEmptyDocument } from "@icm/model";
+import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import { describe, expect, it } from "vitest";
 
-import { razaviManualBulkConnectionEdits } from "./razavi-presentation";
+import {
+  materializeRazaviProjectBulkConnections,
+  razaviManualBulkConnectionEdits,
+} from "./razavi-presentation";
 
 function manualMos(id: string, symbolId: "nmos" | "pmos") {
   return {
@@ -14,7 +17,21 @@ function manualMos(id: string, symbolId: "nmos" | "pmos") {
 }
 
 describe("Razavi hidden bulk policy", () => {
-  it("connects a new manual MOS bulk only to its matching explicit global supply", () => {
+  it("materializes entry-boundary fallback without mutating the supplied Project", () => {
+    const project = createEmptyProject("project-entry", "Entry");
+    project.documents[0]!.instances.push(manualMos("M1", "nmos"));
+
+    const prepared = materializeRazaviProjectBulkConnections(project);
+
+    expect(prepared.instanceCount).toBe(1);
+    expect(project.documents[0]!.nets).toEqual([]);
+    expect(prepared.project.documents[0]!.nets[0]).toMatchObject({
+      id: "net-global-0",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+  });
+
+  it("delegates matching-supply materialization to the Edit Engine", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(manualMos("M4", "pmos"));
     document.nets.push({
@@ -29,9 +46,8 @@ describe("Razavi hidden bulk policy", () => {
       razaviManualBulkConnectionEdits(document, document.instances),
     ).toEqual([
       {
-        kind: "connect_endpoints",
-        from: { kind: "terminal", instanceId: "M4", pinName: "B" },
-        to: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+        kind: "reconcile_mos_bulk",
+        instanceIds: ["M4"],
       },
     ]);
   });
@@ -55,14 +71,13 @@ describe("Razavi hidden bulk policy", () => {
       razaviManualBulkConnectionEdits(document, document.instances),
     ).toEqual([
       {
-        kind: "connect_endpoints",
-        from: { kind: "terminal", instanceId: "M4", pinName: "B" },
-        to: { kind: "terminal", instanceId: "VDD3", pinName: "P" },
+        kind: "reconcile_mos_bulk",
+        instanceIds: ["M4"],
       },
     ]);
   });
 
-  it("never guesses a body short for imported or supply-less MOS", () => {
+  it("never guesses imported source data but applies the product fallback manually", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(
       {
@@ -85,6 +100,6 @@ describe("Razavi hidden bulk policy", () => {
 
     expect(
       razaviManualBulkConnectionEdits(document, document.instances),
-    ).toEqual([]);
+    ).toEqual([{ kind: "reconcile_mos_bulk", instanceIds: ["MnoSupply"] }]);
   });
 });

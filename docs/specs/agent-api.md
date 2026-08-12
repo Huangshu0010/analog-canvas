@@ -90,12 +90,14 @@ target cell/subcircuit name when available, and resolved `targetDocumentId` or
   and complete `presentation`;
 - ports with direction, position, and owning `netId | null`;
 - instances with display/source name, symbol/variant, target/model description,
-  complete primitive properties and parameters, placement, bounds, and complete
-  resolved/connected pin inventory;
+  complete primitive properties and parameters, placement, bounds, complete
+  resolved/connected pin inventory, and effective MOS bulk status/Net when
+  applicable;
 - every pin's name, role/direction when resolvable, local/page position,
   visibility, and `netId | null`;
 - Nets with scope, complete terminal refs, port IDs, route IDs, and Junction IDs;
-- complete Route endpoints, waypoints, segment modes, and derived polyline;
+- complete Route endpoints, waypoints, segment modes, optional presentation
+  (`wire`/`bulk-dashed`), and derived polyline;
 - Junctions, annotations, layout groups, and constraints with all persisted
   fields and members;
 - drafting objects with canonical RichText AST, resolved anchor, bounds,
@@ -170,6 +172,11 @@ it never returns or accepts a whole writable Document.
 Capability edit kinds are the shared Edit Engine schemas. Phase 9 adds generic
 symbol/port edits only through that shared boundary; GUI and Agent must validate
 identically.
+
+MOS bulk authoring uses the same typed boundary: `set_mos_bulk_defaults`
+configures Cell-level stable Net IDs, `reconcile_mos_bulk` materializes the
+effective default/fallback, and an explicit dashed body connection is still a
+normal Route plus terminal/Net edits. There is no Agent-only bulk protocol.
 
 `patch_instance_properties` is the single typed property edit. It accepts an
 instance ID plus a primitive `set` record and/or an `unset` key list, rejects an

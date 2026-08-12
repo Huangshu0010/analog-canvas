@@ -24,6 +24,41 @@ import { razaviTextbookProfile } from "./style-profile.js";
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("textbook monochrome SVG renderer", () => {
+  it("renders a bulk Route with the canonical wire geometry and Razavi dash", () => {
+    const document = createEmptyProject("bulk-route", "Bulk route")
+      .documents[0]!;
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: { position: { x: 40, y: 40 }, rotation: 0, mirror: "none" },
+      properties: {},
+    });
+    document.ports.push({
+      id: "VB",
+      name: "VB",
+      direction: "input",
+      position: { x: 100, y: 40 },
+    });
+    document.nets.push({
+      id: "net-vb",
+      scope: "local",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+      ports: ["VB"],
+    });
+    document.routes.push({
+      id: "route-bulk",
+      netId: "net-vb",
+      from: { kind: "terminal", instanceId: "M1", pinName: "B" },
+      to: { kind: "port", portId: "VB" },
+      waypoints: [],
+      segmentModes: ["manual"],
+      presentation: "bulk-dashed",
+    });
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('data-route-presentation="bulk-dashed"');
+    expect(svg).toContain('stroke-dasharray="3 3"');
+  });
   it("preserves a manually formatted multi-character semantic subscript", () => {
     const document = createEmptyProject("project-rich-label", "Rich label")
       .documents[0]!;

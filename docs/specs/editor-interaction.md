@@ -322,6 +322,25 @@ attached `instance-label`: an empty attached label deliberately suppresses the
 renderer-owned default reference, rather than introducing a hidden editor-only
 flag.
 
+Canonical NMOS/PMOS always retain D/G/S/B electrically and use the Razavi
+three-terminal variant by default. A new manual MOS resolves B in this order:
+explicit membership, the active Cell's stable `mosBulkDefaults` Net ID, then
+NMOS -> `0` / PMOS -> `VDD`. The Edit Engine materializes that result in
+`Net.terminals`; imported/source-bound MOS instances are never repaired by the
+fallback. Selection shows the effective B Net and origin. `Draw bulk
+connection` exposes the internal B anchor and starts the normal Wire workflow,
+rendered as a Razavi dashed route. Starting an override atomically clears the
+materialized default first, so the body-bias target cannot merge with VSS/VDD.
+Deleting that dashed route disconnects explicit B and reapplies the default in
+one transaction. `set_mos_bulk_defaults` updates the Cell-level stable Net IDs;
+`reconcile_mos_bulk` is the only operation that materializes those defaults or
+the product fallback onto B.
+
+Project creation/open/import prepares eligible manual MOS defaults before the
+editor history and recovery scheduler are installed. This compatibility
+materialization is therefore not exposed as a synthetic user edit or an
+unsaved-recovery candidate. Imported/source-bound MOS instances remain exempt.
+
 `C` captures selected instances and only Nets, Routes, Junctions, and attached
 annotations wholly internal to that selection. It shows a non-interactive,
 mouse-following formal ghost; its next canvas click creates fresh stable IDs and

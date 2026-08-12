@@ -250,7 +250,7 @@ describe("ERC engine", () => {
     );
   });
 
-  it("reports unconnected and hidden non-safe bulk without hiding electrical intent", () => {
+  it("reports only unresolved imported bulk and accepts explicit body-bias", () => {
     const project = emptyProject();
     const document = project.documents[0]!;
     document.instances = [roleInstance("three-terminal")];
@@ -268,9 +268,9 @@ describe("ERC engine", () => {
       },
     ];
 
-    expect(roleRun(project).map((diagnostic) => diagnostic.code)).toEqual([
-      "ERC_FLOATING_BULK",
-    ]);
+    expect(roleRun(project)).toContainEqual(
+      expect.objectContaining({ code: "ERC_BULK_UNRESOLVED" }),
+    );
 
     document.nets.push({
       id: "net-body-bias",
@@ -280,21 +280,21 @@ describe("ERC engine", () => {
       ports: [],
     });
     document.revision += 1;
-    const hiddenBulk = roleRun(project).find(
-      (diagnostic) => diagnostic.code === "ERC_FLOATING_BULK",
-    );
-    expect(hiddenBulk).toMatchObject({
-      primary: { objectId: "M1:B" },
-      parameters: { hidden: true, netId: "net-body-bias" },
-    });
+    expect(roleRun(project)).toEqual([]);
 
-    document.nets[2] = {
-      ...document.nets[2]!,
-      id: "net-vss",
-      name: "VSS",
+    document.nets = document.nets.filter((net) => net.id !== "net-body-bias");
+    document.instances[0] = {
+      ...document.instances[0]!,
+      sourceRef: {
+        fileId: "source.sp",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
     };
     document.revision += 1;
-    expect(roleRun(project)).toEqual([]);
+    expect(roleRun(project)).toContainEqual(
+      expect.objectContaining({ code: "ERC_BULK_UNRESOLVED" }),
+    );
   });
 
   it("reports a Net that shorts reviewed VDD and ground symbols", () => {

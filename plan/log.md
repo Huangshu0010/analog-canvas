@@ -1,5 +1,20 @@
 # Maintenance Log
 
+## 2026-08-12 - Razavi MOS bulk semantics
+
+- Target: preserve canonical D/G/S/B while making three-terminal Razavi MOS
+  authoring electrically complete through Cell defaults, product fallback, and
+  an explicit dashed body-route workflow.
+- Changed areas: model/Derived/Edit Engine bulk contract; Razavi auxiliary B
+  anchor and generated catalog; route rendering/deletion/clipboard; editor
+  Selection and entry-boundary preparation; ERC; Agent Snapshot/API artifacts;
+  normative product and interaction docs.
+- Validation: 606 unit tests; 86 browser E2E tests; workspace typecheck,
+  formatting, references, MOS/catalog/API generated-artifact checks, production
+  build, and `git diff --check` all passed.
+- Commit status: ready to commit on `codex/razavi-bulk-semantics` as
+  `feat: unify Razavi MOS bulk connectivity`.
+
 ## 2026-08-12 - Net deletion selection closure
 
 - Target: prevent a removed Net Label's stale selection ID from rolling back

@@ -15,12 +15,23 @@ const manifestPath = resolve(referenceRoot, "manifest.json");
 const geometryPath = resolve(referenceRoot, "mos-geometry.json");
 const check = process.argv.includes("--check");
 
-const PIN_CONTRACT = [
-  ["D", "drain", "north", { x: 10, y: -20 }],
-  ["G", "gate", "west", { x: -20, y: 0 }],
-  ["S", "source", "south", { x: 10, y: 20 }],
-  ["B", "bulk", "east", { x: 20, y: 0 }],
-];
+function pinContract(polarity) {
+  // PMOS keeps the approved schematic-facing D/S semantics even though the
+  // sole screenshot raster names its upper/lower pixel anchors oppositely.
+  return polarity === "pmos"
+    ? [
+        ["D", "drain", "south", { x: 10, y: 20 }],
+        ["G", "gate", "west", { x: -20, y: 0 }],
+        ["S", "source", "north", { x: 10, y: -20 }],
+        ["B", "bulk", "east", { x: 20, y: 0 }],
+      ]
+    : [
+        ["D", "drain", "north", { x: 10, y: -20 }],
+        ["G", "gate", "west", { x: -20, y: 0 }],
+        ["S", "source", "south", { x: 10, y: 20 }],
+        ["B", "bulk", "east", { x: 20, y: 0 }],
+      ];
+}
 const normal = { strokeRole: "normal", lineCap: "butt", lineJoin: "miter" };
 
 function fail(message) {
@@ -144,10 +155,17 @@ function sourceArrowPrimitives(measurement, polarity) {
   ];
 }
 
-function pins(measurement, threeTerminal) {
-  return PIN_CONTRACT.filter(([name]) => !threeTerminal || name !== "B").map(
-    ([name, role, direction, expected]) => {
-      const actual = logicalPoint(measurement, measurement.pinsPx[name]);
+function pins(measurement, polarity, threeTerminal) {
+  return pinContract(polarity)
+    .filter(([name]) => !threeTerminal || name !== "B")
+    .map(([name, role, direction, expected]) => {
+      const rasterName =
+        polarity === "pmos" && name === "D"
+          ? "S"
+          : polarity === "pmos" && name === "S"
+            ? "D"
+            : name;
+      const actual = logicalPoint(measurement, measurement.pinsPx[rasterName]);
       if (actual.x !== expected.x || actual.y !== expected.y) {
         fail(
           `${name} pixel anchor maps to ${actual.x},${actual.y}; expected ${expected.x},${expected.y}`,
@@ -160,8 +178,7 @@ function pins(measurement, threeTerminal) {
         direction,
         presentation: { visibility: "visible", leadLength: 10 },
       };
-    },
-  );
+    });
 }
 
 function basePrimitives(measurement, polarity, threeTerminal) {
@@ -237,7 +254,7 @@ function symbol(polarity, measurement, threeTerminal, bodyMeasurement) {
     id,
     name: `${polarity === "nmos" ? "NMOS" : "PMOS"}${threeTerminal ? " (3-terminal)" : ""}`,
     viewBox: { x: 0, y: 0, width: 1, height: 1 },
-    pins: pins(measurement, threeTerminal),
+    pins: pins(measurement, polarity, threeTerminal),
     primitives,
     variants: threeTerminal
       ? []
@@ -245,6 +262,11 @@ function symbol(polarity, measurement, threeTerminal, bodyMeasurement) {
           {
             id: "textbook-3terminal",
             hiddenPinNames: ["B"],
+            // Context-gated Razavi body connection. This names the canonical
+            // electrical B pin without modifying calibrated symbol artwork.
+            auxiliaryPins: [
+              { name: "B", at: { x: -4, y: 0 }, direction: "east" },
+            ],
             hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
             additionalPrimitives: sourceArrowPrimitives(measurement, polarity),
           },

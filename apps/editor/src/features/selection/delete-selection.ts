@@ -91,6 +91,7 @@ export function proposeConnectedInstanceDeletion(
         to,
         waypoints: route.waypoints.map((point) => ({ ...point })),
         segmentModes: [...route.segmentModes],
+        ...(route.presentation ? { presentation: route.presentation } : {}),
       },
     ];
   });
