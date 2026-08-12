@@ -259,3 +259,93 @@ test("commits a pending component from a semantic canvas click", async ({
   await expect(page.getByTestId("hit-R1")).toBeVisible();
   await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
 });
+
+test("quick-places a starter, records it as recent, and restores Library state", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const panel = page.getByTestId("shapes-library-panel");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  await expect(panel).toHaveAttribute("data-open", "true");
+  await page.getByTestId("shapes-chip-resistor").click();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Canvas is not measurable");
+  await page.mouse.move(box.x + 280, box.y + 220);
+  await expect(page.getByTestId("component-placement-preview")).toBeVisible();
+  await canvas.click({ position: { x: 280, y: 220 } });
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("shapes-recent-resistor")).toBeVisible();
+
+  await page.keyboard.press("q");
+  await expect(page.getByLabel("Component value")).toHaveValue("");
+  await page.getByTestId("library-toggle").click();
+  await expect(panel).toHaveAttribute("data-open", "false");
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem("icm.library-panel-open.v1")),
+    )
+    .toBe("false");
+
+  await page.reload();
+  await expect(page.getByTestId("shapes-library-panel")).toHaveAttribute(
+    "data-open",
+    "false",
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem("icm.recent-components.v1")),
+    )
+    .toContain("resistor");
+});
+
+test("keeps a usable canvas while toggling Library at the narrow breakpoint", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 720, height: 720 });
+  await page.goto("/");
+
+  const canvas = page.getByTestId("schematic-canvas");
+  const openWidth = (await canvas.boundingBox())?.width ?? 0;
+  expect(openWidth).toBeGreaterThan(300);
+
+  await page.getByTestId("library-toggle").click();
+  await expect(page.getByTestId("shapes-library-panel")).toHaveAttribute(
+    "data-open",
+    "false",
+  );
+  const closedWidth = (await canvas.boundingBox())?.width ?? 0;
+  expect(closedWidth).toBeGreaterThan(openWidth);
+  expect(
+    await page.evaluate(() => ({
+      horizontal:
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
+      vertical:
+        document.documentElement.scrollHeight >
+        document.documentElement.clientHeight,
+    })),
+  ).toEqual({ horizontal: false, vertical: false });
+});
+
+test("double-clicking a placed device opens Properties for editing", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByLabel("Component search").fill("resistor");
+  await dialog.getByLabel("Component value").fill("4.7k");
+  await dialog.getByRole("button", { name: "Apply" }).click();
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 280, y: 220 } });
+
+  await page.getByTestId("hit-R1").dblclick();
+  await expect(page.getByTestId("selection-shelf")).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  const propertyValue = page.getByLabel("Component value");
+  await expect(propertyValue).toHaveValue("4.7k");
+  await expect(propertyValue).toBeFocused();
+});

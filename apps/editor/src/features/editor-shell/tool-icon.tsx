@@ -10,7 +10,8 @@ export type ToolIconName =
   | "zoom-in"
   | "zoom-out"
   | "fit"
-  | "inspect";
+  | "inspect"
+  | "library";
 
 export function ToolIcon({ name }: { name: ToolIconName }) {
   const common = {
@@ -84,6 +85,14 @@ export function ToolIcon({ name }: { name: ToolIconName }) {
         <>
           <path d="M4 3h12v14H4z" {...common} />
           <path d="M7 7h6M7 10h6M7 13h4" {...common} />
+        </>
+      ) : null}
+      {name === "library" ? (
+        <>
+          <path
+            d="M3.5 4.5h5v11h-5zM11.5 4.5h5v4h-5zM11.5 11.5h5v4h-5z"
+            {...common}
+          />
         </>
       ) : null}
     </svg>

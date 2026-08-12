@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { STARTER_SYMBOL_IDS, quickPlaceRequest } from "./shapes-panel";
 
 describe("shapes quick-place", () => {
-  it("exposes starter chips with placement defaults", () => {
+  it("exposes starter chips without persisting parameter placeholders", () => {
     expect(STARTER_SYMBOL_IDS).toContain("resistor");
     expect(STARTER_SYMBOL_IDS).toContain("nmos");
 
@@ -15,7 +15,7 @@ describe("shapes quick-place", () => {
       showReference: true,
       referenceText: null,
     });
-    expect(request?.properties.value).toBe("10k");
+    expect(request?.properties.value).toBe("");
   });
 
   it("returns null for unknown symbols", () => {

@@ -1,14 +1,9 @@
-import {
-  SymbolArtwork,
-  type ComponentInsertRequest,
-} from "../component-insert/insert-component-dialog";
-import {
-  componentParameters,
-  initialComponentParameterValues,
-} from "../component-insert/component-parameters";
+import type { ComponentInsertRequest } from "../component-insert/component-insert-request";
+import { SymbolArtwork } from "../component-insert/symbol-artwork";
+import { initialComponentParameterValues } from "../component-insert/component-parameters";
 import { findPaletteSymbol } from "../component-insert/symbol-catalog";
 
-/** Starter chips always offered in the left shapes column . */
+/** Starter chips always offered in the left shapes panel. */
 export const STARTER_SYMBOL_IDS = [
   "resistor",
   "capacitor",
@@ -26,20 +21,13 @@ export function quickPlaceRequest(
 ): ComponentInsertRequest | null {
   const symbol = findPaletteSymbol(styleProfileId, symbolId);
   if (!symbol) return null;
-  const parameters = componentParameters(symbolId);
-  const properties =
-    parameters.length === 0
-      ? initialComponentParameterValues(symbolId)
-      : Object.fromEntries(
-          parameters.map((parameter) => [
-            parameter.key,
-            parameter.placeholder || "",
-          ]),
-        );
   return {
     symbolId: symbol.id,
     symbolName: symbol.name,
-    properties,
+    // Quick-place follows the full Insert dialog's existing blank-value
+    // semantics. Placeholders remain hints rather than silently persisted
+    // electrical parameters.
+    properties: initialComponentParameterValues(symbolId),
     initialRotation: 0,
     showReference: true,
     referenceText: null,

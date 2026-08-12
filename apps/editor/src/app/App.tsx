@@ -101,6 +101,7 @@ import {
   effectiveComponentParameterValue,
 } from "../features/component-insert/component-parameters";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
+import { ShapesPanel } from "../features/editor-shell/shapes-panel";
 import { useDocumentController } from "../document/document-controller";
 import {
   applyDraftingHandle,
@@ -200,6 +201,7 @@ import type { SnapGuideLine, SnapResult } from "../snap/engine";
 
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 const RECENT_COMPONENTS_STORAGE_KEY = "icm.recent-components.v1";
+const LIBRARY_PANEL_STORAGE_KEY = "icm.library-panel-open.v1";
 const DRAG_START_DISTANCE_PX = 4;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
@@ -432,6 +434,14 @@ function isTypingTarget(target: EventTarget | null): boolean {
 export function App({ project: initialProject, visitStats }: AppProps) {
   const [status, setStatus] = useState("Ready");
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
+  const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return window.localStorage.getItem(LIBRARY_PANEL_STORAGE_KEY) !== "false";
+    } catch {
+      return true;
+    }
+  });
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [componentPreviewPoint, setComponentPreviewPoint] =
     useState<Point | null>(null);
@@ -1091,6 +1101,29 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       } else {
         selectionShelfRef.current?.focus();
       }
+    });
+  }
+
+  function inspectInstance(instanceId: string): void {
+    setSelectedEndpoint(null);
+    updateInstanceSelection(instanceId, false);
+    setImportReviewOpen(false);
+    setSelectionOpen(true);
+    setStatus(`Properties for ${instanceId}`);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => instanceValueInputRef.current?.focus());
+    });
+  }
+
+  function toggleLibraryPanel(): void {
+    setLibraryPanelOpen((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem(LIBRARY_PANEL_STORAGE_KEY, String(next));
+      } catch {
+        // The Library remains usable when storage is unavailable.
+      }
+      return next;
     });
   }
 
@@ -5164,7 +5197,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   return (
-    <main className="app-shell">
+    <main className={libraryPanelOpen ? "app-shell library-open" : "app-shell"}>
       <header className="app-header">
         <div>
           <h1>Interactive Circuit Maker</h1>
@@ -5186,6 +5219,22 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             }
           }}
         >
+          <button
+            type="button"
+            aria-controls="shapes-library-panel"
+            aria-expanded={libraryPanelOpen}
+            aria-pressed={libraryPanelOpen}
+            data-testid="library-toggle"
+            title={
+              libraryPanelOpen
+                ? "Hide component library"
+                : "Show component library"
+            }
+            onClick={toggleLibraryPanel}
+          >
+            <ToolIcon name="library" />
+            Library
+          </button>
           {hasImportedHierarchy ? (
             <div
               className="document-nav"
@@ -5514,6 +5563,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         recentSymbolIds={recentSymbolIds}
         onApply={beginInsertedComponentPlacement}
         onCancel={cancelComponentInsert}
+      />
+      <ShapesPanel
+        styleProfileId={document.presentation.styleProfileId}
+        recentSymbolIds={recentSymbolIds}
+        open={libraryPanelOpen}
+        onOpenInsert={openInsertComponentDialog}
+        onQuickPlace={beginInsertedComponentPlacement}
       />
       <aside
         className={selectionOpen ? "selection-dock open" : "selection-dock"}
@@ -6777,14 +6833,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                         event.shiftKey || event.ctrlKey,
                       );
                     }}
-                    onDoubleClick={
-                      childDocumentId
-                        ? (event) => {
-                            event.stopPropagation();
-                            enterHierarchy(instance.id);
-                          }
-                        : undefined
-                    }
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      if (childDocumentId) {
+                        enterHierarchy(instance.id);
+                        return;
+                      }
+                      inspectInstance(instance.id);
+                    }}
                     onPointerDown={(event) => beginMove(event, instance.id)}
                     pointerEvents={tool === "wire" ? "none" : undefined}
                   />

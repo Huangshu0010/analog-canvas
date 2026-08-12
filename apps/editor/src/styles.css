@@ -147,6 +147,201 @@ body {
   overflow: hidden;
 }
 
+.app-shell.library-open {
+  grid-template-columns: 15.5rem minmax(0, 1fr);
+}
+
+.shapes-panel {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--icm-border);
+  background: var(--icm-surface);
+}
+
+.shapes-panel.collapsed {
+  display: none;
+}
+
+.shapes-panel-header {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--icm-border);
+}
+
+.shapes-panel-title {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.35rem;
+  border: 0;
+  box-shadow: none;
+  text-align: left;
+}
+
+.shapes-kicker {
+  color: var(--icm-text-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.shapes-panel-heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.shapes-panel-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  padding: 0.75rem;
+  overflow: auto;
+}
+
+.shapes-fold {
+  flex: 0 0 auto;
+  overflow: clip;
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-md);
+  background: var(--icm-surface);
+}
+
+.shapes-fold-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  padding: 0 0.6rem;
+  color: var(--icm-text);
+  background: var(--icm-surface-muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.shapes-fold-summary::-webkit-details-marker {
+  display: none;
+}
+
+.shapes-fold-summary::before {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid currentColor;
+  content: "";
+  opacity: 0.5;
+  transition: transform 120ms ease;
+}
+
+.shapes-fold[open] > .shapes-fold-summary::before {
+  transform: rotate(90deg);
+}
+
+.shapes-fold-count {
+  min-width: 1.25rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--icm-text-muted);
+  background: var(--icm-surface-hover);
+  font-size: 0.62rem;
+  text-align: center;
+}
+
+.shapes-fold-body {
+  padding: 0.5rem;
+  border-top: 1px solid var(--icm-border);
+}
+
+.shapes-fold:not([open]) > .shapes-fold-body {
+  display: none;
+}
+
+.shapes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.shapes-chip {
+  display: grid;
+  min-width: 0;
+  min-height: 6.25rem;
+  align-content: center;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.4rem;
+  border-color: var(--icm-border);
+  background: var(--icm-surface-muted);
+  box-shadow: none;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.shapes-chip-art {
+  width: 4rem;
+  height: 3rem;
+  overflow: visible;
+}
+
+.shapes-chip span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shapes-hint {
+  margin: 0;
+  color: var(--icm-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.shapes-panel-footer {
+  padding: 0.65rem 0.75rem 0.75rem;
+  border-top: 1px solid var(--icm-border);
+}
+
+.shapes-insert {
+  display: flex;
+  width: 100%;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #fff;
+  border-color: var(--icm-accent);
+  background: var(--icm-accent);
+  font-weight: 650;
+}
+
+.shapes-insert:hover:not(:disabled) {
+  border-color: var(--icm-accent);
+  background: var(--icm-accent);
+  filter: brightness(0.96);
+}
+
+.shapes-insert kbd {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid rgb(255 255 255 / 38%);
+  border-radius: 0.25rem;
+  background: rgb(255 255 255 / 14%);
+  font: inherit;
+  font-size: 0.65rem;
+}
+
 .app-header {
   position: relative;
   z-index: 20;
@@ -816,6 +1011,10 @@ body {
     var(--icm-chrome-bg);
 }
 
+.app-shell.library-open .canvas-panel {
+  grid-column: 2;
+}
+
 .schematic-canvas {
   display: block;
   width: 100%;
@@ -943,7 +1142,8 @@ body {
 
 .guide-hit {
   fill: none;
-  stroke: transparent;
+  /* A near-transparent stroke remains targetable across SVG engines. */
+  stroke: rgb(0 0 0 / 0.4%);
   stroke-width: 14;
   cursor: move;
   pointer-events: stroke;
@@ -1185,7 +1385,8 @@ body {
   stroke-width: 1;
   stroke-dasharray: 6 4;
   cursor: move;
-  pointer-events: stroke;
+  /* The wider `.guide-hit` overlay owns pointer interaction. */
+  pointer-events: none;
   vector-effect: non-scaling-stroke;
 }
 
@@ -1836,6 +2037,10 @@ body {
 }
 
 @media (max-width: 860px) {
+  .app-shell.library-open {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+
   .app-header {
     display: flex;
     align-items: flex-start;
