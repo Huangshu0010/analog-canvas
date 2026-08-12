@@ -5652,3 +5652,17 @@ contracts (WP-R1)`.
   Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `feat(editor): unify human/Agent transaction dispatch (WP-WA2)`.
+
+## 2026-08-12 - WP-WA3 in-browser Agent host (no network)
+
+- Target: run the full Agent Circuit feature against the live controller in one
+  process; service dispatches `transact` through the host, not a private commit.
+- Changed areas: `AgentCircuitHostServiceOptions` + host-mode dispatch in
+  `service.ts`; new `apps/editor/src/agent/browser-agent-host.ts` + integration
+  tests; editor depends on `@icm/agent-adapter` (lockfile re-resolved).
+- Validation: 6 host-mode integration tests (4 ops, undo parity, render-hash
+  equality, stale revision, unknown document, project replacement); 29 adapter
+  store-mode tests preserved; workspace `typecheck` clean; Prettier; `git diff
+  --check` clean.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(agent): in-browser Agent host without network (WP-WA3)`.

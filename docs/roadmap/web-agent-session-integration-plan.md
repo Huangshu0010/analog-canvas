@@ -346,6 +346,10 @@ human/Agent write path; `AgentOperationHost` contract frozen in
 
 ### WP-WA3 — In-browser Agent host without network
 
+Status: `complete` — `BrowserAgentHost` + host-mode service run all four
+operations against the live controller in one process; see
+`apps/editor/src/agent/browser-agent-host.ts`.
+
 - Goal: Instantiate the existing Snapshot/transact/render service against live
   browser state using an in-memory authenticated test channel.
 - Main modules: `apps/editor/src/agent`, editor integration boundary.

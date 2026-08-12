@@ -16,6 +16,7 @@ import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { base64EncodeUtf8, utf8ByteLength } from "./platform.js";
+import type { AgentOperationHost } from "./host.js";
 import {
   AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
@@ -109,6 +110,20 @@ export interface AgentCircuitServiceOptions {
   agentId: string;
   store: AgentDocumentStore;
   resolver: SymbolResolver;
+  permissions: AgentPermissions;
+  limits?: Partial<AgentLimits>;
+}
+
+/**
+ * Editor/browser host mode: the service reads the live Project/resolver and
+ * dispatches `transact` through the host's unified controller/history path
+ * (ADR 0016 / WP-WA2) instead of invoking `executeTransaction` + a private
+ * commit. Use this in the browser; use {@link AgentCircuitServiceOptions} for
+ * the in-process/loopback host.
+ */
+export interface AgentCircuitHostServiceOptions {
+  agentId: string;
+  host: AgentOperationHost;
   permissions: AgentPermissions;
   limits?: Partial<AgentLimits>;
 }
@@ -541,12 +556,19 @@ function renderArtifact(
 }
 
 export function createAgentCircuitService(
-  options: AgentCircuitServiceOptions,
+  options: AgentCircuitServiceOptions | AgentCircuitHostServiceOptions,
 ): AgentCircuitService {
   const limits = { ...DEFAULT_AGENT_LIMITS, ...options.limits };
   const history: AgentDiff[] = [];
   const response = (input: unknown): AgentCircuitResponse =>
     AgentCircuitResponseSchema.parse(input);
+  const useHost = "host" in options;
+  const host = useHost
+    ? (options as AgentCircuitHostServiceOptions).host
+    : null;
+  const storeOptions = (
+    useHost ? null : options
+  ) as AgentCircuitServiceOptions | null;
 
   return {
     limits,
@@ -615,13 +637,19 @@ export function createAgentCircuitService(
         });
       }
 
-      const document = options.store.getDocument(request.documentId);
-      if (request.documentId !== document.id) {
+      const resolver = host ? host.getResolver() : storeOptions!.resolver;
+      const project = host
+        ? host.getProject?.()
+        : storeOptions!.store.getProject?.();
+      const document = host
+        ? host.getDocument(request.documentId)
+        : storeOptions!.store.getDocument(request.documentId);
+      if (!document || request.documentId !== document.id) {
         return fail(
           request.operation,
           "DOCUMENT_NOT_FOUND",
           `The service is not bound to Document ${request.documentId}`,
-          document.revision,
+          document?.revision,
         );
       }
 
@@ -644,11 +672,9 @@ export function createAgentCircuitService(
           );
         }
         const snapshot = buildAgentSessionSnapshot({
-          ...(options.store.getProject
-            ? { project: options.store.getProject() }
-            : {}),
+          ...(project ? { project } : {}),
           document,
-          resolver: options.resolver,
+          resolver,
           includeSourceSpans,
           includeEditorGuides: request.includeEditorGuides === true,
         });
@@ -689,17 +715,8 @@ export function createAgentCircuitService(
             document.revision,
           );
         }
-        const all = describeObjects(
-          document,
-          options.resolver,
-          includeSourceSpans,
-        );
-        const selected = selectQueryIds(
-          request,
-          document,
-          options.resolver,
-          history,
-        );
+        const all = describeObjects(document, resolver, includeSourceSpans);
+        const selected = selectQueryIds(request, document, resolver, history);
         const requested = all.filter((item) => selected.ids.has(item.id));
         const requestedLimit = Math.min(
           request.limit ?? limits.maxQueryObjects,
@@ -722,7 +739,7 @@ export function createAgentCircuitService(
           (id) => !all.some((item) => item.id === id),
         );
         const diagnostics = [
-          ...visualDiagnostics(document, options.resolver),
+          ...visualDiagnostics(document, resolver),
           ...missingIds.map((id) => ({
             code: "AGENT_QUERY_OBJECT_NOT_FOUND",
             severity: "info" as const,
@@ -792,18 +809,31 @@ export function createAgentCircuitService(
             );
           }
         }
-        const result = executeTransaction(
-          document,
-          {
-            transactionId: request.transactionId,
-            documentId: request.documentId,
-            expectedRevision: request.expectedRevision,
-            actor: { kind: "agent", id: options.agentId },
-            ...(request.dryRun === undefined ? {} : { dryRun: request.dryRun }),
-            edits: request.edits,
-          },
-          { symbolResolver: options.resolver },
-        );
+        const result = host
+          ? host.dispatchTransaction({
+              transactionId: request.transactionId,
+              documentId: request.documentId,
+              expectedRevision: request.expectedRevision,
+              actor: { kind: "agent", id: options.agentId },
+              ...(request.dryRun === undefined
+                ? {}
+                : { dryRun: request.dryRun }),
+              edits: request.edits,
+            })
+          : executeTransaction(
+              document,
+              {
+                transactionId: request.transactionId,
+                documentId: request.documentId,
+                expectedRevision: request.expectedRevision,
+                actor: { kind: "agent", id: options.agentId },
+                ...(request.dryRun === undefined
+                  ? {}
+                  : { dryRun: request.dryRun }),
+                edits: request.edits,
+              },
+              { symbolResolver: resolver },
+            );
         if (!result.ok) {
           return fail(
             "transact",
@@ -824,7 +854,11 @@ export function createAgentCircuitService(
           );
         }
         if (result.applied) {
-          options.store.commitDocument(result.document);
+          // The browser host commits through the controller/history dispatch;
+          // only the in-process/loopback store commits independently here.
+          if (!useHost) {
+            storeOptions!.store.commitDocument(result.document);
+          }
           history.push({
             ...result.diff,
             editKinds: [...result.diff.editKinds],
@@ -838,7 +872,7 @@ export function createAgentCircuitService(
         // fresh Snapshot. dryRun reports the proposed geometry the same way.
         const resolvedRoutes = collectResolvedRoutes(
           result.document,
-          options.resolver,
+          resolver,
           result.diff.changedObjectIds,
         );
         return response({
@@ -864,7 +898,7 @@ export function createAgentCircuitService(
         );
       }
       try {
-        const rendered = renderArtifact(request, document, options.resolver);
+        const rendered = renderArtifact(request, document, resolver);
         const byteLength = utf8ByteLength(rendered.svg);
         if (byteLength > limits.maxRenderBytes) {
           return fail(
