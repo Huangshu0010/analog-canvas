@@ -4663,3 +4663,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): add ProjectConnectivityIndex with flightline normalization
   (WP-R2)`.
+
+## 2026-08-12 - WP-R3 Additive Resolved Route Geometry
+
+- Target: implement the unified `ResolvedRouteGeometry` (ADR 0014) additively,
+  with typed segments/vertices, bounds, hit segments, and profile-independent
+  endpoint joins (raw direction ingredients for the renderer's terminal and
+  route-anchor miter bridges). No production consumer switch.
+- Changed areas: new `packages/derived/src/resolved-route-geometry.ts` and
+  `resolved-route-geometry.test.ts` (7 tests); `packages/derived/src/index.ts`
+  re-export; target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (92 tests, was 85); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add ResolvedRouteGeometry with endpoint join ingredients
+  (WP-R3)`.
