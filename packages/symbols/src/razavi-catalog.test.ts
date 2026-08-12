@@ -513,16 +513,16 @@ describe("Razavi symbol catalog", () => {
     };
     const npnArrow = arrowPoints(npn);
     const pnpArrow = arrowPoints(pnp);
-    const squaredDistancesFromTip = (
-      points: typeof npnArrow,
-    ) =>
+    const squaredDistancesFromTip = (points: typeof npnArrow) =>
       points
         .slice(0, -1)
         .map((point) => {
           const tip = points.at(-1)!;
-          return Math.round(
-            ((point.x - tip.x) ** 2 + (point.y - tip.y) ** 2) * 1_000_000,
-          ) / 1_000_000;
+          return (
+            Math.round(
+              ((point.x - tip.x) ** 2 + (point.y - tip.y) ** 2) * 1_000_000,
+            ) / 1_000_000
+          );
         })
         .sort((left, right) => left - right);
     expect(squaredDistancesFromTip(pnpArrow)).toEqual(
@@ -611,7 +611,12 @@ describe("Razavi symbol catalog", () => {
         primitive.to.x === 6.405579 &&
         primitive.to.y === -12.806695,
     );
-    if (!idealPivot || idealPivot.kind !== "circle" || !idealBlade || idealBlade.kind !== "line") {
+    if (
+      !idealPivot ||
+      idealPivot.kind !== "circle" ||
+      !idealBlade ||
+      idealBlade.kind !== "line"
+    ) {
       throw new Error("missing ideal-switch pivot or blade");
     }
     expect(

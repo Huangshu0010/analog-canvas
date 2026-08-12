@@ -11,6 +11,10 @@ const BUNDLED_FONT_PACKAGE = fileURLToPath(
 );
 const BUNDLED_FONT_DIRECTORY = resolve(dirname(BUNDLED_FONT_PACKAGE), "ttf");
 const BUNDLED_FONTS = [
+  "DejaVuSans.ttf",
+  "DejaVuSans-Bold.ttf",
+  "DejaVuSans-Oblique.ttf",
+  "DejaVuSans-BoldOblique.ttf",
   "DejaVuSerif.ttf",
   "DejaVuSerif-Bold.ttf",
   "DejaVuSerif-Italic.ttf",
@@ -27,9 +31,12 @@ function resvg(svg: string, fitTo: { mode: "zoom" | "width"; value: number }) {
   return new Resvg(svg, {
     fitTo,
     font: {
-      loadSystemFonts: true,
+      // Formal export goldens must not depend on whichever fonts happen to be
+      // installed on the developer machine or GitHub runner.
+      loadSystemFonts: false,
       fontFiles: BUNDLED_FONTS,
-      defaultFontFamily: "DejaVu Serif",
+      defaultFontFamily: "DejaVu Sans",
+      sansSerifFamily: "DejaVu Sans",
       serifFamily: "DejaVu Serif",
     },
   }).render();

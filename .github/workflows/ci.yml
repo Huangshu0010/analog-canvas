@@ -32,12 +32,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Formatting
-        run: pnpm format:check
-      - name: Pinned references
-        run: pnpm references:check
-      - name: TypeScript
-        run: pnpm typecheck
+      - run: pnpm ci:static
 
   unit:
     name: Unit and integration tests
@@ -53,7 +48,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+      - run: pnpm ci:unit
 
   release:
     name: Release contracts
@@ -69,20 +64,7 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build workspace
-        run: pnpm build
-      - name: Performance budgets
-        run: node scripts/performance-baseline.mjs
-      - name: Export goldens
-        run: node scripts/phase-7-export-golden.mjs --check
-      - name: PWA icons
-        run: node scripts/pwa-icons.mjs --check
-      - name: Production preview
-        run: node scripts/editor-production-smoke.mjs --check
-      - name: Package release
-        run: node scripts/package-release.mjs
-      - name: Packaged release smoke
-        run: node scripts/release-smoke.mjs
+      - run: pnpm ci:release
 
   e2e:
     name: Browser tests (${{ matrix.shard }})
@@ -105,4 +87,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e -- --shard=${{ matrix.shard }}
+      - run: pnpm ci:e2e -- --shard=${{ matrix.shard }}

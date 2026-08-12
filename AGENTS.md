@@ -63,9 +63,6 @@ the owned set without updating the plan first.
 
 ## Circuit Asset Rules
 
-- Treat `lib/circuit.vss` as binary. Never rewrite, normalize, or inspect it as
-  text. Validate modifications in Visio or a compatible application and state
-  what was visually checked.
 - Keep each circuit fixture in its own `netlists/<circuit-name>/` directory.
 - Preserve explicit `.subckt` interfaces and instance pin order. Interface
   changes are shared-contract changes and require checking every caller.
@@ -93,6 +90,26 @@ Before considering a target complete:
 6. Do not automatically extract a reusable lesson. When a human asks, draft a
    candidate under `docs/experience/` with supporting evidence for the human
    to accept, edit, or reject.
+
+## Mainline Delivery Gate
+
+Focused validation is the normal development loop. It is not sufficient by
+itself to deliver a non-document change to `main`.
+
+Before a non-document change is merged or pushed to `main`:
+
+1. Start the canonical CI check from a clean dependency/build state:
+   `pnpm install --frozen-lockfile` followed by `pnpm ci:check`.
+2. Push a review branch and wait for the corresponding GitHub Actions required
+   checks to finish successfully.
+3. If a remote check fails, keep the target active: inspect its log, repair the
+   reported cause, and repeat verification. A successful `git push` is not a
+   completed delivery.
+
+Do not bypass the gate by weakening, skipping, or deleting a failing check.
+When a test or golden is obsolete, demonstrate that the accepted behavior is
+preserved and update the contract deliberately. If the check cannot run in the
+local environment, record the limitation and require the remote green result.
 
 ## Plan-Log-Experience Mainline
 

@@ -30,9 +30,7 @@ export function isMosSymbol(resolved: ResolvedSymbol): boolean {
 
 export function isBjtSymbol(resolved: ResolvedSymbol): boolean {
   const roles = new Set(resolved.definition.pins.map((pin) => pin.role));
-  return (
-    roles.has("base") && roles.has("collector") && roles.has("emitter")
-  );
+  return roles.has("base") && roles.has("collector") && roles.has("emitter");
 }
 
 function transformedBounds(
