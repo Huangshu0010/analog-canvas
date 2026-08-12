@@ -1,5 +1,5 @@
 import { hasBlockingVisualDiagnostics } from "@icm/derived";
-import type { VisualDiagnostic } from "@icm/derived";
+import type { ErcDiagnostic, VisualDiagnostic } from "@icm/derived";
 import type { SpiceDiagnostic } from "@icm/spice";
 
 import type { EditorTool } from "../../interaction/interaction-state";
@@ -174,5 +174,46 @@ export function SelectionInspectorDetails({
         </ul>
       </section>
     </>
+  );
+}
+
+export interface ErcDiagnosticsSectionProps {
+  diagnostics: readonly ErcDiagnostic[];
+  onSelectDiagnostic(diagnostic: ErcDiagnostic): void;
+}
+
+/**
+ * ERC has an independent producer and severity policy. Keep its panel separate
+ * from import and visual observations so a visual count can never be mistaken
+ * for electrical validity.
+ */
+export function ErcDiagnosticsSection({
+  diagnostics,
+  onSelectDiagnostic,
+}: ErcDiagnosticsSectionProps) {
+  return (
+    <section
+      aria-label="ERC diagnostics"
+      className="diagnostics erc-diagnostics"
+    >
+      <h2>Electrical diagnostics ({diagnostics.length})</h2>
+      <ul data-testid="erc-diagnostics">
+        {diagnostics.map((diagnostic, index) => (
+          <li
+            key={diagnostic.id}
+            data-severity={diagnostic.severity}
+            data-confidence={diagnostic.confidence}
+          >
+            <button
+              type="button"
+              data-testid={`erc-diagnostic-${index}`}
+              onClick={() => onSelectDiagnostic(diagnostic)}
+            >
+              <strong>{diagnostic.code}</strong>: {diagnostic.message}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

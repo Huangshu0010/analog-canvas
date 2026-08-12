@@ -4958,3 +4958,14 @@ contracts (WP-R1)`.
   Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(erc): diagnose floating gates and hidden bulk risks`.
+
+## 2026-08-12 - Connectivity Recovery C9a: current-document ERC inspector
+
+- Target: show active-document ERC separately in the Properties shelf and
+  navigate its primary target without changing visual/import review semantics.
+- Changed areas: editor diagnostic derivation/navigation, Inspector section,
+  scoped CSS, and focused component/browser tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 2 focused Inspector tests; focused
+  Playwright ERC flow; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): surface current-document ERC diagnostics`.

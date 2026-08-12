@@ -28,10 +28,11 @@ import {
   moveRouteSegment,
   proposeGroupMove,
   resolveDraftingObjectGeometry,
+  runErcChecks,
   routeAttachmentPlacement,
   routePolyline,
 } from "@icm/derived";
-import type { Flightline, SearchResult } from "@icm/derived";
+import type { ErcDiagnostic, Flightline, SearchResult } from "@icm/derived";
 import {
   createEmptyProject,
   parseProject,
@@ -130,6 +131,7 @@ import { createVisualDemoProject } from "../demos/visual-demo";
 import { useProjectRecovery } from "../document/project-recovery";
 import { useSelectionController } from "../features/selection/selection-controller";
 import {
+  ErcDiagnosticsSection,
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "../features/selection/selection-inspector-details";
@@ -593,6 +595,17 @@ export function App({ project: initialProject }: AppProps) {
   const projectConnectivityIndex = useMemo(
     () => buildProjectConnectivityIndex(project, resolver),
     [project, resolver],
+  );
+  const ercDiagnostics = useMemo(
+    () => runErcChecks(project, projectConnectivityIndex, resolver),
+    [project, projectConnectivityIndex, resolver],
+  );
+  const currentErcDiagnostics = useMemo(
+    () =>
+      ercDiagnostics.filter(
+        (diagnostic) => diagnostic.primary.documentId === document.id,
+      ),
+    [document.id, ercDiagnostics],
   );
   const searchResults = useMemo(
     () =>
@@ -1097,6 +1110,58 @@ export function App({ project: initialProject }: AppProps) {
       });
     }
     setStatus(`${diagnostic.code}: ${ids.join(", ") || "Document"}`);
+  }
+
+  function jumpToErcDiagnostic(diagnostic: ErcDiagnostic): void {
+    const locator = diagnostic.primary;
+    if (locator.documentId !== document.id) {
+      setStatus(`${diagnostic.code}: open ${locator.documentId} to inspect`);
+      return;
+    }
+    const focusPoint = (point: Point) =>
+      setViewBox({
+        x: point.x - 80,
+        y: point.y - 60,
+        width: 160,
+        height: 120,
+      });
+    const endpoint =
+      locator.kind === "terminal"
+        ? locator.endpoint
+        : locator.kind === "port"
+          ? { kind: "port" as const, portId: locator.objectId }
+          : locator.kind === "no-connect"
+            ? document.noConnects.find(
+                (noConnect) => noConnect.id === locator.objectId,
+              )?.endpoint
+            : undefined;
+    if (endpoint) {
+      const candidate = visibleEndpoints.find(
+        (item) => endpointKey(item.endpoint) === endpointKey(endpoint),
+      );
+      if (candidate) {
+        selectEndpoint(candidate);
+        focusPoint(candidate.point);
+      }
+    } else if (locator.kind === "instance") {
+      const instance = document.instances.find(
+        (item) => item.id === locator.objectId,
+      );
+      selectOnly("instance", [locator.objectId]);
+      setSelectedEndpoint(null);
+      if (instance?.placement) focusPoint(instance.placement.position);
+    } else if (locator.kind === "net") {
+      resetSelection();
+      setSelectedEndpoint(null);
+      highlightNet(locator.objectId);
+      const route = document.routes.find(
+        (item) => item.netId === locator.objectId,
+      );
+      const polyline = route ? routePolyline(document, resolver, route) : null;
+      if (polyline?.points[0]) focusPoint(polyline.points[0]);
+    }
+    setSelectionOpen(true);
+    setStatus(`${diagnostic.code}: ${diagnostic.message}`);
   }
 
   function applyResult(result: EditTransactionResult): void {
@@ -5875,6 +5940,12 @@ export function App({ project: initialProject }: AppProps) {
                   Delete current arrow
                 </button>
               </section>
+            ) : null}
+            {currentErcDiagnostics.length > 0 ? (
+              <ErcDiagnosticsSection
+                diagnostics={currentErcDiagnostics}
+                onSelectDiagnostic={jumpToErcDiagnostic}
+              />
             ) : null}
             {importReviewOpen ? (
               <section className="import-review" aria-label="Import Review">

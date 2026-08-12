@@ -739,6 +739,12 @@ body {
   font-size: 0.75rem;
 }
 
+/* ERC is a live editor signal; unlike import review and visual evidence, it
+ * remains available while manually repairing the active circuit. */
+.diagnostics.erc-diagnostics {
+  display: block;
+}
+
 .diagnostics h2 {
   font-size: 0.85rem;
 }

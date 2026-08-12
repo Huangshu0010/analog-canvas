@@ -1503,3 +1503,20 @@ test("marks and clears an unconnected endpoint as No Connect", async ({
   );
   await expect(page.locator('[data-role="no-connect"]')).toHaveCount(0);
 });
+
+test("surfaces and locates current-document ERC diagnostics", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 380, y: 260 });
+  await openSelectionShelf(page);
+
+  await expect(page.getByTestId("erc-diagnostics")).toContainText(
+    "ERC_UNCONNECTED_PIN",
+  );
+  await page.getByTestId("erc-diagnostic-0").click();
+  await expect(page.getByTestId("status")).toContainText("ERC_UNCONNECTED_PIN");
+  await expect(
+    page.getByRole("region", { name: "Endpoint actions" }),
+  ).toBeVisible();
+});
