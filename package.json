@@ -8,6 +8,9 @@
     "node": ">=24.0.0",
     "pnpm": ">=11.16.0"
   },
+  "dependencies": {
+    "@icm/agent-adapter": "workspace:*"
+  },
   "scripts": {
     "build": "pnpm -r --if-present build",
     "release:package": "pnpm build && node scripts/package-release.mjs",

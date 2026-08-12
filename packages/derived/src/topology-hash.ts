@@ -19,7 +19,7 @@ function rotateRight(value: number, bits: number): number {
 }
 
 /** Synchronous SHA-256 without a Node-only runtime dependency. */
-function sha256Hex(value: string): string {
+export function sha256Hex(value: string): string {
   const input = new TextEncoder().encode(value);
   const paddedLength = Math.ceil((input.length + 9) / 64) * 64;
   const padded = new Uint8Array(paddedLength);

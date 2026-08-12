@@ -8,6 +8,11 @@
       "development": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./loopback": {
+      "development": "./src/loopback.ts",
+      "types": "./dist/loopback.d.ts",
+      "default": "./dist/loopback.js"
     }
   },
   "scripts": {

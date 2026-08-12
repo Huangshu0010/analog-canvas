@@ -21,6 +21,7 @@ against. They describe required behavior and invariants, not task history.
 | [`export.md`](export.md)                                     |            7 | accepted                 | Formal SVG source and derived PNG/PDF contracts                              |
 | [`performance.md`](performance.md)                           |            7 | accepted                 | Representative workloads and release budgets                                 |
 | [`editor-interaction.md`](editor-interaction.md)             |            8 | accepted                 | Direct manipulation, manual authoring, gestures, and automation boundary     |
+| [`web-agent-session.md`](web-agent-session.md)               |    Web Agent | proposed                 | Browser-authoritative relay: scopes, transport, events, errors, threat       |
 
 Create a specification when its owning phase begins; do not create empty files
 only to mirror this table. Start from [`spec.template.md`](spec.template.md).

@@ -56,6 +56,7 @@ ablation/blind-readability gate.
 | Plan | Status | Outcome |
 | --- | --- | --- |
 | [`Connectivity, routing, and electrical debugging unification`](connectivity-routing-debugging-plan.md) | proposed | Preserve the accumulated manual/Agent routing behavior while introducing one Project connectivity index, one resolved Route geometry contract, hierarchical search/trace navigation, No Connect, and ERC |
+| [`Browser-authorized Agent sessions`](web-agent-session-integration-plan.md) | proposed | Let a user grant an external Agent bounded access to the live browser Project through the existing semantic Snapshot/transaction/render API and a temporary Cloudflare relay |
 
 ## Phase Rules
 

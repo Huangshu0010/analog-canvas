@@ -1,0 +1,173 @@
+/**
+ * Frozen web-session transport schemas (WP-WA1). These are browser-safe (zod
+ * only) and are consumed by both the in-browser Agent Host (WP-WA3) and the
+ * Cloudflare relay (WP-WA4). They never import Node builtins.
+ *
+ * Contract source: [`docs/specs/web-agent-session.md`](../../../docs/specs/web-agent-session.md)
+ * and [`ADR 0016`](../../../docs/adr/0016-browser-authoritative-agent-session.md).
+ * The Circuit API payload carried by these messages is defined in `schema.ts`.
+ */
+
+import { z } from "zod";
+
+/** Relay protocol version. Bumped only on an incompatible envelope change. */
+export const AGENT_SESSION_PROTOCOL_VERSION = "1.0" as const;
+
+const OpaqueIdSchema = z.string().min(1);
+const IsoTimestampSchema = z
+  .string()
+  .min(1)
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/u);
+
+/** Kind of a relay message envelope. */
+export const AgentSessionMessageKindSchema = z.enum([
+  "circuit-request",
+  "circuit-response",
+  "event",
+  "cancel",
+]);
+
+/**
+ * One forwarded relay message. The `circuit-request`/`circuit-response` payload
+ * is the strict Circuit API schema from `schema.ts`; the relay never interprets
+ * or rewrites it.
+ */
+export const AgentSessionMessageSchema = z.strictObject({
+  protocolVersion: z.literal(AGENT_SESSION_PROTOCOL_VERSION),
+  sessionId: OpaqueIdSchema,
+  messageId: OpaqueIdSchema,
+  requestId: OpaqueIdSchema,
+  sentAt: IsoTimestampSchema,
+  kind: AgentSessionMessageKindSchema,
+  payload: z.unknown(),
+});
+
+/** Agent-facing event types. `document.replaced` terminates the session. */
+export const AgentSessionEventTypeSchema = z.enum([
+  "session.ready",
+  "session.paused",
+  "session.revoked",
+  "session.expiring",
+  "editor.online",
+  "editor.offline",
+  "document.revision-changed",
+  "document.replaced",
+  "operation.started",
+  "operation.completed",
+  "operation.failed",
+]);
+
+const ActorKindSchema = z.enum(["human", "agent"]);
+
+/** A bounded event delivered on the Agent SSE stream. */
+export const AgentSessionEventSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("session.ready"),
+    sessionId: OpaqueIdSchema,
+    expiresAt: IsoTimestampSchema.optional(),
+  }),
+  z.strictObject({
+    type: z.literal("session.paused"),
+    sessionId: OpaqueIdSchema,
+  }),
+  z.strictObject({
+    type: z.literal("session.revoked"),
+    sessionId: OpaqueIdSchema,
+  }),
+  z.strictObject({
+    type: z.literal("session.expiring"),
+    sessionId: OpaqueIdSchema,
+    expiresAt: IsoTimestampSchema,
+  }),
+  z.strictObject({
+    type: z.literal("editor.online"),
+    sessionId: OpaqueIdSchema,
+  }),
+  z.strictObject({
+    type: z.literal("editor.offline"),
+    sessionId: OpaqueIdSchema,
+  }),
+  z.strictObject({
+    type: z.literal("document.revision-changed"),
+    sessionId: OpaqueIdSchema,
+    documentId: OpaqueIdSchema,
+    revision: z.number().int().nonnegative(),
+    actorKind: ActorKindSchema,
+    requestId: OpaqueIdSchema.optional(),
+    changedObjectIds: z.array(OpaqueIdSchema),
+  }),
+  z.strictObject({
+    type: z.literal("document.replaced"),
+    sessionId: OpaqueIdSchema,
+  }),
+  z.strictObject({
+    type: z.literal("operation.started"),
+    sessionId: OpaqueIdSchema,
+    requestId: OpaqueIdSchema,
+  }),
+  z.strictObject({
+    type: z.literal("operation.completed"),
+    sessionId: OpaqueIdSchema,
+    requestId: OpaqueIdSchema,
+  }),
+  z.strictObject({
+    type: z.literal("operation.failed"),
+    sessionId: OpaqueIdSchema,
+    requestId: OpaqueIdSchema,
+  }),
+]);
+
+/** Typed transport error codes (web-session layer). */
+export const AgentTransportErrorCodeSchema = z.enum([
+  // Session lifecycle
+  "SESSION_NOT_FOUND",
+  "SESSION_EXPIRED",
+  "SESSION_PAUSED",
+  "SESSION_REVOKED",
+  "PROJECT_REPLACED",
+  // Claim exchange
+  "CLAIM_INVALID",
+  "CLAIM_EXPIRED",
+  "CLAIM_ALREADY_USED",
+  // Token
+  "TOKEN_INVALID",
+  "TOKEN_EXPIRED",
+  "TOKEN_SCOPE_INSUFFICIENT",
+  // Transport and editor state
+  "EDITOR_OFFLINE",
+  "EDITOR_DISCONNECTED",
+  "REQUEST_TOO_LARGE",
+  "MESSAGE_TOO_LARGE",
+  "RATE_LIMITED",
+  "REQUEST_IN_PROGRESS",
+  "REQUEST_ID_REUSED",
+  "REQUEST_RESULT_UNAVAILABLE",
+  "REQUEST_TIMEOUT",
+  "UNSUPPORTED_PROTOCOL_VERSION",
+  "UNAUTHORIZED_ORIGIN",
+]);
+
+/**
+ * Web-session permission scopes carried by an `agentToken`. They map to
+ * `AgentPermissions` as documented in the spec. `circuit.snapshot` is the
+ * primary read scope and also admits the legacy v1 query read path.
+ */
+export const AgentSessionScopeSchema = z.enum([
+  "circuit.snapshot",
+  "circuit.render",
+  "circuit.source-spans",
+  "circuit.edit.geometry",
+  "circuit.edit.connectivity",
+  "circuit.edit.presentation",
+]);
+
+export type AgentSessionMessage = z.infer<typeof AgentSessionMessageSchema>;
+export type AgentSessionMessageKind = z.infer<
+  typeof AgentSessionMessageKindSchema
+>;
+export type AgentSessionEvent = z.infer<typeof AgentSessionEventSchema>;
+export type AgentSessionEventType = z.infer<typeof AgentSessionEventTypeSchema>;
+export type AgentTransportErrorCode = z.infer<
+  typeof AgentTransportErrorCodeSchema
+>;
+export type AgentSessionScope = z.infer<typeof AgentSessionScopeSchema>;
