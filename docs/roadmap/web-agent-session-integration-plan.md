@@ -364,6 +364,12 @@ operations against the live controller in one process; see
 
 ### WP-WA4 — Cloudflare session relay
 
+Status: `relay core complete` — pure session state machine + relay orchestration
+are tested with fake time/transport in `worker/agent-session-state.ts` and
+`worker/agent-session.ts`. The Cloudflare Durable Object + WebSocket browser
+channel + Worker route wiring + wrangler binding require the CF runtime and are
+verified in WP-WA7 deployment.
+
 - Goal: Implement the Worker routes and one Durable Object per session for
   claim exchange, authenticated browser channel, Agent requests, SSE events,
   bounded result cache, heartbeat, expiry, pause/revoke, and rate/size limits.

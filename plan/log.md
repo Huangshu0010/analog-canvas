@@ -5666,3 +5666,20 @@ contracts (WP-R1)`.
   --check` clean.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `feat(agent): in-browser Agent host without network (WP-WA3)`.
+
+## 2026-08-12 - WP-WA4 Agent session relay core
+
+- Target: deliver the deterministically-verifiable session relay core (auth,
+  claim, scope, idempotency, expiry, rate/size limits, pause/revoke, project
+  replacement).
+- Changed areas: new `worker/agent-session-state.ts` (pure state machine) +
+  tests; new `worker/agent-session.ts` (relay orchestration with injected
+  forward) + tests; roadmap status.
+- Validation: 22 worker tests (13 state machine + 7 relay + 2 analytics) with
+  fake time/transport; workspace `typecheck` clean; Prettier; `git diff --check`
+  clean.
+- Limitation: CF Durable Object + WebSocket browser channel + route wiring +
+  binding cannot run here; deferred to WP-WA7 deployment. `experience: candidate`
+  on the split-core-then-deploy-transport approach.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(agent): Cloudflare Agent session relay state machine (WP-WA4)`.
