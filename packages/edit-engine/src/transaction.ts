@@ -1375,9 +1375,11 @@ function applyInstanceRouteFollow(
   originalDocument: SchematicDocument,
   resolver: SymbolResolver,
   instanceId: string,
+  explicitlyAuthoredRouteIds: ReadonlySet<string>,
 ): string[] {
   const changed: string[] = [];
   for (const originalRoute of originalDocument.routes) {
+    if (explicitlyAuthoredRouteIds.has(originalRoute.id)) continue;
     const movesFrom = endpointBelongsToInstance(originalRoute.from, instanceId);
     const movesTo = endpointBelongsToInstance(originalRoute.to, instanceId);
     if (!movesFrom && !movesTo) continue;
@@ -1420,9 +1422,10 @@ function applyInstanceRouteFollow(
         );
       }
     } catch {
-      // Preserve the established move+set_route_points escape hatch. A later
-      // explicit edit may provide valid geometry; otherwise final validation
-      // rejects this transaction and names the affected Route.
+      // Protected or otherwise non-followable geometry remains unchanged;
+      // final validation rejects the transaction and names the affected Route.
+      // Routes explicitly authored anywhere in this transaction were skipped
+      // above, so their edit is the sole geometry authority.
       continue;
     }
 
@@ -1652,6 +1655,13 @@ export function executeTransaction(
 
   const proposedRevision = document.revision + 1;
   const draft = structuredClone(document);
+  const explicitlyAuthoredRouteIds = new Set(
+    transaction.edits.flatMap((edit) =>
+      edit.kind === "set_route_points" || edit.kind === "route_orthogonal"
+        ? [edit.routeId]
+        : [],
+    ),
+  );
   const changedObjectIds = new Set<string>();
   const resolver = context.symbolResolver;
   const originalRouteStates = new Map(
@@ -2002,6 +2012,7 @@ export function executeTransaction(
             beforeTransform,
             resolver,
             edit.instanceId,
+            explicitlyAuthoredRouteIds,
           );
           for (const routeId of stretched) changedObjectIds.add(routeId);
         }
@@ -2053,6 +2064,7 @@ export function executeTransaction(
             beforeTransform,
             rotateResolver,
             edit.instanceId,
+            explicitlyAuthoredRouteIds,
           )) {
             changedObjectIds.add(routeId);
           }
@@ -2105,6 +2117,7 @@ export function executeTransaction(
             beforeTransform,
             mirrorResolver,
             edit.instanceId,
+            explicitlyAuthoredRouteIds,
           )) {
             changedObjectIds.add(routeId);
           }

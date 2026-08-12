@@ -1,5 +1,19 @@
 # Maintenance Log
 
+## 2026-08-13 - Move planner and Route geometry ownership
+
+- Target: remove double planning between GUI group moves and Edit Engine route
+  follow, and stop disconnected geometry on one logical Net from moving as one
+  block.
+- Changed areas: transaction-wide explicit Route authority; group-move edit
+  planner; connected-component internal selection; movement contracts and
+  focused regressions.
+- Validation: 36 routing/stretch tests, 5 clipboard/marker consumer tests, and
+  all 620 unit tests; workspace typecheck and build; Prettier and
+  `git diff --check` clean.
+- Commit status: ready to commit on `codex/wire-move-consistency` as
+  `fix(routing): unify move and route geometry ownership`.
+
 ## 2026-08-13 - Wire session and snap consistency
 
 - Target: remove intermittent manual-Wire failures caused by tool reactivation,
