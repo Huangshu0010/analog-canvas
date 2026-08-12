@@ -4488,6 +4488,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `codex/contextual-properties-net-labels`
   as `fix(symbols): rename ideal switch as open switch`.
 
+## 2026-08-12 - Close VDD stem/bar seam
+
+- Target: remove the visible VDD power-port gap between the vertical stem and
+  filled horizontal bar without changing its pin or power-label semantics.
+- Changed areas: VDD asset, regenerated catalog output/hash, and an interior
+  stem/bar-overlap regression.
+- Validation: catalog stale check, symbols build, 20 focused catalog tests,
+  and `git diff --check` passed. The branch-local commit remains subject to
+  the required clean-state CI and remote Actions gate before main delivery.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `fix(symbols): close VDD stem and bar seam`.
+
 ## 2026-08-11 - Contextual Properties and Net Labels
 
 - Target: add the smallest durable component Value path and make the editor's

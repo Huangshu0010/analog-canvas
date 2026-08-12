@@ -492,7 +492,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "vdd.symbol.json",
     assetHash:
-      "bf4571ccb9a15ecf6f60455b787d7919e783deae715fa324eec0609779c71cc6",
+      "080d4e5412ab70aff3c275b8391fd308101bc96c7c81625e60200b12248e864c",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -2929,7 +2929,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         },
         to: {
           x: 0,
-          y: 2.5,
+          y: 1.5,
         },
         style: {
           strokeRole: "normal",

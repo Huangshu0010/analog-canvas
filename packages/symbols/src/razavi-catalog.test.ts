@@ -314,6 +314,30 @@ describe("Razavi symbol catalog", () => {
       ]),
     );
     expect(requireRazaviCatalogSymbol("ground").labelVisibility).toBe("hidden");
+    const vdd = requireRazaviCatalogSymbol("vdd");
+    const vddStem = vdd.primitives.find(
+      (primitive) =>
+        primitive.kind === "line" &&
+        primitive.from.x === 0 &&
+        primitive.from.y === 20,
+    );
+    const vddBar = vdd.primitives.find(
+      (primitive) =>
+        primitive.kind === "polygon" && primitive.fill === "foreground",
+    );
+    if (
+      !vddStem ||
+      vddStem.kind !== "line" ||
+      !vddBar ||
+      vddBar.kind !== "polygon"
+    ) {
+      throw new Error("missing VDD stem or bar");
+    }
+    const barBottom = Math.max(...vddBar.points.map((point) => point.y));
+    expect(vddStem.to).toEqual({ x: 0, y: 1.5 });
+    // Butt-capped primitives need a real interior overlap, not a merely
+    // coincident endpoint, to avoid an anti-aliased VDD T-junction seam.
+    expect(vddStem.to.y).toBeLessThan(barBottom);
   });
 
   it("keeps canonical MOS assets four-terminal and three-terminal mode visual-only", () => {

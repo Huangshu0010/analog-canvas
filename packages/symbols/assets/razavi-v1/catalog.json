@@ -409,7 +409,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "vdd.symbol.json",
-      "assetHash": "bf4571ccb9a15ecf6f60455b787d7919e783deae715fa324eec0609779c71cc6",
+      "assetHash": "080d4e5412ab70aff3c275b8391fd308101bc96c7c81625e60200b12248e864c",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",
