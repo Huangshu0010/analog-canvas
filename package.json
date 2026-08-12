@@ -29,7 +29,7 @@
     "dev": "pnpm --filter @icm/editor dev",
     "ci:static": "pnpm format:check && pnpm references:check && pnpm typecheck",
     "ci:unit": "pnpm test",
-    "ci:release": "pnpm release:verify",
+    "ci:release": "pnpm exec playwright install --with-deps chromium && pnpm release:verify",
     "ci:e2e": "pnpm build && playwright test",
     "ci:check": "pnpm ci:static && pnpm ci:unit && pnpm ci:release && pnpm ci:e2e",
     "format": "prettier --write \"apps/**/*.{ts,tsx,json,css,html}\" \"packages/**/*.{ts,tsx,json}\" \"references/**/*.json\" \"scripts/**/*.mjs\" \"*.{json,yaml}\"",
