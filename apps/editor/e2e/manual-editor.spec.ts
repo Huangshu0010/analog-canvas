@@ -1303,6 +1303,15 @@ test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
     page.getByTestId("annotation-hit-imported-label-horizontal"),
   ).toHaveCount(0);
 
+  // The label was selected alongside the Route. Its deleted annotation id
+  // must not poison the following atomic Wire deletion.
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("route-hit-route-imported-h")).toHaveCount(0);
+  await expect(page.getByTestId("status")).toContainText(
+    "Deleted wire route-imported-h",
+  );
+
+  await page.keyboard.press("Control+z");
   await page.keyboard.press("Control+z");
   const label = page.getByTestId("annotation-hit-imported-label-horizontal");
   await label.click();

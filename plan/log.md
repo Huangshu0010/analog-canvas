@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-12 - Net deletion selection closure
+
+- Target: prevent a removed Net Label's stale selection ID from rolling back
+  the next Wire deletion transaction, while auditing the full Net protocol.
+- Changed areas: model-bound visual-selection pruning, Label delete cleanup,
+  focused unit/browser regressions, and target audit record.
+- Validation: 3 focused selection unit tests; 2 Net Label browser flows;
+  workspace typecheck; `git diff --check`.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): reconcile selection after Net deletion`.
+
 ## 2026-08-12 - Reliable imported Net-label deletion
 
 - Target: make Net-label deletion work consistently for current-editor and
@@ -5341,7 +5352,7 @@ contracts (WP-R1)`.
   Agent API artifacts; focused unit/browser regressions and target plan.
 - Validation: 51 focused tests; supplied-legacy-topology browser regression;
   typecheck; format and Agent artifact checks; frozen install; `git diff
-  --check`. Complete static/unit/release CI stages passed (589 unit tests).
+--check`. Complete static/unit/release CI stages passed (589 unit tests).
   Two full 16-worker E2E attempts each had unrelated, non-repeatable timeout
   failures; all three affected existing cases passed in isolated single-worker
   reruns.

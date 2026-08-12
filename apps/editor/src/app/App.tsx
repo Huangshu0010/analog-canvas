@@ -155,7 +155,10 @@ import {
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "../features/selection/selection-inspector-details";
-import { hasVisualSelection } from "../features/selection/visual-selection";
+import {
+  hasVisualSelection,
+  pruneVisualSelection,
+} from "../features/selection/visual-selection";
 import type { VisualSelection } from "../features/selection/visual-selection";
 import {
   annotationAnchor,
@@ -1006,6 +1009,11 @@ export function App({ project: initialProject }: AppProps) {
   useEffect(() => {
     if (!selectedRouteId) setSelectedRouteSegmentIndex(null);
   }, [selectedRouteId]);
+
+  useEffect(() => {
+    const pruned = pruneVisualSelection(visualSelection, document);
+    if (pruned !== visualSelection) replaceSelection(pruned);
+  }, [document, visualSelection]);
 
   useEffect(() => {
     if (!selectedRoute) {
@@ -3413,6 +3421,7 @@ export function App({ project: initialProject }: AppProps) {
           { kind: "remove_annotation", annotationId: existingLabel.id },
         ]);
         if (result.ok) {
+          replaceSelectionKind("annotation", []);
           setStatus(`Deleted Net Label ${existingLabel.text}`);
         }
       } else {
@@ -3484,6 +3493,7 @@ export function App({ project: initialProject }: AppProps) {
       { kind: "remove_annotation", annotationId: label.id },
     ]);
     if (result.ok) {
+      replaceSelectionKind("annotation", []);
       setNetLabelDraft("");
       setStatus(`Deleted Net Label ${label.text}`);
     }
