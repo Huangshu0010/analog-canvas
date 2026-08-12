@@ -519,6 +519,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     pendingSymbolId,
     pendingComponentPlacement,
     wireSource,
+    wireSourceRevision,
     wirePreviewPoint,
     wireWaypoints,
     draftingSource,
@@ -962,6 +963,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     return [...byKey.values()];
   }, [visibleBulkEndpoints, visibleEndpoints]);
+  useEffect(() => {
+    if (
+      !wireSource ||
+      wireSourceRevision === null ||
+      wireSourceRevision === document.revision
+    ) {
+      return;
+    }
+    clearTransientCanvasState();
+    cancelInteraction();
+    setBulkDrawInstanceId(null);
+    setStatus(
+      `Wire cancelled because the circuit changed from revision ${wireSourceRevision} to ${document.revision}`,
+    );
+  }, [document.revision, wireSource, wireSourceRevision]);
   useEffect(() => {
     const normalizationEdits = powerNetNormalizations(document).length
       ? [{ kind: "normalize_power_nets" as const }]
@@ -1544,7 +1560,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     setTool("wire");
     if (!wireSource) {
-      setWireSource(candidate);
+      setWireSource(candidate, document.revision);
       setWirePreviewPoint(candidate.point);
       setWireWaypoints([]);
       setStatus(`Wire source: ${endpointTestId(candidate.endpoint)}`);
@@ -1593,7 +1609,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       }
       return;
     }
-    setWireSource(from);
+    setWireSource(from, document.revision);
     setWirePreviewPoint(to.point);
     setWireWaypoints([]);
     setStatus(`Wire source: flightline on ${flightline.netId}`);
@@ -1643,7 +1659,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       : proposal.edits;
     const result = transact(edits);
     if (result.ok) {
-      setWireSource(null);
+      setWireSource(null, null);
       setWirePreviewPoint(null);
       setWireWaypoints([]);
       setTool("pointer");
@@ -1694,7 +1710,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     };
     setBulkDrawInstanceId(selectedInstance.id);
     setTool("wire");
-    setWireSource(source);
+    setWireSource(source, document.revision);
     setWirePreviewPoint(source.point);
     setWireWaypoints([]);
     setStatus(`Drawing ${selectedInstance.id}.B bulk connection`);
@@ -1712,7 +1728,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (!wireSource) {
       const netId = `net-ui-${nextRoutingSuffix()}`;
       const source = freeWireAnchor(point, netId, true);
-      setWireSource(source);
+      setWireSource(source, document.revision);
       setWirePreviewPoint(point);
       setWireWaypoints([]);
       setStatus("Wire source: free grid point");
@@ -1813,7 +1829,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     const anchor = routeAnchor(routeId, tap.point, tap.segmentIndex);
     if (!wireSource) {
-      setWireSource(anchor);
+      setWireSource(anchor, document.revision);
       setWirePreviewPoint(tap.point);
       setWireWaypoints([]);
       setStatus(`Wire source: route ${routeId}`);
@@ -2351,6 +2367,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     point: Point;
     endpoint?: WireSource;
     route?: { routeId: string; segmentIndex: number; point: Point };
+    ambiguous?: boolean;
     guides: SnapGuideLine[];
   } {
     if (suppressSnap) return { point, guides: [] };
@@ -2369,10 +2386,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         segmentIndex,
       })),
     );
-    const endpointTargets = visibleEndpoints.map((source) => ({
+    const endpointTargets = wiringEndpoints.map((source) => ({
       source,
       anchor: endpointSnapAnchor(source),
     }));
+    const activeSourceAnchorId = wireSource
+      ? endpointSnapAnchor(wireSource).id
+      : null;
     const resolved = resolvePointSnap(
       point,
       [
@@ -2383,20 +2403,30 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         grid: document.presentation.grid,
         tolerance: logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
         profile: SNAP_PROFILES.wire,
+        ...(activeSourceAnchorId
+          ? { excludedTargetIds: new Set([activeSourceAnchorId]) }
+          : {}),
       },
     );
     const snappedPoint = {
       x: point.x + resolved.delta.x,
       y: point.y + resolved.delta.y,
     };
-    const endpoint = endpointTargets.find(
-      (candidate) => candidate.anchor.id === resolved.pointMatch?.id,
-    )?.source;
-    const route = routeTargets.find(
-      (candidate) => candidate.anchor.id === resolved.pointMatch?.id,
+    const bestTargetIds = new Set(
+      (resolved.pointMatches ?? []).map((target) => target.id),
     );
+    const matchingEndpoints = endpointTargets.filter((candidate) =>
+      bestTargetIds.has(candidate.anchor.id),
+    );
+    const matchingRoutes = routeTargets.filter((candidate) =>
+      bestTargetIds.has(candidate.anchor.id),
+    );
+    const ambiguous = matchingEndpoints.length + matchingRoutes.length > 1;
+    const endpoint = ambiguous ? undefined : matchingEndpoints[0]?.source;
+    const route = ambiguous ? undefined : matchingRoutes[0];
     return {
       point: snappedPoint,
+      ...(ambiguous ? { ambiguous: true } : {}),
       ...(endpoint ? { endpoint } : {}),
       ...(route
         ? {
@@ -2419,9 +2449,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   ): void {
     const resolved = resolveWireCanvasSnap(rawPoint, svg, suppressSnap);
     paintSnapGuides([]);
+    if (resolved.ambiguous) {
+      setStatus(
+        "Ambiguous connection: choose one endpoint or conductor away from the overlap",
+      );
+      return;
+    }
     if (resolved.endpoint) {
       if (!wireSource) {
-        setWireSource(resolved.endpoint);
+        setWireSource(resolved.endpoint, document.revision);
         setWirePreviewPoint(resolved.endpoint.point);
         setWireWaypoints([]);
       } else if (
@@ -2429,6 +2465,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         endpointKey(resolved.endpoint.endpoint)
       ) {
         commitWire(resolved.endpoint);
+      } else {
+        setStatus("Choose a different endpoint");
       }
       return;
     }
@@ -2439,7 +2477,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         resolved.route.segmentIndex,
       );
       if (!wireSource) {
-        setWireSource(anchor);
+        setWireSource(anchor, document.revision);
         setWirePreviewPoint(anchor.point);
         setWireWaypoints([]);
       } else {
@@ -6774,7 +6812,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 return;
               }
               if (wireSource) {
-                setWireSource(null);
+                setWireSource(null, null);
                 setWirePreviewPoint(null);
                 setWireWaypoints([]);
                 setTool("pointer");

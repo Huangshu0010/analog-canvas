@@ -240,4 +240,27 @@ describe("unified Snap Engine", () => {
     expect(result.electricalMatch).toBeUndefined();
     expect(result.pointMatch?.id).toBe("pin");
   });
+
+  it("excludes the active Wire source and reports equal coincident targets", () => {
+    const result = resolvePointSnap(
+      { x: 10, y: 10 },
+      [
+        { id: "source", point: { x: 10, y: 10 }, kind: "pin" },
+        { id: "target-a", point: { x: 10, y: 10 }, kind: "pin" },
+        { id: "target-b", point: { x: 10, y: 10 }, kind: "pin" },
+      ],
+      {
+        grid: 10,
+        tolerance: 4,
+        profile: SNAP_PROFILES.wire,
+        excludedTargetIds: new Set(["source"]),
+      },
+    );
+
+    expect(result.pointMatch?.id).toBe("target-a");
+    expect(result.pointMatches?.map((target) => target.id)).toEqual([
+      "target-a",
+      "target-b",
+    ]);
+  });
 });

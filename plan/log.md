@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-13 - Wire session and snap consistency
+
+- Target: remove intermittent manual-Wire failures caused by tool reactivation,
+  stale source references, self-snap, and coincident-candidate ordering.
+- Changed areas: editor interaction state; point-snap result contract; Wire
+  canvas integration; interaction specification; unit and browser regressions.
+- Validation: 15 focused unit tests; workspace typecheck and build; focused
+  Playwright regression; Prettier check and `git diff --check` clean.
+- Commit status: ready to commit on `codex/wire-move-consistency` as
+  `fix(editor): stabilize wire sessions and snap targets`.
+
 ## 2026-08-12 - Drawn VDD rail mainline delivery
 
 - Target: deliver drawn VDD rail and capacitor refinements to remote main by
