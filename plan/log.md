@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-12 - Capacitor calibration integration
+
+- Target: include the separately reviewed capacitor plate calibration in the
+  active drawn-VDD-rail branch.
+- Changed areas: cherry-picked calibrated capacitor asset and catalog with its
+  original target record; integration target record.
+- Validation: symbol catalog check; Symbols build; capacitor vertical/horizontal
+  fidelity (`0.6438` / `0.7247` IoU, zero registration lift); `git diff --check`.
+- Commit status: calibration cherry-pick `83d8668`; integration record ready to
+  commit and push on `codex/vdd-drawn-rail`.
+
 ## 2026-08-12 - Drawn VDD rail correction
 
 - Target: replace the incorrect VDD P-pin wire-start interaction with direct,
