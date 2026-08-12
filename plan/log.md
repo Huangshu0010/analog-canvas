@@ -4608,3 +4608,25 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   Prettier check, and `git diff --check` passed.
 - Commit status: ready to commit on `main` as
   `docs(roadmap): plan connectivity and routing unification`.
+
+## 2026-08-12 - WP-R0 Connectivity/Routing Behavioral Baseline
+
+- Target: first work package of the connectivity-routing-debugging roadmap —
+  pin current behavior before any refactor. Additive characterization tests
+  plus a historical doc note; no production code change.
+- Changed areas: new `packages/derived/src/endpoint.test.ts` (14 tests) and
+  `packages/derived/src/routes.test.ts` (7 tests) covering `endpointKey`,
+  endpoint visibility/point/outward-direction, `routePolyline`, `deriveCrossings`
+  overlap and shared-endpoint exclusion, and storage-partition characterization;
+  historical note on `docs/roadmap/phase-3-connectivity-and-routing.md` Detach
+  scenario; target plan and this log.
+- Validation: workspace `pnpm typecheck`, `vitest run packages/derived/src/`
+  (76 tests, was 55), `prettier --check` on owned files, and `git diff --check`
+  passed. Full-repo/e2e deferred (additive tests + doc note only).
+- Finding: current `deriveFlightlines` from/to direction (and derived id) is
+  NOT partition-invariant — pinned for R2 to address consciously.
+- Note: an unrelated dirty target (`plan/2026-08-12-ci-delivery-and-archive-
+  governance`) coexists; only owned paths were staged.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `test(derived): characterize endpoint/route primitives and partition
+  invariance (WP-R0)`.
