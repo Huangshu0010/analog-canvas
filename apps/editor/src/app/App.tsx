@@ -964,21 +964,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     return [...byKey.values()];
   }, [visibleBulkEndpoints, visibleEndpoints]);
   useEffect(() => {
-    if (
-      !wireSource ||
-      wireSourceRevision === null ||
-      wireSourceRevision === document.revision
-    ) {
-      return;
-    }
-    clearTransientCanvasState();
-    cancelInteraction();
-    setBulkDrawInstanceId(null);
-    setStatus(
-      `Wire cancelled because the circuit changed from revision ${wireSourceRevision} to ${document.revision}`,
-    );
-  }, [document.revision, wireSource, wireSourceRevision]);
-  useEffect(() => {
     const normalizationEdits = powerNetNormalizations(document).length
       ? [{ kind: "normalize_power_nets" as const }]
       : [];
@@ -1462,9 +1447,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     );
   }
 
-  function transact(edits: SchematicEdit[]): EditTransactionResult {
+  function transact(
+    edits: SchematicEdit[],
+    options: { completesWireSession?: boolean } = {},
+  ): EditTransactionResult {
     const result = transactDocument(edits);
     applyResult(result);
+    if (result.ok && wireSource && !options.completesWireSession) {
+      clearTransientCanvasState();
+      cancelInteraction();
+      setBulkDrawInstanceId(null);
+      setStatus(
+        `Committed revision ${result.revision}; Wire cancelled because the circuit changed`,
+      );
+    }
     return result;
   }
 
@@ -1617,6 +1613,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function commitWire(candidate: WireSource): void {
     if (!wireSource) return;
+    if (wireSourceRevision !== document.revision) {
+      clearTransientCanvasState();
+      cancelInteraction();
+      setBulkDrawInstanceId(null);
+      setStatus("Wire cancelled because its source revision is stale");
+      return;
+    }
     const suffix = nextRoutingSuffix();
     const proposal = proposeWireCommit(
       wireSource,
@@ -1657,7 +1660,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           }),
         ]
       : proposal.edits;
-    const result = transact(edits);
+    const result = transact(edits, { completesWireSession: true });
     if (result.ok) {
       setWireSource(null, null);
       setWirePreviewPoint(null);

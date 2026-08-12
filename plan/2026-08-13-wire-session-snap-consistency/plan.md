@@ -71,8 +71,10 @@ fix(editor): stabilize wire sessions and snap targets
 ## Outcome
 
 Wire reactivation now preserves the active source and bends. Every source is
-tagged with its resolving Document revision and is cancelled explicitly if an
-unrelated transaction changes that revision. Point snap excludes the source,
-returns all equal best coincident targets, and the editor rejects ambiguous
-electrical completion instead of choosing by object ID. Focused unit tests,
-typecheck, build, and the new browser regression passed.
+tagged with its resolving Document revision. The shared transaction boundary
+synchronously cancels a draft after any other successful mutation, while Wire
+commit validates the source revision and declares itself as the completing
+transaction. Point snap excludes the source, returns all equal best coincident
+targets, and rejects ambiguity instead of choosing by object ID. Focused unit,
+typecheck, build, and browser regressions passed; the full gate's initial status
+race was fixed and its four affected scenarios pass together.

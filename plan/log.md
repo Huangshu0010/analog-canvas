@@ -21,7 +21,9 @@
 - Changed areas: editor interaction state; point-snap result contract; Wire
   canvas integration; interaction specification; unit and browser regressions.
 - Validation: 15 focused unit tests; workspace typecheck and build; focused
-  Playwright regression; Prettier check and `git diff --check` clean.
+  Playwright regression plus four transaction/status scenarios. The initial
+  full-gate run exposed and drove removal of an effect-ordering race; Prettier
+  check and `git diff --check` clean.
 - Commit status: ready to commit on `codex/wire-move-consistency` as
   `fix(editor): stabilize wire sessions and snap targets`.
 
