@@ -34,6 +34,15 @@ function noConnectKey(endpoint: {
     : `port:${endpoint.portId}`;
 }
 
+function isRepeatedGlobalPowerNet(
+  document: CircuitProject["documents"][number],
+  nets: readonly CircuitProject["documents"][number]["nets"][number][],
+): boolean {
+  if (!nets.every((net) => net.scope === "global")) return false;
+  const domains = new Set(nets.map((net) => powerDomainForNet(document, net)));
+  return domains.size === 1 && (domains.has("vdd") || domains.has("ground"));
+}
+
 function terminalLocator(
   documentId: string,
   instanceId: string,
@@ -297,18 +306,20 @@ export function runErcChecks(
     }
 
     // ERC_DUPLICATE_NET_NAME
-    const netsByName = new Map<string, string[]>();
+    const netsByName = new Map<string, typeof document.nets>();
     for (const net of document.nets) {
       if (!net.name) continue;
       const name = net.name.toLowerCase();
       const group = netsByName.get(name) ?? [];
-      group.push(net.id);
+      group.push(net);
       netsByName.set(name, group);
     }
-    for (const [name, ids] of netsByName) {
-      if (ids.length < 2) continue;
-      const [primaryId, ...restIds] = [...ids].sort((a, b) =>
-        a.localeCompare(b, "en"),
+    for (const [name, nets] of netsByName) {
+      if (nets.length < 2 || isRepeatedGlobalPowerNet(document, nets)) {
+        continue;
+      }
+      const [primary, ...rest] = [...nets].sort((a, b) =>
+        a.id.localeCompare(b.id, "en"),
       );
       diagnostics.push({
         id: `erc:dup-net:${document.id}:${name}`,
@@ -317,12 +328,12 @@ export function runErcChecks(
         severity: "error",
         confidence: "high",
         gateEligible: true,
-        message: `Net name "${name}" is shared by ${ids.length} nets in document ${document.id} without an explicit merge`,
-        primary: directObjectLocator(document.id, "net", primaryId!),
-        related: restIds.map((objectId) =>
-          directObjectLocator(document.id, "net", objectId),
+        message: `Net name "${name}" is shared by ${nets.length} nets in document ${document.id} without an explicit merge`,
+        primary: directObjectLocator(document.id, "net", primary!.id),
+        related: rest.map((net) =>
+          directObjectLocator(document.id, "net", net.id),
         ),
-        parameters: { name, count: ids.length },
+        parameters: { name, count: nets.length },
       });
     }
 

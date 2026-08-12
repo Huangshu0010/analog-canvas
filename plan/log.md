@@ -5424,6 +5424,17 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `fix(connectivity): normalize symbol-defined power Nets`.
 
+## 2026-08-12 - Global power-Net duplicate ERC exemption
+
+- Target: accept repeated global Ground/VDD symbol Nets without weakening
+  duplicate-name diagnostics for ordinary signal Nets.
+- Changed areas: ERC grouping predicate and focused regression, target plan,
+  and maintenance log.
+- Validation: 16 focused ERC tests; workspace typecheck; format check;
+  `git diff --check`.
+- Commit status: ready to commit on `codex/razavi-bulk-semantics` as
+  `fix(erc): accept repeated global power Nets`.
+
 ## 2026-08-12 - Unified Net Label binding and deletion
 
 - Target: eliminate conflicting Route/Junction/Net interpretations of Label

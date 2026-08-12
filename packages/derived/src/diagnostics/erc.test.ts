@@ -398,6 +398,42 @@ describe("ERC engine", () => {
     expect(diagnostic!.severity).toBe("error");
   });
 
+  it("accepts repeated global ground-symbol Nets", () => {
+    const project = emptyProject();
+    project.documents[0]!.instances = [
+      {
+        id: "GND1",
+        symbolId: "ground",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "GND2",
+        symbolId: "ground",
+        placement: null,
+        properties: {},
+      },
+    ];
+    project.documents[0]!.nets = [
+      {
+        id: "net-ground-1",
+        name: "0",
+        scope: "global",
+        terminals: [{ instanceId: "GND1", pinName: "0" }],
+        ports: [],
+      },
+      {
+        id: "net-ground-2",
+        name: "0",
+        scope: "global",
+        terminals: [{ instanceId: "GND2", pinName: "0" }],
+        ports: [],
+      },
+    ];
+
+    expect(codes(project)).not.toContain("ERC_DUPLICATE_NET_NAME");
+  });
+
   it("defensively reports a NoConnect endpoint that is also on a Net", () => {
     // The schema invariant (WP-R7) rejects this at parse/Edit-Engine time; ERC
     // repeats the check defensively. Construct the invalid state via a cast.
