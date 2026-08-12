@@ -1881,6 +1881,20 @@ body.analytics-body {
   background: #10161f;
 }
 
+html:not(.light) {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+html:has(body.analytics-body) {
+  tab-size: 4;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
 html.light body.analytics-body {
   background: #ffffff;
 }
@@ -1973,6 +1987,17 @@ html.light .analytics-shell {
 .analytics-shell dl,
 .analytics-shell ul {
   margin-block: 0;
+}
+
+.analytics-shell .analytics-sub {
+  margin-top: 0.55rem;
+}
+
+.analytics-shell *,
+.analytics-shell *::before,
+.analytics-shell *::after {
+  border-style: solid;
+  border-width: 0;
 }
 
 .analytics-shell button {
@@ -2187,6 +2212,7 @@ html.light .analytics-shell {
 }
 
 .analytics-range-input {
+  appearance: auto;
   box-sizing: border-box;
   min-width: 9.5rem;
   padding: 0.35rem 0.55rem;
@@ -2198,6 +2224,8 @@ html.light .analytics-shell {
   font-family: var(--font-mono);
   font-size: 0.84rem;
   color-scheme: inherit;
+  -webkit-font-smoothing: antialiased;
+  height: 2.16796875rem;
 }
 
 html.light .analytics-range-input {
@@ -2215,6 +2243,7 @@ html.light .analytics-range-input {
 }
 
 .analytics-range-reset {
+  appearance: button;
   padding: 0.35rem 0.55rem;
   border: 1px solid var(--analytics-line);
   border-radius: var(--analytics-radius);

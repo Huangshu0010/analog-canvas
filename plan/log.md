@@ -53,13 +53,14 @@ Keep reusable lessons in `docs/experience/`, not in this log.
 - Target: make Analog Canvas analytics match the existing Analog Arena page
   without redesigning it.
 - Changed areas: analytics component and styles, theme preload, matching mono
-  font dependency, and focused browser regression coverage.
+  font dependency, Arena-compatible reset isolation, and focused browser
+  regression coverage.
 - Validation: frozen install, static/unit/release gates, focused analytics
   Playwright, and all five GitHub Actions PR checks passed. Local full E2E was
   72/74 with two pre-existing unrelated drafting rich-text assertions failing;
   both remote browser shards passed.
-- Commit status: implementation committed and PR checks green; close-out
-  documentation ready to commit before merge.
+- Commit status: initial implementation merged through PR #11; post-deployment
+  reset-alignment follow-up ready for review.
 
 ## 2026-08-12 - Bound transient canvas state and runtime caches
 
