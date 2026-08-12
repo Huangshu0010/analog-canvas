@@ -20,8 +20,14 @@ import { routePolyline, type SegmentMode } from "./routes.js";
  */
 
 export interface ResolvedRouteSegment {
-  /** Stable identity across split/normalize/stretch (attachment-remap seed). */
+  /** Positional compatibility index within this resolved route revision. */
   index: number;
+  /**
+   * Address valid only while the owning Document stays at `documentRevision`.
+   * Stored-route mutations must return an explicit remap; array position alone
+   * is never a cross-edit attachment identity.
+   */
+  ref: RouteSegmentRef;
   from: Point;
   to: Point;
   mode: SegmentMode;
@@ -32,6 +38,7 @@ export type ResolvedRouteVertexKind =
 
 export interface ResolvedRouteVertex {
   index: number;
+  ref: RouteVertexRef;
   point: Point;
   kind: ResolvedRouteVertexKind;
 }
@@ -58,6 +65,7 @@ export type EndpointJoin =
 
 export interface HitSegment {
   segmentIndex: number;
+  segmentRef: RouteSegmentRef;
   from: Point;
   to: Point;
   /** Consumer applies screen tolerance; this never moves the centerline. */
@@ -73,6 +81,40 @@ export interface ResolvedRouteGeometry {
   endpointJoins: readonly EndpointJoin[];
   hitGeometry: readonly HitSegment[];
   bounds: { min: Point; max: Point };
+}
+
+export interface RouteSegmentRef {
+  documentId: string;
+  documentRevision: number;
+  routeId: string;
+  index: number;
+}
+
+export interface RouteVertexRef {
+  documentId: string;
+  documentRevision: number;
+  routeId: string;
+  index: number;
+}
+
+/**
+ * A mutation-owned mapping from a route segment before an edit to the segment
+ * that carries its attachment afterwards. Pure geometry resolution never
+ * invents this mapping; C5 planners must emit it alongside split/normalise/
+ * stretch operations.
+ */
+export interface RouteAttachmentRemap {
+  from: RouteSegmentRef;
+  to: RouteSegmentRef | null;
+}
+
+/** Complete pure routing read model for one Document. */
+export interface ResolvedDocumentRoutingGeometry {
+  documentId: string;
+  documentRevision: number;
+  routes: ReadonlyMap<string, ResolvedRouteGeometry>;
+  /** Terminal and cross-route anchor joins in deterministic order. */
+  endpointJoins: readonly EndpointJoin[];
 }
 
 /** Sign direction of an axis-aligned segment, or null if diagonal/zero. */
@@ -113,11 +155,28 @@ export function resolveRouteGeometry(
     const horizontal = from.y === to.y;
     segments.push({
       index,
+      ref: {
+        documentId: document.id,
+        documentRevision: document.revision,
+        routeId: route.id,
+        index,
+      },
       from,
       to,
       mode: polyline.segmentModes[index] ?? "auto",
     });
-    hitGeometry.push({ segmentIndex: index, from, to, horizontal });
+    hitGeometry.push({
+      segmentIndex: index,
+      segmentRef: {
+        documentId: document.id,
+        documentRevision: document.revision,
+        routeId: route.id,
+        index,
+      },
+      from,
+      to,
+      horizontal,
+    });
   }
 
   const vertices: ResolvedRouteVertex[] = points.map((point, index) => {
@@ -126,7 +185,17 @@ export function resolveRouteGeometry(
     else if (index === points.length - 1)
       kind = vertexKindForEndpoint(document, route.to);
     else kind = "bend";
-    return { index, point, kind };
+    return {
+      index,
+      ref: {
+        documentId: document.id,
+        documentRevision: document.revision,
+        routeId: route.id,
+        index,
+      },
+      point,
+      kind,
+    };
   });
 
   const endpointJoins: EndpointJoin[] = [];
@@ -181,6 +250,36 @@ export function resolveRouteGeometry(
     endpointJoins,
     hitGeometry,
     bounds,
+  };
+}
+
+/**
+ * Resolve all routable geometry in one Document. This is the only geometry
+ * result that includes cross-route joins, avoiding a second consumer-specific
+ * traversal for route-anchor bridges.
+ */
+export function resolveDocumentRoutingGeometry(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+): ResolvedDocumentRoutingGeometry {
+  const routes = new Map<string, ResolvedRouteGeometry>();
+  const terminalJoins: EndpointJoin[] = [];
+  for (const route of [...document.routes].sort((left, right) =>
+    left.id.localeCompare(right.id, "en"),
+  )) {
+    const geometry = resolveRouteGeometry(document, resolver, route);
+    if (!geometry) continue;
+    routes.set(route.id, geometry);
+    terminalJoins.push(...geometry.endpointJoins);
+  }
+  return {
+    documentId: document.id,
+    documentRevision: document.revision,
+    routes,
+    endpointJoins: [
+      ...terminalJoins,
+      ...resolveRouteAnchorJoins(document, resolver),
+    ],
   };
 }
 

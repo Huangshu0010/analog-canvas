@@ -3,7 +3,11 @@ import type { SchematicDocument } from "@icm/model";
 import { InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
-import { resolveRouteAnchorJoins, resolveRouteGeometry } from "./index.js";
+import {
+  resolveDocumentRoutingGeometry,
+  resolveRouteAnchorJoins,
+  resolveRouteGeometry,
+} from "./index.js";
 
 // Two-pin symbol: pin R faces east, pin L faces west; used for terminal
 // endpoint-join tests where the resolved outward direction matters.
@@ -83,13 +87,13 @@ describe("ResolvedRouteGeometry", () => {
     expect(resolveRouteGeometry(document, resolver, bad)).toBeNull();
   });
 
-  it("produces one typed segment per centerline segment with stable index and mode", () => {
+  it("produces revision-scoped segment references and positional compatibility indexes", () => {
     const geometry = resolveRouteGeometry(
       junctionRouteDocument(),
       resolver,
       junctionRouteDocument().routes[0]!,
     )!;
-    expect(geometry.segments).toEqual([
+    expect(geometry.segments).toMatchObject([
       { index: 0, from: { x: 0, y: 0 }, to: { x: 50, y: 0 }, mode: "manual" },
       {
         index: 1,
@@ -97,6 +101,10 @@ describe("ResolvedRouteGeometry", () => {
         to: { x: 100, y: 100 },
         mode: "auto",
       },
+    ]);
+    expect(geometry.segments.map((segment) => segment.ref)).toEqual([
+      { documentId: "r", documentRevision: 0, routeId: "route-j", index: 0 },
+      { documentId: "r", documentRevision: 0, routeId: "route-j", index: 1 },
     ]);
     expect(geometry.hitGeometry.map((hit) => hit.horizontal)).toEqual([
       true,
@@ -327,5 +335,15 @@ describe("resolveRouteAnchorJoins", () => {
 
   it("excludes a degree-1 (free-end) route-anchor", () => {
     expect(resolveRouteAnchorJoins(anchorDocument(1), resolver)).toEqual([]);
+  });
+
+  it("returns per-route and cross-route joins from one document aggregate", () => {
+    const document = anchorDocument(2);
+    const aggregate = resolveDocumentRoutingGeometry(document, resolver);
+    expect(aggregate.documentId).toBe("a");
+    expect([...aggregate.routes.keys()]).toEqual(["r1", "r2"]);
+    expect(aggregate.endpointJoins).toEqual(
+      resolveRouteAnchorJoins(document, resolver),
+    );
   });
 });

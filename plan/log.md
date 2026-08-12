@@ -4831,3 +4831,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   tests; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): preserve NoConnect declarations through clipboard paste`.
+
+## 2026-08-12 - Connectivity Recovery C3: route geometry semantics
+
+- Target: correct misleading segment-identity semantics and make route-anchor
+  joins part of one document-level pure geometry read model.
+- Changed areas: resolved route geometry types/resolver/tests; target plan and
+  this log.
+- Validation: workspace `pnpm typecheck`; 16 focused resolved-geometry and
+  deletion-parity tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): clarify route geometry identity and joins`.
