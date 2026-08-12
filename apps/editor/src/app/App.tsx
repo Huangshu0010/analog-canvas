@@ -29,7 +29,6 @@ import {
   resolveDraftingObjectGeometry,
   runErcChecks,
   routeAttachmentPlacement,
-  routePolyline,
   traceHierarchyNet,
 } from "@icm/derived";
 import type {
@@ -1146,8 +1145,12 @@ export function App({ project: initialProject }: AppProps) {
       const route = opened.routes.find(
         (item) => item.netId === locator.objectId,
       );
-      const polyline = route ? routePolyline(opened, resolver, route) : null;
-      if (polyline?.points[0]) focusPoint(polyline.points[0]);
+      const centerline = route
+        ? projectConnectivityIndex.documents
+            .get(opened.id)
+            ?.routeGeometry.get(route.id)?.centerline
+        : undefined;
+      if (centerline?.[0]) focusPoint(centerline[0]);
     }
     setSelectionOpen(true);
     setStatus(statusMessage);
@@ -3378,7 +3381,9 @@ export function App({ project: initialProject }: AppProps) {
       (candidate) => candidate.id !== net.id && candidate.name === name,
     );
     const targetNetId = sameNameNet?.id ?? net.id;
-    const polyline = routePolyline(document, resolver, selectedRoute);
+    const polyline = routePolylines.find(
+      ({ route }) => route.id === selectedRoute.id,
+    )?.polyline;
     if (!polyline) return;
     const segment = Math.max(0, Math.floor((polyline.points.length - 1) / 2));
     const from = polyline.points[segment]!;
@@ -6331,11 +6336,9 @@ export function App({ project: initialProject }: AppProps) {
             ) : null}
             {netLabelEditorOpen && selectedRoute
               ? (() => {
-                  const polyline = routePolyline(
-                    document,
-                    resolver,
-                    selectedRoute,
-                  );
+                  const polyline = routePolylines.find(
+                    ({ route }) => route.id === selectedRoute.id,
+                  )?.polyline;
                   if (!polyline) return null;
                   const segmentIndex = Math.min(
                     selectedRouteSegmentIndex ?? 0,

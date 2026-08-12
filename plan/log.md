@@ -5081,3 +5081,15 @@ contracts (WP-R1)`.
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(editor): consume indexed flightlines`.
+
+## 2026-08-12 - Connectivity Recovery C3f: remaining editor geometry reads
+
+- Target: remove the last direct editor `routePolyline` reads for Net focus
+  and Net-label placement.
+- Changed areas: editor navigation and Net-label read consumers; target plan
+  and log.
+- Validation: 19 focused App/geometry tests; two focused Playwright
+  label/search flows; workspace `pnpm typecheck`; static no-direct-call audit;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(editor): finish resolved route reads`.
