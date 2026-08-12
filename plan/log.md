@@ -5509,6 +5509,18 @@ contracts (WP-R1)`.
   at one worker, and the complete suite passed 85/85 at eight workers.
 - Commit status: integration branch validated and ready to fast-forward main.
 
+## 2026-08-12 - Razavi bulk / latest-main integration
+
+- Target: combine Razavi MOS bulk semantics with the published component
+  Library quick-place work without discarding either editor surface.
+- Changed areas: automatic two-parent integration commit; factual integration
+  target record. No functional conflict required manual resolution.
+- Validation: workspace typecheck; 20 focused Derived MOS-bulk/ERC tests; six
+  editor presentation/library unit tests; nine single-worker component-Library
+  browser tests; `git diff --check` clean.
+- Commit status: merge commit `c291ee2` created locally; close-out metadata is
+  ready to commit on `codex/razavi-bulk-semantics`.
+
 ## 2026-08-12 - Safe PR 14 improvements
 
 - Target: retain the useful PR #14 Library and direct-inspection behavior on
