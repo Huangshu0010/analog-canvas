@@ -5640,3 +5640,15 @@ contracts (WP-R1)`.
   former Node path.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `feat(agent): split browser-safe protocol boundary (WP-WA1)`.
+
+## 2026-08-12 - WP-WA2 unified editor transaction host
+
+- Target: route authenticated Agent and human edits through one
+  `EditorDocumentController`/`DocumentHistory` path and freeze the host contract.
+- Changed areas: `EditorDocumentController.dispatchTransaction` + `transact`
+  refactor; `useDocumentController` exposure; new `packages/agent-adapter/src/host.ts`
+  (`AgentOperationHost`); extended controller tests.
+- Validation: 27 document tests (11 controller); workspace `typecheck` clean;
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(editor): unify human/Agent transaction dispatch (WP-WA2)`.

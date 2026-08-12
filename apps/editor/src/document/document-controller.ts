@@ -1,7 +1,11 @@
 import { useRef, useState } from "react";
 
-import { DocumentHistory } from "@icm/edit-engine";
-import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
+import { DocumentHistory, rejectTransaction } from "@icm/edit-engine";
+import type {
+  EditActor,
+  EditTransactionResult,
+  SchematicEdit,
+} from "@icm/edit-engine";
 import { CircuitProjectSchema } from "@icm/model";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 import { builtInSymbols, createProjectSymbolResolver } from "@icm/symbols";
@@ -12,6 +16,21 @@ import {
 } from "./editor-session";
 
 type ProjectSymbolResolver = ReturnType<typeof createProjectSymbolResolver>;
+
+/**
+ * A complete authenticated transaction envelope accepted by
+ * {@link EditorDocumentController.dispatchTransaction}. Both human and Agent
+ * entry points build one of these; the actor identifies the origin. This is the
+ * single write envelope that reaches `DocumentHistory`.
+ */
+export interface EditorTransactionRequest {
+  transactionId: string;
+  documentId: string;
+  expectedRevision: number;
+  actor: EditActor;
+  dryRun?: boolean;
+  edits: readonly SchematicEdit[];
+}
 
 export interface DocumentControllerSnapshot {
   project: CircuitProject;
@@ -131,13 +150,36 @@ export class EditorDocumentController {
 
   transact(edits: readonly SchematicEdit[]): EditTransactionResult {
     this.transactionCounter += 1;
-    const result = this.historyValue.transact({
+    return this.dispatchTransaction({
       transactionId: `transaction-ui-${this.transactionCounter}`,
-      documentId: this.document.id,
+      documentId: this.activeDocumentIdValue,
       expectedRevision: this.historyValue.document.revision,
       actor: { kind: "human", id: "human-local" },
-      edits: [...edits],
+      edits,
     });
+  }
+
+  /**
+   * The single write path for both human and Agent transactions. Selects the
+   * matching per-Document history (without retargeting the active Document),
+   * dispatches through {@link DocumentHistory.transact}, and on a successful
+   * commit replaces the Project document and refreshes the resolver exactly like
+   * a human commit. `dryRun` mutates no history, Project, resolver, or undo
+   * state. Opening or viewing another Document neither retargets nor cancels an
+   * explicit dispatch.
+   */
+  dispatchTransaction(
+    request: EditorTransactionRequest,
+  ): EditTransactionResult {
+    const history = this.historyForDocument(request.documentId);
+    if (!history) {
+      return rejectTransaction(
+        this.document,
+        "OBJECT_NOT_FOUND",
+        `Document ${request.documentId} is not present in the Project`,
+      );
+    }
+    const result = history.transact(request);
     if (result.ok && result.applied) {
       this.projectValue = replaceProjectDocument(
         this.projectValue,
@@ -149,6 +191,26 @@ export class EditorDocumentController {
       );
     }
     return result;
+  }
+
+  /**
+   * Returns the per-Document history for `documentId`, creating one at the
+   * Project's current revision if the Document has never been opened. Returns
+   * `null` when the Document is absent so the caller can produce a typed error.
+   * Never changes the active Document.
+   */
+  private historyForDocument(documentId: string): DocumentHistory | null {
+    const existing = this.histories.get(documentId);
+    if (existing) return existing;
+    const document = this.projectValue.documents.find(
+      (candidate) => candidate.id === documentId,
+    );
+    if (!document) return null;
+    const history = new DocumentHistory(document, {
+      symbolResolver: this.resolverValue,
+    });
+    this.histories.set(documentId, history);
+    return history;
   }
 }
 
@@ -180,6 +242,14 @@ export function useDocumentController(
     },
     transact: (edits: readonly SchematicEdit[]) => {
       const result = controller.transact(edits);
+      if (result.ok && result.applied) {
+        synchronize();
+        onCommittedRef.current(controller.project);
+      }
+      return result;
+    },
+    dispatchTransaction: (request: EditorTransactionRequest) => {
+      const result = controller.dispatchTransaction(request);
       if (result.ok && result.applied) {
         synchronize();
         onCommittedRef.current(controller.project);

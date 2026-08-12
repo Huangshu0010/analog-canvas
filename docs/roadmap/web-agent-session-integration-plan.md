@@ -328,6 +328,10 @@ loopback moved to `./loopback`; relay envelope + web-session schemas frozen in
 
 ### WP-WA2 — Unified editor transaction host
 
+Status: `complete` — `EditorDocumentController.dispatchTransaction` is the single
+human/Agent write path; `AgentOperationHost` contract frozen in
+`packages/agent-adapter/src/host.ts`.
+
 - Goal: Route authenticated Agent and human edits through one
   `EditorDocumentController`/`DocumentHistory` path.
 - Main modules: `apps/editor/src/document`, Agent operation host interface,
