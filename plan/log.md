@@ -5538,3 +5538,14 @@ contracts (WP-R1)`.
   workflow; `git diff --check` clean.
 - Commit status: merge commit `842d889` created locally; refreshed PR branch
   pending push and required CI checks.
+# 2026-08-12 - Razavi capacitor plate calibration
+
+- Target: calibrate capacitor plate geometry to its registered Razavi raster
+  while preserving electrical pins and wiring anchors.
+- Changed areas: capacitor Symbol DSL and regenerated Razavi catalog; target
+  record.
+- Validation: generated/catalog checks; Symbols build; 21 catalog tests;
+  vertical/horizontal fidelity (`0.6438` / `0.7247` IoU, both zero
+  registration lift); `git diff --check` clean.
+- Commit status: ready to commit on `codex/capacitor-plate-calibration` as
+  `fix(symbols): calibrate Razavi capacitor plate geometry`.
