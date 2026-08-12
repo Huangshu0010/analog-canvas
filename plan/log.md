@@ -5037,3 +5037,14 @@ contracts (WP-R1)`.
 --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): navigate project ERC diagnostics`.
+
+## 2026-08-12 - Connectivity Recovery C3d: formal render geometry consumer
+
+- Target: migrate formal SVG route, bridge, marker attachment, and bounds
+  consumers to resolved document routing geometry.
+- Changed areas: `@icm/render-svg` route rendering; target plan and log.
+- Validation: 32 focused render/geometry tests including existing SVG goldens;
+  workspace `pnpm typecheck`; static no-direct-`routePolyline` audit;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(render): consume resolved route geometry`.
