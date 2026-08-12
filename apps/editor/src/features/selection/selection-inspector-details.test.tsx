@@ -1,8 +1,15 @@
-import type { VisualDiagnostic } from "@icm/derived";
+import type {
+  Diagnostic,
+  ErcDiagnostic,
+  HierarchyNetTrace,
+  VisualDiagnostic,
+} from "@icm/derived";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
+  NetTraceSection,
+  ProjectDiagnosticsSection,
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "./selection-inspector-details";
@@ -25,6 +32,25 @@ const observation: VisualDiagnostic = {
   gateEligible: false,
   message: "Label is crowded",
   objectIds: ["label-1"],
+};
+
+const ercDiagnostic: ErcDiagnostic = {
+  id: "erc:fixture",
+  domain: "erc",
+  code: "ERC_UNCONNECTED_PIN",
+  severity: "warning",
+  confidence: "high",
+  gateEligible: false,
+  message: "RCHILD.1 is unconnected",
+  primary: {
+    documentId: "document-child",
+    hierarchyPath: [],
+    kind: "terminal",
+    objectId: "RCHILD:1",
+    endpoint: { kind: "terminal", instanceId: "RCHILD", pinName: "1" },
+  },
+  related: [],
+  parameters: {},
 };
 
 describe("selection inspector details", () => {
@@ -81,5 +107,95 @@ describe("selection inspector details", () => {
     expect(observationList).not.toContain("BROKEN_ROUTE");
     expect(markup).toContain("SPICE_NOTE");
     expect(markup).toContain('data-testid="blocking-diagnostic-count">1');
+  });
+
+  it("renders locator-backed domains in one filterable project panel", () => {
+    const visualDiagnostic: Diagnostic = {
+      ...ercDiagnostic,
+      id: "visual:fixture",
+      domain: "visual",
+      code: "VISUAL_SHORT_SEGMENT",
+      message: "Segment is too short",
+    };
+    const markup = renderToStaticMarkup(
+      <ProjectDiagnosticsSection
+        diagnostics={[ercDiagnostic, visualDiagnostic]}
+        documentLabel={(documentId) =>
+          documentId === "document-child" ? "Bias Child Cell" : "Main Cell"
+        }
+        onSelectDiagnostic={() => undefined}
+      />,
+    );
+    expect(markup).toContain('data-testid="project-diagnostics"');
+    expect(markup).toContain('data-testid="diagnostic-domain-erc"');
+    expect(markup).toContain('data-testid="diagnostic-domain-visual"');
+    expect(markup).toContain('data-testid="diagnostic-severity-warning"');
+    expect(markup).toContain('data-document-id="document-child"');
+    expect(markup).toContain("Cell: Bias Child Cell");
+    expect(markup).toContain("ERC / ERC_UNCONNECTED_PIN");
+    expect(markup).toContain("VISUAL / VISUAL_SHORT_SEGMENT");
+  });
+
+  it("renders concrete, navigable hierarchy Net hops", () => {
+    const trace: HierarchyNetTrace = {
+      primary: {
+        documentId: "document-top",
+        netId: "net-top",
+        visibleEndpoints: [],
+        routes: [],
+        junctions: [],
+        virtualEdges: [],
+        flightlines: [],
+      },
+      highlights: [
+        {
+          documentId: "document-top",
+          netId: "net-top",
+          visibleEndpoints: [],
+          routes: [],
+          junctions: [],
+          virtualEdges: [],
+          flightlines: [],
+        },
+        {
+          documentId: "document-child",
+          netId: "net-child",
+          visibleEndpoints: [],
+          routes: [],
+          junctions: [],
+          virtualEdges: [],
+          flightlines: [],
+        },
+      ],
+      hops: [
+        {
+          direction: "down",
+          from: { documentId: "document-top", netId: "net-top" },
+          to: { documentId: "document-child", netId: "net-child" },
+          frame: {
+            parentDocumentId: "document-top",
+            instanceId: "XBIAS",
+            parentPinName: "OUT",
+            childDocumentId: "document-child",
+            childPortId: "port-out",
+            childNetId: "net-child",
+          },
+        },
+      ],
+    };
+    const markup = renderToStaticMarkup(
+      <NetTraceSection
+        trace={trace}
+        documentLabel={(documentId) =>
+          documentId === "document-child" ? "Bias Child Cell" : "Top Cell"
+        }
+        onNavigateHop={() => undefined}
+      />,
+    );
+    expect(markup).toContain('data-testid="net-trace-hops"');
+    expect(markup).toContain('data-testid="net-trace-hop-0"');
+    expect(markup).toContain("Enter");
+    expect(markup).toContain("XBIAS.OUT");
+    expect(markup).toContain("Bias Child Cell / net-child");
   });
 });

@@ -8,10 +8,13 @@ import type {
 
 import { resolveEndpointOutwardDirection } from "./endpoint.js";
 import {
+  resolveDocumentRoutingGeometry,
+  type ResolvedDocumentRoutingGeometry,
+} from "./resolved-route-geometry.js";
+import {
   measureRichTextDocument,
   richTextMetrics,
 } from "./rich-text-layout.js";
-import { routePolyline } from "./routes.js";
 import { resolveSchematicStyleProfile } from "./style-profile.js";
 
 export interface VisualDiagnostic {
@@ -52,6 +55,8 @@ function enclosingBounds(input: readonly Rect[]): Rect | undefined {
 
 function overlappingClusters<T extends { id: string; bounds: Rect }>(
   items: readonly T[],
+  overlaps: (left: T, right: T) => boolean = (left, right) =>
+    rectanglesOverlap(left.bounds, right.bounds),
 ): T[][] {
   const parents = items.map((_, index) => index);
   const find = (index: number): number => {
@@ -68,7 +73,7 @@ function overlappingClusters<T extends { id: string; bounds: Rect }>(
   };
   for (let left = 0; left < items.length; left += 1) {
     for (let right = left + 1; right < items.length; right += 1) {
-      if (rectanglesOverlap(items[left]!.bounds, items[right]!.bounds)) {
+      if (overlaps(items[left]!, items[right]!)) {
         join(left, right);
       }
     }
@@ -79,6 +84,102 @@ function overlappingClusters<T extends { id: string; bounds: Rect }>(
     groups.set(root, [...(groups.get(root) ?? []), item]);
   });
   return [...groups.values()].filter((group) => group.length > 1);
+}
+
+function samePoint(left: Point, right: Point): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
+function powerPinName(symbolId: string): string | undefined {
+  return symbolId === "vdd" ? "P" : symbolId === "ground" ? "0" : undefined;
+}
+
+function terminalSharesNet(
+  document: SchematicDocument,
+  left: { instanceId: string; pinName: string },
+  right: { instanceId: string; pinName: string },
+): boolean {
+  return document.nets.some(
+    (net) =>
+      net.terminals.some(
+        (terminal) =>
+          terminal.instanceId === left.instanceId &&
+          terminal.pinName === left.pinName,
+      ) &&
+      net.terminals.some(
+        (terminal) =>
+          terminal.instanceId === right.instanceId &&
+          terminal.pinName === right.pinName,
+      ),
+  );
+}
+
+/**
+ * A power marker touching one visible pin on its own Net is an intentional
+ * terminal contact, not a symbol collision. This remains deliberately narrow:
+ * ordinary same-Net symbol overlap is still reported.
+ */
+function isExactPowerPinContact(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  leftId: string,
+  rightId: string,
+): boolean {
+  const left = document.instances.find((item) => item.id === leftId);
+  const right = document.instances.find((item) => item.id === rightId);
+  if (!left?.placement || !right?.placement) return false;
+  const powerInstance = powerPinName(left.symbolId) ? left : right;
+  const otherInstance = powerInstance === left ? right : left;
+  const powerPin = powerPinName(powerInstance.symbolId);
+  const powerPlacement = powerInstance.placement;
+  const otherPlacement = otherInstance.placement;
+  if (
+    !powerPin ||
+    powerPinName(otherInstance.symbolId) ||
+    !powerPlacement ||
+    !otherPlacement
+  ) {
+    return false;
+  }
+  const powerSymbol = resolver.resolve(
+    powerInstance.symbolId,
+    powerInstance.symbolVariantId,
+  );
+  const otherSymbol = resolver.resolve(
+    otherInstance.symbolId,
+    otherInstance.symbolVariantId,
+  );
+  const powerDefinition = powerSymbol?.definition.pins.find(
+    (pin) => pin.name === powerPin,
+  );
+  if (!powerDefinition || !otherSymbol) return false;
+  const powerPoint = transformPoint(
+    powerDefinition.at,
+    powerPlacement.position,
+    powerPlacement,
+  );
+  const hiddenPins = new Set(otherSymbol.variant?.hiddenPinNames ?? []);
+  return otherSymbol.definition.pins.some((pin) => {
+    if (
+      hiddenPins.has(pin.name) ||
+      pin.presentation.visibility === "implicit"
+    ) {
+      return false;
+    }
+    const point = transformPoint(
+      pin.at,
+      otherPlacement.position,
+      otherPlacement,
+    );
+    return (
+      samePoint(powerPoint, point) &&
+      terminalSharesNet(
+        document,
+        { instanceId: powerInstance.id, pinName: powerPin },
+        { instanceId: otherInstance.id, pinName: pin.name },
+      )
+    );
+  });
 }
 
 function primitivePoints(primitive: SymbolPrimitive): Point[] | null {
@@ -260,24 +361,25 @@ function pushRoutingQualityMetrics(
   document: SchematicDocument,
   resolver: SymbolResolver,
   boundsById: Map<string, Rect>,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
 ): void {
   const routePolylines = document.routes
     .map((route) => ({
       route,
-      polyline: routePolyline(document, resolver, route),
+      centerline: routingGeometry.routes.get(route.id)?.centerline,
     }))
     .filter(
       (
         entry,
       ): entry is {
         route: typeof entry.route;
-        polyline: NonNullable<typeof entry.polyline>;
-      } => entry.polyline !== null,
+        centerline: readonly Point[];
+      } => entry.centerline !== undefined,
     );
 
   // 1. Wire-through-symbol: a Route segment passes through an instance
   //    silhouette that is not one of its terminal endpoints.
-  for (const { route, polyline } of routePolylines) {
+  for (const { route, centerline } of routePolylines) {
     const terminalInstances = new Set(
       [route.from, route.to]
         .filter(
@@ -288,9 +390,9 @@ function pushRoutingQualityMetrics(
         )
         .map((endpoint) => endpoint.instanceId),
     );
-    for (let index = 1; index < polyline.points.length; index += 1) {
-      const from = polyline.points[index - 1]!;
-      const to = polyline.points[index]!;
+    for (let index = 1; index < centerline.length; index += 1) {
+      const from = centerline[index - 1]!;
+      const to = centerline[index]!;
       for (const [instanceId, box] of boundsById) {
         if (terminalInstances.has(instanceId)) continue;
         if (segmentIntersectsRect(from, to, box)) {
@@ -322,10 +424,7 @@ function pushRoutingQualityMetrics(
       const left = routePolylines[leftIndex]!;
       const right = routePolylines[rightIndex]!;
       if (left.route.netId !== right.route.netId) continue;
-      const overlap = firstCollinearOverlap(
-        left.polyline.points,
-        right.polyline.points,
-      );
+      const overlap = firstCollinearOverlap(left.centerline, right.centerline);
       if (overlap) {
         const ids = overlappingRouteIdsByNet.get(left.route.netId) ?? new Set();
         ids.add(left.route.id);
@@ -352,17 +451,17 @@ function pushRoutingQualityMetrics(
 
   // 3. Terminal departure: the first segment of a terminal-anchored Route
   //    should leave along the pin's outward direction. Reported as evidence.
-  for (const { route, polyline } of routePolylines) {
+  for (const { route, centerline } of routePolylines) {
     if (route.from.kind !== "terminal") continue;
-    if (polyline.points.length < 2) continue;
+    if (centerline.length < 2) continue;
     const outward = resolveEndpointOutwardDirection(
       document,
       resolver,
       route.from,
     );
     if (!outward) continue;
-    const first = polyline.points[0]!;
-    const second = polyline.points[1]!;
+    const first = centerline[0]!;
+    const second = centerline[1]!;
     const departure = {
       x: Math.sign(second.x - first.x),
       y: Math.sign(second.y - first.y),
@@ -450,6 +549,7 @@ export function diagnoseVisualQuality(
     options.minimumSegmentLength ?? document.presentation.grid;
   const bounds = instanceBounds(document, resolver);
   const boundsById = new Map(bounds.map((item) => [item.id, item.bounds]));
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
 
   for (const instance of document.instances) {
     if (!instance.placement) {
@@ -477,7 +577,12 @@ export function diagnoseVisualQuality(
       });
     }
   }
-  for (const cluster of overlappingClusters(bounds)) {
+  for (const cluster of overlappingClusters(
+    bounds,
+    (left, right) =>
+      rectanglesOverlap(left.bounds, right.bounds) &&
+      !isExactPowerPinContact(document, resolver, left.id, right.id),
+  )) {
     const objectIds = cluster
       .map((item) => item.id)
       .sort((left, right) => left.localeCompare(right, "en"));
@@ -536,11 +641,11 @@ export function diagnoseVisualQuality(
   }
 
   for (const route of document.routes) {
-    const polyline = routePolyline(document, resolver, route);
-    if (!polyline) continue;
-    for (let index = 1; index < polyline.points.length; index += 1) {
-      const from = polyline.points[index - 1]!;
-      const to = polyline.points[index]!;
+    const centerline = routingGeometry.routes.get(route.id)?.centerline;
+    if (!centerline) continue;
+    for (let index = 1; index < centerline.length; index += 1) {
+      const from = centerline[index - 1]!;
+      const to = centerline[index]!;
       const length = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
       if (length < minimumSegmentLength) {
         diagnostics.push({
@@ -566,12 +671,12 @@ export function diagnoseVisualQuality(
   for (const junction of document.junctions) {
     for (const route of document.routes) {
       if (route.netId === junction.netId) continue;
-      const polyline = routePolyline(document, resolver, route);
+      const centerline = routingGeometry.routes.get(route.id)?.centerline;
       if (
-        polyline?.points
-          .slice(1)
+        centerline
+          ?.slice(1)
           .some((to, index) =>
-            pointOnSegment(junction.position, polyline.points[index]!, to),
+            pointOnSegment(junction.position, centerline[index]!, to),
           )
       ) {
         diagnostics.push({
@@ -639,7 +744,13 @@ export function diagnoseVisualQuality(
   // Read-only routing-quality metrics. These are evidence, not pass/fail
   // judges: they report wire-through-symbol, same-Net route overlap, and
   // terminal departure direction. They never move objects.
-  pushRoutingQualityMetrics(diagnostics, document, resolver, boundsById);
+  pushRoutingQualityMetrics(
+    diagnostics,
+    document,
+    resolver,
+    boundsById,
+    routingGeometry,
+  );
   return diagnostics.sort((left, right) =>
     `${left.code}\0${left.objectIds.join("\0")}`.localeCompare(
       `${right.code}\0${right.objectIds.join("\0")}`,

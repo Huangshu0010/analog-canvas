@@ -8,6 +8,12 @@ Owning phase: `Phase 8`
 
 Primary owner: `apps/editor`
 
+Related ADRs: [`0013-project-connectivity-index.md`](../adr/0013-project-connectivity-index.md),
+[`0015-object-locator-and-diagnostic-envelope.md`](../adr/0015-object-locator-and-diagnostic-envelope.md).
+Project search and net highlight/trace (WP-R5/R6) navigate via `ObjectLocator` +
+`navigateTo` and read the unified connectivity index; navigation never mutates a
+revision or clears an undo history.
+
 ## Purpose
 
 Define the target human interaction model for a compact schematic editor. The
@@ -175,7 +181,7 @@ component or short Route drag.
 | `F`                        | Fit the active Document in the viewport.                                           |
 | `W`                        | Enter or continue Wire mode.                                                       |
 | `L`                        | Edit/create the selected Route's electrical Net Label.                             |
-| `P`                        | Enter Construction line mode.                                                      |
+| `K`                        | Enter Construction line mode.                                                      |
 | `Q`                        | Open Properties for the selected object and focus its primary editor.              |
 | `Escape`                   | Cancel the active gesture, then return to Pointer mode.                            |
 | `Delete` / `Backspace`     | Delete the selected object after applying the selection-specific semantic command. |

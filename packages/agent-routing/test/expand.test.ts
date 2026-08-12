@@ -235,7 +235,7 @@ describe("expandRouteGraph", () => {
           from: "tap0",
           to: "tap0",
           role: "label",
-          label: { text: "VOUT", attachedObjectId: "port-vout" },
+          label: { text: "VOUT" },
         },
       ],
     });
@@ -245,6 +245,7 @@ describe("expandRouteGraph", () => {
     if (ann.kind !== "upsert_annotation") return;
     expect(ann.annotation.kind).toBe("net-label");
     expect(ann.annotation.text).toBe("VOUT");
+    expect(ann.annotation.attachedObjectId).toBe("net-1");
   });
 
   it("returns MISSING_ENDPOINT when an endpoint node is absent from the input", () => {

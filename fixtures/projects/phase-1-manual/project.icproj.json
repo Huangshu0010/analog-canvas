@@ -32,6 +32,7 @@
       "layoutGroups": [],
       "name": "Manual Editor Demo",
       "nets": [],
+      "noConnects": [],
       "ports": [],
       "presentation": {
         "compactness": "normal",
@@ -45,7 +46,7 @@
   ],
   "id": "project-phase-1-manual",
   "name": "Phase 1 Manual Editor",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "source": {
     "dialect": "none",
     "entry": null,

@@ -14,9 +14,9 @@
       "role": "drain",
       "at": {
         "x": 10,
-        "y": -20
+        "y": 20
       },
-      "direction": "north",
+      "direction": "south",
       "presentation": {
         "visibility": "visible",
         "leadLength": 10
@@ -40,9 +40,9 @@
       "role": "source",
       "at": {
         "x": 10,
-        "y": 20
+        "y": -20
       },
-      "direction": "south",
+      "direction": "north",
       "presentation": {
         "visibility": "visible",
         "leadLength": 10

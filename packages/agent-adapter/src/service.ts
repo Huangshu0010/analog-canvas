@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 
-import { diagnoseVisualQuality, routePolyline } from "@icm/derived";
+import {
+  diagnoseVisualQuality,
+  resolveDocumentRoutingGeometry,
+} from "@icm/derived";
 import { executeTransaction } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
 import { transformPoint } from "@icm/model";
@@ -137,10 +140,11 @@ function collectResolvedRoutes(
   changedObjectIds: readonly string[],
 ): Array<{ routeId: string; polyline: Point[] }> {
   const changed = new Set(changedObjectIds);
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
   const result: Array<{ routeId: string; polyline: Point[] }> = [];
   for (const route of document.routes) {
     if (!changed.has(route.id)) continue;
-    const polyline = routePolyline(document, resolver, route)?.points ?? null;
+    const polyline = routingGeometry.routes.get(route.id)?.centerline ?? null;
     if (polyline && polyline.length >= 2) {
       result.push({ routeId: route.id, polyline: [...polyline] });
     }
@@ -395,6 +399,10 @@ function selectQueryIds(
     }
     case "region": {
       const ids = new Set<string>();
+      const routingGeometry = resolveDocumentRoutingGeometry(
+        document,
+        resolver,
+      );
       for (const instance of document.instances) {
         if (
           instance.placement &&
@@ -415,9 +423,11 @@ function selectQueryIds(
           ids.add(annotation.id);
       }
       for (const route of document.routes) {
-        const polyline = routePolyline(document, resolver, route);
+        const polyline = routingGeometry.routes.get(route.id);
         if (
-          polyline?.points.some((point) => pointInBounds(point, scope.bounds))
+          polyline?.centerline.some((point) =>
+            pointInBounds(point, scope.bounds),
+          )
         )
           ids.add(route.id);
       }
@@ -465,7 +475,10 @@ function editCategory(
     case "connect_endpoints":
     case "merge_nets":
     case "set_net_name":
+    case "normalize_power_nets":
     case "disconnect_endpoint":
+    case "add_no_connect":
+    case "remove_no_connect":
       return "connectivity";
     case "upsert_annotation":
     case "remove_annotation":

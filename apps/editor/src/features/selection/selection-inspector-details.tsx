@@ -1,5 +1,13 @@
 import { hasBlockingVisualDiagnostics } from "@icm/derived";
-import type { VisualDiagnostic } from "@icm/derived";
+import type {
+  Diagnostic,
+  DiagnosticDomain,
+  DiagnosticSeverity,
+  HierarchyNetTrace,
+  HierarchyNetTraceHop,
+  VisualDiagnostic,
+} from "@icm/derived";
+import { useMemo, useState } from "react";
 import type { SpiceDiagnostic } from "@icm/spice";
 
 import type { EditorTool } from "../../interaction/interaction-state";
@@ -174,5 +182,187 @@ export function SelectionInspectorDetails({
         </ul>
       </section>
     </>
+  );
+}
+
+export interface ProjectDiagnosticsSectionProps {
+  diagnostics: readonly Diagnostic[];
+  documentLabel(documentId: string): string;
+  onSelectDiagnostic(diagnostic: Diagnostic): void;
+}
+
+export interface NetTraceSectionProps {
+  trace: HierarchyNetTrace;
+  documentLabel(documentId: string): string;
+  onNavigateHop(hop: HierarchyNetTraceHop): void;
+}
+
+/** Concrete hierarchy edges for the currently highlighted logical Net. */
+export function NetTraceSection({
+  trace,
+  documentLabel,
+  onNavigateHop,
+}: NetTraceSectionProps) {
+  return (
+    <section
+      aria-label="Hierarchy Net trace"
+      className="diagnostics erc-diagnostics net-trace"
+    >
+      <h2>Hierarchy Net trace ({trace.highlights.length} Cells)</h2>
+      <ul data-testid="net-trace-hops">
+        {trace.hops.map((hop, index) => (
+          <li
+            key={`${hop.direction}-${hop.from.documentId}-${hop.from.netId}-${hop.frame.instanceId}-${hop.frame.parentPinName}-${index}`}
+          >
+            <button
+              type="button"
+              data-testid={`net-trace-hop-${index}`}
+              onClick={() => onNavigateHop(hop)}
+            >
+              <strong>{hop.direction === "down" ? "Enter" : "Return"}</strong>:{" "}
+              {hop.frame.instanceId}.{hop.frame.parentPinName} →{" "}
+              {documentLabel(hop.to.documentId)} / {hop.to.netId}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+type DiagnosticSeverityFilter = "all" | DiagnosticSeverity;
+
+const DIAGNOSTIC_SEVERITY_FILTERS: readonly DiagnosticSeverityFilter[] = [
+  "all",
+  "error",
+  "warning",
+  "info",
+];
+
+type ProjectDomainFilter = "all" | DiagnosticDomain;
+
+function DiagnosticFilters({
+  diagnostics,
+  domainFilter,
+  severityFilter,
+  onDomainFilterChange,
+  onSeverityFilterChange,
+}: {
+  diagnostics: readonly Diagnostic[];
+  domainFilter: ProjectDomainFilter;
+  severityFilter: DiagnosticSeverityFilter;
+  onDomainFilterChange(filter: ProjectDomainFilter): void;
+  onSeverityFilterChange(filter: DiagnosticSeverityFilter): void;
+}) {
+  const domains = [
+    "all" as const,
+    ...[...new Set(diagnostics.map((diagnostic) => diagnostic.domain))].sort(),
+  ];
+  return (
+    <>
+      <div className="diagnostic-filters" aria-label="Diagnostic domains">
+        {domains.map((filter) => {
+          const count =
+            filter === "all"
+              ? diagnostics.length
+              : diagnostics.filter((diagnostic) => diagnostic.domain === filter)
+                  .length;
+          return (
+            <button
+              key={filter}
+              type="button"
+              data-testid={`diagnostic-domain-${filter}`}
+              aria-pressed={domainFilter === filter}
+              onClick={() => onDomainFilterChange(filter)}
+            >
+              {filter === "all" ? "All domains" : filter} ({count})
+            </button>
+          );
+        })}
+      </div>
+      <div className="diagnostic-filters" aria-label="Diagnostic severities">
+        {DIAGNOSTIC_SEVERITY_FILTERS.map((filter) => {
+          const count =
+            filter === "all"
+              ? diagnostics.length
+              : diagnostics.filter(
+                  (diagnostic) => diagnostic.severity === filter,
+                ).length;
+          return (
+            <button
+              key={filter}
+              type="button"
+              data-testid={`diagnostic-severity-${filter}`}
+              aria-pressed={severityFilter === filter}
+              onClick={() => onSeverityFilterChange(filter)}
+            >
+              {filter === "all" ? "All severities" : filter} ({count})
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+/** Project-wide diagnostic workbench for compatible, locator-backed domains. */
+export function ProjectDiagnosticsSection({
+  diagnostics,
+  documentLabel,
+  onSelectDiagnostic,
+}: ProjectDiagnosticsSectionProps) {
+  const [domainFilter, setDomainFilter] = useState<ProjectDomainFilter>("all");
+  const [severityFilter, setSeverityFilter] =
+    useState<DiagnosticSeverityFilter>("all");
+  const visibleDiagnostics = useMemo(
+    () =>
+      diagnostics.filter(
+        (diagnostic) =>
+          (domainFilter === "all" || diagnostic.domain === domainFilter) &&
+          (severityFilter === "all" || diagnostic.severity === severityFilter),
+      ),
+    [diagnostics, domainFilter, severityFilter],
+  );
+  return (
+    <section
+      aria-label="Project diagnostics"
+      className="diagnostics erc-diagnostics"
+    >
+      <h2>
+        Schematic diagnostics ({visibleDiagnostics.length}/{diagnostics.length})
+      </h2>
+      <DiagnosticFilters
+        diagnostics={diagnostics}
+        domainFilter={domainFilter}
+        severityFilter={severityFilter}
+        onDomainFilterChange={setDomainFilter}
+        onSeverityFilterChange={setSeverityFilter}
+      />
+      <ul data-testid="project-diagnostics">
+        {visibleDiagnostics.map((diagnostic) => (
+          <li
+            key={diagnostic.id}
+            data-domain={diagnostic.domain}
+            data-document-id={diagnostic.primary.documentId}
+            data-severity={diagnostic.severity}
+            data-confidence={diagnostic.confidence}
+          >
+            <button
+              type="button"
+              data-testid={`project-diagnostic-${diagnostic.id}`}
+              onClick={() => onSelectDiagnostic(diagnostic)}
+            >
+              <strong>
+                {diagnostic.domain.toUpperCase()} / {diagnostic.code}
+              </strong>
+              : {diagnostic.message}
+              <small>
+                Cell: {documentLabel(diagnostic.primary.documentId)}
+              </small>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

@@ -9,6 +9,7 @@ import {
   LayoutConstraintSchema,
   LayoutGroupSchema,
   MirrorSchema,
+  NoConnectSchema,
   PlacementSchema,
   PointSchema,
   RouteEndpointSchema,
@@ -18,6 +19,7 @@ import {
   StableIdSchema,
   deriveStableId,
   inverseTransformPoint,
+  powerNetNormalizations,
   transformPoint,
 } from "@icm/model";
 import type {
@@ -163,6 +165,7 @@ export const ConnectEndpointsEditSchema = z.strictObject({
   to: RouteEndpointSchema,
   newNetId: StableIdSchema.optional(),
   newNetName: z.string().min(1).optional(),
+  newNetScope: z.enum(["local", "global"]).optional(),
 });
 export const MergeNetsEditSchema = z.strictObject({
   kind: z.literal("merge_nets"),
@@ -174,6 +177,9 @@ export const SetNetNameEditSchema = z.strictObject({
   netId: StableIdSchema,
   name: z.string().trim().min(1).max(256),
 });
+export const NormalizePowerNetsEditSchema = z.strictObject({
+  kind: z.literal("normalize_power_nets"),
+});
 export const DisconnectEndpointEditSchema = z.strictObject({
   kind: z.literal("disconnect_endpoint"),
   endpoint: z.discriminatedUnion("kind", [
@@ -184,6 +190,14 @@ export const DisconnectEndpointEditSchema = z.strictObject({
     }),
     z.strictObject({ kind: z.literal("port"), portId: StableIdSchema }),
   ]),
+});
+export const AddNoConnectEditSchema = z.strictObject({
+  kind: z.literal("add_no_connect"),
+  noConnect: NoConnectSchema,
+});
+export const RemoveNoConnectEditSchema = z.strictObject({
+  kind: z.literal("remove_no_connect"),
+  noConnectId: StableIdSchema,
 });
 export const UpsertAnnotationEditSchema = z.strictObject({
   kind: z.literal("upsert_annotation"),
@@ -272,7 +286,10 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   ConnectEndpointsEditSchema,
   MergeNetsEditSchema,
   SetNetNameEditSchema,
+  NormalizePowerNetsEditSchema,
   DisconnectEndpointEditSchema,
+  AddNoConnectEditSchema,
+  RemoveNoConnectEditSchema,
   UpsertAnnotationEditSchema,
   RemoveAnnotationEditSchema,
   SetPresentationStyleEditSchema,
@@ -553,6 +570,19 @@ function validateConnectableEndpoint(
   }
 }
 
+function validateNetLabelBinding(
+  document: SchematicDocument,
+  annotation: Annotation,
+): string | null {
+  if (annotation.kind !== "net-label") return null;
+  if (!annotation.attachedObjectId) {
+    return `Net Label requires a Net attachment: ${annotation.id}`;
+  }
+  return document.nets.some((net) => net.id === annotation.attachedObjectId)
+    ? null
+    : `Net Label attachment is not a Net: ${annotation.attachedObjectId}`;
+}
+
 function addEndpointToNet(
   document: SchematicDocument,
   netId: string,
@@ -575,6 +605,31 @@ function addEndpointToNet(
   } else if (endpoint.kind === "port" && !net.ports.includes(endpoint.portId)) {
     net.ports.push(endpoint.portId);
   }
+}
+
+function normalizePowerNets(
+  document: SchematicDocument,
+  changedObjectIds: Set<string>,
+): boolean {
+  let changed = false;
+  for (const normalization of powerNetNormalizations(document)) {
+    const net = document.nets.find(
+      (candidate) => candidate.id === normalization.netId,
+    )!;
+    let netChanged = false;
+    if (net.scope !== "global") {
+      net.scope = "global";
+      changed = true;
+      netChanged = true;
+    }
+    if (normalization.name && net.name !== normalization.name) {
+      net.name = normalization.name;
+      changed = true;
+      netChanged = true;
+    }
+    if (netChanged) changedObjectIds.add(net.id);
+  }
+  return changed;
 }
 
 function replaceLayoutReference(
@@ -1620,6 +1675,7 @@ export function executeTransaction(
           ...draft.nets,
           ...draft.routes,
           ...draft.junctions,
+          ...draft.noConnects,
           ...draft.annotations,
           ...draft.layoutGroups,
           ...draft.constraints,
@@ -1665,6 +1721,11 @@ export function executeTransaction(
               (terminal) => terminal.instanceId === edit.instanceId,
             ),
           ) ||
+          draft.noConnects.some(
+            (noConnect) =>
+              noConnect.endpoint.kind === "terminal" &&
+              noConnect.endpoint.instanceId === edit.instanceId,
+          ) ||
           draft.annotations.some(
             (annotation) => annotation.attachedObjectId === edit.instanceId,
           ) ||
@@ -1682,6 +1743,46 @@ export function executeTransaction(
         }
         draft.instances.splice(index, 1);
         changedObjectIds.add(edit.instanceId);
+        connectivityChanged = true;
+        break;
+      }
+      case "add_no_connect": {
+        const idExists = [
+          ...draft.ports,
+          ...draft.instances,
+          ...draft.nets,
+          ...draft.routes,
+          ...draft.junctions,
+          ...draft.noConnects,
+          ...draft.annotations,
+          ...draft.layoutGroups,
+          ...draft.constraints,
+        ].some((candidate) => candidate.id === edit.noConnect.id);
+        if (idExists) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Object ID already exists: ${edit.noConnect.id}`,
+          );
+        }
+        draft.noConnects.push(NoConnectSchema.parse(edit.noConnect));
+        changedObjectIds.add(edit.noConnect.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "remove_no_connect": {
+        const index = draft.noConnects.findIndex(
+          (candidate) => candidate.id === edit.noConnectId,
+        );
+        if (index < 0) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `NoConnect does not exist: ${edit.noConnectId}`,
+            [],
+            [edit.noConnectId],
+          );
+        }
+        draft.noConnects.splice(index, 1);
+        changedObjectIds.add(edit.noConnectId);
         connectivityChanged = true;
         break;
       }
@@ -2596,7 +2697,7 @@ export function executeTransaction(
           draft.nets.push({
             id: netId,
             ...(edit.newNetName ? { name: edit.newNetName } : {}),
-            scope: "local",
+            scope: edit.newNetScope ?? "local",
             terminals: [],
             ports: [],
           });
@@ -2703,6 +2804,12 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
+      case "normalize_power_nets": {
+        if (normalizePowerNets(draft, changedObjectIds)) {
+          connectivityChanged = true;
+        }
+        break;
+      }
       case "disconnect_endpoint": {
         const error = validateConnectableEndpoint(
           draft,
@@ -2760,6 +2867,8 @@ export function executeTransaction(
           );
         }
         const annotation = AnnotationSchema.parse(edit.annotation);
+        const bindingError = validateNetLabelBinding(draft, annotation);
+        if (bindingError) return rejectAt("EDIT_PRECONDITION", bindingError);
         if (existingIndex >= 0) draft.annotations[existingIndex] = annotation;
         else draft.annotations.push(annotation);
         changedObjectIds.add(annotation.id);
@@ -2813,6 +2922,8 @@ export function executeTransaction(
           );
         }
         const annotation = AnnotationSchema.parse(edit.annotation);
+        const bindingError = validateNetLabelBinding(draft, annotation);
+        if (bindingError) return rejectAt("EDIT_PRECONDITION", bindingError);
         if (existingIndex >= 0) draft.annotations[existingIndex] = annotation;
         else draft.annotations.push(annotation);
         changedObjectIds.add(annotation.id);
@@ -3078,6 +3189,13 @@ export function executeTransaction(
       }
     }
     geometryChanged = true;
+  }
+
+  // A power symbol's terminal membership, rather than an incidental Net name
+  // or the specific UI operation used to create it, owns power-Net semantics.
+  // This catches wiring, endpoint joins, and merges through the same boundary.
+  if (normalizePowerNets(draft, changedObjectIds)) {
+    connectivityChanged = true;
   }
 
   if (resolver) {

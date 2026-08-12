@@ -1834,6 +1834,74 @@
                     "additionalProperties": false
                   }
                 },
+                "noConnects": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "endpoint": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "terminal"
+                              },
+                              "instanceId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              },
+                              "pinName": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "instanceId",
+                              "pinName"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "port"
+                              },
+                              "portId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "portId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "endpoint"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
                 "annotations": {
                   "type": "array",
                   "items": {
@@ -28525,6 +28593,7 @@
                 "nets",
                 "routes",
                 "junctions",
+                "noConnects",
                 "annotations",
                 "drafting",
                 "layoutGroups",

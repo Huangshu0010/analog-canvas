@@ -32,7 +32,7 @@ describe("optional browser file handles", () => {
     await expect(
       writeProjectToHandle(handle, createEmptyProject("handle", "Handle")),
     ).resolves.toBe("written");
-    expect(writes[0]).toContain('"schemaVersion": 2');
+    expect(writes[0]).toContain('"schemaVersion": 3');
   });
 
   it("does not write when permission is denied", async () => {

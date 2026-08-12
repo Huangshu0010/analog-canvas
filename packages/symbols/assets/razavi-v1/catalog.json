@@ -294,7 +294,7 @@
       "palette": true,
       "automaticMappings": ["spice:M:pmos", "pdk:model-type:pmos"],
       "assetPath": "pmos.symbol.json",
-      "assetHash": "a995e33e91c8c4828967e75572cb323fdcd6af49a710dd088a2b5d5b3e91e391"
+      "assetHash": "30b1377d7e9fdb9105b4902a8a694b1c6a0b26c3b8d01f8fe33f425736755458"
     },
     {
       "symbolId": "pmos3",
@@ -313,7 +313,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "pmos3.symbol.json",
-      "assetHash": "d2416d0a22a651dbac75d94bfa57c63aa1a792dc88e275256f066ad9717165ba"
+      "assetHash": "8dca33880e073396eb45f79f6a2fb882a759d0ca4ddd473275b6f4de820c335f"
     },
     {
       "symbolId": "pnp",
@@ -409,7 +409,7 @@
       "palette": true,
       "automaticMappings": [],
       "assetPath": "vdd.symbol.json",
-      "assetHash": "bf4571ccb9a15ecf6f60455b787d7919e783deae715fa324eec0609779c71cc6",
+      "assetHash": "080d4e5412ab70aff3c275b8391fd308101bc96c7c81625e60200b12248e864c",
       "visualAuthority": {
         "kind": "razavi-reference-v1",
         "referenceManifestPath": "fixtures/visual-reference/razavi-reference-v1/manifest.json",

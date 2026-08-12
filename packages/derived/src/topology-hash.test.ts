@@ -42,6 +42,7 @@ function baseDoc(
     },
     layoutGroups: [],
     constraints: [],
+    noConnects: [],
     ...overrides,
   };
 }
@@ -168,11 +169,36 @@ describe("electricalTopologyHash", () => {
     );
   });
 
+  it("changes when an explicit NoConnect declaration is added", () => {
+    const base = project([
+      baseDoc({
+        instances: [
+          {
+            id: "M1",
+            symbolId: "nmos",
+            properties: {},
+            placement: null,
+          },
+        ],
+      }),
+    ]);
+    const withNoConnect = structuredClone(base);
+    withNoConnect.documents[0]!.noConnects = [
+      {
+        id: "nc-m1-g",
+        endpoint: { kind: "terminal", instanceId: "M1", pinName: "G" },
+      },
+    ];
+    expect(electricalTopologyHash(withNoConnect)).not.toBe(
+      electricalTopologyHash(base),
+    );
+  });
+
   it("produces a lowercase 64-char hex sha256", () => {
     const hash = electricalTopologyHash(project([baseDoc({})]));
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
     expect(hash).toBe(
-      "5b9e3efe62a3fc6c5b7bedde385285846e02f230e3ad0bb6c26e8765ca0e6c6c",
+      "b6a04bb7a96eedb445c34150fadfadd44fd727d858135762e8f63556ebab4004",
     );
   });
 });

@@ -5,11 +5,16 @@ import {
 } from "@icm/model";
 import {
   resolveDraftingObjectGeometry,
+  resolveEndpointPoint,
+  resolveDocumentRoutingGeometry,
   routeAttachmentPlacement,
-  routePolyline,
-  resolveEndpointOutwardDirection,
 } from "@icm/derived";
-import type { ResolvedDraftingGeometry } from "@icm/derived";
+import type {
+  EndpointJoin,
+  ResolvedDocumentRoutingGeometry,
+  ResolvedDraftingGeometry,
+  ResolvedRouteGeometry,
+} from "@icm/derived";
 import type {
   DraftingObject,
   Point,
@@ -77,52 +82,56 @@ function pointList(points: ReadonlyArray<{ x: number; y: number }>): string {
 }
 
 /**
+ * A No Connect declaration is electrical intent, not an editor-only hint.
+ * Keep its mark in the formal scene so canvas rendering and SVG/PDF export
+ * cannot disagree.  It is deliberately centred on the real endpoint rather
+ * than offset along a lead: the declaration applies to that exact terminal or
+ * port origin.
+ */
+function renderNoConnectMarkers(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  profile: SchematicStyleProfile,
+): string {
+  const halfExtent = Math.max(profile.strokes.normal * 3, 4);
+  const strokeWidth = profile.strokes.normal;
+  return [...document.noConnects]
+    .sort((left, right) => left.id.localeCompare(right.id, "en"))
+    .flatMap((noConnect) => {
+      const point = resolveEndpointPoint(
+        document,
+        resolver,
+        noConnect.endpoint,
+      );
+      if (!point) return [];
+      return [
+        `<path data-object-id="${escapeXml(noConnect.id)}" data-role="no-connect" d="M ${point.x - halfExtent} ${point.y - halfExtent} L ${point.x + halfExtent} ${point.y + halfExtent} M ${point.x + halfExtent} ${point.y - halfExtent} L ${point.x - halfExtent} ${point.y + halfExtent}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"/>`,
+      ];
+    })
+    .join("");
+}
+
+/**
  * Route topology always terminates at the exact electrical pin origin. Draw a
  * short path from inside a terminal lead, through the exact pin, into the
  * actual route segment. SVG then owns the sharp miter at the corner, removing
  * the separate-stroke anti-alias seam without adding route geometry.
  */
 function renderTerminalMiterBridges(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  route: SchematicDocument["routes"][number],
-  points: readonly Point[],
+  joins: readonly EndpointJoin[],
   profile: SchematicStyleProfile,
 ): string {
-  if (points.length < 2) return "";
   const overlap = Math.max(profile.strokes.wire, profile.strokes.symbol) * 0.75;
-  const bridges: string[] = [];
-  const segmentDirection = (from: Point, to: Point): Point | null => {
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    if (dx !== 0 && dy === 0) return { x: Math.sign(dx), y: 0 };
-    if (dx === 0 && dy !== 0) return { x: 0, y: Math.sign(dy) };
-    return null;
-  };
-  const renderBridge = (point: Point, outward: Point, routeOutward: Point) =>
-    `<path data-role="terminal-miter-bridge" data-route-id="${escapeXml(route.id)}" d="M ${point.x - outward.x * overlap} ${point.y - outward.y * overlap} L ${point.x} ${point.y} L ${point.x + routeOutward.x * overlap} ${point.y + routeOutward.y * overlap}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="miter"${profileMiterAttribute(profile)}/>`;
-  const fromOutward = resolveEndpointOutwardDirection(
-    document,
-    resolver,
-    route.from,
-  );
-  const first = points[0]!;
-  const next = points[1]!;
-  const firstDirection = segmentDirection(first, next);
-  if (fromOutward && firstDirection)
-    bridges.push(renderBridge(first, fromOutward, firstDirection));
-
-  const toOutward = resolveEndpointOutwardDirection(
-    document,
-    resolver,
-    route.to,
-  );
-  const previous = points.at(-2)!;
-  const last = points.at(-1)!;
-  const lastDirection = segmentDirection(last, previous);
-  if (toOutward && lastDirection)
-    bridges.push(renderBridge(last, toOutward, lastDirection));
-  return bridges.join("");
+  return joins
+    .filter(
+      (join): join is Extract<EndpointJoin, { kind: "terminal-miter" }> =>
+        join.kind === "terminal-miter",
+    )
+    .map(
+      (join) =>
+        `<path data-role="terminal-miter-bridge" data-route-id="${escapeXml(join.routeId)}" d="M ${join.at.x - join.pinOutward.x * overlap} ${join.at.y - join.pinOutward.y * overlap} L ${join.at.x} ${join.at.y} L ${join.at.x + join.routeDirection.x * overlap} ${join.at.y + join.routeDirection.y * overlap}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="miter"${profileMiterAttribute(profile)}/>`,
+    )
+    .join("");
 }
 
 /**
@@ -131,47 +140,29 @@ function renderTerminalMiterBridges(
  * as one sharp path. A real branch Junction owns its dot instead.
  */
 function renderRouteAnchorMiterBridges(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
+  joins: readonly EndpointJoin[],
   profile: SchematicStyleProfile,
 ): string {
-  const anchors = new Map<string, { point: Point; directions: Point[] }>();
-  for (const junction of document.junctions) {
-    if (junction.role === "route-anchor") {
-      anchors.set(junction.id, { point: junction.position, directions: [] });
-    }
-  }
-  const addEndpoint = (
-    endpoint: SchematicDocument["routes"][number]["from"],
-    point: Point,
-    neighbor: Point,
-  ) => {
-    if (endpoint.kind !== "junction") return;
-    const anchor = anchors.get(endpoint.junctionId);
-    if (!anchor) return;
-    const dx = neighbor.x - point.x;
-    const dy = neighbor.y - point.y;
-    if (dx !== 0 && dy === 0) {
-      anchor.directions.push({ x: Math.sign(dx), y: 0 });
-    } else if (dx === 0 && dy !== 0) {
-      anchor.directions.push({ x: 0, y: Math.sign(dy) });
-    }
-  };
-  for (const route of document.routes) {
-    const polyline = routePolyline(document, resolver, route);
-    if (!polyline || polyline.points.length < 2) continue;
-    addEndpoint(route.from, polyline.points[0]!, polyline.points[1]!);
-    addEndpoint(route.to, polyline.points.at(-1)!, polyline.points.at(-2)!);
-  }
   const overlap = Math.max(profile.strokes.wire, profile.strokes.symbol) * 0.75;
-  return [...anchors.entries()]
-    .filter(([, anchor]) => anchor.directions.length === 2)
-    .sort(([left], [right]) => left.localeCompare(right, "en"))
-    .map(([junctionId, anchor]) => {
-      const [first, second] = anchor.directions;
-      return `<path data-role="route-anchor-miter-bridge" data-junction-id="${escapeXml(junctionId)}" d="M ${anchor.point.x + first!.x * overlap} ${anchor.point.y + first!.y * overlap} L ${anchor.point.x} ${anchor.point.y} L ${anchor.point.x + second!.x * overlap} ${anchor.point.y + second!.y * overlap}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="miter"${profileMiterAttribute(profile)}/>`;
+  return joins
+    .filter(
+      (join): join is Extract<EndpointJoin, { kind: "route-anchor-miter" }> =>
+        join.kind === "route-anchor-miter",
+    )
+    .map((join) => {
+      const [first, second] = join.directions;
+      return `<path data-role="route-anchor-miter-bridge" data-junction-id="${escapeXml(join.junctionId)}" d="M ${join.at.x + first.x * overlap} ${join.at.y + first.y * overlap} L ${join.at.x} ${join.at.y} L ${join.at.x + second.x * overlap} ${join.at.y + second.y * overlap}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="miter"${profileMiterAttribute(profile)}/>`;
     })
     .join("");
+}
+
+function routeAttachmentPolyline(geometry: ResolvedRouteGeometry) {
+  return {
+    routeId: geometry.routeId,
+    netId: geometry.netId,
+    points: [...geometry.centerline],
+    segmentModes: geometry.segments.map((segment) => segment.mode),
+  };
 }
 
 function profileMiterAttribute(profile: SchematicStyleProfile): string {
@@ -352,6 +343,7 @@ function symbolBounds(
 function deriveBounds(
   document: SchematicDocument,
   resolver: SymbolResolver,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
   margin: number,
   profile: SchematicStyleProfile,
 ): Rect {
@@ -391,11 +383,11 @@ function deriveBounds(
     bounds.push(instanceBox);
   }
   for (const route of document.routes) {
-    const polyline = routePolyline(document, resolver, route);
-    if (!polyline) {
+    const geometry = routingGeometry.routes.get(route.id);
+    if (!geometry) {
       throw new Error(`Cannot derive bounds for unresolved route: ${route.id}`);
     }
-    for (const point of polyline.points) {
+    for (const point of geometry.centerline) {
       bounds.push({ x: point.x, y: point.y, width: 0, height: 0 });
     }
   }
@@ -421,18 +413,14 @@ function deriveBounds(
   }
   for (const annotation of document.annotations) {
     const attachedRoute = annotation.routeAttachment
-      ? document.routes.find(
-          (route) => route.id === annotation.routeAttachment!.routeId,
-        )
+      ? routingGeometry.routes.get(annotation.routeAttachment.routeId)
       : undefined;
     const attachmentPlacement =
       attachedRoute && annotation.routeAttachment
-        ? routePolyline(document, resolver, attachedRoute)
-          ? routeAttachmentPlacement(
-              routePolyline(document, resolver, attachedRoute)!,
-              annotation.routeAttachment,
-            )
-          : null
+        ? routeAttachmentPlacement(
+            routeAttachmentPolyline(attachedRoute),
+            annotation.routeAttachment,
+          )
         : null;
     const annotationPosition =
       attachmentPlacement?.position ?? annotation.position;
@@ -496,30 +484,27 @@ export function buildSvgScene(
   if (!Number.isInteger(margin) || margin < 0) {
     throw new Error("SVG margin must be a non-negative integer");
   }
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
   const viewBox = options.bounds
     ? RectSchema.parse(options.bounds)
-    : deriveBounds(document, resolver, margin, profile);
+    : deriveBounds(document, resolver, routingGeometry, margin, profile);
 
   const routes = [...document.routes]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map((route) => {
-      const polyline = routePolyline(document, resolver, route);
-      if (!polyline) {
+      const geometry = routingGeometry.routes.get(route.id);
+      if (!geometry) {
         throw new Error(`Cannot render unresolved route: ${route.id}`);
       }
       const terminalBridges = renderTerminalMiterBridges(
-        document,
-        resolver,
-        route,
-        polyline.points,
+        geometry.endpointJoins,
         profile,
       );
-      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(polyline.points)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalBridges}`;
+      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(geometry.centerline)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalBridges}`;
     })
     .join("");
   const routeAnchorBridges = renderRouteAnchorMiterBridges(
-    document,
-    resolver,
+    routingGeometry.endpointJoins,
     profile,
   );
   const junctionDegrees = new Map(
@@ -570,6 +555,10 @@ export function buildSvgScene(
     profile.nodes.portOriginRadius === 0
       ? ""
       : `<g data-layer="ports">${portOrigins}</g>`;
+  const noConnectMarkers = renderNoConnectMarkers(document, resolver, profile);
+  const noConnectLayer = noConnectMarkers
+    ? `<g data-layer="no-connects">${noConnectMarkers}</g>`
+    : "";
   const explicitInstanceLabels = new Set(
     document.annotations
       .filter(
@@ -624,18 +613,14 @@ export function buildSvgScene(
         ? ` data-attached-object-id="${escapeXml(annotation.attachedObjectId)}"`
         : "";
       const attachedRoute = annotation.routeAttachment
-        ? document.routes.find(
-            (route) => route.id === annotation.routeAttachment!.routeId,
-          )
+        ? routingGeometry.routes.get(annotation.routeAttachment.routeId)
         : undefined;
       const attachmentPlacement =
         attachedRoute && annotation.routeAttachment
-          ? routePolyline(document, resolver, attachedRoute)
-            ? routeAttachmentPlacement(
-                routePolyline(document, resolver, attachedRoute)!,
-                annotation.routeAttachment,
-              )
-            : null
+          ? routeAttachmentPlacement(
+              routeAttachmentPolyline(attachedRoute),
+              annotation.routeAttachment,
+            )
           : null;
       // A route-marker resolves its VisualAnchor to a position/rotation for
       // rendering. A free anchor uses fallbackPosition; a route anchor reuses
@@ -655,11 +640,7 @@ export function buildSvgScene(
                   labelPosition: routeMarkerAnchor.fallbackPosition,
                   rotation: 0 as const,
                 }
-              : resolveRouteMarkerPlacement(
-                  document,
-                  resolver,
-                  routeMarkerAnchor,
-                )
+              : resolveRouteMarkerPlacement(routingGeometry, routeMarkerAnchor)
           : null;
       const position =
         routeMarkerPlacement?.position ??
@@ -754,7 +735,7 @@ export function buildSvgScene(
 
   return {
     viewBox,
-    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}${routeAnchorBridges}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
+    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}${routeAnchorBridges}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g>${noConnectLayer}<g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
   };
 }
 
@@ -762,8 +743,7 @@ export function buildSvgScene(
 // reusing the legacy routeAttachmentPlacement math so a migrated current
 // marker renders identically to its pre-migration form.
 function resolveRouteMarkerPlacement(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
   anchor: Extract<
     SchematicDocument["annotations"][number]["anchor"],
     { kind: "route" }
@@ -773,23 +753,14 @@ function resolveRouteMarkerPlacement(
   labelPosition: Point;
   rotation: 0 | 90 | 180 | 270;
 } | null {
-  const route = document.routes.find(
-    (candidate) => candidate.id === anchor.routeId,
-  );
+  const route = routingGeometry.routes.get(anchor.routeId);
   if (!route)
     return {
       position: anchor.fallbackPosition,
       labelPosition: anchor.fallbackPosition,
       rotation: 0,
     };
-  const polyline = routePolyline(document, resolver, route);
-  if (!polyline)
-    return {
-      position: anchor.fallbackPosition,
-      labelPosition: anchor.fallbackPosition,
-      rotation: 0,
-    };
-  const placement = routeAttachmentPlacement(polyline, {
+  const placement = routeAttachmentPlacement(routeAttachmentPolyline(route), {
     routeId: anchor.routeId,
     segmentIndex: anchor.segmentIndex,
     t: anchor.t,

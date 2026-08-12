@@ -227,7 +227,7 @@ export function expandRouteGraph(
           kind: "net-label",
           text: edge.label?.text ?? "",
           position: { ...to },
-          attachedObjectId: edge.label?.attachedObjectId ?? edge.to,
+          attachedObjectId: graph.netId,
           offset: { x: 0, y: 0 },
           alignment: "middle",
           rotation: 0,

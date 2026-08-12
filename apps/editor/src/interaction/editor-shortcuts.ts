@@ -17,6 +17,7 @@ export interface EditorShortcutContext {
   hasDraftingSelection: boolean;
   hasInspectableSelection: boolean;
   hasRouteSelection: boolean;
+  hasHighlightableNet: boolean;
   wireSessionActive: boolean;
   wireReadyToFinish: boolean;
   draftingReadyToFinish: boolean;
@@ -38,6 +39,7 @@ export type EditorShortcutIntent =
   | { kind: "add-text" }
   | { kind: "open-properties" | "property-selection-required" }
   | { kind: "edit-net-label" | "net-label-selection-required" }
+  | { kind: "toggle-net-highlight" }
   | { kind: "mirror"; direction: ScreenFlip }
   | { kind: "fit-view" }
   | {
@@ -125,7 +127,10 @@ export function resolveEditorShortcut(
       ? { kind: "edit-net-label" }
       : { kind: "net-label-selection-required" };
   }
-  if (plain && key === "p") {
+  if (plain && key === "h" && context.hasHighlightableNet) {
+    return { kind: "toggle-net-highlight" };
+  }
+  if (plain && key === "k") {
     return { kind: "activate-tool", tool: "construction-line" };
   }
   if (plain && key === "q") {

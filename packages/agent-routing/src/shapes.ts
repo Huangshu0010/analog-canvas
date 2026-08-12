@@ -150,7 +150,8 @@ export function buildLocalBranchTreeGraph(args: {
 /**
  * Build a labeled-islands Route graph: a local branch junction per island plus a
  * `label` edge at each island. No cross-island wire — connectivity is by Net
- * name. The Agent supplies label text and the attached object per island.
+ * name. The Agent supplies label text; the graph Net is the only electrical
+ * attachment.
  */
 export function buildLabeledIslandsGraph(args: {
   netId: string;
@@ -160,7 +161,7 @@ export function buildLabeledIslandsGraph(args: {
     junctionId: string;
     center: Point;
     endpoints: Array<{ id: string; endpoint: RouteEndpoint }>;
-    label: { text: string; attachedObjectId: string };
+    label: { text: string };
   }>;
 }): RouteGraph {
   const { netId, documentId, revision, islands } = args;

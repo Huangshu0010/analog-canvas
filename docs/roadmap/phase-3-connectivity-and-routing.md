@@ -109,6 +109,19 @@ Detach a routed branch
 → restore a flightline
 ```
 
+> **Historical note (retained, not authoritative).** The unconditional
+> "retain membership + restore a flightline" above reflects the Phase-3 intent
+> at the time of delivery. The current `Delete wire` operation supersedes it.
+> The Edit Engine `cut_connection` handler
+> (`packages/edit-engine/src/transaction.ts`) now applies four
+> context-dependent branches: it **splits** a fully routed local net, **deletes
+> the net** of an isolated empty free wire, **retains membership** for a
+> partially routed or SPICE-imported net, and **retains membership** for a
+> global net. The authoritative current behavior is captured by the
+> `cut_connection` cases in `packages/edit-engine/src/routing.test.ts`. This
+> phase remains `complete`; the Detach wording and the matching exit-gate clause
+> are kept as history and do not override the current `Delete wire` semantics.
+
 ## Deterministic validation
 
 - graph and MST unit/property tests;

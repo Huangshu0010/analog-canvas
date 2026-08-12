@@ -54,6 +54,7 @@ function documentWithRoute(): SchematicDocument {
     },
     layoutGroups: [],
     constraints: [],
+    noConnects: [],
     drafting: { objects: [], guides: [] },
   };
 }

@@ -303,21 +303,18 @@ describe("derived connectivity and route geometry", () => {
         segmentModes: ["manual"],
       },
     ];
-    const label = (id: string, attachedObjectId: string) => ({
+    const label = (id: string, x: number) => ({
       id,
       kind: "net-label" as const,
       text: "SIGNAL",
-      position: { x: 0, y: 0 },
+      position: { x, y: 92 },
       offset: { x: 0, y: 0 },
       rotation: 0 as const,
-      attachedObjectId,
+      attachedObjectId: "net-signal",
       alignment: "start" as const,
       locked: false,
     });
-    document.annotations = [
-      label("label-left", "junction-left"),
-      label("label-right", "junction-right"),
-    ];
+    document.annotations = [label("label-left", 20), label("label-right", 180)];
 
     expect(deriveFlightlines(document, resolver)).toEqual([]);
     document.annotations[1] = {

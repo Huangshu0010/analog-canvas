@@ -34,6 +34,46 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("accepts Net-id Label bindings and rejects overloaded object ids", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({
+      id: "net-signal",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    });
+    const annotation = {
+      id: "label-signal",
+      kind: "net-label" as const,
+      text: "SIGNAL",
+      position: { x: 100, y: 100 },
+      attachedObjectId: "net-signal",
+      offset: { x: 0, y: -8 },
+      alignment: "middle" as const,
+      rotation: 0 as const,
+      locked: false,
+    };
+    const accepted = executeTransaction(document, {
+      ...transaction(),
+      edits: [{ kind: "upsert_annotation", annotation }],
+    });
+    expect(accepted).toMatchObject({ ok: true });
+
+    const rejected = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "upsert_annotation",
+          annotation: { ...annotation, attachedObjectId: "junction-signal" },
+        },
+      ],
+    });
+    expect(rejected).toMatchObject({
+      ok: false,
+      error: { message: "Net Label attachment is not a Net: junction-signal" },
+    });
+  });
+
   it("rejects a stale revision without changing the Document", () => {
     const document = createEmptyDocument("document-main", "Main");
     const before = JSON.stringify(document);
@@ -57,6 +97,56 @@ describe("Edit Transaction envelope", () => {
     });
     expect(result.document).not.toBe(document);
     expect(document.revision).toBe(0);
+  });
+
+  it("normalizes a power-symbol Net regardless of how the Net was created", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      {
+        id: "M2",
+        symbolId: "pmos",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "VDD3",
+        symbolId: "vdd",
+        placement: null,
+        properties: {},
+      },
+    );
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "connect_endpoints",
+            from: { kind: "terminal", instanceId: "M2", pinName: "S" },
+            to: { kind: "terminal", instanceId: "VDD3", pinName: "P" },
+            newNetId: "net-ui-2",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [
+          {
+            id: "net-ui-2",
+            name: "VDD",
+            scope: "global",
+            terminals: [
+              { instanceId: "M2", pinName: "S" },
+              { instanceId: "VDD3", pinName: "P" },
+            ],
+          },
+        ],
+      },
+    });
   });
 
   it("dry-runs without mutating or advancing the current revision", () => {

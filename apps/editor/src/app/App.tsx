@@ -5,29 +5,51 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from "react";
 
-import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
+import {
+  proposeGroupMoveEdits,
+  proposeLooseRouteTranslation,
+  proposeWireSegmentMove,
+  proposeVisualRouteDeletion,
+  type EditTransactionResult,
+  type SchematicEdit,
+} from "@icm/edit-engine";
 import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
 import {
   exportFormalArtifactsInBrowser,
   rasterizeFormalSvgInBrowser,
 } from "@icm/exporters/browser";
 import {
+  buildProjectConnectivityIndex,
+  buildProjectSearchIndex,
+  adaptVisualDiagnostic,
   deriveCrossings,
-  deriveFlightlines,
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
   endpointKey,
+  findHierarchyPath,
   isVisibleEndpoint,
   moveRouteSegment,
-  proposeGroupMove,
+  mergeDiagnostics,
+  resolveEndpointPoint,
   resolveDraftingObjectGeometry,
+  resolveNetLabelBinding,
+  runErcChecks,
   routeAttachmentPlacement,
-  routePolyline,
+  traceHierarchyNet,
 } from "@icm/derived";
-import type { Flightline } from "@icm/derived";
+import type {
+  Diagnostic,
+  Flightline,
+  HierarchyFrame,
+  HierarchyNetTraceHop,
+  ObjectLocator,
+  RoutePolyline,
+  SearchResult,
+} from "@icm/derived";
 import {
   createEmptyProject,
   parseProject,
+  powerNetNormalizations,
   serializeProject,
   transformPoint,
 } from "@icm/model";
@@ -70,6 +92,11 @@ import {
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import {
+  proposeLegacyPowerContactReconciliation,
+  proposePlacementContact,
+  proposedStandalonePowerConnection,
+} from "../features/component-insert/placement-connectivity";
+import {
   componentParameters,
   effectiveComponentParameterValue,
 } from "../features/component-insert/component-parameters";
@@ -97,6 +124,7 @@ import {
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
+import { ProjectSearchDialog } from "../features/search/project-search-dialog";
 import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
@@ -111,10 +139,10 @@ import type { TextEditingSession } from "../features/text-editing/text-editing";
 import {
   defaultRazaviSymbolVariantId,
   razaviHiddenBulkRisk,
+  razaviManualBulkConnectionEdits,
   razaviMosPresentationEdits,
 } from "../presentation/razavi-presentation";
 import {
-  collectVisualRouteDeletion,
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
 } from "../features/selection/delete-selection";
@@ -123,10 +151,15 @@ import { createVisualDemoProject } from "../demos/visual-demo";
 import { useProjectRecovery } from "../document/project-recovery";
 import { useSelectionController } from "../features/selection/selection-controller";
 import {
+  NetTraceSection,
+  ProjectDiagnosticsSection,
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "../features/selection/selection-inspector-details";
-import { hasVisualSelection } from "../features/selection/visual-selection";
+import {
+  hasVisualSelection,
+  pruneVisualSelection,
+} from "../features/selection/visual-selection";
 import type { VisualSelection } from "../features/selection/visual-selection";
 import {
   annotationAnchor,
@@ -149,6 +182,7 @@ import {
 } from "../features/wiring/wire-editing";
 import type { WireSource } from "../features/wiring/wire-editing";
 import { buildManualWirePath } from "../features/wiring/wire-path";
+import { resolveRouteTap, type RouteTap } from "../features/wiring/route-tap";
 import {
   buildDraftingAnchors,
   buildInstanceAnchors,
@@ -302,88 +336,6 @@ function quadraticTangentAngle(
   return (Math.acos(cosine) * 180) / Math.PI;
 }
 
-interface RouteTap {
-  segmentIndex: number;
-  point: Point;
-  distanceSquared: number;
-}
-
-/**
- * Resolve a pointer position to the nearest point on an orthogonal route.
- *
- * SVG gives the route a wide transparent hit stroke in screen pixels. The old
- * code threw that tolerance away by demanding exact logical-coordinate
- * equality after grid snapping, so a click that visibly hit a wire often could
- * not make a junction. Keep the hit and topology layers consistent: project
- * to the segment, retain the closest in-tolerance candidate, and use that
- * exact projected point for a subsequent route split.
- */
-function resolveRouteTap(
-  points: readonly Point[],
-  pointer: Point,
-  tolerance: number,
-): RouteTap | null {
-  // A geometric bend is a virtual snap target. Prefer it before projecting
-  // onto either of its two segments, otherwise an off-axis click near a corner
-  // becomes a point beside the bend and yields a visibly skewed branch.
-  let nearestVertex: RouteTap | null = null;
-  for (let index = 1; index < points.length - 1; index += 1) {
-    const point = points[index]!;
-    const dx = pointer.x - point.x;
-    const dy = pointer.y - point.y;
-    const distanceSquared = dx * dx + dy * dy;
-    if (distanceSquared > tolerance * tolerance) continue;
-    if (
-      !nearestVertex ||
-      distanceSquared < nearestVertex.distanceSquared ||
-      (distanceSquared === nearestVertex.distanceSquared &&
-        index - 1 < nearestVertex.segmentIndex)
-    ) {
-      nearestVertex = {
-        segmentIndex: index - 1,
-        point: { ...point },
-        distanceSquared,
-      };
-    }
-  }
-  if (nearestVertex) return nearestVertex;
-
-  let best: RouteTap | null = null;
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const from = points[index]!;
-    const to = points[index + 1]!;
-    if (from.x !== to.x && from.y !== to.y) continue;
-    const point =
-      from.x === to.x
-        ? {
-            x: from.x,
-            y: Math.max(
-              Math.min(pointer.y, Math.max(from.y, to.y)),
-              Math.min(from.y, to.y),
-            ),
-          }
-        : {
-            x: Math.max(
-              Math.min(pointer.x, Math.max(from.x, to.x)),
-              Math.min(from.x, to.x),
-            ),
-            y: from.y,
-          };
-    const dx = pointer.x - point.x;
-    const dy = pointer.y - point.y;
-    const distanceSquared = dx * dx + dy * dy;
-    if (distanceSquared > tolerance * tolerance) continue;
-    if (
-      !best ||
-      distanceSquared < best.distanceSquared ||
-      (distanceSquared === best.distanceSquared && index < best.segmentIndex)
-    ) {
-      best = { segmentIndex: index, point, distanceSquared };
-    }
-  }
-  return best;
-}
-
 function maxRoutingCounter(document: SchematicDocument): number {
   const ids = [
     ...document.ports.map((item) => item.id),
@@ -519,7 +471,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     initialProject ?? createEmptyProject("project-main", "New Circuit"),
     stageRecovery,
   );
-  const [documentStack, setDocumentStack] = useState<string[]>([]);
+  const [documentStack, setDocumentStack] = useState<HierarchyFrame[]>([]);
   const {
     selection: visualSelection,
     replace: replaceSelection,
@@ -599,6 +551,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     null,
   );
   const [helpOpen, setHelpOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
+    documentId: string;
+    netId: string;
+    endpoint?: RouteEndpoint;
+  } | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const instanceCounter = useRef(0);
@@ -662,6 +621,58 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   );
   const unplacedPorts = document.ports.filter((port) => port.position === null);
   const selectedIds = visualSelection.instanceIds;
+  const projectConnectivityIndex = useMemo(
+    () => buildProjectConnectivityIndex(project, resolver),
+    [project, resolver],
+  );
+  const highlightedTrace = useMemo(
+    () =>
+      highlightedNetOrigin
+        ? traceHierarchyNet(
+            projectConnectivityIndex,
+            highlightedNetOrigin.documentId,
+            highlightedNetOrigin.netId,
+            highlightedNetOrigin.endpoint,
+          )
+        : undefined,
+    [highlightedNetOrigin, projectConnectivityIndex],
+  );
+  const highlightedNet = useMemo(
+    () =>
+      highlightedTrace?.highlights.find(
+        (highlight) => highlight.documentId === document.id,
+      ),
+    [document.id, highlightedTrace],
+  );
+  const highlightedNetId = highlightedNet?.netId ?? null;
+  const ercDiagnostics = useMemo(
+    () => runErcChecks(project, projectConnectivityIndex, resolver),
+    [project, projectConnectivityIndex, resolver],
+  );
+  const projectVisualDiagnostics = useMemo(
+    () =>
+      project.documents.flatMap((candidate) =>
+        diagnoseVisualQuality(candidate, resolver).map((diagnostic) =>
+          adaptVisualDiagnostic(
+            diagnostic,
+            candidate.id,
+            projectConnectivityIndex,
+          ),
+        ),
+      ),
+    [project.documents, projectConnectivityIndex, resolver],
+  );
+  const projectDiagnostics = useMemo(
+    () => mergeDiagnostics(ercDiagnostics, projectVisualDiagnostics),
+    [ercDiagnostics, projectVisualDiagnostics],
+  );
+  const searchResults = useMemo(
+    () =>
+      buildProjectSearchIndex(project, {
+        connectivityIndex: projectConnectivityIndex,
+      }).search(searchQuery),
+    [project, projectConnectivityIndex, searchQuery],
+  );
   const supplementalSelection: SupplementalSelection = {
     routeIds: visualSelection.routeIds,
     junctionIds: visualSelection.junctionIds,
@@ -688,11 +699,34 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const selectedRoute = selectedRouteId
     ? document.routes.find((route) => route.id === selectedRouteId)
     : undefined;
+  // Labels are electrically associated with a Net, not intrinsically with a
+  // Route. The editor's own label id is useful as a preference only: imported
+  // projects and older documents legitimately use arbitrary annotation ids.
+  const selectedRouteNetLabels = selectedRoute
+    ? document.annotations.filter(
+        (annotation) =>
+          annotation.kind === "net-label" &&
+          annotation.attachedObjectId === selectedRoute.netId,
+      )
+    : [];
+  const selectedRouteNetLabel = selectedRoute
+    ? (selectedRouteNetLabels.find(
+        (annotation) => annotation.id === `net-label-${selectedRoute.id}`,
+      ) ??
+      selectedRouteNetLabels.find(
+        (annotation) =>
+          resolveNetLabelBinding(document, resolver, annotation)?.routeId ===
+          selectedRoute.id,
+      ))
+    : undefined;
   const selectedAnnotation = selectedAnnotationId
     ? document.annotations.find(
         (annotation) => annotation.id === selectedAnnotationId,
       )
     : undefined;
+  const selectedNetLabelBinding = selectedAnnotation
+    ? resolveNetLabelBinding(document, resolver, selectedAnnotation)
+    : null;
   const selectedDrafting = selectedDraftingId
     ? document.drafting?.objects.find(
         (object) => object.id === selectedDraftingId,
@@ -728,44 +762,61 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     selectedEndpoint?.endpoint.kind === "port"
       ? selectedEndpoint.endpoint.portId
       : null;
+  const selectedNoConnect =
+    selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction"
+      ? document.noConnects.find(
+          (noConnect) =>
+            endpointKey(noConnect.endpoint) ===
+            endpointKey(selectedEndpoint.endpoint),
+        )
+      : undefined;
+  const selectedEndpointNetId = selectedEndpoint
+    ? endpointNetId(document, selectedEndpoint.endpoint)
+    : null;
+  const selectedHighlightNetId =
+    selectedRoute?.netId ??
+    selectedEndpointNetId ??
+    selectedNetLabelBinding?.netId ??
+    null;
+  const selectedHighlightEndpoint =
+    selectedRoute?.from ??
+    selectedEndpoint?.endpoint ??
+    selectedNetLabelBinding?.endpoint;
+  const selectedHighlightIsActive = Boolean(
+    selectedHighlightNetId &&
+    highlightedNetOrigin?.documentId === document.id &&
+    highlightedNetOrigin.netId === selectedHighlightNetId &&
+    (!highlightedNetOrigin.endpoint ||
+      (selectedHighlightEndpoint &&
+        endpointKey(highlightedNetOrigin.endpoint) ===
+          endpointKey(selectedHighlightEndpoint))),
+  );
   const flightlines = useMemo(
-    () => deriveFlightlines(document, resolver),
-    [document, resolver],
+    () =>
+      document.nets.flatMap(
+        (net) =>
+          projectConnectivityIndex.documents.get(document.id)?.nets.get(net.id)
+            ?.flightlines ?? [],
+      ),
+    [document.id, document.nets, projectConnectivityIndex],
   );
   const displayedFlightlines = useMemo(() => {
-    if (!document.sourceBinding) return flightlines;
-    const focusedNetIds = new Set<string>();
-    if (selectedRoute) focusedNetIds.add(selectedRoute.netId);
-    if (selectedEndpoint) {
-      const netId = endpointNetId(document, selectedEndpoint.endpoint);
-      if (netId) focusedNetIds.add(netId);
+    // Flightlines are migration guidance for an untouched SPICE import only.
+    // A human-created document has no source binding, and any later edit of an
+    // import changes sourceStatus; neither state should be cluttered with
+    // inferred dashed connectivity.
+    if (!document.sourceBinding || document.sourceStatus !== "in-sync") {
+      return [];
     }
-    for (const net of document.nets) {
-      if (
-        net.terminals.some((terminal) =>
-          selectedIds.includes(terminal.instanceId),
-        ) ||
-        visualSelection.junctionIds.some((junctionId) =>
-          document.junctions.some(
-            (junction) =>
-              junction.id === junctionId && junction.netId === net.id,
-          ),
+    // A highlighted Net is already presented as a strong complete conductor
+    // overlay. Do not also draw its dashed incomplete-routing guidance.
+    const unhighlightedFlightlines = highlightedNetId
+      ? flightlines.filter(
+          (flightline) => flightline.netId !== highlightedNetId,
         )
-      ) {
-        focusedNetIds.add(net.id);
-      }
-    }
-    return flightlines.filter((flightline) =>
-      focusedNetIds.has(flightline.netId),
-    );
-  }, [
-    document,
-    flightlines,
-    selectedEndpoint,
-    selectedIds,
-    selectedRoute,
-    visualSelection.junctionIds,
-  ]);
+      : flightlines;
+    return unhighlightedFlightlines;
+  }, [document, flightlines, highlightedNetId]);
   const crossings = useMemo(
     () => deriveCrossings(document, resolver),
     [document, resolver],
@@ -844,22 +895,44 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     ],
     [document, resolver],
   );
+  useEffect(() => {
+    const normalizationEdits = powerNetNormalizations(document).length
+      ? [{ kind: "normalize_power_nets" as const }]
+      : [];
+    const powerContactEdits = proposeLegacyPowerContactReconciliation(
+      resolver,
+      document.instances,
+      visibleEndpoints,
+    );
+    const bulkEdits = razaviManualBulkConnectionEdits(
+      document,
+      document.instances,
+    );
+    const edits = [...normalizationEdits, ...powerContactEdits, ...bulkEdits];
+    if (edits.length === 0) return;
+    const result = transact(edits);
+    if (result.ok) {
+      setStatus(
+        `Normalized ${normalizationEdits.length} power-Net rule(s), reconciled ${powerContactEdits.length} visible power contact(s), and added ${bulkEdits.length} Razavi bulk connection(s)`,
+      );
+    }
+  }, [document, resolver, visibleEndpoints]);
   const routePolylines = useMemo(
     () =>
-      document.routes
-        .map((route) => ({
-          route,
-          polyline: routePolyline(document, resolver, route),
-        }))
-        .filter(
-          (
-            candidate,
-          ): candidate is {
-            route: SchematicDocument["routes"][number];
-            polyline: NonNullable<ReturnType<typeof routePolyline>>;
-          } => candidate.polyline !== null,
-        ),
-    [document, resolver],
+      document.routes.flatMap((route) => {
+        const geometry = projectConnectivityIndex.documents
+          .get(document.id)
+          ?.routeGeometry.get(route.id);
+        if (!geometry) return [];
+        const polyline: RoutePolyline = {
+          routeId: geometry.routeId,
+          netId: geometry.netId,
+          points: [...geometry.centerline],
+          segmentModes: geometry.segments.map((segment) => segment.mode),
+        };
+        return [{ route, polyline }];
+      }),
+    [document, projectConnectivityIndex],
   );
 
   const textEditingTarget = textEditing
@@ -964,16 +1037,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }, [selectedRouteId]);
 
   useEffect(() => {
+    const pruned = pruneVisualSelection(visualSelection, document);
+    if (pruned !== visualSelection) replaceSelection(pruned);
+  }, [document, visualSelection]);
+
+  useEffect(() => {
     if (!selectedRoute) {
       setNetLabelDraft("");
       setNetLabelEditorOpen(false);
       return;
     }
-    const net = document.nets.find(
-      (candidate) => candidate.id === selectedRoute.netId,
-    );
-    setNetLabelDraft(net?.name ?? "");
-  }, [document.nets, selectedRoute]);
+    setNetLabelDraft(selectedRouteNetLabel?.text ?? "");
+  }, [selectedRoute, selectedRouteNetLabel]);
 
   useEffect(() => {
     if (!selectedInstance) {
@@ -1052,6 +1127,119 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setStatus(`Opened Cell ${nextDocument.name}`);
   }
 
+  function navigateToLocator(
+    locator: ObjectLocator,
+    statusMessage: string,
+  ): void {
+    const targetDocument = project.documents.find(
+      (candidate) => candidate.id === locator.documentId,
+    );
+    if (!targetDocument) {
+      setStatus(`Document not found: ${locator.documentId}`);
+      return;
+    }
+    const derivedPath = findHierarchyPath(
+      projectConnectivityIndex,
+      project.topDocumentId,
+      locator.documentId,
+    );
+    const hierarchyPath =
+      locator.hierarchyPath.length > 0
+        ? locator.hierarchyPath
+        : (derivedPath ?? []);
+    documentViewBoxes.current.set(document.id, viewBox);
+    const opened = openDocument(locator.documentId);
+    if (!opened) {
+      setStatus(`Document not found: ${locator.documentId}`);
+      return;
+    }
+    setDocumentStack([...hierarchyPath]);
+    setViewBox(documentViewBoxes.current.get(opened.id) ?? DEFAULT_VIEWBOX);
+    clearTransientCanvasState();
+    resetSelection();
+    setSelectedRouteSegmentIndex(null);
+    setTextEditing(null);
+    setSelectedEndpoint(null);
+    cancelInteraction();
+
+    const focusPoint = (point: Point) =>
+      setViewBox({
+        x: point.x - 80,
+        y: point.y - 60,
+        width: 160,
+        height: 120,
+      });
+    const endpoint =
+      locator.kind === "terminal"
+        ? locator.endpoint
+        : locator.kind === "port"
+          ? { kind: "port" as const, portId: locator.objectId }
+          : locator.kind === "no-connect"
+            ? opened.noConnects.find(
+                (noConnect) => noConnect.id === locator.objectId,
+              )?.endpoint
+            : undefined;
+    if (endpoint) {
+      const point =
+        endpoint.kind === "port"
+          ? opened.ports.find((port) => port.id === endpoint.portId)?.position
+          : endpoint.kind === "terminal"
+            ? (() => {
+                const instance = opened.instances.find(
+                  (candidate) => candidate.id === endpoint.instanceId,
+                );
+                const resolved = instance
+                  ? resolver.resolve(
+                      instance.symbolId,
+                      instance.symbolVariantId,
+                    )
+                  : undefined;
+                const pin = resolved?.definition.pins.find(
+                  (candidate) => candidate.name === endpoint.pinName,
+                );
+                return instance?.placement && pin
+                  ? transformPoint(
+                      pin.at,
+                      instance.placement.position,
+                      instance.placement,
+                    )
+                  : null;
+              })()
+            : null;
+      if (point) {
+        setSelectedEndpoint({
+          endpoint,
+          netId: endpointNetId(opened, endpoint),
+          point,
+          preludeEdits: [],
+        });
+        focusPoint(point);
+      }
+    } else if (locator.kind === "instance") {
+      const instance = opened.instances.find(
+        (item) => item.id === locator.objectId,
+      );
+      selectOnly("instance", [locator.objectId]);
+      if (instance?.placement) focusPoint(instance.placement.position);
+    } else if (locator.kind === "net") {
+      setHighlightedNetOrigin({
+        documentId: opened.id,
+        netId: locator.objectId,
+      });
+      const route = opened.routes.find(
+        (item) => item.netId === locator.objectId,
+      );
+      const centerline = route
+        ? projectConnectivityIndex.documents
+            .get(opened.id)
+            ?.routeGeometry.get(route.id)?.centerline
+        : undefined;
+      if (centerline?.[0]) focusPoint(centerline[0]);
+    }
+    setSelectionOpen(true);
+    setStatus(statusMessage);
+  }
+
   function enterHierarchy(instanceId: string): void {
     const instance = document.instances.find(
       (candidate) => candidate.id === instanceId,
@@ -1061,15 +1249,22 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       setStatus(`${instanceId} has no imported child Cell`);
       return;
     }
-    setDocumentStack((current) => [...current, document.id]);
+    setDocumentStack((current) => [
+      ...current,
+      {
+        parentDocumentId: document.id,
+        instanceId,
+        childDocumentId: targetId,
+      },
+    ]);
     switchDocument(targetId);
   }
 
   function returnToParentDocument(): void {
-    const parentId = documentStack.at(-1);
-    if (!parentId) return;
+    const frame = documentStack.at(-1);
+    if (!frame) return;
     setDocumentStack((current) => current.slice(0, -1));
-    switchDocument(parentId);
+    switchDocument(frame.parentDocumentId);
   }
 
   function returnToTopDocument(): void {
@@ -1134,6 +1329,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       });
     }
     setStatus(`${diagnostic.code}: ${ids.join(", ") || "Document"}`);
+  }
+
+  function jumpToProjectDiagnostic(diagnostic: Diagnostic): void {
+    navigateToLocator(
+      diagnostic.primary,
+      `${diagnostic.domain.toUpperCase()} ${diagnostic.code}: ${diagnostic.message}`,
+    );
   }
 
   function applyResult(result: EditTransactionResult): void {
@@ -1451,7 +1653,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       (candidate) => candidate.id === selectedRouteId,
     );
     if (!route) return;
-    const result = transact([{ kind: "cut_connection", routeId: route.id }]);
+    const result = transact(
+      proposeVisualRouteDeletion(document, [route.id], []).edits,
+    );
     if (result.ok) {
       replaceSelectionKind("route", []);
       setStatus(`Deleted wire ${route.id}`);
@@ -1564,56 +1768,24 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           ),
         };
         if (delta.x !== 0 || delta.y !== 0) {
-          const junctionEdits = anchorIds.map((junctionId): SchematicEdit => {
-            const junction = document.junctions.find(
-              (candidate) => candidate.id === junctionId,
-            )!;
-            return {
-              kind: "move_junction",
-              junctionId,
-              position: {
-                x: junction.position.x + delta.x,
-                y: junction.position.y + delta.y,
-              },
-            };
-          });
-          const translatedPoints = record.polyline.points.map((routePoint) => ({
-            x: routePoint.x + delta.x,
-            y: routePoint.y + delta.y,
-          }));
-          const result = transact([
-            ...junctionEdits,
-            {
-              kind: "set_route_points",
-              routeId: record.route.id,
-              netId: record.route.netId,
-              from: record.route.from,
-              to: record.route.to,
-              waypoints: translatedPoints.slice(1, -1),
-              segmentModes: record.route.segmentModes,
-            },
-          ]);
+          const result = transact(
+            proposeLooseRouteTranslation(document, record.route.id, delta)
+              .edits,
+          );
           if (result.ok) setStatus(`Moved loose route ${record.route.id}`);
         }
       } else {
-        const proposal = moveRouteSegment(
-          record.polyline,
+        const proposal = proposeWireSegmentMove(
+          document,
+          resolver,
+          record.route.id,
           preview.segmentIndex,
           {
             x: snapCoordinate(point.x, document.presentation.grid),
             y: snapCoordinate(point.y, document.presentation.grid),
           },
         );
-        const result = transact([
-          {
-            kind: "set_route_points",
-            routeId: record.route.id,
-            netId: record.route.netId,
-            from: record.route.from,
-            to: record.route.to,
-            ...proposal,
-          },
-        ]);
+        const result = transact(proposal.edits);
         if (result.ok) setStatus(`Moved route segment ${record.route.id}`);
       }
     } catch (error) {
@@ -2255,11 +2427,61 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             : "",
         }
       : null;
+    const contact = proposePlacementContact(
+      resolver,
+      instance,
+      visibleEndpoints,
+    );
+    const standalonePower =
+      contact.matched || contact.ambiguous
+        ? { edits: [], matched: false, ambiguous: false }
+        : proposedStandalonePowerConnection(instance);
+    // Build only the future global-Net facts needed to decide hidden B policy.
+    // The real transaction below remains the sole persistence boundary.
+    const projectedDocument = structuredClone(document);
+    projectedDocument.instances.push(instance);
+    for (const edit of [...contact.edits, ...standalonePower.edits]) {
+      if (edit.kind !== "connect_endpoints" || !edit.newNetId) continue;
+      projectedDocument.nets.push({
+        id: edit.newNetId,
+        ...(edit.newNetName ? { name: edit.newNetName } : {}),
+        scope: edit.newNetScope ?? "local",
+        terminals: [edit.from, edit.to]
+          .filter(
+            (
+              endpoint,
+            ): endpoint is Extract<RouteEndpoint, { kind: "terminal" }> =>
+              endpoint.kind === "terminal",
+          )
+          .map(({ instanceId, pinName }) => ({ instanceId, pinName }))
+          .filter(
+            (terminal, index, terminals) =>
+              terminals.findIndex(
+                (candidate) =>
+                  candidate.instanceId === terminal.instanceId &&
+                  candidate.pinName === terminal.pinName,
+              ) === index,
+          ),
+        ports: [edit.from, edit.to]
+          .filter(
+            (endpoint): endpoint is Extract<RouteEndpoint, { kind: "port" }> =>
+              endpoint.kind === "port",
+          )
+          .map((endpoint) => endpoint.portId),
+      });
+    }
+    const bulkEdits = razaviManualBulkConnectionEdits(
+      projectedDocument,
+      projectedDocument.instances,
+    );
     const result = transact([
       {
         kind: "add_instance",
         instance,
       },
+      ...contact.edits,
+      ...standalonePower.edits,
+      ...bulkEdits,
       ...(instanceLabel
         ? [{ kind: "upsert_annotation" as const, annotation: instanceLabel }]
         : []),
@@ -2287,7 +2509,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       cancelInteraction();
       setComponentPreviewPoint(null);
       setComponentPlacementRotation(0);
-      setStatus(`Added ${id} (${symbolId})`);
+      setStatus(
+        contact.ambiguous
+          ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly`
+          : contact.matched
+            ? `Added ${id} (${symbolId}) and connected its contacted pin`
+            : `Added ${id} (${symbolId})`,
+      );
     }
   }
 
@@ -2503,46 +2731,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     };
     if (delta.x !== 0 || delta.y !== 0) {
       try {
-        const groupMove = proposeGroupMove(document, resolver, moves);
-        const stretchEdits: SchematicEdit[] = groupMove.routes.map(
-          (proposal) => {
-            const route = document.routes.find(
-              (candidate) => candidate.id === proposal.routeId,
-            )!;
-            return {
-              kind: "set_route_points" as const,
-              routeId: route.id,
-              netId: route.netId,
-              from: route.from,
-              to: route.to,
-              waypoints: proposal.waypoints,
-              segmentModes: proposal.segmentModes,
-            };
-          },
-        );
+        const groupMove = proposeGroupMoveEdits(document, resolver, moves);
         const result = transact([
-          ...moves.map((move): SchematicEdit => ({
-            kind: "move_instance",
-            ...move,
-          })),
-          ...groupMove.junctions.map((move): SchematicEdit => ({
-            kind: "move_junction",
-            ...move,
-          })),
-          ...stretchEdits,
-          ...groupMove.annotations.flatMap((move): SchematicEdit[] => {
-            const annotation = document.annotations.find(
-              (candidate) => candidate.id === move.annotationId,
-            );
-            return annotation
-              ? [
-                  {
-                    kind: "upsert_annotation",
-                    annotation: { ...annotation, position: move.position },
-                  },
-                ]
-              : [];
-          }),
+          ...groupMove.edits,
           ...(electricalMatch?.moving.electrical &&
           electricalMatch.target.electrical
             ? [
@@ -3244,16 +3435,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       (candidate) => candidate.id === selectedRoute.netId,
     );
     if (!net) return;
-    const labelId = `net-label-${selectedRoute.id}`;
-    const existingLabel = document.annotations.find(
-      (annotation) => annotation.id === labelId,
-    );
+    const existingLabel = selectedRouteNetLabel;
+    const labelId = existingLabel?.id ?? `net-label-${selectedRoute.id}`;
     const name = netLabelDraft.trim();
     if (!name) {
       if (existingLabel) {
-        transact([
+        const result = transact([
           { kind: "remove_annotation", annotationId: existingLabel.id },
         ]);
+        if (result.ok) {
+          replaceSelectionKind("annotation", []);
+          setStatus(`Deleted Net Label ${existingLabel.text}`);
+        }
+      } else {
+        setStatus("Selected Route has no Net Label");
       }
       return;
     }
@@ -3261,7 +3456,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       (candidate) => candidate.id !== net.id && candidate.name === name,
     );
     const targetNetId = sameNameNet?.id ?? net.id;
-    const polyline = routePolyline(document, resolver, selectedRoute);
+    const polyline = routePolylines.find(
+      ({ route }) => route.id === selectedRoute.id,
+    )?.polyline;
     if (!polyline) return;
     const segment = Math.max(0, Math.floor((polyline.points.length - 1) / 2));
     const from = polyline.points[segment]!;
@@ -3301,6 +3498,27 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           ? `Connected Nets through label ${name}`
           : `Named Net ${name}`,
       );
+    }
+  }
+
+  function deleteSelectedRouteNetLabel(): void {
+    if (!selectedRoute) return;
+    const label = selectedRouteNetLabel;
+    if (!label) {
+      setStatus(
+        selectedRouteNetLabels.length > 1
+          ? "This Net has multiple labels; select the label to delete"
+          : "Selected Route has no Net Label",
+      );
+      return;
+    }
+    const result = transact([
+      { kind: "remove_annotation", annotationId: label.id },
+    ]);
+    if (result.ok) {
+      replaceSelectionKind("annotation", []);
+      setNetLabelDraft("");
+      setStatus(`Deleted Net Label ${label.text}`);
     }
   }
 
@@ -4400,7 +4618,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     if (hasMixedSelection) {
-      const visualRouteDeletion = collectVisualRouteDeletion(
+      const visualRouteDeletion = proposeVisualRouteDeletion(
         document,
         [...initialRouteIds],
         [...selectedJunctionIds],
@@ -4416,17 +4634,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 uniqueSuffixCounter.current,
               )
             : [];
-        const alreadyOrphanedJunctionIds =
-          visualRouteDeletion.junctionIds.filter(
-            (junctionId) =>
-              !document.routes.some(
-                (route) =>
-                  (route.from.kind === "junction" &&
-                    route.from.junctionId === junctionId) ||
-                  (route.to.kind === "junction" &&
-                    route.to.junctionId === junctionId),
-              ),
-          );
         // Instance deletion already removes every annotation attached to the
         // instance. A marquee can select both visual objects, but emitting the
         // same remove_annotation edit twice makes the second operation fail
@@ -4438,14 +4645,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         );
         const result = transact([
           ...instanceEdits,
-          ...visualRouteDeletion.routeIds.map((routeId): SchematicEdit => ({
-            kind: "cut_connection",
-            routeId,
-          })),
-          ...alreadyOrphanedJunctionIds.map((junctionId): SchematicEdit => ({
-            kind: "remove_junction",
-            junctionId,
-          })),
+          ...visualRouteDeletion.edits,
           ...explicitAnnotationIds.map((annotationId): SchematicEdit => ({
             kind: "remove_annotation",
             annotationId,
@@ -4512,26 +4712,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function deleteSelectedJunction(): void {
     if (selectedEndpoint?.endpoint.kind !== "junction") return;
     const junctionId = selectedEndpoint.endpoint.junctionId;
-    const attachedRouteEdits = document.routes
-      .filter(
-        (route) =>
-          (route.from.kind === "junction" &&
-            route.from.junctionId === junctionId) ||
-          (route.to.kind === "junction" && route.to.junctionId === junctionId),
-      )
-      .map((route): SchematicEdit => ({
-        kind: "cut_connection",
-        routeId: route.id,
-      }));
-    const result = transact(
-      attachedRouteEdits.length > 0
-        ? attachedRouteEdits
-        : [{ kind: "remove_junction", junctionId }],
-    );
+    const proposal = proposeVisualRouteDeletion(document, [], [junctionId]);
+    const result = transact(proposal.edits);
     if (result.ok) {
       setSelectedEndpoint(null);
       setStatus(
-        `Deleted junction and ${attachedRouteEdits.length} attached routes`,
+        `Deleted junction and ${proposal.routeIds.length} attached routes`,
       );
     }
   }
@@ -4561,6 +4747,62 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       setSelectedEndpoint(null);
       setStatus(
         removeRoutes ? "Deleted endpoint connection" : "Disconnected endpoint",
+      );
+    }
+  }
+
+  function nextNoConnectId(): string {
+    const occupied = new Set([
+      ...document.instances.map((instance) => instance.id),
+      ...document.nets.map((net) => net.id),
+      ...document.routes.map((route) => route.id),
+      ...document.junctions.map((junction) => junction.id),
+      ...document.noConnects.map((noConnect) => noConnect.id),
+      ...document.ports.map((port) => port.id),
+      ...document.annotations.map((annotation) => annotation.id),
+      ...document.layoutGroups.map((group) => group.id),
+      ...document.constraints.map((constraint) => constraint.id),
+      ...(document.drafting?.objects ?? []).map((object) => object.id),
+    ]);
+    let id: string;
+    do {
+      uniqueSuffixCounter.current += 1;
+      id = `no-connect-ui-${uniqueSuffixCounter.current}`;
+    } while (occupied.has(id));
+    return id;
+  }
+
+  function toggleSelectedNoConnect(): void {
+    if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
+      return;
+    }
+    if (selectedNoConnect) {
+      const result = transact([
+        { kind: "remove_no_connect", noConnectId: selectedNoConnect.id },
+      ]);
+      if (result.ok) {
+        setStatus(
+          `Cleared No Connect on ${endpointTestId(selectedEndpoint.endpoint)}`,
+        );
+      }
+      return;
+    }
+    if (selectedEndpointNetId) {
+      setStatus("Disconnect this endpoint before marking it No Connect");
+      return;
+    }
+    const result = transact([
+      {
+        kind: "add_no_connect",
+        noConnect: {
+          id: nextNoConnectId(),
+          endpoint: selectedEndpoint.endpoint,
+        },
+      },
+    ]);
+    if (result.ok) {
+      setStatus(
+        `Marked ${endpointTestId(selectedEndpoint.endpoint)} No Connect`,
       );
     }
   }
@@ -4651,6 +4893,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "f" &&
+        !isTypingTarget(event.target)
+      ) {
+        event.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+      if (event.key === "Escape" && searchOpen) {
+        event.preventDefault();
+        closeSearch();
+        return;
+      }
       if (event.key === "Escape" && dismissOpenCommandMenus()) {
         event.preventDefault();
         return;
@@ -4671,6 +4927,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         hasDraftingSelection: Boolean(selectedDrafting),
         hasInspectableSelection,
         hasRouteSelection: Boolean(selectedRoute),
+        hasHighlightableNet: selectedHighlightNetId !== null,
         wireSessionActive: Boolean(wireSource),
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
         draftingReadyToFinish:
@@ -4763,6 +5020,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         case "net-label-selection-required":
           setStatus("Select a wire segment before adding a Net Label");
           return;
+        case "toggle-net-highlight":
+          toggleHighlightedNet();
+          return;
         case "fit-view":
           fitView();
           return;
@@ -4847,6 +5107,60 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function closeHelp(): void {
     setHelpOpen(false);
     requestAnimationFrame(() => helpButtonRef.current?.focus());
+  }
+
+  function closeSearch(): void {
+    setSearchOpen(false);
+    setSearchQuery("");
+  }
+
+  function selectSearchResult(result: SearchResult): void {
+    navigateToLocator(
+      result.locator,
+      `Selected ${result.locator.kind} ${result.locator.objectId}`,
+    );
+    closeSearch();
+  }
+
+  function highlightNet(
+    netId: string,
+    documentId = document.id,
+    endpoint?: RouteEndpoint,
+  ): void {
+    setHighlightedNetOrigin({
+      documentId,
+      netId,
+      ...(endpoint ? { endpoint } : {}),
+    });
+    setStatus(`Highlighted Net ${netId}`);
+  }
+
+  function toggleHighlightedNet(): void {
+    const netId = selectedHighlightNetId;
+    if (!netId) {
+      setStatus(
+        "Select a wire, connected pin, or Net Label before highlighting a Net",
+      );
+      return;
+    }
+    if (selectedHighlightIsActive) {
+      setHighlightedNetOrigin(null);
+      setStatus(`Cleared Net highlight ${netId}`);
+      return;
+    }
+    highlightNet(netId, document.id, selectedHighlightEndpoint);
+  }
+
+  function navigateTraceHop(hop: HierarchyNetTraceHop): void {
+    navigateToLocator(
+      {
+        documentId: hop.to.documentId,
+        hierarchyPath: [],
+        kind: "net",
+        objectId: hop.to.netId,
+      },
+      `Traced Net ${hop.to.netId} via ${hop.frame.instanceId}.${hop.frame.parentPinName}`,
+    );
   }
 
   return (
@@ -4959,7 +5273,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 onClick={() => activateTool("construction-line")}
               >
                 <ToolIcon name="line" />
-                Construction line (P)
+                Construction line (K)
               </button>
               <button
                 type="button"
@@ -5121,6 +5435,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           >
             Help
           </button>
+          <button
+            type="button"
+            data-testid="project-search-button"
+            aria-haspopup="dialog"
+            aria-expanded={searchOpen}
+            onClick={() => setSearchOpen(true)}
+          >
+            Search
+          </button>
         </nav>
         <div className="editor-header-meta">
           <p className="editor-status" data-testid="status" aria-live="polite">
@@ -5177,6 +5500,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       {helpOpen ? (
         <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
       ) : null}
+      <ProjectSearchDialog
+        open={searchOpen}
+        query={searchQuery}
+        results={searchResults}
+        onQueryChange={setSearchQuery}
+        onSelect={selectSearchResult}
+        onClose={closeSearch}
+      />
       <InsertComponentDialog
         open={insertDialogOpen}
         styleProfileId={document.presentation.styleProfileId}
@@ -5756,8 +6087,16 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 <button type="button" onClick={applyNetLabel}>
                   Apply Net label
                 </button>
+                <button type="button" onClick={deleteSelectedRouteNetLabel}>
+                  Delete Net label
+                </button>
                 <button type="button" onClick={addCurrentArrow}>
                   Add current arrow
+                </button>
+                <button type="button" onClick={toggleHighlightedNet}>
+                  {selectedHighlightIsActive
+                    ? "Clear Net highlight (H)"
+                    : "Highlight Net (H)"}
                 </button>
                 <button type="button" onClick={deleteSelectedRouteConnection}>
                   Delete wire
@@ -5783,6 +6122,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 >
                   Delete connection
                 </button>
+                <button
+                  type="button"
+                  onClick={toggleSelectedNoConnect}
+                  disabled={
+                    !selectedNoConnect && selectedEndpointNetId !== null
+                  }
+                >
+                  {selectedNoConnect ? "Clear No Connect" : "Mark No Connect"}
+                </button>
+                {!selectedNoConnect && selectedEndpointNetId ? (
+                  <small>
+                    Disconnect this endpoint before marking No Connect.
+                  </small>
+                ) : null}
                 {selectedPortId ? (
                   <button
                     type="button"
@@ -5818,6 +6171,48 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   Delete current arrow
                 </button>
               </section>
+            ) : null}
+            {selectedAnnotation && !isRoutedMarker(selectedAnnotation) ? (
+              <section
+                className="context-actions"
+                aria-label="Annotation actions"
+              >
+                <h2>Annotation</h2>
+                {selectedNetLabelBinding ? (
+                  <button type="button" onClick={toggleHighlightedNet}>
+                    {selectedHighlightIsActive
+                      ? "Clear Net highlight (H)"
+                      : "Highlight Net (H)"}
+                  </button>
+                ) : null}
+                <button type="button" onClick={deleteSelectedAnnotation}>
+                  {selectedAnnotation.kind === "net-label"
+                    ? "Delete selected Net label"
+                    : "Delete annotation"}
+                </button>
+              </section>
+            ) : null}
+            {projectDiagnostics.length > 0 ? (
+              <ProjectDiagnosticsSection
+                diagnostics={projectDiagnostics}
+                documentLabel={(documentId) =>
+                  project.documents.find(
+                    (candidate) => candidate.id === documentId,
+                  )?.name ?? documentId
+                }
+                onSelectDiagnostic={jumpToProjectDiagnostic}
+              />
+            ) : null}
+            {highlightedTrace && highlightedTrace.hops.length > 0 ? (
+              <NetTraceSection
+                trace={highlightedTrace}
+                documentLabel={(documentId) =>
+                  project.documents.find(
+                    (candidate) => candidate.id === documentId,
+                  )?.name ?? documentId
+                }
+                onNavigateHop={navigateTraceHop}
+              />
             ) : null}
             {importReviewOpen ? (
               <section className="import-review" aria-label="Import Review">
@@ -6056,6 +6451,62 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             fill="url(#grid)"
           />
           <g dangerouslySetInnerHTML={{ __html: scene.formalBody }} />
+          {highlightedNet ? (
+            <g
+              data-testid="net-highlight-overlay"
+              data-net-id={highlightedNet.netId}
+              className="net-highlight-overlay"
+              pointerEvents="none"
+            >
+              {routePolylines
+                .filter(({ route }) => highlightedNet.routes.includes(route.id))
+                .map(({ route, polyline }) => (
+                  <polyline
+                    key={route.id}
+                    className="net-highlight-halo"
+                    points={serializePolylinePoints(polyline.points)}
+                  />
+                ))}
+              {routePolylines
+                .filter(({ route }) => highlightedNet.routes.includes(route.id))
+                .map(({ route, polyline }) => (
+                  <polyline
+                    key={`${route.id}-core`}
+                    className="net-highlight-core"
+                    points={serializePolylinePoints(polyline.points)}
+                  />
+                ))}
+              {document.junctions
+                .filter((junction) =>
+                  highlightedNet.junctions.includes(junction.id),
+                )
+                .map((junction) => (
+                  <circle
+                    key={junction.id}
+                    cx={junction.position.x}
+                    cy={junction.position.y}
+                    r="4.5"
+                  />
+                ))}
+              {highlightedNet.visibleEndpoints.flatMap((endpoint) => {
+                const point = resolveEndpointPoint(
+                  document,
+                  resolver,
+                  endpoint,
+                );
+                if (!point) return [];
+                return [
+                  <circle
+                    key={`endpoint:${endpointKey(endpoint)}`}
+                    className="net-highlight-endpoint"
+                    cx={point.x}
+                    cy={point.y}
+                    r="5.5"
+                  />,
+                ];
+              })}
+            </g>
+          ) : null}
           {copyPreviewScene ? (
             <g
               data-testid="copy-placement-preview"
@@ -6098,11 +6549,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             ) : null}
             {netLabelEditorOpen && selectedRoute
               ? (() => {
-                  const polyline = routePolyline(
-                    document,
-                    resolver,
-                    selectedRoute,
-                  );
+                  const polyline = routePolylines.find(
+                    ({ route }) => route.id === selectedRoute.id,
+                  )?.polyline;
                   if (!polyline) return null;
                   const segmentIndex = Math.min(
                     selectedRouteSegmentIndex ?? 0,
