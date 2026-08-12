@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -54,4 +54,13 @@ before fast-forwarding main.
 
 ## Outcome
 
-Pending refresh and validation.
+Merged latest `origin/main` commit `4081e52` into the integration branch with
+no conflict; the Analytics reset CSS and both factual logs were preserved by
+Git's automatic merge. No functional path required manual conflict resolution.
+
+The frozen install, static/type/reference gates, 597 unit tests, production
+build, performance, export/PWA, production/release smoke all passed. The first
+16-worker E2E invocation reached the outer command timeout with three
+independent 30-second test timeouts; all three passed 3/3 in a one-worker
+rerun, and the complete 85-test browser suite then passed 85/85 with eight
+workers. This final tree is accepted for a fast-forward main update.

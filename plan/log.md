@@ -5459,3 +5459,16 @@ contracts (WP-R1)`.
   production/release gates, and 85 browser E2E tests all passed.
 - Commit status: merge commit `1f79b3a` created locally on
   `codex/integrate-connectivity-main`; close-out ready to commit and push.
+
+## 2026-08-12 - Latest-main integration refresh
+
+- Target: incorporate the Analytics reset commits that reached main after the
+  first connectivity integration validation and revalidate the exact final
+  candidate before updating main.
+- Changed areas: automatic latest-main merge; integration target record. No
+  functional conflict required manual resolution.
+- Validation: frozen install; static/type/reference gates; 597 unit tests;
+  production build, performance, export/PWA and production/release smoke. Three
+  independent E2E cases timed out only in the initial 16-worker run, passed 3/3
+  at one worker, and the complete suite passed 85/85 at eight workers.
+- Commit status: integration branch validated and ready to fast-forward main.
