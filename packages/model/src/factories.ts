@@ -26,6 +26,7 @@ export function createEmptyDocument(
     },
     layoutGroups: [],
     constraints: [],
+    noConnects: [],
     drafting: { objects: [], guides: [] },
   };
 }

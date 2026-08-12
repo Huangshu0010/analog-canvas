@@ -42,6 +42,7 @@ function baseDoc(
     },
     layoutGroups: [],
     constraints: [],
+    noConnects: [],
     ...overrides,
   };
 }

@@ -247,6 +247,7 @@ function importDocument(
     },
     layoutGroups: [],
     constraints: [],
+    noConnects: [],
   };
 }
 

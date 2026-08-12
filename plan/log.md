@@ -4721,3 +4721,22 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): compute net highlight and cross-cell trace from the index
   (WP-R6)`.
+
+## 2026-08-12 - WP-R7 NoConnect Schema and v2 -> v3 Migration
+
+- Target: persisted NoConnect record + schema version 2 -> 3 + idempotent
+  backfill migration + schema-level invariants. Foundation for the ERC engine
+  (WP-R8). Edit/importer/Agent/visual sub-steps deferred.
+- Changed areas: `packages/model/src/schema.ts` (NoConnect, version 3, invariant,
+  types); new `migration-v2-to-v3.ts` + test; `persistence.ts` registration;
+  cascade `noConnects: []` added to typed document literals (`factories`,
+  `importer`, 3 test helpers), `persistence.test` migration chain, `platform-web`
+  assertion, and regenerated v3 fixtures (minimal, phase-1-manual, phase-3-
+  routing).
+- Validation: workspace `pnpm typecheck`; full `pnpm test` — 524 passed, 8
+  failed. The 8 failures are pre-existing and unrelated (confirmed by stashing
+  R7 — same 8 fail on clean branch): instance-label/golden/Razavi-catalog
+  regeneration in flight on the separate `codex/ci-delivery-gate` target. R7
+  adds no new failures. `prettier --check`; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(model): add NoConnect record with v2->v3 schema migration (WP-R7)`.
