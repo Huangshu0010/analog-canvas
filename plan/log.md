@@ -5158,3 +5158,15 @@ contracts (WP-R1)`.
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(derived): consume resolved route geometry in stretch`.
+
+## 2026-08-12 - Connectivity Recovery C10b: resolved-geometry audit
+
+- Target: audit consumer migration with broad gates and repair an observed
+  visual-envelope identity collision without deleting lower-level primitives.
+- Changed areas: visual diagnostic identity/test and factual recovery status;
+  target plan and log.
+- Validation: 569 workspace unit tests; 80 editor E2E tests; 500-instance
+  performance gate; workspace `pnpm typecheck`; static consumer audit;
+  `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): audit resolved geometry migration`.

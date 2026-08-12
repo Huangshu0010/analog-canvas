@@ -54,6 +54,17 @@ function locatorFromIndex(
   );
 }
 
+function visualDiagnosticIdentity(visual: VisualDiagnostic): string {
+  return JSON.stringify({
+    objectIds: visual.objectIds,
+    parameters: Object.entries(visual.parameters ?? {}).sort(
+      ([left], [right]) => left.localeCompare(right, "en"),
+    ),
+    point: visual.point ?? null,
+    bounds: visual.bounds ?? null,
+  });
+}
+
 /**
  * Adapt a `VisualDiagnostic` (current document-scoped observation) into the
  * unified envelope as `domain: "visual"`. Its `objectIds` are resolved to
@@ -75,7 +86,7 @@ export function adaptVisualDiagnostic(
         locator.objectId !== documentId || locator.kind !== "document",
     );
   return {
-    id: `visual:${documentId}:${visual.code}:${primaryId ?? "doc"}`,
+    id: `visual:${documentId}:${visual.code}:${visualDiagnosticIdentity(visual)}`,
     domain: "visual",
     code: visual.code,
     severity: visual.severity,

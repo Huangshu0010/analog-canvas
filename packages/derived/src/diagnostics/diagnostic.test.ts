@@ -99,6 +99,23 @@ describe("diagnostic aggregation", () => {
     ).toBeGreaterThan(merged.findIndex((item) => item.domain === "erc"));
   });
 
+  it("keeps distinct visual observations on one primary object uniquely addressable", () => {
+    const project = projectWithInstance();
+    const index = buildProjectConnectivityIndex(project, resolver);
+    const first = adaptVisualDiagnostic(
+      { ...shortSegment, objectIds: ["I1", "foreign-a"] },
+      "doc",
+      index,
+    );
+    const second = adaptVisualDiagnostic(
+      { ...shortSegment, objectIds: ["I1", "foreign-b"] },
+      "doc",
+      index,
+    );
+    expect(first.primary).toEqual(second.primary);
+    expect(first.id).not.toBe(second.id);
+  });
+
   it("produces a deterministic merged order", () => {
     const project = projectWithInstance();
     const index = buildProjectConnectivityIndex(project, resolver);
