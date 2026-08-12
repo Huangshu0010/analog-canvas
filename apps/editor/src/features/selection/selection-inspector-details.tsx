@@ -179,6 +179,7 @@ export function SelectionInspectorDetails({
 
 export interface ErcDiagnosticsSectionProps {
   diagnostics: readonly ErcDiagnostic[];
+  documentLabel(documentId: string): string;
   onSelectDiagnostic(diagnostic: ErcDiagnostic): void;
 }
 
@@ -189,6 +190,7 @@ export interface ErcDiagnosticsSectionProps {
  */
 export function ErcDiagnosticsSection({
   diagnostics,
+  documentLabel,
   onSelectDiagnostic,
 }: ErcDiagnosticsSectionProps) {
   return (
@@ -201,6 +203,7 @@ export function ErcDiagnosticsSection({
         {diagnostics.map((diagnostic, index) => (
           <li
             key={diagnostic.id}
+            data-document-id={diagnostic.primary.documentId}
             data-severity={diagnostic.severity}
             data-confidence={diagnostic.confidence}
           >
@@ -210,6 +213,9 @@ export function ErcDiagnosticsSection({
               onClick={() => onSelectDiagnostic(diagnostic)}
             >
               <strong>{diagnostic.code}</strong>: {diagnostic.message}
+              <small>
+                Cell: {documentLabel(diagnostic.primary.documentId)}
+              </small>
             </button>
           </li>
         ))}

@@ -629,13 +629,6 @@ export function App({ project: initialProject }: AppProps) {
     () => runErcChecks(project, projectConnectivityIndex, resolver),
     [project, projectConnectivityIndex, resolver],
   );
-  const currentErcDiagnostics = useMemo(
-    () =>
-      ercDiagnostics.filter(
-        (diagnostic) => diagnostic.primary.documentId === document.id,
-      ),
-    [document.id, ercDiagnostics],
-  );
   const searchResults = useMemo(
     () =>
       buildProjectSearchIndex(project, {
@@ -6014,9 +6007,14 @@ export function App({ project: initialProject }: AppProps) {
                 </button>
               </section>
             ) : null}
-            {currentErcDiagnostics.length > 0 ? (
+            {ercDiagnostics.length > 0 ? (
               <ErcDiagnosticsSection
-                diagnostics={currentErcDiagnostics}
+                diagnostics={ercDiagnostics}
+                documentLabel={(documentId) =>
+                  project.documents.find(
+                    (candidate) => candidate.id === documentId,
+                  )?.name ?? documentId
+                }
                 onSelectDiagnostic={jumpToErcDiagnostic}
               />
             ) : null}

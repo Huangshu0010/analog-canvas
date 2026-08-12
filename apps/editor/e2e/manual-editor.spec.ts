@@ -1491,6 +1491,36 @@ test("navigates a project-search locator into an imported child Cell", async ({
   await expect(page.getByTestId("active-document-name")).toHaveText("Top Cell");
 });
 
+test("navigates a project ERC diagnostic into its imported child Cell", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByTestId("project-file")
+    .setInputFiles(
+      resolve(
+        process.cwd(),
+        "fixtures/projects/hierarchy-navigation/project.icproj.json",
+      ),
+    );
+  await openSelectionShelf(page);
+
+  const childDiagnostic = page
+    .locator(
+      '[data-testid="erc-diagnostics"] li[data-document-id="document-child"] button',
+    )
+    .first();
+  await expect(childDiagnostic).toContainText("Cell: Bias Child Cell");
+  await childDiagnostic.click();
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "Bias Child Cell",
+  );
+  await expect(page.getByTestId("status")).toContainText("ERC_");
+  await expect(
+    page.getByRole("region", { name: "Endpoint actions" }),
+  ).toBeVisible();
+});
+
 test("highlights the complete current-document Net from a selected route", async ({
   page,
 }) => {

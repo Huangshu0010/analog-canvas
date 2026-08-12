@@ -1,8 +1,9 @@
-import type { VisualDiagnostic } from "@icm/derived";
+import type { ErcDiagnostic, VisualDiagnostic } from "@icm/derived";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
+  ErcDiagnosticsSection,
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "./selection-inspector-details";
@@ -25,6 +26,25 @@ const observation: VisualDiagnostic = {
   gateEligible: false,
   message: "Label is crowded",
   objectIds: ["label-1"],
+};
+
+const ercDiagnostic: ErcDiagnostic = {
+  id: "erc:fixture",
+  domain: "erc",
+  code: "ERC_UNCONNECTED_PIN",
+  severity: "warning",
+  confidence: "high",
+  gateEligible: false,
+  message: "RCHILD.1 is unconnected",
+  primary: {
+    documentId: "document-child",
+    hierarchyPath: [],
+    kind: "terminal",
+    objectId: "RCHILD:1",
+    endpoint: { kind: "terminal", instanceId: "RCHILD", pinName: "1" },
+  },
+  related: [],
+  parameters: {},
 };
 
 describe("selection inspector details", () => {
@@ -81,5 +101,19 @@ describe("selection inspector details", () => {
     expect(observationList).not.toContain("BROKEN_ROUTE");
     expect(markup).toContain("SPICE_NOTE");
     expect(markup).toContain('data-testid="blocking-diagnostic-count">1');
+  });
+
+  it("identifies the owning Cell for each project ERC diagnostic", () => {
+    const markup = renderToStaticMarkup(
+      <ErcDiagnosticsSection
+        diagnostics={[ercDiagnostic]}
+        documentLabel={(documentId) =>
+          documentId === "document-child" ? "Bias Child Cell" : documentId
+        }
+        onSelectDiagnostic={() => undefined}
+      />,
+    );
+    expect(markup).toContain('data-document-id="document-child"');
+    expect(markup).toContain("Cell: Bias Child Cell");
   });
 });

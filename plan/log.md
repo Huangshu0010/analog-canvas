@@ -5025,3 +5025,15 @@ contracts (WP-R1)`.
   `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `test(editor): cover cross-Cell locator navigation`.
+
+## 2026-08-12 - Connectivity Recovery C9b: project ERC diagnostic navigation
+
+- Target: surface the full project ERC envelope in the editor and navigate an
+  off-Cell diagnostic via its canonical locator.
+- Changed areas: editor ERC shelf presentation and focused selection/browser
+  tests; target plan and log.
+- Validation: 14 focused selection/App unit tests; focused Playwright child
+  ERC navigation; workspace `pnpm typecheck`; targeted Prettier; `git diff
+--check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): navigate project ERC diagnostics`.
