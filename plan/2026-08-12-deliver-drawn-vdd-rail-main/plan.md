@@ -55,5 +55,6 @@ The current branch already contains latest remote main. A frozen install and
 complete `pnpm ci:check` passed after updating the capacitor's rotated-label
 boundary expectation from `y=125` to `y=126`, which follows its intentionally
 expanded visible extent. The gate passed 615 unit tests, release/performance/
-export/PWA/release-smoke stages, and 91 browser tests. Ready to push the final
-delivery metadata, open a PR, wait for remote required checks, and merge.
+export/PWA/release-smoke stages, and 91 browser tests. PR #19 was merged after
+all five required GitHub Actions checks passed; remote main reached merge
+commit `8bd0670` on 2026-08-12.

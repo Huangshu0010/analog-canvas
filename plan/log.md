@@ -8,8 +8,8 @@
   delivery target record.
 - Validation: frozen install and full `pnpm ci:check` passed: 615 unit tests,
   release/performance/export/PWA/release smoke, and 91 browser tests.
-- Commit status: ready to push/open PR from `codex/vdd-drawn-rail`; wait for
-  GitHub required checks before merging main.
+- Commit status: PR #19 merged as `8bd0670` after five required GitHub Actions
+  checks passed; remote `main` verified at that merge commit.
 
 ## 2026-08-12 - Capacitor plate contraction
 
