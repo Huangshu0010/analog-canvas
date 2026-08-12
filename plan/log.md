@@ -5148,3 +5148,13 @@ contracts (WP-R1)`.
   `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(derived): consume resolved route geometry in visuals`.
+
+## 2026-08-12 - Connectivity Recovery C3i: stretch resolved geometry reads
+
+- Target: make direct segment drag and local stretch derive their existing
+  route centerlines from shared resolved document geometry.
+- Changed areas: derived stretch read inputs and target plan/log.
+- Validation: 15 focused stretch/geometry tests; workspace `pnpm typecheck`;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): consume resolved route geometry in stretch`.
