@@ -4,6 +4,7 @@ import type {
   Annotation,
   Instance,
   Net,
+  NoConnect,
   Point,
   RouteBranch,
   RouteEndpoint,
@@ -16,6 +17,7 @@ export interface SchematicClipboard {
   routes: RouteBranch[];
   junctions: SchematicDocument["junctions"];
   annotations: Annotation[];
+  noConnects: NoConnect[];
 }
 
 export interface PasteProposal {
@@ -85,6 +87,7 @@ export function clipboardPreviewDocument(
       position: movePoint(junction.position, offset),
     })),
     ports: [],
+    noConnects: structuredClone(clipboard.noConnects),
     annotations,
     drafting: undefined,
   };
@@ -124,6 +127,11 @@ export function copySelection(
           routeIds.has(annotation.routeAttachment.routeId)) ||
         (annotation.anchor?.kind === "route" &&
           routeIds.has(annotation.anchor.routeId)),
+    ),
+    noConnects: document.noConnects.filter(
+      (noConnect) =>
+        noConnect.endpoint.kind === "terminal" &&
+        selectedIds.has(noConnect.endpoint.instanceId),
     ),
   });
 }
@@ -187,6 +195,7 @@ export function proposePaste(
       ...document.nets,
       ...document.routes,
       ...document.junctions,
+      ...document.noConnects,
       ...document.annotations,
       ...document.layoutGroups,
       ...document.constraints,
@@ -211,6 +220,12 @@ export function proposePaste(
     ]),
   );
   const netIds = new Map<string, string>();
+  const noConnectIds = new Map(
+    clipboard.noConnects.map((noConnect) => [
+      noConnect.id,
+      uniqueCopyId(noConnect.id, sequence, occupied),
+    ]),
+  );
   const existingAnchors = new Map<string, RouteEndpoint>();
   for (const net of clipboard.nets) {
     const existing = net.name
@@ -279,6 +294,24 @@ export function proposePaste(
       }
     }
   }
+  edits.push(
+    ...clipboard.noConnects.map((noConnect): SchematicEdit => {
+      if (noConnect.endpoint.kind !== "terminal") {
+        throw new Error("Clipboard NoConnect must target a copied terminal");
+      }
+      return {
+        kind: "add_no_connect",
+        noConnect: {
+          id: noConnectIds.get(noConnect.id)!,
+          endpoint: {
+            kind: "terminal",
+            instanceId: instanceIds.get(noConnect.endpoint.instanceId)!,
+            pinName: noConnect.endpoint.pinName,
+          },
+        },
+      };
+    }),
+  );
   edits.push(
     ...clipboard.junctions.map((junction): SchematicEdit => ({
       kind: "add_junction",

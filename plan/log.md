@@ -4820,3 +4820,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   and transaction tests; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(noconnect): add editable electrical lifecycle core`.
+
+## 2026-08-12 - Connectivity Recovery C2b: NoConnect clipboard transfer
+
+- Target: preserve and remap selected-instance terminal NoConnect declarations
+  through clipboard preview and paste.
+- Changed areas: editor clipboard data/proposal and regression test; target
+  plan and this log.
+- Validation: workspace `pnpm typecheck`; 12 focused clipboard/transaction
+  tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): preserve NoConnect declarations through clipboard paste`.
