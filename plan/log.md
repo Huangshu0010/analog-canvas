@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-12 - Reliable imported Net-label deletion
+
+- Target: make Net-label deletion work consistently for current-editor and
+  imported/legacy annotation identities.
+- Changed areas: Route label lookup/actions, explicit annotation deletion
+  action, and focused browser regression coverage.
+- Validation: `corepack pnpm exec playwright test apps/editor/e2e/manual-editor.spec.ts --grep "Net Label"` (2 passed),
+  `corepack pnpm typecheck`, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): delete imported Net labels reliably`.
+
 ## 2026-08-12 - Move Construction Line to K
 
 - Target: reserve `P` for a future schematic Port command and use `K` for

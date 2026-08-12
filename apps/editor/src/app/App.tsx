@@ -692,6 +692,25 @@ export function App({ project: initialProject }: AppProps) {
   const selectedRoute = selectedRouteId
     ? document.routes.find((route) => route.id === selectedRouteId)
     : undefined;
+  // Labels are electrically associated with a Net, not intrinsically with a
+  // Route. The editor's own label id is useful as a preference only: imported
+  // projects and older documents legitimately use arbitrary annotation ids.
+  const selectedRouteNetLabels = selectedRoute
+    ? document.annotations.filter(
+        (annotation) =>
+          annotation.kind === "net-label" &&
+          (annotation.id === `net-label-${selectedRoute.id}` ||
+            annotation.attachedObjectId === selectedRoute.netId),
+      )
+    : [];
+  const selectedRouteNetLabel = selectedRoute
+    ? (selectedRouteNetLabels.find(
+        (annotation) => annotation.id === `net-label-${selectedRoute.id}`,
+      ) ??
+      (selectedRouteNetLabels.length === 1
+        ? selectedRouteNetLabels[0]
+        : undefined))
+    : undefined;
   const selectedAnnotation = selectedAnnotationId
     ? document.annotations.find(
         (annotation) => annotation.id === selectedAnnotationId,
@@ -3385,16 +3404,19 @@ export function App({ project: initialProject }: AppProps) {
       (candidate) => candidate.id === selectedRoute.netId,
     );
     if (!net) return;
-    const labelId = `net-label-${selectedRoute.id}`;
-    const existingLabel = document.annotations.find(
-      (annotation) => annotation.id === labelId,
-    );
+    const existingLabel = selectedRouteNetLabel;
+    const labelId = existingLabel?.id ?? `net-label-${selectedRoute.id}`;
     const name = netLabelDraft.trim();
     if (!name) {
       if (existingLabel) {
-        transact([
+        const result = transact([
           { kind: "remove_annotation", annotationId: existingLabel.id },
         ]);
+        if (result.ok) {
+          setStatus(`Deleted Net Label ${existingLabel.text}`);
+        }
+      } else {
+        setStatus("Selected Route has no Net Label");
       }
       return;
     }
@@ -3449,12 +3471,13 @@ export function App({ project: initialProject }: AppProps) {
 
   function deleteSelectedRouteNetLabel(): void {
     if (!selectedRoute) return;
-    const labelId = `net-label-${selectedRoute.id}`;
-    const label = document.annotations.find(
-      (annotation) => annotation.id === labelId,
-    );
+    const label = selectedRouteNetLabel;
     if (!label) {
-      setStatus("Selected Route has no Net Label");
+      setStatus(
+        selectedRouteNetLabels.length > 1
+          ? "This Net has multiple labels; select the label to delete"
+          : "Selected Route has no Net Label",
+      );
       return;
     }
     const result = transact([
@@ -6089,6 +6112,19 @@ export function App({ project: initialProject }: AppProps) {
                 <small>Drag to slide along the wire or move its label.</small>
                 <button type="button" onClick={deleteSelectedAnnotation}>
                   Delete current arrow
+                </button>
+              </section>
+            ) : null}
+            {selectedAnnotation && !isRoutedMarker(selectedAnnotation) ? (
+              <section
+                className="context-actions"
+                aria-label="Annotation actions"
+              >
+                <h2>Annotation</h2>
+                <button type="button" onClick={deleteSelectedAnnotation}>
+                  {selectedAnnotation.kind === "net-label"
+                    ? "Delete selected Net label"
+                    : "Delete annotation"}
                 </button>
               </section>
             ) : null}

@@ -1267,6 +1267,52 @@ test("C previews one copy and Escape cancels without a revision", async ({
   );
 });
 
+test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
+  const project = createRoutingDemoProject();
+  const document = project.documents[0]!;
+  document.routes.push({
+    id: "route-imported-h",
+    netId: "net-h",
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
+    waypoints: [],
+    segmentModes: ["manual"],
+  });
+  document.annotations.push({
+    id: "imported-label-horizontal",
+    kind: "net-label",
+    text: "HORIZONTAL",
+    position: { x: 300, y: 280 },
+    attachedObjectId: "net-h",
+    offset: { x: 0, y: -8 },
+    alignment: "middle",
+    rotation: 0,
+    locked: false,
+  });
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "legacy-net-label.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+
+  await clickRoute(page, "route-imported-h");
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Delete Net label" }).click();
+  await expect(
+    page.getByTestId("annotation-hit-imported-label-horizontal"),
+  ).toHaveCount(0);
+
+  await page.keyboard.press("Control+z");
+  const label = page.getByTestId("annotation-hit-imported-label-horizontal");
+  await label.click();
+  await expect(
+    page.getByRole("button", { name: "Delete selected Net label" }),
+  ).toBeVisible();
+  await page.keyboard.press("Delete");
+  await expect(label).toHaveCount(0);
+});
+
 test("derives crossings and creates junctions only when a wire ends on a route", async ({
   page,
 }) => {
