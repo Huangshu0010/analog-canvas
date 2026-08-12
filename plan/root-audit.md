@@ -9,7 +9,7 @@ an archive. Completed plans with resolved experience are stored under
 | State | Count | Required disposition |
 | --- | ---: | --- |
 | `active` | 4 | Confirm ownership and close only after its stated validation and log entry. |
-| `completed` + `none` | 1 | This lifecycle target awaits its own commit; archive it only in a later sweep. |
+| `completed` + `none` | 3 | Each awaits a later archive sweep; their commits and log entries are complete. |
 | `completed` + `candidate` | 5 | Human decides whether to extract, reject, or defer the experience signal. |
 | `superseded` | 1 | Retain until its replacement is recorded, then archive. |
 | legacy ``proposed`` | 1 | Replace the invalid legacy state with `active`, `completed`, or `superseded`. |
@@ -25,6 +25,8 @@ an archive. Completed plans with resolved experience are stored under
 ### Commit-gated completion
 
 - `2026-08-13-plan-lifecycle-hygiene`
+- `2026-08-13-prune-routine-plan-records`
+- `2026-08-13-expand-routine-plan-pruning`
 
 ### Completed plans awaiting an experience decision
 

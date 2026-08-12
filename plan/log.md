@@ -1,5 +1,22 @@
 # Maintenance Log
 
+## 2026-08-13 - Expand routine plan record pruning
+
+- Target: reduce archived plan-body bloat beyond the initial 14-record sweep
+  without removing decision-bearing history or changing product behavior.
+- Changed areas: deleted 20 independently reconstructible UI, shortcut,
+  symbol-calibration, visual-fixture, and typecheck plan bodies; condensed the
+  archive index; clarified the evidence-and-decision-value retention rule.
+- Evidence boundary: each deletion was checked for a completed outcome,
+  matching factual log record, and Git history. Architecture, migrations,
+  recovery, integration, CI/deployment, shared geometry, and experience
+  records remain present.
+- Validation: protected-record presence and 20-file deletion count confirmed;
+  `git diff --check` passed and final worktree review contains only this
+  target's planned documentation updates.
+- Commit status: prepared as `docs(plan): expand routine record pruning` on
+  `codex/plan-lifecycle-hygiene`.
+
 ## 2026-08-13 - Move planner and Route geometry ownership
 
 - Target: remove double planning between GUI group moves and Edit Engine route

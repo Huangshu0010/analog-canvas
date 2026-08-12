@@ -70,13 +70,14 @@ An archived plan may be deleted only when all of the following are true:
 2. its Outcome and Git history establish the completed work;
 3. `plan/log.md` contains the factual target, changed-area, validation, and
    commit record; and
-4. it is a routine micro-target, not an architecture/ADR, schema or migration,
-   release or CI, deployment, cross-branch integration, active coordination,
-   or unresolved-decision record.
+4. it is an independently reconstructible routine record, not an
+   architecture/ADR, schema or migration, release or CI, deployment,
+   cross-branch integration, active coordination, or unresolved-decision
+   record.
 
-Deletion removes redundant prose, not evidence: Git and the factual log remain
-the retention surface. Never delete a plan with an unresolved experience signal
-or state.
+Length and age are not retention criteria. Delete redundant prose, not
+evidence: Git and the factual log remain the retention surface. Never delete a
+plan with an unresolved experience signal or state.
 
 ## Experience Extraction
 
