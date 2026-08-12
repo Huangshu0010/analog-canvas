@@ -4768,3 +4768,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   (112 tests, was 109); `prettier --check` on new files; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): unify diagnostics into a single sorted envelope (WP-R9)`.
+
+## 2026-08-12 - WP-R10 Deletion-Gate Parity and Migration Gate Status
+
+- Target: establish the §13 deletion-gate characterization tests (old/new
+  parity) and record the migration gate status. Old production read models are
+  NOT deleted — deletion is gated on e2e + pre-existing-failure resolution +
+  performance baseline, none of which this session can run/resolve.
+- Changed areas: new `packages/derived/src/deletion-gate-parity.test.ts`
+  (8 tests: flightline content + route centerline parity across four fixtures);
+  target plan (gate-status record + ordered switch plan); this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (120 tests, was 112); `prettier --check` on new file; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `test(derived): add old/new deletion-gate parity tests (WP-R10)`.
