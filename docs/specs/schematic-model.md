@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.2`
+Version: `1.3`
 
 Owning phase: `Phase 0`
 
@@ -47,7 +47,6 @@ The model separates three non-electrical concerns from electrical truth:
 | ------------------- | ---------------------------------------------------------------- | :--------------------------: | :-----------------------: |
 | SchematicAnnotation | instance-label, net-label, power-label, route-marker             | only defined net-name action |            yes            |
 | DraftingObject      | text, arrow, leader, callout, construction-line, floating-symbol |              no              |            yes            |
-| Guide               | horizontal/vertical editor reference line                        |              no              |            no             |
 
 `annotations` narrows to `instance-label | net-label | power-label |
 route-marker`, where `route-marker.markerKind` is `current | voltage`. The old
@@ -56,7 +55,6 @@ route-marker`, where `route-marker.markerKind` is `current | voltage`. The old
 ```typescript
 interface DraftingLayer {
   objects: DraftingObject[]; // persistent, exported
-  guides: Guide[]; // persistent, always export: false
 }
 ```
 
@@ -141,14 +139,6 @@ type DraftingObject =
   | DraftCallout
   | DraftConstructionLine
   | DraftFloatingSymbol;
-
-interface Guide {
-  id: StableId;
-  axis: "horizontal" | "vertical";
-  coordinate: number;
-  locked: boolean;
-  visible: boolean;
-}
 ```
 
 All drafting members share `id`, `locked`, `zIndex`, optional `styleOverride`,
@@ -158,9 +148,9 @@ contain no terminal; a floating symbol never creates a Pin, Net, flightline,
 Junction, or SPICE instance. Style overrides are limited to `sizeScale`,
 `weight`, `italic`, `lineStyle`, `arrowHead`; no per-object arbitrary SVG/CSS.
 
-Visual stacking is fixed: Guide (editor only) -> electrical Route/Junction ->
-Symbol -> SchematicAnnotation -> draft line/arrow -> draft text/callout ->
-selection handles. `zIndex` orders only within one DraftingObject kind.
+Visual stacking is fixed: electrical Route/Junction -> Symbol ->
+SchematicAnnotation -> draft line/arrow -> draft text/callout -> selection
+handles. `zIndex` orders only within one DraftingObject kind.
 
 An Instance placement is either `null` or a position plus rotation
 `0|90|180|270` and mirror `none|x`. Mirror `x` negates the local x-coordinate
@@ -233,7 +223,7 @@ ERC engine consume; they are not derived state.
 - Annotation attachments reference an existing visual/electrical object.
 - Layout groups and constraints contain unique existing object IDs.
 - A layout constraint targets at least two objects.
-- Drafting objects, guides, and non-`route-marker` annotations never create or
+- Drafting objects and non-`route-marker` annotations never create or
   modify a Net, Route, Junction, flightline, Pin, or SPICE instance.
 - A `route-marker` or drafting `VisualAnchor` of kind `route`/`object` references
   an existing Route/object; an unresolved anchor keeps `fallbackPosition` and a
@@ -246,7 +236,6 @@ ERC engine consume; they are not derived state.
 - A `DraftFloatingSymbol.symbolId` references only a `decorative: true` catalog
   entry whose definition has no terminal; this is enforced by the Edit Engine
   via the Symbol Resolver, not by the model Zod schema.
-- A Guide is always `export: false`; it never appears in formal SVG/PNG/PDF.
 
 ## Operations and state transitions
 
@@ -258,6 +247,10 @@ selection, hover, and wire draft state do not mutate this model.
 Every field in `SchematicDocumentSchema` is persisted. Pin page coordinates,
 spatial indexes, routed components, flightlines, diagnostics, and SVG scenes
 are derived and absent from the schema.
+
+Manual drawing Guides are not part of the persisted model. Automatic Smart
+Snap alignment feedback is transient editor state and is never saved or
+exposed through the Edit Engine.
 
 ## Valid example
 
@@ -290,7 +283,7 @@ alignment plus a migration diagnostic. The migration never guesses a Route,
 Net/Route/Junction/instance and does not rewrite original SPICE. Migration
 identity is measured with `electricalTopologyHash` (instances/ports/Nets/
 hierarchy only; excludes placement, Route geometry, Junction placement,
-annotations, drafting, guides), which is unchanged across migration. Write-back
+annotations and drafting), which is unchanged across migration. Write-back
 never regenerates the old `plain-text` shape.
 
 ## Deterministic validation

@@ -28351,46 +28351,10 @@
                         ],
                         "additionalProperties": false
                       }
-                    },
-                    "guides": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 256
-                          },
-                          "visible": {
-                            "type": "boolean"
-                          },
-                          "locked": {
-                            "type": "boolean"
-                          },
-                          "axis": {
-                            "type": "string",
-                            "enum": [
-                              "horizontal",
-                              "vertical"
-                            ]
-                          },
-                          "coordinate": {
-                            "type": "number"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "visible",
-                          "locked"
-                        ],
-                        "additionalProperties": false
-                      }
                     }
                   },
                   "required": [
-                    "objects",
-                    "guides"
+                    "objects"
                   ],
                   "additionalProperties": false
                 },

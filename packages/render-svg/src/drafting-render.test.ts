@@ -23,7 +23,6 @@ describe("drafting layer rendering", () => {
           rotation: 0,
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-layer="drafting"');
@@ -49,7 +48,6 @@ describe("drafting layer rendering", () => {
           rotation: 0,
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain("a&lt;b&gt;&amp;c");
@@ -60,25 +58,6 @@ describe("drafting layer rendering", () => {
     const document = createEmptyDocument("doc", "Empty");
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).not.toContain('data-layer="drafting"');
-  });
-
-  it("never renders guides in formal output", () => {
-    const document = createEmptyDocument("doc", "Guides");
-    document.drafting = {
-      objects: [],
-      guides: [
-        {
-          id: "g1",
-          axis: "vertical",
-          coordinate: 100,
-          locked: false,
-          visible: true,
-        },
-      ],
-    };
-    const svg = renderDocumentSvg(document, resolver);
-    expect(svg).not.toContain('data-object-id="g1"');
-    expect(svg).not.toContain('data-kind="guide"');
   });
 
   it("renders a construction-line with dashed style", () => {
@@ -98,7 +77,6 @@ describe("drafting layer rendering", () => {
           lineStyle: "dashed",
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-kind="construction-line"');
@@ -123,7 +101,6 @@ describe("drafting layer rendering", () => {
           styleOverride: { strokeScale: 1.5 },
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-kind="draft-rectangle"');
@@ -146,7 +123,6 @@ describe("drafting layer rendering", () => {
           to: { kind: "free", position: { x: 100, y: 0 } },
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-kind="draft-arrow"');
@@ -179,7 +155,6 @@ describe("drafting layer rendering", () => {
           styleOverride: { arrowHead: "none" },
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-kind="draft-arrow"');
@@ -201,7 +176,6 @@ describe("drafting layer rendering", () => {
           curveControls: [{ x: 50, y: 50 }],
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('<path d="M 0 0 Q 50 50');
@@ -239,7 +213,6 @@ describe("drafting layer rendering", () => {
           transform: { rotation: 0, mirror: "none" },
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-kind="draft-floating-symbol"');
@@ -263,7 +236,6 @@ describe("drafting layer rendering", () => {
           lineStyle: "dashed",
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     // viewBox must cover the line's padded bounds.
@@ -299,7 +271,6 @@ describe("drafting layer rendering", () => {
           rotation: 0,
         },
       ],
-      guides: [],
     };
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain('data-anchor-resolved="false"');

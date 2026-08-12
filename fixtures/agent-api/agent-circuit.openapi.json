@@ -286,9 +286,6 @@
                       },
                       "includeSourceSpans": {
                         "type": "boolean"
-                      },
-                      "includeEditorGuides": {
-                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -352,6 +349,19 @@
                                 "reason": {
                                   "type": "string",
                                   "minLength": 1
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "clear_document"
                                 }
                               },
                               "required": [
@@ -34786,73 +34796,6 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
-                                  "const": "set_guide"
-                                },
-                                "guide": {
-                                  "type": "object",
-                                  "properties": {
-                                    "id": {
-                                      "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 256
-                                    },
-                                    "axis": {
-                                      "type": "string",
-                                      "enum": [
-                                        "horizontal",
-                                        "vertical"
-                                      ]
-                                    },
-                                    "coordinate": {
-                                      "type": "number"
-                                    },
-                                    "locked": {
-                                      "type": "boolean"
-                                    },
-                                    "visible": {
-                                      "type": "boolean"
-                                    }
-                                  },
-                                  "required": [
-                                    "id",
-                                    "axis",
-                                    "coordinate",
-                                    "locked",
-                                    "visible"
-                                  ],
-                                  "additionalProperties": false
-                                }
-                              },
-                              "required": [
-                                "kind",
-                                "guide"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "kind": {
-                                  "type": "string",
-                                  "const": "remove_guide"
-                                },
-                                "guideId": {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 256
-                                }
-                              },
-                              "required": [
-                                "kind",
-                                "guideId"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "kind": {
-                                  "type": "string",
                                   "const": "set_layout_group"
                                 },
                                 "group": {
@@ -63505,46 +63448,10 @@
                                         ],
                                         "additionalProperties": false
                                       }
-                                    },
-                                    "guides": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "object",
-                                        "properties": {
-                                          "id": {
-                                            "type": "string",
-                                            "minLength": 1,
-                                            "maxLength": 256
-                                          },
-                                          "visible": {
-                                            "type": "boolean"
-                                          },
-                                          "locked": {
-                                            "type": "boolean"
-                                          },
-                                          "axis": {
-                                            "type": "string",
-                                            "enum": [
-                                              "horizontal",
-                                              "vertical"
-                                            ]
-                                          },
-                                          "coordinate": {
-                                            "type": "number"
-                                          }
-                                        },
-                                        "required": [
-                                          "id",
-                                          "visible",
-                                          "locked"
-                                        ],
-                                        "additionalProperties": false
-                                      }
                                     }
                                   },
                                   "required": [
-                                    "objects",
-                                    "guides"
+                                    "objects"
                                   ],
                                   "additionalProperties": false
                                 },
@@ -64956,9 +64863,6 @@
                       },
                       "includeSourceSpans": {
                         "type": "boolean"
-                      },
-                      "includeEditorGuides": {
-                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -65022,6 +64926,19 @@
                                 "reason": {
                                   "type": "string",
                                   "minLength": 1
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "clear_document"
                                 }
                               },
                               "required": [
@@ -99456,73 +99373,6 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
-                                  "const": "set_guide"
-                                },
-                                "guide": {
-                                  "type": "object",
-                                  "properties": {
-                                    "id": {
-                                      "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 256
-                                    },
-                                    "axis": {
-                                      "type": "string",
-                                      "enum": [
-                                        "horizontal",
-                                        "vertical"
-                                      ]
-                                    },
-                                    "coordinate": {
-                                      "type": "number"
-                                    },
-                                    "locked": {
-                                      "type": "boolean"
-                                    },
-                                    "visible": {
-                                      "type": "boolean"
-                                    }
-                                  },
-                                  "required": [
-                                    "id",
-                                    "axis",
-                                    "coordinate",
-                                    "locked",
-                                    "visible"
-                                  ],
-                                  "additionalProperties": false
-                                }
-                              },
-                              "required": [
-                                "kind",
-                                "guide"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "kind": {
-                                  "type": "string",
-                                  "const": "remove_guide"
-                                },
-                                "guideId": {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 256
-                                }
-                              },
-                              "required": [
-                                "kind",
-                                "guideId"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "object",
-                              "properties": {
-                                "kind": {
-                                  "type": "string",
                                   "const": "set_layout_group"
                                 },
                                 "group": {
@@ -128175,46 +128025,10 @@
                                         ],
                                         "additionalProperties": false
                                       }
-                                    },
-                                    "guides": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "object",
-                                        "properties": {
-                                          "id": {
-                                            "type": "string",
-                                            "minLength": 1,
-                                            "maxLength": 256
-                                          },
-                                          "visible": {
-                                            "type": "boolean"
-                                          },
-                                          "locked": {
-                                            "type": "boolean"
-                                          },
-                                          "axis": {
-                                            "type": "string",
-                                            "enum": [
-                                              "horizontal",
-                                              "vertical"
-                                            ]
-                                          },
-                                          "coordinate": {
-                                            "type": "number"
-                                          }
-                                        },
-                                        "required": [
-                                          "id",
-                                          "visible",
-                                          "locked"
-                                        ],
-                                        "additionalProperties": false
-                                      }
                                     }
                                   },
                                   "required": [
-                                    "objects",
-                                    "guides"
+                                    "objects"
                                   ],
                                   "additionalProperties": false
                                 },

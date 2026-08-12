@@ -210,51 +210,26 @@ test("text floating editor closes on Escape or an outside pointer", async ({
   await expect(page.getByTestId("canvas-text-editor")).toHaveCount(0);
 });
 
-// Export bounds cover drafting content and guides never appear in the SVG.
-test("export includes drafting bounds and never emits guides", async ({
-  page,
-}) => {
+test("export includes drafting bounds", async ({ page }) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Construction line (K)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
-  await clickCommand(page, "More", "Add vertical guide");
-  await expect(page.getByTestId("revision")).toHaveText("2");
-  await expect(page.locator('[data-testid^="guide-"]')).toHaveCount(1);
 
   const svg = (await downloadBytes(page, "File", "Export SVG")).toString(
     "utf8",
   );
   expect(svg).toContain('data-kind="construction-line"');
-  expect(svg).not.toContain('data-kind="guide"');
-  expect(svg).not.toContain("guide-");
 });
 
-test("guide follows the pointer and commits only on release", async ({
-  page,
-}) => {
+test("exposes no manual Guide command or shortcut", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "More", "Add vertical guide");
-  const guide = page.locator('[data-testid^="guide-"]');
-  const start = await guide.evaluate((element) => {
-    const line = element as SVGLineElement;
-    const matrix = line.getScreenCTM();
-    if (!matrix) return null;
-    const point = new DOMPoint(
-      Number(line.getAttribute("x1")),
-      (Number(line.getAttribute("y1")) + Number(line.getAttribute("y2"))) / 2,
-    ).matrixTransform(matrix);
-    return { x: point.x, y: point.y };
-  });
-  if (!start) throw new Error("Guide is not measurable");
-  const before = await guide.getAttribute("x1");
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x + 70, start.y, { steps: 4 });
-  await expect(guide).not.toHaveAttribute("x1", before!);
-  await expect(page.getByTestId("revision")).toHaveText("1");
-  await page.mouse.up();
-  await expect(page.getByTestId("revision")).toHaveText("2");
+  await expect(page.locator('[data-testid^="guide-"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /guide/iu })).toHaveCount(0);
+  await expect(page.locator("summary", { hasText: "More" })).toHaveCount(0);
+  await page.keyboard.press("g");
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await expect(page.getByTestId("revision")).toHaveText("0");
 });
 
 // Production-preview smoke is covered separately by the build gate.
@@ -353,6 +328,7 @@ test("Escape removes Smart Snap guides from a cancelled component drag", async (
   await page.getByTestId("schematic-canvas").click({
     position: { x: 560, y: 360 },
   });
+  await page.keyboard.press("Escape");
 
   const moving = page.getByTestId("hit-R1");
   const target = page.getByTestId("hit-R2");
@@ -571,6 +547,7 @@ test("R creates a selectable, styleable rectangle with four resize handles", asy
   // The empty interior must also pass a placement click through to the canvas.
   await chooseComponent(page, "nmos");
   await page.mouse.click(center.x, center.y);
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("hit-M1")).toHaveCount(1);
   await expect(page.getByTestId("revision")).toHaveText("2");
 

@@ -8,7 +8,7 @@ import type { WireSource } from "../features/wiring/wire-editing";
 export type { WireSource } from "../features/wiring/wire-editing";
 
 export type EditorTool =
-  "pointer" | "wire" | "guide" | "construction-line" | "arrow" | "rectangle";
+  "pointer" | "wire" | "construction-line" | "arrow" | "rectangle";
 
 export type DrawingTool = Extract<
   EditorTool,
@@ -35,7 +35,6 @@ export type InteractionState =
       previewPoint: Point | null;
       waypoints: Point[];
     }
-  | { kind: "guide" }
   | {
       kind: "drawing";
       tool: DrawingTool;
@@ -83,8 +82,6 @@ export function activateInteractionTool(tool: EditorTool): InteractionState {
         previewPoint: null,
         waypoints: [],
       };
-    case "guide":
-      return { kind: "guide" };
     case "arrow":
     case "construction-line":
     case "rectangle":
@@ -161,8 +158,6 @@ export function interactionTool(state: InteractionState): EditorTool {
       return "pointer";
     case "wire":
       return "wire";
-    case "guide":
-      return "guide";
     case "drawing":
       return state.tool;
   }

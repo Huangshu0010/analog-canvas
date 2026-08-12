@@ -321,14 +321,6 @@ export const VisualAnchorSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-export const GuideSchema = z.strictObject({
-  id: StableIdSchema,
-  axis: z.enum(["horizontal", "vertical"]),
-  coordinate: z.number().finite(),
-  locked: z.boolean(),
-  visible: z.boolean(),
-});
-
 // DraftingObject union (ADR 0010). Each member shares id/locked/zIndex, an
 // optional styleOverride, and a VisualAnchor. A1a ships the minimal set with
 // text fully populated; arrow/leader/callout/construction-line/rectangle/
@@ -433,7 +425,6 @@ export const DraftingObjectSchema = z.discriminatedUnion("kind", [
 
 export const DraftingLayerSchema = z.strictObject({
   objects: z.array(DraftingObjectSchema),
-  guides: z.array(GuideSchema),
 });
 export const PresentationIntentSchema = z.strictObject({
   styleProfileId: StableIdSchema,
@@ -539,7 +530,6 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       ...document.layoutGroups,
       ...document.constraints,
       ...(document.drafting?.objects ?? []),
-      ...(document.drafting?.guides ?? []),
     ];
     for (const [key, netId] of Object.entries(document.mosBulkDefaults ?? {})) {
       if (!document.nets.some((net) => net.id === netId)) {
@@ -891,7 +881,6 @@ export type Annotation = z.infer<typeof AnnotationSchema>;
 export type RichTextDocument = z.infer<typeof RichTextDocumentSchema>;
 export type RichTextRun = z.infer<typeof RichTextRunSchema>;
 export type VisualAnchor = z.infer<typeof VisualAnchorSchema>;
-export type Guide = z.infer<typeof GuideSchema>;
 export type DraftText = z.infer<typeof DraftTextSchema>;
 export type DraftArrow = z.infer<typeof DraftArrowSchema>;
 export type DraftLeader = z.infer<typeof DraftLeaderSchema>;

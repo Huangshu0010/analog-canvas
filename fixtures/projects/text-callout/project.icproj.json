@@ -51,7 +51,7 @@
       ],
       "junctions": [],
       "layoutGroups": [],
-      "name": "Callout and Guide",
+      "name": "Callout",
       "nets": [
         {
           "id": "net-ground",
@@ -71,8 +71,8 @@
       "sourceStatus": "geometry-only-changed"
     }
   ],
-  "id": "project-text-callout-guide",
-  "name": "Callout and Guide",
+  "id": "project-text-callout",
+  "name": "Callout",
   "schemaVersion": 1,
   "source": {
     "dialect": "none",

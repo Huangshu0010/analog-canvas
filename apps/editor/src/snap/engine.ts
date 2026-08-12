@@ -4,7 +4,6 @@ export type SnapAxis = "x" | "y";
 
 export type SnapTargetKind =
   | "grid"
-  | "guide"
   | "instance-center"
   | "instance-edge"
   | "pin"
@@ -77,7 +76,6 @@ export const SNAP_PROFILES = {
   instanceMove: {
     kinds: new Set<SnapTargetKind>([
       "grid",
-      "guide",
       "instance-center",
       "instance-edge",
       "pin",
@@ -90,7 +88,6 @@ export const SNAP_PROFILES = {
   draftingMove: {
     kinds: new Set<SnapTargetKind>([
       "grid",
-      "guide",
       "instance-center",
       "instance-edge",
       "drafting",
@@ -101,7 +98,6 @@ export const SNAP_PROFILES = {
   draftingHandle: {
     kinds: new Set<SnapTargetKind>([
       "grid",
-      "guide",
       "instance-center",
       "instance-edge",
       "pin",
@@ -124,25 +120,12 @@ export const SNAP_PROFILES = {
     exactElectrical: true,
     gridAlignedTranslation: false,
   },
-  guideMove: {
-    kinds: new Set<SnapTargetKind>([
-      "grid",
-      "instance-center",
-      "instance-edge",
-      "pin",
-      "port",
-      "junction",
-    ]),
-    exactElectrical: false,
-    gridAlignedTranslation: false,
-  },
 } as const satisfies Record<string, SnapProfile>;
 
 const KIND_PRIORITY: Record<SnapTargetKind, number> = {
   pin: 0,
   port: 0,
   junction: 0,
-  guide: 1,
   route: 2,
   "instance-center": 3,
   "instance-edge": 4,
@@ -195,8 +178,6 @@ function compatibleElectrical(left: SnapAnchor, right: SnapAnchor): boolean {
 
 function compatibleAxisKinds(moving: SnapAnchor, target: SnapAnchor): boolean {
   switch (target.kind) {
-    case "guide":
-      return true;
     case "instance-center":
       return moving.kind === "instance-center" || moving.kind === "drafting";
     case "instance-edge":

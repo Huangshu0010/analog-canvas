@@ -26,9 +26,9 @@ describe("unified Snap Engine", () => {
           axes: ["x"],
         },
         {
-          id: "horizontal-guide",
+          id: "horizontal-center",
           point: { x: 100, y: 30 },
-          kind: "guide",
+          kind: "instance-center",
           axes: ["y"],
         },
       ],
@@ -40,7 +40,7 @@ describe("unified Snap Engine", () => {
 
     expect(result.delta).toEqual({ x: 20, y: 30 });
     expect(result.xMatch?.targetAnchorId).toBe("vertical-center");
-    expect(result.yMatch?.targetAnchorId).toBe("horizontal-guide");
+    expect(result.yMatch?.targetAnchorId).toBe("horizontal-center");
     expect(result.guides).toHaveLength(2);
   });
 

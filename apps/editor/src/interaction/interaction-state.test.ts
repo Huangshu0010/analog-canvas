@@ -27,7 +27,6 @@ describe("editor interaction state", () => {
   it("cancels every creation mode to one idle state", () => {
     for (const tool of [
       "wire",
-      "guide",
       "construction-line",
       "arrow",
       "rectangle",

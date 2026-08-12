@@ -61,7 +61,10 @@ export function EditorHelpDialog({
               editable Documents from SPICE source files. Use
               <strong>File / Save Project</strong> to download an editable
               project file; use <strong>File / Export</strong> for SVG, PNG, or
-              PDF drawings.
+              PDF drawings. Because raw browser refresh shortcuts are blocked to
+              protect unsaved work, use <strong>File / Refresh app</strong>
+              when you deliberately want to reload; it saves and restores the
+              current recovery snapshot.
             </p>
             <h3>Place, select, and connect</h3>
             <p>
@@ -73,6 +76,11 @@ export function EditorHelpDialog({
               <kbd>Backspace</kbd> removes the selection, or removes the latest
               wire bend while drawing.
             </p>
+            <p>
+              <strong>Edit / Clear canvas</strong> removes all content from the
+              active Cell in one operation. It asks for confirmation and can be
+              restored with Undo.
+            </p>
             <h3>View and drawing tools</h3>
             <p>
               With the pointer over the canvas, use the mouse wheel to zoom and
@@ -81,10 +89,9 @@ export function EditorHelpDialog({
               With no rotatable selection, <kbd>R</kbd> starts Rectangle; with a
               component or drawing selected it rotates clockwise.{" "}
               <kbd>Shift+R</kbd> mirrors left/right; <kbd>Shift+V</kbd> mirrors
-              top/bottom. <kbd>F</kbd> always fits the circuit in view. Guides
-              are available from More and can be shown, cleared, or locked for
-              alignment. <kbd>C</kbd> starts a mouse-following copy; click
-              places it and <kbd>Esc</kbd> cancels.
+              top/bottom. <kbd>F</kbd> always fits the circuit in view.{" "}
+              <kbd>C</kbd> starts a mouse-following copy; click places it and
+              <kbd>Esc</kbd> cancels.
             </p>
           </section>
           <section id="help-shortcuts" className="help-shortcuts">
@@ -116,10 +123,8 @@ export function EditorHelpDialog({
                 <dd>
                   <kbd>W</kbd> wire; <kbd>L</kbd> edits a selected Net Label;
                   <kbd>T</kbd> text; <kbd>A</kbd> arrow; <kbd>K</kbd>
-                  construction line; <kbd>Q</kbd> Properties; <kbd>G</kbd>{" "}
-                  guide;
-                  <kbd>Home</kbd> fit view; <kbd>X</kbd> reverses a selected
-                  current arrow.
+                  construction line; <kbd>Q</kbd> Properties; <kbd>Home</kbd>
+                  fit view; <kbd>X</kbd> reverses a selected current arrow.
                 </dd>
               </div>
               <div>

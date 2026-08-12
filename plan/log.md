@@ -5612,3 +5612,22 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on
   `codex/persistent-authoring-input-safety` as
   `feat(editor): add persistent authoring tools and input safety`.
+
+## 2026-08-13 - Remove Guides and add clear/refresh commands
+
+- Target: remove the manual Guide feature without retaining a compatibility
+  protocol, and provide deliberate Clear canvas and recovery-safe Refresh app
+  commands.
+- Changed areas: model/Edit Engine/Agent Guide contracts; editor command,
+  shortcut, canvas, snap, and help surfaces; atomic `clear_document`; explicit
+  recovery flush/reload/auto-restore; active specs, fixtures, generated Agent
+  artifacts, and regressions. Automatic Smart Snap alignment feedback remains
+  transient and separate.
+- Validation: workspace typecheck; generated Agent API artifacts; 613/613 unit
+  tests; 93/95 browser tests passed on the initial parallel run, with both
+  stale persistent-tool test assumptions corrected and passing individually;
+  six directly affected browser regressions passed together; `git diff
+  --check` clean.
+- Commit status: ready to commit on
+  `codex/persistent-authoring-input-safety` as
+  `feat(editor): remove guides and add clear and refresh`.

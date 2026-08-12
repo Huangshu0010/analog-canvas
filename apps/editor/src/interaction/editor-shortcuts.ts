@@ -143,9 +143,6 @@ export function resolveEditorShortcut(
       ? { kind: "open-properties" }
       : { kind: "property-selection-required" };
   }
-  if (plain && key === "g") {
-    return { kind: "activate-tool", tool: "guide" };
-  }
   if (plain && key === "f" && !event.shiftKey) return { kind: "fit-view" };
   if (plain && key === "home") return { kind: "fit-view" };
   if (

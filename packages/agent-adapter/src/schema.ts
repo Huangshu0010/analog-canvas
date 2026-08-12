@@ -102,9 +102,6 @@ export const AgentSnapshotRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("snapshot"),
   documentId: StableIdSchema,
   includeSourceSpans: z.boolean().optional(),
-  // ADR 0010 WP-R4: include guide axis/coordinate in the response. Default
-  // false so editor noise is not mistaken for circuit content.
-  includeEditorGuides: z.boolean().optional(),
 });
 export const AgentTransactRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("transact"),
@@ -302,9 +299,7 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
   annotations: z.array(AnnotationSchema),
   // ADR 0010 WP-R4: each drafting object carries its canonical shape plus the
   // derived resolved geometry (position(s)/bounds/diagnostics) computed from
-  // the single resolveDraftingObjectGeometry entry. Guides expose
-  // id/visible/locked by default; axis/coordinate are included only when the
-  // request sets includeEditorGuides.
+  // the single resolveDraftingObjectGeometry entry.
   drafting: z.strictObject({
     objects: z.array(
       z.strictObject({
@@ -315,15 +310,6 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
         // duplicate top-level bounds.
         resolvedGeometry: ResolvedDraftingGeometrySchema,
         diagnostics: z.array(DraftingDiagnosticSchema),
-      }),
-    ),
-    guides: z.array(
-      z.strictObject({
-        id: StableIdSchema,
-        visible: z.boolean(),
-        locked: z.boolean(),
-        axis: z.enum(["horizontal", "vertical"]).optional(),
-        coordinate: z.number().optional(),
       }),
     ),
   }),

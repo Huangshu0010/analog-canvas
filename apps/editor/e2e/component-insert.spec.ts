@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { chooseComponent } from "./editor-fixtures.js";
+import { chooseComponent, clickCommand } from "./editor-fixtures.js";
 
 test("blocks destructive browser refresh shortcuts and uses the stronger grid", async ({
   page,
@@ -32,6 +32,36 @@ test("blocks destructive browser refresh shortcuts and uses the stronger grid", 
     "data-refresh-guard",
     "alive",
   );
+});
+
+test("refreshes explicitly only after flushing and automatically restoring recovery", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await chooseComponent(page, "resistor");
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  const navigated = page.waitForEvent("framenavigated");
+  await clickCommand(page, "File", "Refresh app");
+  await navigated;
+
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByTestId("status")).toHaveText(
+    "Restored recovery revision 1",
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        sessionStorage.getItem("icm.restore-after-refresh.v1"),
+      ),
+    )
+    .toBeNull();
 });
 
 test("inserts from the master-detail dialog with keyboard and live placement preview", async ({

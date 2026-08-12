@@ -1561,20 +1561,8 @@ body {
    wiring, leaving only endpoint and route hit targets above the input plane. */
 .schematic-canvas.wire-mode .hit-target,
 .schematic-canvas.wire-mode .annotation-hit,
-.schematic-canvas.wire-mode .guide,
-.schematic-canvas.wire-mode .guide-hit,
 .schematic-canvas.wire-mode .route-handle {
   pointer-events: none;
-}
-
-.guide-hit {
-  fill: none;
-  /* Match route-hit: fully transparent strokes are not reliably targetable. */
-  stroke: rgb(0 0 0 / 0.4%);
-  stroke-width: 14;
-  cursor: move;
-  pointer-events: stroke;
-  vector-effect: non-scaling-stroke;
 }
 
 .route-hit {
@@ -1815,22 +1803,6 @@ body {
 
 .rich-text-fraction-rule {
   padding: 0 0.08em;
-}
-
-/* ADR 0010 editor-only Guide overlay: dashed, non-exported, never electrical. */
-.guide {
-  stroke: rgb(var(--icm-accent-rgb) / 55%);
-  stroke-width: 1;
-  stroke-dasharray: 6 4;
-  cursor: move;
-  /* Visual only; `.guide-hit` owns pointer interaction. */
-  pointer-events: none;
-  vector-effect: non-scaling-stroke;
-}
-
-.guide.guide-locked {
-  stroke: rgb(110 118 129 / 60%);
-  cursor: not-allowed;
 }
 
 .smart-snap-guide {
@@ -2359,8 +2331,6 @@ body {
 .schematic-canvas.component-mode .hit-target,
 .schematic-canvas.component-mode .route-hit,
 .schematic-canvas.component-mode .annotation-hit,
-.schematic-canvas.component-mode .guide,
-.schematic-canvas.component-mode .guide-hit,
 .schematic-canvas.component-mode .route-handle,
 .schematic-canvas.component-mode [data-testid^="terminal-"],
 .schematic-canvas.component-mode [data-testid^="junction-"] {

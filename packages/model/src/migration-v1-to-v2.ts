@@ -74,7 +74,7 @@ function migrateDocument(
   const annotations = asArray(document.annotations).filter(isRecord);
   const existingDrafting = isRecord(document.drafting)
     ? document.drafting
-    : { objects: [], guides: [] };
+    : { objects: [] };
   const draftingObjects = asArray(existingDrafting.objects).filter(isRecord);
 
   const keptAnnotations: Record_[] = [];
@@ -119,7 +119,6 @@ function migrateDocument(
     annotations: keptAnnotations,
     drafting: {
       objects: draftingObjects,
-      guides: asArray(existingDrafting.guides),
     },
   };
 }

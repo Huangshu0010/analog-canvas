@@ -138,7 +138,7 @@ describe("editor shortcut contract", () => {
     expect(resolve("q", { hasInspectableSelection: true })).toEqual({
       kind: "open-properties",
     });
-    expect(resolve("g")).toEqual({ kind: "activate-tool", tool: "guide" });
+    expect(resolve("g")).toBeNull();
     expect(resolve("t")).toEqual({ kind: "add-text" });
     expect(resolve("f")).toEqual({ kind: "fit-view" });
     expect(resolve("f", {}, { shiftKey: true })).toBeNull();

@@ -36,8 +36,6 @@ export interface BuildAgentSessionSnapshotOptions {
   document: SchematicDocument;
   resolver: SymbolResolver;
   includeSourceSpans?: boolean;
-  // ADR 0010 WP-R4: include guide axis/coordinate in the response.
-  includeEditorGuides?: boolean;
 }
 
 function stableValue(input: unknown): unknown {
@@ -407,8 +405,7 @@ function documentSnapshot(
     // ADR 0010 WP-R4: each drafting object carries its canonical shape plus the
     // derived resolved geometry (position(s)/bounds/diagnostics) from the
     // single resolveDraftingObjectGeometry entry; the Document's anchor JSON is
-    // unchanged. Guides expose id/visible/locked by default; axis/coordinate
-    // are included only when the request sets includeEditorGuides.
+    // unchanged.
     drafting: {
       objects: [...(document.drafting?.objects ?? [])]
         .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -424,16 +421,6 @@ function documentSnapshot(
             diagnostics: geometry.diagnostics,
           };
         }),
-      guides: [...(document.drafting?.guides ?? [])]
-        .sort((left, right) => left.id.localeCompare(right.id, "en"))
-        .map((guide) => ({
-          id: guide.id,
-          visible: guide.visible,
-          locked: guide.locked,
-          ...(options.includeEditorGuides
-            ? { axis: guide.axis, coordinate: guide.coordinate }
-            : {}),
-        })),
     },
     layoutGroups: [...document.layoutGroups]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -456,7 +443,7 @@ export function buildAgentSessionSnapshot(
   // ADR 0010: the Snapshot identity hash covers only electrical facts
   // (instances and pin inventory, ports, Nets and their membership,
   // hierarchical edges). Placement, route geometry, Junction placement,
-  // annotations, drafting objects, guides, and diagnostics never change it, so
+  // annotations, drafting objects, and diagnostics never change it, so
   // an electrically identical Document hashes identically across the schema-2
   // migration. When only a single Document is available (no Project view), the
   // hash is computed over that one Document's electrical projection.

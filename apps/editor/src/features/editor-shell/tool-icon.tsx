@@ -14,8 +14,7 @@ export type ToolIconName =
   | "inspect"
   | "undo"
   | "redo"
-  | "delete"
-  | "guide";
+  | "delete";
 
 export function ToolIcon({ name }: { name: ToolIconName }) {
   const common = {
@@ -109,11 +108,6 @@ export function ToolIcon({ name }: { name: ToolIconName }) {
       {name === "delete" ? (
         <>
           <path d="M4 6h12M8 6V4h4v2M7 6l.6 10h4.8L13 6" {...common} />
-        </>
-      ) : null}
-      {name === "guide" ? (
-        <>
-          <path d="M4 3v14M16 3v14M4 10h12" {...common} />
         </>
       ) : null}
     </svg>

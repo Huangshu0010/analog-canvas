@@ -1725,9 +1725,10 @@ test("keeps the production command surface compact and publishes PWA metadata", 
 }) => {
   await page.goto("/");
   const toolbar = page.getByRole("navigation", { name: "Editor commands" });
-  for (const label of ["File", "Edit", "Draw", "More"]) {
+  for (const label of ["File", "Edit", "Draw"]) {
     await expect(toolbar.locator("summary", { hasText: label })).toBeVisible();
   }
+  await expect(toolbar.locator("summary", { hasText: "More" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "View" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);
   await expect(toolbar.locator("summary", { hasText: "Export" })).toHaveCount(
@@ -1735,16 +1736,13 @@ test("keeps the production command surface compact and publishes PWA metadata", 
   );
   await clickCommand(page, "Draw", "Wire (W)");
   await expect(page.getByTestId("active-tool")).toHaveText("wire");
-  await openMenu(page, "More");
-  await expect(
-    page.getByRole("button", { name: "Add current arrow" }),
-  ).toHaveCount(0);
   for (const obsolete of [
     "Select",
     "Junction",
     "Crossing",
     "Stretch",
     "Detach",
+    "Guide",
   ]) {
     await expect(
       toolbar.getByRole("button", { name: obsolete, exact: true }),
@@ -1761,6 +1759,44 @@ test("keeps the production command surface compact and publishes PWA metadata", 
     name: "Interactive Circuit Maker",
     display: "standalone",
   });
+});
+
+test("clears the active canvas atomically after confirmation and restores it with Undo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 240 });
+  await placeComponent(page, "resistor", { x: 560, y: 240 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain('Clear all content from Cell "Main"');
+    await dialog.dismiss();
+  });
+  await clickCommand(page, "Edit", "Clear canvas");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+  await expect(page.getByTestId("status")).toHaveText("Clear canvas cancelled");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await clickCommand(page, "Edit", "Clear canvas");
+  await expect(page.getByTestId("instance-count")).toHaveText("0");
+  await expect(page.getByTestId("net-count")).toHaveText("0");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
+  await expect(page.getByTestId("canvas-empty-state")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("4");
+  await expect(page.getByTestId("status")).toHaveText(
+    "Cleared Cell Main · Undo restores it",
+  );
+
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("instance-count")).toHaveText("2");
+  await expect(page.getByTestId("net-count")).toHaveText("1");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(page.getByTestId("revision")).toHaveText("5");
 });
 
 test("shows first-party visitor analytics without tracking the dashboard itself", async ({

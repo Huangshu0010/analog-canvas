@@ -96,7 +96,7 @@ function sha256Hex(value: string): string {
 // ADR 0010 electricalTopologyHash. Covers only electrical facts so the
 // schema-1 -> schema-2 annotation/drafting migration preserves topology
 // identity. Excludes placement/rotation/mirror, Route geometry, Junction
-// placement, annotations, drafting objects, and guides. This is the
+// placement, annotations, and drafting objects. This is the
 // migration-identity hash referenced by the agent-api spec.
 
 /**

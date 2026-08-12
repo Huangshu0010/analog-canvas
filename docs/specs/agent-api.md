@@ -102,8 +102,6 @@ target cell/subcircuit name when available, and resolved `targetDocumentId` or
   fields and members;
 - drafting objects with canonical RichText AST, resolved anchor, bounds,
   `locked`, and `zIndex`, plus any invalid-anchor diagnostics;
-- guide count and per-guide `visible`/`locked` state; guide coordinates are
-  omitted unless the request sets `includeEditorGuides: true`;
 - spatial diagnostics valid for the returned revision.
 
 The Text & Peripheral Editing System (ADR 0010) extends the Snapshot with the
@@ -114,19 +112,12 @@ Razavi-style current arrow attached to Route X at 60% of segment 2", but
 `transact` still accepts only the typed edit union — never raw paths, SVG,
 CSS, HTML, arbitrary LaTeX, or a whole Document. Drafting objects are
 non-electrical: they never affect `electricalTopologyHash`, Net membership, or
-flightline. Guides are editor aids: they are counted in the default Snapshot
-but their coordinates are returned only with an explicit
-`includeEditorGuides: true`, so editor noise is not mistaken for circuit
-content.
+flightline.
 
 Resolved drafting geometry (position, rotation, endpoints, bounds, and anchor
 diagnostics) is derived at Snapshot time from the single
 `resolveDraftingObjectGeometry` entry in `@icm/derived`; it is never persisted
-and never mixed into the DraftingObject schema. The `snapshot` request accepts
-`includeEditorGuides?: boolean` (default `false`); when `true`, each guide's
-`axis` and `coordinate` are included alongside its `id`/`visible`/`locked`.
-Guides never enter formal render/export and never affect the topology hash.
-NOTE: the `includeEditorGuides` request option and the resolved-geometry fields
+and never mixed into the DraftingObject schema. The resolved-geometry fields
 in the drafting response are implemented by WP-R4 of the Drafting Runtime
 Completion work; until then the response carries raw drafting objects only.
 
@@ -135,7 +126,7 @@ Document and must agree. Arrays use deterministic ID/order rules defined by the
 generated schema tests. `electricalTopologyHash` covers only electrical facts
 (instances and pin inventory, ports, Nets and their terminal/port membership,
 hierarchical instance-reference edges); it excludes placement/rotation/mirror,
-Route geometry, Junction placement, annotations, drafting objects, guides, and
+Route geometry, Junction placement, annotations, drafting objects, and
 diagnostics. It is the migration-identity hash: a schema-1 Project's
 `electricalTopologyHash` equals its migrated schema-2 form's.
 

@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.8`
+Version: `1.9`
 
 Owning phase: `Phase 8`
 
@@ -54,7 +54,7 @@ and recent devices plus the existing master/detail insertion dialog for the
 full catalog and parameters. Drawing tools remain in the `Draw` menu:
 
 ```text
-Library | File | Edit | Draw | More
+Library | File | Edit | Draw
 ```
 
 The exact visual treatment may use icons, labels, or responsive grouping, but
@@ -62,10 +62,9 @@ the information architecture is normative:
 
 | Group   | Commands                                                              |
 | ------- | --------------------------------------------------------------------- |
-| File    | Open, Save, Import, Export, and recent/example documents              |
-| Edit    | Undo, Redo, Delete, and contextual Align                              |
+| File    | Open, Save, recovery-safe Refresh app, Import, and Export             |
+| Edit    | Undo, Redo, Delete, Clear canvas, and contextual Align                |
 | Draw    | Insert Component; Wire, Text, Arrow, Construction line, and Rectangle |
-| More    | Guides and shortcut reference; diagnostics remain in Import Review    |
 | Library | Toggle starter/recent quick-place chips; open the full Insert dialog  |
 
 The following are not permanent production toolbar modes:
@@ -100,7 +99,7 @@ shows zoom percentage, zoom in/out, and Fit View. Empty Documents show a subtle
 `I`/`W` quick-start hint that disappears after authored content exists. Draw,
 rotate, lock, and viewport actions use one linear SVG icon vocabulary while
 retaining text and shortcut labels. Hover, selected, active-tool, placement
-ghost, endpoint snap, and Guide-hit feedback remain editor overlays and never
+ghost, endpoint snap, and transient alignment feedback remain editor overlays and never
 enter formal export.
 
 Fit and zoom are direct canvas controls and shortcuts, so a second `View` menu
@@ -111,14 +110,13 @@ must not duplicate them. Formal SVG/PNG/PDF export remains grouped in `File`.
 This section is `proposed` (ADR 0010); interaction lands in WP-A3/A4. It
 freezes the V1 tool surface and command mapping.
 
-The `Draw` menu owns Text and free drawing tools. `More` retains only
-route-attached annotation and Guide commands:
+The `Draw` menu owns Text and free drawing tools. Route-attached annotations
+remain contextual rather than permanent toolbar modes:
 
 | Group   | Contents                                                                     | Shortcut                 |
 | ------- | ---------------------------------------------------------------------------- | ------------------------ |
 | Text    | text, caption, format tools                                                  | `T` text placement       |
 | Markup  | free arrow, construction line, and rectangle; route arrow remains contextual | `A` arrow, `R` rectangle |
-| Guides  | add horizontal/vertical guide, show/hide, lock, clear unlocked               | `G` guide tool           |
 | Palette | search all low-frequency commands                                            | `Ctrl+K`                 |
 
 `R` is context-dispatched on the unified canvas: it rotates a selected placed
@@ -160,10 +158,8 @@ A rectangle is a persisted, non-electrical outline with four resize handles;
 its line style, stroke width, bearing, lock, movement, and deletion use the same
 drafting controls as free arrows and construction lines.
 
-Guides are dragged from a ruler (or `G` then click for touch). Drag moves the
-guide, double-click locks it, `Delete` removes an unlocked guide. One permanent,
-editor-owned Snap Engine resolves every pointer profile. It prioritizes exact
-compatible electrical endpoints, explicit Guides, Route geometry, peer object
+One permanent, editor-owned Snap Engine resolves every pointer profile. It
+prioritizes exact compatible electrical endpoints, Route geometry, peer object
 centers/edges, drafting anchors, and finally the grid. X and Y matches are
 independent so pin, center, and edge extension lines can align without forcing
 objects to overlap. Profiles decide which candidates are legal: Wire may create
@@ -210,8 +206,10 @@ text editor, searchable palette field, or another control that consumes the
 key. Browser refresh shortcuts (`Ctrl/Cmd+R`, `Ctrl/Cmd+Shift+R`, and `F5`) are
 the deliberate exception: the editor intercepts them even while a field has
 focus so an accidental refresh cannot discard the active in-memory Project.
-Other browser-reserved shortcuts must not be intercepted unless the
-application can complete the named operation safely.
+`File > Refresh app` is the deliberate reload path: it synchronously stages and
+flushes the current Project to recovery, reloads, and automatically restores
+that exact Project. Other browser-reserved shortcuts must not be intercepted
+unless the application can complete the named operation safely.
 
 The persisted orientation remains the compact `rotation + mirror: "x"`
 representation: the editor composes its two existing typed edits atomically
@@ -240,7 +238,7 @@ operation.
   selection boundary receive deterministic local stretch. If any member is
   locked or violates a constraint, the whole move is rejected with a visible
   reason.
-- Instance, annotation, drafting-object, drafting-handle, Route, and Guide
+- Instance, annotation, drafting-object, drafting-handle, and Route
   drags share one transient pointer-session controller. It owns the threshold,
   pointer capture, animation-frame coalescing, cancel cleanup, and pointer-up
   boundary. Object-specific geometry remains outside the controller and
@@ -539,28 +537,34 @@ stateDiagram-v2
     Pointer --> Wire: W or drag from endpoint/segment
     BoxSelect --> Pointer: release or cancel
     MoveSelection --> Pointer: commit or cancel
-    PlaceComponent --> Pointer: place or cancel
-    DrawVddRail --> Pointer: second click or cancel
+    PlaceComponent --> PlaceComponent: place
+    PlaceComponent --> Pointer: cancel
+    DrawVddRail --> DrawVddRail: second click
+    DrawVddRail --> Pointer: cancel
     Wire --> Wire: add orthogonal point
-    Wire --> Pointer: commit endpoint or cancel
+    Wire --> Wire: commit endpoint
+    Wire --> Pointer: cancel
 ```
 
-Only a completed placement, move, semantic edit, or wire session increments the
-Document revision. Previews and cancelled gestures are transient.
+Only a completed placement, move, semantic edit, wire Route, or Clear canvas
+transaction increments the Document revision. Clear canvas atomically removes
+all authored content from the active Document, preserves its identity and
+presentation, and is undoable. Previews and cancelled gestures are transient.
 
 ## Persistence boundary
 
 - Persisted: committed instances, annotations, logical Nets, endpoints,
   junctions, route geometry, source status, user-facing presentation state, and
-  the `drafting` layer (objects and guides) already covered by the Project and
+  the authored `drafting` objects already covered by the Project and
   Document specifications.
 - Session-local: current selection, open menu, palette query, active gesture,
   snap candidate, drag rectangle, context handles, in-progress rich-text draft,
   and viewport transform.
 - Derived: crossings, flightlines, diagnostics, hover affordances, snap
   overlays, and resolved drafting anchors/bounds.
-- Never exported: Guides are persisted for collaboration but are always
-  `export: false`; they never appear in formal SVG/PNG/PDF.
+- Removed: manual Guides have no schema field, edit, Agent snapshot member,
+  command, shortcut, canvas object, snap candidate, or export representation.
+  Projects carrying the retired field are not a supported compatibility input.
 - External build-time evidence: VSS inventories, reviewed pin mapping, and
   geometry comparison artifacts.
 

@@ -26,6 +26,89 @@ function transaction(revision: number, edits: unknown[], dryRun = false) {
 }
 
 describe("DocumentHistory", () => {
+  it("clears every authored collection atomically and restores it with undo", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.sourceBinding = {
+      cellName: "main",
+      sourceRef: {
+        fileId: "main.spi",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    };
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-vss",
+      name: "VSS",
+      scope: "global",
+      terminals: [],
+      ports: [],
+    });
+    document.mosBulkDefaults = { nmosNetId: "net-vss" };
+    document.annotations.push({
+      id: "label-R1",
+      kind: "instance-label",
+      text: "R1",
+      position: { x: 0, y: 0 },
+      attachedObjectId: "R1",
+      offset: { x: 0, y: 0 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    });
+    document.drafting = {
+      objects: [
+        {
+          id: "note-1",
+          kind: "text",
+          locked: false,
+          zIndex: 0,
+          anchor: { kind: "free", position: { x: 20, y: 30 } },
+          content: { runs: [{ kind: "text", value: "note" }] },
+          alignment: "start",
+          rotation: 0,
+        },
+      ],
+    };
+    const history = new DocumentHistory(document);
+
+    const cleared = history.transact(
+      transaction(0, [{ kind: "clear_document" }]),
+    );
+    expect(cleared).toMatchObject({
+      ok: true,
+      revision: 1,
+      diff: {
+        editKinds: ["clear_document"],
+        changedObjectIds: ["R1", "label-R1", "net-vss", "note-1"],
+      },
+    });
+    expect(history.document).toMatchObject({
+      id: "document-main",
+      name: "Main",
+      instances: [],
+      annotations: [],
+      drafting: { objects: [] },
+      sourceBinding: { cellName: "main" },
+      sourceStatus: "connectivity-modified",
+    });
+    expect(history.document.mosBulkDefaults).toBeUndefined();
+
+    const undone = history.transact(transaction(1, [{ kind: "undo" }]));
+    expect(undone).toMatchObject({ ok: true, revision: 2 });
+    expect(history.document.instances).toHaveLength(1);
+    expect(history.document.annotations).toHaveLength(1);
+    expect(history.document.drafting?.objects).toHaveLength(1);
+    expect(history.document.mosBulkDefaults).toEqual({
+      nmosNetId: "net-vss",
+    });
+  });
+
   it("undoes and redoes geometry with monotonically increasing revisions", () => {
     const history = historyFixture();
     const placed = history.transact(
