@@ -172,11 +172,21 @@ derived local-stretch proposal:
 - locked adjacent segments reject the proposal;
 - when no waypoint exists, a deterministic elbow is introduced if needed.
 
-For an equal-delta group move, all Routes and Junctions wholly internal to the
-selected instances translate by the same delta, including their attached Net,
-Route, and Junction annotations. Only Routes that cross the selection boundary
-use local endpoint stretch. A protected route or one whose endpoints request
-different deltas rejects the complete transaction.
+Automatic instance follow is transaction-aware. If the transaction explicitly
+authors a Route through `set_route_points` or `route_orthogonal`, the Engine
+does not also stretch that Route. In a group move, terminal-only and
+terminal-to-fixed-endpoint Routes use Engine follow; explicit Route geometry is
+reserved for Routes incident to a Junction moved by the same plan.
+
+For an equal-delta group move, a connected Route component is internal when it
+contains at least one selected terminal and contains no port or terminal owned
+by an unselected instance. Its Routes and Junctions translate by the same
+delta, including attached Route and Junction annotations. A disconnected
+component on the same logical Net remains fixed. Net annotations move only
+when the whole logical Net has no ports and all its terminals are selected.
+Routes that cross the component boundary use local endpoint stretch. A
+protected route or one whose endpoints request different deltas rejects the
+complete transaction.
 
 Direct segment movement keeps both Route endpoints fixed. The selected segment
 moves only perpendicular to its orientation; adjacent vertices stretch or a

@@ -18,10 +18,34 @@ describe("editor interaction state", () => {
     expect(wiring).toEqual({
       kind: "wire",
       source: null,
+      sourceRevision: null,
       previewPoint: null,
       waypoints: [],
     });
     expect(interactionTool(wiring)).toBe("wire");
+  });
+
+  it("keeps an in-progress wire when Wire is activated again", () => {
+    const source = {
+      endpoint: { kind: "junction" as const, junctionId: "J1" },
+      netId: "n1",
+      point: { x: 10, y: 20 },
+      preludeEdits: [],
+    };
+    let state = activateInteractionTool("wire");
+    state = interactionReducer(state, {
+      type: "set-wire-source",
+      source,
+      sourceRevision: 7,
+    });
+    state = interactionReducer(state, {
+      type: "set-wire-waypoints",
+      update: [{ x: 30, y: 20 }],
+    });
+
+    expect(
+      interactionReducer(state, { type: "activate-tool", tool: "wire" }),
+    ).toBe(state);
   });
 
   it("cancels every creation mode to one idle state", () => {
@@ -69,6 +93,7 @@ describe("editor interaction state", () => {
         point: { x: 10, y: 20 },
         preludeEdits: [],
       },
+      sourceRevision: 7,
     });
     state = interactionReducer(state, {
       type: "set-wire-preview",
@@ -82,6 +107,7 @@ describe("editor interaction state", () => {
     expect(interactionReducer(state, { type: "complete-wire" })).toEqual({
       kind: "wire",
       source: null,
+      sourceRevision: null,
       previewPoint: null,
       waypoints: [],
     });

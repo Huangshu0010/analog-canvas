@@ -1,7 +1,7 @@
-import type { Point, SchematicDocument } from "@icm/model";
+import type { Point, RouteBranch, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { resolveEndpointPoint } from "./endpoint.js";
+import { endpointKey, resolveEndpointPoint } from "./endpoint.js";
 import {
   resolveDocumentRoutingGeometry,
   type ResolvedDocumentRoutingGeometry,
@@ -348,17 +348,81 @@ export function deriveInternalGroupSelection(
     )
     .map((net) => net.id)
     .sort((left, right) => left.localeCompare(right, "en"));
-  const netIdSet = new Set(netIds);
+  const internalRouteIds = new Set<string>();
+  const internalJunctionIds = new Set<string>();
+  const routesByNetId = new Map<string, RouteBranch[]>();
+  for (const route of document.routes) {
+    const netRoutes = routesByNetId.get(route.netId) ?? [];
+    netRoutes.push(route);
+    routesByNetId.set(route.netId, netRoutes);
+  }
+
+  for (const net of document.nets) {
+    const netRoutes = [...(routesByNetId.get(net.id) ?? [])].sort(
+      (left, right) => left.id.localeCompare(right.id, "en"),
+    );
+    const routesByEndpoint = new Map<string, typeof netRoutes>();
+    for (const route of netRoutes) {
+      for (const endpoint of [route.from, route.to]) {
+        const key = endpointKey(endpoint);
+        const incident = routesByEndpoint.get(key) ?? [];
+        incident.push(route);
+        routesByEndpoint.set(key, incident);
+      }
+    }
+
+    const unvisited = new Set(netRoutes.map((route) => route.id));
+    for (const seed of netRoutes) {
+      if (!unvisited.has(seed.id)) continue;
+      const component = [] as typeof netRoutes;
+      const queue = [seed];
+      unvisited.delete(seed.id);
+      while (queue.length > 0) {
+        const route = queue.shift()!;
+        component.push(route);
+        for (const endpoint of [route.from, route.to]) {
+          for (const incident of routesByEndpoint.get(endpointKey(endpoint)) ??
+            []) {
+            if (!unvisited.delete(incident.id)) continue;
+            queue.push(incident);
+          }
+        }
+      }
+
+      const componentEndpoints = new Map(
+        component
+          .flatMap((route) => [route.from, route.to])
+          .map((endpoint) => [endpointKey(endpoint), endpoint] as const),
+      );
+      let hasSelectedTerminal = false;
+      let crossesSelectionBoundary = false;
+      for (const endpoint of componentEndpoints.values()) {
+        if (endpoint.kind === "port") {
+          crossesSelectionBoundary = true;
+        } else if (endpoint.kind === "terminal") {
+          if (selectedIds.has(endpoint.instanceId)) hasSelectedTerminal = true;
+          else crossesSelectionBoundary = true;
+        }
+      }
+      if (!hasSelectedTerminal || crossesSelectionBoundary) continue;
+
+      for (const route of component) internalRouteIds.add(route.id);
+      for (const endpoint of componentEndpoints.values()) {
+        if (endpoint.kind === "junction") {
+          internalJunctionIds.add(endpoint.junctionId);
+        }
+      }
+    }
+  }
+
   return {
     netIds,
-    routeIds: document.routes
-      .filter((route) => netIdSet.has(route.netId))
-      .map((route) => route.id)
-      .sort((left, right) => left.localeCompare(right, "en")),
-    junctionIds: document.junctions
-      .filter((junction) => netIdSet.has(junction.netId))
-      .map((junction) => junction.id)
-      .sort((left, right) => left.localeCompare(right, "en")),
+    routeIds: [...internalRouteIds].sort((left, right) =>
+      left.localeCompare(right, "en"),
+    ),
+    junctionIds: [...internalJunctionIds].sort((left, right) =>
+      left.localeCompare(right, "en"),
+    ),
   };
 }
 

@@ -1,5 +1,33 @@
 # Maintenance Log
 
+## 2026-08-13 - Move planner and Route geometry ownership
+
+- Target: remove double planning between GUI group moves and Edit Engine route
+  follow, and stop disconnected geometry on one logical Net from moving as one
+  block.
+- Changed areas: transaction-wide explicit Route authority; group-move edit
+  planner; connected-component internal selection; movement contracts and
+  focused regressions.
+- Validation: 36 routing/stretch tests, 5 clipboard/marker consumer tests, and
+  all 620 unit tests; final clean `pnpm ci:check` including 92 browser tests
+  and every release gate; `git diff --check` clean.
+- Commit status: implementation commit `0af19d1` on
+  `codex/wire-move-consistency`; final validation recorded before push.
+
+## 2026-08-13 - Wire session and snap consistency
+
+- Target: remove intermittent manual-Wire failures caused by tool reactivation,
+  stale source references, self-snap, and coincident-candidate ordering.
+- Changed areas: editor interaction state; point-snap result contract; Wire
+  canvas integration; interaction specification; unit and browser regressions.
+- Validation: 15 focused unit tests; workspace typecheck and build; focused
+  Playwright regression plus four transaction/status scenarios. The initial
+  full-gate run exposed and drove removal of an effect-ordering race; final
+  clean `pnpm ci:check` passed all 620 unit and 92 browser tests plus release
+  gates; `git diff --check` clean.
+- Commit status: implementation commits `6aa57cd` and `34b4ad3` on
+  `codex/wire-move-consistency`; final validation recorded before push.
+
 ## 2026-08-12 - Drawn VDD rail mainline delivery
 
 - Target: deliver drawn VDD rail and capacitor refinements to remote main by
@@ -5631,3 +5659,153 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on
   `codex/persistent-authoring-input-safety` as
   `feat(editor): remove guides and add clear and refresh`.
+
+## 2026-08-12 - Browser-authorized Agent session roadmap
+
+- Target: plan secure, non-visual external Agent control of the live published
+  browser editor while preserving one Snapshot/transaction/render domain API
+  and one editor mutation/history lifecycle.
+- Changed areas: new web Agent-session roadmap; roadmap index; documentation
+  target plan. Concurrent VDD rail implementation paths were read-only and are
+  an explicit pre-implementation dependency.
+- Validation: pinned reference check passed; roadmap/source boundary review;
+  `git diff --check` clean.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `docs(agent): plan browser-authorized agent sessions`.
+
+## 2026-08-12 - WP-WA0 browser-authorized session contract
+
+- Target: freeze the browser-authoritative Agent session contract (authority,
+  identity, scopes, transport, events, idempotency, host dispatch, errors,
+  threat model) as the foundation for WP-WA1–WA7.
+- Changed areas: new ADR 0016 and `docs/specs/web-agent-session.md`; index
+  entries in `docs/adr/README.md` and `docs/specs/README.md`; cross-link and
+  `power-rail` note in `docs/specs/agent-api.md`; WP-WA0 status in the roadmap;
+  target plan and this log entry.
+- Validation: rebased onto VDD-merged `main` (`0e96608`) and verified VDD touched
+  no `agent-adapter`/`document-controller` file and added no edit kinds;
+  `pnpm references:check`; Prettier on all touched Markdown; `git diff --check`
+  clean.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `docs(agent): freeze browser-authorized session contract (WP-WA0)`.
+
+## 2026-08-12 - WP-WA1 browser-safe protocol boundary
+
+- Target: separate the Node-only loopback transport from browser-importable
+  schemas/operation logic and freeze the relay envelope + web-session schemas.
+- Changed areas: exported `sha256Hex` from `@icm/derived`; new
+  `agent-adapter/platform.ts` and `envelope.ts`; removed `node:crypto`/`Buffer`
+  from `snapshot.ts`/`service.ts`; split package exports with a `./loopback`
+  Node subpath; new `browser-safety.test.ts`.
+- Validation: 177 combined derived+adapter tests; workspace `typecheck` clean;
+  Prettier; `git diff --check` clean. Render base64/sha256 byte-identical to the
+  former Node path.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(agent): split browser-safe protocol boundary (WP-WA1)`.
+
+## 2026-08-12 - WP-WA2 unified editor transaction host
+
+- Target: route authenticated Agent and human edits through one
+  `EditorDocumentController`/`DocumentHistory` path and freeze the host contract.
+- Changed areas: `EditorDocumentController.dispatchTransaction` + `transact`
+  refactor; `useDocumentController` exposure; new `packages/agent-adapter/src/host.ts`
+  (`AgentOperationHost`); extended controller tests.
+- Validation: 27 document tests (11 controller); workspace `typecheck` clean;
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(editor): unify human/Agent transaction dispatch (WP-WA2)`.
+
+## 2026-08-12 - WP-WA3 in-browser Agent host (no network)
+
+- Target: run the full Agent Circuit feature against the live controller in one
+  process; service dispatches `transact` through the host, not a private commit.
+- Changed areas: `AgentCircuitHostServiceOptions` + host-mode dispatch in
+  `service.ts`; new `apps/editor/src/agent/browser-agent-host.ts` + integration
+  tests; editor depends on `@icm/agent-adapter` (lockfile re-resolved).
+- Validation: 6 host-mode integration tests (4 ops, undo parity, render-hash
+  equality, stale revision, unknown document, project replacement); 29 adapter
+  store-mode tests preserved; workspace `typecheck` clean; Prettier; `git diff
+  --check` clean.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(agent): in-browser Agent host without network (WP-WA3)`.
+
+## 2026-08-12 - WP-WA4 Agent session relay core
+
+- Target: deliver the deterministically-verifiable session relay core (auth,
+  claim, scope, idempotency, expiry, rate/size limits, pause/revoke, project
+  replacement).
+- Changed areas: new `worker/agent-session-state.ts` (pure state machine) +
+  tests; new `worker/agent-session.ts` (relay orchestration with injected
+  forward) + tests; roadmap status.
+- Validation: 22 worker tests (13 state machine + 7 relay + 2 analytics) with
+  fake time/transport; workspace `typecheck` clean; Prettier; `git diff --check`
+  clean.
+- Limitation: CF Durable Object + WebSocket browser channel + route wiring +
+  binding cannot run here; deferred to WP-WA7 deployment. `experience: candidate`
+  on the split-core-then-deploy-transport approach.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(agent): Cloudflare Agent session relay state machine (WP-WA4)`.
+
+## 2026-08-12 - WP-WA5 Connect Agent panel
+
+- Target: browser-side authorization surface (panel, hook, App integration) and
+  shared placement of the session state machine.
+- Changed areas: new `apps/editor/src/agent/{connect-agent-panel,use-agent-session}`;
+  `App.tsx` Agent command + panel mount; `.agent-panel` CSS; state machine moved
+  to `packages/agent-adapter/src/session-state.ts`; worker + browser-safety
+  imports updated; root declares `@icm/agent-adapter`; obsolete App assertion
+  updated.
+- Validation: 5 panel markup tests; agent-host (6) + state-machine (13) +
+  worker relay (7) suites pass; App shell (12) passes; workspace `typecheck`
+  clean; Prettier; `git diff --check` clean.
+- Limitation: Playwright grant-to-revoke + network WebSocket transport need a
+  deployed review environment (WP-WA7).
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(editor): Connect Agent authorization panel (WP-WA5)`.
+
+## 2026-08-12 - WP-WA6 external web-session client contract
+
+- Target: publish the public contract an external Agent uses over HTTPS without
+  MCP or repository imports.
+- Changed areas: `docs/agent/api-usage.md` (web-session example + transport
+  failure catalog); `docs/agent/README.md` link; `packages/agent-adapter/src/openapi.ts`
+  transport paths + schemas; regenerated `fixtures/agent-api/agent-circuit.openapi.json`.
+- Validation: `agent-api:artifacts:check` after rebuild; `references:check`;
+  workspace `typecheck` clean; Prettier; `git diff --check` clean.
+- Limitation: end-to-end external HTTP test needs the deployed relay (WP-WA7).
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `docs(agent): external web-session client contract (WP-WA6)`.
+
+## 2026-08-12 - WP-WA7 delivery gate
+
+- Target: validate the local delivery gate for WP-WA0–WA6 and record the
+  remote/deployment gate.
+- Changed areas: `pnpm-lock.yaml` Prettier reformat; delivery-gate plan; roadmap
+  exit-gate status.
+- Validation (local, green): frozen-lockfile install; `format:check`;
+  `references:check`; `typecheck`; full unit suite (108 files / 656 tests);
+  `agent-api:artifacts:check`.
+- Deferred (need user/CI/deployment): GitHub Actions required checks; Playwright
+  e2e; Cloudflare DO + WebSocket transport; perf budgets; relay no-retention.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `chore(agent): format lockfile and record delivery gate (WP-WA7)`.
+
+## 2026-08-13 - Web Agent session production closure
+
+- Target: replace the disconnected WA4/WA5 prototypes with one usable,
+  browser-authoritative external-Agent session from public claim through live
+  semantic edit, shared recovery/undo, events, and revocation.
+- Changed areas: real `AgentSessionDO` + Worker routes/binding/migration;
+  serializable hashed session state and non-content at-most-once ledger; exact
+  scope/Project/Document enforcement; BrowserAgentHost Project fencing; real
+  editor WebSocket hook and lifecycle UI; public OpenAPI + copied connection
+  instructions; generated contract, accepted ADR/spec, roadmap status, and one
+  grant-to-Snapshot/edit/retry/undo/pause/revoke Playwright scenario.
+- Validation: frozen install and final `pnpm ci:check` green under CI settings;
+  108 files / 669 unit tests; 92 Playwright scenarios; production/release smoke;
+  500-instance performance baseline; generated Agent API artifacts; Wrangler
+  4.120.1 production dry-run exposes both `AnalyticsDO` and `AgentSessionDO`;
+  `git diff --check` clean.
+- Commit status: ready to commit and push on
+  `codex/web-agent-session-architecture` as
+  `feat(agent): connect browser-authorized sessions end to end`.

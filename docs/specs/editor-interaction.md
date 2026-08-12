@@ -393,6 +393,9 @@ The core rule is:
 - Starting from a pin, existing Junction, Route segment, or blank grid point
   opens a wire session. A blank-grid source creates no Document records until
   the session commits.
+- Activating Wire again while a session is open is idempotent: it preserves the
+  source and uncommitted bends. The active source is excluded from automatic
+  endpoint snap candidates, so a coincident destination can still be reached.
 - A blank-canvas click fixes an orthogonal bend. Double-click or `Enter`
   terminates at the current grid point as a dangling Junction. `Backspace`
   removes the latest uncommitted bend.
@@ -409,6 +412,9 @@ The core rule is:
   the opposite proposed endpoint.
 - A wire end that geometrically hits more than one route segment is rejected as
   ambiguous. The user must choose one conductor away from the crossing.
+- Equal-priority endpoint or conductor candidates at the same snapped point are
+  likewise rejected as ambiguous; candidate array or object-ID ordering never
+  decides electrical connectivity.
 - Deleting a connected instance converts each routed pin endpoint into a
   Junction at the former pin coordinate, removes that terminal from its Net,
   and removes the instance atomically. Remaining Route geometry and Net
@@ -442,7 +448,10 @@ The core rule is:
 
 `Alt` temporarily suppresses snapping. `Escape` or secondary-click cancels the
 uncommitted wire session. Undo restores the complete pre-transaction topology,
-route geometry, source status, and revision-visible state.
+route geometry, source status, and revision-visible state. A Wire source is
+resolved against one Document revision; any other transaction that changes the
+revision explicitly cancels the transient session instead of reusing stale
+endpoint or route-split references.
 
 ## Automation boundary
 

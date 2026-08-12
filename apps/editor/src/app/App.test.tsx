@@ -136,7 +136,10 @@ describe("editor shell", () => {
     expect(markup).toContain('aria-haspopup="dialog"');
     expect(markup).toContain(">Help</button>");
     expect(markup).not.toContain('role="dialog"');
-    expect(markup).not.toContain("Agent");
+    // The Connect Agent command is available (WP-WA5), but the authorization
+    // panel itself must not render until the user opens it.
+    expect(markup).toContain("Connect Agent");
+    expect(markup).not.toContain('data-testid="connect-agent-panel"');
   });
 
   it("links to first-party visitor analytics without crowding editor commands", () => {

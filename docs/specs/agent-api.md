@@ -15,7 +15,10 @@ Related ADRs: [`0005-agent-api-without-mcp.md`](../adr/0005-agent-api-without-mc
 [`0015-object-locator-and-diagnostic-envelope.md`](../adr/0015-object-locator-and-diagnostic-envelope.md).
 Snapshot connectivity and resolved-route-geometry fields, and any diagnostic
 additions, are added additively (WP-R7/R10); existing Agent clients keep working
-without writing the new fields.
+without writing the new fields. The public web transport that carries these
+operations to an external Agent over HTTPS — session authorization, relay,
+events, idempotency, and typed transport errors — is specified separately in
+[`web-agent-session.md`](web-agent-session.md) (ADR 0016).
 
 ## Purpose
 
@@ -97,7 +100,8 @@ target cell/subcircuit name when available, and resolved `targetDocumentId` or
   visibility, and `netId | null`;
 - Nets with scope, complete terminal refs, port IDs, route IDs, and Junction IDs;
 - complete Route endpoints, waypoints, segment modes, optional presentation
-  (`wire`/`bulk-dashed`), and derived polyline;
+  (`wire`/`bulk-dashed`/`power-rail`; a `power-rail` Route must belong to a VDD
+  Net), and derived polyline;
 - Junctions, annotations, layout groups, and constraints with all persisted
   fields and members;
 - drafting objects with canonical RichText AST, resolved anchor, bounds,

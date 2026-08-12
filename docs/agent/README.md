@@ -14,7 +14,9 @@ Start with:
   errors, diagnostics, resolved Routes, crossings, flightlines, and artifacts;
 - [`circuit-style-knowledge.md`](circuit-style-knowledge.md) for evidence-first
   circuit understanding and textbook/Razavi-style expression;
-- [`api-usage.md`](api-usage.md) for request payload examples and permissions;
+- [`api-usage.md`](api-usage.md) for request payload examples and permissions,
+  including the browser-authorized **web session** flow for an external Agent
+  (ADR 0016);
 - [`layout-guidance.md`](layout-guidance.md) for the earlier compact layout
   heuristics retained for compatibility;
 - [`knowledge-and-skill-plan.md`](knowledge-and-skill-plan.md) for the earlier

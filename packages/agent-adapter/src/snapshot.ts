@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import {
   diagnoseVisualQuality,
   electricalTopologyHash,
@@ -16,6 +14,7 @@ import type {
 } from "@icm/model";
 import type { SymbolPin, SymbolResolver } from "@icm/symbols";
 
+import { utf8ByteLength } from "./platform.js";
 import {
   AGENT_SNAPSHOT_VERSION,
   AgentSessionSnapshotSchema,
@@ -459,7 +458,7 @@ export function buildAgentSessionSnapshot(
   return AgentSessionSnapshotSchema.parse({
     snapshotVersion: AGENT_SNAPSHOT_VERSION,
     electricalTopologyHash: topologyHash,
-    byteLength: Buffer.byteLength(canonical, "utf8"),
+    byteLength: utf8ByteLength(canonical),
     ...content,
   });
 }
