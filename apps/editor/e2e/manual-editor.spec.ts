@@ -1464,6 +1464,33 @@ test("opens project search with Ctrl+F and selects a matching component", async 
   await expect(page.getByTestId("project-search-input")).toHaveCount(0);
 });
 
+test("navigates a project-search locator into an imported child Cell", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByTestId("project-file")
+    .setInputFiles(
+      resolve(
+        process.cwd(),
+        "fixtures/projects/hierarchy-navigation/project.icproj.json",
+      ),
+    );
+
+  await page.keyboard.press("Control+f");
+  await page.getByTestId("project-search-input").fill("RCHILD");
+  await page.getByTestId("project-search-result-RCHILD").click();
+  await expect(page.getByTestId("active-document-name")).toHaveText(
+    "Bias Child Cell",
+  );
+  await expect(page.getByTestId("status")).toContainText(
+    "Selected instance RCHILD",
+  );
+
+  await page.getByRole("button", { name: "Up" }).click();
+  await expect(page.getByTestId("active-document-name")).toHaveText("Top Cell");
+});
+
 test("highlights the complete current-document Net from a selected route", async ({
   page,
 }) => {

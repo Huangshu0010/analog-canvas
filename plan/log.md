@@ -5013,3 +5013,15 @@ contracts (WP-R1)`.
   Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(erc): diagnose stale imported pin mappings`.
+
+## 2026-08-12 - Connectivity Recovery C6d: cross-Cell locator browser coverage
+
+- Target: prove editor navigation from a child-Cell project-search locator and
+  the retained parent `Up` frame.
+- Changed areas: minimal imported hierarchy fixture, editor Playwright flow,
+  target plan and log.
+- Validation: focused Playwright hierarchy navigation; 12 focused
+  hierarchy/App unit tests; workspace `pnpm typecheck`; targeted Prettier;
+  `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `test(editor): cover cross-Cell locator navigation`.
