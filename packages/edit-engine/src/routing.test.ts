@@ -255,11 +255,62 @@ describe("routing Edit Engine", () => {
       plan.edits.filter((edit) => edit.kind === "move_instance"),
     ).toHaveLength(3);
     expect(plan.edits.some((edit) => edit.kind === "set_route_points")).toBe(
-      true,
+      false,
     );
     const moved = executeTransaction(
       routed.document,
       transaction(document.id, 1, plan.edits),
+      context,
+    );
+    expect(moved.ok).toBe(true);
+  });
+
+  it("authors route geometry only where a group move also moves a Junction", () => {
+    const document = documentFixture();
+    document.junctions.push({
+      id: "junction-h",
+      netId: "net-h",
+      position: { x: 300, y: 300 },
+    });
+    document.routes.push(
+      {
+        id: "route-h-left",
+        netId: "net-h",
+        from: terminal("A"),
+        to: { kind: "junction", junctionId: "junction-h" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-h-right",
+        netId: "net-h",
+        from: { kind: "junction", junctionId: "junction-h" },
+        to: terminal("B"),
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    const plan = proposeGroupMoveEdits(document, resolver, [
+      { instanceId: "A", position: { x: 160, y: 320 } },
+      { instanceId: "B", position: { x: 480, y: 320 } },
+    ]);
+    expect(plan.edits.filter((edit) => edit.kind === "move_junction")).toEqual([
+      {
+        kind: "move_junction",
+        junctionId: "junction-h",
+        position: { x: 320, y: 320 },
+      },
+    ]);
+    expect(
+      plan.edits
+        .filter((edit) => edit.kind === "set_route_points")
+        .map((edit) => edit.routeId),
+    ).toEqual(["route-h-left", "route-h-right"]);
+
+    const moved = executeTransaction(
+      document,
+      transaction(document.id, 0, plan.edits),
       context,
     );
     expect(moved.ok).toBe(true);

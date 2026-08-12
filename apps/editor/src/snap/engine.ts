@@ -60,6 +60,7 @@ export interface SnapResult {
   yMatch?: SnapMatch;
   electricalMatch?: ElectricalSnapMatch;
   pointMatch?: SnapAnchor;
+  pointMatches?: readonly SnapAnchor[];
   guides: SnapGuideLine[];
 }
 
@@ -473,6 +474,7 @@ export function resolvePointSnap(
     tolerance: number;
     profile: SnapProfile;
     previous?: SnapResult;
+    excludedTargetIds?: ReadonlySet<string>;
   },
 ): SnapResult {
   const pointKinds = new Set<SnapTargetKind>([
@@ -482,9 +484,10 @@ export function resolvePointSnap(
     "route",
     "drafting",
   ]);
-  const pointMatch = targetAnchors
+  const pointCandidates = targetAnchors
     .filter(
       (target) =>
+        !options.excludedTargetIds?.has(target.id) &&
         options.profile.kinds.has(target.kind) &&
         pointKinds.has(target.kind) &&
         axes(target).includes("x") &&
@@ -500,8 +503,20 @@ export function resolvePointSnap(
         KIND_PRIORITY[left.target.kind] - KIND_PRIORITY[right.target.kind] ||
         left.distance - right.distance ||
         left.target.id.localeCompare(right.target.id),
-    )[0]?.target;
-  if (pointMatch) {
+    );
+  const bestCandidate = pointCandidates[0];
+  if (bestCandidate) {
+    const pointMatch = bestCandidate.target;
+    const pointMatches = pointCandidates
+      .filter(
+        (candidate) =>
+          KIND_PRIORITY[candidate.target.kind] ===
+            KIND_PRIORITY[pointMatch.kind] &&
+          Math.abs(candidate.distance - bestCandidate.distance) < 1e-9 &&
+          Math.abs(candidate.target.point.x - pointMatch.point.x) < 1e-9 &&
+          Math.abs(candidate.target.point.y - pointMatch.point.y) < 1e-9,
+      )
+      .map((candidate) => candidate.target);
     const makeMatch = (axis: SnapAxis): SnapMatch => ({
       axis,
       movingAnchorId: "pointer",
@@ -518,6 +533,7 @@ export function resolvePointSnap(
       xMatch: makeMatch("x"),
       yMatch: makeMatch("y"),
       pointMatch,
+      pointMatches,
       guides: [],
     };
   }
