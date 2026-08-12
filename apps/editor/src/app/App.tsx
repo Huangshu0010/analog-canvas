@@ -38,6 +38,7 @@ import type {
   Flightline,
   HierarchyFrame,
   ObjectLocator,
+  RoutePolyline,
   SearchResult,
 } from "@icm/derived";
 import {
@@ -833,20 +834,20 @@ export function App({ project: initialProject }: AppProps) {
   );
   const routePolylines = useMemo(
     () =>
-      document.routes
-        .map((route) => ({
-          route,
-          polyline: routePolyline(document, resolver, route),
-        }))
-        .filter(
-          (
-            candidate,
-          ): candidate is {
-            route: SchematicDocument["routes"][number];
-            polyline: NonNullable<ReturnType<typeof routePolyline>>;
-          } => candidate.polyline !== null,
-        ),
-    [document, resolver],
+      document.routes.flatMap((route) => {
+        const geometry = projectConnectivityIndex.documents
+          .get(document.id)
+          ?.routeGeometry.get(route.id);
+        if (!geometry) return [];
+        const polyline: RoutePolyline = {
+          routeId: geometry.routeId,
+          netId: geometry.netId,
+          points: [...geometry.centerline],
+          segmentModes: geometry.segments.map((segment) => segment.mode),
+        };
+        return [{ route, polyline }];
+      }),
+    [document, projectConnectivityIndex],
   );
 
   const textEditingTarget = textEditing

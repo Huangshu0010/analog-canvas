@@ -5048,3 +5048,14 @@ contracts (WP-R1)`.
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(render): consume resolved route geometry`.
+
+## 2026-08-12 - Connectivity Recovery C3e: editor geometry read consumer
+
+- Target: adapt editor route hit/display/marker/highlight records from the
+  active document's resolved route geometry.
+- Changed areas: editor route read model; target plan and log.
+- Validation: 16 focused App/interaction tests; two focused Playwright route
+  flows; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(editor): consume resolved route geometry for hits`.
