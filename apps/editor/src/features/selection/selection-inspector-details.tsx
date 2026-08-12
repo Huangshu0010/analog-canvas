@@ -1,5 +1,6 @@
 import { hasBlockingVisualDiagnostics } from "@icm/derived";
 import type { ErcDiagnostic, VisualDiagnostic } from "@icm/derived";
+import { useMemo, useState } from "react";
 import type { SpiceDiagnostic } from "@icm/spice";
 
 import type { EditorTool } from "../../interaction/interaction-state";
@@ -183,6 +184,15 @@ export interface ErcDiagnosticsSectionProps {
   onSelectDiagnostic(diagnostic: ErcDiagnostic): void;
 }
 
+type ErcSeverityFilter = "all" | ErcDiagnostic["severity"];
+
+const ERC_SEVERITY_FILTERS: readonly ErcSeverityFilter[] = [
+  "all",
+  "error",
+  "warning",
+  "info",
+];
+
 /**
  * ERC has an independent producer and severity policy. Keep its panel separate
  * from import and visual observations so a visual count can never be mistaken
@@ -193,14 +203,49 @@ export function ErcDiagnosticsSection({
   documentLabel,
   onSelectDiagnostic,
 }: ErcDiagnosticsSectionProps) {
+  const [severityFilter, setSeverityFilter] =
+    useState<ErcSeverityFilter>("all");
+  const visibleDiagnostics = useMemo(
+    () =>
+      severityFilter === "all"
+        ? diagnostics
+        : diagnostics.filter(
+            (diagnostic) => diagnostic.severity === severityFilter,
+          ),
+    [diagnostics, severityFilter],
+  );
   return (
     <section
       aria-label="ERC diagnostics"
       className="diagnostics erc-diagnostics"
     >
-      <h2>Electrical diagnostics ({diagnostics.length})</h2>
+      <h2>
+        Electrical diagnostics ({visibleDiagnostics.length}/{diagnostics.length}
+        )
+      </h2>
+      <div className="diagnostic-filters" aria-label="ERC severity filters">
+        {ERC_SEVERITY_FILTERS.map((filter) => {
+          const count =
+            filter === "all"
+              ? diagnostics.length
+              : diagnostics.filter(
+                  (diagnostic) => diagnostic.severity === filter,
+                ).length;
+          return (
+            <button
+              key={filter}
+              type="button"
+              data-testid={`erc-filter-${filter}`}
+              aria-pressed={severityFilter === filter}
+              onClick={() => setSeverityFilter(filter)}
+            >
+              {filter === "all" ? "All" : filter} ({count})
+            </button>
+          );
+        })}
+      </div>
       <ul data-testid="erc-diagnostics">
-        {diagnostics.map((diagnostic, index) => (
+        {visibleDiagnostics.map((diagnostic, index) => (
           <li
             key={diagnostic.id}
             data-document-id={diagnostic.primary.documentId}

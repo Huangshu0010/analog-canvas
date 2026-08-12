@@ -1571,6 +1571,12 @@ test("surfaces and locates current-document ERC diagnostics", async ({
   await expect(page.getByTestId("erc-diagnostics")).toContainText(
     "ERC_UNCONNECTED_PIN",
   );
+  await page.getByTestId("erc-filter-error").click();
+  await expect(page.getByTestId("erc-diagnostics")).toHaveText("");
+  await page.getByTestId("erc-filter-warning").click();
+  await expect(page.getByTestId("erc-diagnostics")).toContainText(
+    "ERC_UNCONNECTED_PIN",
+  );
   await page.getByTestId("erc-diagnostic-0").click();
   await expect(page.getByTestId("status")).toContainText("ERC_UNCONNECTED_PIN");
   await expect(

@@ -115,5 +115,7 @@ describe("selection inspector details", () => {
     );
     expect(markup).toContain('data-document-id="document-child"');
     expect(markup).toContain("Cell: Bias Child Cell");
+    expect(markup).toContain('data-testid="erc-filter-all"');
+    expect(markup).toContain("All (1)");
   });
 });

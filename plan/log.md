@@ -5104,3 +5104,15 @@ contracts (WP-R1)`.
   79/79; 500-instance performance check passed; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `docs(roadmap): record connectivity recovery status`.
+
+## 2026-08-12 - Connectivity Recovery C9c: ERC severity filter
+
+- Target: allow the project ERC shelf to focus an explicit severity without
+  hiding or mutating diagnostic facts.
+- Changed areas: ERC presentation filters and selection/browser tests; target
+  plan and log.
+- Validation: 14 focused selection/App tests; two focused Playwright ERC
+  flows; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): filter project ERC diagnostics`.
