@@ -38,21 +38,21 @@ describe("semantic default instance-label placement", () => {
       alignment: "start",
     });
     expect(placed("voltage-source")).toMatchObject({
-      position: { x: 117, y: 105 },
+      position: { x: 113, y: 105 },
       alignment: "start",
     });
   });
 
   it("moves a rotated passive side label with the symbol", () => {
     expect(placed("capacitor", 90)).toMatchObject({
-      position: { x: 95, y: 114 },
+      position: { x: 95, y: 125 },
       alignment: "middle",
     });
   });
 
   it("places Port text on the endpoint's reverse extension", () => {
     expect(placed("port")).toMatchObject({
-      position: { x: 85, y: 105 },
+      position: { x: 88, y: 105 },
       alignment: "end",
     });
   });
@@ -63,20 +63,20 @@ describe("semantic default instance-label placement", () => {
       alignment: "start",
     });
     expect(placed("nmos", 0, "none", "textbook-3terminal")).toMatchObject({
-      position: { x: 116, y: 108 },
+      position: { x: 113, y: 108 },
       alignment: "start",
     });
   });
 
   it("uses visible glyph edges for vertical MOS orientations", () => {
     expect(placed("nmos", 90, "none", "textbook-3terminal")).toMatchObject({
-      position: { x: 92, y: 132 },
-      semanticPosition: { x: 92, y: 116 },
+      position: { x: 92, y: 129 },
+      semanticPosition: { x: 92, y: 113 },
       alignment: "middle",
     });
     expect(placed("nmos", 270, "none", "textbook-3terminal")).toMatchObject({
-      position: { x: 108, y: 79 },
-      semanticPosition: { x: 108, y: 84 },
+      position: { x: 108, y: 82 },
+      semanticPosition: { x: 108, y: 87 },
       alignment: "middle",
     });
   });

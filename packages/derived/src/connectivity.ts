@@ -168,8 +168,7 @@ function flightlineNodePriority(
     (route) =>
       (route.from.kind === "junction" &&
         route.from.junctionId === junctionId) ||
-      (route.to.kind === "junction" &&
-        route.to.junctionId === junctionId),
+      (route.to.kind === "junction" && route.to.junctionId === junctionId),
   ).length;
   return junction?.role === "route-anchor" && degree <= 1 ? 0 : 2;
 }

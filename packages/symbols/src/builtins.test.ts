@@ -8,6 +8,7 @@ import { SYMBOL_CONNECTION_GRID, SymbolDefinitionSchema } from "./schema.js";
 
 const PRODUCT_IDS = [
   "capacitor",
+  "closed-switch",
   "current-source",
   "diode",
   "ground",
