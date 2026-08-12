@@ -81,4 +81,5 @@ moved Junction, and those explicit Route IDs are excluded from automatic
 follow. Internal Route/Junction movement is based on actual connected
 components, while logical-Net annotations retain the stricter whole-Net rule.
 The 36 focused routing/stretch tests, consumer checks, all 620 unit tests,
-typecheck, and build validations passed.
+typecheck, and build validations passed. The final clean `pnpm ci:check` also
+passed all 92 browser scenarios and every release gate.

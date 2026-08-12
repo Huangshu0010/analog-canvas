@@ -9,10 +9,10 @@
   planner; connected-component internal selection; movement contracts and
   focused regressions.
 - Validation: 36 routing/stretch tests, 5 clipboard/marker consumer tests, and
-  all 620 unit tests; workspace typecheck and build; Prettier and
-  `git diff --check` clean.
-- Commit status: ready to commit on `codex/wire-move-consistency` as
-  `fix(routing): unify move and route geometry ownership`.
+  all 620 unit tests; final clean `pnpm ci:check` including 92 browser tests
+  and every release gate; `git diff --check` clean.
+- Commit status: implementation commit `0af19d1` on
+  `codex/wire-move-consistency`; final validation recorded before push.
 
 ## 2026-08-13 - Wire session and snap consistency
 
@@ -22,10 +22,11 @@
   canvas integration; interaction specification; unit and browser regressions.
 - Validation: 15 focused unit tests; workspace typecheck and build; focused
   Playwright regression plus four transaction/status scenarios. The initial
-  full-gate run exposed and drove removal of an effect-ordering race; Prettier
-  check and `git diff --check` clean.
-- Commit status: ready to commit on `codex/wire-move-consistency` as
-  `fix(editor): stabilize wire sessions and snap targets`.
+  full-gate run exposed and drove removal of an effect-ordering race; final
+  clean `pnpm ci:check` passed all 620 unit and 92 browser tests plus release
+  gates; `git diff --check` clean.
+- Commit status: implementation commits `6aa57cd` and `34b4ad3` on
+  `codex/wire-move-consistency`; final validation recorded before push.
 
 ## 2026-08-12 - Drawn VDD rail mainline delivery
 

@@ -77,4 +77,5 @@ commit validates the source revision and declares itself as the completing
 transaction. Point snap excludes the source, returns all equal best coincident
 targets, and rejects ambiguity instead of choosing by object ID. Focused unit,
 typecheck, build, and browser regressions passed; the full gate's initial status
-race was fixed and its four affected scenarios pass together.
+race was fixed and its four affected scenarios pass together. The final clean
+`pnpm ci:check` passed all 620 unit and 92 browser tests plus release gates.
