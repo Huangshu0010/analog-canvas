@@ -1419,20 +1419,37 @@ test("keeps the production command surface compact and publishes PWA metadata", 
 test("shows first-party visitor analytics without tracking the dashboard itself", async ({
   page,
 }) => {
+  await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   let dashboardTracked = false;
   await page.route("**/api/track", async (route) => {
     dashboardTracked = true;
     await route.fulfill({ status: 204 });
   });
   await page.route("**/api/analytics", async (route) => {
+    const countries = [
+      "CN",
+      "US",
+      "GB",
+      "DE",
+      "FR",
+      "JP",
+      "SG",
+      "CA",
+      "AU",
+      "IN",
+      "NZ",
+    ].map((code, index) => ({ code, pv: 12 - index, uv: 11 - index }));
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         generatedAt: "2026-08-12T00:00:00.000Z",
         totals: { pv: 12, uv: 7 },
         today: { date: "2026-08-12", pv: 3, uv: 2 },
-        days: [{ date: "2026-08-12", pv: 3, uv: 2 }],
-        countries: [{ code: "CN", pv: 8, uv: 5 }],
+        days: [
+          { date: "2026-05-15", pv: 1, uv: 1 },
+          { date: "2026-08-12", pv: 3, uv: 2 },
+        ],
+        countries,
         points: [{ lat: 40, lng: 116, count: 8 }],
         paths: [{ path: "/", pv: 12, uv: 7 }],
         sources: [{ source: "direct-or-unknown", pv: 12, uv: 7 }],
@@ -1447,12 +1464,36 @@ test("shows first-party visitor analytics without tracking the dashboard itself"
   });
 
   await page.goto("/analytics");
+  await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+  await expect(page).toHaveTitle("Analytics — Analog Canvas");
   await expect(
-    page.getByRole("heading", { name: "Visitor analytics" }),
+    page.getByRole("link", { name: "Back to editor" }),
+  ).toHaveAttribute("href", "/");
+  await expect(page.getByRole("textbox", { name: "From" })).toHaveValue(
+    "2026-05-15",
+  );
+  await expect(
+    page.getByRole("textbox", { name: "To", exact: true }),
+  ).toHaveValue("2026-08-12");
+  await expect(
+    page.getByRole("button", { name: "Last 90 days" }),
   ).toBeVisible();
-  await expect(page.getByText("Countries and regions")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "ISO 3166 Code" }),
+  ).toBeVisible();
   await expect(page.getByText("China")).toBeVisible();
-  await expect(page.getByText("No IP addresses")).toBeVisible();
+  await expect(page.getByText("New Zealand")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show all 11" }).click();
+  await expect(page.getByText("New Zealand")).toBeVisible();
+
+  const themeSwitch = page.getByRole("button", {
+    name: "Switch to light theme",
+  });
+  await themeSwitch.click();
+  await expect(page.locator("html")).toHaveClass(/light/);
+  await expect(
+    page.getByRole("button", { name: "Switch to dark theme" }),
+  ).toBeVisible();
   expect(dashboardTracked).toBe(false);
 });
 
