@@ -89,6 +89,11 @@ import {
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import {
+  proposeLegacyPowerContactReconciliation,
+  proposePlacementContact,
+  proposedStandalonePowerConnection,
+} from "../features/component-insert/placement-connectivity";
+import {
   componentParameters,
   effectiveComponentParameterValue,
 } from "../features/component-insert/component-parameters";
@@ -131,6 +136,7 @@ import type { TextEditingSession } from "../features/text-editing/text-editing";
 import {
   defaultRazaviSymbolVariantId,
   razaviHiddenBulkRisk,
+  razaviManualBulkConnectionEdits,
   razaviMosPresentationEdits,
 } from "../presentation/razavi-presentation";
 import {
@@ -858,6 +864,25 @@ export function App({ project: initialProject }: AppProps) {
     ],
     [document, resolver],
   );
+  useEffect(() => {
+    const powerContactEdits = proposeLegacyPowerContactReconciliation(
+      resolver,
+      document.instances,
+      visibleEndpoints,
+    );
+    const bulkEdits = razaviManualBulkConnectionEdits(
+      document,
+      document.instances,
+    );
+    const edits = [...powerContactEdits, ...bulkEdits];
+    if (edits.length === 0) return;
+    const result = transact(edits);
+    if (result.ok) {
+      setStatus(
+        `Reconciled ${powerContactEdits.length} visible power contact(s) and ${bulkEdits.length} Razavi bulk connection(s)`,
+      );
+    }
+  }, [document, resolver, visibleEndpoints]);
   const routePolylines = useMemo(
     () =>
       document.routes.flatMap((route) => {
@@ -2366,11 +2391,61 @@ export function App({ project: initialProject }: AppProps) {
             : "",
         }
       : null;
+    const contact = proposePlacementContact(
+      resolver,
+      instance,
+      visibleEndpoints,
+    );
+    const standalonePower =
+      contact.matched || contact.ambiguous
+        ? { edits: [], matched: false, ambiguous: false }
+        : proposedStandalonePowerConnection(instance);
+    // Build only the future global-Net facts needed to decide hidden B policy.
+    // The real transaction below remains the sole persistence boundary.
+    const projectedDocument = structuredClone(document);
+    projectedDocument.instances.push(instance);
+    for (const edit of [...contact.edits, ...standalonePower.edits]) {
+      if (edit.kind !== "connect_endpoints" || !edit.newNetId) continue;
+      projectedDocument.nets.push({
+        id: edit.newNetId,
+        ...(edit.newNetName ? { name: edit.newNetName } : {}),
+        scope: edit.newNetScope ?? "local",
+        terminals: [edit.from, edit.to]
+          .filter(
+            (
+              endpoint,
+            ): endpoint is Extract<RouteEndpoint, { kind: "terminal" }> =>
+              endpoint.kind === "terminal",
+          )
+          .map(({ instanceId, pinName }) => ({ instanceId, pinName }))
+          .filter(
+            (terminal, index, terminals) =>
+              terminals.findIndex(
+                (candidate) =>
+                  candidate.instanceId === terminal.instanceId &&
+                  candidate.pinName === terminal.pinName,
+              ) === index,
+          ),
+        ports: [edit.from, edit.to]
+          .filter(
+            (endpoint): endpoint is Extract<RouteEndpoint, { kind: "port" }> =>
+              endpoint.kind === "port",
+          )
+          .map((endpoint) => endpoint.portId),
+      });
+    }
+    const bulkEdits = razaviManualBulkConnectionEdits(
+      projectedDocument,
+      projectedDocument.instances,
+    );
     const result = transact([
       {
         kind: "add_instance",
         instance,
       },
+      ...contact.edits,
+      ...standalonePower.edits,
+      ...bulkEdits,
       ...(instanceLabel
         ? [{ kind: "upsert_annotation" as const, annotation: instanceLabel }]
         : []),
@@ -2398,7 +2473,13 @@ export function App({ project: initialProject }: AppProps) {
       cancelInteraction();
       setComponentPreviewPoint(null);
       setComponentPlacementRotation(0);
-      setStatus(`Added ${id} (${symbolId})`);
+      setStatus(
+        contact.ambiguous
+          ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly`
+          : contact.matched
+            ? `Added ${id} (${symbolId}) and connected its contacted pin`
+            : `Added ${id} (${symbolId})`,
+      );
     }
   }
 

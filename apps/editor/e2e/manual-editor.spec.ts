@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import { resolve } from "node:path";
+import { createEmptyProject } from "@icm/model";
 
 import { createRoutingDemoProject } from "../src/demos/routing-demo.js";
 import {
@@ -384,6 +385,46 @@ test("deletes a routed part of an imported Net that still has flightlines", asyn
 
   await page.getByTestId("hit-A").click();
   await expect(page.getByTestId("flightline")).toHaveCount(2);
+});
+
+test("reconciles one legacy visible VDD contact without a visual-only ERC", async ({
+  page,
+}) => {
+  const project = createEmptyProject("legacy-contact", "Legacy contact");
+  const document = project.documents[0]!;
+  document.instances.push(
+    {
+      id: "M4",
+      symbolId: "pmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: {
+        position: { x: 90, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    },
+    {
+      id: "VDD9",
+      symbolId: "vdd",
+      placement: {
+        position: { x: 100, y: 80 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    },
+  );
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "legacy-contact.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+
+  await expect(page.getByTestId("status")).toContainText(
+    "Reconciled 0 visible power contact(s) and 1 Razavi bulk connection(s)",
+  );
 });
 
 test("uses a flightline as direct Wire guidance", async ({ page }) => {

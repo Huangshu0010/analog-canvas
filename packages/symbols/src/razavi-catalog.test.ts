@@ -351,6 +351,16 @@ describe("Razavi symbol catalog", () => {
     expect(getRazaviCatalogEntry("nmos3")?.reviewStatus).toBe("provisional");
   });
 
+  it("assigns PMOS source and drain to the Razavi-facing terminals", () => {
+    const pmos = requireRazaviCatalogSymbol("pmos");
+    expect(pmos.pins).toMatchObject([
+      { name: "D", role: "drain", at: { x: 10, y: 20 } },
+      { name: "G", role: "gate", at: { x: -20, y: 0 } },
+      { name: "S", role: "source", at: { x: 10, y: -20 } },
+      { name: "B", role: "bulk", at: { x: 20, y: 0 } },
+    ]);
+  });
+
   it("uses raster-authored Razavi MOS bodies without moving electrical pin anchors", () => {
     const nmos = requireRazaviCatalogSymbol("nmos");
     const measurement = mosGeometry.symbols.nmos;

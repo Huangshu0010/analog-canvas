@@ -5283,3 +5283,17 @@ contracts (WP-R1)`.
   production smoke; static geometry/planner consumer audit; `git diff --check`.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `docs(roadmap): record final connectivity acceptance audit`.
+
+## 2026-08-12 - Electrical contact integrity for Razavi MOS
+
+- Target: make exact manual power-symbol contacts electrically truthful,
+  reconcile safe legacy contacts, preserve hidden bulk semantics, and correct
+  PMOS source/drain presentation roles.
+- Changed areas: editor placement/reconciliation and bulk policy, typed
+  connect-endpoint Net scope, Razavi PMOS catalog/source, API/visual/formal
+  generated artifacts, focused unit and browser regressions, target plan.
+- Validation: frozen install; complete `pnpm ci:check` (583 unit tests, 82
+  browser E2E tests, release/performance/export/production-smoke gates);
+  catalog/API/Phase-5 checks; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): preserve electrical truth at Razavi MOS contacts`.

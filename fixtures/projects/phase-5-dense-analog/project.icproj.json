@@ -93,8 +93,8 @@
           "symbolVariantId": "textbook-3terminal",
           "placement": {
             "position": { "x": 180, "y": 80 },
-            "rotation": 180,
-            "mirror": "none"
+            "rotation": 0,
+            "mirror": "x"
           },
           "properties": { "role": "active-load-left" }
         },
@@ -104,8 +104,8 @@
           "symbolVariantId": "textbook-3terminal",
           "placement": {
             "position": { "x": 300, "y": 80 },
-            "rotation": 180,
-            "mirror": "x"
+            "rotation": 0,
+            "mirror": "none"
           },
           "properties": { "role": "active-load-right" }
         }

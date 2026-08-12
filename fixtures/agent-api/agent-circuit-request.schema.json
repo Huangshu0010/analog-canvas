@@ -1713,6 +1713,13 @@
                   "newNetName": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "newNetScope": {
+                    "type": "string",
+                    "enum": [
+                      "local",
+                      "global"
+                    ]
                   }
                 },
                 "required": [

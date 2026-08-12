@@ -164,6 +164,7 @@ export const ConnectEndpointsEditSchema = z.strictObject({
   to: RouteEndpointSchema,
   newNetId: StableIdSchema.optional(),
   newNetName: z.string().min(1).optional(),
+  newNetScope: z.enum(["local", "global"]).optional(),
 });
 export const MergeNetsEditSchema = z.strictObject({
   kind: z.literal("merge_nets"),
@@ -2653,7 +2654,7 @@ export function executeTransaction(
           draft.nets.push({
             id: netId,
             ...(edit.newNetName ? { name: edit.newNetName } : {}),
-            scope: "local",
+            scope: edit.newNetScope ?? "local",
             terminals: [],
             ports: [],
           });

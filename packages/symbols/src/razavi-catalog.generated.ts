@@ -358,7 +358,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "a995e33e91c8c4828967e75572cb323fdcd6af49a710dd088a2b5d5b3e91e391",
+      "30b1377d7e9fdb9105b4902a8a694b1c6a0b26c3b8d01f8fe33f425736755458",
   },
   {
     symbolId: "pmos3",
@@ -380,7 +380,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "pmos3.symbol.json",
     assetHash:
-      "d2416d0a22a651dbac75d94bfa57c63aa1a792dc88e275256f066ad9717165ba",
+      "8dca33880e073396eb45f79f6a2fb882a759d0ca4ddd473275b6f4de820c335f",
   },
   {
     symbolId: "pnp",
@@ -2134,9 +2134,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "drain",
         at: {
           x: 10,
-          y: -20,
+          y: 20,
         },
-        direction: "north",
+        direction: "south",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -2160,9 +2160,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "source",
         at: {
           x: 10,
-          y: 20,
+          y: -20,
         },
-        direction: "south",
+        direction: "north",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -2400,9 +2400,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "drain",
         at: {
           x: 10,
-          y: -20,
+          y: 20,
         },
-        direction: "north",
+        direction: "south",
         presentation: {
           visibility: "visible",
           leadLength: 10,
@@ -2426,9 +2426,9 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         role: "source",
         at: {
           x: 10,
-          y: 20,
+          y: -20,
         },
-        direction: "south",
+        direction: "north",
         presentation: {
           visibility: "visible",
           leadLength: 10,
