@@ -850,6 +850,20 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
+.net-highlight-overlay polyline {
+  fill: none;
+  stroke: var(--icm-accent-selection);
+  stroke-width: 5;
+  opacity: 0.32;
+  vector-effect: non-scaling-stroke;
+}
+
+.net-highlight-overlay circle {
+  fill: var(--icm-accent-selection);
+  opacity: 0.55;
+  vector-effect: non-scaling-stroke;
+}
+
 .wire-preview {
   fill: none;
   stroke: var(--icm-accent);

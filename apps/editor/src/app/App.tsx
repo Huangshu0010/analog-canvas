@@ -18,6 +18,7 @@ import {
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
+  computeNetHighlight,
   deriveCrossings,
   deriveFlightlines,
   deriveInternalGroupSelection,
@@ -525,6 +526,7 @@ export function App({ project: initialProject }: AppProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedNetId, setHighlightedNetId] = useState<string | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const instanceCounter = useRef(0);
@@ -673,6 +675,7 @@ export function App({ project: initialProject }: AppProps) {
     if (!document.sourceBinding) return flightlines;
     const focusedNetIds = new Set<string>();
     if (selectedRoute) focusedNetIds.add(selectedRoute.netId);
+    if (highlightedNetId) focusedNetIds.add(highlightedNetId);
     if (selectedEndpoint) {
       const netId = endpointNetId(document, selectedEndpoint.endpoint);
       if (netId) focusedNetIds.add(netId);
@@ -699,6 +702,7 @@ export function App({ project: initialProject }: AppProps) {
     document,
     flightlines,
     selectedEndpoint,
+    highlightedNetId,
     selectedIds,
     selectedRoute,
     visualSelection.junctionIds,
@@ -797,6 +801,17 @@ export function App({ project: initialProject }: AppProps) {
           } => candidate.polyline !== null,
         ),
     [document, resolver],
+  );
+  const highlightedNet = useMemo(
+    () =>
+      highlightedNetId
+        ? computeNetHighlight(
+            projectConnectivityIndex,
+            document.id,
+            highlightedNetId,
+          )
+        : undefined,
+    [document.id, highlightedNetId, projectConnectivityIndex],
   );
 
   const textEditingTarget = textEditing
@@ -4791,11 +4806,17 @@ export function App({ project: initialProject }: AppProps) {
         resetSelection();
         break;
       case "net":
+        setHighlightedNetId(locator.objectId);
         resetSelection();
         break;
     }
     closeSearch();
     setStatus(`Selected ${locator.kind} ${locator.objectId}`);
+  }
+
+  function highlightNet(netId: string): void {
+    setHighlightedNetId(netId);
+    setStatus(`Highlighted Net ${netId}`);
   }
 
   return (
@@ -5708,6 +5729,12 @@ export function App({ project: initialProject }: AppProps) {
                 <button type="button" onClick={addCurrentArrow}>
                   Add current arrow
                 </button>
+                <button
+                  type="button"
+                  onClick={() => highlightNet(selectedRoute!.netId)}
+                >
+                  Highlight Net
+                </button>
                 <button type="button" onClick={deleteSelectedRouteConnection}>
                   Delete wire
                 </button>
@@ -6005,6 +6032,35 @@ export function App({ project: initialProject }: AppProps) {
             fill="url(#grid)"
           />
           <g dangerouslySetInnerHTML={{ __html: scene.formalBody }} />
+          {highlightedNet ? (
+            <g
+              data-testid="net-highlight-overlay"
+              data-net-id={highlightedNet.netId}
+              className="net-highlight-overlay"
+              pointerEvents="none"
+            >
+              {routePolylines
+                .filter(({ route }) => highlightedNet.routes.includes(route.id))
+                .map(({ route, polyline }) => (
+                  <polyline
+                    key={route.id}
+                    points={serializePolylinePoints(polyline.points)}
+                  />
+                ))}
+              {document.junctions
+                .filter((junction) =>
+                  highlightedNet.junctions.includes(junction.id),
+                )
+                .map((junction) => (
+                  <circle
+                    key={junction.id}
+                    cx={junction.position.x}
+                    cy={junction.position.y}
+                    r="4.5"
+                  />
+                ))}
+            </g>
+          ) : null}
           {copyPreviewScene ? (
             <g
               data-testid="copy-placement-preview"

@@ -4915,3 +4915,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): add Ctrl+F project search`.
+
+## 2026-08-12 - Connectivity Recovery C7b: current-document Net highlight
+
+- Target: surface C4 indexed Net membership in a non-mutating editor overlay,
+  without claiming cross-Cell rendering/navigation.
+- Changed areas: App highlight state/overlay and styles; focused E2E; target
+  plan and log.
+- Validation: workspace `pnpm typecheck`; two focused Playwright search and
+  highlight flows; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): highlight current-document Net membership`.

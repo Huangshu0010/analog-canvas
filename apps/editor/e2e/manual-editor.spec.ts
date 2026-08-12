@@ -1463,3 +1463,21 @@ test("opens project search with Ctrl+F and selects a matching component", async 
   );
   await expect(page.getByTestId("project-search-input")).toHaveCount(0);
 });
+
+test("highlights the complete current-document Net from a selected route", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 380, y: 260 });
+  await placeComponent(page, "resistor", { x: 600, y: 260 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await clickRoute(page, "route-ui-1");
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Highlight Net" }).click();
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
+    "data-net-id",
+    "net-ui-1",
+  );
+});
