@@ -1,5 +1,14 @@
 # Maintenance Log
 
+## 2026-08-12 - Capacitor user refinement
+
+- Target: apply the requested 10% plate-length and 20% center-spacing increase
+  to the integrated Razavi capacitor.
+- Changed areas: capacitor Symbol DSL and regenerated catalog; target record.
+- Validation: Razavi catalog generation/check; Symbols build; `git diff --check`.
+- Commit status: ready to commit on `codex/vdd-drawn-rail` as
+  `fix(symbols): expand capacitor plates and spacing`.
+
 ## 2026-08-12 - Capacitor calibration integration
 
 - Target: include the separately reviewed capacitor plate calibration in the
