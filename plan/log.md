@@ -5700,3 +5700,16 @@ contracts (WP-R1)`.
   deployed review environment (WP-WA7).
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `feat(editor): Connect Agent authorization panel (WP-WA5)`.
+
+## 2026-08-12 - WP-WA6 external web-session client contract
+
+- Target: publish the public contract an external Agent uses over HTTPS without
+  MCP or repository imports.
+- Changed areas: `docs/agent/api-usage.md` (web-session example + transport
+  failure catalog); `docs/agent/README.md` link; `packages/agent-adapter/src/openapi.ts`
+  transport paths + schemas; regenerated `fixtures/agent-api/agent-circuit.openapi.json`.
+- Validation: `agent-api:artifacts:check` after rebuild; `references:check`;
+  workspace `typecheck` clean; Prettier; `git diff --check` clean.
+- Limitation: end-to-end external HTTP test needs the deployed relay (WP-WA7).
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `docs(agent): external web-session client contract (WP-WA6)`.

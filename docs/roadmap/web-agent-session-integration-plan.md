@@ -404,6 +404,10 @@ transport require a deployed review environment (WP-WA7).
 
 ### WP-WA6 — Agent client package and usage contract
 
+Status: `complete` — `docs/agent/api-usage.md` web-session example + transport
+error catalog; `agentCircuitOpenApi` extended with transport paths; artifact
+regenerated.
+
 - Goal: Make ordinary external Agents easy to connect without MCP by publishing
   a small OpenAPI document, examples, and optional zero-magic CLI/TypeScript
   client for claim, capabilities, Snapshot, transact, render, and events.

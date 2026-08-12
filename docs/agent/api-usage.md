@@ -60,6 +60,53 @@ Do not place tokens in Project files, prompts, source netlists, or committed
 configuration. Stop the listener when the Agent session ends. The request path
 and body API version must match.
 
+## Web session example (published editor)
+
+The published browser editor exposes the same Circuit API over a browser-
+authorized relay (ADR 0016). The human clicks **Connect Agent**, grants a
+scoped preset, and gives the Agent a one-time claim code. The Agent never needs
+repository source — only this document and the claim code.
+
+1. **Redeem the claim** (single-use, short expiry):
+
+   ```http
+   POST /api/agent/claims/{claimCode} HTTP/1.1
+   Content-Type: application/json
+
+   {}
+   ```
+
+   On success the response carries a scoped `agentToken` (bearer) and its expiry.
+   A claim is consumed once; reuse returns `CLAIM_ALREADY_USED`.
+
+2. **Call the Circuit API** through the session. The body is the same Circuit
+   request schema as the loopback adapter; the relay forwards it to the live
+   browser editor without interpreting it:
+
+   ```http
+   POST /api/agent/sessions/{sessionId}/circuit HTTP/1.1
+   Authorization: Bearer AGENT_TOKEN
+   Content-Type: application/json
+
+   {"apiVersion":"2.0","requestId":"cap-1","operation":"capabilities"}
+   ```
+
+   Then `snapshot`, `transact` (with the Snapshot revision as `expectedRevision`,
+   dry-run first when useful), and `render` exactly as in the recommended v2
+   lifecycle. Every request carries a unique `requestId`; the relay caches each
+   completed result, so a retry after a lost response returns the same terminal
+   result and never reapplies the edit.
+
+3. **Stream events** (`GET /api/agent/sessions/{id}/events`, SSE) for
+   `editor.online`/`editor.offline`, `document.revision-changed`,
+   `operation.started`/`completed`/`failed`, and the terminal
+   `document.replaced`/`session.*` events.
+
+The browser must remain open and online; closing the tab or revoking access ends
+the session. Open/Import/Restore replaces the Project and emits
+`document.replaced`; the old token cannot read or edit the new Project — request
+a new authorized session.
+
 ## Failure handling
 
 - `INVALID_REQUEST`: repair the payload against the checked schema.
@@ -72,6 +119,23 @@ and body API version must match.
 - `EDIT_PRECONDITION`: preserve current state and explain the rejected
   assumption, including lock or pin-map conflicts.
 - `RENDER_TOO_LARGE`: request smaller render bounds.
+
+Web-session transport errors (published editor only):
+
+- `CLAIM_INVALID` / `CLAIM_EXPIRED` / `CLAIM_ALREADY_USED`: ask the human for a
+  fresh claim code; a claim is one-time and short-lived.
+- `TOKEN_INVALID` / `TOKEN_EXPIRED`: redeem a new claim within the session
+  lifetime.
+- `TOKEN_SCOPE_INSUFFICIENT`: do not retry the same operation; request broader
+  scope from the human.
+- `SESSION_PAUSED`: wait for `session.ready`; the human paused the session.
+- `SESSION_REVOKED` / `SESSION_EXPIRED` / `PROJECT_REPLACED`: terminal; stop and
+  request a new authorized session.
+- `EDITOR_OFFLINE`: the browser tab is absent; wait for `editor.online` and do
+  not blind-retry an unknown write. After reconnect, a repeated `requestId`
+  resolves whether a transaction committed.
+- `RATE_LIMITED`: back off and retry, respecting `Retry-After` when present.
+- `REQUEST_TOO_LARGE`: shrink the payload; the relay enforces a hard ceiling.
 
 No error authorizes filesystem access, raw Project replacement, or a fallback
 mutation mechanism.
