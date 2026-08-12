@@ -5128,3 +5128,13 @@ contracts (WP-R1)`.
   `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): unify ERC and visual diagnostics`.
+
+## 2026-08-12 - Connectivity Recovery C3g: Agent resolved geometry reads
+
+- Target: migrate Agent snapshot, resolved-route response and region query
+  reads to document-level resolved routing geometry without schema changes.
+- Changed areas: Agent read consumers and parity tests; target plan and log.
+- Validation: 21 focused Agent snapshot/service tests; workspace
+  `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(agent): consume resolved route geometry`.

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { executeTransaction } from "@icm/edit-engine";
+import { resolveDocumentRoutingGeometry } from "@icm/derived";
 import { createEmptyDocument, parseProject } from "@icm/model";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
@@ -654,6 +655,12 @@ describe("Agent Circuit API v1 service", () => {
       (entry) => entry.routeId === "route-vinp",
     );
     expect(resolved).toBeDefined();
+    expect(resolved!.polyline).toEqual(
+      resolveDocumentRoutingGeometry(
+        fixture.getDocument(),
+        resolver,
+      ).routes.get("route-vinp")?.centerline,
+    );
     expect(resolved!.polyline.length).toBeGreaterThanOrEqual(2);
     // The polyline is orthogonal and its endpoints match the resolved port
     // and terminal, not necessarily the raw waypoint the Agent sent.
