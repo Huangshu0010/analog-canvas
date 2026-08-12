@@ -5549,6 +5549,7 @@ contracts (WP-R1)`.
   workflow; `git diff --check` clean.
 - Commit status: merge commit `842d889` created locally; refreshed PR branch
   pending push and required CI checks.
+
 # 2026-08-12 - Razavi capacitor plate calibration
 
 - Target: calibrate capacitor plate geometry to its registered Razavi raster
