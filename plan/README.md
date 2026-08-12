@@ -58,6 +58,10 @@ Moving a plan does not authorize rewriting its historical content.
 Failed, blocked, unresolved, proposed-only, superseded-before-implementation,
 pending, and active plans remain visible in the plan root.
 
+[`root-audit.md`](root-audit.md) is the concise current queue for root plans
+that are not yet eligible for archival. Update it when a plan's state changes;
+do not treat an old directory's date as evidence that it is complete.
+
 ## Experience Extraction
 
 Experience extraction is a human decision, not automatic target close-out. A

@@ -57,6 +57,14 @@ Current rules live in `AGENTS.md`, `plan/README.md`, accepted specs, and ADRs.
 `2026-08-07-execute-phase-8` were intentionally excluded because their plans
 contain experience signals awaiting an explicit human decision.
 
+## 2026-08 lifecycle sweep
+
+On 2026-08-13, 136 current-format targets with `status: completed`,
+`experience: none`, recorded outcomes, and Git history were moved from the
+root into `2026-08/` without changing their bodies. The root retention queue
+and the plans needing a human experience decision are recorded in
+[`../root-audit.md`](../root-audit.md).
+
 ## 2026-08 completed second batch
 
 These legacy plans have recorded outcomes and commit evidence. They have no

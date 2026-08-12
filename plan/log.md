@@ -5809,3 +5809,17 @@ contracts (WP-R1)`.
 - Commit status: ready to commit and push on
   `codex/web-agent-session-architecture` as
   `feat(agent): connect browser-authorized sessions end to end`.
+
+## 2026-08-13 - Plan lifecycle hygiene
+
+- Target: reduce the root planning surface without rewriting history or
+  discarding unresolved work.
+- Changed areas: moved 136 resolved completed target directories to
+  `plan/archived/2026-08/`; added the root retention audit and archival batch
+  index; linked the current queue from `plan/README.md`.
+- Validation: every moved plan has current `completed`/`none` metadata, an
+  Outcome section, and Git history; active, candidate, superseded, proposed,
+  and metadata-missing plans remained in the root. This target remains until
+  its own commit; `git diff --check` passed.
+- Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
+  `docs(plan): archive resolved completed targets`.
