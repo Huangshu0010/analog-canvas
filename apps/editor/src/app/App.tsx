@@ -721,6 +721,9 @@ export function App({ project: initialProject }: AppProps) {
         (annotation) => annotation.id === selectedAnnotationId,
       )
     : undefined;
+  const selectedNetLabelBinding = selectedAnnotation
+    ? resolveNetLabelBinding(document, resolver, selectedAnnotation)
+    : null;
   const selectedDrafting = selectedDraftingId
     ? document.drafting?.objects.find(
         (object) => object.id === selectedDraftingId,
@@ -767,6 +770,11 @@ export function App({ project: initialProject }: AppProps) {
   const selectedEndpointNetId = selectedEndpoint
     ? endpointNetId(document, selectedEndpoint.endpoint)
     : null;
+  const selectedHighlightNetId =
+    selectedRoute?.netId ??
+    selectedEndpointNetId ??
+    selectedNetLabelBinding?.netId ??
+    null;
   const flightlines = useMemo(
     () =>
       document.nets.flatMap(
@@ -4903,7 +4911,7 @@ export function App({ project: initialProject }: AppProps) {
         hasDraftingSelection: Boolean(selectedDrafting),
         hasInspectableSelection,
         hasRouteSelection: Boolean(selectedRoute),
-        hasHighlightableNet: Boolean(selectedRoute || selectedEndpointNetId),
+        hasHighlightableNet: selectedHighlightNetId !== null,
         wireSessionActive: Boolean(wireSource),
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
         draftingReadyToFinish:
@@ -5104,9 +5112,11 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function toggleHighlightedNet(): void {
-    const netId = selectedRoute?.netId ?? selectedEndpointNetId;
+    const netId = selectedHighlightNetId;
     if (!netId) {
-      setStatus("Select a wire or connected pin before highlighting a Net");
+      setStatus(
+        "Select a wire, connected pin, or Net Label before highlighting a Net",
+      );
       return;
     }
     if (
@@ -6130,6 +6140,13 @@ export function App({ project: initialProject }: AppProps) {
                 aria-label="Annotation actions"
               >
                 <h2>Annotation</h2>
+                {selectedNetLabelBinding ? (
+                  <button type="button" onClick={toggleHighlightedNet}>
+                    {highlightedNetId === selectedNetLabelBinding.netId
+                      ? "Clear Net highlight (H)"
+                      : "Highlight Net (H)"}
+                  </button>
+                ) : null}
                 <button type="button" onClick={deleteSelectedAnnotation}>
                   {selectedAnnotation.kind === "net-label"
                     ? "Delete selected Net label"

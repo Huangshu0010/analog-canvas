@@ -5371,3 +5371,14 @@ contracts (WP-R1)`.
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `fix(connectivity): unify Net label binding semantics`.
+
+## 2026-08-12 - Net Label highlight alignment
+
+- Target: make the unified Net-id Label binding participate in the same full
+  Net highlight interaction as Route and endpoint selection.
+- Changed areas: editor highlight-selection adapter and annotation action;
+  focused Label/Route browser regression; target plan.
+- Validation: three focused browser flows; workspace typecheck; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): align Net Label highlight selection`.

@@ -1300,6 +1300,16 @@ test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
     "annotation-hit-imported-label-horizontal",
   );
   await importedLabel.click();
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
+    "data-net-id",
+    "net-h",
+  );
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-core"),
+  ).toHaveCount(1);
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
   await page.keyboard.press("Delete");
   await expect(importedLabel).toHaveCount(0);
   await page.keyboard.press("Control+z");
