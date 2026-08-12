@@ -94,6 +94,26 @@ Before considering a target complete:
    candidate under `docs/experience/` with supporting evidence for the human
    to accept, edit, or reject.
 
+## Mainline Delivery Gate
+
+Focused validation is the normal development loop. It is not sufficient by
+itself to deliver a non-document change to `main`.
+
+Before a non-document change is merged or pushed to `main`:
+
+1. Start the canonical CI check from a clean dependency/build state:
+   `pnpm install --frozen-lockfile` followed by `pnpm ci:check`.
+2. Push a review branch and wait for the corresponding GitHub Actions required
+   checks to finish successfully.
+3. If a remote check fails, keep the target active: inspect its log, repair the
+   reported cause, and repeat verification. A successful `git push` is not a
+   completed delivery.
+
+Do not bypass the gate by weakening, skipping, or deleting a failing check.
+When a test or golden is obsolete, demonstrate that the accepted behavior is
+preserved and update the contract deliberately. If the check cannot run in the
+local environment, record the limitation and require the remote green result.
+
 ## Plan-Log-Experience Mainline
 
 The automatic per-target loop is:
