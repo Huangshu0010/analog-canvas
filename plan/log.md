@@ -4782,3 +4782,16 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   (120 tests, was 112); `prettier --check` on new file; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `test(derived): add old/new deletion-gate parity tests (WP-R10)`.
+
+## 2026-08-12 - Connectivity Recovery C0: status and contract reconciliation
+
+- Target: reconcile the accepted connectivity/routing roadmap with actual
+  additive-prototype delivery; preserve history while making incomplete exit
+  conditions explicit.
+- Changed areas: roadmap status matrix and C0–C10 recovery waves; ADR 0013–0015
+  amendments for staged index/cache, route-geometry/remap, and canonical
+  locator/diagnostic ownership; target plan and this log.
+- Validation: reviewed cross-references and ran `git diff --check`; no runtime
+  or schema behavior changed.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): reconcile connectivity delivery status`.

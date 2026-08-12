@@ -111,6 +111,32 @@ interface HitSegment {
    `route-anchor-miter-bridge` private paths are deleted only after the SVG/PNG
    golden and a pixel seam regression pass against `endpointJoins`.
 
+## Amendment — 2026-08-12 recovery semantics
+
+The initial additive implementation supplies useful centerline and bridge
+ingredients, but does not yet implement the frozen interface as written. In
+particular, an array `index` is **not** stable across split, insertion,
+normalization, or stretch. It is only a revision-scoped positional index and
+must not be used as a persistent attachment identity.
+
+C3 shall replace that ambiguity with a revision-scoped `SegmentRef` and an
+explicit edit/planner-produced `AttachmentRemap`. The remap belongs to the
+operation that changes a stored Route; a pure resolver cannot reconstruct every
+semantic split after the fact. Marker, hit and drag consumers remain on their
+compatibility paths until that contract is implemented and migrated.
+
+`EndpointJoin` is also a raw geometry recipe (`at` and incident directions),
+not a profile-specific SVG `path`: stroke overlap is resolved by the renderer's
+active style profile. Route-anchor joins are document-level facts, therefore
+the final C3 result is a document routing-geometry aggregate containing both
+per-route geometry and cross-route joins. The resolver is pure over the
+Document and SymbolResolver; C4 may then expose its results through ADR 0013's
+index without creating a geometry-to-index dependency cycle.
+
+Accordingly, the dual-compute assertion and consumer migration listed below
+are C3/C10 exit conditions, not properties already guaranteed by the current
+prototype.
+
 ## Alternatives considered
 
 ### Alternative A — leave bridges in the renderer

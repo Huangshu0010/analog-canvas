@@ -130,6 +130,26 @@ Cell undo histories are preserved across navigation.
   locator is added by the adapter when binding is available, and omitted
   (source-only) otherwise.
 
+## Amendment — 2026-08-12 recovery ownership
+
+The frozen `ObjectLocator`, `HierarchyFrame`, and `Diagnostic` shapes are the
+only public protocol. Before C1, the repository contains provisional
+`IndexObjectLocator`, project-search `ObjectLocator`, and `ErcLocator` shapes;
+they are implementation debt, not permitted alternative protocols. No new
+consumer may introduce another locator or diagnostic-envelope type.
+
+C1 creates `packages/derived/src/object-locator.ts` and
+`packages/derived/src/diagnostics/diagnostic.ts` as the canonical declarations.
+Index, search and ERC import those declarations directly (or receive a
+compatibility re-export); all direct-document locators still carry
+`hierarchyPath: []`. `HierarchyFrame` becomes operational with the editor's
+`navigateTo()` work in C6, rather than being claimed complete merely because a
+backend type exists.
+
+The diagnostic envelope is independent of ERC: ERC, visual/routing and SPICE
+adapters share it, but the public diagnostic type must not import an ERC-only
+type. This preserves the domain boundary and prevents an adapter cycle.
+
 ## Alternatives considered
 
 ### Alternative A — Document-scoped ids only
