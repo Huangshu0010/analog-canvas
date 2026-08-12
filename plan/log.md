@@ -4648,3 +4648,18 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `docs(adr): freeze connectivity index, resolved geometry, and locator
   contracts (WP-R1)`.
+
+## 2026-08-12 - WP-R2 Additive Project Connectivity Index
+
+- Target: implement the unified read-only `ProjectConnectivityIndex` (ADR 0013)
+  additively as a facade over existing `derive*` primitives, with partition-
+  invariant flightline normalization, typed virtual edges, hierarchy edges, and
+  a project object index. No production consumer switch.
+- Changed areas: new `packages/derived/src/connectivity-index.ts` and
+  `connectivity-index.test.ts` (9 tests); `packages/derived/src/index.ts`
+  re-export; target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (85 tests, was 76); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add ProjectConnectivityIndex with flightline normalization
+  (WP-R2)`.

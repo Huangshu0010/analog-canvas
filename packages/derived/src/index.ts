@@ -1,5 +1,6 @@
 export * from "./anchor.js";
 export * from "./connectivity.js";
+export * from "./connectivity-index.js";
 export * from "./drafting-geometry.js";
 export * from "./endpoint.js";
 export * from "./instance-label-placement.js";
