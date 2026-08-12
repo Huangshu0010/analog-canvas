@@ -232,4 +232,49 @@ describe("ERC engine", () => {
       diagnostics.some((item) => item.code === "ERC_NO_CONNECT_CONFLICT"),
     ).toBe(true);
   });
+
+  it("reports unresolved symbols instead of silently skipping their pins", () => {
+    const project = emptyProject();
+    project.documents[0]!.instances = [
+      { ...instance("I1"), symbolId: "missing-symbol" },
+    ];
+    const diagnostics = run(project);
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "ERC_UNRESOLVED_SYMBOL",
+        primary: expect.objectContaining({ objectId: "I1" }),
+      }),
+    );
+  });
+
+  it("reports a missing hierarchy target and child interface mismatch", () => {
+    const project = emptyProject();
+    const parent = project.documents[0]!;
+    parent.instances = [
+      {
+        ...instance("X1"),
+        properties: { "spice.childDocumentId": "child" },
+      },
+    ];
+    expect(codes(project)).toContain("ERC_HIERARCHY_TARGET_MISSING");
+
+    const child = createEmptyProject("child-project", "Child", "child")
+      .documents[0]!;
+    child.ports = [
+      {
+        id: "port-a",
+        name: "A",
+        direction: "passive",
+        position: { x: 0, y: 0 },
+      },
+    ];
+    project.documents.push(child);
+    const diagnostics = run(project);
+    expect(diagnostics.map((item) => item.code)).toEqual(
+      expect.arrayContaining([
+        "ERC_PORT_COUNT_MISMATCH",
+        "ERC_PORT_NAME_MISMATCH",
+      ]),
+    );
+  });
 });

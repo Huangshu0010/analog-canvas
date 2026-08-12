@@ -4883,3 +4883,13 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): add bidirectional hierarchy Net trace`.
+
+## 2026-08-12 - Connectivity Recovery C8a: ERC symbol and hierarchy interface
+
+- Target: add only deterministic resolver/model hierarchy checks without
+  inferring missing foundry-model or pin-role semantics.
+- Changed areas: derived ERC and tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 18 focused ERC/index tests; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): diagnose symbols and hierarchy interface mismatches`.

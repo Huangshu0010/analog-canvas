@@ -60,6 +60,100 @@ export function runErcChecks(
       document.noConnects.map((noConnect) => noConnectKey(noConnect.endpoint)),
     );
 
+    // ERC_UNRESOLVED_SYMBOL and hierarchy interface checks. These run before
+    // pin connectivity checks so unknown symbols never get silently skipped.
+    for (const instance of document.instances) {
+      const resolved = resolver.resolve(
+        instance.symbolId,
+        instance.symbolVariantId,
+      );
+      if (!resolved) {
+        diagnostics.push({
+          id: `erc:unresolved-symbol:${document.id}:${instance.id}`,
+          domain: "erc",
+          code: "ERC_UNRESOLVED_SYMBOL",
+          severity: "error",
+          confidence: "high",
+          gateEligible: true,
+          message: `Instance ${instance.id} references unresolved symbol ${instance.symbolId}`,
+          primary: directObjectLocator(document.id, "instance", instance.id),
+          related: [],
+          parameters: { instanceId: instance.id, symbolId: instance.symbolId },
+        });
+      }
+
+      const childDocumentId = instance.properties["spice.childDocumentId"];
+      if (typeof childDocumentId !== "string") continue;
+      const child = project.documents.find(
+        (candidate) => candidate.id === childDocumentId,
+      );
+      if (!child) {
+        diagnostics.push({
+          id: `erc:hierarchy-target-missing:${document.id}:${instance.id}`,
+          domain: "erc",
+          code: "ERC_HIERARCHY_TARGET_MISSING",
+          severity: "error",
+          confidence: "high",
+          gateEligible: true,
+          message: `Instance ${instance.id} references missing child document ${childDocumentId}`,
+          primary: directObjectLocator(document.id, "instance", instance.id),
+          related: [],
+          parameters: { instanceId: instance.id, childDocumentId },
+        });
+        continue;
+      }
+      if (!resolved) continue;
+      const pinNames = new Set(resolved.definition.pins.map((pin) => pin.name));
+      const childPortNames = new Set(child.ports.map((port) => port.name));
+      if (pinNames.size !== childPortNames.size) {
+        diagnostics.push({
+          id: `erc:port-count-mismatch:${document.id}:${instance.id}`,
+          domain: "erc",
+          code: "ERC_PORT_COUNT_MISMATCH",
+          severity: "error",
+          confidence: "high",
+          gateEligible: true,
+          message: `Instance ${instance.id} has ${pinNames.size} symbol pins but child document ${child.id} has ${childPortNames.size} ports`,
+          primary: directObjectLocator(document.id, "instance", instance.id),
+          related: child.ports.map((port) =>
+            directObjectLocator(child.id, "port", port.id),
+          ),
+          parameters: {
+            instanceId: instance.id,
+            pinCount: pinNames.size,
+            portCount: childPortNames.size,
+          },
+        });
+      }
+      const mismatchedPorts = child.ports.filter(
+        (port) => !pinNames.has(port.name),
+      );
+      const unmatchedPins = resolved.definition.pins.filter(
+        (pin) => !childPortNames.has(pin.name),
+      );
+      if (mismatchedPorts.length > 0 || unmatchedPins.length > 0) {
+        diagnostics.push({
+          id: `erc:port-name-mismatch:${document.id}:${instance.id}`,
+          domain: "erc",
+          code: "ERC_PORT_NAME_MISMATCH",
+          severity: "error",
+          confidence: "high",
+          gateEligible: true,
+          message: `Instance ${instance.id} symbol pins do not match child document ${child.id} port names`,
+          primary: directObjectLocator(document.id, "instance", instance.id),
+          related: mismatchedPorts.map((port) =>
+            directObjectLocator(child.id, "port", port.id),
+          ),
+          parameters: {
+            instanceId: instance.id,
+            childDocumentId: child.id,
+            unmatchedPortCount: mismatchedPorts.length,
+            unmatchedPinCount: unmatchedPins.length,
+          },
+        });
+      }
+    }
+
     // ERC_DUPLICATE_INSTANCE_NAME
     const instancesByName = new Map<string, string[]>();
     for (const instance of document.instances) {
