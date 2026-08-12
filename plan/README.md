@@ -62,6 +62,22 @@ pending, and active plans remain visible in the plan root.
 that are not yet eligible for archival. Update it when a plan's state changes;
 do not treat an old directory's date as evidence that it is complete.
 
+## Routine Record Retention
+
+An archived plan may be deleted only when all of the following are true:
+
+1. `status: completed` and `experience: none` are explicit;
+2. its Outcome and Git history establish the completed work;
+3. `plan/log.md` contains the factual target, changed-area, validation, and
+   commit record; and
+4. it is a routine micro-target, not an architecture/ADR, schema or migration,
+   release or CI, deployment, cross-branch integration, active coordination,
+   or unresolved-decision record.
+
+Deletion removes redundant prose, not evidence: Git and the factual log remain
+the retention surface. Never delete a plan with an unresolved experience signal
+or state.
+
 ## Experience Extraction
 
 Experience extraction is a human decision, not automatic target close-out. A

@@ -5823,3 +5823,16 @@ contracts (WP-R1)`.
   its own commit; `git diff --check` passed.
 - Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
   `docs(plan): archive resolved completed targets`.
+
+## 2026-08-13 - Routine plan record retention
+
+- Target: remove redundant archived micro-plan prose while retaining factual
+  evidence in Git and this log.
+- Changed areas: deleted 14 resolved visual-calibration, naming, and narrow
+  geometry-fix plan records; documented the deletion eligibility rule.
+- Validation: every deleted plan had `completed`/`none` metadata, Outcome, Git
+  history, and a matching log entry; no active, candidate, legacy, migration,
+  delivery, integration, or web-agent record was selected; `git diff --check`
+  passed.
+- Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
+  `docs(plan): prune routine completed records`.

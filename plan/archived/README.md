@@ -65,6 +65,12 @@ root into `2026-08/` without changing their bodies. The root retention queue
 and the plans needing a human experience decision are recorded in
 [`../root-audit.md`](../root-audit.md).
 
+Later on 2026-08-13, 14 routine visual-calibration, naming, and narrow
+geometry-fix plan bodies were deleted under the retention rule in
+[`../README.md`](../README.md). Their factual log entries and Git history
+remain available; architecture, migration, delivery, integration, and
+unresolved records were retained.
+
 ## 2026-08 completed second batch
 
 These legacy plans have recorded outcomes and commit evidence. They have no
