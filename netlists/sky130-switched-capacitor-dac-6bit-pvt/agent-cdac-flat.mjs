@@ -27,7 +27,7 @@ const RESET_Y = 90;
 
 function annotation(input) {
   return {
-    kind: "upsert_annotation",
+    kind: "upsert_schematic_annotation",
     annotation: {
       offset: { x: 0, y: 0 },
       rotation: 0,

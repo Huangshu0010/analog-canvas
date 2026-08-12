@@ -75,7 +75,7 @@ export function resolveTextEditingTarget(
 
 export function textDeletionEdit(session: TextEditingSession): SchematicEdit {
   return session.owner === "annotation"
-    ? { kind: "remove_annotation", annotationId: session.id }
+    ? { kind: "remove_schematic_annotation", annotationId: session.id }
     : { kind: "remove_drafting_object", objectId: session.id };
 }
 
@@ -124,7 +124,7 @@ export function proposeTextEditingCommit(
     }
     return {
       kind: "update",
-      edit: { kind: "upsert_annotation", annotation: next },
+      edit: { kind: "upsert_schematic_annotation", annotation: next },
       id: annotation.id,
     };
   }

@@ -628,7 +628,7 @@ place_instance / move_instance / set_instance_symbol
 place_port / move_port
 set_route_points / add_junction / remove_junction
 connect_endpoints / disconnect_endpoint / merge_nets
-upsert_annotation / set_layout_group / set_layout_constraint
+upsert_schematic_annotation / set_layout_group / set_layout_constraint
 ```
 
 每个 transaction 携带 `documentId`、`expectedRevision`、`transactionId` 和

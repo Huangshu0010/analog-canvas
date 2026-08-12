@@ -241,8 +241,10 @@ describe("expandRouteGraph", () => {
     });
     const result = expandRouteGraph(graph, input([]));
     expect(result.conflicts).toEqual([]);
-    const ann = result.edits.find((e) => e.kind === "upsert_annotation")!;
-    if (ann.kind !== "upsert_annotation") return;
+    const ann = result.edits.find(
+      (e) => e.kind === "upsert_schematic_annotation",
+    )!;
+    if (ann.kind !== "upsert_schematic_annotation") return;
     expect(ann.annotation.kind).toBe("net-label");
     expect(ann.annotation.text).toBe("VOUT");
     expect(ann.annotation.attachedObjectId).toBe("net-1");

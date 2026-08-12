@@ -2277,7 +2277,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         styleProfile,
       );
       if (!annotation) return;
-      const result = transact([{ kind: "upsert_annotation", annotation }]);
+      const result = transact([
+        { kind: "upsert_schematic_annotation", annotation },
+      ]);
       if (result.ok) {
         selectOnly("annotation", [annotation.id]);
         setStatus(`Selected label ${annotation.id}; drag again to move`);
@@ -2300,7 +2302,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       styleProfile,
     );
     if (!annotation) return;
-    const result = transact([{ kind: "upsert_annotation", annotation }]);
+    const result = transact([
+      { kind: "upsert_schematic_annotation", annotation },
+    ]);
     if (result.ok) beginAnnotationTextEditing(annotation);
   }
 
@@ -2314,7 +2318,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (!annotation) return;
     transact([
       {
-        kind: "upsert_annotation",
+        kind: "upsert_schematic_annotation",
         annotation: draggedAnnotationAtPosition(annotation, position),
       },
     ]);
@@ -2763,12 +2767,17 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       ...standalonePower.edits,
       ...bulkEdits,
       ...(instanceLabel
-        ? [{ kind: "upsert_annotation" as const, annotation: instanceLabel }]
+        ? [
+            {
+              kind: "upsert_schematic_annotation" as const,
+              annotation: instanceLabel,
+            },
+          ]
         : []),
       ...(symbolId === "vdd"
         ? [
             {
-              kind: "upsert_annotation" as const,
+              kind: "upsert_schematic_annotation" as const,
               annotation: {
                 id: `label-${id}`,
                 kind: "power-label" as const,
@@ -3749,7 +3758,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (!name) {
       if (existingLabel) {
         const result = transact([
-          { kind: "remove_annotation", annotationId: existingLabel.id },
+          {
+            kind: "remove_schematic_annotation",
+            annotationId: existingLabel.id,
+          },
         ]);
         if (result.ok) {
           replaceSelectionKind("annotation", []);
@@ -3785,7 +3797,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         ]
       : [{ kind: "set_net_name", netId: net.id, name }];
     edits.push({
-      kind: "upsert_annotation",
+      kind: "upsert_schematic_annotation",
       annotation: {
         id: labelId,
         kind: "net-label",
@@ -3821,7 +3833,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     const result = transact([
-      { kind: "remove_annotation", annotationId: label.id },
+      { kind: "remove_schematic_annotation", annotationId: label.id },
     ]);
     if (result.ok) {
       replaceSelectionKind("annotation", []);
@@ -4009,7 +4021,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function deleteSelectedAnnotation(): void {
     if (!selectedAnnotation) return;
     const result = transact([
-      { kind: "remove_annotation", annotationId: selectedAnnotation.id },
+      {
+        kind: "remove_schematic_annotation",
+        annotationId: selectedAnnotation.id,
+      },
     ]);
     if (result.ok) replaceSelectionKind("annotation", []);
   }
@@ -4033,7 +4048,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       : undefined;
     const result = transact([
       {
-        kind: "upsert_annotation",
+        kind: "upsert_schematic_annotation",
         annotation: {
           ...selectedAnnotation,
           ...(anchor ? { anchor } : {}),
@@ -4752,7 +4767,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             : [];
         // Instance deletion already removes every annotation attached to the
         // instance. A marquee can select both visual objects, but emitting the
-        // same remove_annotation edit twice makes the second operation fail
+        // same remove_schematic_annotation edit twice makes the second
+        // operation fail
         // with OBJECT_NOT_FOUND and rolls back the whole transaction.
         const explicitAnnotationIds = explicitAnnotationRemovals(
           document,
@@ -4763,7 +4779,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           ...instanceEdits,
           ...visualRouteDeletion.edits,
           ...explicitAnnotationIds.map((annotationId): SchematicEdit => ({
-            kind: "remove_annotation",
+            kind: "remove_schematic_annotation",
             annotationId,
           })),
           ...[...selectedDraftingIds].map((objectId): SchematicEdit => ({

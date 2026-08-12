@@ -1,5 +1,21 @@
 # Maintenance Log
 
+## 2026-08-13 - Retire legacy annotation edit protocol
+
+- Target: keep only the explicit schematic-annotation edit protocol and reject
+  the earlier ambiguous edit names without compatibility.
+- Changed areas: Edit Engine schema/runtime, Agent capability and generated API
+  artifacts, editor/routing/recipe callers, fixtures, tests, and normative
+  protocol documentation.
+- Contract preservation: the current remove path now includes the layout-intent
+  reference protection that previously existed only in the legacy branch.
+- Validation: 68 focused cross-package tests plus 19 focused Edit Engine tests;
+  Agent API artifact check; typecheck; production build; formatting;
+  `git diff --check`; and absence audit outside explicit negative tests passed.
+- Commit status: prepared as
+  `refactor(api): retire legacy annotation edits` on
+  `codex/ci-contract-cleanup`.
+
 ## 2026-08-13 - Scope CI by changed surface
 
 - Target: keep required PR check names while avoiding release and browser work

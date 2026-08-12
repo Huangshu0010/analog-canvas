@@ -44,7 +44,7 @@ describe("drawn VDD rail construction", () => {
         segmentModes: ["manual"],
       },
       {
-        kind: "upsert_annotation",
+        kind: "upsert_schematic_annotation",
         annotation: {
           kind: "power-label",
           text: "VDD",
@@ -63,7 +63,7 @@ describe("drawn VDD rail construction", () => {
     }).at(-1);
 
     expect(label).toMatchObject({
-      kind: "upsert_annotation",
+      kind: "upsert_schematic_annotation",
       annotation: {
         attachedObjectId: "junction-vdd4-start",
         position: { x: 266, y: 45 },
