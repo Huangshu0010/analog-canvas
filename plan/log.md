@@ -4693,3 +4693,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(editor): extract route-tap resolver from App into wiring feature
   (WP-R4)`.
+
+## 2026-08-12 - WP-R5 Project Search Index (core)
+
+- Target: deterministic project search index (ADR 0015 locator backend) over
+  instances/nets/ports, exact > prefix > substring, no fuzzy ranking. Pure
+  backend; Ctrl+F UI and HierarchyFrame document-stack migration deferred to
+  R9/R10 (e2e-gated).
+- Changed areas: new `packages/derived/src/project-search.ts` and
+  `project-search.test.ts` (7 tests); `packages/derived/src/index.ts` re-export;
+  target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (99 tests, was 92); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add deterministic project search index (WP-R5)`.
