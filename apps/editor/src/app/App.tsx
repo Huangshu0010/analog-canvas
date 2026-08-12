@@ -6,6 +6,8 @@ import type {
 } from "react";
 
 import {
+  proposeLooseRouteTranslation,
+  proposeWireSegmentMove,
   proposeVisualRouteDeletion,
   type EditTransactionResult,
   type SchematicEdit,
@@ -1703,56 +1705,24 @@ export function App({ project: initialProject }: AppProps) {
           ),
         };
         if (delta.x !== 0 || delta.y !== 0) {
-          const junctionEdits = anchorIds.map((junctionId): SchematicEdit => {
-            const junction = document.junctions.find(
-              (candidate) => candidate.id === junctionId,
-            )!;
-            return {
-              kind: "move_junction",
-              junctionId,
-              position: {
-                x: junction.position.x + delta.x,
-                y: junction.position.y + delta.y,
-              },
-            };
-          });
-          const translatedPoints = record.polyline.points.map((routePoint) => ({
-            x: routePoint.x + delta.x,
-            y: routePoint.y + delta.y,
-          }));
-          const result = transact([
-            ...junctionEdits,
-            {
-              kind: "set_route_points",
-              routeId: record.route.id,
-              netId: record.route.netId,
-              from: record.route.from,
-              to: record.route.to,
-              waypoints: translatedPoints.slice(1, -1),
-              segmentModes: record.route.segmentModes,
-            },
-          ]);
+          const result = transact(
+            proposeLooseRouteTranslation(document, record.route.id, delta)
+              .edits,
+          );
           if (result.ok) setStatus(`Moved loose route ${record.route.id}`);
         }
       } else {
-        const proposal = moveRouteSegment(
-          record.polyline,
+        const proposal = proposeWireSegmentMove(
+          document,
+          resolver,
+          record.route.id,
           preview.segmentIndex,
           {
             x: snapCoordinate(point.x, document.presentation.grid),
             y: snapCoordinate(point.y, document.presentation.grid),
           },
         );
-        const result = transact([
-          {
-            kind: "set_route_points",
-            routeId: record.route.id,
-            netId: record.route.netId,
-            from: record.route.from,
-            to: record.route.to,
-            ...proposal,
-          },
-        ]);
+        const result = transact(proposal.edits);
         if (result.ok) setStatus(`Moved route segment ${record.route.id}`);
       }
     } catch (error) {

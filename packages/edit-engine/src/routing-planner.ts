@@ -1,5 +1,10 @@
-import { normalizeRouteGeometry, type SegmentMode } from "@icm/derived";
+import {
+  normalizeRouteGeometry,
+  proposeWireSegmentDrag,
+  type SegmentMode,
+} from "@icm/derived";
 import type { Point, RouteEndpoint, SchematicDocument } from "@icm/model";
+import type { SymbolResolver } from "@icm/symbols";
 
 import type { SchematicEdit } from "./transaction.js";
 
@@ -29,6 +34,142 @@ export interface VisualRouteDeletion {
   routeIds: string[];
   junctionIds: string[];
   edits: SchematicEdit[];
+}
+
+export interface WireManipulationProposal {
+  routeId: string;
+  edits: SchematicEdit[];
+}
+
+function routeEdits(
+  document: SchematicDocument,
+  routes: readonly {
+    routeId: string;
+    waypoints: Point[];
+    segmentModes: SegmentMode[];
+  }[],
+): SchematicEdit[] {
+  return routes.map((proposal) => {
+    const route = document.routes.find(
+      (candidate) => candidate.id === proposal.routeId,
+    );
+    if (!route) throw new Error(`Route not found: ${proposal.routeId}`);
+    return {
+      kind: "set_route_points" as const,
+      routeId: route.id,
+      netId: route.netId,
+      from: route.from,
+      to: route.to,
+      waypoints: proposal.waypoints,
+      segmentModes: proposal.segmentModes,
+    };
+  });
+}
+
+/** Plan one topology-preserving segment drag as typed transaction edits. */
+export function proposeWireSegmentMove(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  routeId: string,
+  segmentIndex: number,
+  target: Point,
+): WireManipulationProposal {
+  const proposal = proposeWireSegmentDrag(
+    document,
+    resolver,
+    routeId,
+    segmentIndex,
+    target,
+  );
+  return {
+    routeId,
+    edits: [
+      ...proposal.junctions.map((move): SchematicEdit => ({
+        kind: "move_junction",
+        ...move,
+      })),
+      ...routeEdits(document, proposal.routes),
+    ],
+  };
+}
+
+function looseRouteAnchorIds(
+  document: SchematicDocument,
+  route: SchematicDocument["routes"][number],
+): [string, string] | null {
+  if (
+    route.from.kind !== "junction" ||
+    route.to.kind !== "junction" ||
+    route.from.junctionId === route.to.junctionId
+  ) {
+    return null;
+  }
+  const isLoose = (junctionId: string) => {
+    const junction = document.junctions.find(
+      (candidate) => candidate.id === junctionId,
+    );
+    if (!junction) return false;
+    const degree = document.routes.filter(
+      (candidate) =>
+        (candidate.from.kind === "junction" &&
+          candidate.from.junctionId === junctionId) ||
+        (candidate.to.kind === "junction" &&
+          candidate.to.junctionId === junctionId),
+    ).length;
+    return (
+      junction.role === "route-anchor" ||
+      ((junction.role ?? "branch") === "branch" && degree === 1)
+    );
+  };
+  return isLoose(route.from.junctionId) && isLoose(route.to.junctionId)
+    ? [route.from.junctionId, route.to.junctionId]
+    : null;
+}
+
+/** Plan translation of an isolated loose route and its two endpoint anchors. */
+export function proposeLooseRouteTranslation(
+  document: SchematicDocument,
+  routeId: string,
+  delta: Point,
+): WireManipulationProposal {
+  const route = document.routes.find((candidate) => candidate.id === routeId);
+  if (!route) throw new Error(`Route not found: ${routeId}`);
+  const anchors = looseRouteAnchorIds(document, route);
+  if (!anchors) {
+    throw new Error("Only a route with two loose ends can move as a whole");
+  }
+  if (delta.x === 0 && delta.y === 0) return { routeId, edits: [] };
+  const anchorEdits = anchors.map((junctionId): SchematicEdit => {
+    const junction = document.junctions.find(
+      (candidate) => candidate.id === junctionId,
+    )!;
+    return {
+      kind: "move_junction",
+      junctionId,
+      position: {
+        x: junction.position.x + delta.x,
+        y: junction.position.y + delta.y,
+      },
+    };
+  });
+  return {
+    routeId,
+    edits: [
+      ...anchorEdits,
+      {
+        kind: "set_route_points",
+        routeId: route.id,
+        netId: route.netId,
+        from: route.from,
+        to: route.to,
+        waypoints: route.waypoints.map((point) => ({
+          x: point.x + delta.x,
+          y: point.y + delta.y,
+        })),
+        segmentModes: [...route.segmentModes],
+      },
+    ],
+  };
 }
 
 /**

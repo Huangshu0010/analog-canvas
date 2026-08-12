@@ -3,34 +3,58 @@ status: completed
 experience: none
 ---
 
-# Connectivity recovery C5a — Wire commit planner boundary
+# Move committed wire manipulation planning into Edit Engine
 
 ## Goal
 
-Move deterministic wire-path and wire-commit proposal logic out of the editor
-feature layer into a pure edit-engine planner. The editor continues to own
-pointer sessions, snap candidate choice and UI ids; the planner owns only the
-typed edit sequence submitted to the transaction engine.
+Make committed segment drag and loose-route translation use typed Edit Engine
+routing proposals rather than letting the editor assemble topology edits. The
+editor retains transient preview only.
 
-## State and ownership
+## State and Ownership
 
-The worktree is clean after C4. This target owns a new edit-engine planner,
-its export, the editor compatibility re-exports/tests, plan and log. It does
-not change the persisted schema, transaction behavior, selection UI, delete
-semantics or group stretch.
+Start state from `git status --short --branch`:
+
+```text
+## roadmap/connectivity-routing-debugging...origin/roadmap/connectivity-routing-debugging
+```
+
+The worktree is clean. This target owns the two committed wire manipulation
+paths and their planner tests. Group move and pointer-preview geometry remain
+outside this bounded target.
+
+- `packages/edit-engine/src/routing-planner.ts`
+- `packages/edit-engine/src/routing.test.ts`
+- `apps/editor/src/app/App.tsx`
+- `plan/2026-08-12-connectivity-recovery-c5a/plan.md`
+- `plan/log.md`
+
+Shared: derived stretch proposals remain the topology-aware source; transaction
+validation remains the sole mutation boundary.
+
+## Work
+
+1. Add typed planner proposals for segment move and whole loose-route move.
+2. Commit their returned edits directly from the editor.
+3. Cover loose route translation and anchored segment drag through the planner.
 
 ## Validation
 
-Focused wire-path/wire-editing tests, workspace typecheck, Prettier and
-`git diff --check`.
+- focused Edit Engine routing and editor route-drag tests
+- workspace typecheck
+- `git diff --check` and status
+
+## Commit Intent
+
+```text
+refactor(routing): plan committed wire manipulation in engine
+```
 
 ## Outcome
 
-Moved the deterministic manual wire path, wire commit, free-end anchor and
-route-tap anchor proposals into `@icm/edit-engine`. Editor feature modules are
-now compatibility re-exports, preserving imports while keeping pointer/snap UI
-outside the mutation planner. Delete, junction lifecycle and group stretch
-remain separate C5 work rather than being silently folded into this refactor.
+Committed segment drag and loose-route translation now receive typed Edit
+Engine proposals. The editor continues to own only pointer preview/session;
+topology edits are planned in the same module as Wire and Delete proposals.
 
-Validation: workspace typecheck; 16 focused wire-path, wire-editing and
-transaction tests; targeted Prettier and `git diff --check`.
+Validation passed: 31 focused routing/stretch tests, two focused editor E2E
+flows, workspace typecheck, targeted Prettier, and `git diff --check`.

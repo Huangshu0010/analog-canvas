@@ -12,6 +12,10 @@ import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { executeTransaction } from "./transaction.js";
+import {
+  proposeLooseRouteTranslation,
+  proposeWireSegmentMove,
+} from "./routing-planner.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 const context = { symbolResolver: resolver };
@@ -45,6 +49,97 @@ function transaction(documentId: string, revision: number, edits: unknown[]) {
 }
 
 describe("routing Edit Engine", () => {
+  it("plans a segment drag as transaction edits", () => {
+    const document = documentFixture();
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+    const plan = proposeWireSegmentMove(
+      routed.document,
+      resolver,
+      "route-h",
+      0,
+      { x: 300, y: 340 },
+    );
+    expect(plan.edits.some((edit) => edit.kind === "set_route_points")).toBe(
+      true,
+    );
+    const moved = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, plan.edits),
+      context,
+    );
+    expect(moved.ok).toBe(true);
+  });
+
+  it("plans whole loose-route translation with both endpoint anchors", () => {
+    const document = documentFixture();
+    document.instances = [];
+    document.ports = [];
+    document.nets = [
+      { id: "net-loose", scope: "local", terminals: [], ports: [] },
+    ];
+    document.junctions = [
+      {
+        id: "junction-left",
+        netId: "net-loose",
+        position: { x: 100, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "junction-right",
+        netId: "net-loose",
+        position: { x: 200, y: 100 },
+        role: "route-anchor",
+      },
+    ];
+    document.routes = [
+      {
+        id: "route-loose",
+        netId: "net-loose",
+        from: { kind: "junction", junctionId: "junction-left" },
+        to: { kind: "junction", junctionId: "junction-right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+    const plan = proposeLooseRouteTranslation(document, "route-loose", {
+      x: 30,
+      y: 20,
+    });
+    expect(
+      plan.edits.filter((edit) => edit.kind === "move_junction"),
+    ).toHaveLength(2);
+    const moved = executeTransaction(
+      document,
+      transaction(document.id, 0, plan.edits),
+      context,
+    );
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) return;
+    expect(
+      routePolyline(moved.document, resolver, moved.document.routes[0]!)
+        ?.points,
+    ).toEqual([
+      { x: 130, y: 120 },
+      { x: 230, y: 120 },
+    ]);
+  });
+
   it("lets an Agent request pin-aware orthogonal routing without waypoints", () => {
     const document = documentFixture();
     const result = executeTransaction(

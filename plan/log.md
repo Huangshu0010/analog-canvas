@@ -5182,3 +5182,13 @@ contracts (WP-R1)`.
   `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(derived): consume resolved geometry in drafting anchors`.
+
+## 2026-08-12 - Connectivity Recovery C5a: committed wire manipulation planner
+
+- Target: move committed segment drag and loose-route translation topology
+  edits from editor orchestration into typed Edit Engine proposals.
+- Changed areas: routing planner/tests, editor commit path, target plan and log.
+- Validation: 31 focused routing/stretch tests; two focused editor E2E flows;
+  workspace `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(routing): plan committed wire manipulation in engine`.
