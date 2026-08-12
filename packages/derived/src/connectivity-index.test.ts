@@ -221,6 +221,35 @@ describe("ProjectConnectivityIndex", () => {
       expect(splitFlightlines[0]!.from).toEqual(singleFlightlines[0]!.from);
       expect(splitFlightlines[0]!.to).toEqual(singleFlightlines[0]!.to);
     });
+
+    it("exposes C3 route geometry and reuses only the unchanged document revision", () => {
+      const project = buildPartitionProject("single");
+      const resolver = new InMemorySymbolResolver([]);
+      const first = buildProjectConnectivityIndex(
+        project,
+        resolver,
+      ).documents.get("partition-single")!;
+      expect(first.routeGeometry.get("route-single")?.centerline).toEqual([
+        { x: 0, y: 100 },
+        { x: 200, y: 100 },
+      ]);
+
+      const second = buildProjectConnectivityIndex(
+        project,
+        resolver,
+      ).documents.get("partition-single")!;
+      expect(second).toBe(first);
+
+      project.documents[0]!.revision += 1;
+      const afterRevision = buildProjectConnectivityIndex(
+        project,
+        resolver,
+      ).documents.get("partition-single")!;
+      expect(afterRevision).not.toBe(first);
+      expect(
+        afterRevision.routeGeometry.get("route-single")?.segments[0]?.ref,
+      ).toMatchObject({ documentRevision: 1, routeId: "route-single" });
+    });
   });
 
   describe("typed virtual edges and object index", () => {

@@ -4842,3 +4842,13 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   deletion-parity tests; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(derived): clarify route geometry identity and joins`.
+
+## 2026-08-12 - Connectivity Recovery C4: complete document index
+
+- Target: materialise document route geometry, remove per-Net full-document
+  flightline derivation, and add non-persisted revision-scoped document caching.
+- Changed areas: connectivity index and focused tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 18 focused connectivity-index and
+  deletion-parity tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `perf(derived): complete cached document connectivity index`.

@@ -15,6 +15,10 @@ import {
 } from "./connectivity.js";
 import { endpointKey, isVisibleEndpoint, netEndpoints } from "./endpoint.js";
 import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
+import {
+  resolveDocumentRoutingGeometry,
+  type ResolvedRouteGeometry,
+} from "./resolved-route-geometry.js";
 
 /**
  * Unified read-only connectivity index (ADR 0013). Single source of
@@ -56,6 +60,7 @@ export interface DocumentConnectivityIndex {
   documentId: string;
   endpointToNet: ReadonlyMap<string, string>;
   nets: ReadonlyMap<string, NetConnectivityRecord>;
+  routeGeometry: ReadonlyMap<string, ResolvedRouteGeometry>;
 }
 
 export interface HierarchyEdge {
@@ -100,6 +105,18 @@ const terminalEndpoint = (
   pinName: string,
 ): EndpointRef => ({ kind: "terminal", instanceId, pinName });
 
+interface CachedDocumentIndex {
+  revision: number;
+  resolver: SymbolResolver;
+  index: DocumentConnectivityIndex;
+}
+
+/** Derived-only cache: never persisted and invalidated by revision/resolver. */
+const documentIndexCache = new WeakMap<
+  SchematicDocument,
+  CachedDocumentIndex
+>();
+
 /**
  * Returns a flightline whose `from`/`to` are ordered by `endpointKey` and whose
  * `id` is recomputed from the ordered keys, so the same logical flightline
@@ -133,6 +150,10 @@ function buildDocumentIndex(
   document: SchematicDocument,
   resolver: SymbolResolver,
 ): DocumentConnectivityIndex {
+  const cached = documentIndexCache.get(document);
+  if (cached?.revision === document.revision && cached.resolver === resolver) {
+    return cached.index;
+  }
   const endpointToNet = new Map<string, string>();
   for (const net of document.nets) {
     for (const endpoint of netEndpoints(document, net)) {
@@ -140,20 +161,47 @@ function buildDocumentIndex(
     }
   }
 
+  const flightlinesByNet = new Map<string, Flightline[]>();
+  for (const line of deriveFlightlines(document, resolver)) {
+    const lines = flightlinesByNet.get(line.netId) ?? [];
+    lines.push(normalizeFlightline(line));
+    flightlinesByNet.set(line.netId, lines);
+  }
+
   const nets = new Map<string, NetConnectivityRecord>();
   for (const net of [...document.nets].sort((a, b) =>
     a.id.localeCompare(b.id, "en"),
   )) {
-    nets.set(net.id, buildNetRecord(document, resolver, net));
+    nets.set(
+      net.id,
+      buildNetRecord(
+        document,
+        resolver,
+        net,
+        flightlinesByNet.get(net.id) ?? [],
+      ),
+    );
   }
 
-  return { documentId: document.id, endpointToNet, nets };
+  const index = {
+    documentId: document.id,
+    endpointToNet,
+    nets,
+    routeGeometry: resolveDocumentRoutingGeometry(document, resolver).routes,
+  };
+  documentIndexCache.set(document, {
+    revision: document.revision,
+    resolver,
+    index,
+  });
+  return index;
 }
 
 function buildNetRecord(
   document: SchematicDocument,
   resolver: SymbolResolver,
   net: Net,
+  flightlines: readonly Flightline[],
 ): NetConnectivityRecord {
   const logicalEndpoints: EndpointRef[] = [
     ...net.terminals.map((terminal) =>
@@ -183,10 +231,6 @@ function buildNetRecord(
     .sort((a, b) => a.localeCompare(b, "en"));
 
   const virtualEdges = deriveLabelVirtualEdges(document, net);
-
-  const flightlines = deriveFlightlines(document, resolver)
-    .filter((line) => line.netId === net.id)
-    .map(normalizeFlightline);
 
   return {
     netId: net.id,
