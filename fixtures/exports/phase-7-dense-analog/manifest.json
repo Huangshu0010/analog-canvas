@@ -18,12 +18,12 @@
       "sha256": "796b65534a6e3cbad4acd97dd4ebb87ef871c6c9953001d06cba48fbb2d9284c"
     },
     "schematic.png": {
-      "byteLength": 55320,
-      "sha256": "381d9a7e442cc8e014f7bade0b42c0c9ea9b09ec31e9871b7844e3f12b95485e"
+      "byteLength": 55858,
+      "sha256": "54238dd0e6415e7cc7fd99d1d267cd86ffafaadb1ae2dc64243aa220c0cfd22c"
     },
     "schematic.pdf": {
-      "byteLength": 31099,
-      "sha256": "cf521811b435f43e68cbf613dd9d0733fcdcfcaeebed2b59e03b7d603dd2e700"
+      "byteLength": 31246,
+      "sha256": "b9fe045c4f33ad4175a44478ae54ecc8da7740d705b7a494d5476ec10896da6c"
     }
   }
 }
