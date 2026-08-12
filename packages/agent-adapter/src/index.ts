@@ -8,4 +8,5 @@ export * from "./openapi.js";
 export * from "./platform.js";
 export * from "./schema.js";
 export * from "./service.js";
+export * from "./session-state.js";
 export * from "./snapshot.js";

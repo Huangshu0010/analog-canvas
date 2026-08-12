@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AgentSessionMachine,
   type AgentSessionLimits,
-} from "./agent-session-state";
+} from "@icm/agent-adapter";
+
 import {
   forwardCircuitRequest,
   redeemClaimResponse,

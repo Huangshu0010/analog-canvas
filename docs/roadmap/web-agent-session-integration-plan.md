@@ -386,6 +386,11 @@ verified in WP-WA7 deployment.
 
 ### WP-WA5 — Connect Agent UI and browser transport
 
+Status: `panel complete (no-network)` — Connect Agent panel + hook + state
+machine (moved to `@icm/agent-adapter`) + `App.tsx` command mount, with panel and
+parity tests. Playwright grant-to-revoke flows and the network WebSocket
+transport require a deployed review environment (WP-WA7).
+
 - Goal: Add Connect Agent, permission presets/details, claim link/code,
   connected/working/paused/offline/expiring states, recent-operation audit, and
   pause/revoke controls.

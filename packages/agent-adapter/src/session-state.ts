@@ -1,7 +1,4 @@
-import type {
-  AgentSessionScope,
-  AgentTransportErrorCode,
-} from "@icm/agent-adapter";
+import type { AgentSessionScope, AgentTransportErrorCode } from "./envelope.js";
 
 /**
  * Pure, runtime-agnostic Agent session state machine (WP-WA4). All time is
@@ -9,7 +6,7 @@ import type {
  * entire authorization/idempotency/expiry/limit contract is deterministic and
  * fake-time testable without the Cloudflare runtime.
  *
- * Contract source: [`docs/specs/web-agent-session.md`](../docs/specs/web-agent-session.md).
+ * Contract source: [`docs/specs/web-agent-session.md`](../../docs/specs/web-agent-session.md).
  * The machine never inspects or persists a Project and never creates an actor or
  * edit — it only authenticates, authorizes, deduplicates, expires, and rate
  * limits. Secrets are stored as verifiers and compared in constant time.

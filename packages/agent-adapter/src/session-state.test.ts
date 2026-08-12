@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { AgentSessionScope } from "@icm/agent-adapter";
+import type { AgentSessionScope } from "./envelope.js";
 
 import {
   AgentSessionMachine,
   constantTimeEqual,
   type AgentSessionLimits,
-} from "./agent-session-state";
+} from "./session-state.js";
 
 const scopes: AgentSessionScope[] = [
   "circuit.snapshot",

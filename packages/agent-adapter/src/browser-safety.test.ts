@@ -81,6 +81,8 @@ describe("agent-adapter browser-safe boundary", () => {
       "service.ts",
       "platform.ts",
       "envelope.ts",
+      "session-state.ts",
+      "host.ts",
       "openapi.ts",
     ];
     for (const file of browserSafeFiles) {

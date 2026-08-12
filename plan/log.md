@@ -5683,3 +5683,20 @@ contracts (WP-R1)`.
   on the split-core-then-deploy-transport approach.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `feat(agent): Cloudflare Agent session relay state machine (WP-WA4)`.
+
+## 2026-08-12 - WP-WA5 Connect Agent panel
+
+- Target: browser-side authorization surface (panel, hook, App integration) and
+  shared placement of the session state machine.
+- Changed areas: new `apps/editor/src/agent/{connect-agent-panel,use-agent-session}`;
+  `App.tsx` Agent command + panel mount; `.agent-panel` CSS; state machine moved
+  to `packages/agent-adapter/src/session-state.ts`; worker + browser-safety
+  imports updated; root declares `@icm/agent-adapter`; obsolete App assertion
+  updated.
+- Validation: 5 panel markup tests; agent-host (6) + state-machine (13) +
+  worker relay (7) suites pass; App shell (12) passes; workspace `typecheck`
+  clean; Prettier; `git diff --check` clean.
+- Limitation: Playwright grant-to-revoke + network WebSocket transport need a
+  deployed review environment (WP-WA7).
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(editor): Connect Agent authorization panel (WP-WA5)`.

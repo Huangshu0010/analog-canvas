@@ -128,6 +128,8 @@ import {
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
+import { ConnectAgentPanel } from "../agent/connect-agent-panel";
+import { useAgentSession } from "../agent/use-agent-session";
 import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
@@ -443,6 +445,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   );
   const [status, setStatus] = useState("Ready");
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
+  const [agentPanelOpen, setAgentPanelOpen] = useState(false);
+  const agentSession = useAgentSession();
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -5521,6 +5525,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 </div>
               </details>
               <details className="command-menu" name="editor-command-menu">
+                <summary>Agent</summary>
+                <div className="command-popover">
+                  <button type="button" onClick={() => setAgentPanelOpen(true)}>
+                    Connect Agent
+                  </button>
+                </div>
+              </details>
+              <details className="command-menu" name="editor-command-menu">
                 <summary>Draw</summary>
                 <div className="command-popover">
                   <button type="button" onClick={openInsertComponentDialog}>
@@ -5733,6 +5745,23 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         recentSymbolIds={recentSymbolIds}
         onApply={beginInsertedComponentPlacement}
         onCancel={cancelComponentInsert}
+      />
+      <ConnectAgentPanel
+        open={agentPanelOpen}
+        status={agentSession.status}
+        claimCode={agentSession.claimCode}
+        scopes={agentSession.scopes}
+        expiresAt={agentSession.expiresAt}
+        audit={agentSession.audit}
+        now={Date.now()}
+        onGrant={agentSession.grant}
+        onPause={agentSession.pause}
+        onResume={agentSession.resume}
+        onRevoke={agentSession.revoke}
+        onClose={() => {
+          agentSession.revoke();
+          setAgentPanelOpen(false);
+        }}
       />
       <div
         className={

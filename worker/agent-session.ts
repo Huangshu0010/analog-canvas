@@ -1,9 +1,8 @@
-import type { AgentTransportErrorCode } from "@icm/agent-adapter";
-
 import type {
   AgentSessionLimits,
   AgentSessionMachine,
-} from "./agent-session-state";
+  AgentTransportErrorCode,
+} from "@icm/agent-adapter";
 
 /**
  * Agent session relay transport (WP-WA4). The security-critical decisions live
