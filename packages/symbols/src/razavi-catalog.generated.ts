@@ -248,7 +248,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "62fe9007af3b1c163e617b50a16c31075b621b3201c0f81a43f466d4e04133eb",
+      "4418daabba55eed90e21e90010cce9c1b62589a7e52ce4964d1eaf2fd5eb1e3c",
   },
   {
     symbolId: "nmos3",
@@ -358,7 +358,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "30b1377d7e9fdb9105b4902a8a694b1c6a0b26c3b8d01f8fe33f425736755458",
+      "6d8bd29ed2d365417209dd2844ddc677355b1729cc000c29adc789dc235df20b",
   },
   {
     symbolId: "pmos3",
@@ -1554,6 +1554,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         id: "textbook-3terminal",
         hiddenPinNames: ["B"],
+        auxiliaryPins: [
+          {
+            name: "B",
+            at: {
+              x: -4,
+              y: 0,
+            },
+            direction: "east",
+          },
+        ],
         hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
         additionalPrimitives: [
           {
@@ -2334,6 +2344,16 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       {
         id: "textbook-3terminal",
         hiddenPinNames: ["B"],
+        auxiliaryPins: [
+          {
+            name: "B",
+            at: {
+              x: -4,
+              y: 0,
+            },
+            direction: "east",
+          },
+        ],
         hiddenPrimitiveParts: ["bulk-lead", "source-arrow-host"],
         additionalPrimitives: [
           {

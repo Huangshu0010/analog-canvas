@@ -9,6 +9,7 @@ export * from "./hierarchy-navigation.js";
 export * from "./instance-label-placement.js";
 export * from "./net-highlight.js";
 export * from "./net-label.js";
+export * from "./mos-bulk.js";
 export * from "./object-locator.js";
 export * from "./project-search.js";
 export * from "./routes.js";

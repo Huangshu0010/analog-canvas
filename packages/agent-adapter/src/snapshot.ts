@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
   diagnoseVisualQuality,
   electricalTopologyHash,
+  resolveMosBulkConnection,
   resolveDraftingObjectGeometry,
   resolveDocumentRoutingGeometry,
 } from "@icm/derived";
@@ -260,6 +261,7 @@ function documentSnapshot(
         ? target.slice("model:".length)
         : null;
       const sourceName = properties["spice.name"];
+      const mosBulk = resolveMosBulkConnection(document, instance);
       return {
         id: instance.id,
         name: typeof sourceName === "string" ? sourceName : instance.id,
@@ -295,6 +297,14 @@ function documentSnapshot(
                 : null,
             netId: terminalNetByKey.get(`${instance.id}\u0000${name}`) ?? null,
           })),
+        ...(mosBulk
+          ? {
+              mosBulk: {
+                status: mosBulk.status,
+                netId: mosBulk.net?.id ?? null,
+              },
+            }
+          : {}),
         ...(options.includeSourceSpans && instance.sourceRef
           ? { sourceRef: structuredClone(instance.sourceRef) }
           : {}),
@@ -313,6 +323,7 @@ function documentSnapshot(
         to: structuredClone(route.to),
         waypoints: structuredClone(route.waypoints),
         segmentModes: [...route.segmentModes],
+        ...(route.presentation ? { presentation: route.presentation } : {}),
         polyline: geometry ? [...geometry.centerline] : null,
       };
     });

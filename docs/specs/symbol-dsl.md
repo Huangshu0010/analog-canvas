@@ -148,6 +148,12 @@ Symbol DSL 1.9 separates visual geometry precision from electrical grid
 precision. Primitive points may retain finite decimals decoded from VSS, while
 pin anchors and instance placement remain integer grid coordinates.
 
+Symbol DSL 1.10 adds variant `auxiliaryPins`. An auxiliary pin names an existing
+canonical electrical pin and supplies context-gated artwork coordinates; it
+does not create another terminal or connectivity protocol. Razavi MOS uses it
+to expose canonical `B` from the internal body region only while an explicit
+body connection is being authored or displayed.
+
 ## Deterministic validation
 
 - schema and generated JSON Schema inspection

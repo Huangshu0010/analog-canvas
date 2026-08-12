@@ -74,12 +74,27 @@ Flightlines never request routing for implicit terminals. Hiding a terminal
 cannot remove or rewrite its logical terminal record, merge its Net with
 another Net, or imply a device-specific short such as MOS `B=S`.
 
+The Razavi MOS bulk is the context-gated exception: when canonical `B` has an
+explicit non-default Net, its variant auxiliary anchor participates in imported
+flightline guidance. Completing that guidance persists an ordinary Route with
+`presentation: "bulk-dashed"`.
+
 ## Orthogonal route geometry
 
 The rendered polyline is `[fromPoint, ...waypoints, toPoint]`. Every segment
 must be horizontal or vertical and non-zero. Normalization removes consecutive
 duplicates and collinear interior points while retaining endpoint identity.
 `segmentModes.length` is always `waypoints.length + 1` after normalization.
+`RouteBranch.presentation` is optional: omitted/`wire` is a normal conductor;
+`bulk-dashed` is the Razavi body appearance. Both share Net membership,
+snapping, selection, split, stretch, highlight, deletion, clipboard, undo,
+Agent snapshot, and formal export behavior.
+
+Deleting an ordinary Route cuts stored geometry while retaining its Net fact.
+Deleting any segment of one connected `bulk-dashed` chain removes that visual
+chain, disconnects the explicit B terminal, and reconciles the configured Cell
+default or product fallback atomically. This semantic exception is implemented
+in the common route-deletion planner rather than in individual GUI commands.
 
 Segment modes mean:
 

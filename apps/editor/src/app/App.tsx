@@ -33,6 +33,7 @@ import {
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
   resolveNetLabelBinding,
+  resolveMosBulkConnection,
   runErcChecks,
   routeAttachmentPlacement,
   traceHierarchyNet,
@@ -139,6 +140,7 @@ import {
 import type { TextEditingSession } from "../features/text-editing/text-editing";
 import {
   defaultRazaviSymbolVariantId,
+  materializeRazaviProjectBulkConnections,
   razaviHiddenBulkRisk,
   razaviManualBulkConnectionEdits,
   razaviMosPresentationEdits,
@@ -432,6 +434,12 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 export function App({ project: initialProject, visitStats }: AppProps) {
+  const [preparedInitialProject] = useState(
+    () =>
+      materializeRazaviProjectBulkConnections(
+        initialProject ?? createEmptyProject("project-main", "New Circuit"),
+      ).project,
+  );
   const [status, setStatus] = useState("Ready");
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
@@ -477,10 +485,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     openDocument,
     replaceProject,
     transact: transactDocument,
-  } = useDocumentController(
-    initialProject ?? createEmptyProject("project-main", "New Circuit"),
-    stageRecovery,
-  );
+  } = useDocumentController(preparedInitialProject, stageRecovery);
   const [documentStack, setDocumentStack] = useState<HierarchyFrame[]>([]);
   const {
     selection: visualSelection,
@@ -546,6 +551,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     number | null
   >(null);
   const [selectedEndpoint, setSelectedEndpoint] = useState<WireSource | null>(
+    null,
+  );
+  const [bulkDrawInstanceId, setBulkDrawInstanceId] = useState<string | null>(
     null,
   );
   const [netLabelDraft, setNetLabelDraft] = useState("");
@@ -867,12 +875,17 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             return {
               endpoint,
               netId: endpointNetId(document, endpoint),
-              point: transformPoint(
-                pin.at,
-                instance.placement!.position,
-                instance.placement!,
-              ),
+              point:
+                resolveEndpointPoint(document, resolver, endpoint) ??
+                transformPoint(
+                  pin.at,
+                  instance.placement!.position,
+                  instance.placement!,
+                ),
               preludeEdits: [],
+              ...(pin.name === "B"
+                ? { routePresentation: "bulk-dashed" as const }
+                : {}),
             };
           });
       }),
@@ -905,6 +918,48 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     ],
     [document, resolver],
   );
+  const visibleBulkEndpoints: WireSource[] = useMemo(
+    () =>
+      document.instances.flatMap((instance): WireSource[] => {
+        if (!instance.placement || bulkDrawInstanceId !== instance.id) {
+          return [];
+        }
+        const resolved = resolver.resolve(
+          instance.symbolId,
+          instance.symbolVariantId,
+        );
+        const anchor = resolved?.variant?.auxiliaryPins?.find(
+          (pin) => pin.name === "B",
+        );
+        if (!anchor) return [];
+        const endpoint: RouteEndpoint = {
+          kind: "terminal",
+          instanceId: instance.id,
+          pinName: "B",
+        };
+        return [
+          {
+            endpoint,
+            netId: endpointNetId(document, endpoint),
+            point: transformPoint(
+              anchor.at,
+              instance.placement.position,
+              instance.placement,
+            ),
+            preludeEdits: [],
+            routePresentation: "bulk-dashed",
+          },
+        ];
+      }),
+    [bulkDrawInstanceId, document, resolver],
+  );
+  const wiringEndpoints = useMemo(() => {
+    const byKey = new Map<string, WireSource>();
+    for (const endpoint of [...visibleEndpoints, ...visibleBulkEndpoints]) {
+      byKey.set(endpointKey(endpoint.endpoint), endpoint);
+    }
+    return [...byKey.values()];
+  }, [visibleBulkEndpoints, visibleEndpoints]);
   useEffect(() => {
     const normalizationEdits = powerNetNormalizations(document).length
       ? [{ kind: "normalize_power_nets" as const }]
@@ -914,16 +969,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       document.instances,
       visibleEndpoints,
     );
-    const bulkEdits = razaviManualBulkConnectionEdits(
-      document,
-      document.instances,
-    );
-    const edits = [...normalizationEdits, ...powerContactEdits, ...bulkEdits];
+    const edits = [...normalizationEdits, ...powerContactEdits];
     if (edits.length === 0) return;
     const result = transact(edits);
     if (result.ok) {
       setStatus(
-        `Normalized ${normalizationEdits.length} power-Net rule(s), reconciled ${powerContactEdits.length} visible power contact(s), and added ${bulkEdits.length} Razavi bulk connection(s)`,
+        `Normalized ${normalizationEdits.length} power-Net rule(s) and reconciled ${powerContactEdits.length} visible power contact(s)`,
       );
     }
   }, [document, resolver, visibleEndpoints]);
@@ -954,6 +1005,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       : undefined;
   const selectedHiddenBulkNet = selectedInstance
     ? razaviHiddenBulkRisk(document, selectedInstance.id)
+    : undefined;
+  const selectedBulkResolution = selectedInstance
+    ? resolveMosBulkConnection(document, selectedInstance)
     : undefined;
   const editingDrafting =
     textEditingTarget?.owner === "drafting"
@@ -1134,6 +1188,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setTextEditing(null);
     setSelectedEndpoint(null);
     cancelInteraction();
+    setBulkDrawInstanceId(null);
   }
 
   function selectEndpoint(candidate: WireSource): void {
@@ -1313,7 +1368,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     // revive after Save/Discard/Open/Import/Restore/demo-load swaps the project.
     // Callers that also remove the recovery key do so after this cancels.
     cancelRecovery();
-    const nextDocument = replaceProject(nextProject);
+    const prepared = materializeRazaviProjectBulkConnections(nextProject);
+    const nextDocument = replaceProject(prepared.project);
     documentViewBoxes.current = new Map();
     setDocumentStack([]);
     setViewBox(nextViewBox);
@@ -1506,12 +1562,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       netId: flightline.netId,
       point: flightline.fromPoint,
       preludeEdits: [],
+      ...(flightline.from.kind === "terminal" && flightline.from.pinName === "B"
+        ? { routePresentation: "bulk-dashed" }
+        : {}),
     };
     const to: WireSource = {
       endpoint: flightline.to,
       netId: flightline.netId,
       point: flightline.toPoint,
       preludeEdits: [],
+      ...(flightline.to.kind === "terminal" && flightline.to.pinName === "B"
+        ? { routePresentation: "bulk-dashed" }
+        : {}),
     };
     setTool("wire");
     if (wireSource) {
@@ -1541,14 +1603,96 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       wireWaypoints,
       suffix,
     );
-    const result = transact(proposal.edits);
+    const bulkEndpoint = [wireSource.endpoint, candidate.endpoint].find(
+      (endpoint) => endpoint.kind === "terminal" && endpoint.pinName === "B",
+    );
+    const defaultBoundInstance =
+      bulkEndpoint?.kind === "terminal"
+        ? document.instances.find(
+            (instance) => instance.id === bulkEndpoint.instanceId,
+          )
+        : undefined;
+    const edits = defaultBoundInstance?.mosBulkBinding
+      ? [
+          {
+            kind: "clear_mos_bulk_default" as const,
+            instanceId: defaultBoundInstance.id,
+          },
+          ...proposal.edits.map((edit) => {
+            if (edit.kind !== "connect_endpoints") return edit;
+            const target =
+              edit.from.kind === "terminal" && edit.from.pinName === "B"
+                ? edit.to
+                : edit.from;
+            return {
+              ...edit,
+              from: target,
+              to: {
+                kind: "terminal" as const,
+                instanceId: defaultBoundInstance.id,
+                pinName: "B",
+              },
+            };
+          }),
+        ]
+      : proposal.edits;
+    const result = transact(edits);
     if (result.ok) {
       setWireSource(null);
       setWirePreviewPoint(null);
       setWireWaypoints([]);
       setTool("pointer");
+      setBulkDrawInstanceId(null);
       setStatus(`Committed route at revision ${result.revision}`);
     }
+  }
+
+  function drawSelectedMosBulk(): void {
+    if (!selectedInstance?.placement) return;
+    const resolved = resolver.resolve(
+      selectedInstance.symbolId,
+      selectedInstance.symbolVariantId,
+    );
+    const anchor = resolved?.variant?.auxiliaryPins?.find(
+      (pin) => pin.name === "B",
+    );
+    if (!anchor) {
+      setStatus("Selected instance has no Razavi bulk anchor");
+      return;
+    }
+    const endpoint: RouteEndpoint = {
+      kind: "terminal",
+      instanceId: selectedInstance.id,
+      pinName: "B",
+    };
+    const source: WireSource = {
+      endpoint,
+      // A materialized default is cleared in the same commit before the new
+      // explicit route is connected. Treat it as unowned while planning so
+      // the planner cannot merge VSS/VDD with the chosen body-bias Net.
+      netId: selectedInstance.mosBulkBinding
+        ? null
+        : endpointNetId(document, endpoint),
+      point: transformPoint(
+        anchor.at,
+        selectedInstance.placement.position,
+        selectedInstance.placement,
+      ),
+      preludeEdits: document.noConnects.flatMap((noConnect) =>
+        noConnect.endpoint.kind === "terminal" &&
+        noConnect.endpoint.instanceId === selectedInstance.id &&
+        noConnect.endpoint.pinName === "B"
+          ? [{ kind: "remove_no_connect" as const, noConnectId: noConnect.id }]
+          : [],
+      ),
+      routePresentation: "bulk-dashed",
+    };
+    setBulkDrawInstanceId(selectedInstance.id);
+    setTool("wire");
+    setWireSource(source);
+    setWirePreviewPoint(source.point);
+    setWireWaypoints([]);
+    setStatus(`Drawing ${selectedInstance.id}.B bulk connection`);
   }
 
   function freeWireAnchor(
@@ -6196,17 +6340,29 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   Place {port.name}
                 </button>
               ))}
-              {selectedInstance && selectedHiddenBulkNet ? (
+              {selectedInstance && selectedBulkResolution ? (
                 <section
                   className="context-actions"
-                  aria-label="Hidden MOS bulk warning"
+                  aria-label="MOS bulk connection"
                 >
-                  <h2>Hidden bulk warning</h2>
+                  <h2>Bulk</h2>
                   <p>
-                    {selectedInstance.id}.B is electrically connected to{" "}
-                    {selectedHiddenBulkNet.name ?? selectedHiddenBulkNet.id},
-                    but Razavi MOS stays in three-terminal display.
+                    {selectedInstance.id}.B →{" "}
+                    {selectedBulkResolution.net
+                      ? (selectedBulkResolution.net.name ??
+                        selectedBulkResolution.net.id)
+                      : selectedBulkResolution.status === "product-fallback"
+                        ? selectedBulkResolution.fallbackName
+                        : "unresolved"}
+                    {" · "}
+                    {selectedBulkResolution.status}
                   </p>
+                  {selectedHiddenBulkNet ? (
+                    <p>Explicit bulk is shown with a Razavi dashed route.</p>
+                  ) : null}
+                  <button type="button" onClick={drawSelectedMosBulk}>
+                    Draw bulk connection
+                  </button>
                 </section>
               ) : null}
               {selectedRouteId ? (
@@ -6571,6 +6727,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 setWirePreviewPoint(null);
                 setWireWaypoints([]);
                 setTool("pointer");
+                setBulkDrawInstanceId(null);
                 setStatus("Wire cancelled");
               }
             }}
@@ -6772,7 +6929,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               {wireDraftPoints.length >= 2 ? (
                 <polyline
                   data-testid="wire-preview"
-                  className="wire-preview"
+                  className={
+                    wireSource?.routePresentation === "bulk-dashed"
+                      ? "wire-preview bulk-route-preview"
+                      : "wire-preview"
+                  }
                   points={serializePolylinePoints(wireDraftPoints)}
                 />
               ) : null}
@@ -7013,7 +7174,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   onClick={(event) => event.stopPropagation()}
                 />
               ))}
-              {visibleEndpoints.map((candidate) => (
+              {wiringEndpoints.map((candidate) => (
                 <circle
                   key={`${candidate.netId}:${endpointTestId(candidate.endpoint)}`}
                   data-testid={endpointTestId(candidate.endpoint)}

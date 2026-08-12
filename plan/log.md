@@ -5500,3 +5500,16 @@ contracts (WP-R1)`.
   from `body.analytics-body` onward remains byte-identical to `main`.
 - Commit status: ready to commit on `codex/merge-pr14-safe` as
   `feat(editor): integrate safe library quick-place improvements`.
+
+## 2026-08-12 - Razavi bulk reconciliation with restored editor UI
+
+- Target: refresh the Razavi bulk candidate after main restored the editor
+  Chrome, using current main's UI structure as the baseline.
+- Changed areas: two-parent reconciliation merge; Razavi bulk initialization,
+  endpoint, dashed-route and Properties hooks reapplied to the restored UI;
+  integration plan outcome.
+- Validation: workspace typecheck; 26 focused unit tests; 63 single-worker
+  browser tests including the Library/restored UI and full manual bulk-route
+  workflow; `git diff --check` clean.
+- Commit status: merge commit `842d889` created locally; refreshed PR branch
+  pending push and required CI checks.

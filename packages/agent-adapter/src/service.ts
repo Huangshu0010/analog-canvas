@@ -75,6 +75,10 @@ export const AGENT_EDIT_KINDS = [
   "connect_endpoints",
   "merge_nets",
   "set_net_name",
+  "normalize_power_nets",
+  "set_mos_bulk_defaults",
+  "reconcile_mos_bulk",
+  "clear_mos_bulk_default",
   "disconnect_endpoint",
   "upsert_annotation",
   "remove_annotation",
@@ -476,6 +480,9 @@ function editCategory(
     case "merge_nets":
     case "set_net_name":
     case "normalize_power_nets":
+    case "set_mos_bulk_defaults":
+    case "reconcile_mos_bulk":
+    case "clear_mos_bulk_default":
     case "disconnect_endpoint":
     case "add_no_connect":
     case "remove_no_connect":

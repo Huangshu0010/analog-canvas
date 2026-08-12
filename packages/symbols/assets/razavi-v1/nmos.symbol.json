@@ -231,6 +231,16 @@
     {
       "id": "textbook-3terminal",
       "hiddenPinNames": ["B"],
+      "auxiliaryPins": [
+        {
+          "name": "B",
+          "at": {
+            "x": -4,
+            "y": 0
+          },
+          "direction": "east"
+        }
+      ],
       "hiddenPrimitiveParts": ["bulk-lead", "source-arrow-host"],
       "additionalPrimitives": [
         {

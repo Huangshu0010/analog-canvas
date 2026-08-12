@@ -94,12 +94,19 @@ export const SourceBindingEvidenceSchema = z.strictObject({
   childDocumentId: StableIdSchema.optional(),
   sourceRef: SourceSpanSchema.optional(),
 });
+export const MosBulkBindingSchema = z.strictObject({
+  origin: z.enum(["cell-default", "product-fallback"]),
+  netId: StableIdSchema,
+});
 export const InstanceSchema = z.strictObject({
   id: StableIdSchema,
   symbolId: StableIdSchema,
   symbolVariantId: StableIdSchema.optional(),
   sourceRef: SourceSpanSchema.optional(),
   binding: SourceBindingEvidenceSchema.optional(),
+  // Present only for an editor-materialized implicit body connection.
+  // Explicit SPICE/user B connections need no parallel metadata.
+  mosBulkBinding: MosBulkBindingSchema.optional(),
   placement: PlacementSchema.nullable(),
   properties: z.record(z.string(), InstancePropertyValueSchema),
 });
@@ -133,6 +140,7 @@ export const SegmentModeSchema = z.enum([
   "locked",
   "trunk",
 ]);
+export const RoutePresentationSchema = z.enum(["wire", "bulk-dashed"]);
 export const RouteBranchSchema = z
   .strictObject({
     id: StableIdSchema,
@@ -141,6 +149,9 @@ export const RouteBranchSchema = z
     to: RouteEndpointSchema,
     waypoints: z.array(PointSchema),
     segmentModes: z.array(SegmentModeSchema),
+    // Electrical connectivity is always owned by `netId` and the endpoints.
+    // This field changes only how the same editable Route is presented.
+    presentation: RoutePresentationSchema.optional(),
   })
   .superRefine((route, context) => {
     if (route.segmentModes.length !== route.waypoints.length + 1) {
@@ -433,6 +444,10 @@ export const PresentationIntentSchema = z.strictObject({
     })
     .optional(),
 });
+export const MosBulkDefaultsSchema = z.strictObject({
+  nmosNetId: StableIdSchema.optional(),
+  pmosNetId: StableIdSchema.optional(),
+});
 export const LayoutGroupSchema = z.strictObject({
   id: StableIdSchema,
   kind: z.enum([
@@ -478,6 +493,9 @@ const SchematicDocumentBaseSchema = z.strictObject({
   junctions: z.array(JunctionSchema),
   annotations: z.array(AnnotationSchema),
   presentation: PresentationIntentSchema,
+  // Stable Net references for cell-level well/substrate intent. When absent,
+  // manual MOS authoring falls back to NMOS -> ground and PMOS -> VDD.
+  mosBulkDefaults: MosBulkDefaultsSchema.optional(),
   layoutGroups: z.array(LayoutGroupSchema),
   constraints: z.array(LayoutConstraintSchema),
   noConnects: z.array(NoConnectSchema).default([]),
@@ -519,6 +537,34 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       ...(document.drafting?.objects ?? []),
       ...(document.drafting?.guides ?? []),
     ];
+    for (const [key, netId] of Object.entries(document.mosBulkDefaults ?? {})) {
+      if (!document.nets.some((net) => net.id === netId)) {
+        context.addIssue({
+          code: "custom",
+          message: `MOS bulk default references an unknown Net: ${netId}`,
+          path: ["mosBulkDefaults", key],
+        });
+      }
+    }
+    for (const [instanceIndex, instance] of document.instances.entries()) {
+      const binding = instance.mosBulkBinding;
+      if (!binding) continue;
+      const net = document.nets.find(
+        (candidate) => candidate.id === binding.netId,
+      );
+      if (
+        !net?.terminals.some(
+          (terminal) =>
+            terminal.instanceId === instance.id && terminal.pinName === "B",
+        )
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: `MOS bulk binding is not materialized on Net: ${binding.netId}`,
+          path: ["instances", instanceIndex, "mosBulkBinding"],
+        });
+      }
+    }
     reportDuplicateIds(objectCollections, "objects", context);
 
     const instanceIds = new Set(
@@ -820,12 +866,14 @@ export type SourceSpan = z.infer<typeof SourceSpanSchema>;
 export type SourceManifest = z.infer<typeof SourceManifestSchema>;
 export type SymbolLibraryLock = z.infer<typeof SymbolLibraryLockSchema>;
 export type SourceBindingEvidence = z.infer<typeof SourceBindingEvidenceSchema>;
+export type MosBulkBinding = z.infer<typeof MosBulkBindingSchema>;
 export type TerminalRef = z.infer<typeof TerminalRefSchema>;
 export type Instance = z.infer<typeof InstanceSchema>;
 export type Port = z.infer<typeof PortSchema>;
 export type Net = z.infer<typeof NetSchema>;
 export type RouteEndpoint = z.infer<typeof RouteEndpointSchema>;
 export type RouteBranch = z.infer<typeof RouteBranchSchema>;
+export type RoutePresentation = z.infer<typeof RoutePresentationSchema>;
 export type Junction = z.infer<typeof JunctionSchema>;
 export type NoConnectEndpoint = z.infer<typeof NoConnectEndpointSchema>;
 export type NoConnect = z.infer<typeof NoConnectSchema>;

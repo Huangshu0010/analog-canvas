@@ -251,6 +251,16 @@ export function proposePaste(
       instance: {
         ...structuredClone(instance),
         id: instanceIds.get(instance.id)!,
+        ...(instance.mosBulkBinding
+          ? {
+              mosBulkBinding: {
+                ...instance.mosBulkBinding,
+                netId:
+                  netIds.get(instance.mosBulkBinding.netId) ??
+                  instance.mosBulkBinding.netId,
+              },
+            }
+          : {}),
         placement: instance.placement
           ? {
               ...instance.placement,
@@ -329,6 +339,7 @@ export function proposePaste(
       to: mapEndpoint(route.to, instanceIds, junctionIds),
       waypoints: route.waypoints.map((point) => movePoint(point, offset)),
       segmentModes: [...route.segmentModes],
+      ...(route.presentation ? { presentation: route.presentation } : {}),
     })),
   );
   edits.push(

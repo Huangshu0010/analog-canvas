@@ -1536,6 +1536,11 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
+.wire-preview.bulk-route-preview {
+  stroke: #000;
+  stroke-dasharray: 3 3;
+}
+
 /* Wire mode owns the canvas input surface. It sits above formal symbols/text
    but below endpoint and route targets, so labels never steal a wiring click. */
 .wire-input-plane {

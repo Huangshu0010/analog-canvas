@@ -106,5 +106,15 @@ describe("wire editing proposals", () => {
         },
       ],
     });
+
+    expect(
+      createRouteWireAnchor(
+        { ...route, presentation: "bulk-dashed" },
+        { x: 23.2, y: 37.8 },
+        1,
+        10,
+        10,
+      ),
+    ).toMatchObject({ routePresentation: "bulk-dashed" });
   });
 });

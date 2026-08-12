@@ -540,6 +540,28 @@
                         ],
                         "additionalProperties": false
                       },
+                      "mosBulkBinding": {
+                        "type": "object",
+                        "properties": {
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "cell-default",
+                              "product-fallback"
+                            ]
+                          },
+                          "netId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                          }
+                        },
+                        "required": [
+                          "origin",
+                          "netId"
+                        ],
+                        "additionalProperties": false
+                      },
                       "placement": {
                         "anyOf": [
                           {
@@ -1203,6 +1225,13 @@
                         "trunk"
                       ]
                     }
+                  },
+                  "presentation": {
+                    "type": "string",
+                    "enum": [
+                      "wire",
+                      "bulk-dashed"
+                    ]
                   }
                 },
                 "required": [
@@ -1369,6 +1398,13 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 1000
+                  },
+                  "presentation": {
+                    "type": "string",
+                    "enum": [
+                      "wire",
+                      "bulk-dashed"
+                    ]
                   }
                 },
                 "required": [
@@ -1789,6 +1825,83 @@
                 },
                 "required": [
                   "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "set_mos_bulk_defaults"
+                  },
+                  "nmosNetId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pmosNetId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "reconcile_mos_bulk"
+                  },
+                  "instanceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "clear_mos_bulk_default"
+                  },
+                  "instanceId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "kind",
+                  "instanceId"
                 ],
                 "additionalProperties": false
               },

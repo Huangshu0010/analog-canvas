@@ -447,6 +447,13 @@ flowchart LR
 
 SPICE MOS 可能有 D/G/S/B 四个 electrical terminals，而教材式符号可以不显示独立 bulk lead。隐藏只改变视觉表达，不能删除 logical terminal。
 
+Razavi MOS 的最终约定是“四端电气、三端默认显示”。B 的唯一事实仍是
+`Net.terminals`；Cell 可用稳定 Net ID 配置 NMOS/PMOS bulk defaults，未配置时
+手工器件采用 NMOS→0、PMOS→VDD fallback。显式 body-bias、B=S 或 SPICE 第四
+节点永远优先且不会被 ERC 当成 floating。非默认显式 B 从器件内部辅助 pin
+引出，使用与 Wire 完全相同的 Route/Net/Edit Engine，只以 `bulk-dashed` 呈现；
+飞线仍是导入后未完成布线的派生 guidance，不成为第二套电气协议。
+
 ```typescript
 interface SymbolPin {
   name: string;

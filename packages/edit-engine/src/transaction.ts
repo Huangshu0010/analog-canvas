@@ -13,6 +13,7 @@ import {
   PlacementSchema,
   PointSchema,
   RouteEndpointSchema,
+  RoutePresentationSchema,
   RotationSchema,
   SegmentModeSchema,
   SchematicDocumentSchema,
@@ -42,6 +43,7 @@ import {
   placeUprightInstanceLabel,
   resolveEndpointOutwardDirection,
   resolveEndpointPoint,
+  resolveMosBulkConnection,
   resolveSchematicStyleProfile,
   routePolyline,
   visibleSymbolLocalBounds,
@@ -117,6 +119,7 @@ export const SetRoutePointsEditSchema = z.strictObject({
   to: RouteEndpointSchema,
   waypoints: z.array(PointSchema),
   segmentModes: z.array(SegmentModeSchema),
+  presentation: RoutePresentationSchema.optional(),
 });
 export const RouteOrthogonalEditSchema = z.strictObject({
   kind: z.literal("route_orthogonal"),
@@ -125,6 +128,7 @@ export const RouteOrthogonalEditSchema = z.strictObject({
   from: RouteEndpointSchema,
   to: RouteEndpointSchema,
   escapeLength: z.number().int().positive().max(1000).optional(),
+  presentation: RoutePresentationSchema.optional(),
 });
 export const AddJunctionEditSchema = z.strictObject({
   kind: z.literal("add_junction"),
@@ -179,6 +183,19 @@ export const SetNetNameEditSchema = z.strictObject({
 });
 export const NormalizePowerNetsEditSchema = z.strictObject({
   kind: z.literal("normalize_power_nets"),
+});
+export const SetMosBulkDefaultsEditSchema = z.strictObject({
+  kind: z.literal("set_mos_bulk_defaults"),
+  nmosNetId: StableIdSchema.nullable().optional(),
+  pmosNetId: StableIdSchema.nullable().optional(),
+});
+export const ReconcileMosBulkEditSchema = z.strictObject({
+  kind: z.literal("reconcile_mos_bulk"),
+  instanceIds: z.array(StableIdSchema).optional(),
+});
+export const ClearMosBulkDefaultEditSchema = z.strictObject({
+  kind: z.literal("clear_mos_bulk_default"),
+  instanceId: StableIdSchema,
 });
 export const DisconnectEndpointEditSchema = z.strictObject({
   kind: z.literal("disconnect_endpoint"),
@@ -287,6 +304,9 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MergeNetsEditSchema,
   SetNetNameEditSchema,
   NormalizePowerNetsEditSchema,
+  SetMosBulkDefaultsEditSchema,
+  ReconcileMosBulkEditSchema,
+  ClearMosBulkDefaultEditSchema,
   DisconnectEndpointEditSchema,
   AddNoConnectEditSchema,
   RemoveNoConnectEditSchema,
@@ -661,6 +681,7 @@ function routeFromEdit(
     to: structuredClone(edit.to),
     waypoints: structuredClone(edit.waypoints),
     segmentModes: [...edit.segmentModes],
+    ...(edit.presentation ? { presentation: edit.presentation } : {}),
   };
 }
 
@@ -1215,6 +1236,7 @@ function splitRoute(
         to: junctionEndpoint,
         waypoints: firstNormalized.points.slice(1, -1),
         segmentModes: firstNormalized.segmentModes,
+        ...(route.presentation ? { presentation: route.presentation } : {}),
       },
       second: {
         id: secondRouteId,
@@ -1223,6 +1245,7 @@ function splitRoute(
         to: structuredClone(route.to),
         waypoints: secondNormalized.points.slice(1, -1),
         segmentModes: secondNormalized.segmentModes,
+        ...(route.presentation ? { presentation: route.presentation } : {}),
       },
     };
   }
@@ -1250,6 +1273,7 @@ function splitRoute(
       to: junctionEndpoint,
       waypoints: firstNormalized.points.slice(1, -1),
       segmentModes: firstNormalized.segmentModes,
+      ...(route.presentation ? { presentation: route.presentation } : {}),
     },
     second: {
       id: secondRouteId,
@@ -1258,6 +1282,7 @@ function splitRoute(
       to: structuredClone(route.to),
       waypoints: secondNormalized.points.slice(1, -1),
       segmentModes: secondNormalized.segmentModes,
+      ...(route.presentation ? { presentation: route.presentation } : {}),
     },
   };
 }
@@ -2231,6 +2256,9 @@ export function executeTransaction(
           );
         }
         const route = routeFromEdit(edit);
+        if (!route.presentation && existing?.presentation) {
+          route.presentation = existing.presentation;
+        }
         const routeError = validateRoute(draft, route, resolver);
         if (routeError) {
           return rejectAt("EDIT_PRECONDITION", routeError, [], [edit.routeId]);
@@ -2300,7 +2328,11 @@ export function executeTransaction(
           to: structuredClone(edit.to),
           waypoints: geometry.waypoints,
           segmentModes: geometry.segmentModes,
+          ...(edit.presentation ? { presentation: edit.presentation } : {}),
         };
+        if (!route.presentation && existing?.presentation) {
+          route.presentation = existing.presentation;
+        }
         const routeError = validateRoute(draft, route, resolver);
         if (routeError) {
           return rejectAt("EDIT_PRECONDITION", routeError);
@@ -2566,6 +2598,12 @@ export function executeTransaction(
             (candidate) => candidate.id !== net.id,
           );
           changedObjectIds.add(net.id);
+          if (draft.mosBulkDefaults?.nmosNetId === net.id) {
+            delete draft.mosBulkDefaults.nmosNetId;
+          }
+          if (draft.mosBulkDefaults?.pmosNetId === net.id) {
+            delete draft.mosBulkDefaults.pmosNetId;
+          }
           connectivityChanged = true;
           break;
         }
@@ -2594,6 +2632,20 @@ export function executeTransaction(
                 : deriveStableId("net-split", net.id, route.id, group[0]!);
             for (const key of group) netIdByEndpoint.set(key, groupNetId);
           });
+          for (const instance of draft.instances) {
+            if (instance.mosBulkBinding?.netId !== net.id) continue;
+            const bodyNetId = netIdByEndpoint.get(
+              endpointKey({
+                kind: "terminal",
+                instanceId: instance.id,
+                pinName: "B",
+              }),
+            );
+            if (bodyNetId && bodyNetId !== net.id) {
+              instance.mosBulkBinding.netId = bodyNetId;
+              changedObjectIds.add(instance.id);
+            }
+          }
           const originalTerminals = [...net.terminals];
           const originalPorts = [...net.ports];
           const terminalsFor = (groupNetId: string) =>
@@ -2727,6 +2779,18 @@ export function executeTransaction(
             `Net merge target/source does not exist: ${edit.targetNetId}, ${edit.sourceNetId}`,
           );
         }
+        for (const instance of draft.instances) {
+          if (instance.mosBulkBinding?.netId === source.id) {
+            instance.mosBulkBinding.netId = target.id;
+            changedObjectIds.add(instance.id);
+          }
+        }
+        if (draft.mosBulkDefaults?.nmosNetId === source.id) {
+          draft.mosBulkDefaults.nmosNetId = target.id;
+        }
+        if (draft.mosBulkDefaults?.pmosNetId === source.id) {
+          draft.mosBulkDefaults.pmosNetId = target.id;
+        }
         for (const terminal of source.terminals) {
           if (
             !target.terminals.some(
@@ -2810,6 +2874,131 @@ export function executeTransaction(
         }
         break;
       }
+      case "set_mos_bulk_defaults": {
+        if (edit.nmosNetId === undefined && edit.pmosNetId === undefined) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "At least one MOS bulk default must be supplied",
+          );
+        }
+        for (const netId of [edit.nmosNetId, edit.pmosNetId]) {
+          if (netId && !draft.nets.some((net) => net.id === netId)) {
+            return rejectAt("OBJECT_NOT_FOUND", `Net does not exist: ${netId}`);
+          }
+        }
+        const defaults = { ...(draft.mosBulkDefaults ?? {}) };
+        if (edit.nmosNetId !== undefined) {
+          if (edit.nmosNetId === null) delete defaults.nmosNetId;
+          else defaults.nmosNetId = edit.nmosNetId;
+        }
+        if (edit.pmosNetId !== undefined) {
+          if (edit.pmosNetId === null) delete defaults.pmosNetId;
+          else defaults.pmosNetId = edit.pmosNetId;
+        }
+        draft.mosBulkDefaults =
+          defaults.nmosNetId || defaults.pmosNetId ? defaults : undefined;
+        connectivityChanged = true;
+        break;
+      }
+      case "reconcile_mos_bulk": {
+        const selected = edit.instanceIds ? new Set(edit.instanceIds) : null;
+        for (const instance of draft.instances) {
+          if (selected && !selected.has(instance.id)) continue;
+          const resolution = resolveMosBulkConnection(draft, instance);
+          if (
+            !resolution ||
+            resolution.materialized ||
+            resolution.status === "no-connect" ||
+            resolution.status === "unresolved"
+          ) {
+            continue;
+          }
+          let target = resolution.net;
+          if (!target) {
+            if (
+              resolution.status !== "product-fallback" ||
+              !("fallbackName" in resolution)
+            ) {
+              continue;
+            }
+            const name = resolution.fallbackName;
+            const id = name === "0" ? "net-global-0" : "net-global-vdd";
+            target = draft.nets.find((net) => net.id === id);
+            if (!target) {
+              target = {
+                id,
+                name,
+                scope: "global",
+                terminals: [],
+                ports: [],
+              };
+              draft.nets.push(target);
+              changedObjectIds.add(id);
+            }
+          }
+          target.terminals.push({ instanceId: instance.id, pinName: "B" });
+          instance.mosBulkBinding = {
+            origin:
+              resolution.status === "cell-default"
+                ? "cell-default"
+                : "product-fallback",
+            netId: target.id,
+          };
+          changedObjectIds.add(instance.id);
+          changedObjectIds.add(target.id);
+          connectivityChanged = true;
+        }
+        break;
+      }
+      case "clear_mos_bulk_default": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+          );
+        }
+        const binding = instance.mosBulkBinding;
+        if (!binding) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `MOS ${instance.id} has no default bulk binding to override`,
+          );
+        }
+        if (
+          draft.routes.some(
+            (route) =>
+              route.presentation === "bulk-dashed" &&
+              [route.from, route.to].some(
+                (endpoint) =>
+                  endpoint.kind === "terminal" &&
+                  endpoint.instanceId === instance.id &&
+                  endpoint.pinName === "B",
+              ),
+          )
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `MOS ${instance.id} already has visible bulk routing`,
+          );
+        }
+        const net = draft.nets.find(
+          (candidate) => candidate.id === binding.netId,
+        );
+        if (net) {
+          net.terminals = net.terminals.filter(
+            (terminal) =>
+              terminal.instanceId !== instance.id || terminal.pinName !== "B",
+          );
+          changedObjectIds.add(net.id);
+        }
+        delete instance.mosBulkBinding;
+        changedObjectIds.add(instance.id);
+        connectivityChanged = true;
+        break;
+      }
       case "disconnect_endpoint": {
         const error = validateConnectableEndpoint(
           draft,
@@ -2846,6 +3035,15 @@ export function executeTransaction(
               terminal.instanceId !== endpoint.instanceId ||
               terminal.pinName !== endpoint.pinName,
           );
+          if (endpoint.pinName === "B") {
+            const instance = draft.instances.find(
+              (candidate) => candidate.id === endpoint.instanceId,
+            );
+            if (instance?.mosBulkBinding) {
+              delete instance.mosBulkBinding;
+              changedObjectIds.add(instance.id);
+            }
+          }
         } else {
           owner.ports = owner.ports.filter(
             (portId) => portId !== endpoint.portId,

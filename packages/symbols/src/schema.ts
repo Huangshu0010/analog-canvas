@@ -83,6 +83,17 @@ export const SymbolPrimitiveSchema = z.discriminatedUnion("kind", [
 export const SymbolVariantSchema = z.strictObject({
   id: StableIdSchema,
   hiddenPinNames: z.array(z.string().min(1)),
+  // A hidden canonical pin may still expose a context-gated wiring anchor at
+  // artwork-specific geometry. The electrical pin itself remains unique.
+  auxiliaryPins: z
+    .array(
+      z.strictObject({
+        name: z.string().min(1),
+        at: PointSchema,
+        direction: z.enum(["north", "east", "south", "west"]),
+      }),
+    )
+    .optional(),
   hiddenPrimitiveParts: z.array(StableIdSchema).optional(),
   additionalPrimitives: z.array(SymbolPrimitiveSchema).optional(),
 });
@@ -153,6 +164,15 @@ export const SymbolDefinitionSchema = z
             code: "custom",
             message: `Variant hides an unknown electrical pin: ${pinName}`,
             path: ["variants", variantIndex, "hiddenPinNames", pinIndex],
+          });
+        }
+      }
+      for (const [pinIndex, pin] of (variant.auxiliaryPins ?? []).entries()) {
+        if (!pinNames.has(pin.name)) {
+          context.addIssue({
+            code: "custom",
+            message: `Variant exposes an unknown auxiliary pin: ${pin.name}`,
+            path: ["variants", variantIndex, "auxiliaryPins", pinIndex],
           });
         }
       }

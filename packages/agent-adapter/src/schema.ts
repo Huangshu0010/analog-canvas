@@ -12,6 +12,7 @@ import {
   PresentationIntentSchema,
   RectSchema,
   RouteEndpointSchema,
+  RoutePresentationSchema,
   SegmentModeSchema,
   SourceSpanSchema,
   StableIdSchema,
@@ -225,6 +226,18 @@ export const AgentSnapshotInstanceSchema = z.strictObject({
   placement: PlacementSchema.nullable(),
   bounds: RectSchema.nullable(),
   pins: z.array(AgentSnapshotPinSchema),
+  mosBulk: z
+    .strictObject({
+      status: z.enum([
+        "explicit",
+        "cell-default",
+        "product-fallback",
+        "no-connect",
+        "unresolved",
+      ]),
+      netId: StableIdSchema.nullable(),
+    })
+    .optional(),
   sourceRef: SourceSpanSchema.optional(),
 });
 
@@ -250,6 +263,7 @@ export const AgentSnapshotRouteSchema = z.strictObject({
   to: RouteEndpointSchema,
   waypoints: z.array(PointSchema),
   segmentModes: z.array(SegmentModeSchema),
+  presentation: RoutePresentationSchema.optional(),
   polyline: z.array(PointSchema).min(2).nullable(),
 });
 

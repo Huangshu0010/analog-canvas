@@ -500,7 +500,14 @@ export function buildSvgScene(
         geometry.endpointJoins,
         profile,
       );
-      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}" points="${pointList(geometry.centerline)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}/>${terminalBridges}`;
+      const presentation = route.presentation ?? "wire";
+      const dash =
+        presentation === "bulk-dashed" ? ' stroke-dasharray="3 3"' : "";
+      const presentationAttribute =
+        presentation === "bulk-dashed"
+          ? ' data-route-presentation="bulk-dashed"'
+          : "";
+      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}"${presentationAttribute} points="${pointList(geometry.centerline)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}${profileMiterAttribute(profile)}/>${terminalBridges}`;
     })
     .join("");
   const routeAnchorBridges = renderRouteAnchorMiterBridges(

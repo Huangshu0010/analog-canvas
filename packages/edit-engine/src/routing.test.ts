@@ -15,6 +15,7 @@ import { executeTransaction } from "./transaction.js";
 import {
   proposeGroupMoveEdits,
   proposeLooseRouteTranslation,
+  proposeVisualRouteDeletion,
   proposeWireSegmentMove,
 } from "./routing-planner.js";
 
@@ -50,6 +51,91 @@ function transaction(documentId: string, revision: number, edits: unknown[]) {
 }
 
 describe("routing Edit Engine", () => {
+  it("centralizes bulk route deletion as disconnect plus fallback reconciliation", () => {
+    const document = documentFixture();
+    document.instances.push({
+      id: "MB",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: { position: { x: 600, y: 200 }, rotation: 0, mirror: "none" },
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-body",
+      name: "VBODY",
+      scope: "local",
+      terminals: [{ instanceId: "MB", pinName: "B" }],
+      ports: [],
+    });
+    document.junctions.push({
+      id: "body-end",
+      netId: "net-body",
+      position: { x: 720, y: 200 },
+      role: "route-anchor",
+    });
+    document.routes.push({
+      id: "route-body",
+      netId: "net-body",
+      from: { kind: "terminal", instanceId: "MB", pinName: "B" },
+      to: { kind: "junction", junctionId: "body-end" },
+      waypoints: [],
+      segmentModes: ["manual"],
+      presentation: "bulk-dashed",
+    });
+    document.junctions.push({
+      id: "body-middle",
+      netId: "net-body",
+      position: { x: 680, y: 200 },
+      role: "route-anchor",
+    });
+    document.routes[document.routes.length - 1] = {
+      ...document.routes.at(-1)!,
+      id: "route-body-head",
+      to: { kind: "junction", junctionId: "body-middle" },
+    };
+    document.routes.push({
+      id: "route-body-tail",
+      netId: "net-body",
+      from: { kind: "junction", junctionId: "body-middle" },
+      to: { kind: "junction", junctionId: "body-end" },
+      waypoints: [],
+      segmentModes: ["manual"],
+      presentation: "bulk-dashed",
+    });
+
+    const proposal = proposeVisualRouteDeletion(
+      document,
+      ["route-body-tail"],
+      [],
+    );
+    expect(proposal.edits).toEqual([
+      { kind: "cut_connection", routeId: "route-body-head" },
+      { kind: "cut_connection", routeId: "route-body-tail" },
+      {
+        kind: "disconnect_endpoint",
+        endpoint: { kind: "terminal", instanceId: "MB", pinName: "B" },
+      },
+      { kind: "reconcile_mos_bulk", instanceIds: ["MB"] },
+    ]);
+    const result = executeTransaction(
+      document,
+      transaction(document.id, 0, proposal.edits),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      result.document.routes.some((route) => route.id.startsWith("route-body")),
+    ).toBe(false);
+    expect(
+      result.document.instances.find((instance) => instance.id === "MB")
+        ?.mosBulkBinding,
+    ).toEqual({
+      origin: "product-fallback",
+      netId: "net-global-0",
+    });
+  });
+
   it("plans a segment drag as transaction edits", () => {
     const document = documentFixture();
     const routed = executeTransaction(

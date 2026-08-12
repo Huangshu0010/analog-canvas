@@ -4,7 +4,12 @@ import {
   proposeWireSegmentDrag,
   type SegmentMode,
 } from "@icm/derived";
-import type { Point, RouteEndpoint, SchematicDocument } from "@icm/model";
+import type {
+  Point,
+  RouteEndpoint,
+  RoutePresentation,
+  SchematicDocument,
+} from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { SchematicEdit } from "./transaction.js";
@@ -23,6 +28,7 @@ export interface WireSource extends WireEndpointGeometry {
   endpoint: RouteEndpoint;
   netId: string | null;
   preludeEdits: SchematicEdit[];
+  routePresentation?: RoutePresentation;
 }
 
 export interface WireCommitProposal {
@@ -102,6 +108,7 @@ function routeEdits(
       to: route.to,
       waypoints: proposal.waypoints,
       segmentModes: proposal.segmentModes,
+      ...(route.presentation ? { presentation: route.presentation } : {}),
     };
   });
 }
@@ -207,15 +214,19 @@ export function proposeLooseRouteTranslation(
           y: point.y + delta.y,
         })),
         segmentModes: [...route.segmentModes],
+        ...(route.presentation ? { presentation: route.presentation } : {}),
       },
     ],
   };
 }
 
 /**
- * Collect the closure for deleting visual route geometry. It deliberately uses
- * `cut_connection`, which removes only stored Wire/Junction facts; it does not
- * remove Net membership or implicitly sever the electrical net.
+ * Collect the closure for deleting visual route geometry. Ordinary Wire
+ * deletion deliberately preserves Net membership. A `bulk-dashed` route is
+ * different: it is the visible representation of an explicit MOS B binding,
+ * so deleting the terminal-touching route also disconnects B and restores the
+ * configured/default bulk policy. Keeping that exception here makes button,
+ * keyboard, marquee, and Agent-facing deletion paths share one contract.
  */
 export function proposeVisualRouteDeletion(
   document: SchematicDocument,
@@ -227,6 +238,36 @@ export function proposeVisualRouteDeletion(
   let changed = true;
   while (changed) {
     changed = false;
+    const bulkJunctions = new Set(
+      document.routes
+        .filter(
+          (route) =>
+            routesToRemove.has(route.id) &&
+            route.presentation === "bulk-dashed",
+        )
+        .flatMap((route) => [route.from, route.to])
+        .filter(
+          (
+            endpoint,
+          ): endpoint is Extract<RouteEndpoint, { kind: "junction" }> =>
+            endpoint.kind === "junction",
+        )
+        .map((endpoint) => endpoint.junctionId),
+    );
+    for (const route of document.routes) {
+      if (
+        route.presentation === "bulk-dashed" &&
+        !routesToRemove.has(route.id) &&
+        [route.from, route.to].some(
+          (endpoint) =>
+            endpoint.kind === "junction" &&
+            bulkJunctions.has(endpoint.junctionId),
+        )
+      ) {
+        routesToRemove.add(route.id);
+        changed = true;
+      }
+    }
     for (const route of document.routes) {
       const touchesDeletedJunction =
         (route.from.kind === "junction" &&
@@ -273,6 +314,37 @@ export function proposeVisualRouteDeletion(
           (route.to.kind === "junction" && route.to.junctionId === junctionId),
       ),
   );
+  const disconnectedBulkInstances = [
+    ...new Set(
+      document.routes
+        .filter(
+          (route) =>
+            routesToRemove.has(route.id) &&
+            route.presentation === "bulk-dashed",
+        )
+        .flatMap((route) => [route.from, route.to])
+        .filter(
+          (
+            endpoint,
+          ): endpoint is Extract<RouteEndpoint, { kind: "terminal" }> =>
+            endpoint.kind === "terminal" && endpoint.pinName === "B",
+        )
+        .filter(
+          (endpoint) =>
+            !document.routes.some(
+              (route) =>
+                !routesToRemove.has(route.id) &&
+                [route.from, route.to].some(
+                  (candidate) =>
+                    candidate.kind === "terminal" &&
+                    candidate.instanceId === endpoint.instanceId &&
+                    candidate.pinName === "B",
+                ),
+            ),
+        )
+        .map((endpoint) => endpoint.instanceId),
+    ),
+  ].sort((a, b) => a.localeCompare(b, "en"));
   return {
     routeIds: sortedRouteIds,
     junctionIds: sortedJunctionIds,
@@ -285,6 +357,13 @@ export function proposeVisualRouteDeletion(
         kind: "remove_junction",
         junctionId,
       })),
+      ...disconnectedBulkInstances.flatMap((instanceId): SchematicEdit[] => [
+        {
+          kind: "disconnect_endpoint",
+          endpoint: { kind: "terminal", instanceId, pinName: "B" },
+        },
+        { kind: "reconcile_mos_bulk", instanceIds: [instanceId] },
+      ]),
     ],
   };
 }
@@ -356,6 +435,11 @@ export function proposeWireCommit(
   suffix: number,
 ): WireCommitProposal {
   const edits: SchematicEdit[] = [...from.preludeEdits, ...to.preludeEdits];
+  const presentation =
+    from.routePresentation === "bulk-dashed" ||
+    to.routePresentation === "bulk-dashed"
+      ? "bulk-dashed"
+      : undefined;
   let netId = from.netId ?? to.netId;
   if (from.netId && to.netId && from.netId !== to.netId) {
     netId = from.netId;
@@ -382,6 +466,7 @@ export function proposeWireCommit(
     to: to.endpoint,
     waypoints: routed.waypoints,
     segmentModes: routed.segmentModes,
+    ...(presentation ? { presentation } : {}),
   });
   return { routeId, netId, edits };
 }
@@ -426,6 +511,7 @@ export function createRouteWireAnchor(
     endpoint: { kind: "junction", junctionId },
     netId: route.netId,
     point: splitPoint,
+    ...(route.presentation ? { routePresentation: route.presentation } : {}),
     preludeEdits: [
       {
         kind: "add_junction",
