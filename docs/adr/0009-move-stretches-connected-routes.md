@@ -40,6 +40,10 @@ topology-preserving logic as `proposeLocalStretch`. Specifically:
   pattern working: a caller that re-points the protected Route in the same
   batch is not blocked by the stretch skipping it. Stretching never breaks a
   lock.
+- A Route named by `set_route_points` or `route_orthogonal` anywhere in the
+  same transaction is excluded from automatic instance follow. That explicit
+  edit is the transaction's sole geometry authority for the Route, avoiding an
+  intermediate auto-stretch that is later overwritten.
 - Stretching preserves Route topology (same endpoint identity, same number of
   bends unless the original was a zero-waypoint direct Route that now needs one
   L-bend to stay orthogonal, mirroring `proposeLocalStretch`'s existing
@@ -115,8 +119,14 @@ invariant.
 - No Project file-format change. Existing Projects are unaffected.
 - No Agent API change beyond the already-added `resolvedRoutes` field, which now
   also reports stretch-affected Routes.
-- The editor UI's own `proposeGroupMove` path is unchanged for group moves;
-  this ADR covers single-instance moves in the Engine.
+- Group moves rely on Engine follow for Routes whose movement is completely
+  described by terminal transforms. They emit explicit Route geometry only
+  when a moved Junction participates, because `move_junction` intentionally
+  has no independent auto-follow behavior.
+- Internal group geometry is derived per connected Route component, not per
+  logical Net. A component moves only when it contains a selected terminal and
+  no port or unselected terminal. Net-attached annotations remain conservative
+  and move only when the complete logical Net is internal.
 - `set_route_points` remains the escape hatch for any case the stretch does not
   cover.
 
@@ -131,6 +141,10 @@ invariant.
 - Canonical topology (Net membership, endpoint identity) is unchanged after a
   stretch.
 - Deterministic: the same move produces the same stretched waypoints.
+- A disconnected remote Route on the same logical Net stays fixed; a shared
+  Junction leading to an unselected terminal is a selection boundary.
+- Group plans contain no redundant `set_route_points` for terminal-only
+  follow, while moved-Junction routes retain explicit geometry.
 
 ## Related documents
 

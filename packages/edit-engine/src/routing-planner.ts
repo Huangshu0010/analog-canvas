@@ -59,6 +59,22 @@ export function proposeGroupMoveEdits(
   moves: readonly { instanceId: string; position: Point }[],
 ): GroupMoveEditProposal {
   const proposal = proposeGroupMove(document, resolver, moves);
+  const movedJunctionIds = new Set(
+    proposal.junctions.map((move) => move.junctionId),
+  );
+  const routesRequiringExplicitGeometry = proposal.routes.filter(
+    (routeMove) => {
+      const route = document.routes.find(
+        (candidate) => candidate.id === routeMove.routeId,
+      );
+      return (
+        (route?.from.kind === "junction" &&
+          movedJunctionIds.has(route.from.junctionId)) ||
+        (route?.to.kind === "junction" &&
+          movedJunctionIds.has(route.to.junctionId))
+      );
+    },
+  );
   return {
     edits: [
       ...moves.map((move): SchematicEdit => ({
@@ -69,7 +85,7 @@ export function proposeGroupMoveEdits(
         kind: "move_junction",
         ...move,
       })),
-      ...routeEdits(document, proposal.routes),
+      ...routeEdits(document, routesRequiringExplicitGeometry),
       ...proposal.annotations.flatMap((move): SchematicEdit[] => {
         const annotation = document.annotations.find(
           (candidate) => candidate.id === move.annotationId,

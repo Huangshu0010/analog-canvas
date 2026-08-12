@@ -3,6 +3,7 @@ import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import {
+  deriveInternalGroupSelection,
   proposeGroupMove,
   proposeGroupStretch,
   proposeWireSegmentDrag,
@@ -210,6 +211,91 @@ describe("group route stretch", () => {
         { routeId: "route-1", waypoints: [] },
         { routeId: "route-2", waypoints: [] },
       ],
+    });
+  });
+
+  it("moves only the selected connected component of a shared logical Net", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({
+      id: "net-shared",
+      scope: "local",
+      terminals: [
+        { instanceId: "R1", pinName: "2" },
+        { instanceId: "R2", pinName: "1" },
+        { instanceId: "R3", pinName: "1" },
+      ],
+      ports: [],
+    });
+    document.junctions.push({
+      id: "junction-remote",
+      netId: "net-shared",
+      position: { x: 500, y: 100 },
+    });
+    document.routes.push(
+      {
+        id: "route-selected",
+        netId: "net-shared",
+        from: { kind: "terminal", instanceId: "R1", pinName: "2" },
+        to: { kind: "terminal", instanceId: "R2", pinName: "1" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-remote",
+        netId: "net-shared",
+        from: { kind: "terminal", instanceId: "R3", pinName: "1" },
+        to: { kind: "junction", junctionId: "junction-remote" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    expect(deriveInternalGroupSelection(document, ["R1", "R2"])).toEqual({
+      netIds: [],
+      routeIds: ["route-selected"],
+      junctionIds: [],
+    });
+  });
+
+  it("keeps a shared junction fixed when its component reaches an unselected terminal", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({
+      id: "net-branch",
+      scope: "local",
+      terminals: [
+        { instanceId: "R1", pinName: "2" },
+        { instanceId: "R2", pinName: "1" },
+      ],
+      ports: [],
+    });
+    document.junctions.push({
+      id: "junction-branch",
+      netId: "net-branch",
+      position: { x: 180, y: 100 },
+    });
+    document.routes.push(
+      {
+        id: "route-inside",
+        netId: "net-branch",
+        from: { kind: "terminal", instanceId: "R1", pinName: "2" },
+        to: { kind: "junction", junctionId: "junction-branch" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-boundary",
+        netId: "net-branch",
+        from: { kind: "junction", junctionId: "junction-branch" },
+        to: { kind: "terminal", instanceId: "R2", pinName: "1" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    expect(deriveInternalGroupSelection(document, ["R1"])).toEqual({
+      netIds: [],
+      routeIds: [],
+      junctionIds: [],
     });
   });
 });

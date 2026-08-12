@@ -350,6 +350,28 @@ test("keeps Wire input above labels and resolves a screen-tolerant route tap", a
   );
 });
 
+test("keeps a Wire source across repeated activation and cancels it after undo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  await placeComponent(page, "resistor", { x: 660, y: 220 });
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.keyboard.press("w");
+  await page.getByTestId("terminal-R2-1").click();
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-1").click();
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await expect(page.getByTestId("status")).toContainText(
+    "Wire cancelled because the circuit changed",
+  );
+});
+
 test("deletes a wire without exposing Unroute", async ({ page }) => {
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 340, y: 220 });
