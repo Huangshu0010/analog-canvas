@@ -1,7 +1,11 @@
 import { createEmptyProject, type CircuitProject } from "@icm/model";
+import { InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
-import { buildProjectSearchIndex } from "./index.js";
+import {
+  buildProjectConnectivityIndex,
+  buildProjectSearchIndex,
+} from "./index.js";
 
 function searchProject(): CircuitProject {
   const project = createEmptyProject("s", "S", "doc");
@@ -67,6 +71,41 @@ describe("buildProjectSearchIndex", () => {
     );
     expect(drive?.field).toBe("property");
     expect(drive?.label).toBe("R=1k");
+  });
+
+  it("matches a property key as well as its value", () => {
+    const result = buildProjectSearchIndex(searchProject())
+      .search("spice.target")
+      .find((candidate) => candidate.locator.objectId === "M1");
+    expect(result?.field).toBe("property");
+    expect(result?.label).toBe("spice.target=nmos_rf");
+  });
+
+  it("uses the supplied connectivity object index for canonical locators", () => {
+    const project = searchProject();
+    const connectivityIndex = buildProjectConnectivityIndex(
+      project,
+      new InMemorySymbolResolver([]),
+    );
+    let resolves = 0;
+    const indexedSearch = buildProjectSearchIndex(project, {
+      connectivityIndex: {
+        ...connectivityIndex,
+        objectIndex: {
+          resolve(documentId, objectId) {
+            resolves += 1;
+            return connectivityIndex.objectIndex.resolve(documentId, objectId);
+          },
+        },
+      },
+    });
+    const result = indexedSearch
+      .search("vin")
+      .find((candidate) => candidate.locator.objectId === "net-in");
+    expect(resolves).toBeGreaterThan(0);
+    expect(result?.locator).toStrictEqual(
+      connectivityIndex.objectIndex.resolve("doc", "net-in"),
+    );
   });
 
   it("matches spice.name and uses it as the instance label", () => {

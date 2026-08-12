@@ -1,5 +1,6 @@
 import type { CircuitProject } from "@icm/model";
 
+import type { ProjectConnectivityIndex } from "./connectivity-index.js";
 import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
 
 /**
@@ -71,14 +72,29 @@ function instanceLabel(
   return symbolId ?? id;
 }
 
-function collectCandidates(project: CircuitProject): Candidate[] {
+function searchLocator(
+  documentId: string,
+  kind: SearchObjectKind,
+  objectId: string,
+  objectIndex?: ProjectConnectivityIndex["objectIndex"],
+): SearchObjectLocator {
+  const resolved = objectIndex?.resolve(documentId, objectId);
+  if (resolved?.kind === kind) return resolved as SearchObjectLocator;
+  return directObjectLocator(documentId, kind, objectId);
+}
+
+function collectCandidates(
+  project: CircuitProject,
+  objectIndex?: ProjectConnectivityIndex["objectIndex"],
+): Candidate[] {
   const candidates: Candidate[] = [];
   for (const document of project.documents) {
     for (const instance of document.instances) {
-      const locator: SearchObjectLocator = directObjectLocator(
+      const locator = searchLocator(
         document.id,
         "instance",
         instance.id,
+        objectIndex,
       );
       const label = instanceLabel(
         instance.id,
@@ -115,14 +131,16 @@ function collectCandidates(project: CircuitProject): Candidate[] {
           field: "property",
           value: String(rawValue).toLowerCase(),
         });
+        candidates.push({
+          locator,
+          label: `${key}=${String(rawValue)}`,
+          field: "property",
+          value: key.toLowerCase(),
+        });
       }
     }
     for (const net of document.nets) {
-      const locator: SearchObjectLocator = directObjectLocator(
-        document.id,
-        "net",
-        net.id,
-      );
+      const locator = searchLocator(document.id, "net", net.id, objectIndex);
       const label = net.name ?? net.id;
       candidates.push({
         locator,
@@ -140,11 +158,7 @@ function collectCandidates(project: CircuitProject): Candidate[] {
       }
     }
     for (const port of document.ports) {
-      const locator: SearchObjectLocator = directObjectLocator(
-        document.id,
-        "port",
-        port.id,
-      );
+      const locator = searchLocator(document.id, "port", port.id, objectIndex);
       const label = port.name;
       candidates.push({
         locator,
@@ -169,8 +183,12 @@ export interface ProjectSearchIndex {
 
 export function buildProjectSearchIndex(
   project: CircuitProject,
+  options: { connectivityIndex?: ProjectConnectivityIndex } = {},
 ): ProjectSearchIndex {
-  const candidates = collectCandidates(project);
+  const candidates = collectCandidates(
+    project,
+    options.connectivityIndex?.objectIndex,
+  );
   return {
     search(query) {
       const normalized = query.trim().toLowerCase();

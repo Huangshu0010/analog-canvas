@@ -4863,3 +4863,13 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   and transaction tests; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(wiring): move wire proposals into edit engine`.
+
+## 2026-08-12 - Connectivity Recovery C6a: canonical project search backend
+
+- Target: have search consume the shared object index and match property keys
+  as well as values, without claiming the unfinished Ctrl+F/navigation UI.
+- Changed areas: project search and tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 19 focused search/connectivity-index
+  tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(search): use canonical locators and property keys`.
