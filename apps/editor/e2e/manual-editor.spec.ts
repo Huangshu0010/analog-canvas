@@ -1481,3 +1481,25 @@ test("highlights the complete current-document Net from a selected route", async
     "net-ui-1",
   );
 });
+
+test("marks and clears an unconnected endpoint as No Connect", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 380, y: 260 });
+
+  await page.getByTestId("terminal-R1-1").click({ button: "right" });
+  await openSelectionShelf(page);
+  await page.getByRole("button", { name: "Mark No Connect" }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Marked terminal-R1-1 No Connect",
+  );
+  await expect(page.locator('[data-role="no-connect"]')).toHaveCount(1);
+
+  await page.getByTestId("terminal-R1-1").click({ button: "right" });
+  await page.getByRole("button", { name: "Clear No Connect" }).click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Cleared No Connect on terminal-R1-1",
+  );
+  await expect(page.locator('[data-role="no-connect"]')).toHaveCount(0);
+});

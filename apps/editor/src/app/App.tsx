@@ -667,6 +667,17 @@ export function App({ project: initialProject }: AppProps) {
     selectedEndpoint?.endpoint.kind === "port"
       ? selectedEndpoint.endpoint.portId
       : null;
+  const selectedNoConnect =
+    selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction"
+      ? document.noConnects.find(
+          (noConnect) =>
+            endpointKey(noConnect.endpoint) ===
+            endpointKey(selectedEndpoint.endpoint),
+        )
+      : undefined;
+  const selectedEndpointNetId = selectedEndpoint
+    ? endpointNetId(document, selectedEndpoint.endpoint)
+    : null;
   const flightlines = useMemo(
     () => deriveFlightlines(document, resolver),
     [document, resolver],
@@ -4487,6 +4498,62 @@ export function App({ project: initialProject }: AppProps) {
     }
   }
 
+  function nextNoConnectId(): string {
+    const occupied = new Set([
+      ...document.instances.map((instance) => instance.id),
+      ...document.nets.map((net) => net.id),
+      ...document.routes.map((route) => route.id),
+      ...document.junctions.map((junction) => junction.id),
+      ...document.noConnects.map((noConnect) => noConnect.id),
+      ...document.ports.map((port) => port.id),
+      ...document.annotations.map((annotation) => annotation.id),
+      ...document.layoutGroups.map((group) => group.id),
+      ...document.constraints.map((constraint) => constraint.id),
+      ...(document.drafting?.objects ?? []).map((object) => object.id),
+    ]);
+    let id: string;
+    do {
+      uniqueSuffixCounter.current += 1;
+      id = `no-connect-ui-${uniqueSuffixCounter.current}`;
+    } while (occupied.has(id));
+    return id;
+  }
+
+  function toggleSelectedNoConnect(): void {
+    if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
+      return;
+    }
+    if (selectedNoConnect) {
+      const result = transact([
+        { kind: "remove_no_connect", noConnectId: selectedNoConnect.id },
+      ]);
+      if (result.ok) {
+        setStatus(
+          `Cleared No Connect on ${endpointTestId(selectedEndpoint.endpoint)}`,
+        );
+      }
+      return;
+    }
+    if (selectedEndpointNetId) {
+      setStatus("Disconnect this endpoint before marking it No Connect");
+      return;
+    }
+    const result = transact([
+      {
+        kind: "add_no_connect",
+        noConnect: {
+          id: nextNoConnectId(),
+          endpoint: selectedEndpoint.endpoint,
+        },
+      },
+    ]);
+    if (result.ok) {
+      setStatus(
+        `Marked ${endpointTestId(selectedEndpoint.endpoint)} No Connect`,
+      );
+    }
+  }
+
   function beginCopyPlacement(): void {
     const copied = copySelection(document, selectedIds);
     if (!copied) {
@@ -5759,6 +5826,20 @@ export function App({ project: initialProject }: AppProps) {
                 >
                   Delete connection
                 </button>
+                <button
+                  type="button"
+                  onClick={toggleSelectedNoConnect}
+                  disabled={
+                    !selectedNoConnect && selectedEndpointNetId !== null
+                  }
+                >
+                  {selectedNoConnect ? "Clear No Connect" : "Mark No Connect"}
+                </button>
+                {!selectedNoConnect && selectedEndpointNetId ? (
+                  <small>
+                    Disconnect this endpoint before marking No Connect.
+                  </small>
+                ) : null}
                 {selectedPortId ? (
                   <button
                     type="button"

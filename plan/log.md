@@ -4936,3 +4936,14 @@ contracts (WP-R1)`.
   Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(render): render explicit NoConnect markers`.
+
+## 2026-08-12 - Connectivity Recovery C2d: NoConnect endpoint editing
+
+- Target: create and clear NoConnect declarations through existing selected
+  terminal/port Endpoint actions.
+- Changed areas: editor endpoint action and focused browser regression; target
+  plan and log.
+- Validation: workspace `pnpm typecheck`; focused Playwright mark/clear flow;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): edit NoConnect declarations from endpoints`.
