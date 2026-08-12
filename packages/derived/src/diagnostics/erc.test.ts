@@ -457,6 +457,43 @@ describe("ERC engine", () => {
     expect(codes(project)).not.toContain("ERC_MISSING_MODEL");
   });
 
+  it("diagnoses only persisted imported pin facts that drift from a symbol", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [
+      {
+        ...instance("I1"),
+        properties: {
+          "spice.pin.P1": "L",
+          "spice.pin.P2": "MISSING",
+          "spice.pin.P3": "L",
+        },
+      },
+    ];
+    document.nets = [
+      {
+        id: "net-1",
+        scope: "local",
+        terminals: [
+          { instanceId: "I1", pinName: "L" },
+          { instanceId: "I1", pinName: "R" },
+        ],
+        ports: [],
+      },
+    ];
+    const mappingDiagnostics = run(project).filter(
+      (diagnostic) => diagnostic.code === "ERC_ILLEGAL_PIN_NAME",
+    );
+    expect(mappingDiagnostics).toHaveLength(2);
+    expect(
+      mappingDiagnostics.map((diagnostic) => diagnostic.parameters.position),
+    ).toEqual([2, 3]);
+
+    document.instances[0] = { ...instance("I1"), properties: {} };
+    document.revision += 1;
+    expect(codes(project)).not.toContain("ERC_ILLEGAL_PIN_NAME");
+  });
+
   it("reports a missing hierarchy target and child interface mismatch", () => {
     const project = emptyProject();
     const parent = project.documents[0]!;

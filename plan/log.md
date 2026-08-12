@@ -5002,3 +5002,14 @@ contracts (WP-R1)`.
   Playwright Net-highlight flow; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): retain Net highlights across hierarchy Cells`.
+
+## 2026-08-12 - Connectivity Recovery C8d: imported pin mapping ERC
+
+- Target: detect persisted positional SPICE pin facts that no longer map
+  uniquely to the resolved symbol.
+- Changed areas: derived ERC mapping policy and regression tests; target plan
+  and log.
+- Validation: workspace `pnpm typecheck`; 13 focused ERC tests; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): diagnose stale imported pin mappings`.

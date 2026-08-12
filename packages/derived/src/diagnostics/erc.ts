@@ -160,6 +160,45 @@ export function runErcChecks(
           related: [],
           parameters: { instanceId: instance.id, symbolId: instance.symbolId },
         });
+      } else {
+        const symbolPinNames = new Set(
+          resolved.definition.pins.map((pin) => pin.name),
+        );
+        const seenImportedPins = new Set<string>();
+        const importedPinFacts = Object.entries(instance.properties)
+          .flatMap(([key, value]) => {
+            const match = /^spice\.pin\.P([1-9][0-9]*)$/u.exec(key);
+            return match ? [{ position: Number(match[1]), key, value }] : [];
+          })
+          .sort((left, right) => left.position - right.position);
+        for (const fact of importedPinFacts) {
+          const pinName = typeof fact.value === "string" ? fact.value : null;
+          const invalid =
+            !pinName ||
+            !symbolPinNames.has(pinName) ||
+            seenImportedPins.has(pinName);
+          if (!invalid) {
+            seenImportedPins.add(pinName);
+            continue;
+          }
+          diagnostics.push({
+            id: `erc:illegal-pin-name:${document.id}:${instance.id}:${fact.position}`,
+            domain: "erc",
+            code: "ERC_ILLEGAL_PIN_NAME",
+            severity: "error",
+            confidence: "high",
+            gateEligible: true,
+            message: `Imported pin fact ${fact.key}=${String(fact.value)} does not map uniquely to symbol ${instance.symbolId}`,
+            primary: directObjectLocator(document.id, "instance", instance.id),
+            related: [],
+            parameters: {
+              instanceId: instance.id,
+              symbolId: instance.symbolId,
+              position: fact.position,
+              ...(pinName ? { pinName } : {}),
+            },
+          });
+        }
       }
 
       const childDocumentId = instance.properties["spice.childDocumentId"];
