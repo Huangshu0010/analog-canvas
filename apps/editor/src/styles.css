@@ -1541,6 +1541,12 @@ body {
   stroke-dasharray: 3 3;
 }
 
+.wire-preview.power-rail-preview {
+  stroke: #000;
+  stroke-width: 1.8;
+  stroke-dasharray: none;
+}
+
 /* Wire mode owns the canvas input surface. It sits above formal symbols/text
    but below endpoint and route targets, so labels never steal a wiring click. */
 .wire-input-plane {

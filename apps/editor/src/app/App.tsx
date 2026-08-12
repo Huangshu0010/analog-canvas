@@ -885,7 +885,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               preludeEdits: [],
               ...(pin.name === "B"
                 ? { routePresentation: "bulk-dashed" as const }
-                : {}),
+                : instance.symbolId === "vdd" && pin.name === "P"
+                  ? { routePresentation: "power-rail" as const }
+                  : {}),
             };
           });
       }),
@@ -6932,7 +6934,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   className={
                     wireSource?.routePresentation === "bulk-dashed"
                       ? "wire-preview bulk-route-preview"
-                      : "wire-preview"
+                      : wireSource?.routePresentation === "power-rail"
+                        ? "wire-preview power-rail-preview"
+                        : "wire-preview"
                   }
                   points={serializePolylinePoints(wireDraftPoints)}
                 />

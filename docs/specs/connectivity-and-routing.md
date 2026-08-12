@@ -86,7 +86,11 @@ must be horizontal or vertical and non-zero. Normalization removes consecutive
 duplicates and collinear interior points while retaining endpoint identity.
 `segmentModes.length` is always `waypoints.length + 1` after normalization.
 `RouteBranch.presentation` is optional: omitted/`wire` is a normal conductor;
-`bulk-dashed` is the Razavi body appearance. Both share Net membership,
+`bulk-dashed` is the Razavi body appearance. `power-rail` is allowed only on a
+Net whose reviewed VDD terminal establishes the VDD power domain; it renders
+with the supply stroke and suppresses otherwise-visible branch dots on that
+same Net without changing their persisted Junction objects. All presentations
+share Net membership,
 snapping, selection, split, stretch, highlight, deletion, clipboard, undo,
 Agent snapshot, and formal export behavior.
 

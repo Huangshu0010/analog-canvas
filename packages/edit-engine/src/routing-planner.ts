@@ -439,7 +439,10 @@ export function proposeWireCommit(
     from.routePresentation === "bulk-dashed" ||
     to.routePresentation === "bulk-dashed"
       ? "bulk-dashed"
-      : undefined;
+      : from.routePresentation === "power-rail" ||
+          to.routePresentation === "power-rail"
+        ? "power-rail"
+        : undefined;
   let netId = from.netId ?? to.netId;
   if (from.netId && to.netId && from.netId !== to.netId) {
     netId = from.netId;

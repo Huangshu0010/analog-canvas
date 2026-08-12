@@ -1,6 +1,7 @@
 import {
   RectSchema,
   SchematicDocumentSchema,
+  powerDomainForNet,
   transformPoint,
 } from "@icm/model";
 import {
@@ -485,6 +486,17 @@ export function buildSvgScene(
     throw new Error("SVG margin must be a non-negative integer");
   }
   const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
+  const powerRailNetIds = new Set(
+    document.routes.flatMap((route) => {
+      if (route.presentation !== "power-rail") return [];
+      const net = document.nets.find(
+        (candidate) => candidate.id === route.netId,
+      );
+      return net && powerDomainForNet(document, net) === "vdd"
+        ? [route.netId]
+        : [];
+    }),
+  );
   const viewBox = options.bounds
     ? RectSchema.parse(options.bounds)
     : deriveBounds(document, resolver, routingGeometry, margin, profile);
@@ -501,13 +513,18 @@ export function buildSvgScene(
         profile,
       );
       const presentation = route.presentation ?? "wire";
+      const isPowerRail =
+        presentation === "power-rail" && powerRailNetIds.has(route.netId);
       const dash =
         presentation === "bulk-dashed" ? ' stroke-dasharray="3 3"' : "";
       const presentationAttribute =
-        presentation === "bulk-dashed"
-          ? ' data-route-presentation="bulk-dashed"'
+        presentation !== "wire"
+          ? ` data-route-presentation="${presentation}"`
           : "";
-      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}"${presentationAttribute} points="${pointList(geometry.centerline)}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}${profileMiterAttribute(profile)}/>${terminalBridges}`;
+      const strokeWidth = isPowerRail
+        ? profile.strokes.supply
+        : profile.strokes.wire;
+      return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}"${presentationAttribute} points="${pointList(geometry.centerline)}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}${profileMiterAttribute(profile)}/>${terminalBridges}`;
     })
     .join("");
   const routeAnchorBridges = renderRouteAnchorMiterBridges(
@@ -530,7 +547,8 @@ export function buildSvgScene(
     .filter(
       (junction) =>
         (junction.role ?? "branch") === "branch" &&
-        (junctionDegrees.get(junction.id) ?? 0) >= 3,
+        (junctionDegrees.get(junction.id) ?? 0) >= 3 &&
+        !powerRailNetIds.has(junction.netId),
     )
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map(

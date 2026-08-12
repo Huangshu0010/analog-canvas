@@ -1,5 +1,17 @@
 # Maintenance Log
 
+## 2026-08-12 - Editable Razavi VDD power rail
+
+- Target: add a visually dotless, supply-weight VDD rail without weakening
+  its explicit route/Junction connectivity records.
+- Changed areas: shared Route presentation schema and Agent artifacts;
+  transaction validation and wire proposal; VDD wire preview; formal SVG;
+  contracts and focused regressions.
+- Validation: 70 focused unit tests; workspace typecheck; Agent-artifact and
+  Razavi-symbol generator checks; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/vdd-power-rail` as
+  `feat(editor): add editable Razavi VDD power rails`.
+
 ## 2026-08-12 - Restore local editor UI on current main
 
 - Target: recreate the validated local editor chrome without reverting newer

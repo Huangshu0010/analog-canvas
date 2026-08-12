@@ -63,6 +63,10 @@ palette presentations; they do not change formal model-Port semantics. A Port
 attached to a `power-label` renders a supply bar instead of an origin circle.
 Explicit Junctions render independently; device-pin anchors, ordinary corners,
 and geometric crossings never acquire a dot from appearance or degree alone.
+An explicit branch Junction on a valid VDD Net that contains a `power-rail`
+Route remains electrically and interactively real but renders without a dot;
+the rail itself uses the supply stroke. This is a Razavi supply-presentation
+exception, not a deletion or weakening of its connectivity record.
 Current and voltage annotation geometry is derived from the annotation kind and
 profile tokens, not text glyphs or editor overlays. Razavi-specific authority,
 construction, and pixel-alignment rules live in

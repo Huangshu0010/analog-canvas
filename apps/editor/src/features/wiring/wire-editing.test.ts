@@ -12,8 +12,15 @@ function source(
   endpoint: RouteEndpoint,
   point: { x: number; y: number },
   netId: string | null = null,
+  routePresentation?: WireSource["routePresentation"],
 ): WireSource {
-  return { endpoint, point, netId, preludeEdits: [] };
+  return {
+    endpoint,
+    point,
+    netId,
+    preludeEdits: [],
+    ...(routePresentation ? { routePresentation } : {}),
+  };
 }
 
 describe("wire editing proposals", () => {
@@ -65,6 +72,25 @@ describe("wire editing proposals", () => {
       sourceNetId: "net-b",
     });
     expect(proposal.edits[3]).not.toHaveProperty("newNetId");
+  });
+
+  it("preserves the VDD source's supply presentation on its first rail", () => {
+    const proposal = proposeWireCommit(
+      source(
+        { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+        { x: 0, y: 0 },
+        "net-vdd",
+        "power-rail",
+      ),
+      source({ kind: "port", portId: "rail-end" }, { x: 80, y: 0 }, "net-vdd"),
+      [],
+      11,
+    );
+
+    expect(proposal.edits.at(-1)).toMatchObject({
+      kind: "set_route_points",
+      presentation: "power-rail",
+    });
   });
 
   it("creates free and route-tap anchors with stable IDs and snapped geometry", () => {
