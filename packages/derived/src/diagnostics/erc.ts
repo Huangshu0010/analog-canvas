@@ -39,7 +39,18 @@ function isRepeatedGlobalPowerNet(
   nets: readonly CircuitProject["documents"][number]["nets"][number][],
 ): boolean {
   if (!nets.every((net) => net.scope === "global")) return false;
-  const domains = new Set(nets.map((net) => powerDomainForNet(document, net)));
+  const domains = new Set(
+    nets.map((net) => {
+      const symbolDomain = powerDomainForNet(document, net);
+      if (symbolDomain !== "none") return symbolDomain;
+      // MOS bulk fallback predates power-symbol Net normalization. Its stable
+      // IDs intentionally express the same two global supply domains even
+      // though the fallback Net has no marker terminal of its own.
+      if (net.id === "net-global-0" && net.name === "0") return "ground";
+      if (net.id === "net-global-vdd" && net.name === "VDD") return "vdd";
+      return "none";
+    }),
+  );
   return domains.size === 1 && (domains.has("vdd") || domains.has("ground"));
 }
 

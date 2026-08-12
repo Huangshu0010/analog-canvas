@@ -33,6 +33,9 @@ Shared dependency: model-level `powerDomainForNet()` power-symbol classifier.
    Net-name ERC rule.
 2. Add regression coverage for multiple Ground symbols and retain the existing
    ordinary duplicate-name failure case.
+3. Recognize the pre-existing canonical MOS-bulk fallback Nets
+   (`net-global-0` / `net-global-vdd`) as their corresponding power domain
+   when they share a normalized group with symbol-defined power Nets.
 
 ## Validation
 
@@ -53,9 +56,11 @@ fix(erc): accept repeated global power Nets
 ## Outcome
 
 Completed a narrow ERC correction. `ERC_DUPLICATE_NET_NAME` now exempts a
-same-name group only when every Net is global and every Net is classified from
-its symbol terminals as the same `ground` or `vdd` power domain. Ordinary
-duplicate local/signal Nets retain the existing error. Added a two-Ground
+same-name group only when every Net is global and every Net is classified as
+the same `ground` or `vdd` power domain. The classification includes the
+established `net-global-0` / `net-global-vdd` MOS-bulk fallback identities,
+which deliberately have no power-marker terminal. Ordinary duplicate
+local/signal Nets retain the existing error. Added a Ground plus bulk-fallback
 regression alongside the existing ordinary duplicate-name test.
 
 Validation passed: focused ERC tests (16), workspace typecheck, format check,

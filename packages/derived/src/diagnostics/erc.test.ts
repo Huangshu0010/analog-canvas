@@ -413,6 +413,12 @@ describe("ERC engine", () => {
         placement: null,
         properties: {},
       },
+      {
+        id: "M1",
+        symbolId: "nmos",
+        placement: null,
+        properties: {},
+      },
     ];
     project.documents[0]!.nets = [
       {
@@ -427,6 +433,13 @@ describe("ERC engine", () => {
         name: "0",
         scope: "global",
         terminals: [{ instanceId: "GND2", pinName: "0" }],
+        ports: [],
+      },
+      {
+        id: "net-global-0",
+        name: "0",
+        scope: "global",
+        terminals: [{ instanceId: "M1", pinName: "B" }],
         ports: [],
       },
     ];

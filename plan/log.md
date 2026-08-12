@@ -5435,6 +5435,16 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/razavi-bulk-semantics` as
   `fix(erc): accept repeated global power Nets`.
 
+## 2026-08-12 - Global ground ERC fallback follow-up
+
+- Target: include canonical MOS-bulk fallback Net `net-global-0` in the
+  same global-ground ERC exemption as visible Ground marker Nets.
+- Changed areas: ERC power-domain grouping and the existing focused regression.
+- Validation: 16 focused ERC tests; workspace typecheck; format check;
+  `git diff --check`.
+- Commit status: ready to commit on `codex/razavi-bulk-semantics` as
+  `fix(erc): recognize canonical power fallback Nets`.
+
 ## 2026-08-12 - Unified Net Label binding and deletion
 
 - Target: eliminate conflicting Route/Junction/Net interpretations of Label
