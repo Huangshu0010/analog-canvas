@@ -5444,3 +5444,17 @@ contracts (WP-R1)`.
   typecheck; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `fix(connectivity): highlight routed components through the index`.
+
+## 2026-08-12 - Main and connectivity integration
+
+- Target: combine the published connectivity/routing branch with current main
+  without risking either the production Analytics/Cloudflare work or editor
+  connectivity behavior.
+- Changed areas: explicit two-parent integration commit; additive maintenance
+  log conflict resolution; integration target record. No functional conflict
+  was manually resolved.
+- Validation: frozen install and complete local `pnpm ci:check`: formatting,
+  references, typecheck, 597 unit tests, build/performance/export/PWA/
+  production/release gates, and 85 browser E2E tests all passed.
+- Commit status: merge commit `1f79b3a` created locally on
+  `codex/integrate-connectivity-main`; close-out ready to commit and push.

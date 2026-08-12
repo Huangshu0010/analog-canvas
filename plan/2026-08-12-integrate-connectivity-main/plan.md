@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -62,4 +62,14 @@ codex/integrate-connectivity-main
 
 ## Outcome
 
-Pending merge and validation.
+Created integration branch `codex/integrate-connectivity-main` from current
+`origin/main`, preserved both maintenance histories in the sole conflict
+(`plan/log.md`), and created merge commit `1f79b3a` with the expected parents:
+the integration-plan commit rooted on main and connectivity commit `d806deb`.
+No functional file required manual conflict resolution.
+
+Local validation completed before push: frozen install; complete
+`corepack pnpm ci:check`; formatting, references, and typecheck; 597 unit
+tests; builds, performance, export/PWA/production/release gates; and all 85
+browser E2E tests. The combined Analytics/Cloudflare and connectivity editor
+surfaces passed together.
