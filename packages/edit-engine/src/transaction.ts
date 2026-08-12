@@ -19,6 +19,7 @@ import {
   StableIdSchema,
   deriveStableId,
   inverseTransformPoint,
+  powerNetNormalizations,
   transformPoint,
 } from "@icm/model";
 import type {
@@ -176,6 +177,9 @@ export const SetNetNameEditSchema = z.strictObject({
   netId: StableIdSchema,
   name: z.string().trim().min(1).max(256),
 });
+export const NormalizePowerNetsEditSchema = z.strictObject({
+  kind: z.literal("normalize_power_nets"),
+});
 export const DisconnectEndpointEditSchema = z.strictObject({
   kind: z.literal("disconnect_endpoint"),
   endpoint: z.discriminatedUnion("kind", [
@@ -282,6 +286,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   ConnectEndpointsEditSchema,
   MergeNetsEditSchema,
   SetNetNameEditSchema,
+  NormalizePowerNetsEditSchema,
   DisconnectEndpointEditSchema,
   AddNoConnectEditSchema,
   RemoveNoConnectEditSchema,
@@ -587,6 +592,31 @@ function addEndpointToNet(
   } else if (endpoint.kind === "port" && !net.ports.includes(endpoint.portId)) {
     net.ports.push(endpoint.portId);
   }
+}
+
+function normalizePowerNets(
+  document: SchematicDocument,
+  changedObjectIds: Set<string>,
+): boolean {
+  let changed = false;
+  for (const normalization of powerNetNormalizations(document)) {
+    const net = document.nets.find(
+      (candidate) => candidate.id === normalization.netId,
+    )!;
+    let netChanged = false;
+    if (net.scope !== "global") {
+      net.scope = "global";
+      changed = true;
+      netChanged = true;
+    }
+    if (normalization.name && net.name !== normalization.name) {
+      net.name = normalization.name;
+      changed = true;
+      netChanged = true;
+    }
+    if (netChanged) changedObjectIds.add(net.id);
+  }
+  return changed;
 }
 
 function replaceLayoutReference(
@@ -2761,6 +2791,12 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
+      case "normalize_power_nets": {
+        if (normalizePowerNets(draft, changedObjectIds)) {
+          connectivityChanged = true;
+        }
+        break;
+      }
       case "disconnect_endpoint": {
         const error = validateConnectableEndpoint(
           draft,
@@ -3136,6 +3172,13 @@ export function executeTransaction(
       }
     }
     geometryChanged = true;
+  }
+
+  // A power symbol's terminal membership, rather than an incidental Net name
+  // or the specific UI operation used to create it, owns power-Net semantics.
+  // This catches wiring, endpoint joins, and merges through the same boundary.
+  if (normalizePowerNets(draft, changedObjectIds)) {
+    connectivityChanged = true;
   }
 
   if (resolver) {

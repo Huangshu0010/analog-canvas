@@ -123,6 +123,55 @@ describe("visual quality diagnostics", () => {
     ).toHaveLength(1);
   });
 
+  it("does not report a precise same-Net power-symbol terminal contact as overlap", () => {
+    const document = createEmptyDocument("doc", "Power contact");
+    document.instances.push(
+      {
+        id: "M2",
+        symbolId: "pmos",
+        symbolVariantId: "textbook-3terminal",
+        placement: {
+          position: { x: 490, y: 290 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+      {
+        id: "VDD3",
+        symbolId: "vdd",
+        placement: {
+          position: { x: 500, y: 250 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    );
+    document.nets.push({
+      id: "net-ui-2",
+      scope: "local",
+      terminals: [
+        { instanceId: "M2", pinName: "S" },
+        { instanceId: "VDD3", pinName: "P" },
+      ],
+      ports: [],
+    });
+
+    expect(
+      diagnoseVisualQuality(document, resolver).filter(
+        (item) => item.code === "VISUAL_SYMBOL_OVERLAP",
+      ),
+    ).toEqual([]);
+
+    document.nets[0]!.terminals = [{ instanceId: "M2", pinName: "S" }];
+    expect(
+      diagnoseVisualQuality(document, resolver).some(
+        (item) => item.code === "VISUAL_SYMBOL_OVERLAP",
+      ),
+    ).toBe(true);
+  });
+
   it("reports wire-through-symbol, same-Net overlap, and terminal departure as evidence", () => {
     const document = createEmptyDocument("doc", "Routing metrics");
     document.nets.push({

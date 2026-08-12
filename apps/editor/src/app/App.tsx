@@ -48,6 +48,7 @@ import type {
 import {
   createEmptyProject,
   parseProject,
+  powerNetNormalizations,
   serializeProject,
   transformPoint,
 } from "@icm/model";
@@ -873,6 +874,9 @@ export function App({ project: initialProject }: AppProps) {
     [document, resolver],
   );
   useEffect(() => {
+    const normalizationEdits = powerNetNormalizations(document).length
+      ? [{ kind: "normalize_power_nets" as const }]
+      : [];
     const powerContactEdits = proposeLegacyPowerContactReconciliation(
       resolver,
       document.instances,
@@ -882,12 +886,12 @@ export function App({ project: initialProject }: AppProps) {
       document,
       document.instances,
     );
-    const edits = [...powerContactEdits, ...bulkEdits];
+    const edits = [...normalizationEdits, ...powerContactEdits, ...bulkEdits];
     if (edits.length === 0) return;
     const result = transact(edits);
     if (result.ok) {
       setStatus(
-        `Reconciled ${powerContactEdits.length} visible power contact(s) and ${bulkEdits.length} Razavi bulk connection(s)`,
+        `Normalized ${normalizationEdits.length} power-Net rule(s), reconciled ${powerContactEdits.length} visible power contact(s), and added ${bulkEdits.length} Razavi bulk connection(s)`,
       );
     }
   }, [document, resolver, visibleEndpoints]);

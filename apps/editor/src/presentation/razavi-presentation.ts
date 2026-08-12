@@ -1,4 +1,5 @@
 import type { SchematicEdit } from "@icm/edit-engine";
+import { powerDomainForNet } from "@icm/model";
 import type { RouteEndpoint, SchematicDocument } from "@icm/model";
 
 const DEFAULT_SYMBOL_VARIANTS: Readonly<Record<string, string>> = {
@@ -71,10 +72,12 @@ function matchingGlobalSupply(
       : new Set(["0", "gnd", "vss", "vssa", "vssd", "vee", "vgnd"]);
   return document.nets.find(
     (net) =>
-      net.scope === "global" &&
-      [net.name, net.id]
-        .map(normalizedSupplyName)
-        .some((name) => name !== undefined && canonicalNames.has(name)),
+      powerDomainForNet(document, net) ===
+        (supplyName === "VDD" ? "vdd" : "ground") ||
+      (net.scope === "global" &&
+        [net.name, net.id]
+          .map(normalizedSupplyName)
+          .some((name) => name !== undefined && canonicalNames.has(name))),
   );
 }
 
@@ -138,7 +141,9 @@ export function razaviHiddenBulkRisk(
         terminal.instanceId === instanceId && terminal.pinName === "B",
     ),
   );
-  if (!bulkNet) return undefined;
+  if (!bulkNet || powerDomainForNet(document, bulkNet) !== "none") {
+    return undefined;
+  }
 
   const isImplicitSupply = [bulkNet.name, bulkNet.id]
     .filter((name): name is string => Boolean(name))

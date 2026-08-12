@@ -1805,6 +1805,19 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
+                                  "const": "normalize_power_nets"
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
                                   "const": "disconnect_endpoint"
                                 },
                                 "endpoint": {
@@ -66299,6 +66312,19 @@
                                 "kind",
                                 "netId",
                                 "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "normalize_power_nets"
+                                }
+                              },
+                              "required": [
+                                "kind"
                               ],
                               "additionalProperties": false
                             },

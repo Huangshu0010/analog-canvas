@@ -1,5 +1,5 @@
 import { createEmptyProject, type CircuitProject } from "@icm/model";
-import { InMemorySymbolResolver } from "@icm/symbols";
+import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { buildProjectConnectivityIndex } from "../connectivity-index.js";
@@ -33,7 +33,7 @@ const dual = {
   aliases: [],
 };
 
-const resolver = new InMemorySymbolResolver([dual]);
+const resolver = new InMemorySymbolResolver([...builtInSymbols, dual]);
 
 const mos = {
   ...dual,
@@ -295,6 +295,34 @@ describe("ERC engine", () => {
     };
     document.revision += 1;
     expect(roleRun(project)).toEqual([]);
+  });
+
+  it("reports a Net that shorts reviewed VDD and ground symbols", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [
+      { id: "VDD1", symbolId: "vdd", placement: null, properties: {} },
+      { id: "GND1", symbolId: "ground", placement: null, properties: {} },
+    ];
+    document.nets = [
+      {
+        id: "net-short",
+        scope: "local",
+        terminals: [
+          { instanceId: "VDD1", pinName: "P" },
+          { instanceId: "GND1", pinName: "0" },
+        ],
+        ports: [],
+      },
+    ];
+
+    expect(run(project)).toContainEqual(
+      expect.objectContaining({
+        code: "ERC_POWER_DOMAIN_CONFLICT",
+        severity: "error",
+        primary: expect.objectContaining({ objectId: "net-short" }),
+      }),
+    );
   });
 
   it("suppresses role-specific ERC warnings with explicit NoConnect", () => {

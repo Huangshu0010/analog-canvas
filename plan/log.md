@@ -5308,3 +5308,20 @@ contracts (WP-R1)`.
   `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `feat(editor): strengthen Net highlighting and flightline policy`.
+
+## 2026-08-12 - Symbol-defined power-Net normalization
+
+- Target: make VDD/GND marker terminal membership authoritative for power-Net
+  scope and safe Razavi bulk presentation, while eliminating only the valid
+  power-marker contact overlap false positive.
+- Changed areas: model power-domain facts; edit transaction and Agent schema;
+  editor legacy normalization/bulk policy; ERC/visual diagnostics; generated
+  Agent API artifacts; focused unit/browser regressions and target plan.
+- Validation: 51 focused tests; supplied-legacy-topology browser regression;
+  typecheck; format and Agent artifact checks; frozen install; `git diff
+  --check`. Complete static/unit/release CI stages passed (589 unit tests).
+  Two full 16-worker E2E attempts each had unrelated, non-repeatable timeout
+  failures; all three affected existing cases passed in isolated single-worker
+  reruns.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(connectivity): normalize symbol-defined power Nets`.

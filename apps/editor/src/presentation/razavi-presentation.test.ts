@@ -36,6 +36,32 @@ describe("Razavi hidden bulk policy", () => {
     ]);
   });
 
+  it("recognizes a VDD symbol Net before legacy metadata normalization", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push(manualMos("M4", "pmos"), {
+      id: "VDD3",
+      symbolId: "vdd",
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-ui-2",
+      scope: "local",
+      terminals: [{ instanceId: "VDD3", pinName: "P" }],
+      ports: [],
+    });
+
+    expect(
+      razaviManualBulkConnectionEdits(document, document.instances),
+    ).toEqual([
+      {
+        kind: "connect_endpoints",
+        from: { kind: "terminal", instanceId: "M4", pinName: "B" },
+        to: { kind: "terminal", instanceId: "VDD3", pinName: "P" },
+      },
+    ]);
+  });
+
   it("never guesses a body short for imported or supply-less MOS", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(

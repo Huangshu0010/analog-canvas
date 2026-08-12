@@ -59,6 +59,56 @@ describe("Edit Transaction envelope", () => {
     expect(document.revision).toBe(0);
   });
 
+  it("normalizes a power-symbol Net regardless of how the Net was created", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push(
+      {
+        id: "M2",
+        symbolId: "pmos",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "VDD3",
+        symbolId: "vdd",
+        placement: null,
+        properties: {},
+      },
+    );
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "connect_endpoints",
+            from: { kind: "terminal", instanceId: "M2", pinName: "S" },
+            to: { kind: "terminal", instanceId: "VDD3", pinName: "P" },
+            newNetId: "net-ui-2",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [
+          {
+            id: "net-ui-2",
+            name: "VDD",
+            scope: "global",
+            terminals: [
+              { instanceId: "M2", pinName: "S" },
+              { instanceId: "VDD3", pinName: "P" },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
   it("dry-runs without mutating or advancing the current revision", () => {
     const document = createEmptyDocument("document-main", "Main");
     const result = executeTransaction(document, transaction(0, true));

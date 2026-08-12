@@ -1,3 +1,4 @@
+import { powerDomainForNet } from "@icm/model";
 import type { CircuitProject } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -79,9 +80,15 @@ function endpointHasOnlyInternalMembership(
 function isSafeBulkNet(
   document: CircuitProject["documents"][number],
   netId: string,
+  expectedDomain: "vdd" | "ground" | undefined,
 ): boolean {
   const net = document.nets.find((candidate) => candidate.id === netId);
   if (!net) return false;
+  const symbolDomain = powerDomainForNet(document, net);
+  if (symbolDomain === "conflict") return false;
+  if (symbolDomain === "vdd" || symbolDomain === "ground") {
+    return expectedDomain === undefined || symbolDomain === expectedDomain;
+  }
   return (
     net.scope === "global" ||
     SAFE_BULK_NET_NAMES.has(normalizedNetName(net.name ?? net.id))
@@ -104,6 +111,22 @@ export function runErcChecks(
     const noConnectEndpoints = new Set(
       document.noConnects.map((noConnect) => noConnectKey(noConnect.endpoint)),
     );
+
+    for (const net of document.nets) {
+      if (powerDomainForNet(document, net) !== "conflict") continue;
+      diagnostics.push({
+        id: `erc:power-domain-conflict:${document.id}:${net.id}`,
+        domain: "erc",
+        code: "ERC_POWER_DOMAIN_CONFLICT",
+        severity: "error",
+        confidence: "high",
+        gateEligible: true,
+        message: `Net ${net.name ?? net.id} contains both VDD and ground power symbols`,
+        primary: directObjectLocator(document.id, "net", net.id),
+        related: [],
+        parameters: { netId: net.id },
+      });
+    }
 
     // ERC_UNRESOLVED_SYMBOL and hierarchy interface checks. These run before
     // pin connectivity checks so unknown symbols never get silently skipped.
@@ -416,8 +439,16 @@ export function runErcChecks(
 
         if (role === "bulk") {
           const isThreeTerminalHidden = hidden.has(pin.name);
+          const expectedDomain =
+            instance.symbolId === "pmos"
+              ? "vdd"
+              : instance.symbolId === "nmos"
+                ? "ground"
+                : undefined;
           const unsafeHiddenNet =
-            isThreeTerminalHidden && netId && !isSafeBulkNet(document, netId);
+            isThreeTerminalHidden &&
+            netId &&
+            !isSafeBulkNet(document, netId, expectedDomain);
           if (
             !explicitlyNoConnect &&
             (!netId || unsafeHiddenNet) &&

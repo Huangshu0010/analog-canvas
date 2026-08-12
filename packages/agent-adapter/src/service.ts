@@ -475,6 +475,7 @@ function editCategory(
     case "connect_endpoints":
     case "merge_nets":
     case "set_net_name":
+    case "normalize_power_nets":
     case "disconnect_endpoint":
     case "add_no_connect":
     case "remove_no_connect":

@@ -387,7 +387,7 @@ test("deletes a routed part of an imported Net that still has flightlines", asyn
   await expect(page.getByTestId("flightline")).toHaveCount(2);
 });
 
-test("reconciles one legacy visible VDD contact without a visual-only ERC", async ({
+test("normalizes a legacy VDD Net and completes its PMOS bulk", async ({
   page,
 }) => {
   const project = createEmptyProject("legacy-contact", "Legacy contact");
@@ -415,6 +415,15 @@ test("reconciles one legacy visible VDD contact without a visual-only ERC", asyn
       properties: {},
     },
   );
+  document.nets.push({
+    id: "net-ui-2",
+    scope: "local",
+    terminals: [
+      { instanceId: "M4", pinName: "S" },
+      { instanceId: "VDD9", pinName: "P" },
+    ],
+    ports: [],
+  });
   await page.goto("/");
   await page.getByTestId("project-file").setInputFiles({
     name: "legacy-contact.icproj.json",
@@ -423,7 +432,7 @@ test("reconciles one legacy visible VDD contact without a visual-only ERC", asyn
   });
 
   await expect(page.getByTestId("status")).toContainText(
-    "Reconciled 0 visible power contact(s) and 1 Razavi bulk connection(s)",
+    "Normalized 1 power-Net rule(s), reconciled 0 visible power contact(s), and added 1 Razavi bulk connection(s)",
   );
 });
 
