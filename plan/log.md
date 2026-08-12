@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-12 - Drawn VDD rail mainline delivery
+
+- Target: deliver drawn VDD rail and capacitor refinements to remote main by
+  review PR under the required delivery gate.
+- Changed areas: corrected capacitor rotated-label geometry expectation and
+  delivery target record.
+- Validation: frozen install and full `pnpm ci:check` passed: 615 unit tests,
+  release/performance/export/PWA/release smoke, and 91 browser tests.
+- Commit status: ready to push/open PR from `codex/vdd-drawn-rail`; wait for
+  GitHub required checks before merging main.
+
 ## 2026-08-12 - Capacitor plate contraction
 
 - Target: reduce the current capacitor plate length by 10%.
