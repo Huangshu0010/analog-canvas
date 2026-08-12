@@ -4795,3 +4795,16 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   or schema behavior changed.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `docs(roadmap): reconcile connectivity delivery status`.
+
+## 2026-08-12 - Connectivity Recovery C1: canonical locator and diagnostic
+
+- Target: replace incompatible index/search/ERC locator declarations and the
+  ERC-coupled diagnostic definition with the single ADR 0015 public protocol.
+- Changed areas: new `object-locator.ts`; connectivity index, search, ERC and
+  visual diagnostic adaptation; focused locator-shape tests; target plan and
+  this log.
+- Validation: workspace `pnpm typecheck`; 25 focused derived tests; targeted
+  Prettier; `rg` confirmed no production private locator declaration; `git diff
+  --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): unify locator and diagnostic protocols`.

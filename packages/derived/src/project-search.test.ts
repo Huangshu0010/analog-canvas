@@ -39,6 +39,9 @@ describe("buildProjectSearchIndex", () => {
     const results = buildProjectSearchIndex(searchProject()).search("vin");
     const ids = results.map((result) => result.locator.objectId);
     expect(ids).toContain("net-in"); // net name "VIN" substring
+    expect(
+      results.find((result) => result.locator.objectId === "net-in")?.locator,
+    ).toMatchObject({ documentId: "doc", hierarchyPath: [], kind: "net" });
   });
 
   it("ranks exact above prefix above substring, per object", () => {

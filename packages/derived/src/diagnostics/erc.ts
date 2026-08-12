@@ -2,6 +2,8 @@ import type { CircuitProject } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { ProjectConnectivityIndex } from "../connectivity-index.js";
+import { directObjectLocator, type ObjectLocator } from "../object-locator.js";
+import type { Diagnostic, DiagnosticSeverity } from "./diagnostic.js";
 
 /**
  * ERC engine (roadmap §8 R8). Emits the unified ADR 0015 `Diagnostic` envelope
@@ -15,45 +17,9 @@ import type { ProjectConnectivityIndex } from "../connectivity-index.js";
  * rules extend the same framework in follow-on targets.
  */
 
-export type ErcSeverity = "error" | "warning" | "info";
-
-export type ErcLocatorKind =
-  | "document"
-  | "instance"
-  | "net"
-  | "route"
-  | "junction"
-  | "terminal"
-  | "port"
-  | "annotation"
-  | "no-connect";
-
-export interface ErcEndpoint {
-  kind: "terminal" | "port";
-  instanceId?: string;
-  pinName?: string;
-  portId?: string;
-}
-
-export interface ErcLocator {
-  documentId: string;
-  kind: ErcLocatorKind;
-  objectId: string;
-  endpoint?: ErcEndpoint;
-}
-
-export interface ErcDiagnostic {
-  id: string;
-  domain: "erc";
-  code: string;
-  severity: ErcSeverity;
-  confidence: "high" | "medium" | "low";
-  gateEligible: boolean;
-  message: string;
-  primary: ErcLocator;
-  related: readonly ErcLocator[];
-  parameters: Readonly<Record<string, string | number | boolean>>;
-}
+/** Compatibility aliases for ERC consumers; their protocol is Diagnostic. */
+export type ErcSeverity = DiagnosticSeverity;
+export type ErcDiagnostic = Diagnostic & { domain: "erc" };
 
 function noConnectKey(endpoint: {
   kind: "terminal" | "port";
@@ -70,11 +36,9 @@ function terminalLocator(
   documentId: string,
   instanceId: string,
   pinName: string,
-): ErcLocator {
+): ObjectLocator {
   return {
-    documentId,
-    kind: "terminal",
-    objectId: `${instanceId}:${pinName}`,
+    ...directObjectLocator(documentId, "terminal", `${instanceId}:${pinName}`),
     endpoint: { kind: "terminal", instanceId, pinName },
   };
 }
@@ -122,16 +86,10 @@ export function runErcChecks(
         confidence: "high",
         gateEligible: true,
         message: `Instance name "${name}" is used by ${ids.length} instances in document ${document.id}`,
-        primary: {
-          documentId: document.id,
-          kind: "instance",
-          objectId: primaryId!,
-        },
-        related: restIds.map((objectId) => ({
-          documentId: document.id,
-          kind: "instance" as const,
-          objectId,
-        })),
+        primary: directObjectLocator(document.id, "instance", primaryId!),
+        related: restIds.map((objectId) =>
+          directObjectLocator(document.id, "instance", objectId),
+        ),
         parameters: { name, count: ids.length },
       });
     }
@@ -158,12 +116,10 @@ export function runErcChecks(
         confidence: "high",
         gateEligible: true,
         message: `Net name "${name}" is shared by ${ids.length} nets in document ${document.id} without an explicit merge`,
-        primary: { documentId: document.id, kind: "net", objectId: primaryId! },
-        related: restIds.map((objectId) => ({
-          documentId: document.id,
-          kind: "net" as const,
-          objectId,
-        })),
+        primary: directObjectLocator(document.id, "net", primaryId!),
+        related: restIds.map((objectId) =>
+          directObjectLocator(document.id, "net", objectId),
+        ),
         parameters: { name, count: ids.length },
       });
     }
@@ -181,12 +137,10 @@ export function runErcChecks(
         gateEligible: true,
         message: `NoConnect ${noConnect.id} is also connected to net ${owner}`,
         primary: {
-          documentId: document.id,
-          kind: "no-connect",
-          objectId: noConnect.id,
+          ...directObjectLocator(document.id, "no-connect", noConnect.id),
           endpoint: noConnect.endpoint,
         },
-        related: [{ documentId: document.id, kind: "net", objectId: owner }],
+        related: [directObjectLocator(document.id, "net", owner)],
         parameters: { netId: owner, noConnectId: noConnect.id },
       });
     }

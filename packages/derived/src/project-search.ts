@@ -1,5 +1,7 @@
 import type { CircuitProject } from "@icm/model";
 
+import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
+
 /**
  * Deterministic project-wide search index (ADR 0015 / roadmap WP-R5 core).
  * Case-insensitive exact/prefix/substring matching over instances, nets, and
@@ -10,11 +12,9 @@ import type { CircuitProject } from "@icm/model";
 
 export type SearchObjectKind = "instance" | "net" | "port";
 
-export interface ObjectLocator {
-  documentId: string;
+export type SearchObjectLocator = ObjectLocator & {
   kind: SearchObjectKind;
-  objectId: string;
-}
+};
 
 export type SearchField =
   | "instance-id"
@@ -29,7 +29,7 @@ export type SearchField =
 export type MatchType = "exact" | "prefix" | "substring";
 
 export interface SearchResult {
-  locator: ObjectLocator;
+  locator: SearchObjectLocator;
   label: string;
   field: SearchField;
   matchType: MatchType;
@@ -48,7 +48,7 @@ const KIND_RANK: Record<SearchObjectKind, number> = {
 };
 
 interface Candidate {
-  locator: ObjectLocator;
+  locator: SearchObjectLocator;
   label: string;
   field: SearchField;
   value: string; // lowercased match target
@@ -75,11 +75,11 @@ function collectCandidates(project: CircuitProject): Candidate[] {
   const candidates: Candidate[] = [];
   for (const document of project.documents) {
     for (const instance of document.instances) {
-      const locator: ObjectLocator = {
-        documentId: document.id,
-        kind: "instance",
-        objectId: instance.id,
-      };
+      const locator: SearchObjectLocator = directObjectLocator(
+        document.id,
+        "instance",
+        instance.id,
+      );
       const label = instanceLabel(
         instance.id,
         instance.symbolId,
@@ -118,11 +118,11 @@ function collectCandidates(project: CircuitProject): Candidate[] {
       }
     }
     for (const net of document.nets) {
-      const locator: ObjectLocator = {
-        documentId: document.id,
-        kind: "net",
-        objectId: net.id,
-      };
+      const locator: SearchObjectLocator = directObjectLocator(
+        document.id,
+        "net",
+        net.id,
+      );
       const label = net.name ?? net.id;
       candidates.push({
         locator,
@@ -140,11 +140,11 @@ function collectCandidates(project: CircuitProject): Candidate[] {
       }
     }
     for (const port of document.ports) {
-      const locator: ObjectLocator = {
-        documentId: document.id,
-        kind: "port",
-        objectId: port.id,
-      };
+      const locator: SearchObjectLocator = directObjectLocator(
+        document.id,
+        "port",
+        port.id,
+      );
       const label = port.name;
       candidates.push({
         locator,

@@ -74,6 +74,7 @@ describe("diagnostic aggregation", () => {
     expect(diagnostic.code).toBe("VISUAL_SHORT_SEGMENT");
     expect(diagnostic.primary).toEqual({
       documentId: "doc",
+      hierarchyPath: [],
       kind: "instance",
       objectId: "I1",
     });

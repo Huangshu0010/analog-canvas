@@ -14,6 +14,7 @@ import {
   type RoutedComponent,
 } from "./connectivity.js";
 import { endpointKey, isVisibleEndpoint, netEndpoints } from "./endpoint.js";
+import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
 
 /**
  * Unified read-only connectivity index (ADR 0013). Single source of
@@ -70,25 +71,11 @@ export interface HierarchyConnectivityIndex {
 }
 
 /**
- * Project-level object identity (ADR 0015 core). The full ADR 0015
- * `ObjectLocator` (with `hierarchyPath`, `endpoint`, `sourceRef`) is populated
- * by search/navigation in WP-R5; the index provides the document/kind/id core.
+ * Project-level object identity (ADR 0015). Direct-document locators carry an
+ * empty hierarchy path; C6 later supplies non-empty paths for navigation.
  */
-export interface IndexObjectLocator {
-  documentId: string;
-  kind:
-    | "document"
-    | "instance"
-    | "net"
-    | "route"
-    | "junction"
-    | "port"
-    | "annotation";
-  objectId: string;
-}
-
 export interface ProjectObjectIndex {
-  resolve(documentId: string, objectId: string): IndexObjectLocator | undefined;
+  resolve(documentId: string, objectId: string): ObjectLocator | undefined;
 }
 
 export interface ProjectConnectivityIndex {
@@ -326,25 +313,25 @@ function buildObjectIndex(project: CircuitProject): ProjectObjectIndex {
       );
       if (!document) return undefined;
       if (document.id === objectId) {
-        return { documentId, kind: "document", objectId };
+        return directObjectLocator(documentId, "document", objectId);
       }
       if (document.instances.some((candidate) => candidate.id === objectId)) {
-        return { documentId, kind: "instance", objectId };
+        return directObjectLocator(documentId, "instance", objectId);
       }
       if (document.nets.some((candidate) => candidate.id === objectId)) {
-        return { documentId, kind: "net", objectId };
+        return directObjectLocator(documentId, "net", objectId);
       }
       if (document.routes.some((candidate) => candidate.id === objectId)) {
-        return { documentId, kind: "route", objectId };
+        return directObjectLocator(documentId, "route", objectId);
       }
       if (document.junctions.some((candidate) => candidate.id === objectId)) {
-        return { documentId, kind: "junction", objectId };
+        return directObjectLocator(documentId, "junction", objectId);
       }
       if (document.ports.some((candidate) => candidate.id === objectId)) {
-        return { documentId, kind: "port", objectId };
+        return directObjectLocator(documentId, "port", objectId);
       }
       if (document.annotations.some((candidate) => candidate.id === objectId)) {
-        return { documentId, kind: "annotation", objectId };
+        return directObjectLocator(documentId, "annotation", objectId);
       }
       return undefined;
     },

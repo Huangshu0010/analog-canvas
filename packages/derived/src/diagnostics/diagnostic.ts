@@ -1,6 +1,6 @@
 import type { ProjectConnectivityIndex } from "../connectivity-index.js";
+import { directObjectLocator, type ObjectLocator } from "../object-locator.js";
 import type { VisualDiagnostic } from "../visual.js";
-import type { ErcDiagnostic, ErcLocator, ErcSeverity } from "./erc.js";
 
 /**
  * Unified diagnostic envelope and aggregation (ADR 0015 / roadmap §5.6, WP-R9
@@ -13,12 +13,22 @@ import type { ErcDiagnostic, ErcLocator, ErcSeverity } from "./erc.js";
 export type DiagnosticDomain =
   "schema" | "spice" | "erc" | "routing" | "visual";
 
-export type Diagnostic = Omit<ErcDiagnostic, "domain" | "severity"> & {
-  domain: DiagnosticDomain;
-  severity: ErcSeverity;
-};
+export type DiagnosticSeverity = "error" | "warning" | "info";
 
-const SEVERITY_RANK: Record<ErcSeverity, number> = {
+export interface Diagnostic {
+  id: string;
+  domain: DiagnosticDomain;
+  code: string;
+  severity: DiagnosticSeverity;
+  confidence: "high" | "medium" | "low";
+  gateEligible: boolean;
+  message: string;
+  primary: ObjectLocator;
+  related: readonly ObjectLocator[];
+  parameters: Readonly<Record<string, string | number | boolean>>;
+}
+
+const SEVERITY_RANK: Record<DiagnosticSeverity, number> = {
   error: 0,
   warning: 1,
   info: 2,
@@ -36,12 +46,10 @@ function locatorFromIndex(
   index: ProjectConnectivityIndex,
   documentId: string,
   objectId: string,
-): ErcLocator {
+): ObjectLocator {
   return (
     index.objectIndex.resolve(documentId, objectId) ?? {
-      documentId,
-      kind: "document",
-      objectId: documentId,
+      ...directObjectLocator(documentId, "document", documentId),
     }
   );
 }
@@ -59,11 +67,11 @@ export function adaptVisualDiagnostic(
   const [primaryId, ...relatedIds] = visual.objectIds;
   const primary = primaryId
     ? locatorFromIndex(index, documentId, primaryId)
-    : { documentId, kind: "document" as const, objectId: documentId };
+    : directObjectLocator(documentId, "document", documentId);
   const related = relatedIds
     .map((objectId) => locatorFromIndex(index, documentId, objectId))
     .filter(
-      (locator): locator is ErcLocator & { objectId: string } =>
+      (locator): locator is ObjectLocator & { objectId: string } =>
         locator.objectId !== documentId || locator.kind !== "document",
     );
   return {

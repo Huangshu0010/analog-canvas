@@ -305,11 +305,13 @@ describe("ProjectConnectivityIndex", () => {
       );
       expect(index.objectIndex.resolve("labels", "net-signal")).toEqual({
         documentId: "labels",
+        hierarchyPath: [],
         kind: "net",
         objectId: "net-signal",
       });
       expect(index.objectIndex.resolve("labels", "junction-left")).toEqual({
         documentId: "labels",
+        hierarchyPath: [],
         kind: "junction",
         objectId: "junction-left",
       });
