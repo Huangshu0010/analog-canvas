@@ -5138,3 +5138,13 @@ contracts (WP-R1)`.
   `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(agent): consume resolved route geometry`.
+
+## 2026-08-12 - Connectivity Recovery C3h: visual resolved geometry reads
+
+- Target: unify visual route diagnostics on one document-level resolved
+  geometry pass without changing diagnostic facts.
+- Changed areas: derived visual diagnostic route reads and target plan/log.
+- Validation: 16 focused visual/geometry/diagnostic tests; workspace
+  `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): consume resolved route geometry in visuals`.
