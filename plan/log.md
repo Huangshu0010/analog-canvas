@@ -4852,3 +4852,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   deletion-parity tests; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `perf(derived): complete cached document connectivity index`.
+
+## 2026-08-12 - Connectivity Recovery C5a: Wire commit planner boundary
+
+- Target: move pure wire path/commit and junction-anchor proposal logic out of
+  editor interaction code into the edit-engine boundary.
+- Changed areas: new edit-engine routing planner and export; editor
+  compatibility re-exports; target plan and log.
+- Validation: workspace `pnpm typecheck`; 16 focused wire-path, wire-editing
+  and transaction tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(wiring): move wire proposals into edit engine`.
