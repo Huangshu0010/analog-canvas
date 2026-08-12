@@ -4597,3 +4597,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Validation: production editor build and `git diff --check` passed.
 - Commit status: ready to commit on `codex/contextual-properties-net-labels` as
   `refactor(editor): compact properties mirror actions`.
+
+## 2026-08-12 - Connectivity, Routing, and Electrical Debugging Plan
+
+- Target: define the consolidation boundary for Net/Wire/Junction/Flightline
+  and Route geometry before P0 ERC, search, Net highlight, and hierarchy trace.
+- Changed areas: cross-cutting roadmap, preservation/migration matrix, 11
+  bounded work packages, deterministic gates, and roadmap index.
+- Validation: current behavior helper audit, referenced-path check, new-plan
+  Prettier check, and `git diff --check` passed.
+- Commit status: ready to commit on `main` as
+  `docs(roadmap): plan connectivity and routing unification`.

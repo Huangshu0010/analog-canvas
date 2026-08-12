@@ -51,6 +51,12 @@ Its deterministic product gates are complete; status remains `review` until an
 external Agent runner and independent reviewer finish the declared quality
 ablation/blind-readability gate.
 
+## Cross-cutting P0 plans
+
+| Plan | Status | Outcome |
+| --- | --- | --- |
+| [`Connectivity, routing, and electrical debugging unification`](connectivity-routing-debugging-plan.md) | proposed | Preserve the accumulated manual/Agent routing behavior while introducing one Project connectivity index, one resolved Route geometry contract, hierarchical search/trace navigation, No Connect, and ERC |
+
 ## Phase Rules
 
 - Each phase must produce a user-visible or deterministically inspectable
