@@ -5093,3 +5093,14 @@ contracts (WP-R1)`.
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(editor): finish resolved route reads`.
+
+## 2026-08-12 - Connectivity Recovery C10a: factual recovery status
+
+- Target: record verified consumer migration, remaining compatibility gates,
+  and broad validation evidence without overwriting the roadmap's historical
+  recovery audit.
+- Changed areas: connectivity recovery status document; target plan and log.
+- Validation: source consumer audit; full unit suite 568/568; full editor E2E
+  79/79; 500-instance performance check passed; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): record connectivity recovery status`.
