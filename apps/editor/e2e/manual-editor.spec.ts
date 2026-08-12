@@ -1296,12 +1296,24 @@ test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
     buffer: Buffer.from(JSON.stringify(project)),
   });
 
+  const importedLabel = page.getByTestId(
+    "annotation-hit-imported-label-horizontal",
+  );
+  await importedLabel.click();
+  await page.keyboard.press("Delete");
+  await expect(importedLabel).toHaveCount(0);
+  await page.keyboard.press("Control+z");
+  await expect(importedLabel).toHaveCount(1);
+
   await clickRoute(page, "route-imported-h");
   await openSelectionShelf(page);
   await page.getByRole("button", { name: "Delete Net label" }).click();
   await expect(
     page.getByTestId("annotation-hit-imported-label-horizontal"),
   ).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Electrical Net label" }),
+  ).toHaveValue("");
 
   // The label was selected alongside the Route. Its deleted annotation id
   // must not poison the following atomic Wire deletion.
@@ -1310,16 +1322,25 @@ test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
   await expect(page.getByTestId("status")).toContainText(
     "Deleted wire route-imported-h",
   );
+  await page.keyboard.press("Control+z");
 
-  await page.keyboard.press("Control+z");
-  await page.keyboard.press("Control+z");
-  const label = page.getByTestId("annotation-hit-imported-label-horizontal");
-  await label.click();
+  const savedWithoutLabel = await downloadBytes(page, "File", "Save Project");
+  const savedDocument = JSON.parse(savedWithoutLabel.toString("utf8"))
+    .documents[0];
+  expect(savedDocument.annotations).toHaveLength(0);
+  expect(
+    savedDocument.nets.find((net: { id: string }) => net.id === "net-h"),
+  ).toMatchObject({ name: "HORIZONTAL" });
+  await page.getByTestId("project-file").setInputFiles({
+    name: "legacy-net-label-reopened.icproj.json",
+    mimeType: "application/json",
+    buffer: savedWithoutLabel,
+  });
+  await clickRoute(page, "route-imported-h");
+  await openSelectionShelf(page);
   await expect(
-    page.getByRole("button", { name: "Delete selected Net label" }),
-  ).toBeVisible();
-  await page.keyboard.press("Delete");
-  await expect(label).toHaveCount(0);
+    page.getByRole("textbox", { name: "Electrical Net label" }),
+  ).toHaveValue("");
 });
 
 test("derives crossings and creates junctions only when a wire ends on a route", async ({

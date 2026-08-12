@@ -15,6 +15,7 @@ import {
 } from "./connectivity.js";
 import { endpointKey, isVisibleEndpoint, netEndpoints } from "./endpoint.js";
 import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
+import { resolveNetLabelBindings } from "./net-label.js";
 import {
   resolveDocumentRoutingGeometry,
   type ResolvedRouteGeometry,
@@ -230,7 +231,7 @@ function buildNetRecord(
     .map((junction) => junction.id)
     .sort((a, b) => a.localeCompare(b, "en"));
 
-  const virtualEdges = deriveLabelVirtualEdges(document, net);
+  const virtualEdges = deriveLabelVirtualEdges(document, resolver, net);
 
   return {
     netId: net.id,
@@ -245,24 +246,35 @@ function buildNetRecord(
 }
 
 /**
- * Typed net-label/power-label virtual edges. Two same-net junctions carrying
- * matching label text are connected by a virtual edge, mirroring the union that
- * `deriveNetConnectivity` applies. Edges form a stable chain within each label
- * group, ordered by junction endpoint key.
+ * Typed net-label/power-label virtual edges. Net Labels are bound to a Net id
+ * and resolved to the nearest routed component; the old Junction-id overload
+ * is deliberately not accepted. Power labels retain their legacy Junction
+ * compatibility until their separate symbol binding contract is migrated.
  */
 function deriveLabelVirtualEdges(
   document: SchematicDocument,
+  resolver: SymbolResolver,
   net: Net,
 ): VirtualConnectivityEdge[] {
   const groups = new Map<
     string,
-    { kind: VirtualConnectivityEdge["kind"]; junctions: string[] }
+    { kind: VirtualConnectivityEdge["kind"]; endpoints: EndpointRef[] }
   >();
+  for (const binding of resolveNetLabelBindings(document, resolver, net.id)) {
+    const annotation = document.annotations.find(
+      (candidate) => candidate.id === binding.annotationId,
+    )!;
+    const label = annotation.text.trim();
+    if (label.length === 0) continue;
+    const group = groups.get(label) ?? {
+      kind: "net-label",
+      endpoints: [],
+    };
+    group.endpoints.push(binding.endpoint);
+    groups.set(label, group);
+  }
   for (const annotation of document.annotations) {
-    if (
-      (annotation.kind !== "net-label" && annotation.kind !== "power-label") ||
-      !annotation.attachedObjectId
-    ) {
+    if (annotation.kind !== "power-label" || !annotation.attachedObjectId) {
       continue;
     }
     const junction = document.junctions.find(
@@ -271,22 +283,27 @@ function deriveLabelVirtualEdges(
     if (!junction || junction.netId !== net.id) continue;
     const label = annotation.text.trim();
     if (label.length === 0) continue;
-    const group = groups.get(label) ?? { kind: annotation.kind, junctions: [] };
-    group.junctions.push(junction.id);
+    const group = groups.get(label) ?? {
+      kind: annotation.kind,
+      endpoints: [],
+    };
+    group.endpoints.push(junctionEndpoint(junction.id));
     groups.set(label, group);
   }
   const edges: VirtualConnectivityEdge[] = [];
   for (const [label, group] of [...groups.entries()].sort((a, b) =>
     a[0].localeCompare(b[0], "en"),
   )) {
-    const ordered = [...new Set(group.junctions)].sort((a, b) =>
-      a.localeCompare(b, "en"),
-    );
+    const ordered = [
+      ...new Map(
+        group.endpoints.map((endpoint) => [endpointKey(endpoint), endpoint]),
+      ).values(),
+    ].sort((a, b) => endpointKey(a).localeCompare(endpointKey(b), "en"));
     for (let index = 0; index < ordered.length - 1; index += 1) {
       edges.push({
         kind: group.kind,
-        from: junctionEndpoint(ordered[index]!),
-        to: junctionEndpoint(ordered[index + 1]!),
+        from: ordered[index]!,
+        to: ordered[index + 1]!,
         evidence: label,
       });
     }

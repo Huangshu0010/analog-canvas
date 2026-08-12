@@ -570,6 +570,19 @@ function validateConnectableEndpoint(
   }
 }
 
+function validateNetLabelBinding(
+  document: SchematicDocument,
+  annotation: Annotation,
+): string | null {
+  if (annotation.kind !== "net-label") return null;
+  if (!annotation.attachedObjectId) {
+    return `Net Label requires a Net attachment: ${annotation.id}`;
+  }
+  return document.nets.some((net) => net.id === annotation.attachedObjectId)
+    ? null
+    : `Net Label attachment is not a Net: ${annotation.attachedObjectId}`;
+}
+
 function addEndpointToNet(
   document: SchematicDocument,
   netId: string,
@@ -2854,6 +2867,8 @@ export function executeTransaction(
           );
         }
         const annotation = AnnotationSchema.parse(edit.annotation);
+        const bindingError = validateNetLabelBinding(draft, annotation);
+        if (bindingError) return rejectAt("EDIT_PRECONDITION", bindingError);
         if (existingIndex >= 0) draft.annotations[existingIndex] = annotation;
         else draft.annotations.push(annotation);
         changedObjectIds.add(annotation.id);
@@ -2907,6 +2922,8 @@ export function executeTransaction(
           );
         }
         const annotation = AnnotationSchema.parse(edit.annotation);
+        const bindingError = validateNetLabelBinding(draft, annotation);
+        if (bindingError) return rejectAt("EDIT_PRECONDITION", bindingError);
         if (existingIndex >= 0) draft.annotations[existingIndex] = annotation;
         else draft.annotations.push(annotation);
         changedObjectIds.add(annotation.id);

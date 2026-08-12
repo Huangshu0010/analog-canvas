@@ -32,6 +32,7 @@ import {
   mergeDiagnostics,
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
+  resolveNetLabelBinding,
   runErcChecks,
   routeAttachmentPlacement,
   traceHierarchyNet,
@@ -702,17 +703,18 @@ export function App({ project: initialProject }: AppProps) {
     ? document.annotations.filter(
         (annotation) =>
           annotation.kind === "net-label" &&
-          (annotation.id === `net-label-${selectedRoute.id}` ||
-            annotation.attachedObjectId === selectedRoute.netId),
+          annotation.attachedObjectId === selectedRoute.netId,
       )
     : [];
   const selectedRouteNetLabel = selectedRoute
     ? (selectedRouteNetLabels.find(
         (annotation) => annotation.id === `net-label-${selectedRoute.id}`,
       ) ??
-      (selectedRouteNetLabels.length === 1
-        ? selectedRouteNetLabels[0]
-        : undefined))
+      selectedRouteNetLabels.find(
+        (annotation) =>
+          resolveNetLabelBinding(document, resolver, annotation)?.routeId ===
+          selectedRoute.id,
+      ))
     : undefined;
   const selectedAnnotation = selectedAnnotationId
     ? document.annotations.find(
@@ -1021,11 +1023,8 @@ export function App({ project: initialProject }: AppProps) {
       setNetLabelEditorOpen(false);
       return;
     }
-    const net = document.nets.find(
-      (candidate) => candidate.id === selectedRoute.netId,
-    );
-    setNetLabelDraft(net?.name ?? "");
-  }, [document.nets, selectedRoute]);
+    setNetLabelDraft(selectedRouteNetLabel?.text ?? "");
+  }, [selectedRoute, selectedRouteNetLabel]);
 
   useEffect(() => {
     if (!selectedInstance) {

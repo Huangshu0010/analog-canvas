@@ -8,6 +8,7 @@ import {
   netEndpoints,
   resolveEndpointPoint,
 } from "./endpoint.js";
+import { resolveNetLabelBindings } from "./net-label.js";
 
 export interface VisibleConnectivityNode {
   key: string;
@@ -93,12 +94,23 @@ export function deriveNetConnectivity(
     const to = endpointKey(route.to);
     if (nodes.has(from) && nodes.has(to)) sets.union(from, to);
   }
-  const labeledJunctions = new Map<string, string[]>();
+  const labeledEndpoints = new Map<string, string[]>();
+  for (const binding of resolveNetLabelBindings(document, resolver, net.id)) {
+    const annotation = document.annotations.find(
+      (candidate) => candidate.id === binding.annotationId,
+    )!;
+    const label = annotation.text.trim();
+    const key = endpointKey(binding.endpoint);
+    if (label.length === 0 || !nodes.has(key)) continue;
+    const group = labeledEndpoints.get(label) ?? [];
+    group.push(key);
+    labeledEndpoints.set(label, group);
+  }
+  // Power labels retain their existing Junction attachment until their own
+  // symbol/instance binding contract is migrated. Net Labels never enter this
+  // compatibility path: their attachedObjectId is exclusively a Net id.
   for (const annotation of document.annotations) {
-    if (
-      (annotation.kind !== "net-label" && annotation.kind !== "power-label") ||
-      !annotation.attachedObjectId
-    ) {
+    if (annotation.kind !== "power-label" || !annotation.attachedObjectId) {
       continue;
     }
     const junction = document.junctions.find(
@@ -109,11 +121,11 @@ export function deriveNetConnectivity(
     if (!nodes.has(key)) continue;
     const label = annotation.text.trim();
     if (label.length === 0) continue;
-    const group = labeledJunctions.get(label) ?? [];
+    const group = labeledEndpoints.get(label) ?? [];
     group.push(key);
-    labeledJunctions.set(label, group);
+    labeledEndpoints.set(label, group);
   }
-  for (const keys of labeledJunctions.values()) {
+  for (const keys of labeledEndpoints.values()) {
     const first = keys[0];
     if (!first) continue;
     for (const key of keys.slice(1)) sets.union(first, key);

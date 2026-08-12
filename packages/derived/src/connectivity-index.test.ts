@@ -291,20 +291,38 @@ describe("ProjectConnectivityIndex", () => {
           position: { x: 160, y: 100 },
         },
       ];
-      const label = (id: string, attachedObjectId: string, text: string) => ({
+      document.routes = [
+        {
+          id: "route-left",
+          netId: "net-signal",
+          from: { kind: "port", portId: "port-left" },
+          to: { kind: "junction", junctionId: "junction-left" },
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+        {
+          id: "route-right",
+          netId: "net-signal",
+          from: { kind: "junction", junctionId: "junction-right" },
+          to: { kind: "port", portId: "port-right" },
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ];
+      const label = (id: string, x: number, text: string) => ({
         id,
         kind: "net-label" as const,
         text,
-        position: { x: 0, y: 0 },
+        position: { x, y: 92 },
         offset: { x: 0, y: 0 },
         rotation: 0 as const,
-        attachedObjectId,
+        attachedObjectId: "net-signal",
         alignment: "start" as const,
         locked: false,
       });
       document.annotations = [
-        label("label-left", "junction-left", "SIGNAL"),
-        label("label-right", "junction-right", "SIGNAL"),
+        label("label-left", 20, "SIGNAL"),
+        label("label-right", 180, "SIGNAL"),
       ];
       return project;
     }
@@ -319,8 +337,8 @@ describe("ProjectConnectivityIndex", () => {
       expect(net.virtualEdges).toEqual([
         {
           kind: "net-label",
-          from: { kind: "junction", junctionId: "junction-left" },
-          to: { kind: "junction", junctionId: "junction-right" },
+          from: { kind: "junction", junctionId: "junction-right" },
+          to: { kind: "port", portId: "port-left" },
           evidence: "SIGNAL",
         },
       ]);

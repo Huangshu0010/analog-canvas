@@ -179,6 +179,20 @@ that name, the interaction must make the same-name merge explicit and atomic;
 plain text placed near a wire never changes connectivity. Moving or deleting a
 label's presentation does not move or disconnect the conductor.
 
+`net-label.attachedObjectId` has exactly one accepted meaning: it is the id of
+the bound logical Net. It is never a Route, Junction, terminal, Port, or
+Instance id. The label's persisted position selects the nearest routed
+component of that Net when label virtual edges are derived; this geometric
+resolution never rewrites the electrical binding. All connectivity consumers
+must use the shared Net-label resolver rather than interpreting
+`attachedObjectId` independently.
+
+`Net.name` is not a fallback visible annotation. Route Properties and the
+canvas label editor read the actual `net-label` annotation only. Removing that
+annotation therefore leaves the Label field empty even when an imported or
+previously authored logical Net name remains for source identity. Removing a
+Label does not infer a conductor cut or reverse a prior explicit Net merge.
+
 ## Unified read models (proposed)
 
 This section is `proposed`, owned by `packages/derived`, and is implemented by

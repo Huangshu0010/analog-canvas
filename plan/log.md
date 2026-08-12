@@ -5358,3 +5358,16 @@ contracts (WP-R1)`.
   reruns.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `fix(connectivity): normalize symbol-defined power Nets`.
+
+## 2026-08-12 - Unified Net Label binding and deletion
+
+- Target: eliminate conflicting Route/Junction/Net interpretations of Label
+  attachment and stop Properties from recreating deleted labels from Net names.
+- Changed areas: accepted connectivity contract; shared Derived Label resolver;
+  Connectivity Index; Edit Engine validation; Agent routing expansion; editor
+  Route Properties and browser regressions; target plan.
+- Validation: 45 focused Derived/Edit Engine/Agent routing tests; two focused
+  Net Label browser flows including delete/save/reopen; workspace typecheck;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(connectivity): unify Net label binding semantics`.
