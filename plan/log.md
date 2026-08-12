@@ -4626,10 +4626,10 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Finding: current `deriveFlightlines` from/to direction (and derived id) is
   NOT partition-invariant — pinned for R2 to address consciously.
 - Note: an unrelated dirty target (`plan/2026-08-12-ci-delivery-and-archive-
-  governance`) coexists; only owned paths were staged.
+governance`) coexists; only owned paths were staged.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `test(derived): characterize endpoint/route primitives and partition
-  invariance (WP-R0)`.
+invariance (WP-R0)`.
 
 ## 2026-08-12 - WP-R1 ADR and Spec Freeze
 
@@ -4643,11 +4643,11 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   forward-references added to edit-engine, editor-interaction, agent-api, and
   export specs.
 - Validation: cross-link audit (12/12 referenced paths resolve); `git diff
-  --check` clean. Markdown outside the `format:check` glob; no code surface
+--check` clean. Markdown outside the `format:check` glob; no code surface
   changed.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `docs(adr): freeze connectivity index, resolved geometry, and locator
-  contracts (WP-R1)`.
+contracts (WP-R1)`.
 
 ## 2026-08-12 - WP-R2 Additive Project Connectivity Index
 
@@ -4662,7 +4662,7 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   (85 tests, was 76); `prettier --check` on new files; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): add ProjectConnectivityIndex with flightline normalization
-  (WP-R2)`.
+(WP-R2)`.
 
 ## 2026-08-12 - WP-R3 Additive Resolved Route Geometry
 
@@ -4677,7 +4677,7 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   (92 tests, was 85); `prettier --check` on new files; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): add ResolvedRouteGeometry with endpoint join ingredients
-  (WP-R3)`.
+(WP-R3)`.
 
 ## 2026-08-12 - WP-R4 Route-Tap Planner Extraction (App thin-out step 1)
 
@@ -4692,7 +4692,7 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   `App.test.tsx` (11); `prettier --check` on changed files; `git diff --check`.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(editor): extract route-tap resolver from App into wiring feature
-  (WP-R4)`.
+(WP-R4)`.
 
 ## 2026-08-12 - WP-R5 Project Search Index (core)
 
@@ -4720,7 +4720,7 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   (103 tests, was 99); `prettier --check` on new files; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): compute net highlight and cross-cell trace from the index
-  (WP-R6)`.
+(WP-R6)`.
 
 ## 2026-08-12 - WP-R7 NoConnect Schema and v2 -> v3 Migration
 
@@ -4753,7 +4753,7 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   (109 tests, was 103); `prettier --check` on new files; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): add ERC engine emitting the unified diagnostic envelope
-  (WP-R8)`.
+(WP-R8)`.
 
 ## 2026-08-12 - WP-R9 Diagnostic Aggregation (data layer)
 
@@ -4805,7 +4805,7 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   this log.
 - Validation: workspace `pnpm typecheck`; 25 focused derived tests; targeted
   Prettier; `rg` confirmed no production private locator declaration; `git diff
-  --check` clean.
+--check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(derived): unify locator and diagnostic protocols`.
 
@@ -4926,3 +4926,13 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   highlight flows; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): highlight current-document Net membership`.
+
+## 2026-08-12 - Connectivity Recovery C2c: formal NoConnect rendering
+
+- Target: render persisted terminal and port NoConnect declarations in the
+  shared formal SVG scene used by canvas and export.
+- Changed areas: SVG renderer and regression test; target plan and log.
+- Validation: workspace `pnpm typecheck`; 24 focused render tests; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(render): render explicit NoConnect markers`.

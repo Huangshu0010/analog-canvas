@@ -5,6 +5,7 @@ import {
 } from "@icm/model";
 import {
   resolveDraftingObjectGeometry,
+  resolveEndpointPoint,
   routeAttachmentPlacement,
   routePolyline,
   resolveEndpointOutwardDirection,
@@ -74,6 +75,36 @@ function escapeXml(value: string): string {
 
 function pointList(points: ReadonlyArray<{ x: number; y: number }>): string {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
+}
+
+/**
+ * A No Connect declaration is electrical intent, not an editor-only hint.
+ * Keep its mark in the formal scene so canvas rendering and SVG/PDF export
+ * cannot disagree.  It is deliberately centred on the real endpoint rather
+ * than offset along a lead: the declaration applies to that exact terminal or
+ * port origin.
+ */
+function renderNoConnectMarkers(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  profile: SchematicStyleProfile,
+): string {
+  const halfExtent = Math.max(profile.strokes.normal * 3, 4);
+  const strokeWidth = profile.strokes.normal;
+  return [...document.noConnects]
+    .sort((left, right) => left.id.localeCompare(right.id, "en"))
+    .flatMap((noConnect) => {
+      const point = resolveEndpointPoint(
+        document,
+        resolver,
+        noConnect.endpoint,
+      );
+      if (!point) return [];
+      return [
+        `<path data-object-id="${escapeXml(noConnect.id)}" data-role="no-connect" d="M ${point.x - halfExtent} ${point.y - halfExtent} L ${point.x + halfExtent} ${point.y + halfExtent} M ${point.x + halfExtent} ${point.y - halfExtent} L ${point.x - halfExtent} ${point.y + halfExtent}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}"/>`,
+      ];
+    })
+    .join("");
 }
 
 /**
@@ -570,6 +601,10 @@ export function buildSvgScene(
     profile.nodes.portOriginRadius === 0
       ? ""
       : `<g data-layer="ports">${portOrigins}</g>`;
+  const noConnectMarkers = renderNoConnectMarkers(document, resolver, profile);
+  const noConnectLayer = noConnectMarkers
+    ? `<g data-layer="no-connects">${noConnectMarkers}</g>`
+    : "";
   const explicitInstanceLabels = new Set(
     document.annotations
       .filter(
@@ -754,7 +789,7 @@ export function buildSvgScene(
 
   return {
     viewBox,
-    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}${routeAnchorBridges}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g><g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
+    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}${routeAnchorBridges}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g>${noConnectLayer}<g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
   };
 }
 
