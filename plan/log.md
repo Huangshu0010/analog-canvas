@@ -5472,3 +5472,17 @@ contracts (WP-R1)`.
   independent E2E cases timed out only in the initial 16-worker run, passed 3/3
   at one worker, and the complete suite passed 85/85 at eight workers.
 - Commit status: integration branch validated and ready to fast-forward main.
+
+## 2026-08-12 - Safe PR 14 improvements
+
+- Target: retain the useful PR #14 Library and direct-inspection behavior on
+  top of merged PR #15 without adopting the conflicting full shell redesign.
+- Changed areas: persisted starter/recent quick-place Library; shared insertion
+  request/artwork modules; device double-click Properties; Guide hit testing;
+  interaction contract; focused unit and browser regressions.
+- Validation: frozen install and complete `pnpm ci:check`: formatting,
+  references, typecheck, 599 unit tests, build/performance/export/PWA/
+  production/release gates, and 88 browser E2E tests all passed. Analytics CSS
+  from `body.analytics-body` onward remains byte-identical to `main`.
+- Commit status: ready to commit on `codex/merge-pr14-safe` as
+  `feat(editor): integrate safe library quick-place improvements`.
