@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.6`
+Version: `1.7`
 
 Owning phase: `Phase 8`
 
@@ -49,23 +49,24 @@ Project and Document baseline.
 ## Command surface
 
 The production header exposes document/navigation and high-frequency document
-commands. Component placement uses one modeless master/detail insertion dialog;
-drawing tools live in the compact `Draw` menu rather than a permanent toolbar
-row or component sidebar:
+commands. Component placement uses a compact quick-place Library for starter
+and recent devices plus the existing master/detail insertion dialog for the
+full catalog and parameters. Drawing tools remain in the `Draw` menu:
 
 ```text
-File | Edit | Draw | More
+Library | File | Edit | Draw | More
 ```
 
 The exact visual treatment may use icons, labels, or responsive grouping, but
 the information architecture is normative:
 
-| Group | Commands                                                              |
-| ----- | --------------------------------------------------------------------- |
-| File  | Open, Save, Import, Export, and recent/example documents              |
-| Edit  | Undo, Redo, Delete, and contextual Align                              |
-| Draw  | Insert Component; Wire, Text, Arrow, Construction line, and Rectangle |
-| More  | Guides and shortcut reference; diagnostics remain in Import Review    |
+| Group   | Commands                                                              |
+| ------- | --------------------------------------------------------------------- |
+| File    | Open, Save, Import, Export, and recent/example documents              |
+| Edit    | Undo, Redo, Delete, and contextual Align                              |
+| Draw    | Insert Component; Wire, Text, Arrow, Construction line, and Rectangle |
+| More    | Guides and shortcut reference; diagnostics remain in Import Review    |
+| Library | Toggle starter/recent quick-place chips; open the full Insert dialog  |
 
 The following are not permanent production toolbar modes:
 
@@ -73,7 +74,8 @@ The following are not permanent production toolbar modes:
 - Save snapshot and Reopen snapshot; recovery is automatic infrastructure.
 - Phase/demo actions; examples belong in File/Open Example or development mode.
 
-`I` or `Draw > Insert component` opens one stable two-column dialog. Its left
+`I`, `Draw > Insert component`, or the Library's Insert entry opens one stable
+two-column dialog. Its left
 setup column contains one compact searchable component picker, device-specific
 parameters, and one compact placement row for initial rotation plus an optional
 label/name; the
@@ -82,8 +84,10 @@ The right column always shows the currently selected symbol's full preview.
 Arrow keys move the current option, `Enter` or `Apply` starts single-shot
 placement, and `Escape` cancels. During placement the resolved symbol follows
 the pointer; `R` rotates it before the placement click. Recent symbols
-are promoted only inside their existing category. The dialog reuses the Symbol
-DSL renderer and owns no separate thumbnail assets.
+are promoted inside their existing category and in the Library's bounded Recent
+section. Quick-place starts with blank parameter values; displayed placeholders
+remain hints rather than persisted electrical values. The dialog and Library
+reuse the Symbol DSL renderer and own no separate thumbnail assets.
 
 The editor shell is viewport-contained: the document body never becomes the
 scroll owner, overlays and inspectors scroll internally, and the SVG canvas
@@ -265,13 +269,15 @@ operation.
   the inspected object must not change the canvas column count, width, or
   viewport. The app shell is a stable single canvas column; no selection state
   adds or removes a layout column.
-- Component selection is transient in the `I` insertion dialog. No permanent
-  component library consumes canvas width or duplicates the Draw command
-  surface.
+- The collapsible Library uses a bounded canvas column for starter/recent
+  quick-place chips. Its open state is remembered locally; the full searchable
+  catalog remains in the `I` insertion dialog.
 - Object properties live in a floating left `Properties` shelf. It is collapsed
-  by default; direct selection never opens it. `Q`, a direct click on the shelf,
-  and the explicit Import Review exception can expand it. It overlays rather
-  than resizes the canvas and scrolls internally when its details overflow.
+  by default; direct selection never opens it. `Q`, double-click on a
+  non-hierarchical instance, a direct click on the shelf, and the explicit
+  Import Review exception can expand it. Hierarchical instance double-click
+  still enters its child cell. The shelf overlays rather than resizes the canvas
+  and scrolls internally when its details overflow.
 - A component's identity card shows only its reference and symbol. Editable
   `X`, `Y`, and `Rotate` appear once in a compact Properties row; device
   parameters use the same inline symbol/unit/explanation notation as `I`.

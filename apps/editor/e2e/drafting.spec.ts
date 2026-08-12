@@ -139,7 +139,7 @@ test("adds formatted drafting text and undo/redo restores it", async ({
     page.getByTestId("canvas-text-editor"),
   );
   await draftInput.fill("Vin");
-  await draftInput.press("Control+a");
+  await draftInput.press("ControlOrMeta+A");
   await page.getByRole("button", { name: "Subscript" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
 
@@ -465,7 +465,7 @@ test("drafting content and anchor survive save and reopen", async ({
     name: "Canvas text editor",
   });
   await draftInput.fill("Vref");
-  await draftInput.press("Control+a");
+  await draftInput.press("ControlOrMeta+A");
   await page.getByRole("button", { name: "Italic" }).click();
   await page.getByRole("button", { name: "Apply text changes" }).click();
   await expect(page.getByTestId("revision")).toHaveText("2");
