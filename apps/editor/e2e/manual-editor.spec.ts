@@ -19,6 +19,7 @@ async function placeComponent(
 ): Promise<void> {
   await chooseComponent(page, symbolId);
   await page.getByTestId("schematic-canvas").click({ position });
+  await page.keyboard.press("Escape");
 }
 
 async function copySelectionAt(
@@ -32,6 +33,8 @@ async function copySelectionAt(
   await page.mouse.move(box.x + position.x, box.y + position.y);
   await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
   await canvas.click({ position });
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("copy-placement-preview")).toHaveCount(0);
 }
 
@@ -298,6 +301,7 @@ test("authors components and connectivity manually from an empty canvas", async 
   await page.getByTestId("terminal-M2-G").click();
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await page.keyboard.press("Escape");
 
   await page.getByTestId("terminal-R1-2").click({ button: "right" });
   await openSelectionShelf(page);
@@ -342,8 +346,7 @@ test("keeps Wire input above labels and resolves a screen-tolerant route tap", a
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
   const routeId = await onlyRouteId(page);
-  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
-  await clickCommand(page, "Draw", "Wire (W)");
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
   await clickRouteWithScreenOffset(page, routeId, { x: 0, y: 5 });
   await expect(page.getByTestId("status")).toHaveText(
     `Wire source: route ${routeId}`,
@@ -357,7 +360,8 @@ test("deletes a wire without exposing Unroute", async ({ page }) => {
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
-  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
+  await page.keyboard.press("Escape");
 
   await clickRoute(page, "route-ui-1");
   await expect(page.getByTestId("status")).toContainText(
@@ -377,6 +381,28 @@ test("deletes a wire without exposing Unroute", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Unroute (keep electrical connection)" }),
   ).toHaveCount(0);
+});
+
+test("keeps Wire active for consecutive independent routes until Escape", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 280, y: 180 });
+  await placeComponent(page, "resistor", { x: 520, y: 180 });
+  await placeComponent(page, "resistor", { x: 280, y: 360 });
+  await placeComponent(page, "resistor", { x: 520, y: 360 });
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
+  await page.getByTestId("terminal-R3-2").click();
+  await page.getByTestId("terminal-R4-1").click();
+
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(2);
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
 test("hides flightlines after manually deleting an imported Route", async ({
@@ -504,6 +530,7 @@ test("draws and deletes one Razavi bulk route through the normal Wire workflow",
   await expect(page.getByTestId("terminal-M1-B")).toBeVisible();
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.dblclick({ position: { x: 320, y: 160 } });
+  await page.keyboard.press("Escape");
 
   const route = page.locator(
     '[data-layer="routes"] [data-route-presentation="bulk-dashed"]',
@@ -547,7 +574,7 @@ test("uses a flightline as direct Wire guidance", async ({ page }) => {
   );
 
   await hint.click({ force: true });
-  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
   await expect(page.getByTestId("flightline")).toHaveCount(0);
 });
@@ -651,7 +678,7 @@ test("places free wire bends and finishes at an arbitrary grid point", async ({
       })),
     );
   expect(points.length).toBeGreaterThanOrEqual(4);
-  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
 });
 
 test("reuses a free wire endpoint as a later wire source", async ({ page }) => {
@@ -671,7 +698,7 @@ test("reuses a free wire endpoint as a later wire source", async ({ page }) => {
   await page.getByTestId("terminal-R2-1").click();
 
   await expect(page.locator('[data-testid^="route-hit-"]')).toHaveCount(2);
-  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
 });
 
 test("moves an isolated free wire as one route", async ({ page }) => {
@@ -680,6 +707,7 @@ test("moves an isolated free wire as one route", async ({ page }) => {
   await clickCommand(page, "Draw", "Wire (W)");
   await canvas.click({ position: { x: 420, y: 220 } });
   await canvas.dblclick({ position: { x: 620, y: 300 } });
+  await page.keyboard.press("Escape");
   await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(0);
 
   const route = page.locator('[data-testid^="route-hit-"]');
@@ -713,6 +741,7 @@ test("stretches the pointed segment of a selected attached wire", async ({
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
 
   const before = await readRoutePoints(page, "route-ui-1");
   await dragRouteSegment(page, "route-ui-1", { x: 0, y: 80 });
@@ -778,6 +807,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-M1-S").click();
   await page.getByTestId("terminal-M2-D").click();
+  await page.keyboard.press("Escape");
 
   await page.keyboard.press("Control+a");
   await copySelectionAt(page, { x: 560, y: 300 });
@@ -797,7 +827,7 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
 
   await expect(page.getByTestId("status")).toContainText("Committed route");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(3);
-  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
+  await expect(page.getByTestId("active-tool")).toHaveText("wire");
 });
 
 test("moves a selected wire segment and deletes a connected component safely", async ({
@@ -809,6 +839,7 @@ test("moves a selected wire segment and deletes a connected component safely", a
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
 
   // Drag the exposed middle segment directly through the unified canvas
   // session; terminal escape segments remain covered by component hit targets.
@@ -841,6 +872,7 @@ test("moves internal wiring with a selected group and copies the routed subgraph
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
   await clickRoute(page, "route-ui-1", 0.5, 0);
   await openSelectionShelf(page);
   await page.getByRole("button", { name: "Add current arrow" }).click();
@@ -908,6 +940,7 @@ test("keeps an internal junction with the live group preview", async ({
   await clickCommand(page, "Draw", "Wire (W)");
   await clickRoute(page, "route-ui-1", 0.5, 0);
   await page.getByTestId("terminal-R3-1").click();
+  await page.keyboard.press("Escape");
 
   const junctionHit = page.locator('[data-testid^="junction-"]').first();
   await expect(junctionHit).toBeVisible();
@@ -939,6 +972,7 @@ test("drags a current marker directly along and around its route", async ({
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
   await clickRoute(page, "route-ui-1", 0.5, 0);
   await openSelectionShelf(page);
   await page.getByRole("button", { name: "Add current arrow" }).click();
@@ -1130,6 +1164,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
 
   await page.getByTestId("hit-R1").click();
   await page.getByTestId("annotation-hit-instance-label-R1").dblclick();
@@ -1173,6 +1208,7 @@ test("edits instance, electrical Net, and free text with bounded label handles",
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R3-2").click();
   await page.getByTestId("terminal-R4-1").click();
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("net-count")).toHaveText("2");
   await clickRoute(page, "route-ui-2", 0.5, 0);
   await openSelectionShelf(page);
@@ -1214,6 +1250,7 @@ test("L edits a selected route Net Label without opening Properties", async ({
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
 
   await clickRoute(page, "route-ui-1", 0.5, 0);
   await page.keyboard.press("l");
@@ -1352,6 +1389,61 @@ test("C previews one copy and Escape cancels without a revision", async ({
   );
 });
 
+test("keeps copy placement active for repeated commits until Escape", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 220 });
+  await page.getByTestId("hit-R1").click();
+  const canvas = page.getByTestId("schematic-canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Canvas is not measurable");
+
+  await page.keyboard.press("c");
+  await page.mouse.move(box.x + 520, box.y + 220);
+  await canvas.click({ position: { x: 520, y: 220 } });
+  await expect(page.getByTestId("instance-count")).toHaveText("2");
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+
+  await page.mouse.move(box.x + 680, box.y + 220);
+  await canvas.click({ position: { x: 680, y: 220 } });
+  await expect(page.getByTestId("instance-count")).toHaveText("3");
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("copy-placement-preview")).toHaveCount(0);
+  await expect(page.getByTestId("revision")).toHaveText("3");
+});
+
+test("keeps the rich-text editor outside its target and shields canvas input", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 420, y: 280 });
+  const label = page.getByTestId("annotation-hit-instance-label-R1");
+  await label.dblclick();
+
+  const overlay = page.getByTestId("canvas-text-editor");
+  await expect(overlay).toBeVisible();
+  const [labelBox, overlayBox, componentBox] = await Promise.all([
+    label.boundingBox(),
+    overlay.boundingBox(),
+    page.getByTestId("hit-R1").boundingBox(),
+  ]);
+  if (!labelBox || !overlayBox || !componentBox) {
+    throw new Error("Text editor geometry is not measurable");
+  }
+  expect(
+    overlayBox.y + overlayBox.height <= labelBox.y ||
+      overlayBox.y >= labelBox.y + labelBox.height,
+  ).toBe(true);
+
+  await overlay.click({ position: { x: 4, y: overlayBox.height - 4 } });
+  await expect(overlay).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  expect(await page.getByTestId("hit-R1").boundingBox()).toEqual(componentBox);
+});
+
 test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
   const project = createRoutingDemoProject();
   const document = project.documents[0]!;
@@ -1472,6 +1564,7 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
   await expect(page.getByTestId("crossing-count")).toHaveText("2");
+  await page.keyboard.press("Escape");
 
   await clickRoute(page, "route-ui-2", 0.25);
   const handle = page.getByTestId("route-handle-route-ui-2");
@@ -1863,6 +1956,7 @@ test("highlights the complete current-document Net from a selected route", async
   await clickCommand(page, "Draw", "Wire (W)");
   await page.getByTestId("terminal-R1-2").click();
   await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
   await clickRoute(page, "route-ui-1");
   await openSelectionShelf(page);
   await page.getByRole("button", { name: "Highlight Net (H)" }).click();

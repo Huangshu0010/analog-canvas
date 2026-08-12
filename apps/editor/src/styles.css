@@ -24,6 +24,7 @@
   --icm-accent-tint: #e7f3fc;
   --icm-error: #eb5757;
   --icm-warning: #9a6700;
+  --icm-grid-dot: #c4c7c9;
 
   /* Spacing: 4px base */
   --icm-space-1: 4px;
@@ -1740,9 +1741,20 @@ body {
   gap: 0.25rem;
   box-sizing: border-box;
   width: 100%;
+  height: 100%;
   min-width: 0;
+  padding: 0.25rem;
+  overflow: hidden;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: var(--icm-radius-md);
   color: var(--icm-text);
+  background: rgb(255 255 255 / 99%);
+  box-shadow: var(--icm-shadow-md);
   font-family: "DejaVu Sans", Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.canvas-grid-dot {
+  fill: var(--icm-grid-dot);
 }
 
 .rich-text-floating-toolbar {

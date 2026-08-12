@@ -51,6 +51,7 @@ export type InteractionAction =
   | { type: "set-wire-source"; source: WireSource | null }
   | { type: "set-wire-preview"; point: Point | null }
   | { type: "set-wire-waypoints"; update: SetStateAction<Point[]> }
+  | { type: "complete-wire" }
   | { type: "set-drawing-source"; point: Point | null }
   | { type: "set-drawing-hover"; point: Point | null }
   | { type: "set-drawing-waypoints"; update: SetStateAction<Point[]> }
@@ -121,6 +122,15 @@ export function interactionReducer(
       return state.kind === "wire"
         ? { ...state, waypoints: applyUpdate(state.waypoints, action.update) }
         : state;
+    case "complete-wire":
+      return state.kind === "wire"
+        ? {
+            kind: "wire",
+            source: null,
+            previewPoint: null,
+            waypoints: [],
+          }
+        : state;
     case "set-drawing-source":
       return state.kind === "drawing"
         ? { ...state, source: action.point }
@@ -186,6 +196,7 @@ export function useInteractionState() {
       dispatch({ type: "set-wire-preview", point }),
     setWireWaypoints: (update: SetStateAction<Point[]>) =>
       dispatch({ type: "set-wire-waypoints", update }),
+    completeWire: () => dispatch({ type: "complete-wire" }),
     setDraftingSource: (point: Point | null) =>
       dispatch({ type: "set-drawing-source", point }),
     setDraftingHover: (point: Point | null) =>

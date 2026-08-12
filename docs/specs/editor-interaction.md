@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.7`
+Version: `1.8`
 
 Owning phase: `Phase 8`
 
@@ -80,10 +80,14 @@ setup column contains one compact searchable component picker, device-specific
 parameters, and one compact placement row for initial rotation plus an optional
 label/name; the
 categorised list is collapsed by default and expands only inside that picker.
-The right column always shows the currently selected symbol's full preview.
-Arrow keys move the current option, `Enter` or `Apply` starts single-shot
-placement, and `Escape` cancels. During placement the resolved symbol follows
-the pointer; `R` rotates it before the placement click. Recent symbols
+The right column always shows the currently selected symbol's full preview at
+the selected initial rotation. Arrow keys move the current option, `R` rotates
+the preview by 90 degrees when focus is outside text-entry controls, and
+`Enter` or `Apply` starts persistent placement. Each canvas click commits one
+independent component and keeps the same placement request active; `Escape`
+cancels the dialog or exits placement. During placement the resolved symbol
+follows the pointer and `R` updates its rotation before the next placement
+click. Recent symbols
 are promoted inside their existing category and in the Library's bounded Recent
 section. Quick-place starts with blank parameter values; displayed placeholders
 remain hints rather than persisted electrical values. The dialog and Library
@@ -128,7 +132,10 @@ while a rich-text editor, input, or search field has focus.
 Rich text is edited in place: selecting `Text` and clicking canvas/Route/object
 shows a free/route/object anchor preview, then an inline editor. `Enter` breaks
 the line, `Ctrl+Enter` commits, `Escape` cancels or exits. A floating format
-bar acts on the selection: italic `Ctrl+I`, bold `Ctrl+B`, subscript
+bar is placed completely above or below its target when space allows. Its
+opaque frame owns pointer and wheel input across its complete bounds, so
+editing cannot select, move, or draw on underlying canvas objects. The bar acts
+on the selection: italic `Ctrl+I`, bold `Ctrl+B`, subscript
 `Ctrl+=`, superscript `Ctrl+Shift+=`, and a fraction button. Font size uses a
 token dropdown (caption/body/label) plus +/- levels, never an unbounded numeric
 field. The import shorthand (`M_{1}`, `\it{...}`, `\frac{a}{b}`) is parse-on-
@@ -183,7 +190,7 @@ component or short Route drag.
 | `Shift+R`                  | Mirror selected objects left/right.                                                |
 | `Shift+V`                  | Mirror selected objects top/bottom.                                                |
 | `F`                        | Fit the active Document in the viewport.                                           |
-| `W`                        | Enter or continue Wire mode.                                                       |
+| `W`                        | Enter Wire mode; every completed Route resets its source and keeps Wire active.    |
 | `L`                        | Edit/create the selected Route's electrical Net Label.                             |
 | `K`                        | Enter Construction line mode.                                                      |
 | `Q`                        | Open Properties for the selected object and focus its primary editor.              |
@@ -195,13 +202,16 @@ component or short Route drag.
 | `Ctrl+S`                   | Save the current Project.                                                          |
 | `Ctrl+O`                   | Open a Project.                                                                    |
 | `Ctrl+A`                   | Select all selectable objects in the active Document.                              |
-| `C`                        | Start one mouse-following copy placement of the selected routed subgraph.          |
+| `C`                        | Start persistent copy placement of the selected routed subgraph until `Escape`.    |
 | `Home`                     | Fit the active Document in the viewport (compatible alias).                        |
 
 Letter and editing shortcuts must not fire while focus is in a text input,
 text editor, searchable palette field, or another control that consumes the
-key. Browser-reserved shortcuts must not be intercepted unless the application
-can complete the named operation safely.
+key. Browser refresh shortcuts (`Ctrl/Cmd+R`, `Ctrl/Cmd+Shift+R`, and `F5`) are
+the deliberate exception: the editor intercepts them even while a field has
+focus so an accidental refresh cannot discard the active in-memory Project.
+Other browser-reserved shortcuts must not be intercepted unless the
+application can complete the named operation safely.
 
 The persisted orientation remains the compact `rotation + mirror: "x"`
 representation: the editor composes its two existing typed edits atomically

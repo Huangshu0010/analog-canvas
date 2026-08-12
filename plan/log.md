@@ -5597,3 +5597,18 @@ contracts (WP-R1)`.
   registration lift); `git diff --check` clean.
 - Commit status: ready to commit on `codex/capacitor-plate-calibration` as
   `fix(symbols): calibrate Razavi capacitor plate geometry`.
+
+## 2026-08-13 - Persistent authoring tools and input safety
+
+- Target: prevent accidental browser refresh and remove repeated tool
+  re-entry during manual circuit authoring.
+- Changed areas: global shortcut capture; Wire interaction state; persistent
+  Insert/quick-place/Copy flows; live rotated Insert preview; grid token;
+  rich-text overlay geometry/input shielding; accepted interaction contract;
+  focused unit and browser regressions.
+- Validation: 20 focused shortcut/state/overlay unit tests; workspace
+  typecheck; component-insert browser spec 11/11; manual-editor browser spec
+  57/57; `git diff --check` clean.
+- Commit status: ready to commit on
+  `codex/persistent-authoring-input-safety` as
+  `feat(editor): add persistent authoring tools and input safety`.

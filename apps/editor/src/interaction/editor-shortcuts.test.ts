@@ -64,6 +64,21 @@ describe("editor shortcut contract", () => {
     expect(resolve("v", {}, { ctrlKey: true })).toBeNull();
   });
 
+  it("blocks browser refresh chords even while an editor field owns focus", () => {
+    for (const modifiers of [
+      { ctrlKey: true },
+      { ctrlKey: true, shiftKey: true },
+      { metaKey: true },
+    ]) {
+      expect(resolve("r", { isTyping: true }, modifiers)).toEqual({
+        kind: "block-browser-refresh",
+      });
+    }
+    expect(resolve("F5", { isTyping: true })).toEqual({
+      kind: "block-browser-refresh",
+    });
+  });
+
   it("resolves R rotation and the two agreed mirror shortcuts", () => {
     expect(resolve("r")).toEqual({
       kind: "activate-tool",

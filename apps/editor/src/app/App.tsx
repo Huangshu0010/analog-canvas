@@ -530,6 +530,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setWireSource,
     setWirePreviewPoint,
     setWireWaypoints,
+    completeWire,
     setDraftingSource,
     setDraftingHover,
     setDraftingWaypoints,
@@ -1643,12 +1644,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       : proposal.edits;
     const result = transact(edits);
     if (result.ok) {
-      setWireSource(null);
-      setWirePreviewPoint(null);
-      setWireWaypoints([]);
-      setTool("pointer");
+      completeWire();
       setBulkDrawInstanceId(null);
-      setStatus(`Committed route at revision ${result.revision}`);
+      setStatus(
+        `Committed route at revision ${result.revision} · Wire remains active · Esc exits`,
+      );
     }
   }
 
@@ -2688,15 +2688,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     ]);
     if (result.ok) {
       selectOnly("instance", [id]);
-      cancelInteraction();
-      setComponentPreviewPoint(null);
-      setComponentPlacementRotation(0);
+      setComponentPreviewPoint(position);
       setStatus(
         contact.ambiguous
-          ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly`
+          ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly · click to place another · Esc exits`
           : contact.matched
-            ? `Added ${id} (${symbolId}) and connected its contacted pin`
-            : `Added ${id} (${symbolId})`,
+            ? `Added ${id} (${symbolId}) and connected its contacted pin · click to place another · Esc exits`
+            : `Added ${id} (${symbolId}) · click to place another · Esc exits`,
       );
     }
   }
@@ -2712,11 +2710,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const result = transact(constructVddRailEdits({ instanceId, start, end }));
     if (!result.ok) return;
     selectOnly("route", [routeId]);
-    cancelInteraction();
     setComponentPreviewPoint(null);
-    setComponentPlacementRotation(0);
     setVddRailStart(null);
-    setStatus(`Added VDD rail ${instanceId}`);
+    setStatus(
+      `Added VDD rail ${instanceId} · click to place another · Esc exits`,
+    );
   }
 
   function selectInstance(instanceId: string, additive: boolean): void {
@@ -5048,9 +5046,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const result = transact(proposal.edits);
     if (result.ok) {
       selectOnly("instance", proposal.instanceIds);
-      setCopyPlacement(null);
-      setCopyPreviewPoint(null);
-      setStatus(`Copied ${proposal.instanceIds.length} components`);
+      setCopyPreviewPoint(point);
+      setStatus(
+        `Copied ${proposal.instanceIds.length} components · click to place another · Esc exits`,
+      );
     }
   }
 
@@ -5135,7 +5134,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         hasInspectableSelection,
         hasRouteSelection: Boolean(selectedRoute),
         hasHighlightableNet: selectedHighlightNetId !== null,
-        wireSessionActive: Boolean(wireSource),
+        wireSessionActive: interactionState.kind === "wire",
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
         draftingReadyToFinish:
           (tool === "arrow" ||
@@ -5165,6 +5164,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       if (!escapeIntent) event.preventDefault();
 
       switch (shortcut.kind) {
+        case "block-browser-refresh":
+          setStatus("Refresh blocked to protect the current circuit");
+          return;
         case "undo":
         case "redo":
           transact([{ kind: shortcut.kind }]);
@@ -5304,8 +5306,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           return;
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   });
 
   useEffect(() => {
@@ -6633,6 +6635,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             onPointerCancel={finishCanvasGesture}
             onClick={(event) => {
               if (copyPlacement) {
+                if (event.detail > 1) return;
                 const point = pointFromClient(
                   event.clientX,
                   event.clientY,
@@ -6645,6 +6648,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 return;
               }
               if (pendingSymbolId && pendingComponentPlacement) {
+                if (event.detail > 1) return;
                 const rawPoint = pointFromClient(
                   event.clientX,
                   event.clientY,
@@ -6773,7 +6777,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 }
                 return;
               }
-              if (wireSource) {
+              if (tool === "wire") {
                 setWireSource(null);
                 setWirePreviewPoint(null);
                 setWireWaypoints([]);
@@ -6792,7 +6796,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 height="10"
                 patternUnits="userSpaceOnUse"
               >
-                <circle cx="0" cy="0" r="0.7" fill="#d8d8d2" />
+                <circle className="canvas-grid-dot" cx="0" cy="0" r="0.7" />
               </pattern>
             </defs>
             <rect

@@ -60,6 +60,34 @@ describe("editor interaction state", () => {
     });
   });
 
+  it("clears committed Wire geometry without leaving Wire mode", () => {
+    let state = activateInteractionTool("wire");
+    state = interactionReducer(state, {
+      type: "set-wire-source",
+      source: {
+        endpoint: { kind: "junction", junctionId: "j1" },
+        netId: "n1",
+        point: { x: 10, y: 20 },
+        preludeEdits: [],
+      },
+    });
+    state = interactionReducer(state, {
+      type: "set-wire-preview",
+      point: { x: 30, y: 20 },
+    });
+    state = interactionReducer(state, {
+      type: "set-wire-waypoints",
+      update: [{ x: 20, y: 20 }],
+    });
+
+    expect(interactionReducer(state, { type: "complete-wire" })).toEqual({
+      kind: "wire",
+      source: null,
+      previewPoint: null,
+      waypoints: [],
+    });
+  });
+
   it("carries component parameters and annotation choices only while placing", () => {
     const state = interactionReducer(
       { kind: "idle" },
