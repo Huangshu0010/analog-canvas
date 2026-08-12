@@ -115,7 +115,7 @@ export function EditorHelpDialog({
                 <dt>Tools and view</dt>
                 <dd>
                   <kbd>W</kbd> wire; <kbd>L</kbd> edits a selected Net Label;
-                  <kbd>T</kbd> text; <kbd>A</kbd> arrow; <kbd>P</kbd>
+                  <kbd>T</kbd> text; <kbd>A</kbd> arrow; <kbd>K</kbd>
                   construction line; <kbd>Q</kbd> Properties; <kbd>G</kbd>{" "}
                   guide;
                   <kbd>Home</kbd> fit view; <kbd>X</kbd> reverses a selected

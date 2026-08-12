@@ -181,7 +181,7 @@ component or short Route drag.
 | `F`                        | Fit the active Document in the viewport.                                           |
 | `W`                        | Enter or continue Wire mode.                                                       |
 | `L`                        | Edit/create the selected Route's electrical Net Label.                             |
-| `P`                        | Enter Construction line mode.                                                      |
+| `K`                        | Enter Construction line mode.                                                      |
 | `Q`                        | Open Properties for the selected object and focus its primary editor.              |
 | `Escape`                   | Cancel the active gesture, then return to Pointer mode.                            |
 | `Delete` / `Backspace`     | Delete the selected object after applying the selection-specific semantic command. |

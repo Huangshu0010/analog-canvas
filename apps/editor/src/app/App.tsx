@@ -5103,7 +5103,7 @@ export function App({ project: initialProject }: AppProps) {
                 onClick={() => activateTool("construction-line")}
               >
                 <ToolIcon name="line" />
-                Construction line (P)
+                Construction line (K)
               </button>
               <button
                 type="button"

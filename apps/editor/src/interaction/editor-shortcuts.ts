@@ -125,7 +125,7 @@ export function resolveEditorShortcut(
       ? { kind: "edit-net-label" }
       : { kind: "net-label-selection-required" };
   }
-  if (plain && key === "p") {
+  if (plain && key === "k") {
     return { kind: "activate-tool", tool: "construction-line" };
   }
   if (plain && key === "q") {

@@ -102,10 +102,11 @@ describe("editor shortcut contract", () => {
   it("maps creation, fit, and marker commands", () => {
     expect(resolve("w")).toEqual({ kind: "activate-tool", tool: "wire" });
     expect(resolve("a")).toEqual({ kind: "activate-tool", tool: "arrow" });
-    expect(resolve("p")).toEqual({
+    expect(resolve("k")).toEqual({
       kind: "activate-tool",
       tool: "construction-line",
     });
+    expect(resolve("p")).toBeNull();
     expect(resolve("l")).toEqual({ kind: "net-label-selection-required" });
     expect(resolve("l", { hasRouteSelection: true })).toEqual({
       kind: "edit-net-label",

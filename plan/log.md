@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-12 - Move Construction Line to K
+
+- Target: reserve `P` for a future schematic Port command and use `K` for
+  Construction line.
+- Changed areas: editor shortcut resolver/regression, Draw menu, Help,
+  interaction contract, and drafting command-menu E2E references.
+- Validation: shortcut unit tests (10), drafting E2E suite (25), production
+  editor build, obsolete-label search, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(editor): reserve P for future port insertion`.
+
 This file records factual, accepted project maintenance history.
 
 Use concise entries:

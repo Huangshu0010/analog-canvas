@@ -215,7 +215,7 @@ test("export includes drafting bounds and never emits guides", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (P)");
+  await clickCommand(page, "Draw", "Construction line (K)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
   await clickCommand(page, "More", "Add vertical guide");
@@ -386,7 +386,7 @@ test("Escape removes Smart Snap guides from a cancelled component drag", async (
 // Creating a construction line commits one object.
 test("two-phase click-creates a construction line", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (P)");
+  await clickCommand(page, "Draw", "Construction line (K)");
   await expect(page.getByTestId("active-tool")).toHaveText("construction-line");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
   await expect(page.getByTestId("revision")).toHaveText("1");
@@ -415,7 +415,7 @@ test("construction line uses stroke-based hit, not a blocking rect", async ({
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (P)");
+  await clickCommand(page, "Draw", "Construction line (K)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -628,7 +628,7 @@ test("arrow endpoint handle drag moves the tip", async ({ page }) => {
 // vertex below the two-vertex floor is refused.
 test("construction line vertex insert via double-click", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (P)");
+  await clickCommand(page, "Draw", "Construction line (K)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
@@ -650,7 +650,7 @@ test("construction line vertex insert via double-click", async ({ page }) => {
 // revision each.
 test("bracket shortcuts step stroke width", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (P)");
+  await clickCommand(page, "Draw", "Construction line (K)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-construction-/).click({ force: true });
   await page.keyboard.press("]");
@@ -662,7 +662,7 @@ test("bracket shortcuts step stroke width", async ({ page }) => {
 // Drawing style lives in Properties; it is not a second floating canvas UI.
 test("Properties changes drawing line style", async ({ page }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (P)");
+  await clickCommand(page, "Draw", "Construction line (K)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   await page.getByTestId(/^drafting-hit-construction-/).click({ force: true });
   await page.keyboard.press("q");
@@ -744,7 +744,7 @@ test("drawing Properties unlocks a protected drawing and Delete overrides its lo
   page,
 }) => {
   await page.goto("/");
-  await clickCommand(page, "Draw", "Construction line (P)");
+  await clickCommand(page, "Draw", "Construction line (K)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 200 });
   const drawing = page.getByTestId(/^drafting-hit-construction-/);
   await drawing.click({ force: true });
