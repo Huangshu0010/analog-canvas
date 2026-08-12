@@ -1,5 +1,19 @@
 # Maintenance Log
 
+## 2026-08-13 - Remove compatibility re-export layers
+
+- Target: make wiring, style, label-placement, and markup callers depend on
+  their actual contract owners rather than private compatibility modules.
+- Changed areas: removed two editor wiring shims and five render-svg wrapper or
+  wrapper-test modules; redirected imports to Edit Engine, Derived, and model.
+- Coverage decision: moved the unique wiring tests to Edit Engine and merged
+  unique style/label assertions into Derived; no behavior coverage was dropped.
+- Validation: removed-path reference audit; 67 focused tests; workspace
+  typecheck; production build; full formatting check; and `git diff --check`
+  passed.
+- Commit status: prepared as `refactor: remove compatibility re-exports` on
+  `codex/ci-contract-cleanup`.
+
 ## 2026-08-13 - Retire legacy annotation edit protocol
 
 - Target: keep only the explicit schematic-annotation edit protocol and reject

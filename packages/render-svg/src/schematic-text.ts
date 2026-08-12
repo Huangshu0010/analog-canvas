@@ -1,8 +1,8 @@
 import type { RichTextDocument } from "@icm/model";
+import type { SchematicStyleProfile } from "@icm/derived";
 
 import { renderRichTextDocument } from "./rich-text.js";
 import type { RichTextDocumentInput } from "./rich-text.js";
-import type { SchematicStyleProfile } from "./style-profile.js";
 
 export type SchematicTextKind =
   | "default-instance"

@@ -1,9 +1,10 @@
 import {
+  defaultInstanceLabelPlacement,
   measureRichTextDocument,
   richTextMetrics,
   routeAttachmentPlacement,
 } from "@icm/derived";
-import type { RoutePolyline } from "@icm/derived";
+import type { RoutePolyline, SchematicStyleProfile } from "@icm/derived";
 import type {
   Annotation,
   Point,
@@ -12,12 +13,7 @@ import type {
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
-import {
-  defaultInstanceLabelPlacement,
-  schematicTextDocument,
-  schematicTextFontSize,
-} from "@icm/render-svg";
-import type { SchematicStyleProfile } from "@icm/render-svg";
+import { schematicTextDocument, schematicTextFontSize } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { clamp, closestPointOnSegment } from "../../canvas/canvas-geometry";

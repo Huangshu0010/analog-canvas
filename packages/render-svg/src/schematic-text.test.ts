@@ -8,10 +8,7 @@ import {
 } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
 import type { RichTextDocumentInput } from "./rich-text.js";
-import {
-  razaviTextbookProfile,
-  textbookMonochromeProfile,
-} from "./style-profile.js";
+import { razaviTextbookProfile, textbookMonochromeProfile } from "@icm/derived";
 
 describe("Razavi schematic typography", () => {
   it.each([

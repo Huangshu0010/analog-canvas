@@ -5,16 +5,21 @@ import {
   transformPoint,
 } from "@icm/model";
 import {
+  defaultInstanceLabelPlacement,
+  resolvePrimitiveStrokeWidth,
   resolveDraftingObjectGeometry,
   resolveEndpointPoint,
   resolveDocumentRoutingGeometry,
+  resolveSchematicStyleProfile,
   routeAttachmentPlacement,
+  textbookMonochromeProfile,
 } from "@icm/derived";
 import type {
   EndpointJoin,
   ResolvedDocumentRoutingGeometry,
   ResolvedDraftingGeometry,
   ResolvedRouteGeometry,
+  SchematicStyleProfile,
 } from "@icm/derived";
 import type {
   DraftingObject,
@@ -29,18 +34,11 @@ import type {
 } from "@icm/symbols";
 
 import {
-  resolveSchematicStyleProfile,
-  resolvePrimitiveStrokeWidth,
-  textbookMonochromeProfile,
-} from "./style-profile.js";
-import type { SchematicStyleProfile } from "./style-profile.js";
-import {
   renderSchematicTextContent,
   schematicTextSizeAttribute,
 } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
 import type { RichTextDocumentInput } from "./rich-text.js";
-import { defaultInstanceLabelPlacement } from "./default-instance-label-placement.js";
 
 export interface SvgRenderOptions {
   bounds?: Rect;

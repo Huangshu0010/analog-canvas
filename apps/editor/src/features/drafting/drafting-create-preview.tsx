@@ -1,5 +1,5 @@
 import type { Point } from "@icm/model";
-import type { SchematicStyleProfile } from "@icm/render-svg";
+import type { SchematicStyleProfile } from "@icm/derived";
 
 import {
   normalizedRect,

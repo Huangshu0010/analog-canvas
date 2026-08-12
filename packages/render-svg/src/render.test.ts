@@ -19,7 +19,7 @@ import {
   renderDocumentSvg,
   renderSymbolDefinitionBody,
 } from "./render.js";
-import { razaviTextbookProfile } from "./style-profile.js";
+import { razaviTextbookProfile } from "@icm/derived";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 

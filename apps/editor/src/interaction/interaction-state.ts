@@ -2,10 +2,9 @@ import { useReducer } from "react";
 import type { SetStateAction } from "react";
 
 import type { Point } from "@icm/model";
+import type { WireSource } from "@icm/edit-engine";
 
-import type { WireSource } from "../features/wiring/wire-editing";
-
-export type { WireSource } from "../features/wiring/wire-editing";
+export type { WireSource } from "@icm/edit-engine";
 
 export type EditorTool =
   "pointer" | "wire" | "construction-line" | "arrow" | "rectangle";

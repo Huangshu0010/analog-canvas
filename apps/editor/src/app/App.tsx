@@ -6,12 +6,17 @@ import type {
 } from "react";
 
 import {
+  buildManualWirePath,
+  createFreeWireAnchor,
+  createRouteWireAnchor,
   proposeGroupMoveEdits,
   proposeLooseRouteTranslation,
+  proposeWireCommit,
   proposeWireSegmentMove,
   proposeVisualRouteDeletion,
   type EditTransactionResult,
   type SchematicEdit,
+  type WireSource,
 } from "@icm/edit-engine";
 import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
 import {
@@ -34,6 +39,7 @@ import {
   resolveDraftingObjectGeometry,
   resolveNetLabelBinding,
   resolveMosBulkConnection,
+  resolveSchematicStyleProfile,
   runErcChecks,
   routeAttachmentPlacement,
   traceHierarchyNet,
@@ -63,7 +69,7 @@ import type {
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
-import { buildSvgScene, resolveSchematicStyleProfile } from "@icm/render-svg";
+import { buildSvgScene } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
 import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
@@ -182,13 +188,6 @@ import {
 } from "../features/wiring/route-interaction-geometry";
 import { reflectOrientation } from "../interaction/shortcut-orientation";
 import type { ScreenFlip } from "../interaction/shortcut-orientation";
-import {
-  createFreeWireAnchor,
-  createRouteWireAnchor,
-  proposeWireCommit,
-} from "../features/wiring/wire-editing";
-import type { WireSource } from "../features/wiring/wire-editing";
-import { buildManualWirePath } from "../features/wiring/wire-path";
 import { resolveRouteTap, type RouteTap } from "../features/wiring/route-tap";
 import {
   buildDraftingAnchors,

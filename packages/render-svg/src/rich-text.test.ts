@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { renderRichTextDocument } from "./rich-text.js";
-import { razaviTextbookProfile } from "./style-profile.js";
+import { razaviTextbookProfile } from "@icm/derived";
 
 describe("renderRichTextDocument", () => {
   it("renders a plain text run escaped", () => {

@@ -1,4 +1,4 @@
-import type { SchematicStyleProfile } from "./style-profile.js";
+import type { SchematicStyleProfile } from "@icm/derived";
 
 // Canonical RichText AST -> SVG tspan renderer. Schematic annotations and
 // drafting text both terminate here; callers may choose different default
