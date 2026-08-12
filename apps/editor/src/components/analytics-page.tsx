@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import land from "../data/land-110m.json";
 import {
   landPathsForWorld,
@@ -8,25 +7,28 @@ import {
 } from "../lib/world-map";
 
 type DayRow = { date: string; pv: number; uv: number };
-type MetricRow = { pv: number; uv: number };
+type BreakdownRow = { pv?: number; uv?: number; count?: number };
+type BreakdownTotal = { pv: number; uv: number };
 type Summary = {
   generatedAt: string;
-  totals: MetricRow;
+  totals: { pv: number; uv: number };
   today: DayRow;
   days: DayRow[];
-  countries: ({ code: string } & MetricRow)[];
+  countries: ({ code: string } & BreakdownRow)[];
   points: { lat: number; lng: number; count: number }[];
-  paths: ({ path: string } & MetricRow)[];
-  sources: ({ source: string } & MetricRow)[];
+  paths: ({ path: string } & BreakdownRow)[];
+  sources: ({ source: string } & BreakdownRow)[];
   breakdownStartedAt: string;
   breakdownTotals: {
-    countries: MetricRow;
-    sources: MetricRow;
-    pages: MetricRow;
+    countries: BreakdownTotal;
+    sources: BreakdownTotal;
+    pages: BreakdownTotal;
   };
 };
 
-const MAP_W = 1800;
+const DEFAULT_RANGE_DAYS = 90;
+const DEFAULT_BREAKDOWN_ROWS = 10;
+const MAP_W = 3600;
 const MAP_H = Math.round(
   MAP_W *
     ((WORLD_BOUNDS.north - WORLD_BOUNDS.south) /
@@ -37,7 +39,7 @@ const LAND_PATHS = landPathsForWorld(
   MAP_W,
   MAP_H,
 );
-const number = new Intl.NumberFormat("en");
+const fmt = new Intl.NumberFormat("en");
 
 const SOURCE_LABELS: Record<string, string> = {
   "direct-or-unknown": "Direct / unknown",
@@ -69,9 +71,31 @@ const SOURCE_LABELS: Record<string, string> = {
   __other__: "Other sources",
 };
 
+function shiftUtcDay(iso: string, delta: number): string {
+  const date = new Date(`${iso}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date.toISOString().slice(0, 10);
+}
+
+function dayCount(from: string, to: string): number {
+  const start = Date.parse(`${from}T00:00:00.000Z`);
+  const end = Date.parse(`${to}T00:00:00.000Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0;
+  return Math.round((end - start) / 86_400_000) + 1;
+}
+
+function rowMetrics(row: BreakdownRow): BreakdownTotal {
+  return { pv: row.pv ?? row.count ?? 0, uv: row.uv ?? 0 };
+}
+
 export function AnalyticsPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState(false);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [theme, setTheme] = useState<"dark" | "light">(() =>
+    document.documentElement.classList.contains("light") ? "light" : "dark",
+  );
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -95,29 +119,64 @@ export function AnalyticsPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    const key = new URLSearchParams(window.location.search).get("key");
-    const endpoint = key
+    const params = new URLSearchParams(window.location.search);
+    const key = params.get("key");
+    const url = key
       ? `/api/analytics?key=${encodeURIComponent(key)}`
       : "/api/analytics";
-    void fetch(endpoint, { signal: controller.signal, cache: "no-store" })
+    void fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
       .then(async (response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json() as Promise<Summary>;
       })
-      .then(setSummary)
-      .catch((reason: unknown) => {
-        if (!(reason instanceof DOMException && reason.name === "AbortError")) {
-          setError(true);
+      .then((data) => {
+        setSummary(data);
+        if (data.days.length) {
+          const end = data.days[data.days.length - 1]!.date;
+          const earliest = data.days[0]!.date;
+          const start = shiftUtcDay(end, -(DEFAULT_RANGE_DAYS - 1));
+          setFrom(start < earliest ? earliest : start);
+          setTo(end);
         }
+      })
+      .catch((reason: unknown) => {
+        if (!(reason instanceof DOMException && reason.name === "AbortError"))
+          setError(true);
       });
     return () => controller.abort();
   }, []);
 
-  const visibleDays = useMemo(
-    () =>
-      summary?.days.filter((day) => day.pv > 0 || day.uv > 0).slice(-90) ?? [],
-    [summary],
-  );
+  const visibleDays = useMemo(() => {
+    if (!summary || !from || !to) return [];
+    const start = from < to ? from : to;
+    const end = from < to ? to : from;
+    return summary.days.filter((day) => day.date >= start && day.date <= end);
+  }, [from, summary, to]);
+
+  const rangeDays =
+    from && to ? dayCount(from < to ? from : to, from < to ? to : from) : 90;
+  const minDate = summary?.days[0]?.date;
+  const maxDate = summary?.days[summary.days.length - 1]?.date;
+
+  function resetRange() {
+    if (!summary?.days.length) return;
+    const end = summary.days[summary.days.length - 1]!.date;
+    const earliest = summary.days[0]!.date;
+    const start = shiftUtcDay(end, -(DEFAULT_RANGE_DAYS - 1));
+    setFrom(start < earliest ? earliest : start);
+    setTo(end);
+  }
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    document.documentElement.classList.toggle("light", next === "light");
+    localStorage.setItem("theme", next);
+    setTheme(next);
+  }
+
   const generated = summary
     ? new Date(summary.generatedAt).toLocaleString("en", {
         dateStyle: "medium",
@@ -127,81 +186,198 @@ export function AnalyticsPage() {
 
   return (
     <div className="analytics-shell">
-      <header className="analytics-topbar">
-        <a href="/">← Back to editor</a>
-        <span>Analog Canvas</span>
-      </header>
-      <main className="analytics-page">
-        <header className="analytics-head">
-          <p className="analytics-kicker">First-party, privacy-friendly</p>
-          <h1>Visitor analytics</h1>
-          <p>
-            UTC days · updated{" "}
-            <time dateTime={summary?.generatedAt}>{generated}</time>
-          </p>
-        </header>
-
-        {error ? (
-          <p className="analytics-error">
-            Analytics are temporarily unavailable. If a dashboard key is
-            configured, append it as
-            <code>?key=…</code>.
-          </p>
-        ) : null}
-
-        <dl className="analytics-metrics" aria-label="Traffic totals">
-          <Metric label="Unique visitors" value={summary?.totals.uv} />
-          <Metric label="Page views" value={summary?.totals.pv} />
-          <Metric label="Visitors today" value={summary?.today.uv} />
-          <Metric label="Views today" value={summary?.today.pv} />
-        </dl>
-
-        <Section title="Daily traffic" aside="Last 90 active days">
-          <DailyChart days={visibleDays} />
-        </Section>
-
-        <Section title="Visitor origins" aside="≈1° request buckets">
-          <WorldHeatmap points={summary?.points ?? []} />
-        </Section>
-
-        <div className="analytics-columns">
-          <Section title="Countries and regions" aside="Top">
-            <BreakdownTable
-              heading="Region"
-              rows={summary?.countries ?? []}
-              total={summary?.breakdownTotals.countries ?? { pv: 0, uv: 0 }}
-              label={(row) => countryName(row.code)}
-              loading={!summary && !error}
-            />
-          </Section>
-          <Section title="Acquisition sources" aside="Top">
-            <BreakdownTable
-              heading="Source"
-              rows={summary?.sources ?? []}
-              total={summary?.breakdownTotals.sources ?? { pv: 0, uv: 0 }}
-              label={(row) => sourceName(row.source)}
-              loading={!summary && !error}
-            />
-          </Section>
-          <section className="analytics-section analytics-section-wide">
-            <SectionHead title="Pages" aside="Top" />
-            <BreakdownTable
-              heading="Path"
-              rows={summary?.paths ?? []}
-              total={summary?.breakdownTotals.pages ?? { pv: 0, uv: 0 }}
-              label={(row) =>
-                row.path === "__other__" ? "Other pages" : row.path
-              }
-              loading={!summary && !error}
-            />
-          </section>
+      <header className="analytics-top-bar" aria-label="Page controls">
+        <div className="analytics-top-bar-left">
+          <button
+            type="button"
+            className="analytics-theme-switch"
+            onClick={toggleTheme}
+            aria-label={
+              theme === "dark"
+                ? "Switch to light theme"
+                : "Switch to dark theme"
+            }
+            title={
+              theme === "dark"
+                ? "Switch to light theme"
+                : "Switch to dark theme"
+            }
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+          </button>
         </div>
+        <div className="analytics-top-bar-right">
+          <a className="analytics-home" href="/">
+            ← Back to editor
+          </a>
+        </div>
+      </header>
 
-        <p className="analytics-privacy">
-          No IP addresses, full referrer URLs, search terms, or canvas documents
-          are stored. Location comes from Cloudflare and is rounded to
-          approximately one degree. Do Not Track is honored.
-        </p>
+      <main className="analytics-page" id="content">
+        <div className="analytics-container">
+          <header className="analytics-head">
+            <h1>Analytics</h1>
+            <p className="analytics-sub">
+              First-party counts · UTC days · updated{" "}
+              <time dateTime={summary?.generatedAt}>{generated}</time>
+            </p>
+          </header>
+
+          {error && (
+            <p className="analytics-error">
+              Could not load analytics. If a dashboard key is set, append{" "}
+              <code>?key=…</code> to the URL.
+            </p>
+          )}
+
+          <dl className="analytics-metrics" aria-label="Totals">
+            <Metric label="Unique visitors" value={summary?.totals.uv} />
+            <Metric label="Page views" value={summary?.totals.pv} />
+            <Metric label="Visitors today" value={summary?.today.uv} />
+            <Metric label="Views today" value={summary?.today.pv} />
+          </dl>
+
+          <section
+            className="analytics-section"
+            aria-labelledby="analytics-chart-h"
+          >
+            <SectionHead
+              title="Daily traffic"
+              id="analytics-chart-h"
+              meta={
+                <>
+                  <ul className="analytics-legend" aria-hidden="true">
+                    <li>
+                      <span className="analytics-swatch analytics-swatch--pv" />
+                      Views
+                    </li>
+                    <li>
+                      <span className="analytics-swatch analytics-swatch--uv" />
+                      Visitors
+                    </li>
+                  </ul>
+                  <span className="analytics-aside" aria-hidden="true">
+                    {rangeDays === 1 ? "1 day" : `${rangeDays} days`}
+                  </span>
+                </>
+              }
+            />
+            <form
+              className="analytics-range"
+              onSubmit={(event) => event.preventDefault()}
+            >
+              <label className="analytics-range-field">
+                <span>From</span>
+                <input
+                  className="analytics-range-input"
+                  type="date"
+                  name="from"
+                  value={from}
+                  min={minDate}
+                  max={maxDate}
+                  onChange={(event) => setFrom(event.target.value)}
+                  required
+                />
+              </label>
+              <label className="analytics-range-field">
+                <span>To</span>
+                <input
+                  className="analytics-range-input"
+                  type="date"
+                  name="to"
+                  value={to}
+                  min={minDate}
+                  max={maxDate}
+                  onChange={(event) => setTo(event.target.value)}
+                  required
+                />
+              </label>
+              <button
+                type="button"
+                className="analytics-range-reset"
+                onClick={resetRange}
+              >
+                Last 90 days
+              </button>
+              <span className="analytics-range-hint">UTC</span>
+            </form>
+            <DailyChart days={visibleDays} />
+          </section>
+
+          <section
+            className="analytics-section"
+            aria-labelledby="analytics-map-h"
+          >
+            <SectionHead
+              title="Origins"
+              id="analytics-map-h"
+              aside="Map"
+              meta={<p className="analytics-note">≈1° request buckets</p>}
+            />
+            <WorldHeatmap points={summary?.points ?? []} />
+          </section>
+
+          <div className="analytics-cols">
+            <section
+              className="analytics-section"
+              aria-labelledby="analytics-countries-h"
+            >
+              <SectionHead
+                title="ISO 3166 Code"
+                id="analytics-countries-h"
+                aside="Top"
+              />
+              <BreakdownTable
+                heading="Region"
+                rows={summary?.countries ?? []}
+                total={summary?.breakdownTotals.countries ?? { pv: 0, uv: 0 }}
+                label={(row) =>
+                  countryName((row as Summary["countries"][number]).code)
+                }
+                loading={!summary && !error}
+                unavailable={error}
+              />
+            </section>
+            <section
+              className="analytics-section"
+              aria-labelledby="analytics-sources-h"
+            >
+              <SectionHead
+                title="Sources"
+                id="analytics-sources-h"
+                aside="Top"
+              />
+              <BreakdownTable
+                heading="Source"
+                rows={summary?.sources ?? []}
+                total={summary?.breakdownTotals.sources ?? { pv: 0, uv: 0 }}
+                label={(row) =>
+                  sourceName((row as Summary["sources"][number]).source)
+                }
+                loading={!summary && !error}
+                unavailable={error}
+              />
+            </section>
+            <section
+              className="analytics-section analytics-section--wide"
+              aria-labelledby="analytics-pages-h"
+            >
+              <SectionHead title="Pages" id="analytics-pages-h" aside="Top" />
+              <BreakdownTable
+                heading="Path"
+                rows={summary?.paths ?? []}
+                total={summary?.breakdownTotals.pages ?? { pv: 0, uv: 0 }}
+                label={(row) => {
+                  const path = (row as Summary["paths"][number]).path;
+                  return path === "__other__" ? "Other pages" : path;
+                }}
+                mono
+                loading={!summary && !error}
+                unavailable={error}
+              />
+            </section>
+          </div>
+        </div>
       </main>
     </div>
   );
@@ -217,33 +393,33 @@ function Metric({
   return (
     <div>
       <dt>{label}</dt>
-      <dd>{value == null ? "—" : number.format(value)}</dd>
+      <dd>{value == null ? "—" : fmt.format(value)}</dd>
     </div>
   );
 }
 
-function Section({
+function SectionHead({
   title,
+  id,
   aside,
-  children,
+  meta,
 }: {
   title: string;
-  aside: string;
-  children: ReactNode;
+  id: string;
+  aside?: string;
+  meta?: ReactNode;
 }) {
   return (
-    <section className="analytics-section">
-      <SectionHead title={title} aside={aside} />
-      {children}
-    </section>
-  );
-}
-
-function SectionHead({ title, aside }: { title: string; aside: string }) {
-  return (
     <div className="analytics-section-head">
-      <h2>{title}</h2>
-      <span>{aside}</span>
+      <h2 id={id}>{title}</h2>
+      <div className="analytics-section-head-meta">
+        {meta}
+        {aside && (
+          <span className="analytics-aside" aria-hidden="true">
+            {aside}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -251,114 +427,164 @@ function SectionHead({ title, aside }: { title: string; aside: string }) {
 function DailyChart({ days }: { days: DayRow[] }) {
   const width = 900;
   const height = 220;
-  const bottom = 24;
+  const padTop = 16;
+  const padBottom = 22;
+  const padX = 2;
+  const plotHeight = height - padTop - padBottom;
+
   if (!days.length) {
     return (
-      <div className="analytics-empty">No traffic has been recorded yet.</div>
+      <svg
+        className="analytics-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Daily page views and unique visitors"
+      >
+        <text
+          className="analytics-chart-tick"
+          x={width / 2}
+          y={height / 2}
+          textAnchor="middle"
+        >
+          No days in this range
+        </text>
+      </svg>
     );
   }
+
   const max = Math.max(1, ...days.map((day) => day.pv));
-  const slot = width / days.length;
+  const slot = (width - padX * 2) / days.length;
+  const ticks =
+    days.length === 1
+      ? [{ index: 0, x: width / 2, anchor: "middle" as const }]
+      : days.length === 2
+        ? [
+            { index: 0, x: 0, anchor: "start" as const },
+            { index: 1, x: width, anchor: "end" as const },
+          ]
+        : [
+            { index: 0, x: 0, anchor: "start" as const },
+            {
+              index: Math.floor(days.length / 2),
+              x: width / 2,
+              anchor: "middle" as const,
+            },
+            { index: days.length - 1, x: width, anchor: "end" as const },
+          ];
+
   return (
     <svg
       className="analytics-chart"
       viewBox={`0 0 ${width} ${height}`}
       role="img"
-      aria-label="Daily page views and visitors"
+      aria-label="Daily page views and unique visitors"
     >
       {days.map((day, index) => {
-        const pvHeight = (day.pv / max) * (height - bottom - 18);
-        const uvHeight = (day.uv / max) * (height - bottom - 18);
-        const title = `${day.date}: ${number.format(day.pv)} views, ${number.format(day.uv)} visitors`;
+        const pvHeight = (day.pv / max) * plotHeight;
+        const uvHeight = (day.uv / max) * plotHeight;
+        const x = padX + index * slot;
+        const title = `${day.date}: ${fmt.format(day.pv)} views, ${fmt.format(day.uv)} visitors`;
         return (
           <g key={day.date}>
             <rect
-              className="analytics-bar-pv"
-              x={index * slot + slot * 0.15}
-              y={height - bottom - pvHeight}
-              width={slot * 0.7}
-              height={Math.max(pvHeight, day.pv ? 1 : 0)}
+              className="analytics-chart-bar-pv"
+              x={x + slot * 0.18}
+              y={height - padBottom - pvHeight}
+              width={slot * 0.64}
+              height={Math.max(pvHeight, day.pv > 0 ? 1.25 : 0)}
             >
               <title>{title}</title>
             </rect>
-            <rect
-              className="analytics-bar-uv"
-              x={index * slot + slot * 0.35}
-              y={height - bottom - uvHeight}
-              width={slot * 0.3}
-              height={Math.max(uvHeight, day.uv ? 1 : 0)}
-            >
-              <title>{title}</title>
-            </rect>
+            {day.uv > 0 && (
+              <rect
+                className="analytics-chart-bar-uv"
+                x={x + slot * 0.34}
+                y={height - padBottom - uvHeight}
+                width={slot * 0.32}
+                height={Math.max(uvHeight, 1.25)}
+              >
+                <title>{title}</title>
+              </rect>
+            )}
           </g>
         );
       })}
       <line
-        className="analytics-axis"
+        className="analytics-chart-axis"
         x1="0"
         x2={width}
-        y1={height - bottom}
-        y2={height - bottom}
+        y1={height - padBottom}
+        y2={height - padBottom}
       />
-      <text className="analytics-tick" x="0" y="12">
-        {number.format(max)}
+      <text className="analytics-chart-tick" x="0" y={padTop - 2}>
+        {fmt.format(max)}
       </text>
-      <text className="analytics-tick" x="0" y={height - 5}>
-        {days[0]!.date.slice(5)}
-      </text>
-      <text
-        className="analytics-tick"
-        x={width}
-        y={height - 5}
-        textAnchor="end"
-      >
-        {days.at(-1)!.date.slice(5)}
-      </text>
+      {ticks.map((tick) => (
+        <text
+          key={`${tick.index}-${tick.anchor}`}
+          className="analytics-chart-tick"
+          x={tick.x}
+          y={height - 4}
+          textAnchor={tick.anchor}
+        >
+          {days[tick.index]!.date.slice(5)}
+        </text>
+      ))}
     </svg>
   );
 }
 
 function WorldHeatmap({ points }: { points: Summary["points"] }) {
-  const max = Math.max(1, ...points.map((point) => point.count));
+  const maxCount = Math.max(1, ...points.map((point) => point.count));
   return (
     <div className="analytics-map-frame">
       <svg
-        className="analytics-map"
+        className="analytics-map-svg"
         viewBox={`0 0 ${MAP_W} ${MAP_H}`}
         role="img"
-        aria-label="World heatmap of visitor origins"
+        aria-label="World heatmap of request origins"
       >
         <defs>
-          <radialGradient id="canvas-heat">
-            <stop offset="0%" stopOpacity="0.9" />
-            <stop offset="60%" stopOpacity="0.3" />
+          <radialGradient id="analytics-heat-gradient">
+            <stop offset="0%" stopOpacity="0.85" />
+            <stop offset="55%" stopOpacity="0.35" />
             <stop offset="100%" stopOpacity="0" />
           </radialGradient>
         </defs>
-        <rect className="analytics-ocean" width={MAP_W} height={MAP_H} />
-        <g className="analytics-land">
+        <rect
+          className="analytics-map-ocean"
+          x="0"
+          y="0"
+          width={MAP_W}
+          height={MAP_H}
+        />
+        <g className="analytics-map-land" aria-hidden="true">
           {LAND_PATHS.map((path, index) => (
             <path d={path} key={index} />
           ))}
         </g>
-        <g>
+        <g className="analytics-map-heat">
           {points.map((point) => {
-            const x =
-              ((point.lng - WORLD_BOUNDS.west) /
-                (WORLD_BOUNDS.east - WORLD_BOUNDS.west)) *
-              MAP_W;
-            const y =
-              ((WORLD_BOUNDS.north - point.lat) /
-                (WORLD_BOUNDS.north - WORLD_BOUNDS.south)) *
-              MAP_H;
-            const radius = 10 + 34 * Math.sqrt(point.count / max);
-            const title = `${number.format(point.count)} views near ${point.lat}, ${point.lng}`;
+            const cx = (point.lng + 180) * 10;
+            const cy = (84 - point.lat) * 10;
+            const radius = 18 + 64 * Math.sqrt(point.count / maxCount);
+            const title = `${fmt.format(point.count)} views near ${point.lat}, ${point.lng}`;
             return (
               <g key={`${point.lat},${point.lng}`}>
-                <circle className="analytics-heat" cx={x} cy={y} r={radius}>
+                <circle
+                  className="analytics-heat-blob"
+                  cx={cx}
+                  cy={cy}
+                  r={radius}
+                >
                   <title>{title}</title>
                 </circle>
-                <circle className="analytics-heat-core" cx={x} cy={y} r={3}>
+                <circle
+                  className="analytics-heat-core"
+                  cx={cx}
+                  cy={cy}
+                  r={Math.max(2.8, radius * 0.09)}
+                >
                   <title>{title}</title>
                 </circle>
               </g>
@@ -370,56 +596,97 @@ function WorldHeatmap({ points }: { points: Summary["points"] }) {
   );
 }
 
-function BreakdownTable<T extends MetricRow>({
+function BreakdownTable<T extends BreakdownRow>({
   heading,
   rows,
   total,
   label,
+  mono = false,
   loading,
+  unavailable,
 }: {
   heading: string;
   rows: T[];
-  total: MetricRow;
+  total: BreakdownTotal;
   label: (row: T) => string;
+  mono?: boolean;
   loading: boolean;
+  unavailable: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const tableId = useId();
+  const canExpand = rows.length > DEFAULT_BREAKDOWN_ROWS;
+  const visibleRows = expanded ? rows : rows.slice(0, DEFAULT_BREAKDOWN_ROWS);
+
   return (
-    <div className="analytics-table-wrap">
-      <table className="analytics-table">
-        <thead>
-          <tr>
-            <th>{heading}</th>
-            <th>Visitors</th>
-            <th>Views</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading || rows.length === 0 ? (
+    <div className="analytics-breakdown">
+      <div className="analytics-table-scroll">
+        <table className="analytics-table" id={tableId}>
+          <thead>
             <tr>
-              <td colSpan={3} className="analytics-empty">
-                {loading ? "Loading…" : "No data yet."}
-              </td>
+              <th scope="col">{heading}</th>
+              <th scope="col" className="num">
+                Unique Visitors
+              </th>
+              <th scope="col" className="num">
+                Page Views
+              </th>
             </tr>
-          ) : (
-            rows.slice(0, 12).map((row, index) => (
-              <tr key={`${label(row)}-${index}`}>
-                <td>{label(row)}</td>
-                <MetricCell value={row.uv} total={total.uv} />
-                <MetricCell value={row.pv} total={total.pv} />
+          </thead>
+          <tbody>
+            {loading || unavailable || rows.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="analytics-empty">
+                  {loading
+                    ? "Loading…"
+                    : unavailable
+                      ? "Unavailable."
+                      : "No data yet."}
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              visibleRows.map((row, index) => {
+                const metric = rowMetrics(row);
+                return (
+                  <tr key={`${label(row)}-${index}`}>
+                    <td className={mono ? "mono" : undefined}>{label(row)}</td>
+                    <MetricCell value={metric.uv} total={total.uv} />
+                    <MetricCell value={metric.pv} total={total.pv} />
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+      {canExpand && (
+        <button
+          type="button"
+          className="analytics-table-toggle"
+          aria-controls={tableId}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <span>
+            {expanded
+              ? `Show top ${DEFAULT_BREAKDOWN_ROWS}`
+              : `Show all ${rows.length}`}
+          </span>
+          <ChevronIcon expanded={expanded} />
+        </button>
+      )}
     </div>
   );
 }
 
 function MetricCell({ value, total }: { value: number; total: number }) {
-  const share = total > 0 ? (value / total) * 100 : 0;
+  const percentage = total > 0 ? (value / total) * 100 : 0;
   return (
-    <td className="analytics-number">
-      {number.format(value)} <small>{share.toFixed(1)}%</small>
+    <td className="num analytics-metric">
+      <span>{fmt.format(value)}</span>
+      <span className="analytics-metric-distribution">
+        {percentage.toFixed(1)}%
+      </span>
     </td>
   );
 }
@@ -435,9 +702,59 @@ function countryName(code: string): string {
   }
 }
 
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={expanded ? "is-expanded" : undefined}
+    >
+      <path d="m7 10 5 5 5-5" />
+    </svg>
+  );
+}
+
 function sourceName(source: string): string {
   return (
     SOURCE_LABELS[source] ??
     (source.startsWith("ref:") ? source.slice(4) : source)
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 14.3A8.5 8.5 0 0 1 9.7 3a7 7 0 1 0 11.3 11.3Z" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
   );
 }
