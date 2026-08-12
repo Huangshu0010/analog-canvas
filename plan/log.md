@@ -5248,3 +5248,15 @@ contracts (WP-R1)`.
   clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(search): expose concrete hierarchy caller paths`.
+
+## 2026-08-12 - Connectivity Recovery final acceptance audit
+
+- Target: verify the complete recovered connectivity/routing/debugging boundary
+  and refresh stale generated artifacts exposed by explicit check gates.
+- Changed areas: generated Agent API schemas/OpenAPI, current-arrow formal SVG
+  golden, recovery status, target plan and log.
+- Validation: format/reference/type checks; 576 unit tests; 81 E2E tests;
+  performance gate; Agent API artifact; Phase 5/current-arrow goldens;
+  production smoke; static geometry/planner consumer audit; `git diff --check`.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): record final connectivity acceptance audit`.

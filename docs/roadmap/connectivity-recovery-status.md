@@ -1,6 +1,6 @@
 # Connectivity recovery status
 
-Status: `active`
+Status: `completed`
 
 This is the factual implementation status following the recovery commits on
 `roadmap/connectivity-routing-debugging`. It supplements, rather than rewrites,
@@ -21,11 +21,17 @@ the roadmap's original recovery audit.
 
 ## Verification evidence
 
-- Full unit suite: 569 passed.
-- Full editor E2E suite: 80 passed.
-- 500-instance performance gate passed: formal render 17.881 ms, Agent summary
-  7.385 ms, and all configured operation budgets passed.
+- Formatting and pinned-reference checks passed.
+- Full unit suite: 576 passed.
+- Full editor E2E suite: 81 passed.
+- 500-instance performance gate passed: formal render 15.567 ms, Agent summary
+  7.129 ms, and all configured operation budgets passed.
+- Agent API artifacts, Phase 5 formal SVG goldens, route-attached current-arrow
+  golden and production-preview smoke checks passed.
 
-The compatibility layer must remain until each remaining consumer has been
-migrated with equivalent characterization and performance coverage. This status
-does not treat an additive module as a completed work package.
+The retained `routePolyline` primitive is no longer a parallel production read
+path: it remains inside geometry derivation and Edit Engine mutation/validation
+where a stored-route primitive is required. Source-only SPICE diagnostics stay
+in Import Review by the accepted ADR boundary; they are not falsely assigned a
+canvas location. This status records completion of the connectivity recovery,
+not an end to future product-policy iteration.
