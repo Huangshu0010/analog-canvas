@@ -208,6 +208,7 @@ import type { SnapGuideLine, SnapResult } from "../snap/engine";
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 const RECENT_COMPONENTS_STORAGE_KEY = "icm.recent-components.v1";
 const LIBRARY_PANEL_STORAGE_KEY = "icm.library-panel-open.v1";
+const REFRESH_RESTORE_STORAGE_KEY = "icm.restore-after-refresh.v1";
 const DRAG_START_DISTANCE_PX = 4;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
@@ -475,10 +476,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return [];
     }
   });
+  const [restoreAfterRefresh] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const requested =
+      window.sessionStorage.getItem(REFRESH_RESTORE_STORAGE_KEY) === "true";
+    if (requested) {
+      window.sessionStorage.removeItem(REFRESH_RESTORE_STORAGE_KEY);
+    }
+    return requested;
+  });
   const {
     candidate: recoveryCandidate,
     stage: stageRecovery,
     cancelPending: cancelRecovery,
+    flush: flushRecovery,
     clearStored: clearRecovery,
     consumeCandidate: consumeRecoveryCandidate,
   } = useProjectRecovery(setStatus);
@@ -548,6 +559,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setWireSource,
     setWirePreviewPoint,
     setWireWaypoints,
+    completeWire,
     setDraftingSource,
     setDraftingHover,
     setDraftingWaypoints,
@@ -1481,6 +1493,37 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     return result;
   }
 
+  const clearableObjectCount =
+    document.ports.length +
+    document.instances.length +
+    document.nets.length +
+    document.routes.length +
+    document.junctions.length +
+    document.noConnects.length +
+    document.annotations.length +
+    document.layoutGroups.length +
+    document.constraints.length +
+    (document.mosBulkDefaults ? 1 : 0) +
+    (document.drafting?.objects.length ?? 0);
+
+  function clearCanvas(): void {
+    if (clearableObjectCount === 0) {
+      setStatus(`Cell ${document.name} is already clear`);
+      return;
+    }
+    const confirmed = window.confirm(
+      `Clear all content from Cell "${document.name}"? You can undo this action.`,
+    );
+    if (!confirmed) {
+      setStatus("Clear canvas cancelled");
+      return;
+    }
+    const result = transact([{ kind: "clear_document" }]);
+    if (!result.ok) return;
+    resetInteractionState();
+    setStatus(`Cleared Cell ${document.name} · Undo restores it`);
+  }
+
   function nextRoutingSuffix(): number {
     routeCounter.current =
       Math.max(routeCounter.current, maxRoutingCounter(document)) + 1;
@@ -1679,12 +1722,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       : proposal.edits;
     const result = transact(edits, { completesWireSession: true });
     if (result.ok) {
-      setWireSource(null, null);
-      setWirePreviewPoint(null);
-      setWireWaypoints([]);
-      setTool("pointer");
+      completeWire();
       setBulkDrawInstanceId(null);
-      setStatus(`Committed route at revision ${result.revision}`);
+      setStatus(
+        `Committed route at revision ${result.revision} · Wire remains active · Esc exits`,
+      );
     }
   }
 
@@ -2513,9 +2555,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     event: ReactPointerEvent<SVGSVGElement>,
   ): void {
     if (tool !== "pointer" || event.button !== 0) return;
-    if (
-      (event.target as Element).closest(".draft-handle, .route-handle, .guide")
-    ) {
+    if ((event.target as Element).closest(".draft-handle, .route-handle")) {
       return;
     }
     const hit = resolveCanvasHitAtPoint(
@@ -2746,15 +2786,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     ]);
     if (result.ok) {
       selectOnly("instance", [id]);
-      cancelInteraction();
-      setComponentPreviewPoint(null);
-      setComponentPlacementRotation(0);
+      setComponentPreviewPoint(position);
       setStatus(
         contact.ambiguous
-          ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly`
+          ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly · click to place another · Esc exits`
           : contact.matched
-            ? `Added ${id} (${symbolId}) and connected its contacted pin`
-            : `Added ${id} (${symbolId})`,
+            ? `Added ${id} (${symbolId}) and connected its contacted pin · click to place another · Esc exits`
+            : `Added ${id} (${symbolId}) · click to place another · Esc exits`,
       );
     }
   }
@@ -2770,11 +2808,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const result = transact(constructVddRailEdits({ instanceId, start, end }));
     if (!result.ok) return;
     selectOnly("route", [routeId]);
-    cancelInteraction();
     setComponentPreviewPoint(null);
-    setComponentPlacementRotation(0);
     setVddRailStart(null);
-    setStatus(`Added VDD rail ${instanceId}`);
+    setStatus(
+      `Added VDD rail ${instanceId} · click to place another · Esc exits`,
+    );
   }
 
   function selectInstance(instanceId: string, additive: boolean): void {
@@ -3118,6 +3156,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (!recoveredProject) return;
     const recoveredDocument = replaceActiveProject(recoveredProject);
     setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
+  }
+
+  useEffect(() => {
+    if (!restoreAfterRefresh || !recoveryCandidate) return;
+    restoreRecovery();
+  }, [recoveryCandidate, restoreAfterRefresh]);
+
+  function refreshApp(): void {
+    stageRecovery(project);
+    flushRecovery();
+    window.sessionStorage.setItem(REFRESH_RESTORE_STORAGE_KEY, "true");
+    window.location.reload();
   }
 
   function discardRecovery(): void {
@@ -3956,182 +4006,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
    * drafting owners. The tagged target keeps their typed edit differences at
    * the boundary rather than branching through the floating editor lifecycle.
    */
-  // --- ADR 0010 Guide tool ------------------------------------------------
-  function addGuide(axis: "horizontal" | "vertical"): void {
-    const coordinate =
-      axis === "vertical"
-        ? Math.round(viewBox.x + viewBox.width / 2)
-        : Math.round(viewBox.y + viewBox.height / 2);
-    const id = `guide-${++uniqueSuffixCounter.current}`;
-    const result = transact([
-      {
-        kind: "set_guide",
-        guide: {
-          id,
-          axis,
-          coordinate,
-          locked: false,
-          visible: true,
-        },
-      },
-    ]);
-    if (result.ok) setStatus(`Added ${axis} guide ${id}`);
-  }
-
-  function toggleGuideLock(guideId: string): void {
-    const guide = document.drafting?.guides.find(
-      (candidate) => candidate.id === guideId,
-    );
-    if (!guide) return;
-    transact([
-      {
-        kind: "set_guide",
-        guide: { ...guide, locked: !guide.locked },
-      },
-    ]);
-  }
-
-  function deleteGuide(guideId: string): void {
-    const guide = document.drafting?.guides.find(
-      (candidate) => candidate.id === guideId,
-    );
-    if (guide?.locked) {
-      setStatus("Guide is locked; unlock it before deleting");
-      return;
-    }
-    transact([{ kind: "remove_guide", guideId }]);
-  }
-
-  function toggleGuidesVisible(): void {
-    const guides = document.drafting?.guides ?? [];
-    const allVisible = guides.every((guide) => guide.visible);
-    const edits = guides.map((guide): SchematicEdit => ({
-      kind: "set_guide",
-      guide: { ...guide, visible: !allVisible },
-    }));
-    if (edits.length > 0) transact(edits);
-  }
-
-  function clearUnlockedGuides(): void {
-    const guides = document.drafting?.guides ?? [];
-    const edits = guides
-      .filter((guide) => !guide.locked)
-      .map((guide): SchematicEdit => ({
-        kind: "remove_guide",
-        guideId: guide.id,
-      }));
-    if (edits.length > 0) transact(edits);
-  }
-
-  function beginGuideDrag(
-    event: ReactPointerEvent<SVGLineElement>,
-    guide: { id: string; axis: "horizontal" | "vertical"; locked: boolean },
-    previewTarget: SVGLineElement = event.currentTarget,
-  ): void {
-    if (guide.locked || event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-    canvasDragSessionRef.current?.cancel();
-    const target = previewTarget;
-    const svg = target.ownerSVGElement;
-    if (!svg) return;
-    const original = {
-      x1: target.getAttribute("x1"),
-      x2: target.getAttribute("x2"),
-      y1: target.getAttribute("y1"),
-      y2: target.getAttribute("y2"),
-    };
-    const restore = (): void => {
-      for (const [name, value] of Object.entries(original)) {
-        if (value === null) target.removeAttribute(name);
-        else target.setAttribute(name, value);
-      }
-    };
-    const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
-    const targetAnchors = buildSceneSnapTargets(
-      document,
-      resolver,
-      visibleEndpoints,
-    );
-    let lastSnap: SnapResult | undefined;
-    const coordinateAt = (
-      clientX: number,
-      clientY: number,
-      suppressSnap: boolean,
-      previous?: SnapResult,
-    ): { coordinate: number; snap: SnapResult } => {
-      const point = pointFromClient(clientX, clientY, svg, false);
-      const resolved: SnapResult = suppressSnap
-        ? { delta: { x: 0, y: 0 }, guides: [] }
-        : resolvePointSnap(point, targetAnchors, {
-            grid: document.presentation.grid,
-            tolerance,
-            profile: SNAP_PROFILES.guideMove,
-            ...(previous ? { previous } : {}),
-          });
-      return {
-        coordinate:
-          guide.axis === "vertical"
-            ? point.x + resolved.delta.x
-            : point.y + resolved.delta.y,
-        snap: resolved,
-      };
-    };
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const resolved = coordinateAt(
-          client.x,
-          client.y,
-          Boolean(client.altKey),
-          lastSnap,
-        );
-        lastSnap = resolved.snap;
-        paintSnapGuides(resolved.snap.guides);
-        const coordinate = resolved.coordinate;
-        if (guide.axis === "vertical") {
-          target.setAttribute("x1", String(coordinate));
-          target.setAttribute("x2", String(coordinate));
-        } else {
-          target.setAttribute("y1", String(coordinate));
-          target.setAttribute("y2", String(coordinate));
-        }
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        restore();
-        paintSnapGuides([]);
-        if (!dragged) return;
-        const current = document.drafting?.guides.find(
-          (candidate) => candidate.id === guide.id,
-        );
-        if (!current) return;
-        transact([
-          {
-            kind: "set_guide",
-            guide: {
-              ...current,
-              coordinate: coordinateAt(
-                client.x,
-                client.y,
-                Boolean(client.altKey),
-                lastSnap,
-              ).coordinate,
-            },
-          },
-        ]);
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        restore();
-        paintSnapGuides([]);
-      },
-    });
-  }
-
   function deleteSelectedAnnotation(): void {
     if (!selectedAnnotation) return;
     const result = transact([
@@ -4392,29 +4266,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       tool === "rectangle"
     )
       return;
-    if (tool === "guide") {
-      // ADR 0010: clicking with the Guide tool adds a vertical guide at the
-      // click x (the toolbar offers horizontal/vertical and clear/lock
-      // actions). Guides are editor aids; they never enter formal export.
-      const id = `guide-${++uniqueSuffixCounter.current}`;
-      const result = transact([
-        {
-          kind: "set_guide",
-          guide: {
-            id,
-            axis: "vertical",
-            coordinate: Math.round(point.x),
-            locked: false,
-            visible: true,
-          },
-        },
-      ]);
-      if (result.ok) {
-        setTool("pointer");
-        setStatus(`Added guide ${id}`);
-      }
-      return;
-    }
     event.currentTarget.setPointerCapture(event.pointerId);
     setBoxPreview({ start: point, end: point, pointerId: event.pointerId });
   }
@@ -5106,9 +4957,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const result = transact(proposal.edits);
     if (result.ok) {
       selectOnly("instance", proposal.instanceIds);
-      setCopyPlacement(null);
-      setCopyPreviewPoint(null);
-      setStatus(`Copied ${proposal.instanceIds.length} components`);
+      setCopyPreviewPoint(point);
+      setStatus(
+        `Copied ${proposal.instanceIds.length} components · click to place another · Esc exits`,
+      );
     }
   }
 
@@ -5193,7 +5045,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         hasInspectableSelection,
         hasRouteSelection: Boolean(selectedRoute),
         hasHighlightableNet: selectedHighlightNetId !== null,
-        wireSessionActive: Boolean(wireSource),
+        wireSessionActive: interactionState.kind === "wire",
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
         draftingReadyToFinish:
           (tool === "arrow" ||
@@ -5223,6 +5075,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       if (!escapeIntent) event.preventDefault();
 
       switch (shortcut.kind) {
+        case "block-browser-refresh":
+          setStatus("Refresh blocked to protect the current circuit");
+          return;
         case "undo":
         case "redo":
           transact([{ kind: shortcut.kind }]);
@@ -5362,8 +5217,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           return;
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   });
 
   useEffect(() => {
@@ -5463,6 +5318,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   <button type="button" onClick={saveProjectFile}>
                     Save Project
                   </button>
+                  <button type="button" onClick={refreshApp}>
+                    Refresh app
+                  </button>
                   <label className="file-import">
                     Open Project
                     <input
@@ -5551,6 +5409,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   </button>
                   <button
                     type="button"
+                    onClick={clearCanvas}
+                    disabled={clearableObjectCount === 0}
+                  >
+                    Clear canvas
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => rotateSelected()}
                     disabled={selectedIds.length === 0}
                   >
@@ -5632,27 +5497,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   >
                     <ToolIcon name="rectangle" />
                     Rectangle (R)
-                  </button>
-                </div>
-              </details>
-              <details className="command-menu" name="editor-command-menu">
-                <summary>More</summary>
-                <div className="command-popover">
-                  <span className="command-group-label">Guides</span>
-                  <button type="button" onClick={() => addGuide("vertical")}>
-                    Add vertical guide
-                  </button>
-                  <button type="button" onClick={() => addGuide("horizontal")}>
-                    Add horizontal guide
-                  </button>
-                  <button type="button" onClick={toggleGuidesVisible}>
-                    Show/hide guides
-                  </button>
-                  <button type="button" onClick={clearUnlockedGuides}>
-                    Clear unlocked guides
-                  </button>
-                  <button type="button" onClick={() => activateTool("guide")}>
-                    Guide tool (G)
                   </button>
                 </div>
               </details>
@@ -5889,17 +5733,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           >
             <ToolIcon name="rectangle" />
             <span>Rect</span>
-          </button>
-          <div className="tool-rail-divider" aria-hidden="true" />
-          <button
-            type="button"
-            className="tool-rail-button"
-            title="Guide tool (G)"
-            aria-pressed={tool === "guide"}
-            onClick={() => activateTool("guide")}
-          >
-            <ToolIcon name="guide" />
-            <span>Guide</span>
           </button>
         </aside>
         <ShapesPanel
@@ -6716,6 +6549,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             onPointerCancel={finishCanvasGesture}
             onClick={(event) => {
               if (copyPlacement) {
+                if (event.detail > 1) return;
                 const point = pointFromClient(
                   event.clientX,
                   event.clientY,
@@ -6728,6 +6562,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 return;
               }
               if (pendingSymbolId && pendingComponentPlacement) {
+                if (event.detail > 1) return;
                 const rawPoint = pointFromClient(
                   event.clientX,
                   event.clientY,
@@ -6856,7 +6691,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 }
                 return;
               }
-              if (wireSource) {
+              if (tool === "wire") {
                 setWireSource(null, null);
                 setWirePreviewPoint(null);
                 setWireWaypoints([]);
@@ -6875,7 +6710,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 height="10"
                 patternUnits="userSpaceOnUse"
               >
-                <circle cx="0" cy="0" r="0.7" fill="#d8d8d2" />
+                <circle className="canvas-grid-dot" cx="0" cy="0" r="0.7" />
               </pattern>
             </defs>
             <rect
@@ -7083,73 +6918,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   points={serializePolylinePoints(wireDraftPoints)}
                 />
               ) : null}
-              {(document.drafting?.guides ?? [])
-                .filter((guide) => guide.visible)
-                .map((guide) => (
-                  <g key={guide.id}>
-                    <line
-                      className="guide-hit"
-                      x1={
-                        guide.axis === "vertical" ? guide.coordinate : viewBox.x
-                      }
-                      y1={
-                        guide.axis === "horizontal"
-                          ? guide.coordinate
-                          : viewBox.y
-                      }
-                      x2={
-                        guide.axis === "vertical"
-                          ? guide.coordinate
-                          : viewBox.x + viewBox.width
-                      }
-                      y2={
-                        guide.axis === "horizontal"
-                          ? guide.coordinate
-                          : viewBox.y + viewBox.height
-                      }
-                      onPointerDown={(event) => {
-                        const visual = event.currentTarget
-                          .nextElementSibling as SVGLineElement | null;
-                        if (visual) beginGuideDrag(event, guide, visual);
-                      }}
-                      pointerEvents={tool === "wire" ? "none" : undefined}
-                      onDoubleClick={() => toggleGuideLock(guide.id)}
-                    />
-                    <line
-                      data-testid={`guide-${guide.id}`}
-                      className={guide.locked ? "guide guide-locked" : "guide"}
-                      x1={
-                        guide.axis === "vertical" ? guide.coordinate : viewBox.x
-                      }
-                      y1={
-                        guide.axis === "horizontal"
-                          ? guide.coordinate
-                          : viewBox.y
-                      }
-                      x2={
-                        guide.axis === "vertical"
-                          ? guide.coordinate
-                          : viewBox.x + viewBox.width
-                      }
-                      y2={
-                        guide.axis === "horizontal"
-                          ? guide.coordinate
-                          : viewBox.y + viewBox.height
-                      }
-                      pointerEvents="none"
-                      onKeyDown={(event) => {
-                        if (
-                          event.key === "Delete" ||
-                          event.key === "Backspace"
-                        ) {
-                          event.stopPropagation();
-                          deleteGuide(guide.id);
-                        }
-                      }}
-                      tabIndex={0}
-                    />
-                  </g>
-                ))}
               <g ref={snapGuideLayerRef} data-layer="snap-guides" />
               {routePolylines
                 .filter(({ route }) => route.id === selectedRouteId)

@@ -5626,6 +5626,40 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/capacitor-plate-calibration` as
   `fix(symbols): calibrate Razavi capacitor plate geometry`.
 
+## 2026-08-13 - Persistent authoring tools and input safety
+
+- Target: prevent accidental browser refresh and remove repeated tool
+  re-entry during manual circuit authoring.
+- Changed areas: global shortcut capture; Wire interaction state; persistent
+  Insert/quick-place/Copy flows; live rotated Insert preview; grid token;
+  rich-text overlay geometry/input shielding; accepted interaction contract;
+  focused unit and browser regressions.
+- Validation: 20 focused shortcut/state/overlay unit tests; workspace
+  typecheck; component-insert browser spec 11/11; manual-editor browser spec
+  57/57; `git diff --check` clean.
+- Commit status: ready to commit on
+  `codex/persistent-authoring-input-safety` as
+  `feat(editor): add persistent authoring tools and input safety`.
+
+## 2026-08-13 - Remove Guides and add clear/refresh commands
+
+- Target: remove the manual Guide feature without retaining a compatibility
+  protocol, and provide deliberate Clear canvas and recovery-safe Refresh app
+  commands.
+- Changed areas: model/Edit Engine/Agent Guide contracts; editor command,
+  shortcut, canvas, snap, and help surfaces; atomic `clear_document`; explicit
+  recovery flush/reload/auto-restore; active specs, fixtures, generated Agent
+  artifacts, and regressions. Automatic Smart Snap alignment feedback remains
+  transient and separate.
+- Validation: workspace typecheck; generated Agent API artifacts; 613/613 unit
+  tests; 93/95 browser tests passed on the initial parallel run, with both
+  stale persistent-tool test assumptions corrected and passing individually;
+  six directly affected browser regressions passed together; `git diff
+  --check` clean.
+- Commit status: ready to commit on
+  `codex/persistent-authoring-input-safety` as
+  `feat(editor): remove guides and add clear and refresh`.
+
 ## 2026-08-12 - Browser-authorized Agent session roadmap
 
 - Target: plan secure, non-visual external Agent control of the live published

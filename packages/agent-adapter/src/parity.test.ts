@@ -81,16 +81,6 @@ const draftingEdits = [
       rotation: 0,
     },
   },
-  {
-    kind: "set_guide",
-    guide: {
-      id: "guide-parity",
-      axis: "vertical",
-      coordinate: 250,
-      locked: false,
-      visible: true,
-    },
-  },
 ] as const;
 
 describe("Agent/Edit Engine drafting parity", () => {
@@ -175,7 +165,7 @@ describe("Agent/Edit Engine drafting parity", () => {
 });
 
 // Minimal electrical projection hash used only by the parity test to assert
-// non-electrical identity (drafting/annotations/guides excluded).
+// non-electrical identity (drafting/annotations excluded).
 function electricalHashOf(project: ReturnType<typeof fixtureProject>): string {
   const electrical = project.documents
     .sort((left, right) => left.id.localeCompare(right.id))

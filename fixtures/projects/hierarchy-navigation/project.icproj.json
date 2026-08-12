@@ -47,7 +47,7 @@
       "layoutGroups": [],
       "constraints": [],
       "noConnects": [],
-      "drafting": { "guides": [], "objects": [] }
+      "drafting": { "objects": [] }
     },
     {
       "id": "document-child",
@@ -86,7 +86,7 @@
       "layoutGroups": [],
       "constraints": [],
       "noConnects": [],
-      "drafting": { "guides": [], "objects": [] }
+      "drafting": { "objects": [] }
     }
   ]
 }

@@ -1006,7 +1006,6 @@ describe("textbook monochrome SVG renderer", () => {
           typographyToken: "caption",
         },
       ],
-      guides: [],
     };
 
     const svg = renderDocumentSvg(document, resolver);
@@ -1056,7 +1055,6 @@ describe("textbook monochrome SVG renderer", () => {
           rotation: 0,
         },
       ],
-      guides: [],
     };
 
     const svg = renderDocumentSvg(document, resolver);
@@ -1082,7 +1080,6 @@ describe("textbook monochrome SVG renderer", () => {
           rotation: 0,
         },
       ],
-      guides: [],
     };
 
     const scene = buildSvgScene(document, resolver);

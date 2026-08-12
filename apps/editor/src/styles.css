@@ -24,6 +24,7 @@
   --icm-accent-tint: #e7f3fc;
   --icm-error: #eb5757;
   --icm-warning: #9a6700;
+  --icm-grid-dot: #c4c7c9;
 
   /* Spacing: 4px base */
   --icm-space-1: 4px;
@@ -1560,20 +1561,8 @@ body {
    wiring, leaving only endpoint and route hit targets above the input plane. */
 .schematic-canvas.wire-mode .hit-target,
 .schematic-canvas.wire-mode .annotation-hit,
-.schematic-canvas.wire-mode .guide,
-.schematic-canvas.wire-mode .guide-hit,
 .schematic-canvas.wire-mode .route-handle {
   pointer-events: none;
-}
-
-.guide-hit {
-  fill: none;
-  /* Match route-hit: fully transparent strokes are not reliably targetable. */
-  stroke: rgb(0 0 0 / 0.4%);
-  stroke-width: 14;
-  cursor: move;
-  pointer-events: stroke;
-  vector-effect: non-scaling-stroke;
 }
 
 .route-hit {
@@ -1740,9 +1729,20 @@ body {
   gap: 0.25rem;
   box-sizing: border-box;
   width: 100%;
+  height: 100%;
   min-width: 0;
+  padding: 0.25rem;
+  overflow: hidden;
+  border: 1px solid var(--icm-border-strong);
+  border-radius: var(--icm-radius-md);
   color: var(--icm-text);
+  background: rgb(255 255 255 / 99%);
+  box-shadow: var(--icm-shadow-md);
   font-family: "DejaVu Sans", Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.canvas-grid-dot {
+  fill: var(--icm-grid-dot);
 }
 
 .rich-text-floating-toolbar {
@@ -1803,22 +1803,6 @@ body {
 
 .rich-text-fraction-rule {
   padding: 0 0.08em;
-}
-
-/* ADR 0010 editor-only Guide overlay: dashed, non-exported, never electrical. */
-.guide {
-  stroke: rgb(var(--icm-accent-rgb) / 55%);
-  stroke-width: 1;
-  stroke-dasharray: 6 4;
-  cursor: move;
-  /* Visual only; `.guide-hit` owns pointer interaction. */
-  pointer-events: none;
-  vector-effect: non-scaling-stroke;
-}
-
-.guide.guide-locked {
-  stroke: rgb(110 118 129 / 60%);
-  cursor: not-allowed;
 }
 
 .smart-snap-guide {
@@ -2347,8 +2331,6 @@ body {
 .schematic-canvas.component-mode .hit-target,
 .schematic-canvas.component-mode .route-hit,
 .schematic-canvas.component-mode .annotation-hit,
-.schematic-canvas.component-mode .guide,
-.schematic-canvas.component-mode .guide-hit,
 .schematic-canvas.component-mode .route-handle,
 .schematic-canvas.component-mode [data-testid^="terminal-"],
 .schematic-canvas.component-mode [data-testid^="junction-"] {

@@ -29,6 +29,7 @@ export interface EditorShortcutContext {
 }
 
 export type EditorShortcutIntent =
+  | { kind: "block-browser-refresh" }
   | { kind: "undo" | "redo" }
   | { kind: "copy" | "save" | "open" | "select-all" }
   | { kind: "reverse-current-marker" }
@@ -73,9 +74,13 @@ export function resolveEditorShortcut(
   event: EditorShortcutKey,
   context: EditorShortcutContext,
 ): EditorShortcutIntent | null {
+  const key = event.key.toLowerCase();
+  if (((event.ctrlKey || event.metaKey) && key === "r") || event.key === "F5") {
+    return { kind: "block-browser-refresh" };
+  }
+
   if (context.isTyping) return null;
 
-  const key = event.key.toLowerCase();
   const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
 
   if (plain && key === "u") {
@@ -137,9 +142,6 @@ export function resolveEditorShortcut(
     return context.hasInspectableSelection
       ? { kind: "open-properties" }
       : { kind: "property-selection-required" };
-  }
-  if (plain && key === "g") {
-    return { kind: "activate-tool", tool: "guide" };
   }
   if (plain && key === "f" && !event.shiftKey) return { kind: "fit-view" };
   if (plain && key === "home") return { kind: "fit-view" };

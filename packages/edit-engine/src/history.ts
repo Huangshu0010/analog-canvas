@@ -30,9 +30,11 @@ function collectObjects(document: SchematicDocument): Map<string, unknown> {
       ...document.nets,
       ...document.routes,
       ...document.junctions,
+      ...document.noConnects,
       ...document.annotations,
       ...document.layoutGroups,
       ...document.constraints,
+      ...(document.drafting?.objects ?? []),
     ].map((object) => [object.id, object]),
   );
 }

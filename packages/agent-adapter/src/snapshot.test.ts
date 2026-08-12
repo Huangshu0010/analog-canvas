@@ -176,7 +176,7 @@ describe("Agent Document Snapshot", () => {
       resolver,
     });
 
-    // Move an instance, change an annotation, and add drafting/guides: none of
+    // Move an instance, change an annotation, and add drafting: none of
     // these are electrical facts, so the hash must not change (ADR 0010).
     const edited = structuredClone(project);
     const document = edited.documents[0]!;
@@ -197,15 +197,6 @@ describe("Agent Document Snapshot", () => {
           content: { runs: [{ kind: "text", value: "note" }] },
           alignment: "start",
           rotation: 0,
-        },
-      ],
-      guides: [
-        {
-          id: "g1",
-          axis: "vertical",
-          coordinate: 42,
-          locked: false,
-          visible: true,
         },
       ],
     };
@@ -257,7 +248,6 @@ describe("Agent Document Snapshot", () => {
           rotation: 0,
         },
       ],
-      guides: [],
     };
     const snapshot = buildAgentSessionSnapshot({ project, document, resolver });
     const entry = snapshot.document.drafting.objects[0]!;
@@ -277,47 +267,6 @@ describe("Agent Document Snapshot", () => {
     expect(entry.object.anchor).toMatchObject({
       kind: "object",
       objectId: document.instances[0]!.id,
-    });
-  });
-
-  it("hides guide coordinates by default and includes them on includeEditorGuides", () => {
-    const project = fixtureProject();
-    const document = project.documents[0]!;
-    document.drafting = {
-      objects: [],
-      guides: [
-        {
-          id: "g1",
-          axis: "vertical",
-          coordinate: 120,
-          locked: false,
-          visible: true,
-        },
-      ],
-    };
-    const defaultSnapshot = buildAgentSessionSnapshot({
-      project,
-      document,
-      resolver,
-    });
-    expect(defaultSnapshot.document.drafting.guides[0]).toEqual({
-      id: "g1",
-      visible: true,
-      locked: false,
-    });
-
-    const optIn = buildAgentSessionSnapshot({
-      project,
-      document,
-      resolver,
-      includeEditorGuides: true,
-    });
-    expect(optIn.document.drafting.guides[0]).toEqual({
-      id: "g1",
-      visible: true,
-      locked: false,
-      axis: "vertical",
-      coordinate: 120,
     });
   });
 });

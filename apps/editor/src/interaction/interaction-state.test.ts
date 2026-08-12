@@ -51,7 +51,6 @@ describe("editor interaction state", () => {
   it("cancels every creation mode to one idle state", () => {
     for (const tool of [
       "wire",
-      "guide",
       "construction-line",
       "arrow",
       "rectangle",
@@ -81,6 +80,36 @@ describe("editor interaction state", () => {
       hover: null,
       waypoints: [],
       snapPoint: null,
+    });
+  });
+
+  it("clears committed Wire geometry without leaving Wire mode", () => {
+    let state = activateInteractionTool("wire");
+    state = interactionReducer(state, {
+      type: "set-wire-source",
+      source: {
+        endpoint: { kind: "junction", junctionId: "j1" },
+        netId: "n1",
+        point: { x: 10, y: 20 },
+        preludeEdits: [],
+      },
+      sourceRevision: 7,
+    });
+    state = interactionReducer(state, {
+      type: "set-wire-preview",
+      point: { x: 30, y: 20 },
+    });
+    state = interactionReducer(state, {
+      type: "set-wire-waypoints",
+      update: [{ x: 20, y: 20 }],
+    });
+
+    expect(interactionReducer(state, { type: "complete-wire" })).toEqual({
+      kind: "wire",
+      source: null,
+      sourceRevision: null,
+      previewPoint: null,
+      waypoints: [],
     });
   });
 

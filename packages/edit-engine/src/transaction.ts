@@ -1,7 +1,6 @@
 import {
   AnnotationSchema,
   DraftingObjectSchema,
-  GuideSchema,
   InstanceSchema,
   InstancePropertyValueSchema,
   JunctionRoleSchema,
@@ -60,6 +59,9 @@ export const EditActorSchema = z.strictObject({
 export const NoopEditSchema = z.strictObject({
   kind: z.literal("noop"),
   reason: z.string().min(1).optional(),
+});
+export const ClearDocumentEditSchema = z.strictObject({
+  kind: z.literal("clear_document"),
 });
 export const AddInstanceEditSchema = z.strictObject({
   kind: z.literal("add_instance"),
@@ -249,14 +251,6 @@ export const RemoveDraftingObjectEditSchema = z.strictObject({
   kind: z.literal("remove_drafting_object"),
   objectId: StableIdSchema,
 });
-export const SetGuideEditSchema = z.strictObject({
-  kind: z.literal("set_guide"),
-  guide: GuideSchema,
-});
-export const RemoveGuideEditSchema = z.strictObject({
-  kind: z.literal("remove_guide"),
-  guideId: StableIdSchema,
-});
 export const SetLayoutGroupEditSchema = z.strictObject({
   kind: z.literal("set_layout_group"),
   group: LayoutGroupSchema,
@@ -284,6 +278,7 @@ export const RedoEditSchema = z.strictObject({ kind: z.literal("redo") });
 
 export const SchematicEditSchema = z.discriminatedUnion("kind", [
   NoopEditSchema,
+  ClearDocumentEditSchema,
   AddInstanceEditSchema,
   RemoveInstanceEditSchema,
   SetInstanceSymbolEditSchema,
@@ -318,8 +313,6 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   RemoveSchematicAnnotationEditSchema,
   UpsertDraftingObjectEditSchema,
   RemoveDraftingObjectEditSchema,
-  SetGuideEditSchema,
-  RemoveGuideEditSchema,
   SetLayoutGroupEditSchema,
   RemoveLayoutGroupEditSchema,
   SetLayoutConstraintEditSchema,
@@ -1611,7 +1604,7 @@ function followAttachedAnnotations(
  */
 function ensureDraftingLayer(draft: SchematicDocument): void {
   if (!draft.drafting) {
-    draft.drafting = { objects: [], guides: [] };
+    draft.drafting = { objects: [] };
   }
 }
 
@@ -1710,6 +1703,35 @@ export function executeTransaction(
       case "undo":
       case "redo":
         continue;
+      case "clear_document": {
+        const removedObjects = [
+          ...draft.ports,
+          ...draft.instances,
+          ...draft.nets,
+          ...draft.routes,
+          ...draft.junctions,
+          ...draft.noConnects,
+          ...draft.annotations,
+          ...draft.layoutGroups,
+          ...draft.constraints,
+          ...(draft.drafting?.objects ?? []),
+        ];
+        for (const object of removedObjects) changedObjectIds.add(object.id);
+        draft.ports = [];
+        draft.instances = [];
+        draft.nets = [];
+        draft.routes = [];
+        draft.junctions = [];
+        draft.noConnects = [];
+        draft.annotations = [];
+        draft.layoutGroups = [];
+        draft.constraints = [];
+        draft.drafting = { objects: [] };
+        delete draft.mosBulkDefaults;
+        connectivityChanged = true;
+        geometryChanged = true;
+        break;
+      }
       case "add_instance": {
         const objectIdExists = [
           ...draft.ports,
@@ -3240,41 +3262,6 @@ export function executeTransaction(
         }
         objects.splice(index, 1);
         changedObjectIds.add(object.id);
-        break;
-      }
-      case "set_guide": {
-        ensureDraftingLayer(draft);
-        const guides = draft.drafting!.guides;
-        const parsed = GuideSchema.parse(edit.guide);
-        const existingIndex = guides.findIndex((item) => item.id === parsed.id);
-        const existing = guides[existingIndex];
-        if (existing?.locked) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Guide is locked: ${existing.id}`,
-          );
-        }
-        if (existingIndex >= 0) guides[existingIndex] = parsed;
-        else guides.push(parsed);
-        changedObjectIds.add(parsed.id);
-        break;
-      }
-      case "remove_guide": {
-        ensureDraftingLayer(draft);
-        const guides = draft.drafting!.guides;
-        const index = guides.findIndex((item) => item.id === edit.guideId);
-        const guide = guides[index];
-        if (!guide) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Guide does not exist: ${edit.guideId}`,
-          );
-        }
-        if (guide.locked) {
-          return rejectAt("EDIT_PRECONDITION", `Guide is locked: ${guide.id}`);
-        }
-        guides.splice(index, 1);
-        changedObjectIds.add(guide.id);
         break;
       }
       case "set_layout_group": {

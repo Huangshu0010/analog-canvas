@@ -11,8 +11,7 @@ import {
 // WP-A0 fixtures for the Text, Annotation, and Peripheral Editing System
 // (ADR 0010). Each fixture is expressed with the current schema-1 annotation
 // model; WP-A1 reinterprets/enriches these into the drafting container. The
-// callout-guide golden intentionally contains no Guide bytes because Guides
-// are editor-only and never export.
+// The callout golden contains only formal drafting content.
 const fixtures = [
   {
     input: "fixtures/projects/text-rich-text/project.icproj.json",
@@ -25,8 +24,8 @@ const fixtures = [
     title: null,
   },
   {
-    input: "fixtures/projects/text-callout-guide/project.icproj.json",
-    output: "fixtures/visual-golden/text-callout-guide.svg",
+    input: "fixtures/projects/text-callout/project.icproj.json",
+    output: "fixtures/visual-golden/text-callout.svg",
     title: "project",
   },
 ];

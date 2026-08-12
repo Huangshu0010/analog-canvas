@@ -71,7 +71,7 @@ describe("unified text editing", () => {
     const document = {
       ...createEmptyDocument("text", "Text"),
       annotations: [annotation()],
-      drafting: { objects: [draftingText()], guides: [] },
+      drafting: { objects: [draftingText()] },
     };
     const annotationSession = createTextEditingSession({
       owner: "annotation",
@@ -96,7 +96,7 @@ describe("unified text editing", () => {
     const document = {
       ...base,
       annotations: [annotation()],
-      drafting: { objects: [draftingText()], guides: [] },
+      drafting: { objects: [draftingText()] },
     };
     const annotationSession = updateTextEditingSession(
       createTextEditingSession({ owner: "annotation", object: annotation() }),
@@ -132,7 +132,7 @@ describe("unified text editing", () => {
     const object = { ...draftingText(), styleOverride: { sizeScale: 1 } };
     const document = {
       ...createEmptyDocument("text", "Text"),
-      drafting: { objects: [object], guides: [] },
+      drafting: { objects: [object] },
     };
     const session = createTextEditingSession({ owner: "drafting", object });
     expect(proposeTextEditingCommit(document, session)).toEqual({
@@ -152,7 +152,7 @@ describe("unified text editing", () => {
       proposeTextEditingCommit(
         {
           ...document,
-          drafting: { objects: [{ ...object, locked: true }], guides: [] },
+          drafting: { objects: [{ ...object, locked: true }] },
         },
         updateTextEditingSession(session, { sizeScale: 1.2 }),
       ),

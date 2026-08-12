@@ -56,6 +56,7 @@ const QUERY_SCOPES = [
 ] as const;
 export const AGENT_EDIT_KINDS = [
   "noop",
+  "clear_document",
   "add_instance",
   "remove_instance",
   "set_instance_symbol",
@@ -495,6 +496,7 @@ export function agentEditCategory(
     case "merge_nets":
     case "set_net_name":
     case "normalize_power_nets":
+    case "clear_document":
     case "set_mos_bulk_defaults":
     case "reconcile_mos_bulk":
     case "clear_mos_bulk_default":
@@ -508,8 +510,6 @@ export function agentEditCategory(
     case "remove_schematic_annotation":
     case "upsert_drafting_object":
     case "remove_drafting_object":
-    case "set_guide":
-    case "remove_guide":
     case "set_presentation_style":
     case "set_layout_group":
     case "remove_layout_group":
@@ -676,7 +676,6 @@ export function createAgentCircuitService(
           document,
           resolver,
           includeSourceSpans,
-          includeEditorGuides: request.includeEditorGuides === true,
         });
         if (snapshot.byteLength > limits.maxSnapshotBytes) {
           return fail(

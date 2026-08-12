@@ -142,6 +142,12 @@ export function InsertComponentDialog({
     setPickerOpen(false);
   };
 
+  const rotatePreview = (): void => {
+    setInitialRotation(
+      (current) => ((current + 90) % 360) as 0 | 90 | 180 | 270,
+    );
+  };
+
   const apply = (): void => {
     if (!selected) return;
     const properties = Object.fromEntries(
@@ -178,7 +184,20 @@ export function InsertComponentDialog({
           apply();
         }}
         onKeyDown={(event) => {
-          if (event.key === "Escape") {
+          const target = event.target as HTMLElement;
+          const isTextEntry = Boolean(
+            target.closest('input, textarea, [contenteditable="true"]'),
+          );
+          if (
+            event.key.toLowerCase() === "r" &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.altKey &&
+            !isTextEntry
+          ) {
+            event.preventDefault();
+            rotatePreview();
+          } else if (event.key === "Escape") {
             event.preventDefault();
             onCancel();
           } else if (event.key === "ArrowDown") {
@@ -362,12 +381,18 @@ export function InsertComponentDialog({
             ) : null}
           </aside>
 
-          <section className="insert-component-preview" aria-live="polite">
+          <section
+            className="insert-component-preview"
+            aria-label="Component preview"
+            aria-live="polite"
+            tabIndex={0}
+          >
             {selected ? (
               <>
                 <SymbolArtwork
                   symbol={selected}
                   className="insert-symbol-artwork"
+                  rotation={initialRotation}
                 />
                 <div>
                   <h3>{selected.name}</h3>
@@ -384,7 +409,9 @@ export function InsertComponentDialog({
         </div>
 
         <footer className="insert-dialog-actions">
-          <small>Type to search · ↑↓ choose · Enter place · Esc cancel</small>
+          <small>
+            Type to search · ↑↓ choose · R rotate · Enter place · Esc cancel
+          </small>
           <div>
             <button type="button" onClick={onCancel}>
               Cancel

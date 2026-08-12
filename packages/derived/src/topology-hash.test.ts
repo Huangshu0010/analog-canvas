@@ -121,7 +121,6 @@ describe("electricalTopologyHash", () => {
               rotation: 0,
             },
           ],
-          guides: [],
         },
       }),
     ]);

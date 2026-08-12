@@ -449,8 +449,8 @@ function deriveBounds(
     );
   }
   // ADR 0010 WP-R2: drafting objects extend the formal export bounds so
-  // callouts and floating symbols outside the circuit are not clipped. Guides
-  // are editor-only and never affect bounds. Resolved geometry is derived.
+  // callouts and floating symbols outside the circuit are not clipped.
+  // Resolved geometry is derived.
   for (const object of document.drafting?.objects ?? []) {
     const geometry = resolveDraftingObjectGeometry(document, resolver, object);
     bounds.push(geometry.bounds);
@@ -812,8 +812,8 @@ function resolveRouteMarkerPlacement(
 }
 
 // ADR 0010 WP-R2: the drafting layer renders every DraftingObject kind by
-// consuming the single derived-geometry entry. Guides never render in formal
-// output. An unresolved anchor still exports using its fallback position and
+// consuming the single derived-geometry entry. An unresolved anchor still
+// exports using its fallback position and
 // carries a data-anchor-resolved="false" attribute for diagnostics.
 function renderDraftingLayer(
   document: SchematicDocument,

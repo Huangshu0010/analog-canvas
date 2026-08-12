@@ -29,14 +29,21 @@ export function resolveCanvasTextEditorFrame(
     Math.max(110, bounds.height + 68, 78 + 15.116 * sizeScale * 1.3),
     viewBox.height - 16,
   );
-  const x = Math.max(
-    viewBox.x + 8,
-    Math.min(viewBox.x + viewBox.width - width - 8, bounds.x - 6),
-  );
-  const y = Math.max(
-    viewBox.y + 8,
-    Math.min(viewBox.y + viewBox.height - height - 8, bounds.y - 58),
-  );
+  const viewportInset = 8;
+  const targetGap = 8;
+  const minX = viewBox.x + viewportInset;
+  const maxX = viewBox.x + viewBox.width - width - viewportInset;
+  const minY = viewBox.y + viewportInset;
+  const maxY = viewBox.y + viewBox.height - height - viewportInset;
+  const x = Math.max(minX, Math.min(maxX, bounds.x - 6));
+  const above = bounds.y - height - targetGap;
+  const below = bounds.y + bounds.height + targetGap;
+  const y =
+    above >= minY
+      ? above
+      : below <= maxY
+        ? below
+        : Math.max(minY, Math.min(maxY, above));
   return { x, y, width, height };
 }
 
@@ -58,7 +65,19 @@ export function CanvasTextEditorOverlay({
   );
 
   return (
-    <foreignObject data-testid="canvas-text-editor" {...frame}>
+    <foreignObject
+      data-testid="canvas-text-editor"
+      className="canvas-text-editor-overlay"
+      pointerEvents="all"
+      {...frame}
+      onPointerDown={(event) => event.stopPropagation()}
+      onPointerMove={(event) => event.stopPropagation()}
+      onPointerUp={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+      onContextMenu={(event) => event.stopPropagation()}
+      onWheel={(event) => event.stopPropagation()}
+    >
       <RichTextEditor
         targetKey={`${session.owner}:${session.id}`}
         content={session.content}

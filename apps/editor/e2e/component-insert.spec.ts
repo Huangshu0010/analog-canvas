@@ -1,6 +1,68 @@
 import { expect, test } from "@playwright/test";
 
-import { chooseComponent } from "./editor-fixtures.js";
+import { chooseComponent, clickCommand } from "./editor-fixtures.js";
+
+test("blocks destructive browser refresh shortcuts and uses the stronger grid", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".canvas-grid-dot").first()).toHaveCSS(
+    "fill",
+    "rgb(196, 199, 201)",
+  );
+  await page.evaluate(() => {
+    document.body.dataset.refreshGuard = "alive";
+  });
+
+  await page.keyboard.press("Control+r");
+  await expect(page.getByTestId("status")).toHaveText(
+    "Refresh blocked to protect the current circuit",
+  );
+  await expect(page.locator("body")).toHaveAttribute(
+    "data-refresh-guard",
+    "alive",
+  );
+
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByLabel("Component search").focus();
+  await page.keyboard.press("F5");
+  await expect(dialog).toBeVisible();
+  await expect(page.locator("body")).toHaveAttribute(
+    "data-refresh-guard",
+    "alive",
+  );
+});
+
+test("refreshes explicitly only after flushing and automatically restoring recovery", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await chooseComponent(page, "resistor");
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  const navigated = page.waitForEvent("framenavigated");
+  await clickCommand(page, "File", "Refresh app");
+  await navigated;
+
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await expect(page.getByTestId("status")).toHaveText(
+    "Restored recovery revision 1",
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        sessionStorage.getItem("icm.restore-after-refresh.v1"),
+      ),
+    )
+    .toBeNull();
+});
 
 test("inserts from the master-detail dialog with keyboard and live placement preview", async ({
   page,
@@ -39,6 +101,7 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
 
   await chooseComponent(page, "resistor");
   await canvas.click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("hit-R1")).toBeVisible();
   await expect(page.getByTestId("canvas-empty-state")).toHaveCount(0);
   await page.getByTestId("selection-shelf").click();
@@ -75,6 +138,7 @@ test("carries a manual Value through placement and Q property editing", async ({
 
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("revision")).toHaveText("1");
   await expect(page.getByTestId("selection-shelf")).toHaveAttribute(
     "aria-expanded",
@@ -207,6 +271,17 @@ test("places MOS parameters and orientation while preserving deliberate referenc
   await dialog.getByLabel("Component l", { exact: true }).fill("180n");
   await dialog.getByLabel("Component m", { exact: true }).fill("4");
   await dialog.getByLabel("Initial rotation").selectOption("90");
+  const dialogArtwork = dialog.locator(".insert-symbol-artwork");
+  await expect(dialogArtwork).toHaveAttribute("data-rotation", "90");
+  await expect(dialogArtwork.locator("g")).toHaveAttribute(
+    "transform",
+    "rotate(90)",
+  );
+  await dialog.getByLabel("Component preview").focus();
+  await page.keyboard.press("r");
+  await expect(dialog.getByLabel("Initial rotation")).toHaveValue("180");
+  await expect(dialogArtwork).toHaveAttribute("data-rotation", "180");
+  await dialog.getByLabel("Initial rotation").selectOption("90");
   await dialog.getByRole("checkbox", { name: "Label" }).uncheck();
   await expect(dialog.locator(".insert-parameter-name").first()).toHaveText(
     "W / m(Channel width)",
@@ -222,6 +297,7 @@ test("places MOS parameters and orientation while preserving deliberate referenc
     /rotate\(90\)/u,
   );
   await canvas.click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
 
   await expect(page.locator('[data-object-id="instance-label-M1"]')).toHaveText(
     "",
@@ -239,7 +315,7 @@ test("places MOS parameters and orientation while preserving deliberate referenc
   await expect(page.getByLabel("Component rotation")).toHaveValue("90");
 });
 
-test("commits a pending component from a semantic canvas click", async ({
+test("keeps component placement active across independent canvas commits", async ({
   page,
 }) => {
   await page.goto("/");
@@ -259,6 +335,11 @@ test("commits a pending component from a semantic canvas click", async ({
   });
 
   await expect(page.getByTestId("hit-R1")).toBeVisible();
+  await expect(page.getByTestId("component-input-plane")).toBeVisible();
+  await canvas.click({ position: { x: 520, y: 230 } });
+  await expect(page.getByTestId("hit-R2")).toBeVisible();
+  await expect(page.getByTestId("revision")).toHaveText("2");
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
 });
 
@@ -276,6 +357,7 @@ test("quick-places a starter, records it as recent, and restores Library state",
   await page.mouse.move(box.x + 280, box.y + 220);
   await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 280, y: 220 } });
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("hit-R1")).toBeVisible();
   await expect(page.getByTestId("shapes-recent-resistor")).toBeVisible();
 
@@ -342,6 +424,7 @@ test("double-clicking a placed device opens Properties for editing", async ({
   await dialog.getByRole("button", { name: "Apply" }).click();
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
   await expect(page.getByTestId("hit-R1")).toBeVisible();
   await expect(page.getByTestId("selection-shelf")).toHaveAttribute(
     "aria-expanded",

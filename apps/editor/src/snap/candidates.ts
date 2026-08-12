@@ -164,17 +164,6 @@ export function buildSceneSnapTargets(
         !excludedInstanceIds.has(source.endpoint.instanceId),
     )
     .map(endpointSnapAnchor);
-  const guideAnchors = (document.drafting?.guides ?? [])
-    .filter((guide) => guide.visible)
-    .map((guide): SnapAnchor => ({
-      id: `guide:${guide.id}`,
-      point:
-        guide.axis === "vertical"
-          ? { x: guide.coordinate, y: 0 }
-          : { x: 0, y: guide.coordinate },
-      kind: "guide",
-      axes: [guide.axis === "vertical" ? "x" : "y"],
-    }));
   const draftingIds = new Set(
     (document.drafting?.objects ?? [])
       .filter((object) => !excludedDraftingIds.has(object.id))
@@ -183,7 +172,6 @@ export function buildSceneSnapTargets(
   return [
     ...instanceAnchors,
     ...endpointAnchors,
-    ...guideAnchors,
     ...buildDraftingAnchors(document, resolver, draftingIds),
   ];
 }

@@ -17,8 +17,18 @@
         "fallbackPosition": { "x": 260, "y": 144 }
       }
     },
-    { "id": "label-m1", "kind": "instance-label", "text": "M_{1}", "attachedObjectId": "M1" },
-    { "id": "label-vout", "kind": "net-label", "text": "V_{out}", "attachedObjectId": "net-output" }
+    {
+      "id": "label-m1",
+      "kind": "instance-label",
+      "text": "M_{1}",
+      "attachedObjectId": "M1"
+    },
+    {
+      "id": "label-vout",
+      "kind": "net-label",
+      "text": "V_{out}",
+      "attachedObjectId": "net-output"
+    }
   ],
   "drafting": {
     "objects": [
@@ -28,10 +38,13 @@
         "content": { "runs": [{ "kind": "text", "value": "V_x" }] },
         "anchor": { "kind": "free", "position": { "x": 332, "y": 150 } },
         "migrationDiagnostics": [
-          { "code": "voltage-no-attachment", "sourceAnnotationId": "voltage-vx", "message": "Free-positioned voltage marker migrated to free text; review its placement." }
+          {
+            "code": "voltage-no-attachment",
+            "sourceAnnotationId": "voltage-vx",
+            "message": "Free-positioned voltage marker migrated to free text; review its placement."
+          }
         ]
       }
-    ],
-    "guides": []
+    ]
   }
 }
