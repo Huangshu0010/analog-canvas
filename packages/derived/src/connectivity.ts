@@ -20,6 +20,8 @@ export interface RoutedComponent {
   id: string;
   netId: string;
   nodes: VisibleConnectivityNode[];
+  /** Stored Routes whose endpoints belong to this visible component. */
+  routes: string[];
 }
 
 export interface VisibleNetConnectivity {
@@ -146,6 +148,18 @@ export function deriveNetConnectivity(
         id: deriveStableId("component", net.id, componentNodes[0]!.key),
         netId: net.id,
         nodes: componentNodes,
+        routes: document.routes
+          .filter(
+            (route) =>
+              route.netId === net.id &&
+              componentNodes.some(
+                (node) =>
+                  node.key === endpointKey(route.from) ||
+                  node.key === endpointKey(route.to),
+              ),
+          )
+          .map((route) => route.id)
+          .sort((left, right) => left.localeCompare(right, "en")),
       };
     })
     .sort((left, right) =>

@@ -61,16 +61,37 @@ export function computeNetHighlight(
   index: ProjectConnectivityIndex,
   documentId: string,
   netId: string,
+  origin?: EndpointRef,
 ): NetHighlight | undefined {
   const record = index.documents.get(documentId)?.nets.get(netId);
   if (!record) return undefined;
+  const component = origin
+    ? record.routedComponents.find((candidate) =>
+        candidate.nodes.some((node) => node.key === endpointKey(origin)),
+      )
+    : undefined;
+  if (origin && !component) return undefined;
+  const visibleEndpoints = component
+    ? component.nodes.map((node) => node.endpoint)
+    : record.visibleEndpoints;
+  const visibleEndpointKeys = new Set(visibleEndpoints.map(endpointKey));
   return {
     documentId,
     netId,
-    visibleEndpoints: record.visibleEndpoints,
-    routes: record.routes,
-    junctions: record.junctions,
-    virtualEdges: record.virtualEdges,
+    visibleEndpoints,
+    routes: component?.routes ?? record.routes,
+    junctions: component
+      ? component.nodes.flatMap((node) =>
+          node.endpoint.kind === "junction" ? [node.endpoint.junctionId] : [],
+        )
+      : record.junctions,
+    virtualEdges: component
+      ? record.virtualEdges.filter(
+          (edge) =>
+            visibleEndpointKeys.has(endpointKey(edge.from)) &&
+            visibleEndpointKeys.has(endpointKey(edge.to)),
+        )
+      : record.virtualEdges,
     flightlines: record.flightlines,
   };
 }
@@ -127,8 +148,9 @@ export function traceHierarchyNet(
   index: ProjectConnectivityIndex,
   documentId: string,
   netId: string,
+  origin?: EndpointRef,
 ): HierarchyNetTrace | undefined {
-  const primary = computeNetHighlight(index, documentId, netId);
+  const primary = computeNetHighlight(index, documentId, netId, origin);
   if (!primary) return undefined;
   const queue: HierarchyNetRef[] = [{ documentId, netId }];
   const visited = new Set<string>();
@@ -139,11 +161,10 @@ export function traceHierarchyNet(
     const current = queue.shift()!;
     const key = `${current.documentId}\u0000${current.netId}`;
     if (visited.has(key)) continue;
-    const highlight = computeNetHighlight(
-      index,
-      current.documentId,
-      current.netId,
-    );
+    const highlight =
+      current.documentId === documentId && current.netId === netId
+        ? computeNetHighlight(index, current.documentId, current.netId, origin)
+        : computeNetHighlight(index, current.documentId, current.netId);
     if (!highlight) continue;
     visited.add(key);
     highlights.push(highlight);

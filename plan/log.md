@@ -5382,3 +5382,16 @@ contracts (WP-R1)`.
   Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `fix(editor): align Net Label highlight selection`.
+
+## 2026-08-12 - Component-aware Net highlight
+
+- Target: remove raw persisted-Net assumptions from highlight and make it a
+  pure consumer of seeded routed-component connectivity.
+- Changed areas: routed component Route membership; Derived Net highlight API;
+  editor typed highlight origin; accepted connectivity contract; focused unit
+  and browser regressions; target plan.
+- Validation: 24 focused Derived tests; four focused browser flows including
+  Label deletion splitting a historic merged-Net highlight; workspace
+  typecheck; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `fix(connectivity): highlight routed components through the index`.

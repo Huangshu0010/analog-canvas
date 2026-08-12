@@ -1717,6 +1717,115 @@ test("highlights the complete current-document Net from a selected route", async
   await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
 });
 
+test("recomputes highlighted routed components after a Net Label is deleted", async ({
+  page,
+}) => {
+  const project = createEmptyProject(
+    "label-highlight",
+    "Label Highlight",
+    "main",
+  );
+  const document = project.documents[0]!;
+  document.nets = [
+    {
+      id: "net-historically-merged",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    },
+  ];
+  document.junctions = [
+    {
+      id: "left-a",
+      netId: "net-historically-merged",
+      position: { x: 180, y: 260 },
+    },
+    {
+      id: "left-b",
+      netId: "net-historically-merged",
+      position: { x: 320, y: 260 },
+    },
+    {
+      id: "right-a",
+      netId: "net-historically-merged",
+      position: { x: 480, y: 260 },
+    },
+    {
+      id: "right-b",
+      netId: "net-historically-merged",
+      position: { x: 620, y: 260 },
+    },
+  ];
+  document.routes = [
+    {
+      id: "route-left-label",
+      netId: "net-historically-merged",
+      from: { kind: "junction", junctionId: "left-a" },
+      to: { kind: "junction", junctionId: "left-b" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+    {
+      id: "route-right-label",
+      netId: "net-historically-merged",
+      from: { kind: "junction", junctionId: "right-a" },
+      to: { kind: "junction", junctionId: "right-b" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+  ];
+  document.annotations = [
+    {
+      id: "label-left-component",
+      kind: "net-label",
+      text: "SIGNAL",
+      position: { x: 250, y: 250 },
+      attachedObjectId: "net-historically-merged",
+      offset: { x: 0, y: -8 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    },
+    {
+      id: "label-right-component",
+      kind: "net-label",
+      text: "SIGNAL",
+      position: { x: 550, y: 250 },
+      attachedObjectId: "net-historically-merged",
+      offset: { x: 0, y: -8 },
+      alignment: "middle",
+      rotation: 0,
+      locked: false,
+    },
+  ];
+
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "label-highlight.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await page.getByTestId("annotation-hit-label-left-component").click();
+  await page.keyboard.press("h");
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-core"),
+  ).toHaveCount(2);
+  await page.keyboard.press("h");
+
+  await page.getByTestId("annotation-hit-label-right-component").click();
+  await page.keyboard.press("Delete");
+  await clickRoute(page, "route-left-label");
+  await page.keyboard.press("h");
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-core"),
+  ).toHaveCount(1);
+  await expect(
+    page.locator(
+      '.net-highlight-overlay .net-highlight-core[points="180,260 320,260"]',
+    ),
+  ).toHaveCount(1);
+});
+
 test("navigates a visible hierarchy Net trace hop into its child Cell", async ({
   page,
 }) => {

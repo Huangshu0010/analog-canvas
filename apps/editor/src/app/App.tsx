@@ -555,6 +555,7 @@ export function App({ project: initialProject }: AppProps) {
   const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
     documentId: string;
     netId: string;
+    endpoint?: RouteEndpoint;
   } | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
@@ -630,6 +631,7 @@ export function App({ project: initialProject }: AppProps) {
             projectConnectivityIndex,
             highlightedNetOrigin.documentId,
             highlightedNetOrigin.netId,
+            highlightedNetOrigin.endpoint,
           )
         : undefined,
     [highlightedNetOrigin, projectConnectivityIndex],
@@ -775,6 +777,19 @@ export function App({ project: initialProject }: AppProps) {
     selectedEndpointNetId ??
     selectedNetLabelBinding?.netId ??
     null;
+  const selectedHighlightEndpoint =
+    selectedRoute?.from ??
+    selectedEndpoint?.endpoint ??
+    selectedNetLabelBinding?.endpoint;
+  const selectedHighlightIsActive = Boolean(
+    selectedHighlightNetId &&
+    highlightedNetOrigin?.documentId === document.id &&
+    highlightedNetOrigin.netId === selectedHighlightNetId &&
+    (!highlightedNetOrigin.endpoint ||
+      (selectedHighlightEndpoint &&
+        endpointKey(highlightedNetOrigin.endpoint) ===
+          endpointKey(selectedHighlightEndpoint))),
+  );
   const flightlines = useMemo(
     () =>
       document.nets.flatMap(
@@ -5106,8 +5121,16 @@ export function App({ project: initialProject }: AppProps) {
     closeSearch();
   }
 
-  function highlightNet(netId: string, documentId = document.id): void {
-    setHighlightedNetOrigin({ documentId, netId });
+  function highlightNet(
+    netId: string,
+    documentId = document.id,
+    endpoint?: RouteEndpoint,
+  ): void {
+    setHighlightedNetOrigin({
+      documentId,
+      netId,
+      ...(endpoint ? { endpoint } : {}),
+    });
     setStatus(`Highlighted Net ${netId}`);
   }
 
@@ -5119,15 +5142,12 @@ export function App({ project: initialProject }: AppProps) {
       );
       return;
     }
-    if (
-      highlightedNetOrigin?.documentId === document.id &&
-      highlightedNetOrigin.netId === netId
-    ) {
+    if (selectedHighlightIsActive) {
       setHighlightedNetOrigin(null);
       setStatus(`Cleared Net highlight ${netId}`);
       return;
     }
-    highlightNet(netId);
+    highlightNet(netId, document.id, selectedHighlightEndpoint);
   }
 
   function navigateTraceHop(hop: HierarchyNetTraceHop): void {
@@ -6056,7 +6076,7 @@ export function App({ project: initialProject }: AppProps) {
                   Add current arrow
                 </button>
                 <button type="button" onClick={toggleHighlightedNet}>
-                  {highlightedNetId === selectedRoute!.netId
+                  {selectedHighlightIsActive
                     ? "Clear Net highlight (H)"
                     : "Highlight Net (H)"}
                 </button>
@@ -6142,7 +6162,7 @@ export function App({ project: initialProject }: AppProps) {
                 <h2>Annotation</h2>
                 {selectedNetLabelBinding ? (
                   <button type="button" onClick={toggleHighlightedNet}>
-                    {highlightedNetId === selectedNetLabelBinding.netId
+                    {selectedHighlightIsActive
                       ? "Clear Net highlight (H)"
                       : "Highlight Net (H)"}
                   </button>

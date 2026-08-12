@@ -193,6 +193,16 @@ annotation therefore leaves the Label field empty even when an imported or
 previously authored logical Net name remains for source identity. Removing a
 Label does not infer a conductor cut or reverse a prior explicit Net merge.
 
+Net highlight never equates a persisted Net record with one connected visible
+component. Its caller supplies a selected Route/endpoint/Label origin, and the
+`ProjectConnectivityIndex` resolves the routed component containing that
+origin, including typed Label virtual edges. The highlight renderer consumes
+only the resulting Route, Junction, and endpoint ids. Consequently, removing a
+Label immediately removes its virtual edge and separates the visible
+highlights even when a historic merge leaves both components under one
+persisted Net id. Unseeded whole-Net highlights are reserved for callers such
+as project navigation that have no visible origin.
+
 ## Unified read models (proposed)
 
 This section is `proposed`, owned by `packages/derived`, and is implemented by

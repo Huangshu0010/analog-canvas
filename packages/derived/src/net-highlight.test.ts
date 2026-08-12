@@ -3,6 +3,7 @@ import { InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { buildProjectConnectivityIndex } from "./connectivity-index.js";
+import { endpointKey } from "./endpoint.js";
 import {
   computeNetHighlight,
   traceHierarchyNet,
@@ -138,6 +139,105 @@ describe("net highlight and cross-cell trace", () => {
     );
     expect(computeNetHighlight(index, "doc", "missing")).toBeUndefined();
     expect(computeNetHighlight(index, "missing", "net-x")).toBeUndefined();
+  });
+
+  it("derives a seeded visible component from Label connectivity instead of raw Net membership", () => {
+    const project = createEmptyProject("labels", "Labels", "doc");
+    const document = project.documents[0]!;
+    document.ports = [
+      { id: "p1", name: "p1", direction: "passive", position: { x: 0, y: 0 } },
+      {
+        id: "p2",
+        name: "p2",
+        direction: "passive",
+        position: { x: 100, y: 0 },
+      },
+      {
+        id: "p3",
+        name: "p3",
+        direction: "passive",
+        position: { x: 200, y: 0 },
+      },
+      {
+        id: "p4",
+        name: "p4",
+        direction: "passive",
+        position: { x: 300, y: 0 },
+      },
+    ];
+    document.nets = [
+      {
+        id: "net-merged",
+        scope: "local",
+        terminals: [],
+        ports: ["p1", "p2", "p3", "p4"],
+      },
+    ];
+    document.routes = [
+      {
+        id: "route-left",
+        netId: "net-merged",
+        from: { kind: "port", portId: "p1" },
+        to: { kind: "port", portId: "p2" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-right",
+        netId: "net-merged",
+        from: { kind: "port", portId: "p3" },
+        to: { kind: "port", portId: "p4" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+    document.annotations = [
+      {
+        id: "label-left",
+        kind: "net-label",
+        text: "SIGNAL",
+        position: { x: 50, y: -8 },
+        attachedObjectId: "net-merged",
+        offset: { x: 0, y: -8 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "label-right",
+        kind: "net-label",
+        text: "SIGNAL",
+        position: { x: 250, y: -8 },
+        attachedObjectId: "net-merged",
+        offset: { x: 0, y: -8 },
+        alignment: "middle",
+        rotation: 0,
+        locked: false,
+      },
+    ];
+    const resolver = new InMemorySymbolResolver([]);
+    const connected = computeNetHighlight(
+      buildProjectConnectivityIndex(project, resolver),
+      "doc",
+      "net-merged",
+      { kind: "port", portId: "p1" },
+    )!;
+    expect(connected.routes).toEqual(["route-left", "route-right"]);
+
+    const withoutRightLabel = structuredClone(project);
+    withoutRightLabel.documents[0]!.annotations = [
+      withoutRightLabel.documents[0]!.annotations[0]!,
+    ];
+    const disconnected = computeNetHighlight(
+      buildProjectConnectivityIndex(withoutRightLabel, resolver),
+      "doc",
+      "net-merged",
+      { kind: "port", portId: "p1" },
+    )!;
+    expect(disconnected.routes).toEqual(["route-left"]);
+    expect(
+      disconnected.visibleEndpoints.map((endpoint) => endpointKey(endpoint)),
+    ).toEqual(["port:p1", "port:p2"]);
   });
 
   it("traces parent pins on the net through hierarchy edges into child ports", () => {
