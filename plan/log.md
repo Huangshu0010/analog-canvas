@@ -5597,3 +5597,16 @@ contracts (WP-R1)`.
   registration lift); `git diff --check` clean.
 - Commit status: ready to commit on `codex/capacitor-plate-calibration` as
   `fix(symbols): calibrate Razavi capacitor plate geometry`.
+
+## 2026-08-12 - Browser-authorized Agent session roadmap
+
+- Target: plan secure, non-visual external Agent control of the live published
+  browser editor while preserving one Snapshot/transaction/render domain API
+  and one editor mutation/history lifecycle.
+- Changed areas: new web Agent-session roadmap; roadmap index; documentation
+  target plan. Concurrent VDD rail implementation paths were read-only and are
+  an explicit pre-implementation dependency.
+- Validation: pinned reference check passed; roadmap/source boundary review;
+  `git diff --check` clean.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `docs(agent): plan browser-authorized agent sessions`.
