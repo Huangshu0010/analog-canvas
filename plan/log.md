@@ -1,5 +1,22 @@
 # Maintenance Log
 
+## 2026-08-13 - Expand routine plan record pruning
+
+- Target: reduce archived plan-body bloat beyond the initial 14-record sweep
+  without removing decision-bearing history or changing product behavior.
+- Changed areas: deleted 20 independently reconstructible UI, shortcut,
+  symbol-calibration, visual-fixture, and typecheck plan bodies; condensed the
+  archive index; clarified the evidence-and-decision-value retention rule.
+- Evidence boundary: each deletion was checked for a completed outcome,
+  matching factual log record, and Git history. Architecture, migrations,
+  recovery, integration, CI/deployment, shared geometry, and experience
+  records remain present.
+- Validation: protected-record presence and 20-file deletion count confirmed;
+  `git diff --check` passed and final worktree review contains only this
+  target's planned documentation updates.
+- Commit status: prepared as `docs(plan): expand routine record pruning` on
+  `codex/plan-lifecycle-hygiene`.
+
 ## 2026-08-13 - Move planner and Route geometry ownership
 
 - Target: remove double planning between GUI group moves and Edit Engine route
@@ -5809,3 +5826,30 @@ contracts (WP-R1)`.
 - Commit status: ready to commit and push on
   `codex/web-agent-session-architecture` as
   `feat(agent): connect browser-authorized sessions end to end`.
+
+## 2026-08-13 - Plan lifecycle hygiene
+
+- Target: reduce the root planning surface without rewriting history or
+  discarding unresolved work.
+- Changed areas: moved 136 resolved completed target directories to
+  `plan/archived/2026-08/`; added the root retention audit and archival batch
+  index; linked the current queue from `plan/README.md`.
+- Validation: every moved plan has current `completed`/`none` metadata, an
+  Outcome section, and Git history; active, candidate, superseded, proposed,
+  and metadata-missing plans remained in the root. This target remains until
+  its own commit; `git diff --check` passed.
+- Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
+  `docs(plan): archive resolved completed targets`.
+
+## 2026-08-13 - Routine plan record retention
+
+- Target: remove redundant archived micro-plan prose while retaining factual
+  evidence in Git and this log.
+- Changed areas: deleted 14 resolved visual-calibration, naming, and narrow
+  geometry-fix plan records; documented the deletion eligibility rule.
+- Validation: every deleted plan had `completed`/`none` metadata, Outcome, Git
+  history, and a matching log entry; no active, candidate, legacy, migration,
+  delivery, integration, or web-agent record was selected; `git diff --check`
+  passed.
+- Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
+  `docs(plan): prune routine completed records`.

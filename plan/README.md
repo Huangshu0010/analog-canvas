@@ -58,6 +58,27 @@ Moving a plan does not authorize rewriting its historical content.
 Failed, blocked, unresolved, proposed-only, superseded-before-implementation,
 pending, and active plans remain visible in the plan root.
 
+[`root-audit.md`](root-audit.md) is the concise current queue for root plans
+that are not yet eligible for archival. Update it when a plan's state changes;
+do not treat an old directory's date as evidence that it is complete.
+
+## Routine Record Retention
+
+An archived plan may be deleted only when all of the following are true:
+
+1. `status: completed` and `experience: none` are explicit;
+2. its Outcome and Git history establish the completed work;
+3. `plan/log.md` contains the factual target, changed-area, validation, and
+   commit record; and
+4. it is an independently reconstructible routine record, not an
+   architecture/ADR, schema or migration, release or CI, deployment,
+   cross-branch integration, active coordination, or unresolved-decision
+   record.
+
+Length and age are not retention criteria. Delete redundant prose, not
+evidence: Git and the factual log remain the retention surface. Never delete a
+plan with an unresolved experience signal or state.
+
 ## Experience Extraction
 
 Experience extraction is a human decision, not automatic target close-out. A
