@@ -294,6 +294,10 @@ changes their source schema.
 
 ### WP-WA0 — Contract ADR and threat model
 
+Status: `complete` — frozen in
+[`ADR 0016`](../adr/0016-browser-authoritative-agent-session.md) and
+[`web-agent-session.md`](../specs/web-agent-session.md).
+
 - Goal: Freeze browser authority, session lifecycle, capability-token model,
   permission scopes, origin policy, retention, audit redaction, and typed
   transport errors.

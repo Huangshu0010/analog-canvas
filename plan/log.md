@@ -5610,3 +5610,19 @@ contracts (WP-R1)`.
   `git diff --check` clean.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `docs(agent): plan browser-authorized agent sessions`.
+
+## 2026-08-12 - WP-WA0 browser-authorized session contract
+
+- Target: freeze the browser-authoritative Agent session contract (authority,
+  identity, scopes, transport, events, idempotency, host dispatch, errors,
+  threat model) as the foundation for WP-WA1–WA7.
+- Changed areas: new ADR 0016 and `docs/specs/web-agent-session.md`; index
+  entries in `docs/adr/README.md` and `docs/specs/README.md`; cross-link and
+  `power-rail` note in `docs/specs/agent-api.md`; WP-WA0 status in the roadmap;
+  target plan and this log entry.
+- Validation: rebased onto VDD-merged `main` (`0e96608`) and verified VDD touched
+  no `agent-adapter`/`document-controller` file and added no edit kinds;
+  `pnpm references:check`; Prettier on all touched Markdown; `git diff --check`
+  clean.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `docs(agent): freeze browser-authorized session contract (WP-WA0)`.
