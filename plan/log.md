@@ -4873,3 +4873,13 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   tests; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(search): use canonical locators and property keys`.
+
+## 2026-08-12 - Connectivity Recovery C7a: bidirectional hierarchy Net trace
+
+- Target: add a recursive pure Net trace graph without destabilising the legacy
+  one-hop API or overstating unfinished editor highlighting.
+- Changed areas: derived Net trace and tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 15 focused trace/index tests;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): add bidirectional hierarchy Net trace`.

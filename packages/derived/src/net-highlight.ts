@@ -37,6 +37,26 @@ export interface NetTrace {
   crossCell: readonly CrossCellTraceFrame[];
 }
 
+export interface HierarchyNetRef {
+  documentId: string;
+  netId: string;
+}
+
+export interface HierarchyNetTraceHop {
+  direction: "down" | "up";
+  from: HierarchyNetRef;
+  to: HierarchyNetRef;
+  frame: CrossCellTraceFrame;
+}
+
+export interface HierarchyNetTrace {
+  primary: NetHighlight;
+  /** One highlight for every reachable logical net, including the primary. */
+  highlights: readonly NetHighlight[];
+  /** Every concrete parent-instance/child-port traversal edge. */
+  hops: readonly HierarchyNetTraceHop[];
+}
+
 export function computeNetHighlight(
   index: ProjectConnectivityIndex,
   documentId: string,
@@ -95,4 +115,97 @@ export function traceNet(
   );
 
   return { primary, crossCell };
+}
+
+/**
+ * Traverse hierarchy connectivity in both directions. The visited key is the
+ * logical document/net pair, preventing cyclic hierarchy projects from looping;
+ * hops are retained independently so two parent instances of one child Cell
+ * remain distinguishable to a later hierarchy-aware UI.
+ */
+export function traceHierarchyNet(
+  index: ProjectConnectivityIndex,
+  documentId: string,
+  netId: string,
+): HierarchyNetTrace | undefined {
+  const primary = computeNetHighlight(index, documentId, netId);
+  if (!primary) return undefined;
+  const queue: HierarchyNetRef[] = [{ documentId, netId }];
+  const visited = new Set<string>();
+  const highlights: NetHighlight[] = [];
+  const hops: HierarchyNetTraceHop[] = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const key = `${current.documentId}\u0000${current.netId}`;
+    if (visited.has(key)) continue;
+    const highlight = computeNetHighlight(
+      index,
+      current.documentId,
+      current.netId,
+    );
+    if (!highlight) continue;
+    visited.add(key);
+    highlights.push(highlight);
+    const endpointToNet = index.documents.get(
+      current.documentId,
+    )?.endpointToNet;
+
+    for (const edge of index.hierarchy.edges) {
+      if (edge.parentDocumentId === current.documentId) {
+        const parentNetId = endpointToNet?.get(
+          endpointKey({
+            kind: "terminal",
+            instanceId: edge.instanceId,
+            pinName: edge.parentPinName,
+          }),
+        );
+        if (parentNetId !== current.netId) continue;
+        const childNetId = index.documents
+          .get(edge.childDocumentId)
+          ?.endpointToNet.get(
+            endpointKey({ kind: "port", portId: edge.childPortId }),
+          );
+        if (!childNetId) continue;
+        const frame: CrossCellTraceFrame = { ...edge, childNetId };
+        const to = { documentId: edge.childDocumentId, netId: childNetId };
+        hops.push({ direction: "down", from: current, to, frame });
+        queue.push(to);
+      }
+      if (edge.childDocumentId === current.documentId) {
+        const childNetId = endpointToNet?.get(
+          endpointKey({ kind: "port", portId: edge.childPortId }),
+        );
+        if (childNetId !== current.netId) continue;
+        const parentNetId = index.documents
+          .get(edge.parentDocumentId)
+          ?.endpointToNet.get(
+            endpointKey({
+              kind: "terminal",
+              instanceId: edge.instanceId,
+              pinName: edge.parentPinName,
+            }),
+          );
+        if (!parentNetId) continue;
+        const frame: CrossCellTraceFrame = { ...edge, childNetId };
+        const to = { documentId: edge.parentDocumentId, netId: parentNetId };
+        hops.push({ direction: "up", from: current, to, frame });
+        queue.push(to);
+      }
+    }
+  }
+
+  highlights.sort((left, right) =>
+    `${left.documentId}\u0000${left.netId}`.localeCompare(
+      `${right.documentId}\u0000${right.netId}`,
+      "en",
+    ),
+  );
+  hops.sort((left, right) =>
+    `${left.direction}\u0000${left.from.documentId}\u0000${left.from.netId}\u0000${left.frame.instanceId}\u0000${left.frame.parentPinName}`.localeCompare(
+      `${right.direction}\u0000${right.from.documentId}\u0000${right.from.netId}\u0000${right.frame.instanceId}\u0000${right.frame.parentPinName}`,
+      "en",
+    ),
+  );
+  return { primary, highlights, hops };
 }

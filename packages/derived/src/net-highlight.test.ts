@@ -3,7 +3,11 @@ import { InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { buildProjectConnectivityIndex } from "./connectivity-index.js";
-import { computeNetHighlight, traceNet } from "./net-highlight.js";
+import {
+  computeNetHighlight,
+  traceHierarchyNet,
+  traceNet,
+} from "./net-highlight.js";
 
 const dual = {
   schemaVersion: 1 as const,
@@ -169,5 +173,36 @@ describe("net highlight and cross-cell trace", () => {
     );
     const trace = traceNet(index, "doc", "net-x")!;
     expect(trace.crossCell).toEqual([]);
+  });
+
+  it("traces hierarchy Nets downward and upward while retaining concrete instance hops", () => {
+    const index = buildProjectConnectivityIndex(
+      hierarchyProject(),
+      new InMemorySymbolResolver([dual]),
+    );
+    const fromTop = traceHierarchyNet(index, "top", "net-top")!;
+    expect(
+      fromTop.highlights.map((item) => `${item.documentId}:${item.netId}`),
+    ).toEqual(["child:net-child-l", "top:net-top"]);
+    expect(fromTop.hops).toContainEqual(
+      expect.objectContaining({
+        direction: "down",
+        from: { documentId: "top", netId: "net-top" },
+        to: { documentId: "child", netId: "net-child-l" },
+        frame: expect.objectContaining({
+          instanceId: "X1",
+          childPortId: "port-l",
+        }),
+      }),
+    );
+
+    const fromChild = traceHierarchyNet(index, "child", "net-child-l")!;
+    expect(fromChild.hops).toContainEqual(
+      expect.objectContaining({
+        direction: "up",
+        from: { documentId: "child", netId: "net-child-l" },
+        to: { documentId: "top", netId: "net-top" },
+      }),
+    );
   });
 });
