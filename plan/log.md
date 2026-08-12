@@ -1,5 +1,13 @@
 # Maintenance Log
 
+## 2026-08-12 - Capacitor plate length extension
+
+- Target: extend the current Razavi capacitor plate length by 30%.
+- Changed areas: capacitor Symbol DSL and regenerated catalog.
+- Validation: Razavi catalog generation/check; Symbols build; `git diff --check`.
+- Commit status: ready on `codex/vdd-drawn-rail` as
+  `fix(symbols): extend capacitor plates`.
+
 ## 2026-08-12 - Capacitor user refinement
 
 - Target: apply the requested 10% plate-length and 20% center-spacing increase
