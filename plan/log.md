@@ -4630,3 +4630,21 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `test(derived): characterize endpoint/route primitives and partition
   invariance (WP-R0)`.
+
+## 2026-08-12 - WP-R1 ADR and Spec Freeze
+
+- Target: freeze cross-module contracts before code migration. Documentation-
+  only; no code, schema, fixture, or Project-file change.
+- Changed areas: new ADRs 0013 (Project Connectivity Index), 0014 (Resolved
+  Route Geometry), 0015 (Object Locator + Diagnostic Envelope); schematic-model
+  spec proposed NoConnect + binding-evidence subsection; connectivity-and-
+  routing spec proposed unified-read-models subsection, compatibility/deletion
+  threshold, and corrected `cut_connection` validation bullet; one-line ADR
+  forward-references added to edit-engine, editor-interaction, agent-api, and
+  export specs.
+- Validation: cross-link audit (12/12 referenced paths resolve); `git diff
+  --check` clean. Markdown outside the `format:check` glob; no code surface
+  changed.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(adr): freeze connectivity index, resolved geometry, and locator
+  contracts (WP-R1)`.

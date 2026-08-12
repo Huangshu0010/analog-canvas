@@ -145,6 +145,57 @@ An Instance placement is either `null` or a position plus rotation
 before rotation. Route waypoints exclude endpoints; endpoint coordinates are
 derived from terminals, ports, or Junction objects.
 
+## NoConnect and source binding evidence (proposed)
+
+This section is `proposed`, owned by `packages/model`, and is implemented by
+WP-R7 of the connectivity-routing-debugging roadmap. It freezes the persisted
+shapes and invariants ahead of implementation. It does not change the accepted
+v1.2 Net/Route/Junction contract.
+
+Two new persisted electrical record kinds are added so ERC and model binding can
+rely on facts that cannot be re-derived from `spice.target` strings or from
+ordinary annotations.
+
+```typescript
+interface NoConnect {
+  id: StableId;
+  endpoint: TerminalEndpoint | PortEndpoint; // the Pin/Port intentionally left open
+  reason?: string;
+}
+
+interface SourceBindingEvidence {
+  kind: "primitive" | "model" | "subcircuit" | "opaque";
+  name: string;
+  status: "resolved" | "missing" | "unsupported";
+  modelType?: string;
+  childDocumentId?: StableId;       // present for subcircuit bindings
+  sourceRef?: SourceSpan;           // present for SPICE-originated bindings
+}
+```
+
+Invariants (frozen):
+
+- A `NoConnect.endpoint` must not simultaneously belong to a Net, a Route, or
+  another `NoConnect`. The Edit Engine rejects the conflicting combination
+  atomically; it is not a derived warning.
+- A hidden or implicit Pin is never auto-promoted to a `NoConnect` because it is
+  not visible. SPICE Nets named `NC`, `N/C`, or `0` are never auto-interpreted
+  as `NoConnect`.
+- `NoConnect` is a first-class electrical record: it has typed edits,
+  undo/redo, clipboard, delete, save/reopen, a fixed formal marker in the Razavi
+  visual language, and participates in formal export. It is not an annotation.
+- `SourceBindingEvidence` captures the stable import-time fact about an
+  instance's model or subcircuit binding. The implementation may continue to
+  read existing `spice.name`/`spice.target`/`spice.pin.*`/`spice.param.*`/
+  `spice.childDocumentId` properties for compatibility, but the normative target
+  is the typed record.
+- Schema migration to the new version backfills empty `noConnects` and empty
+  binding evidence for every instance; it infers no `NoConnect` and invents no
+  binding evidence.
+
+These records are the input the unified connectivity index (ADR 0013) and the
+ERC engine consume; they are not derived state.
+
 ## Invariants
 
 - IDs are immutable after creation and unique within a Document object graph.

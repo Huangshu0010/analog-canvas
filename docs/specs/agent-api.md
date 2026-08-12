@@ -9,7 +9,13 @@ Owning phase: `Phase 6/8/9`
 Primary owner: `packages/agent-adapter`
 
 Related ADRs: [`0005-agent-api-without-mcp.md`](../adr/0005-agent-api-without-mcp.md),
-[`0007-snapshot-driven-agent-workflow.md`](../adr/0007-snapshot-driven-agent-workflow.md)
+[`0007-snapshot-driven-agent-workflow.md`](../adr/0007-snapshot-driven-agent-workflow.md),
+[`0013-project-connectivity-index.md`](../adr/0013-project-connectivity-index.md),
+[`0014-resolved-route-geometry.md`](../adr/0014-resolved-route-geometry.md),
+[`0015-object-locator-and-diagnostic-envelope.md`](../adr/0015-object-locator-and-diagnostic-envelope.md).
+Snapshot connectivity and resolved-route-geometry fields, and any diagnostic
+additions, are added additively (WP-R7/R10); existing Agent clients keep working
+without writing the new fields.
 
 ## Purpose
 

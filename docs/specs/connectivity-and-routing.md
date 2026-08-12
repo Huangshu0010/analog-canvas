@@ -179,6 +179,58 @@ that name, the interaction must make the same-name merge explicit and atomic;
 plain text placed near a wire never changes connectivity. Moving or deleting a
 label's presentation does not move or disconnect the conductor.
 
+## Unified read models (proposed)
+
+This section is `proposed`, owned by `packages/derived`, and is implemented by
+WP-R2/R3/R5 of the connectivity-routing-debugging roadmap. It freezes the
+consumer boundary for the unified read models ahead of implementation; it does
+not change the accepted v1.5 connectivity/flightline/crossing rules above.
+
+Three additive, derived read models are accepted in
+[`../adr/0013-project-connectivity-index.md`](../adr/0013-project-connectivity-index.md),
+[`../adr/0014-resolved-route-geometry.md`](../adr/0014-resolved-route-geometry.md),
+and
+[`../adr/0015-object-locator-and-diagnostic-envelope.md`](../adr/0015-object-locator-and-diagnostic-envelope.md):
+
+- **`ProjectConnectivityIndex`** (ADR 0013) — the single connectivity read model
+  for flightline derivation, net highlight, cross-Cell trace, project search,
+  and ERC. It expresses logical membership, the visible routed graph, and typed
+  virtual edges (net-label, power-label, hierarchy port) as three distinct
+  facts. The current `deriveVisibleConnectivity`, `deriveNetConnectivity`,
+  `deriveFlightlines`, and `deriveCrossings` remain the production path until
+  their consumers migrate.
+- **`ResolvedRouteGeometry`** (ADR 0014) — the single Route geometry truth for
+  rendering, hit testing, segment drag, marker attachment, routing/visual
+  diagnostics, and formal export. Its `centerline` keeps the accepted
+  `[fromPoint, …waypoints, toPoint]` shape; its `endpointJoins` formalize the
+  terminal and route-anchor miter bridges the renderer currently computes
+  privately.
+- **`ObjectLocator` + `HierarchyFrame` + unified `Diagnostic` envelope**
+  (ADR 0015) — the Project-level object identity and navigation contract shared
+  by search, net trace, ERC, and the diagnostic UI. `navigateTo` switches Cell,
+  restores the instance path, reveals/zooms, selects, and highlights without
+  ever mutating a revision or clearing an undo history.
+
+None of these read models is persisted or formally exported; they are absent
+from Project JSON, recovery, and SVG/PNG/PDF output.
+
+### Compatibility and deletion threshold
+
+The migration is additive and one-consumer-at-a-time. The existing
+`deriveVisibleConnectivity` / `deriveFlightlines` / `deriveCrossings` helpers,
+the renderer's private `renderTerminalMiterBridges` /
+`renderRouteAnchorMiterBridges`, and the Document-id-only navigation stack
+remain until WP-R10 proves:
+
+- `rg` shows no production consumer of the old helper;
+- the old/new characterization fixtures agree, or their differences are
+  explicitly accepted in the ADRs (notably the flightline id/direction
+  normalization in ADR 0013); and
+- full routing/editor/Agent/export regression passes.
+
+Only then are the old helpers and private bridges deleted. No old behavior is
+removed in the name of refactoring before its characterization test pins it.
+
 ## Valid example
 
 Two independent orthogonal branches cross at `(300, 300)` without a Junction.
@@ -205,5 +257,7 @@ derived and absent from Project JSON.
 - T/X crossing-without-Junction regressions;
 - targeted crossing branch split, ambiguous-intersection UI rejection, and
   locked replacement tests;
-- detach retaining Net membership;
+- `cut_connection` branch coverage: split a fully routed local net, delete the
+  empty net of an isolated free wire, retain membership for a partially routed
+  or SPICE-imported net, and retain membership for a global net;
 - formal SVG and Playwright routing closure.

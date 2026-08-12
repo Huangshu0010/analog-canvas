@@ -8,6 +8,12 @@ Owning phase: `Phase 0/1/8`
 
 Primary owner: `packages/edit-engine`
 
+Related ADRs: [`0013-project-connectivity-index.md`](../adr/0013-project-connectivity-index.md),
+[`0014-resolved-route-geometry.md`](../adr/0014-resolved-route-geometry.md).
+Routing planners (WP-R4) read the unified connectivity index and resolved route
+geometry as read-only input; the Edit Engine remains the sole mutation path and
+validates every edit independently without trusting the planner.
+
 ## Purpose
 
 Define the only committed mutation path for both GUI and Agent operations,
