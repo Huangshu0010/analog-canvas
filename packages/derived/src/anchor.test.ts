@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SchematicDocument, VisualAnchor } from "@icm/model";
 
 import { resolveVisualAnchor } from "./anchor.js";
+import { resolveDocumentRoutingGeometry } from "./resolved-route-geometry.js";
 
 // Minimal SymbolResolver stub: anchor resolution for object/free anchors never
 // needs symbol geometry, and the route case uses a trivial orthogonal route
@@ -112,6 +113,7 @@ describe("resolveVisualAnchor", () => {
   });
 
   it("resolves a route anchor along the segment using the legacy math", () => {
+    const document = documentWithRoute();
     const anchor: VisualAnchor = {
       kind: "route",
       routeId: "r1",
@@ -123,9 +125,10 @@ describe("resolveVisualAnchor", () => {
       fallbackPosition: { x: 0, y: 0 },
     };
     const resolved = resolveVisualAnchor(
-      documentWithRoute(),
+      document,
       stubResolver,
       anchor,
+      resolveDocumentRoutingGeometry(document, stubResolver),
     );
     expect(resolved.resolved).toBe(true);
     // Midpoint of (100,100)-(200,100), normalOffset 0.

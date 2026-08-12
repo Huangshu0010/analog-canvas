@@ -10,6 +10,10 @@ import type { SymbolResolver } from "@icm/symbols";
 
 import { resolveVisualAnchor, type ResolvedAnchor } from "./anchor.js";
 import {
+  resolveDocumentRoutingGeometry,
+  type ResolvedDocumentRoutingGeometry,
+} from "./resolved-route-geometry.js";
+import {
   measureRichTextDocument,
   richTextMetrics,
 } from "./rich-text-layout.js";
@@ -113,21 +117,22 @@ export function resolveDraftingObjectGeometry(
   resolver: SymbolResolver,
   object: DraftingObject,
 ): ResolvedDraftingGeometry {
+  const routingGeometry = resolveDocumentRoutingGeometry(document, resolver);
   switch (object.kind) {
     case "text":
-      return resolveText(document, resolver, object);
+      return resolveText(document, resolver, object, routingGeometry);
     case "arrow":
-      return resolveArrow(document, resolver, object);
+      return resolveArrow(document, resolver, object, routingGeometry);
     case "leader":
-      return resolveLeader(document, resolver, object);
+      return resolveLeader(document, resolver, object, routingGeometry);
     case "callout":
-      return resolveCallout(document, resolver, object);
+      return resolveCallout(document, resolver, object, routingGeometry);
     case "construction-line":
       return resolveConstructionLine(object);
     case "rectangle":
       return resolveRectangle(object);
     case "floating-symbol":
-      return resolveFloatingSymbol(document, resolver, object);
+      return resolveFloatingSymbol(document, resolver, object, routingGeometry);
   }
 }
 
@@ -137,8 +142,14 @@ function resolveAnchorWithRole(
   anchor: VisualAnchor,
   draftingObjectId: string,
   anchorRole: DraftingAnchorRole,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
 ): { anchor: ResolvedAnchor; diagnostics: DraftingDiagnostic[] } {
-  const resolved = resolveVisualAnchor(document, resolver, anchor);
+  const resolved = resolveVisualAnchor(
+    document,
+    resolver,
+    anchor,
+    routingGeometry,
+  );
   const diagnostics: DraftingDiagnostic[] = [];
   if (!resolved.resolved && resolved.diagnostic) {
     // P2: propagate the precise code (missing target vs invalid route segment)
@@ -179,10 +190,16 @@ function resolveText(
   document: SchematicDocument,
   resolver: SymbolResolver,
   object: Extract<DraftingObject, { kind: "text" }>,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
 ) {
   // Text anchors may be free/object/route; route anchors reuse the shared route
   // math via resolveVisualAnchor.
-  const resolved = resolveVisualAnchor(document, resolver, object.anchor);
+  const resolved = resolveVisualAnchor(
+    document,
+    resolver,
+    object.anchor,
+    routingGeometry,
+  );
   const diagnostics: DraftingDiagnostic[] = [];
   if (!resolved.resolved && resolved.diagnostic) {
     const code =
@@ -228,6 +245,7 @@ function resolveArrow(
   document: SchematicDocument,
   resolver: SymbolResolver,
   object: Extract<DraftingObject, { kind: "arrow" }>,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
 ) {
   const from = resolveAnchorWithRole(
     document,
@@ -235,6 +253,7 @@ function resolveArrow(
     object.from,
     object.id,
     "from",
+    routingGeometry,
   );
   const to = resolveAnchorWithRole(
     document,
@@ -242,6 +261,7 @@ function resolveArrow(
     object.to,
     object.id,
     "to",
+    routingGeometry,
   );
   const fromPoint = from.anchor.position;
   const toPoint = to.anchor.position;
@@ -272,6 +292,7 @@ function resolveLeader(
   document: SchematicDocument,
   resolver: SymbolResolver,
   object: Extract<DraftingObject, { kind: "leader" }>,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
 ) {
   const anchor = resolveAnchorWithRole(
     document,
@@ -279,6 +300,7 @@ function resolveLeader(
     object.anchor,
     object.id,
     "anchor",
+    routingGeometry,
   );
   const target = resolveAnchorWithRole(
     document,
@@ -286,6 +308,7 @@ function resolveLeader(
     object.target,
     object.id,
     "target",
+    routingGeometry,
   );
   const anchorPoint = anchor.anchor.position;
   const targetPoint = target.anchor.position;
@@ -305,6 +328,7 @@ function resolveCallout(
   document: SchematicDocument,
   resolver: SymbolResolver,
   object: Extract<DraftingObject, { kind: "callout" }>,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
 ) {
   const anchor = resolveAnchorWithRole(
     document,
@@ -312,6 +336,7 @@ function resolveCallout(
     object.anchor,
     object.id,
     "anchor",
+    routingGeometry,
   );
   const target = resolveAnchorWithRole(
     document,
@@ -319,6 +344,7 @@ function resolveCallout(
     object.target,
     object.id,
     "target",
+    routingGeometry,
   );
   const textPos = anchor.anchor.position;
   const targetPoint = target.anchor.position;
@@ -407,6 +433,7 @@ function resolveFloatingSymbol(
   document: SchematicDocument,
   resolver: SymbolResolver,
   object: Extract<DraftingObject, { kind: "floating-symbol" }>,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
 ) {
   const anchor = resolveAnchorWithRole(
     document,
@@ -414,6 +441,7 @@ function resolveFloatingSymbol(
     object.anchor,
     object.id,
     "anchor",
+    routingGeometry,
   );
   const resolvedSymbol = resolver.resolve(object.symbolId);
   const diagnostics = [...anchor.diagnostics];

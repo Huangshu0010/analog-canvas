@@ -1,7 +1,11 @@
 import type { Point, SchematicDocument, VisualAnchor } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { routeAttachmentPlacement, routePolyline } from "./routes.js";
+import {
+  resolveDocumentRoutingGeometry,
+  type ResolvedDocumentRoutingGeometry,
+} from "./resolved-route-geometry.js";
+import { routeAttachmentPlacement } from "./routes.js";
 
 // ADR 0010 general VisualAnchor resolver. It generalizes the existing
 // routeAttachmentPlacement() (current-marker-specific) to the free | object |
@@ -40,6 +44,7 @@ export function resolveVisualAnchor(
   document: SchematicDocument,
   resolver: SymbolResolver,
   anchor: VisualAnchor,
+  routingGeometry = resolveDocumentRoutingGeometry(document, resolver),
 ): ResolvedAnchor {
   switch (anchor.kind) {
     case "free":
@@ -47,7 +52,7 @@ export function resolveVisualAnchor(
     case "object":
       return resolveObjectAnchor(document, anchor);
     case "route":
-      return resolveRouteAnchor(document, resolver, anchor);
+      return resolveRouteAnchor(document, anchor, routingGeometry);
   }
 }
 
@@ -80,8 +85,8 @@ function resolveObjectAnchor(
 
 function resolveRouteAnchor(
   document: SchematicDocument,
-  resolver: SymbolResolver,
   anchor: Extract<VisualAnchor, { kind: "route" }>,
+  routingGeometry: ResolvedDocumentRoutingGeometry,
 ): ResolvedAnchor {
   const route = document.routes.find(
     (candidate) => candidate.id === anchor.routeId,
@@ -93,21 +98,29 @@ function resolveRouteAnchor(
       `Route ${anchor.routeId} is missing; using fallback position.`,
     );
   }
-  const polyline = routePolyline(document, resolver, route);
-  if (!polyline) {
+  const geometry = routingGeometry.routes.get(route.id);
+  if (!geometry) {
     return unresolvedRoute(
       anchor,
       "DRAFTING_ANCHOR_TARGET_MISSING",
       `Route ${anchor.routeId} has no resolvable polyline; using fallback position.`,
     );
   }
-  const placement = routeAttachmentPlacement(polyline, {
-    routeId: anchor.routeId,
-    segmentIndex: anchor.segmentIndex,
-    t: anchor.t,
-    normalOffset: anchor.normalOffset,
-    direction: anchor.direction,
-  });
+  const placement = routeAttachmentPlacement(
+    {
+      routeId: geometry.routeId,
+      netId: geometry.netId,
+      points: [...geometry.centerline],
+      segmentModes: geometry.segments.map((segment) => segment.mode),
+    },
+    {
+      routeId: anchor.routeId,
+      segmentIndex: anchor.segmentIndex,
+      t: anchor.t,
+      normalOffset: anchor.normalOffset,
+      direction: anchor.direction,
+    },
+  );
   if (!placement) {
     // P2: a valid route whose segment is gone/out-of-range is a distinct,
     // actionable failure (re-select the segment), not a missing target.

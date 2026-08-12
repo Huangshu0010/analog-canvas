@@ -5170,3 +5170,15 @@ contracts (WP-R1)`.
   `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `docs(roadmap): audit resolved geometry migration`.
+
+## 2026-08-12 - Connectivity Recovery C3j: drafting anchor geometry reads
+
+- Target: migrate route-anchor and drafting reads to shared resolved document
+  geometry and record the narrowed compatibility boundary.
+- Changed areas: derived anchor/drafting resolution, anchor parity test,
+  recovery status, target plan and log.
+- Validation: 29 focused anchor/drafting/geometry tests; workspace
+  `pnpm typecheck`; targeted Prettier; static consumer audit;
+  `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(derived): consume resolved geometry in drafting anchors`.
