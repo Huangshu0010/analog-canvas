@@ -92,6 +92,7 @@ import {
   InsertComponentDialog,
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
+import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import {
   proposeLegacyPowerContactReconciliation,
   proposePlacementContact,
@@ -456,6 +457,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const [componentPlacementRotation, setComponentPlacementRotation] = useState<
     0 | 90 | 180 | 270
   >(0);
+  const [vddRailStart, setVddRailStart] = useState<Point | null>(null);
   const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -885,9 +887,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               preludeEdits: [],
               ...(pin.name === "B"
                 ? { routePresentation: "bulk-dashed" as const }
-                : instance.symbolId === "vdd" && pin.name === "P"
-                  ? { routePresentation: "power-rail" as const }
-                  : {}),
+                : {}),
             };
           });
       }),
@@ -1483,6 +1483,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     cancelInteraction();
     setComponentPreviewPoint(null);
     setComponentPlacementRotation(0);
+    setVddRailStart(null);
     setInsertDialogOpen(true);
     setStatus("Choose a component to place");
   }
@@ -1508,12 +1509,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setInsertDialogOpen(false);
     setComponentPlacementRotation(initialRotation);
     setComponentPreviewPoint(null);
+    setVddRailStart(null);
     beginComponentPlacement(request);
     setStatus(`Place ${symbolName} on the canvas · R rotates · Esc cancels`);
   }
 
   function cancelComponentInsert(): void {
     setInsertDialogOpen(false);
+    setVddRailStart(null);
     setStatus("Component insertion cancelled");
   }
 
@@ -2696,6 +2699,24 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             : `Added ${id} (${symbolId})`,
       );
     }
+  }
+
+  function placeVddRail(start: Point, end: Point): void {
+    instanceCounter.current += 1;
+    let instanceId = `VDD${instanceCounter.current}`;
+    while (document.instances.some((instance) => instance.id === instanceId)) {
+      instanceCounter.current += 1;
+      instanceId = `VDD${instanceCounter.current}`;
+    }
+    const routeId = `route-${instanceId.toLowerCase()}-rail`;
+    const result = transact(constructVddRailEdits({ instanceId, start, end }));
+    if (!result.ok) return;
+    selectOnly("route", [routeId]);
+    cancelInteraction();
+    setComponentPreviewPoint(null);
+    setComponentPlacementRotation(0);
+    setVddRailStart(null);
+    setStatus(`Added VDD rail ${instanceId}`);
   }
 
   function selectInstance(instanceId: string, additive: boolean): void {
@@ -4364,7 +4385,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       event.currentTarget,
     );
     if (pendingSymbolId) {
-      setComponentPreviewPoint(point);
+      setComponentPreviewPoint(
+        pendingSymbolId === "vdd" && vddRailStart
+          ? {
+              x: snapCoordinate(point.x, document.presentation.grid),
+              y: vddRailStart.y,
+            }
+          : point,
+      );
       return;
     }
     if (copyPlacement) {
@@ -5250,6 +5278,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           cancelInteraction();
           setComponentPreviewPoint(null);
           setComponentPlacementRotation(0);
+          setVddRailStart(null);
           setBoxPreview(null);
           setStatus(
             interactionState.kind === "drawing"
@@ -6616,15 +6645,35 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 return;
               }
               if (pendingSymbolId && pendingComponentPlacement) {
-                placeNewComponent(
-                  pendingSymbolId,
-                  pointFromClient(
-                    event.clientX,
-                    event.clientY,
-                    event.currentTarget,
-                  ),
-                  pendingComponentPlacement,
+                const rawPoint = pointFromClient(
+                  event.clientX,
+                  event.clientY,
+                  event.currentTarget,
                 );
+                const point = {
+                  x: snapCoordinate(rawPoint.x, document.presentation.grid),
+                  y: snapCoordinate(rawPoint.y, document.presentation.grid),
+                };
+                if (pendingSymbolId === "vdd") {
+                  if (!vddRailStart) {
+                    setVddRailStart(point);
+                    setComponentPreviewPoint(point);
+                    setStatus("VDD rail: click the right end (Esc cancels)");
+                  } else if (point.x === vddRailStart.x) {
+                    setStatus("VDD rail needs a non-zero horizontal length");
+                  } else {
+                    placeVddRail(vddRailStart, {
+                      x: point.x,
+                      y: vddRailStart.y,
+                    });
+                  }
+                } else {
+                  placeNewComponent(
+                    pendingSymbolId,
+                    point,
+                    pendingComponentPlacement,
+                  );
+                }
                 return;
               }
               const target = event.target as Element;
@@ -6848,7 +6897,19 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               />
             ) : null}
             <g data-layer="editor-overlay">
-              {pendingSymbolId && componentPreviewPoint ? (
+              {pendingSymbolId === "vdd" ? (
+                vddRailStart && componentPreviewPoint ? (
+                  <line
+                    data-testid="vdd-rail-preview"
+                    className="vdd-rail-preview"
+                    x1={vddRailStart.x}
+                    y1={vddRailStart.y}
+                    x2={componentPreviewPoint.x}
+                    y2={vddRailStart.y}
+                    strokeWidth={styleProfile.strokes.powerRail}
+                  />
+                ) : null
+              ) : pendingSymbolId && componentPreviewPoint ? (
                 <ComponentPlacementPreview
                   styleProfileId={document.presentation.styleProfileId}
                   symbolId={pendingSymbolId}
@@ -6934,9 +6995,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   className={
                     wireSource?.routePresentation === "bulk-dashed"
                       ? "wire-preview bulk-route-preview"
-                      : wireSource?.routePresentation === "power-rail"
-                        ? "wire-preview power-rail-preview"
-                        : "wire-preview"
+                      : "wire-preview"
                   }
                   points={serializePolylinePoints(wireDraftPoints)}
                 />

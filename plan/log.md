@@ -1,5 +1,18 @@
 # Maintenance Log
 
+## 2026-08-12 - Drawn VDD rail correction
+
+- Target: replace the incorrect VDD P-pin wire-start interaction with direct,
+  length-selectable VDD rail construction.
+- Changed areas: VDD rail construction proposal; component-placement flow and
+  preview; route-tap presentation inheritance; rail style token; interaction
+  specification and browser regression; superseded prior VDD target record.
+- Validation: 59 focused unit tests; workspace typecheck; Agent-artifact and
+  symbol-catalog checks; editor production build; focused Playwright flow;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/vdd-drawn-rail` as
+  `fix(editor): construct VDD as a drawn power rail`.
+
 ## 2026-08-12 - Editable Razavi VDD power rail
 
 - Target: add a visually dotless, supply-weight VDD rail without weakening

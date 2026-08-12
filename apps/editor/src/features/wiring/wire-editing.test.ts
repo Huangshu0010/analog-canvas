@@ -142,5 +142,17 @@ describe("wire editing proposals", () => {
         10,
       ),
     ).toMatchObject({ routePresentation: "bulk-dashed" });
+
+    // Splitting a VDD rail preserves its presentation on the two rail pieces,
+    // but the newly drawn branch must use the ordinary wire presentation.
+    expect(
+      createRouteWireAnchor(
+        { ...route, presentation: "power-rail" },
+        { x: 23.2, y: 37.8 },
+        1,
+        10,
+        11,
+      ),
+    ).not.toHaveProperty("routePresentation");
   });
 });

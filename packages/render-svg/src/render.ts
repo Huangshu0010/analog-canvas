@@ -522,7 +522,7 @@ export function buildSvgScene(
           ? ` data-route-presentation="${presentation}"`
           : "";
       const strokeWidth = isPowerRail
-        ? profile.strokes.supply
+        ? profile.strokes.powerRail
         : profile.strokes.wire;
       return `<polyline data-object-id="${escapeXml(route.id)}" data-net-id="${escapeXml(route.netId)}"${presentationAttribute} points="${pointList(geometry.centerline)}" fill="none" stroke="${profile.foreground}" stroke-width="${strokeWidth}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${dash}${profileMiterAttribute(profile)}/>${terminalBridges}`;
     })

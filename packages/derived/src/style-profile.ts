@@ -13,6 +13,7 @@ export interface SchematicStyleProfile {
     readonly emphasis: number;
     readonly ground: number;
     readonly supply: number;
+    readonly powerRail: number;
     readonly annotation: number;
   };
   readonly nodes: {
@@ -83,6 +84,7 @@ export const textbookMonochromeProfile: SchematicStyleProfile = {
     emphasis: 2.16,
     ground: 2.16,
     supply: 2.16,
+    powerRail: 2.16,
     annotation: 0.8,
   },
   nodes: { junctionRadius: 1.75, portOriginRadius: 0 },
@@ -113,6 +115,8 @@ export const razaviTextbookProfile: SchematicStyleProfile = {
     emphasis: 2.4,
     ground: razaviPeripheralGeometry.groundBarStroke,
     supply: 1.8,
+    // Matches the 3.24-unit filled horizontal bar in the reviewed VDD Symbol.
+    powerRail: 3.24,
     annotation: 1.6,
   },
   nodes: {

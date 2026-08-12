@@ -1,5 +1,5 @@
 ---
-status: completed
+status: superseded
 experience: none
 ---
 
@@ -69,13 +69,12 @@ feat(editor): add editable Razavi VDD power rails
 
 Added the persisted `power-rail` Route presentation. The edit engine accepts
 it only on a Net whose reviewed VDD terminal establishes the VDD domain. A
-wire started at `VDD.P` automatically carries that presentation; it previews
-and renders with the Razavi supply stroke. A branch Junction on the same VDD
-rail Net remains an ordinary persisted/selectable/splittable Junction, but its
-formal dot is omitted. Agent request/response/OpenAPI artifacts now include
-the enum value.
+branch Junction on the same VDD rail Net remains an ordinary
+persisted/selectable/splittable Junction, but its formal dot is omitted. Agent
+request/response/OpenAPI artifacts now include the enum value.
 
 Validation passed: 70 focused edit-engine, renderer, Agent, application, and
 wiring tests; workspace typecheck; Agent-artifact check; symbol-catalog check;
-targeted Prettier; and `git diff --check`. Ready to commit on
-`codex/vdd-power-rail`.
+targeted Prettier; and `git diff --check`. User review superseded its `VDD.P`
+wire-start interaction: `2026-08-12-drawn-vdd-rail` replaces it with direct
+drawn-rail insertion.

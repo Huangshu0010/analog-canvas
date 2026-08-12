@@ -305,7 +305,7 @@ describe("textbook monochrome SVG renderer", () => {
     const svg = renderDocumentSvg(document, resolver);
 
     expect(svg).toContain(
-      'data-object-id="rail" data-net-id="net-vdd" data-route-presentation="power-rail" points="40,100 100,100" fill="none" stroke="#000" stroke-width="1.8"',
+      'data-object-id="rail" data-net-id="net-vdd" data-route-presentation="power-rail" points="40,100 100,100" fill="none" stroke="#000" stroke-width="3.24"',
     );
     expect(svg).not.toContain('data-object-id="rail-junction"');
     expect(

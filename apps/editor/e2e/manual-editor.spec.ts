@@ -241,6 +241,33 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   await page.keyboard.press("Escape");
 });
 
+test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
+  await page.goto("/");
+  await chooseComponent(page, "vdd");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  await canvas.click({ position: { x: 180, y: 120 } });
+  await canvas.hover({ position: { x: 520, y: 120 } });
+  const preview = page.getByTestId("vdd-rail-preview");
+  await expect(preview).toHaveAttribute("stroke-width", "3.24");
+  expect(
+    await preview.evaluate(
+      (element) => element.getAttribute("x1") !== element.getAttribute("x2"),
+    ),
+  ).toBe(true);
+  await canvas.click({ position: { x: 520, y: 120 } });
+
+  await expect(page.getByTestId("route-hit-route-vdd1-rail")).toHaveCount(1);
+  await expect(
+    canvas.locator('[data-object-id="route-vdd1-rail"]'),
+  ).toHaveAttribute("data-route-presentation", "power-rail");
+  await expect(
+    canvas.locator('[data-object-id="junction-vdd1-start"]'),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("hit-VDD1")).toHaveCount(0);
+  await expect(canvas.getByText("VDD", { exact: true })).toBeVisible();
+});
+
 test("does not expose presentation-style switching in the browser", async ({
   page,
 }) => {

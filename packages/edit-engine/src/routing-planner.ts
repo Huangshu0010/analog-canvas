@@ -514,7 +514,9 @@ export function createRouteWireAnchor(
     endpoint: { kind: "junction", junctionId },
     netId: route.netId,
     point: splitPoint,
-    ...(route.presentation ? { routePresentation: route.presentation } : {}),
+    ...(route.presentation && route.presentation !== "power-rail"
+      ? { routePresentation: route.presentation }
+      : {}),
     preludeEdits: [
       {
         kind: "add_junction",

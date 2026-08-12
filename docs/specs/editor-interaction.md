@@ -506,6 +506,15 @@ op-amp, switches, crystal, VDD/VSS/GND, and ports. VSS remains
 immutable build-time evidence; the runtime must not require Visio or parse
 `.vss` files.
 
+VDD is a construction exception, not a fixed-size placed glyph. Selecting VDD
+enters a two-click rail operation: the first click fixes the horizontal rail's
+start and the second fixes its length. The editor persists an unplaced VDD
+semantic anchor on a global VDD Net, two dotless route-anchor Junctions, a
+thick `power-rail` Route using the reviewed VDD bar's width, and an attached
+VDD power label. Wires tapped onto
+the rail use the ordinary branch stroke while retaining real Junction
+connectivity; the renderer deliberately omits their node dots.
+
 ## Interaction state transitions
 
 ```mermaid
@@ -515,11 +524,13 @@ stateDiagram-v2
     Pointer --> MoveSelection: drag movable object beyond threshold
     Pointer --> InsertDialog: I or Insert component
     InsertDialog --> PlaceComponent: Enter or Apply
+    InsertDialog --> DrawVddRail: VDD Apply
     InsertDialog --> Pointer: cancel
     Pointer --> Wire: W or drag from endpoint/segment
     BoxSelect --> Pointer: release or cancel
     MoveSelection --> Pointer: commit or cancel
     PlaceComponent --> Pointer: place or cancel
+    DrawVddRail --> Pointer: second click or cancel
     Wire --> Wire: add orthogonal point
     Wire --> Pointer: commit endpoint or cancel
 ```
