@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -65,4 +65,13 @@ fix(editor): match analytics dashboard to Analog Arena
 
 ## Outcome
 
-Pending.
+Ported the Analog Arena analytics dashboard component and styles to Analog
+Canvas, with only the document title, return-to-editor link, local module/export
+adaptation, and editor body isolation changed. Added the matching theme preload
+and mono font, plus browser coverage for date controls, theme switching, and
+breakdown expansion.
+
+Focused typecheck, editor build, and analytics Playwright passed. The canonical
+install and static/unit/release gates passed locally. Local E2E passed 72/74,
+with the two pre-existing drafting rich-text `span` assertions failing; all five
+GitHub Actions PR checks, including both browser shards, passed.

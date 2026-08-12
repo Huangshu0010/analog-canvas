@@ -15,6 +15,19 @@ Use concise entries:
 
 Keep reusable lessons in `docs/experience/`, not in this log.
 
+## 2026-08-12 - Align Analytics Dashboard with Analog Arena
+
+- Target: make Analog Canvas analytics match the existing Analog Arena page
+  without redesigning it.
+- Changed areas: analytics component and styles, theme preload, matching mono
+  font dependency, and focused browser regression coverage.
+- Validation: frozen install, static/unit/release gates, focused analytics
+  Playwright, and all five GitHub Actions PR checks passed. Local full E2E was
+  72/74 with two pre-existing unrelated drafting rich-text assertions failing;
+  both remote browser shards passed.
+- Commit status: implementation committed and PR checks green; close-out
+  documentation ready to commit before merge.
+
 ## 2026-08-12 - Bound transient canvas state and runtime caches
 
 - Target: remove stale Smart Snap guide remnants and bound audit-identified
