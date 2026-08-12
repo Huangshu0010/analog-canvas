@@ -5626,3 +5626,17 @@ contracts (WP-R1)`.
   clean.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `docs(agent): freeze browser-authorized session contract (WP-WA0)`.
+
+## 2026-08-12 - WP-WA1 browser-safe protocol boundary
+
+- Target: separate the Node-only loopback transport from browser-importable
+  schemas/operation logic and freeze the relay envelope + web-session schemas.
+- Changed areas: exported `sha256Hex` from `@icm/derived`; new
+  `agent-adapter/platform.ts` and `envelope.ts`; removed `node:crypto`/`Buffer`
+  from `snapshot.ts`/`service.ts`; split package exports with a `./loopback`
+  Node subpath; new `browser-safety.test.ts`.
+- Validation: 177 combined derived+adapter tests; workspace `typecheck` clean;
+  Prettier; `git diff --check` clean. Render base64/sha256 byte-identical to the
+  former Node path.
+- Commit status: ready to commit on `codex/web-agent-session-architecture` as
+  `feat(agent): split browser-safe protocol boundary (WP-WA1)`.

@@ -311,6 +311,10 @@ Status: `complete` — frozen in
 
 ### WP-WA1 — Browser-safe protocol boundary
 
+Status: `complete` — browser-safe main entry (no `node:` builtins); Node
+loopback moved to `./loopback`; relay envelope + web-session schemas frozen in
+`packages/agent-adapter/src/{platform,envelope}.ts`.
+
 - Goal: Separate Node-only loopback transport from schemas and operation logic
   that the browser can import; freeze relay envelopes and web-session schemas.
 - Main modules: `packages/agent-adapter`, optional

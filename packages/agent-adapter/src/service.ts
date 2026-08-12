@@ -1,8 +1,7 @@
-import { createHash } from "node:crypto";
-
 import {
   diagnoseVisualQuality,
   resolveDocumentRoutingGeometry,
+  sha256Hex,
 } from "@icm/derived";
 import { executeTransaction } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
@@ -16,6 +15,7 @@ import type {
 import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
+import { base64EncodeUtf8, utf8ByteLength } from "./platform.js";
 import {
   AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
@@ -708,7 +708,7 @@ export function createAgentCircuitService(
         const objects: AgentObjectDescriptor[] = [];
         let bytes = 0;
         for (const item of requested) {
-          const itemBytes = Buffer.byteLength(JSON.stringify(item), "utf8");
+          const itemBytes = utf8ByteLength(JSON.stringify(item));
           if (
             objects.length >= requestedLimit ||
             bytes + itemBytes > limits.maxQueryBytes
@@ -865,8 +865,8 @@ export function createAgentCircuitService(
       }
       try {
         const rendered = renderArtifact(request, document, options.resolver);
-        const bytes = Buffer.from(rendered.svg, "utf8");
-        if (bytes.byteLength > limits.maxRenderBytes) {
+        const byteLength = utf8ByteLength(rendered.svg);
+        if (byteLength > limits.maxRenderBytes) {
           return fail(
             "render",
             "RENDER_TOO_LARGE",
@@ -883,9 +883,9 @@ export function createAgentCircuitService(
           artifact: {
             mediaType: "image/svg+xml",
             encoding: "base64",
-            data: bytes.toString("base64"),
-            sha256: createHash("sha256").update(bytes).digest("hex"),
-            byteLength: bytes.byteLength,
+            data: base64EncodeUtf8(rendered.svg),
+            sha256: sha256Hex(rendered.svg),
+            byteLength,
             mode: request.mode,
           },
           diagnostics: rendered.diagnostics,
