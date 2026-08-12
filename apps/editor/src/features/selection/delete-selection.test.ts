@@ -1,5 +1,8 @@
 import { createEmptyDocument, createEmptyProject } from "@icm/model";
-import { executeTransaction } from "@icm/edit-engine";
+import {
+  executeTransaction,
+  proposeVisualRouteDeletion,
+} from "@icm/edit-engine";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
@@ -175,6 +178,29 @@ describe("collectVisualRouteDeletion", () => {
     ).toEqual({
       routeIds: ["route-1"],
       junctionIds: ["junction-left", "junction-right"],
+    });
+  });
+
+  it("submits the visual deletion closure without duplicate junction removals", () => {
+    const document = documentWithJunctionRoute();
+    const proposal = proposeVisualRouteDeletion(document, ["route-1"], []);
+    expect(proposal.edits).toEqual([
+      { kind: "cut_connection", routeId: "route-1" },
+    ]);
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "delete-route",
+        documentId: document.id,
+        expectedRevision: 0,
+        actor: { kind: "human", id: "test" },
+        edits: proposal.edits,
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      document: { routes: [], junctions: [] },
     });
   });
 });

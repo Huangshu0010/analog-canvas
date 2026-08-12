@@ -5,7 +5,11 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from "react";
 
-import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
+import {
+  proposeVisualRouteDeletion,
+  type EditTransactionResult,
+  type SchematicEdit,
+} from "@icm/edit-engine";
 import { createFormalExportSource, safeExportBaseName } from "@icm/exporters";
 import {
   exportFormalArtifactsInBrowser,
@@ -114,7 +118,6 @@ import {
   razaviMosPresentationEdits,
 } from "../presentation/razavi-presentation";
 import {
-  collectVisualRouteDeletion,
   explicitAnnotationRemovals,
   proposeConnectedInstanceDeletion,
 } from "../features/selection/delete-selection";
@@ -1369,7 +1372,9 @@ export function App({ project: initialProject }: AppProps) {
       (candidate) => candidate.id === selectedRouteId,
     );
     if (!route) return;
-    const result = transact([{ kind: "cut_connection", routeId: route.id }]);
+    const result = transact(
+      proposeVisualRouteDeletion(document, [route.id], []).edits,
+    );
     if (result.ok) {
       replaceSelectionKind("route", []);
       setStatus(`Deleted wire ${route.id}`);
@@ -4318,7 +4323,7 @@ export function App({ project: initialProject }: AppProps) {
       return;
     }
     if (hasMixedSelection) {
-      const visualRouteDeletion = collectVisualRouteDeletion(
+      const visualRouteDeletion = proposeVisualRouteDeletion(
         document,
         [...initialRouteIds],
         [...selectedJunctionIds],
@@ -4334,17 +4339,6 @@ export function App({ project: initialProject }: AppProps) {
                 uniqueSuffixCounter.current,
               )
             : [];
-        const alreadyOrphanedJunctionIds =
-          visualRouteDeletion.junctionIds.filter(
-            (junctionId) =>
-              !document.routes.some(
-                (route) =>
-                  (route.from.kind === "junction" &&
-                    route.from.junctionId === junctionId) ||
-                  (route.to.kind === "junction" &&
-                    route.to.junctionId === junctionId),
-              ),
-          );
         // Instance deletion already removes every annotation attached to the
         // instance. A marquee can select both visual objects, but emitting the
         // same remove_annotation edit twice makes the second operation fail
@@ -4356,14 +4350,7 @@ export function App({ project: initialProject }: AppProps) {
         );
         const result = transact([
           ...instanceEdits,
-          ...visualRouteDeletion.routeIds.map((routeId): SchematicEdit => ({
-            kind: "cut_connection",
-            routeId,
-          })),
-          ...alreadyOrphanedJunctionIds.map((junctionId): SchematicEdit => ({
-            kind: "remove_junction",
-            junctionId,
-          })),
+          ...visualRouteDeletion.edits,
           ...explicitAnnotationIds.map((annotationId): SchematicEdit => ({
             kind: "remove_annotation",
             annotationId,
@@ -4430,26 +4417,12 @@ export function App({ project: initialProject }: AppProps) {
   function deleteSelectedJunction(): void {
     if (selectedEndpoint?.endpoint.kind !== "junction") return;
     const junctionId = selectedEndpoint.endpoint.junctionId;
-    const attachedRouteEdits = document.routes
-      .filter(
-        (route) =>
-          (route.from.kind === "junction" &&
-            route.from.junctionId === junctionId) ||
-          (route.to.kind === "junction" && route.to.junctionId === junctionId),
-      )
-      .map((route): SchematicEdit => ({
-        kind: "cut_connection",
-        routeId: route.id,
-      }));
-    const result = transact(
-      attachedRouteEdits.length > 0
-        ? attachedRouteEdits
-        : [{ kind: "remove_junction", junctionId }],
-    );
+    const proposal = proposeVisualRouteDeletion(document, [], [junctionId]);
+    const result = transact(proposal.edits);
     if (result.ok) {
       setSelectedEndpoint(null);
       setStatus(
-        `Deleted junction and ${attachedRouteEdits.length} attached routes`,
+        `Deleted junction and ${proposal.routeIds.length} attached routes`,
       );
     }
   }

@@ -1,5 +1,8 @@
 import { endpointKey, resolveEndpointPoint } from "@icm/derived";
-import type { SchematicEdit } from "@icm/edit-engine";
+import {
+  proposeVisualRouteDeletion,
+  type SchematicEdit,
+} from "@icm/edit-engine";
 import type { RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -15,45 +18,8 @@ export function collectVisualRouteDeletion(
   routeIds: readonly string[],
   junctionIds: readonly string[],
 ): { routeIds: string[]; junctionIds: string[] } {
-  const routesToRemove = new Set(routeIds);
-  const junctionsToRemove = new Set(junctionIds);
-  let changed = true;
-
-  while (changed) {
-    changed = false;
-    for (const route of document.routes) {
-      const touchesDeletedJunction =
-        (route.from.kind === "junction" &&
-          junctionsToRemove.has(route.from.junctionId)) ||
-        (route.to.kind === "junction" &&
-          junctionsToRemove.has(route.to.junctionId));
-      if (touchesDeletedJunction && !routesToRemove.has(route.id)) {
-        routesToRemove.add(route.id);
-        changed = true;
-      }
-    }
-    for (const junction of document.junctions) {
-      if (junctionsToRemove.has(junction.id)) continue;
-      const attachedRoutes = document.routes.filter(
-        (route) =>
-          (route.from.kind === "junction" &&
-            route.from.junctionId === junction.id) ||
-          (route.to.kind === "junction" && route.to.junctionId === junction.id),
-      );
-      if (
-        attachedRoutes.length > 0 &&
-        attachedRoutes.every((route) => routesToRemove.has(route.id))
-      ) {
-        junctionsToRemove.add(junction.id);
-        changed = true;
-      }
-    }
-  }
-
-  return {
-    routeIds: [...routesToRemove],
-    junctionIds: [...junctionsToRemove],
-  };
+  const proposal = proposeVisualRouteDeletion(document, routeIds, junctionIds);
+  return { routeIds: proposal.routeIds, junctionIds: proposal.junctionIds };
 }
 
 export function proposeConnectedInstanceDeletion(

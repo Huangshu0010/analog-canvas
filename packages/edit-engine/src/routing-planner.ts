@@ -25,6 +25,89 @@ export interface WireCommitProposal {
   edits: SchematicEdit[];
 }
 
+export interface VisualRouteDeletion {
+  routeIds: string[];
+  junctionIds: string[];
+  edits: SchematicEdit[];
+}
+
+/**
+ * Collect the closure for deleting visual route geometry. It deliberately uses
+ * `cut_connection`, which removes only stored Wire/Junction facts; it does not
+ * remove Net membership or implicitly sever the electrical net.
+ */
+export function proposeVisualRouteDeletion(
+  document: SchematicDocument,
+  routeIds: readonly string[],
+  junctionIds: readonly string[],
+): VisualRouteDeletion {
+  const routesToRemove = new Set(routeIds);
+  const junctionsToRemove = new Set(junctionIds);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const route of document.routes) {
+      const touchesDeletedJunction =
+        (route.from.kind === "junction" &&
+          junctionsToRemove.has(route.from.junctionId)) ||
+        (route.to.kind === "junction" &&
+          junctionsToRemove.has(route.to.junctionId));
+      if (touchesDeletedJunction && !routesToRemove.has(route.id)) {
+        routesToRemove.add(route.id);
+        changed = true;
+      }
+    }
+    for (const junction of document.junctions) {
+      if (junctionsToRemove.has(junction.id)) continue;
+      const attachedRoutes = document.routes.filter(
+        (route) =>
+          (route.from.kind === "junction" &&
+            route.from.junctionId === junction.id) ||
+          (route.to.kind === "junction" && route.to.junctionId === junction.id),
+      );
+      if (
+        attachedRoutes.length > 0 &&
+        attachedRoutes.every((route) => routesToRemove.has(route.id))
+      ) {
+        junctionsToRemove.add(junction.id);
+        changed = true;
+      }
+    }
+  }
+  const sortedRouteIds = [...routesToRemove].sort((a, b) =>
+    a.localeCompare(b, "en"),
+  );
+  const sortedJunctionIds = [...junctionsToRemove].sort((a, b) =>
+    a.localeCompare(b, "en"),
+  );
+  // `cut_connection` removes a junction that becomes orphaned. Only a selected
+  // junction already detached before this transaction needs an explicit edit;
+  // otherwise a second remove would reject the transaction.
+  const alreadyOrphanedJunctionIds = sortedJunctionIds.filter(
+    (junctionId) =>
+      !document.routes.some(
+        (route) =>
+          (route.from.kind === "junction" &&
+            route.from.junctionId === junctionId) ||
+          (route.to.kind === "junction" && route.to.junctionId === junctionId),
+      ),
+  );
+  return {
+    routeIds: sortedRouteIds,
+    junctionIds: sortedJunctionIds,
+    edits: [
+      ...sortedRouteIds.map((routeId): SchematicEdit => ({
+        kind: "cut_connection",
+        routeId,
+      })),
+      ...alreadyOrphanedJunctionIds.map((junctionId): SchematicEdit => ({
+        kind: "remove_junction",
+        junctionId,
+      })),
+    ],
+  };
+}
+
 function samePoint(left: Point, right: Point): boolean {
   return left.x === right.x && left.y === right.y;
 }

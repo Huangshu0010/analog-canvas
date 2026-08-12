@@ -4893,3 +4893,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(erc): diagnose symbols and hierarchy interface mismatches`.
+
+## 2026-08-12 - Connectivity Recovery C5b: route deletion planner boundary
+
+- Target: centralise visual route/junction deletion closure and preserve the
+  established cut-versus-electrical-Net semantics.
+- Changed areas: edit-engine routing planner, App Delete consumers, selection
+  compatibility adapter/tests, target plan and log.
+- Validation: workspace `pnpm typecheck`; 17 focused selection/wiring/
+  transaction tests; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(wiring): centralize visual route deletion planning`.
