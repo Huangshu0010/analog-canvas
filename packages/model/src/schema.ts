@@ -81,11 +81,25 @@ export const InstancePropertyValueSchema = z.union([
   z.number().finite(),
   z.boolean(),
 ]);
+// Stable import-time evidence for a model/subcircuit binding. It intentionally
+// does not replace the lossless `spice.*` compatibility properties; consumers
+// such as ERC must use this fact rather than attempt to re-parse those strings.
+// Optional presence keeps pre-evidence Project files valid without guessing a
+// status during migration.
+export const SourceBindingEvidenceSchema = z.strictObject({
+  kind: z.enum(["primitive", "model", "subcircuit", "opaque"]),
+  name: z.string().min(1),
+  status: z.enum(["resolved", "missing", "unsupported"]),
+  modelType: z.string().min(1).optional(),
+  childDocumentId: StableIdSchema.optional(),
+  sourceRef: SourceSpanSchema.optional(),
+});
 export const InstanceSchema = z.strictObject({
   id: StableIdSchema,
   symbolId: StableIdSchema,
   symbolVariantId: StableIdSchema.optional(),
   sourceRef: SourceSpanSchema.optional(),
+  binding: SourceBindingEvidenceSchema.optional(),
   placement: PlacementSchema.nullable(),
   properties: z.record(z.string(), InstancePropertyValueSchema),
 });
@@ -805,6 +819,7 @@ export type SourcePosition = z.infer<typeof SourcePositionSchema>;
 export type SourceSpan = z.infer<typeof SourceSpanSchema>;
 export type SourceManifest = z.infer<typeof SourceManifestSchema>;
 export type SymbolLibraryLock = z.infer<typeof SymbolLibraryLockSchema>;
+export type SourceBindingEvidence = z.infer<typeof SourceBindingEvidenceSchema>;
 export type TerminalRef = z.infer<typeof TerminalRefSchema>;
 export type Instance = z.infer<typeof InstanceSchema>;
 export type Port = z.infer<typeof PortSchema>;

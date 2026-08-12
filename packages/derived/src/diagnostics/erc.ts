@@ -108,6 +108,41 @@ export function runErcChecks(
     // ERC_UNRESOLVED_SYMBOL and hierarchy interface checks. These run before
     // pin connectivity checks so unknown symbols never get silently skipped.
     for (const instance of document.instances) {
+      if (instance.binding?.status === "missing") {
+        diagnostics.push({
+          id: `erc:missing-model:${document.id}:${instance.id}`,
+          domain: "erc",
+          code: "ERC_MISSING_MODEL",
+          severity: "error",
+          confidence: "high",
+          gateEligible: true,
+          message: `Instance ${instance.id} binding ${instance.binding.kind}:${instance.binding.name} is missing`,
+          primary: directObjectLocator(document.id, "instance", instance.id),
+          related: [],
+          parameters: {
+            instanceId: instance.id,
+            bindingKind: instance.binding.kind,
+            bindingName: instance.binding.name,
+          },
+        });
+      } else if (instance.binding?.status === "unsupported") {
+        diagnostics.push({
+          id: `erc:unsupported-model:${document.id}:${instance.id}`,
+          domain: "erc",
+          code: "ERC_UNSUPPORTED_MODEL",
+          severity: "warning",
+          confidence: "high",
+          gateEligible: false,
+          message: `Instance ${instance.id} binding ${instance.binding.kind}:${instance.binding.name} is unsupported by the reviewed symbol catalog`,
+          primary: directObjectLocator(document.id, "instance", instance.id),
+          related: [],
+          parameters: {
+            instanceId: instance.id,
+            bindingKind: instance.binding.kind,
+            bindingName: instance.binding.name,
+          },
+        });
+      }
       const resolved = resolver.resolve(
         instance.symbolId,
         instance.symbolVariantId,

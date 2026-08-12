@@ -414,6 +414,49 @@ describe("ERC engine", () => {
     );
   });
 
+  it("uses only typed binding evidence for missing and unsupported model ERC", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [
+      {
+        ...instance("I1"),
+        // Compatibility text alone must not create a model ERC.
+        properties: { "spice.target": "model:legacy-text" },
+        binding: {
+          kind: "model",
+          name: "missing-model",
+          status: "missing",
+        },
+      },
+    ];
+    document.nets = [
+      {
+        id: "net-1",
+        scope: "local",
+        terminals: [
+          { instanceId: "I1", pinName: "L" },
+          { instanceId: "I1", pinName: "R" },
+        ],
+        ports: [],
+      },
+    ];
+
+    expect(codes(project)).toContain("ERC_MISSING_MODEL");
+    expect(codes(project)).not.toContain("ERC_UNSUPPORTED_MODEL");
+
+    document.instances[0] = {
+      ...document.instances[0]!,
+      binding: {
+        kind: "opaque",
+        name: "unsupported-device",
+        status: "unsupported",
+      },
+    };
+    document.revision += 1;
+    expect(codes(project)).toContain("ERC_UNSUPPORTED_MODEL");
+    expect(codes(project)).not.toContain("ERC_MISSING_MODEL");
+  });
+
   it("reports a missing hierarchy target and child interface mismatch", () => {
     const project = emptyProject();
     const parent = project.documents[0]!;

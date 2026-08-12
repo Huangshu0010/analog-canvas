@@ -125,6 +125,50 @@ function targetDescription(
   }
 }
 
+function bindingEvidence(
+  instance: CircuitInstanceIR,
+  modelTypeByName: ReadonlyMap<string, string>,
+): NonNullable<Instance["binding"]> {
+  switch (instance.target.kind) {
+    case "primitive":
+      return {
+        kind: "primitive",
+        name: instance.target.family,
+        status: "resolved",
+        sourceRef: instance.sourceRef,
+      };
+    case "model": {
+      const modelType = modelTypeByName.get(
+        instance.target.modelName.toLowerCase(),
+      );
+      return {
+        kind: "model",
+        name: instance.target.modelName,
+        status: "resolved",
+        ...(modelType ? { modelType } : {}),
+        sourceRef: instance.sourceRef,
+      };
+    }
+    case "subcircuit":
+      // The second importer pass resolves the stable child document id. Until
+      // then the evidence records the target name without deriving it from a
+      // mutable compatibility property.
+      return {
+        kind: "subcircuit",
+        name: instance.target.cellName,
+        status: "missing",
+        sourceRef: instance.sourceRef,
+      };
+    case "opaque":
+      return {
+        kind: "opaque",
+        name: instance.target.sourceName,
+        status: "resolved",
+        sourceRef: instance.sourceRef,
+      };
+  }
+}
+
 function importInstance(
   instance: CircuitInstanceIR,
   diagnostics: SpiceDiagnostic[],
@@ -164,6 +208,7 @@ function importInstance(
     id: instance.id,
     symbolId: mapping.symbolId,
     sourceRef: instance.sourceRef,
+    binding: bindingEvidence(instance, modelTypeByName),
     placement: null,
     properties,
   };
@@ -269,19 +314,24 @@ function bindImportedChildDocuments(
   return documents.map((document) => ({
     ...document,
     instances: document.instances.map((instance) => {
-      const target = instance.properties["spice.target"];
-      if (typeof target !== "string" || !target.startsWith("subcircuit:")) {
+      if (instance.binding?.kind !== "subcircuit") {
         return instance;
       }
       const childDocumentId = documentIdByCellName.get(
-        target.slice("subcircuit:".length).toLowerCase(),
+        instance.binding.name.toLowerCase(),
       );
-      if (!childDocumentId) return instance;
       return {
         ...instance,
+        binding: {
+          ...instance.binding,
+          status: childDocumentId ? "resolved" : "missing",
+          ...(childDocumentId ? { childDocumentId } : {}),
+        },
         properties: {
           ...instance.properties,
-          "spice.childDocumentId": childDocumentId,
+          ...(childDocumentId
+            ? { "spice.childDocumentId": childDocumentId }
+            : {}),
         },
       };
     }),

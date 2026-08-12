@@ -4969,3 +4969,14 @@ contracts (WP-R1)`.
   Playwright ERC flow; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): surface current-document ERC diagnostics`.
+
+## 2026-08-12 - Connectivity Recovery C8c: typed source binding evidence
+
+- Target: persist explicit import binding facts and derive missing/unsupported
+  model ERC only from those facts.
+- Changed areas: model instance schema, SPICE importer evidence, ERC policy,
+  model spec, and focused importer/ERC tests; target plan and log.
+- Validation: workspace `pnpm typecheck`; 23 focused model/SPICE/ERC tests;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): consume typed source binding evidence`.
