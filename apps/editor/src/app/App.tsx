@@ -18,7 +18,6 @@ import {
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
-  computeNetHighlight,
   deriveCrossings,
   deriveFlightlines,
   deriveInternalGroupSelection,
@@ -32,6 +31,7 @@ import {
   runErcChecks,
   routeAttachmentPlacement,
   routePolyline,
+  traceHierarchyNet,
 } from "@icm/derived";
 import type {
   ErcDiagnostic,
@@ -535,7 +535,10 @@ export function App({ project: initialProject }: AppProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [highlightedNetId, setHighlightedNetId] = useState<string | null>(null);
+  const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
+    documentId: string;
+    netId: string;
+  } | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const instanceCounter = useRef(0);
@@ -603,6 +606,25 @@ export function App({ project: initialProject }: AppProps) {
     () => buildProjectConnectivityIndex(project, resolver),
     [project, resolver],
   );
+  const highlightedTrace = useMemo(
+    () =>
+      highlightedNetOrigin
+        ? traceHierarchyNet(
+            projectConnectivityIndex,
+            highlightedNetOrigin.documentId,
+            highlightedNetOrigin.netId,
+          )
+        : undefined,
+    [highlightedNetOrigin, projectConnectivityIndex],
+  );
+  const highlightedNet = useMemo(
+    () =>
+      highlightedTrace?.highlights.find(
+        (highlight) => highlight.documentId === document.id,
+      ),
+    [document.id, highlightedTrace],
+  );
+  const highlightedNetId = highlightedNet?.netId ?? null;
   const ercDiagnostics = useMemo(
     () => runErcChecks(project, projectConnectivityIndex, resolver),
     [project, projectConnectivityIndex, resolver],
@@ -832,17 +854,6 @@ export function App({ project: initialProject }: AppProps) {
           } => candidate.polyline !== null,
         ),
     [document, resolver],
-  );
-  const highlightedNet = useMemo(
-    () =>
-      highlightedNetId
-        ? computeNetHighlight(
-            projectConnectivityIndex,
-            document.id,
-            highlightedNetId,
-          )
-        : undefined,
-    [document.id, highlightedNetId, projectConnectivityIndex],
   );
 
   const textEditingTarget = textEditing
@@ -1130,7 +1141,10 @@ export function App({ project: initialProject }: AppProps) {
       selectOnly("instance", [locator.objectId]);
       if (instance?.placement) focusPoint(instance.placement.position);
     } else if (locator.kind === "net") {
-      setHighlightedNetId(locator.objectId);
+      setHighlightedNetOrigin({
+        documentId: opened.id,
+        netId: locator.objectId,
+      });
       const route = opened.routes.find(
         (item) => item.netId === locator.objectId,
       );
@@ -5005,8 +5019,8 @@ export function App({ project: initialProject }: AppProps) {
     closeSearch();
   }
 
-  function highlightNet(netId: string): void {
-    setHighlightedNetId(netId);
+  function highlightNet(netId: string, documentId = document.id): void {
+    setHighlightedNetOrigin({ documentId, netId });
     setStatus(`Highlighted Net ${netId}`);
   }
 

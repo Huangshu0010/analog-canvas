@@ -4992,3 +4992,13 @@ contracts (WP-R1)`.
   clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): navigate canonical locators across hierarchy`.
+
+## 2026-08-12 - Connectivity Recovery C7c: hierarchy-aware Net highlight
+
+- Target: retain a logical Net highlight by its origin Cell/Net pair and
+  resolve the active Cell overlay from the bidirectional hierarchy trace.
+- Changed areas: editor highlight state/trace consumer; target plan and log.
+- Validation: workspace `pnpm typecheck`; 16 focused Net/App tests; focused
+  Playwright Net-highlight flow; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): retain Net highlights across hierarchy Cells`.
