@@ -4707,3 +4707,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   (99 tests, was 92); `prettier --check` on new files; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): add deterministic project search index (WP-R5)`.
+
+## 2026-08-12 - WP-R6 Net Highlight and Cross-Cell Trace (core)
+
+- Target: compute net highlight and cross-cell trace from the
+  ProjectConnectivityIndex (R2). Pure computation; overlay rendering deferred
+  to R9 (e2e-gated UI).
+- Changed areas: new `packages/derived/src/net-highlight.ts` and
+  `net-highlight.test.ts` (4 tests); `packages/derived/src/index.ts` re-export;
+  target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (103 tests, was 99); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): compute net highlight and cross-cell trace from the index
+  (WP-R6)`.

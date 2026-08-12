@@ -4,6 +4,7 @@ export * from "./connectivity-index.js";
 export * from "./drafting-geometry.js";
 export * from "./endpoint.js";
 export * from "./instance-label-placement.js";
+export * from "./net-highlight.js";
 export * from "./project-search.js";
 export * from "./routes.js";
 export * from "./resolved-route-geometry.js";
