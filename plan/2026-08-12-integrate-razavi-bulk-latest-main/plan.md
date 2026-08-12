@@ -58,13 +58,16 @@ close-out commit if needed.
 
 ## Outcome
 
-Merged `origin/main` commit `b7bf310` automatically as `c291ee2`. Git merged
-the shared App, CSS, interaction-specification, and maintenance-log files
-without a functional conflict; main's Library quick-place panel and this
-branch's Razavi bulk semantics coexist in the resulting tree.
+The first integration merged `origin/main` commit `b7bf310` automatically as
+`c291ee2`, preserving its Library quick-place panel with Razavi bulk semantics.
 
-Validation passed: workspace typecheck; 20 focused Derived MOS-bulk/ERC tests;
-six editor presentation/library unit tests; and nine single-worker browser
-tests covering component insertion and the Library panel. `git diff --check`
-is clean. The only expected pending work before close-out is this plan/log
-metadata commit.
+While the first PR checks ran, main advanced to `a4ef6a0` with a deliberate
+editor-Chrome restoration. The second merge had a genuine `App.tsx` conflict:
+the current main UI was selected as the structural baseline, then only the
+Razavi bulk entry materialization, endpoint, dashed-preview, explicit-route,
+and Properties hooks were reapplied. The result is merge commit `842d889`.
+
+Validation passed: workspace typecheck; 26 focused Derived/editor unit tests;
+and 63 single-worker browser tests, including the restored UI/Library coverage
+and the normal Wire workflow that draws and deletes a Razavi bulk route.
+`git diff --check` is clean. The branch is ready for the refreshed PR checks.
