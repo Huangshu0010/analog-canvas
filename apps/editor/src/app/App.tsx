@@ -16,6 +16,8 @@ import {
   rasterizeFormalSvgInBrowser,
 } from "@icm/exporters/browser";
 import {
+  buildProjectConnectivityIndex,
+  buildProjectSearchIndex,
   deriveCrossings,
   deriveFlightlines,
   deriveInternalGroupSelection,
@@ -28,7 +30,7 @@ import {
   routeAttachmentPlacement,
   routePolyline,
 } from "@icm/derived";
-import type { Flightline } from "@icm/derived";
+import type { Flightline, SearchResult } from "@icm/derived";
 import {
   createEmptyProject,
   parseProject,
@@ -101,6 +103,7 @@ import {
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
+import { ProjectSearchDialog } from "../features/search/project-search-dialog";
 import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
@@ -520,6 +523,8 @@ export function App({ project: initialProject }: AppProps) {
     null,
   );
   const [helpOpen, setHelpOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const instanceCounter = useRef(0);
@@ -583,6 +588,17 @@ export function App({ project: initialProject }: AppProps) {
   );
   const unplacedPorts = document.ports.filter((port) => port.position === null);
   const selectedIds = visualSelection.instanceIds;
+  const projectConnectivityIndex = useMemo(
+    () => buildProjectConnectivityIndex(project, resolver),
+    [project, resolver],
+  );
+  const searchResults = useMemo(
+    () =>
+      buildProjectSearchIndex(project, {
+        connectivityIndex: projectConnectivityIndex,
+      }).search(searchQuery),
+    [project, projectConnectivityIndex, searchQuery],
+  );
   const supplementalSelection: SupplementalSelection = {
     routeIds: visualSelection.routeIds,
     junctionIds: visualSelection.junctionIds,
@@ -4542,6 +4558,20 @@ export function App({ project: initialProject }: AppProps) {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "f" &&
+        !isTypingTarget(event.target)
+      ) {
+        event.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+      if (event.key === "Escape" && searchOpen) {
+        event.preventDefault();
+        closeSearch();
+        return;
+      }
       if (event.key === "Escape" && dismissOpenCommandMenus()) {
         event.preventDefault();
         return;
@@ -4738,6 +4768,34 @@ export function App({ project: initialProject }: AppProps) {
   function closeHelp(): void {
     setHelpOpen(false);
     requestAnimationFrame(() => helpButtonRef.current?.focus());
+  }
+
+  function closeSearch(): void {
+    setSearchOpen(false);
+    setSearchQuery("");
+  }
+
+  function selectSearchResult(result: SearchResult): void {
+    const locator = result.locator;
+    if (locator.documentId !== document.id) {
+      setDocumentStack([]);
+      switchDocument(locator.documentId);
+    }
+    setSelectedEndpoint(null);
+    switch (locator.kind) {
+      case "instance":
+        selectOnly("instance", [locator.objectId]);
+        break;
+      case "port":
+        setStatus(`Located port ${locator.objectId}`);
+        resetSelection();
+        break;
+      case "net":
+        resetSelection();
+        break;
+    }
+    closeSearch();
+    setStatus(`Selected ${locator.kind} ${locator.objectId}`);
   }
 
   return (
@@ -5012,6 +5070,15 @@ export function App({ project: initialProject }: AppProps) {
           >
             Help
           </button>
+          <button
+            type="button"
+            data-testid="project-search-button"
+            aria-haspopup="dialog"
+            aria-expanded={searchOpen}
+            onClick={() => setSearchOpen(true)}
+          >
+            Search
+          </button>
         </nav>
         <p className="editor-status" data-testid="status" aria-live="polite">
           {status}
@@ -5051,6 +5118,14 @@ export function App({ project: initialProject }: AppProps) {
       {helpOpen ? (
         <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
       ) : null}
+      <ProjectSearchDialog
+        open={searchOpen}
+        query={searchQuery}
+        results={searchResults}
+        onQueryChange={setSearchQuery}
+        onSelect={selectSearchResult}
+        onClose={closeSearch}
+      />
       <InsertComponentDialog
         open={insertDialogOpen}
         styleProfileId={document.presentation.styleProfileId}

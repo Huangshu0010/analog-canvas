@@ -1447,3 +1447,19 @@ test("selecting an object does not change canvas width", async ({ page }) => {
   const widthAfter = (await canvas.boundingBox())!.width;
   expect(widthAfter).toBe(widthBefore);
 });
+
+test("opens project search with Ctrl+F and selects a matching component", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 420, y: 260 });
+  await page.keyboard.press("Control+f");
+  const input = page.getByTestId("project-search-input");
+  await expect(input).toBeFocused();
+  await input.fill("R1");
+  await page.getByTestId("project-search-result-R1").click();
+  await expect(page.getByTestId("status")).toContainText(
+    "Selected instance R1",
+  );
+  await expect(page.getByTestId("project-search-input")).toHaveCount(0);
+});

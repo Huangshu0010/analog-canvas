@@ -4904,3 +4904,14 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
   transaction tests; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(wiring): centralize visual route deletion planning`.
+
+## 2026-08-12 - Connectivity Recovery C6b: project search UI
+
+- Target: expose canonical project search by Ctrl+F without falsely claiming
+  hierarchy-frame navigation or Net highlight completion.
+- Changed areas: editor search dialog, App integration/styles and focused E2E;
+  target plan and log.
+- Validation: workspace `pnpm typecheck`; focused Playwright search flow;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): add Ctrl+F project search`.
