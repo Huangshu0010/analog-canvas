@@ -856,18 +856,34 @@ body {
   vector-effect: non-scaling-stroke;
 }
 
-.net-highlight-overlay polyline {
+.net-highlight-overlay .net-highlight-halo {
   fill: none;
-  stroke: var(--icm-accent-selection);
+  stroke: #008ff0;
+  stroke-width: 10;
+  opacity: 0.28;
+  vector-effect: non-scaling-stroke;
+}
+
+.net-highlight-overlay .net-highlight-core {
+  fill: none;
+  stroke: #00a6ff;
   stroke-width: 5;
-  opacity: 0.32;
+  opacity: 0.96;
   vector-effect: non-scaling-stroke;
 }
 
 .net-highlight-overlay circle {
-  fill: var(--icm-accent-selection);
-  opacity: 0.55;
+  fill: #00a6ff;
+  stroke: #fff;
+  stroke-width: 1.25;
+  opacity: 1;
   vector-effect: non-scaling-stroke;
+}
+
+.net-highlight-overlay .net-highlight-endpoint {
+  fill: #00a6ff;
+  stroke: #fff;
+  stroke-width: 1.5;
 }
 
 .wire-preview {

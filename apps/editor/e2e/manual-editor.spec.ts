@@ -451,6 +451,14 @@ test("uses a flightline as direct Wire guidance", async ({ page }) => {
 
 test("focuses imported flightlines on the selected Net", async ({ page }) => {
   const project = createRoutingDemoProject();
+  project.documents[0]!.routes.push({
+    id: "route-imported-h",
+    netId: "net-h",
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
+    waypoints: [],
+    segmentModes: ["manual"],
+  });
   project.documents[0]!.sourceBinding = {
     cellName: "routing_demo",
     sourceRef: {
@@ -467,8 +475,17 @@ test("focuses imported flightlines on the selected Net", async ({ page }) => {
   });
 
   await expect(page.getByTestId("flightline")).toHaveCount(0);
-  await page.getByTestId("hit-A").click();
-  await expect(page.getByTestId("flightline")).toHaveCount(2);
+  await clickRoute(page, "route-imported-h");
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
+    "data-net-id",
+    "net-h",
+  );
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(1);
   await page.getByTestId("hit-C").click();
   await expect(page.getByTestId("flightline")).toHaveCount(1);
 });
@@ -1573,11 +1590,20 @@ test("highlights the complete current-document Net from a selected route", async
   await page.getByTestId("terminal-R2-1").click();
   await clickRoute(page, "route-ui-1");
   await openSelectionShelf(page);
-  await page.getByRole("button", { name: "Highlight Net" }).click();
+  await page.getByRole("button", { name: "Highlight Net (H)" }).click();
   await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
     "data-net-id",
     "net-ui-1",
   );
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-core"),
+  ).toHaveCount(1);
+  await expect(
+    page.locator(".net-highlight-overlay .net-highlight-endpoint"),
+  ).toHaveCount(2);
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await page.keyboard.press("h");
+  await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
 });
 
 test("navigates a visible hierarchy Net trace hop into its child Cell", async ({

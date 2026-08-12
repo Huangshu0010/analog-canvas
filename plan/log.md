@@ -5297,3 +5297,14 @@ contracts (WP-R1)`.
   catalog/API/Phase-5 checks; `git diff --check` clean.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `fix(editor): preserve electrical truth at Razavi MOS contacts`.
+
+## 2026-08-12 - Net highlight and flightline clarity
+
+- Target: make an active Net visually unambiguous, add keyboard toggling, and
+  prevent its visual routing overlay from competing with dashed flightlines.
+- Changed areas: editor Net overlay/flightline policy, `H` shortcut and
+  focused unit/browser coverage, target plan.
+- Validation: 10 shortcut unit tests; two focused browser E2E flows; workspace
+  `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/construction-line-k-shortcut` as
+  `feat(editor): strengthen Net highlighting and flightline policy`.

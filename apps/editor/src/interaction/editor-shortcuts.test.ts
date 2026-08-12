@@ -14,6 +14,7 @@ const baseContext: EditorShortcutContext = {
   hasDraftingSelection: false,
   hasInspectableSelection: false,
   hasRouteSelection: false,
+  hasHighlightableNet: false,
   wireSessionActive: false,
   wireReadyToFinish: false,
   draftingReadyToFinish: false,
@@ -114,6 +115,10 @@ describe("editor shortcut contract", () => {
     expect(
       resolve("l", { hasRouteSelection: true, wireSessionActive: true }),
     ).toBeNull();
+    expect(resolve("h")).toBeNull();
+    expect(resolve("h", { hasHighlightableNet: true })).toEqual({
+      kind: "toggle-net-highlight",
+    });
     expect(resolve("q")).toEqual({ kind: "property-selection-required" });
     expect(resolve("q", { hasInspectableSelection: true })).toEqual({
       kind: "open-properties",

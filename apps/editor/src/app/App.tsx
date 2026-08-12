@@ -30,6 +30,7 @@ import {
   isVisibleEndpoint,
   moveRouteSegment,
   mergeDiagnostics,
+  resolveEndpointPoint,
   resolveDraftingObjectGeometry,
   runErcChecks,
   routeAttachmentPlacement,
@@ -751,7 +752,14 @@ export function App({ project: initialProject }: AppProps) {
     [document.id, document.nets, projectConnectivityIndex],
   );
   const displayedFlightlines = useMemo(() => {
-    if (!document.sourceBinding) return flightlines;
+    // A highlighted Net is already presented as a strong complete conductor
+    // overlay. Do not also draw its dashed incomplete-routing guidance.
+    const unhighlightedFlightlines = highlightedNetId
+      ? flightlines.filter(
+          (flightline) => flightline.netId !== highlightedNetId,
+        )
+      : flightlines;
+    if (!document.sourceBinding) return unhighlightedFlightlines;
     const focusedNetIds = new Set<string>();
     if (selectedRoute) focusedNetIds.add(selectedRoute.netId);
     if (highlightedNetId) focusedNetIds.add(highlightedNetId);
@@ -774,7 +782,7 @@ export function App({ project: initialProject }: AppProps) {
         focusedNetIds.add(net.id);
       }
     }
-    return flightlines.filter((flightline) =>
+    return unhighlightedFlightlines.filter((flightline) =>
       focusedNetIds.has(flightline.netId),
     );
   }, [
@@ -4866,6 +4874,7 @@ export function App({ project: initialProject }: AppProps) {
         hasDraftingSelection: Boolean(selectedDrafting),
         hasInspectableSelection,
         hasRouteSelection: Boolean(selectedRoute),
+        hasHighlightableNet: Boolean(selectedRoute || selectedEndpointNetId),
         wireSessionActive: Boolean(wireSource),
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
         draftingReadyToFinish:
@@ -4957,6 +4966,9 @@ export function App({ project: initialProject }: AppProps) {
           return;
         case "net-label-selection-required":
           setStatus("Select a wire segment before adding a Net Label");
+          return;
+        case "toggle-net-highlight":
+          toggleHighlightedNet();
           return;
         case "fit-view":
           fitView();
@@ -5060,6 +5072,23 @@ export function App({ project: initialProject }: AppProps) {
   function highlightNet(netId: string, documentId = document.id): void {
     setHighlightedNetOrigin({ documentId, netId });
     setStatus(`Highlighted Net ${netId}`);
+  }
+
+  function toggleHighlightedNet(): void {
+    const netId = selectedRoute?.netId ?? selectedEndpointNetId;
+    if (!netId) {
+      setStatus("Select a wire or connected pin before highlighting a Net");
+      return;
+    }
+    if (
+      highlightedNetOrigin?.documentId === document.id &&
+      highlightedNetOrigin.netId === netId
+    ) {
+      setHighlightedNetOrigin(null);
+      setStatus(`Cleared Net highlight ${netId}`);
+      return;
+    }
+    highlightNet(netId);
   }
 
   function navigateTraceHop(hop: HierarchyNetTraceHop): void {
@@ -5984,11 +6013,10 @@ export function App({ project: initialProject }: AppProps) {
                 <button type="button" onClick={addCurrentArrow}>
                   Add current arrow
                 </button>
-                <button
-                  type="button"
-                  onClick={() => highlightNet(selectedRoute!.netId)}
-                >
-                  Highlight Net
+                <button type="button" onClick={toggleHighlightedNet}>
+                  {highlightedNetId === selectedRoute!.netId
+                    ? "Clear Net highlight (H)"
+                    : "Highlight Net (H)"}
                 </button>
                 <button type="button" onClick={deleteSelectedRouteConnection}>
                   Delete wire
@@ -6335,6 +6363,16 @@ export function App({ project: initialProject }: AppProps) {
                 .map(({ route, polyline }) => (
                   <polyline
                     key={route.id}
+                    className="net-highlight-halo"
+                    points={serializePolylinePoints(polyline.points)}
+                  />
+                ))}
+              {routePolylines
+                .filter(({ route }) => highlightedNet.routes.includes(route.id))
+                .map(({ route, polyline }) => (
+                  <polyline
+                    key={`${route.id}-core`}
+                    className="net-highlight-core"
                     points={serializePolylinePoints(polyline.points)}
                   />
                 ))}
@@ -6350,6 +6388,23 @@ export function App({ project: initialProject }: AppProps) {
                     r="4.5"
                   />
                 ))}
+              {highlightedNet.visibleEndpoints.flatMap((endpoint) => {
+                const point = resolveEndpointPoint(
+                  document,
+                  resolver,
+                  endpoint,
+                );
+                if (!point) return [];
+                return [
+                  <circle
+                    key={`endpoint:${endpointKey(endpoint)}`}
+                    className="net-highlight-endpoint"
+                    cx={point.x}
+                    cy={point.y}
+                    r="5.5"
+                  />,
+                ];
+              })}
             </g>
           ) : null}
           {copyPreviewScene ? (
