@@ -5853,3 +5853,20 @@ contracts (WP-R1)`.
   passed.
 - Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
   `docs(plan): prune routine completed records`.
+
+## 2026-08-13 - Agent authoring and evidence contract hardening
+
+- Target: remove Agent-side guesses for identity, wiring, contact, diagnostics,
+  and transient session recovery while retaining the browser as authority.
+- Changed areas: canonical coincident-contact and Project-diagnostic derivation;
+  shared GUI/Agent `wireIntent` planner; claim Project/Document bootstrap;
+  bounded same-session WebSocket replacement; reconnect UI; generated OpenAPI
+  artifacts; accepted Agent/session/connectivity specifications.
+- Validation: focused 99-test cross-package suite; frozen install; final local
+  `pnpm ci:check` green with 679 unit/integration and 99 Playwright tests plus
+  build, export, PWA, release smoke, and performance gates. An initial remote
+  Linux-only E2E typing failure was repaired; PR #25 then passed Static,
+  Unit/integration, Release, and both Browser required checks.
+- Commit status: implementation `37513a2` plus cross-platform test correction
+  `ee7b854` pushed to `codex/agent-contract-hardening`; PR #25 is ready for
+  review.

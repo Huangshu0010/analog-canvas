@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -103,4 +103,24 @@ feat(agent): harden session and authoring contracts
 
 ## Outcome
 
-Pending implementation and validation.
+Unified the browser Agent path around shared production contracts rather than
+transport-local inference:
+
+- `deriveDocumentContactEvidence` now supplies coincident endpoint contact to
+  visible connectivity, junction-dot rendering, and wire-through diagnostics;
+- Agent `wireIntent` delegates endpoint/free/Route-segment authoring to the GUI
+  routing planner, including explicit Route splits and Junction creation;
+- GUI, Snapshot, transact/dry-run, legacy query, and render consume canonical
+  Project diagnostics, with transaction diagnostic deltas;
+- claim redemption returns Project/Document identity, and same-tab relay loss
+  uses bounded replacement/reconnect without replaying domain requests;
+- the Connect Agent dialog exposes reconnect and the accepted specs record the
+  sole owner/consumer map.
+
+Validation completed after rebasing onto `origin/main` `62141a8`: focused
+cross-package suites (99 tests), frozen install, generated Agent API artifact
+check, references, typecheck, and final `pnpm ci:check` (679 unit/integration,
+99 Playwright, build/export/PWA/release smoke and performance gates) passed.
+The initial remote Static contracts run found a Linux-only TypeScript narrowing
+in the new reconnect E2E; explicit typing fixed it. PR #25 then passed all five
+required GitHub checks on `ee7b854`.
