@@ -4754,3 +4754,17 @@ diff --check` passed. The full Playwright baseline completed 30/49, with the
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(derived): add ERC engine emitting the unified diagnostic envelope
   (WP-R8)`.
+
+## 2026-08-12 - WP-R9 Diagnostic Aggregation (data layer)
+
+- Target: unified Diagnostic envelope + aggregation merging ERC (R8) with
+  adapted VisualDiagnostic observations into one domain-tagged sorted list. Data
+  layer for the diagnostic UI; the React panel + navigateTo are deferred
+  (e2e-gated).
+- Changed areas: new `packages/derived/src/diagnostics/diagnostic.ts` and
+  `diagnostic.test.ts` (3 tests); `packages/derived/src/index.ts` re-export;
+  target plan and this log.
+- Validation: workspace `pnpm typecheck`; `vitest run packages/derived/src/`
+  (112 tests, was 109); `prettier --check` on new files; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(derived): unify diagnostics into a single sorted envelope (WP-R9)`.
