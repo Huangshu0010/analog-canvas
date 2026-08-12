@@ -5204,3 +5204,12 @@ contracts (WP-R1)`.
   clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(routing): plan group move edits in engine`.
+
+## 2026-08-12 - Connectivity Recovery C5c: routing planner status
+
+- Target: record verified committed-routing planner ownership and retain the
+  intentional editor session/Snap boundary.
+- Changed areas: recovery status, target plan and log.
+- Validation: static App/planner ownership audit; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `docs(roadmap): record routing planner migration`.
