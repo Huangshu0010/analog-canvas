@@ -1,4 +1,5 @@
 import type { AgentSessionScope, AgentTransportErrorCode } from "./envelope.js";
+import { sha256Hex } from "@icm/derived";
 
 /**
  * Pure, runtime-agnostic Agent session state machine (WP-WA4). All time is
@@ -23,10 +24,15 @@ export interface AgentSessionLimits {
   sessionTtlMs: number;
   /** Hard request-body ceiling before any forward. */
   maxRequestBytes: number;
+  /** Hard browser relay envelope ceiling (request or response). */
+  maxMessageBytes: number;
   /** Sliding request rate limit. */
   rateLimit: { windowMs: number; maxRequests: number };
   /** How long a completed requestId result is served as idempotent. */
   resultCacheTtlMs: number;
+  /** Maximum count and aggregate serialized bytes retained in relay memory. */
+  resultCacheMaxEntries: number;
+  resultCacheMaxBytes: number;
 }
 
 export const DEFAULT_AGENT_SESSION_LIMITS: AgentSessionLimits = {
@@ -34,8 +40,11 @@ export const DEFAULT_AGENT_SESSION_LIMITS: AgentSessionLimits = {
   tokenTtlMs: 60 * 60 * 1000,
   sessionTtlMs: 60 * 60 * 1000,
   maxRequestBytes: 2_000_000,
+  maxMessageBytes: 6_000_000,
   rateLimit: { windowMs: 60_000, maxRequests: 60 },
   resultCacheTtlMs: 5 * 60 * 1000,
+  resultCacheMaxEntries: 32,
+  resultCacheMaxBytes: 16_000_000,
 };
 
 /** Secrets returned once when a session is created. */
@@ -89,6 +98,14 @@ interface RateWindow {
 interface CachedResult {
   result: unknown;
   completedAt: number;
+  payloadHash: string;
+  byteLength: number;
+}
+
+interface PendingRequest {
+  payloadHash: string;
+  startedAt: number;
+  completedAt?: number;
 }
 
 interface SessionInternals {
@@ -104,6 +121,7 @@ interface SessionInternals {
   token: TokenRecord | null;
   rateWindow: RateWindow;
   cache: Map<string, CachedResult>;
+  pending: Map<string, PendingRequest>;
 }
 
 /** Constant-time string equality for equal-length high-entropy secrets. */
@@ -116,8 +134,30 @@ export function constantTimeEqual(left: string, right: string): boolean {
   return diff === 0;
 }
 
+function secretVerifier(secret: string): string {
+  return sha256Hex(secret);
+}
+
+export interface PersistedAgentSessionState {
+  version: 1;
+  limits: AgentSessionLimits;
+  sessionId: string;
+  editorSecretVerifier: string;
+  projectSessionId: string;
+  projectId: string;
+  documentIds: string[];
+  scopes: AgentSessionScope[];
+  status: AgentSessionStatus;
+  expiresAt: number;
+  claim: ClaimRecord | null;
+  token: TokenRecord | null;
+  rateWindow: RateWindow;
+  requestLedger?: Array<[string, PendingRequest]>;
+}
+
 export interface CreateAgentSessionOptions {
   limits?: Partial<AgentSessionLimits>;
+  sessionId?: string;
   projectSessionId: string;
   projectId: string;
   documentIds: readonly string[];
@@ -127,6 +167,8 @@ export interface CreateAgentSessionOptions {
 }
 
 export class AgentSessionMachine {
+  private readonly activeRequests = new Set<string>();
+
   private constructor(
     private readonly limits: AgentSessionLimits,
     private readonly internals: SessionInternals,
@@ -144,7 +186,7 @@ export class AgentSessionMachine {
     session: CreatedAgentSession;
   } {
     const limits = { ...DEFAULT_AGENT_SESSION_LIMITS, ...options.limits };
-    const sessionId = options.random();
+    const sessionId = options.sessionId ?? options.random();
     const editorSecret = options.random();
     const claimCode = options.random();
     const claimExpiresAt = options.now + limits.claimTtlMs;
@@ -153,7 +195,7 @@ export class AgentSessionMachine {
       limits,
       {
         sessionId,
-        editorSecretVerifier: editorSecret,
+        editorSecretVerifier: secretVerifier(editorSecret),
         projectSessionId: options.projectSessionId,
         projectId: options.projectId,
         documentIds: new Set(options.documentIds),
@@ -161,13 +203,14 @@ export class AgentSessionMachine {
         status: "active",
         expiresAt,
         claim: {
-          codeVerifier: claimCode,
+          codeVerifier: secretVerifier(claimCode),
           expiresAt: claimExpiresAt,
           used: false,
         },
         token: null,
         rateWindow: { windowStart: options.now, count: 0 },
         cache: new Map(),
+        pending: new Map(),
       },
       options.random,
     );
@@ -191,6 +234,85 @@ export class AgentSessionMachine {
     return this.internals.projectId;
   }
 
+  get projectSessionId(): string {
+    return this.internals.projectSessionId;
+  }
+
+  get documentIds(): string[] {
+    return [...this.internals.documentIds].sort();
+  }
+
+  get scopes(): AgentSessionScope[] {
+    return [...this.internals.scopes];
+  }
+
+  get expiresAt(): number {
+    return this.internals.expiresAt;
+  }
+
+  /** Whether the one-time claim has produced a live Agent capability. */
+  get claimed(): boolean {
+    return this.internals.claim?.used === true && this.internals.token !== null;
+  }
+
+  static restore(
+    state: PersistedAgentSessionState,
+    random: () => string,
+  ): AgentSessionMachine {
+    if (state.version !== 1) {
+      throw new Error("Unsupported Agent session state version");
+    }
+    return new AgentSessionMachine(
+      { ...DEFAULT_AGENT_SESSION_LIMITS, ...structuredClone(state.limits) },
+      {
+        sessionId: state.sessionId,
+        editorSecretVerifier: state.editorSecretVerifier,
+        projectSessionId: state.projectSessionId,
+        projectId: state.projectId,
+        documentIds: new Set(state.documentIds),
+        scopes: [...state.scopes],
+        status: state.status,
+        expiresAt: state.expiresAt,
+        claim: state.claim ? { ...state.claim } : null,
+        token: state.token
+          ? { ...state.token, scopes: [...state.token.scopes] }
+          : null,
+        rateWindow: { ...state.rateWindow },
+        // Project-bearing responses remain process-local. Only request IDs,
+        // payload hashes, and timestamps survive to preserve at-most-once
+        // execution without retaining Snapshot/render bodies.
+        cache: new Map(),
+        pending: new Map(
+          (state.requestLedger ?? []).map(([id, value]) => [id, { ...value }]),
+        ),
+      },
+      random,
+    );
+  }
+
+  serialize(): PersistedAgentSessionState {
+    return {
+      version: 1,
+      limits: structuredClone(this.limits),
+      sessionId: this.internals.sessionId,
+      editorSecretVerifier: this.internals.editorSecretVerifier,
+      projectSessionId: this.internals.projectSessionId,
+      projectId: this.internals.projectId,
+      documentIds: this.documentIds,
+      scopes: this.scopes,
+      status: this.internals.status,
+      expiresAt: this.internals.expiresAt,
+      claim: this.internals.claim ? { ...this.internals.claim } : null,
+      token: this.internals.token
+        ? { ...this.internals.token, scopes: [...this.internals.token.scopes] }
+        : null,
+      rateWindow: { ...this.internals.rateWindow },
+      requestLedger: [...this.internals.pending.entries()].map(
+        ([id, value]) => [id, { ...value }],
+      ),
+    };
+  }
+
   /** Visible status at `now`, deriving `expired` from the session lifetime. */
   statusAt(now: number): AgentSessionStatus | "expired" {
     if (this.internals.status === "revoked") return "revoked";
@@ -200,7 +322,10 @@ export class AgentSessionMachine {
 
   /** Authenticate the browser WebSocket channel with the editor secret. */
   authorizeEditor(secret: string): boolean {
-    return constantTimeEqual(secret, this.internals.editorSecretVerifier);
+    return constantTimeEqual(
+      secretVerifier(secret),
+      this.internals.editorSecretVerifier,
+    );
   }
 
   /** Exchange a one-time claim code for a scoped capability token. */
@@ -213,7 +338,10 @@ export class AgentSessionMachine {
     const lifecycle = this.lifecycleCode(now);
     if (lifecycle) return { ok: false, code: lifecycle };
     const claim = this.internals.claim;
-    if (!claim || !constantTimeEqual(code, claim.codeVerifier)) {
+    if (
+      !claim ||
+      !constantTimeEqual(secretVerifier(code), claim.codeVerifier)
+    ) {
       return { ok: false, code: "CLAIM_INVALID" };
     }
     if (claim.used) return { ok: false, code: "CLAIM_ALREADY_USED" };
@@ -226,7 +354,7 @@ export class AgentSessionMachine {
       this.internals.expiresAt,
     );
     this.internals.token = {
-      verifier: agentToken,
+      verifier: secretVerifier(agentToken),
       scopes: [...this.internals.scopes],
       expiresAt: tokenExpiresAt,
     };
@@ -248,7 +376,7 @@ export class AgentSessionMachine {
       return { ok: false, code: "SESSION_PAUSED" };
     }
     const record = this.internals.token;
-    if (!record || !constantTimeEqual(token, record.verifier)) {
+    if (!record || !constantTimeEqual(secretVerifier(token), record.verifier)) {
       return { ok: false, code: "TOKEN_INVALID" };
     }
     if (now >= record.expiresAt) return { ok: false, code: "TOKEN_EXPIRED" };
@@ -272,12 +400,26 @@ export class AgentSessionMachine {
       : { ok: false, code: "TOKEN_SCOPE_INSUFFICIENT" };
   }
 
+  assertDocument(
+    projectId: string,
+    documentId: string,
+  ): { ok: true } | { ok: false; code: AgentTransportErrorCode } {
+    return projectId === this.internals.projectId &&
+      this.internals.documentIds.has(documentId)
+      ? { ok: true }
+      : { ok: false, code: "TOKEN_SCOPE_INSUFFICIENT" };
+  }
+
   /**
    * Begin a forwarded request: reject on pause/revoke/expiry/rate-limit, serve a
    * cached terminal result for a repeated `requestId`, or allow the forward to
    * proceed. Never re-runs a completed request.
    */
-  beginRequest(requestId: string, now: number): RequestBeginResult {
+  beginRequest(
+    requestId: string,
+    now: number,
+    payloadHash = requestId,
+  ): RequestBeginResult {
     const lifecycle = this.lifecycleCode(now);
     if (lifecycle) return { kind: "rejected", code: lifecycle };
     if (this.internals.status === "paused") {
@@ -285,7 +427,21 @@ export class AgentSessionMachine {
     }
     const cached = this.internals.cache.get(requestId);
     if (cached && now - cached.completedAt < this.limits.resultCacheTtlMs) {
-      return { kind: "cached", result: cached.result };
+      return cached.payloadHash === payloadHash
+        ? { kind: "cached", result: cached.result }
+        : { kind: "rejected", code: "REQUEST_ID_REUSED" };
+    }
+    if (cached) this.internals.cache.delete(requestId);
+    const pending = this.internals.pending.get(requestId);
+    if (pending) {
+      if (pending.payloadHash !== payloadHash) {
+        return { kind: "rejected", code: "REQUEST_ID_REUSED" };
+      }
+      if (this.activeRequests.has(requestId)) {
+        return { kind: "rejected", code: "REQUEST_IN_PROGRESS" };
+      }
+      this.activeRequests.add(requestId);
+      return { kind: "proceed" };
     }
     const { rateLimit } = this.limits;
     const window = this.internals.rateWindow;
@@ -297,12 +453,49 @@ export class AgentSessionMachine {
       return { kind: "rejected", code: "RATE_LIMITED" };
     }
     window.count += 1;
+    this.internals.pending.set(requestId, { payloadHash, startedAt: now });
+    this.activeRequests.add(requestId);
     return { kind: "proceed" };
   }
 
   /** Cache a terminal forwarded result for idempotent replay. */
   completeRequest(requestId: string, result: unknown, now: number): void {
-    this.internals.cache.set(requestId, { result, completedAt: now });
+    const pending = this.internals.pending.get(requestId);
+    this.activeRequests.delete(requestId);
+    this.internals.pending.set(requestId, {
+      payloadHash: pending?.payloadHash ?? requestId,
+      startedAt: pending?.startedAt ?? now,
+      completedAt: now,
+    });
+    const byteLength = new TextEncoder().encode(
+      JSON.stringify(result),
+    ).byteLength;
+    if (byteLength > this.limits.resultCacheMaxBytes) return;
+    this.internals.cache.set(requestId, {
+      result,
+      completedAt: now,
+      payloadHash: pending?.payloadHash ?? requestId,
+      byteLength,
+    });
+    let totalBytes = [...this.internals.cache.values()].reduce(
+      (total, entry) => total + entry.byteLength,
+      0,
+    );
+    while (
+      this.internals.cache.size > this.limits.resultCacheMaxEntries ||
+      totalBytes > this.limits.resultCacheMaxBytes
+    ) {
+      const oldestId = this.internals.cache.keys().next().value;
+      if (oldestId === undefined) break;
+      const oldest = this.internals.cache.get(oldestId);
+      this.internals.cache.delete(oldestId);
+      totalBytes -= oldest?.byteLength ?? 0;
+    }
+  }
+
+  failRequest(requestId: string, forget = true): void {
+    this.activeRequests.delete(requestId);
+    if (forget) this.internals.pending.delete(requestId);
   }
 
   /** Enforce the relay-level request-size ceiling. */
@@ -311,6 +504,14 @@ export class AgentSessionMachine {
   ): { ok: true } | { ok: false; code: AgentTransportErrorCode } {
     return bytes > this.limits.maxRequestBytes
       ? { ok: false, code: "REQUEST_TOO_LARGE" }
+      : { ok: true };
+  }
+
+  checkMessageSize(
+    bytes: number,
+  ): { ok: true } | { ok: false; code: AgentTransportErrorCode } {
+    return bytes > this.limits.maxMessageBytes
+      ? { ok: false, code: "MESSAGE_TOO_LARGE" }
       : { ok: true };
   }
 

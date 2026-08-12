@@ -9,13 +9,20 @@ import {
   visitorCookie,
   type DurableObjectNamespaceLike,
 } from "./analytics";
+import {
+  routeAgentSessionRequest,
+  type AgentSessionNamespaceLike,
+} from "./agent-session";
 
 export { AnalyticsDO } from "./analytics";
+export { AgentSessionDO } from "./agent-session";
 
 type Env = {
   ANALYTICS: DurableObjectNamespaceLike;
   ASSETS: { fetch(request: Request): Promise<Response> };
   ANALYTICS_KEY: string | undefined;
+  AGENT_SESSION: AgentSessionNamespaceLike;
+  AGENT_ALLOWED_ORIGIN?: string;
 };
 
 type RequestCf = {
@@ -74,6 +81,9 @@ const REFERRER_CATEGORIES: readonly (readonly [string, readonly string[]])[] = [
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    const agentResponse = await routeAgentSessionRequest(request, env);
+    if (agentResponse) return agentResponse;
 
     if (url.pathname === "/api/track" && request.method === "POST") {
       return trackPageView(request, env);

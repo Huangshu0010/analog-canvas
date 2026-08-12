@@ -17,6 +17,7 @@ function baseProps(
     scopes: [],
     expiresAt: null,
     audit: [],
+    error: null,
     now: 0,
     onGrant: vi.fn(),
     onPause: vi.fn(),
@@ -52,11 +53,11 @@ describe("ConnectAgentPanel", () => {
     expect(markup).toContain("Full Circuit Edit");
   });
 
-  it("shows the one-time claim code, scopes, and pause/revoke when ready", () => {
+  it("shows the one-time claim code while waiting for the Agent", () => {
     const markup = renderToStaticMarkup(
       <ConnectAgentPanel
         {...baseProps({
-          status: "ready",
+          status: "waiting-for-agent",
           claimCode: "CLAIM-12345",
           scopes: ["circuit.snapshot", "circuit.render"],
           expiresAt: 60_000,
@@ -65,6 +66,7 @@ describe("ConnectAgentPanel", () => {
       />,
     );
     expect(markup).toContain('data-testid="agent-claim-code"');
+    expect(markup).toContain('data-testid="agent-copy-instructions"');
     expect(markup).toContain("CLAIM-12345");
     expect(markup).toContain("circuit.snapshot, circuit.render");
     expect(markup).toContain('data-testid="agent-pause"');

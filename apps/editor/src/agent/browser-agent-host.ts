@@ -2,7 +2,10 @@ import type {
   AgentHostTransactionRequest,
   AgentOperationHost,
 } from "@icm/agent-adapter";
-import type { EditTransactionResult } from "@icm/edit-engine";
+import {
+  rejectTransaction,
+  type EditTransactionResult,
+} from "@icm/edit-engine";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -23,12 +26,19 @@ import type { EditorDocumentController } from "../document/document-controller";
  * or Worker. The session transport is layered on top in WP-WA4/WP-WA5.
  */
 export class BrowserAgentHost implements AgentOperationHost {
+  private readonly boundProjectSessionId: string;
+
   constructor(
     private readonly controller: EditorDocumentController,
     private readonly onTransactionCommitted?: () => void,
-  ) {}
+  ) {
+    this.boundProjectSessionId = controller.projectSessionId;
+  }
 
   getDocument(documentId: string): SchematicDocument | null {
+    if (this.controller.projectSessionId !== this.boundProjectSessionId) {
+      return null;
+    }
     const document = this.controller.project.documents.find(
       (candidate) => candidate.id === documentId,
     );
@@ -36,20 +46,35 @@ export class BrowserAgentHost implements AgentOperationHost {
   }
 
   getProject(): CircuitProject {
+    this.assertBound();
     return this.controller.project;
   }
 
   getResolver(): SymbolResolver {
+    this.assertBound();
     return this.controller.resolver;
   }
 
   dispatchTransaction(
     request: AgentHostTransactionRequest,
   ): EditTransactionResult {
+    if (this.controller.projectSessionId !== this.boundProjectSessionId) {
+      return rejectTransaction(
+        this.controller.document,
+        "DOCUMENT_MISMATCH",
+        "The Agent session is bound to a Project that has been replaced",
+      );
+    }
     const result = this.controller.dispatchTransaction(request);
     if (result.ok && result.applied) {
       this.onTransactionCommitted?.();
     }
     return result;
+  }
+
+  private assertBound(): void {
+    if (this.controller.projectSessionId !== this.boundProjectSessionId) {
+      throw new Error("The Agent session Project has been replaced");
+    }
   }
 }

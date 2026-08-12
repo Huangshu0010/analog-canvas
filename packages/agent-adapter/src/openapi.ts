@@ -90,8 +90,14 @@ export const agentCircuitOpenApi = {
               schema: {
                 type: "object",
                 additionalProperties: false,
-                required: ["projectId", "documentIds", "scopes"],
+                required: [
+                  "projectSessionId",
+                  "projectId",
+                  "documentIds",
+                  "scopes",
+                ],
                 properties: {
+                  projectSessionId: { type: "string", minLength: 1 },
                   projectId: { type: "string", minLength: 1 },
                   documentIds: {
                     type: "array",
@@ -118,19 +124,26 @@ export const agentCircuitOpenApi = {
         },
       },
     },
-    "/api/agent/claims/{claimCode}": {
+    "/api/agent/claims": {
       post: {
         operationId: "agentClaimRedeem",
         description:
           "Exchange a one-time, short-lived claim code for a scoped, expiring bearer token. Single-use.",
-        parameters: [
-          {
-            name: "claimCode",
-            in: "path",
-            required: true,
-            schema: { type: "string", minLength: 1 },
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["claimCode"],
+                properties: {
+                  claimCode: { type: "string", minLength: 1 },
+                },
+              },
+            },
           },
-        ],
+        },
         responses: {
           "200": {
             description: "Claim redeemed",
@@ -153,7 +166,7 @@ export const agentCircuitOpenApi = {
       post: {
         operationId: "agentSessionCircuit",
         description:
-          "Send one Circuit API request over the session. The relay forwards the strict Circuit payload to the live browser editor without interpreting it.",
+          "Send one Circuit API request over the session. The relay validates the strict payload and required token scopes, then forwards it to the live browser without applying or rewriting edits.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -209,6 +222,62 @@ export const agentCircuitOpenApi = {
         },
       },
     },
+    "/api/agent/sessions/{sessionId}/control": {
+      post: {
+        operationId: "agentSessionControl",
+        description:
+          "Browser-owner pause, resume, revoke, or Project-replacement control. Requires x-editor-secret.",
+        parameters: [
+          {
+            name: "sessionId",
+            in: "path",
+            required: true,
+            schema: { type: "string", minLength: 1 },
+          },
+          {
+            name: "x-editor-secret",
+            in: "header",
+            required: true,
+            schema: { type: "string", minLength: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["action"],
+                properties: {
+                  action: {
+                    type: "string",
+                    enum: ["pause", "resume", "revoke", "replace-project"],
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "Control applied" } },
+      },
+    },
+    "/api/agent/sessions/{sessionId}/editor": {
+      get: {
+        operationId: "agentSessionEditorChannel",
+        description:
+          "Browser WebSocket command channel. Uses the icm-agent-session subprotocol plus the editor secret.",
+        parameters: [
+          {
+            name: "sessionId",
+            in: "path",
+            required: true,
+            schema: { type: "string", minLength: 1 },
+          },
+        ],
+        responses: { "101": { description: "WebSocket switching protocols" } },
+      },
+    },
     "/api/agent/sessions/{sessionId}": {
       delete: {
         operationId: "agentSessionDisconnect",
@@ -237,29 +306,38 @@ export const agentCircuitOpenApi = {
       agentSessionCreated: {
         type: "object",
         additionalProperties: false,
-        required: [
-          "sessionId",
-          "editorSecret",
-          "claimCode",
-          "claimExpiresAt",
-          "expiresAt",
-        ],
+        required: ["ok", "session"],
         properties: {
-          sessionId: { type: "string", minLength: 1 },
-          editorSecret: { type: "string", minLength: 1 },
-          claimCode: { type: "string", minLength: 1 },
-          claimExpiresAt: { type: "string", format: "date-time" },
-          expiresAt: { type: "string", format: "date-time" },
+          ok: { type: "boolean", const: true },
+          session: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "sessionId",
+              "editorSecret",
+              "claimCode",
+              "claimExpiresAt",
+              "expiresAt",
+            ],
+            properties: {
+              sessionId: { type: "string", minLength: 1 },
+              editorSecret: { type: "string", minLength: 1 },
+              claimCode: { type: "string", minLength: 1 },
+              claimExpiresAt: { type: "integer", minimum: 0 },
+              expiresAt: { type: "integer", minimum: 0 },
+            },
+          },
         },
       },
       agentClaimResponse: {
         type: "object",
         additionalProperties: false,
-        required: ["ok", "agentToken", "tokenExpiresAt", "scopes"],
+        required: ["ok", "sessionId", "agentToken", "tokenExpiresAt", "scopes"],
         properties: {
           ok: { type: "boolean", const: true },
+          sessionId: { type: "string", minLength: 1 },
           agentToken: { type: "string", minLength: 1 },
-          tokenExpiresAt: { type: "string", format: "date-time" },
+          tokenExpiresAt: { type: "integer", minimum: 0 },
           scopes: {
             type: "array",
             items: { type: "string", minLength: 1 },

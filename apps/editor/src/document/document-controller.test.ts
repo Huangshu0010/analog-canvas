@@ -84,6 +84,7 @@ describe("EditorDocumentController", () => {
 
   it("resets active document and all histories on Project replacement", () => {
     const controller = new EditorDocumentController(hierarchicalProject());
+    const originalSessionId = controller.projectSessionId;
     controller.transact([{ kind: "add_instance", instance: instance("Rold") }]);
     const replacement = createEmptyProject("replacement", "Replacement");
     replacement.topDocumentId = replacement.documents[0]!.id;
@@ -92,6 +93,8 @@ describe("EditorDocumentController", () => {
 
     expect(document.id).toBe(replacement.topDocumentId);
     expect(controller.project.id).toBe("replacement");
+    expect(controller.projectSessionId).toMatch(/^replacement:\d+$/u);
+    expect(controller.projectSessionId).not.toBe(originalSessionId);
     expect(controller.canUndo).toBe(false);
     expect(controller.canRedo).toBe(false);
   });

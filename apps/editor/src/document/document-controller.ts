@@ -39,6 +39,7 @@ export interface DocumentControllerSnapshot {
   resolver: ProjectSymbolResolver;
   canUndo: boolean;
   canRedo: boolean;
+  projectSessionId: string;
 }
 
 /**
@@ -53,6 +54,7 @@ export class EditorDocumentController {
   private historyValue: DocumentHistory;
   private histories: Map<string, DocumentHistory>;
   private transactionCounter = 0;
+  private projectSessionCounter = 1;
 
   constructor(initialProject: CircuitProject) {
     this.projectValue = CircuitProjectSchema.parse(
@@ -101,6 +103,10 @@ export class EditorDocumentController {
     return this.transactionCounter;
   }
 
+  get projectSessionId(): string {
+    return `${this.projectValue.id}:${this.projectSessionCounter}`;
+  }
+
   snapshot(): DocumentControllerSnapshot {
     return {
       project: this.project,
@@ -109,6 +115,7 @@ export class EditorDocumentController {
       resolver: this.resolver,
       canUndo: this.canUndo,
       canRedo: this.canRedo,
+      projectSessionId: this.projectSessionId,
     };
   }
 
@@ -132,6 +139,7 @@ export class EditorDocumentController {
   }
 
   replaceProject(nextProject: CircuitProject): SchematicDocument {
+    this.projectSessionCounter += 1;
     this.projectValue = CircuitProjectSchema.parse(
       structuredClone(nextProject),
     );
@@ -230,6 +238,7 @@ export function useDocumentController(
 
   return {
     ...snapshot,
+    controller,
     openDocument: (documentId: string) => {
       const document = controller.openDocument(documentId);
       if (document) synchronize();
@@ -255,6 +264,10 @@ export function useDocumentController(
         onCommittedRef.current(controller.project);
       }
       return result;
+    },
+    synchronizeExternalCommit: () => {
+      synchronize();
+      onCommittedRef.current(controller.project);
     },
   };
 }

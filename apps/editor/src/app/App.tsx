@@ -129,6 +129,7 @@ import {
 import { EditorHelpDialog } from "../components/editor-help-dialog";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
 import { ConnectAgentPanel } from "../agent/connect-agent-panel";
+import { BrowserAgentHost } from "../agent/browser-agent-host";
 import { useAgentSession } from "../agent/use-agent-session";
 import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
@@ -446,7 +447,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const [status, setStatus] = useState("Ready");
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
-  const agentSession = useAgentSession();
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -491,7 +491,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     openDocument,
     replaceProject,
     transact: transactDocument,
+    controller: editorDocumentController,
+    projectSessionId,
+    synchronizeExternalCommit,
   } = useDocumentController(preparedInitialProject, stageRecovery);
+  const browserAgentHost = useMemo(
+    () =>
+      new BrowserAgentHost(editorDocumentController, synchronizeExternalCommit),
+    [editorDocumentController, projectSessionId],
+  );
+  const agentSession = useAgentSession({
+    project,
+    projectSessionId,
+    host: browserAgentHost,
+  });
   const [documentStack, setDocumentStack] = useState<HierarchyFrame[]>([]);
   const {
     selection: visualSelection,
@@ -5753,13 +5766,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         scopes={agentSession.scopes}
         expiresAt={agentSession.expiresAt}
         audit={agentSession.audit}
+        error={agentSession.error}
         now={Date.now()}
         onGrant={agentSession.grant}
         onPause={agentSession.pause}
         onResume={agentSession.resume}
         onRevoke={agentSession.revoke}
         onClose={() => {
-          agentSession.revoke();
           setAgentPanelOpen(false);
         }}
       />

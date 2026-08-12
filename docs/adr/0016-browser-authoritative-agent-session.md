@@ -1,6 +1,6 @@
 # ADR 0016: Browser-Authoritative Agent Session
 
-Status: `proposed`
+Status: `accepted`
 
 Date: `2026-08-12`
 

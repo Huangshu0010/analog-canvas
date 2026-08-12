@@ -5727,3 +5727,23 @@ contracts (WP-R1)`.
   e2e; Cloudflare DO + WebSocket transport; perf budgets; relay no-retention.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `chore(agent): format lockfile and record delivery gate (WP-WA7)`.
+
+## 2026-08-13 - Web Agent session production closure
+
+- Target: replace the disconnected WA4/WA5 prototypes with one usable,
+  browser-authoritative external-Agent session from public claim through live
+  semantic edit, shared recovery/undo, events, and revocation.
+- Changed areas: real `AgentSessionDO` + Worker routes/binding/migration;
+  serializable hashed session state and non-content at-most-once ledger; exact
+  scope/Project/Document enforcement; BrowserAgentHost Project fencing; real
+  editor WebSocket hook and lifecycle UI; public OpenAPI + copied connection
+  instructions; generated contract, accepted ADR/spec, roadmap status, and one
+  grant-to-Snapshot/edit/retry/undo/pause/revoke Playwright scenario.
+- Validation: frozen install and final `pnpm ci:check` green under CI settings;
+  108 files / 669 unit tests; 92 Playwright scenarios; production/release smoke;
+  500-instance performance baseline; generated Agent API artifacts; Wrangler
+  4.120.1 production dry-run exposes both `AnalyticsDO` and `AgentSessionDO`;
+  `git diff --check` clean.
+- Commit status: ready to commit and push on
+  `codex/web-agent-session-architecture` as
+  `feat(agent): connect browser-authorized sessions end to end`.

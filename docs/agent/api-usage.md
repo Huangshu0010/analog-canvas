@@ -67,13 +67,18 @@ authorized relay (ADR 0016). The human clicks **Connect Agent**, grants a
 scoped preset, and gives the Agent a one-time claim code. The Agent never needs
 repository source — only this document and the claim code.
 
+The deployed machine-readable contract is available at
+`GET /api/agent/openapi.json`. The editor's **Copy Agent connection
+instructions** action includes this address, the claim endpoint, and the
+one-time code.
+
 1. **Redeem the claim** (single-use, short expiry):
 
    ```http
-   POST /api/agent/claims/{claimCode} HTTP/1.1
+   POST /api/agent/claims HTTP/1.1
    Content-Type: application/json
 
-   {}
+   {"claimCode":"<one-time-code>"}
    ```
 
    On success the response carries a scoped `agentToken` (bearer) and its expiry.
@@ -81,7 +86,8 @@ repository source — only this document and the claim code.
 
 2. **Call the Circuit API** through the session. The body is the same Circuit
    request schema as the loopback adapter; the relay forwards it to the live
-   browser editor without interpreting it:
+   browser editor after strict schema and scope validation, without applying or
+   rewriting edits:
 
    ```http
    POST /api/agent/sessions/{sessionId}/circuit HTTP/1.1
@@ -93,9 +99,10 @@ repository source — only this document and the claim code.
 
    Then `snapshot`, `transact` (with the Snapshot revision as `expectedRevision`,
    dry-run first when useful), and `render` exactly as in the recommended v2
-   lifecycle. Every request carries a unique `requestId`; the relay caches each
-   completed result, so a retry after a lost response returns the same terminal
-   result and never reapplies the edit.
+   lifecycle. Every request carries a unique `requestId`; bounded in-memory
+   caches in the relay and authoritative browser return the same terminal
+   result for a retry without persisting Snapshot/render payloads or reapplying
+   the edit.
 
 3. **Stream events** (`GET /api/agent/sessions/{id}/events`, SSE) for
    `editor.online`/`editor.offline`, `document.revision-changed`,
@@ -124,8 +131,8 @@ Web-session transport errors (published editor only):
 
 - `CLAIM_INVALID` / `CLAIM_EXPIRED` / `CLAIM_ALREADY_USED`: ask the human for a
   fresh claim code; a claim is one-time and short-lived.
-- `TOKEN_INVALID` / `TOKEN_EXPIRED`: redeem a new claim within the session
-  lifetime.
+- `TOKEN_INVALID` / `TOKEN_EXPIRED`: request a newly authorized session from
+  the human; a consumed claim cannot mint a second token.
 - `TOKEN_SCOPE_INSUFFICIENT`: do not retry the same operation; request broader
   scope from the human.
 - `SESSION_PAUSED`: wait for `session.ready`; the human paused the session.
@@ -136,6 +143,8 @@ Web-session transport errors (published editor only):
   resolves whether a transaction committed.
 - `RATE_LIMITED`: back off and retry, respecting `Retry-After` when present.
 - `REQUEST_TOO_LARGE`: shrink the payload; the relay enforces a hard ceiling.
+- `REQUEST_RESULT_UNAVAILABLE`: that `requestId` already ran but its response
+  cache was evicted; do not replay it. Read a fresh Snapshot to resolve state.
 
 No error authorizes filesystem access, raw Project replacement, or a fallback
 mutation mechanism.

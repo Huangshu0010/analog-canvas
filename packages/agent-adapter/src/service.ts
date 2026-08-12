@@ -466,7 +466,7 @@ function selectQueryIds(
   }
 }
 
-function editCategory(
+export function agentEditCategory(
   edit: SchematicEdit,
 ): "geometry" | "connectivity" | "presentation" | "unsupported" {
   switch (edit.kind) {
@@ -637,10 +637,6 @@ export function createAgentCircuitService(
         });
       }
 
-      const resolver = host ? host.getResolver() : storeOptions!.resolver;
-      const project = host
-        ? host.getProject?.()
-        : storeOptions!.store.getProject?.();
       const document = host
         ? host.getDocument(request.documentId)
         : storeOptions!.store.getDocument(request.documentId);
@@ -652,6 +648,10 @@ export function createAgentCircuitService(
           document?.revision,
         );
       }
+      const resolver = host ? host.getResolver() : storeOptions!.resolver;
+      const project = host
+        ? host.getProject?.()
+        : storeOptions!.store.getProject?.();
 
       if (request.operation === "snapshot") {
         if (!(options.permissions.snapshot ?? options.permissions.query)) {
@@ -791,7 +791,7 @@ export function createAgentCircuitService(
           );
         }
         for (const edit of request.edits) {
-          const category = editCategory(edit);
+          const category = agentEditCategory(edit);
           if (category === "unsupported") {
             return fail(
               "transact",

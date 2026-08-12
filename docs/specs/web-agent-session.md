@@ -1,6 +1,6 @@
 # Web Agent Session
 
-Status: `proposed`
+Status: `accepted`
 
 Version: `0.1`
 
@@ -57,8 +57,9 @@ The first release uses scoped capability tokens, not product accounts.
 
 Claim codes are single-use and expire after at most five minutes. Agent tokens
 default to one hour, never outlive their editor session, and are invalidated by
-pause, revoke, Project replacement, tab close/heartbeat expiry, or service-side
-abuse controls.
+pause, revoke, Project replacement, a normal tab close, session expiry, or
+service-side abuse controls. An abrupt browser loss makes the editor offline;
+the session's fixed lifetime remains the terminal cleanup boundary.
 
 Secrets are never placed in analytics, URL query parameters, logs, local
 recovery data, Snapshot data, render artifacts, or `Cache-Control`-able
@@ -104,12 +105,14 @@ a different Project.
 The minimum resources (exact paths are frozen in WP-WA1):
 
 ```text
+GET    /api/agent/openapi.json             public machine-readable contract
 POST   /api/agent/sessions                 browser creates a session
-POST   /api/agent/claims/{claimCode}       Agent exchanges one-time claim
+POST   /api/agent/claims                   Agent exchanges claim from JSON body
 POST   /api/agent/sessions/{id}/circuit    Agent sends one Circuit API request
 GET    /api/agent/sessions/{id}/events     Agent receives bounded SSE events
 DELETE /api/agent/sessions/{id}            Agent disconnects its capability
 WS     /api/agent/sessions/{id}/editor     browser command/result channel
+POST   /api/agent/sessions/{id}/control    browser pause/resume/revoke/replace
 ```
 
 - Browser creation and WebSocket authentication use the `editorSecret` returned
@@ -124,9 +127,10 @@ WS     /api/agent/sessions/{id}/editor     browser command/result channel
 
 ## Relay message envelope
 
-Every forwarded operation uses one envelope. The `circuit-request` payload is the
-existing strict Agent Circuit API schema; the relay never interprets or rewrites
-typed edits.
+Every forwarded operation uses one envelope. The `circuit-request` payload is
+the existing strict Agent Circuit API schema. The relay validates its schema,
+Document binding, and required token scopes, but never applies or rewrites typed
+edits or derives circuit meaning.
 
 ```typescript
 interface AgentSessionMessage {
@@ -145,8 +149,9 @@ interface AgentSessionMessage {
 - One Durable Object serializes in-flight writes per session.
 - `requestId` is an idempotency key for the token/session lifetime. Repeating a
   completed request returns the bounded cached terminal result and never
-  reapplies the edit. The browser independently deduplicates `requestId` before
-  dispatch.
+  reapplies the edit. Both relay memory and the browser independently
+  deduplicate `requestId` before dispatch; response bodies are never written to
+  Durable Object storage.
 - `expectedRevision` remains the optimistic-concurrency authority.
 - On `STALE_REVISION` the response carries the current revision; the Agent
   obtains a fresh Snapshot and re-evaluates rather than replaying blindly.
@@ -235,20 +240,21 @@ usable and the Agent must not retry without re-authorization.
 | `CLAIM_EXPIRED`            | Claim code past its short expiry              | Obtain a new claim                  |
 | `CLAIM_ALREADY_USED`       | Claim code consumed (single-use)              | Obtain a new claim                  |
 | `TOKEN_INVALID`            | Bearer missing/malformed                      | Terminal; re-claim                  |
-| `TOKEN_EXPIRED`            | `agentToken` past its expiry                  | Re-claim within session lifetime    |
+| `TOKEN_EXPIRED`            | `agentToken` past its expiry                  | Ask for a newly authorized session  |
 | `TOKEN_SCOPE_INSUFFICIENT` | Operation outside granted scopes              | Do not retry; request broader scope |
 
 ### Transport and state
 
-| Code                           | Meaning                                 | Retry / action                                |
-| ------------------------------ | --------------------------------------- | --------------------------------------------- |
-| `EDITOR_OFFLINE`               | Browser WebSocket absent                | Wait for `editor.online`; do not blind-retry  |
-| `EDITOR_DISCONNECTED`          | Browser left mid-operation              | Resolve via cached `requestId`; do not replay |
-| `REQUEST_TOO_LARGE`            | Body exceeds relay ceiling              | Do not retry as-is; shrink payload            |
-| `MESSAGE_TOO_LARGE`            | Forwarded envelope exceeds limits       | Do not retry as-is; shrink payload            |
-| `RATE_LIMITED`                 | Too many requests                       | Back off; respect `Retry-After` if present    |
-| `UNSUPPORTED_PROTOCOL_VERSION` | `protocolVersion` unsupported           | Terminal; upgrade client                      |
-| `UNAUTHORIZED_ORIGIN`          | CORS/origin policy rejected the request | Terminal; use an allowed origin               |
+| Code                           | Meaning                                  | Retry / action                                |
+| ------------------------------ | ---------------------------------------- | --------------------------------------------- |
+| `EDITOR_OFFLINE`               | Browser WebSocket absent                 | Wait for `editor.online`; do not blind-retry  |
+| `EDITOR_DISCONNECTED`          | Browser left mid-operation               | Resolve via cached `requestId`; do not replay |
+| `REQUEST_TOO_LARGE`            | Body exceeds relay ceiling               | Do not retry as-is; shrink payload            |
+| `MESSAGE_TOO_LARGE`            | Forwarded envelope exceeds limits        | Do not retry as-is; shrink payload            |
+| `RATE_LIMITED`                 | Too many requests                        | Back off; respect `Retry-After` if present    |
+| `REQUEST_RESULT_UNAVAILABLE`   | Request ran; cached response was evicted | Do not replay; inspect a fresh Snapshot       |
+| `UNSUPPORTED_PROTOCOL_VERSION` | `protocolVersion` unsupported            | Terminal; upgrade client                      |
+| `UNAUTHORIZED_ORIGIN`          | CORS/origin policy rejected the request  | Terminal; use an allowed origin               |
 
 ### Domain (carried from `agent-api.md`)
 
@@ -271,8 +277,8 @@ advances the revision again.
   lifetime.
 - Project replacement revokes the session; no token crosses Projects.
 - Secrets never appear in analytics, URLs, logs, recovery, Snapshot, or render.
-- The domain payload schema is the strict Circuit API; the relay never interprets
-  or rewrites typed edits.
+- The domain payload schema is the strict Circuit API; the relay validates
+  authorization categories but never applies or rewrites typed edits.
 - All session responses use `Cache-Control: no-store`.
 
 ## Threat model

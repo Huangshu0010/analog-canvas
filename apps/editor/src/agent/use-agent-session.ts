@@ -1,35 +1,71 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  AgentSessionMachine,
+  AGENT_API_VERSION,
+  AGENT_API_V1_VERSION,
+  AGENT_SESSION_PROTOCOL_VERSION,
+  AgentCircuitRequestSchema,
+  AgentSessionEventSchema,
+  AgentSessionMessageSchema,
+  createAgentCircuitService,
+  type AgentOperationHost,
+  type AgentPermissions,
   type AgentSessionScope,
-  type AgentSessionStatus,
 } from "@icm/agent-adapter";
+import { sha256Hex } from "@icm/derived";
+import type { CircuitProject } from "@icm/model";
 
 import type {
   AgentAuditEntry,
   AgentConnectionStatus,
 } from "./connect-agent-panel";
 
-/**
- * React binding for the Agent session (WP-WA5). Owns an
- * {@link AgentSessionMachine} and exposes the panel state plus grant/pause/
- * resume/revoke controls. All authorization/expiry/idempotency decisions live in
- * the state machine; this hook only mirrors its status into React and records a
- * bounded audit. The claim code is held only while the session is live and is
- * cleared on revoke/close; it is never sent to analytics or recovery.
- *
- * The network relay transport (WP-WA4 DO) is layered on top of this state; in the
- * no-network dev path the host is the in-browser `BrowserAgentHost` (WP-WA3).
- */
-
-function machineStatusToConnection(
-  status: AgentSessionStatus | "expired",
-): AgentConnectionStatus {
-  if (status === "expired") return "expired";
-  if (status === "active") return "ready";
-  return status;
+interface CreatedSessionResponse {
+  ok: true;
+  session: {
+    sessionId: string;
+    editorSecret: string;
+    claimCode: string;
+    claimExpiresAt: number;
+    expiresAt: number;
+  };
 }
+
+function isCreatedSessionResponse(
+  value: unknown,
+): value is CreatedSessionResponse {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as { ok?: unknown; session?: unknown };
+  if (
+    candidate.ok !== true ||
+    typeof candidate.session !== "object" ||
+    candidate.session === null
+  ) {
+    return false;
+  }
+  const session = candidate.session as Record<string, unknown>;
+  return (
+    typeof session.sessionId === "string" &&
+    typeof session.editorSecret === "string" &&
+    typeof session.claimCode === "string" &&
+    typeof session.claimExpiresAt === "number" &&
+    typeof session.expiresAt === "number"
+  );
+}
+
+type LiveSession = CreatedSessionResponse["session"] & {
+  socket: WebSocket | null;
+  claimed: boolean;
+  requestCache: Map<
+    string,
+    { payloadHash: string; response: unknown; byteLength: number }
+  >;
+  requestCacheBytes: number;
+  requestHashes: Map<string, string>;
+};
+
+const BROWSER_CACHE_MAX_ENTRIES = 32;
+const BROWSER_CACHE_MAX_BYTES = 16_000_000;
 
 export interface AgentSessionViewModel {
   status: AgentConnectionStatus;
@@ -37,30 +73,72 @@ export interface AgentSessionViewModel {
   scopes: readonly AgentSessionScope[];
   expiresAt: number | null;
   audit: readonly AgentAuditEntry[];
+  error: string | null;
+}
+
+export interface UseAgentSessionOptions {
+  project: CircuitProject;
+  projectSessionId: string;
+  host: AgentOperationHost;
 }
 
 export interface UseAgentSessionResult extends AgentSessionViewModel {
-  grant: (scopes: readonly AgentSessionScope[]) => void;
-  markClaimed: () => void;
-  pause: () => void;
-  resume: () => void;
-  revoke: () => void;
-  /** Advance the visible status from the machine (e.g. on a heartbeat tick). */
-  refresh: () => void;
+  grant: (scopes: readonly AgentSessionScope[]) => Promise<void>;
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
+  revoke: () => Promise<void>;
 }
 
-export function useAgentSession(): UseAgentSessionResult {
-  const machineRef = useRef<AgentSessionMachine | null>(null);
+function permissionsFromScopes(
+  scopes: readonly AgentSessionScope[],
+): AgentPermissions {
+  return {
+    query: scopes.includes("circuit.snapshot"),
+    snapshot: scopes.includes("circuit.snapshot"),
+    render: scopes.includes("circuit.render"),
+    sourceSpans: scopes.includes("circuit.source-spans"),
+    edit: {
+      geometry: scopes.includes("circuit.edit.geometry"),
+      connectivity: scopes.includes("circuit.edit.connectivity"),
+      presentation: scopes.includes("circuit.edit.presentation"),
+    },
+  };
+}
+
+function socketUrl(sessionId: string): string {
+  const url = new URL(
+    `/api/agent/sessions/${sessionId}/editor`,
+    window.location.href,
+  );
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString();
+}
+
+export function useAgentSession(
+  options: UseAgentSessionOptions,
+): UseAgentSessionResult {
+  const liveRef = useRef<LiveSession | null>(null);
+  const projectSessionRef = useRef(options.projectSessionId);
+  const revisionRef = useRef(
+    new Map(
+      options.project.documents.map((document) => [
+        document.id,
+        document.revision,
+      ]),
+    ),
+  );
+  const agentRevisionRef = useRef(new Map<string, number>());
   const [view, setView] = useState<AgentSessionViewModel>({
     status: "idle",
     claimCode: null,
     scopes: [],
     expiresAt: null,
     audit: [],
+    error: null,
   });
 
-  const record = useCallback(
-    (next: Partial<AgentSessionViewModel>, entry: AgentAuditEntry | null) => {
+  const update = useCallback(
+    (next: Partial<AgentSessionViewModel>, entry?: AgentAuditEntry) => {
       setView((previous) => ({
         ...previous,
         ...next,
@@ -70,86 +148,416 @@ export function useAgentSession(): UseAgentSessionResult {
     [],
   );
 
-  const snapshot = useCallback(
-    (overrides: Partial<AgentSessionViewModel> = {}): AgentSessionViewModel => {
-      const machine = machineRef.current;
-      if (!machine) {
-        return { ...view, ...overrides };
-      }
-      return {
-        ...view,
-        status: machineStatusToConnection(machine.statusAt(Date.now())),
-        ...overrides,
-      };
-    },
-    [view],
-  );
-
-  const grant = useCallback(
-    (scopes: readonly AgentSessionScope[]) => {
-      const now = Date.now();
-      const created = AgentSessionMachine.create({
-        projectSessionId: crypto.randomUUID(),
-        projectId: crypto.randomUUID(),
-        documentIds: [],
-        scopes,
-        now,
-        random: () => crypto.randomUUID(),
-      });
-      machineRef.current = created.machine;
-      record(
+  const control = useCallback(
+    async (action: "pause" | "resume" | "revoke" | "replace-project") => {
+      const live = liveRef.current;
+      if (!live) return;
+      const response = await fetch(
+        `/api/agent/sessions/${live.sessionId}/control`,
         {
-          status: "ready",
-          claimCode: created.session.claimCode,
-          scopes,
-          expiresAt: created.session.expiresAt,
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-editor-secret": live.editorSecret,
+          },
+          body: JSON.stringify({ action }),
         },
-        { at: now, kind: "granted" },
       );
+      if (!response.ok)
+        throw new Error(`Session control failed (${response.status})`);
     },
-    [record],
+    [],
   );
 
-  const markClaimed = useCallback(() => {
-    record({}, { at: Date.now(), kind: "claimed" });
-  }, [record]);
-
-  const pause = useCallback(() => {
-    machineRef.current?.pause();
-    record({ status: "paused" }, { at: Date.now(), kind: "paused" });
-  }, [record]);
-
-  const resume = useCallback(() => {
-    machineRef.current?.resume();
-    record({ status: "ready" }, { at: Date.now(), kind: "resumed" });
-  }, [record]);
-
-  const revoke = useCallback(() => {
-    machineRef.current?.revoke();
-    record(
-      { status: "revoked", claimCode: null },
+  const revoke = useCallback(async () => {
+    const live = liveRef.current;
+    if (!live) {
+      update({ status: "idle", claimCode: null });
+      return;
+    }
+    try {
+      await control("revoke");
+    } catch {
+      // Local revocation remains terminal even when the relay is unreachable.
+    }
+    live.socket?.close(1000, "revoked");
+    liveRef.current = null;
+    update(
+      { status: "revoked", claimCode: null, error: null },
       { at: Date.now(), kind: "revoked" },
     );
-  }, [record]);
+  }, [control, update]);
 
-  const refresh = useCallback(() => {
-    setView((previous) => {
-      const machine = machineRef.current;
-      if (!machine) return previous;
-      return {
-        ...previous,
-        status: machineStatusToConnection(machine.statusAt(Date.now())),
-      };
+  const grant = useCallback(
+    async (scopes: readonly AgentSessionScope[]) => {
+      if (liveRef.current) await revoke();
+      update({ status: "creating", error: null, claimCode: null, scopes });
+      try {
+        const response = await fetch("/api/agent/sessions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectSessionId: options.projectSessionId,
+            projectId: options.project.id,
+            documentIds: options.project.documents.map(
+              (document) => document.id,
+            ),
+            scopes,
+          }),
+        });
+        if (!response.ok)
+          throw new Error(`Session creation failed (${response.status})`);
+        const payload: unknown = await response.json();
+        if (!isCreatedSessionResponse(payload)) {
+          throw new Error("Session creation returned an invalid response");
+        }
+        const created = payload;
+        const live: LiveSession = {
+          ...created.session,
+          socket: null,
+          claimed: false,
+          requestCache: new Map(),
+          requestCacheBytes: 0,
+          requestHashes: new Map(),
+        };
+        liveRef.current = live;
+
+        const service = createAgentCircuitService({
+          agentId: `web-agent:${live.sessionId}`,
+          host: options.host,
+          permissions: permissionsFromScopes(scopes),
+        });
+        const socket = new WebSocket(socketUrl(live.sessionId), [
+          "icm-agent-session",
+          live.editorSecret,
+        ]);
+        live.socket = socket;
+        socket.addEventListener("open", () => {
+          update(
+            {
+              status: "waiting-for-agent",
+              claimCode: live.claimCode,
+              scopes,
+              expiresAt: live.expiresAt,
+              error: null,
+            },
+            { at: Date.now(), kind: "granted" },
+          );
+        });
+        socket.addEventListener("message", (event) => {
+          let raw: unknown;
+          try {
+            raw = JSON.parse(String(event.data));
+          } catch {
+            return;
+          }
+          const parsed = AgentSessionMessageSchema.safeParse(raw);
+          if (!parsed.success || parsed.data.sessionId !== live.sessionId)
+            return;
+          if (parsed.data.kind === "event") {
+            const sessionEvent = AgentSessionEventSchema.safeParse(
+              parsed.data.payload,
+            );
+            if (
+              sessionEvent.success &&
+              sessionEvent.data.type === "session.ready"
+            ) {
+              live.claimed = true;
+              update(
+                { status: "connected", claimCode: null },
+                { at: Date.now(), kind: "claimed" },
+              );
+            } else if (
+              sessionEvent.success &&
+              sessionEvent.data.type === "session.revoked"
+            ) {
+              socket.close(1000, "session revoked");
+              if (liveRef.current === live) liveRef.current = null;
+              update(
+                { status: "revoked", claimCode: null },
+                { at: Date.now(), kind: "revoked" },
+              );
+            } else if (
+              sessionEvent.success &&
+              sessionEvent.data.type === "session.paused"
+            ) {
+              update({ status: "paused" });
+            }
+            return;
+          }
+          if (parsed.data.kind !== "circuit-request") return;
+          const circuitRequest = AgentCircuitRequestSchema.safeParse(
+            parsed.data.payload,
+          );
+          const payloadKey = JSON.stringify(parsed.data.payload);
+          const payloadHash = sha256Hex(payloadKey);
+          const cached = live.requestCache.get(parsed.data.requestId);
+          const sendResponse = (payload: unknown) => {
+            socket.send(
+              JSON.stringify({
+                protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+                sessionId: live.sessionId,
+                messageId: crypto.randomUUID(),
+                requestId: parsed.data.requestId,
+                sentAt: new Date().toISOString(),
+                kind: "circuit-response",
+                payload,
+              }),
+            );
+          };
+          const sendRequestError = (
+            code: "REQUEST_ID_REUSED" | "REQUEST_RESULT_UNAVAILABLE",
+            message: string,
+          ) => {
+            const candidate = parsed.data.payload as {
+              apiVersion?: unknown;
+              operation?: unknown;
+            };
+            sendResponse({
+              apiVersion:
+                candidate.apiVersion === AGENT_API_V1_VERSION
+                  ? AGENT_API_V1_VERSION
+                  : AGENT_API_VERSION,
+              requestId: parsed.data.requestId,
+              operation:
+                typeof candidate.operation === "string" &&
+                ["query", "snapshot", "transact", "render"].includes(
+                  candidate.operation,
+                )
+                  ? candidate.operation
+                  : "error",
+              ok: false,
+              error: { code, message },
+              diagnostics: [],
+            });
+          };
+          if (cached) {
+            if (cached.payloadHash === payloadHash) {
+              sendResponse(cached.response);
+            } else {
+              sendRequestError(
+                "REQUEST_ID_REUSED",
+                "requestId was reused with a different payload",
+              );
+            }
+            return;
+          }
+          const knownHash = live.requestHashes.get(parsed.data.requestId);
+          if (knownHash) {
+            sendRequestError(
+              knownHash === payloadHash
+                ? "REQUEST_RESULT_UNAVAILABLE"
+                : "REQUEST_ID_REUSED",
+              knownHash === payloadHash
+                ? "The request was already executed but its cached result was evicted"
+                : "requestId was reused with a different payload",
+            );
+            return;
+          }
+          live.requestHashes.set(parsed.data.requestId, payloadHash);
+          const operation = circuitRequest.success
+            ? circuitRequest.data.operation
+            : "request";
+          update(
+            { status: "working" },
+            { at: Date.now(), kind: "operation", detail: operation },
+          );
+          const result = service.handle(parsed.data.payload);
+          const responseBytes = new TextEncoder().encode(
+            JSON.stringify(result),
+          ).byteLength;
+          if (responseBytes <= BROWSER_CACHE_MAX_BYTES) {
+            live.requestCache.set(parsed.data.requestId, {
+              payloadHash,
+              response: result,
+              byteLength: responseBytes,
+            });
+            live.requestCacheBytes += responseBytes;
+          }
+          while (
+            live.requestCache.size > BROWSER_CACHE_MAX_ENTRIES ||
+            live.requestCacheBytes > BROWSER_CACHE_MAX_BYTES
+          ) {
+            const oldest = live.requestCache.keys().next().value;
+            if (oldest === undefined) break;
+            const entry = live.requestCache.get(oldest);
+            live.requestCache.delete(oldest);
+            live.requestCacheBytes -= entry?.byteLength ?? 0;
+          }
+          sendResponse(result);
+          if (
+            result.ok &&
+            result.operation === "transact" &&
+            result.applied &&
+            circuitRequest.success &&
+            circuitRequest.data.operation === "transact"
+          ) {
+            agentRevisionRef.current.set(
+              circuitRequest.data.documentId,
+              result.revision,
+            );
+            socket.send(
+              JSON.stringify({
+                protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+                sessionId: live.sessionId,
+                messageId: crypto.randomUUID(),
+                requestId: parsed.data.requestId,
+                sentAt: new Date().toISOString(),
+                kind: "event",
+                payload: {
+                  type: "document.revision-changed",
+                  sessionId: live.sessionId,
+                  documentId: circuitRequest.data.documentId,
+                  revision: result.revision,
+                  actorKind: "agent",
+                  requestId: parsed.data.requestId,
+                  changedObjectIds: [...result.diff.changedObjectIds],
+                },
+              }),
+            );
+          }
+          update({ status: "connected" });
+        });
+        socket.addEventListener("close", () => {
+          if (liveRef.current === live) update({ status: "offline" });
+        });
+        socket.addEventListener("error", () => {
+          if (liveRef.current === live) {
+            update({
+              status: "offline",
+              error: "Agent relay connection failed",
+            });
+          }
+        });
+      } catch (error) {
+        liveRef.current = null;
+        update({
+          status: "idle",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    [options.host, options.project, options.projectSessionId, revoke, update],
+  );
+
+  const pause = useCallback(async () => {
+    try {
+      await control("pause");
+      update(
+        { status: "paused", error: null },
+        { at: Date.now(), kind: "paused" },
+      );
+    } catch (error) {
+      update({
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [control, update]);
+
+  const resume = useCallback(async () => {
+    try {
+      await control("resume");
+      update(
+        {
+          status: liveRef.current?.claimed ? "connected" : "waiting-for-agent",
+          error: null,
+        },
+        { at: Date.now(), kind: "resumed" },
+      );
+    } catch (error) {
+      update({
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [control, update]);
+
+  useEffect(() => {
+    if (projectSessionRef.current !== options.projectSessionId) return;
+    const live = liveRef.current;
+    for (const document of options.project.documents) {
+      const previousRevision = revisionRef.current.get(document.id);
+      revisionRef.current.set(document.id, document.revision);
+      if (
+        previousRevision === undefined ||
+        previousRevision === document.revision ||
+        !live?.socket ||
+        live.socket.readyState !== WebSocket.OPEN
+      ) {
+        continue;
+      }
+      if (agentRevisionRef.current.get(document.id) === document.revision) {
+        agentRevisionRef.current.delete(document.id);
+        continue;
+      }
+      live.socket.send(
+        JSON.stringify({
+          protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+          sessionId: live.sessionId,
+          messageId: crypto.randomUUID(),
+          requestId: `human-revision-${document.id}-${document.revision}`,
+          sentAt: new Date().toISOString(),
+          kind: "event",
+          payload: {
+            type: "document.revision-changed",
+            sessionId: live.sessionId,
+            documentId: document.id,
+            revision: document.revision,
+            actorKind: "human",
+            changedObjectIds: [],
+          },
+        }),
+      );
+    }
+  }, [options.project, options.projectSessionId]);
+
+  useEffect(() => {
+    if (projectSessionRef.current === options.projectSessionId) return;
+    projectSessionRef.current = options.projectSessionId;
+    revisionRef.current = new Map(
+      options.project.documents.map((document) => [
+        document.id,
+        document.revision,
+      ]),
+    );
+    agentRevisionRef.current.clear();
+    const live = liveRef.current;
+    if (!live) return;
+    void control("replace-project").finally(() => {
+      live.socket?.close(1000, "project replaced");
+      liveRef.current = null;
+      update(
+        { status: "revoked", claimCode: null },
+        { at: Date.now(), kind: "replaced" },
+      );
     });
-  }, []);
+  }, [control, options.project, options.projectSessionId, update]);
 
-  return {
-    ...view,
-    grant,
-    markClaimed,
-    pause,
-    resume,
-    revoke,
-    refresh,
-  };
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const live = liveRef.current;
+      if (live && Date.now() >= live.expiresAt) {
+        live.socket?.close(1000, "expired");
+        liveRef.current = null;
+        update({ status: "expired", claimCode: null });
+      }
+    }, 1_000);
+    return () => window.clearInterval(timer);
+  }, [update]);
+
+  useEffect(
+    () => () => {
+      const live = liveRef.current;
+      if (live) {
+        void fetch(`/api/agent/sessions/${live.sessionId}`, {
+          method: "DELETE",
+          headers: { "x-editor-secret": live.editorSecret },
+          keepalive: true,
+        });
+        live.socket?.close(1000, "tab closed");
+      }
+    },
+    [],
+  );
+
+  return { ...view, grant, pause, resume, revoke };
 }

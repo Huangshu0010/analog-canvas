@@ -21,12 +21,20 @@
         "name": "ANALYTICS",
         "class_name": "AnalyticsDO",
       },
+      {
+        "name": "AGENT_SESSION",
+        "class_name": "AgentSessionDO",
+      },
     ],
   },
   "migrations": [
     {
       "tag": "v1",
       "new_sqlite_classes": ["AnalyticsDO"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["AgentSessionDO"],
     },
   ],
   "observability": {

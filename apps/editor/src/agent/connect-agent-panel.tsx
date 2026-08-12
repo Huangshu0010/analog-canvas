@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import type { AgentSessionScope } from "@icm/agent-adapter";
 
@@ -13,11 +13,26 @@ import type { AgentSessionScope } from "@icm/agent-adapter";
  */
 
 export type AgentConnectionStatus =
-  "idle" | "ready" | "paused" | "revoked" | "expired";
+  | "idle"
+  | "creating"
+  | "waiting-for-agent"
+  | "connected"
+  | "working"
+  | "paused"
+  | "offline"
+  | "revoked"
+  | "expired";
 
 export interface AgentAuditEntry {
   at: number;
-  kind: "granted" | "claimed" | "paused" | "resumed" | "revoked" | "replaced";
+  kind:
+    | "granted"
+    | "claimed"
+    | "operation"
+    | "paused"
+    | "resumed"
+    | "revoked"
+    | "replaced";
   detail?: string;
 }
 
@@ -64,6 +79,7 @@ export interface ConnectAgentPanelProps {
   scopes: readonly AgentSessionScope[];
   expiresAt: number | null;
   audit: readonly AgentAuditEntry[];
+  error: string | null;
   now: number;
   onGrant: (scopes: AgentSessionScope[]) => void;
   onPause: () => void;
@@ -74,8 +90,12 @@ export interface ConnectAgentPanelProps {
 
 const STATUS_LABEL: Record<AgentConnectionStatus, string> = {
   idle: "Not connected",
-  ready: "Connected",
+  creating: "Creating secure session…",
+  "waiting-for-agent": "Waiting for Agent to claim",
+  connected: "Agent connected",
+  working: "Agent working…",
   paused: "Paused",
+  offline: "Editor relay offline",
   revoked: "Revoked",
   expired: "Expired",
 };
@@ -89,8 +109,15 @@ function formatExpiry(expiresAt: number | null, now: number): string {
 }
 
 export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
+  const [clock, setClock] = useState(props.now);
+  useEffect(() => {
+    if (!props.open) return;
+    setClock(Date.now());
+    const timer = window.setInterval(() => setClock(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [props.open]);
   if (!props.open) return null;
-  const connected = props.status !== "idle";
+  const connected = props.status !== "idle" && props.status !== "creating";
   const terminal = props.status === "revoked" || props.status === "expired";
 
   return (
@@ -112,9 +139,15 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
         {STATUS_LABEL[props.status]}
         <span className="agent-panel-expiry">
           {" "}
-          (expires in {formatExpiry(props.expiresAt, props.now)})
+          (expires in {formatExpiry(props.expiresAt, clock)})
         </span>
       </p>
+
+      {props.error ? (
+        <p className="agent-panel-error" role="alert">
+          {props.error}
+        </p>
+      ) : null}
 
       {!connected ? (
         <div className="agent-panel-grant" data-testid="agent-grant">
@@ -141,8 +174,25 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
 
       {props.claimCode !== null && !terminal ? (
         <div className="agent-panel-claim" data-testid="agent-claim">
-          <p>Give this one-time code to the Agent. It expires in minutes.</p>
+          <p>
+            Give this one-time code and the editor address to the Agent. It
+            expires in minutes.
+          </p>
           <code data-testid="agent-claim-code">{props.claimCode}</code>
+          <button
+            type="button"
+            data-testid="agent-copy-instructions"
+            onClick={() => {
+              const origin = window.location.origin;
+              void navigator.clipboard
+                .writeText(
+                  `Connect to the Interactive Circuit Maker Agent API. POST ${JSON.stringify({ claimCode: props.claimCode })} to ${origin}/api/agent/claims, then use the returned bearer token and sessionId. OpenAPI: ${origin}/api/agent/openapi.json`,
+                )
+                .catch(() => undefined);
+            }}
+          >
+            Copy Agent connection instructions
+          </button>
           <p className="agent-panel-scopes">
             Scopes: {props.scopes.join(", ")}
           </p>
@@ -151,7 +201,9 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
 
       {connected ? (
         <div className="agent-panel-controls">
-          {props.status === "ready" ? (
+          {props.status === "connected" ||
+          props.status === "waiting-for-agent" ||
+          props.status === "working" ? (
             <button
               type="button"
               data-testid="agent-pause"

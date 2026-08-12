@@ -55,9 +55,11 @@ describe("AgentSessionMachine", () => {
 
   it("redeems a one-time claim for a scoped token and rejects reuse", () => {
     const { machine, session, now } = setup();
+    expect(machine.claimed).toBe(false);
     const first = machine.redeemClaim(session.claimCode, now());
     expect(first.ok).toBe(true);
     if (!first.ok) return;
+    expect(machine.claimed).toBe(true);
     expect(first.claim.scopes).toEqual(scopes);
 
     const auth = machine.authorize(first.claim.agentToken, now());
@@ -134,6 +136,13 @@ describe("AgentSessionMachine", () => {
     );
   });
 
+  it("binds requests to the authorized Project and Document set", () => {
+    const { machine } = setup();
+    expect(machine.assertDocument("project-1", "document-1").ok).toBe(true);
+    expect(machine.assertDocument("project-2", "document-1").ok).toBe(false);
+    expect(machine.assertDocument("project-1", "document-2").ok).toBe(false);
+  });
+
   it("serves the cached result for a repeated requestId and never re-runs", () => {
     const { machine, now, advance } = setup();
     const begin = machine.beginRequest("request-1", now());
@@ -151,6 +160,85 @@ describe("AgentSessionMachine", () => {
     // A new requestId proceeds normally.
     const next = machine.beginRequest("request-2", now());
     expect(next.kind).toBe("proceed");
+  });
+
+  it("blocks concurrent duplicates and requestId reuse with another payload", () => {
+    const { machine, now } = setup();
+    expect(machine.beginRequest("request-1", now(), "hash-a").kind).toBe(
+      "proceed",
+    );
+    const concurrent = machine.beginRequest("request-1", now(), "hash-a");
+    expect(concurrent).toEqual({
+      kind: "rejected",
+      code: "REQUEST_IN_PROGRESS",
+    });
+    const conflicting = machine.beginRequest("request-1", now(), "hash-b");
+    expect(conflicting).toEqual({
+      kind: "rejected",
+      code: "REQUEST_ID_REUSED",
+    });
+
+    machine.completeRequest("request-1", { ok: true }, now());
+    expect(machine.beginRequest("request-1", now(), "hash-a").kind).toBe(
+      "cached",
+    );
+    expect(machine.beginRequest("request-1", now(), "hash-b")).toEqual({
+      kind: "rejected",
+      code: "REQUEST_ID_REUSED",
+    });
+  });
+
+  it("bounds the in-memory terminal-result cache by count", () => {
+    const { machine, now } = setup({ resultCacheMaxEntries: 2 });
+    for (const requestId of ["one", "two", "three"]) {
+      machine.beginRequest(requestId, now());
+      machine.completeRequest(requestId, { requestId }, now());
+    }
+    expect(machine.beginRequest("one", now()).kind).toBe("proceed");
+    expect(machine.beginRequest("two", now()).kind).toBe("cached");
+    expect(machine.beginRequest("three", now()).kind).toBe("cached");
+  });
+
+  it("retains an unknown request ledger entry without retaining its result", () => {
+    const { machine, now } = setup();
+    machine.beginRequest("uncertain", now(), "payload-hash");
+    machine.failRequest("uncertain", false);
+    const restored = AgentSessionMachine.restore(
+      machine.serialize(),
+      () => "next-token",
+    );
+    expect(restored.beginRequest("uncertain", now(), "payload-hash").kind).toBe(
+      "proceed",
+    );
+    expect(restored.beginRequest("uncertain", now(), "different-hash")).toEqual(
+      { kind: "rejected", code: "REQUEST_ID_REUSED" },
+    );
+  });
+
+  it("serializes hashed verifiers without persisting circuit-bearing caches", () => {
+    const { machine, session, now } = setup();
+    const redeemed = machine.redeemClaim(session.claimCode, now());
+    if (!redeemed.ok) throw new Error("claim failed");
+    machine.beginRequest("pending", now(), "payload-hash");
+    machine.completeRequest(
+      "pending",
+      { snapshot: "circuit-response-marker" },
+      now(),
+    );
+
+    const state = machine.serialize();
+    expect(JSON.stringify(state)).not.toContain(session.editorSecret);
+    expect(JSON.stringify(state)).not.toContain(session.claimCode);
+    expect(JSON.stringify(state)).not.toContain(redeemed.claim.agentToken);
+    expect(JSON.stringify(state)).toContain("payload-hash");
+    expect(JSON.stringify(state)).not.toContain("circuit-response-marker");
+
+    const restored = AgentSessionMachine.restore(state, () => "next-token");
+    expect(restored.authorizeEditor(session.editorSecret)).toBe(true);
+    expect(restored.authorize(redeemed.claim.agentToken, now()).ok).toBe(true);
+    expect(restored.beginRequest("pending", now(), "payload-hash").kind).toBe(
+      "proceed",
+    );
   });
 
   it("rate-limits requests over the configured window", () => {
@@ -171,6 +259,13 @@ describe("AgentSessionMachine", () => {
     const tooLarge = machine.checkSize(129);
     expect(tooLarge.ok).toBe(false);
     if (!tooLarge.ok) expect(tooLarge.code).toBe("REQUEST_TOO_LARGE");
+  });
+
+  it("enforces the browser-message ceiling independently", () => {
+    const { machine } = setup({ maxMessageBytes: 256 });
+    expect(machine.checkMessageSize(256).ok).toBe(true);
+    const tooLarge = machine.checkMessageSize(257);
+    expect(tooLarge).toEqual({ ok: false, code: "MESSAGE_TOO_LARGE" });
   });
 
   it("revokes the session on Project replacement and invalidates the token", () => {

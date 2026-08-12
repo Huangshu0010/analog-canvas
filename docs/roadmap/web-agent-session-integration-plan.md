@@ -1,6 +1,6 @@
 # Browser-Authorized Agent Sessions
 
-Status: `proposed`
+Status: `implemented; review deployment and required remote checks pending`
 
 ## Objective
 
@@ -31,32 +31,33 @@ The editor shows that an Agent is connected, the permissions and expiry, the
 last operation, and a one-click pause/revoke control. Closing the browser tab or
 revoking access prevents further operations.
 
-## Current repository evidence
+## Delivered repository evidence
 
-The existing code solves the domain half of this feature but not the web-host
-half:
+The domain and web-host halves now form one browser-authoritative vertical
+slice:
 
 - `packages/agent-adapter/src/schema.ts` defines the bounded v2
   `capabilities/snapshot/transact/render` protocol.
 - `packages/agent-adapter/src/snapshot.ts` builds the deterministic semantic
   read model needed for non-visual reasoning.
-- `packages/agent-adapter/src/service.ts` enforces permissions and limits, but
-  calls `executeTransaction()` and then an independent
-  `AgentDocumentStore.commitDocument()`; it is not attached to the editor's
-  live history/controller lifecycle.
-- `packages/agent-adapter/src/http.ts` imports Node HTTP/crypto and deliberately
-  binds only to loopback. It remains useful for desktop and scripted hosts but
-  cannot serve a public web editor.
-- `apps/editor/src/document/document-controller.ts` owns live Project state,
-  per-Document `DocumentHistory`, resolver refresh, and React synchronization,
-  but accepts only GUI-originated edit arrays and constructs a human actor.
-- `worker/index.ts` serves static assets and analytics. Other `/api/*` requests
-  return 404; there is no Agent session, authorization, or live browser relay.
-
-Therefore the Project/Document schemas, shared Edit Engine, Snapshot, typed
-transactions, capabilities, diagnostics, and formal render are retained. The
-store/commit host boundary, browser integration, authorization, transport, and
-live event lifecycle require implementation.
+- `packages/agent-adapter/src/service.ts` supports a browser host boundary that
+  dispatches through the editor controller while retaining the optional Node
+  loopback adapter as a separate subpath.
+- `apps/editor/src/document/document-controller.ts` provides one typed
+  transaction dispatch for human and Agent actors, one undo history, and an
+  immutable Project-session identity across replacement.
+- `apps/editor/src/agent` binds the real Project/Document set to a scoped
+  session, runs Circuit requests through `BrowserAgentHost`, deduplicates
+  requests in browser memory, and exposes lifecycle/audit controls.
+- `worker/agent-session.ts` and `worker/index.ts` implement the public session,
+  claim, circuit, SSE, control, WebSocket, and OpenAPI resources through one
+  Durable Object per session. Only hashed credentials and bounded lifecycle
+  metadata are persisted; Snapshot/render/response bodies are not.
+- `wrangler.jsonc` registers the `AgentSessionDO` binding and migration.
+- Focused state/Worker/controller/host tests plus the Playwright
+  grant-claim-Snapshot-edit-retry-undo-pause-revoke flow cover the complete
+  local product path. A production Worker dry-run bundles both Durable Object
+  classes successfully.
 
 ## Frozen architectural direction
 
@@ -163,7 +164,7 @@ The exact paths are frozen in WP-WA1, but the minimum resource model is:
 
 ```text
 POST   /api/agent/sessions                 browser creates a session
-POST   /api/agent/claims/{claimCode}       Agent exchanges one-time claim
+POST   /api/agent/claims                   Agent exchanges JSON-body claim
 POST   /api/agent/sessions/{id}/circuit    Agent sends one Circuit API request
 GET    /api/agent/sessions/{id}/events     Agent receives bounded SSE events
 DELETE /api/agent/sessions/{id}            Agent disconnects its capability
@@ -364,11 +365,10 @@ operations against the live controller in one process; see
 
 ### WP-WA4 — Cloudflare session relay
 
-Status: `relay core complete` — pure session state machine + relay orchestration
-are tested with fake time/transport in `worker/agent-session-state.ts` and
-`worker/agent-session.ts`. The Cloudflare Durable Object + WebSocket browser
-channel + Worker route wiring + wrangler binding require the CF runtime and are
-verified in WP-WA7 deployment.
+Status: `complete` — the session state machine, public Worker routing,
+`AgentSessionDO`, browser WebSocket forwarding, SSE, persistence/expiry cleanup,
+scope/Document isolation, and Wrangler binding are implemented and covered by
+focused tests plus a production dry-run bundle.
 
 - Goal: Implement the Worker routes and one Durable Object per session for
   claim exchange, authenticated browser channel, Agent requests, SSE events,
@@ -386,10 +386,10 @@ verified in WP-WA7 deployment.
 
 ### WP-WA5 — Connect Agent UI and browser transport
 
-Status: `panel complete (no-network)` — Connect Agent panel + hook + state
-machine (moved to `@icm/agent-adapter`) + `App.tsx` command mount, with panel and
-parity tests. Playwright grant-to-revoke flows and the network WebSocket
-transport require a deployed review environment (WP-WA7).
+Status: `complete` — Connect Agent uses the real Worker session and browser
+WebSocket, binds the live Project/Documents, shows lifecycle/audit state, copies
+self-describing connection instructions, and passes the Playwright
+grant-to-edit-to-undo/pause/revoke flow.
 
 - Goal: Add Connect Agent, permission presets/details, claim link/code,
   connected/working/paused/offline/expiring states, recent-operation audit, and
@@ -422,11 +422,12 @@ regenerated.
 
 ### WP-WA7 — Delivery hardening and measured rollout
 
-Status: `local gate green; remote/deployment deferred` — frozen install,
-`format:check`, `references:check`, `typecheck`, full unit suite (108 files /
-656 tests), and `agent-api:artifacts:check` pass on the branch. GitHub Actions,
-Playwright e2e, the Cloudflare Durable Object + WebSocket deployment, and
-performance/no-retention validation remain the user's mainline gate.
+Status: `implementation validation complete; review deployment pending` —
+frozen install, static checks, 108-file/669-test unit suite, production build,
+500-instance performance gate, release smoke, generated API check, Worker
+dry-run, and the new product E2E pass. The pre-existing full Playwright suite
+shows load-sensitive local parallel timeouts that pass in focused runs; required
+GitHub checks and a Cloudflare review deployment remain the delivery authority.
 
 - Goal: Validate security, performance, reliability, and production delivery
   before enabling the feature by default.

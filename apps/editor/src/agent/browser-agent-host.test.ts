@@ -166,8 +166,8 @@ describe("BrowserAgentHost + Agent Circuit service", () => {
     expect(controller.document.instances).not.toContainEqual(instance("R2"));
   });
 
-  it("reflects a replaced Project so the old document is no longer reachable", () => {
-    const { controller, host } = setup();
+  it("keeps the old host fenced off after whole-Project replacement", () => {
+    const { controller, host, service } = setup();
     const oldDocumentId = controller.activeDocumentId;
 
     const replacement = createEmptyProject(
@@ -177,9 +177,21 @@ describe("BrowserAgentHost + Agent Circuit service", () => {
     );
     controller.replaceProject(replacement);
 
-    expect(host.getProject().id).toBe("replacement");
+    expect(() => host.getProject()).toThrow(/replaced/u);
     expect(host.getDocument(oldDocumentId)).toBeNull();
-    expect(host.getDocument(replacement.topDocumentId)).not.toBeNull();
+    expect(host.getDocument(replacement.topDocumentId)).toBeNull();
+    const oldServiceRead = service.handle({
+      apiVersion: "2.0",
+      requestId: "replacement-race",
+      operation: "snapshot",
+      documentId: replacement.topDocumentId,
+    });
+    expect(oldServiceRead.ok).toBe(false);
+
+    const replacementHost = new BrowserAgentHost(controller);
+    expect(
+      replacementHost.getDocument(replacement.topDocumentId),
+    ).not.toBeNull();
   });
 
   it("returns DOCUMENT_NOT_FOUND for an unknown document over the host", () => {
