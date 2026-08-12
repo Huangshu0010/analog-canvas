@@ -5070,3 +5070,14 @@ contracts (WP-R1)`.
   Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(erc): aggregate stale hierarchy interfaces`.
+
+## 2026-08-12 - Connectivity Recovery C2e: editor indexed flightlines
+
+- Target: migrate editor flightline count and overlay to the active document's
+  `ProjectConnectivityIndex` record rather than direct derivation.
+- Changed areas: editor flightline read consumer; target plan and log.
+- Validation: 21 focused App/index tests; three focused Playwright flightline
+  flows; workspace `pnpm typecheck`; static no-direct-derivation audit;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(editor): consume indexed flightlines`.

@@ -19,7 +19,6 @@ import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
   deriveCrossings,
-  deriveFlightlines,
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
   endpointKey,
@@ -715,8 +714,13 @@ export function App({ project: initialProject }: AppProps) {
     ? endpointNetId(document, selectedEndpoint.endpoint)
     : null;
   const flightlines = useMemo(
-    () => deriveFlightlines(document, resolver),
-    [document, resolver],
+    () =>
+      document.nets.flatMap(
+        (net) =>
+          projectConnectivityIndex.documents.get(document.id)?.nets.get(net.id)
+            ?.flightlines ?? [],
+      ),
+    [document.id, document.nets, projectConnectivityIndex],
   );
   const displayedFlightlines = useMemo(() => {
     if (!document.sourceBinding) return flightlines;
