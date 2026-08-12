@@ -4947,3 +4947,14 @@ contracts (WP-R1)`.
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): edit NoConnect declarations from endpoints`.
+
+## 2026-08-12 - Connectivity Recovery C8b: role-sensitive ERC policy
+
+- Target: diagnose floating gate and hidden/unconnected bulk conditions from
+  reviewed pin roles without changing topology.
+- Changed areas: derived ERC policy and role/NoConnect/hidden-variant tests;
+  target plan and log.
+- Validation: workspace `pnpm typecheck`; 11 focused ERC tests; targeted
+  Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(erc): diagnose floating gates and hidden bulk risks`.

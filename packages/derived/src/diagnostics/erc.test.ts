@@ -35,6 +35,45 @@ const dual = {
 
 const resolver = new InMemorySymbolResolver([dual]);
 
+const mos = {
+  ...dual,
+  id: "mos",
+  name: "MOS",
+  pins: [
+    {
+      name: "G",
+      role: "gate",
+      at: { x: -20, y: 0 },
+      direction: "west" as const,
+      presentation: { visibility: "visible" as const },
+    },
+    {
+      name: "D",
+      role: "drain",
+      at: { x: 0, y: -20 },
+      direction: "north" as const,
+      presentation: { visibility: "visible" as const },
+    },
+    {
+      name: "S",
+      role: "source",
+      at: { x: 0, y: 20 },
+      direction: "south" as const,
+      presentation: { visibility: "visible" as const },
+    },
+    {
+      name: "B",
+      role: "bulk",
+      at: { x: 20, y: 0 },
+      direction: "east" as const,
+      presentation: { visibility: "visible" as const },
+    },
+  ],
+  variants: [{ id: "three-terminal", hiddenPinNames: ["B"] }],
+};
+
+const roleResolver = new InMemorySymbolResolver([mos]);
+
 function emptyProject(): CircuitProject {
   return createEmptyProject("erc", "ERC", "doc");
 }
@@ -62,6 +101,34 @@ function run(project: CircuitProject) {
 
 function codes(project: CircuitProject): string[] {
   return run(project).map((diagnostic) => diagnostic.code);
+}
+
+function roleRun(project: CircuitProject) {
+  return runErcChecks(
+    project,
+    buildProjectConnectivityIndex(project, roleResolver),
+    roleResolver,
+  );
+}
+
+function roleInstance(variant?: string) {
+  return {
+    ...instance("M1"),
+    symbolId: "mos",
+    ...(variant ? { symbolVariantId: variant } : {}),
+  };
+}
+
+function connectDrainAndSource(project: CircuitProject): void {
+  project.documents[0]!.nets.push({
+    id: "net-channel",
+    scope: "local",
+    terminals: [
+      { instanceId: "M1", pinName: "D" },
+      { instanceId: "M1", pinName: "S" },
+    ],
+    ports: [],
+  });
 }
 
 describe("ERC engine", () => {
@@ -147,6 +214,106 @@ describe("ERC engine", () => {
         implicitResolver,
       ),
     ).toEqual([]);
+  });
+
+  it("distinguishes an electrically floating gate from generic pins", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [roleInstance()];
+    connectDrainAndSource(project);
+    document.nets.push(
+      {
+        id: "net-gate-only",
+        scope: "local",
+        terminals: [{ instanceId: "M1", pinName: "G" }],
+        ports: [],
+      },
+      {
+        id: "net-vss",
+        name: "VSS",
+        scope: "local",
+        terminals: [{ instanceId: "M1", pinName: "B" }],
+        ports: [],
+      },
+    );
+
+    const diagnostics = roleRun(project);
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "ERC_FLOATING_GATE",
+        primary: expect.objectContaining({ objectId: "M1:G" }),
+        related: [expect.objectContaining({ objectId: "net-gate-only" })],
+      }),
+    );
+    expect(diagnostics.map((diagnostic) => diagnostic.code)).not.toContain(
+      "ERC_UNCONNECTED_PIN",
+    );
+  });
+
+  it("reports unconnected and hidden non-safe bulk without hiding electrical intent", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [roleInstance("three-terminal")];
+    connectDrainAndSource(project);
+    document.ports = [
+      { id: "port-g", name: "VIN", direction: "input", position: null },
+    ];
+    document.nets = [
+      ...document.nets,
+      {
+        id: "net-gate",
+        scope: "local",
+        terminals: [{ instanceId: "M1", pinName: "G" }],
+        ports: ["port-g"],
+      },
+    ];
+
+    expect(roleRun(project).map((diagnostic) => diagnostic.code)).toEqual([
+      "ERC_FLOATING_BULK",
+    ]);
+
+    document.nets.push({
+      id: "net-body-bias",
+      name: "Vbody",
+      scope: "local",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+      ports: [],
+    });
+    document.revision += 1;
+    const hiddenBulk = roleRun(project).find(
+      (diagnostic) => diagnostic.code === "ERC_FLOATING_BULK",
+    );
+    expect(hiddenBulk).toMatchObject({
+      primary: { objectId: "M1:B" },
+      parameters: { hidden: true, netId: "net-body-bias" },
+    });
+
+    document.nets[2] = {
+      ...document.nets[2]!,
+      id: "net-vss",
+      name: "VSS",
+    };
+    document.revision += 1;
+    expect(roleRun(project)).toEqual([]);
+  });
+
+  it("suppresses role-specific ERC warnings with explicit NoConnect", () => {
+    const project = emptyProject();
+    const document = project.documents[0]!;
+    document.instances = [roleInstance()];
+    connectDrainAndSource(project);
+    document.noConnects = [
+      {
+        id: "nc-gate",
+        endpoint: { kind: "terminal", instanceId: "M1", pinName: "G" },
+      },
+      {
+        id: "nc-bulk",
+        endpoint: { kind: "terminal", instanceId: "M1", pinName: "B" },
+      },
+    ];
+
+    expect(roleRun(project)).toEqual([]);
   });
 
   it("flags two instances sharing a normalized spice.name", () => {

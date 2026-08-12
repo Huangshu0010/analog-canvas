@@ -43,6 +43,51 @@ function terminalLocator(
   };
 }
 
+const SAFE_BULK_NET_NAMES = new Set([
+  "0",
+  "gnd",
+  "vss",
+  "vssa",
+  "vssd",
+  "vee",
+  "vdd",
+  "vdda",
+  "vddd",
+  "vcc",
+]);
+
+function normalizedNetName(name: string): string {
+  return name.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
+}
+
+function endpointHasOnlyInternalMembership(
+  document: CircuitProject["documents"][number],
+  netId: string,
+  instanceId: string,
+  pinName: string,
+): boolean {
+  const net = document.nets.find((candidate) => candidate.id === netId);
+  return Boolean(
+    net &&
+    net.ports.length === 0 &&
+    net.terminals.length === 1 &&
+    net.terminals[0]?.instanceId === instanceId &&
+    net.terminals[0]?.pinName === pinName,
+  );
+}
+
+function isSafeBulkNet(
+  document: CircuitProject["documents"][number],
+  netId: string,
+): boolean {
+  const net = document.nets.find((candidate) => candidate.id === netId);
+  if (!net) return false;
+  return (
+    net.scope === "global" ||
+    SAFE_BULK_NET_NAMES.has(normalizedNetName(net.name ?? net.id))
+  );
+}
+
 export function runErcChecks(
   project: CircuitProject,
   index: ProjectConnectivityIndex,
@@ -239,8 +284,9 @@ export function runErcChecks(
       });
     }
 
-    // ERC_UNCONNECTED_PIN (v1-conservative required-pin policy: every visible
-    // pin must have a Net or a NoConnect; passive-pin tolerance is deferred).
+    // Role-sensitive checks run before generic visibility policy: a gate or
+    // bulk has a distinct electrical explanation and must not produce a second
+    // generic ERC_UNCONNECTED_PIN alongside it.
     for (const instance of document.instances) {
       const resolved = resolver.resolve(
         instance.symbolId,
@@ -249,16 +295,91 @@ export function runErcChecks(
       if (!resolved) continue;
       const hidden = new Set(resolved.variant?.hiddenPinNames ?? []);
       for (const pin of resolved.definition.pins) {
-        if (hidden.has(pin.name)) continue;
-        if (pin.presentation.visibility === "implicit") continue;
         const endpoint = {
           kind: "terminal" as const,
           instanceId: instance.id,
           pinName: pin.name,
         };
         const key = noConnectKey(endpoint);
-        if (endpointToNet.has(key)) continue;
-        if (noConnectEndpoints.has(key)) continue;
+        const netId = endpointToNet.get(key);
+        const explicitlyNoConnect = noConnectEndpoints.has(key);
+        const role = pin.role.toLowerCase();
+
+        if (role === "gate") {
+          if (
+            !explicitlyNoConnect &&
+            (!netId ||
+              endpointHasOnlyInternalMembership(
+                document,
+                netId,
+                instance.id,
+                pin.name,
+              ))
+          ) {
+            diagnostics.push({
+              id: `erc:floating-gate:${document.id}:${instance.id}:${pin.name}`,
+              domain: "erc",
+              code: "ERC_FLOATING_GATE",
+              severity: "warning",
+              confidence: "high",
+              gateEligible: false,
+              message: netId
+                ? `Gate ${instance.id}.${pin.name} is the only endpoint on net ${netId}`
+                : `Gate ${instance.id}.${pin.name} is not connected and has no NoConnect`,
+              primary: terminalLocator(document.id, instance.id, pin.name),
+              related: netId
+                ? [directObjectLocator(document.id, "net", netId)]
+                : [],
+              parameters: {
+                instanceId: instance.id,
+                pinName: pin.name,
+                ...(netId ? { netId } : {}),
+              },
+            });
+          }
+          continue;
+        }
+
+        if (role === "bulk") {
+          const isThreeTerminalHidden = hidden.has(pin.name);
+          const unsafeHiddenNet =
+            isThreeTerminalHidden && netId && !isSafeBulkNet(document, netId);
+          if (
+            !explicitlyNoConnect &&
+            (!netId || unsafeHiddenNet) &&
+            pin.presentation.visibility !== "implicit"
+          ) {
+            diagnostics.push({
+              id: `erc:floating-bulk:${document.id}:${instance.id}:${pin.name}`,
+              domain: "erc",
+              code: "ERC_FLOATING_BULK",
+              severity: "warning",
+              confidence: "high",
+              gateEligible: false,
+              message: !netId
+                ? `Bulk ${instance.id}.${pin.name} is not connected and has no NoConnect`
+                : `Hidden bulk ${instance.id}.${pin.name} is connected to non-safe net ${netId}`,
+              primary: terminalLocator(document.id, instance.id, pin.name),
+              related: netId
+                ? [directObjectLocator(document.id, "net", netId)]
+                : [],
+              parameters: {
+                instanceId: instance.id,
+                pinName: pin.name,
+                hidden: isThreeTerminalHidden,
+                ...(netId ? { netId } : {}),
+              },
+            });
+          }
+          continue;
+        }
+
+        // ERC_UNCONNECTED_PIN (v1-conservative required-pin policy: every
+        // visible non-role-specialized pin must have a Net or a NoConnect;
+        // passive-pin tolerance is deferred).
+        if (hidden.has(pin.name)) continue;
+        if (pin.presentation.visibility === "implicit") continue;
+        if (netId || explicitlyNoConnect) continue;
         diagnostics.push({
           id: `erc:unconnected-pin:${document.id}:${instance.id}:${pin.name}`,
           domain: "erc",
