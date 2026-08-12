@@ -63,9 +63,6 @@ the owned set without updating the plan first.
 
 ## Circuit Asset Rules
 
-- Treat `lib/circuit.vss` as binary. Never rewrite, normalize, or inspect it as
-  text. Validate modifications in Visio or a compatible application and state
-  what was visually checked.
 - Keep each circuit fixture in its own `netlists/<circuit-name>/` directory.
 - Preserve explicit `.subckt` interfaces and instance pin order. Interface
   changes are shared-contract changes and require checking every caller.

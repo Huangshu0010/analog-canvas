@@ -19,10 +19,15 @@ historical-retention requirement has been explicitly resolved.
 Start state from `git status --short --branch`:
 
 ```text
-## main...origin/main
+## codex/ci-delivery-gate...origin/codex/ci-delivery-gate
+?? packages/derived/src/endpoint.test.ts
+?? packages/derived/src/routes.test.ts
+?? plan/2026-08-12-wp-r0-behavior-baseline/
 ```
 
-The worktree is clean. This target owns the CI command surface, Actions
+The three untracked paths belong to a separate behavior-baseline target. They
+do not overlap this target's owned files or shared contracts, so this target
+will leave them untouched. This target owns the CI command surface, Actions
 workflow, CI-specific test/golden repairs, the workflow rules in `AGENTS.md`,
 and the VSS-retirement inventory and archival changes that are proven safe.
 
@@ -125,4 +130,11 @@ chore(archive): retire resolved VSS development artifacts
 
 ## Outcome
 
-Populate after the remote CI result and VSS retirement decision are known.
+The remote CI run for commit `1414ffb` passed every job on 2026-08-12 after
+the release contract installed Chromium for its production smoke check. The
+retirement audit found no active product, build, catalog, or CI dependency on
+the VSS source, import/review tools, generated Visio references, VSS IR, or
+their VSS-only golden files. ADR 0011 and the historical phase records retain
+provenance in Git history. The working-tree retirement set may therefore be
+removed in its own commit; active `README.md` and `AGENTS.md` will be updated
+to remove instructions that point at the removed archive.
