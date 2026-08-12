@@ -5192,3 +5192,15 @@ contracts (WP-R1)`.
   workspace `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `refactor(routing): plan committed wire manipulation in engine`.
+
+## 2026-08-12 - Connectivity Recovery C5b: group move planner
+
+- Target: move committed group instance/route/Junction/annotation edit
+  assembly into the Edit Engine routing planner.
+- Changed areas: routing planner/tests, editor group commit path, target plan
+  and log.
+- Validation: 32 focused routing/stretch tests; two focused editor group-move
+  E2E flows; workspace `pnpm typecheck`; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `refactor(routing): plan group move edits in engine`.

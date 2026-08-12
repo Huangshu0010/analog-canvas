@@ -6,6 +6,7 @@ import type {
 } from "react";
 
 import {
+  proposeGroupMoveEdits,
   proposeLooseRouteTranslation,
   proposeWireSegmentMove,
   proposeVisualRouteDeletion,
@@ -29,7 +30,6 @@ import {
   isVisibleEndpoint,
   moveRouteSegment,
   mergeDiagnostics,
-  proposeGroupMove,
   resolveDraftingObjectGeometry,
   runErcChecks,
   routeAttachmentPlacement,
@@ -2612,46 +2612,9 @@ export function App({ project: initialProject }: AppProps) {
     };
     if (delta.x !== 0 || delta.y !== 0) {
       try {
-        const groupMove = proposeGroupMove(document, resolver, moves);
-        const stretchEdits: SchematicEdit[] = groupMove.routes.map(
-          (proposal) => {
-            const route = document.routes.find(
-              (candidate) => candidate.id === proposal.routeId,
-            )!;
-            return {
-              kind: "set_route_points" as const,
-              routeId: route.id,
-              netId: route.netId,
-              from: route.from,
-              to: route.to,
-              waypoints: proposal.waypoints,
-              segmentModes: proposal.segmentModes,
-            };
-          },
-        );
+        const groupMove = proposeGroupMoveEdits(document, resolver, moves);
         const result = transact([
-          ...moves.map((move): SchematicEdit => ({
-            kind: "move_instance",
-            ...move,
-          })),
-          ...groupMove.junctions.map((move): SchematicEdit => ({
-            kind: "move_junction",
-            ...move,
-          })),
-          ...stretchEdits,
-          ...groupMove.annotations.flatMap((move): SchematicEdit[] => {
-            const annotation = document.annotations.find(
-              (candidate) => candidate.id === move.annotationId,
-            );
-            return annotation
-              ? [
-                  {
-                    kind: "upsert_annotation",
-                    annotation: { ...annotation, position: move.position },
-                  },
-                ]
-              : [];
-          }),
+          ...groupMove.edits,
           ...(electricalMatch?.moving.electrical &&
           electricalMatch.target.electrical
             ? [

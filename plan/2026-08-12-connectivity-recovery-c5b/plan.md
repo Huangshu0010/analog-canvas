@@ -3,34 +3,57 @@ status: completed
 experience: none
 ---
 
-# Connectivity recovery C5b — route deletion planner boundary
+# Plan group-move routing edits in Edit Engine
 
 ## Goal
 
-Move route/junction deletion closure and its typed edit proposal into the
-edit-engine routing planner. Preserve the current “Delete a wire; electrical
-Net membership remains and flightlines express unrouted connectivity” behavior.
+Move the committed group-move route, Junction, annotation and instance edit
+assembly into the Edit Engine routing planner. The editor retains Snap-derived
+optional endpoint connection as an interaction decision.
 
-## State and ownership
+## State and Ownership
 
-The worktree is clean after the previous green CI. This target owns the
-edit-engine routing planner/export, the editor selection compatibility adapter
-and its tests, plan and log. It does not redefine `cut_connection`, renderer
-flightlines, or multi-instance deletion semantics.
+Start state from `git status --short --branch`:
+
+```text
+## roadmap/connectivity-routing-debugging...origin/roadmap/connectivity-routing-debugging
+```
+
+The worktree is clean. This target owns committed group movement assembly only;
+Snap candidate selection and transaction execution remain editor/session work.
+
+- `packages/edit-engine/src/routing-planner.ts`
+- `packages/edit-engine/src/routing.test.ts`
+- `apps/editor/src/app/App.tsx`
+- `plan/2026-08-12-connectivity-recovery-c5b/plan.md`
+- `plan/log.md`
+
+Shared: derived `proposeGroupMove()` remains the geometry/topology planner and
+is adapted to typed transaction edits here.
+
+## Work
+
+1. Add an engine-level group move edit proposal.
+2. Replace editor-side route/Junction/annotation edit assembly.
+3. Cover the proposal through a transaction regression and focused browser flow.
 
 ## Validation
 
-Focused selection/transaction/wiring tests; workspace typecheck, Prettier and
-`git diff --check`.
+- focused routing and editor group-move tests
+- workspace typecheck
+- `git diff --check` and status
+
+## Commit Intent
+
+```text
+refactor(routing): plan group move edits in engine
+```
 
 ## Outcome
 
-The edit-engine now owns visual route/junction deletion closure and returns the
-typed transaction edits. It deliberately emits only `cut_connection` for
-junctions made orphan by a cut, because the transaction owns that cleanup;
-already-isolated junctions receive an explicit removal. App Delete paths now
-consume the proposal, while the former editor selection helper is a thin
-compatibility adapter.
+The group-move route/Junction/annotation/instance edit assembly now lives in
+the Edit Engine routing planner. The editor appends only an interaction-owned,
+Snap-derived optional endpoint connection.
 
-Validation: workspace typecheck; 17 focused selection/wiring/transaction tests;
-targeted Prettier and `git diff --check`.
+Validation passed: 32 focused routing/stretch tests, two focused editor group
+move E2E flows, workspace typecheck, targeted Prettier, and `git diff --check`.

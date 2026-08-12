@@ -1,5 +1,6 @@
 import {
   normalizeRouteGeometry,
+  proposeGroupMove,
   proposeWireSegmentDrag,
   type SegmentMode,
 } from "@icm/derived";
@@ -39,6 +40,45 @@ export interface VisualRouteDeletion {
 export interface WireManipulationProposal {
   routeId: string;
   edits: SchematicEdit[];
+}
+
+export interface GroupMoveEditProposal {
+  edits: SchematicEdit[];
+}
+
+/** Plan instance-group movement and all internal route/Junction/label follow edits. */
+export function proposeGroupMoveEdits(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  moves: readonly { instanceId: string; position: Point }[],
+): GroupMoveEditProposal {
+  const proposal = proposeGroupMove(document, resolver, moves);
+  return {
+    edits: [
+      ...moves.map((move): SchematicEdit => ({
+        kind: "move_instance",
+        ...move,
+      })),
+      ...proposal.junctions.map((move): SchematicEdit => ({
+        kind: "move_junction",
+        ...move,
+      })),
+      ...routeEdits(document, proposal.routes),
+      ...proposal.annotations.flatMap((move): SchematicEdit[] => {
+        const annotation = document.annotations.find(
+          (candidate) => candidate.id === move.annotationId,
+        );
+        return annotation
+          ? [
+              {
+                kind: "upsert_annotation",
+                annotation: { ...annotation, position: move.position },
+              },
+            ]
+          : [];
+      }),
+    ],
+  };
 }
 
 function routeEdits(

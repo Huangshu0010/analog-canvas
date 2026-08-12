@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import { executeTransaction } from "./transaction.js";
 import {
+  proposeGroupMoveEdits,
   proposeLooseRouteTranslation,
   proposeWireSegmentMove,
 } from "./routing-planner.js";
@@ -138,6 +139,44 @@ describe("routing Edit Engine", () => {
       { x: 130, y: 120 },
       { x: 230, y: 120 },
     ]);
+  });
+
+  it("plans internal group route follow as one engine edit proposal", () => {
+    const document = documentFixture();
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+    const plan = proposeGroupMoveEdits(routed.document, resolver, [
+      { instanceId: "A", position: { x: 160, y: 320 } },
+      { instanceId: "B", position: { x: 480, y: 320 } },
+      { instanceId: "C", position: { x: 320, y: 160 } },
+    ]);
+    expect(
+      plan.edits.filter((edit) => edit.kind === "move_instance"),
+    ).toHaveLength(3);
+    expect(plan.edits.some((edit) => edit.kind === "set_route_points")).toBe(
+      true,
+    );
+    const moved = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, plan.edits),
+      context,
+    );
+    expect(moved.ok).toBe(true);
   });
 
   it("lets an Agent request pin-aware orthogonal routing without waypoints", () => {
