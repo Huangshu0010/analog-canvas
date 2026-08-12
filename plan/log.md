@@ -1,5 +1,17 @@
 # Maintenance Log
 
+## 2026-08-13 - Scope CI by changed surface
+
+- Target: keep required PR check names while avoiding release and browser work
+  for documentation-only changes.
+- Changed areas: CI change classifier and conditional lightweight/full paths
+  for static, unit, release, and both browser-shard checks.
+- Validation: workflow Prettier parse/check, pull-request and push path-policy
+  review, and `git diff --check` passed.
+- Commit status: prepared as
+  `ci: skip heavy gates for documentation-only changes` on
+  `codex/ci-contract-cleanup`.
+
 ## 2026-08-13 - Expand routine plan record pruning
 
 - Target: reduce archived plan-body bloat beyond the initial 14-record sweep
