@@ -1,5 +1,10 @@
 import { hasBlockingVisualDiagnostics } from "@icm/derived";
-import type { ErcDiagnostic, VisualDiagnostic } from "@icm/derived";
+import type {
+  Diagnostic,
+  DiagnosticDomain,
+  DiagnosticSeverity,
+  VisualDiagnostic,
+} from "@icm/derived";
 import { useMemo, useState } from "react";
 import type { SpiceDiagnostic } from "@icm/spice";
 
@@ -178,53 +183,64 @@ export function SelectionInspectorDetails({
   );
 }
 
-export interface ErcDiagnosticsSectionProps {
-  diagnostics: readonly ErcDiagnostic[];
+export interface ProjectDiagnosticsSectionProps {
+  diagnostics: readonly Diagnostic[];
   documentLabel(documentId: string): string;
-  onSelectDiagnostic(diagnostic: ErcDiagnostic): void;
+  onSelectDiagnostic(diagnostic: Diagnostic): void;
 }
 
-type ErcSeverityFilter = "all" | ErcDiagnostic["severity"];
+type DiagnosticSeverityFilter = "all" | DiagnosticSeverity;
 
-const ERC_SEVERITY_FILTERS: readonly ErcSeverityFilter[] = [
+const DIAGNOSTIC_SEVERITY_FILTERS: readonly DiagnosticSeverityFilter[] = [
   "all",
   "error",
   "warning",
   "info",
 ];
 
-/**
- * ERC has an independent producer and severity policy. Keep its panel separate
- * from import and visual observations so a visual count can never be mistaken
- * for electrical validity.
- */
-export function ErcDiagnosticsSection({
+type ProjectDomainFilter = "all" | DiagnosticDomain;
+
+function DiagnosticFilters({
   diagnostics,
-  documentLabel,
-  onSelectDiagnostic,
-}: ErcDiagnosticsSectionProps) {
-  const [severityFilter, setSeverityFilter] =
-    useState<ErcSeverityFilter>("all");
-  const visibleDiagnostics = useMemo(
-    () =>
-      severityFilter === "all"
-        ? diagnostics
-        : diagnostics.filter(
-            (diagnostic) => diagnostic.severity === severityFilter,
-          ),
-    [diagnostics, severityFilter],
-  );
+  domainFilter,
+  severityFilter,
+  onDomainFilterChange,
+  onSeverityFilterChange,
+}: {
+  diagnostics: readonly Diagnostic[];
+  domainFilter: ProjectDomainFilter;
+  severityFilter: DiagnosticSeverityFilter;
+  onDomainFilterChange(filter: ProjectDomainFilter): void;
+  onSeverityFilterChange(filter: DiagnosticSeverityFilter): void;
+}) {
+  const domains = [
+    "all" as const,
+    ...[...new Set(diagnostics.map((diagnostic) => diagnostic.domain))].sort(),
+  ];
   return (
-    <section
-      aria-label="ERC diagnostics"
-      className="diagnostics erc-diagnostics"
-    >
-      <h2>
-        Electrical diagnostics ({visibleDiagnostics.length}/{diagnostics.length}
-        )
-      </h2>
-      <div className="diagnostic-filters" aria-label="ERC severity filters">
-        {ERC_SEVERITY_FILTERS.map((filter) => {
+    <>
+      <div className="diagnostic-filters" aria-label="Diagnostic domains">
+        {domains.map((filter) => {
+          const count =
+            filter === "all"
+              ? diagnostics.length
+              : diagnostics.filter((diagnostic) => diagnostic.domain === filter)
+                  .length;
+          return (
+            <button
+              key={filter}
+              type="button"
+              data-testid={`diagnostic-domain-${filter}`}
+              aria-pressed={domainFilter === filter}
+              onClick={() => onDomainFilterChange(filter)}
+            >
+              {filter === "all" ? "All domains" : filter} ({count})
+            </button>
+          );
+        })}
+      </div>
+      <div className="diagnostic-filters" aria-label="Diagnostic severities">
+        {DIAGNOSTIC_SEVERITY_FILTERS.map((filter) => {
           const count =
             filter === "all"
               ? diagnostics.length
@@ -235,29 +251,70 @@ export function ErcDiagnosticsSection({
             <button
               key={filter}
               type="button"
-              data-testid={`erc-filter-${filter}`}
+              data-testid={`diagnostic-severity-${filter}`}
               aria-pressed={severityFilter === filter}
-              onClick={() => setSeverityFilter(filter)}
+              onClick={() => onSeverityFilterChange(filter)}
             >
-              {filter === "all" ? "All" : filter} ({count})
+              {filter === "all" ? "All severities" : filter} ({count})
             </button>
           );
         })}
       </div>
-      <ul data-testid="erc-diagnostics">
-        {visibleDiagnostics.map((diagnostic, index) => (
+    </>
+  );
+}
+
+/** Project-wide diagnostic workbench for compatible, locator-backed domains. */
+export function ProjectDiagnosticsSection({
+  diagnostics,
+  documentLabel,
+  onSelectDiagnostic,
+}: ProjectDiagnosticsSectionProps) {
+  const [domainFilter, setDomainFilter] = useState<ProjectDomainFilter>("all");
+  const [severityFilter, setSeverityFilter] =
+    useState<DiagnosticSeverityFilter>("all");
+  const visibleDiagnostics = useMemo(
+    () =>
+      diagnostics.filter(
+        (diagnostic) =>
+          (domainFilter === "all" || diagnostic.domain === domainFilter) &&
+          (severityFilter === "all" || diagnostic.severity === severityFilter),
+      ),
+    [diagnostics, domainFilter, severityFilter],
+  );
+  return (
+    <section
+      aria-label="Project diagnostics"
+      className="diagnostics erc-diagnostics"
+    >
+      <h2>
+        Schematic diagnostics ({visibleDiagnostics.length}/{diagnostics.length})
+      </h2>
+      <DiagnosticFilters
+        diagnostics={diagnostics}
+        domainFilter={domainFilter}
+        severityFilter={severityFilter}
+        onDomainFilterChange={setDomainFilter}
+        onSeverityFilterChange={setSeverityFilter}
+      />
+      <ul data-testid="project-diagnostics">
+        {visibleDiagnostics.map((diagnostic) => (
           <li
             key={diagnostic.id}
+            data-domain={diagnostic.domain}
             data-document-id={diagnostic.primary.documentId}
             data-severity={diagnostic.severity}
             data-confidence={diagnostic.confidence}
           >
             <button
               type="button"
-              data-testid={`erc-diagnostic-${index}`}
+              data-testid={`project-diagnostic-${diagnostic.id}`}
               onClick={() => onSelectDiagnostic(diagnostic)}
             >
-              <strong>{diagnostic.code}</strong>: {diagnostic.message}
+              <strong>
+                {diagnostic.domain.toUpperCase()} / {diagnostic.code}
+              </strong>
+              : {diagnostic.message}
               <small>
                 Cell: {documentLabel(diagnostic.primary.documentId)}
               </small>

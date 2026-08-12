@@ -5116,3 +5116,15 @@ contracts (WP-R1)`.
   clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): filter project ERC diagnostics`.
+
+## 2026-08-12 - Connectivity Recovery C9d: unified diagnostic workbench
+
+- Target: present locator-backed ERC and visual diagnostics in one persistent
+  project panel with domain/severity filtering and canonical navigation.
+- Changed areas: editor diagnostic derivation/panel, selection and browser
+  coverage, recovery status, target plan and log.
+- Validation: 20 focused diagnostic/selection tests; three focused Playwright
+  cross-Cell/ERC/visual flows; workspace `pnpm typecheck`; targeted Prettier;
+  `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): unify ERC and visual diagnostics`.

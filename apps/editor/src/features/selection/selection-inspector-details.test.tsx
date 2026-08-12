@@ -1,9 +1,9 @@
-import type { ErcDiagnostic, VisualDiagnostic } from "@icm/derived";
+import type { Diagnostic, ErcDiagnostic, VisualDiagnostic } from "@icm/derived";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
-  ErcDiagnosticsSection,
+  ProjectDiagnosticsSection,
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "./selection-inspector-details";
@@ -103,19 +103,30 @@ describe("selection inspector details", () => {
     expect(markup).toContain('data-testid="blocking-diagnostic-count">1');
   });
 
-  it("identifies the owning Cell for each project ERC diagnostic", () => {
+  it("renders locator-backed domains in one filterable project panel", () => {
+    const visualDiagnostic: Diagnostic = {
+      ...ercDiagnostic,
+      id: "visual:fixture",
+      domain: "visual",
+      code: "VISUAL_SHORT_SEGMENT",
+      message: "Segment is too short",
+    };
     const markup = renderToStaticMarkup(
-      <ErcDiagnosticsSection
-        diagnostics={[ercDiagnostic]}
+      <ProjectDiagnosticsSection
+        diagnostics={[ercDiagnostic, visualDiagnostic]}
         documentLabel={(documentId) =>
-          documentId === "document-child" ? "Bias Child Cell" : documentId
+          documentId === "document-child" ? "Bias Child Cell" : "Main Cell"
         }
         onSelectDiagnostic={() => undefined}
       />,
     );
+    expect(markup).toContain('data-testid="project-diagnostics"');
+    expect(markup).toContain('data-testid="diagnostic-domain-erc"');
+    expect(markup).toContain('data-testid="diagnostic-domain-visual"');
+    expect(markup).toContain('data-testid="diagnostic-severity-warning"');
     expect(markup).toContain('data-document-id="document-child"');
     expect(markup).toContain("Cell: Bias Child Cell");
-    expect(markup).toContain('data-testid="erc-filter-all"');
-    expect(markup).toContain("All (1)");
+    expect(markup).toContain("ERC / ERC_UNCONNECTED_PIN");
+    expect(markup).toContain("VISUAL / VISUAL_SHORT_SEGMENT");
   });
 });

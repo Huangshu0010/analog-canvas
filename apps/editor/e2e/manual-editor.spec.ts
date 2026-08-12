@@ -1507,7 +1507,7 @@ test("navigates a project ERC diagnostic into its imported child Cell", async ({
 
   const childDiagnostic = page
     .locator(
-      '[data-testid="erc-diagnostics"] li[data-document-id="document-child"] button',
+      '[data-testid="project-diagnostics"] li[data-document-id="document-child"] button',
     )
     .first();
   await expect(childDiagnostic).toContainText("Cell: Bias Child Cell");
@@ -1568,18 +1568,42 @@ test("surfaces and locates current-document ERC diagnostics", async ({
   await placeComponent(page, "resistor", { x: 380, y: 260 });
   await openSelectionShelf(page);
 
-  await expect(page.getByTestId("erc-diagnostics")).toContainText(
+  await expect(page.getByTestId("project-diagnostics")).toContainText(
     "ERC_UNCONNECTED_PIN",
   );
-  await page.getByTestId("erc-filter-error").click();
-  await expect(page.getByTestId("erc-diagnostics")).toHaveText("");
-  await page.getByTestId("erc-filter-warning").click();
-  await expect(page.getByTestId("erc-diagnostics")).toContainText(
+  await page.getByTestId("diagnostic-domain-erc").click();
+  await page.getByTestId("diagnostic-severity-error").click();
+  await expect(page.getByTestId("project-diagnostics")).toHaveText("");
+  await page.getByTestId("diagnostic-severity-warning").click();
+  await expect(page.getByTestId("project-diagnostics")).toContainText(
     "ERC_UNCONNECTED_PIN",
   );
-  await page.getByTestId("erc-diagnostic-0").click();
+  await page
+    .getByTestId("project-diagnostics")
+    .getByRole("button", { name: /ERC_UNCONNECTED_PIN/ })
+    .first()
+    .click();
   await expect(page.getByTestId("status")).toContainText("ERC_UNCONNECTED_PIN");
   await expect(
     page.getByRole("region", { name: "Endpoint actions" }),
   ).toBeVisible();
+});
+
+test("filters and navigates locator-backed visual diagnostics", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 420, y: 300 });
+  await placeComponent(page, "resistor", { x: 420, y: 300 });
+  await openSelectionShelf(page);
+
+  await page.getByTestId("diagnostic-domain-visual").click();
+  const diagnostics = page.getByTestId("project-diagnostics");
+  await expect(diagnostics).toContainText("VISUAL_SYMBOL_OVERLAP");
+  await diagnostics
+    .getByRole("button", { name: /VISUAL_SYMBOL_OVERLAP/ })
+    .click();
+  await expect(page.getByTestId("status")).toContainText(
+    "VISUAL VISUAL_SYMBOL_OVERLAP",
+  );
 });

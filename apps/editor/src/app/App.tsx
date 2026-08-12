@@ -18,6 +18,7 @@ import {
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
+  adaptVisualDiagnostic,
   deriveCrossings,
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
@@ -25,6 +26,7 @@ import {
   findHierarchyPath,
   isVisibleEndpoint,
   moveRouteSegment,
+  mergeDiagnostics,
   proposeGroupMove,
   resolveDraftingObjectGeometry,
   runErcChecks,
@@ -32,7 +34,7 @@ import {
   traceHierarchyNet,
 } from "@icm/derived";
 import type {
-  ErcDiagnostic,
+  Diagnostic,
   Flightline,
   HierarchyFrame,
   ObjectLocator,
@@ -137,7 +139,7 @@ import { createVisualDemoProject } from "../demos/visual-demo";
 import { useProjectRecovery } from "../document/project-recovery";
 import { useSelectionController } from "../features/selection/selection-controller";
 import {
-  ErcDiagnosticsSection,
+  ProjectDiagnosticsSection,
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "../features/selection/selection-inspector-details";
@@ -627,6 +629,23 @@ export function App({ project: initialProject }: AppProps) {
   const ercDiagnostics = useMemo(
     () => runErcChecks(project, projectConnectivityIndex, resolver),
     [project, projectConnectivityIndex, resolver],
+  );
+  const projectVisualDiagnostics = useMemo(
+    () =>
+      project.documents.flatMap((candidate) =>
+        diagnoseVisualQuality(candidate, resolver).map((diagnostic) =>
+          adaptVisualDiagnostic(
+            diagnostic,
+            candidate.id,
+            projectConnectivityIndex,
+          ),
+        ),
+      ),
+    [project.documents, projectConnectivityIndex, resolver],
+  );
+  const projectDiagnostics = useMemo(
+    () => mergeDiagnostics(ercDiagnostics, projectVisualDiagnostics),
+    [ercDiagnostics, projectVisualDiagnostics],
   );
   const searchResults = useMemo(
     () =>
@@ -1247,10 +1266,10 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(`${diagnostic.code}: ${ids.join(", ") || "Document"}`);
   }
 
-  function jumpToErcDiagnostic(diagnostic: ErcDiagnostic): void {
+  function jumpToProjectDiagnostic(diagnostic: Diagnostic): void {
     navigateToLocator(
       diagnostic.primary,
-      `${diagnostic.code}: ${diagnostic.message}`,
+      `${diagnostic.domain.toUpperCase()} ${diagnostic.code}: ${diagnostic.message}`,
     );
   }
 
@@ -6017,15 +6036,15 @@ export function App({ project: initialProject }: AppProps) {
                 </button>
               </section>
             ) : null}
-            {ercDiagnostics.length > 0 ? (
-              <ErcDiagnosticsSection
-                diagnostics={ercDiagnostics}
+            {projectDiagnostics.length > 0 ? (
+              <ProjectDiagnosticsSection
+                diagnostics={projectDiagnostics}
                 documentLabel={(documentId) =>
                   project.documents.find(
                     (candidate) => candidate.id === documentId,
                   )?.name ?? documentId
                 }
-                onSelectDiagnostic={jumpToErcDiagnostic}
+                onSelectDiagnostic={jumpToProjectDiagnostic}
               />
             ) : null}
             {importReviewOpen ? (

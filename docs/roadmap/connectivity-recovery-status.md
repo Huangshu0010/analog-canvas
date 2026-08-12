@@ -16,7 +16,7 @@ the roadmap's original recovery audit.
 | Net trace/highlight     | Core completed; bidirectional hierarchy trace backs the editor overlay.                                                            | Add visible path expansion/multiple-caller presentation.                                                       |
 | NoConnect               | Completed minimal lifecycle: schema v3 migration, edits, undo/redo, clipboard, render/export, snapshot and topology hash.          | Maintain regression coverage.                                                                                  |
 | ERC                     | Core completed: binding, unresolved symbol, imported-pin, hierarchy, floating gate/bulk, and NoConnect policy.                     | Iterate policy and suppression UX from product feedback.                                                       |
-| Diagnostics UI          | Project ERC shelf with Cell labels and cross-Cell navigation is complete.                                                          | Unify SPICE/visual/routing grouping, source references and filters.                                            |
+| Diagnostics UI          | Persistent project workbench merges locator-backed ERC and visual diagnostics, with Cell labels, domain/severity filters and cross-Cell navigation. | SPICE remains in Import Review until source spans have stable locators; routing must adopt the envelope before it joins the workbench. |
 | Compatibility cleanup   | Not ready for deletion.                                                                                                            | `routePolyline` remains a valid lower-level primitive for geometry derivation, stretch and visual diagnostics. |
 
 ## Verification evidence
