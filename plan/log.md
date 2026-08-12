@@ -1,5 +1,13 @@
 # Maintenance Log
 
+## 2026-08-12 - Capacitor plate contraction
+
+- Target: reduce the current capacitor plate length by 10%.
+- Changed areas: capacitor Symbol DSL and regenerated catalog.
+- Validation: Razavi catalog generation/check; Symbols build; `git diff --check`.
+- Commit status: ready on `codex/vdd-drawn-rail` as
+  `fix(symbols): contract capacitor plates`.
+
 ## 2026-08-12 - Capacitor plate length extension
 
 - Target: extend the current Razavi capacitor plate length by 30%.
