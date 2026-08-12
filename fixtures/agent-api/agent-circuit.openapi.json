@@ -1251,7 +1251,8 @@
                                   "type": "string",
                                   "enum": [
                                     "wire",
-                                    "bulk-dashed"
+                                    "bulk-dashed",
+                                    "power-rail"
                                   ]
                                 }
                               },
@@ -1424,7 +1425,8 @@
                                   "type": "string",
                                   "enum": [
                                     "wire",
-                                    "bulk-dashed"
+                                    "bulk-dashed",
+                                    "power-rail"
                                   ]
                                 }
                               },
@@ -36926,7 +36928,8 @@
                                         "type": "string",
                                         "enum": [
                                           "wire",
-                                          "bulk-dashed"
+                                          "bulk-dashed",
+                                          "power-rail"
                                         ]
                                       },
                                       "polyline": {
@@ -65918,7 +65921,8 @@
                                   "type": "string",
                                   "enum": [
                                     "wire",
-                                    "bulk-dashed"
+                                    "bulk-dashed",
+                                    "power-rail"
                                   ]
                                 }
                               },
@@ -66091,7 +66095,8 @@
                                   "type": "string",
                                   "enum": [
                                     "wire",
-                                    "bulk-dashed"
+                                    "bulk-dashed",
+                                    "power-rail"
                                   ]
                                 }
                               },
@@ -101593,7 +101598,8 @@
                                         "type": "string",
                                         "enum": [
                                           "wire",
-                                          "bulk-dashed"
+                                          "bulk-dashed",
+                                          "power-rail"
                                         ]
                                       },
                                       "polyline": {

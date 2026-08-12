@@ -140,7 +140,11 @@ export const SegmentModeSchema = z.enum([
   "locked",
   "trunk",
 ]);
-export const RoutePresentationSchema = z.enum(["wire", "bulk-dashed"]);
+export const RoutePresentationSchema = z.enum([
+  "wire",
+  "bulk-dashed",
+  "power-rail",
+]);
 export const RouteBranchSchema = z
   .strictObject({
     id: StableIdSchema,

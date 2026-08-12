@@ -45,7 +45,7 @@ describe("semantic default instance-label placement", () => {
 
   it("moves a rotated passive side label with the symbol", () => {
     expect(placed("capacitor", 90)).toMatchObject({
-      position: { x: 95, y: 125 },
+      position: { x: 95, y: 126 },
       alignment: "middle",
     });
   });

@@ -1774,7 +1774,8 @@
                         "type": "string",
                         "enum": [
                           "wire",
-                          "bulk-dashed"
+                          "bulk-dashed",
+                          "power-rail"
                         ]
                       },
                       "polyline": {

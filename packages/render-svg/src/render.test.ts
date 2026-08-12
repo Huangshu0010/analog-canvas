@@ -232,6 +232,90 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).not.toContain('data-object-id="junction-legacy-loose"');
   });
 
+  it("renders a VDD power rail without weakening or dotting its real branches", () => {
+    const project = createEmptyProject("project-vdd-rail", "VDD rail");
+    const document = project.documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.instances.push({
+      id: "VDD1",
+      symbolId: "vdd",
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-vdd",
+      scope: "global",
+      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+      ports: [],
+    });
+    document.junctions.push(
+      {
+        id: "rail-junction",
+        netId: "net-vdd",
+        position: { x: 100, y: 100 },
+        role: "branch",
+      },
+      {
+        id: "rail-left",
+        netId: "net-vdd",
+        position: { x: 40, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "rail-right",
+        netId: "net-vdd",
+        position: { x: 160, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "rail-branch",
+        netId: "net-vdd",
+        position: { x: 100, y: 160 },
+        role: "route-anchor",
+      },
+    );
+    document.routes.push(
+      {
+        id: "rail",
+        netId: "net-vdd",
+        from: { kind: "junction", junctionId: "rail-left" },
+        to: { kind: "junction", junctionId: "rail-junction" },
+        waypoints: [],
+        segmentModes: ["manual"],
+        presentation: "power-rail",
+      },
+      {
+        id: "rail-tail",
+        netId: "net-vdd",
+        from: { kind: "junction", junctionId: "rail-junction" },
+        to: { kind: "junction", junctionId: "rail-right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "rail-drop",
+        netId: "net-vdd",
+        from: { kind: "junction", junctionId: "rail-junction" },
+        to: { kind: "junction", junctionId: "rail-branch" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain(
+      'data-object-id="rail" data-net-id="net-vdd" data-route-presentation="power-rail" points="40,100 100,100" fill="none" stroke="#000" stroke-width="3.24"',
+    );
+    expect(svg).not.toContain('data-object-id="rail-junction"');
+    expect(
+      document.junctions.find((junction) => junction.id === "rail-junction"),
+    ).toMatchObject({
+      netId: "net-vdd",
+      role: "branch",
+    });
+  });
+
   it("renders terminal and port No Connect declarations in the formal scene", () => {
     const project = createEmptyProject("project-no-connect", "No Connect");
     const document = project.documents[0]!;

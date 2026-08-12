@@ -12,8 +12,15 @@ function source(
   endpoint: RouteEndpoint,
   point: { x: number; y: number },
   netId: string | null = null,
+  routePresentation?: WireSource["routePresentation"],
 ): WireSource {
-  return { endpoint, point, netId, preludeEdits: [] };
+  return {
+    endpoint,
+    point,
+    netId,
+    preludeEdits: [],
+    ...(routePresentation ? { routePresentation } : {}),
+  };
 }
 
 describe("wire editing proposals", () => {
@@ -67,6 +74,25 @@ describe("wire editing proposals", () => {
     expect(proposal.edits[3]).not.toHaveProperty("newNetId");
   });
 
+  it("preserves the VDD source's supply presentation on its first rail", () => {
+    const proposal = proposeWireCommit(
+      source(
+        { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+        { x: 0, y: 0 },
+        "net-vdd",
+        "power-rail",
+      ),
+      source({ kind: "port", portId: "rail-end" }, { x: 80, y: 0 }, "net-vdd"),
+      [],
+      11,
+    );
+
+    expect(proposal.edits.at(-1)).toMatchObject({
+      kind: "set_route_points",
+      presentation: "power-rail",
+    });
+  });
+
   it("creates free and route-tap anchors with stable IDs and snapped geometry", () => {
     expect(
       createFreeWireAnchor({ x: 12, y: 18 }, "net-new", true, 8),
@@ -116,5 +142,17 @@ describe("wire editing proposals", () => {
         10,
       ),
     ).toMatchObject({ routePresentation: "bulk-dashed" });
+
+    // Splitting a VDD rail preserves its presentation on the two rail pieces,
+    // but the newly drawn branch must use the ordinary wire presentation.
+    expect(
+      createRouteWireAnchor(
+        { ...route, presentation: "power-rail" },
+        { x: 23.2, y: 37.8 },
+        1,
+        10,
+        11,
+      ),
+    ).not.toHaveProperty("routePresentation");
   });
 });

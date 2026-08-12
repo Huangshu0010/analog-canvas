@@ -1,5 +1,77 @@
 # Maintenance Log
 
+## 2026-08-12 - Drawn VDD rail mainline delivery
+
+- Target: deliver drawn VDD rail and capacitor refinements to remote main by
+  review PR under the required delivery gate.
+- Changed areas: corrected capacitor rotated-label geometry expectation and
+  delivery target record.
+- Validation: frozen install and full `pnpm ci:check` passed: 615 unit tests,
+  release/performance/export/PWA/release smoke, and 91 browser tests.
+- Commit status: ready to push/open PR from `codex/vdd-drawn-rail`; wait for
+  GitHub required checks before merging main.
+
+## 2026-08-12 - Capacitor plate contraction
+
+- Target: reduce the current capacitor plate length by 10%.
+- Changed areas: capacitor Symbol DSL and regenerated catalog.
+- Validation: Razavi catalog generation/check; Symbols build; `git diff --check`.
+- Commit status: ready on `codex/vdd-drawn-rail` as
+  `fix(symbols): contract capacitor plates`.
+
+## 2026-08-12 - Capacitor plate length extension
+
+- Target: extend the current Razavi capacitor plate length by 30%.
+- Changed areas: capacitor Symbol DSL and regenerated catalog.
+- Validation: Razavi catalog generation/check; Symbols build; `git diff --check`.
+- Commit status: ready on `codex/vdd-drawn-rail` as
+  `fix(symbols): extend capacitor plates`.
+
+## 2026-08-12 - Capacitor user refinement
+
+- Target: apply the requested 10% plate-length and 20% center-spacing increase
+  to the integrated Razavi capacitor.
+- Changed areas: capacitor Symbol DSL and regenerated catalog; target record.
+- Validation: Razavi catalog generation/check; Symbols build; `git diff --check`.
+- Commit status: ready to commit on `codex/vdd-drawn-rail` as
+  `fix(symbols): expand capacitor plates and spacing`.
+
+## 2026-08-12 - Capacitor calibration integration
+
+- Target: include the separately reviewed capacitor plate calibration in the
+  active drawn-VDD-rail branch.
+- Changed areas: cherry-picked calibrated capacitor asset and catalog with its
+  original target record; integration target record.
+- Validation: symbol catalog check; Symbols build; capacitor vertical/horizontal
+  fidelity (`0.6438` / `0.7247` IoU, zero registration lift); `git diff --check`.
+- Commit status: calibration cherry-pick `83d8668`; integration record ready to
+  commit and push on `codex/vdd-drawn-rail`.
+
+## 2026-08-12 - Drawn VDD rail correction
+
+- Target: replace the incorrect VDD P-pin wire-start interaction with direct,
+  length-selectable VDD rail construction.
+- Changed areas: VDD rail construction proposal; component-placement flow and
+  preview; route-tap presentation inheritance; rail style token; interaction
+  specification and browser regression; superseded prior VDD target record.
+- Validation: 59 focused unit tests; workspace typecheck; Agent-artifact and
+  symbol-catalog checks; editor production build; focused Playwright flow;
+  targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/vdd-drawn-rail` as
+  `fix(editor): construct VDD as a drawn power rail`.
+
+## 2026-08-12 - Editable Razavi VDD power rail
+
+- Target: add a visually dotless, supply-weight VDD rail without weakening
+  its explicit route/Junction connectivity records.
+- Changed areas: shared Route presentation schema and Agent artifacts;
+  transaction validation and wire proposal; VDD wire preview; formal SVG;
+  contracts and focused regressions.
+- Validation: 70 focused unit tests; workspace typecheck; Agent-artifact and
+  Razavi-symbol generator checks; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `codex/vdd-power-rail` as
+  `feat(editor): add editable Razavi VDD power rails`.
+
 ## 2026-08-12 - Restore local editor UI on current main
 
 - Target: recreate the validated local editor chrome without reverting newer
@@ -5513,3 +5585,15 @@ contracts (WP-R1)`.
   workflow; `git diff --check` clean.
 - Commit status: merge commit `842d889` created locally; refreshed PR branch
   pending push and required CI checks.
+
+# 2026-08-12 - Razavi capacitor plate calibration
+
+- Target: calibrate capacitor plate geometry to its registered Razavi raster
+  while preserving electrical pins and wiring anchors.
+- Changed areas: capacitor Symbol DSL and regenerated Razavi catalog; target
+  record.
+- Validation: generated/catalog checks; Symbols build; 21 catalog tests;
+  vertical/horizontal fidelity (`0.6438` / `0.7247` IoU, both zero
+  registration lift); `git diff --check` clean.
+- Commit status: ready to commit on `codex/capacitor-plate-calibration` as
+  `fix(symbols): calibrate Razavi capacitor plate geometry`.

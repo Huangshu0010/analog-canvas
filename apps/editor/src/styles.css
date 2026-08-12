@@ -1541,6 +1541,12 @@ body {
   stroke-dasharray: 3 3;
 }
 
+.vdd-rail-preview {
+  stroke: #000;
+  stroke-linecap: butt;
+  pointer-events: none;
+}
+
 /* Wire mode owns the canvas input surface. It sits above formal symbols/text
    but below endpoint and route targets, so labels never steal a wiring click. */
 .wire-input-plane {

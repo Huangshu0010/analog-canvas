@@ -439,7 +439,10 @@ export function proposeWireCommit(
     from.routePresentation === "bulk-dashed" ||
     to.routePresentation === "bulk-dashed"
       ? "bulk-dashed"
-      : undefined;
+      : from.routePresentation === "power-rail" ||
+          to.routePresentation === "power-rail"
+        ? "power-rail"
+        : undefined;
   let netId = from.netId ?? to.netId;
   if (from.netId && to.netId && from.netId !== to.netId) {
     netId = from.netId;
@@ -511,7 +514,9 @@ export function createRouteWireAnchor(
     endpoint: { kind: "junction", junctionId },
     netId: route.netId,
     point: splitPoint,
-    ...(route.presentation ? { routePresentation: route.presentation } : {}),
+    ...(route.presentation && route.presentation !== "power-rail"
+      ? { routePresentation: route.presentation }
+      : {}),
     preludeEdits: [
       {
         kind: "add_junction",

@@ -34,6 +34,82 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("permits a power rail only on a Net established by a VDD symbol", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "VDD1",
+      symbolId: "vdd",
+      placement: null,
+      properties: {},
+    });
+    document.ports.push(
+      {
+        id: "rail-left",
+        name: "L",
+        direction: "passive",
+        position: { x: 0, y: 0 },
+      },
+      {
+        id: "rail-right",
+        name: "R",
+        direction: "passive",
+        position: { x: 40, y: 0 },
+      },
+    );
+    document.nets.push({
+      id: "net-vdd",
+      scope: "global",
+      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+      ports: ["rail-left", "rail-right"],
+    });
+
+    const accepted = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "set_route_points",
+            routeId: "rail",
+            netId: "net-vdd",
+            from: { kind: "port", portId: "rail-left" },
+            to: { kind: "port", portId: "rail-right" },
+            waypoints: [],
+            segmentModes: ["manual"],
+            presentation: "power-rail",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(accepted.ok).toBe(true);
+
+    document.nets[0]!.terminals = [];
+    const rejected = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "set_route_points",
+            routeId: "rail",
+            netId: "net-vdd",
+            from: { kind: "port", portId: "rail-left" },
+            to: { kind: "port", portId: "rail-right" },
+            waypoints: [],
+            segmentModes: ["manual"],
+            presentation: "power-rail",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(rejected).toMatchObject({
+      ok: false,
+      error: { message: "Power rail rail must belong to a VDD Net" },
+    });
+  });
+
   it("sets a Cell bulk default by stable Net id before reconciliation", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
