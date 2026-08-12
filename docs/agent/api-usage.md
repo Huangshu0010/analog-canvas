@@ -9,8 +9,9 @@
 3. Reason over the Snapshot's complete instance-pin/Net-terminal mapping,
    hierarchy references, placements, routes, locks, and diagnostics. Load only
    the circuit-knowledge pages relevant to the observed evidence.
-4. Prepare generic typed edits with the Snapshot revision as
-   `expectedRevision`. Dry-run any non-trivial transaction.
+4. For ordinary wiring, submit one high-level `wireIntent`; for other work,
+   prepare generic typed edits. In both cases use the Snapshot revision as
+   `expectedRevision` and dry-run any non-trivial transaction.
 5. Inspect the dry-run diff and diagnostics, then submit the same edits without
    `dryRun` if the assumptions still hold.
 6. Request a `formal` or `diagnostics` render. Repair only evidenced problems.
@@ -81,7 +82,10 @@ one-time code.
    {"claimCode":"<one-time-code>"}
    ```
 
-   On success the response carries a scoped `agentToken` (bearer) and its expiry.
+   On success the response carries `sessionId`, `projectId`, authorized
+   `documentIds`, a scoped `agentToken` (bearer), and its expiry. Select the
+   target from those returned IDs; do not guess `document-main` or infer an ID
+   from a visible Cell name.
    A claim is consumed once; reuse returns `CLAIM_ALREADY_USED`.
 
 2. **Call the Circuit API** through the session. The body is the same Circuit
@@ -113,6 +117,11 @@ The browser must remain open and online; closing the tab or revoking access ends
 the session. Open/Import/Restore replaces the Project and emits
 `document.replaced`; the old token cannot read or edit the new Project — request
 a new authorized session.
+
+A transient relay failure is not a revocation. The editor reconnects the same
+in-memory authorization with bounded backoff and exposes a manual **Reconnect**
+action. Wait for `editor.online`; never replay an uncertain write under a new
+`requestId`.
 
 ## Failure handling
 

@@ -373,9 +373,12 @@ function operationScopes(request: AgentCircuitRequest): AgentSessionScope[] {
     case "render":
       return ["circuit.render"];
     case "transact":
+      if (request.wireIntent) {
+        return ["circuit.edit.geometry", "circuit.edit.connectivity"];
+      }
       return [
         ...new Set(
-          request.edits.flatMap((edit) => {
+          (request.edits ?? []).flatMap((edit) => {
             const category = agentEditCategory(edit);
             return category === "unsupported"
               ? []
@@ -401,7 +404,14 @@ export function redeemClaimResponse(
   code: string,
   now: number,
 ):
-  | { ok: true; agentToken: string; tokenExpiresAt: number; scopes: string[] }
+  | {
+      ok: true;
+      agentToken: string;
+      tokenExpiresAt: number;
+      scopes: string[];
+      projectId: string;
+      documentIds: string[];
+    }
   | RelayError {
   const result = machine.redeemClaim(code, now);
   return result.ok
@@ -410,6 +420,8 @@ export function redeemClaimResponse(
         agentToken: result.claim.agentToken,
         tokenExpiresAt: result.claim.tokenExpiresAt,
         scopes: [...result.claim.scopes],
+        projectId: machine.projectId,
+        documentIds: machine.documentIds,
       }
     : errorBody(result.code, errorMessage(result.code));
 }
@@ -554,8 +566,15 @@ export class AgentSessionDO {
     }
   }
 
-  async webSocketClose() {
+  async webSocketClose(socket?: WebSocket) {
     await this.ready;
+    const replacement = (
+      this.state.getWebSockets?.(EDITOR_SOCKET_TAG) ?? []
+    ).some(
+      (candidate) =>
+        candidate !== socket && candidate.readyState === WebSocket.OPEN,
+    );
+    if (replacement) return;
     this.emit({
       type: "editor.offline",
       sessionId: this.machine?.sessionId ?? "unknown",
@@ -737,8 +756,14 @@ export class AgentSessionDO {
       return jsonResponse({ error: "WebSocket runtime unavailable" }, 501);
     }
     const pair = new Pair();
+    const previousSockets = this.state.getWebSockets?.(EDITOR_SOCKET_TAG) ?? [];
     this.state.acceptWebSocket(pair[1], [EDITOR_SOCKET_TAG]);
     this.emit({ type: "editor.online", sessionId: machine.sessionId });
+    for (const socket of previousSockets) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close(4001, "editor transport replaced");
+      }
+    }
     if (machine.claimed) {
       pair[1].send(
         JSON.stringify({

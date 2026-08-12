@@ -2,6 +2,7 @@ import {
   normalizeRouteGeometry,
   proposeGroupMove,
   proposeWireSegmentDrag,
+  resolveEndpointPoint,
   type SegmentMode,
 } from "@icm/derived";
 import type {
@@ -35,6 +36,23 @@ export interface WireCommitProposal {
   routeId: string;
   netId: string;
   edits: SchematicEdit[];
+}
+
+export type WireIntentAnchor =
+  | { kind: "endpoint"; endpoint: RouteEndpoint }
+  | {
+      kind: "route-segment";
+      routeId: string;
+      segmentIndex: number;
+      point: Point;
+    }
+  | { kind: "free"; point: Point };
+
+export interface WireIntent {
+  id: string;
+  from: WireIntentAnchor;
+  to: WireIntentAnchor;
+  waypoints?: readonly Point[] | undefined;
 }
 
 export interface VisualRouteDeletion {
@@ -448,8 +466,15 @@ export function proposeWireCommit(
   from: WireSource,
   to: WireSource,
   manualWaypoints: readonly Point[],
-  suffix: number,
+  suffixOrIds: number | { routeId: string; newNetId: string },
 ): WireCommitProposal {
+  const ids =
+    typeof suffixOrIds === "number"
+      ? {
+          routeId: `route-ui-${suffixOrIds}`,
+          newNetId: `net-ui-${suffixOrIds}`,
+        }
+      : suffixOrIds;
   const edits: SchematicEdit[] = [...from.preludeEdits, ...to.preludeEdits];
   const presentation =
     from.routePresentation === "bulk-dashed" ||
@@ -468,14 +493,14 @@ export function proposeWireCommit(
       sourceNetId: to.netId,
     });
   }
-  if (!netId) netId = `net-ui-${suffix}`;
+  if (!netId) netId = ids.newNetId;
   edits.push({
     kind: "connect_endpoints",
     from: from.endpoint,
     to: to.endpoint,
     ...(!from.netId && !to.netId ? { newNetId: netId } : {}),
   });
-  const routeId = `route-ui-${suffix}`;
+  const routeId = ids.routeId;
   const routed = buildManualWirePath(from, to, manualWaypoints);
   edits.push({
     kind: "set_route_points",
@@ -494,9 +519,12 @@ export function createFreeWireAnchor(
   point: Point,
   netId: string,
   createNet: boolean,
-  suffix: number,
+  suffixOrJunctionId: number | string,
 ): WireSource {
-  const junctionId = `junction-ui-${suffix}`;
+  const junctionId =
+    typeof suffixOrJunctionId === "number"
+      ? `junction-ui-${suffixOrJunctionId}`
+      : suffixOrJunctionId;
   return {
     endpoint: { kind: "junction", junctionId },
     netId,
@@ -519,9 +547,23 @@ export function createRouteWireAnchor(
   point: Point,
   segmentIndex: number,
   grid: number,
-  suffix: number,
+  suffixOrIds:
+    | number
+    | {
+        junctionId: string;
+        firstRouteId: string;
+        secondRouteId: string;
+      },
 ): WireSource {
-  const junctionId = `junction-ui-${suffix}`;
+  const ids =
+    typeof suffixOrIds === "number"
+      ? {
+          junctionId: `junction-ui-${suffixOrIds}`,
+          firstRouteId: `${route.id}-a-${suffixOrIds}`,
+          secondRouteId: `${route.id}-b-${suffixOrIds}`,
+        }
+      : suffixOrIds;
+  const junctionId = ids.junctionId;
   const splitPoint = {
     x: Math.round(point.x / grid) * grid,
     y: Math.round(point.y / grid) * grid,
@@ -541,11 +583,121 @@ export function createRouteWireAnchor(
         position: splitPoint,
         split: {
           routeId: route.id,
-          firstRouteId: `${route.id}-a-${suffix}`,
-          secondRouteId: `${route.id}-b-${suffix}`,
+          firstRouteId: ids.firstRouteId,
+          secondRouteId: ids.secondRouteId,
           segmentIndex,
         },
       },
     ],
   };
+}
+
+function endpointNetId(
+  document: SchematicDocument,
+  endpoint: RouteEndpoint,
+): string | null {
+  switch (endpoint.kind) {
+    case "terminal":
+      return (
+        document.nets.find((net) =>
+          net.terminals.some(
+            (terminal) =>
+              terminal.instanceId === endpoint.instanceId &&
+              terminal.pinName === endpoint.pinName,
+          ),
+        )?.id ?? null
+      );
+    case "port":
+      return (
+        document.nets.find((net) => net.ports.includes(endpoint.portId))?.id ??
+        null
+      );
+    case "junction":
+      return (
+        document.junctions.find(
+          (junction) => junction.id === endpoint.junctionId,
+        )?.netId ?? null
+      );
+  }
+}
+
+function endpointWireSource(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  endpoint: RouteEndpoint,
+): WireSource | string {
+  const point = resolveEndpointPoint(document, resolver, endpoint);
+  if (!point) return `Wire endpoint is unresolved: ${JSON.stringify(endpoint)}`;
+  return {
+    endpoint,
+    point,
+    netId: endpointNetId(document, endpoint),
+    preludeEdits: [],
+  };
+}
+
+/**
+ * Expand one ordinary Wire gesture into the same primitive edit sequence used
+ * by the GUI. Agent transports call this planner instead of rebuilding Net,
+ * route-split, and Junction choreography.
+ */
+export function proposeWireIntent(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
+  intent: WireIntent,
+): WireCommitProposal | string {
+  const routeFor = (
+    anchor: Extract<WireIntentAnchor, { kind: "route-segment" }>,
+  ) => document.routes.find((route) => route.id === anchor.routeId);
+  const existingNetId = [intent.from, intent.to]
+    .flatMap((anchor) => {
+      if (anchor.kind === "route-segment")
+        return [routeFor(anchor)?.netId ?? null];
+      if (anchor.kind === "endpoint")
+        return [endpointNetId(document, anchor.endpoint)];
+      return [null];
+    })
+    .find((netId): netId is string => netId !== null);
+  const newNetId = `${intent.id}-net`;
+  let freeAnchorCreatedNet = false;
+  const source = (
+    anchor: WireIntentAnchor,
+    side: "from" | "to",
+  ): WireSource | string => {
+    if (anchor.kind === "endpoint") {
+      return endpointWireSource(document, resolver, anchor.endpoint);
+    }
+    if (anchor.kind === "route-segment") {
+      const route = routeFor(anchor);
+      if (!route) return `Wire route does not exist: ${anchor.routeId}`;
+      return createRouteWireAnchor(
+        route,
+        anchor.point,
+        anchor.segmentIndex,
+        document.presentation.grid,
+        {
+          junctionId: `${intent.id}-${side}-junction`,
+          firstRouteId: `${route.id}-a-${intent.id}-${side}`,
+          secondRouteId: `${route.id}-b-${intent.id}-${side}`,
+        },
+      );
+    }
+    const netId = existingNetId ?? newNetId;
+    const createNet = existingNetId === undefined && !freeAnchorCreatedNet;
+    if (createNet) freeAnchorCreatedNet = true;
+    return createFreeWireAnchor(
+      anchor.point,
+      netId,
+      createNet,
+      `${intent.id}-${side}-junction`,
+    );
+  };
+  const from = source(intent.from, "from");
+  if (typeof from === "string") return from;
+  const to = source(intent.to, "to");
+  if (typeof to === "string") return to;
+  return proposeWireCommit(from, to, intent.waypoints ?? [], {
+    routeId: `${intent.id}-route`,
+    newNetId,
+  });
 }

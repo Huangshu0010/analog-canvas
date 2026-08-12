@@ -53,7 +53,7 @@ API v2 has exactly four operations:
 | -------------- | ----------------------------------------------------- | ----------------------------------------- |
 | `capabilities` | none                                                  | operations, permissions, limits, versions |
 | `snapshot`     | Document ID, optional source spans                    | complete AgentSessionSnapshot             |
-| `transact`     | Document ID, revision, transaction ID, typed edits    | applied/dry-run diff and diagnostics      |
+| `transact`     | Document ID, revision, transaction ID, edits or Wire intent | applied/dry-run diff and diagnostics |
 | `render`       | Document ID, formal/diagnostics mode, optional bounds | bounded SVG artifact and diagnostics      |
 
 API v1 remains accepted with `capabilities/query/transact/render`. No new query
@@ -62,6 +62,28 @@ meaning across both versions.
 
 No request accepts Project JSON, a whole Snapshot/Document replacement,
 filesystem path, JavaScript, or SVG input.
+
+## Implementation ownership and evidence flow
+
+Each semantic fact has one owning module. Transport and UI layers consume these
+contracts; they do not derive substitutes.
+
+| Concern | Sole production owner | Consumers |
+| --- | --- | --- |
+| Session authorization, claim, token, expiry | `worker/agent-session.ts` | browser session hook, external Agent |
+| Project/Document bootstrap identity | claim response + generated OpenAPI | external Agent |
+| Snapshot schema and serialization | `packages/agent-adapter/src/snapshot.ts` | web/loopback transports |
+| Endpoint coordinate contact | `packages/derived/src/contact.ts` | connectivity, renderer, visual diagnostics |
+| Visible/logical connectivity | `packages/derived` connectivity index/read models | highlight, ERC, trace, Agent Snapshot |
+| Route geometry | resolved Route geometry in `packages/derived` | renderer, hit/drag, diagnostics, Snapshot |
+| Wire authoring expansion | `proposeWireIntent`/`proposeWireCommit` in `packages/edit-engine/src/routing-planner.ts` | GUI Wire, Agent `wireIntent` |
+| Transaction validation and mutation | Edit Engine through browser `DocumentHistory` | human and Agent dispatch |
+| Project diagnostics | `diagnoseProject` in `packages/derived/src/diagnostics` | GUI log, Agent transact/snapshot/render |
+| Formal SVG | `packages/render-svg` | GUI/export/Agent render |
+
+An API consumer may choose an intent and inspect returned evidence. It must not
+recreate junction rules, Net equivalence, Route splitting, ERC, or visual
+warnings from coordinates or screenshots.
 
 ## Snapshot contract
 
@@ -168,6 +190,14 @@ Capability edit kinds are the shared Edit Engine schemas. Phase 9 adds generic
 symbol/port edits only through that shared boundary; GUI and Agent must validate
 identically.
 
+For ordinary wiring, `transact` accepts exactly one high-level `wireIntent`
+instead of an `edits` array. Its `from` and `to` anchors are an endpoint, Route
+segment, or free point, with optional orthogonal waypoints. The adapter expands
+that intent through `proposeWireIntent` in the same routing planner used by GUI
+Wire; it does not synthesize Nets, Junctions, Route splits, or endpoint IDs in
+the transport layer. Primitive typed edits remain available for advanced batch
+operations, but a request must supply exactly one of `edits` or `wireIntent`.
+
 MOS bulk authoring uses the same typed boundary: `set_mos_bulk_defaults`
 configures Cell-level stable Net IDs, `reconcile_mos_bulk` materializes the
 effective default/fallback, and an explicit dashed body connection is still a
@@ -209,6 +239,12 @@ Diagnostics returned by Snapshot, transact, and render contain:
 - related `objectIds`;
 - optional `path`, `bounds`, or `point`;
 - primitive typed `parameters` for machine repair decisions.
+
+`diagnoseProject` is the canonical Project diagnostic read path for both the
+GUI and Agent adapter. A successful or dry-run transaction returns diagnostics
+for the proposed Document plus `diagnosticDelta.added` and
+`diagnosticDelta.removed` relative to the pre-transaction Project. Agents use
+that evidence instead of reconstructing ERC or visual heuristics locally.
 
 All diagnostics produced by `diagnoseVisualQuality` include the policy
 metadata. Other API/runtime diagnostics may omit it. Clients must never promote

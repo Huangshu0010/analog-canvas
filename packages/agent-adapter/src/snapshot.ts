@@ -1,5 +1,4 @@
 import {
-  diagnoseVisualQuality,
   electricalTopologyHash,
   resolveMosBulkConnection,
   resolveDraftingObjectGeometry,
@@ -16,6 +15,10 @@ import type { SymbolPin, SymbolResolver } from "@icm/symbols";
 
 import { utf8ByteLength } from "./platform.js";
 import {
+  agentProjectDiagnostics,
+  agentVisualDiagnostics,
+} from "./diagnostics.js";
+import {
   AGENT_SNAPSHOT_VERSION,
   AgentSessionSnapshotSchema,
 } from "./schema.js";
@@ -25,13 +28,8 @@ import type {
   AgentSnapshotDocument,
 } from "./schema.js";
 
-type ProjectView = Pick<
-  CircuitProject,
-  "id" | "name" | "topDocumentId" | "documents"
->;
-
 export interface BuildAgentSessionSnapshotOptions {
-  project?: ProjectView;
+  project?: CircuitProject;
   document: SchematicDocument;
   resolver: SymbolResolver;
   includeSourceSpans?: boolean;
@@ -186,22 +184,13 @@ function projectIndex(options: BuildAgentSessionSnapshotOptions) {
 }
 
 function diagnosticSnapshot(
+  project: CircuitProject | undefined,
   document: SchematicDocument,
   resolver: SymbolResolver,
 ): AgentDiagnostic[] {
-  return diagnoseVisualQuality(document, resolver).map((item) => ({
-    code: item.code,
-    severity: item.severity,
-    category: item.category,
-    confidence: item.confidence,
-    gateEligible: item.gateEligible,
-    message: item.message,
-    objectIds: [...item.objectIds],
-    revision: document.revision,
-    ...(item.bounds ? { bounds: item.bounds } : {}),
-    ...(item.point ? { point: item.point } : {}),
-    ...(item.parameters ? { parameters: { ...item.parameters } } : {}),
-  }));
+  return project
+    ? agentProjectDiagnostics(project, resolver, document.id, document.revision)
+    : agentVisualDiagnostics(document, resolver);
 }
 
 function documentSnapshot(
@@ -427,7 +416,7 @@ function documentSnapshot(
     constraints: [...document.constraints]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
       .map((constraint) => structuredClone(constraint)),
-    diagnostics: diagnosticSnapshot(document, resolver),
+    diagnostics: diagnosticSnapshot(options.project, document, resolver),
   };
 }
 

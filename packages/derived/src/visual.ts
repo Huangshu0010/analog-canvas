@@ -6,7 +6,7 @@ import type {
   SymbolResolver,
 } from "@icm/symbols";
 
-import { resolveEndpointOutwardDirection } from "./endpoint.js";
+import { endpointKey, resolveEndpointOutwardDirection } from "./endpoint.js";
 import {
   resolveDocumentRoutingGeometry,
   type ResolvedDocumentRoutingGeometry,
@@ -16,6 +16,7 @@ import {
   richTextMetrics,
 } from "./rich-text-layout.js";
 import { resolveSchematicStyleProfile } from "./style-profile.js";
+import { deriveDocumentContactEvidence } from "./contact.js";
 
 export interface VisualDiagnostic {
   code: string;
@@ -376,25 +377,42 @@ function pushRoutingQualityMetrics(
         centerline: readonly Point[];
       } => entry.centerline !== undefined,
     );
+  const contactEvidence = deriveDocumentContactEvidence(
+    document,
+    resolver,
+    routingGeometry,
+  );
 
   // 1. Wire-through-symbol: a Route segment passes through an instance
   //    silhouette that is not one of its terminal endpoints.
   for (const { route, centerline } of routePolylines) {
-    const terminalInstances = new Set(
-      [route.from, route.to]
-        .filter(
-          (
-            endpoint,
-          ): endpoint is Extract<typeof endpoint, { kind: "terminal" }> =>
-            endpoint.kind === "terminal",
+    const contactTerminalInstances = (endpoint: typeof route.from) =>
+      new Set(
+        (
+          contactEvidence.byEndpointKey.get(endpointKey(endpoint))
+            ?.endpoints ?? [endpoint]
         )
-        .map((endpoint) => endpoint.instanceId),
-    );
+          .filter(
+            (
+              candidate,
+            ): candidate is Extract<typeof candidate, { kind: "terminal" }> =>
+              candidate.kind === "terminal",
+          )
+          .map((candidate) => candidate.instanceId),
+      );
+    const fromTerminalInstances = contactTerminalInstances(route.from);
+    const toTerminalInstances = contactTerminalInstances(route.to);
     for (let index = 1; index < centerline.length; index += 1) {
       const from = centerline[index - 1]!;
       const to = centerline[index]!;
       for (const [instanceId, box] of boundsById) {
-        if (terminalInstances.has(instanceId)) continue;
+        if (
+          (index === 1 && fromTerminalInstances.has(instanceId)) ||
+          (index === centerline.length - 1 &&
+            toTerminalInstances.has(instanceId))
+        ) {
+          continue;
+        }
         if (segmentIntersectsRect(from, to, box)) {
           diagnostics.push({
             code: "VISUAL_WIRE_THROUGH_SYMBOL",

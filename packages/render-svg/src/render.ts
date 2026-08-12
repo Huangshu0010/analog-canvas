@@ -5,6 +5,7 @@ import {
   transformPoint,
 } from "@icm/model";
 import {
+  deriveDocumentContactEvidence,
   resolveDraftingObjectGeometry,
   resolveEndpointPoint,
   resolveDocumentRoutingGeometry,
@@ -531,23 +532,17 @@ export function buildSvgScene(
     routingGeometry.endpointJoins,
     profile,
   );
-  const junctionDegrees = new Map(
-    document.junctions.map((junction) => [junction.id, 0]),
+  const contactEvidence = deriveDocumentContactEvidence(
+    document,
+    resolver,
+    routingGeometry,
   );
-  for (const route of document.routes) {
-    for (const endpoint of [route.from, route.to]) {
-      if (endpoint.kind !== "junction") continue;
-      junctionDegrees.set(
-        endpoint.junctionId,
-        (junctionDegrees.get(endpoint.junctionId) ?? 0) + 1,
-      );
-    }
-  }
   const junctions = [...document.junctions]
     .filter(
       (junction) =>
         (junction.role ?? "branch") === "branch" &&
-        (junctionDegrees.get(junction.id) ?? 0) >= 3 &&
+        (contactEvidence.byEndpointKey.get(`junction:${junction.id}`)?.incidents
+          .length ?? 0) >= 3 &&
         !powerRailNetIds.has(junction.netId),
     )
     .sort((left, right) => left.id.localeCompare(right.id, "en"))

@@ -172,6 +172,118 @@ describe("Agent Circuit API v1 service", () => {
     );
   });
 
+  it("expands a high-level wire intent through the shared GUI wire planner", () => {
+    const document = createEmptyDocument("wire-intent", "Wire intent");
+    document.ports.push(
+      {
+        id: "left",
+        name: "left",
+        direction: "passive",
+        position: { x: 0, y: 0 },
+      },
+      {
+        id: "right",
+        name: "right",
+        direction: "passive",
+        position: { x: 40, y: 0 },
+      },
+      {
+        id: "top",
+        name: "top",
+        direction: "passive",
+        position: { x: 20, y: -20 },
+      },
+    );
+    let stored = document;
+    const service = createAgentCircuitService({
+      agentId: "agent-wire",
+      resolver,
+      permissions: allPermissions,
+      store: {
+        getDocument: () => stored,
+        commitDocument: (next) => {
+          stored = next;
+        },
+      },
+    });
+
+    expect(
+      service.handle({
+        apiVersion: "2.0",
+        requestId: "wire-intent-request",
+        operation: "transact",
+        documentId: document.id,
+        transactionId: "wire-intent-transaction",
+        expectedRevision: 0,
+        wireIntent: {
+          id: "wire-output",
+          from: {
+            kind: "endpoint",
+            endpoint: { kind: "port", portId: "left" },
+          },
+          to: {
+            kind: "endpoint",
+            endpoint: { kind: "port", portId: "right" },
+          },
+        },
+      }),
+    ).toMatchObject({
+      ok: true,
+      applied: true,
+      revision: 1,
+      resolvedRoutes: [
+        {
+          routeId: "wire-output-route",
+          polyline: [
+            { x: 0, y: 0 },
+            { x: 40, y: 0 },
+          ],
+        },
+      ],
+    });
+    expect(stored.nets).toMatchObject([
+      { id: "wire-output-net", ports: ["left", "right"] },
+    ]);
+
+    expect(
+      service.handle({
+        apiVersion: "2.0",
+        requestId: "wire-tap-request",
+        operation: "transact",
+        documentId: document.id,
+        transactionId: "wire-tap-transaction",
+        expectedRevision: 1,
+        wireIntent: {
+          id: "wire-tap",
+          from: {
+            kind: "endpoint",
+            endpoint: { kind: "port", portId: "top" },
+          },
+          to: {
+            kind: "route-segment",
+            routeId: "wire-output-route",
+            segmentIndex: 0,
+            point: { x: 20, y: 0 },
+          },
+        },
+      }),
+    ).toMatchObject({ ok: true, applied: true, revision: 2 });
+    expect(stored.junctions).toContainEqual(
+      expect.objectContaining({
+        id: "wire-tap-to-junction",
+        netId: "wire-output-net",
+        position: { x: 20, y: 0 },
+      }),
+    );
+    expect(
+      stored.routes.find((route) => route.id === "wire-tap-route"),
+    ).toMatchObject({
+      netId: "wire-output-net",
+      from: { kind: "port", portId: "top" },
+      to: { kind: "junction", junctionId: "wire-tap-to-junction" },
+    });
+  });
+
   it("rejects Snapshots above the server-owned byte limit", () => {
     const fixture = serviceFixture(allPermissions, { maxSnapshotBytes: 10 });
     expect(

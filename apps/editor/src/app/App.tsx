@@ -21,7 +21,6 @@ import {
 import {
   buildProjectConnectivityIndex,
   buildProjectSearchIndex,
-  adaptVisualDiagnostic,
   deriveCrossings,
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
@@ -29,12 +28,11 @@ import {
   findHierarchyPath,
   isVisibleEndpoint,
   moveRouteSegment,
-  mergeDiagnostics,
+  diagnoseProject,
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
   resolveNetLabelBinding,
   resolveMosBulkConnection,
-  runErcChecks,
   routeAttachmentPlacement,
   traceHierarchyNet,
 } from "@icm/derived";
@@ -695,26 +693,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     [document.id, highlightedTrace],
   );
   const highlightedNetId = highlightedNet?.netId ?? null;
-  const ercDiagnostics = useMemo(
-    () => runErcChecks(project, projectConnectivityIndex, resolver),
-    [project, projectConnectivityIndex, resolver],
-  );
-  const projectVisualDiagnostics = useMemo(
-    () =>
-      project.documents.flatMap((candidate) =>
-        diagnoseVisualQuality(candidate, resolver).map((diagnostic) =>
-          adaptVisualDiagnostic(
-            diagnostic,
-            candidate.id,
-            projectConnectivityIndex,
-          ),
-        ),
-      ),
-    [project.documents, projectConnectivityIndex, resolver],
-  );
   const projectDiagnostics = useMemo(
-    () => mergeDiagnostics(ercDiagnostics, projectVisualDiagnostics),
-    [ercDiagnostics, projectVisualDiagnostics],
+    () => diagnoseProject(project, resolver, projectConnectivityIndex),
+    [project, projectConnectivityIndex, resolver],
   );
   const searchResults = useMemo(
     () =>
@@ -5656,6 +5637,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         onGrant={agentSession.grant}
         onPause={agentSession.pause}
         onResume={agentSession.resume}
+        onReconnect={agentSession.reconnect}
         onRevoke={agentSession.revoke}
         onClose={() => {
           setAgentPanelOpen(false);

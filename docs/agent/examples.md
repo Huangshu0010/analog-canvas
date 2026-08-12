@@ -43,11 +43,12 @@ Snapshots and zero blocking visual diagnostics.
 ## 3. Add an explicit branch without inventing crossing connectivity
 
 1. Inspect the Snapshot's complete Net, Route, and Junction facts.
-2. Dry-run `add_junction` with source-route split metadata, followed by
-   `set_route_points` from a same-Net terminal to the new Junction.
+2. Dry-run one `wireIntent` from the terminal endpoint to the target
+   `route-segment` anchor. The shared GUI planner owns the Junction ID, Route
+   split, Net merge, and Route creation choreography.
 3. If validation reports an unintended connection or lock conflict, stop and
    revise the route; do not infer connectivity from a geometric crossing.
-4. Commit, render, and refresh.
+4. Inspect `diagnosticDelta`, commit, render, and refresh.
 
 Expected result: a Junction dot exists only for explicit same-Net branches;
 unrelated geometric crossings remain dotless.

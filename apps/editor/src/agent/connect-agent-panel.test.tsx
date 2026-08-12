@@ -22,6 +22,7 @@ function baseProps(
     onGrant: vi.fn(),
     onPause: vi.fn(),
     onResume: vi.fn(),
+    onReconnect: vi.fn(),
     onRevoke: vi.fn(),
     onClose: vi.fn(),
     ...overrides,
@@ -83,6 +84,16 @@ describe("ConnectAgentPanel", () => {
     );
     expect(markup).toContain('data-testid="agent-resume"');
     expect(markup).not.toContain('data-testid="agent-pause"');
+  });
+
+  it("offers explicit recovery while the relay is reconnecting or offline", () => {
+    for (const status of ["reconnecting", "offline"] as const) {
+      const markup = renderToStaticMarkup(
+        <ConnectAgentPanel {...baseProps({ status })} />,
+      );
+      expect(markup).toContain('data-testid="agent-reconnect"');
+      expect(markup).toContain('data-testid="agent-revoke"');
+    }
   });
 
   it("hides the claim code and controls in a terminal revoked state", () => {

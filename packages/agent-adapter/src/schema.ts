@@ -103,13 +103,40 @@ export const AgentSnapshotRequestSchema = RequestBaseSchema.extend({
   documentId: StableIdSchema,
   includeSourceSpans: z.boolean().optional(),
 });
+export const AgentWireIntentAnchorSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("endpoint"),
+    endpoint: RouteEndpointSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("route-segment"),
+    routeId: StableIdSchema,
+    segmentIndex: z.number().int().nonnegative(),
+    point: PointSchema,
+  }),
+  z.strictObject({ kind: z.literal("free"), point: PointSchema }),
+]);
+export const AgentWireIntentSchema = z.strictObject({
+  id: StableIdSchema,
+  from: AgentWireIntentAnchorSchema,
+  to: AgentWireIntentAnchorSchema,
+  waypoints: z.array(PointSchema).max(256).optional(),
+});
 export const AgentTransactRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("transact"),
   documentId: StableIdSchema,
   transactionId: StableIdSchema,
   expectedRevision: z.number().int().nonnegative(),
   dryRun: z.boolean().optional(),
-  edits: z.array(SchematicEditSchema).min(1).max(256),
+  edits: z.array(SchematicEditSchema).min(1).max(256).optional(),
+  wireIntent: AgentWireIntentSchema.optional(),
+}).superRefine((request, context) => {
+  if ((request.edits === undefined) === (request.wireIntent === undefined)) {
+    context.addIssue({
+      code: "custom",
+      message: "Provide exactly one of edits or wireIntent",
+    });
+  }
 });
 export const AgentRenderRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("render"),
@@ -138,6 +165,7 @@ const AgentDiagnosticBoundsSchema = z.strictObject({
 
 export const AgentDiagnosticSchema = z.strictObject({
   code: z.string().min(1),
+  domain: z.enum(["schema", "spice", "erc", "routing", "visual"]).optional(),
   severity: z.enum(["error", "warning", "info"]),
   category: z.enum(["structural", "observation"]).optional(),
   confidence: z.enum(["high", "medium", "low"]).optional(),
@@ -402,6 +430,12 @@ export const AgentTransactSuccessResponseSchema = ResponseBaseSchema.extend({
   proposedRevision: z.number().int().nonnegative(),
   diff: AgentDiffSchema,
   diagnostics: z.array(AgentDiagnosticSchema),
+  diagnosticDelta: z
+    .strictObject({
+      added: z.array(AgentDiagnosticSchema),
+      removed: z.array(AgentDiagnosticSchema),
+    })
+    .optional(),
   resolvedRoutes: z
     .array(
       z.strictObject({
