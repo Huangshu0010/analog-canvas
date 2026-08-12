@@ -24,6 +24,7 @@ import {
   deriveInternalGroupSelection,
   diagnoseVisualQuality,
   endpointKey,
+  findHierarchyPath,
   isVisibleEndpoint,
   moveRouteSegment,
   proposeGroupMove,
@@ -32,7 +33,13 @@ import {
   routeAttachmentPlacement,
   routePolyline,
 } from "@icm/derived";
-import type { ErcDiagnostic, Flightline, SearchResult } from "@icm/derived";
+import type {
+  ErcDiagnostic,
+  Flightline,
+  HierarchyFrame,
+  ObjectLocator,
+  SearchResult,
+} from "@icm/derived";
 import {
   createEmptyProject,
   parseProject,
@@ -446,7 +453,7 @@ export function App({ project: initialProject }: AppProps) {
     initialProject ?? createEmptyProject("project-main", "New Circuit"),
     stageRecovery,
   );
-  const [documentStack, setDocumentStack] = useState<string[]>([]);
+  const [documentStack, setDocumentStack] = useState<HierarchyFrame[]>([]);
   const {
     selection: visualSelection,
     replace: replaceSelection,
@@ -1028,6 +1035,112 @@ export function App({ project: initialProject }: AppProps) {
     setStatus(`Opened Cell ${nextDocument.name}`);
   }
 
+  function navigateToLocator(
+    locator: ObjectLocator,
+    statusMessage: string,
+  ): void {
+    const targetDocument = project.documents.find(
+      (candidate) => candidate.id === locator.documentId,
+    );
+    if (!targetDocument) {
+      setStatus(`Document not found: ${locator.documentId}`);
+      return;
+    }
+    const derivedPath = findHierarchyPath(
+      projectConnectivityIndex,
+      project.topDocumentId,
+      locator.documentId,
+    );
+    const hierarchyPath =
+      locator.hierarchyPath.length > 0
+        ? locator.hierarchyPath
+        : (derivedPath ?? []);
+    documentViewBoxes.current.set(document.id, viewBox);
+    const opened = openDocument(locator.documentId);
+    if (!opened) {
+      setStatus(`Document not found: ${locator.documentId}`);
+      return;
+    }
+    setDocumentStack([...hierarchyPath]);
+    setViewBox(documentViewBoxes.current.get(opened.id) ?? DEFAULT_VIEWBOX);
+    clearTransientCanvasState();
+    resetSelection();
+    setSelectedRouteSegmentIndex(null);
+    setTextEditing(null);
+    setSelectedEndpoint(null);
+    cancelInteraction();
+
+    const focusPoint = (point: Point) =>
+      setViewBox({
+        x: point.x - 80,
+        y: point.y - 60,
+        width: 160,
+        height: 120,
+      });
+    const endpoint =
+      locator.kind === "terminal"
+        ? locator.endpoint
+        : locator.kind === "port"
+          ? { kind: "port" as const, portId: locator.objectId }
+          : locator.kind === "no-connect"
+            ? opened.noConnects.find(
+                (noConnect) => noConnect.id === locator.objectId,
+              )?.endpoint
+            : undefined;
+    if (endpoint) {
+      const point =
+        endpoint.kind === "port"
+          ? opened.ports.find((port) => port.id === endpoint.portId)?.position
+          : endpoint.kind === "terminal"
+            ? (() => {
+                const instance = opened.instances.find(
+                  (candidate) => candidate.id === endpoint.instanceId,
+                );
+                const resolved = instance
+                  ? resolver.resolve(
+                      instance.symbolId,
+                      instance.symbolVariantId,
+                    )
+                  : undefined;
+                const pin = resolved?.definition.pins.find(
+                  (candidate) => candidate.name === endpoint.pinName,
+                );
+                return instance?.placement && pin
+                  ? transformPoint(
+                      pin.at,
+                      instance.placement.position,
+                      instance.placement,
+                    )
+                  : null;
+              })()
+            : null;
+      if (point) {
+        setSelectedEndpoint({
+          endpoint,
+          netId: endpointNetId(opened, endpoint),
+          point,
+          preludeEdits: [],
+        });
+        focusPoint(point);
+      }
+    } else if (locator.kind === "instance") {
+      const instance = opened.instances.find(
+        (item) => item.id === locator.objectId,
+      );
+      selectOnly("instance", [locator.objectId]);
+      if (instance?.placement) focusPoint(instance.placement.position);
+    } else if (locator.kind === "net") {
+      setHighlightedNetId(locator.objectId);
+      const route = opened.routes.find(
+        (item) => item.netId === locator.objectId,
+      );
+      const polyline = route ? routePolyline(opened, resolver, route) : null;
+      if (polyline?.points[0]) focusPoint(polyline.points[0]);
+    }
+    setSelectionOpen(true);
+    setStatus(statusMessage);
+  }
+
   function enterHierarchy(instanceId: string): void {
     const instance = document.instances.find(
       (candidate) => candidate.id === instanceId,
@@ -1037,15 +1150,22 @@ export function App({ project: initialProject }: AppProps) {
       setStatus(`${instanceId} has no imported child Cell`);
       return;
     }
-    setDocumentStack((current) => [...current, document.id]);
+    setDocumentStack((current) => [
+      ...current,
+      {
+        parentDocumentId: document.id,
+        instanceId,
+        childDocumentId: targetId,
+      },
+    ]);
     switchDocument(targetId);
   }
 
   function returnToParentDocument(): void {
-    const parentId = documentStack.at(-1);
-    if (!parentId) return;
+    const frame = documentStack.at(-1);
+    if (!frame) return;
     setDocumentStack((current) => current.slice(0, -1));
-    switchDocument(parentId);
+    switchDocument(frame.parentDocumentId);
   }
 
   function returnToTopDocument(): void {
@@ -1113,55 +1233,10 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function jumpToErcDiagnostic(diagnostic: ErcDiagnostic): void {
-    const locator = diagnostic.primary;
-    if (locator.documentId !== document.id) {
-      setStatus(`${diagnostic.code}: open ${locator.documentId} to inspect`);
-      return;
-    }
-    const focusPoint = (point: Point) =>
-      setViewBox({
-        x: point.x - 80,
-        y: point.y - 60,
-        width: 160,
-        height: 120,
-      });
-    const endpoint =
-      locator.kind === "terminal"
-        ? locator.endpoint
-        : locator.kind === "port"
-          ? { kind: "port" as const, portId: locator.objectId }
-          : locator.kind === "no-connect"
-            ? document.noConnects.find(
-                (noConnect) => noConnect.id === locator.objectId,
-              )?.endpoint
-            : undefined;
-    if (endpoint) {
-      const candidate = visibleEndpoints.find(
-        (item) => endpointKey(item.endpoint) === endpointKey(endpoint),
-      );
-      if (candidate) {
-        selectEndpoint(candidate);
-        focusPoint(candidate.point);
-      }
-    } else if (locator.kind === "instance") {
-      const instance = document.instances.find(
-        (item) => item.id === locator.objectId,
-      );
-      selectOnly("instance", [locator.objectId]);
-      setSelectedEndpoint(null);
-      if (instance?.placement) focusPoint(instance.placement.position);
-    } else if (locator.kind === "net") {
-      resetSelection();
-      setSelectedEndpoint(null);
-      highlightNet(locator.objectId);
-      const route = document.routes.find(
-        (item) => item.netId === locator.objectId,
-      );
-      const polyline = route ? routePolyline(document, resolver, route) : null;
-      if (polyline?.points[0]) focusPoint(polyline.points[0]);
-    }
-    setSelectionOpen(true);
-    setStatus(`${diagnostic.code}: ${diagnostic.message}`);
+    navigateToLocator(
+      diagnostic.primary,
+      `${diagnostic.code}: ${diagnostic.message}`,
+    );
   }
 
   function applyResult(result: EditTransactionResult): void {
@@ -4923,27 +4998,11 @@ export function App({ project: initialProject }: AppProps) {
   }
 
   function selectSearchResult(result: SearchResult): void {
-    const locator = result.locator;
-    if (locator.documentId !== document.id) {
-      setDocumentStack([]);
-      switchDocument(locator.documentId);
-    }
-    setSelectedEndpoint(null);
-    switch (locator.kind) {
-      case "instance":
-        selectOnly("instance", [locator.objectId]);
-        break;
-      case "port":
-        setStatus(`Located port ${locator.objectId}`);
-        resetSelection();
-        break;
-      case "net":
-        setHighlightedNetId(locator.objectId);
-        resetSelection();
-        break;
-    }
+    navigateToLocator(
+      result.locator,
+      `Selected ${result.locator.kind} ${result.locator.objectId}`,
+    );
     closeSearch();
-    setStatus(`Selected ${locator.kind} ${locator.objectId}`);
   }
 
   function highlightNet(netId: string): void {

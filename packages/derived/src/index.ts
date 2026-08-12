@@ -5,6 +5,7 @@ export * from "./diagnostics/diagnostic.js";
 export * from "./diagnostics/erc.js";
 export * from "./drafting-geometry.js";
 export * from "./endpoint.js";
+export * from "./hierarchy-navigation.js";
 export * from "./instance-label-placement.js";
 export * from "./net-highlight.js";
 export * from "./object-locator.js";

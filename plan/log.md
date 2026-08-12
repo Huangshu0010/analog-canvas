@@ -4980,3 +4980,15 @@ contracts (WP-R1)`.
   targeted Prettier; `git diff --check` clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(erc): consume typed source binding evidence`.
+
+## 2026-08-12 - Connectivity Recovery C6c: canonical hierarchy navigation
+
+- Target: replace document-id navigation with canonical hierarchy frames and
+  migrate search/ERC target jumps through one locator navigator.
+- Changed areas: derived path resolver, editor navigation state/consumers, and
+  focused hierarchy/App/browser regressions; target plan and log.
+- Validation: workspace `pnpm typecheck`; 17 focused derived/App tests; two
+  focused Playwright search/ERC flows; targeted Prettier; `git diff --check`
+  clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(editor): navigate canonical locators across hierarchy`.
