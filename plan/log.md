@@ -1,19 +1,18 @@
 # Maintenance Log
 
-## 2026-08-12 - Razavi MOS bulk semantics
+## 2026-08-12 - Restore local editor UI on current main
 
-- Target: preserve canonical D/G/S/B while making three-terminal Razavi MOS
-  authoring electrically complete through Cell defaults, product fallback, and
-  an explicit dashed body-route workflow.
-- Changed areas: model/Derived/Edit Engine bulk contract; Razavi auxiliary B
-  anchor and generated catalog; route rendering/deletion/clipboard; editor
-  Selection and entry-boundary preparation; ERC; Agent Snapshot/API artifacts;
-  normative product and interaction docs.
-- Validation: 606 unit tests; 86 browser E2E tests; workspace typecheck,
-  formatting, references, MOS/catalog/API generated-artifact checks, production
-  build, and `git diff --check` all passed.
-- Commit status: ready to commit on `codex/razavi-bulk-semantics` as
-  `feat: unify Razavi MOS bulk connectivity`.
+- Target: recreate the validated local editor chrome without reverting newer
+  remote connectivity, routing, diagnostics, search, analytics, or Library
+  behavior.
+- Changed areas: editor shell structure and visual scale, responsive
+  Library/Properties layout, tool icons, and focused unit/browser contracts.
+- Validation: App/ShapesPanel unit tests 14/14; focused editor Playwright 89/89
+  with viewport cases repeated; workspace typecheck; editor dependency-closure
+  production build; Prettier; and `git diff --check` passed.
+- Commit status: ready to commit on `fix/restore-local-editor-ui` as
+  `fix(editor): restore local chrome on current main`; full canonical and
+  remote delivery gates remain required before merge to `main`.
 
 ## 2026-08-12 - Net deletion selection closure
 
@@ -5424,27 +5423,6 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/construction-line-k-shortcut` as
   `fix(connectivity): normalize symbol-defined power Nets`.
 
-## 2026-08-12 - Global power-Net duplicate ERC exemption
-
-- Target: accept repeated global Ground/VDD symbol Nets without weakening
-  duplicate-name diagnostics for ordinary signal Nets.
-- Changed areas: ERC grouping predicate and focused regression, target plan,
-  and maintenance log.
-- Validation: 16 focused ERC tests; workspace typecheck; format check;
-  `git diff --check`.
-- Commit status: ready to commit on `codex/razavi-bulk-semantics` as
-  `fix(erc): accept repeated global power Nets`.
-
-## 2026-08-12 - Global ground ERC fallback follow-up
-
-- Target: include canonical MOS-bulk fallback Net `net-global-0` in the
-  same global-ground ERC exemption as visible Ground marker Nets.
-- Changed areas: ERC power-domain grouping and the existing focused regression.
-- Validation: 16 focused ERC tests; workspace typecheck; format check;
-  `git diff --check`.
-- Commit status: ready to commit on `codex/razavi-bulk-semantics` as
-  `fix(erc): recognize canonical power fallback Nets`.
-
 ## 2026-08-12 - Unified Net Label binding and deletion
 
 - Target: eliminate conflicting Route/Junction/Net interpretations of Label
@@ -5508,18 +5486,6 @@ contracts (WP-R1)`.
   independent E2E cases timed out only in the initial 16-worker run, passed 3/3
   at one worker, and the complete suite passed 85/85 at eight workers.
 - Commit status: integration branch validated and ready to fast-forward main.
-
-## 2026-08-12 - Razavi bulk / latest-main integration
-
-- Target: combine Razavi MOS bulk semantics with the published component
-  Library quick-place work without discarding either editor surface.
-- Changed areas: automatic two-parent integration commit; factual integration
-  target record. No functional conflict required manual resolution.
-- Validation: workspace typecheck; 20 focused Derived MOS-bulk/ERC tests; six
-  editor presentation/library unit tests; nine single-worker component-Library
-  browser tests; `git diff --check` clean.
-- Commit status: merge commit `c291ee2` created locally; close-out metadata is
-  ready to commit on `codex/razavi-bulk-semantics`.
 
 ## 2026-08-12 - Safe PR 14 improvements
 

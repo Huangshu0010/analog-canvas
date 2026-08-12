@@ -39,13 +39,15 @@ Shared merge surface:
    resolution.
 2. Verify merge ancestry and absence of conflict markers.
 3. Run focused workspace validation for the merged editor and bulk semantics.
-4. Record the factual result and leave the branch ready for a reviewed main
+4. Reconcile the later mainline editor-Chrome restoration: retain its UI
+   structure and reapply only the Razavi bulk feature hooks in `App.tsx`.
+5. Record the factual result and leave the branch ready for a reviewed main
    update.
 
 ## Validation
 
 - `corepack pnpm typecheck`
-- focused Razavi bulk and component-insert tests
+- focused Razavi bulk and restored-editor UI tests
 - `git diff --check`
 - `git status --short --branch`
 
