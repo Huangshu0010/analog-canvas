@@ -66,11 +66,11 @@ const shortSegment: VisualDiagnostic = {
 };
 
 describe("diagnostic aggregation", () => {
-  it("adapts a VisualDiagnostic into a domain:visual envelope with a resolved primary locator", () => {
+  it("adapts a route-quality observation with a resolved primary locator", () => {
     const project = projectWithInstance();
     const index = buildProjectConnectivityIndex(project, resolver);
     const diagnostic = adaptVisualDiagnostic(shortSegment, "doc", index);
-    expect(diagnostic.domain).toBe("visual");
+    expect(diagnostic.domain).toBe("routing");
     expect(diagnostic.code).toBe("VISUAL_SHORT_SEGMENT");
     expect(diagnostic.primary).toEqual({
       documentId: "doc",
@@ -81,7 +81,7 @@ describe("diagnostic aggregation", () => {
     expect(diagnostic.related).toEqual([]);
   });
 
-  it("keeps ERC and visual diagnostics in distinct domains after merging", () => {
+  it("keeps ERC and routing diagnostics in distinct domains after merging", () => {
     const project = projectWithInstance();
     const index = buildProjectConnectivityIndex(project, resolver);
     const erc = runErcChecks(project, index, resolver); // unconnected pins -> warnings
@@ -91,12 +91,29 @@ describe("diagnostic aggregation", () => {
     expect(merged.map((item) => item.domain).sort()).toEqual([
       "erc",
       "erc",
-      "visual",
+      "routing",
     ]);
-    // ERC errors/warnings sort before visual warnings by domain then severity.
+    // ERC errors/warnings sort before routing warnings by domain then severity.
     expect(
-      merged.findIndex((item) => item.domain === "visual"),
+      merged.findIndex((item) => item.domain === "routing"),
     ).toBeGreaterThan(merged.findIndex((item) => item.domain === "erc"));
+  });
+
+  it("classifies route-quality observations as routing without changing their locator", () => {
+    const project = projectWithInstance();
+    const index = buildProjectConnectivityIndex(project, resolver);
+    const routing = adaptVisualDiagnostic(
+      { ...shortSegment, objectIds: ["I1"] },
+      "doc",
+      index,
+    );
+    expect(routing.domain).toBe("routing");
+    expect(routing.primary).toEqual({
+      documentId: "doc",
+      hierarchyPath: [],
+      kind: "instance",
+      objectId: "I1",
+    });
   });
 
   it("keeps distinct visual observations on one primary object uniquely addressable", () => {

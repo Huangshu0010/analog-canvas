@@ -42,6 +42,14 @@ const DOMAIN_ORDER: readonly DiagnosticDomain[] = [
   "visual",
 ];
 
+const ROUTING_VISUAL_CODES = new Set([
+  "VISUAL_WIRE_THROUGH_SYMBOL",
+  "VISUAL_ROUTE_OVERLAP",
+  "VISUAL_TERMINAL_DEPARTURE",
+  "VISUAL_SHORT_SEGMENT",
+  "VISUAL_AMBIGUOUS_JUNCTION",
+]);
+
 function locatorFromIndex(
   index: ProjectConnectivityIndex,
   documentId: string,
@@ -87,7 +95,7 @@ export function adaptVisualDiagnostic(
     );
   return {
     id: `visual:${documentId}:${visual.code}:${visualDiagnosticIdentity(visual)}`,
-    domain: "visual",
+    domain: ROUTING_VISUAL_CODES.has(visual.code) ? "routing" : "visual",
     code: visual.code,
     severity: visual.severity,
     confidence: visual.confidence,

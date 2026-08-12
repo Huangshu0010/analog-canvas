@@ -5225,3 +5225,14 @@ contracts (WP-R1)`.
   clean.
 - Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
   as `feat(editor): navigate hierarchy Net trace paths`.
+
+## 2026-08-12 - Connectivity Recovery C9e: routing diagnostic domain
+
+- Target: classify route-quality observations as `routing` rather than
+  overloading `visual` in the unified diagnostic envelope.
+- Changed areas: diagnostic adapter/tests, recovery status, target plan and
+  log.
+- Validation: 14 focused diagnostic/selection/visual tests; workspace
+  `pnpm typecheck`; targeted Prettier; `git diff --check` clean.
+- Commit status: ready to commit on `roadmap/connectivity-routing-debugging`
+  as `feat(diagnostics): classify routing observations separately`.
