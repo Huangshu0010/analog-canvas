@@ -6194,3 +6194,14 @@ contracts (WP-R1)`.
   link scan, pinned references, typecheck), and `git diff --check` passed.
 - Commit status: ready to commit on `codex/docs-information-architecture` as
   `docs: consolidate current documentation architecture`.
+
+## 2026-08-13 - Integrate docs architecture and contact authoring
+
+- Target: combine the completed documentation architecture and unified
+  electrical-contact branches into one validated review head.
+- Changed areas: merge metadata and preservation of both factual plan-log
+  records; no product-source conflict or behavior rewrite was required.
+- Validation: 102-file Markdown-link scan, five targeted browser regressions,
+  and `pnpm verify:branch` (675 tests, build, and production smoke) passed.
+- Commit status: merge committed on `codex/unified-electrical-contact` as
+  `a3f9264`; plan closure is recorded in the following maintenance commit.
