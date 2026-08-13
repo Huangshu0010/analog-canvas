@@ -101,7 +101,7 @@ Source: GitHub Actions** once. The included `Deploy GitHub Pages` workflow
 then publishes every push to `main` at:
 
 ```text
-https://<GitHub-account>.github.io/interactive-circuit-maker/
+https://chenzc24.github.io/Analog-Canvas/
 ```
 
 It also supports a manual run from the Actions tab. The workflow builds with

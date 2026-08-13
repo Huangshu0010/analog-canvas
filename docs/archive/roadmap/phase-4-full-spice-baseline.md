@@ -111,12 +111,12 @@ Import a vendor extension not understood by the selected dialect
 
 ## Risks and decisions
 
-| Risk or decision | Handling |
-|---|---|
-| “Full SPICE” has no single grammar | Pin an explicit SPICE3/ngspice baseline and expose dialect identity |
-| Parser work blocks product progress | Keep Phase 4 parallelizable with Phase 5 after Phase 2 |
-| Control language becomes a simulator project | Preserve structurally; do not execute |
-| Corpus licensing is unclear | Use minimized original fixtures derived from documented grammar |
+| Risk or decision                             | Handling                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------- |
+| “Full SPICE” has no single grammar           | Pin an explicit SPICE3/ngspice baseline and expose dialect identity |
+| Parser work blocks product progress          | Keep Phase 4 parallelizable with Phase 5 after Phase 2              |
+| Control language becomes a simulator project | Preserve structurally; do not execute                               |
+| Corpus licensing is unclear                  | Use minimized original fixtures derived from documented grammar     |
 
 ## Exit gate
 

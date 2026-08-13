@@ -44,7 +44,8 @@ stroke/node rules below as hard constraints the renderer will enforce or
 visually expose. Treat any routing decision as your own judgment, guided by
 [`routing-and-diagnostics.md`](../../agent/knowledge/routing-and-diagnostics.md),
 [`schematic-expression.md`](../../agent/knowledge/schematic-expression.md), and
-[`layout-guidance.md`](../../agent/layout-guidance.md) — not by this canon.
+[`circuit-style-knowledge.md`](../../agent/circuit-style-knowledge.md) — not by
+this retired canon.
 
 ## Coordinate canon
 
@@ -106,14 +107,14 @@ maps reviewed VSS weights to roles: `1.2` point → `normal`, `2.16` point →
 `emphasis`. Unknown source weights block generation rather than clustering
 silently. Roles and values (scene units):
 
-| Role           | Value  | Use                                            |
-| -------------- | -----: | ---------------------------------------------- |
-| `wire`         | `1.6`  | Conductors                                     |
-| `symbol`       | `1.6`  | Unmigrated component compatibility geometry    |
-| `normal`       | `1.2`  | Reviewed normal Visio component geometry       |
-| `emphasis`     | `2.16` | MOS gates and reviewed heavy Visio geometry    |
-| `supply`       | `1.8`  | GND/VDD/VSS bars                               |
-| `annotation`   | `1.6`  | Current arrows and polarity geometry           |
+| Role         |  Value | Use                                         |
+| ------------ | -----: | ------------------------------------------- |
+| `wire`       |  `1.6` | Conductors                                  |
+| `symbol`     |  `1.6` | Unmigrated component compatibility geometry |
+| `normal`     |  `1.2` | Reviewed normal Visio component geometry    |
+| `emphasis`   | `2.16` | MOS gates and reviewed heavy Visio geometry |
+| `supply`     |  `1.8` | GND/VDD/VSS bars                            |
+| `annotation` |  `1.6` | Current arrows and polarity geometry        |
 
 Line cap `butt`; line join `miter`; miter limit `4`. Junction and Port origin
 radius `3.0`; supply bar width `20`; current arrow length `24`; arrow head
@@ -122,14 +123,14 @@ length `10`, width `7`.
 Connection-origin truth — the renderer draws based on explicit object kind, not
 on geometric degree:
 
-| Object                        | Formal appearance                            |
-| ----------------------------- | -------------------------------------------- |
-| Device pin anchor             | Invisible                                    |
-| Placed signal Port origin     | Filled foreground circle, radius `3.0`       |
-| Power Port with power label   | Supply bar width `20`; no overlapping dot    |
-| Explicit Junction             | Filled foreground circle, radius `3.0`       |
-| Two-wire corner               | No extra dot                                 |
-| Non-connected geometric cross | No dot and no bridge                         |
+| Object                        | Formal appearance                         |
+| ----------------------------- | ----------------------------------------- |
+| Device pin anchor             | Invisible                                 |
+| Placed signal Port origin     | Filled foreground circle, radius `3.0`    |
+| Power Port with power label   | Supply bar width `20`; no overlapping dot |
+| Explicit Junction             | Filled foreground circle, radius `3.0`    |
+| Two-wire corner               | No extra dot                              |
+| Non-connected geometric cross | No dot and no bridge                      |
 
 Degree alone does not create a dot. Connectivity and explicit object kind are
 the authority. A positioned Port renders as power presentation only when a

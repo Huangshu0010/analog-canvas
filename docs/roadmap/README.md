@@ -1,74 +1,27 @@
 # Delivery Roadmap
 
-The roadmap decomposes the accepted architecture into demonstrable phases.
-Phases are ordered by dependency and exit gates, not by calendar estimates.
+This directory contains only current cross-module work. Completed delivery
+phases are preserved as historical evidence under
+[`../archive/roadmap/`](../archive/roadmap/README.md); they are not default
+implementation context.
 
-## Phase Index
+## Delivery status
 
-| Phase | Plan                                                                                              | Status     | Primary outcome                                                             |
-| ----: | ------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
-|     0 | [`Contracts and Scaffold`](phase-0-contracts-and-scaffold.md)                                     | complete   | Stable Project, Document, coordinate, Symbol, edit, and IR boundaries       |
-|     1 | [`Core Editor Slice`](phase-1-core-editor-slice.md)                                               | complete   | Manually place, move, save, reopen, and render a small schematic            |
-|     2 | [`SPICE Import`](phase-2-spice-import.md)                                                         | complete   | Import current fixtures into Documents without losing connectivity          |
-|     3 | [`Connectivity and Routing`](phase-3-connectivity-and-routing.md)                                 | complete   | Wire, explicit junction, crossing, flightline, stretch, and detach closure  |
-|     4 | [`Full SPICE Baseline`](phase-4-full-spice-baseline.md)                                           | complete   | Complete SPICE3/ngspice structural compatibility and lossless round-trip    |
-|     5 | [`Symbols and Visual Quality`](../archive/roadmap/phase-5-symbols-and-visual-quality.md)          | superseded | Archived VSS-era record; current visual work uses the Razavi visual contract |
-|     6 | [`Agent API`](phase-6-agent-api.md)                                                               | complete   | Safe `capabilities/query/transact/render` Agent integration                 |
-|     7 | [`Export and Hardening`](phase-7-export-and-hardening.md)                                         | complete   | Recovery, performance, broader dialects, and production export              |
-|     8 | [`Direct Manipulation and Manual Authoring`](phase-8-direct-manipulation-and-manual-authoring.md) | complete   | Compact UI, manual placement, direct wiring, and automatic junctions        |
-|     9 | [`Snapshot-Driven Agent Workflow`](phase-9-agent-reasoning-and-observability.md)                  | review     | Snapshot/Skill workflow implemented; external quality ablation remains      |
+| Area                                                                      | Status                                                        | Current authority                                                                                                       |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Phases 0--8: contracts, editor, import, routing, export, manual authoring | complete                                                      | [archived phase records](../archive/roadmap/README.md) and current specs/ADRs                                           |
+| Phase 9: Snapshot-driven Agent workflow                                   | review                                                        | [Phase 9 record](phase-9-agent-reasoning-and-observability.md)                                                          |
+| Connectivity, routing, and electrical debugging                           | proposed                                                      | [unification plan](connectivity-routing-debugging-plan.md)                                                              |
+| Browser-authorized Agent sessions                                         | implementation validation complete; deployment review pending | [session integration plan](web-agent-session-integration-plan.md) and [web-session spec](../specs/web-agent-session.md) |
 
-## Dependency Graph
+## Active planning rules
 
-```mermaid
-flowchart LR
-    P0["P0 Contracts"] --> P1["P1 Core Editor"]
-    P0 --> P2["P2 SPICE Import"]
-    P1 --> P3["P3 Connectivity + Routing"]
-    P2 --> P3
-    P2 --> P4["P4 Full SPICE"]
-    P1 --> P5["P5 Symbols + Visual"]
-    P3 --> P5
-    P3 --> P6["P6 Agent API"]
-    P5 --> P6
-    P4 --> P7["P7 Export + Hardening"]
-    P5 --> P7
-    P6 --> P7
-    P7 --> P8["P8 Direct Manipulation + Manual Authoring"]
-    P8 --> P9["P9 Snapshot-Driven Agent Workflow"]
-```
+- A roadmap frames a cross-module outcome and its acceptance boundary; it does
+  not own a working-tree change.
+- A target under `plan/` owns implementation, dirty-state handling, validation,
+  and delivery evidence.
+- An accepted spec or ADR overrides stale roadmap wording.
+- Completed work moves to archive rather than remaining alongside open work.
 
-Phase 1 and Phase 2 may proceed in parallel after Phase 0. Phase 4 may proceed
-in parallel with the later part of Phase 5. A downstream phase must not assume
-an upstream contract is stable until the upstream exit gate is recorded.
-Phase 8 is a post-v0.1 interaction redesign: it preserves the completed Phase
-0-7 baseline and extends its contracts instead of rewriting their history.
-Phase 9 implements the post-Phase-8 Agent workflow: the host supplies a complete
-read-only Document Snapshot, a thin Skill governs the lifecycle, knowledge is
-loaded on demand, and all writes remain typed transactions. It deliberately
-adds neither a query language nor a mandatory Layout Intent/compiler layer.
-Its deterministic product gates are complete; status remains `review` until an
-external Agent runner and independent reviewer finish the declared quality
-ablation/blind-readability gate.
-
-## Cross-cutting P0 plans
-
-| Plan | Status | Outcome |
-| --- | --- | --- |
-| [`Connectivity, routing, and electrical debugging unification`](connectivity-routing-debugging-plan.md) | proposed | Preserve the accumulated manual/Agent routing behavior while introducing one Project connectivity index, one resolved Route geometry contract, hierarchical search/trace navigation, No Connect, and ERC |
-| [`Browser-authorized Agent sessions`](web-agent-session-integration-plan.md) | proposed | Let a user grant an external Agent bounded access to the live browser Project through the existing semantic Snapshot/transaction/render API and a temporary Cloudflare relay |
-
-## Phase Rules
-
-- Each phase must produce a user-visible or deterministically inspectable
-  outcome, not only internal abstractions.
-- A phase may create several bounded targets under `plan/`; the roadmap file
-  is not a substitute for target ownership and dirty-state handling.
-- New cross-module contracts require a spec or ADR before dependent targets
-  implement against them.
-- Exit gates require evidence in tests, golden fixtures, generated artifacts,
-  or recorded review. Confidence alone is not an exit gate.
-- Out-of-scope work remains visible; it is not silently pulled into a phase.
-
-Use [`phase.template.md`](phase.template.md) when a new phase or a replacement
-phase is introduced.
+Use [`phase.template.md`](phase.template.md) only for a new, genuinely staged
+delivery phase.

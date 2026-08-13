@@ -6,20 +6,20 @@ repository search, completed roadmaps, target plans, or `docs/archive/`.
 ## Read in this order
 
 1. [`../overall-product-plan.md`](../overall-product-plan.md) — product
-   boundary and system architecture.
+   boundary, system shape, and source-of-truth map.
 2. [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
+   and [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)
    — the Razavi raster is the sole visual authority.
-3. [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)
-   — authority, component construction, Port semantics, palette exposure, and
-   pixel-fidelity contract.
-4. [`../specs/schematic-model.md`](../specs/schematic-model.md),
+3. [`../specs/schematic-model.md`](../specs/schematic-model.md),
    [`../specs/edit-engine.md`](../specs/edit-engine.md), and
    [`../specs/connectivity-and-routing.md`](../specs/connectivity-and-routing.md)
    — electrical and editing invariants.
-5. [`../specs/editor-interaction.md`](../specs/editor-interaction.md) and
-   [`../specs/agent-api.md`](../specs/agent-api.md) — human and Agent entry
-   points.
-6. [`../agent/workflow.md`](../agent/workflow.md) — Agent execution process.
+4. [`../specs/editor-interaction.md`](../specs/editor-interaction.md),
+   [`../specs/agent-api.md`](../specs/agent-api.md), and
+   [`../specs/web-agent-session.md`](../specs/web-agent-session.md) — human
+   and Agent entry points.
+5. [`../agent/workflow.md`](../agent/workflow.md) — required Agent execution
+   and visual review loop.
 
 Read a targeted roadmap, plan, user guide, or archive item only when the
 current task explicitly requires its history or acceptance evidence.

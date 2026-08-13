@@ -35,6 +35,8 @@ does not accept a LAN address. Use `pnpm dev` for a different development port.
 
 ## Agent API requests fail
 
-The static host does not enable Agent access. Start the optional Agent adapter
-explicitly, use a token of at least 32 characters, and send requests only to
-its loopback JSON endpoint. See `docs/agent/usage.md`.
+The static host does not enable the optional loopback Agent adapter. Start that
+adapter explicitly, use a token of at least 32 characters, and send requests
+only to its loopback JSON endpoint. For the published browser editor, use
+**Connect Agent** and the [browser-session instructions](../agent/api-usage.md)
+instead.

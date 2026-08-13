@@ -73,4 +73,4 @@ with product-owned tests. Production code never imports `.reference-src/`.
 
 - [`0003-isolate-reference-sources.md`](0003-isolate-reference-sources.md)
 - [`edit-engine.md`](../specs/edit-engine.md)
-- [`Phase 0`](../roadmap/phase-0-contracts-and-scaffold.md)
+- [`Phase 0`](../archive/roadmap/phase-0-contracts-and-scaffold.md)

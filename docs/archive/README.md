@@ -13,6 +13,8 @@ accepted ADR, active specification, or the
   — superseded repository walkthrough containing VSS-era assumptions.
 - [`roadmap/phase-5-symbols-and-visual-quality.md`](roadmap/phase-5-symbols-and-visual-quality.md)
   — completed VSS-era visual-pipeline record.
+- [`roadmap/`](roadmap/README.md) — completed Phase 0--8 delivery records;
+  current planning remains under `docs/roadmap/`.
 
 - [`phase9-external-quality-studies/`](phase9-external-quality-studies/) —
   completed held-out Agent studies retained as historical evidence, not future
