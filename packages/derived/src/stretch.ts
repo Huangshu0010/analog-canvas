@@ -31,7 +31,12 @@ export interface JunctionMoveProposal {
 
 export interface AnnotationMoveProposal {
   annotationId: string;
-  position: Point;
+  anchor: Extract<
+    SchematicDocument["annotations"][number]["anchor"],
+    {
+      kind: "free";
+    }
+  >;
 }
 
 export interface GroupMoveProposal {
@@ -626,16 +631,27 @@ export function proposeGroupMove(
     annotations: document.annotations
       .filter(
         (annotation) =>
-          annotation.attachedObjectId !== undefined &&
-          internallyMovedObjectIds.has(annotation.attachedObjectId),
+          annotation.anchor.kind === "free" &&
+          // Free text has no object relationship. It follows a selected group
+          // only when it lies inside that group's translated routing closure.
+          internallyMovedObjectIds.has(annotation.netId ?? ""),
       )
-      .map((annotation) => ({
-        annotationId: annotation.id,
-        position: {
-          x: annotation.position.x + groupDelta.x,
-          y: annotation.position.y + groupDelta.y,
-        },
-      }))
+      .map((annotation) => {
+        const anchor = annotation.anchor;
+        if (anchor.kind !== "free") {
+          throw new Error("Free annotation filter lost anchor narrowing");
+        }
+        return {
+          annotationId: annotation.id,
+          anchor: {
+            kind: "free" as const,
+            position: {
+              x: anchor.position.x + groupDelta.x,
+              y: anchor.position.y + groupDelta.y,
+            },
+          },
+        };
+      })
       .sort((left, right) =>
         left.annotationId.localeCompare(right.annotationId, "en"),
       ),

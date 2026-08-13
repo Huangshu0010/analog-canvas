@@ -5,7 +5,7 @@ import {
   SchematicEditSchema,
 } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
-import { transformPoint } from "@icm/model";
+import { flattenRichText, transformPoint } from "@icm/model";
 import type {
   CircuitProject,
   Point,
@@ -304,15 +304,16 @@ function describeObjects(
     descriptors.push({
       id: annotation.id,
       kind: "annotation",
-      name: annotation.text.slice(0, 128),
-      position: annotation.position,
-      netIds: annotation.attachedObjectId
-        ? sourceNetIds(document, annotation.attachedObjectId)
-        : [],
+      name: flattenRichText(annotation.content).slice(0, 128),
+      position:
+        annotation.anchor.kind === "free"
+          ? annotation.anchor.position
+          : annotation.anchor.fallbackPosition,
+      netIds: annotation.netId ? [annotation.netId] : [],
       attributes: {
         kind: annotation.kind,
         locked: annotation.locked,
-        attached: annotation.attachedObjectId !== undefined,
+        anchorKind: annotation.anchor.kind,
       },
     });
   }
@@ -392,7 +393,7 @@ function selectQueryIds(
             .filter((junction) => junction.netId === net.id)
             .map((junction) => junction.id),
           ...document.annotations
-            .filter((annotation) => annotation.attachedObjectId === net.id)
+            .filter((annotation) => annotation.netId === net.id)
             .map((annotation) => annotation.id),
         ]),
       };
@@ -419,8 +420,11 @@ function selectQueryIds(
           ids.add(junction.id);
       }
       for (const annotation of document.annotations) {
-        if (pointInBounds(annotation.position, scope.bounds))
-          ids.add(annotation.id);
+        const position =
+          annotation.anchor.kind === "free"
+            ? annotation.anchor.position
+            : annotation.anchor.fallbackPosition;
+        if (pointInBounds(position, scope.bounds)) ids.add(annotation.id);
       }
       for (const route of document.routes) {
         const polyline = routingGeometry.routes.get(route.id);

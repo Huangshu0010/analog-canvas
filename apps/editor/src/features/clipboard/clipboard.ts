@@ -33,12 +33,18 @@ export interface PasteProposal {
 export function clipboardPlacementAnchor(
   clipboard: SchematicClipboard,
 ): Point | null {
+  const annotation = clipboard.annotations[0];
+  const annotationPosition = annotation
+    ? annotation.anchor.kind === "free"
+      ? annotation.anchor.position
+      : annotation.anchor.fallbackPosition
+    : null;
   return (
     clipboard.instances.find((instance) => instance.placement)?.placement
       ?.position ??
     clipboard.junctions[0]?.position ??
     clipboard.routes[0]?.waypoints[0] ??
-    clipboard.annotations[0]?.position ??
+    annotationPosition ??
     null
   );
 }
@@ -55,10 +61,9 @@ export function clipboardPreviewDocument(
 ): SchematicDocument {
   const annotations = clipboard.annotations.map((annotation) => {
     const preview = structuredClone(annotation);
-    preview.position = movePoint(preview.position, offset);
-    if (preview.anchor?.kind === "free") {
+    if (preview.anchor.kind === "free") {
       preview.anchor.position = movePoint(preview.anchor.position, offset);
-    } else if (preview.anchor && "fallbackPosition" in preview.anchor) {
+    } else if ("fallbackPosition" in preview.anchor) {
       preview.anchor.fallbackPosition = movePoint(
         preview.anchor.fallbackPosition,
         offset,
@@ -121,11 +126,10 @@ export function copySelection(
     ),
     annotations: document.annotations.filter(
       (annotation) =>
-        (annotation.attachedObjectId !== undefined &&
-          attachedIds.has(annotation.attachedObjectId)) ||
-        (annotation.routeAttachment !== undefined &&
-          routeIds.has(annotation.routeAttachment.routeId)) ||
-        (annotation.anchor?.kind === "route" &&
+        (annotation.netId !== undefined && attachedIds.has(annotation.netId)) ||
+        (annotation.anchor.kind === "object" &&
+          attachedIds.has(annotation.anchor.objectId)) ||
+        (annotation.anchor.kind === "route" &&
           routeIds.has(annotation.anchor.routeId)),
     ),
     noConnects: document.noConnects.filter(
@@ -392,35 +396,36 @@ export function proposePaste(
       annotation: {
         ...structuredClone(annotation),
         id: uniqueCopyId(annotation.id, sequence, occupied),
-        position: movePoint(annotation.position, offset),
-        ...(annotation.attachedObjectId
-          ? {
-              attachedObjectId:
-                objectIds.get(annotation.attachedObjectId) ??
-                annotation.attachedObjectId,
-            }
+        ...(annotation.netId
+          ? { netId: netIds.get(annotation.netId) ?? annotation.netId }
           : {}),
-        ...(annotation.routeAttachment
-          ? {
-              routeAttachment: {
-                ...annotation.routeAttachment,
-                routeId:
-                  routeIds.get(annotation.routeAttachment.routeId) ??
-                  annotation.routeAttachment.routeId,
-              },
-            }
-          : {}),
-        // ADR 0010: a route-marker's route association lives on its VisualAnchor.
-        ...(annotation.anchor?.kind === "route"
-          ? {
-              anchor: {
-                ...annotation.anchor,
-                routeId:
-                  routeIds.get(annotation.anchor.routeId) ??
-                  annotation.anchor.routeId,
-              },
-            }
-          : {}),
+        anchor:
+          annotation.anchor.kind === "free"
+            ? {
+                kind: "free",
+                position: movePoint(annotation.anchor.position, offset),
+              }
+            : annotation.anchor.kind === "object"
+              ? {
+                  ...annotation.anchor,
+                  objectId:
+                    objectIds.get(annotation.anchor.objectId) ??
+                    annotation.anchor.objectId,
+                  fallbackPosition: movePoint(
+                    annotation.anchor.fallbackPosition,
+                    offset,
+                  ),
+                }
+              : {
+                  ...annotation.anchor,
+                  routeId:
+                    routeIds.get(annotation.anchor.routeId) ??
+                    annotation.anchor.routeId,
+                  fallbackPosition: movePoint(
+                    annotation.anchor.fallbackPosition,
+                    offset,
+                  ),
+                },
       },
     })),
   );

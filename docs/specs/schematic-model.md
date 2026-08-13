@@ -82,10 +82,10 @@ runs per document, and maximum 256 characters per `text` run. Formatting is
 authored through the canvas floating toolbar and persisted directly as the
 canonical AST. Command-like text such as `M_{1}`, `\it{...}`, or
 `\frac{a}{b}` remains literal when entered in the current editor; no markup
-input language is interpreted on submit. Old single-string annotations migrate
-to a single `text` run. When an annotation has no explicit RichText content, a
-read-only presentation fallback preserves historical underscore notation and
-standardized identifiers such as `M1` and `VDD`.
+input language is interpreted on submit. Schema-v7 migration converts every
+old single-string annotation once into an AST. A current persisted annotation
+always has `content`; renderer, hit-testing, connectivity, and export have no
+string or markup fallback.
 
 Every attachable drafting object and route marker shares one `VisualAnchor`.
 The `object` and `route` variants persist a `fallbackPosition` (last-known
@@ -112,8 +112,12 @@ type VisualAnchor =
     };
 ```
 
-This generalizes the existing `RouteAnnotationAttachment`. Anchor resolution
-reads derived Route/object geometry only and never mutates a Route or Net. An
+A SchematicAnnotation has exactly one visual anchor. Net and power labels use
+`netId` for electrical identity and `anchor` only for placement; an object or
+Route id is never overloaded to mean both.
+
+Anchor resolution reads derived Route/object geometry only and never mutates a
+Route or Net. An
 unresolved anchor (deleted Route/object, removed segment, non-orthogonal
 segment) renders at `fallbackPosition` as a visible warning, and offers
 re-attach / convert-to-free / delete. "Warning state" is a **derived

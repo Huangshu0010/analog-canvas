@@ -13,7 +13,6 @@ import type {
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
-import { schematicTextDocument } from "@icm/model";
 import { schematicTextFontSize } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -225,10 +224,9 @@ export function dragRouteAttachmentAtPoint(
 export function effectiveRouteAttachment(
   annotation: Annotation,
 ): RouteAnnotationAttachment | null {
-  if (annotation.routeAttachment) return annotation.routeAttachment;
   if (
     annotation.kind === "route-marker" &&
-    annotation.anchor?.kind === "route"
+    annotation.anchor.kind === "route"
   ) {
     const anchor = annotation.anchor;
     return {
@@ -256,12 +254,14 @@ export function annotationAnchor(
   if (!isRoutedMarker(annotation) || !attachment) {
     if (
       annotation.kind === "route-marker" &&
-      (annotation.anchor?.kind === "object" ||
-        annotation.anchor?.kind === "route")
+      (annotation.anchor.kind === "object" ||
+        annotation.anchor.kind === "route")
     ) {
       return annotation.anchor.fallbackPosition;
     }
-    return annotation.position;
+    return annotation.anchor.kind === "free"
+      ? annotation.anchor.position
+      : annotation.anchor.fallbackPosition;
   }
   const record = routePolylines.find(
     ({ route }) => route.id === attachment.routeId,
@@ -269,7 +269,9 @@ export function annotationAnchor(
   return (
     (record &&
       routeAttachmentPlacement(record.polyline, attachment)?.position) ??
-    annotation.position
+    (annotation.anchor.kind === "free"
+      ? annotation.anchor.position
+      : annotation.anchor.fallbackPosition)
   );
 }
 
@@ -283,8 +285,7 @@ export function annotationHitBox(
   const fontSize =
     schematicTextFontSize(annotation.kind, styleProfile) * sizeScale;
   const textLayout = measureRichTextDocument(
-    annotation.content ??
-      schematicTextDocument(annotation.text, annotation.kind),
+    annotation.content,
     richTextMetrics(styleProfile, "label", sizeScale),
   );
   let labelPosition = anchor;
@@ -394,7 +395,8 @@ export function defaultInstanceLabel(
     document.annotations.some(
       (annotation) =>
         annotation.kind === "instance-label" &&
-        annotation.attachedObjectId === instance.id,
+        annotation.anchor.kind === "object" &&
+        annotation.anchor.objectId === instance.id,
     )
   ) {
     return null;
@@ -416,12 +418,29 @@ export function defaultInstanceLabel(
   return {
     id: `instance-label-${instance.id}`,
     kind: "instance-label",
-    text: instance.id,
-    position,
-    attachedObjectId: instance.id,
-    offset: {
-      x: placement.semanticPosition.x - instance.placement.position.x,
-      y: placement.semanticPosition.y - instance.placement.position.y,
+    content: {
+      runs: [
+        {
+          kind: "span",
+          style: "italic",
+          children: [
+            {
+              kind: "span",
+              style: "bold",
+              children: [{ kind: "text", value: instance.id }],
+            },
+          ],
+        },
+      ],
+    },
+    anchor: {
+      kind: "object",
+      objectId: instance.id,
+      localOffset: {
+        x: placement.semanticPosition.x - instance.placement.position.x,
+        y: placement.semanticPosition.y - instance.placement.position.y,
+      },
+      fallbackPosition: position,
     },
     alignment: placement.alignment,
     rotation: 0,

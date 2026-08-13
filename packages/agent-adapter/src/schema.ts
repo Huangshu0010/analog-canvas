@@ -177,35 +177,6 @@ export const AgentWireIntentSchema = z.strictObject({
  */
 export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
   (edit, context) => {
-    if (edit.kind === "upsert_schematic_annotation") {
-      if (edit.annotation.content === undefined) {
-        context.addIssue({
-          code: "custom",
-          path: ["annotation", "content"],
-          message:
-            "RichText content is required for Agent-authored annotations",
-        });
-      }
-      if (edit.annotation.routeAttachment !== undefined) {
-        context.addIssue({
-          code: "custom",
-          path: ["annotation", "routeAttachment"],
-          message: "Use annotation.anchor instead of legacy routeAttachment",
-        });
-      }
-      if (
-        edit.annotation.kind === "route-marker" &&
-        edit.annotation.anchor === undefined
-      ) {
-        context.addIssue({
-          code: "custom",
-          path: ["annotation", "anchor"],
-          message:
-            "A route-marker annotation requires an explicit VisualAnchor",
-        });
-      }
-    }
-
     if (edit.kind === "add_instance") {
       if (
         edit.instance.symbolId === "vdd" ||

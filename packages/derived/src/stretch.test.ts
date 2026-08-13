@@ -186,10 +186,9 @@ describe("group route stretch", () => {
     document.annotations.push({
       id: "net-label",
       kind: "net-label",
-      text: "SIGNAL",
-      position: { x: 180, y: 90 },
-      attachedObjectId: "net-1",
-      offset: { x: 0, y: -10 },
+      content: { runs: [{ kind: "text", value: "SIGNAL" }] },
+      netId: "net-1",
+      anchor: { kind: "free", position: { x: 180, y: 90 } },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -205,7 +204,10 @@ describe("group route stretch", () => {
       internalRouteIds: ["route-1", "route-2"],
       junctions: [{ junctionId: "junction-1", position: { x: 200, y: 130 } }],
       annotations: [
-        { annotationId: "net-label", position: { x: 200, y: 120 } },
+        {
+          annotationId: "net-label",
+          anchor: { kind: "free", position: { x: 200, y: 120 } },
+        },
       ],
       routes: [
         { routeId: "route-1", waypoints: [] },

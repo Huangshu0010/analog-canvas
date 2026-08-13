@@ -85,9 +85,8 @@ describe("electricalTopologyHash", () => {
           {
             id: "a1",
             kind: "instance-label",
-            text: "M1",
-            position: { x: 0, y: 0 },
-            offset: { x: 0, y: 0 },
+            content: { runs: [{ kind: "text", value: "M1" }] },
+            anchor: { kind: "free", position: { x: 0, y: 0 } },
             alignment: "middle",
             rotation: 0,
             locked: false,

@@ -60,10 +60,13 @@ describe("presentation and layout edits", () => {
       {
         id: "label-M2",
         kind: "instance-label",
-        text: "M2",
-        position: { x: 180, y: 145 },
-        attachedObjectId: "M2",
-        offset: { x: 0, y: 25 },
+        content: { runs: [{ kind: "text", value: "M2" }] },
+        anchor: {
+          kind: "object",
+          objectId: "M2",
+          localOffset: { x: 0, y: 25 },
+          fallbackPosition: { x: 180, y: 145 },
+        },
         alignment: "middle",
         rotation: 0,
         locked: false,
@@ -72,16 +75,13 @@ describe("presentation and layout edits", () => {
         id: "marker-M2",
         kind: "route-marker",
         markerKind: "voltage",
-        text: "V_M2",
-        position: { x: 190, y: 145 },
-        attachedObjectId: "M2",
+        content: { runs: [{ kind: "text", value: "V_M2" }] },
         anchor: {
           kind: "object",
           objectId: "M2",
           localOffset: { x: 10, y: 25 },
           fallbackPosition: { x: 190, y: 145 },
         },
-        offset: { x: 10, y: 25 },
         alignment: "middle",
         rotation: 0,
         locked: false,
@@ -104,9 +104,10 @@ describe("presentation and layout edits", () => {
     );
     expect(result.ok).toBe(true);
     expect(result.document.instances[1]!.placement!.position.y).toBe(100);
-    expect(result.document.annotations[0]!.position.y).toBe(125);
+    expect(result.document.annotations[0]!.anchor).toMatchObject({
+      fallbackPosition: { x: 180, y: 125 },
+    });
     expect(result.document.annotations[1]).toMatchObject({
-      position: { x: 190, y: 125 },
       anchor: { fallbackPosition: { x: 190, y: 125 } },
     });
     expect(result.document.constraints[0]!.id).toBe("matched-y");
@@ -118,10 +119,8 @@ describe("presentation and layout edits", () => {
       id: "marker",
       kind: "route-marker",
       markerKind: "current",
-      text: "I_x",
-      position: { x: 0, y: 0 },
+      content: { runs: [{ kind: "text", value: "I_x" }] },
       anchor: { kind: "free", position: { x: 0, y: 0 } },
-      offset: { x: 0, y: 0 },
       alignment: "start",
       rotation: 0,
       locked: true,
@@ -133,7 +132,9 @@ describe("presentation and layout edits", () => {
       ]),
     );
     expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
-    expect(result.document.annotations[0]!.text).toBe("I_x");
+    expect(result.document.annotations[0]!.content).toEqual({
+      runs: [{ kind: "text", value: "I_x" }],
+    });
   });
 
   it("does not remove a semantic annotation referenced by layout intent", () => {
@@ -141,10 +142,9 @@ describe("presentation and layout edits", () => {
     document.annotations.push({
       id: "label",
       kind: "net-label",
-      text: "OUT",
-      position: { x: 20, y: 20 },
-      attachedObjectId: "net-out",
-      offset: { x: 0, y: 0 },
+      content: { runs: [{ kind: "text", value: "OUT" }] },
+      netId: "net-out",
+      anchor: { kind: "free", position: { x: 20, y: 20 } },
       alignment: "start",
       rotation: 0,
       locked: false,

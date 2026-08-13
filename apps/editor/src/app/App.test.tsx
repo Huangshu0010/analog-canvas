@@ -245,10 +245,13 @@ describe("editor shell", () => {
           annotation: {
             id: "instance-label-V1",
             kind: "instance-label",
-            text: "V1",
-            position: { x: 100, y: 148 },
-            attachedObjectId: "V1",
-            offset: { x: 0, y: 48 },
+            content: { runs: [{ kind: "text", value: "V1" }] },
+            anchor: {
+              kind: "object",
+              objectId: "V1",
+              localOffset: { x: 0, y: 48 },
+              fallbackPosition: { x: 100, y: 148 },
+            },
             alignment: "middle",
             rotation: 0,
             locked: false,

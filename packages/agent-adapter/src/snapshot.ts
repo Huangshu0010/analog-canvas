@@ -328,7 +328,11 @@ function documentSnapshot(
     ),
     ...document.junctions.map((junction) => pointBounds(junction.position)),
     ...document.annotations.map((annotation) =>
-      pointBounds(annotation.position),
+      pointBounds(
+        annotation.anchor.kind === "free"
+          ? annotation.anchor.position
+          : annotation.anchor.fallbackPosition,
+      ),
     ),
     ...routes.flatMap(
       (route) => route.polyline?.map((point) => pointBounds(point)) ?? [],

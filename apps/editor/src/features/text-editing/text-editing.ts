@@ -1,5 +1,5 @@
 import type { SchematicEdit } from "@icm/edit-engine";
-import { flattenRichText, schematicTextDocument } from "@icm/model";
+import { flattenRichText } from "@icm/model";
 import type {
   Annotation,
   DraftingObject,
@@ -34,9 +34,7 @@ export function createTextEditingSession(
     return {
       owner: "annotation",
       id: annotation.id,
-      content:
-        annotation.content ??
-        schematicTextDocument(annotation.text, annotation.kind),
+      content: annotation.content,
       sizeScale: annotation.sizeScale ?? 1,
     };
   }
@@ -107,14 +105,11 @@ export function proposeTextEditingCommit(
     const annotation = target.object;
     const next = {
       ...annotation,
-      text: plainText,
       content: session.content,
       sizeScale: session.sizeScale,
     };
     if (
-      annotation.text === next.text &&
       annotation.sizeScale === next.sizeScale &&
-      annotation.content &&
       richTextEqual(annotation.content, next.content)
     ) {
       return { kind: "unchanged" };

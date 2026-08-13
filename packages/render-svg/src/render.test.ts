@@ -63,10 +63,16 @@ describe("textbook monochrome SVG renderer", () => {
   it("preserves a manually formatted multi-character semantic subscript", () => {
     const document = createEmptyProject("project-rich-label", "Rich label")
       .documents[0]!;
+    document.nets.push({
+      id: "net-vout",
+      scope: "local",
+      powerDomain: "none",
+      terminals: [],
+      ports: [],
+    });
     document.annotations.push({
       id: "label-vin",
       kind: "net-label",
-      text: "VOUT",
       content: {
         runs: [
           {
@@ -93,8 +99,8 @@ describe("textbook monochrome SVG renderer", () => {
           },
         ],
       },
-      position: { x: 100, y: 100 },
-      offset: { x: 0, y: 0 },
+      netId: "net-vout",
+      anchor: { kind: "free", position: { x: 100, y: 100 } },
       alignment: "start",
       rotation: 0,
       locked: false,
@@ -845,10 +851,32 @@ describe("textbook monochrome SVG renderer", () => {
       id: "current-arrow",
       kind: "route-marker",
       markerKind: "current",
-      text: "I_x",
-      // This is a persistence fallback only. The route anchor drives the
-      // rendered position.
-      position: { x: 0, y: 0 },
+      content: {
+        runs: [
+          {
+            kind: "span",
+            style: "italic",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "I" }],
+              },
+            ],
+          },
+          {
+            kind: "span",
+            style: "subscript",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "x" }],
+              },
+            ],
+          },
+        ],
+      },
       anchor: {
         kind: "route",
         routeId: "route-current",
@@ -859,7 +887,6 @@ describe("textbook monochrome SVG renderer", () => {
         orientation: "follow",
         fallbackPosition: { x: 0, y: 0 },
       },
-      offset: { x: 0, y: 0 },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -1172,13 +1199,20 @@ describe("textbook monochrome SVG renderer", () => {
         id: "voltage-x",
         kind: "route-marker",
         markerKind: "voltage",
-        text: "V_X",
-        position: { x: 100, y: 100 },
+        content: {
+          runs: [
+            { kind: "text", value: "V" },
+            {
+              kind: "span",
+              style: "subscript",
+              children: [{ kind: "text", value: "X" }],
+            },
+          ],
+        },
         anchor: {
           kind: "free",
           position: { x: 100, y: 100 },
         },
-        offset: { x: 0, y: 0 },
         alignment: "start",
         rotation: 90,
         locked: false,
@@ -1188,13 +1222,13 @@ describe("textbook monochrome SVG renderer", () => {
     const svg = renderDocumentSvg(document, resolver);
 
     expect(svg).toContain(
-      '<text data-role="polarity-positive" x="108" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">+</text>',
+      '<text data-role="polarity-positive" x="88" y="96" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">+</text>',
     );
     expect(svg).toContain(
-      '<text data-role="polarity-negative" x="92" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">−</text>',
+      '<text data-role="polarity-negative" x="88" y="112" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">−</text>',
     );
     expect(svg).toContain(
-      '<text x="100" y="100" text-anchor="start" font-size="15.116"><tspan',
+      '<text x="100" y="100" text-anchor="start" font-size="15.116">V<tspan',
     );
     expect(svg).not.toContain('transform="rotate(90 100 100)"><tspan');
   });
@@ -1249,14 +1283,29 @@ describe("textbook monochrome SVG renderer", () => {
         properties: {},
       },
     ];
+    document.nets.push({
+      id: "net-vdd",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+      ports: [],
+    });
     document.annotations = [
       {
         id: "label-VDD1",
         kind: "power-label",
-        text: "VDD",
-        position: { x: 114, y: 105 },
-        attachedObjectId: "VDD1",
-        offset: { x: 14, y: 5 },
+        content: {
+          runs: [
+            { kind: "text", value: "V" },
+            {
+              kind: "span",
+              style: "subscript",
+              children: [{ kind: "text", value: "DD" }],
+            },
+          ],
+        },
+        netId: "net-vdd",
+        anchor: { kind: "free", position: { x: 114, y: 105 } },
         alignment: "start",
         rotation: 0,
         locked: false,

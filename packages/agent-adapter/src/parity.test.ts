@@ -41,9 +41,7 @@ const draftingEdits = [
       id: "marker-parity",
       kind: "route-marker",
       markerKind: "current",
-      text: "I_x",
       content: { runs: [{ kind: "text", value: "I_x" }] },
-      position: { x: 200, y: 120 },
       anchor: {
         kind: "route",
         routeId: "route-bias-right",
@@ -54,7 +52,6 @@ const draftingEdits = [
         orientation: "follow",
         fallbackPosition: { x: 200, y: 120 },
       },
-      offset: { x: 0, y: 0 },
       alignment: "middle",
       rotation: 0,
       locked: false,

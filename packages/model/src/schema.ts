@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 6;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 7;
 
 export const StableIdSchema = z.string().min(1).max(256);
 export const PointSchema = z.strictObject({
@@ -283,25 +283,19 @@ export const AnnotationSchema = z
   .strictObject({
     id: StableIdSchema,
     kind: AnnotationKindSchema,
-    // Optional explicit RichText presentation saved by the canvas editor.
-    // `text` remains the canonical semantic/electrical identity. When this is
-    // absent, formal rendering derives standardized appearance from `text`;
-    // when present, it preserves the user's explicit formatting.
-    content: z.lazy(() => RichTextDocumentSchema).optional(),
-    text: z.string(),
-    position: PointSchema,
-    attachedObjectId: StableIdSchema.optional(),
-    routeAttachment: RouteAnnotationAttachmentSchema.optional(),
-    offset: PointSchema,
+    // Schema-v7 gives every editable annotation one presentation authority.
+    // `content` is the visual/semantic text source and `anchor` is the only
+    // visual attachment. A Net relation is deliberately separate from anchor:
+    // it expresses electrical meaning, never a placement shortcut.
+    content: z.lazy(() => RichTextDocumentSchema),
+    anchor: z.lazy(() => VisualAnchorSchema),
+    netId: StableIdSchema.optional(),
     alignment: z.enum(["start", "middle", "end"]),
     rotation: RotationSchema,
     locked: z.boolean(),
     sizeScale: z.number().finite().positive().optional(),
     // SchematicAnnotation route-marker discriminator (ADR 0010).
     markerKind: RouteMarkerKindSchema.optional(),
-    // ADR 0010 VisualAnchor for route-marker annotations. Declared lazily so the
-    // schema can reference VisualAnchorSchema, which is defined below.
-    anchor: z.lazy(() => VisualAnchorSchema).optional(),
   })
   .superRefine((annotation, context) => {
     if (annotation.markerKind && annotation.kind !== "route-marker") {
@@ -309,6 +303,27 @@ export const AnnotationSchema = z
         code: z.ZodIssueCode.custom,
         path: ["markerKind"],
         message: "markerKind is only valid on a route-marker annotation",
+      });
+    }
+    if (
+      (annotation.kind === "net-label" || annotation.kind === "power-label") &&
+      !annotation.netId
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["netId"],
+        message: "Net and power labels require a Net identity",
+      });
+    }
+    if (
+      annotation.kind !== "net-label" &&
+      annotation.kind !== "power-label" &&
+      annotation.netId !== undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["netId"],
+        message: "netId is only valid on net and power labels",
       });
     }
   });
@@ -686,12 +701,15 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
     const junctionById = new Map(
       document.junctions.map((junction) => [junction.id, junction]),
     );
-    const attachableIds = new Set([
+    const anchorObjectIds = new Set([
       ...document.ports.map((item) => item.id),
       ...document.instances.map((item) => item.id),
+      ...document.junctions.map((item) => item.id),
+    ]);
+    const attachableIds = new Set([
+      ...anchorObjectIds,
       ...document.nets.map((item) => item.id),
       ...document.routes.map((item) => item.id),
-      ...document.junctions.map((item) => item.id),
     ]);
     const layoutObjectIds = new Set([
       ...attachableIds,
@@ -704,14 +722,29 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       annotationIndex,
       annotation,
     ] of document.annotations.entries()) {
+      const anchor = annotation.anchor;
+      if (anchor.kind === "object" && !anchorObjectIds.has(anchor.objectId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown annotation anchor target: ${anchor.objectId}`,
+          path: ["annotations", annotationIndex, "anchor", "objectId"],
+        });
+      }
       if (
-        annotation.attachedObjectId &&
-        !attachableIds.has(annotation.attachedObjectId)
+        anchor.kind === "route" &&
+        !document.routes.some((route) => route.id === anchor.routeId)
       ) {
         context.addIssue({
           code: "custom",
-          message: `Unknown annotation attachment: ${annotation.attachedObjectId}`,
-          path: ["annotations", annotationIndex, "attachedObjectId"],
+          message: `Unknown annotation route anchor: ${anchor.routeId}`,
+          path: ["annotations", annotationIndex, "anchor", "routeId"],
+        });
+      }
+      if (annotation.netId !== undefined && !netIds.has(annotation.netId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown annotation Net: ${annotation.netId}`,
+          path: ["annotations", annotationIndex, "netId"],
         });
       }
     }

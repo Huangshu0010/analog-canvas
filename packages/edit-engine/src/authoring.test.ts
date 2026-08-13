@@ -308,14 +308,24 @@ describe("semantic authoring", () => {
       position: null,
     });
     document.netlist!.portOrder.push("port-in");
+    document.nets.push({
+      id: "net-in",
+      scope: "local",
+      terminals: [],
+      ports: ["port-in"],
+    });
     document.annotations.push(
       {
         id: "label-in",
         kind: "net-label",
-        text: "IN",
-        position: { x: 80, y: 100 },
-        attachedObjectId: "port-in",
-        offset: { x: -20, y: 0 },
+        content: { runs: [{ kind: "text", value: "IN" }] },
+        netId: "net-in",
+        anchor: {
+          kind: "object",
+          objectId: "port-in",
+          localOffset: { x: -20, y: 0 },
+          fallbackPosition: { x: 80, y: 100 },
+        },
         alignment: "end",
         rotation: 0,
         locked: false,
@@ -324,16 +334,13 @@ describe("semantic authoring", () => {
         id: "marker-in",
         kind: "route-marker",
         markerKind: "voltage",
-        text: "V_IN",
-        position: { x: 80, y: 110 },
-        attachedObjectId: "port-in",
+        content: { runs: [{ kind: "text", value: "V_IN" }] },
         anchor: {
           kind: "object",
           objectId: "port-in",
           localOffset: { x: -20, y: 10 },
           fallbackPosition: { x: 80, y: 110 },
         },
-        offset: { x: -20, y: 10 },
         alignment: "end",
         rotation: 0,
         locked: false,
@@ -372,13 +379,12 @@ describe("semantic authoring", () => {
       moved.document.annotations.find(
         (annotation) => annotation.id === "label-in",
       ),
-    ).toMatchObject({ position: { x: 120, y: 120 } });
+    ).toMatchObject({ anchor: { fallbackPosition: { x: 120, y: 120 } } });
     expect(
       moved.document.annotations.find(
         (annotation) => annotation.id === "marker-in",
       ),
     ).toMatchObject({
-      position: { x: 120, y: 130 },
       anchor: { fallbackPosition: { x: 120, y: 130 } },
     });
   });

@@ -81,7 +81,6 @@ describe("drawn VDD rail construction", () => {
     expect(result.document.annotations).toMatchObject([
       {
         kind: "power-label",
-        text: "VDD",
         content: {
           runs: [
             { kind: "text", value: "V" },

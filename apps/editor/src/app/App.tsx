@@ -55,9 +55,11 @@ import type {
 } from "@icm/derived";
 import {
   createEmptyProject,
+  flattenRichText,
   parseProject,
   powerNetNormalizations,
   serializeProject,
+  semanticTextDocument,
   transformPoint,
 } from "@icm/model";
 import type {
@@ -745,7 +747,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     ? document.annotations.filter(
         (annotation) =>
           annotation.kind === "net-label" &&
-          annotation.attachedObjectId === selectedRoute.netId,
+          annotation.netId === selectedRoute.netId,
       )
     : [];
   const selectedRouteNetLabel = selectedRoute
@@ -1115,9 +1117,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     );
     return Boolean(
       visualSelection.annotationIds.includes(id) ||
-      (annotation?.attachedObjectId &&
-        (selectedIds.includes(annotation.attachedObjectId) ||
-          selectedInternalObjectIds.has(annotation.attachedObjectId))),
+      (annotation?.anchor.kind === "object" &&
+        (selectedIds.includes(annotation.anchor.objectId) ||
+          selectedInternalObjectIds.has(annotation.anchor.objectId))),
     );
   }
 
@@ -1136,7 +1138,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       setNetLabelEditorOpen(false);
       return;
     }
-    setNetLabelDraft(selectedRouteNetLabel?.text ?? "");
+    setNetLabelDraft(
+      selectedRouteNetLabel
+        ? flattenRichText(selectedRouteNetLabel.content)
+        : "",
+    );
   }, [selectedRoute, selectedRouteNetLabel]);
 
   useEffect(() => {
@@ -2088,9 +2094,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     annotation: Annotation,
     candidate: Point,
   ): Point {
-    if (annotation.kind === "instance-label" && annotation.attachedObjectId) {
+    if (
+      annotation.kind === "instance-label" &&
+      annotation.anchor.kind === "object"
+    ) {
+      const anchor = annotation.anchor;
       const instance = document.instances.find(
-        (item) => item.id === annotation.attachedObjectId,
+        (item) => item.id === anchor.objectId,
       );
       if (instance?.placement) {
         const resolved = resolver.resolve(
@@ -2123,9 +2133,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         };
       }
     }
-    if (annotation.kind === "net-label" && annotation.attachedObjectId) {
+    if (annotation.kind === "net-label" && annotation.netId) {
       const candidates = routePolylines
-        .filter(({ route }) => route.netId === annotation.attachedObjectId)
+        .filter(({ route }) => route.netId === annotation.netId)
         .flatMap(({ polyline }) =>
           polyline.points
             .slice(0, -1)
@@ -2167,7 +2177,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       );
       if (!attached) return annotation;
       const anchor =
-        annotation.anchor?.kind === "route"
+        annotation.anchor.kind === "route"
           ? {
               ...annotation.anchor,
               segmentIndex: attached.routeAttachment.segmentIndex,
@@ -2179,28 +2189,37 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           : annotation.anchor;
       return {
         ...annotation,
-        position: attached.position,
-        ...(anchor ? { anchor } : {}),
-        ...(annotation.routeAttachment
-          ? { routeAttachment: attached.routeAttachment }
-          : {}),
+        anchor,
       };
     }
 
     const position = constrainAnnotationPosition(annotation, candidate);
-    let offset = { ...annotation.offset };
-    if (annotation.attachedObjectId) {
+    if (annotation.anchor.kind === "object") {
+      const anchor = annotation.anchor;
       const instance = document.instances.find(
-        (item) => item.id === annotation.attachedObjectId,
+        (item) => item.id === anchor.objectId,
       );
       if (instance?.placement) {
-        offset = {
-          x: position.x - instance.placement.position.x,
-          y: position.y - instance.placement.position.y,
+        return {
+          ...annotation,
+          anchor: {
+            ...annotation.anchor,
+            localOffset: {
+              x: position.x - instance.placement.position.x,
+              y: position.y - instance.placement.position.y,
+            },
+            fallbackPosition: position,
+          },
         };
       }
     }
-    return { ...annotation, position, offset };
+    return {
+      ...annotation,
+      anchor:
+        annotation.anchor.kind === "free"
+          ? { kind: "free", position }
+          : { ...annotation.anchor, fallbackPosition: position },
+    };
   }
 
   function beginAnnotationDrag(
@@ -2243,7 +2262,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       originalPosition: {
         ...(isRoutedMarker(annotation) && markerPlacement
           ? markerPlacement.labelPosition
-          : annotation.position),
+          : annotation.anchor.kind === "free"
+            ? annotation.anchor.position
+            : annotation.anchor.fallbackPosition),
       },
       pointerStart,
     };
@@ -2786,9 +2807,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const instanceLabel = defaultLabel
       ? {
           ...defaultLabel,
-          text: placementRequest.showReference
-            ? (placementRequest.referenceText ?? defaultLabel.text)
-            : "",
+          content: semanticTextDocument(
+            placementRequest.showReference
+              ? (placementRequest.referenceText ?? instance.id)
+              : " ",
+            "instance-label",
+          ),
         }
       : null;
     const contact = proposePlacementContact(
@@ -3002,8 +3026,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const attachedAnnotationIds = document.annotations
       .filter(
         (annotation) =>
-          annotation.attachedObjectId !== undefined &&
-          movingIds.includes(annotation.attachedObjectId),
+          annotation.anchor.kind === "object" &&
+          movingIds.includes(annotation.anchor.objectId),
       )
       .map((annotation) => annotation.id);
     const movingInternalSelection = deriveInternalGroupSelection(
@@ -3019,8 +3043,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       .filter((annotation) => {
         const routeAttachment = effectiveRouteAttachment(annotation);
         return (
-          (annotation.attachedObjectId !== undefined &&
-            movingInternalObjectIds.has(annotation.attachedObjectId)) ||
+          (annotation.anchor.kind === "object" &&
+            movingInternalObjectIds.has(annotation.anchor.objectId)) ||
           (routeAttachment !== null &&
             movingInternalSelection.routeIds.includes(routeAttachment.routeId))
         );
@@ -3953,8 +3977,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           id,
           kind: "route-marker",
           markerKind: "current",
-          text: "I_x",
-          position: fallbackPosition,
+          content: semanticTextDocument("I_x", "route-marker"),
           anchor: {
             kind: "route",
             routeId: selectedRoute.id,
@@ -3965,7 +3988,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             orientation: "follow",
             fallbackPosition,
           },
-          offset: { x: 0, y: 0 },
           alignment: "middle",
           rotation: 0,
           locked: false,
@@ -3997,7 +4019,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         ]);
         if (result.ok) {
           replaceSelectionKind("annotation", []);
-          setStatus(`Deleted Net Label ${existingLabel.text}`);
+          setStatus(
+            `Deleted Net Label ${flattenRichText(existingLabel.content)}`,
+          );
         }
       } else {
         setStatus("Selected Route has no Net Label");
@@ -4015,7 +4039,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const segment = Math.max(0, Math.floor((polyline.points.length - 1) / 2));
     const from = polyline.points[segment]!;
     const to = polyline.points[segment + 1] ?? from;
-    const position = existingLabel?.position ?? {
+    const position = (existingLabel
+      ? existingLabel.anchor.kind === "free"
+        ? existingLabel.anchor.position
+        : existingLabel.anchor.fallbackPosition
+      : undefined) ?? {
       x: Math.round((from.x + to.x) / 2),
       y: Math.round((from.y + to.y) / 2 - 8),
     };
@@ -4033,10 +4061,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       annotation: {
         id: labelId,
         kind: "net-label",
-        text: name,
-        position,
-        attachedObjectId: targetNetId,
-        offset: { x: 0, y: -8 },
+        content: semanticTextDocument(name, "net-label"),
+        netId: targetNetId,
+        anchor: {
+          kind: "route",
+          routeId: selectedRoute.id,
+          segmentIndex: segment,
+          t: 0.5,
+          normalOffset: -8,
+          direction: "forward",
+          orientation: "follow",
+          fallbackPosition: position,
+        },
         alignment: "middle",
         rotation: 0,
         locked: false,
@@ -4070,7 +4106,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (result.ok) {
       replaceSelectionKind("annotation", []);
       setNetLabelDraft("");
-      setStatus(`Deleted Net Label ${label.text}`);
+      setStatus(`Deleted Net Label ${flattenRichText(label.content)}`);
     }
   }
 
@@ -4296,19 +4332,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     // A route-marker stores direction on its route VisualAnchor.
     const anchor =
       selectedAnnotation.kind === "route-marker" &&
-      selectedAnnotation.anchor?.kind === "route"
+      selectedAnnotation.anchor.kind === "route"
         ? { ...selectedAnnotation.anchor, direction }
         : selectedAnnotation.anchor;
-    const routeAttachment = selectedAnnotation.routeAttachment
-      ? { ...selectedAnnotation.routeAttachment, direction }
-      : undefined;
     const result = transact([
       {
         kind: "upsert_schematic_annotation",
         annotation: {
           ...selectedAnnotation,
-          ...(anchor ? { anchor } : {}),
-          ...(routeAttachment ? { routeAttachment } : {}),
+          anchor,
         },
       },
     ]);
@@ -4651,7 +4683,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     rectsIntersect(
                       annotationHitBox(
                         defaultLabel,
-                        defaultLabel.position,
+                        annotationAnchor(defaultLabel, routePolylines),
                         routePolylines,
                         styleProfile,
                       ),
@@ -7291,7 +7323,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   document.annotations.some(
                     (annotation) =>
                       annotation.kind === "instance-label" &&
-                      annotation.attachedObjectId === instance.id,
+                      annotation.anchor.kind === "object" &&
+                      annotation.anchor.objectId === instance.id,
                   )
                 ) {
                   return null;
@@ -7313,7 +7346,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     className="annotation-hit"
                     {...annotationHitBox(
                       label,
-                      label.position,
+                      annotationAnchor(label, routePolylines),
                       routePolylines,
                       styleProfile,
                     )}

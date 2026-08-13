@@ -6361,3 +6361,19 @@ contracts (WP-R1)`.
   and clean branch status passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `docs(agent): plan four-operation takeover completion`.
+
+## 2026-08-13 - M2 RichText and VisualAnchor authority
+
+- Target: make schema-v7 RichText content and VisualAnchor the only editable
+  annotation authority, while preserving old Projects through deterministic
+  migration.
+- Changed areas: model schema and v6-to-v7 migration; GUI text/drag/clipboard;
+  edit engine and routing; Net-label/connectivity/visual consumers; SVG text
+  renderer and visual goldens; Agent Snapshot/OpenAPI; canonical fixtures and
+  current model/connectivity/editor specifications.
+- Validation: focused M2 suites; full local unit suite (116 files, 701 tests);
+  `pnpm ci:static`; Agent artifact write/check; visual golden check;
+  `git diff --check`; and `pnpm verify:branch` (workspace build and production
+  smoke) passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(model): make RichText and VisualAnchor canonical`.

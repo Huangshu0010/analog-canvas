@@ -225,10 +225,11 @@ export function expandRouteGraph(
         annotation: {
           id: `route-${graph.netId}-label-${labelIndex}`,
           kind: "net-label",
-          text: edge.label?.text ?? "",
-          position: { ...to },
-          attachedObjectId: graph.netId,
-          offset: { x: 0, y: 0 },
+          content: {
+            runs: [{ kind: "text", value: edge.label?.text || "Net" }],
+          },
+          netId: graph.netId,
+          anchor: { kind: "free", position: { ...to } },
           alignment: "middle",
           rotation: 0,
           locked: false,

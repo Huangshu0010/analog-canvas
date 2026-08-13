@@ -231,11 +231,10 @@ describe("ProjectConnectivityIndex", () => {
       const label = (id: string, x: number, text: string) => ({
         id,
         kind: "net-label" as const,
-        text,
-        position: { x, y: 92 },
-        offset: { x: 0, y: 0 },
+        content: { runs: [{ kind: "text" as const, value: text }] },
+        netId: "net-signal",
+        anchor: { kind: "free" as const, position: { x, y: 92 } },
         rotation: 0 as const,
-        attachedObjectId: "net-signal",
         alignment: "start" as const,
         locked: false,
       });

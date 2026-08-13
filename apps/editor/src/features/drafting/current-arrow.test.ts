@@ -49,8 +49,7 @@ describe("route-attached current arrows", () => {
       id: "current-1",
       kind: "route-marker",
       markerKind: "current",
-      text: "I_x",
-      position: { x: 160, y: 100 },
+      content: { runs: [{ kind: "text", value: "I_x" }] },
       anchor: {
         kind: "route",
         routeId: "route-signal",
@@ -61,7 +60,6 @@ describe("route-attached current arrows", () => {
         orientation: "follow",
         fallbackPosition: { x: 160, y: 100 },
       },
-      offset: { x: 0, y: 0 },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -130,8 +128,7 @@ describe("route-attached current arrows", () => {
       id: "current-1",
       kind: "route-marker",
       markerKind: "current",
-      text: "I_x",
-      position: { x: 160, y: 100 },
+      content: { runs: [{ kind: "text", value: "I_x" }] },
       anchor: {
         kind: "route",
         routeId: "route-signal",
@@ -142,7 +139,6 @@ describe("route-attached current arrows", () => {
         orientation: "follow",
         fallbackPosition: { x: 160, y: 100 },
       },
-      offset: { x: 0, y: 0 },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -159,7 +155,6 @@ describe("route-attached current arrows", () => {
       kind: "upsert_schematic_annotation",
       annotation: {
         id: "current-1-copy-1",
-        position: { x: 180, y: 120 },
         anchor: { routeId: "route-signal-copy-1" },
       },
     });

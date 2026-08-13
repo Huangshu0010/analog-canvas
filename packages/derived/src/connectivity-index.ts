@@ -1,4 +1,4 @@
-import { deriveStableId } from "@icm/model";
+import { deriveStableId, flattenRichText } from "@icm/model";
 import type {
   CircuitProject,
   Net,
@@ -264,7 +264,7 @@ function deriveLabelVirtualEdges(
     const annotation = document.annotations.find(
       (candidate) => candidate.id === binding.annotationId,
     )!;
-    const label = annotation.text.trim();
+    const label = flattenRichText(annotation.content).trim();
     if (label.length === 0) continue;
     const group = groups.get(label) ?? {
       kind: "net-label",
@@ -274,20 +274,20 @@ function deriveLabelVirtualEdges(
     groups.set(label, group);
   }
   for (const annotation of document.annotations) {
-    if (annotation.kind !== "power-label" || !annotation.attachedObjectId) {
+    if (annotation.kind !== "power-label" || annotation.netId !== net.id) {
       continue;
     }
-    const junction = document.junctions.find(
-      (candidate) => candidate.id === annotation.attachedObjectId,
+    const binding = resolveNetLabelBindings(document, resolver, net.id).find(
+      (candidate) => candidate.annotationId === annotation.id,
     );
-    if (!junction || junction.netId !== net.id) continue;
-    const label = annotation.text.trim();
+    if (!binding) continue;
+    const label = flattenRichText(annotation.content).trim();
     if (label.length === 0) continue;
     const group = groups.get(label) ?? {
       kind: annotation.kind,
       endpoints: [],
     };
-    group.endpoints.push(junctionEndpoint(junction.id));
+    group.endpoints.push(binding.endpoint);
     groups.set(label, group);
   }
   const edges: VirtualConnectivityEdge[] = [];

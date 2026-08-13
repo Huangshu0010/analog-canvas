@@ -230,7 +230,9 @@ describe("Agent Document Snapshot", () => {
       rotation: 90,
       mirror: "x",
     };
-    document.annotations[0]!.text = "changed";
+    document.annotations[0]!.content = {
+      runs: [{ kind: "text", value: "changed" }],
+    };
     document.drafting = {
       objects: [
         {

@@ -137,9 +137,9 @@ on the selection with italic, bold, subscript, and superscript buttons;
 `Ctrl+I` and `Ctrl+B` are keyboard aliases. Font size uses bounded +/- levels,
 never an unbounded numeric field. Formatting is persisted directly as the
 canonical RichText AST. Text that resembles former markup commands, including
-`M_{1}` and `\frac{a}{b}`, remains literal when entered in this editor. A
-read-only semantic fallback for annotations that predate explicit RichText
-content does not constitute an authoring input language.
+`M_{1}` and `\frac{a}{b}`, remains literal when entered in this editor.
+Historical plain-text annotations are converted by Project migration; current
+editor interaction never renders or edits a string fallback.
 
 Route markers, arrows, leaders, and callouts use the shared `VisualAnchor`: a
 current marker dragged along a Route updates `segmentIndex/t`, a normal drag

@@ -359,10 +359,9 @@ describe("Edit Transaction envelope", () => {
     const annotation = {
       id: "label-signal",
       kind: "net-label" as const,
-      text: "SIGNAL",
-      position: { x: 100, y: 100 },
-      attachedObjectId: "net-signal",
-      offset: { x: 0, y: -8 },
+      content: { runs: [{ kind: "text", value: "SIGNAL" }] },
+      netId: "net-signal",
+      anchor: { kind: "free", position: { x: 100, y: 100 } },
       alignment: "middle" as const,
       rotation: 0 as const,
       locked: false,
@@ -378,13 +377,13 @@ describe("Edit Transaction envelope", () => {
       edits: [
         {
           kind: "upsert_schematic_annotation",
-          annotation: { ...annotation, attachedObjectId: "junction-signal" },
+          annotation: { ...annotation, netId: "junction-signal" },
         },
       ],
     });
     expect(rejected).toMatchObject({
       ok: false,
-      error: { message: "Net Label attachment is not a Net: junction-signal" },
+      error: { message: "Net Label identity is not a Net: junction-signal" },
     });
   });
 
@@ -641,13 +640,16 @@ describe("Edit Transaction envelope", () => {
     document.annotations.push({
       id: "instance-label-Q1",
       kind: "instance-label",
-      text: "Q1",
-      position: initial.position,
-      offset: {
-        x: initial.semanticPosition.x - instance.placement.position.x,
-        y: initial.semanticPosition.y - instance.placement.position.y,
+      content: { runs: [{ kind: "text", value: "Q1" }] },
+      anchor: {
+        kind: "object",
+        objectId: "Q1",
+        localOffset: {
+          x: initial.semanticPosition.x - instance.placement.position.x,
+          y: initial.semanticPosition.y - instance.placement.position.y,
+        },
+        fallbackPosition: initial.position,
       },
-      attachedObjectId: "Q1",
       alignment: initial.alignment,
       rotation: 0,
       locked: false,
@@ -685,10 +687,14 @@ describe("Edit Transaction envelope", () => {
     expect(label).toMatchObject({ alignment: "middle", rotation: 0 });
     // The persisted semantic anchor is integer-rounded, so permit the one
     // pixel rounding difference while requiring the glyph edge to stay clear.
-    expect(label.position.y).toBeGreaterThanOrEqual(
+    if (label.anchor.kind === "free") {
+      throw new Error("Rotated instance label must retain an object anchor");
+    }
+    const fallback = label.anchor.fallbackPosition;
+    expect(fallback.y).toBeGreaterThanOrEqual(
       Math.floor(bottom + profile.typography.instanceFontSize * 1.05 + 1.5),
     );
-    expect(label.position.y).toBeLessThanOrEqual(
+    expect(fallback.y).toBeLessThanOrEqual(
       Math.ceil(bottom + profile.typography.instanceFontSize * 1.05 + 2.5),
     );
   });

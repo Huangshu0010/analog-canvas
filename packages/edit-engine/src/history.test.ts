@@ -53,10 +53,13 @@ describe("DocumentHistory", () => {
     document.annotations.push({
       id: "label-R1",
       kind: "instance-label",
-      text: "R1",
-      position: { x: 0, y: 0 },
-      attachedObjectId: "R1",
-      offset: { x: 0, y: 0 },
+      content: { runs: [{ kind: "text", value: "R1" }] },
+      anchor: {
+        kind: "object",
+        objectId: "R1",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 0, y: 0 },
+      },
       alignment: "middle",
       rotation: 0,
       locked: false,
