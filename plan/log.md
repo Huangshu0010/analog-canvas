@@ -1,5 +1,20 @@
 # Maintenance Log
 
+## 2026-08-13 - Project compatibility corpus baseline
+
+- Target: establish the first M4 migration-corpus proof, without changing
+  simulation, PVT, waveform, or design-netlist export scope.
+- Changed areas: explicit Project corpus manifest; sequential migration and
+  canonicalization regression test; current user file-compatibility guidance.
+- Contract result: every shipped Project fixture and saved circuit Project is
+  classified as current, historic migration input, or explicitly rejected;
+  all supported historic inputs parse to stable schema-v8 output without
+  persisted `spice.*` or `routeAttachment` fields.
+- Validation: focused corpus/persistence/v7-to-v8 tests (14 tests), typecheck,
+  Markdown links, production-reader audit, and `git diff --check` passed.
+- Commit status: committed as `ab30544` and pushed on
+  `codex/agent-project-lifecycle`.
+
 ## 2026-08-13 - Typed netlist and source-provenance authority
 
 - Target: complete M3 of browser Agent takeover by removing runtime `spice.*`
@@ -14,8 +29,8 @@
 - Validation: focused migration/import/ERC/Snapshot checks; Agent artifacts
   write/check; full `pnpm test:local` (117 files, 707 tests); typecheck, docs,
   references, formatting, `git diff --check`, and `pnpm verify:branch` passed.
-- Commit status: ready to commit as `feat(model): make netlist provenance typed`
-  on `codex/agent-project-lifecycle`.
+- Commit status: committed as `9ad4ce5` and pushed on
+  `codex/agent-project-lifecycle`.
 
 ## 2026-08-13 - Detailed browser Agent takeover delivery sequence
 
