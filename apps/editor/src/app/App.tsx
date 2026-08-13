@@ -54,6 +54,12 @@ import {
   serializeProject,
   transformPoint,
 } from "@icm/model";
+import {
+  extractDesignNetlist,
+  printDesignNetlist,
+  type NetlistDiagnostic,
+  type NetlistFormat,
+} from "@icm/netlist";
 import type {
   Annotation,
   CircuitProject,
@@ -454,6 +460,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       ).project,
   );
   const [status, setStatus] = useState("Ready");
+  const [netlistDiagnostics, setNetlistDiagnostics] = useState<
+    NetlistDiagnostic[]
+  >([]);
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
@@ -3180,6 +3189,28 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setStatus(`Saved formal Project revision ${document.revision}`);
   }
 
+  function exportNetlist(format: NetlistFormat): void {
+    const result = extractDesignNetlist(project);
+    setNetlistDiagnostics(result.diagnostics);
+    if (!result.ir) {
+      const errorCount = result.diagnostics.filter(
+        (item) => item.severity === "error",
+      ).length;
+      setStatus(
+        `Netlist export blocked by ${errorCount} electrical contract error${errorCount === 1 ? "" : "s"}`,
+      );
+      return;
+    }
+    const file = printDesignNetlist(format, result.ir);
+    download(file.text, file.mediaType, file.extension.slice(1));
+    const warningCount = result.diagnostics.filter(
+      (item) => item.severity === "warning",
+    ).length;
+    setStatus(
+      `Exported ${format === "spice" ? "SPICE" : "Spectre"} design netlist${warningCount ? ` with ${warningCount} warning${warningCount === 1 ? "" : "s"}` : ""}`,
+    );
+  }
+
   function restoreRecovery(): void {
     if (recoveryCandidate) {
       const unsupported = findUnsupportedProjectSymbolIds(
@@ -5468,6 +5499,43 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   >
                     PDF
                   </button>
+                  <button
+                    type="button"
+                    aria-label="Export SPICE netlist"
+                    onClick={() => exportNetlist("spice")}
+                  >
+                    SPICE (.spi)
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Export Spectre netlist"
+                    onClick={() => exportNetlist("spectre")}
+                  >
+                    Spectre (.scs)
+                  </button>
+                  {netlistDiagnostics.length > 0 ? (
+                    <section
+                      className="netlist-export-diagnostics"
+                      aria-label="Netlist export diagnostics"
+                    >
+                      <strong>Netlist diagnostics</strong>
+                      <ul>
+                        {netlistDiagnostics.slice(0, 8).map((item, index) => (
+                          <li
+                            key={`${item.documentId}:${item.code}:${index}`}
+                            data-severity={item.severity}
+                          >
+                            {item.code}: {item.message}
+                          </li>
+                        ))}
+                      </ul>
+                      {netlistDiagnostics.length > 8 ? (
+                        <small>
+                          {netlistDiagnostics.length - 8} more diagnostics
+                        </small>
+                      ) : null}
+                    </section>
+                  ) : null}
                   {recoveryCandidate ? (
                     <>
                       <button type="button" onClick={restoreRecovery}>
