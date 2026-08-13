@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 8,
   "id": "project-hierarchy-navigation",
   "name": "Hierarchy Navigation Fixture",
   "source": {
@@ -24,7 +24,7 @@
       "instances": [
         {
           "id": "XCHILD",
-          "symbolId": "opamp",
+          "symbolId": "resistor",
           "placement": {
             "position": { "x": 300, "y": 240 },
             "rotation": 0,
@@ -64,9 +64,16 @@
       "ports": [
         {
           "id": "port-child-p",
-          "name": "P",
+          "name": "1",
           "direction": "passive",
           "position": { "x": 120, "y": 240 },
+          "presentation": "hollow"
+        },
+        {
+          "id": "port-child-2",
+          "name": "2",
+          "direction": "passive",
+          "position": { "x": 120, "y": 300 },
           "presentation": "hollow"
         }
       ],

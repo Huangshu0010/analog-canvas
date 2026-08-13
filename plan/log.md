@@ -6521,3 +6521,28 @@ contracts (WP-R1)`.
   #37 passed.
 - Commit status: committed as `f2a87fd` on
   `codex/stabilize-properties-e2e`.
+
+## 2026-08-13 - Refresh Phase 7 formal export golden
+
+- Target: reconcile the formal SVG/PNG/PDF baseline with the accepted
+  canonical RichText and VisualAnchor output.
+- Changed areas: deterministic Phase 7 export artifacts and hash manifest.
+- Validation: generated through `pnpm export:golden`; full `pnpm ci:check`
+  passed (725 unit tests, 99 browser E2E, build, performance, PWA and release
+  smoke).
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `test(export): refresh formal export golden`.
+
+## 2026-08-13 - Refresh migrated editor E2E fixtures
+
+- Target: restore browser gate coverage after accepted first-class Port,
+  RichText and hierarchy-interface migrations, without weakening product
+  behavior.
+- Changed areas: stale Port endpoint/selector expectations, semantic RichText
+  selector, and the imported hierarchy-navigation fixture's valid symbol/port
+  interface.
+- Validation: focused browser E2E (64 tests) and full `pnpm ci:check` passed
+  (725 unit tests, 99 browser E2E, build, performance, Golden/PWA/release
+  smoke); `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `test(editor): refresh migrated routing fixtures`.
