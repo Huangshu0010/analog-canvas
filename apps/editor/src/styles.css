@@ -597,40 +597,6 @@ body {
   white-space: normal;
 }
 
-.netlist-export-diagnostics {
-  max-width: 28rem;
-  margin: 4px;
-  padding: 8px;
-  border: 1px solid var(--icm-border);
-  border-radius: 6px;
-  color: var(--icm-text-muted);
-  font-size: var(--icm-font-xs);
-}
-
-.netlist-export-diagnostics strong {
-  color: var(--icm-text);
-}
-
-.netlist-export-diagnostics ul {
-  display: grid;
-  gap: 4px;
-  margin: 6px 0 0;
-  padding-left: 18px;
-  white-space: normal;
-}
-
-.netlist-export-diagnostics [data-severity="error"] {
-  color: var(--icm-danger, #a61b1b);
-}
-
-.command-popover .netlist-export-diagnostics button {
-  min-height: 0;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  white-space: normal;
-}
-
 .file-import {
   padding: 0 var(--icm-space-2);
   border: 1px solid transparent;

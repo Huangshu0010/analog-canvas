@@ -95,9 +95,11 @@ describe("editor shell", () => {
     const markup = renderToStaticMarkup(<App project={project} />);
     expect(markup).toContain("Smoke Project");
     expect(markup).toContain("Schematic canvas");
-    expect(markup).toContain("Export SPICE netlist");
-    expect(markup).toContain("Export Spectre netlist");
-    expect(markup).toContain("Structural design netlist only");
+    expect(markup).not.toContain("Export SPICE netlist");
+    expect(markup).not.toContain("Export Spectre netlist");
+    expect(markup).not.toContain("Cell netlist interface");
+    expect(markup).not.toContain("Component reference");
+    expect(markup).not.toContain("Component model");
     expect(markup).not.toContain('data-testid="cell-navigation"');
   });
 

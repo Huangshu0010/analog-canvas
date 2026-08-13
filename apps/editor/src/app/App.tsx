@@ -58,12 +58,6 @@ import {
   serializeProject,
   transformPoint,
 } from "@icm/model";
-import {
-  extractDesignNetlist,
-  printDesignNetlist,
-  type NetlistDiagnostic,
-  type NetlistFormat,
-} from "@icm/netlist";
 import type {
   Annotation,
   CircuitProject,
@@ -76,11 +70,7 @@ import type {
 import { buildSvgScene } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
-import {
-  builtInSymbols,
-  deviceNetlistDefinition,
-  findUnsupportedProjectSymbolIds,
-} from "@icm/symbols";
+import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
 import {
   clipboardPlacementAnchor,
   clipboardPreviewDocument,
@@ -116,10 +106,7 @@ import {
   componentParameters,
   effectiveComponentParameterValue,
 } from "../features/component-insert/component-parameters";
-import {
-  bindingForEditedModel,
-  initialInstanceNetlist,
-} from "../features/netlist-export/netlist-authoring";
+import { initialInstanceNetlist } from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
 import { ShapesPanel } from "../features/editor-shell/shapes-panel";
 import { useDocumentController } from "../document/document-controller";
@@ -457,9 +444,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       ).project,
   );
   const [status, setStatus] = useState("Ready");
-  const [netlistDiagnostics, setNetlistDiagnostics] = useState<
-    NetlistDiagnostic[]
-  >([]);
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
@@ -604,22 +588,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   );
   const [netLabelDraft, setNetLabelDraft] = useState("");
   const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
-  const [cellNetlistDraft, setCellNetlistDraft] = useState({
-    name: document.netlist?.name ?? document.name,
-    portOrder: (document.netlist?.portOrder ?? []).join(", "),
-  });
   const [instancePropertyDraft, setInstancePropertyDraft] = useState<{
     instanceId: string | null;
-    reference: string;
-    model: string;
     parameters: Record<string, string>;
     x: string;
     y: string;
     rotation: "0" | "90" | "180" | "270";
   }>({
     instanceId: null,
-    reference: "",
-    model: "",
     parameters: {},
     x: "",
     y: "",
@@ -1158,18 +1134,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }, [selectedRoute, selectedRouteNetLabel]);
 
   useEffect(() => {
-    setCellNetlistDraft({
-      name: document.netlist?.name ?? document.name,
-      portOrder: (document.netlist?.portOrder ?? []).join(", "),
-    });
-  }, [document.id, document.name, document.netlist]);
-
-  useEffect(() => {
     if (!selectedInstance) {
       setInstancePropertyDraft({
         instanceId: null,
-        reference: "",
-        model: "",
         parameters: {},
         x: "",
         y: "",
@@ -1179,11 +1146,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     setInstancePropertyDraft({
       instanceId: selectedInstance.id,
-      reference: selectedInstance.netlist?.reference ?? "",
-      model:
-        selectedInstance.netlist?.binding?.kind === "model"
-          ? selectedInstance.netlist.binding.name
-          : "",
       parameters: Object.fromEntries(
         componentParameters(selectedInstance.symbolId).map((parameter) => [
           parameter.key,
@@ -3178,75 +3140,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setStatus(`Saved formal Project revision ${document.revision}`);
   }
 
-  function exportNetlist(format: NetlistFormat): void {
-    const result = extractDesignNetlist(project);
-    setNetlistDiagnostics(result.diagnostics);
-    if (!result.ir) {
-      const errorCount = result.diagnostics.filter(
-        (item) => item.severity === "error",
-      ).length;
-      setStatus(
-        `Netlist export blocked by ${errorCount} electrical contract error${errorCount === 1 ? "" : "s"}`,
-      );
-      return;
-    }
-    const file = printDesignNetlist(format, result.ir);
-    download(file.text, file.mediaType, file.extension.slice(1));
-    const warningCount = result.diagnostics.filter(
-      (item) => item.severity === "warning",
-    ).length;
-    setStatus(
-      `Exported ${format === "spice" ? "SPICE" : "Spectre"} design netlist${warningCount ? ` with ${warningCount} warning${warningCount === 1 ? "" : "s"}` : ""}`,
-    );
-  }
-
-  function locateNetlistDiagnostic(item: NetlistDiagnostic): void {
-    const target = project.documents.find(
-      (candidate) => candidate.id === item.documentId,
-    );
-    if (!target) {
-      setStatus(`Document not found: ${item.documentId}`);
-      return;
-    }
-    const objectId = item.objectIds.find((id) =>
-      [
-        ...target.instances,
-        ...target.nets,
-        ...target.ports,
-        ...target.routes,
-        ...target.junctions,
-        ...target.annotations,
-        ...target.noConnects,
-      ].some((object) => object.id === id),
-    );
-    const kind: ObjectLocator["kind"] = objectId
-      ? target.instances.some((instance) => instance.id === objectId)
-        ? "instance"
-        : target.nets.some((net) => net.id === objectId)
-          ? "net"
-          : target.ports.some((port) => port.id === objectId)
-            ? "port"
-            : target.routes.some((route) => route.id === objectId)
-              ? "route"
-              : target.junctions.some((junction) => junction.id === objectId)
-                ? "junction"
-                : target.annotations.some(
-                      (annotation) => annotation.id === objectId,
-                    )
-                  ? "annotation"
-                  : "no-connect"
-      : "document";
-    navigateToLocator(
-      {
-        documentId: target.id,
-        hierarchyPath: [],
-        kind,
-        objectId: objectId ?? target.id,
-      },
-      `${item.code}: ${item.message}`,
-    );
-  }
-
   function restoreRecovery(): void {
     if (recoveryCandidate) {
       const unsupported = findUnsupportedProjectSymbolIds(
@@ -3949,11 +3842,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     const edits: SchematicEdit[] = [];
-    const reference = instancePropertyDraft.reference.trim();
-    if (!reference) {
-      setStatus("Netlist reference is required");
-      return;
-    }
     const set: Record<string, string> = {};
     const unset: string[] = [];
     const baseNetlist =
@@ -3992,13 +3880,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       });
     }
 
-    const netlistBinding = bindingForEditedModel(
-      selectedInstance.symbolId,
-      instancePropertyDraft.model,
-    );
     const nextNetlist = {
-      reference,
-      ...(netlistBinding ? { binding: netlistBinding } : {}),
+      ...baseNetlist,
       parameters: netlistParameters,
     };
     if (
@@ -4051,34 +3934,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (result.ok) setStatus(`Updated properties for ${selectedInstance.id}`);
   }
 
-  function applyCellNetlistInterface(): void {
-    const name = cellNetlistDraft.name.trim();
-    if (!name) {
-      setStatus("Cell netlist name is required");
-      return;
-    }
-    const portOrder = cellNetlistDraft.portOrder
-      .split(/[\s,]+/u)
-      .map((portId) => portId.trim())
-      .filter(Boolean);
-    const result = transact([
-      {
-        kind: "set_cell_netlist_interface",
-        netlist: { name, portOrder },
-      },
-    ]);
-    if (result.ok) setStatus(`Updated netlist interface ${name}`);
-  }
-
   function discardInstancePropertyDraft(): void {
     if (!selectedInstance) return;
     setInstancePropertyDraft({
       instanceId: selectedInstance.id,
-      reference: selectedInstance.netlist?.reference ?? "",
-      model:
-        selectedInstance.netlist?.binding?.kind === "model"
-          ? selectedInstance.netlist.binding.name
-          : "",
       parameters: Object.fromEntries(
         componentParameters(selectedInstance.symbolId).map((parameter) => [
           parameter.key,
@@ -5542,52 +5401,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   >
                     PDF
                   </button>
-                  <button
-                    type="button"
-                    aria-label="Export SPICE netlist"
-                    onClick={() => exportNetlist("spice")}
-                  >
-                    SPICE (.spi)
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Export Spectre netlist"
-                    onClick={() => exportNetlist("spectre")}
-                  >
-                    Spectre (.scs)
-                  </button>
-                  <small>
-                    Structural design netlist only; simulation setup and PDK
-                    includes are not added.
-                  </small>
-                  {netlistDiagnostics.length > 0 ? (
-                    <section
-                      className="netlist-export-diagnostics"
-                      aria-label="Netlist export diagnostics"
-                    >
-                      <strong>Netlist diagnostics</strong>
-                      <ul>
-                        {netlistDiagnostics.slice(0, 8).map((item, index) => (
-                          <li
-                            key={`${item.documentId}:${item.code}:${index}`}
-                            data-severity={item.severity}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => locateNetlistDiagnostic(item)}
-                            >
-                              {item.code}: {item.message}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                      {netlistDiagnostics.length > 8 ? (
-                        <small>
-                          {netlistDiagnostics.length - 8} more diagnostics
-                        </small>
-                      ) : null}
-                    </section>
-                  ) : null}
                   {recoveryCandidate ? (
                     <>
                       <button type="button" onClick={restoreRecovery}>
@@ -5999,44 +5812,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               </span>
             </button>
             <div className="selection-panel" hidden={!selectionOpen}>
-              <section
-                className="context-actions"
-                aria-label="Cell netlist interface"
-              >
-                <h2>Cell netlist</h2>
-                <label title="Electrical cell/subcircuit name">
-                  <span className="property-parameter-name">Cell name</span>
-                  <input
-                    aria-label="Cell netlist name"
-                    value={cellNetlistDraft.name}
-                    onChange={(event) => {
-                      const name = event.currentTarget.value;
-                      setCellNetlistDraft((current) => ({ ...current, name }));
-                    }}
-                  />
-                </label>
-                <label title="Ordered Port IDs used by the subcircuit interface">
-                  <span className="property-parameter-name">
-                    Port order
-                    <em>(Comma-separated Port IDs)</em>
-                  </span>
-                  <input
-                    aria-label="Cell netlist port order"
-                    value={cellNetlistDraft.portOrder}
-                    placeholder="port-in, port-out"
-                    onChange={(event) => {
-                      const portOrder = event.currentTarget.value;
-                      setCellNetlistDraft((current) => ({
-                        ...current,
-                        portOrder,
-                      }));
-                    }}
-                  />
-                </label>
-                <button type="button" onClick={applyCellNetlistInterface}>
-                  Apply Cell Netlist
-                </button>
-              </section>
               {!hasInspectableSelection ? (
                 <p className="inspect-empty">Select an object to inspect.</p>
               ) : null}
@@ -6063,45 +5838,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   aria-label="Component properties"
                 >
                   <h2>Component properties</h2>
-                  <label title="Unique instance name emitted to SPICE/Spectre">
-                    <span className="property-parameter-name">
-                      Reference
-                      <em>(Netlist instance name)</em>
-                    </span>
-                    <input
-                      aria-label="Component reference"
-                      value={instancePropertyDraft.reference}
-                      placeholder="R1"
-                      onChange={(event) => {
-                        const reference = event.currentTarget.value;
-                        setInstancePropertyDraft((current) => ({
-                          ...current,
-                          reference,
-                        }));
-                      }}
-                    />
-                  </label>
-                  {deviceNetlistDefinition(selectedInstance.symbolId)
-                    ?.targetPolicy === "required-model" ? (
-                    <label title="Explicit simulator model name; no PDK model is guessed">
-                      <span className="property-parameter-name">
-                        Model
-                        <em>(Required for netlist export)</em>
-                      </span>
-                      <input
-                        aria-label="Component model"
-                        value={instancePropertyDraft.model}
-                        placeholder="nch_mac"
-                        onChange={(event) => {
-                          const model = event.currentTarget.value;
-                          setInstancePropertyDraft((current) => ({
-                            ...current,
-                            model,
-                          }));
-                        }}
-                      />
-                    </label>
-                  ) : null}
                   {componentParameters(selectedInstance.symbolId).map(
                     (parameter, index) => (
                       <label key={parameter.key} title={parameter.help}>
@@ -6133,12 +5869,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                       </label>
                     ),
                   )}
-                  {typeof selectedInstance.properties["spice.target"] ===
-                  "string" ? (
-                    <p className="property-source-fact">
-                      Model: {selectedInstance.properties["spice.target"]}
-                    </p>
-                  ) : null}
                   {selectedInstance.placement ? (
                     <>
                       <div

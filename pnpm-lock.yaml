@@ -53,9 +53,6 @@ importers:
       "@icm/model":
         specifier: workspace:*
         version: link:../../packages/model
-      "@icm/netlist":
-        specifier: workspace:*
-        version: link:../../packages/netlist
       "@icm/render-svg":
         specifier: workspace:*
         version: link:../../packages/render-svg

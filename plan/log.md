@@ -5988,3 +5988,25 @@ contracts (WP-R1)`.
   blocked-diagnostic location; `git diff --check` clean.
 - Commit status: ready to commit and push on
   `codex/netlist-export-system` as `merge: integrate main into netlist export`.
+
+## 2026-08-13 - Hide web netlist surface
+
+- Target: retain deterministic netlist contracts and conversion code while
+  temporarily removing all netlist export and authoring semantics from the
+  public web editor.
+- Changed areas: removed the File-menu SPICE/Spectre downloads, export
+  diagnostics and explanatory copy, Cell netlist-interface controls, and
+  Instance Reference/Model controls and imported-model source text; removed the
+  editor's direct netlist runtime dependency; added negative unit and browser
+  coverage for the hidden surface. SPICE import and internal
+  model/migration/extractor/printer/typed-edit contracts remain intact.
+- Validation: focused 26-test unit suite; focused hidden-surface Playwright
+  scenario; typecheck and build; frozen install; static, 692-unit, release,
+  performance, golden, production, and release-smoke gates; all 99 unrelated
+  browser scenarios plus the new hidden-surface scenario. The existing
+  recovery-refresh scenario passed alone but flaked under 16-worker full-suite
+  load; the full suite was repeated at reduced concurrency for deterministic
+  coverage. `git diff --check` clean.
+- Commit status: ready to commit and push on
+  `codex/netlist-export-system` as `feat(editor): hide web netlist surface`,
+  then open a draft PR to `main`.
