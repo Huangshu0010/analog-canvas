@@ -5927,3 +5927,16 @@ contracts (WP-R1)`.
   `git diff --check` passed.
 - Commit status: ready to commit on `codex/ci-contract-cleanup` as
   `refactor(rich-text): consolidate the active text contract`.
+
+## 2026-08-13 - CI cleanup and Agent contract integration
+
+- Target: combine `codex/ci-contract-cleanup` with Agent contract hardening in
+  one reviewed delivery without losing either branch's accepted contracts.
+- Changed areas: resolved editor and SVG integration conflicts; regenerated
+  Agent API artifacts; retained consolidated RichText, canonical diagnostics,
+  shared Wire intent, and contact-aware junction behavior.
+- Validation: 132 focused tests; frozen install; full `pnpm ci:check` with 668
+  unit/integration and 99 Playwright tests; all six required GitHub checks;
+  post-merge ancestry verification.
+- Commit status: integration commit `3ecda02` merged through PR #25 into
+  `main` as `e9782e4`.
