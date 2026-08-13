@@ -1,3 +1,8 @@
+---
+status: completed
+experience: candidate
+---
+
 # Razavi Existing MOS Presentation Migration
 
 ## Goal

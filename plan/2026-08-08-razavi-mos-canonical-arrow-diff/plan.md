@@ -1,3 +1,8 @@
+---
+status: completed
+experience: candidate
+---
+
 # Razavi MOS Canonical Arrow Diff
 
 ## Goal

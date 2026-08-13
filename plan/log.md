@@ -6126,3 +6126,14 @@ contracts (WP-R1)`.
   pending final confirmation.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(plan): classify legacy records batch 1`.
+
+## 2026-08-13 - Legacy plan metadata sweep, batch 2
+
+- Target: classify the next 25 root plans that predate lifecycle metadata.
+- Changed areas: archived 20 individually evidenced completed records; marked
+  five explicit human-review signals as `completed/candidate`; reduced the
+  unclassified root queue from 96 to 71 records.
+- Validation: per-plan Git evidence table, Markdown formatting, root-state
+  count, `git diff --check`, and status review pending final confirmation.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(plan): classify legacy records batch 2`.

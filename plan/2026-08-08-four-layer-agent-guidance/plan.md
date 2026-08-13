@@ -1,3 +1,8 @@
+---
+status: completed
+experience: candidate
+---
+
 # Establish four-layer Agent guidance
 
 ## Goal

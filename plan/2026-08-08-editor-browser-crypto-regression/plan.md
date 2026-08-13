@@ -1,3 +1,8 @@
+---
+status: completed
+experience: candidate
+---
+
 # Restore Browser-Compatible Editor Startup
 
 ## Goal

@@ -9,8 +9,8 @@ an archive. Completed plans with resolved experience are stored under
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
 | `active`                  |     0 | No target is currently active in the root plan queue.                             |
-| `completed` + `candidate` |    11 | Human decides whether to extract, reject, or defer the experience signal.         |
-| missing metadata          |    96 | Audit against outcome text and Git evidence; never archive merely because of age. |
+| `completed` + `candidate` |    16 | Human decides whether to extract, reject, or defer the experience signal.         |
+| missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
 ### Active
 
@@ -29,6 +29,11 @@ None.
 - `2026-08-07-razavi-canon-into-skill-manifest`
 - `2026-08-07-record-rule-guided-agent-layout`
 - `2026-08-07-render-faithful-hierarchical-ports`
+- `2026-08-08-drafting-runtime-final-repair`
+- `2026-08-08-editor-browser-crypto-regression`
+- `2026-08-08-four-layer-agent-guidance`
+- `2026-08-08-razavi-existing-mos-migration`
+- `2026-08-08-razavi-mos-canonical-arrow-diff`
 
 ## 2026-08-13 Root Closure
 
@@ -43,9 +48,9 @@ superseded VDD plan's drawn-rail replacement is already archived.
 
 ## Legacy Metadata Sweep
 
-The first 25 oldest pre-metadata records were individually classified on
-2026-08-13 from their intent/outcome, factual log, and Git path history. Nineteen
-completed records with resolved experience were archived; six completed records
-with an explicit human-review signal remain above as candidates. The remaining
-96 plans still require the same individual evidence review; do not bulk-rewrite
-their historical bodies.
+The first 50 oldest pre-metadata records were individually classified on
+2026-08-13 from their intent/outcome, factual log, and Git path history. Thirty-nine
+completed records with resolved experience were archived; eleven completed
+records with an explicit human-review signal remain above as candidates. The
+remaining 71 plans still require the same individual evidence review; do not
+bulk-rewrite their historical bodies.
