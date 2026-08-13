@@ -50,19 +50,19 @@ The product needs a complete editing and review loop, not a simulation service
 or a remote filesystem. The following boundary is therefore frozen for this
 roadmap:
 
-| Capability | Delivery decision | Authority / API shape |
-| --- | --- | --- |
-| Read a complete Document | Deliver | `snapshot` |
-| Atomic Document edits and wiring | Deliver | `transact` through the shared Edit Engine |
-| Formal visual evidence | Deliver | `render` (SVG) and File Resource visual download (SVG/PNG/PDF) |
-| Project create/open/save/export | Deliver | browser-owned Project controller and scoped File Resource |
-| Structural SPICE import | Deliver | staged File Resource candidate, then explicit human approval |
-| `.icproj.json` import/export | Deliver | staged File Resource candidate / canonical Project download |
-| Active Cell, selection, Net highlight, fit view | Deliver | non-persisting semantic intents inside `transact` |
-| Agent own-head undo/redo and semantic duplicate | Deliver | typed `transact` intents and shared history |
-| Simulation, PVT, analyses, waveform/measurement data | Do not deliver | no scope, endpoint, Snapshot field, or File Resource kind |
-| SPICE/Spectre/design-netlist export | Do not deliver | no scope, endpoint, download kind, or capability |
-| Arbitrary paths, filesystem enumeration, Project database, DOM automation | Do not deliver | rejected at the File Resource and session boundary |
+| Capability                                                                | Delivery decision | Authority / API shape                                          |
+| ------------------------------------------------------------------------- | ----------------- | -------------------------------------------------------------- |
+| Read a complete Document                                                  | Deliver           | `snapshot`                                                     |
+| Atomic Document edits and wiring                                          | Deliver           | `transact` through the shared Edit Engine                      |
+| Formal visual evidence                                                    | Deliver           | `render` (SVG) and File Resource visual download (SVG/PNG/PDF) |
+| Project create/open/save/export                                           | Deliver           | browser-owned Project controller and scoped File Resource      |
+| Structural SPICE import                                                   | Deliver           | staged File Resource candidate, then explicit human approval   |
+| `.icproj.json` import/export                                              | Deliver           | staged File Resource candidate / canonical Project download    |
+| Active Cell, selection, Net highlight, fit view                           | Deliver           | non-persisting semantic intents inside `transact`              |
+| Agent own-head undo/redo and semantic duplicate                           | Deliver           | typed `transact` intents and shared history                    |
+| Simulation, PVT, analyses, waveform/measurement data                      | Do not deliver    | no scope, endpoint, Snapshot field, or File Resource kind      |
+| SPICE/Spectre/design-netlist export                                       | Do not deliver    | no scope, endpoint, download kind, or capability               |
+| Arbitrary paths, filesystem enumeration, Project database, DOM automation | Do not deliver    | rejected at the File Resource and session boundary             |
 
 As of this roadmap, production v2 has the strict four-operation request parser,
 revisioned single-Document Snapshot/transaction/render path, browser claim and
@@ -98,19 +98,19 @@ Excluded:
 
 ## Delivery sequence and exit gates
 
-| Order | Package | Single authority to establish | Exit gate |
-| --- | --- | --- | --- |
-| M0 | Power identity | `Net.powerDomain` | Completed in schema v5; no production supply identity is inferred from labels or symbols. |
-| M1 | Port presentation | first-class `Port.presentation` | Every live Port has one electrical/visual record; no product or Agent port-symbol authoring remains. |
-| M2 | Text and attachment | required RichText AST + one `VisualAnchor` | GUI, Agent, render/export, clipboard and hit-test use no string/markup or `routeAttachment` fallback. |
-| M3 | Typed netlist facts | `Document.netlist` / `Instance.netlist` | Every writable netlist fact is typed, visible in Snapshot, and no runtime `spice.*` fallback is consulted. |
-| M4 | Compatibility corpus | tested sequential migrations | Shipped fixtures and representative projects rewrite to current form with topology and render stability evidence. |
-| A1 | Project controller | one browser-owned `EditorProjectController` | GUI and Agent cannot create/rename/remove Documents or repair hierarchy through a second mutable path. |
-| A2 | Session continuity | one session state machine | Claim, reconnect, refresh, pause, rotate, revoke, replacement and uncertain write states have deterministic outcomes. |
-| A3 | File Resource | one bounded in-memory candidate/artifact broker | Project/visual bytes flow through declared kinds, hashes and limits, never paths or hidden storage. |
-| A4 | Semantic collaboration | one shared editor semantic controller | Agent navigation/highlight/fit use the same resolved connectivity and locator service as GUI without persistence. |
-| A5 | History and duplication | one project-aware history/closure planner | Agent own-head undo/redo and duplicate have the same topology-safe semantics as the GUI. |
-| A6 | Contract hardening | generated OpenAPI + external-client proof | All supported flows are discoverable, scoped, load-tested, and deploy-tested; no excluded feature leaks into capabilities. |
+| Order | Package                 | Single authority to establish                   | Exit gate                                                                                                                  |
+| ----- | ----------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| M0    | Power identity          | `Net.powerDomain`                               | Completed in schema v5; no production supply identity is inferred from labels or symbols.                                  |
+| M1    | Port presentation       | first-class `Port.presentation`                 | Every live Port has one electrical/visual record; no product or Agent port-symbol authoring remains.                       |
+| M2    | Text and attachment     | required RichText AST + one `VisualAnchor`      | GUI, Agent, render/export, clipboard and hit-test use no string/markup or `routeAttachment` fallback.                      |
+| M3    | Typed netlist facts     | `Document.netlist` / `Instance.netlist`         | Every writable netlist fact is typed, visible in Snapshot, and no runtime `spice.*` fallback is consulted.                 |
+| M4    | Compatibility corpus    | tested sequential migrations                    | Shipped fixtures and representative projects rewrite to current form with topology and render stability evidence.          |
+| A1    | Project controller      | one browser-owned `EditorProjectController`     | GUI and Agent cannot create/rename/remove Documents or repair hierarchy through a second mutable path.                     |
+| A2    | Session continuity      | one session state machine                       | Claim, reconnect, refresh, pause, rotate, revoke, replacement and uncertain write states have deterministic outcomes.      |
+| A3    | File Resource           | one bounded in-memory candidate/artifact broker | Project/visual bytes flow through declared kinds, hashes and limits, never paths or hidden storage.                        |
+| A4    | Semantic collaboration  | one shared editor semantic controller           | Agent navigation/highlight/fit use the same resolved connectivity and locator service as GUI without persistence.          |
+| A5    | History and duplication | one project-aware history/closure planner       | Agent own-head undo/redo and duplicate have the same topology-safe semantics as the GUI.                                   |
+| A6    | Contract hardening      | generated OpenAPI + external-client proof       | All supported flows are discoverable, scoped, load-tested, and deploy-tested; no excluded feature leaks into capabilities. |
 
 Each M target is a separate schema migration and must complete before a new
 Agent write relies on it. Existing legacy forms remain read-only compatibility
@@ -118,6 +118,258 @@ until their migration has passed fixtures and real Project samples. Each A
 target is a separate target plan and cannot be marked complete merely because
 its transport/schema scaffolding exists: it must have a consumer path, an error
 contract, and the exit evidence stated below.
+
+## Verified baseline and delivery discipline
+
+The roadmap is deliberately not a claim that every listed package already
+exists. At the start of the remaining delivery sequence the completed model
+authorities are:
+
+| Completed slice | Current authority                                 | What new Agent writes may not do                                  |
+| --------------- | ------------------------------------------------- | ----------------------------------------------------------------- |
+| M0              | `Net.powerDomain`                                 | infer a supply from a marker Symbol, label, name, or fixed Net ID |
+| M1              | first-class `Port` plus `Port.presentation`       | author `port` or `port-filled` as an electrical Instance          |
+| M2              | required RichText AST and required `VisualAnchor` | author a string/markup annotation or `routeAttachment`            |
+
+The current Project schema is v7. These completed migrations remain migration
+evidence, not a reason to retain their former runtime fallbacks.
+
+The next verified authority gap is M3. `@icm/spice` still writes
+`spice.name`, `spice.target`, `spice.param.*`, `spice.pin.*`, and
+`spice.childDocumentId`; Snapshot, ERC, hierarchy, search, component parameter
+display, and one Edit Engine symbol-replacement path still read some of those
+properties. `Instance.netlist` already holds reference/binding/parameters and
+`Document.netlist` already holds Cell interface facts, but they are not yet
+complete enough to replace those consumers.
+
+Every remaining row below is its own target plan, commit series, and validation
+boundary. No target may claim completion from types or transport scaffolding
+alone. It needs: one runtime owner, one human-visible or external-client
+consumer, deterministic negative cases, and the stated exit evidence. A
+temporary adapter is permitted only at a numbered migration boundary; an Agent
+authoring parser never accepts the retired form.
+
+## Detailed implementation sequence
+
+### M3. Typed netlist facts and immutable source provenance
+
+**Purpose.** Make typed model fields the sole runtime source for reference,
+binding, parameters, source pin order, hierarchy target, and Cell interface.
+This supports structural SPICE _import_ and source-status reporting; it does
+not create a design-netlist export feature.
+
+**Schema-v8 decision.** Add exactly the typed facts absent from the current
+model before removing a reader:
+
+- `Instance.netlist` gains an ordered terminal mapping, including source
+  position and resolved Symbol pin name, so an import preserves pin order
+  without `spice.pin.P<n>`.
+- a subcircuit binding owns `childDocumentId`; it is the only runtime hierarchy
+  edge. A binding cannot be both external and linked to a child Document.
+- source-only information that has no editable circuit meaning moves to a
+  tagged immutable `importProvenance` record beside the typed facts. It may
+  retain a source span, dialect, original target spelling, and bounded opaque
+  import attributes. It is never a generic `properties` bag, never used for
+  electrical decisions, and never patchable through normal property edits.
+- document source identity stays in `source`/`sourceBinding`; the existing
+  typed `Document.netlist` continues to own interface name and ordered Port
+  IDs. It must reject duplicate, missing, or unordered interface members.
+
+The target first inventories every `spice.*` use and maps it to one of the
+fields above. The importer writes only that form. Schema-v7-to-v8 migration
+copies recognized legacy facts deterministically, moves unknown source facts to
+provenance, rejects contradictory duplicate facts with path diagnostics, then
+removes all `spice.*` keys from ordinary editable properties. It never derives
+a child Cell by name when an ID is absent.
+
+**Consumer conversion.** Convert Snapshot, hierarchy index/navigation,
+ERC, project search, component parameter display, and the Edit Engine's
+symbol/pin validation in the same target. Snapshot must expose every editable
+typed fact and clearly separate optional provenance from editable data. ERC
+and hierarchy validation must consume the typed terminal map and binding,
+never reparse source strings. `properties` remains available for non-netlist
+user metadata only.
+
+**Evidence.** Test import of primitives, models, external subcircuits and
+linked subcircuits; pin-order preservation; missing/unsupported binding;
+attempted stale `spice.*` authoring; hierarchy and ERC parity; and one complete
+v7-to-v8 save/load/canonical round trip. A source-reference test must prove
+that provenance is inspectable but cannot change electrical topology. Run
+focused model/import/derived/edit-engine/Agent tests, generated API artifacts,
+and `pnpm verify:branch` before delivery.
+
+### M4. Compatibility corpus, retirement, and documentation truth
+
+**Purpose.** Prove that legacy Projects have a single sequential path to the
+current authority, then retire runtime compatibility rather than leaving a
+second live contract forever.
+
+**Corpus.** Maintain two explicit groups: immutable old-version inputs used
+only to test migrations, and current canonical Projects used by GUI/import/
+render tests. Include every shipped `.icproj.json` fixture plus representative
+structural-SPICE imports, hierarchy, Port, Power, RichText/anchor, NoConnect,
+and Razavi visual samples. For each input assert:
+
+1. sequential migration reaches the current schema;
+2. canonical save/load is byte stable;
+3. electrical topology hash, hierarchy bindings, and ordered terminal facts
+   match an approved expectation;
+4. formal SVG/PNG/PDF output stays within its approved golden contract; and
+5. no current serialized Project contains `spice.*`, a port Symbol instance,
+   legacy VDD electrical identity, string annotation fallback, or
+   `routeAttachment`.
+
+After that evidence, delete production readers/writers and retired catalog
+authoring paths. Keep only migration input fixtures and migration code needed
+to open supported historic versions. Historical reference assets may remain
+outside the product catalog. In the same delivery, synchronize the current
+Project-file, model, Agent API, web-session, user compatibility, and workflow
+documents with the actual schema/API version; archive or label non-normative
+v1/v3 material so an external Agent cannot mistake it for a supported route.
+
+**Evidence.** A repository-wide production-source absence audit supplements,
+but never replaces, corpus tests. The target is blocked if any source Project
+cannot migrate without guessing an electrical fact; retain it as a named
+unsupported compatibility case instead of silently repairing it.
+
+### A1. Browser-owned Project controller and Project transactions
+
+**Purpose.** Replace the current per-Document controller collection with one
+`EditorProjectController` that owns the live Project map/order, composite
+revision, active Cell pruning, hierarchy validation, composite history, and
+recovery scheduling. `DocumentHistory` stays an internal implementation
+detail.
+
+Before code, amend ADR 0019 and the Agent/API and web-session specs together
+with one unambiguous `transact` target discriminant. The public API remains
+four operations. A Document transaction and a Project transaction may not be
+two ambiguous root-field conventions; the production parser accepts the one
+chosen discriminated shape and the generated OpenAPI shows it. Project edits
+cover only create/rename/remove Document, select top Document, update ordered
+Cell interfaces, and repair typed hierarchy bindings. They carry expected
+Project revision plus every affected Document revision, and are atomic.
+
+Project deletion rejects dangling Routes, Nets, NoConnects, interface members,
+and callers unless the same transaction repairs them. GUI, Agent host, file
+approval, and recovery call the controller only; none edits `Project.documents`
+directly. Tests cover stale Project revision, multi-Document rollback,
+active-selection pruning, hierarchy repair, one composite undo item, human /
+Agent parity, and rejection before recovery or session events.
+
+### A2. One explicit session state machine
+
+**Purpose.** Replace independent panel/hook/relay interpretations with a
+shared state-machine contract for `idle`, `authorizing`, `claimable`,
+`claimed`, `online`, `paused`, `reconnecting`, `offline`, `revoked`,
+`replaced`, and `expired`.
+
+The browser stores only a bounded same-tab reconnect proof (`sessionId`,
+editor secret, and Project-session identity) in `sessionStorage`; it never
+stores bearer tokens or Project bytes. The worker owns claim/token expiry,
+scope, rate limit, and request-result retention. The host owns live Project
+identity and terminal execution evidence. All three use the same transition
+table and the same error converter.
+
+Reconnect may reattach only to the same Project session. Open/import/restore,
+session expiry, explicit revoke, rotation, and Project mismatch erase recovery
+proof and require a new claim. An uncertain write is resolved solely through
+the original `requestId`; it is never replayed under a new ID. Add fake-time,
+browser-refresh, worker-drop, duplicate-request, rotate/revoke, and secret
+redaction tests, then one deployed relay/browser scenario.
+
+### A3. Scoped File Resource and browser-approved import
+
+**Purpose.** Deliver file capability without exposing a filesystem or adding a
+fifth Circuit operation. The File Resource is a separate, browser-owned
+OpenAPI resource discovered from `capabilities`; it has only `project`,
+`visual`, and staged `project` / `structural-spice` kinds.
+
+Downloads are generated from a named validated Project/Document revision and
+return bytes, media type, SHA-256, and byte length. Visual formats are SVG,
+PNG, and PDF only. Staging accepts bytes, a normalized relative virtual name,
+media type, declared length/hash, and a bounded include graph. It rejects raw
+paths, URLs, traversal, duplicate names, hash/length mismatch, unsupported
+future schema, excessive nesting, and simulation/model-analysis classes.
+
+Staging does not mutate the Project. The browser alone presents candidate
+summary/migrations/diagnostics and chooses Cancel, Open-and-disconnect, or
+Open-and-reconnect. Replacement revokes the old session and needs a new claim;
+the relay retains no bytes. Required evidence includes byte-identical GUI /
+Agent exports, deterministic candidate summaries, every rejection path, no
+secret or raw-byte leak, and browser approval E2E.
+
+### A4. Shared semantic editor control
+
+**Purpose.** Let an Agent make its review visible without coordinate guessing,
+DOM automation, or persisted canvas state. Add explicitly non-persisting
+`transact` intents for activate Cell, select canonical `ObjectLocator`s,
+highlight a resolved Net, fit to objects/Net/bounds/Document, and clear focus.
+
+The intents consume the existing Object Locator, connectivity index, resolved
+route geometry, and Net-highlighting service. They return resolved objects,
+bounds, and Net evidence, require `editor.semantic-control`, and emit an
+auditable session event. They never update Project/Document revision, history,
+recovery, topology hash, flightline policy, or formal render. GUI and Agent
+must render one overlay and return matching errors for stale, inaccessible, or
+deleted locators. Bind keyboard shortcuts only in the human UI; the Agent API
+uses the typed intent, not simulated keystrokes.
+
+### A5. Project-aware history and connected duplication
+
+**Purpose.** Move semantic closure and identity remapping below React so human
+and Agent receive the same behavior. The controller owns one composite history
+record per atomic Project transaction. `undo_own_head` / `redo_own_head` can
+act only when the requesting Agent owns the current shared history head;
+otherwise return `HISTORY_DIVERGED` with current revision/actor evidence.
+
+The duplicate planner takes canonical selected locators and derives a connected
+closure. It remaps Instances, Ports, Nets, Routes, Junctions, NoConnects,
+typed hierarchy bindings, RichText anchors, layout groups/constraints, and
+annotations in a single transaction; it never clones a hidden compatibility
+field. Test isolated/closed/branched Routes, hierarchy, anchors, mixed human /
+Agent history, stale retries, and equivalence with the GUI duplicate action.
+
+### A6. Public contract hardening and release proof
+
+**Purpose.** Leave one discoverable external interface rather than an
+implementation-only capability. Generated OpenAPI publishes only production
+v2's four Circuit operations plus declared File Resource paths. It uses
+`$defs`/`$ref` only as a generation optimization: the accepted wire JSON and
+examples cannot change.
+
+The contract includes schemas for 200, 400, 401, 403, 409, 413, 429, and 503;
+a single error-envelope converter with every Zod issue path; examples for
+claim, capabilities, Snapshot, dry-run/commit, render, reconnect, and File
+Resource flows; capability-derived edit/intent/resource registries; limits,
+scopes, and explicit exclusions. Validate every example through the production
+parser and use an external-client fixture that has only the copied claim
+instruction and deployed OpenAPI—no repository import, SDK, MCP, DOM, or
+undocumented endpoint.
+
+The final delivery gate includes frozen install, `pnpm ci:check`, scale budgets
+for 100/500-instance Snapshot, Project transaction, staged import, and visual
+export, deployed browser/relay E2E, and required remote checks. It must assert
+that capabilities expose neither simulation/PVT/waveform data nor SPICE,
+Spectre, or design-netlist export/download kinds.
+
+## Dependency gates and completion matrix
+
+| Target | Cannot start before             | May not leave behind                       | Completion evidence                                           |
+| ------ | ------------------------------- | ------------------------------------------ | ------------------------------------------------------------- |
+| M3     | M0--M2                          | any runtime `spice.*` decision             | schema-v8 migration and all typed consumers                   |
+| M4     | M3                              | untested current/legacy dual forms         | corpus migration, canonical/golden proof, docs reconciliation |
+| A1     | M4                              | a second live Project mutation path        | controller-only Project edits and composite rollback          |
+| A2     | A1 session identity             | hook/panel/relay state divergence          | reconnect/terminal-state proof                                |
+| A3     | A1 and A2 replacement semantics | paths, hidden storage, implicit import     | approved candidate/download proof                             |
+| A4     | M4 locator/connectivity facts   | coordinate-derived highlight state         | shared overlay and no-persistence proof                       |
+| A5     | A1 composite history            | React-only closure/remapping               | own-head and GUI-parity proof                                 |
+| A6     | A1--A5                          | undocumented or excluded public capability | deployed external-client and CI evidence                      |
+
+No simulation, PVT, waveform/measurement, SPICE/Spectre/design-netlist export,
+filesystem path, cloud Project store, or browser-automation work may be added
+to any target in this roadmap. A request for one of those capabilities requires
+a new product decision, not a convenience extension to the File Resource or
+Agent `transact` schema.
 
 ## Work packages
 
@@ -170,19 +422,19 @@ The table is deliberately a map of **owners**, not a list of helpers an Agent
 may call. A future package may add an internal helper only when it consumes one
 of these authorities.
 
-| User-visible need | One implementation owner | Agent-facing evidence / command | Delivery package |
-| --- | --- | --- | --- |
-| Discover allowed work | capability registry derived from schemas and session scopes | `capabilities` | A6 |
-| Read circuit, hierarchy and current diagnostics | Snapshot serializer plus Project header | `snapshot` | current, M1–M4, A1 |
-| Add/move/connect/delete circuit objects | Edit Engine + routing planner | typed `transact` / `wireIntent` | current, M1–M4 |
-| Create/manage Documents and hierarchy | `EditorProjectController` | typed Project `transact` edits | A1 |
-| Inspect final appearance | formal renderer/exporters | `render` | current |
-| Save a portable Project | canonical project serializer | File Resource `project` download | A3 |
-| Save formal drawing | SVG/PNG/PDF exporters | File Resource `visual` download | A3 |
-| Import Project or structural SPICE | import parser and migration chain | File Resource stage + browser approval | M4, A3 |
-| Review an Agent's focus in the canvas | editor semantic controller | non-persisting `transact` intent + SSE | A4 |
-| Undo Agent's latest still-current action | project-aware history | `undo_own_head` / `redo_own_head` intent | A5 |
-| Keep a granted Agent connected across transient breaks | session state machine | SSE state / same `requestId` result | A2 |
+| User-visible need                                      | One implementation owner                                    | Agent-facing evidence / command          | Delivery package   |
+| ------------------------------------------------------ | ----------------------------------------------------------- | ---------------------------------------- | ------------------ |
+| Discover allowed work                                  | capability registry derived from schemas and session scopes | `capabilities`                           | A6                 |
+| Read circuit, hierarchy and current diagnostics        | Snapshot serializer plus Project header                     | `snapshot`                               | current, M1–M4, A1 |
+| Add/move/connect/delete circuit objects                | Edit Engine + routing planner                               | typed `transact` / `wireIntent`          | current, M1–M4     |
+| Create/manage Documents and hierarchy                  | `EditorProjectController`                                   | typed Project `transact` edits           | A1                 |
+| Inspect final appearance                               | formal renderer/exporters                                   | `render`                                 | current            |
+| Save a portable Project                                | canonical project serializer                                | File Resource `project` download         | A3                 |
+| Save formal drawing                                    | SVG/PNG/PDF exporters                                       | File Resource `visual` download          | A3                 |
+| Import Project or structural SPICE                     | import parser and migration chain                           | File Resource stage + browser approval   | M4, A3             |
+| Review an Agent's focus in the canvas                  | editor semantic controller                                  | non-persisting `transact` intent + SSE   | A4                 |
+| Undo Agent's latest still-current action               | project-aware history                                       | `undo_own_head` / `redo_own_head` intent | A5                 |
+| Keep a granted Agent connected across transient breaks | session state machine                                       | SSE state / same `requestId` result      | A2                 |
 
 The File Resource is discovered through `capabilities` as scoped resource
 descriptors, including max bytes, supported media types, candidate lifetime and
@@ -196,18 +448,18 @@ only over the declared file transfer request.
 Each row is one future target-plan/commit series, not permission to implement
 the entire roadmap in one change.
 
-| Target | Main owned paths | Required behavior | Must not regress |
-| --- | --- | --- | --- |
-| M1 | model migration, edit engine, renderer, catalog, Agent Snapshot | first-class Port visual/electrical lifecycle | existing Port connectivity, external-port rendering, old Project opening |
-| M2 | model annotation/drafting schema, text editor, renderer, clipboard, Agent schema | AST-only RichText and one attachment record | existing labels, current arrow and drawing-object positioning |
-| M3 | model/import/netlist facts, ERC, hierarchy, Snapshot | typed netlist facts and immutable provenance | structural SPICE import, round-trip source-status behavior, pin order |
-| M4 | migrations, fixtures, generated legacy readers | rewrite all supported old data then delete retired runtime forms | topology hash, formal output baseline, explicit source provenance |
-| A1 | project controller, history host, agent host, schema/OpenAPI | atomic Project edits and hierarchy repair | single-Document GUI/Agent transaction parity, undo, recovery |
-| A2 | relay state, browser session hook/panel, session tests | same-Project resume and deterministic terminal states | single-use claims, scope checks, exact-once request IDs |
-| A3 | worker file handlers, import/export adapters, GUI approval panel | bounded project/visual download and staged import | no raw paths, no implicit Project replacement, no retained bytes |
-| A4 | locator/connectivity/highlight services and editor shell | shared visible Agent focus | no persisted change, no revision/history/recovery impact |
-| A5 | history, duplicate planner, clipboard integration, Agent adapter | safe own-head history and connected duplication | human undo order, route/Junction/NoConnect/remapped anchors |
-| A6 | OpenAPI generator, docs, external fixture, CI/deployed E2E | public discoverability and production evidence | wire JSON, error envelope, excluded-capability absence |
+| Target | Main owned paths                                                                 | Required behavior                                                | Must not regress                                                         |
+| ------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| M1     | model migration, edit engine, renderer, catalog, Agent Snapshot                  | first-class Port visual/electrical lifecycle                     | existing Port connectivity, external-port rendering, old Project opening |
+| M2     | model annotation/drafting schema, text editor, renderer, clipboard, Agent schema | AST-only RichText and one attachment record                      | existing labels, current arrow and drawing-object positioning            |
+| M3     | model/import/netlist facts, ERC, hierarchy, Snapshot                             | typed netlist facts and immutable provenance                     | structural SPICE import, round-trip source-status behavior, pin order    |
+| M4     | migrations, fixtures, generated legacy readers                                   | rewrite all supported old data then delete retired runtime forms | topology hash, formal output baseline, explicit source provenance        |
+| A1     | project controller, history host, agent host, schema/OpenAPI                     | atomic Project edits and hierarchy repair                        | single-Document GUI/Agent transaction parity, undo, recovery             |
+| A2     | relay state, browser session hook/panel, session tests                           | same-Project resume and deterministic terminal states            | single-use claims, scope checks, exact-once request IDs                  |
+| A3     | worker file handlers, import/export adapters, GUI approval panel                 | bounded project/visual download and staged import                | no raw paths, no implicit Project replacement, no retained bytes         |
+| A4     | locator/connectivity/highlight services and editor shell                         | shared visible Agent focus                                       | no persisted change, no revision/history/recovery impact                 |
+| A5     | history, duplicate planner, clipboard integration, Agent adapter                 | safe own-head history and connected duplication                  | human undo order, route/Junction/NoConnect/remapped anchors              |
+| A6     | OpenAPI generator, docs, external fixture, CI/deployed E2E                       | public discoverability and production evidence                   | wire JSON, error envelope, excluded-capability absence                   |
 
 ### A1 — Project lifecycle under `snapshot` and `transact`
 
@@ -274,11 +526,11 @@ This package requires the A1 ADR amendment. Add one scoped browser-memory File
 Resource beside—not inside—the four Circuit operations. Its allowed kinds are
 exactly:
 
-| Direction | Kind | Result |
-| --- | --- | --- |
-| download | `project` | canonical `.icproj.json` for a named Project revision |
-| download | `visual` | formal SVG, PNG, or PDF for one Document/revision |
-| stage upload | `project` | parsed/migrated `.icproj.json` candidate |
+| Direction    | Kind               | Result                                                    |
+| ------------ | ------------------ | --------------------------------------------------------- |
+| download     | `project`          | canonical `.icproj.json` for a named Project revision     |
+| download     | `visual`           | formal SVG, PNG, or PDF for one Document/revision         |
+| stage upload | `project`          | parsed/migrated `.icproj.json` candidate                  |
 | stage upload | `structural-spice` | bounded structural SPICE candidate with confined includes |
 
 The File Resource accepts bytes, declared media type, normalized relative

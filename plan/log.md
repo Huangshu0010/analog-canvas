@@ -1,5 +1,19 @@
 # Maintenance Log
 
+## 2026-08-13 - Detailed browser Agent takeover delivery sequence
+
+- Target: turn the accepted four-operation takeover roadmap into an
+  implementation-ready sequence while excluding simulation, PVT,
+  waveforms/measurements, and SPICE/Spectre/design-netlist export.
+- Changed areas: verified M0--M2 status and M3 `spice.*` authority inventory;
+  detailed M3--M4 and A1--A6 boundaries, owners, dependency gates, negative
+  cases, and delivery proof; current roadmap status.
+- Validation: Prettier on changed Markdown, `pnpm docs:check`,
+  `pnpm references:check`, and `git diff --check` passed.
+- Commit status: ready to commit as
+  `docs(agent): detail takeover delivery slices` on
+  `codex/agent-project-lifecycle`.
+
 ## 2026-08-13 - Remove compatibility re-export layers
 
 - Target: make wiring, style, label-placement, and markup callers depend on
