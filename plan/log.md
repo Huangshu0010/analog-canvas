@@ -6157,3 +6157,13 @@ contracts (WP-R1)`.
   recovery tests, workspace typecheck, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(platform): retire unused browser platform package`.
+
+## 2026-08-13 - Restore lockfile static CI contract
+
+- Target: repair PR #33 Static contracts failure from unformatted
+  `pnpm-lock.yaml`.
+- Changed areas: Prettier serialization only for the lockfile; dependency
+  resolution is unchanged.
+- Validation: `pnpm ci:static`, frozen install, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(ci): format lockfile static contract`.
