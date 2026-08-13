@@ -6016,7 +6016,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                       <em>(Netlist instance name)</em>
                     </span>
                     <input
-                      ref={instanceValueInputRef}
                       aria-label="Component reference"
                       value={instancePropertyDraft.reference}
                       placeholder="R1"
@@ -6051,7 +6050,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     </label>
                   ) : null}
                   {componentParameters(selectedInstance.symbolId).map(
-                    (parameter) => (
+                    (parameter, index) => (
                       <label key={parameter.key} title={parameter.help}>
                         <span className="property-parameter-name">
                           {parameter.label}
@@ -6059,6 +6058,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                           <em>({parameter.help})</em>
                         </span>
                         <input
+                          ref={index === 0 ? instanceValueInputRef : undefined}
                           aria-label={`Component ${parameter.label.toLowerCase()}`}
                           inputMode={parameter.inputMode}
                           value={

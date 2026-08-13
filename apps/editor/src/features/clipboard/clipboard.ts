@@ -151,6 +151,22 @@ function uniqueCopyId(
   return candidate;
 }
 
+function uniqueCopyReference(
+  sourceReference: string,
+  occupied: Set<string>,
+): string {
+  const numbered = /^(.*?)(\d+)$/u.exec(sourceReference);
+  const base = numbered?.[1] || sourceReference;
+  let sequence = numbered ? Number(numbered[2]) + 1 : 1;
+  let candidate = numbered ? `${base}${sequence}` : `${base}_COPY${sequence}`;
+  while (occupied.has(candidate.toLowerCase())) {
+    sequence += 1;
+    candidate = numbered ? `${base}${sequence}` : `${base}_COPY${sequence}`;
+  }
+  occupied.add(candidate.toLowerCase());
+  return candidate;
+}
+
 function movePoint(point: Point, offset: Point): Point {
   return { x: point.x + offset.x, y: point.y + offset.y };
 }
@@ -207,6 +223,26 @@ export function proposePaste(
       uniqueCopyId(instance.id, sequence, occupied),
     ]),
   );
+  const occupiedReferences = new Set(
+    document.instances.flatMap((instance) =>
+      instance.netlist ? [instance.netlist.reference.toLowerCase()] : [],
+    ),
+  );
+  const instanceReferences = new Map(
+    clipboard.instances.flatMap((instance) =>
+      instance.netlist
+        ? [
+            [
+              instance.id,
+              uniqueCopyReference(
+                instance.netlist.reference,
+                occupiedReferences,
+              ),
+            ] as const,
+          ]
+        : [],
+    ),
+  );
   const routeIds = new Map(
     clipboard.routes.map((route) => [
       route.id,
@@ -251,6 +287,14 @@ export function proposePaste(
       instance: {
         ...structuredClone(instance),
         id: instanceIds.get(instance.id)!,
+        ...(instance.netlist
+          ? {
+              netlist: {
+                ...structuredClone(instance.netlist),
+                reference: instanceReferences.get(instance.id)!,
+              },
+            }
+          : {}),
         ...(instance.mosBulkBinding
           ? {
               mosBulkBinding: {
