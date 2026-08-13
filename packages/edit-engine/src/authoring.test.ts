@@ -159,12 +159,21 @@ describe("semantic authoring", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {
-        "spice.target": "model:sky130_fd_pr__nfet_01v8",
-        "spice.pin.P1": "P1",
-        "spice.pin.P2": "P2",
-        "spice.pin.P3": "P3",
-        "spice.pin.P4": "P4",
+      properties: {},
+      netlist: {
+        reference: "XM1",
+        parameters: {},
+        binding: {
+          kind: "model",
+          deviceClass: "mos",
+          name: "sky130_fd_pr__nfet_01v8",
+        },
+        terminals: [
+          { sourcePosition: 0, pinName: "P1" },
+          { sourcePosition: 1, pinName: "P2" },
+          { sourcePosition: 2, pinName: "P3" },
+          { sourcePosition: 3, pinName: "P4" },
+        ],
       },
     });
     document.nets.push(
@@ -237,12 +246,21 @@ describe("semantic authoring", () => {
           {
             id: "XM1",
             symbolId: "nmos",
-            properties: {
-              "spice.target": "model:sky130_fd_pr__nfet_01v8",
-              "spice.pin.P1": "D",
-              "spice.pin.P2": "G",
-              "spice.pin.P3": "S",
-              "spice.pin.P4": "B",
+            properties: {},
+            netlist: {
+              reference: "XM1",
+              parameters: {},
+              binding: {
+                kind: "model",
+                deviceClass: "mos",
+                name: "sky130_fd_pr__nfet_01v8",
+              },
+              terminals: [
+                { sourcePosition: 0, pinName: "D" },
+                { sourcePosition: 1, pinName: "G" },
+                { sourcePosition: 2, pinName: "S" },
+                { sourcePosition: 3, pinName: "B" },
+              ],
             },
           },
         ],

@@ -30,7 +30,7 @@
   ],
   "id": "project-minimal",
   "name": "Minimal Project",
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "source": {
     "dialect": "none",
     "entry": null,

@@ -313,7 +313,16 @@ describe("ProjectConnectivityIndex", () => {
             rotation: 0,
             mirror: "none",
           },
-          properties: { "spice.childDocumentId": "child" },
+          properties: {},
+          netlist: {
+            reference: "X1",
+            parameters: {},
+            binding: {
+              kind: "subcircuit",
+              name: "child",
+              childDocumentId: "child",
+            },
+          },
         },
       ];
       const childBase = createEmptyProject("child", "Child", "child")
@@ -337,7 +346,7 @@ describe("ProjectConnectivityIndex", () => {
       return project;
     }
 
-    it("maps each parent pin to the same-named child port via spice.childDocumentId", () => {
+    it("maps each parent pin to the same-named child port via typed binding", () => {
       const resolver = new InMemorySymbolResolver([dual]);
       const index = buildProjectConnectivityIndex(hierarchyProject(), resolver);
       expect(index.hierarchy.edges).toEqual([

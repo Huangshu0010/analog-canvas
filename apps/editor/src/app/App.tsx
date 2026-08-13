@@ -4118,8 +4118,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     const edits: SchematicEdit[] = [];
-    const set: Record<string, string> = {};
-    const unset: string[] = [];
     const baseNetlist =
       selectedInstance.netlist ??
       initialInstanceNetlist(
@@ -4132,28 +4130,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       const value = (
         instancePropertyDraft.parameters[parameter.key] ?? ""
       ).trim();
-      const explicit = selectedInstance.properties[parameter.key];
-      const effective = effectiveComponentParameterValue(
-        selectedInstance,
-        parameter,
-      );
-      if (explicit === undefined) {
-        if (value !== "" && value !== effective) set[parameter.key] = value;
-      } else if (value === "") {
-        unset.push(parameter.key);
-      } else if (String(explicit) !== value) {
-        set[parameter.key] = value;
-      }
       if (value === "") delete netlistParameters[parameter.key];
       else netlistParameters[parameter.key] = value;
-    }
-    if (Object.keys(set).length > 0 || unset.length > 0) {
-      edits.push({
-        kind: "patch_instance_properties",
-        instanceId: selectedInstance.id,
-        ...(Object.keys(set).length > 0 ? { set } : {}),
-        ...(unset.length > 0 ? { unset } : {}),
-      });
     }
 
     const nextNetlist = {

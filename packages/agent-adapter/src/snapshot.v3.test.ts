@@ -95,6 +95,9 @@ describe("Agent v3 document snapshot — exact netlist/interface parity", () => 
         expect(instanceSnapshot.netlist!.parameters).toEqual(
           model.netlist.parameters,
         );
+        expect(instanceSnapshot.netlist!.terminals).toEqual(
+          model.netlist.terminals,
+        );
       } else {
         expect(instanceSnapshot.netlist).toBeUndefined();
       }

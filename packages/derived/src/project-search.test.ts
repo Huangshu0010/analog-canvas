@@ -34,13 +34,15 @@ function searchProject(): CircuitProject {
       id: "M1",
       symbolId: "nmos",
       placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
-      properties: { "spice.name": "M1", "spice.target": "nmos_rf", W: 10 },
+      properties: { W: 10, target: "nmos_rf" },
+      netlist: { reference: "M1", parameters: {} },
     },
     {
       id: "Rdrive",
       symbolId: "resistor",
       placement: { position: { x: 100, y: 0 }, rotation: 0, mirror: "none" },
-      properties: { "spice.name": "Rload", R: "1k" },
+      properties: { R: "1k" },
+      netlist: { reference: "Rload", parameters: {} },
     },
   ];
   document.nets = [
@@ -60,7 +62,12 @@ function multiCallerSearchProject(): CircuitProject {
     id,
     symbolId: "dual",
     placement: null,
-    properties: { "spice.childDocumentId": "child" },
+    properties: {},
+    netlist: {
+      reference: id,
+      parameters: {},
+      binding: { kind: "subcircuit", name: "child", childDocumentId: "child" },
+    },
   }));
   const child = createEmptyProject("child-project", "Child", "child")
     .documents[0]!;
@@ -72,7 +79,8 @@ function multiCallerSearchProject(): CircuitProject {
       id: "RCHILD",
       symbolId: "resistor",
       placement: null,
-      properties: { "spice.name": "RCHILD" },
+      properties: {},
+      netlist: { reference: "RCHILD", parameters: {} },
     },
   ];
   project.documents.push(child);
@@ -120,10 +128,10 @@ describe("buildProjectSearchIndex", () => {
 
   it("matches a property key as well as its value", () => {
     const result = buildProjectSearchIndex(searchProject())
-      .search("spice.target")
+      .search("target")
       .find((candidate) => candidate.locator.objectId === "M1");
     expect(result?.field).toBe("property");
-    expect(result?.label).toBe("spice.target=nmos_rf");
+    expect(result?.label).toBe("target=nmos_rf");
   });
 
   it("uses the supplied connectivity object index for canonical locators", () => {
@@ -170,12 +178,12 @@ describe("buildProjectSearchIndex", () => {
     ).toEqual([["X1"], ["X2"]]);
   });
 
-  it("matches spice.name and uses it as the instance label", () => {
+  it("matches netlist reference and uses it as the instance label", () => {
     const results = buildProjectSearchIndex(searchProject()).search("rload");
     const drive = results.find(
       (result) => result.locator.objectId === "Rdrive",
     );
-    expect(drive?.field).toBe("spice-name");
+    expect(drive?.field).toBe("netlist-reference");
     expect(drive?.label).toBe("Rload");
   });
 

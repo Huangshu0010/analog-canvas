@@ -50,7 +50,16 @@ describe("editor session project helpers", () => {
         id: "Xstable",
         symbolId: "hierarchical-gain-cell",
         placement: null,
-        properties: { "spice.childDocumentId": child.id },
+        properties: {},
+        netlist: {
+          reference: "X1",
+          parameters: {},
+          binding: {
+            kind: "subcircuit",
+            name: "child",
+            childDocumentId: child.id,
+          },
+        },
       }),
     ).toBe(child.id);
     expect(

@@ -7,6 +7,7 @@ export * from "./migration-v3-to-v4.js";
 export * from "./migration-v4-to-v5.js";
 export * from "./migration-v5-to-v6.js";
 export * from "./migration-v6-to-v7.js";
+export * from "./migration-v7-to-v8.js";
 export * from "./persistence.js";
 export * from "./power-domain.js";
 export * from "./rich-text.js";

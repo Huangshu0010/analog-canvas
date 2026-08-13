@@ -123,9 +123,15 @@ describe("editor shell", () => {
       id: "X1",
       symbolId: "hierarchical-child",
       placement: null,
-      properties: {
-        "spice.target": "subcircuit:child",
-        "spice.childDocumentId": childDocument.id,
+      properties: {},
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        binding: {
+          kind: "subcircuit",
+          name: "child",
+          childDocumentId: childDocument.id,
+        },
       },
     });
     project.documents.push(childDocument);

@@ -192,15 +192,6 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
               : "Use add_port instead of a legacy port symbol",
         });
       }
-      for (const key of Object.keys(edit.instance.properties)) {
-        if (!key.startsWith("spice.")) continue;
-        context.addIssue({
-          code: "custom",
-          path: ["instance", "properties", key],
-          message:
-            "Use typed instance netlist data instead of legacy spice.* properties",
-        });
-      }
     }
 
     if (
@@ -217,21 +208,6 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
             ? "Use add_power_rail instead of the legacy vdd symbol"
             : "Use add_port instead of a legacy port symbol",
       });
-    }
-
-    if (edit.kind === "patch_instance_properties") {
-      for (const key of [
-        ...Object.keys(edit.set ?? {}),
-        ...(edit.unset ?? []),
-      ]) {
-        if (!key.startsWith("spice.")) continue;
-        context.addIssue({
-          code: "custom",
-          path: [edit.set && key in edit.set ? "set" : "unset", key],
-          message:
-            "Use typed instance netlist edits instead of legacy spice.* properties",
-        });
-      }
     }
 
     if (
@@ -414,6 +390,41 @@ export const AgentSnapshotPortSchema = z.strictObject({
   netId: StableIdSchema.nullable(),
 });
 
+const AgentNetlistFactsSchema = z.strictObject({
+  reference: z.string().min(1),
+  binding: z
+    .discriminatedUnion("kind", [
+      z.strictObject({
+        kind: z.literal("primitive"),
+        deviceClass: z.string().min(1),
+      }),
+      z.strictObject({
+        kind: z.literal("model"),
+        deviceClass: z.string().min(1),
+        name: z.string().min(1),
+      }),
+      z.strictObject({
+        kind: z.literal("subcircuit"),
+        childDocumentId: StableIdSchema,
+        name: z.string().min(1),
+      }),
+      z.strictObject({
+        kind: z.literal("external-subcircuit"),
+        name: z.string().min(1),
+      }),
+    ])
+    .optional(),
+  parameters: z.record(z.string(), z.string()),
+  terminals: z
+    .array(
+      z.strictObject({
+        sourcePosition: z.number().int().nonnegative(),
+        pinName: z.string().min(1),
+      }),
+    )
+    .optional(),
+});
+
 export const AgentSnapshotInstanceSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1),
@@ -439,6 +450,7 @@ export const AgentSnapshotInstanceSchema = z.strictObject({
     })
     .optional(),
   sourceRef: SourceSpanSchema.optional(),
+  netlist: AgentNetlistFactsSchema.optional(),
 });
 
 export const AgentSnapshotNetSchema = z.strictObject({
@@ -550,37 +562,10 @@ export const AgentSessionSnapshotSchema = z.strictObject({
   document: AgentSnapshotDocumentSchema,
 });
 
-// --- API v3 snapshot targets (ADR 0018 / AP1) -------------------------------
-// v3 surfaces the exact persisted netlist/interface facts the v2 snapshot only
-// derives from legacy `spice.*` properties, plus Project-structural and
-// component-catalog reads. v1/v2 schemas above are unchanged.
+// Compatibility-only v3 Snapshot types remain available to frozen local
+// fixtures. Production v2 exposes the same typed netlist facts directly.
 
-const AgentInstanceNetlistBindingSchema = z.discriminatedUnion("kind", [
-  z.strictObject({
-    kind: z.literal("primitive"),
-    deviceClass: z.string().min(1),
-  }),
-  z.strictObject({
-    kind: z.literal("model"),
-    deviceClass: z.string().min(1),
-    name: z.string().min(1),
-  }),
-  z.strictObject({
-    kind: z.literal("subcircuit"),
-    childDocumentId: StableIdSchema,
-    name: z.string().min(1),
-  }),
-  z.strictObject({
-    kind: z.literal("external-subcircuit"),
-    name: z.string().min(1),
-  }),
-]);
-
-export const AgentInstanceNetlistFactsSchema = z.strictObject({
-  reference: z.string().min(1),
-  binding: AgentInstanceNetlistBindingSchema.optional(),
-  parameters: z.record(z.string(), z.string()),
-});
+export const AgentInstanceNetlistFactsSchema = AgentNetlistFactsSchema;
 
 export const AgentCellInterfaceSchema = z.strictObject({
   name: z.string().min(1),

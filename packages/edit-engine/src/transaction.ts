@@ -103,12 +103,24 @@ export const MirrorInstanceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   mirror: MirrorSchema,
 });
-export const PatchInstancePropertiesEditSchema = z.strictObject({
-  kind: z.literal("patch_instance_properties"),
-  instanceId: StableIdSchema,
-  set: z.record(z.string().min(1), InstancePropertyValueSchema).optional(),
-  unset: z.array(z.string().min(1)).max(64).optional(),
-});
+export const PatchInstancePropertiesEditSchema = z
+  .strictObject({
+    kind: z.literal("patch_instance_properties"),
+    instanceId: StableIdSchema,
+    set: z.record(z.string().min(1), InstancePropertyValueSchema).optional(),
+    unset: z.array(z.string().min(1)).max(64).optional(),
+  })
+  .superRefine((edit, context) => {
+    for (const key of [...Object.keys(edit.set ?? {}), ...(edit.unset ?? [])]) {
+      if (!key.startsWith("spice.")) continue;
+      context.addIssue({
+        code: "custom",
+        path: [edit.set && key in edit.set ? "set" : "unset", key],
+        message:
+          "Legacy spice.* properties are migration-only; use typed netlist facts or import provenance",
+      });
+    }
+  });
 export const SetInstanceNetlistEditSchema = z.strictObject({
   kind: z.literal("set_instance_netlist"),
   instanceId: StableIdSchema,
@@ -2009,10 +2021,13 @@ export function executeTransaction(
           }
           if (changed) changedObjectIds.add(route.id);
         }
-        for (const [key, value] of Object.entries(instance.properties)) {
-          if (!key.startsWith("spice.pin.") || typeof value !== "string")
-            continue;
-          instance.properties[key] = pinMap[value] ?? value;
+        if (instance.netlist?.terminals) {
+          instance.netlist.terminals = instance.netlist.terminals.map(
+            (terminal) => ({
+              ...terminal,
+              pinName: pinMap[terminal.pinName] ?? terminal.pinName,
+            }),
+          );
         }
         instance.symbolId = edit.symbolId;
         if (symbolVariantId === undefined) delete instance.symbolVariantId;

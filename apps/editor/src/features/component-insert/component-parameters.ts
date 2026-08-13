@@ -4,7 +4,6 @@ export interface ComponentParameter {
   key: string;
   label: string;
   unit?: string;
-  sourceKey?: string;
   placeholder: string;
   help: string;
   inputMode?: "decimal" | "text";
@@ -16,7 +15,6 @@ const passiveValue = (unit: string, help: string, placeholder: string) =>
       key: "value",
       label: "Value",
       unit,
-      sourceKey: "spice.param.value",
       placeholder,
       help,
       inputMode: "text" as const,
@@ -28,7 +26,6 @@ const MOS_PARAMETERS = [
     key: "w",
     label: "W",
     unit: "m",
-    sourceKey: "spice.param.w",
     placeholder: "1u",
     help: "Channel width",
     inputMode: "text" as const,
@@ -37,7 +34,6 @@ const MOS_PARAMETERS = [
     key: "l",
     label: "L",
     unit: "m",
-    sourceKey: "spice.param.l",
     placeholder: "150n",
     help: "Channel length",
     inputMode: "text" as const,
@@ -45,7 +41,6 @@ const MOS_PARAMETERS = [
   {
     key: "m",
     label: "M",
-    sourceKey: "spice.param.m",
     placeholder: "1",
     help: "Parallel multiplier",
     inputMode: "decimal" as const,
@@ -86,10 +81,5 @@ export function effectiveComponentParameterValue(
   if (typeof explicit === "string" || typeof explicit === "number") {
     return String(explicit);
   }
-  const source = parameter.sourceKey
-    ? instance.properties[parameter.sourceKey]
-    : undefined;
-  return typeof source === "string" || typeof source === "number"
-    ? String(source)
-    : "";
+  return "";
 }

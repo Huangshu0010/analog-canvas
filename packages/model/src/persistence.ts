@@ -9,6 +9,7 @@ import { migrateV3ToV4 } from "./migration-v3-to-v4.js";
 import { migrateV4ToV5 } from "./migration-v4-to-v5.js";
 import { migrateV5ToV6 } from "./migration-v5-to-v6.js";
 import { migrateV6ToV7 } from "./migration-v6-to-v7.js";
+import { migrateV7ToV8 } from "./migration-v7-to-v8.js";
 
 export interface ProjectDiagnostic {
   code: "INVALID_JSON" | "INVALID_PROJECT" | "UNSUPPORTED_SCHEMA_VERSION";
@@ -132,6 +133,11 @@ defaultProjectMigrations.register(5, (input) =>
 // authority. Legacy text/attachment fields are consumed on read only.
 defaultProjectMigrations.register(6, (input) =>
   migrateV6ToV7(input as Record<string, unknown>),
+);
+// Schema 7 -> 8: typed netlist terminal facts and immutable import provenance
+// consume all runtime `spice.*` properties.
+defaultProjectMigrations.register(7, (input) =>
+  migrateV7ToV8(input as Record<string, unknown>),
 );
 
 function isRecord(value: unknown): value is Record<string, unknown> {

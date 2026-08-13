@@ -119,10 +119,15 @@ function primitiveRecord(
 }
 
 function instanceTarget(
-  properties: Readonly<Record<string, string | number | boolean>>,
+  instance: SchematicDocument["instances"][number],
 ): string | null {
-  const target = properties["spice.target"];
-  return typeof target === "string" ? target : null;
+  const provenance = instance.importProvenance;
+  if (provenance) return provenance.sourceTarget;
+  const binding = instance.netlist?.binding;
+  if (!binding) return null;
+  if (binding.kind === "primitive") return `primitive:${binding.deviceClass}`;
+  if (binding.kind === "model") return `model:${binding.name}`;
+  return `subcircuit:${binding.name}`;
 }
 
 function subcircuitTargetName(target: string | null): string | null {
@@ -167,9 +172,7 @@ function projectIndex(options: BuildAgentSessionSnapshotOptions) {
         netCount: document.nets.length,
         references: document.instances
           .flatMap((instance) => {
-            const targetName = subcircuitTargetName(
-              instanceTarget(instance.properties),
-            );
+            const targetName = subcircuitTargetName(instanceTarget(instance));
             return targetName
               ? [
                   {
@@ -239,29 +242,27 @@ function documentSnapshot(
       const hidden = new Set(resolved?.variant?.hiddenPinNames ?? []);
       const properties = primitiveRecord(instance.properties);
       const parameters = Object.fromEntries(
-        Object.entries(properties)
-          .filter(([key]) => key.startsWith("spice.param."))
-          .map(
-            ([key, value]) =>
-              [key.slice("spice.param.".length), value] as const,
-          )
-          .sort(([left], [right]) => left.localeCompare(right, "en")),
+        Object.entries(instance.netlist?.parameters ?? {}).sort(
+          ([left], [right]) => left.localeCompare(right, "en"),
+        ),
       );
-      const target = instanceTarget(properties);
+      const target = instanceTarget(instance);
       const model = target?.toLowerCase().startsWith("model:")
         ? target.slice("model:".length)
         : null;
-      const sourceName = properties["spice.name"];
       const mosBulk = resolveMosBulkConnection(document, instance);
       return {
         id: instance.id,
-        name: typeof sourceName === "string" ? sourceName : instance.id,
+        name: instance.netlist?.reference ?? instance.id,
         symbolId: instance.symbolId,
         symbolVariantId: instance.symbolVariantId ?? null,
         target,
         model,
         properties,
         parameters,
+        ...(instance.netlist
+          ? { netlist: instanceNetlistFactsOf(instance) }
+          : {}),
         placement: instance.placement
           ? structuredClone(instance.placement)
           : null,
@@ -488,6 +489,13 @@ function instanceNetlistFactsOf(
         left.localeCompare(right, "en"),
       ),
     ),
+    ...(netlist.terminals
+      ? {
+          terminals: [...netlist.terminals]
+            .sort((left, right) => left.sourcePosition - right.sourcePosition)
+            .map((terminal) => ({ ...terminal })),
+        }
+      : {}),
   };
 }
 
@@ -535,7 +543,7 @@ function projectReference(
       },
     ];
   }
-  const targetName = subcircuitTargetName(instanceTarget(instance.properties));
+  const targetName = subcircuitTargetName(instanceTarget(instance));
   return targetName
     ? [
         {

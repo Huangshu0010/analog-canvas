@@ -86,6 +86,7 @@ describe("Project persistence", () => {
     registry.register(4, (input) => ({ ...input, schemaVersion: 5 }));
     registry.register(5, (input) => ({ ...input, schemaVersion: 6 }));
     registry.register(6, (input) => ({ ...input, schemaVersion: 7 }));
+    registry.register(7, (input) => ({ ...input, schemaVersion: 8 }));
     const current = createEmptyProject("project-test", "Test Project");
     const legacy = { ...current, schemaVersion: 0 };
     expect(parseProject(serializeProject(current), registry)).toEqual(current);

@@ -1,5 +1,22 @@
 # Maintenance Log
 
+## 2026-08-13 - Typed netlist and source-provenance authority
+
+- Target: complete M3 of browser Agent takeover by removing runtime `spice.*`
+  authority without adding simulation, PVT, waveform, or design-netlist export.
+- Changed areas: schema-v8 terminal mapping/import provenance and migration;
+  structural SPICE import; hierarchy, ERC, search, Snapshot/OpenAPI, component
+  parameters, symbol replacement, fixtures, and current model/API/persistence
+  specifications.
+- Contract result: typed netlist facts are the sole runtime netlist/hierarchy
+  authority; imported source evidence is bounded and immutable; current model
+  and transaction schemas reject `spice.*` writes.
+- Validation: focused migration/import/ERC/Snapshot checks; Agent artifacts
+  write/check; full `pnpm test:local` (117 files, 707 tests); typecheck, docs,
+  references, formatting, `git diff --check`, and `pnpm verify:branch` passed.
+- Commit status: ready to commit as `feat(model): make netlist provenance typed`
+  on `codex/agent-project-lifecycle`.
+
 ## 2026-08-13 - Detailed browser Agent takeover delivery sequence
 
 - Target: turn the accepted four-operation takeover roadmap into an

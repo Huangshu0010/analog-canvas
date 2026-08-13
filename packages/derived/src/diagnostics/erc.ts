@@ -104,7 +104,7 @@ export function runErcChecks(
     // ERC_UNRESOLVED_SYMBOL and hierarchy interface checks. These run before
     // pin connectivity checks so unknown symbols never get silently skipped.
     for (const instance of document.instances) {
-      if (instance.binding?.status === "missing") {
+      if (instance.importProvenance?.status === "missing") {
         diagnostics.push({
           id: `erc:missing-model:${document.id}:${instance.id}`,
           domain: "erc",
@@ -112,16 +112,16 @@ export function runErcChecks(
           severity: "error",
           confidence: "high",
           gateEligible: true,
-          message: `Instance ${instance.id} binding ${instance.binding.kind}:${instance.binding.name} is missing`,
+          message: `Instance ${instance.id} binding ${instance.importProvenance.kind}:${instance.importProvenance.name} is missing`,
           primary: directObjectLocator(document.id, "instance", instance.id),
           related: [],
           parameters: {
             instanceId: instance.id,
-            bindingKind: instance.binding.kind,
-            bindingName: instance.binding.name,
+            bindingKind: instance.importProvenance.kind,
+            bindingName: instance.importProvenance.name,
           },
         });
-      } else if (instance.binding?.status === "unsupported") {
+      } else if (instance.importProvenance?.status === "unsupported") {
         diagnostics.push({
           id: `erc:unsupported-model:${document.id}:${instance.id}`,
           domain: "erc",
@@ -129,13 +129,13 @@ export function runErcChecks(
           severity: "warning",
           confidence: "high",
           gateEligible: false,
-          message: `Instance ${instance.id} binding ${instance.binding.kind}:${instance.binding.name} is unsupported by the reviewed symbol catalog`,
+          message: `Instance ${instance.id} binding ${instance.importProvenance.kind}:${instance.importProvenance.name} is unsupported by the reviewed symbol catalog`,
           primary: directObjectLocator(document.id, "instance", instance.id),
           related: [],
           parameters: {
             instanceId: instance.id,
-            bindingKind: instance.binding.kind,
-            bindingName: instance.binding.name,
+            bindingKind: instance.importProvenance.kind,
+            bindingName: instance.importProvenance.name,
           },
         });
       }
@@ -161,14 +161,9 @@ export function runErcChecks(
           resolved.definition.pins.map((pin) => pin.name),
         );
         const seenImportedPins = new Set<string>();
-        const importedPinFacts = Object.entries(instance.properties)
-          .flatMap(([key, value]) => {
-            const match = /^spice\.pin\.P([1-9][0-9]*)$/u.exec(key);
-            return match ? [{ position: Number(match[1]), key, value }] : [];
-          })
-          .sort((left, right) => left.position - right.position);
+        const importedPinFacts = instance.netlist?.terminals ?? [];
         for (const fact of importedPinFacts) {
-          const pinName = typeof fact.value === "string" ? fact.value : null;
+          const pinName = fact.pinName;
           const invalid =
             !pinName ||
             !symbolPinNames.has(pinName) ||
@@ -178,27 +173,28 @@ export function runErcChecks(
             continue;
           }
           diagnostics.push({
-            id: `erc:illegal-pin-name:${document.id}:${instance.id}:${fact.position}`,
+            id: `erc:illegal-pin-name:${document.id}:${instance.id}:${fact.sourcePosition}`,
             domain: "erc",
             code: "ERC_ILLEGAL_PIN_NAME",
             severity: "error",
             confidence: "high",
             gateEligible: true,
-            message: `Imported pin fact ${fact.key}=${String(fact.value)} does not map uniquely to symbol ${instance.symbolId}`,
+            message: `Imported source terminal ${fact.sourcePosition + 1}=${pinName} does not map uniquely to symbol ${instance.symbolId}`,
             primary: directObjectLocator(document.id, "instance", instance.id),
             related: [],
             parameters: {
               instanceId: instance.id,
               symbolId: instance.symbolId,
-              position: fact.position,
+              position: fact.sourcePosition,
               ...(pinName ? { pinName } : {}),
             },
           });
         }
       }
 
-      const childDocumentId = instance.properties["spice.childDocumentId"];
-      if (typeof childDocumentId !== "string") continue;
+      const childBinding = instance.netlist?.binding;
+      if (childBinding?.kind !== "subcircuit") continue;
+      const childDocumentId = childBinding.childDocumentId;
       const child = project.documents.find(
         (candidate) => candidate.id === childDocumentId,
       );
@@ -272,7 +268,7 @@ export function runErcChecks(
     // ERC_DUPLICATE_INSTANCE_NAME
     const instancesByName = new Map<string, string[]>();
     for (const instance of document.instances) {
-      const spiceName = instance.properties["spice.name"];
+      const spiceName = instance.netlist?.reference;
       const name = (
         typeof spiceName === "string" && spiceName.length > 0
           ? spiceName
@@ -481,8 +477,9 @@ export function runErcChecks(
     for (const instance of [...parent.instances].sort((left, right) =>
       left.id.localeCompare(right.id, "en"),
     )) {
-      const childDocumentId = instance.properties["spice.childDocumentId"];
-      if (typeof childDocumentId !== "string") continue;
+      const childBinding = instance.netlist?.binding;
+      if (childBinding?.kind !== "subcircuit") continue;
+      const childDocumentId = childBinding.childDocumentId;
       const child = project.documents.find(
         (candidate) => candidate.id === childDocumentId,
       );

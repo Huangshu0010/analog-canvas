@@ -21,7 +21,7 @@ export type SearchObjectLocator = ObjectLocator & {
 export type SearchField =
   | "instance-id"
   | "symbol"
-  | "spice-name"
+  | "netlist-reference"
   | "property"
   | "net-name"
   | "net-id"
@@ -66,10 +66,9 @@ function classifyMatch(value: string, query: string): MatchType | null {
 function instanceLabel(
   id: string,
   symbolId: string,
-  properties: Record<string, unknown>,
+  reference: string | undefined,
 ): string {
-  const spiceName = properties["spice.name"];
-  if (typeof spiceName === "string" && spiceName.length > 0) return spiceName;
+  if (reference) return reference;
   return symbolId ?? id;
 }
 
@@ -100,7 +99,7 @@ function collectCandidates(
       const label = instanceLabel(
         instance.id,
         instance.symbolId,
-        instance.properties,
+        instance.netlist?.reference,
       );
       candidates.push({
         locator,
@@ -114,18 +113,16 @@ function collectCandidates(
         field: "symbol",
         value: instance.symbolId.toLowerCase(),
       });
-      const spiceName = instance.properties["spice.name"];
-      if (typeof spiceName === "string") {
+      const reference = instance.netlist?.reference;
+      if (reference) {
         candidates.push({
           locator,
           label,
-          field: "spice-name",
-          value: spiceName.toLowerCase(),
+          field: "netlist-reference",
+          value: reference.toLowerCase(),
         });
       }
       for (const [key, rawValue] of Object.entries(instance.properties)) {
-        // `spice.name` is indexed as a dedicated field above; avoid double-indexing.
-        if (key === "spice.name") continue;
         candidates.push({
           locator,
           label: `${key}=${String(rawValue)}`,

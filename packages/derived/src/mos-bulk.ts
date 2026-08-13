@@ -85,7 +85,7 @@ export function resolveMosBulkConnection(
 
   // Imported/source-bound MOS instances must already carry the fourth SPICE
   // node. Never repair missing source data by guessing a body connection.
-  if (instance.sourceRef || instance.binding) {
+  if (instance.sourceRef || instance.importProvenance) {
     return {
       status: "unresolved",
       instance,

@@ -34,17 +34,18 @@ describe("component parameter catalogue", () => {
     });
   });
 
-  it("prefers a user override and otherwise exposes an imported source fact", () => {
+  it("uses typed netlist parameters as the single component-value authority", () => {
     const parameter = componentParameters("nmos")[0]!;
     const instance: Instance = {
       id: "M1",
       symbolId: "nmos",
       placement: null,
-      properties: { "spice.param.w": "1u" },
+      properties: {},
+      netlist: { reference: "M1", parameters: { w: "1u" } },
     };
     expect(effectiveComponentParameterValue(instance, parameter)).toBe("1u");
     instance.properties.w = "2u";
-    expect(effectiveComponentParameterValue(instance, parameter)).toBe("2u");
+    expect(effectiveComponentParameterValue(instance, parameter)).toBe("1u");
     instance.netlist = { reference: "M1", parameters: { w: "3u" } };
     expect(effectiveComponentParameterValue(instance, parameter)).toBe("3u");
   });

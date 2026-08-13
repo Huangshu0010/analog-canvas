@@ -29,9 +29,9 @@ Q2 collector base emitter QPREF
     });
     expect(
       imported.project?.documents[0]?.instances.map((instance) => [
-        instance.properties["spice.name"],
+        instance.netlist?.reference,
         instance.symbolId,
-        instance.binding,
+        instance.importProvenance,
       ]),
     ).toEqual([
       [
@@ -162,7 +162,7 @@ Q2 collector base emitter QPREF
     expect(
       imported.project?.documents[0]?.instances
         .filter((instance) => instance.symbolId === "inductor")
-        .map((instance) => instance.properties["spice.name"]),
+        .map((instance) => instance.netlist?.reference),
     ).toEqual(["L1", "L2"]);
   });
 
@@ -189,23 +189,16 @@ Q2 collector base emitter QPREF
       "nmos",
       "nmos",
     ]);
-    expect(document.instances[0]!.properties).toMatchObject({
-      "spice.target": "model:sky130_fd_pr__nfet_01v8",
-      "spice.param.l": "1.0",
-      "spice.param.w": "96",
-      "spice.pin.P1": "D",
-      "spice.pin.P2": "G",
-      "spice.pin.P3": "S",
-      "spice.pin.P4": "B",
+    expect(document.instances[0]!.properties).toEqual({
       "symbol.mapping.registry": "sky130-nfet-four-terminal",
     });
-    expect(document.instances[0]!.binding).toMatchObject({
+    expect(document.instances[0]!.importProvenance).toMatchObject({
       // SKY130 uses an external PDK model name: the compiler preserves it as
       // opaque IR and the reviewed registry supplies the successful mapping.
       kind: "opaque",
       name: "sky130_fd_pr__nfet_01v8",
       status: "resolved",
-      sourceRef: document.instances[0]!.sourceRef,
+      sourceTarget: "model:sky130_fd_pr__nfet_01v8",
     });
     expect(document.instances[0]!.netlist).toEqual({
       reference: "XM1",
@@ -215,6 +208,12 @@ Q2 collector base emitter QPREF
         name: "sky130_fd_pr__nfet_01v8",
       },
       parameters: { l: "1.0", w: "96", nf: "12" },
+      terminals: [
+        { sourcePosition: 0, pinName: "D" },
+        { sourcePosition: 1, pinName: "G" },
+        { sourcePosition: 2, pinName: "S" },
+        { sourcePosition: 3, pinName: "B" },
+      ],
     });
     expect(
       document.nets
@@ -245,17 +244,21 @@ Q2 collector base emitter QPREF
     );
     const document = imported.project!.documents[0]!;
     const instance = document.instances.find(
-      (candidate) => candidate.properties["spice.name"] === "XM1",
+      (candidate) => candidate.netlist?.reference === "XM1",
     )!;
     expect(instance).toMatchObject({
       symbolId: "nmos",
       properties: {
-        "spice.pin.P1": "D",
-        "spice.pin.P2": "G",
-        "spice.pin.P3": "S",
-        "spice.pin.P4": "B",
         "symbol.mapping.registry": "sky130-nfet-four-terminal",
       },
+      netlist: expect.objectContaining({
+        terminals: [
+          { sourcePosition: 0, pinName: "D" },
+          { sourcePosition: 1, pinName: "G" },
+          { sourcePosition: 2, pinName: "S" },
+          { sourcePosition: 3, pinName: "B" },
+        ],
+      }),
     });
     expect(
       imported.diagnostics.filter(

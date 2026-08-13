@@ -557,7 +557,6 @@ describe("Edit Transaction envelope", () => {
   it("patches instance properties atomically and records a non-source edit", () => {
     const document = documentWithInstance();
     document.instances[0]!.properties = {
-      "spice.param.value": "10k",
       value: "8k",
     };
     document.sourceStatus = "in-sync";
@@ -569,7 +568,7 @@ describe("Edit Transaction envelope", () => {
           kind: "patch_instance_properties",
           instanceId: "M1",
           set: { value: "12k", enabled: true },
-          unset: ["spice.param.value"],
+          unset: ["unused"],
         },
       ],
     });
@@ -588,9 +587,32 @@ describe("Edit Transaction envelope", () => {
       },
     });
     expect(document.instances[0]!.properties).toEqual({
-      "spice.param.value": "10k",
       value: "8k",
     });
+  });
+
+  it("rejects legacy SPICE property patches before any candidate mutation", () => {
+    const document = documentWithInstance();
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "patch_instance_properties",
+          instanceId: "M1",
+          set: { "spice.param.value": "10k" },
+        },
+      ],
+    });
+    expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "INVALID_TRANSACTION",
+          path: ["edits", 0, "set", "spice.param.value"],
+        }),
+      ]),
+    );
+    expect(document.instances[0]!.properties).toEqual({});
   });
 
   it("rejects an invalid property patch without partially changing the instance", () => {

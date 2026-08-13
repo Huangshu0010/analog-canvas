@@ -163,7 +163,7 @@ An Instance placement is either `null` or a position plus rotation
 before rotation. Route waypoints exclude endpoints; endpoint coordinates are
 derived from terminals, ports, or Junction objects.
 
-## NoConnect and source binding evidence
+## NoConnect, typed netlist facts, and import provenance
 
 This section is owned by `packages/model` and implemented incrementally by
 WP-R7/WP-R8 of the connectivity-routing-debugging roadmap. It does not change
@@ -180,13 +180,24 @@ interface NoConnect {
   reason?: string;
 }
 
-interface SourceBindingEvidence {
+interface InstanceNetlistData {
+  reference: string;
+  binding?:
+    | PrimitiveBinding
+    | ModelBinding
+    | SubcircuitBinding
+    | ExternalSubcircuitBinding;
+  parameters: Record<string, string>;
+  terminals?: Array<{ sourcePosition: number; pinName: string }>;
+}
+
+interface InstanceImportProvenance {
   kind: "primitive" | "model" | "subcircuit" | "opaque";
   name: string;
-  status: "resolved" | "missing" | "unsupported";
+  sourceTarget: string;
+  status?: "resolved" | "missing" | "unsupported";
   modelType?: string;
-  childDocumentId?: StableId; // present for subcircuit bindings
-  sourceRef?: SourceSpan; // present for SPICE-originated bindings
+  attributes?: Record<string, string | number | boolean>;
 }
 ```
 
@@ -201,15 +212,16 @@ Invariants (frozen):
 - `NoConnect` is a first-class electrical record: it has typed edits,
   undo/redo, clipboard, delete, save/reopen, a fixed formal marker in the Razavi
   visual language, and participates in formal export. It is not an annotation.
-- `SourceBindingEvidence` captures the stable import-time fact about an
-  instance's model or subcircuit binding. The implementation may continue to
-  read existing `spice.name`/`spice.target`/`spice.pin.*`/`spice.param.*`/
-  `spice.childDocumentId` properties for compatibility, but the normative target
-  is the typed record.
-- Binding evidence is optional for legacy instances. A migration never invents
-  an evidence status from `spice.target`; only a current importer or an
-  explicit typed edit may write it. Therefore old Projects retain their
-  previous behavior and do not receive speculative model ERC.
+- `InstanceNetlistData` owns every editable netlist fact: reference, binding,
+  parameters, and imported terminal order. A linked subcircuit binding owns its
+  `childDocumentId`; hierarchy never resolves a Cell by source name.
+- `InstanceImportProvenance` is bounded, immutable source evidence. It explains
+  import status (when known) and target spelling but cannot create connectivity,
+  hierarchy, parameter, or model semantics. Normal property edits cannot patch
+  it. Migration may preserve an exact target with no status rather than guess.
+- Schema-v8 migration consumes `spice.name`, `spice.target`, `spice.pin.*`,
+  `spice.param.*`, and `spice.childDocumentId` once. Current Projects reject
+  all `spice.*` properties; no runtime consumer reads or writes them.
 
 These records are the input the unified connectivity index (ADR 0013) and the
 ERC engine consume; they are not derived state.
@@ -227,9 +239,10 @@ ERC engine consume; they are not derived state.
 - Netlist export reads logical Net membership only. It never derives a Net,
   pin order, reference, model, or Cell interface from drawing geometry or
   annotation text.
-- Persisted Cell interfaces and Instance netlist data are the sole export
-  authority once introduced by a versioned Project migration; legacy
-  `spice.*` properties are compatibility inputs only.
+- Persisted Cell interfaces and Instance netlist data are the sole netlist and
+  hierarchy authority. Import provenance is explanatory only; ordinary
+  properties, drawing geometry, and annotation text cannot substitute for
+  typed facts.
 - `placement: null` preserves an unplaced logical instance.
 - Layout intent and annotation placement never modify logical connectivity.
 - Annotation attachments reference an existing visual/electrical object.

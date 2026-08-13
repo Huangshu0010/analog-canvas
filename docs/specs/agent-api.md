@@ -115,7 +115,8 @@ target cell/subcircuit name when available, and resolved `targetDocumentId` or
   and complete `presentation`;
 - ports with direction, position, and owning `netId | null`;
 - instances with display/source name, symbol/variant, target/model description,
-  complete primitive properties and parameters, placement, bounds, complete
+  complete primitive properties and typed netlist facts (reference, binding,
+  parameters, ordered imported terminals), placement, bounds, complete
   resolved/connected pin inventory, and effective MOS bulk status/Net when
   applicable;
 - every pin's name, role/direction when resolvable, local/page position,

@@ -539,9 +539,16 @@ describe("Agent Circuit API v1 service", () => {
       id: "X1",
       symbolId: "generic-block-4",
       placement: null,
-      properties: {
-        "spice.target": "model:sky130_fd_pr__nfet_01v8",
-        "spice.pin.P1": "P1",
+      properties: {},
+      netlist: {
+        reference: "XM1",
+        parameters: {},
+        binding: {
+          kind: "model",
+          deviceClass: "mos",
+          name: "sky130_fd_pr__nfet_01v8",
+        },
+        terminals: [{ sourcePosition: 0, pinName: "P1" }],
       },
     });
     document.ports.push({

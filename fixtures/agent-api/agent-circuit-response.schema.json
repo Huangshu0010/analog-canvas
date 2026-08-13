@@ -615,6 +615,136 @@
                       },
                       "sourceRef": {
                         "$ref": "#/$defs/__schema2"
+                      },
+                      "netlist": {
+                        "type": "object",
+                        "properties": {
+                          "reference": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "binding": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "primitive"
+                                  },
+                                  "deviceClass": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "deviceClass"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "model"
+                                  },
+                                  "deviceClass": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "deviceClass",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "subcircuit"
+                                  },
+                                  "childDocumentId": {
+                                    "$ref": "#/$defs/__schema0"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "childDocumentId",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "external-subcircuit"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "parameters": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "terminals": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "sourcePosition": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "pinName": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "required": [
+                                "sourcePosition",
+                                "pinName"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "reference",
+                          "parameters"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "required": [

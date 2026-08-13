@@ -78,7 +78,16 @@ function hierarchyProject(): CircuitProject {
       id: "X1",
       symbolId: "dual",
       placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
-      properties: { "spice.childDocumentId": "child" },
+      properties: {},
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        binding: {
+          kind: "subcircuit",
+          name: "child",
+          childDocumentId: "child",
+        },
+      },
     },
   ];
   top.nets = [

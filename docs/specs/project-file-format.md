@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `5.0`
+Version: `8.0`
 
 Owning phase: `Phase 0`
 
@@ -33,11 +33,11 @@ its validation, canonical serialization, and migration behavior.
 ## Data model or interface
 
 The authoritative runtime contract is `CircuitProjectSchema` in
-`packages/model`. The current released version is 5:
+`packages/model`. The current released version is 8:
 
 ```typescript
 interface CircuitProject {
-  schemaVersion: 5;
+  schemaVersion: 8;
   id: string;
   name: string;
   source: SourceManifest;
@@ -51,14 +51,14 @@ interface CircuitProject {
 declared policy, and selected source file IDs, paths, and hashes. In the Page
 release it does **not** mean that SPICE source text was copied into the Project
 file or a browser-created `sources/` directory. `SymbolLibraryLock` owns
-library ID, version, and content hash. Documents are embedded; version 5 has
+library ID, version, and content hash. Documents are embedded; version 8 has
 no separate document, source-lock, symbol-lock, cache, session, recovery, or
 export files. Version 3 adds a first-class `NoConnect` collection to each
 Document; migration never infers NoConnect intent.
 
 ## Invariants
 
-- `schemaVersion` is exactly `5` after migration.
+- `schemaVersion` is exactly `8` after migration.
 - At least one Document exists and `topDocumentId` resolves to it.
 - Document IDs are unique.
 - Unknown object fields are rejected.
@@ -115,6 +115,13 @@ reviewed semantics of legacy VDD/ground marker terminals once; normal runtime
 code never infers a supply domain from a symbol, name, or fixed Net ID. New VDD
 rails create an explicit global VDD Net plus editable route anchors and a
 RichText label in one transaction, without a hidden `vdd` instance.
+
+Version 6 makes `Port.presentation` first class; version 7 makes RichText and
+`VisualAnchor` mandatory for editable annotations. Version 8 moves runtime
+SPICE facts into typed `Instance.netlist` terminal/binding/parameter records
+plus bounded immutable `importProvenance`. Schema-v8 migration consumes legacy
+`spice.*` properties without deriving a hierarchy target from a name; current
+writers reject those properties.
 
 ## Deterministic validation
 

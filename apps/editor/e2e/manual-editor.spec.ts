@@ -2326,9 +2326,15 @@ test("navigates a visible hierarchy Net trace hop into its child Cell", async ({
 }) => {
   const project = createRoutingDemoProject();
   const top = project.documents[0]!;
-  top.instances.find((instance) => instance.id === "A")!.properties[
-    "spice.childDocumentId"
-  ] = "document-trace-child";
+  top.instances.find((instance) => instance.id === "A")!.netlist = {
+    reference: "XA",
+    parameters: {},
+    binding: {
+      kind: "subcircuit",
+      name: "Trace Child Cell",
+      childDocumentId: "document-trace-child",
+    },
+  };
   top.routes.push({
     id: "route-trace",
     netId: "net-h",

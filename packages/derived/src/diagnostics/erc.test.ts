@@ -87,7 +87,8 @@ function instance(id: string, spiceName?: string) {
       rotation: 0 as const,
       mirror: "none" as const,
     },
-    properties: spiceName ? { "spice.name": spiceName } : {},
+    properties: {},
+    ...(spiceName ? { netlist: { reference: spiceName, parameters: {} } } : {}),
   };
 }
 
@@ -345,7 +346,7 @@ describe("ERC engine", () => {
     expect(roleRun(project)).toEqual([]);
   });
 
-  it("flags two instances sharing a normalized spice.name", () => {
+  it("flags two instances sharing a normalized netlist reference", () => {
     const project = emptyProject();
     project.documents[0]!.instances = [
       instance("I1", "M1"),
@@ -501,11 +502,12 @@ describe("ERC engine", () => {
     document.instances = [
       {
         ...instance("I1"),
-        // Compatibility text alone must not create a model ERC.
-        properties: { "spice.target": "model:legacy-text" },
-        binding: {
+        // Arbitrary properties alone must not create a model ERC.
+        properties: { "legacy.target": "model:legacy-text" },
+        importProvenance: {
           kind: "model",
           name: "missing-model",
+          sourceTarget: "model:missing-model",
           status: "missing",
         },
       },
@@ -527,9 +529,10 @@ describe("ERC engine", () => {
 
     document.instances[0] = {
       ...document.instances[0]!,
-      binding: {
+      importProvenance: {
         kind: "opaque",
         name: "unsupported-device",
+        sourceTarget: "opaque:unsupported-device",
         status: "unsupported",
       },
     };
@@ -544,10 +547,14 @@ describe("ERC engine", () => {
     document.instances = [
       {
         ...instance("I1"),
-        properties: {
-          "spice.pin.P1": "L",
-          "spice.pin.P2": "MISSING",
-          "spice.pin.P3": "L",
+        netlist: {
+          reference: "I1",
+          parameters: {},
+          terminals: [
+            { sourcePosition: 0, pinName: "L" },
+            { sourcePosition: 1, pinName: "MISSING" },
+            { sourcePosition: 2, pinName: "L" },
+          ],
         },
       },
     ];
@@ -568,7 +575,7 @@ describe("ERC engine", () => {
     expect(mappingDiagnostics).toHaveLength(2);
     expect(
       mappingDiagnostics.map((diagnostic) => diagnostic.parameters.position),
-    ).toEqual([2, 3]);
+    ).toEqual([1, 2]);
 
     document.instances[0] = { ...instance("I1"), properties: {} };
     document.revision += 1;
@@ -581,7 +588,16 @@ describe("ERC engine", () => {
     parent.instances = [
       {
         ...instance("X1"),
-        properties: { "spice.childDocumentId": "child" },
+        properties: {},
+        netlist: {
+          reference: "X1",
+          parameters: {},
+          binding: {
+            kind: "subcircuit",
+            name: "child",
+            childDocumentId: "child",
+          },
+        },
       },
     ];
     expect(codes(project)).toContain("ERC_HIERARCHY_TARGET_MISSING");
@@ -612,11 +628,29 @@ describe("ERC engine", () => {
     parent.instances = [
       {
         ...instance("X1"),
-        properties: { "spice.childDocumentId": "child" },
+        properties: {},
+        netlist: {
+          reference: "X1",
+          parameters: {},
+          binding: {
+            kind: "subcircuit",
+            name: "child",
+            childDocumentId: "child",
+          },
+        },
       },
       {
         ...instance("X2"),
-        properties: { "spice.childDocumentId": "child" },
+        properties: {},
+        netlist: {
+          reference: "X2",
+          parameters: {},
+          binding: {
+            kind: "subcircuit",
+            name: "child",
+            childDocumentId: "child",
+          },
+        },
       },
     ];
     const child = createEmptyProject("child-project", "Child", "child")

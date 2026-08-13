@@ -356,7 +356,9 @@ function referencedDocumentId(
   project: CircuitProject,
   instance: SchematicDocument["instances"][number],
 ): string | null {
-  const childId = instance.properties["spice.childDocumentId"];
+  const binding = instance.netlist?.binding;
+  const childId =
+    binding?.kind === "subcircuit" ? binding.childDocumentId : undefined;
   if (
     typeof childId === "string" &&
     project.documents.some((candidate) => candidate.id === childId)

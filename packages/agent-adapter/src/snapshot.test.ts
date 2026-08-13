@@ -67,6 +67,17 @@ describe("Agent Document Snapshot", () => {
     });
     const vinp = snapshot.document.nets.find((item) => item.id === "net-vinp")!;
     expect(vinp.terminals).toContainEqual({ instanceId: "M1", pinName: "G" });
+    const modelM1 = document.instances.find((item) => item.id === "M1")!;
+    if (!modelM1.netlist) {
+      expect(m1.netlist).toBeUndefined();
+    } else {
+      expect(m1.netlist).toMatchObject({
+        reference: modelM1.netlist.reference,
+        parameters: modelM1.netlist.parameters,
+      });
+      expect(m1.netlist?.binding).toEqual(modelM1.netlist.binding);
+      expect(m1.netlist?.terminals).toEqual(modelM1.netlist.terminals);
+    }
 
     for (const instance of snapshot.document.instances) {
       for (const pin of instance.pins) {
@@ -148,7 +159,15 @@ describe("Agent Document Snapshot", () => {
   it("is deterministic across persisted collection order and resolves references", () => {
     const project = fixtureProject();
     const parent = project.documents[0]!;
-    parent.instances[0]!.properties["spice.target"] = "subcircuit:child";
+    parent.instances[0]!.netlist = {
+      reference: "M1",
+      parameters: {},
+      binding: {
+        kind: "subcircuit",
+        name: "child",
+        childDocumentId: "document-child",
+      },
+    };
     const child = structuredClone(parent);
     child.id = "document-child";
     child.name = "child";
