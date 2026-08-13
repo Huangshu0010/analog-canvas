@@ -14,6 +14,12 @@ accepted ADR, active specification, or the
 - [`roadmap/phase-5-symbols-and-visual-quality.md`](roadmap/phase-5-symbols-and-visual-quality.md)
   — completed VSS-era visual-pipeline record.
 
+- [`phase9-external-quality-studies/`](phase9-external-quality-studies/) —
+  completed held-out Agent studies retained as historical evidence, not future
+  pass/fail fixtures.
+- [`phase9-research-evidence/`](phase9-research-evidence/) — historical Phase 9
+  deterministic reports and inputs that no longer satisfy current schemas.
+
 Use an archived document only when a current document links to it for explicit
 historical evidence.
 

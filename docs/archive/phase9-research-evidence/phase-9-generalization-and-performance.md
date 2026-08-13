@@ -4,7 +4,7 @@ Date: 2026-08-07
 
 ## Checked large-Document run
 
-[`phase-9-generalization.mjs`](../../../scripts/phase-9-generalization.mjs)
+The retired `generalization.mjs` program
 builds a deterministic 128-transistor, eight-path stress Document with unequal
 path lengths, explicit pin/Net membership, 392 Routes, 18 ports, shared rails,
 and varied device parameters. It is deliberately not named after a known
@@ -15,8 +15,8 @@ refreshes revision 1, verifies the structural topology is unchanged, and renders
 the final formal SVG. It makes zero v1 query calls and enables no helper. The
 checked artifacts are:
 
-- [`generalization-and-performance.json`](../../../fixtures/agent-layout-eval/generalization-and-performance.json)
-- [`unseen-transistor-128.svg`](../../../fixtures/agent-layout-eval/unseen-transistor-128.svg)
+- [`generalization-and-performance.json`](artifacts/generalization-and-performance.json)
+- [`unseen-transistor-128.svg`](artifacts/unseen-transistor-128.svg)
 
 The 128-instance Snapshot is 289,373 bytes (about 72,344 tokens using a
 conservative bytes/4 estimate). The same complete schema at 500 instances is
@@ -46,7 +46,7 @@ an externally supplied unseen circuit and a blind human readability review.
 
 ## Skill/package ablation boundary
 
-[`phase-9-skill-evaluation.mjs`](../../../scripts/phase-9-skill-evaluation.mjs)
+[`skill-evaluation.mjs`](../../../tools/research/phase9/skill-evaluation.mjs)
 checks the four guidance tiers, manifest links, owner/strength/trigger metadata,
 and progressive-loading cost. The checked report is
 [`skill-and-ablation-structure.json`](../../../fixtures/agent-layout-eval/skill-and-ablation-structure.json).
@@ -57,7 +57,7 @@ smaller than loading the whole library. It intentionally does not label static
 document checks as Agent-quality or blinded-readability results. A model runner
 and independent reviewer are required for that part of the Phase 9 research
 gate; the reproducible input/result/anonymization contract is implemented by
-[`phase-9-external-quality-eval.mjs`](../../../scripts/phase-9-external-quality-eval.mjs).
+[`external-quality-eval.mjs`](../../../tools/research/phase9/external-quality-eval.mjs).
 
 ## Optional-helper decision
 

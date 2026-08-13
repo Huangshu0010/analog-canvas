@@ -10,16 +10,16 @@ per-Document formal renders, zero query/helper use, and zero final diagnostics.
 
 The independent anonymous review produced:
 
-| Tier | Guidance                    | Mean | Hard invariants | Result |
-| ---- | --------------------------- | ---: | --------------- | ------ |
-| A    | API contract only           |  4.0 | pass            | base   |
-| B    | thin Skill                  |  3.8 | pass            | regress |
-| C    | Skill + core knowledge      |  4.8 | pass            | improve |
-| D    | Skill + full routed knowledge | 2.6 | pass           | regress |
+| Tier | Guidance                      | Mean | Hard invariants | Result  |
+| ---- | ----------------------------- | ---: | --------------- | ------- |
+| A    | API contract only             |  4.0 | pass            | base    |
+| B    | thin Skill                    |  3.8 | pass            | regress |
+| C    | Skill + core knowledge        |  4.8 | pass            | improve |
+| D    | Skill + full routed knowledge |  2.6 | pass            | regress |
 
 The gate failed because every guided tier must be at least as readable as A.
 The failure is not hidden or re-scored. The pinned compact report is
-[`external-quality-flash-adc-v3-report.json`](../../../fixtures/agent-layout-eval/external-quality-flash-adc-v3-report.json).
+[`external-quality-flash-adc-v3-report.json`](../phase9-research-evidence/artifacts/external-quality-flash-adc-v3-report.json).
 
 ## What the review found
 

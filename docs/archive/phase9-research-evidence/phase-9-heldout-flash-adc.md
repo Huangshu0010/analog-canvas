@@ -1,6 +1,6 @@
 # Phase 9 held-out Flash ADC fixture
 
-Status: `frozen after the Skill/knowledge set; external tier runs pending`
+Status: `frozen historical input; retired from future pass/fail reuse`
 
 This fixture is the common unseen input for the external four-tier Agent
 quality gate. It was added after the Phase 9 Skill and knowledge pages were
@@ -25,11 +25,11 @@ claim.
 
 The generated starting Project and exact import evidence are:
 
-- [`heldout-flash-adc-4bit-start.icproj.json`](../../../fixtures/agent-layout-eval/heldout-flash-adc-4bit-start.icproj.json)
-- [`heldout-flash-adc-4bit-import-report.json`](../../../fixtures/agent-layout-eval/heldout-flash-adc-4bit-import-report.json)
-- [`heldout-flash-adc-4bit-task.md`](../../../fixtures/agent-layout-eval/heldout-flash-adc-4bit-task.md)
+- [`heldout-flash-adc-4bit-start.icproj.json`](artifacts/heldout-flash-adc-4bit-start.icproj.json)
+- [`heldout-flash-adc-4bit-import-report.json`](artifacts/heldout-flash-adc-4bit-import-report.json)
+- [`heldout-flash-adc-4bit-task.md`](artifacts/heldout-flash-adc-4bit-task.md)
 
-`pnpm phase9:heldout:check` reimports the source, checks hierarchy, symbol
+The retired held-out generator reimported the source and checked hierarchy, symbol
 resolution, connectivity counts, elaborated scale, Snapshot byte lengths and
 topology hashes, then byte-compares both generated artifacts. The general SPICE
 corpus test independently pins the source connectivity hash.
@@ -39,7 +39,7 @@ corpus test independently pins the source connectivity hash.
 Use a new output directory for every real model run:
 
 ```powershell
-node scripts/phase-9-external-quality-eval.mjs prepare `
+node tools/research/phase9/external-quality-eval.mjs prepare `
   --project fixtures/agent-layout-eval/heldout-flash-adc-4bit-start.icproj.json `
   --task fixtures/agent-layout-eval/heldout-flash-adc-4bit-task.md `
   --targeted docs/agent/knowledge/hierarchy-and-large-circuits.md,docs/agent/knowledge/pdk-and-symbols.md,docs/agent/knowledge/patterns/differential-pair.md,docs/agent/knowledge/patterns/current-mirror.md,docs/agent/knowledge/patterns/arrays-and-ladders.md `

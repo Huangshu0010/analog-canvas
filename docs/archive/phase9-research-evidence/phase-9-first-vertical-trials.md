@@ -6,12 +6,12 @@ Status: checked initial failure trace and checked recovery trace
 
 ## Method
 
-[`phase-9-snapshot-audit.mjs`](../../../scripts/phase-9-snapshot-audit.mjs)
+The retired `snapshot-audit.mjs` program
 imports each untouched SPICE source, calls API v2 `capabilities`, obtains one
 complete Snapshot for every Document, performs a revision-safe v2 dry-run, and
 requests a diagnostic render. It makes zero v1 query calls and enables no
 optional helper. The deterministic report is
-[`initial-vertical-snapshot-audit.json`](../../../fixtures/agent-layout-eval/initial-vertical-snapshot-audit.json).
+[`initial-vertical-snapshot-audit.json`](artifacts/initial-vertical-snapshot-audit.json).
 
 This is deliberately an initial/failed trace where the product cannot yet
 express the next honest edit. It does not retrofit the known RLC/CDAC target
@@ -73,9 +73,9 @@ No helper passes the WP-9.8 entry gate at this point.
 
 The confirmed gaps were closed with reviewed SKY130 mappings,
 `set_instance_symbol`, `place_port`, and `move_port`. The repeat audit is
-[`post-gap-snapshot-audit.json`](../../../fixtures/agent-layout-eval/post-gap-snapshot-audit.json)
+[`post-gap-snapshot-audit.json`](artifacts/post-gap-snapshot-audit.json)
 and the end-to-end replay report is
-[`recovery-layout-replay.json`](../../../fixtures/agent-layout-eval/recovery-layout-replay.json).
+[`recovery-layout-replay.json`](artifacts/recovery-layout-replay.json).
 
 The recovery run:
 

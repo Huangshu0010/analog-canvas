@@ -30,24 +30,23 @@ knowledge card being evaluated.
 
 ## Reproducible evaluation kit
 
-[`phase-9-external-quality-eval.mjs`](../../../scripts/phase-9-external-quality-eval.mjs)
+[`external-quality-eval.mjs`](../../../tools/research/phase9/external-quality-eval.mjs)
 prepares isolated contexts and validates, anonymizes, and scores the external
 results.
 Choose a genuinely held-out Project and write one task file, then run:
 
 ```powershell
-node scripts/phase-9-external-quality-eval.mjs prepare `
+node tools/research/phase9/external-quality-eval.mjs prepare `
   --project path/to/held-out.icproj.json `
   --task path/to/task.md `
   --targeted docs/agent/knowledge/patterns/current-mirror.md,docs/agent/knowledge/human-collaboration.md `
   --out output/phase9-external-eval/run-001
 ```
 
-The repository's frozen default input and exact targeted knowledge set are
-recorded in
-[`phase-9-heldout-flash-adc.md`](phase-9-heldout-flash-adc.md). Use that command
-for the first recorded study; the generic command above is retained for future
-research fixtures.
+Earlier frozen inputs and their results are archived under
+[`phase9-research-evidence`](../../archive/phase9-research-evidence/README.md)
+and must not be reused as held-out pass/fail fixtures. The generic command above
+is retained for genuinely new research inputs.
 
 The output directory must be new; preparation refuses to merge a new trial with
 stale results. Its manifest hashes the exact Project, task, tier contexts, and
@@ -74,7 +73,7 @@ Document in `final.snapshots.json`, one formal render per Document plus their
 a replacement Project. After all four finish:
 
 ```powershell
-node scripts/phase-9-external-quality-eval.mjs finalize `
+node tools/research/phase9/external-quality-eval.mjs finalize `
   --root output/phase9-external-eval/run-001
 ```
 
@@ -90,13 +89,13 @@ Keep `private/tier-map.json` hidden.
 After the reviewer fills every 1–5 score and saves a response:
 
 ```powershell
-node scripts/phase-9-external-quality-eval.mjs score `
+node tools/research/phase9/external-quality-eval.mjs score `
   --root output/phase9-external-eval/run-001 `
   --response output/phase9-external-eval/run-001/blind/review-response.json
 ```
 
 The deterministic pipeline itself is checked with
-`pnpm phase9:external-eval:self-test`. The self-test is not a model-quality
+`node tools/research/phase9/external-quality-eval.mjs self-test`. The self-test is not a model-quality
 result; it proves the kit rejects missing/electrically changed results and can
 complete anonymous scoring when valid external evidence exists. A scored run
 ends with manifest status `quality-gate-passed` or `quality-gate-failed` and a

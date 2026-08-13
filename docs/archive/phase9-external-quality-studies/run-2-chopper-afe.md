@@ -6,15 +6,15 @@ Run 2 used a new post-remediation 144-MOS hierarchical chopper AFE. All four
 isolated tiers again passed electrical signature, lock, revision, placement,
 Snapshot, render, query/helper, and diagnostic gates. The anonymous review was:
 
-| Tier | Mean | Outcome |
-| ---- | ---: | ------- |
-| A    |  4.2 | baseline |
+| Tier | Mean | Outcome           |
+| ---- | ---: | ----------------- |
+| A    |  4.2 | baseline          |
 | B    |  4.0 | slight regression |
-| C    |  2.8 | regression |
-| D    |  3.2 | regression |
+| C    |  2.8 | regression        |
+| D    |  3.2 | regression        |
 
 The exact compact evidence is
-[`external-quality-chopper-afe-v1-report.json`](../../../fixtures/agent-layout-eval/external-quality-chopper-afe-v1-report.json).
+[`external-quality-chopper-afe-v1-report.json`](../phase9-research-evidence/artifacts/external-quality-chopper-afe-v1-report.json).
 
 The new port-label completeness rule fixed omissions but was applied
 mechanically: repeated local labels, a very tall one-column parent, and dense

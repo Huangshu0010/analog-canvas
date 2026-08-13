@@ -13,16 +13,16 @@ import { dirname, resolve } from "node:path";
 import {
   AgentSessionSnapshotSchema,
   buildAgentSessionSnapshot,
-} from "../packages/agent-adapter/dist/index.js";
+} from "../../../packages/agent-adapter/dist/index.js";
 import {
   CircuitProjectSchema,
   parseProject,
   serializeProject,
-} from "../packages/model/dist/index.js";
+} from "../../../packages/model/dist/index.js";
 import {
   builtInSymbols,
   createProjectSymbolResolver,
-} from "../packages/symbols/dist/index.js";
+} from "../../../packages/symbols/dist/index.js";
 
 const TIERS = ["A", "B", "C", "D"];
 const SCORE_CATEGORIES = [
