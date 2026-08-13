@@ -379,7 +379,7 @@ function operationScopes(request: AgentCircuitRequest): AgentSessionScope[] {
       return [
         ...new Set(
           (request.edits ?? []).flatMap((edit) => {
-            const category = agentEditCategory(edit);
+            const category = agentEditCategory(edit.kind);
             return category === "unsupported"
               ? []
               : ([`circuit.edit.${category}`] as AgentSessionScope[]);

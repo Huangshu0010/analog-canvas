@@ -1,5 +1,9 @@
 import { resolveDocumentRoutingGeometry, sha256Hex } from "@icm/derived";
-import { executeTransaction, proposeWireIntent } from "@icm/edit-engine";
+import {
+  executeTransaction,
+  proposeWireIntent,
+  SchematicEditSchema,
+} from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
 import { transformPoint } from "@icm/model";
 import type {
@@ -55,41 +59,17 @@ const QUERY_SCOPES = [
   "diagnostics",
   "changes",
 ] as const;
-export const AGENT_EDIT_KINDS = [
-  "noop",
-  "clear_document",
-  "add_instance",
-  "remove_instance",
-  "set_instance_symbol",
-  "place_instance",
-  "move_instance",
-  "rotate_instance",
-  "mirror_instance",
-  "patch_instance_properties",
-  "place_port",
-  "move_port",
-  "set_route_points",
-  "route_orthogonal",
+/**
+ * The Edit Engine schema is the sole list of typed edit kinds. `wire` is the
+ * one deliberate extra capability: it advertises the mutually-exclusive
+ * high-level `wireIntent` transaction form, not a SchematicEdit member.
+ */
+export const AGENT_EDIT_KINDS = Object.freeze([
+  ...SchematicEditSchema.options
+    .map((option) => option.shape.kind.value)
+    .filter((kind) => agentEditCategory(kind) !== "unsupported"),
   "wire",
-  "add_junction",
-  "remove_junction",
-  "move_junction",
-  "make_flightline",
-  "cut_connection",
-  "connect_endpoints",
-  "merge_nets",
-  "set_net_name",
-  "normalize_power_nets",
-  "set_mos_bulk_defaults",
-  "reconcile_mos_bulk",
-  "clear_mos_bulk_default",
-  "disconnect_endpoint",
-  "set_layout_group",
-  "remove_layout_group",
-  "set_layout_constraint",
-  "remove_layout_constraint",
-  "align_instances",
-] as const;
+]);
 
 export const DEFAULT_AGENT_LIMITS: AgentLimits = {
   maxQueryObjects: 200,
@@ -449,9 +429,9 @@ function selectQueryIds(
 }
 
 export function agentEditCategory(
-  edit: SchematicEdit,
+  kind: SchematicEdit["kind"],
 ): "geometry" | "connectivity" | "presentation" | "unsupported" {
-  switch (edit.kind) {
+  switch (kind) {
     case "noop":
     case "add_instance":
     case "remove_instance":
@@ -801,7 +781,7 @@ export function createAgentCircuitService(
           );
         }
         for (const edit of edits) {
-          const category = agentEditCategory(edit);
+          const category = agentEditCategory(edit.kind);
           if (category === "unsupported") {
             return fail(
               "transact",

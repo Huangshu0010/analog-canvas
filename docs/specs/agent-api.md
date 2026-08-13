@@ -186,9 +186,14 @@ complete Document validation retain their meaning. A successful non-dry
 transaction commits only the validated returned Document and reports a diff;
 it never returns or accepts a whole writable Document.
 
-Capability edit kinds are the shared Edit Engine schemas. Phase 9 adds generic
-symbol/port edits only through that shared boundary; GUI and Agent must validate
-identically.
+Capability edit kinds are derived from the shared Edit Engine schema. Every
+non-history `SchematicEdit` accepted by the Agent permission boundary is
+advertised, including annotation, drafting, presentation, and NoConnect edits;
+the schema, permission classification, and capability response must pass a
+bidirectional parity test. `wire` is the sole explicit extra capability name:
+it denotes the high-level `wireIntent` transaction form rather than a typed
+`SchematicEdit`. Phase 9 adds generic symbol/port edits only through that shared
+boundary; GUI and Agent must validate identically.
 
 For ordinary wiring, `transact` accepts exactly one high-level `wireIntent`
 instead of an `edits` array. Its `from` and `to` anchors are an endpoint, Route
