@@ -5963,3 +5963,12 @@ contracts (WP-R1)`.
 - Validation: targeted Markdown formatting and `git diff --check` passed.
 - Commit status: ready to commit on `codex/add-readme-citation` as
   `docs(readme): add project citation`.
+
+## 2026-08-13 - Citation title correction
+
+- Target: use the user-specified short project title `analog-canvas` in the
+  README citation.
+- Changed areas: prose citation, BibTeX key/title, and target plan.
+- Validation: targeted Markdown formatting and `git diff --check` passed.
+- Commit status: ready to commit on `codex/shorten-citation-title` as
+  `docs(readme): shorten citation title`.
