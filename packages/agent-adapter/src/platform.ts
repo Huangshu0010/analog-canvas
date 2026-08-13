@@ -54,3 +54,66 @@ export function base64EncodeUtf8(value: string): string {
   }
   return output;
 }
+
+/** Base64 of arbitrary bytes. */
+export function base64EncodeBytes(bytes: Uint8Array): string {
+  let output = "";
+  let index = 0;
+  for (; index + 3 <= bytes.length; index += 3) {
+    const byte0 = bytes[index]!;
+    const byte1 = bytes[index + 1]!;
+    const byte2 = bytes[index + 2]!;
+    output +=
+      BASE64_ALPHABET[byte0 >> 2]! +
+      BASE64_ALPHABET[((byte0 & 0x03) << 4) | (byte1 >> 4)]! +
+      BASE64_ALPHABET[((byte1 & 0x0f) << 2) | (byte2 >> 6)]! +
+      BASE64_ALPHABET[byte2 & 0x3f]!;
+  }
+  const remaining = bytes.length - index;
+  if (remaining === 1) {
+    const byte0 = bytes[index]!;
+    output +=
+      BASE64_ALPHABET[byte0 >> 2]! +
+      BASE64_ALPHABET[(byte0 & 0x03) << 4]! +
+      "==";
+  } else if (remaining === 2) {
+    const byte0 = bytes[index]!;
+    const byte1 = bytes[index + 1]!;
+    output +=
+      BASE64_ALPHABET[byte0 >> 2]! +
+      BASE64_ALPHABET[((byte0 & 0x03) << 4) | (byte1 >> 4)]! +
+      BASE64_ALPHABET[(byte1 & 0x0f) << 2]! +
+      "=";
+  }
+  return output;
+}
+
+/** Decode canonical base64 without Node or browser-only globals. */
+export function base64DecodeBytes(value: string): Uint8Array | null {
+  if (
+    value.length === 0 ||
+    value.length % 4 !== 0 ||
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(
+      value,
+    )
+  ) {
+    return null;
+  }
+  const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  const bytes = new Uint8Array((value.length / 4) * 3 - padding);
+  let offset = 0;
+  for (let index = 0; index < value.length; index += 4) {
+    const a = BASE64_ALPHABET.indexOf(value[index]!);
+    const b = BASE64_ALPHABET.indexOf(value[index + 1]!);
+    const c =
+      value[index + 2] === "=" ? 0 : BASE64_ALPHABET.indexOf(value[index + 2]!);
+    const d =
+      value[index + 3] === "=" ? 0 : BASE64_ALPHABET.indexOf(value[index + 3]!);
+    if (a < 0 || b < 0 || c < 0 || d < 0) return null;
+    const packed = (a << 18) | (b << 12) | (c << 6) | d;
+    if (offset < bytes.length) bytes[offset++] = packed >> 16;
+    if (offset < bytes.length) bytes[offset++] = (packed >> 8) & 0xff;
+    if (offset < bytes.length) bytes[offset++] = packed & 0xff;
+  }
+  return bytes;
+}

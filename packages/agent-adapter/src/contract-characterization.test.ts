@@ -212,7 +212,7 @@ describe("Agent Circuit API frozen v1/v2 boundary (characterization)", () => {
     expect(snapshot.project).not.toHaveProperty("projectRevision");
   });
 
-  it("freezes session scopes to circuit data scopes plus semantic editor control", () => {
+  it("freezes circuit, semantic, and separately-scoped File Resource permissions", () => {
     expect([...AgentSessionScopeSchema.options]).toEqual([
       "circuit.snapshot",
       "circuit.render",
@@ -221,6 +221,9 @@ describe("Agent Circuit API frozen v1/v2 boundary (characterization)", () => {
       "circuit.edit.connectivity",
       "circuit.edit.presentation",
       "editor.semantic-control",
+      "project.download",
+      "project.import",
+      "visual.download",
     ]);
   });
 

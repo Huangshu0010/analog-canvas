@@ -282,6 +282,8 @@ redaction tests, then one deployed relay/browser scenario.
 
 ### A3. Scoped File Resource and browser-approved import
 
+**Status: complete (2026-08-13).**
+
 **Purpose.** Deliver file capability without exposing a filesystem or adding a
 fifth Circuit operation. The File Resource is a separate, browser-owned
 OpenAPI resource discovered from `capabilities`; it has only `project`,

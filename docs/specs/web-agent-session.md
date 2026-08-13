@@ -86,11 +86,14 @@ individually.
 | `circuit.edit.connectivity` | Net/terminal/Route connectivity edits    | `edit.connectivity`        |
 | `circuit.edit.presentation` | Text, drafting, annotation, style intent | `edit.presentation`        |
 | `editor.semantic-control`   | Temporary Cell/selection/Net/view focus  | `semanticControl`          |
+| `project.download`          | Canonical `.icproj.json` download        | File Resource only         |
+| `visual.download`           | Formal SVG/PNG/PDF download              | File Resource only         |
+| `project.import`            | Stage/inspect/discard/import approval    | File Resource only         |
 
-The web session's only read path is the v2 Snapshot. Legacy v1 `query` is not
-published by the hosted session. Import/export, raw Project download, filesystem
-access, and arbitrary code are **not** implied by full circuit edit and require
-separate scopes and user-visible controls if ever added.
+The web session's only circuit read path is the v2 Snapshot. Legacy v1 `query`
+is not published by the hosted session. File Resource scopes do not imply host
+filesystem access, arbitrary code, simulation, waveforms, or SPICE/design-
+netlist export.
 
 ## Project binding and replacement
 
@@ -112,6 +115,7 @@ The published external-Agent resources are deliberately limited to:
 GET    /api/agent/openapi.json             public machine-readable contract
 POST   /api/agent/claims                   Agent exchanges claim from JSON body
 POST   /api/agent/sessions/{id}/circuit    Agent sends one Circuit API request
+POST   /api/agent/sessions/{id}/files      Agent uses the named File Resource
 ```
 
 - Browser session creation, control/revocation, WebSocket forwarding, and
@@ -129,6 +133,24 @@ POST   /api/agent/sessions/{id}/circuit    Agent sends one Circuit API request
   (`agent-api.md`) and additionally have relay-level hard ceilings enforced
   before any forward.
 
+### File Resource
+
+`/files` is deliberately separate from the Circuit API's four operations. A
+successful `capabilities` response advertises it as `resources.file`; Agents
+must obey the returned byte limit and granted scopes. It supports only
+canonical Project JSON or formal SVG/PNG/PDF download, plus staging,
+inspection, discard, and explicit approval request for a bounded
+`.icproj.json` or virtual structural-SPICE source bundle.
+
+The browser validates base64, declared byte length, SHA-256, virtual relative
+names, duplicate names, and the existing Project/SPICE parser. Candidate bytes
+and parsed Projects exist only in short-lived browser memory. The relay stores
+neither candidate nor artifact bytes, and exported artifacts are one-shot:
+repeating their request id returns `REQUEST_RESULT_UNAVAILABLE` rather than a
+cached blob. Staging never mutates the live Project. Only the visible browser
+**Replace Project** confirmation accepts it; acceptance takes the existing
+Project replacement path and terminates the current Agent session.
+
 ## Relay message envelope
 
 Every forwarded operation uses one envelope. The `circuit-request` payload is
@@ -143,8 +165,14 @@ interface AgentSessionMessage {
   messageId: string; // unique per message
   requestId: string; // idempotency key for the token/session lifetime
   sentAt: string; // ISO-8601, set by the originator
-  kind: "circuit-request" | "circuit-response" | "event" | "cancel";
-  payload: unknown; // typed by kind; Circuit API schema for request/response
+  kind:
+    | "circuit-request"
+    | "circuit-response"
+    | "file-request"
+    | "file-response"
+    | "event"
+    | "cancel";
+  payload: unknown; // typed by kind; Circuit or File Resource schema
 }
 ```
 

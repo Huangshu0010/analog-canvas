@@ -2,13 +2,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   AGENT_API_VERSION,
+  AGENT_FILE_RESOURCE_MAX_BYTES,
   AGENT_API_V1_VERSION,
   AGENT_SESSION_PROTOCOL_VERSION,
   AgentSessionEventSchema,
   AgentSessionMessageSchema,
+  parseAgentFileResourceRequest,
   createAgentCircuitService,
   parseAgentCircuitRequest,
   type AgentOperationHost,
+  type AgentFileResourceRequest,
+  type AgentFileResourceResponse,
   type AgentPermissions,
   type AgentSessionScope,
 } from "@icm/agent-adapter";
@@ -106,6 +110,12 @@ export interface UseAgentSessionOptions {
   project: CircuitProject;
   projectSessionId: string;
   host: AgentOperationHost;
+  fileHost?: {
+    handle: (
+      request: AgentFileResourceRequest,
+    ) => Promise<AgentFileResourceResponse>;
+    clear?: () => void;
+  };
 }
 
 export interface UseAgentSessionResult extends AgentSessionViewModel {
@@ -208,6 +218,7 @@ export function useAgentSession(
     }
     stopReconnect(live);
     clearAgentSessionRecovery(window.sessionStorage);
+    options.fileHost?.clear?.();
     try {
       await control("revoke");
     } catch {
@@ -219,7 +230,7 @@ export function useAgentSession(
       { status: "revoked", claimCode: null, error: null },
       { at: Date.now(), kind: "revoked" },
     );
-  }, [control, update]);
+  }, [control, options.fileHost, update]);
 
   const grant = useCallback(
     async (
@@ -280,6 +291,22 @@ export function useAgentSession(
           agentId: `web-agent:${live.sessionId}`,
           host: options.host,
           permissions: permissionsFromScopes(scopes),
+          ...(options.fileHost
+            ? {
+                fileResource: {
+                  path: "/api/agent/sessions/{sessionId}/files" as const,
+                  operations: [
+                    "download",
+                    "stage",
+                    "inspect",
+                    "discard",
+                    "request-approval",
+                  ] as const,
+                  maxBytes: AGENT_FILE_RESOURCE_MAX_BYTES,
+                  humanApprovalRequired: true as const,
+                },
+              }
+            : {}),
         });
         const connect = () => {
           if (
@@ -358,6 +385,7 @@ export function useAgentSession(
               ) {
                 stopReconnect(live);
                 clearAgentSessionRecovery(window.sessionStorage);
+                options.fileHost?.clear?.();
                 socket.close(1000, "session revoked");
                 if (liveRef.current === live) liveRef.current = null;
                 update(
@@ -370,6 +398,62 @@ export function useAgentSession(
               ) {
                 update({ status: "paused" });
               }
+              return;
+            }
+            if (parsed.data.kind === "file-request") {
+              const fileRequest = parseAgentFileResourceRequest(
+                parsed.data.payload,
+              );
+              if (!fileRequest.success || !options.fileHost) return;
+              const payloadHash = sha256Hex(
+                JSON.stringify(parsed.data.payload),
+              );
+              const knownHash = live.requestHashes.get(parsed.data.requestId);
+              const sendFileResponse = (payload: unknown) => {
+                socket.send(
+                  JSON.stringify({
+                    protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+                    sessionId: live.sessionId,
+                    messageId: crypto.randomUUID(),
+                    requestId: parsed.data.requestId,
+                    sentAt: new Date().toISOString(),
+                    kind: "file-response",
+                    payload,
+                  }),
+                );
+              };
+              if (knownHash) {
+                sendFileResponse({
+                  apiVersion: AGENT_API_VERSION,
+                  requestId: parsed.data.requestId,
+                  operation: fileRequest.data.operation,
+                  ok: false,
+                  error: {
+                    code:
+                      knownHash === payloadHash
+                        ? "REQUEST_RESULT_UNAVAILABLE"
+                        : "REQUEST_ID_REUSED",
+                    message:
+                      knownHash === payloadHash
+                        ? "The request was already executed without a browser-side replay cache"
+                        : "requestId was reused with a different payload",
+                  },
+                });
+                return;
+              }
+              live.requestHashes.set(parsed.data.requestId, payloadHash);
+              update(
+                { status: "working" },
+                {
+                  at: Date.now(),
+                  kind: "operation",
+                  detail: `file.${fileRequest.data.operation}`,
+                },
+              );
+              void options.fileHost
+                .handle(fileRequest.data)
+                .then(sendFileResponse)
+                .finally(() => update({ status: "connected" }));
               return;
             }
             if (parsed.data.kind !== "circuit-request") return;
@@ -542,7 +626,14 @@ export function useAgentSession(
         });
       }
     },
-    [options.host, options.project, options.projectSessionId, revoke, update],
+    [
+      options.fileHost,
+      options.host,
+      options.project,
+      options.projectSessionId,
+      revoke,
+      update,
+    ],
   );
 
   useEffect(() => {
@@ -659,6 +750,7 @@ export function useAgentSession(
     );
     agentRevisionRef.current.clear();
     clearAgentSessionRecovery(window.sessionStorage);
+    options.fileHost?.clear?.();
     const live = liveRef.current;
     if (!live) return;
     stopReconnect(live);
@@ -670,7 +762,13 @@ export function useAgentSession(
         { at: Date.now(), kind: "replaced" },
       );
     });
-  }, [control, options.project, options.projectSessionId, update]);
+  }, [
+    control,
+    options.fileHost,
+    options.project,
+    options.projectSessionId,
+    update,
+  ]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -678,17 +776,19 @@ export function useAgentSession(
       if (live && Date.now() >= live.expiresAt) {
         stopReconnect(live);
         clearAgentSessionRecovery(window.sessionStorage);
+        options.fileHost?.clear?.();
         live.socket?.close(1000, "expired");
         liveRef.current = null;
         update({ status: "expired", claimCode: null });
       }
     }, 1_000);
     return () => window.clearInterval(timer);
-  }, [update]);
+  }, [options.fileHost, update]);
 
   useEffect(
     () => () => {
       const live = liveRef.current;
+      options.fileHost?.clear?.();
       if (live) {
         stopReconnect(live);
         if (!live.claimed) {
@@ -702,7 +802,7 @@ export function useAgentSession(
         live.socket?.close(1000, "tab closed");
       }
     },
-    [],
+    [options.fileHost],
   );
 
   return { ...view, grant, pause, resume, reconnect, rotate, revoke };

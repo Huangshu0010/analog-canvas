@@ -112,6 +112,15 @@ export const QueryScopeSchema = z.discriminatedUnion("kind", [
 export const AgentCapabilitiesRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("capabilities"),
 });
+/** Named non-Circuit resource advertised by a live browser Agent session. */
+export const AgentFileResourceCapabilitySchema = z.strictObject({
+  path: z.literal("/api/agent/sessions/{sessionId}/files"),
+  operations: z.array(
+    z.enum(["download", "stage", "inspect", "discard", "request-approval"]),
+  ),
+  maxBytes: z.number().int().positive(),
+  humanApprovalRequired: z.literal(true),
+});
 export const AgentQueryRequestSchema = RequestBaseSchema.extend({
   apiVersion: z.literal(AGENT_API_V1_VERSION),
   operation: z.literal("query"),
@@ -729,6 +738,9 @@ export const AgentCapabilitiesResponseSchema = ResponseBaseSchema.extend({
       AgentProductionPermissionsSchema,
     ]),
     limits: z.union([AgentLimitsSchema, AgentProductionLimitsSchema]),
+    resources: z
+      .strictObject({ file: AgentFileResourceCapabilitySchema })
+      .optional(),
   }),
 });
 export const AgentQueryResponseSchema = ResponseBaseSchema.extend({
@@ -888,6 +900,9 @@ const AgentProductionCapabilitiesResponseSchema = ResponseBaseSchema.extend({
     editKinds: z.array(z.string().min(1)),
     permissions: AgentProductionPermissionsSchema,
     limits: AgentProductionLimitsSchema,
+    resources: z
+      .strictObject({ file: AgentFileResourceCapabilitySchema })
+      .optional(),
   }),
 });
 const AgentProductionTransactSuccessResponseSchema =
@@ -950,6 +965,9 @@ export type AgentInstanceNetlistFacts = z.infer<
 >;
 export type AgentProjectSnapshot = z.infer<typeof AgentProjectSnapshotSchema>;
 export type AgentCatalogSnapshot = z.infer<typeof AgentCatalogSnapshotSchema>;
+export type AgentFileResourceCapability = z.infer<
+  typeof AgentFileResourceCapabilitySchema
+>;
 export type AgentSnapshotV3Response = z.infer<
   typeof AgentSnapshotV3ResponseSchema
 >;

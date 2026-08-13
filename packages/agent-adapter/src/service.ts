@@ -39,6 +39,7 @@ import type {
   AgentDiagnostic,
   AgentDiff,
   AgentLimits,
+  AgentFileResourceCapability,
   AgentObjectDescriptor,
   AgentPermissions,
   AgentQueryRequest,
@@ -126,6 +127,8 @@ export interface AgentCircuitHostServiceOptions {
   host: AgentOperationHost;
   permissions: AgentPermissions;
   limits?: Partial<AgentLimits>;
+  /** Advertised independently from the four Circuit operations. */
+  fileResource?: AgentFileResourceCapability;
 }
 
 export interface AgentCircuitService {
@@ -562,6 +565,9 @@ export function createAgentCircuitService(
   const host = useHost
     ? (options as AgentCircuitHostServiceOptions).host
     : null;
+  const fileResource = useHost
+    ? (options as AgentCircuitHostServiceOptions).fileResource
+    : undefined;
   const storeOptions = (
     useHost ? null : options
   ) as AgentCircuitServiceOptions | null;
@@ -652,6 +658,7 @@ export function createAgentCircuitService(
               request.apiVersion === AGENT_API_VERSION
                 ? productionLimits
                 : limits,
+            ...(fileResource ? { resources: { file: fileResource } } : {}),
           },
         });
       }

@@ -48,10 +48,13 @@ describe("ConnectAgentPanel", () => {
     expect(instructions).toContain(
       "replace {sessionId} in the Circuit URL with that value",
     );
-    expect(instructions).toContain("7. Dry-run non-trivial transact requests");
-    expect(instructions).toContain("9. Render, then request a fresh snapshot");
     expect(instructions).toContain(
-      "10. Reuse a requestId only when retrying the exact same payload",
+      "7. Use https://editor.example/api/agent/sessions/{sessionId}/files",
+    );
+    expect(instructions).toContain("9. Dry-run non-trivial transact requests");
+    expect(instructions).toContain("11. Render, then request a fresh snapshot");
+    expect(instructions).toContain(
+      "12. Reuse a requestId only when retrying the exact same payload",
     );
     expect(instructions).not.toMatch(/Bearer [A-Za-z0-9_-]{20,}/u);
   });

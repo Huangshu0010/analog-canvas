@@ -23,6 +23,8 @@ const IsoTimestampSchema = z
 export const AgentSessionMessageKindSchema = z.enum([
   "circuit-request",
   "circuit-response",
+  "file-request",
+  "file-response",
   "event",
   "cancel",
 ]);
@@ -153,6 +155,13 @@ export const AgentTransportErrorCodeSchema = z.enum([
   "REQUEST_TIMEOUT",
   "UNSUPPORTED_PROTOCOL_VERSION",
   "UNAUTHORIZED_ORIGIN",
+  // File Resource
+  "FILE_CONTENT_INVALID",
+  "FILE_TOO_LARGE",
+  "FILE_INTEGRITY_MISMATCH",
+  "FILE_CANDIDATE_NOT_FOUND",
+  "FILE_IMPORT_FAILED",
+  "FILE_EXPORT_FAILED",
 ]);
 
 /** Stable machine-readable failure envelope for every HTTP transport error. */
@@ -181,6 +190,9 @@ export const AgentSessionScopeSchema = z.enum([
   "circuit.edit.connectivity",
   "circuit.edit.presentation",
   "editor.semantic-control",
+  "project.download",
+  "project.import",
+  "visual.download",
 ]);
 
 export type AgentSessionMessage = z.infer<typeof AgentSessionMessageSchema>;

@@ -6486,3 +6486,19 @@ contracts (WP-R1)`.
   tests, all workspace builds and production smoke) passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `feat(agent): add shared semantic editor control`.
+
+## 2026-08-13 - Scoped browser Agent File Resource
+
+- Target: add the named File Resource for canonical Project/formal visual
+  download and browser-approved Project/structural-SPICE staging, without a
+  fifth Circuit operation, filesystem access, simulation, or netlist export.
+- Changed areas: Agent File Resource schemas/OpenAPI/artifacts/scopes/session
+  relay; browser file host and approval UI; session instructions/presets;
+  current Agent/session/roadmap specifications; unit, Worker, and browser E2E
+  coverage.
+- Validation: focused suites (48 tests), `web-agent-session` browser E2E,
+  typecheck, generated Agent artifacts, docs/diff checks, and
+  `pnpm verify:branch` (120 files, 725 tests, all workspace builds and
+  production smoke) passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(agent): add scoped browser file resource`.

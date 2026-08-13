@@ -306,6 +306,7 @@ describe("public Agent session routes", () => {
     expect(Object.keys(contract.paths).sort()).toEqual([
       "/api/agent/claims",
       "/api/agent/sessions/{sessionId}/circuit",
+      "/api/agent/sessions/{sessionId}/files",
     ]);
   });
 
@@ -339,6 +340,59 @@ describe("public Agent session routes", () => {
       ),
     ]);
     expect([first.status, second.status].sort()).toEqual([200, 409]);
+  });
+
+  it("gates the File Resource independently from Circuit edit scopes", async () => {
+    const { env } = routedFixture();
+    const createdResponse = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          projectSessionId: "project:files",
+          projectId: "project",
+          documentIds: ["document-main"],
+          scopes: ["project.download"],
+        }),
+      }),
+      env,
+    );
+    const created = (await createdResponse!.json()) as {
+      session: { sessionId: string; claimCode: string };
+    };
+    const claimResponse = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/claims", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ claimCode: created.session.claimCode }),
+      }),
+      env,
+    );
+    const claim = (await claimResponse!.json()) as { agentToken: string };
+    const response = await routeAgentSessionRequest(
+      new Request(
+        `https://editor.example/api/agent/sessions/${created.session.sessionId}/files`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${claim.agentToken}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            apiVersion: "2.0",
+            requestId: "not-visual-download",
+            operation: "download",
+            artifact: "svg",
+            documentId: "document-main",
+          }),
+        },
+      ),
+      env,
+    );
+    expect(response?.status).toBe(403);
+    expect(await response!.json()).toMatchObject({
+      error: { code: "TOKEN_SCOPE_INSUFFICIENT" },
+    });
   });
 
   it("does not reopen a revoked browser session from a retained editor proof", async () => {

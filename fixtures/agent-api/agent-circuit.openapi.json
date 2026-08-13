@@ -374,6 +374,203 @@
           }
         }
       }
+    },
+    "/api/agent/sessions/{sessionId}/files": {
+      "post": {
+        "operationId": "agentSessionFileResource",
+        "description": "Use formal Project/SVG/PNG/PDF download or stage a Project/structural-SPICE candidate in browser memory. Staging never changes the live Project; only a visible browser confirmation may accept it.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/agentFileResourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scoped file-resource response. Imported candidates remain browser-local until human approval.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentFileResourceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_TOO_LARGE",
+                    "message": "Request exceeds the byte limit"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "TOKEN_INVALID",
+                    "message": "Bearer token is missing or unknown"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "TOKEN_SCOPE_INSUFFICIENT",
+                    "message": "Bearer token does not grant the required scope"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "SESSION_NOT_FOUND",
+                    "message": "Session is unknown or expired"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_ID_REUSED",
+                    "message": "requestId was already used with a different payload"
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_TOO_LARGE",
+                    "message": "Request exceeds the byte limit"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Session rate limit exceeded"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "EDITOR_OFFLINE",
+                    "message": "Editor is offline"
+                  }
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_TIMEOUT",
+                    "message": "The browser did not complete the request in time"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -431,7 +628,13 @@
                   "REQUEST_RESULT_UNAVAILABLE",
                   "REQUEST_TIMEOUT",
                   "UNSUPPORTED_PROTOCOL_VERSION",
-                  "UNAUTHORIZED_ORIGIN"
+                  "UNAUTHORIZED_ORIGIN",
+                  "FILE_CONTENT_INVALID",
+                  "FILE_TOO_LARGE",
+                  "FILE_INTEGRITY_MISMATCH",
+                  "FILE_CANDIDATE_NOT_FOUND",
+                  "FILE_IMPORT_FAILED",
+                  "FILE_EXPORT_FAILED"
                 ]
               },
               "message": {
@@ -4050,6 +4253,53 @@
                       "changeHistoryEntries"
                     ],
                     "additionalProperties": false
+                  },
+                  "resources": {
+                    "type": "object",
+                    "properties": {
+                      "file": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "const": "/api/agent/sessions/{sessionId}/files"
+                          },
+                          "operations": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "download",
+                                "stage",
+                                "inspect",
+                                "discard",
+                                "request-approval"
+                              ]
+                            }
+                          },
+                          "maxBytes": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "humanApprovalRequired": {
+                            "type": "boolean",
+                            "const": true
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "operations",
+                          "maxBytes",
+                          "humanApprovalRequired"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "file"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -7178,6 +7428,525 @@
               "code",
               "severity",
               "message"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "agentFileResourceRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+              },
+              "operation": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema2"
+              },
+              "artifact": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema3"
+              },
+              "documentId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema4"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "artifact"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "const": "stage"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "project",
+                  "structural-spice"
+                ]
+              },
+              "files": {
+                "minItems": 1,
+                "maxItems": 24,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema5"
+                }
+              },
+              "entryPath": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "kind",
+              "files"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "const": "inspect"
+              },
+              "candidateId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "candidateId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "const": "discard"
+              },
+              "candidateId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "candidateId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "const": "request-approval"
+              },
+              "candidateId": {
+                "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "candidateId"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "const": "2.0"
+          },
+          "__schema1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "__schema2": {
+            "type": "string",
+            "const": "download"
+          },
+          "__schema3": {
+            "type": "string",
+            "enum": [
+              "project",
+              "svg",
+              "png",
+              "pdf"
+            ]
+          },
+          "__schema4": {
+            "$ref": "#/components/schemas/agentFileResourceRequest/$defs/__schema1"
+          },
+          "__schema5": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "mediaType": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "encoding": {
+                "type": "string",
+                "const": "base64"
+              },
+              "data": {
+                "type": "string",
+                "minLength": 4
+              },
+              "byteLength": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 1500000
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": [
+              "name",
+              "mediaType",
+              "encoding",
+              "data",
+              "byteLength",
+              "sha256"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "agentFileResourceResponse": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "const": "download"
+              },
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "artifact": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  "mediaType": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "encoding": {
+                    "type": "string",
+                    "const": "base64"
+                  },
+                  "data": {
+                    "type": "string",
+                    "minLength": 4
+                  },
+                  "byteLength": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 1500000
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                },
+                "required": [
+                  "name",
+                  "mediaType",
+                  "encoding",
+                  "data",
+                  "byteLength",
+                  "sha256"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "ok",
+              "artifact"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "stage",
+                  "inspect"
+                ]
+              },
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "candidate": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema2"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "ok",
+              "candidate"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "const": "discard"
+              },
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "discarded": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "ok",
+              "discarded"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "const": "request-approval"
+              },
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "candidate": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema2"
+              },
+              "approval": {
+                "type": "string",
+                "const": "pending-human"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "ok",
+              "candidate",
+              "approval"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema0"
+              },
+              "requestId": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema1"
+              },
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "download",
+                  "stage",
+                  "inspect",
+                  "discard",
+                  "request-approval"
+                ]
+              },
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "error": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "message": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "apiVersion",
+              "requestId",
+              "operation",
+              "ok",
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "const": "2.0"
+          },
+          "__schema1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "__schema2": {
+            "type": "object",
+            "properties": {
+              "candidateId": {
+                "$ref": "#/components/schemas/agentFileResourceResponse/$defs/__schema1"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "project",
+                  "structural-spice"
+                ]
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "projectName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "documentCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "instanceCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "diagnostics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "warning",
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "severity",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "candidateId",
+              "kind",
+              "expiresAt",
+              "projectName",
+              "documentCount",
+              "instanceCount",
+              "diagnostics"
             ],
             "additionalProperties": false
           }

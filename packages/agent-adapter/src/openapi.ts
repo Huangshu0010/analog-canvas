@@ -4,6 +4,10 @@ import {
   AgentCircuitResponseJsonSchema,
 } from "./schema.js";
 import {
+  AgentFileResourceRequestJsonSchema,
+  AgentFileResourceResponseJsonSchema,
+} from "./file-resource.js";
+import {
   AgentClaimRequestJsonSchema,
   AgentTransportErrorResponseJsonSchema,
 } from "./envelope.js";
@@ -47,6 +51,14 @@ const agentCircuitResponseSchema = componentSchema(
   AgentCircuitResponseJsonSchema as Record<string, unknown>,
   "agentCircuitResponse",
 );
+const agentFileResourceRequestSchema = componentSchema(
+  AgentFileResourceRequestJsonSchema as Record<string, unknown>,
+  "agentFileResourceRequest",
+);
+const agentFileResourceResponseSchema = componentSchema(
+  AgentFileResourceResponseJsonSchema as Record<string, unknown>,
+  "agentFileResourceResponse",
+);
 const agentClaimRequestSchema = componentSchema(
   AgentClaimRequestJsonSchema as Record<string, unknown>,
   "agentClaimRequest",
@@ -60,6 +72,12 @@ const agentCircuitRequestRef = {
 } as const;
 const agentCircuitResponseRef = {
   $ref: "#/components/schemas/agentCircuitResponse",
+} as const;
+const agentFileResourceRequestRef = {
+  $ref: "#/components/schemas/agentFileResourceRequest",
+} as const;
+const agentFileResourceResponseRef = {
+  $ref: "#/components/schemas/agentFileResourceResponse",
 } as const;
 
 export const agentCircuitRequestExamples = {
@@ -230,6 +248,23 @@ const circuitSessionResponses = {
   "504": transportErrorResponse(agentTransportErrorExamples["504"]),
 } as const;
 
+const fileSessionResponses = {
+  "200": {
+    description:
+      "Scoped file-resource response. Imported candidates remain browser-local until human approval.",
+    content: { "application/json": { schema: agentFileResourceResponseRef } },
+  },
+  "400": transportErrorResponse(agentTransportErrorExamples["413"]),
+  "401": transportErrorResponse(agentTransportErrorExamples["401"]),
+  "403": transportErrorResponse(agentTransportErrorExamples["403"]),
+  "404": transportErrorResponse(agentTransportErrorExamples["404"]),
+  "409": transportErrorResponse(agentTransportErrorExamples["409"]),
+  "413": transportErrorResponse(agentTransportErrorExamples["413"]),
+  "429": transportErrorResponse(agentTransportErrorExamples["429"]),
+  "503": transportErrorResponse(agentTransportErrorExamples["503"]),
+  "504": transportErrorResponse(agentTransportErrorExamples["504"]),
+} as const;
+
 const claimResponses = {
   "200": {
     description: "Claim redeemed",
@@ -295,6 +330,29 @@ export const agentCircuitOpenApi = {
         responses: circuitSessionResponses,
       },
     },
+    "/api/agent/sessions/{sessionId}/files": {
+      post: {
+        operationId: "agentSessionFileResource",
+        description:
+          "Use formal Project/SVG/PNG/PDF download or stage a Project/structural-SPICE candidate in browser memory. Staging never changes the live Project; only a visible browser confirmation may accept it.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "sessionId",
+            in: "path",
+            required: true,
+            schema: { type: "string", minLength: 1 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: agentFileResourceRequestRef },
+          },
+        },
+        responses: fileSessionResponses,
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -305,6 +363,8 @@ export const agentCircuitOpenApi = {
       agentTransportErrorResponse: agentTransportErrorResponseSchema,
       agentCircuitRequest: agentCircuitRequestSchema,
       agentCircuitResponse: agentCircuitResponseSchema,
+      agentFileResourceRequest: agentFileResourceRequestSchema,
+      agentFileResourceResponse: agentFileResourceResponseSchema,
       agentClaimResponse: {
         type: "object",
         additionalProperties: false,

@@ -96,7 +96,9 @@ interface RateWindow {
 }
 
 interface CachedResult {
-  result: unknown;
+  /** Omitted for one-shot artifacts so the relay never retains their bytes. */
+  result?: unknown;
+  unavailable?: true;
   completedAt: number;
   payloadHash: string;
   byteLength: number;
@@ -427,6 +429,11 @@ export class AgentSessionMachine {
     }
     const cached = this.internals.cache.get(requestId);
     if (cached && now - cached.completedAt < this.limits.resultCacheTtlMs) {
+      if (cached.unavailable) {
+        return cached.payloadHash === payloadHash
+          ? { kind: "rejected", code: "REQUEST_RESULT_UNAVAILABLE" }
+          : { kind: "rejected", code: "REQUEST_ID_REUSED" };
+      }
       return cached.payloadHash === payloadHash
         ? { kind: "cached", result: cached.result }
         : { kind: "rejected", code: "REQUEST_ID_REUSED" };
@@ -491,6 +498,27 @@ export class AgentSessionMachine {
       this.internals.cache.delete(oldestId);
       totalBytes -= oldest?.byteLength ?? 0;
     }
+  }
+
+  /**
+   * Complete a request without retaining its result. Used for exported bytes:
+   * a retry with the same requestId is rejected instead of replaying a stale
+   * browser artifact through the Durable Object.
+   */
+  completeRequestWithoutResult(requestId: string, now: number): void {
+    const pending = this.internals.pending.get(requestId);
+    this.activeRequests.delete(requestId);
+    this.internals.pending.set(requestId, {
+      payloadHash: pending?.payloadHash ?? requestId,
+      startedAt: pending?.startedAt ?? now,
+      completedAt: now,
+    });
+    this.internals.cache.set(requestId, {
+      unavailable: true,
+      completedAt: now,
+      payloadHash: pending?.payloadHash ?? requestId,
+      byteLength: 0,
+    });
   }
 
   failRequest(requestId: string, forget = true): void {

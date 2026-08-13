@@ -34,7 +34,7 @@ describe("Agent golden request contract", () => {
     });
   });
 
-  it("publishes only the external claim and session Circuit paths", () => {
+  it("publishes claim, Circuit, and the separate File Resource paths", () => {
     for (const apiVersion of ["1.0", "3.0"] as const) {
       expect(
         AgentProductionCircuitRequestSchema.safeParse({
@@ -47,6 +47,7 @@ describe("Agent golden request contract", () => {
     expect(Object.keys(agentCircuitOpenApi.paths).sort()).toEqual([
       "/api/agent/claims",
       "/api/agent/sessions/{sessionId}/circuit",
+      "/api/agent/sessions/{sessionId}/files",
     ]);
   });
 

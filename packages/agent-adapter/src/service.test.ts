@@ -198,6 +198,7 @@ describe("Agent Circuit API v1 service", () => {
     expect(Object.keys(agentCircuitOpenApi.paths).sort()).toEqual([
       "/api/agent/claims",
       "/api/agent/sessions/{sessionId}/circuit",
+      "/api/agent/sessions/{sessionId}/files",
     ]);
   });
 

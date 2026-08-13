@@ -49,20 +49,22 @@ Every request contains a stable `requestId`, an `apiVersion`, and one operation.
 
 API v2 has exactly four operations:
 
-| Operation      | Required payload                                            | Result                                    |
-| -------------- | ----------------------------------------------------------- | ----------------------------------------- |
-| `capabilities` | none                                                        | operations, permissions, limits, versions |
-| `snapshot`     | Document ID, optional source spans                          | complete AgentSessionSnapshot             |
+| Operation      | Required payload                                                       | Result                                      |
+| -------------- | ---------------------------------------------------------------------- | ------------------------------------------- |
+| `capabilities` | none                                                                   | operations, permissions, limits, versions   |
+| `snapshot`     | Document ID, optional source spans                                     | complete AgentSessionSnapshot               |
 | `transact`     | Document ID, revision, transaction ID, edits, Wire, or semantic intent | mutation diff or non-persisting UI evidence |
-| `render`       | Document ID, formal/diagnostics mode, optional bounds       | bounded SVG artifact and diagnostics      |
+| `render`       | Document ID, formal/diagnostics mode, optional bounds                  | bounded SVG artifact and diagnostics        |
 
 API v1 remains accepted only by the optional local development adapter with
 `capabilities/query/transact/render`. No new query
 planner or semantic scope is added to v1. `transact` and `render` retain their
 meaning across both versions.
 
-No request accepts Project JSON, a whole Snapshot/Document replacement,
-filesystem path, JavaScript, or SVG input.
+No **Circuit** request accepts Project JSON, a whole Snapshot/Document
+replacement, filesystem path, JavaScript, or SVG input. The separately scoped
+File Resource is the sole exception for bounded Project/structural-SPICE
+candidate staging; it never directly replaces a Project.
 
 Hosted requests have one production parser: the schema published at
 `/api/agent/openapi.json`. The relay, browser WebSocket host, and Circuit
@@ -74,10 +76,10 @@ echo bearer tokens or rejected values. Invalid bodies do not forward to the
 browser, begin an idempotency record, or change a Document revision. JSON
 syntax failures use the same envelope with no invented field path.
 
-The published web OpenAPI exposes only claim redemption and the authenticated
-session Circuit endpoint. Browser-owner control, WebSocket forwarding, local
-loopback, and relay-event routes are implementation details, not Agent API
-operations.
+The published web OpenAPI exposes claim redemption, the authenticated session
+Circuit endpoint, and a separately scoped File Resource endpoint. Browser-owner
+control, WebSocket forwarding, local loopback, and relay-event routes are
+implementation details, not Agent API operations.
 
 ## Implementation ownership and evidence flow
 
@@ -302,9 +304,9 @@ The optional local adapter accepts JSON only, uses `Cache-Control: no-store`,
 requires a bearer token of at least 32 characters, and binds only to
 `127.0.0.1` or `::1`. It may retain `/v1/circuit` as an explicit migration
 reader beside `/v2/circuit`. The hosted public OpenAPI instead exposes the
-claim endpoint and one authenticated session Circuit endpoint carrying the v2
-four-operation contract. Request bodies remain bounded and no filesystem route
-exists.
+claim endpoint, one authenticated session Circuit endpoint carrying the v2
+four-operation contract, and the independently scoped browser File Resource.
+Request bodies remain bounded and no filesystem route exists.
 
 ## Invariants
 
@@ -315,6 +317,9 @@ exists.
 - Bidirectional pin/Net views agree.
 - An Agent cannot claim human identity or bypass Edit Engine atomicity/locks.
 - Raw Project/Snapshot replacement and arbitrary filesystem access do not exist.
+- File Resource candidates remain browser-memory-only until an explicit human
+  approval; it exposes only canonical Project download, formal SVG/PNG/PDF,
+  and bounded Project/structural-SPICE stage/inspect/discard requests.
 - Drafting and guide edits are non-electrical; they never change
   `electricalTopologyHash`, Net/Route/Junction membership, or flightline.
 - No request accepts SVG, CSS, HTML, arbitrary LaTeX, or a script/path payload;

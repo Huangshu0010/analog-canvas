@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { WebSocketRoute } from "@playwright/test";
+import { createHash } from "node:crypto";
+
+import { createEmptyProject, serializeProject } from "@icm/model";
 
 import { clickCommand, openMenu } from "./editor-fixtures.js";
 
@@ -139,6 +142,61 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
       .at(-1)!;
   };
 
+  const sendFileRequest = async (
+    requestId: string,
+    payload: Record<string, unknown>,
+  ): Promise<SessionMessage> => {
+    const responseCount = responses.filter(
+      (message) =>
+        message.requestId === requestId && message.kind === "file-response",
+    ).length;
+    socket.send(
+      JSON.stringify({
+        protocolVersion: "1.0",
+        sessionId,
+        messageId: `file-${requestId}`,
+        requestId,
+        sentAt: new Date().toISOString(),
+        kind: "file-request",
+        payload,
+      }),
+    );
+    await expect
+      .poll(
+        () =>
+          responses.filter(
+            (message) =>
+              message.requestId === requestId &&
+              message.kind === "file-response",
+          ).length,
+      )
+      .toBe(responseCount + 1);
+    return responses
+      .filter(
+        (message) =>
+          message.requestId === requestId && message.kind === "file-response",
+      )
+      .at(-1)!;
+  };
+
+  const capabilities = await sendCircuitRequest("capabilities", {
+    apiVersion: "2.0",
+    requestId: "capabilities",
+    operation: "capabilities",
+  });
+  expect(capabilities.payload).toMatchObject({
+    ok: true,
+    capabilities: {
+      operations: ["capabilities", "snapshot", "transact", "render"],
+      resources: {
+        file: {
+          path: "/api/agent/sessions/{sessionId}/files",
+          humanApprovalRequired: true,
+        },
+      },
+    },
+  });
+
   const snapshot = await sendCircuitRequest("snapshot-before", {
     apiVersion: "2.0",
     requestId: "snapshot-before",
@@ -231,6 +289,44 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
     ],
   });
   expect(replay.payload).toEqual(transaction.payload);
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
+  const stagedBytes = Buffer.from(
+    serializeProject(
+      createEmptyProject("agent-staged", "Agent staged Project"),
+    ),
+  );
+  const staged = await sendFileRequest("stage-project", {
+    apiVersion: "2.0",
+    requestId: "stage-project",
+    operation: "stage",
+    kind: "project",
+    files: [
+      {
+        name: "agent-staged.icproj.json",
+        mediaType: "application/json",
+        encoding: "base64",
+        data: stagedBytes.toString("base64"),
+        byteLength: stagedBytes.byteLength,
+        sha256: createHash("sha256").update(stagedBytes).digest("hex"),
+      },
+    ],
+  });
+  expect(staged.payload).toMatchObject({ ok: true, operation: "stage" });
+  const candidateId = (staged.payload as { candidate: { candidateId: string } })
+    .candidate.candidateId;
+  await sendFileRequest("approve-staged-project", {
+    apiVersion: "2.0",
+    requestId: "approve-staged-project",
+    operation: "request-approval",
+    candidateId,
+  });
+  await expect(page.getByTestId("agent-file-approval")).toContainText(
+    "Agent staged Project",
+  );
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await page.getByTestId("agent-file-reject").click();
+  await expect(page.getByTestId("agent-file-approval")).toHaveCount(0);
   await expect(page.getByTestId("revision")).toHaveText("1");
 
   await page

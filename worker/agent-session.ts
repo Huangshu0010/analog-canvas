@@ -2,6 +2,8 @@ import {
   AGENT_SESSION_PROTOCOL_VERSION,
   AgentClaimRequestSchema,
   AgentCircuitResponseSchema,
+  AgentFileResourceResponseSchema,
+  AgentSessionScopeSchema,
   DEFAULT_AGENT_SESSION_LIMITS,
   AgentSessionEventSchema,
   AgentSessionMachine,
@@ -11,7 +13,9 @@ import {
   agentCircuitOpenApi,
   invalidAgentRequestResponse,
   parseAgentCircuitRequest,
+  parseAgentFileResourceRequest,
   type AgentCircuitRequest,
+  type AgentFileResourceRequest,
   type AgentSessionEvent,
   type AgentSessionLimits,
   type AgentSessionScope,
@@ -247,7 +251,7 @@ export async function routeAgentSessionRequest(
   }
 
   const match =
-    /^\/api\/agent\/sessions\/([^/]+)(?:\/(circuit|events|editor|control))?$/u.exec(
+    /^\/api\/agent\/sessions\/([^/]+)(?:\/(circuit|files|events|editor|control))?$/u.exec(
       url.pathname,
     );
   if (!match) return jsonResponse({ error: "Not found" }, 404, allowedOrigin);
@@ -305,6 +309,7 @@ function transportStatus(code: AgentTransportErrorCode): number {
       return 404;
     case "REQUEST_TOO_LARGE":
     case "MESSAGE_TOO_LARGE":
+    case "FILE_TOO_LARGE":
       return 413;
     case "RATE_LIMITED":
       return 429;
@@ -343,6 +348,12 @@ function errorMessage(code: AgentTransportErrorCode): string {
     REQUEST_TIMEOUT: "The browser did not complete the request in time",
     UNSUPPORTED_PROTOCOL_VERSION: "Unsupported session protocol version",
     UNAUTHORIZED_ORIGIN: "Origin is not authorized",
+    FILE_CONTENT_INVALID: "File content does not match the requested format",
+    FILE_TOO_LARGE: "File Resource payload exceeds its bounded limit",
+    FILE_INTEGRITY_MISMATCH: "File content hash does not match its declaration",
+    FILE_CANDIDATE_NOT_FOUND: "Candidate is unavailable or has expired",
+    FILE_IMPORT_FAILED: "Structural SPICE import failed",
+    FILE_EXPORT_FAILED: "Formal file export failed",
   };
   return messages[code];
 }
@@ -391,6 +402,22 @@ function operationScopes(request: AgentCircuitRequest): AgentSessionScope[] {
           }),
         ),
       ];
+  }
+}
+
+function fileOperationScopes(
+  request: AgentFileResourceRequest,
+): AgentSessionScope[] {
+  switch (request.operation) {
+    case "download":
+      return [
+        request.artifact === "project" ? "project.download" : "visual.download",
+      ];
+    case "stage":
+    case "inspect":
+    case "discard":
+    case "request-approval":
+      return ["project.import"];
   }
 }
 
@@ -507,6 +534,9 @@ export class AgentSessionDO {
     if (request.method === "POST" && url.pathname === "/circuit") {
       return this.circuit(request, machine, allowedOrigin);
     }
+    if (request.method === "POST" && url.pathname === "/files") {
+      return this.files(request, machine, allowedOrigin);
+    }
     if (request.method === "GET" && url.pathname === "/events") {
       return this.events(request, machine, allowedOrigin);
     }
@@ -548,10 +578,16 @@ export class AgentSessionDO {
     if (!parsed.success) return;
     const envelope = parsed.data;
     if (envelope.sessionId !== machine.sessionId) return;
-    if (envelope.kind === "circuit-response") {
+    if (
+      envelope.kind === "circuit-response" ||
+      envelope.kind === "file-response"
+    ) {
       const pending = this.pendingForwards.get(envelope.requestId);
       if (!pending) return;
-      const response = AgentCircuitResponseSchema.safeParse(envelope.payload);
+      const response =
+        envelope.kind === "circuit-response"
+          ? AgentCircuitResponseSchema.safeParse(envelope.payload)
+          : AgentFileResourceResponseSchema.safeParse(envelope.payload);
       if (!response.success) {
         clearTimeout(pending.timeout);
         this.pendingForwards.delete(envelope.requestId);
@@ -668,15 +704,7 @@ export class AgentSessionDO {
       }
       const scopes = body.scopes.filter(
         (value): value is AgentSessionScope =>
-          typeof value === "string" &&
-          [
-            "circuit.snapshot",
-            "circuit.render",
-            "circuit.source-spans",
-            "circuit.edit.geometry",
-            "circuit.edit.connectivity",
-            "circuit.edit.presentation",
-          ].includes(value),
+          AgentSessionScopeSchema.safeParse(value).success,
       );
       if (
         scopes.length !== body.scopes.length ||
@@ -931,6 +959,145 @@ export class AgentSessionDO {
     }
   }
 
+  private async files(
+    request: Request,
+    machine: AgentSessionMachine,
+    allowedOrigin: string | null,
+  ): Promise<Response> {
+    const raw = await request.text();
+    const size = machine.checkSize(new TextEncoder().encode(raw).byteLength);
+    if (!size.ok) {
+      return jsonResponse(
+        errorBody(size.code, errorMessage(size.code)),
+        transportStatus(size.code),
+        allowedOrigin,
+      );
+    }
+    let input: unknown;
+    try {
+      input = JSON.parse(raw);
+    } catch {
+      return jsonResponse(
+        errorBody(
+          "FILE_CONTENT_INVALID",
+          "File Resource request must be valid JSON",
+        ),
+        400,
+        allowedOrigin,
+      );
+    }
+    const parsed = parseAgentFileResourceRequest(input);
+    if (!parsed.success) {
+      return jsonResponse(
+        errorBody(
+          "FILE_CONTENT_INVALID",
+          "File Resource request does not match its strict schema",
+        ),
+        400,
+        allowedOrigin,
+      );
+    }
+    const fileRequest = parsed.data;
+    const auth = machine.authorize(bearerToken(request), Date.now());
+    if (!auth.ok)
+      return jsonResponse(
+        errorBody(auth.code, errorMessage(auth.code)),
+        transportStatus(auth.code),
+        allowedOrigin,
+      );
+    const scopeAllowed = fileOperationScopes(fileRequest).every(
+      (required) => machine.assertScope(auth.session.scopes, required).ok,
+    );
+    if (!scopeAllowed) {
+      return jsonResponse(
+        errorBody(
+          "TOKEN_SCOPE_INSUFFICIENT",
+          errorMessage("TOKEN_SCOPE_INSUFFICIENT"),
+        ),
+        403,
+        allowedOrigin,
+      );
+    }
+    if (
+      fileRequest.operation === "download" &&
+      fileRequest.documentId !== undefined
+    ) {
+      const document = machine.assertDocument(
+        machine.projectId,
+        fileRequest.documentId,
+      );
+      if (!document.ok)
+        return jsonResponse(
+          errorBody(
+            document.code,
+            "Document is outside the authorized session",
+          ),
+          403,
+          allowedOrigin,
+        );
+    }
+    const begin = machine.beginRequest(
+      fileRequest.requestId,
+      Date.now(),
+      await sha256Text(raw),
+    );
+    if (begin.kind === "cached")
+      return jsonResponse(begin.result, 200, allowedOrigin);
+    if (begin.kind === "rejected")
+      return jsonResponse(
+        errorBody(begin.code, errorMessage(begin.code)),
+        transportStatus(begin.code),
+        allowedOrigin,
+      );
+    await this.persist();
+    this.emit({
+      type: "operation.started",
+      sessionId: machine.sessionId,
+      requestId: fileRequest.requestId,
+    });
+    try {
+      const result = await this.forwardToEditor(
+        machine,
+        fileRequest,
+        "file-request",
+      );
+      // Export blobs are explicitly one-shot: the DO retains only an unavailable
+      // idempotency marker, never their bytes. Candidate summaries are safe to cache.
+      if (fileRequest.operation === "download") {
+        machine.completeRequestWithoutResult(fileRequest.requestId, Date.now());
+      } else {
+        machine.completeRequest(fileRequest.requestId, result, Date.now());
+      }
+      await this.persist();
+      this.emit({
+        type: "operation.completed",
+        sessionId: machine.sessionId,
+        requestId: fileRequest.requestId,
+      });
+      return jsonResponse(result, 200, allowedOrigin);
+    } catch (error) {
+      const value = error instanceof Error ? error.message : "";
+      const code: AgentTransportErrorCode =
+        value === "REQUEST_TIMEOUT" || value === "MESSAGE_TOO_LARGE"
+          ? value
+          : value === "EDITOR_OFFLINE"
+            ? "EDITOR_OFFLINE"
+            : "EDITOR_DISCONNECTED";
+      machine.failRequest(fileRequest.requestId, code === "EDITOR_OFFLINE");
+      await this.persist();
+      this.emit({
+        type: "operation.failed",
+        sessionId: machine.sessionId,
+        requestId: fileRequest.requestId,
+      });
+      return jsonResponse(
+        errorBody(code, errorMessage(code)),
+        transportStatus(code),
+        allowedOrigin,
+      );
+    }
+  }
+
   private async events(
     request: Request,
     machine: AgentSessionMachine,
@@ -1040,7 +1207,8 @@ export class AgentSessionDO {
 
   private async forwardToEditor(
     machine: AgentSessionMachine,
-    payload: AgentCircuitRequest,
+    payload: AgentCircuitRequest | AgentFileResourceRequest,
+    kind: "circuit-request" | "file-request" = "circuit-request",
   ): Promise<unknown> {
     const sockets = this.state.getWebSockets?.(EDITOR_SOCKET_TAG) ?? [];
     const socket = sockets.find(
@@ -1062,7 +1230,7 @@ export class AgentSessionDO {
         messageId: crypto.randomUUID(),
         requestId,
         sentAt: new Date().toISOString(),
-        kind: "circuit-request",
+        kind,
         payload,
       }),
     );

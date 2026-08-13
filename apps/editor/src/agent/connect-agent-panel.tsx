@@ -52,6 +52,8 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
       "circuit.render",
       "circuit.source-spans",
       "editor.semantic-control",
+      "project.download",
+      "visual.download",
     ],
   },
   {
@@ -63,6 +65,8 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
       "circuit.source-spans",
       "circuit.edit.geometry",
       "editor.semantic-control",
+      "project.download",
+      "visual.download",
     ],
   },
   {
@@ -76,6 +80,9 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
       "circuit.edit.connectivity",
       "circuit.edit.presentation",
       "editor.semantic-control",
+      "project.download",
+      "visual.download",
+      "project.import",
     ],
   },
 ];
@@ -104,6 +111,7 @@ export function agentConnectionInstructions(
 ): string {
   const claimUrl = `${origin}/api/agent/claims`;
   const circuitUrl = `${origin}/api/agent/sessions/{sessionId}/circuit`;
+  const fileUrl = `${origin}/api/agent/sessions/{sessionId}/files`;
   const openApiUrl = `${origin}/api/agent/openapi.json`;
   return `Connect to the Interactive Circuit Maker Agent API.
 1. Redeem claimCode exactly once by POSTing ${JSON.stringify({ claimCode })} to ${claimUrl}, and retain the complete response in memory.
@@ -112,10 +120,12 @@ export function agentConnectionInstructions(
 4. Call capabilities once through POST ${circuitUrl}.
 5. Request one complete snapshot for the selected documentId.
 6. Validate every request against the published OpenAPI: ${openApiUrl}
-7. Dry-run non-trivial transact requests using the snapshot revision.
-8. Commit the same edits only if dry-run succeeds and the revision is unchanged.
-9. Render, then request a fresh snapshot for final verification.
-10. Reuse a requestId only when retrying the exact same payload.`;
+7. Use ${fileUrl} only for authorized Project/formal-file download or staging a bounded Project/structural-SPICE candidate; staging never changes the browser Project.
+8. A human must explicitly approve a staged candidate in the editor before it can replace the Project.
+9. Dry-run non-trivial transact requests using the snapshot revision.
+10. Commit the same edits only if dry-run succeeds and the revision is unchanged.
+11. Render, then request a fresh snapshot for final verification.
+12. Reuse a requestId only when retrying the exact same payload.`;
 }
 
 const STATUS_LABEL: Record<AgentConnectionStatus, string> = {

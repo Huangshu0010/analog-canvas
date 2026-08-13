@@ -70,6 +70,18 @@ describe("AgentSessionMachine", () => {
     if (!reuse.ok) expect(reuse.code).toBe("CLAIM_ALREADY_USED");
   });
 
+  it("records one-shot artifacts without retaining or replaying their bytes", () => {
+    const { machine, now } = setup();
+    expect(machine.beginRequest("artifact", now(), "artifact-hash")).toEqual({
+      kind: "proceed",
+    });
+    machine.completeRequestWithoutResult("artifact", now());
+    expect(machine.beginRequest("artifact", now(), "artifact-hash")).toEqual({
+      kind: "rejected",
+      code: "REQUEST_RESULT_UNAVAILABLE",
+    });
+  });
+
   it("rejects an unknown claim code", () => {
     const { machine, now } = setup();
     const result = machine.redeemClaim("not-the-code", now());

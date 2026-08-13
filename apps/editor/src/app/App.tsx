@@ -143,7 +143,9 @@ import { EditorHelpDialog } from "../components/editor-help-dialog";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
 import { ConnectAgentPanel } from "../agent/connect-agent-panel";
 import { BrowserAgentHost } from "../agent/browser-agent-host";
+import { BrowserAgentFileHost } from "../agent/browser-agent-file-host";
 import { useAgentSession } from "../agent/use-agent-session";
+import type { AgentFileCandidateSummary } from "@icm/agent-adapter";
 import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
@@ -528,11 +530,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       ),
     [editorDocumentController, projectSessionId],
   );
-  const agentSession = useAgentSession({
-    project,
-    projectSessionId,
-    host: browserAgentHost,
-  });
   const [documentStack, setDocumentStack] = useState<HierarchyFrame[]>([]);
   const {
     selection: visualSelection,
@@ -549,6 +546,28 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     [],
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
+  const [agentFileCandidate, setAgentFileCandidate] =
+    useState<AgentFileCandidateSummary | null>(null);
+  const browserAgentFileHost = useMemo(
+    () =>
+      new BrowserAgentFileHost({
+        getProjectSessionId: () => editorDocumentController.projectSessionId,
+        getProject: () => editorDocumentController.project,
+        getDocument: (documentId) =>
+          editorDocumentController.project.documents.find(
+            (candidate) => candidate.id === documentId,
+          ) ?? null,
+        getResolver: () => editorDocumentController.resolver,
+        onApprovalRequested: setAgentFileCandidate,
+      }),
+    [editorDocumentController, projectSessionId],
+  );
+  const agentSession = useAgentSession({
+    project,
+    projectSessionId,
+    host: browserAgentHost,
+    fileHost: browserAgentFileHost,
+  });
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [routeStretchPreview, setRouteStretchPreview] =
@@ -1636,6 +1655,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     // revive after Save/Discard/Open/Import/Restore/demo-load swaps the project.
     // Callers that also remove the recovery key do so after this cancels.
     cancelRecovery();
+    browserAgentFileHost.clear();
+    setAgentFileCandidate(null);
     const prepared = materializeRazaviProjectBulkConnections(nextProject);
     const nextDocument = replaceProject(prepared.project);
     documentViewBoxes.current = new Map();
@@ -1643,6 +1664,32 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setViewBox(nextViewBox);
     resetInteractionState();
     return nextDocument;
+  }
+
+  function approveAgentFileCandidate(): void {
+    if (!agentFileCandidate) return;
+    const candidate = browserAgentFileHost.consumeApproved(
+      agentFileCandidate.candidateId,
+    );
+    setAgentFileCandidate(null);
+    if (!candidate) {
+      setStatus(
+        "Agent file candidate expired; ask the Agent to stage it again",
+      );
+      return;
+    }
+    replaceActiveProject(candidate);
+    stageRecovery(candidate);
+    setStatus(
+      `Accepted Agent ${agentFileCandidate.kind} candidate: ${candidate.name}`,
+    );
+  }
+
+  function rejectAgentFileCandidate(): void {
+    if (!agentFileCandidate) return;
+    browserAgentFileHost.discard(agentFileCandidate.candidateId);
+    setAgentFileCandidate(null);
+    setStatus("Rejected Agent file candidate");
   }
 
   function jumpToVisualDiagnostic(
@@ -6182,6 +6229,64 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           setAgentPanelOpen(false);
         }}
       />
+      {agentFileCandidate ? (
+        <div className="agent-panel" data-testid="agent-file-approval">
+          <section
+            className="agent-dialog"
+            role="dialog"
+            aria-label="Approve Agent file import"
+          >
+            <div className="agent-panel-header">
+              <h2>Approve Agent file import</h2>
+            </div>
+            <p>
+              The Agent staged a {agentFileCandidate.kind} candidate. It has not
+              changed this Project. Replacing it will end the current Agent
+              session.
+            </p>
+            <dl className="agent-file-candidate-summary">
+              <div>
+                <dt>Project</dt>
+                <dd>{agentFileCandidate.projectName}</dd>
+              </div>
+              <div>
+                <dt>Documents</dt>
+                <dd>{agentFileCandidate.documentCount}</dd>
+              </div>
+              <div>
+                <dt>Instances</dt>
+                <dd>{agentFileCandidate.instanceCount}</dd>
+              </div>
+            </dl>
+            {agentFileCandidate.diagnostics.length > 0 ? (
+              <ul className="agent-panel-audit">
+                {agentFileCandidate.diagnostics.map((diagnostic, index) => (
+                  <li key={`${diagnostic.severity}-${index}`}>
+                    <span>{diagnostic.severity}</span>
+                    <span>{diagnostic.message}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="agent-panel-controls">
+              <button
+                type="button"
+                data-testid="agent-file-reject"
+                onClick={rejectAgentFileCandidate}
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                data-testid="agent-file-approve"
+                onClick={approveAgentFileCandidate}
+              >
+                Replace Project
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       <div
         className={
           libraryPanelOpen ? "app-workspace" : "app-workspace library-collapsed"

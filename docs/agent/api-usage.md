@@ -26,6 +26,14 @@ focus. Use snapshot-returned IDs and hierarchy paths, never canvas coordinates.
 Semantic results always have `applied: false` and leave revision, undo, and
 Project data unchanged.
 
+When capabilities advertises `resources.file`, use the separate File Resource
+instead of inventing a Circuit operation. `download` returns only canonical
+Project JSON or formal SVG/PNG/PDF. `stage` accepts a bounded `.icproj.json` or
+structural-SPICE virtual source bundle, but does not mutate the live Project;
+call `inspect`, then `request-approval`. The human must select **Replace
+Project** in the browser. No file request provides filesystem access,
+simulation, waveform data, or design-netlist export.
+
 A successful `transact` returns `resolvedRoutes`: the post-edit resolved
 polyline for each Route in `diff.changedObjectIds`. Read it to learn the actual
 stored geometry — including any normalization (e.g. `set_route_points`
@@ -125,6 +133,19 @@ one-time code.
    caches in the relay and authoritative browser return the same terminal
    result for a retry without persisting Snapshot/render payloads or reapplying
    the edit.
+
+3. **Use File Resource only when its scope is present**:
+
+   ```http
+   POST /api/agent/sessions/{sessionId}/files HTTP/1.1
+   Authorization: Bearer AGENT_TOKEN
+   Content-Type: application/json
+
+   {"apiVersion":"2.0","requestId":"download-project-1","operation":"download","artifact":"project"}
+   ```
+
+   Do not treat staging as an import. It only returns a candidate summary;
+   replacement requires the browser-human confirmation and ends this session.
 
 The browser must remain open and online; closing the tab or revoking access ends
 the session. Open/Import/Restore replaces the Project and emits
