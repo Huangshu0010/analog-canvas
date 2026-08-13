@@ -6099,3 +6099,17 @@ contracts (WP-R1)`.
   unchanged; `git diff --check` clean.
 - Commit status: three reviewable implementation commits plus this close-out on
   `codex/local-validation-optimization`.
+
+## 2026-08-13 - Plan root lifecycle closure
+
+- Target: remove completed plan records from the active root queue without
+  erasing architecture, CI, migration, or integration evidence.
+- Changed areas: archived 23 completed or superseded non-routine target plans;
+  deleted three routine README citation plans; corrected four stale `active`
+  records and one legacy WP-A1 `proposed` record from their existing evidence;
+  refreshed the root audit.
+- Validation: every lifecycle action was checked against the plan Outcome,
+  matching factual log evidence, and Git path history; stale-root-path search,
+  Markdown formatting, and `git diff --check` pending final confirmation.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(plan): close completed root records`.

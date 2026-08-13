@@ -1,3 +1,8 @@
+---
+status: completed
+experience: none
+---
+
 # WP-A1: Model, Migration, Edit Engine, and Derived Anchor Resolver
 
 Status: `proposed` — awaiting human review before editing shared contracts.
@@ -194,3 +199,10 @@ another migration.
 feat(model): v2 drafting types, schema-1->2 migration, and VisualAnchor resolver (WP-A1a)
 <gate> feat(model): switch to schema 2 and electricalTopologyHash (WP-A1 gate)
 ```
+
+## Outcome
+
+Completed. The factual entries in `plan/log.md` dated 2026-08-08 record the
+additive model/migration/anchor work (A1a), renderer and Agent-adapter
+consumption (A1b), and the schema-2 integration gate. This plan is historical
+schema-migration evidence and is retained in the archive.
