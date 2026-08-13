@@ -6249,6 +6249,7 @@ contracts (WP-R1)`.
 - Changed areas: one browser assertion and its target record.
 - Validation: `pnpm test:e2e:local apps/editor/e2e/manual-editor.spec.ts --grep
   "keeps component insertion and inspection from resizing the canvas"` passed
-  with one worker; `git diff --check` passed.
-- Commit status: ready to commit on `codex/stabilize-properties-e2e` as
+  with one worker; `git diff --check` and all six remote CI jobs on PR #37
+  passed.
+- Commit status: committed and pushed on `codex/stabilize-properties-e2e` as
   `test(e2e): wait for Properties dock canvas transition`.

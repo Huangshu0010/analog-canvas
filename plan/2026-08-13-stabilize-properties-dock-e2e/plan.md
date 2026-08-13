@@ -62,4 +62,5 @@ The immediate geometry sample raced the existing 160 ms Properties-dock CSS
 transition on the remote runner. The test now polls until the canvas has
 actually narrowed, preserving the layout assertion without modifying product
 behavior. The capped local target E2E passed; remote CI remains required
-before merge.
+before merge. PR #37 then passed all remote CI jobs, including both browser
+shards.
