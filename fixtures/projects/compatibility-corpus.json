@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "description": "Supported Project-file migration corpus. current files must already be canonical schema-v8; migration-input files are immutable historic inputs only.",
+  "current": [
+    "fixtures/projects/minimal/project.icproj.json",
+    "fixtures/projects/phase-1-manual/project.icproj.json",
+    "fixtures/projects/phase-3-routing/project.icproj.json"
+  ],
+  "migrationInputs": [
+    "fixtures/projects/hierarchy-navigation/project.icproj.json",
+    "fixtures/projects/phase-1-rendered/project.icproj.json",
+    "fixtures/projects/phase-2-imported-rlc/project.icproj.json",
+    "fixtures/projects/phase-5-dense-analog/project.icproj.json",
+    "netlists/mixed-device-acceptance/razavi-mos-buffer.icproj.json",
+    "netlists/rlc-rf-bandpass-100mhz/razavi-100mhz-bandpass.icproj.json",
+    "netlists/sky130-ota-5t-gain40-pm60-noise50uv-pvt/razavi-ota-5t-live.icproj.json",
+    "netlists/sky130-ota-5t-gain40-pm60-noise50uv-pvt/razavi-ota-5t-redrawn.icproj.json",
+    "netlists/sky130-switched-capacitor-dac-6bit-pvt/agent-scdac-newarch.icproj.json",
+    "netlists/sky130-switched-capacitor-dac-6bit-pvt/codex-agent-cdac-flat.icproj.json",
+    "netlists/sky130-switched-capacitor-dac-6bit-pvt/razavi-6bit-cdac-flat.icproj.json",
+    "netlists/sky130-switched-capacitor-dac-6bit-pvt/razavi-6bit-cdac.icproj.json",
+    "netlists/sky130-thermometer-trim-resistor/thermometer-trim-resistor-flat-refined.icproj.json",
+    "netlists/sky130-transistor-divide-by-2/agent-divide-by-2-flat.icproj.json",
+    "netlists/sky130-transistor-divide-by-2/agent-divide-by-2-refined.icproj.json",
+    "netlists/sky130-transistor-divide-by-2/agent-divide-by-2.icproj.json"
+  ],
+  "rejected": [
+    {
+      "path": "fixtures/projects/rejected-missing-top/project.icproj.json",
+      "error": "Unknown top document"
+    }
+  ]
+}

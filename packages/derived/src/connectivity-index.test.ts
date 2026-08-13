@@ -231,11 +231,10 @@ describe("ProjectConnectivityIndex", () => {
       const label = (id: string, x: number, text: string) => ({
         id,
         kind: "net-label" as const,
-        text,
-        position: { x, y: 92 },
-        offset: { x: 0, y: 0 },
+        content: { runs: [{ kind: "text" as const, value: text }] },
+        netId: "net-signal",
+        anchor: { kind: "free" as const, position: { x, y: 92 } },
         rotation: 0 as const,
-        attachedObjectId: "net-signal",
         alignment: "start" as const,
         locked: false,
       });
@@ -314,7 +313,16 @@ describe("ProjectConnectivityIndex", () => {
             rotation: 0,
             mirror: "none",
           },
-          properties: { "spice.childDocumentId": "child" },
+          properties: {},
+          netlist: {
+            reference: "X1",
+            parameters: {},
+            binding: {
+              kind: "subcircuit",
+              name: "child",
+              childDocumentId: "child",
+            },
+          },
         },
       ];
       const childBase = createEmptyProject("child", "Child", "child")
@@ -338,7 +346,7 @@ describe("ProjectConnectivityIndex", () => {
       return project;
     }
 
-    it("maps each parent pin to the same-named child port via spice.childDocumentId", () => {
+    it("maps each parent pin to the same-named child port via typed binding", () => {
       const resolver = new InMemorySymbolResolver([dual]);
       const index = buildProjectConnectivityIndex(hierarchyProject(), resolver);
       expect(index.hierarchy.edges).toEqual([

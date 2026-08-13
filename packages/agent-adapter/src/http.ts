@@ -7,6 +7,10 @@ import {
   AGENT_API_VERSION,
   AgentCircuitResponseSchema,
 } from "./schema.js";
+import {
+  invalidAgentRequestResponse,
+  parseAgentCircuitRequest,
+} from "./request-contract.js";
 import type { AgentCircuitService } from "./service.js";
 
 export interface LoopbackAgentServerOptions {
@@ -171,6 +175,15 @@ export async function startLoopbackAgentServer(
         );
         return;
       }
+      if (apiVersion === AGENT_API_VERSION) {
+        const parsed = parseAgentCircuitRequest(input);
+        if (!parsed.success) {
+          writeJson(response, 400, parsed.response);
+          return;
+        }
+        writeJson(response, 200, service.handle(parsed.data));
+        return;
+      }
       writeJson(response, 200, service.handle(input));
     } catch (error) {
       const code =
@@ -178,13 +191,12 @@ export async function startLoopbackAgentServer(
       writeJson(
         response,
         code === "HTTP_BODY_TOO_LARGE" ? 413 : 400,
-        httpError(
-          apiVersion,
-          code,
-          code === "HTTP_BODY_TOO_LARGE"
-            ? `Request body exceeds ${maximum} bytes`
-            : "Request body is not valid JSON",
-        ),
+        code === "HTTP_BODY_TOO_LARGE"
+          ? httpError(apiVersion, code, `Request body exceeds ${maximum} bytes`)
+          : invalidAgentRequestResponse({
+              apiVersion,
+              requestId: "http-error",
+            }),
       );
     }
   });

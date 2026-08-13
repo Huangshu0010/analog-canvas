@@ -41,7 +41,7 @@ describe("migrateV2ToV3", () => {
   });
 
   it("remains the explicit predecessor of the current schema", () => {
-    expect(CURRENT_PROJECT_SCHEMA_VERSION).toBe(4);
+    expect(CURRENT_PROJECT_SCHEMA_VERSION).toBe(8);
     expect(migrateV2ToV3({ schemaVersion: 2 }).schemaVersion).toBe(3);
   });
 });

@@ -1,4 +1,4 @@
-import { schematicTextDocument, transformPoint } from "@icm/model";
+import { flattenRichText, transformPoint } from "@icm/model";
 import type { Point, Rect, SchematicDocument } from "@icm/model";
 import type {
   ResolvedSymbol,
@@ -17,6 +17,7 @@ import {
 } from "./rich-text-layout.js";
 import { resolveSchematicStyleProfile } from "./style-profile.js";
 import { deriveDocumentContactEvidence } from "./contact.js";
+import { resolveVisualAnchor } from "./anchor.js";
 
 export interface VisualDiagnostic {
   code: string;
@@ -290,7 +291,11 @@ function objectAnchor(
   const instance = document.instances.find((item) => item.id === objectId);
   if (instance?.placement) return instance.placement.position;
   const annotation = document.annotations.find((item) => item.id === objectId);
-  if (annotation) return annotation.position;
+  if (annotation) {
+    return annotation.anchor.kind === "free"
+      ? annotation.anchor.position
+      : annotation.anchor.fallbackPosition;
+  }
   const port = document.ports.find((item) => item.id === objectId);
   if (port?.position) return port.position;
   const junction = document.junctions.find((item) => item.id === objectId);
@@ -621,25 +626,28 @@ export function diagnoseVisualQuality(
     document.presentation.styleProfileId,
   );
   const annotationBounds = document.annotations
-    .filter((annotation) => annotation.text.trim().length > 0)
+    .filter(
+      (annotation) => flattenRichText(annotation.content).trim().length > 0,
+    )
     .map((annotation) => {
       const measured = measureRichTextDocument(
-        annotation.content ??
-          schematicTextDocument(annotation.text, annotation.kind),
+        annotation.content,
         richTextMetrics(styleProfile, "label", annotation.sizeScale ?? 1),
       );
+      const anchor = resolveVisualAnchor(document, resolver, annotation.anchor);
+      const position = anchor.position;
       const rotated = annotation.rotation === 90 || annotation.rotation === 270;
       const width = Math.max(1, rotated ? measured.height : measured.width);
       const height = Math.max(1, rotated ? measured.width : measured.height);
       const x =
         annotation.alignment === "middle"
-          ? annotation.position.x - width / 2
+          ? position.x - width / 2
           : annotation.alignment === "end"
-            ? annotation.position.x - width
-            : annotation.position.x;
+            ? position.x - width
+            : position.x;
       return {
         id: annotation.id,
-        bounds: { x, y: annotation.position.y - height, width, height },
+        bounds: { x, y: position.y - height, width, height },
       };
     });
   for (const cluster of overlappingClusters(annotationBounds)) {

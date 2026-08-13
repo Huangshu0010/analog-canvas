@@ -8,7 +8,11 @@ import {
   isOrthogonal,
   routePolyline,
 } from "@icm/derived";
-import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
+import {
+  InMemorySymbolResolver,
+  builtInSymbols,
+  requireRazaviCatalogSymbol,
+} from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { executeTransaction } from "./transaction.js";
@@ -20,11 +24,14 @@ import {
   proposeWireSegmentMove,
 } from "./routing-planner.js";
 
-const resolver = new InMemorySymbolResolver(builtInSymbols);
+const resolver = new InMemorySymbolResolver([
+  ...builtInSymbols,
+  requireRazaviCatalogSymbol("port"),
+]);
 const context = { symbolResolver: resolver };
 
 function documentFixture() {
-  return parseProject(
+  const document = parseProject(
     readFileSync(
       resolve(
         process.cwd(),
@@ -33,6 +40,46 @@ function documentFixture() {
       "utf8",
     ),
   ).documents[0]!;
+  const placements = {
+    A: {
+      position: { x: 140, y: 300 },
+      rotation: 0 as const,
+      mirror: "none" as const,
+    },
+    B: {
+      position: { x: 460, y: 300 },
+      rotation: 0 as const,
+      mirror: "x" as const,
+    },
+    C: {
+      position: { x: 300, y: 140 },
+      rotation: 90 as const,
+      mirror: "none" as const,
+    },
+    D: {
+      position: { x: 300, y: 460 },
+      rotation: 270 as const,
+      mirror: "none" as const,
+    },
+    E: {
+      position: { x: 340, y: 440 },
+      rotation: 90 as const,
+      mirror: "none" as const,
+    },
+  };
+  document.instances = Object.entries(placements).map(([id, placement]) => ({
+    id,
+    symbolId: "port",
+    placement,
+    properties: {},
+  }));
+  document.nets = document.nets.map((net) => ({
+    ...net,
+    terminals: net.ports.map((instanceId) => ({ instanceId, pinName: "P" })),
+    ports: [],
+  }));
+  document.ports = [];
+  return document;
 }
 
 const terminal = (instanceId: string) => ({
@@ -336,7 +383,7 @@ describe("routing Edit Engine", () => {
     document.junctions.push({
       id: "junction-h",
       netId: "net-h",
-      position: { x: 300, y: 300 },
+      position: { x: 320, y: 300 },
     });
     document.routes.push(
       {
@@ -365,7 +412,7 @@ describe("routing Edit Engine", () => {
       {
         kind: "move_junction",
         junctionId: "junction-h",
-        position: { x: 320, y: 320 },
+        position: { x: 340, y: 320 },
       },
     ]);
     expect(
@@ -497,10 +544,18 @@ describe("routing Edit Engine", () => {
     routed.document.annotations.push({
       id: "net-label-route-h",
       kind: "net-label",
-      text: "CLK",
-      position: { x: 300, y: 292 },
-      attachedObjectId: "net-h",
-      offset: { x: 0, y: -8 },
+      content: { runs: [{ kind: "text", value: "CLK" }] },
+      netId: "net-h",
+      anchor: {
+        kind: "route",
+        routeId: "route-h",
+        segmentIndex: 0,
+        t: 0.5,
+        normalOffset: -8,
+        direction: "forward",
+        orientation: "horizontal",
+        fallbackPosition: { x: 300, y: 292 },
+      },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -531,8 +586,7 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "net-label-route-h",
       ),
     ).toMatchObject({
-      position: { x: 300, y: 332 },
-      offset: { x: 0, y: -8 },
+      anchor: { fallbackPosition: { x: 300, y: 332 } },
       rotation: 0,
     });
     expect(reshaped.diff.changedObjectIds).toEqual(
@@ -556,8 +610,7 @@ describe("routing Edit Engine", () => {
       id: "current-route-h",
       kind: "route-marker",
       markerKind: "current",
-      text: "I_x",
-      position: { x: 300, y: 300 },
+      content: { runs: [{ kind: "text", value: "I_x" }] },
       anchor: {
         kind: "route",
         routeId: "route-h",
@@ -568,7 +621,6 @@ describe("routing Edit Engine", () => {
         orientation: "follow",
         fallbackPosition: { x: 300, y: 300 },
       },
-      offset: { x: 0, y: 0 },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -600,7 +652,6 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "current-route-h",
       ),
     ).toMatchObject({
-      position: { x: 300, y: 300 },
       anchor: {
         kind: "route",
         routeId: "route-h",
@@ -637,7 +688,6 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "current-route-h",
       ),
     ).toMatchObject({
-      position: { x: 300, y: 300 },
       anchor: { segmentIndex: 0, t: 0.5 },
     });
   });
@@ -647,10 +697,13 @@ describe("routing Edit Engine", () => {
     document.annotations.push({
       id: "label-a",
       kind: "instance-label",
-      text: "A",
-      position: { x: 99, y: 280 },
-      attachedObjectId: "A",
-      offset: { x: -41, y: -20 },
+      content: { runs: [{ kind: "text", value: "A" }] },
+      anchor: {
+        kind: "object",
+        objectId: "A",
+        localOffset: { x: -41, y: -20 },
+        fallbackPosition: { x: 99, y: 280 },
+      },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -702,8 +755,10 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 119, y: 300 },
-      offset: { x: -41, y: -20 },
+      anchor: {
+        localOffset: { x: -41, y: -20 },
+        fallbackPosition: { x: 119, y: 300 },
+      },
       alignment: "middle",
       rotation: 0,
     });
@@ -732,8 +787,10 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 180, y: 279 },
-      offset: { x: 20, y: -41 },
+      anchor: {
+        localOffset: { x: 20, y: -41 },
+        fallbackPosition: { x: 180, y: 279 },
+      },
       alignment: "start",
       rotation: 0,
     });
@@ -763,8 +820,10 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 180, y: 361 },
-      offset: { x: 20, y: 41 },
+      anchor: {
+        localOffset: { x: 20, y: 41 },
+        fallbackPosition: { x: 180, y: 361 },
+      },
       alignment: "start",
       rotation: 0,
     });
@@ -795,10 +854,13 @@ describe("routing Edit Engine", () => {
       document.annotations.push({
         id: "instance-label-M1",
         kind: "instance-label",
-        text: "M1",
-        position: { x: 116, y: 108 },
-        attachedObjectId: "M1",
-        offset: { x: 16, y: 8 },
+        content: { runs: [{ kind: "text", value: "M1" }] },
+        anchor: {
+          kind: "object",
+          objectId: "M1",
+          localOffset: { x: 16, y: 8 },
+          fallbackPosition: { x: 116, y: 108 },
+        },
         alignment: "start",
         rotation: 0,
         locked: false,
@@ -850,8 +912,10 @@ describe("routing Edit Engine", () => {
             (annotation) => annotation.id === "instance-label-M1",
           ),
         ).toMatchObject({
-          position: state.position,
-          offset: state.offset,
+          anchor: {
+            localOffset: state.offset,
+            fallbackPosition: state.position,
+          },
           alignment: state.alignment,
           rotation: 0,
         });
@@ -866,13 +930,16 @@ describe("routing Edit Engine", () => {
       {
         id: "label-a",
         kind: "instance-label",
-        text: "A",
+        content: { runs: [{ kind: "text", value: "A" }] },
         // Deliberately differs from instance position + semantic offset. This
         // is the valid state produced by upright baseline/clearance correction
         // after a rotate or mirror operation.
-        position: { x: 185, y: 257 },
-        attachedObjectId: "A",
-        offset: { x: 20, y: -35 },
+        anchor: {
+          kind: "object",
+          objectId: "A",
+          localOffset: { x: 20, y: -35 },
+          fallbackPosition: { x: 185, y: 257 },
+        },
         alignment: "middle",
         rotation: 0,
         locked: false,
@@ -881,16 +948,13 @@ describe("routing Edit Engine", () => {
         id: "marker-a",
         kind: "route-marker",
         markerKind: "voltage",
-        text: "V_A",
-        position: { x: 150, y: 280 },
-        attachedObjectId: "A",
+        content: { runs: [{ kind: "text", value: "V_A" }] },
         anchor: {
           kind: "object",
           objectId: "A",
           localOffset: { x: 10, y: -20 },
           fallbackPosition: { x: 150, y: 280 },
         },
-        offset: { x: 10, y: -20 },
         alignment: "middle",
         rotation: 0,
         locked: false,
@@ -913,13 +977,14 @@ describe("routing Edit Engine", () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: "label-a",
-          position: { x: 205, y: 287 },
-          offset: { x: 20, y: -35 },
+          anchor: expect.objectContaining({
+            localOffset: { x: 20, y: -35 },
+            fallbackPosition: { x: 205, y: 287 },
+          }),
           alignment: "middle",
         }),
         expect.objectContaining({
           id: "marker-a",
-          position: { x: 170, y: 310 },
           anchor: expect.objectContaining({
             fallbackPosition: { x: 170, y: 310 },
           }),
@@ -944,8 +1009,10 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "label-a",
       ),
     ).toMatchObject({
-      position: { x: 255, y: 307 },
-      offset: { x: 20, y: -35 },
+      anchor: {
+        localOffset: { x: 20, y: -35 },
+        fallbackPosition: { x: 255, y: 307 },
+      },
       alignment: "middle",
     });
   });
@@ -1125,8 +1192,7 @@ describe("routing Edit Engine", () => {
       id: "current-split",
       kind: "route-marker",
       markerKind: "current",
-      text: "I_x",
-      position: { x: 375, y: 300 },
+      content: { runs: [{ kind: "text", value: "I_x" }] },
       anchor: {
         kind: "route",
         routeId: "route-h",
@@ -1137,7 +1203,6 @@ describe("routing Edit Engine", () => {
         orientation: "follow",
         fallbackPosition: { x: 375, y: 300 },
       },
-      offset: { x: 0, y: 0 },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -1187,7 +1252,6 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "current-split",
       ),
     ).toMatchObject({
-      position: { x: 375, y: 300 },
       anchor: {
         kind: "route",
         routeId: "route-h-b",

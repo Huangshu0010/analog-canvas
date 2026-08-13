@@ -3,30 +3,14 @@ import {
   AgentCircuitRequestJsonSchema,
   AgentCircuitResponseJsonSchema,
 } from "./schema.js";
-
-/**
- * Shared typed-error response for the web-session transport (ADR 0016 / WP-WA6).
- * `code` is one of the transport error codes in `envelope.ts` plus the Circuit
- * API domain codes.
- */
-const transportErrorSchema = {
-  type: "object",
-  additionalProperties: false,
-  required: ["ok", "error"],
-  properties: {
-    ok: { type: "boolean", const: false },
-    revision: { type: "integer", minimum: 0 },
-    error: {
-      type: "object",
-      additionalProperties: false,
-      required: ["code", "message"],
-      properties: {
-        code: { type: "string", minLength: 1 },
-        message: { type: "string" },
-      },
-    },
-  },
-} as const;
+import {
+  AgentFileResourceRequestJsonSchema,
+  AgentFileResourceResponseJsonSchema,
+} from "./file-resource.js";
+import {
+  AgentClaimRequestJsonSchema,
+  AgentTransportErrorResponseJsonSchema,
+} from "./envelope.js";
 
 function componentSchema(
   value: Record<string, unknown>,
@@ -67,11 +51,233 @@ const agentCircuitResponseSchema = componentSchema(
   AgentCircuitResponseJsonSchema as Record<string, unknown>,
   "agentCircuitResponse",
 );
+const agentFileResourceRequestSchema = componentSchema(
+  AgentFileResourceRequestJsonSchema as Record<string, unknown>,
+  "agentFileResourceRequest",
+);
+const agentFileResourceResponseSchema = componentSchema(
+  AgentFileResourceResponseJsonSchema as Record<string, unknown>,
+  "agentFileResourceResponse",
+);
+const agentClaimRequestSchema = componentSchema(
+  AgentClaimRequestJsonSchema as Record<string, unknown>,
+  "agentClaimRequest",
+);
+const agentTransportErrorResponseSchema = componentSchema(
+  AgentTransportErrorResponseJsonSchema as Record<string, unknown>,
+  "agentTransportErrorResponse",
+);
 const agentCircuitRequestRef = {
   $ref: "#/components/schemas/agentCircuitRequest",
 } as const;
 const agentCircuitResponseRef = {
   $ref: "#/components/schemas/agentCircuitResponse",
+} as const;
+const agentFileResourceRequestRef = {
+  $ref: "#/components/schemas/agentFileResourceRequest",
+} as const;
+const agentFileResourceResponseRef = {
+  $ref: "#/components/schemas/agentFileResourceResponse",
+} as const;
+
+export const agentCircuitRequestExamples = {
+  capabilities: {
+    summary: "Discover the current four-operation contract and limits",
+    value: {
+      apiVersion: "2.0",
+      requestId: "capabilities-1",
+      operation: "capabilities",
+    },
+  },
+  snapshot: {
+    summary: "Read one complete authorized Document",
+    value: {
+      apiVersion: "2.0",
+      requestId: "snapshot-1",
+      operation: "snapshot",
+      documentId: "document-main",
+      includeSourceSpans: false,
+    },
+  },
+  transactDryRun: {
+    summary: "Dry-run one atomic edit batch before committing the same edits",
+    value: {
+      apiVersion: "2.0",
+      requestId: "dry-run-1",
+      operation: "transact",
+      documentId: "document-main",
+      transactionId: "place-vin-1",
+      expectedRevision: 0,
+      dryRun: true,
+      edits: [
+        {
+          kind: "add_port",
+          port: {
+            id: "VIN",
+            name: "Vin",
+            direction: "input",
+            presentation: "hollow",
+            position: { x: 200, y: 260 },
+          },
+        },
+      ],
+    },
+  },
+  render: {
+    summary: "Render the formal scene after a successful commit",
+    value: {
+      apiVersion: "2.0",
+      requestId: "render-1",
+      operation: "render",
+      documentId: "document-main",
+      mode: "formal",
+    },
+  },
+} as const;
+
+export const agentClaimRequestExample = {
+  claimCode: "session-id.one-time-claim",
+} as const;
+
+export const agentTransportErrorExamples = {
+  "404": {
+    ok: false,
+    error: {
+      code: "SESSION_NOT_FOUND",
+      message: "Session is unknown or expired",
+    },
+  },
+  "401": {
+    ok: false,
+    error: {
+      code: "TOKEN_INVALID",
+      message: "Bearer token is missing or unknown",
+    },
+  },
+  "403": {
+    ok: false,
+    error: {
+      code: "TOKEN_SCOPE_INSUFFICIENT",
+      message: "Bearer token does not grant the required scope",
+    },
+  },
+  "409": {
+    ok: false,
+    error: {
+      code: "REQUEST_ID_REUSED",
+      message: "requestId was already used with a different payload",
+    },
+  },
+  "413": {
+    ok: false,
+    error: {
+      code: "REQUEST_TOO_LARGE",
+      message: "Request exceeds the byte limit",
+    },
+  },
+  "429": {
+    ok: false,
+    error: { code: "RATE_LIMITED", message: "Session rate limit exceeded" },
+  },
+  "503": {
+    ok: false,
+    error: { code: "EDITOR_OFFLINE", message: "Editor is offline" },
+  },
+  "504": {
+    ok: false,
+    error: {
+      code: "REQUEST_TIMEOUT",
+      message: "The browser did not complete the request in time",
+    },
+  },
+} as const;
+
+function transportErrorResponse(
+  example: (typeof agentTransportErrorExamples)[keyof typeof agentTransportErrorExamples],
+) {
+  return {
+    description: "Typed Agent session transport error",
+    content: {
+      "application/json": {
+        schema: { $ref: "#/components/schemas/agentTransportErrorResponse" },
+        example,
+      },
+    },
+  } as const;
+}
+
+const circuitSessionResponses = {
+  "200": {
+    description: "Circuit API response",
+    content: { "application/json": { schema: agentCircuitResponseRef } },
+  },
+  "400": {
+    description: "Malformed JSON or request-schema violation",
+    content: {
+      "application/json": {
+        schema: agentCircuitResponseRef,
+        example: {
+          apiVersion: "2.0",
+          requestId: "req-123",
+          operation: "error",
+          ok: false,
+          error: {
+            code: "INVALID_REQUEST",
+            message: "Request does not match the Circuit API schema",
+          },
+          diagnostics: [
+            {
+              code: "SCHEMA_VIOLATION",
+              domain: "schema",
+              severity: "error",
+              path: ["edits", 2, "instance", "symbolVariantId"],
+              message: "Expected a non-empty string or omitted field",
+            },
+          ],
+        },
+      },
+    },
+  },
+  "401": transportErrorResponse(agentTransportErrorExamples["401"]),
+  "403": transportErrorResponse(agentTransportErrorExamples["403"]),
+  "404": transportErrorResponse(agentTransportErrorExamples["404"]),
+  "409": transportErrorResponse(agentTransportErrorExamples["409"]),
+  "413": transportErrorResponse(agentTransportErrorExamples["413"]),
+  "429": transportErrorResponse(agentTransportErrorExamples["429"]),
+  "503": transportErrorResponse(agentTransportErrorExamples["503"]),
+  "504": transportErrorResponse(agentTransportErrorExamples["504"]),
+} as const;
+
+const fileSessionResponses = {
+  "200": {
+    description:
+      "Scoped file-resource response. Imported candidates remain browser-local until human approval.",
+    content: { "application/json": { schema: agentFileResourceResponseRef } },
+  },
+  "400": transportErrorResponse(agentTransportErrorExamples["413"]),
+  "401": transportErrorResponse(agentTransportErrorExamples["401"]),
+  "403": transportErrorResponse(agentTransportErrorExamples["403"]),
+  "404": transportErrorResponse(agentTransportErrorExamples["404"]),
+  "409": transportErrorResponse(agentTransportErrorExamples["409"]),
+  "413": transportErrorResponse(agentTransportErrorExamples["413"]),
+  "429": transportErrorResponse(agentTransportErrorExamples["429"]),
+  "503": transportErrorResponse(agentTransportErrorExamples["503"]),
+  "504": transportErrorResponse(agentTransportErrorExamples["504"]),
+} as const;
+
+const claimResponses = {
+  "200": {
+    description: "Claim redeemed",
+    content: {
+      "application/json": {
+        schema: { $ref: "#/components/schemas/agentClaimResponse" },
+      },
+    },
+  },
+  "401": transportErrorResponse(agentTransportErrorExamples["401"]),
+  "404": transportErrorResponse(agentTransportErrorExamples["404"]),
+  "409": transportErrorResponse(agentTransportErrorExamples["409"]),
+  "413": transportErrorResponse(agentTransportErrorExamples["413"]),
 } as const;
 
 export const agentCircuitOpenApi = {
@@ -81,95 +287,6 @@ export const agentCircuitOpenApi = {
     version: AGENT_API_VERSION,
   },
   paths: {
-    "/v1/circuit": {
-      post: {
-        operationId: "agentCircuitV1Operation",
-        deprecated: true,
-        description: "Legacy scoped-query compatibility endpoint.",
-        security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": { schema: agentCircuitRequestRef },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Agent Circuit API response",
-            content: {
-              "application/json": { schema: agentCircuitResponseRef },
-            },
-          },
-        },
-      },
-    },
-    "/v2/circuit": {
-      post: {
-        operationId: "agentCircuitV2Operation",
-        description: "Snapshot-driven Agent circuit workflow endpoint.",
-        security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": { schema: agentCircuitRequestRef },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Agent Circuit API response",
-            content: {
-              "application/json": { schema: agentCircuitResponseRef },
-            },
-          },
-        },
-      },
-    },
-    "/api/agent/sessions": {
-      post: {
-        operationId: "agentSessionCreate",
-        description:
-          "Browser creates an Agent session bound to the open Project. Returns the editor secret and one-time claim code once; the relay persists neither.",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                additionalProperties: false,
-                required: [
-                  "projectSessionId",
-                  "projectId",
-                  "documentIds",
-                  "scopes",
-                ],
-                properties: {
-                  projectSessionId: { type: "string", minLength: 1 },
-                  projectId: { type: "string", minLength: 1 },
-                  documentIds: {
-                    type: "array",
-                    items: { type: "string", minLength: 1 },
-                  },
-                  scopes: {
-                    type: "array",
-                    items: { type: "string", minLength: 1 },
-                  },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Session created",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/agentSessionCreated" },
-              },
-            },
-          },
-        },
-      },
-    },
     "/api/agent/claims": {
       post: {
         operationId: "agentClaimRedeem",
@@ -179,33 +296,12 @@ export const agentCircuitOpenApi = {
           required: true,
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                additionalProperties: false,
-                required: ["claimCode"],
-                properties: {
-                  claimCode: { type: "string", minLength: 1 },
-                },
-              },
+              schema: { $ref: "#/components/schemas/agentClaimRequest" },
+              example: agentClaimRequestExample,
             },
           },
         },
-        responses: {
-          "200": {
-            description: "Claim redeemed",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/agentClaimResponse" },
-              },
-            },
-          },
-          default: {
-            description: "Claim error",
-            content: {
-              "application/json": { schema: transportErrorSchema },
-            },
-          },
-        },
+        responses: claimResponses,
       },
     },
     "/api/agent/sessions/{sessionId}/circuit": {
@@ -225,64 +321,25 @@ export const agentCircuitOpenApi = {
         requestBody: {
           required: true,
           content: {
-            "application/json": { schema: agentCircuitRequestRef },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Circuit API response",
-            content: {
-              "application/json": { schema: agentCircuitResponseRef },
-            },
-          },
-          default: {
-            description: "Transport or Circuit error",
-            content: {
-              "application/json": { schema: transportErrorSchema },
+            "application/json": {
+              schema: agentCircuitRequestRef,
+              examples: agentCircuitRequestExamples,
             },
           },
         },
+        responses: circuitSessionResponses,
       },
     },
-    "/api/agent/sessions/{sessionId}/events": {
-      get: {
-        operationId: "agentSessionEvents",
+    "/api/agent/sessions/{sessionId}/files": {
+      post: {
+        operationId: "agentSessionFileResource",
         description:
-          "Bounded SSE event stream: editor online/offline, document.revision-changed, operation.*, and terminal session.*/document.replaced events.",
+          "Use formal Project/SVG/PNG/PDF download or stage a Project/structural-SPICE candidate in browser memory. Staging never changes the live Project; only a visible browser confirmation may accept it.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "sessionId",
             in: "path",
-            required: true,
-            schema: { type: "string", minLength: 1 },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "Server-Sent Events stream",
-            content: {
-              "text/event-stream": { schema: { type: "string" } },
-            },
-          },
-        },
-      },
-    },
-    "/api/agent/sessions/{sessionId}/control": {
-      post: {
-        operationId: "agentSessionControl",
-        description:
-          "Browser-owner pause, resume, revoke, or Project-replacement control. Requires x-editor-secret.",
-        parameters: [
-          {
-            name: "sessionId",
-            in: "path",
-            required: true,
-            schema: { type: "string", minLength: 1 },
-          },
-          {
-            name: "x-editor-secret",
-            in: "header",
             required: true,
             schema: { type: "string", minLength: 1 },
           },
@@ -290,57 +347,10 @@ export const agentCircuitOpenApi = {
         requestBody: {
           required: true,
           content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                additionalProperties: false,
-                required: ["action"],
-                properties: {
-                  action: {
-                    type: "string",
-                    enum: ["pause", "resume", "revoke", "replace-project"],
-                  },
-                },
-              },
-            },
+            "application/json": { schema: agentFileResourceRequestRef },
           },
         },
-        responses: { "200": { description: "Control applied" } },
-      },
-    },
-    "/api/agent/sessions/{sessionId}/editor": {
-      get: {
-        operationId: "agentSessionEditorChannel",
-        description:
-          "Browser WebSocket command channel. Uses the icm-agent-session subprotocol plus the editor secret.",
-        parameters: [
-          {
-            name: "sessionId",
-            in: "path",
-            required: true,
-            schema: { type: "string", minLength: 1 },
-          },
-        ],
-        responses: { "101": { description: "WebSocket switching protocols" } },
-      },
-    },
-    "/api/agent/sessions/{sessionId}": {
-      delete: {
-        operationId: "agentSessionDisconnect",
-        description:
-          "Disconnect the Agent capability. The session can be revoked.",
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          {
-            name: "sessionId",
-            in: "path",
-            required: true,
-            schema: { type: "string", minLength: 1 },
-          },
-        ],
-        responses: {
-          "204": { description: "Disconnected" },
-        },
+        responses: fileSessionResponses,
       },
     },
   },
@@ -349,34 +359,12 @@ export const agentCircuitOpenApi = {
       bearerAuth: { type: "http", scheme: "bearer" },
     },
     schemas: {
+      agentClaimRequest: agentClaimRequestSchema,
+      agentTransportErrorResponse: agentTransportErrorResponseSchema,
       agentCircuitRequest: agentCircuitRequestSchema,
       agentCircuitResponse: agentCircuitResponseSchema,
-      agentSessionCreated: {
-        type: "object",
-        additionalProperties: false,
-        required: ["ok", "session"],
-        properties: {
-          ok: { type: "boolean", const: true },
-          session: {
-            type: "object",
-            additionalProperties: false,
-            required: [
-              "sessionId",
-              "editorSecret",
-              "claimCode",
-              "claimExpiresAt",
-              "expiresAt",
-            ],
-            properties: {
-              sessionId: { type: "string", minLength: 1 },
-              editorSecret: { type: "string", minLength: 1 },
-              claimCode: { type: "string", minLength: 1 },
-              claimExpiresAt: { type: "integer", minimum: 0 },
-              expiresAt: { type: "integer", minimum: 0 },
-            },
-          },
-        },
-      },
+      agentFileResourceRequest: agentFileResourceRequestSchema,
+      agentFileResourceResponse: agentFileResourceResponseSchema,
       agentClaimResponse: {
         type: "object",
         additionalProperties: false,

@@ -96,7 +96,7 @@ describe("instance label placement", () => {
     ).toBeGreaterThan(instance.placement.position.y);
   });
 
-  it("places passive, source, and Port labels on their semantic sides", () => {
+  it("places passive and source labels on their semantic sides", () => {
     expect(placedDefaultLabel("resistor")).toMatchObject({
       position: { x: 112, y: 105 },
       alignment: "start",
@@ -108,10 +108,6 @@ describe("instance label placement", () => {
     expect(placedDefaultLabel("capacitor", 90)).toMatchObject({
       position: { x: 95, y: 126 },
       alignment: "middle",
-    });
-    expect(placedDefaultLabel("port")).toMatchObject({
-      position: { x: 88, y: 105 },
-      alignment: "end",
     });
   });
 

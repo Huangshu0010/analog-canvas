@@ -42,13 +42,31 @@ describe("hierarchy navigation", () => {
         id: "X2",
         symbolId: "dual",
         placement: null,
-        properties: { "spice.childDocumentId": "child" },
+        properties: {},
+        netlist: {
+          reference: "X2",
+          parameters: {},
+          binding: {
+            kind: "subcircuit",
+            name: "child",
+            childDocumentId: "child",
+          },
+        },
       },
       {
         id: "X1",
         symbolId: "dual",
         placement: null,
-        properties: { "spice.childDocumentId": "child" },
+        properties: {},
+        netlist: {
+          reference: "X1",
+          parameters: {},
+          binding: {
+            kind: "subcircuit",
+            name: "child",
+            childDocumentId: "child",
+          },
+        },
       },
     ];
     const child = createEmptyProject("child-project", "Child", "child")

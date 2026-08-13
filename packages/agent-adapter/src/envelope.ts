@@ -23,9 +23,19 @@ const IsoTimestampSchema = z
 export const AgentSessionMessageKindSchema = z.enum([
   "circuit-request",
   "circuit-response",
+  "file-request",
+  "file-response",
   "event",
   "cancel",
 ]);
+
+export const AgentClaimRequestSchema = z.strictObject({
+  claimCode: OpaqueIdSchema,
+});
+export const AgentClaimRequestJsonSchema = z.toJSONSchema(
+  AgentClaimRequestSchema,
+  { target: "draft-2020-12", reused: "ref" },
+);
 
 /**
  * One forwarded relay message. The `circuit-request`/`circuit-response` payload
@@ -145,7 +155,27 @@ export const AgentTransportErrorCodeSchema = z.enum([
   "REQUEST_TIMEOUT",
   "UNSUPPORTED_PROTOCOL_VERSION",
   "UNAUTHORIZED_ORIGIN",
+  // File Resource
+  "FILE_CONTENT_INVALID",
+  "FILE_TOO_LARGE",
+  "FILE_INTEGRITY_MISMATCH",
+  "FILE_CANDIDATE_NOT_FOUND",
+  "FILE_IMPORT_FAILED",
+  "FILE_EXPORT_FAILED",
 ]);
+
+/** Stable machine-readable failure envelope for every HTTP transport error. */
+export const AgentTransportErrorResponseSchema = z.strictObject({
+  ok: z.literal(false),
+  error: z.strictObject({
+    code: AgentTransportErrorCodeSchema,
+    message: z.string(),
+  }),
+});
+export const AgentTransportErrorResponseJsonSchema = z.toJSONSchema(
+  AgentTransportErrorResponseSchema,
+  { target: "draft-2020-12", reused: "ref" },
+);
 
 /**
  * Web-session permission scopes carried by an `agentToken`. They map to
@@ -159,9 +189,14 @@ export const AgentSessionScopeSchema = z.enum([
   "circuit.edit.geometry",
   "circuit.edit.connectivity",
   "circuit.edit.presentation",
+  "editor.semantic-control",
+  "project.download",
+  "project.import",
+  "visual.download",
 ]);
 
 export type AgentSessionMessage = z.infer<typeof AgentSessionMessageSchema>;
+export type AgentClaimRequest = z.infer<typeof AgentClaimRequestSchema>;
 export type AgentSessionMessageKind = z.infer<
   typeof AgentSessionMessageKindSchema
 >;
@@ -169,5 +204,8 @@ export type AgentSessionEvent = z.infer<typeof AgentSessionEventSchema>;
 export type AgentSessionEventType = z.infer<typeof AgentSessionEventTypeSchema>;
 export type AgentTransportErrorCode = z.infer<
   typeof AgentTransportErrorCodeSchema
+>;
+export type AgentTransportErrorResponse = z.infer<
+  typeof AgentTransportErrorResponseSchema
 >;
 export type AgentSessionScope = z.infer<typeof AgentSessionScopeSchema>;

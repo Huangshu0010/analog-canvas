@@ -54,14 +54,13 @@ function fixture() {
   return document;
 }
 
-function label(attachedObjectId: string, x = 180): Annotation {
+function label(netId: string, x = 180): Annotation {
   return {
     id: "label",
     kind: "net-label",
-    text: "SIGNAL",
-    position: { x, y: 92 },
-    attachedObjectId,
-    offset: { x: 0, y: -8 },
+    content: { runs: [{ kind: "text", value: "SIGNAL" }] },
+    netId,
+    anchor: { kind: "free", position: { x, y: 92 } },
     alignment: "middle",
     rotation: 0,
     locked: false,
@@ -71,7 +70,7 @@ function label(attachedObjectId: string, x = 180): Annotation {
 describe("Net Label binding", () => {
   const resolver = new InMemorySymbolResolver([]);
 
-  it("treats attachedObjectId only as a Net id and resolves its nearest Route", () => {
+  it("uses netId as the electrical identity and resolves its nearest Route", () => {
     expect(
       resolveNetLabelBinding(fixture(), resolver, label("signal")),
     ).toEqual({

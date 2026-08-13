@@ -13,6 +13,7 @@ const allPermissions: AgentPermissions = {
   query: true,
   render: true,
   sourceSpans: false,
+  semanticControl: true,
   edit: { geometry: true, connectivity: true, presentation: true },
 };
 
@@ -29,15 +30,38 @@ function setup() {
   const project = createEmptyProject("agent-session", "Agent Session");
   const controller = new EditorDocumentController(project);
   let committed = 0;
-  const host = new BrowserAgentHost(controller, () => {
-    committed += 1;
-  });
+  const semanticRequests: string[] = [];
+  const host = new BrowserAgentHost(
+    controller,
+    () => {
+      committed += 1;
+    },
+    (request) => {
+      semanticRequests.push(request.intent.kind);
+      return {
+        ok: true,
+        documentId: request.documentId,
+        kind: request.intent.kind,
+        objectIds:
+          request.intent.kind === "highlight-net" ? [request.intent.netId] : [],
+        ...(request.intent.kind === "highlight-net"
+          ? { netId: request.intent.netId }
+          : {}),
+      };
+    },
+  );
   const service = createAgentCircuitService({
     agentId: "codex",
     host,
     permissions: allPermissions,
   });
-  return { controller, host, service, committed: () => committed };
+  return {
+    controller,
+    host,
+    service,
+    committed: () => committed,
+    semanticRequests: () => [...semanticRequests],
+  };
 }
 
 // WP-WA3: the complete capabilities/snapshot/transact/render feature runs
@@ -45,6 +69,24 @@ function setup() {
 // token, or Worker. Agent commits enter the same history as human edits.
 
 describe("BrowserAgentHost + Agent Circuit service", () => {
+  it("uses the public v2 parser before a hosted request can reach the controller", () => {
+    const { controller, service } = setup();
+    const result = service.handle({
+      apiVersion: "1.0",
+      requestId: "legacy-hosted-request",
+      operation: "capabilities",
+    });
+
+    expect(result).toMatchObject({
+      apiVersion: "2.0",
+      requestId: "legacy-hosted-request",
+      operation: "error",
+      ok: false,
+      error: { code: "INVALID_REQUEST" },
+    });
+    expect(controller.document.revision).toBe(0);
+  });
+
   it("runs capabilities/snapshot/transact/render against the live document", () => {
     const { controller, service, committed } = setup();
     const documentId = controller.activeDocumentId;
@@ -111,6 +153,68 @@ describe("BrowserAgentHost + Agent Circuit service", () => {
       instance("Ragent"),
     );
     expect(controller.canUndo).toBe(false);
+  });
+
+  it("routes scoped semantic control to the browser without changing history", () => {
+    const { controller, service, committed, semanticRequests } = setup();
+    const documentId = controller.activeDocumentId;
+
+    const result = service.handle({
+      apiVersion: "2.0",
+      requestId: "semantic-fit",
+      operation: "transact",
+      documentId,
+      transactionId: "semantic-fit-tx",
+      expectedRevision: controller.document.revision,
+      semanticIntent: { kind: "fit-document" },
+    });
+
+    expect(result).toMatchObject({
+      operation: "transact",
+      ok: true,
+      applied: false,
+      revision: 0,
+      proposedRevision: 0,
+      diff: {
+        documentId,
+        fromRevision: 0,
+        toRevision: 0,
+        editKinds: [],
+        changedObjectIds: [],
+      },
+      semantic: { kind: "fit-document", documentId, objectIds: [] },
+    });
+    expect(semanticRequests()).toEqual(["fit-document"]);
+    expect(controller.document.revision).toBe(0);
+    expect(controller.canUndo).toBe(false);
+    expect(committed()).toBe(0);
+  });
+
+  it("rejects semantic control when the explicit scope is absent", () => {
+    const { controller, host, semanticRequests } = setup();
+    const service = createAgentCircuitService({
+      agentId: "codex-no-semantic",
+      host,
+      permissions: { ...allPermissions, semanticControl: false },
+    });
+
+    const result = service.handle({
+      apiVersion: "2.0",
+      requestId: "semantic-denied",
+      operation: "transact",
+      documentId: controller.activeDocumentId,
+      transactionId: "semantic-denied-tx",
+      expectedRevision: 0,
+      semanticIntent: { kind: "clear-focus" },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      operation: "transact",
+      error: { code: "PERMISSION_DENIED" },
+    });
+    expect(semanticRequests()).toEqual([]);
+    expect(controller.document.revision).toBe(0);
   });
 
   it("produces a formal render hash identical to the direct renderer", () => {

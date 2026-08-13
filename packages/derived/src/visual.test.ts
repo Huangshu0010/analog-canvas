@@ -148,9 +148,8 @@ describe("visual quality diagnostics", () => {
     document.annotations = ["a", "b"].map((id) => ({
       id,
       kind: "instance-label",
-      text: "",
-      position: { x: 100, y: 100 },
-      offset: { x: 0, y: 0 },
+      content: { runs: [{ kind: "line-break" as const }] },
+      anchor: { kind: "free" as const, position: { x: 100, y: 100 } },
       alignment: "middle",
       rotation: 0,
       locked: false,

@@ -1,4 +1,4 @@
-import { deriveStableId } from "@icm/model";
+import { deriveStableId, flattenRichText } from "@icm/model";
 import type { Net, Point, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -113,27 +113,24 @@ export function deriveNetConnectivity(
     const annotation = document.annotations.find(
       (candidate) => candidate.id === binding.annotationId,
     )!;
-    const label = annotation.text.trim();
+    const label = flattenRichText(annotation.content).trim();
     const key = endpointKey(binding.endpoint);
     if (label.length === 0 || !nodes.has(key)) continue;
     const group = labeledEndpoints.get(label) ?? [];
     group.push(key);
     labeledEndpoints.set(label, group);
   }
-  // Power labels retain their existing Junction attachment until their own
-  // symbol/instance binding contract is migrated. Net Labels never enter this
-  // compatibility path: their attachedObjectId is exclusively a Net id.
   for (const annotation of document.annotations) {
-    if (annotation.kind !== "power-label" || !annotation.attachedObjectId) {
+    if (annotation.kind !== "power-label" || annotation.netId !== net.id) {
       continue;
     }
-    const junction = document.junctions.find(
-      (candidate) => candidate.id === annotation.attachedObjectId,
+    const binding = resolveNetLabelBindings(document, resolver, net.id).find(
+      (candidate) => candidate.annotationId === annotation.id,
     );
-    if (!junction || junction.netId !== net.id) continue;
-    const key = endpointKey({ kind: "junction", junctionId: junction.id });
+    if (!binding) continue;
+    const key = endpointKey(binding.endpoint);
     if (!nodes.has(key)) continue;
-    const label = annotation.text.trim();
+    const label = flattenRichText(annotation.content).trim();
     if (label.length === 0) continue;
     const group = labeledEndpoints.get(label) ?? [];
     group.push(key);

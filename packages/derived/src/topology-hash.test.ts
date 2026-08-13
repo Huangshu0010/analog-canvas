@@ -85,9 +85,8 @@ describe("electricalTopologyHash", () => {
           {
             id: "a1",
             kind: "instance-label",
-            text: "M1",
-            position: { x: 0, y: 0 },
-            offset: { x: 0, y: 0 },
+            content: { runs: [{ kind: "text", value: "M1" }] },
+            anchor: { kind: "free", position: { x: 0, y: 0 } },
             alignment: "middle",
             rotation: 0,
             locked: false,
@@ -165,6 +164,28 @@ describe("electricalTopologyHash", () => {
     ]);
     expect(electricalTopologyHash(before)).not.toBe(
       electricalTopologyHash(after),
+    );
+  });
+
+  it("changes when a Net's explicit power identity changes", () => {
+    const before = project([
+      baseDoc({
+        nets: [
+          {
+            id: "supply",
+            scope: "global",
+            powerDomain: "none",
+            terminals: [],
+            ports: [],
+          },
+        ],
+      }),
+    ]);
+    const after = structuredClone(before);
+    after.documents[0]!.nets[0]!.powerDomain = "vdd";
+
+    expect(electricalTopologyHash(after)).not.toBe(
+      electricalTopologyHash(before),
     );
   });
 

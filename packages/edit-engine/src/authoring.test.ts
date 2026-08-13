@@ -159,12 +159,21 @@ describe("semantic authoring", () => {
         rotation: 0,
         mirror: "none",
       },
-      properties: {
-        "spice.target": "model:sky130_fd_pr__nfet_01v8",
-        "spice.pin.P1": "P1",
-        "spice.pin.P2": "P2",
-        "spice.pin.P3": "P3",
-        "spice.pin.P4": "P4",
+      properties: {},
+      netlist: {
+        reference: "XM1",
+        parameters: {},
+        binding: {
+          kind: "model",
+          deviceClass: "mos",
+          name: "sky130_fd_pr__nfet_01v8",
+        },
+        terminals: [
+          { sourcePosition: 0, pinName: "P1" },
+          { sourcePosition: 1, pinName: "P2" },
+          { sourcePosition: 2, pinName: "P3" },
+          { sourcePosition: 3, pinName: "P4" },
+        ],
       },
     });
     document.nets.push(
@@ -237,12 +246,21 @@ describe("semantic authoring", () => {
           {
             id: "XM1",
             symbolId: "nmos",
-            properties: {
-              "spice.target": "model:sky130_fd_pr__nfet_01v8",
-              "spice.pin.P1": "D",
-              "spice.pin.P2": "G",
-              "spice.pin.P3": "S",
-              "spice.pin.P4": "B",
+            properties: {},
+            netlist: {
+              reference: "XM1",
+              parameters: {},
+              binding: {
+                kind: "model",
+                deviceClass: "mos",
+                name: "sky130_fd_pr__nfet_01v8",
+              },
+              terminals: [
+                { sourcePosition: 0, pinName: "D" },
+                { sourcePosition: 1, pinName: "G" },
+                { sourcePosition: 2, pinName: "S" },
+                { sourcePosition: 3, pinName: "B" },
+              ],
             },
           },
         ],
@@ -308,14 +326,24 @@ describe("semantic authoring", () => {
       position: null,
     });
     document.netlist!.portOrder.push("port-in");
+    document.nets.push({
+      id: "net-in",
+      scope: "local",
+      terminals: [],
+      ports: ["port-in"],
+    });
     document.annotations.push(
       {
         id: "label-in",
         kind: "net-label",
-        text: "IN",
-        position: { x: 80, y: 100 },
-        attachedObjectId: "port-in",
-        offset: { x: -20, y: 0 },
+        content: { runs: [{ kind: "text", value: "IN" }] },
+        netId: "net-in",
+        anchor: {
+          kind: "object",
+          objectId: "port-in",
+          localOffset: { x: -20, y: 0 },
+          fallbackPosition: { x: 80, y: 100 },
+        },
         alignment: "end",
         rotation: 0,
         locked: false,
@@ -324,16 +352,13 @@ describe("semantic authoring", () => {
         id: "marker-in",
         kind: "route-marker",
         markerKind: "voltage",
-        text: "V_IN",
-        position: { x: 80, y: 110 },
-        attachedObjectId: "port-in",
+        content: { runs: [{ kind: "text", value: "V_IN" }] },
         anchor: {
           kind: "object",
           objectId: "port-in",
           localOffset: { x: -20, y: 10 },
           fallbackPosition: { x: 80, y: 110 },
         },
-        offset: { x: -20, y: 10 },
         alignment: "end",
         rotation: 0,
         locked: false,
@@ -372,13 +397,12 @@ describe("semantic authoring", () => {
       moved.document.annotations.find(
         (annotation) => annotation.id === "label-in",
       ),
-    ).toMatchObject({ position: { x: 120, y: 120 } });
+    ).toMatchObject({ anchor: { fallbackPosition: { x: 120, y: 120 } } });
     expect(
       moved.document.annotations.find(
         (annotation) => annotation.id === "marker-in",
       ),
     ).toMatchObject({
-      position: { x: 120, y: 130 },
       anchor: { fallbackPosition: { x: 120, y: 130 } },
     });
   });

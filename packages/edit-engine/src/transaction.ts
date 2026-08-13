@@ -11,6 +11,9 @@ import {
   LayoutGroupSchema,
   MirrorSchema,
   NoConnectSchema,
+  NetPowerDomainSchema,
+  PortPresentationSchema,
+  PortSchema,
   PlacementSchema,
   PointSchema,
   RouteEndpointSchema,
@@ -100,12 +103,24 @@ export const MirrorInstanceEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   mirror: MirrorSchema,
 });
-export const PatchInstancePropertiesEditSchema = z.strictObject({
-  kind: z.literal("patch_instance_properties"),
-  instanceId: StableIdSchema,
-  set: z.record(z.string().min(1), InstancePropertyValueSchema).optional(),
-  unset: z.array(z.string().min(1)).max(64).optional(),
-});
+export const PatchInstancePropertiesEditSchema = z
+  .strictObject({
+    kind: z.literal("patch_instance_properties"),
+    instanceId: StableIdSchema,
+    set: z.record(z.string().min(1), InstancePropertyValueSchema).optional(),
+    unset: z.array(z.string().min(1)).max(64).optional(),
+  })
+  .superRefine((edit, context) => {
+    for (const key of [...Object.keys(edit.set ?? {}), ...(edit.unset ?? [])]) {
+      if (!key.startsWith("spice.")) continue;
+      context.addIssue({
+        code: "custom",
+        path: [edit.set && key in edit.set ? "set" : "unset", key],
+        message:
+          "Legacy spice.* properties are migration-only; use typed netlist facts or import provenance",
+      });
+    }
+  });
 export const SetInstanceNetlistEditSchema = z.strictObject({
   kind: z.literal("set_instance_netlist"),
   instanceId: StableIdSchema,
@@ -114,6 +129,30 @@ export const SetInstanceNetlistEditSchema = z.strictObject({
 export const SetCellNetlistInterfaceEditSchema = z.strictObject({
   kind: z.literal("set_cell_netlist_interface"),
   netlist: CellNetlistInterfaceSchema,
+});
+/** First-class Ports own both endpoint connectivity and visual presentation. */
+export const AddPortEditSchema = z.strictObject({
+  kind: z.literal("add_port"),
+  port: PortSchema,
+});
+export const RemovePortEditSchema = z.strictObject({
+  kind: z.literal("remove_port"),
+  portId: StableIdSchema,
+});
+export const RenamePortEditSchema = z.strictObject({
+  kind: z.literal("rename_port"),
+  portId: StableIdSchema,
+  name: z.string().trim().min(1).max(256),
+});
+export const SetPortDirectionEditSchema = z.strictObject({
+  kind: z.literal("set_port_direction"),
+  portId: StableIdSchema,
+  direction: z.enum(["input", "output", "bidirectional", "passive"]),
+});
+export const SetPortPresentationEditSchema = z.strictObject({
+  kind: z.literal("set_port_presentation"),
+  portId: StableIdSchema,
+  presentation: PortPresentationSchema,
 });
 export const PlacePortEditSchema = z.strictObject({
   kind: z.literal("place_port"),
@@ -193,6 +232,27 @@ export const ConnectEndpointsEditSchema = z.strictObject({
   newNetId: StableIdSchema.optional(),
   newNetName: z.string().min(1).optional(),
   newNetScope: z.enum(["local", "global"]).optional(),
+});
+/**
+ * A VDD rail is electrical data, not a hidden marker instance plus an
+ * unrelated line. This edit creates the explicit supply Net and its only
+ * visible rail geometry atomically.
+ */
+export const AddPowerRailEditSchema = z.strictObject({
+  kind: z.literal("add_power_rail"),
+  netId: StableIdSchema,
+  routeId: StableIdSchema,
+  startJunctionId: StableIdSchema,
+  endJunctionId: StableIdSchema,
+  labelId: StableIdSchema,
+  domain: z.literal("vdd"),
+  start: PointSchema,
+  end: PointSchema,
+});
+export const SetNetPowerDomainEditSchema = z.strictObject({
+  kind: z.literal("set_net_power_domain"),
+  netId: StableIdSchema,
+  powerDomain: z.enum(["none", "vdd", "ground"]),
 });
 export const MergeNetsEditSchema = z.strictObject({
   kind: z.literal("merge_nets"),
@@ -300,6 +360,11 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   PatchInstancePropertiesEditSchema,
   SetInstanceNetlistEditSchema,
   SetCellNetlistInterfaceEditSchema,
+  AddPortEditSchema,
+  RemovePortEditSchema,
+  RenamePortEditSchema,
+  SetPortDirectionEditSchema,
+  SetPortPresentationEditSchema,
   PlacePortEditSchema,
   MovePortEditSchema,
   SetRoutePointsEditSchema,
@@ -311,8 +376,10 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MakeFlightlineEditSchema,
   CutConnectionEditSchema,
   ConnectEndpointsEditSchema,
+  AddPowerRailEditSchema,
   MergeNetsEditSchema,
   SetNetNameEditSchema,
+  SetNetPowerDomainEditSchema,
   NormalizePowerNetsEditSchema,
   SetMosBulkDefaultsEditSchema,
   ReconcileMosBulkEditSchema,
@@ -601,12 +668,12 @@ function validateNetLabelBinding(
   annotation: Annotation,
 ): string | null {
   if (annotation.kind !== "net-label") return null;
-  if (!annotation.attachedObjectId) {
-    return `Net Label requires a Net attachment: ${annotation.id}`;
+  if (!annotation.netId) {
+    return `Net Label requires a Net identity: ${annotation.id}`;
   }
-  return document.nets.some((net) => net.id === annotation.attachedObjectId)
+  return document.nets.some((net) => net.id === annotation.netId)
     ? null
-    : `Net Label attachment is not a Net: ${annotation.attachedObjectId}`;
+    : `Net Label identity is not a Net: ${annotation.netId}`;
 }
 
 function addEndpointToNet(
@@ -701,10 +768,7 @@ function validateRoute(
   }
   const net = document.nets.find((candidate) => candidate.id === route.netId);
   if (!net) return `Route net does not exist: ${route.netId}`;
-  if (
-    route.presentation === "power-rail" &&
-    powerDomainForNet(document, net) !== "vdd"
-  ) {
+  if (route.presentation === "power-rail" && powerDomainForNet(net) !== "vdd") {
     return `Power rail ${route.id} must belong to a VDD Net`;
   }
   if (!endpointBelongsToNet(document, net, route.from)) {
@@ -838,7 +902,7 @@ function closestRouteMarkerAnchor(
 
 function routeMarkerAttachment(annotation: Annotation) {
   if (annotation.kind !== "route-marker") return null;
-  if (annotation.anchor?.kind === "route") {
+  if (annotation.anchor.kind === "route") {
     return {
       routeId: annotation.anchor.routeId,
       segmentIndex: annotation.anchor.segmentIndex,
@@ -847,7 +911,7 @@ function routeMarkerAttachment(annotation: Annotation) {
       normalOffset: annotation.anchor.normalOffset,
     };
   }
-  return annotation.routeAttachment ?? null;
+  return null;
 }
 
 function closestRouteAnchor(
@@ -912,13 +976,20 @@ function captureNetLabelRouteAnchors(
     return polyline ? [{ route, polyline }] : [];
   });
   return document.annotations.flatMap((annotation) => {
-    if (annotation.kind !== "net-label" || !annotation.attachedObjectId) {
+    const annotationAnchor = annotation.anchor;
+    if (
+      (annotation.kind !== "net-label" && annotation.kind !== "power-label") ||
+      annotationAnchor.kind !== "route"
+    ) {
       return [];
     }
     const closest = polylines
-      .filter(({ route }) => route.netId === annotation.attachedObjectId)
+      .filter(({ route }) => route.id === annotationAnchor.routeId)
       .flatMap(({ route, polyline }) => {
-        const anchor = closestRouteAnchor(polyline.points, annotation.position);
+        const anchor = closestRouteAnchor(
+          polyline.points,
+          annotationAnchor.fallbackPosition,
+        );
         return anchor
           ? [
               {
@@ -1048,13 +1119,16 @@ function followNetLabelsOnChangedRoutes(
       x: normal.x * captured.normalOffset,
       y: normal.y * captured.normalOffset,
     };
-    annotation.position = {
-      x: Math.round(anchor.x + offset.x),
-      y: Math.round(anchor.y + offset.y),
-    };
-    annotation.offset = {
-      x: Math.round(offset.x),
-      y: Math.round(offset.y),
+    if (annotation.anchor.kind !== "route") continue;
+    annotation.anchor = {
+      ...annotation.anchor,
+      segmentIndex: attachment.segmentIndex,
+      t: attachment.t,
+      normalOffset: Math.round(offset.x * normal.x + offset.y * normal.y),
+      fallbackPosition: {
+        x: Math.round(anchor.x + offset.x),
+        y: Math.round(anchor.y + offset.y),
+      },
     };
     changedObjectIds.add(annotation.id);
   }
@@ -1123,7 +1197,7 @@ function followRouteMarkersOnChangedRoutes(
       x: Math.round(from.x + (to.x - from.x) * attachment.t),
       y: Math.round(from.y + (to.y - from.y) * attachment.t),
     };
-    if (annotation.anchor?.kind === "route") {
+    if (annotation.anchor.kind === "route") {
       annotation.anchor = {
         ...annotation.anchor,
         segmentIndex: attachment.segmentIndex,
@@ -1131,14 +1205,6 @@ function followRouteMarkersOnChangedRoutes(
         fallbackPosition: position,
       };
     }
-    if (annotation.routeAttachment) {
-      annotation.routeAttachment = {
-        ...annotation.routeAttachment,
-        segmentIndex: attachment.segmentIndex,
-        t: attachment.t,
-      };
-    }
-    annotation.position = position;
     changedObjectIds.add(annotation.id);
   }
 }
@@ -1182,7 +1248,7 @@ function remapRouteMarkersAfterSplit(
       x: Math.round(from.x + (to.x - from.x) * t),
       y: Math.round(from.y + (to.y - from.y) * t),
     };
-    if (annotation.anchor?.kind === "route") {
+    if (annotation.anchor.kind === "route") {
       annotation.anchor = {
         ...annotation.anchor,
         routeId: closest.route.id,
@@ -1191,15 +1257,6 @@ function remapRouteMarkersAfterSplit(
         fallbackPosition: position,
       };
     }
-    if (annotation.routeAttachment) {
-      annotation.routeAttachment = {
-        ...annotation.routeAttachment,
-        routeId: closest.route.id,
-        segmentIndex,
-        t,
-      };
-    }
-    annotation.position = position;
     changedObjectIds.add(annotation.id);
   }
 }
@@ -1456,23 +1513,14 @@ function applyInstanceRouteFollow(
   return changed.sort((left, right) => left.localeCompare(right, "en"));
 }
 
-function translateAttachedAnnotation(
+function translateObjectAnchoredAnnotation(
   annotation: Annotation,
-  attachedObjectId: string,
+  objectId: string,
   delta: Point,
 ): void {
-  annotation.position = {
-    x: annotation.position.x + delta.x,
-    y: annotation.position.y + delta.y,
-  };
-  if (annotation.anchor?.kind === "free") {
-    annotation.anchor.position = {
-      x: annotation.anchor.position.x + delta.x,
-      y: annotation.anchor.position.y + delta.y,
-    };
-  } else if (
-    annotation.anchor?.kind === "object" &&
-    annotation.anchor.objectId === attachedObjectId
+  if (
+    annotation.anchor.kind === "object" &&
+    annotation.anchor.objectId === objectId
   ) {
     annotation.anchor.fallbackPosition = {
       x: annotation.anchor.fallbackPosition.x + delta.x,
@@ -1500,8 +1548,13 @@ function followAttachedAnnotations(
       y: newPosition.y - oldPosition.y,
     };
     for (const annotation of draft.annotations) {
-      if (annotation.attachedObjectId !== instanceId) continue;
-      translateAttachedAnnotation(annotation, instanceId, delta);
+      if (
+        annotation.anchor.kind !== "object" ||
+        annotation.anchor.objectId !== instanceId
+      ) {
+        continue;
+      }
+      translateObjectAnchoredAnnotation(annotation, instanceId, delta);
       changedObjectIds.add(annotation.id);
     }
     return;
@@ -1533,18 +1586,16 @@ function followAttachedAnnotations(
     ? resolver?.resolve(instance.symbolId, instance.symbolVariantId)
     : undefined;
   for (const annotation of draft.annotations) {
-    if (annotation.attachedObjectId !== instanceId) continue;
-    const hasRecordedOffset =
-      annotation.offset.x !== 0 ||
-      annotation.offset.y !== 0 ||
-      (annotation.position.x === oldPosition.x &&
-        annotation.position.y === oldPosition.y);
-    const semanticAnchor = hasRecordedOffset
-      ? {
-          x: oldPosition.x + annotation.offset.x,
-          y: oldPosition.y + annotation.offset.y,
-        }
-      : annotation.position;
+    if (
+      annotation.anchor.kind !== "object" ||
+      annotation.anchor.objectId !== instanceId
+    ) {
+      continue;
+    }
+    const semanticAnchor = {
+      x: oldPosition.x + annotation.anchor.localOffset.x,
+      y: oldPosition.y + annotation.anchor.localOffset.y,
+    };
     const local = inverseTransformPoint(
       semanticAnchor,
       oldPosition,
@@ -1582,13 +1633,16 @@ function followAttachedAnnotations(
         }
       }
     }
-    annotation.position = {
-      x: Math.round(position.x),
-      y: Math.round(position.y),
-    };
-    annotation.offset = {
-      x: transformedAnchor.x - newPosition.x,
-      y: transformedAnchor.y - newPosition.y,
+    annotation.anchor = {
+      ...annotation.anchor,
+      localOffset: {
+        x: transformedAnchor.x - newPosition.x,
+        y: transformedAnchor.y - newPosition.y,
+      },
+      fallbackPosition: {
+        x: Math.round(position.x),
+        y: Math.round(position.y),
+      },
     };
     if (annotation.kind === "instance-label") {
       annotation.rotation = 0;
@@ -1803,7 +1857,9 @@ export function executeTransaction(
               noConnect.endpoint.instanceId === edit.instanceId,
           ) ||
           draft.annotations.some(
-            (annotation) => annotation.attachedObjectId === edit.instanceId,
+            (annotation) =>
+              annotation.anchor.kind === "object" &&
+              annotation.anchor.objectId === edit.instanceId,
           ) ||
           draft.layoutGroups.some((group) =>
             group.objectIds.includes(edit.instanceId),
@@ -1965,10 +2021,13 @@ export function executeTransaction(
           }
           if (changed) changedObjectIds.add(route.id);
         }
-        for (const [key, value] of Object.entries(instance.properties)) {
-          if (!key.startsWith("spice.pin.") || typeof value !== "string")
-            continue;
-          instance.properties[key] = pinMap[value] ?? value;
+        if (instance.netlist?.terminals) {
+          instance.netlist.terminals = instance.netlist.terminals.map(
+            (terminal) => ({
+              ...terminal,
+              pinName: pinMap[terminal.pinName] ?? terminal.pinName,
+            }),
+          );
         }
         instance.symbolId = edit.symbolId;
         if (symbolVariantId === undefined) delete instance.symbolVariantId;
@@ -2268,6 +2327,163 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
+      case "add_port": {
+        const existingIds = new Set([
+          ...draft.ports.map((port) => port.id),
+          ...draft.instances.map((instance) => instance.id),
+          ...draft.nets.map((net) => net.id),
+          ...draft.routes.map((route) => route.id),
+          ...draft.junctions.map((junction) => junction.id),
+          ...draft.noConnects.map((noConnect) => noConnect.id),
+          ...draft.annotations.map((annotation) => annotation.id),
+          ...draft.layoutGroups.map((group) => group.id),
+          ...draft.constraints.map((constraint) => constraint.id),
+          ...(draft.drafting?.objects.map((object) => object.id) ?? []),
+        ]);
+        if (existingIds.has(edit.port.id)) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Port ID already exists: ${edit.port.id}`,
+            [],
+            [edit.port.id],
+          );
+        }
+        draft.ports.push({
+          ...structuredClone(edit.port),
+          presentation: edit.port.presentation ?? "hollow",
+        });
+        if (draft.netlist && !draft.netlist.portOrder.includes(edit.port.id)) {
+          draft.netlist.portOrder.push(edit.port.id);
+        }
+        changedObjectIds.add(edit.port.id);
+        changedObjectIds.add(draft.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "remove_port": {
+        const index = draft.ports.findIndex(
+          (candidate) => candidate.id === edit.portId,
+        );
+        if (index < 0) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Port does not exist: ${edit.portId}`,
+          );
+        }
+        const usedByNet = draft.nets.some((net) =>
+          net.ports.includes(edit.portId),
+        );
+        const usedByRoute = draft.routes.some(
+          (route) =>
+            (route.from.kind === "port" && route.from.portId === edit.portId) ||
+            (route.to.kind === "port" && route.to.portId === edit.portId),
+        );
+        const usedByNoConnect = draft.noConnects.some(
+          (noConnect) =>
+            noConnect.endpoint.kind === "port" &&
+            noConnect.endpoint.portId === edit.portId,
+        );
+        const usedByAnnotation = draft.annotations.some(
+          (annotation) =>
+            annotation.anchor.kind === "object" &&
+            annotation.anchor.objectId === edit.portId,
+        );
+        const layoutOwner = [...draft.layoutGroups, ...draft.constraints].find(
+          (item) => item.objectIds.includes(edit.portId),
+        );
+        if (
+          usedByNet ||
+          usedByRoute ||
+          usedByNoConnect ||
+          usedByAnnotation ||
+          layoutOwner
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Port ${edit.portId} still has electrical or presentation references`,
+            [],
+            [edit.portId],
+          );
+        }
+        draft.ports.splice(index, 1);
+        if (draft.netlist) {
+          draft.netlist.portOrder = draft.netlist.portOrder.filter(
+            (portId) => portId !== edit.portId,
+          );
+        }
+        changedObjectIds.add(edit.portId);
+        changedObjectIds.add(draft.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "rename_port": {
+        const port = draft.ports.find(
+          (candidate) => candidate.id === edit.portId,
+        );
+        if (!port) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Port does not exist: ${edit.portId}`,
+          );
+        }
+        if (port.name === edit.name) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Port name is unchanged",
+            [],
+            [port.id],
+          );
+        }
+        port.name = edit.name;
+        changedObjectIds.add(port.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "set_port_direction": {
+        const port = draft.ports.find(
+          (candidate) => candidate.id === edit.portId,
+        );
+        if (!port) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Port does not exist: ${edit.portId}`,
+          );
+        }
+        if (port.direction === edit.direction) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Port direction is unchanged",
+            [],
+            [port.id],
+          );
+        }
+        port.direction = edit.direction;
+        changedObjectIds.add(port.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "set_port_presentation": {
+        const port = draft.ports.find(
+          (candidate) => candidate.id === edit.portId,
+        );
+        if (!port) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Port does not exist: ${edit.portId}`,
+          );
+        }
+        if ((port.presentation ?? "hollow") === edit.presentation) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Port presentation is unchanged",
+            [],
+            [port.id],
+          );
+        }
+        port.presentation = edit.presentation;
+        changedObjectIds.add(port.id);
+        break;
+      }
       case "place_port": {
         const port = draft.ports.find(
           (candidate) => candidate.id === edit.portId,
@@ -2324,8 +2540,11 @@ export function executeTransaction(
         };
         port.position = structuredClone(edit.position);
         for (const annotation of draft.annotations) {
-          if (annotation.attachedObjectId === edit.portId) {
-            translateAttachedAnnotation(annotation, edit.portId, delta);
+          if (
+            annotation.anchor.kind === "object" &&
+            annotation.anchor.objectId === edit.portId
+          ) {
+            translateObjectAnchoredAnnotation(annotation, edit.portId, delta);
             changedObjectIds.add(annotation.id);
           }
         }
@@ -2450,6 +2669,7 @@ export function executeTransaction(
           draft.nets.push({
             id: edit.netId,
             scope: "local",
+            powerDomain: "none",
             terminals: [],
             ports: [],
           });
@@ -2758,7 +2978,9 @@ export function executeTransaction(
         );
         const preservedObjectIds = new Set([
           ...draft.annotations.flatMap((annotation) =>
-            annotation.attachedObjectId ? [annotation.attachedObjectId] : [],
+            annotation.anchor.kind === "object"
+              ? [annotation.anchor.objectId]
+              : [],
           ),
           ...draft.layoutGroups.flatMap((group) => group.objectIds),
           ...draft.constraints.flatMap((constraint) => constraint.objectIds),
@@ -2856,6 +3078,7 @@ export function executeTransaction(
             draft.nets.push({
               id: groupNetId,
               scope: "local",
+              powerDomain: net.powerDomain ?? "none",
               terminals: terminalsFor(groupNetId),
               ports: portsFor(groupNetId),
             });
@@ -2937,6 +3160,7 @@ export function executeTransaction(
             id: netId,
             ...(edit.newNetName ? { name: edit.newNetName } : {}),
             scope: edit.newNetScope ?? "local",
+            powerDomain: "none",
             terminals: [],
             ports: [],
           });
@@ -2945,6 +3169,112 @@ export function executeTransaction(
         addEndpointToNet(draft, netId, edit.from);
         addEndpointToNet(draft, netId, edit.to);
         changedObjectIds.add(netId);
+        connectivityChanged = true;
+        break;
+      }
+      case "add_power_rail": {
+        if (edit.start.y !== edit.end.y || edit.start.x === edit.end.x) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "A VDD power rail must be a non-zero horizontal segment",
+          );
+        }
+        const ids = [
+          edit.netId,
+          edit.routeId,
+          edit.startJunctionId,
+          edit.endJunctionId,
+          edit.labelId,
+        ];
+        if (new Set(ids).size !== ids.length) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Power rail IDs must be distinct",
+          );
+        }
+        const existingIds = new Set([
+          ...draft.instances.map((instance) => instance.id),
+          ...draft.ports.map((port) => port.id),
+          ...draft.nets.map((net) => net.id),
+          ...draft.routes.map((route) => route.id),
+          ...draft.junctions.map((junction) => junction.id),
+          ...draft.annotations.map((annotation) => annotation.id),
+          ...(draft.drafting?.objects.map((object) => object.id) ?? []),
+          ...draft.layoutGroups.map((group) => group.id),
+          ...draft.constraints.map((constraint) => constraint.id),
+          ...draft.noConnects.map((noConnect) => noConnect.id),
+        ]);
+        const duplicate = ids.find((id) => existingIds.has(id));
+        if (duplicate) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Power rail object ID already exists: ${duplicate}`,
+            [],
+            [duplicate],
+          );
+        }
+        const right = edit.start.x < edit.end.x ? edit.end : edit.start;
+        draft.nets.push({
+          id: edit.netId,
+          name: "VDD",
+          scope: "global",
+          powerDomain: edit.domain,
+          terminals: [],
+          ports: [],
+        });
+        draft.junctions.push(
+          JunctionSchema.parse({
+            id: edit.startJunctionId,
+            netId: edit.netId,
+            position: edit.start,
+            role: "route-anchor",
+          }),
+          JunctionSchema.parse({
+            id: edit.endJunctionId,
+            netId: edit.netId,
+            position: edit.end,
+            role: "route-anchor",
+          }),
+        );
+        draft.routes.push({
+          id: edit.routeId,
+          netId: edit.netId,
+          from: { kind: "junction", junctionId: edit.startJunctionId },
+          to: { kind: "junction", junctionId: edit.endJunctionId },
+          waypoints: [],
+          segmentModes: ["manual"],
+          presentation: "power-rail",
+        });
+        draft.annotations.push(
+          AnnotationSchema.parse({
+            id: edit.labelId,
+            kind: "power-label",
+            content: {
+              runs: [
+                { kind: "text", value: "V" },
+                {
+                  kind: "span",
+                  style: "subscript",
+                  children: [{ kind: "text", value: "DD" }],
+                },
+              ],
+            },
+            netId: edit.netId,
+            anchor: {
+              kind: "object",
+              objectId:
+                edit.start.x < edit.end.x
+                  ? edit.endJunctionId
+                  : edit.startJunctionId,
+              localOffset: { x: 6, y: 5 },
+              fallbackPosition: { x: right.x + 6, y: right.y + 5 },
+            },
+            alignment: "start",
+            rotation: 0,
+            locked: false,
+          }),
+        );
+        for (const id of ids) changedObjectIds.add(id);
         connectivityChanged = true;
         break;
       }
@@ -2965,6 +3295,21 @@ export function executeTransaction(
             "OBJECT_NOT_FOUND",
             `Net merge target/source does not exist: ${edit.targetNetId}, ${edit.sourceNetId}`,
           );
+        }
+        if (
+          (target.powerDomain ?? "none") !== "none" &&
+          (source.powerDomain ?? "none") !== "none" &&
+          target.powerDomain !== source.powerDomain
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Cannot merge Nets with incompatible power domains",
+            [],
+            [target.id, source.id],
+          );
+        }
+        if ((target.powerDomain ?? "none") === "none") {
+          target.powerDomain = source.powerDomain ?? "none";
         }
         for (const instance of draft.instances) {
           if (instance.mosBulkBinding?.netId === source.id) {
@@ -3003,8 +3348,8 @@ export function executeTransaction(
           }
         }
         for (const annotation of draft.annotations) {
-          if (annotation.attachedObjectId === source.id) {
-            annotation.attachedObjectId = target.id;
+          if (annotation.netId === source.id) {
+            annotation.netId = target.id;
             changedObjectIds.add(annotation.id);
           }
         }
@@ -3051,6 +3396,27 @@ export function executeTransaction(
           );
         }
         net.name = edit.name;
+        changedObjectIds.add(net.id);
+        connectivityChanged = true;
+        break;
+      }
+      case "set_net_power_domain": {
+        const net = draft.nets.find((candidate) => candidate.id === edit.netId);
+        if (!net) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Net does not exist: ${edit.netId}`,
+          );
+        }
+        if ((net.powerDomain ?? "none") === edit.powerDomain) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Power-domain edit does not change the Net",
+            [],
+            [net.id],
+          );
+        }
+        net.powerDomain = NetPowerDomainSchema.parse(edit.powerDomain);
         changedObjectIds.add(net.id);
         connectivityChanged = true;
         break;
@@ -3116,6 +3482,7 @@ export function executeTransaction(
                 id,
                 name,
                 scope: "global",
+                powerDomain: name === "0" ? "ground" : "vdd",
                 terminals: [],
                 ports: [],
               };
@@ -3485,8 +3852,11 @@ export function executeTransaction(
           const oldCoordinate = instance!.placement!.position[edit.axis];
           instance!.placement!.position[edit.axis] = coordinate;
           for (const annotation of draft.annotations) {
-            if (annotation.attachedObjectId === instance!.id) {
-              translateAttachedAnnotation(annotation, instance!.id, {
+            if (
+              annotation.anchor.kind === "object" &&
+              annotation.anchor.objectId === instance!.id
+            ) {
+              translateObjectAnchoredAnnotation(annotation, instance!.id, {
                 x: edit.axis === "x" ? coordinate - oldCoordinate : 0,
                 y: edit.axis === "y" ? coordinate - oldCoordinate : 0,
               });

@@ -1,7 +1,7 @@
 import {
   RectSchema,
+  semanticTextDocument,
   SchematicDocumentSchema,
-  powerDomainForNet,
   transformPoint,
 } from "@icm/model";
 import {
@@ -12,10 +12,12 @@ import {
   resolveDraftingObjectGeometry,
   resolveEndpointPoint,
   resolveDocumentRoutingGeometry,
+  resolveVisualAnchor,
   resolveSchematicStyleProfile,
   routeAttachmentPlacement,
   textbookMonochromeProfile,
 } from "@icm/derived";
+import { flattenRichText } from "@icm/model";
 import type {
   EndpointJoin,
   ResolvedDocumentRoutingGeometry,
@@ -36,10 +38,7 @@ import type {
   SymbolResolver,
 } from "@icm/symbols";
 
-import {
-  renderSchematicTextContent,
-  schematicTextSizeAttribute,
-} from "./schematic-text.js";
+import { schematicTextSizeAttribute } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
 
 export interface SvgRenderOptions {
@@ -57,14 +56,7 @@ function renderAnnotationText(
   annotation: SchematicDocument["annotations"][number],
   profile: SchematicStyleProfile,
 ): string {
-  // A new semantic label has no RichText payload and receives canonical Razavi
-  // composition from its electrical string. Once a human explicitly formats
-  // it in the canvas editor, that persisted AST is the visual source of truth;
-  // flattening it back through `text` loses selected multi-character spans.
-  if (annotation.content) {
-    return renderRichTextDocument(annotation.content, profile);
-  }
-  return renderSchematicTextContent(annotation.text, annotation.kind, profile);
+  return renderRichTextDocument(annotation.content, profile);
 }
 
 function escapeXml(value: string): string {
@@ -304,7 +296,7 @@ function renderVisiblePinNames(
         profile.id === "textbook-monochrome-v1"
           ? ' style="font-size:8px"'
           : schematicTextSizeAttribute("pin-name", profile);
-      return `<text data-pin-name="${escapeXml(pin.name)}" x="${x}" y="${y}" text-anchor="${alignment}"${sizeAttribute}>${renderSchematicTextContent(pin.name, "pin-name", profile)}</text>`;
+      return `<text data-pin-name="${escapeXml(pin.name)}" x="${x}" y="${y}" text-anchor="${alignment}"${sizeAttribute}>${renderRichTextDocument({ runs: [{ kind: "text", value: pin.name }] }, profile)}</text>`;
     })
     .join("");
 }
@@ -410,33 +402,33 @@ function deriveBounds(
     }
   }
   for (const annotation of document.annotations) {
-    const attachedRoute = annotation.routeAttachment
-      ? routingGeometry.routes.get(annotation.routeAttachment.routeId)
-      : undefined;
-    const attachmentPlacement =
-      attachedRoute && annotation.routeAttachment
-        ? routeAttachmentPlacement(
-            routeAttachmentPolyline(attachedRoute),
-            annotation.routeAttachment,
-          )
+    const resolvedAnchor = resolveVisualAnchor(
+      document,
+      resolver,
+      annotation.anchor,
+      routingGeometry,
+    );
+    const routePlacement =
+      annotation.anchor.kind === "route"
+        ? resolveRouteMarkerPlacement(routingGeometry, annotation.anchor)
         : null;
     const annotationPosition =
-      attachmentPlacement?.position ?? annotation.position;
+      routePlacement?.position ?? resolvedAnchor.position;
     const verticalCurrent =
-      (attachmentPlacement?.rotation ?? annotation.rotation) === 90 ||
-      (attachmentPlacement?.rotation ?? annotation.rotation) === 270;
-    const textPosition = attachmentPlacement
-      ? attachmentPlacement.labelPosition
+      (routePlacement?.rotation ?? annotation.rotation) === 90 ||
+      (routePlacement?.rotation ?? annotation.rotation) === 270;
+    const textPosition = routePlacement
+      ? routePlacement.labelPosition
       : {
           x: annotationPosition.x + (verticalCurrent ? 15 : 0),
           y: annotationPosition.y + (verticalCurrent ? 4 : 0),
         };
     bounds.push(
       estimatedTextBounds(
-        annotation.text,
+        flattenRichText(annotation.content),
         textPosition.x,
         textPosition.y,
-        attachmentPlacement
+        routePlacement
           ? "middle"
           : verticalCurrent
             ? "start"
@@ -489,9 +481,7 @@ export function buildSvgScene(
       const net = document.nets.find(
         (candidate) => candidate.id === route.netId,
       );
-      return net && powerDomainForNet(document, net) === "vdd"
-        ? [route.netId]
-        : [];
+      return net && (net.powerDomain ?? "none") === "vdd" ? [route.netId] : [];
     }),
   );
   const viewBox = options.bounds
@@ -539,17 +529,6 @@ export function buildSvgScene(
       if (contact.endpoints.some((endpoint) => endpoint.kind === "port")) {
         return false;
       }
-      if (
-        contact.endpoints.some(
-          (endpoint) =>
-            endpoint.kind === "terminal" &&
-            document.instances.find(
-              (instance) => instance.id === endpoint.instanceId,
-            )?.symbolId === "port",
-        )
-      ) {
-        return false;
-      }
       return contactRequiresJunctionDot(contact);
     })
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -565,25 +544,20 @@ export function buildSvgScene(
       return `<circle data-object-id="${escapeXml(objectId)}"${derivedAttribute} cx="${contact.point.x}" cy="${contact.point.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`;
     })
     .join("");
-  const powerPortIds = new Set(
-    document.annotations
-      .filter((annotation) => annotation.kind === "power-label")
-      .map((annotation) => annotation.attachedObjectId)
-      .filter((id): id is string => id !== undefined),
-  );
   const portOrigins =
     profile.nodes.portOriginRadius === 0
       ? ""
       : [...document.ports]
           .filter(
-            (port) => port.position !== null && !powerPortIds.has(port.id),
+            (port) =>
+              port.position !== null &&
+              (port.presentation ?? "hollow") !== "supply",
           )
           .sort((left, right) => left.id.localeCompare(right.id, "en"))
-          .map((port) =>
-            profile.id === "razavi-textbook-v1"
-              ? `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.background}" stroke="${profile.foreground}" stroke-width="${profile.strokes.normal}"/>`
-              : `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.foreground}"/>`,
-          )
+          .map((port) => {
+            const filled = (port.presentation ?? "hollow") === "filled";
+            return `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" data-port-presentation="${filled ? "filled" : "hollow"}" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${filled ? profile.foreground : profile.background}"${filled ? "" : ` stroke="${profile.foreground}" stroke-width="${profile.strokes.normal}"`}/>`;
+          })
           .join("");
   const portLayer =
     profile.nodes.portOriginRadius === 0
@@ -596,10 +570,18 @@ export function buildSvgScene(
   const explicitInstanceLabels = new Set(
     document.annotations
       .filter(
-        (annotation) =>
-          annotation.kind === "instance-label" && annotation.attachedObjectId,
+        (
+          annotation,
+        ): annotation is SchematicDocument["annotations"][number] & {
+          anchor: Extract<
+            SchematicDocument["annotations"][number]["anchor"],
+            { kind: "object" }
+          >;
+        } =>
+          annotation.kind === "instance-label" &&
+          annotation.anchor.kind === "object",
       )
-      .map((annotation) => annotation.attachedObjectId!),
+      .map((annotation) => annotation.anchor.objectId),
   );
   const symbols = [...document.instances]
     .filter((instance) => instance.placement !== null)
@@ -636,54 +618,39 @@ export function buildSvgScene(
         labelHiddenBySymbol ||
         !labelPlacement
           ? ""
-          : `<text x="${labelPlacement.position.x}" y="${labelPlacement.position.y}" text-anchor="${labelPlacement.alignment}"${schematicTextSizeAttribute("default-instance", profile)}>${renderSchematicTextContent(instance.id, "default-instance", profile)}</text>`;
+          : `<text x="${labelPlacement.position.x}" y="${labelPlacement.position.y}" text-anchor="${labelPlacement.alignment}"${schematicTextSizeAttribute("default-instance", profile)}>${renderRichTextDocument(profile.id === "textbook-monochrome-v1" ? { runs: [{ kind: "text", value: instance.id }] } : semanticTextDocument(instance.id, "default-instance"), profile)}</text>`;
       return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}>${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
     })
     .join("");
   const annotations = [...document.annotations]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map((annotation) => {
-      const attachment = annotation.attachedObjectId
-        ? ` data-attached-object-id="${escapeXml(annotation.attachedObjectId)}"`
-        : "";
-      const attachedRoute = annotation.routeAttachment
-        ? routingGeometry.routes.get(annotation.routeAttachment.routeId)
-        : undefined;
-      const attachmentPlacement =
-        attachedRoute && annotation.routeAttachment
-          ? routeAttachmentPlacement(
-              routeAttachmentPolyline(attachedRoute),
-              annotation.routeAttachment,
-            )
-          : null;
-      // A route-marker resolves its VisualAnchor to a position/rotation for
-      // rendering. A free anchor uses fallbackPosition; a route anchor reuses
-      // the legacy routeAttachment math when its route is present.
-      const routeMarkerAnchor = annotation.anchor;
+      const attachment = ` data-anchor-kind="${annotation.anchor.kind}"`;
+      const resolvedAnchor = resolveVisualAnchor(
+        document,
+        resolver,
+        annotation.anchor,
+        routingGeometry,
+      );
       const routeMarkerPlacement =
-        annotation.kind === "route-marker" && routeMarkerAnchor
-          ? routeMarkerAnchor.kind === "free"
+        annotation.kind === "route-marker"
+          ? annotation.anchor.kind === "free"
             ? {
-                position: routeMarkerAnchor.position,
-                labelPosition: routeMarkerAnchor.position,
+                position: annotation.anchor.position,
+                labelPosition: annotation.anchor.position,
                 rotation: 0 as const,
               }
-            : routeMarkerAnchor.kind === "object"
+            : annotation.anchor.kind === "object"
               ? {
-                  position: routeMarkerAnchor.fallbackPosition,
-                  labelPosition: routeMarkerAnchor.fallbackPosition,
+                  position: resolvedAnchor.position,
+                  labelPosition: resolvedAnchor.position,
                   rotation: 0 as const,
                 }
-              : resolveRouteMarkerPlacement(routingGeometry, routeMarkerAnchor)
+              : resolveRouteMarkerPlacement(routingGeometry, annotation.anchor)
           : null;
       const position =
-        routeMarkerPlacement?.position ??
-        attachmentPlacement?.position ??
-        annotation.position;
-      const rotation =
-        routeMarkerPlacement?.rotation ??
-        attachmentPlacement?.rotation ??
-        annotation.rotation;
+        routeMarkerPlacement?.position ?? resolvedAnchor.position;
+      const rotation = routeMarkerPlacement?.rotation ?? annotation.rotation;
       const transform = `rotate(${rotation} ${position.x} ${position.y})`;
       const attributes = `data-object-id="${escapeXml(annotation.id)}" data-kind="${annotation.kind}"${attachment}`;
       if (
@@ -696,12 +663,11 @@ export function buildSvgScene(
         const label = routeMarkerPlacement?.labelPosition;
         const textX = vertical ? x + 15 : x;
         const textY = vertical ? y + 4 : y - 7;
-        const textAnchor =
-          routeMarkerPlacement || attachmentPlacement
-            ? "middle"
-            : vertical
-              ? "start"
-              : annotation.alignment;
+        const textAnchor = routeMarkerPlacement
+          ? "middle"
+          : vertical
+            ? "start"
+            : annotation.alignment;
         if (profile.id !== "textbook-monochrome-v1") {
           const arrow = profile.annotations;
           // A route-marker is mounted on an existing route, so that route is
@@ -712,18 +678,14 @@ export function buildSvgScene(
           const halfHeadWidth = arrow.arrowHeadWidth / 2;
           const razaviTextX = label
             ? label.x
-            : attachmentPlacement
-              ? attachmentPlacement.labelPosition.x
-              : vertical
-                ? x + arrow.arrowHeadLength / 2 + arrow.currentLabelGap
-                : x;
+            : vertical
+              ? x + arrow.arrowHeadLength / 2 + arrow.currentLabelGap
+              : x;
           const razaviTextY = label
             ? label.y
-            : attachmentPlacement
-              ? attachmentPlacement.labelPosition.y
-              : vertical
-                ? y + 4
-                : y - arrow.currentLabelGap;
+            : vertical
+              ? y + 4
+              : y - arrow.currentLabelGap;
           return `<g ${attributes}><g transform="${transform}"><polygon data-role="current-arrow-head" points="${tipX},${y} ${baseX},${y - halfHeadWidth} ${baseX},${y + halfHeadWidth}" fill="${profile.foreground}"/></g><text x="${razaviTextX}" y="${razaviTextY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
         }
         return `<g ${attributes}><g transform="${transform}"><line x1="${x - 12}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><polygon points="${x + 12},${y} ${x + 5},${y - 4} ${x + 5},${y + 4}" fill="${profile.foreground}"/></g><text x="${textX}" y="${textY}" text-anchor="${textAnchor}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
@@ -732,14 +694,18 @@ export function buildSvgScene(
         profile.id !== "textbook-monochrome-v1" &&
         annotation.kind === "power-label"
       ) {
-        const port = document.ports.find(
-          (candidate) => candidate.id === annotation.attachedObjectId,
-        );
+        const annotationAnchor = annotation.anchor;
+        const port =
+          annotationAnchor.kind === "object"
+            ? document.ports.find(
+                (candidate) => candidate.id === annotationAnchor.objectId,
+              )
+            : undefined;
         const supplyBar =
           port?.position && profile.annotations.supplyBarWidth > 0
-            ? `<line data-role="supply-bar" x1="${port.position.x - profile.annotations.supplyBarWidth / 2}" y1="${port.position.y}" x2="${port.position.x + profile.annotations.supplyBarWidth / 2}" y2="${port.position.y}" transform="rotate(${annotation.rotation} ${port.position.x} ${port.position.y})" stroke="${profile.foreground}" stroke-width="${profile.strokes.supply}" stroke-linecap="${profile.lineCap}"/>`
+            ? `<line data-role="supply-bar" x1="${port.position.x - profile.annotations.supplyBarWidth / 2}" y1="${port.position.y}" x2="${port.position.x + profile.annotations.supplyBarWidth / 2}" y2="${port.position.y}" transform="rotate(${rotation} ${port.position.x} ${port.position.y})" stroke="${profile.foreground}" stroke-width="${profile.strokes.supply}" stroke-linecap="${profile.lineCap}"/>`
             : "";
-        return `<g ${attributes}>${supplyBar}<text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
+        return `<g ${attributes}>${supplyBar}<text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&
@@ -749,21 +715,21 @@ export function buildSvgScene(
         const polarity = profile.annotations;
         const positiveOffset = rotateOffset(
           { x: -polarity.polarityOffsetX, y: -polarity.polarityHalfGap },
-          annotation.rotation,
+          rotation,
         );
         const negativeOffset = rotateOffset(
           { x: -polarity.polarityOffsetX, y: polarity.polarityHalfGap },
-          annotation.rotation,
+          rotation,
         );
         const polarityStyle = `font-style:normal;font-weight:${profile.typography.plainWeight}`;
-        return `<g ${attributes}><text data-role="polarity-positive" x="${annotation.position.x + positiveOffset.x}" y="${annotation.position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${annotation.position.x + negativeOffset.x}" y="${annotation.position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
+        return `<g ${attributes}><text data-role="polarity-positive" x="${position.x + positiveOffset.x}" y="${position.y + positiveOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">+</text><text data-role="polarity-negative" x="${position.x + negativeOffset.x}" y="${position.y + negativeOffset.y + 4}" text-anchor="middle" font-size="${profile.typography.polarityFontSize}" style="${polarityStyle}">−</text><text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}"${schematicTextSizeAttribute("route-marker", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
       }
       const emphasis =
         profile.id === "textbook-monochrome-v1" &&
         annotation.kind === "power-label"
           ? ' font-weight="bold"'
           : "";
-      return `<text ${attributes} x="${annotation.position.x}" y="${annotation.position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text>`;
+      return `<text ${attributes} x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text>`;
     })
     .join("");
 

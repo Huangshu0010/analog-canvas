@@ -246,8 +246,10 @@ describe("expandRouteGraph", () => {
     )!;
     if (ann.kind !== "upsert_schematic_annotation") return;
     expect(ann.annotation.kind).toBe("net-label");
-    expect(ann.annotation.text).toBe("VOUT");
-    expect(ann.annotation.attachedObjectId).toBe("net-1");
+    expect(ann.annotation.content).toEqual({
+      runs: [{ kind: "text", value: "VOUT" }],
+    });
+    expect(ann.annotation.netId).toBe("net-1");
   });
 
   it("returns MISSING_ENDPOINT when an endpoint node is absent from the input", () => {

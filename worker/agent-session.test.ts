@@ -296,12 +296,18 @@ describe("public Agent session routes", () => {
       env,
     );
     expect(response?.status).toBe(200);
-    expect(await response!.json()).toMatchObject({
+    const contract = await response!.json();
+    expect(contract).toMatchObject({
       openapi: "3.1.0",
       paths: {
         "/api/agent/claims": { post: { operationId: "agentClaimRedeem" } },
       },
     });
+    expect(Object.keys(contract.paths).sort()).toEqual([
+      "/api/agent/claims",
+      "/api/agent/sessions/{sessionId}/circuit",
+      "/api/agent/sessions/{sessionId}/files",
+    ]);
   });
 
   it("allows only one concurrent creation for a session object", async () => {
@@ -334,6 +340,107 @@ describe("public Agent session routes", () => {
       ),
     ]);
     expect([first.status, second.status].sort()).toEqual([200, 409]);
+  });
+
+  it("gates the File Resource independently from Circuit edit scopes", async () => {
+    const { env } = routedFixture();
+    const createdResponse = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          projectSessionId: "project:files",
+          projectId: "project",
+          documentIds: ["document-main"],
+          scopes: ["project.download"],
+        }),
+      }),
+      env,
+    );
+    const created = (await createdResponse!.json()) as {
+      session: { sessionId: string; claimCode: string };
+    };
+    const claimResponse = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/claims", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ claimCode: created.session.claimCode }),
+      }),
+      env,
+    );
+    const claim = (await claimResponse!.json()) as { agentToken: string };
+    const response = await routeAgentSessionRequest(
+      new Request(
+        `https://editor.example/api/agent/sessions/${created.session.sessionId}/files`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${claim.agentToken}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            apiVersion: "2.0",
+            requestId: "not-visual-download",
+            operation: "download",
+            artifact: "svg",
+            documentId: "document-main",
+          }),
+        },
+      ),
+      env,
+    );
+    expect(response?.status).toBe(403);
+    expect(await response!.json()).toMatchObject({
+      error: { code: "TOKEN_SCOPE_INSUFFICIENT" },
+    });
+  });
+
+  it("does not reopen a revoked browser session from a retained editor proof", async () => {
+    const storage = new MemoryStorage();
+    const object = new AgentSessionDO(
+      { storage },
+      { AGENT_ALLOWED_ORIGIN: "https://editor.example" },
+    );
+    const createdResponse = await object.fetch(
+      new Request("https://agent-session.internal/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "session-terminal",
+          projectSessionId: "project:1",
+          projectId: "project",
+          documentIds: ["document-main"],
+          scopes: ["circuit.snapshot"],
+        }),
+      }),
+    );
+    const created = (await createdResponse.json()) as {
+      session: { editorSecret: string };
+    };
+    const revoked = await object.fetch(
+      new Request("https://agent-session.internal/control", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-editor-secret": created.session.editorSecret,
+        },
+        body: JSON.stringify({ action: "revoke" }),
+      }),
+    );
+    expect(revoked.status).toBe(200);
+
+    const reconnect = await object.fetch(
+      new Request("https://agent-session.internal/editor", {
+        headers: {
+          upgrade: "websocket",
+          "sec-websocket-protocol": `icm-agent-session, ${created.session.editorSecret}`,
+        },
+      }),
+    );
+    expect(reconnect.status).toBe(409);
+    expect(await reconnect.json()).toMatchObject({
+      error: { code: "SESSION_REVOKED" },
+    });
   });
 
   it("does not mark the editor offline when a replacement socket is open", async () => {
@@ -528,6 +635,53 @@ describe("public Agent session routes", () => {
     } as unknown as WebSocket;
     sockets.set(created.session.sessionId, [socket]);
 
+    const invalid = await routeAgentSessionRequest(
+      new Request(
+        `https://editor.example/api/agent/sessions/${created.session.sessionId}/circuit`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${claim.agentToken}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            apiVersion: "2.0",
+            requestId: "invalid-edit-1",
+            operation: "transact",
+            documentId: "document-main",
+            transactionId: "invalid-edit-1",
+            expectedRevision: 0,
+            edits: [
+              {
+                kind: "add_instance",
+                instance: {
+                  id: "VIN",
+                  symbolId: "resistor",
+                  symbolVariantId: "",
+                  placement: null,
+                  properties: {},
+                },
+              },
+            ],
+          }),
+        },
+      ),
+      env,
+    );
+    expect(invalid?.status).toBe(400);
+    expect(await invalid!.json()).toMatchObject({
+      operation: "error",
+      ok: false,
+      error: { code: "INVALID_REQUEST" },
+      diagnostics: [
+        {
+          code: "SCHEMA_VIOLATION",
+          path: ["edits", 0, "instance", "symbolVariantId"],
+        },
+      ],
+    });
+    expect(sent).toBe(0);
+
     const snapshot = await routeAgentSessionRequest(
       new Request(
         `https://editor.example/api/agent/sessions/${created.session.sessionId}/circuit`,
@@ -610,6 +764,31 @@ describe("public Agent session routes", () => {
       env,
     );
     expect(forbidden?.status).toBe(403);
+    expect(sent).toBe(2);
+
+    const semanticForbidden = await routeAgentSessionRequest(
+      new Request(
+        `https://editor.example/api/agent/sessions/${created.session.sessionId}/circuit`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${claim.agentToken}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            apiVersion: "2.0",
+            requestId: "semantic-without-scope",
+            operation: "transact",
+            documentId: "document-main",
+            transactionId: "semantic-without-scope-tx",
+            expectedRevision: 3,
+            semanticIntent: { kind: "fit-document" },
+          }),
+        },
+      ),
+      env,
+    );
+    expect(semanticForbidden?.status).toBe(403);
     expect(sent).toBe(2);
   });
 });

@@ -1,4 +1,6 @@
 import type {
+  AgentHostSemanticIntentRequest,
+  AgentHostSemanticIntentResult,
   AgentHostTransactionRequest,
   AgentOperationHost,
 } from "@icm/agent-adapter";
@@ -31,6 +33,9 @@ export class BrowserAgentHost implements AgentOperationHost {
   constructor(
     private readonly controller: EditorDocumentController,
     private readonly onTransactionCommitted?: () => void,
+    private readonly onSemanticIntent?: (
+      request: AgentHostSemanticIntentRequest,
+    ) => AgentHostSemanticIntentResult,
   ) {
     this.boundProjectSessionId = controller.projectSessionId;
   }
@@ -70,6 +75,41 @@ export class BrowserAgentHost implements AgentOperationHost {
       this.onTransactionCommitted?.();
     }
     return result;
+  }
+
+  applySemanticIntent(
+    request: AgentHostSemanticIntentRequest,
+  ): AgentHostSemanticIntentResult {
+    if (this.controller.projectSessionId !== this.boundProjectSessionId) {
+      return {
+        ok: false,
+        code: "DOCUMENT_MISMATCH",
+        message:
+          "The Agent session is bound to a Project that has been replaced",
+      };
+    }
+    if (!this.getDocument(request.documentId)) {
+      return {
+        ok: false,
+        code: "DOCUMENT_NOT_FOUND",
+        message: `Document ${request.documentId} is not present in this Project`,
+      };
+    }
+    if (!this.onSemanticIntent) {
+      return {
+        ok: false,
+        code: "SEMANTIC_CONTROL_UNAVAILABLE",
+        message: "The live editor has no semantic control adapter",
+      };
+    }
+    return this.onSemanticIntent(request);
+  }
+
+  semanticControlAvailable(): boolean {
+    return (
+      this.controller.projectSessionId === this.boundProjectSessionId &&
+      this.onSemanticIntent !== undefined
+    );
   }
 
   private assertBound(): void {

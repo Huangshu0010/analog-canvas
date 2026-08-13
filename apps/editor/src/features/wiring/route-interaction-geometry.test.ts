@@ -95,8 +95,7 @@ describe("route interaction geometry", () => {
       id: "current-1",
       kind: "route-marker" as const,
       markerKind: "current" as const,
-      text: "I_1",
-      position: { x: -1, y: -1 },
+      content: { runs: [{ kind: "text" as const, value: "I_1" }] },
       anchor: {
         kind: "route" as const,
         routeId: "route-1",
@@ -107,7 +106,6 @@ describe("route interaction geometry", () => {
         orientation: "follow" as const,
         fallbackPosition: { x: -1, y: -1 },
       },
-      offset: { x: 0, y: 0 },
       alignment: "middle" as const,
       rotation: 0 as const,
       locked: false,
@@ -184,8 +182,8 @@ describe("route interaction geometry", () => {
     expect(label).toMatchObject({
       id: "instance-label-R1",
       kind: "instance-label",
-      text: "R1",
-      attachedObjectId: "R1",
+      content: expect.any(Object),
+      anchor: expect.objectContaining({ kind: "object", objectId: "R1" }),
     });
     document.annotations.push(label!);
     expect(
@@ -214,8 +212,10 @@ describe("route interaction geometry", () => {
     expect(
       defaultInstanceLabel(document, instance, resolver, profile),
     ).toMatchObject({
-      position: { x: 92, y: 129 },
-      offset: { x: -8, y: 13 },
+      anchor: {
+        localOffset: { x: -8, y: 13 },
+        fallbackPosition: { x: 92, y: 129 },
+      },
       alignment: "middle",
     });
   });

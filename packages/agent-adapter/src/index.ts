@@ -3,9 +3,11 @@
 // loopback transport lives in `./loopback.ts` and the `./loopback` subpath.
 
 export * from "./envelope.js";
+export * from "./file-resource.js";
 export * from "./host.js";
 export * from "./openapi.js";
 export * from "./platform.js";
+export * from "./request-contract.js";
 export * from "./schema.js";
 export * from "./service.js";
 export * from "./session-state.js";

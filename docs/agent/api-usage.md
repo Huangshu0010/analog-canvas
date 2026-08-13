@@ -1,14 +1,15 @@
 # Agent API Usage
 
-## Recommended v2 lifecycle
+## One production lifecycle
 
 1. Call `capabilities` once and obey the returned operations, permissions, edit
    kinds, and byte/transaction limits.
 2. Read the returned Project Index and choose one Document. Request exactly one
    complete `snapshot` for that Document; do not construct a query plan first.
 3. Reason over the Snapshot's complete instance-pin/Net-terminal mapping,
-   hierarchy references, placements, routes, locks, and diagnostics. Load only
-   the circuit-knowledge pages relevant to the observed evidence.
+   explicit Net `powerDomain`, hierarchy references, placements, routes, locks,
+   and diagnostics. Never infer supply identity from a label, symbol, or Net
+   ID. Load only the circuit-knowledge pages relevant to the observed evidence.
 4. For ordinary wiring, submit one high-level `wireIntent`; for other work,
    prepare generic typed edits. In both cases use the Snapshot revision as
    `expectedRevision` and dry-run any non-trivial transaction.
@@ -17,6 +18,21 @@
 6. Request a `formal` or `diagnostics` render. Repair only evidenced problems.
 7. Request a fresh Snapshot before global review and handoff. On
    `STALE_REVISION`, refresh and reconsider; never blindly retry the old edit.
+
+When capabilities reports `semanticControl: true`, an Agent may submit one
+`transact.semanticIntent` to make review visible in the browser: select a
+canonical locator, highlight a Net, activate or fit an existing Cell, or clear
+focus. Use snapshot-returned IDs and hierarchy paths, never canvas coordinates.
+Semantic results always have `applied: false` and leave revision, undo, and
+Project data unchanged.
+
+When capabilities advertises `resources.file`, use the separate File Resource
+instead of inventing a Circuit operation. `download` returns only canonical
+Project JSON or formal SVG/PNG/PDF. `stage` accepts a bounded `.icproj.json` or
+structural-SPICE virtual source bundle, but does not mutate the live Project;
+call `inspect`, then `request-approval`. The human must select **Replace
+Project** in the browser. No file request provides filesystem access,
+simulation, waveform data, or design-netlist export.
 
 A successful `transact` returns `resolvedRoutes`: the post-edit resolved
 polyline for each Route in `diff.changedObjectIds`. Read it to learn the actual
@@ -27,14 +43,24 @@ edit position (`["edits", index]`) or, for a Route geometry failure, at the
 Route (`["routes", routeId]`), and `objectIds` names the offending object. Read
 `path`/`objectIds` to pinpoint the failing edit rather than parsing the message.
 
-The normal v2 operation surface is intentionally flat:
-`capabilities`, `snapshot`, `transact`, and `render`. API v1 `query` remains a
-compatibility boundary, not a recommended planning language.
+The production operation surface is exactly `capabilities`, `snapshot`,
+`transact`, and `render`. Do not invent a validation, planning, compilation, or
+fallback mutation endpoint. The deployed OpenAPI examples identify the current
+request version; API v1 `query` is compatibility history, not a production
+planning language.
 
-## Loopback example
+For a hosted session, treat the published OpenAPI as the only request contract.
+An HTTP `400` is an `INVALID_REQUEST` Circuit envelope: correct every returned
+diagnostic `path`, then retry with a fresh `requestId`. Never retry a changed
+payload under an old `requestId`; an invalid request was not forwarded or
+committed.
 
-The desktop host creates a high-entropy token and starts the optional adapter.
-Clients send one JSON operation per request:
+## Local development only: loopback example
+
+The desktop host may start the optional loopback adapter for repository-local
+development. It is not published in the browser OpenAPI and is never part of
+the hosted Agent authorization workflow. External Agents must use the hosted
+session flow below, not this endpoint.
 
 ```http
 POST /v2/circuit HTTP/1.1
@@ -108,24 +134,40 @@ one-time code.
    result for a retry without persisting Snapshot/render payloads or reapplying
    the edit.
 
-3. **Stream events** (`GET /api/agent/sessions/{id}/events`, SSE) for
-   `editor.online`/`editor.offline`, `document.revision-changed`,
-   `operation.started`/`completed`/`failed`, and the terminal
-   `document.replaced`/`session.*` events.
+3. **Use File Resource only when its scope is present**:
+
+   ```http
+   POST /api/agent/sessions/{sessionId}/files HTTP/1.1
+   Authorization: Bearer AGENT_TOKEN
+   Content-Type: application/json
+
+   {"apiVersion":"2.0","requestId":"download-project-1","operation":"download","artifact":"project"}
+   ```
+
+   Do not treat staging as an import. It only returns a candidate summary;
+   replacement requires the browser-human confirmation and ends this session.
 
 The browser must remain open and online; closing the tab or revoking access ends
 the session. Open/Import/Restore replaces the Project and emits
 `document.replaced`; the old token cannot read or edit the new Project — request
 a new authorized session.
 
-A transient relay failure is not a revocation. The editor reconnects the same
-in-memory authorization with bounded backoff and exposes a manual **Reconnect**
-action. Wait for `editor.online`; never replay an uncertain write under a new
-`requestId`.
+A transient relay failure is not a revocation. Do not replay an uncertain write
+under a new `requestId`; repeat the original request ID to recover its terminal
+result, or request a fresh Snapshot after the browser is available again.
+
+Closing the Connect Agent panel does not pause, revoke, or disconnect the live
+session. If the Agent loses its bearer, the user may choose **Rotate Agent
+Access**. Rotation revokes the old capability and creates a new one-time claim
+for the same open Project, authorized Documents, and scopes; it is not a refresh
+token and never revives the old bearer.
 
 ## Failure handling
 
-- `INVALID_REQUEST`: repair the payload against the checked schema.
+- `INVALID_REQUEST`: repair every reported `SCHEMA_VIOLATION` at its machine-
+  readable `path`, then submit a new dry run. The response never echoes the
+  rejected value. Malformed JSON uses the same envelope without a fabricated
+  field path.
 - `PERMISSION_DENIED`: request narrower authority or ask the human/host for a
   new authorized session; do not route around it.
 - `LIMIT_EXCEEDED`: split a transaction. Do not drop electrical edits silently.

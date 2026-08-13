@@ -1,6 +1,6 @@
 import type { RichTextDocument, RichTextRun, RichTextStyle } from "./schema.js";
 
-export type SchematicTextKind =
+export type LegacySchematicTextKind =
   | "default-instance"
   | "instance-label"
   | "net-label"
@@ -16,9 +16,9 @@ export interface SchematicMathRuns {
 }
 
 /** Derive standardized math typography from a schematic semantic identifier. */
-export function parseSchematicMath(
+function parseLegacySchematicMath(
   text: string,
-  kind: SchematicTextKind,
+  kind: LegacySchematicTextKind,
 ): SchematicMathRuns | null {
   // This compatibility parser is used only when a persisted annotation has
   // no explicit RichText content. New formatting is authored by the toolbar.
@@ -70,12 +70,12 @@ function styled(children: RichTextRun[], style: RichTextStyle): RichTextRun {
   return { kind: "span", style, children };
 }
 
-/** Convert a schematic identifier into the canonical RichText document. */
-export function schematicTextDocument(
+/** Convert only historic v6-and-earlier markup into canonical RichText. */
+export function migrateLegacySchematicText(
   text: string,
-  kind: SchematicTextKind,
+  kind: LegacySchematicTextKind,
 ): RichTextDocument {
-  const runs = parseSchematicMath(text, kind);
+  const runs = parseLegacySchematicMath(text, kind);
   if (!runs) return { runs: [{ kind: "text", value: text }] };
 
   const subscript: RichTextRun[] = runs.subscript

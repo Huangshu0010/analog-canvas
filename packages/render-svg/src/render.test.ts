@@ -63,10 +63,16 @@ describe("textbook monochrome SVG renderer", () => {
   it("preserves a manually formatted multi-character semantic subscript", () => {
     const document = createEmptyProject("project-rich-label", "Rich label")
       .documents[0]!;
+    document.nets.push({
+      id: "net-vout",
+      scope: "local",
+      powerDomain: "none",
+      terminals: [],
+      ports: [],
+    });
     document.annotations.push({
       id: "label-vin",
       kind: "net-label",
-      text: "VOUT",
       content: {
         runs: [
           {
@@ -93,8 +99,8 @@ describe("textbook monochrome SVG renderer", () => {
           },
         ],
       },
-      position: { x: 100, y: 100 },
-      offset: { x: 0, y: 0 },
+      netId: "net-vout",
+      anchor: { kind: "free", position: { x: 100, y: 100 } },
       alignment: "start",
       rotation: 0,
       locked: false,
@@ -109,23 +115,6 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).not.toContain(">OUT</tspan>");
     expect(svg).toContain("font-style:italic;font-weight:700");
     expect(svg).toContain("font-style:normal;font-weight:700");
-  });
-
-  it("renders the Razavi palette port as a hollow endpoint", () => {
-    const port = builtInSymbols.find((symbol) => symbol.id === "port");
-    expect(port).toBeDefined();
-
-    const body = renderSymbolDefinitionBody(
-      port!,
-      [],
-      [],
-      razaviTextbookProfile,
-    );
-
-    expect(body).toContain(
-      'r="2.47907" fill="none" stroke="#000" stroke-width="1.6"',
-    );
-    expect(body).toContain('x2="-4.607544"');
   });
 
   it("preserves the resistor's sharp miter override", () => {
@@ -509,6 +498,7 @@ describe("textbook monochrome SVG renderer", () => {
     document.nets.push({
       id: "net-vdd",
       scope: "global",
+      powerDomain: "vdd",
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
       ports: [],
     });
@@ -781,25 +771,24 @@ describe("textbook monochrome SVG renderer", () => {
         "utf8",
       ),
     );
-    const terminal = (instanceId: string) => ({
-      kind: "terminal" as const,
-      instanceId,
-      pinName: "P",
+    const port = (portId: string) => ({
+      kind: "port" as const,
+      portId,
     });
     project.documents[0]!.routes = [
       {
         id: "route-h",
         netId: "net-h",
-        from: terminal("A"),
-        to: terminal("B"),
+        from: port("A"),
+        to: port("B"),
         waypoints: [],
         segmentModes: ["manual"],
       },
       {
         id: "route-v",
         netId: "net-v",
-        from: terminal("C"),
-        to: terminal("D"),
+        from: port("C"),
+        to: port("D"),
         waypoints: [],
         segmentModes: ["manual"],
       },
@@ -862,10 +851,32 @@ describe("textbook monochrome SVG renderer", () => {
       id: "current-arrow",
       kind: "route-marker",
       markerKind: "current",
-      text: "I_x",
-      // This is a persistence fallback only. The route anchor drives the
-      // rendered position.
-      position: { x: 0, y: 0 },
+      content: {
+        runs: [
+          {
+            kind: "span",
+            style: "italic",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "I" }],
+              },
+            ],
+          },
+          {
+            kind: "span",
+            style: "subscript",
+            children: [
+              {
+                kind: "span",
+                style: "bold",
+                children: [{ kind: "text", value: "x" }],
+              },
+            ],
+          },
+        ],
+      },
       anchor: {
         kind: "route",
         routeId: "route-current",
@@ -876,7 +887,6 @@ describe("textbook monochrome SVG renderer", () => {
         orientation: "follow",
         fallbackPosition: { x: 0, y: 0 },
       },
-      offset: { x: 0, y: 0 },
       alignment: "middle",
       rotation: 0,
       locked: false,
@@ -914,7 +924,38 @@ describe("textbook monochrome SVG renderer", () => {
 
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain(
-      '<circle data-object-id="port-vin" data-node-kind="port-origin" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#000" stroke-width="1.6"/>',
+      '<circle data-object-id="port-vin" data-node-kind="port-origin" data-port-presentation="hollow" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#000" stroke-width="1.6"/>',
+    );
+  });
+
+  it("renders filled and supply Ports only from Port presentation", () => {
+    const document = createEmptyProject("project-port-presentation", "Ports")
+      .documents[0]!;
+    document.presentation.styleProfileId = "razavi-textbook-v1";
+    document.ports.push(
+      {
+        id: "filled",
+        name: "Filled",
+        direction: "passive",
+        position: { x: 30, y: 40 },
+        presentation: "filled",
+      },
+      {
+        id: "supply",
+        name: "VDD",
+        direction: "passive",
+        position: { x: 60, y: 40 },
+        presentation: "supply",
+      },
+    );
+    document.netlist!.portOrder.push("filled", "supply");
+
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain(
+      'data-object-id="filled" data-node-kind="port-origin" data-port-presentation="filled"',
+    );
+    expect(svg).not.toContain(
+      'data-object-id="supply" data-node-kind="port-origin"',
     );
   });
 
@@ -1158,13 +1199,20 @@ describe("textbook monochrome SVG renderer", () => {
         id: "voltage-x",
         kind: "route-marker",
         markerKind: "voltage",
-        text: "V_X",
-        position: { x: 100, y: 100 },
+        content: {
+          runs: [
+            { kind: "text", value: "V" },
+            {
+              kind: "span",
+              style: "subscript",
+              children: [{ kind: "text", value: "X" }],
+            },
+          ],
+        },
         anchor: {
           kind: "free",
           position: { x: 100, y: 100 },
         },
-        offset: { x: 0, y: 0 },
         alignment: "start",
         rotation: 90,
         locked: false,
@@ -1174,13 +1222,13 @@ describe("textbook monochrome SVG renderer", () => {
     const svg = renderDocumentSvg(document, resolver);
 
     expect(svg).toContain(
-      '<text data-role="polarity-positive" x="108" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">+</text>',
+      '<text data-role="polarity-positive" x="88" y="96" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">+</text>',
     );
     expect(svg).toContain(
-      '<text data-role="polarity-negative" x="92" y="92" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">−</text>',
+      '<text data-role="polarity-negative" x="88" y="112" text-anchor="middle" font-size="14" style="font-style:normal;font-weight:400">−</text>',
     );
     expect(svg).toContain(
-      '<text x="100" y="100" text-anchor="start" font-size="15.116"><tspan',
+      '<text x="100" y="100" text-anchor="start" font-size="15.116">V<tspan',
     );
     expect(svg).not.toContain('transform="rotate(90 100 100)"><tspan');
   });
@@ -1235,14 +1283,29 @@ describe("textbook monochrome SVG renderer", () => {
         properties: {},
       },
     ];
+    document.nets.push({
+      id: "net-vdd",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+      ports: [],
+    });
     document.annotations = [
       {
         id: "label-VDD1",
         kind: "power-label",
-        text: "VDD",
-        position: { x: 114, y: 105 },
-        attachedObjectId: "VDD1",
-        offset: { x: 14, y: 5 },
+        content: {
+          runs: [
+            { kind: "text", value: "V" },
+            {
+              kind: "span",
+              style: "subscript",
+              children: [{ kind: "text", value: "DD" }],
+            },
+          ],
+        },
+        netId: "net-vdd",
+        anchor: { kind: "free", position: { x: 114, y: 105 } },
         alignment: "start",
         rotation: 0,
         locked: false,

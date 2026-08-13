@@ -6,6 +6,10 @@ import type { CircuitProject } from "./schema.js";
 import { migrateV1ToV2 } from "./migration-v1-to-v2.js";
 import { migrateV2ToV3 } from "./migration-v2-to-v3.js";
 import { migrateV3ToV4 } from "./migration-v3-to-v4.js";
+import { migrateV4ToV5 } from "./migration-v4-to-v5.js";
+import { migrateV5ToV6 } from "./migration-v5-to-v6.js";
+import { migrateV6ToV7 } from "./migration-v6-to-v7.js";
+import { migrateV7ToV8 } from "./migration-v7-to-v8.js";
 
 export interface ProjectDiagnostic {
   code: "INVALID_JSON" | "INVALID_PROJECT" | "UNSUPPORTED_SCHEMA_VERSION";
@@ -114,6 +118,26 @@ defaultProjectMigrations.register(2, (input) =>
 // and instance netlist facts without inventing models or simulation setup.
 defaultProjectMigrations.register(3, (input) =>
   migrateV3ToV4(input as Record<string, unknown>),
+);
+// Schema 4 -> 5: persist Net power identity once, removing the runtime
+// dependency on legacy VDD/ground marker terminals.
+defaultProjectMigrations.register(4, (input) =>
+  migrateV4ToV5(input as Record<string, unknown>),
+);
+// Schema 5 -> 6: first-class Port visual presentation and legacy port-symbol
+// conversion. Runtime never needs a port Symbol after this migration.
+defaultProjectMigrations.register(5, (input) =>
+  migrateV5ToV6(input as Record<string, unknown>),
+);
+// Schema 6 -> 7: annotations have one RichText/VisualAnchor presentation
+// authority. Legacy text/attachment fields are consumed on read only.
+defaultProjectMigrations.register(6, (input) =>
+  migrateV6ToV7(input as Record<string, unknown>),
+);
+// Schema 7 -> 8: typed netlist terminal facts and immutable import provenance
+// consume all runtime `spice.*` properties.
+defaultProjectMigrations.register(7, (input) =>
+  migrateV7ToV8(input as Record<string, unknown>),
 );
 
 function isRecord(value: unknown): value is Record<string, unknown> {

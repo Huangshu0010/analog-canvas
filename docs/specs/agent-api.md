@@ -49,37 +49,55 @@ Every request contains a stable `requestId`, an `apiVersion`, and one operation.
 
 API v2 has exactly four operations:
 
-| Operation      | Required payload                                      | Result                                    |
-| -------------- | ----------------------------------------------------- | ----------------------------------------- |
-| `capabilities` | none                                                  | operations, permissions, limits, versions |
-| `snapshot`     | Document ID, optional source spans                    | complete AgentSessionSnapshot             |
-| `transact`     | Document ID, revision, transaction ID, edits or Wire intent | applied/dry-run diff and diagnostics |
-| `render`       | Document ID, formal/diagnostics mode, optional bounds | bounded SVG artifact and diagnostics      |
+| Operation      | Required payload                                                       | Result                                      |
+| -------------- | ---------------------------------------------------------------------- | ------------------------------------------- |
+| `capabilities` | none                                                                   | operations, permissions, limits, versions   |
+| `snapshot`     | Document ID, optional source spans                                     | complete AgentSessionSnapshot               |
+| `transact`     | Document ID, revision, transaction ID, edits, Wire, or semantic intent | mutation diff or non-persisting UI evidence |
+| `render`       | Document ID, formal/diagnostics mode, optional bounds                  | bounded SVG artifact and diagnostics        |
 
-API v1 remains accepted with `capabilities/query/transact/render`. No new query
+API v1 remains accepted only by the optional local development adapter with
+`capabilities/query/transact/render`. No new query
 planner or semantic scope is added to v1. `transact` and `render` retain their
 meaning across both versions.
 
-No request accepts Project JSON, a whole Snapshot/Document replacement,
-filesystem path, JavaScript, or SVG input.
+No **Circuit** request accepts Project JSON, a whole Snapshot/Document
+replacement, filesystem path, JavaScript, or SVG input. The separately scoped
+File Resource is the sole exception for bounded Project/structural-SPICE
+candidate staging; it never directly replaces a Project.
+
+Hosted requests have one production parser: the schema published at
+`/api/agent/openapi.json`. The relay, browser WebSocket host, and Circuit
+service all apply that same v2 parser before a request can reach the Edit
+Engine. A malformed Circuit body receives HTTP `400` and the normal Circuit
+error envelope with `error.code: "INVALID_REQUEST"`; every schema violation
+has a stable diagnostic `path` when a field can be located. Responses never
+echo bearer tokens or rejected values. Invalid bodies do not forward to the
+browser, begin an idempotency record, or change a Document revision. JSON
+syntax failures use the same envelope with no invented field path.
+
+The published web OpenAPI exposes claim redemption, the authenticated session
+Circuit endpoint, and a separately scoped File Resource endpoint. Browser-owner
+control, WebSocket forwarding, local loopback, and relay-event routes are
+implementation details, not Agent API operations.
 
 ## Implementation ownership and evidence flow
 
 Each semantic fact has one owning module. Transport and UI layers consume these
 contracts; they do not derive substitutes.
 
-| Concern | Sole production owner | Consumers |
-| --- | --- | --- |
-| Session authorization, claim, token, expiry | `worker/agent-session.ts` | browser session hook, external Agent |
-| Project/Document bootstrap identity | claim response + generated OpenAPI | external Agent |
-| Snapshot schema and serialization | `packages/agent-adapter/src/snapshot.ts` | web/loopback transports |
-| Endpoint coordinate contact | `packages/derived/src/contact.ts` | connectivity, renderer, visual diagnostics |
-| Visible/logical connectivity | `packages/derived` connectivity index/read models | highlight, ERC, trace, Agent Snapshot |
-| Route geometry | resolved Route geometry in `packages/derived` | renderer, hit/drag, diagnostics, Snapshot |
-| Wire authoring expansion | `proposeWireIntent`/`proposeWireCommit` in `packages/edit-engine/src/routing-planner.ts` | GUI Wire, Agent `wireIntent` |
-| Transaction validation and mutation | Edit Engine through browser `DocumentHistory` | human and Agent dispatch |
-| Project diagnostics | `diagnoseProject` in `packages/derived/src/diagnostics` | GUI log, Agent transact/snapshot/render |
-| Formal SVG | `packages/render-svg` | GUI/export/Agent render |
+| Concern                                     | Sole production owner                                                                    | Consumers                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Session authorization, claim, token, expiry | `worker/agent-session.ts`                                                                | browser session hook, external Agent       |
+| Project/Document bootstrap identity         | claim response + generated OpenAPI                                                       | external Agent                             |
+| Snapshot schema and serialization           | `packages/agent-adapter/src/snapshot.ts`                                                 | web/loopback transports                    |
+| Endpoint coordinate contact                 | `packages/derived/src/contact.ts`                                                        | connectivity, renderer, visual diagnostics |
+| Visible/logical connectivity                | `packages/derived` connectivity index/read models                                        | highlight, ERC, trace, Agent Snapshot      |
+| Route geometry                              | resolved Route geometry in `packages/derived`                                            | renderer, hit/drag, diagnostics, Snapshot  |
+| Wire authoring expansion                    | `proposeWireIntent`/`proposeWireCommit` in `packages/edit-engine/src/routing-planner.ts` | GUI Wire, Agent `wireIntent`               |
+| Transaction validation and mutation         | Edit Engine through browser `DocumentHistory`                                            | human and Agent dispatch                   |
+| Project diagnostics                         | `diagnoseProject` in `packages/derived/src/diagnostics`                                  | GUI log, Agent transact/snapshot/render    |
+| Formal SVG                                  | `packages/render-svg`                                                                    | GUI/export/Agent render                    |
 
 An API consumer may choose an intent and inspect returned evidence. It must not
 recreate junction rules, Net equivalence, Route splitting, ERC, or visual
@@ -115,12 +133,16 @@ target cell/subcircuit name when available, and resolved `targetDocumentId` or
   and complete `presentation`;
 - ports with direction, position, and owning `netId | null`;
 - instances with display/source name, symbol/variant, target/model description,
-  complete primitive properties and parameters, placement, bounds, complete
+  complete primitive properties and typed netlist facts (reference, binding,
+  parameters, ordered imported terminals), placement, bounds, complete
   resolved/connected pin inventory, and effective MOS bulk status/Net when
   applicable;
 - every pin's name, role/direction when resolvable, local/page position,
   visibility, and `netId | null`;
-- Nets with scope, complete terminal refs, port IDs, route IDs, and Junction IDs;
+- Nets with explicit `powerDomain` (`none`/`vdd`/`ground`/`conflict`), scope,
+  complete terminal refs, port IDs, route IDs, and Junction IDs. `powerDomain`
+  is the only current supply identity; Agents must not infer it from a symbol,
+  Net name, or fixed Net ID;
 - complete Route endpoints, waypoints, segment modes, optional presentation
   (`wire`/`bulk-dashed`/`power-rail`; a `power-rail` Route must belong to a VDD
   Net), and derived polyline;
@@ -201,7 +223,17 @@ segment, or free point, with optional orthogonal waypoints. The adapter expands
 that intent through `proposeWireIntent` in the same routing planner used by GUI
 Wire; it does not synthesize Nets, Junctions, Route splits, or endpoint IDs in
 the transport layer. Primitive typed edits remain available for advanced batch
-operations, but a request must supply exactly one of `edits` or `wireIntent`.
+operations, but a request must supply exactly one of `edits`, `wireIntent`, or
+`semanticIntent`.
+
+`semanticIntent` is the scoped browser-editor form: `activate-document`,
+canonical `ObjectLocator` `select`, `highlight-net`, `fit-document`, and
+`clear-focus`. It requires `editor.semantic-control`, reuses the editor's
+existing locator, hierarchy Net-trace, selection, and viewport owners, and is
+not available to loopback/in-process hosts without a live GUI. A successful
+semantic transaction reports `applied: false`, an empty revision-preserving
+diff, and resolved UI evidence in `semantic`; it never reaches the Edit Engine,
+DocumentHistory, recovery, topology hash, formal export, or persisted Project.
 
 MOS bulk authoring uses the same typed boundary: `set_mos_bulk_defaults`
 configures Cell-level stable Net IDs, `reconcile_mos_bulk` materializes the
@@ -268,11 +300,13 @@ add a separate overlay group. Render data is base64 encoded and rejected above
 
 ## Loopback transport
 
-The optional adapter accepts JSON only, uses `Cache-Control: no-store`, requires
-a bearer token of at least 32 characters, and binds only to `127.0.0.1` or
-`::1`. It serves `/v1/circuit` for legacy requests and `/v2/circuit` for v2;
-the body version must match the path. Request bodies remain bounded and no
-filesystem route exists.
+The optional local adapter accepts JSON only, uses `Cache-Control: no-store`,
+requires a bearer token of at least 32 characters, and binds only to
+`127.0.0.1` or `::1`. It may retain `/v1/circuit` as an explicit migration
+reader beside `/v2/circuit`. The hosted public OpenAPI instead exposes the
+claim endpoint, one authenticated session Circuit endpoint carrying the v2
+four-operation contract, and the independently scoped browser File Resource.
+Request bodies remain bounded and no filesystem route exists.
 
 ## Invariants
 
@@ -283,6 +317,9 @@ filesystem route exists.
 - Bidirectional pin/Net views agree.
 - An Agent cannot claim human identity or bypass Edit Engine atomicity/locks.
 - Raw Project/Snapshot replacement and arbitrary filesystem access do not exist.
+- File Resource candidates remain browser-memory-only until an explicit human
+  approval; it exposes only canonical Project download, formal SVG/PNG/PDF,
+  and bounded Project/structural-SPICE stage/inspect/discard requests.
 - Drafting and guide edits are non-electrical; they never change
   `electricalTopologyHash`, Net/Route/Junction membership, or flightline.
 - No request accepts SVG, CSS, HTML, arbitrary LaTeX, or a script/path payload;
@@ -304,11 +341,11 @@ replaying blindly.
 
 ## Compatibility and migration
 
-- v1 remains supported during Phase 9 and is covered by its existing fixtures.
-- v2 introduces the Snapshot read path and `/v2/circuit` without changing
-  persisted Projects.
-- Removing v1, changing Snapshot required fields, permission meaning, hash
-  coverage, or typed edit semantics requires a compatible version decision.
+- v1 remains only in local migration fixtures and the optional loopback reader;
+  it is absent from hosted OpenAPI and v2 capabilities.
+- v2 is the sole hosted Snapshot and mutation path.
+- Changing Snapshot required fields, permission meaning, hash coverage, or
+  typed edit semantics requires a compatible version decision.
 - Additive diagnostic parameters may appear when clients can ignore them.
 
 ## Deterministic validation
@@ -320,11 +357,74 @@ replaying blindly.
 - 100/500-instance payload/token/generation budgets
 - dry-run, stale revision, atomicity, lock, and GUI/Edit Engine parity tests
 - spatial diagnostic and formal/overlay artifact inspection
-- authenticated `/v1/circuit` and `/v2/circuit` tests
+- authenticated hosted session-Circuit endpoint tests plus isolated local v1
+  migration tests
 
 ## Open decisions
 
-- v1 removal is deferred until compatibility usage is measured and a later ADR
-  accepts deprecation.
+- final deletion of the local v1 migration reader is deferred until compatibility
+  usage is measured.
 - Deterministic transport chunks remain deferred until a real Document exceeds
   the accepted Snapshot budget.
+
+## Agent v3 extension (ADR 0018)
+
+> **Superseded:** ADR 0019 restores the four-operation Circuit boundary. The
+> proposed `artifact` and `collaborate` operations and AP2 expansion below are
+> non-normative planning history. Current work may enrich
+> `capabilities/snapshot/transact/render` but must not add a Circuit operation.
+
+[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) freezes an
+additive API v3 that retains v1/v2 unchanged. v3 publishes
+`capabilities | snapshot | transact | artifact | render | collaborate`; v1
+(`capabilities/query/transact/render`) and v2
+(`capabilities/snapshot/transact/render`) remain exactly as frozen above.
+`render` stays separate in v3 so existing render clients need no migration;
+`artifact` owns portable file products and import candidates and is not a second
+edit engine.
+
+### v3 Snapshot targets and write/read parity
+
+v3 `snapshot` accepts a target mode beyond a single Document: `project`
+(structure, exact Cell interfaces, source-manifest summary, runtime
+`projectRevision`), `document` (today's full Document snapshot plus exact
+persisted netlist/interface facts), `catalog` (every insertable product symbol:
+stable ID, variants, pins, roles/directions, default properties, supported
+parameters, style availability), and `editor-state` (transient read; see
+[`editor-interaction.md`](editor-interaction.md)). For every writable persisted
+field, the matching Snapshot target returns its exact current value. At minimum
+v3 adds:
+
+- Project schema version, source-manifest summary, symbol-library lock, and
+  runtime `projectRevision`;
+- each Cell's exact netlist name, kind, dialect-relevant binding facts, and
+  ordered Port IDs;
+- each Instance's exact netlist reference, primitive/subcircuit binding, ordered
+  pin mapping, model, and parameters;
+- hierarchy edges derived from those exact bindings;
+- catalog entries for every insertable product symbol;
+- capability/limit information needed before constructing a transaction.
+
+Raw imported source text remains excluded. A parity test must fail when a
+writable schema field is absent from the corresponding Snapshot target.
+
+### v3 transactions and history
+
+`transact` in v3 accepts a typed `document`, `project`, or `history`
+transaction. Project transactions carry `expectedProjectRevision` and, for
+multi-Document changes, expected revisions for every affected Document; the
+Project edit inventory and removal rules are frozen in ADR 0018. Agent history
+uses `undo_own_head(transactionId)` / `redo_own_head(transactionId)`, returning
+`HISTORY_DIVERGED` with current head/revision metadata when the requesting
+Agent's transaction is not the shared head; it never skips a human or other-
+Agent transaction.
+
+### v3 domain error codes
+
+The accepted domain-code set is the v2 set above plus the v3 additions
+`STALE_PROJECT_REVISION`, `HISTORY_DIVERGED`, `OBJECT_NOT_FOUND`,
+`ARTIFACT_TOO_LARGE`, `IMPORT_REQUIRES_APPROVAL`, `IMPORT_CANDIDATE_EXPIRED`,
+and `IMPORT_AMBIGUOUS_ENTRY`. `STALE_PROJECT_REVISION` returns the current
+`projectRevision` and is not terminal, mirroring `STALE_REVISION`. These codes
+are prose-defined here; closing the generated `error.code` open string into an
+enum is part of the work package that changes source schemas (AP1/AP8).

@@ -103,6 +103,52 @@ function serviceFixture(
 }
 
 describe("Agent Circuit API v1 service", () => {
+  it("keeps the store service's migration parser explicitly separate", () => {
+    const fixture = serviceFixture();
+    const legacy = fixture.service.handle({
+      apiVersion: "1.0",
+      requestId: "legacy-capabilities",
+      operation: "capabilities",
+    });
+    expect(legacy).toMatchObject({ ok: true, apiVersion: "1.0" });
+  });
+
+  it("rejects a schema-invalid request without changing the revision", () => {
+    const fixture = serviceFixture();
+    const before = fixture.getDocument().revision;
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "invalid-variant",
+      operation: "transact",
+      documentId: fixture.getDocument().id,
+      transactionId: "invalid-variant",
+      expectedRevision: before,
+      edits: [
+        {
+          kind: "add_instance",
+          instance: {
+            id: "VIN",
+            symbolId: "resistor",
+            symbolVariantId: "",
+            placement: null,
+            properties: {},
+          },
+        },
+      ],
+    });
+    expect(response).toMatchObject({
+      operation: "error",
+      ok: false,
+      error: { code: "INVALID_REQUEST" },
+      diagnostics: [
+        {
+          path: ["edits", 0, "instance", "symbolVariantId"],
+        },
+      ],
+    });
+    expect(fixture.getDocument().revision).toBe(before);
+  });
+
   it("publishes exactly four operations and validates checked request examples", () => {
     const fixture = serviceFixture();
     const response = fixture.service.handle({
@@ -149,12 +195,11 @@ describe("Agent Circuit API v1 service", () => {
     expect(AgentCircuitRequestJsonSchema).toMatchObject({
       $schema: "https://json-schema.org/draft/2020-12/schema",
     });
-    expect(agentCircuitOpenApi.paths["/v1/circuit"].post.operationId).toBe(
-      "agentCircuitV1Operation",
-    );
-    expect(agentCircuitOpenApi.paths["/v2/circuit"].post.operationId).toBe(
-      "agentCircuitV2Operation",
-    );
+    expect(Object.keys(agentCircuitOpenApi.paths).sort()).toEqual([
+      "/api/agent/claims",
+      "/api/agent/sessions/{sessionId}/circuit",
+      "/api/agent/sessions/{sessionId}/files",
+    ]);
   });
 
   it("derives advertised typed edits from the Edit Engine schema", () => {
@@ -184,7 +229,7 @@ describe("Agent Circuit API v1 service", () => {
 
   it("publishes one reusable request and response schema in OpenAPI", () => {
     const schemas = agentCircuitOpenApi.components.schemas;
-    const paths = ["/v1/circuit", "/v2/circuit"] as const;
+    const paths = ["/api/agent/sessions/{sessionId}/circuit"] as const;
     for (const path of paths) {
       expect(
         agentCircuitOpenApi.paths[path].post.requestBody.content[
@@ -244,6 +289,7 @@ describe("Agent Circuit API v1 service", () => {
       ok: true,
       capabilities: {
         operations: ["capabilities", "snapshot", "transact", "render"],
+        apiVersions: ["2.0"],
         snapshotVersions: ["1.0"],
         permissions: { snapshot: true },
       },
@@ -271,7 +317,12 @@ describe("Agent Circuit API v1 service", () => {
         },
       },
     });
-    if (!response.ok || response.operation !== "snapshot") return;
+    if (
+      !response.ok ||
+      response.operation !== "snapshot" ||
+      !("snapshot" in response)
+    )
+      return;
     expect(
       response.snapshot.document.instances.find((item) => item.id === "M1")
         ?.pins,
@@ -499,9 +550,16 @@ describe("Agent Circuit API v1 service", () => {
       id: "X1",
       symbolId: "generic-block-4",
       placement: null,
-      properties: {
-        "spice.target": "model:sky130_fd_pr__nfet_01v8",
-        "spice.pin.P1": "P1",
+      properties: {},
+      netlist: {
+        reference: "XM1",
+        parameters: {},
+        binding: {
+          kind: "model",
+          deviceClass: "mos",
+          name: "sky130_fd_pr__nfet_01v8",
+        },
+        terminals: [{ sourcePosition: 0, pinName: "P1" }],
       },
     });
     document.ports.push({
@@ -791,13 +849,11 @@ describe("Agent Circuit API v1 service", () => {
             id: "note-test",
             kind: "route-marker",
             markerKind: "current",
-            text: "I_x",
-            position: { x: 100, y: 100 },
+            content: { runs: [{ kind: "text", value: "I_x" }] },
             anchor: {
               kind: "free",
               position: { x: 100, y: 100 },
             },
-            offset: { x: 0, y: 0 },
             alignment: "middle",
             rotation: 0,
             locked: false,

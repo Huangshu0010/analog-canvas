@@ -78,7 +78,16 @@ function hierarchyProject(): CircuitProject {
       id: "X1",
       symbolId: "dual",
       placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
-      properties: { "spice.childDocumentId": "child" },
+      properties: {},
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        binding: {
+          kind: "subcircuit",
+          name: "child",
+          childDocumentId: "child",
+        },
+      },
     },
   ];
   top.nets = [
@@ -195,10 +204,9 @@ describe("net highlight and cross-cell trace", () => {
       {
         id: "label-left",
         kind: "net-label",
-        text: "SIGNAL",
-        position: { x: 50, y: -8 },
-        attachedObjectId: "net-merged",
-        offset: { x: 0, y: -8 },
+        content: { runs: [{ kind: "text", value: "SIGNAL" }] },
+        netId: "net-merged",
+        anchor: { kind: "free", position: { x: 50, y: -8 } },
         alignment: "middle",
         rotation: 0,
         locked: false,
@@ -206,10 +214,9 @@ describe("net highlight and cross-cell trace", () => {
       {
         id: "label-right",
         kind: "net-label",
-        text: "SIGNAL",
-        position: { x: 250, y: -8 },
-        attachedObjectId: "net-merged",
-        offset: { x: 0, y: -8 },
+        content: { runs: [{ kind: "text", value: "SIGNAL" }] },
+        netId: "net-merged",
+        anchor: { kind: "free", position: { x: 250, y: -8 } },
         alignment: "middle",
         rotation: 0,
         locked: false,

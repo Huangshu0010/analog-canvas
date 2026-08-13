@@ -4,73 +4,7 @@
       "annotations": [],
       "constraints": [],
       "id": "document-routing",
-      "instances": [
-        {
-          "id": "A",
-          "placement": {
-            "mirror": "none",
-            "position": {
-              "x": 140,
-              "y": 300
-            },
-            "rotation": 0
-          },
-          "properties": {},
-          "symbolId": "port"
-        },
-        {
-          "id": "B",
-          "placement": {
-            "mirror": "x",
-            "position": {
-              "x": 460,
-              "y": 300
-            },
-            "rotation": 0
-          },
-          "properties": {},
-          "symbolId": "port"
-        },
-        {
-          "id": "C",
-          "placement": {
-            "mirror": "none",
-            "position": {
-              "x": 300,
-              "y": 140
-            },
-            "rotation": 90
-          },
-          "properties": {},
-          "symbolId": "port"
-        },
-        {
-          "id": "D",
-          "placement": {
-            "mirror": "none",
-            "position": {
-              "x": 300,
-              "y": 460
-            },
-            "rotation": 270
-          },
-          "properties": {},
-          "symbolId": "port"
-        },
-        {
-          "id": "E",
-          "placement": {
-            "mirror": "none",
-            "position": {
-              "x": 340,
-              "y": 440
-            },
-            "rotation": 90
-          },
-          "properties": {},
-          "symbolId": "port"
-        }
-      ],
+      "instances": [],
       "junctions": [],
       "layoutGroups": [],
       "name": "Phase 3 Routing",
@@ -78,42 +12,78 @@
         {
           "id": "net-h",
           "name": "HORIZONTAL",
-          "ports": [],
+          "ports": [
+            "A",
+            "B",
+            "E"
+          ],
           "scope": "local",
-          "terminals": [
-            {
-              "instanceId": "A",
-              "pinName": "P"
-            },
-            {
-              "instanceId": "B",
-              "pinName": "P"
-            },
-            {
-              "instanceId": "E",
-              "pinName": "P"
-            }
-          ]
+          "terminals": []
         },
         {
           "id": "net-v",
           "name": "VERTICAL",
-          "ports": [],
+          "ports": [
+            "C",
+            "D"
+          ],
           "scope": "local",
-          "terminals": [
-            {
-              "instanceId": "C",
-              "pinName": "P"
-            },
-            {
-              "instanceId": "D",
-              "pinName": "P"
-            }
-          ]
+          "terminals": []
         }
       ],
       "noConnects": [],
-      "ports": [],
+      "ports": [
+        {
+          "direction": "passive",
+          "id": "A",
+          "name": "A",
+          "position": {
+            "x": 150,
+            "y": 300
+          },
+          "presentation": "hollow"
+        },
+        {
+          "direction": "passive",
+          "id": "B",
+          "name": "B",
+          "position": {
+            "x": 450,
+            "y": 300
+          },
+          "presentation": "hollow"
+        },
+        {
+          "direction": "passive",
+          "id": "C",
+          "name": "C",
+          "position": {
+            "x": 300,
+            "y": 150
+          },
+          "presentation": "hollow"
+        },
+        {
+          "direction": "passive",
+          "id": "D",
+          "name": "D",
+          "position": {
+            "x": 300,
+            "y": 450
+          },
+          "presentation": "hollow"
+        },
+        {
+          "direction": "passive",
+          "id": "E",
+          "name": "E",
+          "position": {
+            "x": 340,
+            "y": 450
+          },
+          "presentation": "hollow"
+        }
+      ],
       "presentation": {
         "compactness": "normal",
         "grid": 10,
@@ -126,7 +96,7 @@
   ],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 4,
+  "schemaVersion": 8,
   "source": {
     "dialect": "none",
     "entry": null,

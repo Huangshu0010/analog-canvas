@@ -51,6 +51,7 @@ describe("editor shell", () => {
         id: "net-vdd",
         name: "VDD",
         scope: "global",
+        powerDomain: "vdd",
         terminals: [{ instanceId: "Msupply", pinName: "B" }],
         ports: [],
       },
@@ -122,9 +123,15 @@ describe("editor shell", () => {
       id: "X1",
       symbolId: "hierarchical-child",
       placement: null,
-      properties: {
-        "spice.target": "subcircuit:child",
-        "spice.childDocumentId": childDocument.id,
+      properties: {},
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        binding: {
+          kind: "subcircuit",
+          name: "child",
+          childDocumentId: childDocument.id,
+        },
       },
     });
     project.documents.push(childDocument);
@@ -172,6 +179,7 @@ describe("editor shell", () => {
     expect(markup).toContain('aria-label="Tool rail"');
     expect(markup).toContain('aria-label="Shapes"');
     expect(markup).toContain('data-testid="shapes-chip-resistor"');
+    expect(markup).toContain('data-testid="shapes-chip-port"');
     expect(markup).toContain('data-testid="shapes-insert"');
     expect(markup).toContain('data-testid="library-toggle"');
     expect(markup).toContain('data-testid="shapes-library-panel"');
@@ -243,10 +251,13 @@ describe("editor shell", () => {
           annotation: {
             id: "instance-label-V1",
             kind: "instance-label",
-            text: "V1",
-            position: { x: 100, y: 148 },
-            attachedObjectId: "V1",
-            offset: { x: 0, y: 48 },
+            content: { runs: [{ kind: "text", value: "V1" }] },
+            anchor: {
+              kind: "object",
+              objectId: "V1",
+              localOffset: { x: 0, y: 48 },
+              fallbackPosition: { x: 100, y: 148 },
+            },
             alignment: "middle",
             rotation: 0,
             locked: false,

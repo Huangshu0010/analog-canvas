@@ -1,14 +1,86 @@
 # Maintenance Log
 
-## 2026-08-13 - Show origins map above daily traffic
+## 2026-08-13 - Agent golden-path request-contract closure
 
-- Target: put the analytics Origins heatmap above the Daily traffic chart.
-- Changed areas: `apps/editor/src/components/analytics-page.tsx` section order.
-- Validation: source-order review and `git diff --check` passed. Existing
-  analytics e2e heading checks still apply; no new test for markup order.
-- Commit status: prepared as
-  `feat(analytics): show origins map above daily traffic` on
-  `agent/analytics-map-above-traffic`.
+- Target: enforce the browser Agent's one public v2 request path without adding
+  a Circuit operation or simulation/PVT/waveform/design-netlist-export scope.
+- Changed areas: strict service handler selection for browser and loopback v2;
+  v2-only invalid-request dialect; OpenAPI typed claim/Circuit failures;
+  copyable connection instructions; current API guidance and focused tests.
+- Contract result: relay, browser host, and service apply the same production
+  request Schema; invalid requests return redacted path-bearing
+  `INVALID_REQUEST`, are not forwarded, and cannot change a revision. Hosted
+  OpenAPI declares all observed Circuit/claim terminal HTTP outcomes.
+- Validation: focused 57-test Agent/worker/editor suite, web Agent E2E,
+  generated artifacts write/check, typecheck, docs, `git diff --check`, and
+  `pnpm verify:branch` (118 files / 713 tests, build and production smoke)
+  passed.
+- Commit status: ready to commit as
+  `fix(agent): enforce one hosted request contract` on
+  `codex/agent-project-lifecycle`.
+
+## 2026-08-13 - Same-Project browser Agent session recovery
+
+- Target: recover an already claimed Agent session across a same-tab browser
+  refresh without implementing Project-level Cell/hierarchy control.
+- Changed areas: bounded browser recovery record and hook lifecycle; terminal
+  relay editor reconnection handling; session threat/spec and delivery-roadmap
+  scope; focused recovery and Worker tests.
+- Contract result: only a matching live Project may reuse the browser editor
+  proof; bearer/claim/Project/request data are not persisted. Revoke, expiry,
+  replacement, malformed storage, and mismatch remove the proof; uncertain
+  writes retain their original request-id path.
+- Validation: focused 44-test session suite, browser Agent E2E, generated
+  artifacts, docs/type/diff checks, and `pnpm verify:branch` passed (119 test
+  files, 717 tests, all builds, production smoke).
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(agent): recover same-project browser sessions`.
+
+## 2026-08-13 - Project compatibility corpus baseline
+
+- Target: establish the first M4 migration-corpus proof, without changing
+  simulation, PVT, waveform, or design-netlist export scope.
+- Changed areas: explicit Project corpus manifest; sequential migration and
+  canonicalization regression test; current user file-compatibility guidance.
+- Contract result: every shipped Project fixture and saved circuit Project is
+  classified as current, historic migration input, or explicitly rejected;
+  all supported historic inputs parse to stable schema-v8 output without
+  persisted `spice.*` or `routeAttachment` fields.
+- Validation: focused corpus/persistence/v7-to-v8 tests (14 tests), typecheck,
+  Markdown links, production-reader audit, and `git diff --check` passed.
+- Commit status: committed as `ab30544` and pushed on
+  `codex/agent-project-lifecycle`.
+
+## 2026-08-13 - Typed netlist and source-provenance authority
+
+- Target: complete M3 of browser Agent takeover by removing runtime `spice.*`
+  authority without adding simulation, PVT, waveform, or design-netlist export.
+- Changed areas: schema-v8 terminal mapping/import provenance and migration;
+  structural SPICE import; hierarchy, ERC, search, Snapshot/OpenAPI, component
+  parameters, symbol replacement, fixtures, and current model/API/persistence
+  specifications.
+- Contract result: typed netlist facts are the sole runtime netlist/hierarchy
+  authority; imported source evidence is bounded and immutable; current model
+  and transaction schemas reject `spice.*` writes.
+- Validation: focused migration/import/ERC/Snapshot checks; Agent artifacts
+  write/check; full `pnpm test:local` (117 files, 707 tests); typecheck, docs,
+  references, formatting, `git diff --check`, and `pnpm verify:branch` passed.
+- Commit status: committed as `9ad4ce5` and pushed on
+  `codex/agent-project-lifecycle`.
+
+## 2026-08-13 - Detailed browser Agent takeover delivery sequence
+
+- Target: turn the accepted four-operation takeover roadmap into an
+  implementation-ready sequence while excluding simulation, PVT,
+  waveforms/measurements, and SPICE/Spectre/design-netlist export.
+- Changed areas: verified M0--M2 status and M3 `spice.*` authority inventory;
+  detailed M3--M4 and A1--A6 boundaries, owners, dependency gates, negative
+  cases, and delivery proof; current roadmap status.
+- Validation: Prettier on changed Markdown, `pnpm docs:check`,
+  `pnpm references:check`, and `git diff --check` passed.
+- Commit status: ready to commit as
+  `docs(agent): detail takeover delivery slices` on
+  `codex/agent-project-lifecycle`.
 
 ## 2026-08-13 - Remove compatibility re-export layers
 
@@ -6252,14 +6324,237 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/unified-electrical-contact` as
   `chore: satisfy contact mainline gate`.
 
+## 2026-08-13 - First-class Port presentation
+
+- Target: remove the duplicate editable `port`/`port-filled` Symbol model and
+  make Port electrical identity and presentation one first-class record.
+- Changed areas: schema v6 and v5-to-v6 migration; typed Port edits; renderer,
+  GUI quick place and exact-contact wiring; Agent schema/Snapshot/OpenAPI;
+  product catalog filtering; canonical projects, routing test fixtures and
+  visual goldens.
+- Validation: focused migration/transaction/contact/render/palette/Agent tests;
+  full `pnpm test:local` (115 files, 712 tests); typecheck; Agent artifact
+  write/check; docs/reference/visual checks; `git diff --check`; and
+  `pnpm verify:branch` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(model): make Ports first-class visual endpoints`.
+
+## 2026-08-13 - Browser Agent takeover delivery roadmap
+
+- Target: freeze a detailed delivery plan for all remaining browser Agent
+  takeover features while excluding simulation, PVT, waveform/measurement data,
+  and SPICE/design-netlist export.
+- Changed areas: four-operation Agent roadmap and its target plan; defines the
+  Project controller, stable session recovery, scoped Project/visual File
+  Resource, staged Project/structural-SPICE import approval, semantic editor
+  collaboration, own-head history/duplication, and delivery evidence.
+- Validation: `pnpm docs:check` and `git diff --check` passed. The unrelated
+  active first-class-Port migration stayed unstaged.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `docs(agent): detail browser takeover delivery roadmap`.
+
+## 2026-08-13 - Agent Project lifecycle and artifact completion plan
+
+- Target: define the remaining interfaces required for complete browser Agent
+  takeover while excluding simulation/PVT/waveforms and design-netlist export.
+- Changed areas: current roadmap index and a new AP0--AP9 cross-module plan for
+  exact Snapshot reads, Project transactions, history, Project/visual artifacts,
+  staged Project/SPICE import, explicit replacement authorization, and semantic
+  editor collaboration.
+- Validation: `pnpm references:check` and `git diff --check` passed; no runtime
+  test was required for the documentation-only target.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `docs: plan complete Agent project lifecycle interfaces`.
+
+## 2026-08-13 - AP0 Agent v3 contract freeze
+
+- Target: freeze the Agent v3 contract (three-authority split, additive v3
+  operations, runtime projectRevision, Project edit inventory, Agent-safe
+  history, artifact/import envelopes, import state machine, scopes, errors, and
+  limits) before any runtime change, and lock the current v2 boundary.
+- Changed areas: new ADR 0018 extending ADR 0016; additive "Agent v3 extension"
+  sections in agent-api, web-agent-session, persistence-and-recovery,
+  project-file-format, export, and editor-interaction specs; ADR index; and a
+  new contract-characterization test. No Zod schema or generated
+  `fixtures/agent-api/` change.
+- Validation: focused characterization suite (7 tests), `pnpm docs:check`,
+  `pnpm references:check`, `pnpm typecheck`, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `docs(agent): freeze v3 contract surface and ADR 0018`.
+
+## 2026-08-13 - AP1 exact Snapshot and component catalog
+
+- Target: make every writable persisted netlist/interface field Agent-readable
+  and publish a machine-readable component catalog via additive v3 `snapshot`
+  targets, without changing v1/v2.
+- Changed areas: agent-adapter schema (v3 version, snapshot request `target`,
+  v3 document/project/catalog response schemas), snapshot (exact instance
+  netlist + cell interface, project + document v3 builders), new catalog
+  builder from `builtInSymbols` joined with `deviceNetlistDefinition`, service
+  v3 snapshot dispatch + capabilities, regenerated `fixtures/agent-api`, new
+  v3 tests, and the AP0 characterization test updated for v3.
+- Validation: 39 adapter tests (incl. 6 new), `agent-api:artifacts --check`,
+  `pnpm typecheck`, `pnpm docs:check`, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(agent): v3 exact snapshot targets and component catalog`.
+
+## 2026-08-13 - Hosted Agent four-operation golden contract
+
+- Target: make external browser Agent takeover self-contained and repairable
+  through one hosted v2 `capabilities/snapshot/transact/render` contract,
+  without adding Circuit operations, SDKs, or source-code dependencies.
+- Changed areas: production-only request/response schemas and generated
+  OpenAPI; shared structured request and transport errors; strict current
+  Agent authoring boundary; ten-step copied lifecycle; explicit access
+  rotation; relay/browser rejection ordering; contract, session, and E2E tests;
+  and ADR/spec supersession of the AP2/v3 surface expansion.
+- Validation: focused Agent tests (63), web-session E2E, generated artifact
+  check, typecheck, docs check, and `pnpm verify:branch` passed (113 test files,
+  705 tests, all workspace builds, production smoke); `git diff --check`
+  passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `fix(agent): close the four-operation request contract`.
+
+## 2026-08-13 - Explicit Net power-domain authority
+
+- Target: remove runtime supply semantics from legacy VDD/ground marker
+  symbols and make VDD rail authoring an atomic, Agent-visible document edit.
+- Changed areas: Project schema v5 and v4-to-v5 migration; explicit
+  power-domain consumers in model/derived/render/edit engine; VDD rail and
+  component-placement behavior; Agent Snapshot/OpenAPI artifacts; compatibility
+  fixtures and current API/project documentation.
+- Validation: focused model, transaction, Agent, and editor tests; full local
+  unit suite (114 files, 708 tests); typecheck; generated Agent artifact
+  write/check; docs and reference checks; `git diff --check`; and
+  `pnpm verify:branch` (workspace build and production smoke) passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(model): make Net power-domain explicit`.
+
+## 2026-08-13 - Four-operation Agent takeover completion roadmap
+
+- Target: replace the superseded API-v3 expansion plan with a current,
+  detailed completion sequence for browser Agent takeover while explicitly
+  excluding simulation/PVT/waveforms and SPICE/design-netlist export.
+- Changed areas: current delivery-roadmap index and the new four-operation
+  completion plan, including authority migrations, Project lifecycle, browser
+  file transport, approval/replacement, semantic collaboration, scopes,
+  errors, and deployed acceptance flows.
+- Validation: `pnpm docs:check`, `pnpm references:check`, `git diff --check`,
+  and clean branch status passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `docs(agent): plan four-operation takeover completion`.
+
+## 2026-08-13 - M2 RichText and VisualAnchor authority
+
+- Target: make schema-v7 RichText content and VisualAnchor the only editable
+  annotation authority, while preserving old Projects through deterministic
+  migration.
+- Changed areas: model schema and v6-to-v7 migration; GUI text/drag/clipboard;
+  edit engine and routing; Net-label/connectivity/visual consumers; SVG text
+  renderer and visual goldens; Agent Snapshot/OpenAPI; canonical fixtures and
+  current model/connectivity/editor specifications.
+- Validation: focused M2 suites; full local unit suite (116 files, 701 tests);
+  `pnpm ci:static`; Agent artifact write/check; visual golden check;
+  `git diff --check`; and `pnpm verify:branch` (workspace build and production
+  smoke) passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(model): make RichText and VisualAnchor canonical`.
+
+## 2026-08-13 - Public Agent OpenAPI surface
+
+- Target: publish only the two externally usable hosted Agent paths, while
+  retaining browser-owner and loopback transport as private implementation.
+- Changed areas: Agent OpenAPI declaration/artifact; deployed OpenAPI and
+  contract tests; hosted-versus-local API/session documentation; target plan.
+- Validation: focused Agent/Worker tests (41 tests), generated Agent artifact
+  write/check, docs/type/diff checks, and `pnpm verify:branch` passed (118
+  test files, 713 tests, all workspace builds, production smoke).
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `refactor(agent): publish only the external session surface`.
+
+## 2026-08-13 - Shared Agent semantic editor control
+
+- Target: let a scoped hosted Agent visibly activate/select/highlight/fit/clear
+  the live editor through the existing GUI authorities, without creating a
+  new Circuit operation or a persisted transaction.
+- Changed areas: canonical derived Locator runtime schema; Agent
+  `semanticIntent` schema/service/host/scope/OpenAPI; browser semantic adapter
+  and permission presets; worker scope gate; Agent E2E; current API/session
+  usage specs and roadmap.
+- Validation: focused unit suites (32 tests), browser Agent E2E, generated
+  artifacts, type/docs/diff checks, and `pnpm verify:branch` (119 files, 719
+  tests, all workspace builds and production smoke) passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(agent): add shared semantic editor control`.
+
+## 2026-08-13 - Scoped browser Agent File Resource
+
+- Target: add the named File Resource for canonical Project/formal visual
+  download and browser-approved Project/structural-SPICE staging, without a
+  fifth Circuit operation, filesystem access, simulation, or netlist export.
+- Changed areas: Agent File Resource schemas/OpenAPI/artifacts/scopes/session
+  relay; browser file host and approval UI; session instructions/presets;
+  current Agent/session/roadmap specifications; unit, Worker, and browser E2E
+  coverage.
+- Validation: focused suites (48 tests), `web-agent-session` browser E2E,
+  typecheck, generated Agent artifacts, docs/diff checks, and
+  `pnpm verify:branch` (120 files, 725 tests, all workspace builds and
+  production smoke) passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(agent): add scoped browser file resource`.
+
+## 2026-08-13 - Show origins map above daily traffic
+
+- Target: put the analytics Origins heatmap above the Daily traffic chart.
+- Changed areas: `apps/editor/src/components/analytics-page.tsx` section order.
+- Validation: source-order review and `git diff --check` passed. Existing
+  analytics e2e heading checks still apply; no new test for markup order.
+- Commit status: committed as `cebdf90` on
+  `agent/analytics-map-above-traffic`.
+
 ## 2026-08-13 - Properties Dock E2E Transition Stability
 
 - Target: make the Properties-dock canvas-width assertion wait for the
   existing transition rather than sampling its pre-transition geometry.
 - Changed areas: one browser assertion and its target record.
-- Validation: `pnpm test:e2e:local apps/editor/e2e/manual-editor.spec.ts --grep
-  "keeps component insertion and inspection from resizing the canvas"` passed
-  with one worker; `git diff --check` and all six remote CI jobs on PR #37
-  passed.
-- Commit status: committed and pushed on `codex/stabilize-properties-e2e` as
-  `test(e2e): wait for Properties dock canvas transition`.
+- Validation: the focused Properties-dock E2E and all remote CI checks on PR
+  #37 passed.
+- Commit status: committed as `f2a87fd` on
+  `codex/stabilize-properties-e2e`.
+
+## 2026-08-13 - Refresh Phase 7 formal export golden
+
+- Target: reconcile the formal SVG/PNG/PDF baseline with the accepted
+  canonical RichText and VisualAnchor output.
+- Changed areas: deterministic Phase 7 export artifacts and hash manifest.
+- Validation: generated through `pnpm export:golden`; full `pnpm ci:check`
+  passed (725 unit tests, 99 browser E2E, build, performance, PWA and release
+  smoke).
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `test(export): refresh formal export golden`.
+
+## 2026-08-13 - Refresh migrated editor E2E fixtures
+
+- Target: restore browser gate coverage after accepted first-class Port,
+  RichText and hierarchy-interface migrations, without weakening product
+  behavior.
+- Changed areas: stale Port endpoint/selector expectations, semantic RichText
+  selector, and the imported hierarchy-navigation fixture's valid symbol/port
+  interface.
+- Validation: focused browser E2E (64 tests) and full `pnpm ci:check` passed
+  (725 unit tests, 99 browser E2E, build, performance, Golden/PWA/release
+  smoke); `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `test(editor): refresh migrated routing fixtures`.
+
+## 2026-08-13 - Repair compatibility corpus inventory
+
+- Target: make the Project compatibility corpus reflect only Git-tracked,
+  shipped Projects after remote CI exposed an ignored local scratch export in
+  the declared migration list.
+- Changed areas: tracked-Project discovery in the compatibility corpus test
+  and the corpus list itself; no ignored local artifact was promoted.
+- Validation: focused corpus test (4 tests), full `pnpm ci:unit` (725 tests),
+  and `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `test(model): exclude ignored scratch Project from corpus`.

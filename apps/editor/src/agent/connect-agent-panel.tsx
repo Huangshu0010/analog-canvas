@@ -47,7 +47,14 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
   {
     id: "review",
     label: "Review",
-    scopes: ["circuit.snapshot", "circuit.render", "circuit.source-spans"],
+    scopes: [
+      "circuit.snapshot",
+      "circuit.render",
+      "circuit.source-spans",
+      "editor.semantic-control",
+      "project.download",
+      "visual.download",
+    ],
   },
   {
     id: "layout",
@@ -57,6 +64,9 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
       "circuit.render",
       "circuit.source-spans",
       "circuit.edit.geometry",
+      "editor.semantic-control",
+      "project.download",
+      "visual.download",
     ],
   },
   {
@@ -69,6 +79,10 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
       "circuit.edit.geometry",
       "circuit.edit.connectivity",
       "circuit.edit.presentation",
+      "editor.semantic-control",
+      "project.download",
+      "visual.download",
+      "project.import",
     ],
   },
 ];
@@ -86,8 +100,32 @@ export interface ConnectAgentPanelProps {
   onPause: () => void;
   onResume: () => void;
   onReconnect: () => void;
+  onRotate: () => void;
   onRevoke: () => void;
   onClose: () => void;
+}
+
+export function agentConnectionInstructions(
+  origin: string,
+  claimCode: string,
+): string {
+  const claimUrl = `${origin}/api/agent/claims`;
+  const circuitUrl = `${origin}/api/agent/sessions/{sessionId}/circuit`;
+  const fileUrl = `${origin}/api/agent/sessions/{sessionId}/files`;
+  const openApiUrl = `${origin}/api/agent/openapi.json`;
+  return `Connect to the Interactive Circuit Maker Agent API.
+1. Redeem claimCode exactly once by POSTing ${JSON.stringify({ claimCode })} to ${claimUrl}, and retain the complete response in memory.
+2. Never log or display agentToken.
+3. Use only sessionId and documentIds returned by the claim response; replace {sessionId} in the Circuit URL with that value, and send agentToken only as the Bearer token.
+4. Call capabilities once through POST ${circuitUrl}.
+5. Request one complete snapshot for the selected documentId.
+6. Validate every request against the published OpenAPI: ${openApiUrl}
+7. Use ${fileUrl} only for authorized Project/formal-file download or staging a bounded Project/structural-SPICE candidate; staging never changes the browser Project.
+8. A human must explicitly approve a staged candidate in the editor before it can replace the Project.
+9. Dry-run non-trivial transact requests using the snapshot revision.
+10. Commit the same edits only if dry-run succeeds and the revision is unchanged.
+11. Render, then request a fresh snapshot for final verification.
+12. Reuse a requestId only when retrying the exact same payload.`;
 }
 
 const STATUS_LABEL: Record<AgentConnectionStatus, string> = {
@@ -192,7 +230,7 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
                 const origin = window.location.origin;
                 void navigator.clipboard
                   .writeText(
-                    `Connect to the Interactive Circuit Maker Agent API. POST ${JSON.stringify({ claimCode: props.claimCode })} to ${origin}/api/agent/claims, then use the returned bearer token, sessionId, and documentIds. OpenAPI: ${origin}/api/agent/openapi.json`,
+                    agentConnectionInstructions(origin, props.claimCode!),
                   )
                   .catch(() => undefined);
               }}
@@ -237,13 +275,22 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
               </button>
             ) : null}
             {!terminal ? (
-              <button
-                type="button"
-                data-testid="agent-revoke"
-                onClick={props.onRevoke}
-              >
-                Revoke
-              </button>
+              <>
+                <button
+                  type="button"
+                  data-testid="agent-rotate"
+                  onClick={props.onRotate}
+                >
+                  Rotate Agent Access
+                </button>
+                <button
+                  type="button"
+                  data-testid="agent-revoke"
+                  onClick={props.onRevoke}
+                >
+                  Revoke
+                </button>
+              </>
             ) : null}
           </div>
         ) : null}

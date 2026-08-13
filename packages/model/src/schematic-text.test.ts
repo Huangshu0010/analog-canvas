@@ -1,45 +1,35 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSchematicMath, schematicTextDocument } from "./schematic-text.js";
+import { migrateLegacySchematicText } from "./schematic-text.js";
+import { semanticTextDocument } from "./semantic-text.js";
 
-describe("schematic semantic text", () => {
-  it.each([
-    ["M1", "instance-label", { base: "M", subscript: "1", style: "math" }],
-    ["R1", "instance-label", { base: "R", subscript: "1", style: "math" }],
-    ["VDD", "power-label", { base: "V", subscript: "DD", style: "math" }],
-    ["Vb1", "net-label", { base: "V", subscript: "b1", style: "math" }],
-    ["IX", "route-marker", { base: "I", subscript: "X", style: "math" }],
-    ["V_X", "route-marker", { base: "V", subscript: "X", style: "math" }],
-    [
-      "VIN+",
-      "route-marker",
-      { base: "V", subscript: "IN", suffix: "+", style: "math" },
-    ],
-    [
-      "VIN-",
-      "net-label",
-      { base: "V", subscript: "IN", suffix: "-", style: "math" },
-    ],
-    [
-      "XM12",
-      "default-instance",
-      { base: "XM", subscript: "12", style: "math" },
-    ],
-  ] as const)("derives %s from its semantic kind", (text, kind, expected) => {
-    expect(parseSchematicMath(text, kind)).toEqual(expected);
+describe("schematic RichText boundaries", () => {
+  it("converts historical markup only at the migration boundary", () => {
+    expect(migrateLegacySchematicText("\\it{V}_{DD}", "power-label")).toEqual({
+      runs: [
+        {
+          kind: "span",
+          style: "italic",
+          children: [{ kind: "text", value: "V" }],
+        },
+        {
+          kind: "span",
+          style: "subscript",
+          children: [{ kind: "text", value: "DD" }],
+        },
+      ],
+    });
   });
 
-  it.each(["V^2", "\\frac{1}{2}"])(
-    "does not treat unsupported notation %s as semantic formatting",
-    (text) => {
-      expect(parseSchematicMath(text, "net-label")).toBeNull();
-      expect(schematicTextDocument(text, "net-label")).toEqual({
-        runs: [{ kind: "text", value: text }],
-      });
-    },
-  );
-
-  it.each(["+", "1.2 V"])("does not infer formatting for %s", (text) => {
-    expect(parseSchematicMath(text, "route-marker")).toBeNull();
+  it("constructs formatting from current semantic identifiers, not markup", () => {
+    expect(semanticTextDocument("M1", "instance-label")).toMatchObject({
+      runs: [
+        { kind: "span", style: "italic" },
+        { kind: "span", style: "subscript" },
+      ],
+    });
+    expect(semanticTextDocument("\\it{V}_{DD}", "power-label")).toEqual({
+      runs: [{ kind: "text", value: "\\it{V}_{DD}" }],
+    });
   });
 });

@@ -4,6 +4,10 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
+import type {
+  AgentHostSemanticIntentRequest,
+  AgentHostSemanticIntentResult,
+} from "@icm/agent-adapter";
 
 import {
   buildManualWirePath,
@@ -55,9 +59,11 @@ import type {
 } from "@icm/derived";
 import {
   createEmptyProject,
+  flattenRichText,
   parseProject,
   powerNetNormalizations,
   serializeProject,
+  semanticTextDocument,
   transformPoint,
 } from "@icm/model";
 import type {
@@ -100,8 +106,8 @@ import {
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import {
-  proposeLegacyPowerContactReconciliation,
   proposePlacementContact,
+  proposePortPlacementContact,
   proposedStandalonePowerConnection,
 } from "../features/component-insert/placement-connectivity";
 import {
@@ -137,7 +143,9 @@ import { EditorHelpDialog } from "../components/editor-help-dialog";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
 import { ConnectAgentPanel } from "../agent/connect-agent-panel";
 import { BrowserAgentHost } from "../agent/browser-agent-host";
+import { BrowserAgentFileHost } from "../agent/browser-agent-file-host";
 import { useAgentSession } from "../agent/use-agent-session";
+import type { AgentFileCandidateSummary } from "@icm/agent-adapter";
 import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
@@ -506,16 +514,22 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     projectSessionId,
     synchronizeExternalCommit,
   } = useDocumentController(preparedInitialProject, stageRecovery);
+  const agentSemanticIntentRef = useRef<
+    (request: AgentHostSemanticIntentRequest) => AgentHostSemanticIntentResult
+  >(() => ({
+    ok: false,
+    code: "SEMANTIC_CONTROL_UNAVAILABLE",
+    message: "The editor is still initializing semantic controls",
+  }));
   const browserAgentHost = useMemo(
     () =>
-      new BrowserAgentHost(editorDocumentController, synchronizeExternalCommit),
+      new BrowserAgentHost(
+        editorDocumentController,
+        synchronizeExternalCommit,
+        (request) => agentSemanticIntentRef.current(request),
+      ),
     [editorDocumentController, projectSessionId],
   );
-  const agentSession = useAgentSession({
-    project,
-    projectSessionId,
-    host: browserAgentHost,
-  });
   const [documentStack, setDocumentStack] = useState<HierarchyFrame[]>([]);
   const {
     selection: visualSelection,
@@ -532,6 +546,28 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     [],
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
+  const [agentFileCandidate, setAgentFileCandidate] =
+    useState<AgentFileCandidateSummary | null>(null);
+  const browserAgentFileHost = useMemo(
+    () =>
+      new BrowserAgentFileHost({
+        getProjectSessionId: () => editorDocumentController.projectSessionId,
+        getProject: () => editorDocumentController.project,
+        getDocument: (documentId) =>
+          editorDocumentController.project.documents.find(
+            (candidate) => candidate.id === documentId,
+          ) ?? null,
+        getResolver: () => editorDocumentController.resolver,
+        onApprovalRequested: setAgentFileCandidate,
+      }),
+    [editorDocumentController, projectSessionId],
+  );
+  const agentSession = useAgentSession({
+    project,
+    projectSessionId,
+    host: browserAgentHost,
+    fileHost: browserAgentFileHost,
+  });
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [routeStretchPreview, setRouteStretchPreview] =
@@ -745,7 +781,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     ? document.annotations.filter(
         (annotation) =>
           annotation.kind === "net-label" &&
-          annotation.attachedObjectId === selectedRoute.netId,
+          annotation.netId === selectedRoute.netId,
       )
     : [];
   const selectedRouteNetLabel = selectedRoute
@@ -985,17 +1021,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const normalizationEdits = powerNetNormalizations(document).length
       ? [{ kind: "normalize_power_nets" as const }]
       : [];
-    const powerContactEdits = proposeLegacyPowerContactReconciliation(
-      resolver,
-      document.instances,
-      visibleEndpoints,
-    );
-    const edits = [...normalizationEdits, ...powerContactEdits];
+    const edits = normalizationEdits;
     if (edits.length === 0) return;
     const result = transact(edits);
     if (result.ok) {
       setStatus(
-        `Normalized ${normalizationEdits.length} power-Net rule(s) and reconciled ${powerContactEdits.length} visible power contact(s)`,
+        `Normalized ${normalizationEdits.length} explicit power-Net rule(s)`,
       );
     }
   }, [document, resolver, visibleEndpoints]);
@@ -1120,9 +1151,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     );
     return Boolean(
       visualSelection.annotationIds.includes(id) ||
-      (annotation?.attachedObjectId &&
-        (selectedIds.includes(annotation.attachedObjectId) ||
-          selectedInternalObjectIds.has(annotation.attachedObjectId))),
+      (annotation?.anchor.kind === "object" &&
+        (selectedIds.includes(annotation.anchor.objectId) ||
+          selectedInternalObjectIds.has(annotation.anchor.objectId))),
     );
   }
 
@@ -1141,7 +1172,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       setNetLabelEditorOpen(false);
       return;
     }
-    setNetLabelDraft(selectedRouteNetLabel?.text ?? "");
+    setNetLabelDraft(
+      selectedRouteNetLabel
+        ? flattenRichText(selectedRouteNetLabel.content)
+        : "",
+    );
   }, [selectedRoute, selectedRouteNetLabel]);
 
   useEffect(() => {
@@ -1339,6 +1374,31 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       );
       selectOnly("instance", [locator.objectId]);
       if (instance?.placement) focusPoint(instance.placement.position);
+    } else if (locator.kind === "route") {
+      const route = opened.routes.find((item) => item.id === locator.objectId);
+      selectOnly("route", [locator.objectId]);
+      const centerline = route
+        ? projectConnectivityIndex.documents
+            .get(opened.id)
+            ?.routeGeometry.get(route.id)?.centerline
+        : undefined;
+      if (centerline?.[0]) focusPoint(centerline[0]);
+    } else if (locator.kind === "junction") {
+      const junction = opened.junctions.find(
+        (item) => item.id === locator.objectId,
+      );
+      selectOnly("junction", [locator.objectId]);
+      if (junction) focusPoint(junction.position);
+    } else if (locator.kind === "annotation") {
+      const annotation = opened.annotations.find(
+        (item) => item.id === locator.objectId,
+      );
+      selectOnly("annotation", [locator.objectId]);
+      const position =
+        annotation?.anchor.kind === "free"
+          ? annotation.anchor.position
+          : annotation?.anchor.fallbackPosition;
+      if (position) focusPoint(position);
     } else if (locator.kind === "net") {
       setHighlightedNetOrigin({
         documentId: opened.id,
@@ -1357,6 +1417,203 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setSelectionOpen(true);
     setStatus(statusMessage);
   }
+
+  function applyAgentSemanticIntent(
+    request: AgentHostSemanticIntentRequest,
+  ): AgentHostSemanticIntentResult {
+    const intent = request.intent;
+    const targetDocument = project.documents.find(
+      (candidate) => candidate.id === request.documentId,
+    );
+    if (!targetDocument) {
+      return {
+        ok: false,
+        code: "DOCUMENT_NOT_FOUND",
+        message: `Document ${request.documentId} is not present in this Project`,
+      };
+    }
+    const activateDocument = (message: string) => {
+      const hierarchyPath =
+        findHierarchyPath(
+          projectConnectivityIndex,
+          project.topDocumentId,
+          targetDocument.id,
+        ) ?? [];
+      navigateToLocator(
+        {
+          documentId: targetDocument.id,
+          hierarchyPath,
+          kind: "document",
+          objectId: targetDocument.id,
+        },
+        message,
+      );
+    };
+    const fail = (
+      code: string,
+      message: string,
+    ): AgentHostSemanticIntentResult => ({
+      ok: false,
+      code,
+      message,
+    });
+
+    switch (intent.kind) {
+      case "activate-document":
+        activateDocument(`Agent activated Cell ${targetDocument.name}`);
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [],
+        };
+      case "fit-document": {
+        activateDocument(`Agent fit Cell ${targetDocument.name}`);
+        setViewBox({ ...buildSvgScene(targetDocument, resolver).viewBox });
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [],
+        };
+      }
+      case "clear-focus":
+        resetInteractionState();
+        setHighlightedNetOrigin(null);
+        setSelectionOpen(false);
+        setStatus("Agent cleared semantic focus");
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [],
+        };
+      case "highlight-net": {
+        const net = targetDocument.nets.find(
+          (candidate) => candidate.id === intent.netId,
+        );
+        if (!net) {
+          return fail(
+            "OBJECT_NOT_FOUND",
+            `Net ${intent.netId} is not present in Document ${targetDocument.id}`,
+          );
+        }
+        activateDocument(`Agent highlighted Net ${net.name ?? net.id}`);
+        highlightNet(net.id, targetDocument.id, intent.endpoint);
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [net.id],
+          netId: net.id,
+        };
+      }
+      case "select": {
+        const { locator } = intent;
+        if (locator.documentId !== targetDocument.id) {
+          return fail(
+            "DOCUMENT_MISMATCH",
+            "A semantic locator must address the transaction Document",
+          );
+        }
+        const expectedHierarchyPath = findHierarchyPath(
+          projectConnectivityIndex,
+          project.topDocumentId,
+          targetDocument.id,
+        );
+        if (
+          !expectedHierarchyPath ||
+          expectedHierarchyPath.length !== locator.hierarchyPath.length ||
+          expectedHierarchyPath.some(
+            (frame, index) =>
+              frame.parentDocumentId !==
+                locator.hierarchyPath[index]?.parentDocumentId ||
+              frame.instanceId !== locator.hierarchyPath[index]?.instanceId ||
+              frame.childDocumentId !==
+                locator.hierarchyPath[index]?.childDocumentId,
+          )
+        ) {
+          return fail(
+            "LOCATOR_MISMATCH",
+            "The locator hierarchy path is not reachable from this Project top Cell",
+          );
+        }
+        const exists = (() => {
+          switch (locator.kind) {
+            case "instance":
+              return targetDocument.instances.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "net":
+              return targetDocument.nets.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "route":
+              return targetDocument.routes.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "junction":
+              return targetDocument.junctions.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "annotation":
+              return targetDocument.annotations.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "port":
+              return targetDocument.ports.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "no-connect":
+              return targetDocument.noConnects.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "terminal": {
+              const endpoint = locator.endpoint;
+              if (endpoint?.kind !== "terminal") return false;
+              const instance = targetDocument.instances.find(
+                (item) => item.id === endpoint.instanceId,
+              );
+              const resolved = instance
+                ? resolver.resolve(instance.symbolId, instance.symbolVariantId)
+                : null;
+              return (
+                resolved?.definition.pins.some(
+                  (pin) => pin.name === endpoint.pinName,
+                ) ?? false
+              );
+            }
+          }
+        })();
+        if (!exists) {
+          return fail(
+            "OBJECT_NOT_FOUND",
+            `Locator ${locator.kind} ${locator.objectId} is not present in Document ${targetDocument.id}`,
+          );
+        }
+        const objectLocator: ObjectLocator = {
+          documentId: locator.documentId,
+          hierarchyPath: locator.hierarchyPath,
+          kind: locator.kind,
+          objectId: locator.objectId,
+          ...(locator.endpoint ? { endpoint: locator.endpoint } : {}),
+        };
+        navigateToLocator(
+          objectLocator,
+          `Agent selected ${locator.kind} ${locator.objectId}`,
+        );
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [locator.objectId],
+          ...(locator.kind === "net" ? { netId: locator.objectId } : {}),
+        };
+      }
+    }
+  }
+
+  agentSemanticIntentRef.current = applyAgentSemanticIntent;
 
   function enterHierarchy(instanceId: string): void {
     const instance = document.instances.find(
@@ -1398,6 +1655,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     // revive after Save/Discard/Open/Import/Restore/demo-load swaps the project.
     // Callers that also remove the recovery key do so after this cancels.
     cancelRecovery();
+    browserAgentFileHost.clear();
+    setAgentFileCandidate(null);
     const prepared = materializeRazaviProjectBulkConnections(nextProject);
     const nextDocument = replaceProject(prepared.project);
     documentViewBoxes.current = new Map();
@@ -1405,6 +1664,32 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setViewBox(nextViewBox);
     resetInteractionState();
     return nextDocument;
+  }
+
+  function approveAgentFileCandidate(): void {
+    if (!agentFileCandidate) return;
+    const candidate = browserAgentFileHost.consumeApproved(
+      agentFileCandidate.candidateId,
+    );
+    setAgentFileCandidate(null);
+    if (!candidate) {
+      setStatus(
+        "Agent file candidate expired; ask the Agent to stage it again",
+      );
+      return;
+    }
+    replaceActiveProject(candidate);
+    stageRecovery(candidate);
+    setStatus(
+      `Accepted Agent ${agentFileCandidate.kind} candidate: ${candidate.name}`,
+    );
+  }
+
+  function rejectAgentFileCandidate(): void {
+    if (!agentFileCandidate) return;
+    browserAgentFileHost.discard(agentFileCandidate.candidateId);
+    setAgentFileCandidate(null);
+    setStatus("Rejected Agent file candidate");
   }
 
   function jumpToVisualDiagnostic(
@@ -1582,6 +1867,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setVddRailStart(null);
     beginComponentPlacement(request);
     setStatus(`Place ${symbolName} on the canvas · R rotates · Esc cancels`);
+  }
+
+  function beginPortPlacement(): void {
+    setInsertDialogOpen(false);
+    setComponentPlacementRotation(0);
+    setComponentPreviewPoint(null);
+    setVddRailStart(null);
+    beginComponentPlacement({
+      symbolId: "port",
+      properties: {},
+      initialRotation: 0,
+      showReference: false,
+      referenceText: null,
+    });
+    setStatus("Place Port on the canvas; Esc cancels");
   }
 
   function cancelComponentInsert(): void {
@@ -2078,9 +2378,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     annotation: Annotation,
     candidate: Point,
   ): Point {
-    if (annotation.kind === "instance-label" && annotation.attachedObjectId) {
+    if (
+      annotation.kind === "instance-label" &&
+      annotation.anchor.kind === "object"
+    ) {
+      const anchor = annotation.anchor;
       const instance = document.instances.find(
-        (item) => item.id === annotation.attachedObjectId,
+        (item) => item.id === anchor.objectId,
       );
       if (instance?.placement) {
         const resolved = resolver.resolve(
@@ -2113,9 +2417,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         };
       }
     }
-    if (annotation.kind === "net-label" && annotation.attachedObjectId) {
+    if (annotation.kind === "net-label" && annotation.netId) {
       const candidates = routePolylines
-        .filter(({ route }) => route.netId === annotation.attachedObjectId)
+        .filter(({ route }) => route.netId === annotation.netId)
         .flatMap(({ polyline }) =>
           polyline.points
             .slice(0, -1)
@@ -2157,7 +2461,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       );
       if (!attached) return annotation;
       const anchor =
-        annotation.anchor?.kind === "route"
+        annotation.anchor.kind === "route"
           ? {
               ...annotation.anchor,
               segmentIndex: attached.routeAttachment.segmentIndex,
@@ -2169,28 +2473,37 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           : annotation.anchor;
       return {
         ...annotation,
-        position: attached.position,
-        ...(anchor ? { anchor } : {}),
-        ...(annotation.routeAttachment
-          ? { routeAttachment: attached.routeAttachment }
-          : {}),
+        anchor,
       };
     }
 
     const position = constrainAnnotationPosition(annotation, candidate);
-    let offset = { ...annotation.offset };
-    if (annotation.attachedObjectId) {
+    if (annotation.anchor.kind === "object") {
+      const anchor = annotation.anchor;
       const instance = document.instances.find(
-        (item) => item.id === annotation.attachedObjectId,
+        (item) => item.id === anchor.objectId,
       );
       if (instance?.placement) {
-        offset = {
-          x: position.x - instance.placement.position.x,
-          y: position.y - instance.placement.position.y,
+        return {
+          ...annotation,
+          anchor: {
+            ...annotation.anchor,
+            localOffset: {
+              x: position.x - instance.placement.position.x,
+              y: position.y - instance.placement.position.y,
+            },
+            fallbackPosition: position,
+          },
         };
       }
     }
-    return { ...annotation, position, offset };
+    return {
+      ...annotation,
+      anchor:
+        annotation.anchor.kind === "free"
+          ? { kind: "free", position }
+          : { ...annotation.anchor, fallbackPosition: position },
+    };
   }
 
   function beginAnnotationDrag(
@@ -2233,7 +2546,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       originalPosition: {
         ...(isRoutedMarker(annotation) && markerPlacement
           ? markerPlacement.labelPosition
-          : annotation.position),
+          : annotation.anchor.kind === "free"
+            ? annotation.anchor.position
+            : annotation.anchor.fallbackPosition),
       },
       pointerStart,
     };
@@ -2715,6 +3030,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     position: Point,
     placementRequest: NonNullable<typeof pendingComponentPlacement>,
   ): void {
+    if (symbolId === "vdd") {
+      setStatus(
+        "Use the VDD rail tool; legacy VDD marker placement is disabled",
+      );
+      return;
+    }
+    if (symbolId === "port" || symbolId === "port-filled") {
+      setStatus(
+        "Use the first-class Port tool; legacy port symbols are disabled",
+      );
+      return;
+    }
     instanceCounter.current += 1;
     const prefix: Record<string, string> = {
       resistor: "R",
@@ -2724,9 +3051,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       "voltage-source": "V",
       "current-source": "I",
       ground: "GND",
-      vdd: "VDD",
-      port: "P",
-      "port-filled": "P",
     };
     let id = `${prefix[symbolId] ?? "X"}${instanceCounter.current}`;
     while (document.instances.some((instance) => instance.id === id)) {
@@ -2767,9 +3091,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const instanceLabel = defaultLabel
       ? {
           ...defaultLabel,
-          text: placementRequest.showReference
-            ? (placementRequest.referenceText ?? defaultLabel.text)
-            : "",
+          content: semanticTextDocument(
+            placementRequest.showReference
+              ? (placementRequest.referenceText ?? instance.id)
+              : " ",
+            "instance-label",
+          ),
         }
       : null;
     const contact = proposePlacementContact(
@@ -2836,24 +3163,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             },
           ]
         : []),
-      ...(symbolId === "vdd"
-        ? [
-            {
-              kind: "upsert_schematic_annotation" as const,
-              annotation: {
-                id: `label-${id}`,
-                kind: "power-label" as const,
-                text: "VDD",
-                position: { x: position.x + 14, y: position.y + 5 },
-                attachedObjectId: id,
-                offset: { x: 14, y: 5 },
-                alignment: "start" as const,
-                rotation: 0 as const,
-                locked: false,
-              },
-            },
-          ]
-        : []),
     ]);
     if (result.ok) {
       selectOnly("instance", [id]);
@@ -2886,6 +3195,47 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     );
   }
 
+  function placePort(position: Point): void {
+    instanceCounter.current += 1;
+    let id = `P${instanceCounter.current}`;
+    while (
+      document.ports.some((port) => port.id === id) ||
+      document.instances.some((instance) => instance.id === id)
+    ) {
+      instanceCounter.current += 1;
+      id = `P${instanceCounter.current}`;
+    }
+    const port = {
+      id,
+      name: id,
+      direction: "passive" as const,
+      position,
+      presentation: "hollow" as const,
+    };
+    const contact = proposePortPlacementContact(
+      document,
+      resolver,
+      port,
+      visibleEndpoints,
+    );
+    const result = transact([{ kind: "add_port", port }, ...contact.edits]);
+    if (!result.ok) return;
+    selectEndpoint({
+      endpoint: { kind: "port", portId: id },
+      netId: null,
+      point: position,
+      preludeEdits: [],
+    });
+    setComponentPreviewPoint(position);
+    setStatus(
+      contact.ambiguous
+        ? `Added ${id}; overlapping conductors are ambiguous, wire explicitly`
+        : contact.matched
+          ? `Added ${id} and connected it`
+          : `Added ${id}`,
+    );
+  }
+
   function commitPendingComponentAt(point: Point): void {
     if (!pendingSymbolId || !pendingComponentPlacement) return;
     if (pendingSymbolId === "vdd") {
@@ -2898,6 +3248,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       } else {
         placeVddRail(vddRailStart, { x: point.x, y: vddRailStart.y });
       }
+      return;
+    }
+    if (pendingSymbolId === "port") {
+      placePort(point);
       return;
     }
     placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
@@ -2956,8 +3310,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const attachedAnnotationIds = document.annotations
       .filter(
         (annotation) =>
-          annotation.attachedObjectId !== undefined &&
-          movingIds.includes(annotation.attachedObjectId),
+          annotation.anchor.kind === "object" &&
+          movingIds.includes(annotation.anchor.objectId),
       )
       .map((annotation) => annotation.id);
     const movingInternalSelection = deriveInternalGroupSelection(
@@ -2973,8 +3327,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       .filter((annotation) => {
         const routeAttachment = effectiveRouteAttachment(annotation);
         return (
-          (annotation.attachedObjectId !== undefined &&
-            movingInternalObjectIds.has(annotation.attachedObjectId)) ||
+          (annotation.anchor.kind === "object" &&
+            movingInternalObjectIds.has(annotation.anchor.objectId)) ||
           (routeAttachment !== null &&
             movingInternalSelection.routeIds.includes(routeAttachment.routeId))
         );
@@ -3907,8 +4261,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           id,
           kind: "route-marker",
           markerKind: "current",
-          text: "I_x",
-          position: fallbackPosition,
+          content: semanticTextDocument("I_x", "route-marker"),
           anchor: {
             kind: "route",
             routeId: selectedRoute.id,
@@ -3919,7 +4272,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             orientation: "follow",
             fallbackPosition,
           },
-          offset: { x: 0, y: 0 },
           alignment: "middle",
           rotation: 0,
           locked: false,
@@ -3951,7 +4303,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         ]);
         if (result.ok) {
           replaceSelectionKind("annotation", []);
-          setStatus(`Deleted Net Label ${existingLabel.text}`);
+          setStatus(
+            `Deleted Net Label ${flattenRichText(existingLabel.content)}`,
+          );
         }
       } else {
         setStatus("Selected Route has no Net Label");
@@ -3969,7 +4323,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const segment = Math.max(0, Math.floor((polyline.points.length - 1) / 2));
     const from = polyline.points[segment]!;
     const to = polyline.points[segment + 1] ?? from;
-    const position = existingLabel?.position ?? {
+    const position = (existingLabel
+      ? existingLabel.anchor.kind === "free"
+        ? existingLabel.anchor.position
+        : existingLabel.anchor.fallbackPosition
+      : undefined) ?? {
       x: Math.round((from.x + to.x) / 2),
       y: Math.round((from.y + to.y) / 2 - 8),
     };
@@ -3987,10 +4345,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       annotation: {
         id: labelId,
         kind: "net-label",
-        text: name,
-        position,
-        attachedObjectId: targetNetId,
-        offset: { x: 0, y: -8 },
+        content: semanticTextDocument(name, "net-label"),
+        netId: targetNetId,
+        anchor: {
+          kind: "route",
+          routeId: selectedRoute.id,
+          segmentIndex: segment,
+          t: 0.5,
+          normalOffset: -8,
+          direction: "forward",
+          orientation: "follow",
+          fallbackPosition: position,
+        },
         alignment: "middle",
         rotation: 0,
         locked: false,
@@ -4024,7 +4390,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (result.ok) {
       replaceSelectionKind("annotation", []);
       setNetLabelDraft("");
-      setStatus(`Deleted Net Label ${label.text}`);
+      setStatus(`Deleted Net Label ${flattenRichText(label.content)}`);
     }
   }
 
@@ -4036,8 +4402,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     const edits: SchematicEdit[] = [];
-    const set: Record<string, string> = {};
-    const unset: string[] = [];
     const baseNetlist =
       selectedInstance.netlist ??
       initialInstanceNetlist(
@@ -4050,28 +4414,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       const value = (
         instancePropertyDraft.parameters[parameter.key] ?? ""
       ).trim();
-      const explicit = selectedInstance.properties[parameter.key];
-      const effective = effectiveComponentParameterValue(
-        selectedInstance,
-        parameter,
-      );
-      if (explicit === undefined) {
-        if (value !== "" && value !== effective) set[parameter.key] = value;
-      } else if (value === "") {
-        unset.push(parameter.key);
-      } else if (String(explicit) !== value) {
-        set[parameter.key] = value;
-      }
       if (value === "") delete netlistParameters[parameter.key];
       else netlistParameters[parameter.key] = value;
-    }
-    if (Object.keys(set).length > 0 || unset.length > 0) {
-      edits.push({
-        kind: "patch_instance_properties",
-        instanceId: selectedInstance.id,
-        ...(Object.keys(set).length > 0 ? { set } : {}),
-        ...(unset.length > 0 ? { unset } : {}),
-      });
     }
 
     const nextNetlist = {
@@ -4250,19 +4594,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     // A route-marker stores direction on its route VisualAnchor.
     const anchor =
       selectedAnnotation.kind === "route-marker" &&
-      selectedAnnotation.anchor?.kind === "route"
+      selectedAnnotation.anchor.kind === "route"
         ? { ...selectedAnnotation.anchor, direction }
         : selectedAnnotation.anchor;
-    const routeAttachment = selectedAnnotation.routeAttachment
-      ? { ...selectedAnnotation.routeAttachment, direction }
-      : undefined;
     const result = transact([
       {
         kind: "upsert_schematic_annotation",
         annotation: {
           ...selectedAnnotation,
-          ...(anchor ? { anchor } : {}),
-          ...(routeAttachment ? { routeAttachment } : {}),
+          anchor,
         },
       },
     ]);
@@ -4605,7 +4945,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     rectsIntersect(
                       annotationHitBox(
                         defaultLabel,
-                        defaultLabel.position,
+                        annotationAnchor(defaultLabel, routePolylines),
                         routePolylines,
                         styleProfile,
                       ),
@@ -5883,11 +6223,70 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         onPause={agentSession.pause}
         onResume={agentSession.resume}
         onReconnect={agentSession.reconnect}
+        onRotate={agentSession.rotate}
         onRevoke={agentSession.revoke}
         onClose={() => {
           setAgentPanelOpen(false);
         }}
       />
+      {agentFileCandidate ? (
+        <div className="agent-panel" data-testid="agent-file-approval">
+          <section
+            className="agent-dialog"
+            role="dialog"
+            aria-label="Approve Agent file import"
+          >
+            <div className="agent-panel-header">
+              <h2>Approve Agent file import</h2>
+            </div>
+            <p>
+              The Agent staged a {agentFileCandidate.kind} candidate. It has not
+              changed this Project. Replacing it will end the current Agent
+              session.
+            </p>
+            <dl className="agent-file-candidate-summary">
+              <div>
+                <dt>Project</dt>
+                <dd>{agentFileCandidate.projectName}</dd>
+              </div>
+              <div>
+                <dt>Documents</dt>
+                <dd>{agentFileCandidate.documentCount}</dd>
+              </div>
+              <div>
+                <dt>Instances</dt>
+                <dd>{agentFileCandidate.instanceCount}</dd>
+              </div>
+            </dl>
+            {agentFileCandidate.diagnostics.length > 0 ? (
+              <ul className="agent-panel-audit">
+                {agentFileCandidate.diagnostics.map((diagnostic, index) => (
+                  <li key={`${diagnostic.severity}-${index}`}>
+                    <span>{diagnostic.severity}</span>
+                    <span>{diagnostic.message}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="agent-panel-controls">
+              <button
+                type="button"
+                data-testid="agent-file-reject"
+                onClick={rejectAgentFileCandidate}
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                data-testid="agent-file-approve"
+                onClick={approveAgentFileCandidate}
+              >
+                Replace Project
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       <div
         className={
           libraryPanelOpen ? "app-workspace" : "app-workspace library-collapsed"
@@ -5967,6 +6366,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           recentSymbolIds={recentSymbolIds}
           open={libraryPanelOpen}
           onOpenInsert={openInsertComponentDialog}
+          onCreatePort={beginPortPlacement}
           onQuickPlace={beginInsertedComponentPlacement}
         />
         <aside
@@ -7029,6 +7429,17 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     strokeWidth={styleProfile.strokes.powerRail}
                   />
                 ) : null
+              ) : pendingSymbolId === "port" && componentPreviewPoint ? (
+                <circle
+                  data-testid="port-placement-preview"
+                  className="component-placement-preview"
+                  cx={componentPreviewPoint.x}
+                  cy={componentPreviewPoint.y}
+                  r={styleProfile.nodes.portOriginRadius}
+                  fill={styleProfile.background}
+                  stroke={styleProfile.foreground}
+                  strokeWidth={styleProfile.strokes.normal}
+                />
               ) : pendingSymbolId && componentPreviewPoint ? (
                 <ComponentPlacementPreview
                   styleProfileId={document.presentation.styleProfileId}
@@ -7232,7 +7643,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   document.annotations.some(
                     (annotation) =>
                       annotation.kind === "instance-label" &&
-                      annotation.attachedObjectId === instance.id,
+                      annotation.anchor.kind === "object" &&
+                      annotation.anchor.objectId === instance.id,
                   )
                 ) {
                   return null;
@@ -7254,7 +7666,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     className="annotation-hit"
                     {...annotationHitBox(
                       label,
-                      label.position,
+                      annotationAnchor(label, routePolylines),
                       routePolylines,
                       styleProfile,
                     )}

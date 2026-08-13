@@ -1,41 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { schematicTextDocument } from "@icm/model";
+import { semanticTextDocument } from "@icm/model";
 
-import {
-  renderSchematicTextContent,
-  schematicTextFontSize,
-} from "./schematic-text.js";
+import { schematicTextFontSize } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
-import { razaviTextbookProfile, textbookMonochromeProfile } from "@icm/derived";
+import { razaviTextbookProfile } from "@icm/derived";
 
 describe("Razavi schematic typography", () => {
-  it("escapes text and emits deterministic Razavi tspan runs", () => {
-    const explicit = renderSchematicTextContent(
-      "V_<X&Y>",
-      "net-label",
+  it("renders only the RichText AST supplied by its caller", () => {
+    const rendered = renderRichTextDocument(
+      semanticTextDocument("VDD", "power-label"),
       razaviTextbookProfile,
     );
-    expect(explicit).toContain("font-style:italic;font-weight:700");
-    expect(explicit).toContain('data-text-run="subscript"');
-    expect(explicit).toContain("&lt;X&amp;Y&gt;");
-    const signed = renderSchematicTextContent(
-      "VIN+",
-      "net-label",
-      razaviTextbookProfile,
-    );
-    expect(signed).toContain('data-text-run="subscript"');
-    expect(signed).toContain("IN");
-    expect(signed).toContain('data-text-run="suffix"');
-    expect(signed).toContain(
-      'style="font-style:normal;font-weight:400">+</tspan>',
-    );
-    expect(
-      renderSchematicTextContent(
-        "M1",
-        "instance-label",
-        textbookMonochromeProfile,
-      ),
-    ).toBe("M1");
+    expect(rendered).toContain('data-text-run="subscript"');
+    expect(rendered).toContain('font-size="76%"');
+    expect(rendered).toContain('baseline-shift="-0.28em"');
+    expect(rendered).toContain('dx="0.046em"');
+    expect(rendered).toContain("font-style:italic;font-weight:700");
+    expect(rendered).toContain("font-style:normal;font-weight:700");
   });
 
   it("uses semantic profile sizes", () => {
@@ -45,27 +26,5 @@ describe("Razavi schematic typography", () => {
     expect(schematicTextFontSize("route-marker", razaviTextbookProfile)).toBe(
       15.116,
     );
-  });
-
-  it("uses bold upright subscripts with calibrated geometry", () => {
-    const rendered = renderSchematicTextContent(
-      "VDD",
-      "power-label",
-      razaviTextbookProfile,
-    );
-    expect(rendered).toContain('font-size="76%"');
-    expect(rendered).toContain('baseline-shift="-0.28em"');
-    expect(rendered).toContain('dx="0.046em"');
-    expect(rendered).toContain("font-style:italic;font-weight:700");
-    expect(rendered).toContain("font-style:normal;font-weight:700");
-  });
-
-  it("uses the same base/subscript convention in editor RichText defaults", () => {
-    const rendered = renderRichTextDocument(
-      schematicTextDocument("M1", "instance-label"),
-      razaviTextbookProfile,
-    );
-    expect(rendered).toContain("font-style:italic;font-weight:700");
-    expect(rendered).toContain("font-style:normal;font-weight:700");
   });
 });

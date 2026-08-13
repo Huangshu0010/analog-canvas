@@ -1,15 +1,29 @@
 # Project File Compatibility
 
-The released Project schema version is `4`. A canonical v4 file can be opened,
-saved, reopened, and saved again without byte drift. Version 1, 2, and 3 files
-are accepted through the registered migration chain; every new save writes v4.
+The released Project schema version is `8`. A canonical v8 file can be opened,
+saved, reopened, and saved again without byte drift. Versions 1 through 7 are
+accepted only through the explicit sequential migration chain; every new save
+writes v8.
+
+Older files are read as migration inputs, not as a second live editor format.
+Their supported path is:
+
+```text
+read → sequential migration → validate → edit → save canonical v8
+```
+
+The compatibility corpus at
+[`fixtures/projects/compatibility-corpus.json`](../../fixtures/projects/compatibility-corpus.json)
+lists every shipped fixture and saved circuit Project. It distinguishes current
+canonical files from immutable historic inputs and named rejected inputs. The
+test suite verifies that every supported historic input reaches a stable v8
+form without retaining retired `spice.*` properties or `routeAttachment`.
 
 Files with a newer schema version are rejected before replacing the current
 Project. The migration registry accepts only explicit, advancing migrations;
 there is no promise that a future file can be opened by an older Page build.
-The canonical `fixtures/projects/minimal/project.icproj.json` file is a v4
-compatibility fixture.
 
-Viewport, selection, canvas overlays, import compiler state, and recovery
-envelopes are not part of the Project file. This keeps future UI and compiler
-changes from forcing Project migrations.
+Viewport, selection, canvas overlays, import compiler state, Agent session
+credentials, and recovery envelopes are not part of the Project file. Browser
+recovery is a non-authoritative safety copy; use **File / Save Project** for
+the portable editable Project.

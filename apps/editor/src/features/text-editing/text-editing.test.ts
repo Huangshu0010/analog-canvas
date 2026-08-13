@@ -14,9 +14,9 @@ import {
 const annotation = (): Annotation => ({
   id: "annotation-1",
   kind: "net-label",
-  text: "Vout",
-  position: { x: 10, y: 20 },
-  offset: { x: 0, y: 0 },
+  content: { runs: [{ kind: "text", value: "Vout" }] },
+  netId: "net-1",
+  anchor: { kind: "free", position: { x: 10, y: 20 } },
   alignment: "middle",
   rotation: 0,
   locked: false,
@@ -107,7 +107,9 @@ describe("unified text editing", () => {
         kind: "update",
         edit: {
           kind: "upsert_schematic_annotation",
-          annotation: { text: "Vbias" },
+          annotation: {
+            content: { runs: [{ kind: "text", value: "Vbias" }] },
+          },
         },
       },
     );

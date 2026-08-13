@@ -7,6 +7,7 @@ import type {
 import type { SymbolResolver } from "@icm/symbols";
 
 import { endpointKey, netEndpoints, resolveEndpointPoint } from "./endpoint.js";
+import { resolveVisualAnchor } from "./anchor.js";
 import { routePolyline } from "./routes.js";
 
 export interface ResolvedNetLabelBinding {
@@ -43,9 +44,9 @@ function squaredDistanceToSegment(
 /**
  * Resolves the single accepted electrical meaning of a Net Label.
  *
- * `attachedObjectId` is a Net id. The annotation position chooses the closest
- * routed component of that Net for virtual-connectivity purposes; it never
- * changes the persisted binding into a Route or Junction id.
+ * `netId` is the electrical identity. `anchor` separately controls placement:
+ * an explicit route anchor is exact, while a free/object anchor resolves to
+ * the nearest routed component only for virtual-connectivity presentation.
  */
 export function resolveNetLabelBinding(
   document: SchematicDocument,
@@ -53,13 +54,58 @@ export function resolveNetLabelBinding(
   annotation: Annotation,
 ): ResolvedNetLabelBinding | null {
   if (
-    annotation.kind !== "net-label" ||
-    !annotation.attachedObjectId ||
-    !document.nets.some((net) => net.id === annotation.attachedObjectId)
+    (annotation.kind !== "net-label" && annotation.kind !== "power-label") ||
+    !annotation.netId ||
+    !document.nets.some((net) => net.id === annotation.netId)
   ) {
     return null;
   }
-  const netId = annotation.attachedObjectId;
+  const netId = annotation.netId;
+  const anchor = annotation.anchor;
+  if (anchor.kind === "route") {
+    const route = document.routes.find(
+      (candidate) =>
+        candidate.id === anchor.routeId && candidate.netId === netId,
+    );
+    if (route) {
+      return {
+        annotationId: annotation.id,
+        netId,
+        routeId: route.id,
+        segmentIndex: anchor.segmentIndex,
+        endpoint: route.from,
+      };
+    }
+  }
+  if (anchor.kind === "object") {
+    const junction = document.junctions.find(
+      (candidate) =>
+        candidate.id === anchor.objectId && candidate.netId === netId,
+    );
+    if (junction) {
+      return {
+        annotationId: annotation.id,
+        netId,
+        endpoint: { kind: "junction", junctionId: junction.id },
+      };
+    }
+    if (
+      document.nets
+        .find((net) => net.id === netId)
+        ?.ports.includes(anchor.objectId)
+    ) {
+      return {
+        annotationId: annotation.id,
+        netId,
+        endpoint: { kind: "port", portId: anchor.objectId },
+      };
+    }
+  }
+  const position = resolveVisualAnchor(
+    document,
+    resolver,
+    annotation.anchor,
+  ).position;
   const routeCandidates = document.routes
     .filter((route) => route.netId === netId)
     .flatMap((route) => {
@@ -67,7 +113,7 @@ export function resolveNetLabelBinding(
       if (!polyline) return [];
       return polyline.points.slice(0, -1).map((from, segmentIndex) => ({
         distance: squaredDistanceToSegment(
-          annotation.position,
+          position,
           from,
           polyline.points[segmentIndex + 1]!,
         ),
@@ -96,14 +142,18 @@ export function resolveNetLabelBinding(
   const net = document.nets.find((candidate) => candidate.id === netId)!;
   const endpoint = netEndpoints(document, net)
     .flatMap((candidate) => {
-      const position = resolveEndpointPoint(document, resolver, candidate);
-      return position
+      const endpointPosition = resolveEndpointPoint(
+        document,
+        resolver,
+        candidate,
+      );
+      return endpointPosition
         ? [
             {
               endpoint: candidate,
               distance:
-                (annotation.position.x - position.x) ** 2 +
-                (annotation.position.y - position.y) ** 2,
+                (position.x - endpointPosition.x) ** 2 +
+                (position.y - endpointPosition.y) ** 2,
             },
           ]
         : [];

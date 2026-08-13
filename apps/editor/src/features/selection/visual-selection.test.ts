@@ -67,9 +67,9 @@ describe("VisualSelection", () => {
     document.annotations.push({
       id: "label-1",
       kind: "net-label",
-      text: "SIGNAL",
-      position: { x: 0, y: 0 },
-      offset: { x: 0, y: 0 },
+      content: { runs: [{ kind: "text", value: "SIGNAL" }] },
+      netId: "net-1",
+      anchor: { kind: "free", position: { x: 0, y: 0 } },
       alignment: "middle",
       rotation: 0,
       locked: false,

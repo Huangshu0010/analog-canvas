@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 4;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 8;
 
 export const StableIdSchema = z.string().min(1).max(256);
 export const PointSchema = z.strictObject({
@@ -115,6 +115,15 @@ export const InstanceNetlistBindingSchema = z.discriminatedUnion("kind", [
     name: NetlistIdentifierSchema,
   }),
 ]);
+/**
+ * A source-order to Symbol-pin mapping. Electrical Net membership still owns
+ * connectivity; this preserves the order an imported structural source used
+ * without smuggling it through editable `properties` keys.
+ */
+export const InstanceNetlistTerminalSchema = z.strictObject({
+  sourcePosition: z.number().int().nonnegative(),
+  pinName: z.string().min(1).max(128),
+});
 export const InstanceNetlistDataSchema = z.strictObject({
   reference: NetlistIdentifierSchema,
   binding: InstanceNetlistBindingSchema.optional(),
@@ -123,47 +132,113 @@ export const InstanceNetlistDataSchema = z.strictObject({
     .refine((parameters) => Object.keys(parameters).length <= 128, {
       message: "An instance may contain at most 128 netlist parameters",
     }),
+  // Manual instances need not claim a source ordering. Import and any author
+  // that does claim one must provide an unambiguous, typed mapping.
+  terminals: z.array(InstanceNetlistTerminalSchema).max(128).optional(),
 });
-// Stable import-time evidence for a model/subcircuit binding. It intentionally
-// does not replace the lossless `spice.*` compatibility properties; consumers
-// such as ERC must use this fact rather than attempt to re-parse those strings.
-// Optional presence keeps pre-evidence Project files valid without guessing a
-// status during migration.
-export const SourceBindingEvidenceSchema = z.strictObject({
+/**
+ * Bounded source evidence that explains imported facts but cannot become a
+ * second electrical/netlist authority. It is not part of normal editable
+ * properties and no runtime consumer may derive connectivity or hierarchy from
+ * `sourceTarget` or `attributes`.
+ */
+export const InstanceImportProvenanceSchema = z.strictObject({
   kind: z.enum(["primitive", "model", "subcircuit", "opaque"]),
   name: z.string().min(1),
-  status: z.enum(["resolved", "missing", "unsupported"]),
+  sourceTarget: z.string().min(1).max(1024),
+  // Older source files can preserve an exact target spelling without a safely
+  // knowable resolution status. Current importers always write this field;
+  // migration never guesses it from a target string.
+  status: z.enum(["resolved", "missing", "unsupported"]).optional(),
   modelType: z.string().min(1).optional(),
-  childDocumentId: StableIdSchema.optional(),
-  sourceRef: SourceSpanSchema.optional(),
+  attributes: z
+    .record(z.string().min(1).max(128), InstancePropertyValueSchema)
+    .refine((attributes) => Object.keys(attributes).length <= 128, {
+      message: "An import provenance record may contain at most 128 attributes",
+    })
+    .optional(),
 });
 export const MosBulkBindingSchema = z.strictObject({
   origin: z.enum(["cell-default", "product-fallback"]),
   netId: StableIdSchema,
 });
-export const InstanceSchema = z.strictObject({
-  id: StableIdSchema,
-  symbolId: StableIdSchema,
-  symbolVariantId: StableIdSchema.optional(),
-  sourceRef: SourceSpanSchema.optional(),
-  binding: SourceBindingEvidenceSchema.optional(),
-  // Present only for an editor-materialized implicit body connection.
-  // Explicit SPICE/user B connections need no parallel metadata.
-  mosBulkBinding: MosBulkBindingSchema.optional(),
-  placement: PlacementSchema.nullable(),
-  properties: z.record(z.string(), InstancePropertyValueSchema),
-  netlist: InstanceNetlistDataSchema.optional(),
-});
+export const InstanceSchema = z
+  .strictObject({
+    id: StableIdSchema,
+    symbolId: StableIdSchema,
+    symbolVariantId: StableIdSchema.optional(),
+    sourceRef: SourceSpanSchema.optional(),
+    importProvenance: InstanceImportProvenanceSchema.optional(),
+    // Present only for an editor-materialized implicit body connection.
+    // Explicit SPICE/user B connections need no parallel metadata.
+    mosBulkBinding: MosBulkBindingSchema.optional(),
+    placement: PlacementSchema.nullable(),
+    properties: z.record(z.string(), InstancePropertyValueSchema),
+    netlist: InstanceNetlistDataSchema.optional(),
+  })
+  .superRefine((instance, context) => {
+    for (const key of Object.keys(instance.properties)) {
+      if (!key.startsWith("spice.")) continue;
+      context.addIssue({
+        code: "custom",
+        path: ["properties", key],
+        message:
+          "Legacy spice.* properties are only accepted by schema migration; use typed netlist facts or import provenance",
+      });
+    }
+    const terminals = instance.netlist?.terminals;
+    if (!terminals) return;
+    const positions = new Set<number>();
+    const pinNames = new Set<string>();
+    for (const [index, terminal] of terminals.entries()) {
+      if (positions.has(terminal.sourcePosition)) {
+        context.addIssue({
+          code: "custom",
+          path: ["netlist", "terminals", index, "sourcePosition"],
+          message: "Netlist terminal source positions must be unique",
+        });
+      }
+      positions.add(terminal.sourcePosition);
+      if (pinNames.has(terminal.pinName)) {
+        context.addIssue({
+          code: "custom",
+          path: ["netlist", "terminals", index, "pinName"],
+          message: "Netlist terminal pin names must be unique",
+        });
+      }
+      pinNames.add(terminal.pinName);
+    }
+  });
+/** Visual presentation is owned by the electrical Port, never by a port Symbol. */
+export const PortPresentationSchema = z.enum(["hollow", "filled", "supply"]);
 export const PortSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1),
   direction: z.enum(["input", "output", "bidirectional", "passive"]),
   position: PointSchema.nullable(),
+  // Schema-v6 migration writes the field for every persisted Port. Optionality
+  // admits pre-migration in-memory test construction only.
+  presentation: PortPresentationSchema.optional(),
 });
+/**
+ * Persisted electrical supply identity. `conflict` is migration/diagnostic
+ * state only; new authoring may choose vdd, ground, or none but never create a
+ * short intentionally.
+ */
+export const NetPowerDomainSchema = z.enum([
+  "none",
+  "vdd",
+  "ground",
+  "conflict",
+]);
 export const NetSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1).optional(),
   scope: z.enum(["local", "global"]),
+  // Schema-v5 migration and all current transactions write this explicitly.
+  // Optionality only admits pre-migration in-memory construction; runtime
+  // treats absence as `none` and never infers from symbol/name/ID.
+  powerDomain: NetPowerDomainSchema.optional(),
   terminals: z.array(TerminalRefSchema),
   ports: z.array(StableIdSchema),
 });
@@ -263,25 +338,19 @@ export const AnnotationSchema = z
   .strictObject({
     id: StableIdSchema,
     kind: AnnotationKindSchema,
-    // Optional explicit RichText presentation saved by the canvas editor.
-    // `text` remains the canonical semantic/electrical identity. When this is
-    // absent, formal rendering derives standardized appearance from `text`;
-    // when present, it preserves the user's explicit formatting.
-    content: z.lazy(() => RichTextDocumentSchema).optional(),
-    text: z.string(),
-    position: PointSchema,
-    attachedObjectId: StableIdSchema.optional(),
-    routeAttachment: RouteAnnotationAttachmentSchema.optional(),
-    offset: PointSchema,
+    // Schema-v7 gives every editable annotation one presentation authority.
+    // `content` is the visual/semantic text source and `anchor` is the only
+    // visual attachment. A Net relation is deliberately separate from anchor:
+    // it expresses electrical meaning, never a placement shortcut.
+    content: z.lazy(() => RichTextDocumentSchema),
+    anchor: z.lazy(() => VisualAnchorSchema),
+    netId: StableIdSchema.optional(),
     alignment: z.enum(["start", "middle", "end"]),
     rotation: RotationSchema,
     locked: z.boolean(),
     sizeScale: z.number().finite().positive().optional(),
     // SchematicAnnotation route-marker discriminator (ADR 0010).
     markerKind: RouteMarkerKindSchema.optional(),
-    // ADR 0010 VisualAnchor for route-marker annotations. Declared lazily so the
-    // schema can reference VisualAnchorSchema, which is defined below.
-    anchor: z.lazy(() => VisualAnchorSchema).optional(),
   })
   .superRefine((annotation, context) => {
     if (annotation.markerKind && annotation.kind !== "route-marker") {
@@ -289,6 +358,27 @@ export const AnnotationSchema = z
         code: z.ZodIssueCode.custom,
         path: ["markerKind"],
         message: "markerKind is only valid on a route-marker annotation",
+      });
+    }
+    if (
+      (annotation.kind === "net-label" || annotation.kind === "power-label") &&
+      !annotation.netId
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["netId"],
+        message: "Net and power labels require a Net identity",
+      });
+    }
+    if (
+      annotation.kind !== "net-label" &&
+      annotation.kind !== "power-label" &&
+      annotation.netId !== undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["netId"],
+        message: "netId is only valid on net and power labels",
       });
     }
   });
@@ -666,12 +756,15 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
     const junctionById = new Map(
       document.junctions.map((junction) => [junction.id, junction]),
     );
-    const attachableIds = new Set([
+    const anchorObjectIds = new Set([
       ...document.ports.map((item) => item.id),
       ...document.instances.map((item) => item.id),
+      ...document.junctions.map((item) => item.id),
+    ]);
+    const attachableIds = new Set([
+      ...anchorObjectIds,
       ...document.nets.map((item) => item.id),
       ...document.routes.map((item) => item.id),
-      ...document.junctions.map((item) => item.id),
     ]);
     const layoutObjectIds = new Set([
       ...attachableIds,
@@ -684,14 +777,29 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       annotationIndex,
       annotation,
     ] of document.annotations.entries()) {
+      const anchor = annotation.anchor;
+      if (anchor.kind === "object" && !anchorObjectIds.has(anchor.objectId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown annotation anchor target: ${anchor.objectId}`,
+          path: ["annotations", annotationIndex, "anchor", "objectId"],
+        });
+      }
       if (
-        annotation.attachedObjectId &&
-        !attachableIds.has(annotation.attachedObjectId)
+        anchor.kind === "route" &&
+        !document.routes.some((route) => route.id === anchor.routeId)
       ) {
         context.addIssue({
           code: "custom",
-          message: `Unknown annotation attachment: ${annotation.attachedObjectId}`,
-          path: ["annotations", annotationIndex, "attachedObjectId"],
+          message: `Unknown annotation route anchor: ${anchor.routeId}`,
+          path: ["annotations", annotationIndex, "anchor", "routeId"],
+        });
+      }
+      if (annotation.netId !== undefined && !netIds.has(annotation.netId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown annotation Net: ${annotation.netId}`,
+          path: ["annotations", annotationIndex, "netId"],
         });
       }
     }
@@ -968,7 +1076,9 @@ export type SourcePosition = z.infer<typeof SourcePositionSchema>;
 export type SourceSpan = z.infer<typeof SourceSpanSchema>;
 export type SourceManifest = z.infer<typeof SourceManifestSchema>;
 export type SymbolLibraryLock = z.infer<typeof SymbolLibraryLockSchema>;
-export type SourceBindingEvidence = z.infer<typeof SourceBindingEvidenceSchema>;
+export type InstanceImportProvenance = z.infer<
+  typeof InstanceImportProvenanceSchema
+>;
 export type NetlistDeviceClass = z.infer<typeof NetlistDeviceClassSchema>;
 export type InstanceNetlistBinding = z.infer<
   typeof InstanceNetlistBindingSchema
@@ -979,7 +1089,9 @@ export type MosBulkBinding = z.infer<typeof MosBulkBindingSchema>;
 export type TerminalRef = z.infer<typeof TerminalRefSchema>;
 export type Instance = z.infer<typeof InstanceSchema>;
 export type Port = z.infer<typeof PortSchema>;
+export type PortPresentation = z.infer<typeof PortPresentationSchema>;
 export type Net = z.infer<typeof NetSchema>;
+export type NetPowerDomain = z.infer<typeof NetPowerDomainSchema>;
 export type RouteEndpoint = z.infer<typeof RouteEndpointSchema>;
 export type RouteBranch = z.infer<typeof RouteBranchSchema>;
 export type RoutePresentation = z.infer<typeof RoutePresentationSchema>;

@@ -48,12 +48,12 @@ messages and persists no Project.
 
 The first release uses scoped capability tokens, not product accounts.
 
-| Secret         | Held by            | Lifetime / use                                                      |
-| -------------- | ------------------ | ------------------------------------------------------------------- |
-| `sessionId`    | public             | Opaque session id; **not** authorization                            |
-| `editorSecret` | browser tab only   | Authenticates the browser's WebSocket command channel               |
-| `claimCode`    | user → Agent, once | Single-use, expires in at most five minutes                         |
-| `agentToken`   | Agent host only    | Bearer, scoped, default one hour, never outlives the editor session |
+| Secret         | Held by            | Lifetime / use                                                                                              |
+| -------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `sessionId`    | public             | Opaque session id; **not** authorization                                                                    |
+| `editorSecret` | browser tab only   | Authenticates the browser's WebSocket command channel; may survive one same-tab refresh in `sessionStorage` |
+| `claimCode`    | user → Agent, once | Single-use, expires in at most five minutes                                                                 |
+| `agentToken`   | Agent host only    | Bearer, scoped, default one hour, never outlives the editor session                                         |
 
 Claim codes are single-use and expire after at most five minutes. Agent tokens
 default to one hour, never outlive their editor session, and are invalidated by
@@ -61,9 +61,13 @@ pause, revoke, Project replacement, a normal tab close, session expiry, or
 service-side abuse controls. An abrupt browser loss makes the editor offline;
 the session's fixed lifetime remains the terminal cleanup boundary.
 
-Secrets are never placed in analytics, URL query parameters, logs, local
+Secrets are never placed in analytics, URL query parameters, logs, Project
 recovery data, Snapshot data, render artifacts, or `Cache-Control`-able
-responses. All session responses use `Cache-Control: no-store`. Constant-time
+responses. The sole exception is a bounded same-tab reconnect proof in browser
+`sessionStorage`: it contains only `sessionId`, `editorSecret`, Project binding,
+scopes, and expiry. It never contains a bearer token, claim code, Project bytes,
+or request/response data, and is cleared on mismatch, expiry, replacement, or
+revoke. All session responses use `Cache-Control: no-store`. Constant-time
 comparison is used for secret/token equality where applicable.
 
 ## Permission scopes
@@ -73,20 +77,23 @@ presets (Review, Layout Edit, Full Circuit Edit); the token always contains the
 explicit scope set. Within a granted scope, operations do not prompt
 individually.
 
-| Scope                       | Allows                                     | Maps to `AgentPermissions` |
-| --------------------------- | ------------------------------------------ | -------------------------- |
-| `circuit.snapshot`          | v2 Snapshot read; v1 query read for legacy | `snapshot` (and `query`)   |
-| `circuit.render`            | Bounded formal/diagnostics render          | `render`                   |
-| `circuit.source-spans`      | Source locations, never raw source text    | `sourceSpans`              |
-| `circuit.edit.geometry`     | Placement and Route geometry edits         | `edit.geometry`            |
-| `circuit.edit.connectivity` | Net/terminal/Route connectivity edits      | `edit.connectivity`        |
-| `circuit.edit.presentation` | Text, drafting, annotation, style intent   | `edit.presentation`        |
+| Scope                       | Allows                                   | Maps to `AgentPermissions` |
+| --------------------------- | ---------------------------------------- | -------------------------- |
+| `circuit.snapshot`          | Complete v2 Snapshot read                | `snapshot`                 |
+| `circuit.render`            | Bounded formal/diagnostics render        | `render`                   |
+| `circuit.source-spans`      | Source locations, never raw source text  | `sourceSpans`              |
+| `circuit.edit.geometry`     | Placement and Route geometry edits       | `edit.geometry`            |
+| `circuit.edit.connectivity` | Net/terminal/Route connectivity edits    | `edit.connectivity`        |
+| `circuit.edit.presentation` | Text, drafting, annotation, style intent | `edit.presentation`        |
+| `editor.semantic-control`   | Temporary Cell/selection/Net/view focus  | `semanticControl`          |
+| `project.download`          | Canonical `.icproj.json` download        | File Resource only         |
+| `visual.download`           | Formal SVG/PNG/PDF download              | File Resource only         |
+| `project.import`            | Stage/inspect/discard/import approval    | File Resource only         |
 
-The web session's primary read path is the v2 Snapshot. v1 `query` is available
-for compatibility and is gated by the `circuit.snapshot` read scope; it is not a
-separate web-session scope. Import/export, raw Project download, filesystem
-access, and arbitrary code are **not** implied by full circuit edit and require
-separate scopes and user-visible controls if ever added.
+The web session's only circuit read path is the v2 Snapshot. Legacy v1 `query`
+is not published by the hosted session. File Resource scopes do not imply host
+filesystem access, arbitrary code, simulation, waveforms, or SPICE/design-
+netlist export.
 
 ## Project binding and replacement
 
@@ -102,21 +109,19 @@ a different Project.
 
 ## Transport resource model
 
-The minimum resources (exact paths are frozen in WP-WA1):
+The published external-Agent resources are deliberately limited to:
 
 ```text
 GET    /api/agent/openapi.json             public machine-readable contract
-POST   /api/agent/sessions                 browser creates a session
 POST   /api/agent/claims                   Agent exchanges claim from JSON body
 POST   /api/agent/sessions/{id}/circuit    Agent sends one Circuit API request
-GET    /api/agent/sessions/{id}/events     Agent receives bounded SSE events
-DELETE /api/agent/sessions/{id}            Agent disconnects its capability
-WS     /api/agent/sessions/{id}/editor     browser command/result channel
-POST   /api/agent/sessions/{id}/control    browser pause/resume/revoke/replace
+POST   /api/agent/sessions/{id}/files      Agent uses the named File Resource
 ```
 
-- Browser creation and WebSocket authentication use the `editorSecret` returned
-  over the session-creation response.
+- Browser session creation, control/revocation, WebSocket forwarding, and
+  relay event plumbing are private implementation routes. They are not part of
+  the external Agent contract and are intentionally absent from the published
+  OpenAPI, so an Agent never receives or needs an `editorSecret`.
 - A successful claim returns `sessionId`, `projectId`, and the authorized
   `documentIds` with the bearer token, so an Agent never guesses Project or
   Document identity from examples or UI labels.
@@ -127,6 +132,24 @@ POST   /api/agent/sessions/{id}/control    browser pause/resume/revoke/replace
 - Request and response sizes reuse the Agent capability limits
   (`agent-api.md`) and additionally have relay-level hard ceilings enforced
   before any forward.
+
+### File Resource
+
+`/files` is deliberately separate from the Circuit API's four operations. A
+successful `capabilities` response advertises it as `resources.file`; Agents
+must obey the returned byte limit and granted scopes. It supports only
+canonical Project JSON or formal SVG/PNG/PDF download, plus staging,
+inspection, discard, and explicit approval request for a bounded
+`.icproj.json` or virtual structural-SPICE source bundle.
+
+The browser validates base64, declared byte length, SHA-256, virtual relative
+names, duplicate names, and the existing Project/SPICE parser. Candidate bytes
+and parsed Projects exist only in short-lived browser memory. The relay stores
+neither candidate nor artifact bytes, and exported artifacts are one-shot:
+repeating their request id returns `REQUEST_RESULT_UNAVAILABLE` rather than a
+cached blob. Staging never mutates the live Project. Only the visible browser
+**Replace Project** confirmation accepts it; acceptance takes the existing
+Project replacement path and terminates the current Agent session.
 
 ## Relay message envelope
 
@@ -142,8 +165,14 @@ interface AgentSessionMessage {
   messageId: string; // unique per message
   requestId: string; // idempotency key for the token/session lifetime
   sentAt: string; // ISO-8601, set by the originator
-  kind: "circuit-request" | "circuit-response" | "event" | "cancel";
-  payload: unknown; // typed by kind; Circuit API schema for request/response
+  kind:
+    | "circuit-request"
+    | "circuit-response"
+    | "file-request"
+    | "file-response"
+    | "event"
+    | "cancel";
+  payload: unknown; // typed by kind; Circuit or File Resource schema
 }
 ```
 
@@ -183,8 +212,10 @@ commands must be delivered to it. Initial events:
 - `operation.started`, `operation.completed`, `operation.failed`.
 
 Selection, hover, viewport, pointer position, and in-progress gestures remain
-editor-local and are never streamed. Agent requests target a Document and render
-bounds explicitly.
+editor-local and are never streamed. An Agent with `editor.semantic-control`
+may submit one explicit non-persisting `semanticIntent` to select/highlight/fit
+the live editor; that request still targets a Document explicitly and is never
+recorded as a circuit transaction.
 
 ## Browser host dispatch contract
 
@@ -223,6 +254,20 @@ The existing `packages/agent-adapter` service must dispatch through this host
 contract instead of independently invoking `executeTransaction()` followed by
 `AgentDocumentStore.commitDocument()`. Snapshot and render obtain the resolver
 and Project at request time, not from stale service-construction options.
+
+### Semantic editor-control contract
+
+`transact` accepts exactly one of typed `edits`, `wireIntent`, or
+`semanticIntent`. The semantic form requires `editor.semantic-control` and is
+handled by the browser host's UI adapter rather than
+`EditorDocumentController.dispatchTransaction()`. It accepts only the existing
+Cell/Locator/Net identities: activate an existing Cell, select a canonical
+hierarchy-aware locator, highlight an existing Net, fit the target Cell, or
+clear focus. It returns normal transaction-shaped evidence with `applied: false`
+and the unchanged revision, but creates no history item, recovery write, Project
+mutation, geometry, or electrical-topology change. Missing, stale, cross-Project,
+or hierarchy-mismatched targets return typed errors; coordinates and raw SVG are
+not accepted.
 
 > Note (VDD increment): Route `presentation` now includes a non-electrical
 > `power-rail` value; the Edit Engine requires such a Route to belong to a VDD
@@ -291,21 +336,21 @@ advances the revision again.
 
 ## Threat model
 
-| Threat                             | Handling                                                                                                                    |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Claim link leaks                   | Single-use, ≤5 min expiry, explicit scopes, visible connected state, immediate revoke, no query-string analytics            |
-| Relay observes payloads in transit | HTTPS required; relay persists no payload and logs no body; end-to-end encryption deferred unless threat review requires it |
-| Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write        |
-| `agentToken` theft                 | Short TTL, scoped, revocable, never stored in recovery/localStorage by default                                              |
-| Browser refresh                    | Initial release revokes the session unless a later explicit reconnect design is accepted                                    |
-| Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged            |
-| Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                        |
-| Editor offline during write        | `EDITOR_OFFLINE`; no unbounded write queue; reconnect never auto-applies a rejected write                                   |
-| Project swap mid-session           | `document.replaced`; old token invalid for the new Project                                                                  |
-| Permission escalation              | Token scopes fixed at claim; no per-op prompt inside scope; user pause/revoke always available                              |
-| Relay compromise                   | No Project data persisted; capability-scoped; browser authoritative, so the relay cannot forge an actor or edit             |
-| Secret in cached/logged response   | `Cache-Control: no-store`; bodies and secrets redacted from logs and analytics                                              |
-| Multiple Agents                    | First release allows at most one Agent token per session; multi-Agent concurrency deferred                                  |
+| Threat                             | Handling                                                                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Claim link leaks                   | Single-use, ≤5 min expiry, explicit scopes, visible connected state, immediate revoke, no query-string analytics                                             |
+| Relay observes payloads in transit | HTTPS required; relay persists no payload and logs no body; end-to-end encryption deferred unless threat review requires it                                  |
+| Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write                                         |
+| `agentToken` theft                 | Short TTL, scoped, revocable, never stored in recovery/localStorage by default                                                                               |
+| Browser refresh                    | Same-tab reconnect may reuse only the bounded recovery proof when the Project binding still matches; otherwise it is cleared and reauthorization is required |
+| Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged                                            |
+| Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                                                         |
+| Editor offline during write        | `EDITOR_OFFLINE`; no unbounded write queue; reconnect never auto-applies a rejected write                                                                    |
+| Project swap mid-session           | `document.replaced`; old token invalid for the new Project                                                                                                   |
+| Permission escalation              | Token scopes fixed at claim; no per-op prompt inside scope; user pause/revoke always available                                                               |
+| Relay compromise                   | No Project data persisted; capability-scoped; browser authoritative, so the relay cannot forge an actor or edit                                              |
+| Secret in cached/logged response   | `Cache-Control: no-store`; bodies and secrets redacted from logs and analytics                                                                               |
+| Multiple Agents                    | First release allows at most one Agent token per session; multi-Agent concurrency deferred                                                                   |
 
 ## Valid example
 
@@ -340,8 +385,9 @@ refreshes the Snapshot and does not replay the old edit.
 
 ## Open decisions
 
-- Browser-refresh reconnect: deferred unless a secure explicit reconnect design
-  is accepted; the default remains revoke-on-refresh.
+- Browser-refresh reconnect is limited to the implemented same-tab recovery
+  proof. Cross-tab restoration, token persistence, and recovery across a
+  Project replacement remain out of scope.
 - End-to-end payload encryption: deferred unless threat review requires
   protection from the service operator.
 - Multi-Agent concurrency: deferred until demonstrated need.
@@ -357,3 +403,57 @@ refreshes the Snapshot and does not replay the old edit.
 - redacted logs/analytics/recovery assertions for secrets and circuit payloads;
 - CORS/origin and `Cache-Control: no-store` assertions;
 - payload and rate-limit enforcement before any forward.
+
+## Agent v3 extension (ADR 0018)
+
+> **Superseded:** ADR 0019 retains claim/bearer authorization and exactly four
+> Circuit operations. The additional scopes, import candidate protocol, and
+> continuation events below are non-normative planning history and are not an
+> implemented or approved web-session surface.
+
+[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) extends this
+session contract for the Agent Project lifecycle surface. The transport,
+envelope, identity, retry, expiry, and revocation rules above are unchanged;
+this section freezes only the additions.
+
+### v3 permission scopes
+
+The six `circuit.*` scopes are retained. v3 adds only orthogonal scopes:
+`project.snapshot`, `project.edit`, `project.export`, `visual.export`,
+`project.import.stage`, `history.own`, and `editor.collaborate`. No scope grants
+filesystem access; Project replacement is always a browser-owner approval action
+and is not representable by an Agent bearer scope.
+
+### Import candidate and approval state machine
+
+An Agent with `project.import.stage` may submit a bounded `ImportFile` bundle
+(bytes, media type, normalized relative POSIX path, encoding, size, SHA-256 as
+defined in ADR 0018), never a filesystem path. The browser parses, migrates,
+validates, and canonicalizes the candidate in memory and returns an opaque
+`candidateId`, expiry, source hashes, Project/hierarchy summary, diagnostics,
+migrations applied, and replacement consequences — without mutating Project,
+history, recovery, selection, or session identity. The relay never persists
+candidate or artifact bytes (`Cache-Control: no-store` continues to apply).
+
+Replacement requires an explicit browser decision: **Cancel** (delete the
+candidate, notify the Agent), **Open and disconnect** (replace Project, revoke
+the old session), or **Open and reconnect Agent** (replace Project, revoke the
+old session, issue a new one-time claim with user-confirmed scopes and Document
+set). The third action is explicit new authorization, not token transfer; the
+old bearer token never gains access to the replacement Project. Before
+replacement the editor cancels pending recovery for the outgoing Project,
+revalidates the imported Project immediately before activation, and stages the
+new Project's own recovery without marking it a formal save. Retry, timeout,
+offline editor, late response, expiry, cancel, and page refresh are terminal and
+deterministic; reusing an old `requestId` cannot reapply replacement.
+
+### v3 events and transport codes
+
+The terminal `document.replaced` event already exists; v3 adds an optional
+bounded continuation-claim event when the user explicitly reconnects the Agent.
+New transport/import codes are `IMPORT_REQUIRES_APPROVAL`,
+`IMPORT_CANDIDATE_EXPIRED`, and `IMPORT_AMBIGUOUS_ENTRY`; the domain codes
+`STALE_PROJECT_REVISION`, `HISTORY_DIVERGED`, `OBJECT_NOT_FOUND`, and
+`ARTIFACT_TOO_LARGE` are defined in [`agent-api.md`](agent-api.md). The threat
+table is extended with import-candidate leakage, ambiguous-entry coercion,
+size/depth exhaustion, replacement replay, and continuation-claim isolation.

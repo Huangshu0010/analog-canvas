@@ -9,69 +9,43 @@ import { constructVddRailEdits } from "./vdd-rail";
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("drawn VDD rail construction", () => {
-  it("uses an unplaced VDD anchor and one horizontal editable power rail", () => {
+  it("uses one explicit VDD Net and one horizontal editable power rail", () => {
     const edits = constructVddRailEdits({
       instanceId: "VDD3",
       start: { x: 80, y: 40 },
       end: { x: 260, y: 40 },
     });
 
-    expect(edits).toMatchObject([
+    expect(edits).toEqual([
       {
-        kind: "add_instance",
-        instance: { id: "VDD3", symbolId: "vdd", placement: null },
-      },
-      {
-        kind: "connect_endpoints",
-        newNetId: "net-power-vdd3",
-        newNetName: "VDD",
-        newNetScope: "global",
-      },
-      {
-        kind: "add_junction",
-        role: "route-anchor",
-        position: { x: 80, y: 40 },
-      },
-      {
-        kind: "add_junction",
-        role: "route-anchor",
-        position: { x: 260, y: 40 },
-      },
-      {
-        kind: "set_route_points",
+        kind: "add_power_rail",
+        netId: "net-power-vdd3",
         routeId: "route-vdd3-rail",
-        presentation: "power-rail",
-        segmentModes: ["manual"],
-      },
-      {
-        kind: "upsert_schematic_annotation",
-        annotation: {
-          kind: "power-label",
-          text: "VDD",
-          attachedObjectId: "junction-vdd3-end",
-          position: { x: 266, y: 45 },
-        },
+        startJunctionId: "junction-vdd3-start",
+        endJunctionId: "junction-vdd3-end",
+        labelId: "label-VDD3",
+        domain: "vdd",
+        start: { x: 80, y: 40 },
+        end: { x: 260, y: 40 },
       },
     ]);
   });
 
   it("keeps the VDD label at the visual right end for a right-to-left draw", () => {
-    const label = constructVddRailEdits({
+    const rail = constructVddRailEdits({
       instanceId: "VDD4",
       start: { x: 260, y: 40 },
       end: { x: 80, y: 40 },
     }).at(-1);
 
-    expect(label).toMatchObject({
-      kind: "upsert_schematic_annotation",
-      annotation: {
-        attachedObjectId: "junction-vdd4-start",
-        position: { x: 266, y: 45 },
-      },
+    expect(rail).toMatchObject({
+      kind: "add_power_rail",
+      startJunctionId: "junction-vdd4-start",
+      endJunctionId: "junction-vdd4-end",
     });
   });
 
-  it("commits the semantic VDD anchor and visual rail in one transaction", () => {
+  it("commits the explicit VDD Net and visual rail in one transaction", () => {
     const document = createEmptyDocument("main", "Main");
     const result = executeTransaction(
       document,
@@ -91,12 +65,33 @@ describe("drawn VDD rail construction", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.document.instances).toMatchObject([
-      { id: "VDD1", placement: null },
+    expect(result.document.instances).toEqual([]);
+    expect(result.document.nets).toMatchObject([
+      {
+        id: "net-power-vdd1",
+        name: "VDD",
+        scope: "global",
+        powerDomain: "vdd",
+      },
     ]);
     expect(result.document.routes).toMatchObject([
       { presentation: "power-rail", netId: "net-power-vdd1" },
     ]);
     expect(result.document.junctions).toHaveLength(2);
+    expect(result.document.annotations).toMatchObject([
+      {
+        kind: "power-label",
+        content: {
+          runs: [
+            { kind: "text", value: "V" },
+            {
+              kind: "span",
+              style: "subscript",
+              children: [{ kind: "text", value: "DD" }],
+            },
+          ],
+        },
+      },
+    ]);
   });
 });

@@ -32,7 +32,9 @@ export function referencedDocumentId(
   project: CircuitProject,
   instance: SchematicDocument["instances"][number],
 ): string | null {
-  const stableChildDocumentId = instance.properties["spice.childDocumentId"];
+  const binding = instance.netlist?.binding;
+  const stableChildDocumentId =
+    binding?.kind === "subcircuit" ? binding.childDocumentId : undefined;
   if (
     typeof stableChildDocumentId === "string" &&
     project.documents.some(

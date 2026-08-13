@@ -2,13 +2,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   AGENT_API_VERSION,
+  AGENT_FILE_RESOURCE_MAX_BYTES,
   AGENT_API_V1_VERSION,
   AGENT_SESSION_PROTOCOL_VERSION,
-  AgentCircuitRequestSchema,
   AgentSessionEventSchema,
   AgentSessionMessageSchema,
+  parseAgentFileResourceRequest,
   createAgentCircuitService,
+  parseAgentCircuitRequest,
   type AgentOperationHost,
+  type AgentFileResourceRequest,
+  type AgentFileResourceResponse,
   type AgentPermissions,
   type AgentSessionScope,
 } from "@icm/agent-adapter";
@@ -19,6 +23,12 @@ import type {
   AgentAuditEntry,
   AgentConnectionStatus,
 } from "./connect-agent-panel";
+import {
+  clearAgentSessionRecovery,
+  readAgentSessionRecovery,
+  writeAgentSessionRecovery,
+  type AgentSessionRecoveryRecord,
+} from "./session-recovery";
 
 interface CreatedSessionResponse {
   ok: true;
@@ -53,7 +63,13 @@ function isCreatedSessionResponse(
   );
 }
 
-type LiveSession = CreatedSessionResponse["session"] & {
+type LiveSession = {
+  sessionId: string;
+  editorSecret: string;
+  claimCode: string | null;
+  claimExpiresAt: number | null;
+  expiresAt: number;
+  scopes: AgentSessionScope[];
   socket: WebSocket | null;
   claimed: boolean;
   hasOpened: boolean;
@@ -94,6 +110,12 @@ export interface UseAgentSessionOptions {
   project: CircuitProject;
   projectSessionId: string;
   host: AgentOperationHost;
+  fileHost?: {
+    handle: (
+      request: AgentFileResourceRequest,
+    ) => Promise<AgentFileResourceResponse>;
+    clear?: () => void;
+  };
 }
 
 export interface UseAgentSessionResult extends AgentSessionViewModel {
@@ -101,6 +123,7 @@ export interface UseAgentSessionResult extends AgentSessionViewModel {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   reconnect: () => void;
+  rotate: () => Promise<void>;
   revoke: () => Promise<void>;
 }
 
@@ -112,6 +135,7 @@ function permissionsFromScopes(
     snapshot: scopes.includes("circuit.snapshot"),
     render: scopes.includes("circuit.render"),
     sourceSpans: scopes.includes("circuit.source-spans"),
+    semanticControl: scopes.includes("editor.semantic-control"),
     edit: {
       geometry: scopes.includes("circuit.edit.geometry"),
       connectivity: scopes.includes("circuit.edit.connectivity"),
@@ -133,6 +157,7 @@ export function useAgentSession(
   options: UseAgentSessionOptions,
 ): UseAgentSessionResult {
   const liveRef = useRef<LiveSession | null>(null);
+  const recoveryAttemptedForProjectRef = useRef<string | null>(null);
   const projectSessionRef = useRef(options.projectSessionId);
   const revisionRef = useRef(
     new Map(
@@ -187,10 +212,13 @@ export function useAgentSession(
   const revoke = useCallback(async () => {
     const live = liveRef.current;
     if (!live) {
+      clearAgentSessionRecovery(window.sessionStorage);
       update({ status: "idle", claimCode: null });
       return;
     }
     stopReconnect(live);
+    clearAgentSessionRecovery(window.sessionStorage);
+    options.fileHost?.clear?.();
     try {
       await control("revoke");
     } catch {
@@ -202,36 +230,52 @@ export function useAgentSession(
       { status: "revoked", claimCode: null, error: null },
       { at: Date.now(), kind: "revoked" },
     );
-  }, [control, update]);
+  }, [control, options.fileHost, update]);
 
   const grant = useCallback(
-    async (scopes: readonly AgentSessionScope[]) => {
+    async (
+      scopes: readonly AgentSessionScope[],
+      recovery?: AgentSessionRecoveryRecord,
+    ) => {
       if (liveRef.current) await revoke();
-      update({ status: "creating", error: null, claimCode: null, scopes });
+      update({
+        status: recovery ? "reconnecting" : "creating",
+        error: null,
+        claimCode: null,
+        scopes,
+      });
       try {
-        const response = await fetch("/api/agent/sessions", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            projectSessionId: options.projectSessionId,
-            projectId: options.project.id,
-            documentIds: options.project.documents.map(
-              (document) => document.id,
-            ),
-            scopes,
-          }),
-        });
-        if (!response.ok)
-          throw new Error(`Session creation failed (${response.status})`);
-        const payload: unknown = await response.json();
-        if (!isCreatedSessionResponse(payload)) {
-          throw new Error("Session creation returned an invalid response");
+        let created: CreatedSessionResponse | null = null;
+        if (!recovery) {
+          const response = await fetch("/api/agent/sessions", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              projectSessionId: options.projectSessionId,
+              projectId: options.project.id,
+              documentIds: options.project.documents.map(
+                (document) => document.id,
+              ),
+              scopes,
+            }),
+          });
+          if (!response.ok)
+            throw new Error(`Session creation failed (${response.status})`);
+          const payload: unknown = await response.json();
+          if (!isCreatedSessionResponse(payload)) {
+            throw new Error("Session creation returned an invalid response");
+          }
+          created = payload;
         }
-        const created = payload;
         const live: LiveSession = {
-          ...created.session,
+          sessionId: recovery?.sessionId ?? created!.session.sessionId,
+          editorSecret: recovery?.editorSecret ?? created!.session.editorSecret,
+          claimCode: recovery ? null : created!.session.claimCode,
+          claimExpiresAt: recovery ? null : created!.session.claimExpiresAt,
+          expiresAt: recovery?.expiresAt ?? created!.session.expiresAt,
+          scopes: [...scopes],
           socket: null,
-          claimed: false,
+          claimed: recovery !== undefined,
           hasOpened: false,
           allowReconnect: true,
           reconnectAttempt: 0,
@@ -247,6 +291,22 @@ export function useAgentSession(
           agentId: `web-agent:${live.sessionId}`,
           host: options.host,
           permissions: permissionsFromScopes(scopes),
+          ...(options.fileHost
+            ? {
+                fileResource: {
+                  path: "/api/agent/sessions/{sessionId}/files" as const,
+                  operations: [
+                    "download",
+                    "stage",
+                    "inspect",
+                    "discard",
+                    "request-approval",
+                  ] as const,
+                  maxBytes: AGENT_FILE_RESOURCE_MAX_BYTES,
+                  humanApprovalRequired: true as const,
+                },
+              }
+            : {}),
         });
         const connect = () => {
           if (
@@ -306,6 +366,15 @@ export function useAgentSession(
                 sessionEvent.data.type === "session.ready"
               ) {
                 live.claimed = true;
+                writeAgentSessionRecovery(window.sessionStorage, {
+                  version: 1,
+                  sessionId: live.sessionId,
+                  editorSecret: live.editorSecret,
+                  projectId: options.project.id,
+                  projectSessionId: options.projectSessionId,
+                  scopes: live.scopes,
+                  expiresAt: live.expiresAt,
+                });
                 update(
                   { status: "connected", claimCode: null },
                   { at: Date.now(), kind: "claimed" },
@@ -315,6 +384,8 @@ export function useAgentSession(
                 sessionEvent.data.type === "session.revoked"
               ) {
                 stopReconnect(live);
+                clearAgentSessionRecovery(window.sessionStorage);
+                options.fileHost?.clear?.();
                 socket.close(1000, "session revoked");
                 if (liveRef.current === live) liveRef.current = null;
                 update(
@@ -329,8 +400,64 @@ export function useAgentSession(
               }
               return;
             }
+            if (parsed.data.kind === "file-request") {
+              const fileRequest = parseAgentFileResourceRequest(
+                parsed.data.payload,
+              );
+              if (!fileRequest.success || !options.fileHost) return;
+              const payloadHash = sha256Hex(
+                JSON.stringify(parsed.data.payload),
+              );
+              const knownHash = live.requestHashes.get(parsed.data.requestId);
+              const sendFileResponse = (payload: unknown) => {
+                socket.send(
+                  JSON.stringify({
+                    protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+                    sessionId: live.sessionId,
+                    messageId: crypto.randomUUID(),
+                    requestId: parsed.data.requestId,
+                    sentAt: new Date().toISOString(),
+                    kind: "file-response",
+                    payload,
+                  }),
+                );
+              };
+              if (knownHash) {
+                sendFileResponse({
+                  apiVersion: AGENT_API_VERSION,
+                  requestId: parsed.data.requestId,
+                  operation: fileRequest.data.operation,
+                  ok: false,
+                  error: {
+                    code:
+                      knownHash === payloadHash
+                        ? "REQUEST_RESULT_UNAVAILABLE"
+                        : "REQUEST_ID_REUSED",
+                    message:
+                      knownHash === payloadHash
+                        ? "The request was already executed without a browser-side replay cache"
+                        : "requestId was reused with a different payload",
+                  },
+                });
+                return;
+              }
+              live.requestHashes.set(parsed.data.requestId, payloadHash);
+              update(
+                { status: "working" },
+                {
+                  at: Date.now(),
+                  kind: "operation",
+                  detail: `file.${fileRequest.data.operation}`,
+                },
+              );
+              void options.fileHost
+                .handle(fileRequest.data)
+                .then(sendFileResponse)
+                .finally(() => update({ status: "connected" }));
+              return;
+            }
             if (parsed.data.kind !== "circuit-request") return;
-            const circuitRequest = AgentCircuitRequestSchema.safeParse(
+            const circuitRequest = parseAgentCircuitRequest(
               parsed.data.payload,
             );
             const payloadKey = JSON.stringify(parsed.data.payload);
@@ -406,6 +533,10 @@ export function useAgentSession(
               { status: "working" },
               { at: Date.now(), kind: "operation", detail: operation },
             );
+            // The relay already rejects malformed public payloads, but the
+            // browser host repeats that same strict parse before it can touch
+            // the live Project. Never route hosted traffic through the local
+            // v1/v3 compatibility handler.
             const result = service.handle(parsed.data.payload);
             const responseBytes = new TextEncoder().encode(
               JSON.stringify(result),
@@ -488,14 +619,35 @@ export function useAgentSession(
         connect();
       } catch (error) {
         liveRef.current = null;
+        if (recovery) clearAgentSessionRecovery(window.sessionStorage);
         update({
           status: "idle",
           error: error instanceof Error ? error.message : String(error),
         });
       }
     },
-    [options.host, options.project, options.projectSessionId, revoke, update],
+    [
+      options.fileHost,
+      options.host,
+      options.project,
+      options.projectSessionId,
+      revoke,
+      update,
+    ],
   );
+
+  useEffect(() => {
+    if (recoveryAttemptedForProjectRef.current === options.projectSessionId) {
+      return;
+    }
+    recoveryAttemptedForProjectRef.current = options.projectSessionId;
+    const recovery = readAgentSessionRecovery(window.sessionStorage, {
+      projectId: options.project.id,
+      projectSessionId: options.projectSessionId,
+      now: Date.now(),
+    });
+    if (recovery) void grant(recovery.scopes, recovery);
+  }, [grant, options.project.id, options.projectSessionId]);
 
   const pause = useCallback(async () => {
     try {
@@ -541,6 +693,12 @@ export function useAgentSession(
     live.reconnect();
   }, [update]);
 
+  const rotate = useCallback(async () => {
+    const live = liveRef.current;
+    if (!live) return;
+    await grant([...live.scopes]);
+  }, [grant]);
+
   useEffect(() => {
     if (projectSessionRef.current !== options.projectSessionId) return;
     const live = liveRef.current;
@@ -583,6 +741,7 @@ export function useAgentSession(
   useEffect(() => {
     if (projectSessionRef.current === options.projectSessionId) return;
     projectSessionRef.current = options.projectSessionId;
+    recoveryAttemptedForProjectRef.current = options.projectSessionId;
     revisionRef.current = new Map(
       options.project.documents.map((document) => [
         document.id,
@@ -590,6 +749,8 @@ export function useAgentSession(
       ]),
     );
     agentRevisionRef.current.clear();
+    clearAgentSessionRecovery(window.sessionStorage);
+    options.fileHost?.clear?.();
     const live = liveRef.current;
     if (!live) return;
     stopReconnect(live);
@@ -601,36 +762,48 @@ export function useAgentSession(
         { at: Date.now(), kind: "replaced" },
       );
     });
-  }, [control, options.project, options.projectSessionId, update]);
+  }, [
+    control,
+    options.fileHost,
+    options.project,
+    options.projectSessionId,
+    update,
+  ]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       const live = liveRef.current;
       if (live && Date.now() >= live.expiresAt) {
         stopReconnect(live);
+        clearAgentSessionRecovery(window.sessionStorage);
+        options.fileHost?.clear?.();
         live.socket?.close(1000, "expired");
         liveRef.current = null;
         update({ status: "expired", claimCode: null });
       }
     }, 1_000);
     return () => window.clearInterval(timer);
-  }, [update]);
+  }, [options.fileHost, update]);
 
   useEffect(
     () => () => {
       const live = liveRef.current;
+      options.fileHost?.clear?.();
       if (live) {
         stopReconnect(live);
-        void fetch(`/api/agent/sessions/${live.sessionId}`, {
-          method: "DELETE",
-          headers: { "x-editor-secret": live.editorSecret },
-          keepalive: true,
-        });
+        if (!live.claimed) {
+          clearAgentSessionRecovery(window.sessionStorage);
+          void fetch(`/api/agent/sessions/${live.sessionId}`, {
+            method: "DELETE",
+            headers: { "x-editor-secret": live.editorSecret },
+            keepalive: true,
+          });
+        }
         live.socket?.close(1000, "tab closed");
       }
     },
-    [],
+    [options.fileHost],
   );
 
-  return { ...view, grant, pause, resume, reconnect, revoke };
+  return { ...view, grant, pause, resume, reconnect, rotate, revoke };
 }

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   ConnectAgentPanel,
+  agentConnectionInstructions,
   type AgentAuditEntry,
   type AgentConnectionStatus,
 } from "./connect-agent-panel";
@@ -23,6 +24,7 @@ function baseProps(
     onPause: vi.fn(),
     onResume: vi.fn(),
     onReconnect: vi.fn(),
+    onRotate: vi.fn(),
     onRevoke: vi.fn(),
     onClose: vi.fn(),
     ...overrides,
@@ -34,6 +36,29 @@ function baseProps(
 // live only in props while the session is live; nothing here persists them.
 
 describe("ConnectAgentPanel", () => {
+  it("provides one complete golden-path lifecycle without a bearer value", () => {
+    const instructions = agentConnectionInstructions(
+      "https://editor.example",
+      "claim-once",
+    );
+    expect(instructions).toContain(
+      'POSTing {"claimCode":"claim-once"} to https://editor.example/api/agent/claims',
+    );
+    expect(instructions).toContain("4. Call capabilities once");
+    expect(instructions).toContain(
+      "replace {sessionId} in the Circuit URL with that value",
+    );
+    expect(instructions).toContain(
+      "7. Use https://editor.example/api/agent/sessions/{sessionId}/files",
+    );
+    expect(instructions).toContain("9. Dry-run non-trivial transact requests");
+    expect(instructions).toContain("11. Render, then request a fresh snapshot");
+    expect(instructions).toContain(
+      "12. Reuse a requestId only when retrying the exact same payload",
+    );
+    expect(instructions).not.toMatch(/Bearer [A-Za-z0-9_-]{20,}/u);
+  });
+
   it("renders nothing when closed", () => {
     const markup = renderToStaticMarkup(
       <ConnectAgentPanel {...baseProps({ open: false })} />,
@@ -94,6 +119,14 @@ describe("ConnectAgentPanel", () => {
       expect(markup).toContain('data-testid="agent-reconnect"');
       expect(markup).toContain('data-testid="agent-revoke"');
     }
+  });
+
+  it("offers user-triggered access rotation while connected", () => {
+    const markup = renderToStaticMarkup(
+      <ConnectAgentPanel {...baseProps({ status: "connected" })} />,
+    );
+    expect(markup).toContain('data-testid="agent-rotate"');
+    expect(markup).toContain("Rotate Agent Access");
   });
 
   it("hides the claim code and controls in a terminal revoked state", () => {

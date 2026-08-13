@@ -104,10 +104,13 @@ describe("extractDesignNetlist", () => {
     project.documents[0]!.annotations.push({
       id: "decorative-label",
       kind: "instance-label",
-      text: "does not affect export",
-      position: { x: 3, y: 4 },
-      attachedObjectId: "resistor-1",
-      offset: { x: 0, y: 0 },
+      content: { runs: [{ kind: "text", value: "does not affect export" }] },
+      anchor: {
+        kind: "object",
+        objectId: "resistor-1",
+        localOffset: { x: 0, y: 0 },
+        fallbackPosition: { x: 3, y: 4 },
+      },
       alignment: "start",
       rotation: 0,
       locked: false,

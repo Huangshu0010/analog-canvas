@@ -1,12 +1,7 @@
-import type { Net, SchematicDocument } from "./schema.js";
+import type { Net, NetPowerDomain, SchematicDocument } from "./schema.js";
 
-/**
- * Electrical intent carried by a reviewed Razavi power-symbol terminal. This
- * is derived from persisted terminal membership rather than a Net's display
- * name, which may be absent or user-defined.
- */
+/** Explicit electrical supply identity stored by each current Net. */
 export type PowerDomain = "vdd" | "ground";
-export type NetPowerDomain = PowerDomain | "none" | "conflict";
 
 export interface PowerNetNormalization {
   netId: string;
@@ -14,7 +9,11 @@ export interface PowerNetNormalization {
   name?: string;
 }
 
-export function powerDomainForTerminal(
+/**
+ * Migration-only legacy inference. No runtime consumer may call this: a v5
+ * Net owns its power identity explicitly.
+ */
+export function inferLegacyPowerDomainForTerminal(
   document: SchematicDocument,
   terminal: Net["terminals"][number],
 ): PowerDomain | undefined {
@@ -30,26 +29,15 @@ export function powerDomainForTerminal(
   return undefined;
 }
 
-export function powerDomainForNet(
-  document: SchematicDocument,
-  net: Net,
-): NetPowerDomain {
-  const domains = new Set(
-    net.terminals.flatMap((terminal) => {
-      const domain = powerDomainForTerminal(document, terminal);
-      return domain ? [domain] : [];
-    }),
-  );
-  if (domains.size === 0) return "none";
-  if (domains.size > 1) return "conflict";
-  return [...domains][0]!;
+export function powerDomainForNet(net: Net): NetPowerDomain {
+  return net.powerDomain ?? "none";
 }
 
 export function powerNetNormalizations(
   document: SchematicDocument,
 ): readonly PowerNetNormalization[] {
   return document.nets.flatMap((net) => {
-    const domain = powerDomainForNet(document, net);
+    const domain = powerDomainForNet(net);
     if (domain === "none" || domain === "conflict") return [];
     const canonicalName = domain === "vdd" ? "VDD" : "0";
     const hasName = Boolean(net.name?.trim());

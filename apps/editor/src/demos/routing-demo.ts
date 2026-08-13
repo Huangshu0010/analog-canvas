@@ -2,22 +2,7 @@ import {
   CURRENT_PROJECT_SCHEMA_VERSION,
   CircuitProjectSchema,
 } from "@icm/model";
-import type { CircuitProject, Instance } from "@icm/model";
-
-function instance(
-  id: string,
-  x: number,
-  y: number,
-  rotation: 0 | 90 | 180 | 270,
-  mirror: "none" | "x" = "none",
-): Instance {
-  return {
-    id,
-    symbolId: "port",
-    placement: { position: { x, y }, rotation, mirror },
-    properties: {},
-  };
-}
+import type { CircuitProject } from "@icm/model";
 
 export function createRoutingDemoProject(): CircuitProject {
   return CircuitProjectSchema.parse({
@@ -37,34 +22,58 @@ export function createRoutingDemoProject(): CircuitProject {
         name: "Phase 3 Routing",
         revision: 0,
         sourceStatus: "in-sync",
-        ports: [],
-        instances: [
-          instance("A", 140, 300, 0),
-          instance("B", 460, 300, 0, "x"),
-          instance("C", 300, 140, 90),
-          instance("D", 300, 460, 270),
-          instance("E", 340, 440, 90),
+        ports: [
+          {
+            id: "A",
+            name: "A",
+            direction: "passive",
+            position: { x: 150, y: 300 },
+            presentation: "hollow",
+          },
+          {
+            id: "B",
+            name: "B",
+            direction: "passive",
+            position: { x: 450, y: 300 },
+            presentation: "hollow",
+          },
+          {
+            id: "C",
+            name: "C",
+            direction: "passive",
+            position: { x: 300, y: 150 },
+            presentation: "hollow",
+          },
+          {
+            id: "D",
+            name: "D",
+            direction: "passive",
+            position: { x: 300, y: 450 },
+            presentation: "hollow",
+          },
+          {
+            id: "E",
+            name: "E",
+            direction: "passive",
+            position: { x: 340, y: 450 },
+            presentation: "hollow",
+          },
         ],
+        instances: [],
         nets: [
           {
             id: "net-h",
             name: "HORIZONTAL",
             scope: "local",
-            terminals: ["A", "B", "E"].map((instanceId) => ({
-              instanceId,
-              pinName: "P",
-            })),
-            ports: [],
+            terminals: [],
+            ports: ["A", "B", "E"],
           },
           {
             id: "net-v",
             name: "VERTICAL",
             scope: "local",
-            terminals: ["C", "D"].map((instanceId) => ({
-              instanceId,
-              pinName: "P",
-            })),
-            ports: [],
+            terminals: [],
+            ports: ["C", "D"],
           },
         ],
         routes: [],

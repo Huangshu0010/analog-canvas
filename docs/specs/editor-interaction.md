@@ -137,9 +137,9 @@ on the selection with italic, bold, subscript, and superscript buttons;
 `Ctrl+I` and `Ctrl+B` are keyboard aliases. Font size uses bounded +/- levels,
 never an unbounded numeric field. Formatting is persisted directly as the
 canonical RichText AST. Text that resembles former markup commands, including
-`M_{1}` and `\frac{a}{b}`, remains literal when entered in this editor. A
-read-only semantic fallback for annotations that predate explicit RichText
-content does not constitute an authoring input language.
+`M_{1}` and `\frac{a}{b}`, remains literal when entered in this editor.
+Historical plain-text annotations are converted by Project migration; current
+editor interaction never renders or edits a string fallback.
 
 Route markers, arrows, leaders, and callouts use the shared `VisualAnchor`: a
 current marker dragged along a Route updates `segmentIndex/t`, a normal drag
@@ -665,3 +665,24 @@ non-electrical unless an explicit wire start/end gesture commits connectivity.
   extension.
 - Diagonal/any-angle drawing modes and whole-Net selection remain deferred;
   the accepted editor is orthogonal and segment-selective.
+
+## Agent v3 extension (ADR 0018)
+
+[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) adds an optional
+transient `collaborate` control surface so an authorized Agent can direct human
+attention without DOM, pointer, keyboard, or screenshot-driven mutation. It
+accepts semantic commands only:
+
+- `navigate_document(documentId)`;
+- `set_selection(ObjectLocator[])` and `clear_selection`;
+- `highlight_net(ObjectLocator)` and `clear_highlight`;
+- `fit_objects(ObjectLocator[])`, `fit_bounds(Rect)`, and `fit_document`.
+
+It validates all locators against the canonical Project Object Index and uses
+the same Net trace/highlight read model as the GUI. It cannot send pointer
+events, keystrokes, arbitrary zoom matrices, CSS, selectors, or DOM queries. It
+requires the `editor.collaborate` scope, produces audit/events, and never
+changes Project revision, topology hash, history, recovery, or formal export —
+consistent with the rule that selection, viewport, and highlight are
+editor-local transient state. A user toggle can disable collaboration control
+without revoking circuit read/edit scopes.

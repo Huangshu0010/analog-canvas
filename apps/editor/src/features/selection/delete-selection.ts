@@ -98,8 +98,8 @@ export function proposeConnectedInstanceDeletion(
   const annotationEdits = document.annotations
     .filter(
       (annotation) =>
-        annotation.attachedObjectId !== undefined &&
-        selected.has(annotation.attachedObjectId),
+        annotation.anchor.kind === "object" &&
+        selected.has(annotation.anchor.objectId),
     )
     .map((annotation): SchematicEdit => ({
       kind: "remove_schematic_annotation",
@@ -135,8 +135,8 @@ export function explicitAnnotationRemovals(
     document.annotations
       .filter(
         (annotation) =>
-          annotation.attachedObjectId !== undefined &&
-          selectedInstances.has(annotation.attachedObjectId),
+          annotation.anchor.kind === "object" &&
+          selectedInstances.has(annotation.anchor.objectId),
       )
       .map((annotation) => annotation.id),
   );

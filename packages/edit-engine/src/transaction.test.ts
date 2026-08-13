@@ -34,6 +34,69 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("owns Port presentation and references through typed Port edits", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    const added = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "add_port",
+            port: {
+              id: "VIN",
+              name: "Vin",
+              direction: "input",
+              position: { x: 40, y: 60 },
+              presentation: "filled",
+            },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    expect(added.document.ports).toContainEqual({
+      id: "VIN",
+      name: "Vin",
+      direction: "input",
+      position: { x: 40, y: 60 },
+      presentation: "filled",
+    });
+    expect(added.document.netlist?.portOrder).toContain("VIN");
+
+    const connected = executeTransaction(
+      added.document,
+      {
+        ...transaction(added.document.revision),
+        edits: [
+          {
+            kind: "connect_endpoints",
+            from: { kind: "port", portId: "VIN" },
+            to: { kind: "port", portId: "VIN" },
+            newNetId: "net-vin",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(connected.ok).toBe(true);
+    if (!connected.ok) return;
+    const rejectedRemoval = executeTransaction(
+      connected.document,
+      {
+        ...transaction(connected.document.revision),
+        edits: [{ kind: "remove_port", portId: "VIN" }],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(rejectedRemoval).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+  });
+
   it("rejects the retired ambiguous annotation edit names", () => {
     expect(
       SchematicEditSchema.safeParse({
@@ -49,7 +112,7 @@ describe("Edit Transaction envelope", () => {
     ).toBe(false);
   });
 
-  it("permits a power rail only on a Net established by a VDD symbol", () => {
+  it("permits a power rail only on an explicitly tagged VDD Net", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "VDD1",
@@ -75,6 +138,7 @@ describe("Edit Transaction envelope", () => {
     document.nets.push({
       id: "net-vdd",
       scope: "global",
+      powerDomain: "vdd",
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
       ports: ["rail-left", "rail-right"],
     });
@@ -100,7 +164,7 @@ describe("Edit Transaction envelope", () => {
     );
     expect(accepted.ok).toBe(true);
 
-    document.nets[0]!.terminals = [];
+    document.nets[0]!.powerDomain = "none";
     const rejected = executeTransaction(
       document,
       {
@@ -124,6 +188,68 @@ describe("Edit Transaction envelope", () => {
       ok: false,
       error: { message: "Power rail rail must belong to a VDD Net" },
     });
+  });
+
+  it("rejects an invalid power rail atomically", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    const before = JSON.stringify(document);
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "add_power_rail",
+            netId: "net-vdd",
+            routeId: "rail-vdd",
+            startJunctionId: "junction-start",
+            endJunctionId: "junction-end",
+            labelId: "label-vdd",
+            domain: "vdd",
+            start: { x: 10, y: 10 },
+            end: { x: 10, y: 40 },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
+    expect(JSON.stringify(document)).toBe(before);
+  });
+
+  it("rejects a power rail whose generated IDs collide with an existing object", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "label-vdd",
+      symbolId: "resistor",
+      placement: null,
+      properties: {},
+    });
+    const before = JSON.stringify(document);
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "add_power_rail",
+            netId: "net-vdd",
+            routeId: "rail-vdd",
+            startJunctionId: "junction-start",
+            endJunctionId: "junction-end",
+            labelId: "label-vdd",
+            domain: "vdd",
+            start: { x: 10, y: 10 },
+            end: { x: 80, y: 10 },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
+    expect(JSON.stringify(document)).toBe(before);
   });
 
   it("sets a Cell bulk default by stable Net id before reconciliation", () => {
@@ -233,10 +359,9 @@ describe("Edit Transaction envelope", () => {
     const annotation = {
       id: "label-signal",
       kind: "net-label" as const,
-      text: "SIGNAL",
-      position: { x: 100, y: 100 },
-      attachedObjectId: "net-signal",
-      offset: { x: 0, y: -8 },
+      content: { runs: [{ kind: "text", value: "SIGNAL" }] },
+      netId: "net-signal",
+      anchor: { kind: "free", position: { x: 100, y: 100 } },
       alignment: "middle" as const,
       rotation: 0 as const,
       locked: false,
@@ -252,13 +377,13 @@ describe("Edit Transaction envelope", () => {
       edits: [
         {
           kind: "upsert_schematic_annotation",
-          annotation: { ...annotation, attachedObjectId: "junction-signal" },
+          annotation: { ...annotation, netId: "junction-signal" },
         },
       ],
     });
     expect(rejected).toMatchObject({
       ok: false,
-      error: { message: "Net Label attachment is not a Net: junction-signal" },
+      error: { message: "Net Label identity is not a Net: junction-signal" },
     });
   });
 
@@ -287,7 +412,7 @@ describe("Edit Transaction envelope", () => {
     expect(document.revision).toBe(0);
   });
 
-  it("normalizes a power-symbol Net regardless of how the Net was created", () => {
+  it("normalizes an explicitly tagged supply Net without inspecting symbols", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push(
       {
@@ -314,6 +439,11 @@ describe("Edit Transaction envelope", () => {
             to: { kind: "terminal", instanceId: "VDD3", pinName: "P" },
             newNetId: "net-ui-2",
           },
+          {
+            kind: "set_net_power_domain",
+            netId: "net-ui-2",
+            powerDomain: "vdd",
+          },
         ],
       },
       { symbolResolver: resolver },
@@ -327,6 +457,7 @@ describe("Edit Transaction envelope", () => {
             id: "net-ui-2",
             name: "VDD",
             scope: "global",
+            powerDomain: "vdd",
             terminals: [
               { instanceId: "M2", pinName: "S" },
               { instanceId: "VDD3", pinName: "P" },
@@ -426,7 +557,6 @@ describe("Edit Transaction envelope", () => {
   it("patches instance properties atomically and records a non-source edit", () => {
     const document = documentWithInstance();
     document.instances[0]!.properties = {
-      "spice.param.value": "10k",
       value: "8k",
     };
     document.sourceStatus = "in-sync";
@@ -438,7 +568,7 @@ describe("Edit Transaction envelope", () => {
           kind: "patch_instance_properties",
           instanceId: "M1",
           set: { value: "12k", enabled: true },
-          unset: ["spice.param.value"],
+          unset: ["unused"],
         },
       ],
     });
@@ -457,9 +587,32 @@ describe("Edit Transaction envelope", () => {
       },
     });
     expect(document.instances[0]!.properties).toEqual({
-      "spice.param.value": "10k",
       value: "8k",
     });
+  });
+
+  it("rejects legacy SPICE property patches before any candidate mutation", () => {
+    const document = documentWithInstance();
+    const result = executeTransaction(document, {
+      ...transaction(),
+      edits: [
+        {
+          kind: "patch_instance_properties",
+          instanceId: "M1",
+          set: { "spice.param.value": "10k" },
+        },
+      ],
+    });
+    expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "INVALID_TRANSACTION",
+          path: ["edits", 0, "set", "spice.param.value"],
+        }),
+      ]),
+    );
+    expect(document.instances[0]!.properties).toEqual({});
   });
 
   it("rejects an invalid property patch without partially changing the instance", () => {
@@ -509,13 +662,16 @@ describe("Edit Transaction envelope", () => {
     document.annotations.push({
       id: "instance-label-Q1",
       kind: "instance-label",
-      text: "Q1",
-      position: initial.position,
-      offset: {
-        x: initial.semanticPosition.x - instance.placement.position.x,
-        y: initial.semanticPosition.y - instance.placement.position.y,
+      content: { runs: [{ kind: "text", value: "Q1" }] },
+      anchor: {
+        kind: "object",
+        objectId: "Q1",
+        localOffset: {
+          x: initial.semanticPosition.x - instance.placement.position.x,
+          y: initial.semanticPosition.y - instance.placement.position.y,
+        },
+        fallbackPosition: initial.position,
       },
-      attachedObjectId: "Q1",
       alignment: initial.alignment,
       rotation: 0,
       locked: false,
@@ -553,10 +709,14 @@ describe("Edit Transaction envelope", () => {
     expect(label).toMatchObject({ alignment: "middle", rotation: 0 });
     // The persisted semantic anchor is integer-rounded, so permit the one
     // pixel rounding difference while requiring the glyph edge to stay clear.
-    expect(label.position.y).toBeGreaterThanOrEqual(
+    if (label.anchor.kind === "free") {
+      throw new Error("Rotated instance label must retain an object anchor");
+    }
+    const fallback = label.anchor.fallbackPosition;
+    expect(fallback.y).toBeGreaterThanOrEqual(
       Math.floor(bottom + profile.typography.instanceFontSize * 1.05 + 1.5),
     );
-    expect(label.position.y).toBeLessThanOrEqual(
+    expect(fallback.y).toBeLessThanOrEqual(
       Math.ceil(bottom + profile.typography.instanceFontSize * 1.05 + 2.5),
     );
   });

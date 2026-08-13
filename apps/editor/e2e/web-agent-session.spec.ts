@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { WebSocketRoute } from "@playwright/test";
+import { createHash } from "node:crypto";
+
+import { createEmptyProject, serializeProject } from "@icm/model";
 
 import { clickCommand, openMenu } from "./editor-fixtures.js";
 
@@ -16,6 +19,8 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
   const editorSecret = "editor-secret-e2e";
   const responses: SessionMessage[] = [];
   let browserSocket: WebSocketRoute | null = null;
+  let sessionCreates = 0;
+  let revokeControls = 0;
 
   await page.routeWebSocket(
     `**/api/agent/sessions/${sessionId}/editor`,
@@ -31,6 +36,7 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "POST" && url.pathname === "/api/agent/sessions") {
+      sessionCreates += 1;
       const body = request.postDataJSON() as {
         projectId: string;
         projectSessionId: string;
@@ -41,6 +47,7 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
       expect(body.projectSessionId).toMatch(/^project-main:\d+$/u);
       expect(body.documentIds).toEqual(["document-main"]);
       expect(body.scopes).toContain("circuit.edit.connectivity");
+      expect(body.scopes).toContain("editor.semantic-control");
       await route.fulfill({
         contentType: "application/json",
         json: {
@@ -57,6 +64,8 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
       return;
     }
     if (request.method() === "POST" && url.pathname.endsWith("/control")) {
+      const body = request.postDataJSON() as { action?: string };
+      if (body.action === "revoke") revokeControls += 1;
       await route.fulfill({
         contentType: "application/json",
         json: { ok: true, status: "active" },
@@ -133,6 +142,61 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
       .at(-1)!;
   };
 
+  const sendFileRequest = async (
+    requestId: string,
+    payload: Record<string, unknown>,
+  ): Promise<SessionMessage> => {
+    const responseCount = responses.filter(
+      (message) =>
+        message.requestId === requestId && message.kind === "file-response",
+    ).length;
+    socket.send(
+      JSON.stringify({
+        protocolVersion: "1.0",
+        sessionId,
+        messageId: `file-${requestId}`,
+        requestId,
+        sentAt: new Date().toISOString(),
+        kind: "file-request",
+        payload,
+      }),
+    );
+    await expect
+      .poll(
+        () =>
+          responses.filter(
+            (message) =>
+              message.requestId === requestId &&
+              message.kind === "file-response",
+          ).length,
+      )
+      .toBe(responseCount + 1);
+    return responses
+      .filter(
+        (message) =>
+          message.requestId === requestId && message.kind === "file-response",
+      )
+      .at(-1)!;
+  };
+
+  const capabilities = await sendCircuitRequest("capabilities", {
+    apiVersion: "2.0",
+    requestId: "capabilities",
+    operation: "capabilities",
+  });
+  expect(capabilities.payload).toMatchObject({
+    ok: true,
+    capabilities: {
+      operations: ["capabilities", "snapshot", "transact", "render"],
+      resources: {
+        file: {
+          path: "/api/agent/sessions/{sessionId}/files",
+          humanApprovalRequired: true,
+        },
+      },
+    },
+  });
+
   const snapshot = await sendCircuitRequest("snapshot-before", {
     apiVersion: "2.0",
     requestId: "snapshot-before",
@@ -145,6 +209,29 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
     operation: "snapshot",
     revision: 0,
   });
+
+  const semantic = await sendCircuitRequest("semantic-fit", {
+    apiVersion: "2.0",
+    requestId: "semantic-fit",
+    operation: "transact",
+    documentId: "document-main",
+    transactionId: "semantic-fit-transaction",
+    expectedRevision: 0,
+    semanticIntent: { kind: "fit-document" },
+  });
+  expect(semantic.payload).toMatchObject({
+    ok: true,
+    operation: "transact",
+    applied: false,
+    revision: 0,
+    proposedRevision: 0,
+    semantic: {
+      kind: "fit-document",
+      documentId: "document-main",
+      objectIds: [],
+    },
+  });
+  await expect(page.getByTestId("revision")).toHaveText("0");
 
   const transaction = await sendCircuitRequest("agent-edit", {
     apiVersion: "2.0",
@@ -204,6 +291,44 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
   expect(replay.payload).toEqual(transaction.payload);
   await expect(page.getByTestId("revision")).toHaveText("1");
 
+  const stagedBytes = Buffer.from(
+    serializeProject(
+      createEmptyProject("agent-staged", "Agent staged Project"),
+    ),
+  );
+  const staged = await sendFileRequest("stage-project", {
+    apiVersion: "2.0",
+    requestId: "stage-project",
+    operation: "stage",
+    kind: "project",
+    files: [
+      {
+        name: "agent-staged.icproj.json",
+        mediaType: "application/json",
+        encoding: "base64",
+        data: stagedBytes.toString("base64"),
+        byteLength: stagedBytes.byteLength,
+        sha256: createHash("sha256").update(stagedBytes).digest("hex"),
+      },
+    ],
+  });
+  expect(staged.payload).toMatchObject({ ok: true, operation: "stage" });
+  const candidateId = (staged.payload as { candidate: { candidateId: string } })
+    .candidate.candidateId;
+  await sendFileRequest("approve-staged-project", {
+    apiVersion: "2.0",
+    requestId: "approve-staged-project",
+    operation: "request-approval",
+    candidateId,
+  });
+  await expect(page.getByTestId("agent-file-approval")).toContainText(
+    "Agent staged Project",
+  );
+  await expect(page.getByTestId("revision")).toHaveText("1");
+  await page.getByTestId("agent-file-reject").click();
+  await expect(page.getByTestId("agent-file-approval")).toHaveCount(0);
+  await expect(page.getByTestId("revision")).toHaveText("1");
+
   await page
     .getByTestId("connect-agent-panel")
     .getByRole("button", { name: "Close" })
@@ -239,6 +364,15 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
   await page.getByTestId("agent-resume").click();
   await expect(page.getByTestId("agent-status")).toContainText(
     "Agent connected",
+  );
+  await page.getByTestId("agent-rotate").click();
+  await expect.poll(() => sessionCreates).toBe(2);
+  await expect.poll(() => revokeControls).toBe(1);
+  await expect(page.getByTestId("agent-claim-code")).toHaveText(
+    `${sessionId}.one-time-claim`,
+  );
+  await expect(page.getByTestId("agent-status")).toContainText(
+    "Waiting for Agent to claim",
   );
   await page.getByTestId("agent-revoke").click();
   await expect(page.getByTestId("agent-status")).toContainText("Revoked");

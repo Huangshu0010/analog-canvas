@@ -200,7 +200,7 @@ describe("drafting and guide edits", () => {
     expect(removed.ok).toBe(true);
   });
 
-  it("upserts a schematic annotation (legacy kind; route-marker lands at the gate)", () => {
+  it("upserts a canonical schematic annotation", () => {
     const document = createEmptyDocument("doc", "Annotation");
     const result = executeTransaction(
       document,
@@ -210,9 +210,8 @@ describe("drafting and guide edits", () => {
           annotation: {
             id: "l1",
             kind: "instance-label",
-            text: "M1",
-            position: { x: 0, y: 0 },
-            offset: { x: 0, y: 0 },
+            content: { runs: [{ kind: "text", value: "M1" }] },
+            anchor: { kind: "free", position: { x: 0, y: 0 } },
             alignment: "middle",
             rotation: 0,
             locked: false,

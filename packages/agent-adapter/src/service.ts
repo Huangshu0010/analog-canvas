@@ -5,7 +5,7 @@ import {
   SchematicEditSchema,
 } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
-import { transformPoint } from "@icm/model";
+import { flattenRichText, transformPoint } from "@icm/model";
 import type {
   CircuitProject,
   Point,
@@ -23,10 +23,15 @@ import {
 } from "./diagnostics.js";
 import type { AgentOperationHost } from "./host.js";
 import {
+  parseAgentCircuitRequest,
+  parseCompatibleAgentCircuitRequest,
+} from "./request-contract.js";
+import {
   AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
+  AGENT_API_V3_VERSION,
   AGENT_SNAPSHOT_VERSION,
-  AgentCircuitRequestSchema,
+  AGENT_SNAPSHOT_V3_VERSION,
   AgentCircuitResponseSchema,
 } from "./schema.js";
 import type {
@@ -34,16 +39,31 @@ import type {
   AgentDiagnostic,
   AgentDiff,
   AgentLimits,
+  AgentFileResourceCapability,
   AgentObjectDescriptor,
   AgentPermissions,
   AgentQueryRequest,
   AgentRenderRequest,
   AgentTransactRequest,
 } from "./schema.js";
-import { buildAgentSessionSnapshot } from "./snapshot.js";
+import { buildAgentCatalogSnapshot } from "./catalog.js";
+import {
+  buildAgentDocumentSnapshotV3,
+  buildAgentProjectSnapshot,
+  buildAgentSessionSnapshot,
+  canonicalSnapshotContent,
+} from "./snapshot.js";
 
 const V1_OPERATIONS = ["capabilities", "query", "transact", "render"] as const;
 const V2_OPERATIONS = [
+  "capabilities",
+  "snapshot",
+  "transact",
+  "render",
+] as const;
+// v3 advertises the implemented operation set; `artifact` and `collaborate` are
+// added by AP4/AP7 when those operations land.
+const V3_OPERATIONS = [
   "capabilities",
   "snapshot",
   "transact",
@@ -107,6 +127,8 @@ export interface AgentCircuitHostServiceOptions {
   host: AgentOperationHost;
   permissions: AgentPermissions;
   limits?: Partial<AgentLimits>;
+  /** Advertised independently from the four Circuit operations. */
+  fileResource?: AgentFileResourceCapability;
 }
 
 export interface AgentCircuitService {
@@ -115,7 +137,10 @@ export interface AgentCircuitService {
 }
 
 function errorResponse(
-  apiVersion: typeof AGENT_API_V1_VERSION | typeof AGENT_API_VERSION,
+  apiVersion:
+    | typeof AGENT_API_V1_VERSION
+    | typeof AGENT_API_VERSION
+    | typeof AGENT_API_V3_VERSION,
   requestId: string,
   operation: "error" | "query" | "snapshot" | "transact" | "render",
   code: string,
@@ -285,15 +310,16 @@ function describeObjects(
     descriptors.push({
       id: annotation.id,
       kind: "annotation",
-      name: annotation.text.slice(0, 128),
-      position: annotation.position,
-      netIds: annotation.attachedObjectId
-        ? sourceNetIds(document, annotation.attachedObjectId)
-        : [],
+      name: flattenRichText(annotation.content).slice(0, 128),
+      position:
+        annotation.anchor.kind === "free"
+          ? annotation.anchor.position
+          : annotation.anchor.fallbackPosition,
+      netIds: annotation.netId ? [annotation.netId] : [],
       attributes: {
         kind: annotation.kind,
         locked: annotation.locked,
-        attached: annotation.attachedObjectId !== undefined,
+        anchorKind: annotation.anchor.kind,
       },
     });
   }
@@ -373,7 +399,7 @@ function selectQueryIds(
             .filter((junction) => junction.netId === net.id)
             .map((junction) => junction.id),
           ...document.annotations
-            .filter((annotation) => annotation.attachedObjectId === net.id)
+            .filter((annotation) => annotation.netId === net.id)
             .map((annotation) => annotation.id),
         ]),
       };
@@ -400,8 +426,11 @@ function selectQueryIds(
           ids.add(junction.id);
       }
       for (const annotation of document.annotations) {
-        if (pointInBounds(annotation.position, scope.bounds))
-          ids.add(annotation.id);
+        const position =
+          annotation.anchor.kind === "free"
+            ? annotation.anchor.position
+            : annotation.anchor.fallbackPosition;
+        if (pointInBounds(position, scope.bounds)) ids.add(annotation.id);
       }
       for (const route of document.routes) {
         const polyline = routingGeometry.routes.get(route.id);
@@ -440,6 +469,7 @@ export function agentEditCategory(
     case "move_instance":
     case "rotate_instance":
     case "mirror_instance":
+    case "add_port":
     case "place_port":
     case "move_port":
     case "move_junction":
@@ -449,6 +479,9 @@ export function agentEditCategory(
       return "presentation";
     case "set_instance_netlist":
     case "set_cell_netlist_interface":
+    case "remove_port":
+    case "rename_port":
+    case "set_port_direction":
       return "connectivity";
     case "set_route_points":
     case "route_orthogonal":
@@ -458,8 +491,10 @@ export function agentEditCategory(
     case "make_flightline":
     case "cut_connection":
     case "connect_endpoints":
+    case "add_power_rail":
     case "merge_nets":
     case "set_net_name":
+    case "set_net_power_domain":
     case "normalize_power_nets":
     case "clear_document":
     case "set_mos_bulk_defaults":
@@ -474,6 +509,7 @@ export function agentEditCategory(
     case "upsert_drafting_object":
     case "remove_drafting_object":
     case "set_presentation_style":
+    case "set_port_presentation":
     case "set_layout_group":
     case "remove_layout_group":
     case "set_layout_constraint":
@@ -529,6 +565,9 @@ export function createAgentCircuitService(
   const host = useHost
     ? (options as AgentCircuitHostServiceOptions).host
     : null;
+  const fileResource = useHost
+    ? (options as AgentCircuitHostServiceOptions).fileResource
+    : undefined;
   const storeOptions = (
     useHost ? null : options
   ) as AgentCircuitServiceOptions | null;
@@ -536,27 +575,14 @@ export function createAgentCircuitService(
   return {
     limits,
     handle(input: unknown): AgentCircuitResponse {
-      const parsed = AgentCircuitRequestSchema.safeParse(input);
+      // A browser-host service is the hosted public path and always parses the
+      // production v2 contract. The in-process store service retains only the
+      // explicit local v1/v3 migration reader.
+      const parsed = useHost
+        ? parseAgentCircuitRequest(input)
+        : parseCompatibleAgentCircuitRequest(input);
       if (!parsed.success) {
-        const candidate = input as {
-          apiVersion?: unknown;
-          requestId?: unknown;
-        } | null;
-        const requestId =
-          candidate && typeof candidate.requestId === "string"
-            ? candidate.requestId
-            : "invalid-request";
-        const apiVersion =
-          candidate?.apiVersion === AGENT_API_V1_VERSION
-            ? AGENT_API_V1_VERSION
-            : AGENT_API_VERSION;
-        return errorResponse(
-          apiVersion,
-          requestId,
-          "error",
-          "INVALID_REQUEST",
-          parsed.error.issues.map((issue) => issue.message).join("; "),
-        );
+        return parsed.response;
       }
       const request = parsed.data;
       const fail = (
@@ -576,38 +602,220 @@ export function createAgentCircuitService(
           diagnostics,
         );
       if (request.operation === "capabilities") {
+        const snapshotPermission =
+          options.permissions.snapshot ?? options.permissions.query;
+        const semanticControl = Boolean(
+          options.permissions.semanticControl &&
+          host?.semanticControlAvailable?.(),
+        );
+        const { query: _queryPermission, ...productionPermissions } = {
+          ...options.permissions,
+          snapshot: snapshotPermission,
+          semanticControl,
+        };
+        const {
+          maxQueryObjects: _maxQueryObjects,
+          maxQueryBytes: _maxQueryBytes,
+          ...productionLimits
+        } = limits;
         return response({
           apiVersion: request.apiVersion,
           requestId: request.requestId,
           operation: "capabilities",
           ok: true,
           capabilities: {
-            apiVersions: [AGENT_API_V1_VERSION, AGENT_API_VERSION],
-            snapshotVersions: [AGENT_SNAPSHOT_VERSION],
+            apiVersions:
+              request.apiVersion === AGENT_API_VERSION
+                ? [AGENT_API_VERSION]
+                : [
+                    AGENT_API_V1_VERSION,
+                    AGENT_API_VERSION,
+                    AGENT_API_V3_VERSION,
+                  ],
+            snapshotVersions:
+              request.apiVersion === AGENT_API_VERSION
+                ? [AGENT_SNAPSHOT_VERSION]
+                : [AGENT_SNAPSHOT_VERSION, AGENT_SNAPSHOT_V3_VERSION],
             operations:
               request.apiVersion === AGENT_API_V1_VERSION
                 ? V1_OPERATIONS
-                : V2_OPERATIONS,
-            queryScopes: QUERY_SCOPES,
+                : request.apiVersion === AGENT_API_V3_VERSION
+                  ? V3_OPERATIONS
+                  : V2_OPERATIONS,
+            ...(request.apiVersion === AGENT_API_V1_VERSION
+              ? { queryScopes: QUERY_SCOPES }
+              : {}),
             editKinds: AGENT_EDIT_KINDS,
-            permissions: {
-              ...options.permissions,
-              snapshot:
-                options.permissions.snapshot ?? options.permissions.query,
-            },
-            limits,
+            permissions:
+              request.apiVersion === AGENT_API_VERSION
+                ? productionPermissions
+                : {
+                    ...options.permissions,
+                    snapshot: snapshotPermission,
+                    semanticControl,
+                  },
+            limits:
+              request.apiVersion === AGENT_API_VERSION
+                ? productionLimits
+                : limits,
+            ...(fileResource ? { resources: { file: fileResource } } : {}),
           },
         });
       }
 
+      if (
+        request.operation === "snapshot" &&
+        request.apiVersion === AGENT_API_V3_VERSION
+      ) {
+        if (!(options.permissions.snapshot ?? options.permissions.query)) {
+          return fail(
+            "snapshot",
+            "PERMISSION_DENIED",
+            "Snapshot permission is not granted",
+          );
+        }
+        const includeSourceSpans = request.includeSourceSpans === true;
+        if (includeSourceSpans && !options.permissions.sourceSpans) {
+          return fail(
+            "snapshot",
+            "PERMISSION_DENIED",
+            "Source-span permission is not granted",
+          );
+        }
+        const resolver = host ? host.getResolver() : storeOptions!.resolver;
+        const project = host
+          ? host.getProject?.()
+          : storeOptions!.store.getProject?.();
+
+        if (request.target === "catalog") {
+          const symbolLibrary = project?.symbolLibrary ?? {
+            id: "razavi-symbols",
+            version: "1",
+          };
+          const catalog = buildAgentCatalogSnapshot({ symbolLibrary });
+          const catalogBytes = utf8ByteLength(
+            canonicalSnapshotContent(catalog),
+          );
+          if (catalogBytes > limits.maxSnapshotBytes) {
+            return fail(
+              "snapshot",
+              "SNAPSHOT_TOO_LARGE",
+              `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
+            );
+          }
+          return response({
+            apiVersion: request.apiVersion,
+            requestId: request.requestId,
+            operation: "snapshot",
+            ok: true,
+            target: "catalog",
+            catalog,
+            diagnostics: [],
+          });
+        }
+
+        if (request.target === "project") {
+          if (!project) {
+            return fail(
+              "snapshot",
+              "INVALID_REQUEST",
+              "The project target requires an active Project",
+            );
+          }
+          const projectSnapshot = buildAgentProjectSnapshot({ project });
+          const projectBytes = utf8ByteLength(
+            canonicalSnapshotContent(projectSnapshot),
+          );
+          if (projectBytes > limits.maxSnapshotBytes) {
+            return fail(
+              "snapshot",
+              "SNAPSHOT_TOO_LARGE",
+              `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
+            );
+          }
+          return response({
+            apiVersion: request.apiVersion,
+            requestId: request.requestId,
+            operation: "snapshot",
+            ok: true,
+            target: "project",
+            project: projectSnapshot,
+            diagnostics: [],
+          });
+        }
+
+        // request.target === "document"
+        const documentId = request.documentId;
+        if (!documentId) {
+          return fail(
+            "snapshot",
+            "INVALID_REQUEST",
+            "The document target requires a documentId",
+          );
+        }
+        const document = host
+          ? host.getDocument(documentId)
+          : storeOptions!.store.getDocument(documentId);
+        if (!document || documentId !== document.id) {
+          return fail(
+            "snapshot",
+            "DOCUMENT_NOT_FOUND",
+            `The service is not bound to Document ${documentId}`,
+            document?.revision,
+          );
+        }
+        const base = buildAgentSessionSnapshot({
+          ...(project ? { project } : {}),
+          document,
+          resolver,
+          includeSourceSpans,
+        });
+        const documentSnapshot = buildAgentDocumentSnapshotV3({
+          ...(project ? { project } : {}),
+          document,
+          resolver,
+          includeSourceSpans,
+        });
+        const documentBytes = utf8ByteLength(
+          canonicalSnapshotContent({
+            project: base.project,
+            document: documentSnapshot,
+          }),
+        );
+        if (documentBytes > limits.maxSnapshotBytes) {
+          return fail(
+            "snapshot",
+            "SNAPSHOT_TOO_LARGE",
+            `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
+            document.revision,
+          );
+        }
+        return response({
+          apiVersion: request.apiVersion,
+          requestId: request.requestId,
+          operation: "snapshot",
+          ok: true,
+          target: "document",
+          revision: document.revision,
+          electricalTopologyHash: base.electricalTopologyHash,
+          byteLength: documentBytes,
+          project: base.project,
+          document: documentSnapshot,
+          diagnostics: documentSnapshot.diagnostics,
+        });
+      }
+
+      // The v3 snapshot branch above returned; every remaining operation
+      // (v2 snapshot, query, transact, render) carries a required documentId.
+      const documentId = request.documentId!;
       const document = host
-        ? host.getDocument(request.documentId)
-        : storeOptions!.store.getDocument(request.documentId);
-      if (!document || request.documentId !== document.id) {
+        ? host.getDocument(documentId)
+        : storeOptions!.store.getDocument(documentId);
+      if (!document || documentId !== document.id) {
         return fail(
           request.operation,
           "DOCUMENT_NOT_FOUND",
-          `The service is not bound to Document ${request.documentId}`,
+          `The service is not bound to Document ${documentId}`,
           document?.revision,
         );
       }
@@ -751,6 +959,78 @@ export function createAgentCircuitService(
       }
 
       if (request.operation === "transact") {
+        if (request.semanticIntent) {
+          if (!options.permissions.semanticControl) {
+            return fail(
+              "transact",
+              "PERMISSION_DENIED",
+              "Semantic editor-control permission is not granted",
+              document.revision,
+            );
+          }
+          if (
+            !host?.applySemanticIntent ||
+            !host.semanticControlAvailable?.()
+          ) {
+            return fail(
+              "transact",
+              "SEMANTIC_CONTROL_UNAVAILABLE",
+              "This Agent host does not provide a live editor control surface",
+              document.revision,
+            );
+          }
+          if (request.expectedRevision !== document.revision) {
+            return fail(
+              "transact",
+              "STALE_REVISION",
+              `Expected revision ${request.expectedRevision}, current revision is ${document.revision}`,
+              document.revision,
+            );
+          }
+          const semantic = host.applySemanticIntent({
+            documentId: request.documentId,
+            intent: request.semanticIntent,
+          });
+          if (!semantic.ok) {
+            return fail(
+              "transact",
+              semantic.code,
+              semantic.message,
+              document.revision,
+            );
+          }
+          const diagnostics = project
+            ? agentProjectDiagnostics(
+                project,
+                resolver,
+                document.id,
+                document.revision,
+              )
+            : agentVisualDiagnostics(document, resolver);
+          return response({
+            apiVersion: request.apiVersion,
+            requestId: request.requestId,
+            operation: "transact",
+            ok: true,
+            applied: false,
+            revision: document.revision,
+            proposedRevision: document.revision,
+            diff: {
+              documentId: document.id,
+              fromRevision: document.revision,
+              toRevision: document.revision,
+              editKinds: [],
+              changedObjectIds: [],
+            },
+            diagnostics,
+            semantic: {
+              kind: semantic.kind,
+              documentId: semantic.documentId,
+              objectIds: [...semantic.objectIds],
+              ...(semantic.netId ? { netId: semantic.netId } : {}),
+            },
+          });
+        }
         if (request.wireIntent) {
           if (
             !options.permissions.edit.geometry ||

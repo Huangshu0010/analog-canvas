@@ -20,12 +20,17 @@ import {
 } from "./diagnostics.js";
 import {
   AGENT_SNAPSHOT_VERSION,
+  AgentProjectSnapshotSchema,
   AgentSessionSnapshotSchema,
+  AgentSnapshotDocumentV3Schema,
 } from "./schema.js";
 import type {
   AgentDiagnostic,
+  AgentInstanceNetlistFacts,
+  AgentProjectSnapshot,
   AgentSessionSnapshot,
   AgentSnapshotDocument,
+  AgentSnapshotDocumentV3,
 } from "./schema.js";
 
 export interface BuildAgentSessionSnapshotOptions {
@@ -114,10 +119,15 @@ function primitiveRecord(
 }
 
 function instanceTarget(
-  properties: Readonly<Record<string, string | number | boolean>>,
+  instance: SchematicDocument["instances"][number],
 ): string | null {
-  const target = properties["spice.target"];
-  return typeof target === "string" ? target : null;
+  const provenance = instance.importProvenance;
+  if (provenance) return provenance.sourceTarget;
+  const binding = instance.netlist?.binding;
+  if (!binding) return null;
+  if (binding.kind === "primitive") return `primitive:${binding.deviceClass}`;
+  if (binding.kind === "model") return `model:${binding.name}`;
+  return `subcircuit:${binding.name}`;
 }
 
 function subcircuitTargetName(target: string | null): string | null {
@@ -162,9 +172,7 @@ function projectIndex(options: BuildAgentSessionSnapshotOptions) {
         netCount: document.nets.length,
         references: document.instances
           .flatMap((instance) => {
-            const targetName = subcircuitTargetName(
-              instanceTarget(instance.properties),
-            );
+            const targetName = subcircuitTargetName(instanceTarget(instance));
             return targetName
               ? [
                   {
@@ -234,29 +242,27 @@ function documentSnapshot(
       const hidden = new Set(resolved?.variant?.hiddenPinNames ?? []);
       const properties = primitiveRecord(instance.properties);
       const parameters = Object.fromEntries(
-        Object.entries(properties)
-          .filter(([key]) => key.startsWith("spice.param."))
-          .map(
-            ([key, value]) =>
-              [key.slice("spice.param.".length), value] as const,
-          )
-          .sort(([left], [right]) => left.localeCompare(right, "en")),
+        Object.entries(instance.netlist?.parameters ?? {}).sort(
+          ([left], [right]) => left.localeCompare(right, "en"),
+        ),
       );
-      const target = instanceTarget(properties);
+      const target = instanceTarget(instance);
       const model = target?.toLowerCase().startsWith("model:")
         ? target.slice("model:".length)
         : null;
-      const sourceName = properties["spice.name"];
       const mosBulk = resolveMosBulkConnection(document, instance);
       return {
         id: instance.id,
-        name: typeof sourceName === "string" ? sourceName : instance.id,
+        name: instance.netlist?.reference ?? instance.id,
         symbolId: instance.symbolId,
         symbolVariantId: instance.symbolVariantId ?? null,
         target,
         model,
         properties,
         parameters,
+        ...(instance.netlist
+          ? { netlist: instanceNetlistFactsOf(instance) }
+          : {}),
         placement: instance.placement
           ? structuredClone(instance.placement)
           : null,
@@ -323,7 +329,11 @@ function documentSnapshot(
     ),
     ...document.junctions.map((junction) => pointBounds(junction.position)),
     ...document.annotations.map((annotation) =>
-      pointBounds(annotation.position),
+      pointBounds(
+        annotation.anchor.kind === "free"
+          ? annotation.anchor.position
+          : annotation.anchor.fallbackPosition,
+      ),
     ),
     ...routes.flatMap(
       (route) => route.polyline?.map((point) => pointBounds(point)) ?? [],
@@ -353,6 +363,7 @@ function documentSnapshot(
         id: port.id,
         name: port.name,
         direction: port.direction,
+        presentation: port.presentation ?? "hollow",
         position: port.position ? { ...port.position } : null,
         netId: portNetById.get(port.id) ?? null,
       })),
@@ -363,6 +374,7 @@ function documentSnapshot(
         id: net.id,
         name: net.name ?? null,
         scope: net.scope,
+        powerDomain: net.powerDomain ?? "none",
         terminals: [...net.terminals].sort(
           (left, right) =>
             left.instanceId.localeCompare(right.instanceId, "en") ||
@@ -449,5 +461,143 @@ export function buildAgentSessionSnapshot(
     electricalTopologyHash: topologyHash,
     byteLength: utf8ByteLength(canonical),
     ...content,
+  });
+}
+
+// --- API v3 snapshot targets (ADR 0018 / AP1) -------------------------------
+
+type DocumentInstance = SchematicDocument["instances"][number];
+
+function cellInterfaceOf(document: SchematicDocument) {
+  return document.netlist
+    ? {
+        name: document.netlist.name,
+        portOrder: [...document.netlist.portOrder],
+      }
+    : null;
+}
+
+function instanceNetlistFactsOf(
+  instance: DocumentInstance,
+): AgentInstanceNetlistFacts {
+  const netlist = instance.netlist!;
+  return {
+    reference: netlist.reference,
+    ...(netlist.binding ? { binding: netlist.binding } : {}),
+    parameters: Object.fromEntries(
+      Object.entries(netlist.parameters).sort(([left], [right]) =>
+        left.localeCompare(right, "en"),
+      ),
+    ),
+    ...(netlist.terminals
+      ? {
+          terminals: [...netlist.terminals]
+            .sort((left, right) => left.sourcePosition - right.sourcePosition)
+            .map((terminal) => ({ ...terminal })),
+        }
+      : {}),
+  };
+}
+
+export function buildAgentDocumentSnapshotV3(
+  options: BuildAgentSessionSnapshotOptions,
+): AgentSnapshotDocumentV3 {
+  const base = documentSnapshot(options);
+  const { document } = options;
+  const factsById = new Map<string, AgentInstanceNetlistFacts>();
+  for (const instance of document.instances) {
+    if (instance.netlist) {
+      factsById.set(instance.id, instanceNetlistFactsOf(instance));
+    }
+  }
+  const instances = base.instances.map((snapshot) => {
+    const netlist = factsById.get(snapshot.id);
+    return netlist ? { ...snapshot, netlist } : { ...snapshot };
+  });
+  return AgentSnapshotDocumentV3Schema.parse({
+    ...base,
+    cellInterface: cellInterfaceOf(document),
+    instances,
+  });
+}
+
+export interface BuildAgentProjectSnapshotOptions {
+  project: CircuitProject;
+}
+
+function projectReference(
+  instance: DocumentInstance,
+  documentIdByName: Map<string, string>,
+): {
+  instanceId: string;
+  targetName: string;
+  targetDocumentId: string | null;
+}[] {
+  const binding = instance.netlist?.binding;
+  if (binding && binding.kind === "subcircuit") {
+    return [
+      {
+        instanceId: instance.id,
+        targetName: binding.name,
+        targetDocumentId: binding.childDocumentId,
+      },
+    ];
+  }
+  const targetName = subcircuitTargetName(instanceTarget(instance));
+  return targetName
+    ? [
+        {
+          instanceId: instance.id,
+          targetName,
+          targetDocumentId:
+            documentIdByName.get(targetName.toLowerCase()) ?? null,
+        },
+      ]
+    : [];
+}
+
+export function buildAgentProjectSnapshot(
+  options: BuildAgentProjectSnapshotOptions,
+): AgentProjectSnapshot {
+  const { project } = options;
+  const documentIdByName = new Map<string, string>();
+  for (const document of project.documents) {
+    documentIdByName.set(document.name.toLowerCase(), document.id);
+    if (document.netlist) {
+      documentIdByName.set(document.netlist.name.toLowerCase(), document.id);
+    }
+    if (document.sourceBinding) {
+      documentIdByName.set(
+        document.sourceBinding.cellName.toLowerCase(),
+        document.id,
+      );
+    }
+  }
+  return AgentProjectSnapshotSchema.parse({
+    id: project.id,
+    name: project.name,
+    topDocumentId: project.topDocumentId,
+    documents: [...project.documents]
+      .sort((left, right) => left.id.localeCompare(right.id, "en"))
+      .map((document) => ({
+        id: document.id,
+        name: document.name,
+        isTop: document.id === project.topDocumentId,
+        revision: document.revision,
+        cellInterface: cellInterfaceOf(document),
+        portCount: document.ports.length,
+        instanceCount: document.instances.length,
+        references: document.instances
+          .flatMap((instance) => projectReference(instance, documentIdByName))
+          .sort((left, right) =>
+            left.instanceId.localeCompare(right.instanceId, "en"),
+          ),
+      })),
+    sourceSummary: {
+      entry: project.source.entry,
+      dialect: project.source.dialect,
+      sourcePolicy: project.source.sourcePolicy,
+      fileCount: project.source.files.length,
+    },
   });
 }

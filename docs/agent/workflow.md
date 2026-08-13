@@ -14,7 +14,7 @@ Use one path for a target and do not mix their state implicitly.
 
 | Path                  | Use                                                  | Source of truth                    | Mutation path                                                    |
 | --------------------- | ---------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------- |
-| Live product          | An editor/host session already owns the Project      | API v2 complete Snapshot           | API v2 typed `transact`                                          |
+| Live product          | An editor/host session already owns the Project      | Current complete Snapshot          | Current typed `transact`                                         |
 | Repository generation | Reproducible fixture, experiment, or formal artifact | imported SPICE plus checked recipe | `tools/agent-layout/generate.mjs` through the shared Edit Engine |
 
 The GUI is for human direct manipulation and visual handoff. An Agent should
@@ -61,8 +61,9 @@ are fixture gates, not a general definition of schematic quality.
 
 ### 1. Establish the contract
 
-For a live session, call `capabilities` once. Require API `2.0`, Snapshot
-`1.0`, and permissions for the intended edits and render. Record
+For a live session, start from the capabilities example in the deployed
+OpenAPI, call `capabilities` once, and use only the returned operations,
+Snapshot version, permissions, edit kinds, and limits. Record
 `maxTransactionEdits`, `maxSnapshotBytes`, `maxRenderBytes`, selected
 `documentId`, and current `revision`.
 

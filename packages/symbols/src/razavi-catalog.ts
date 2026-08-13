@@ -51,10 +51,16 @@ const entriesById = new Map(
   razaviSymbolCatalogEntries.map((entry) => [entry.symbolId, entry]),
 );
 
+// These definitions remain in the generated historical catalog solely so the
+// schema-v5 -> v6 reader can recognize old files. They are not product
+// components: a current Port is a first-class model object.
+const RETIRED_PORT_SYMBOL_IDS = new Set(["port", "port-filled"]);
+
 export function isRazaviProductCatalogEntry(
   entry: RazaviSymbolCatalogEntry,
 ): boolean {
   return (
+    !RETIRED_PORT_SYMBOL_IDS.has(entry.symbolId) &&
     entry.palette &&
     entry.reviewStatus === "reviewed" &&
     entry.visualAuthority.kind === "razavi-reference-v1"

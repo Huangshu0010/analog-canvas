@@ -120,6 +120,9 @@ function electricalProjection(document: SchematicDocument): unknown {
     .map((net) => ({
       id: net.id,
       scope: net.scope,
+      // Missing is only accepted for pre-v5 in-memory callers. Persisted v5
+      // projects and all edits write this electrical fact explicitly.
+      powerDomain: net.powerDomain ?? "none",
       terminals: [...net.terminals].sort((left, right) =>
         `${left.instanceId}:${left.pinName}`.localeCompare(
           `${right.instanceId}:${right.pinName}`,

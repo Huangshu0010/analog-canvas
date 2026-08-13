@@ -1,4 +1,3 @@
-import { powerDomainForNet } from "@icm/model";
 import type { Instance, Net, SchematicDocument } from "@icm/model";
 
 export type MosBulkKind = "nmos" | "pmos";
@@ -29,26 +28,12 @@ export function mosBulkKind(instance: Instance): MosBulkKind | undefined {
     : undefined;
 }
 
-function normalizedName(value: string | undefined): string | undefined {
-  return value?.toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
-}
-
 function fallbackNet(
   document: SchematicDocument,
   kind: MosBulkKind,
 ): Net | undefined {
   const domain = kind === "nmos" ? "ground" : "vdd";
-  const names =
-    kind === "nmos"
-      ? new Set(["0", "gnd", "vss", "vssa", "vssd", "vgnd"])
-      : new Set(["vdd", "vdda", "vddd", "vcc", "vpwr"]);
-  return document.nets.find(
-    (net) =>
-      powerDomainForNet(document, net) === domain ||
-      [net.name, net.id]
-        .map(normalizedName)
-        .some((name) => name !== undefined && names.has(name)),
-  );
+  return document.nets.find((net) => (net.powerDomain ?? "none") === domain);
 }
 
 /**
@@ -100,7 +85,7 @@ export function resolveMosBulkConnection(
 
   // Imported/source-bound MOS instances must already carry the fourth SPICE
   // node. Never repair missing source data by guessing a body connection.
-  if (instance.sourceRef || instance.binding) {
+  if (instance.sourceRef || instance.importProvenance) {
     return {
       status: "unresolved",
       instance,
@@ -157,7 +142,7 @@ export function mosBulkShouldBeVisible(
   if (configuredId === resolution.net.id) return false;
   const expectedDomain = kind === "nmos" ? "ground" : "vdd";
   return (
-    powerDomainForNet(document, resolution.net) !== expectedDomain &&
+    (resolution.net.powerDomain ?? "none") !== expectedDomain &&
     fallbackNet(document, kind)?.id !== resolution.net.id
   );
 }

@@ -164,17 +164,18 @@ function targetDescription(
   }
 }
 
-function bindingEvidence(
+function importProvenance(
   instance: CircuitInstanceIR,
   modelTypeByName: ReadonlyMap<string, string>,
-): NonNullable<Instance["binding"]> {
+  symbolMappings: readonly PdkSymbolMappingOverride[],
+): NonNullable<Instance["importProvenance"]> {
   switch (instance.target.kind) {
     case "primitive":
       return {
         kind: "primitive",
         name: instance.target.family,
+        sourceTarget: targetDescription(instance, symbolMappings),
         status: "resolved",
-        sourceRef: instance.sourceRef,
       };
     case "model": {
       const modelType = modelTypeByName.get(
@@ -183,9 +184,9 @@ function bindingEvidence(
       return {
         kind: "model",
         name: instance.target.modelName,
+        sourceTarget: targetDescription(instance, symbolMappings),
         status: "resolved",
         ...(modelType ? { modelType } : {}),
-        sourceRef: instance.sourceRef,
       };
     }
     case "subcircuit":
@@ -195,15 +196,15 @@ function bindingEvidence(
       return {
         kind: "subcircuit",
         name: instance.target.cellName,
+        sourceTarget: targetDescription(instance, symbolMappings),
         status: "missing",
-        sourceRef: instance.sourceRef,
       };
     case "opaque":
       return {
         kind: "opaque",
         name: instance.target.sourceName,
+        sourceTarget: targetDescription(instance, symbolMappings),
         status: "resolved",
-        sourceRef: instance.sourceRef,
       };
   }
 }
@@ -227,28 +228,20 @@ function importInstance(
     );
     return null;
   }
-  const properties: Instance["properties"] = {
-    "spice.name": instance.name,
-    "spice.target": targetDescription(instance, symbolMappings),
-  };
+  const properties: Instance["properties"] = {};
   if (mapping?.registryId) {
     properties["symbol.mapping.registry"] = mapping.registryId;
-  }
-  for (const [key, parameter] of Object.entries(instance.parameters)) {
-    properties[`spice.param.${key}`] = parameter.rawText;
-  }
-  for (const terminal of instance.terminals) {
-    properties[`spice.pin.P${terminal.position + 1}`] =
-      mapping?.pinNames?.[terminal.position] ??
-      terminal.name ??
-      `P${terminal.position + 1}`;
   }
   const netlistBinding = importedNetlistBinding(instance, mapping);
   return {
     id: instance.id,
     symbolId: mapping.symbolId,
     sourceRef: instance.sourceRef,
-    binding: bindingEvidence(instance, modelTypeByName),
+    importProvenance: importProvenance(
+      instance,
+      modelTypeByName,
+      symbolMappings,
+    ),
     placement: null,
     properties,
     netlist: {
@@ -260,6 +253,13 @@ function importInstance(
           parameter.rawText,
         ]),
       ),
+      terminals: instance.terminals.map((terminal) => ({
+        sourcePosition: terminal.position,
+        pinName:
+          mapping.pinNames?.[terminal.position] ??
+          terminal.name ??
+          `P${terminal.position + 1}`,
+      })),
     },
   };
 }
@@ -313,9 +313,11 @@ function importDocument(
           .map((terminal) => ({
             instanceId: instance.id,
             pinName: String(
-              importedInstanceById.get(instance.id)?.properties[
-                `spice.pin.P${terminal.position + 1}`
-              ] ?? `P${terminal.position + 1}`,
+              importedInstanceById
+                .get(instance.id)
+                ?.netlist?.terminals?.find(
+                  (candidate) => candidate.sourcePosition === terminal.position,
+                )?.pinName ?? `P${terminal.position + 1}`,
             ),
           })),
       ),
@@ -348,10 +350,9 @@ function importDocument(
 }
 
 /**
- * Records a stable document link for an imported `X` instance. `spice.target`
- * remains the source-fidelity description; the ID is solely the imported
- * Project's navigation reference and avoids resolving hierarchy by a mutable
- * cell name at runtime.
+ * Records a stable document link for an imported `X` instance. Typed
+ * `netlist.binding` is the navigation authority; import provenance retains the
+ * source spelling without becoming an electrical runtime fallback.
  */
 function bindImportedChildDocuments(
   documents: readonly SchematicDocument[],
@@ -365,24 +366,17 @@ function bindImportedChildDocuments(
   return documents.map((document) => ({
     ...document,
     instances: document.instances.map((instance) => {
-      if (instance.binding?.kind !== "subcircuit") {
+      if (instance.importProvenance?.kind !== "subcircuit") {
         return instance;
       }
       const childDocumentId = documentIdByCellName.get(
-        instance.binding.name.toLowerCase(),
+        instance.importProvenance.name.toLowerCase(),
       );
       return {
         ...instance,
-        binding: {
-          ...instance.binding,
+        importProvenance: {
+          ...instance.importProvenance,
           status: childDocumentId ? "resolved" : "missing",
-          ...(childDocumentId ? { childDocumentId } : {}),
-        },
-        properties: {
-          ...instance.properties,
-          ...(childDocumentId
-            ? { "spice.childDocumentId": childDocumentId }
-            : {}),
         },
         netlist: instance.netlist
           ? {
@@ -390,12 +384,12 @@ function bindImportedChildDocuments(
               binding: childDocumentId
                 ? {
                     kind: "subcircuit" as const,
-                    name: instance.binding.name,
+                    name: instance.importProvenance.name,
                     childDocumentId,
                   }
                 : {
                     kind: "external-subcircuit" as const,
-                    name: instance.binding.name,
+                    name: instance.importProvenance.name,
                   },
             }
           : undefined,

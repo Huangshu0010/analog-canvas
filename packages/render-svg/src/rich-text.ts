@@ -1,25 +1,6 @@
 import type { SchematicStyleProfile } from "@icm/derived";
 import type { RichTextDocument, RichTextRun } from "@icm/model";
 
-type CompatibilityRole = "legacy-base" | "legacy-subscript" | "legacy-suffix";
-
-type RenderTextRun = Extract<RichTextRun, { kind: "text" }> & {
-  role?: CompatibilityRole;
-};
-type RenderSpanRun = Omit<
-  Extract<RichTextRun, { kind: "span" }>,
-  "children"
-> & {
-  role?: CompatibilityRole;
-  children: RenderRichTextRun[];
-};
-type RenderRichTextRun =
-  RenderTextRun | Extract<RichTextRun, { kind: "line-break" }> | RenderSpanRun;
-
-export interface AttributedRichTextDocument {
-  runs: RenderRichTextRun[];
-}
-
 interface RenderContext {
   profile: SchematicStyleProfile;
   italic: boolean;
@@ -38,21 +19,9 @@ function styleAttribute(ctx: RenderContext): string {
   return `font-style:${ctx.italic ? "italic" : "normal"};font-weight:${ctx.bold ? ctx.profile.typography.mathWeight : ctx.profile.typography.plainWeight}`;
 }
 
+/** Render only canonical RichText AST runs. */
 export function renderRichTextDocument(
   document: RichTextDocument,
-  profile: SchematicStyleProfile,
-  options: {
-    lineOriginX?: number;
-    defaultItalic?: boolean;
-    defaultBold?: boolean;
-  } = {},
-): string {
-  return renderAttributedRichTextDocument(document, profile, options);
-}
-
-/** @internal Compatibility metadata for standardized schematic identifiers. */
-export function renderAttributedRichTextDocument(
-  document: AttributedRichTextDocument,
   profile: SchematicStyleProfile,
   options: {
     lineOriginX?: number;
@@ -68,7 +37,7 @@ export function renderAttributedRichTextDocument(
   });
 }
 
-function renderRuns(runs: RenderRichTextRun[], ctx: RenderContext): string {
+function renderRuns(runs: RichTextRun[], ctx: RenderContext): string {
   let output = "";
   let lineOpen = false;
   for (const run of runs) {
@@ -84,10 +53,10 @@ function renderRuns(runs: RenderRichTextRun[], ctx: RenderContext): string {
   return output;
 }
 
-function renderRun(node: RenderRichTextRun, ctx: RenderContext): string {
+function renderRun(node: RichTextRun, ctx: RenderContext): string {
   switch (node.kind) {
     case "text":
-      return renderText(node, ctx);
+      return escapeXml(node.value);
     case "line-break":
       return "";
     case "span":
@@ -95,26 +64,17 @@ function renderRun(node: RenderRichTextRun, ctx: RenderContext): string {
   }
 }
 
-function renderText(node: RenderTextRun, ctx: RenderContext): string {
-  const value = escapeXml(node.value);
-  if (node.role === "legacy-base") {
-    return `<tspan data-text-run="base" style="${styleAttribute(ctx)}">${value}</tspan>`;
-  }
-  if (node.role === "legacy-suffix") {
-    return `<tspan data-text-run="suffix" baseline-shift="baseline" dy="${ctx.profile.typography.subscriptBaselineShiftEm}em" style="font-style:normal;font-weight:${ctx.profile.typography.plainWeight}">${value}</tspan>`;
-  }
-  return value;
-}
-
-function renderSpan(node: RenderSpanRun, ctx: RenderContext): string {
+function renderSpan(
+  node: Extract<RichTextRun, { kind: "span" }>,
+  ctx: RenderContext,
+): string {
   if (node.style === "italic" || node.style === "bold") {
     const childCtx: RenderContext = {
       ...ctx,
       italic: ctx.italic || node.style === "italic",
       bold: ctx.bold || node.style === "bold",
     };
-    const children = renderRuns(node.children, childCtx);
-    return `<tspan data-text-run="span" style="${styleAttribute(childCtx)}">${children}</tspan>`;
+    return `<tspan data-text-run="span" style="${styleAttribute(childCtx)}">${renderRuns(node.children, childCtx)}</tspan>`;
   }
 
   const typography = ctx.profile.typography;
@@ -123,12 +83,7 @@ function renderSpan(node: RenderSpanRun, ctx: RenderContext): string {
     node.style === "subscript"
       ? -typography.subscriptBaselineShiftEm
       : typography.subscriptBaselineShiftEm;
-  const children = renderRuns(node.children, ctx);
   const dx =
     node.style === "subscript" ? typography.subscriptHorizontalGapEm : 0;
-  const style =
-    node.role === "legacy-subscript"
-      ? `font-style:normal;font-weight:${typography.mathWeight}`
-      : styleAttribute(ctx);
-  return `<tspan data-text-run="${node.style}" dx="${dx}em" font-size="${percent}%" baseline-shift="${shift}em" style="${style}">${children}</tspan>`;
+  return `<tspan data-text-run="${node.style}" dx="${dx}em" font-size="${percent}%" baseline-shift="${shift}em" style="${styleAttribute(ctx)}">${renderRuns(node.children, ctx)}</tspan>`;
 }

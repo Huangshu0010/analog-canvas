@@ -158,7 +158,7 @@ export function proposeGroupMoveEdits(
           ? [
               {
                 kind: "upsert_schematic_annotation",
-                annotation: { ...annotation, position: move.position },
+                annotation: { ...annotation, anchor: move.anchor },
               },
             ]
           : [];
