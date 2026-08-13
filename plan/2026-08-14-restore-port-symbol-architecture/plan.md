@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -85,3 +85,5 @@ and imported-child search E2E; Agent artifact check and visual Golden check.
 Delivery follow-up: rebase this branch onto the subsequently merged canonical
 junction-node work. The preflight identifies a `plan/log.md`-only conflict;
 preserve both factual entries and do not alter the unrelated connectivity code.
+The rebase completed with that log-only resolution; no connectivity source file
+was modified by the integration.
