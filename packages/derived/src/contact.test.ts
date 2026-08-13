@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { deriveVisibleConnectivity } from "./connectivity.js";
 import { deriveDocumentContactEvidence } from "./contact.js";
+import { resolveElectricalContactTargets } from "./contact-target.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -67,6 +68,38 @@ function contactedResistorDocument() {
 }
 
 describe("coincident contact evidence", () => {
+  it("groups duplicate segment and endpoint hits by visible conductor", () => {
+    const document = contactedResistorDocument();
+    const targets = resolveElectricalContactTargets(document, resolver, [
+      {
+        kind: "endpoint",
+        id: "junction",
+        point: { x: 100, y: 100 },
+        netId: "net-out",
+        endpoint: { kind: "junction", junctionId: "junction-out" },
+      },
+      {
+        kind: "route",
+        id: "left-segment",
+        point: { x: 100, y: 100 },
+        netId: "net-out",
+        routeId: "route-left",
+        segmentIndex: 0,
+      },
+      {
+        kind: "route",
+        id: "right-segment",
+        point: { x: 100, y: 100 },
+        netId: "net-out",
+        routeId: "route-right",
+        segmentIndex: 0,
+      },
+    ]);
+    expect(targets).toHaveLength(1);
+    expect(targets[0]?.candidates).toHaveLength(3);
+    expect(targets[0]?.endpoint?.id).toBe("junction");
+  });
+
   it("contracts a same-Net terminal and Junction without treating crossings as contacts", () => {
     const document = contactedResistorDocument();
     const evidence = deriveDocumentContactEvidence(document, resolver);

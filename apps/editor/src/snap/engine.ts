@@ -12,10 +12,14 @@ export type SnapTargetKind =
   | "route"
   | "drafting";
 
-export interface SnapElectricalRef {
-  endpoint: RouteEndpoint;
-  netId: string | null;
-}
+export type SnapElectricalRef =
+  | { kind: "endpoint"; endpoint: RouteEndpoint; netId: string | null }
+  | {
+      kind: "route";
+      routeId: string;
+      segmentIndex: number;
+      netId: string;
+    };
 
 export interface SnapAnchor {
   id: string;
@@ -23,6 +27,8 @@ export interface SnapAnchor {
   kind: SnapTargetKind;
   axes?: readonly SnapAxis[];
   electrical?: SnapElectricalRef;
+  /** Route projections are computed for one moving pin, never all pins. */
+  acceptsMovingAnchorId?: string;
 }
 
 export interface SnapProfile {
@@ -82,6 +88,7 @@ export const SNAP_PROFILES = {
       "pin",
       "port",
       "junction",
+      "route",
     ]),
     exactElectrical: true,
     gridAlignedTranslation: true,
@@ -164,9 +171,11 @@ function endpointKey(endpoint: RouteEndpoint): string {
 
 function compatibleElectrical(left: SnapAnchor, right: SnapAnchor): boolean {
   if (!left.electrical || !right.electrical) return false;
+  if (left.electrical.kind !== "endpoint") return false;
   if (
+    right.electrical.kind === "endpoint" &&
     endpointKey(left.electrical.endpoint) ===
-    endpointKey(right.electrical.endpoint)
+      endpointKey(right.electrical.endpoint)
   ) {
     return false;
   }
@@ -273,6 +282,12 @@ function exactElectricalCandidate(
     return request.targetAnchors.flatMap((target) => {
       if (!target.electrical || !request.profile.kinds.has(target.kind))
         return [];
+      if (
+        target.acceptsMovingAnchorId &&
+        target.acceptsMovingAnchorId !== moving.id
+      ) {
+        return [];
+      }
       if (!compatibleElectrical(moving, target)) return [];
       const distance = Math.hypot(
         target.point.x - moved.x,
@@ -296,6 +311,7 @@ function exactElectricalCandidate(
   const closest = candidates.sort(
     (left, right) =>
       left.distance - right.distance ||
+      KIND_PRIORITY[left.target.kind] - KIND_PRIORITY[right.target.kind] ||
       left.target.id.localeCompare(right.target.id) ||
       left.moving.id.localeCompare(right.moving.id),
   )[0];

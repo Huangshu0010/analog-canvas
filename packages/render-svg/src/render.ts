@@ -26,6 +26,7 @@ import type {
   DraftingObject,
   Point,
   Rect,
+  RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
 import type {
@@ -531,19 +532,53 @@ export function buildSvgScene(
     resolver,
     routingGeometry,
   );
-  const junctions = [...document.junctions]
-    .filter(
-      (junction) =>
-        (junction.role ?? "branch") === "branch" &&
-        (contactEvidence.byEndpointKey.get(`junction:${junction.id}`)?.incidents
-          .length ?? 0) >= 3 &&
-        !powerRailNetIds.has(junction.netId),
-    )
+  const junctions = contactEvidence.contacts
+    .filter((contact) => {
+      if (powerRailNetIds.has(contact.netId)) return false;
+      if (contact.endpoints.some((endpoint) => endpoint.kind === "port")) {
+        return false;
+      }
+      const terminalCount = contact.endpoints.filter(
+        (endpoint) => endpoint.kind === "terminal",
+      ).length;
+      if (
+        contact.endpoints.some(
+          (endpoint) =>
+            endpoint.kind === "terminal" &&
+            document.instances.find(
+              (instance) => instance.id === endpoint.instanceId,
+            )?.symbolId === "port",
+        )
+      ) {
+        return false;
+      }
+      const routeCount = contact.incidents.filter(
+        (incident) => incident.kind === "route",
+      ).length;
+      const physicalBranch = contact.endpoints.some((endpoint) => {
+        if (endpoint.kind !== "junction") return false;
+        const junction = document.junctions.find(
+          (candidate) => candidate.id === endpoint.junctionId,
+        );
+        return (junction?.role ?? "branch") === "branch";
+      });
+      return (
+        (terminalCount > 0 && (routeCount > 0 || terminalCount > 1)) ||
+        (physicalBranch && contact.incidents.length >= 3)
+      );
+    })
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
-    .map(
-      (junction) =>
-        `<circle data-object-id="${escapeXml(junction.id)}" cx="${junction.position.x}" cy="${junction.position.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`,
-    )
+    .map((contact) => {
+      const junctionEndpoint = contact.endpoints.find(
+        (endpoint): endpoint is Extract<RouteEndpoint, { kind: "junction" }> =>
+          endpoint.kind === "junction",
+      );
+      const objectId = junctionEndpoint?.junctionId ?? contact.id;
+      const derivedAttribute = junctionEndpoint
+        ? ""
+        : ' data-node-kind="contact"';
+      return `<circle data-object-id="${escapeXml(objectId)}"${derivedAttribute} cx="${contact.point.x}" cy="${contact.point.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`;
+    })
     .join("");
   const powerPortIds = new Set(
     document.annotations

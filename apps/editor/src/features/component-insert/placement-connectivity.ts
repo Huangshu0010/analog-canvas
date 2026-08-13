@@ -1,6 +1,20 @@
-import type { SchematicEdit, WireSource } from "@icm/edit-engine";
+import {
+  proposeEndpointRouteAttachment,
+  type SchematicEdit,
+  type WireSource,
+} from "@icm/edit-engine";
+import { resolveElectricalContactTargets, routePolyline } from "@icm/derived";
+import type {
+  ElectricalContactCandidate,
+  ElectricalContactTarget,
+} from "@icm/derived";
 import { transformPoint } from "@icm/model";
-import type { Instance, RouteEndpoint } from "@icm/model";
+import type {
+  Instance,
+  Point,
+  RouteEndpoint,
+  SchematicDocument,
+} from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 const POWER_CONNECTION_BY_SYMBOL = {
@@ -57,6 +71,24 @@ function samePoint(
   return left.x === right.x && left.y === right.y;
 }
 
+function pointOnSegment(point: Point, from: Point, to: Point): boolean {
+  if (from.x === to.x) {
+    return (
+      point.x === from.x &&
+      point.y >= Math.min(from.y, to.y) &&
+      point.y <= Math.max(from.y, to.y)
+    );
+  }
+  if (from.y === to.y) {
+    return (
+      point.y === from.y &&
+      point.x >= Math.min(from.x, to.x) &&
+      point.x <= Math.max(from.x, to.x)
+    );
+  }
+  return false;
+}
+
 function sameEndpoint(left: RouteEndpoint, right: RouteEndpoint): boolean {
   switch (left.kind) {
     case "terminal":
@@ -74,45 +106,127 @@ function sameEndpoint(left: RouteEndpoint, right: RouteEndpoint): boolean {
 
 /**
  * A component may acquire electrical connectivity only from an exact visible
- * pin-to-pin/pin-to-junction contact. Grid coincidence alone is deliberately
- * insufficient. Multiple contacts are ambiguous and remain explicit wiring
- * work rather than silently shorting Nets.
+ * pin-to-pin, pin-to-Junction, or pin-to-Route contact. Grid coincidence alone
+ * is deliberately insufficient. Multiple independent contacts commit
+ * together; multiple disconnected conductors at one point remain ambiguous.
  */
 export function proposePlacementContact(
+  document: SchematicDocument,
   resolver: SymbolResolver,
   instance: Instance,
   targets: readonly WireSource[],
 ): PlacementContactProposal {
-  const contacts = newInstanceEndpoints(resolver, instance).flatMap((source) =>
-    targets
+  const contacts: Array<{
+    source: WireSource;
+    target: ElectricalContactTarget;
+  }> = [];
+  let ambiguous = false;
+  for (const source of newInstanceEndpoints(resolver, instance)) {
+    const candidates: ElectricalContactCandidate[] = targets
       .filter((target) => samePoint(source.point, target.point))
-      .map((target) => ({ source, target })),
-  );
-  if (contacts.length !== 1) {
-    return { edits: [], matched: false, ambiguous: contacts.length > 1 };
+      .map((target) => ({
+        kind: "endpoint" as const,
+        id: `endpoint:${JSON.stringify(target.endpoint)}`,
+        point: target.point,
+        netId: target.netId,
+        endpoint: target.endpoint,
+      }));
+    for (const route of document.routes) {
+      const polyline = routePolyline(document, resolver, route);
+      if (!polyline) continue;
+      for (
+        let segmentIndex = 0;
+        segmentIndex < polyline.points.length - 1;
+        segmentIndex += 1
+      ) {
+        if (
+          !pointOnSegment(
+            source.point,
+            polyline.points[segmentIndex]!,
+            polyline.points[segmentIndex + 1]!,
+          )
+        )
+          continue;
+        candidates.push({
+          kind: "route" as const,
+          id: `route:${route.id}:${segmentIndex}`,
+          point: source.point,
+          netId: route.netId,
+          routeId: route.id,
+          segmentIndex,
+        });
+      }
+    }
+    const groups = resolveElectricalContactTargets(
+      document,
+      resolver,
+      candidates,
+    );
+    if (groups.length === 1) contacts.push({ source, target: groups[0]! });
+    else if (groups.length > 1) ambiguous = true;
   }
-  const { source, target } = contacts[0]!;
+  if (ambiguous) {
+    return { edits: [], matched: false, ambiguous: true };
+  }
+  if (contacts.length === 0) {
+    return { edits: [], matched: false, ambiguous: false };
+  }
+  const routeIds = contacts.flatMap((contact) =>
+    contact.target.route ? [contact.target.route.routeId] : [],
+  );
+  if (new Set(routeIds).size !== routeIds.length) {
+    return { edits: [], matched: false, ambiguous: true };
+  }
   const power =
     POWER_CONNECTION_BY_SYMBOL[
       instance.symbolId as keyof typeof POWER_CONNECTION_BY_SYMBOL
     ];
-  const newNetId = `net-contact-${instance.id.toLowerCase()}`;
-  const createsNet = target.netId === null;
-  const edit: SchematicEdit = {
-    kind: "connect_endpoints",
-    from: source.endpoint,
-    to: target.endpoint,
-    ...(createsNet ? { newNetId } : {}),
-    ...(createsNet && power
-      ? { newNetName: power.name, newNetScope: "global" as const }
-      : {}),
-  };
+  const edits: SchematicEdit[] = [];
+  let powerNetId: string | undefined;
+  let powerEndpoint: RouteEndpoint | undefined;
+  for (const contact of contacts) {
+    const { source, target } = contact;
+    if (target.endpoint) {
+      const newNetId =
+        contacts.length === 1
+          ? `net-contact-${instance.id.toLowerCase()}`
+          : `net-contact-${instance.id.toLowerCase()}-${
+              source.endpoint.kind === "terminal"
+                ? source.endpoint.pinName.toLowerCase()
+                : "pin"
+            }`;
+      const createsNet = target.endpoint.netId === null;
+      edits.push({
+        kind: "connect_endpoints",
+        from: source.endpoint,
+        to: target.endpoint.endpoint,
+        ...(createsNet ? { newNetId } : {}),
+        ...(createsNet && power
+          ? { newNetName: power.name, newNetScope: "global" as const }
+          : {}),
+      });
+      if (power && createsNet) powerNetId = newNetId;
+    } else if (target.route) {
+      edits.push(
+        ...proposeEndpointRouteAttachment(
+          document,
+          source.endpoint,
+          null,
+          target.route.routeId,
+          source.point,
+          target.route.segmentIndex,
+          `contact-${instance.id.toLowerCase()}-${source.endpoint.kind === "terminal" ? source.endpoint.pinName.toLowerCase() : "pin"}`,
+        ).edits,
+      );
+    }
+    if (power) powerEndpoint = source.endpoint;
+  }
   return {
-    edits: [edit],
+    edits,
     matched: true,
     ambiguous: false,
-    ...(power && createsNet ? { powerNetId: newNetId } : {}),
-    ...(power ? { powerEndpoint: source.endpoint } : {}),
+    ...(powerNetId ? { powerNetId } : {}),
+    ...(powerEndpoint ? { powerEndpoint } : {}),
   };
 }
 
@@ -185,13 +299,20 @@ export function proposeLegacyPowerContactReconciliation(
     ) {
       return [];
     }
-    const proposal = proposePlacementContact(
-      resolver,
-      instance,
-      targets.filter(
-        (candidate) => !sameEndpoint(source.endpoint, candidate.endpoint),
-      ),
-    );
-    return proposal.matched && !proposal.ambiguous ? proposal.edits : [];
+    const createsNet = source.netId === null && target.netId === null;
+    return [
+      {
+        kind: "connect_endpoints" as const,
+        from: source.endpoint,
+        to: target.endpoint,
+        ...(createsNet
+          ? {
+              newNetId: `net-contact-${instance.id.toLowerCase()}`,
+              newNetName: power.name,
+              newNetScope: "global" as const,
+            }
+          : {}),
+      },
+    ];
   });
 }

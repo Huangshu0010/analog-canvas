@@ -953,6 +953,45 @@
           "properties": {
             "kind": {
               "type": "string",
+              "const": "attach_endpoint_to_route"
+            },
+            "endpoint": {
+              "$ref": "#/$defs/__schema20"
+            },
+            "routeId": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "point": {
+              "$ref": "#/$defs/__schema11"
+            },
+            "segmentIndex": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "firstRouteId": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "secondRouteId": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "kind",
+            "endpoint",
+            "routeId",
+            "point",
+            "segmentIndex",
+            "firstRouteId",
+            "secondRouteId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
               "const": "remove_junction"
             },
             "junctionId": {

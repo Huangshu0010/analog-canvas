@@ -119,6 +119,9 @@ not translate them.
 - Continuous geometry within one RouteBranch is connected without a dot.
 - A branch through a Junction endpoint is connected and the Junction renders
   as a solid dot.
+- A visible device terminal that is an explicit Route endpoint renders the
+  same solid contact marker. This marker is derived presentation, not a
+  persisted decorative Junction. Hollow Ports remain hollow.
 - Any X or T intersection lacking an explicit shared Junction remains a
   crossing, including intersections between branches of the same Net.
 - A crossing never causes automatic Net merge, route split, or Junction repair.
@@ -139,6 +142,11 @@ preserving the explicit graph unchanged.
   a specified segment into caller-named first/second branches. With explicit
   `createNet: true`, it may also create the caller-named empty local Net needed
   for a free wire endpoint.
+- `attach_endpoint_to_route` adds one existing terminal/Port endpoint to the
+  Route Net and replaces the selected Route with two caller-named halves that
+  share that endpoint. The endpoint must resolve exactly at the split point.
+  This is the canonical component-on-conductor operation: later instance
+  movement stretches both halves through their real endpoint reference.
 - `remove_junction` removes an unused Junction.
 - `move_junction` changes a Junction coordinate without changing Net
   membership; the caller includes corresponding Route replacements atomically.
@@ -177,6 +185,12 @@ authors a Route through `set_route_points` or `route_orthogonal`, the Engine
 does not also stretch that Route. In a group move, terminal-only and
 terminal-to-fixed-endpoint Routes use Engine follow; explicit Route geometry is
 reserved for Routes incident to a Junction moved by the same plan.
+
+When a moved visible pin snaps to an unrelated Route interior, the same atomic
+transaction moves the instance and applies `attach_endpoint_to_route`. A
+different-Net contact includes an explicit Net merge. Multiple coincident but
+visibly disconnected conductors remain ambiguous and are never selected by id
+ordering.
 
 For an equal-delta group move, a connected Route component is internal when it
 contains at least one selected terminal and contains no port or terminal owned
@@ -277,6 +291,8 @@ SVG pixels:
 
 - visible connectivity unions the reported same-Net endpoint contact;
 - junction rendering uses its incident degree to decide whether to draw a dot;
+- contact-marker rendering also identifies explicit terminal/Route contacts
+  without adding a Junction to the Document;
 - wire-through diagnostics accept a terminal at a Route endpoint only when the
   same contact evidence contains it.
 
@@ -284,6 +300,12 @@ Route waypoints are deliberately not implicit contact points. Two centerlines
 that merely cross remain disconnected unless an explicit Junction/anchor makes
 the contact part of the Document. This derived layer changes no Net membership
 and is absent from persistence.
+
+`resolveElectricalContactTargets` is the companion authoring read model. It
+groups raw endpoint and Route-segment hits by routed component rather than SVG
+hit count. Two segments at one bend, or a pin plus its incident Route, are one
+conductor; two disconnected branches at a crossing remain two conductors even
+when they share a logical Net record.
 
 ### Compatibility and deletion threshold
 

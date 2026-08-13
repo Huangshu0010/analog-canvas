@@ -297,6 +297,45 @@ describe("textbook monochrome SVG renderer", () => {
     );
   });
 
+  it("renders a derived contact marker for a Route ending on a device pin", () => {
+    const document = createEmptyProject("project-pin-contact", "Pin contact")
+      .documents[0]!;
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-pin",
+      scope: "local",
+      terminals: [{ instanceId: "R1", pinName: "1" }],
+      ports: [],
+    });
+    document.junctions.push({
+      id: "loose-end",
+      netId: "net-pin",
+      position: { x: 60, y: 100 },
+      role: "route-anchor",
+    });
+    document.routes.push({
+      id: "route-pin",
+      netId: "net-pin",
+      from: { kind: "junction", junctionId: "loose-end" },
+      to: { kind: "terminal", instanceId: "R1", pinName: "1" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toMatch(/data-node-kind="contact" cx="100" cy="100"/u);
+    expect(svg).not.toContain('data-object-id="loose-end"');
+  });
+
   it("renders a VDD power rail without weakening or dotting its real branches", () => {
     const project = createEmptyProject("project-vdd-rail", "VDD rail");
     const document = project.documents[0]!;
@@ -920,7 +959,10 @@ describe("textbook monochrome SVG renderer", () => {
       '<circle data-object-id="junction-bias" cx="225" cy="80" r="3.77907" fill="#000"/>',
     );
     expect(svg).not.toContain('data-node-kind="device-pin"');
-    expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
+    // Five physical branches, five hollow ports, and twelve derived
+    // terminal-contact markers. The markers make committed pin contacts
+    // visible without persisting decorative Junction objects.
+    expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(22);
     // A route-marker contributes a head; its attached route remains the shaft.
     expect(svg).not.toContain('data-role="current-arrow-shaft"');
     expect(svg).toContain('data-kind="route-marker"');

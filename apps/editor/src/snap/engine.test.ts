@@ -135,6 +135,7 @@ describe("unified Snap Engine", () => {
           point: { x: 20, y: 0 },
           kind: "pin",
           electrical: {
+            kind: "endpoint",
             endpoint: { kind: "terminal", instanceId: "R1", pinName: "1" },
             netId: null,
           },
@@ -193,7 +194,11 @@ describe("unified Snap Engine", () => {
           id: "moving-pin",
           point: { x: 0, y: 0 },
           kind: "pin",
-          electrical: { endpoint: movingEndpoint, netId: null },
+          electrical: {
+            kind: "endpoint",
+            endpoint: movingEndpoint,
+            netId: null,
+          },
         },
       ],
       targetAnchors: [
@@ -201,7 +206,11 @@ describe("unified Snap Engine", () => {
           id: "target-junction",
           point: { x: 10, y: 10 },
           kind: "junction",
-          electrical: { endpoint: targetEndpoint, netId: "n1" },
+          electrical: {
+            kind: "endpoint",
+            endpoint: targetEndpoint,
+            netId: "n1",
+          },
         },
       ],
       primaryAnchorId: "moving-pin",
@@ -211,12 +220,102 @@ describe("unified Snap Engine", () => {
     });
 
     expect(result.delta).toEqual({ x: 10, y: 10 });
-    expect(result.electricalMatch?.moving.electrical?.endpoint).toEqual(
-      movingEndpoint,
-    );
-    expect(result.electricalMatch?.target.electrical?.endpoint).toEqual(
-      targetEndpoint,
-    );
+    expect(result.electricalMatch?.moving.electrical).toMatchObject({
+      kind: "endpoint",
+      endpoint: movingEndpoint,
+    });
+    expect(result.electricalMatch?.target.electrical).toMatchObject({
+      kind: "endpoint",
+      endpoint: targetEndpoint,
+    });
+  });
+
+  it("snaps one moving pin to its projected Route contact", () => {
+    const result = resolveTranslationSnap({
+      rawDelta: { x: 19, y: 20 },
+      movingAnchors: [
+        {
+          id: "moving-pin",
+          point: { x: 0, y: 0 },
+          kind: "pin",
+          electrical: {
+            kind: "endpoint",
+            endpoint: { kind: "terminal", instanceId: "M1", pinName: "D" },
+            netId: null,
+          },
+        },
+      ],
+      targetAnchors: [
+        {
+          id: "route-contact",
+          point: { x: 20, y: 20 },
+          kind: "route",
+          acceptsMovingAnchorId: "moving-pin",
+          electrical: {
+            kind: "route",
+            routeId: "route-bias",
+            segmentIndex: 0,
+            netId: "net-bias",
+          },
+        },
+      ],
+      primaryAnchorId: "moving-pin",
+      grid: 10,
+      tolerance: 3,
+      profile: SNAP_PROFILES.instanceMove,
+    });
+
+    expect(result.delta).toEqual({ x: 20, y: 20 });
+    expect(result.electricalMatch?.target.electrical).toMatchObject({
+      kind: "route",
+      routeId: "route-bias",
+    });
+  });
+
+  it("prefers an explicit endpoint over its coincident Route projection", () => {
+    const moving = {
+      id: "moving-pin",
+      point: { x: 0, y: 0 },
+      kind: "pin" as const,
+      electrical: {
+        kind: "endpoint" as const,
+        endpoint: { kind: "terminal" as const, instanceId: "M1", pinName: "D" },
+        netId: null,
+      },
+    };
+    const result = resolveTranslationSnap({
+      rawDelta: { x: 20, y: 20 },
+      movingAnchors: [moving],
+      targetAnchors: [
+        {
+          id: "aaa-route",
+          point: { x: 20, y: 20 },
+          kind: "route",
+          electrical: {
+            kind: "route",
+            routeId: "r1",
+            segmentIndex: 0,
+            netId: "n1",
+          },
+        },
+        {
+          id: "zzz-junction",
+          point: { x: 20, y: 20 },
+          kind: "junction",
+          electrical: {
+            kind: "endpoint",
+            endpoint: { kind: "junction", junctionId: "j1" },
+            netId: "n1",
+          },
+        },
+      ],
+      primaryAnchorId: moving.id,
+      grid: 10,
+      tolerance: 3,
+      profile: SNAP_PROFILES.instanceMove,
+    });
+
+    expect(result.electricalMatch?.target.id).toBe("zzz-junction");
   });
 
   it("does not turn drafting point snap into an electrical match", () => {
@@ -228,6 +327,7 @@ describe("unified Snap Engine", () => {
           point: { x: 10, y: 10 },
           kind: "pin",
           electrical: {
+            kind: "endpoint",
             endpoint: { kind: "terminal", instanceId: "M1", pinName: "G" },
             netId: null,
           },

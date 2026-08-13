@@ -6167,3 +6167,16 @@ contracts (WP-R1)`.
 - Validation: `pnpm ci:static`, frozen install, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(ci): format lockfile static contract`.
+
+## 2026-08-13 - Unified electrical contact authoring
+
+- Target: replace raw SVG-hit ambiguity and coordinate-only component contact
+  with one conductor-aware Wire/placement/movement contract.
+- Changed areas: derived contact targeting, typed endpoint-to-Route attachment,
+  editor Wire and component interaction, snap semantics, contact markers,
+  Agent API artifacts, specifications, and visual/browser regressions.
+- Validation: focused unit tests (75), targeted browser tests (5), Agent API
+  artifact check, `pnpm verify:branch` (675 tests plus build/smoke), and
+  `git diff --check` passed.
+- Commit status: ready to commit on `codex/unified-electrical-contact` as
+  `refactor(connectivity): unify electrical contact authoring`.

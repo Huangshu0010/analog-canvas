@@ -405,17 +405,21 @@ The core rule is:
 - Releasing on a pin or existing junction connects to it.
 - Releasing on the interior of a route segment previews a dot and, on commit,
   splits the route as needed and creates or reuses a junction atomically.
+- Placing or moving a component pin onto a Route interior uses a different
+  topology-preserving attachment: the pin itself becomes the shared endpoint
+  of the two split Route halves. Moving that component later therefore adapts
+  both adjacent wire halves without relying on coordinate overlap.
 - Passing over or crossing a route without ending there creates no junction,
   no dot, and no connectivity.
 - A flightline is a non-persisted routing hint. Clicking its wide invisible
   hit area starts Wire at one proposed frontier endpoint and previews the
   other; clicking a flightline during an active Wire session commits toward
   the opposite proposed endpoint.
-- A wire end that geometrically hits more than one route segment is rejected as
-  ambiguous. The user must choose one conductor away from the crossing.
-- Equal-priority endpoint or conductor candidates at the same snapped point are
-  likewise rejected as ambiguous; candidate array or object-ID ordering never
-  decides electrical connectivity.
+- Raw hit multiplicity is not ambiguity. Endpoint and Route hits are first
+  grouped by actual visible conductor, so two segments at a bend and a pin plus
+  its incident Route remain selectable. A wire end that hits more than one
+  disconnected conductor is rejected; the user must choose one away from the
+  crossing. Candidate array or object-ID ordering never decides connectivity.
 - Deleting a connected instance converts each routed pin endpoint into a
   Junction at the former pin coordinate, removes that terminal from its Net,
   and removes the instance atomically. Remaining Route geometry and Net

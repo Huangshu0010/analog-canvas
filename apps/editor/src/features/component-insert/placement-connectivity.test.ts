@@ -25,6 +25,74 @@ function transaction(expectedRevision: number, edits: unknown[]) {
 }
 
 describe("component placement electrical contacts", () => {
+  it("splits a contacted Route around the placed pin instead of relying on overlap", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.nets.push({
+      id: "net-bias",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    });
+    document.junctions.push(
+      {
+        id: "left",
+        netId: "net-bias",
+        position: { x: 60, y: 100 },
+        role: "route-anchor",
+      },
+      {
+        id: "right",
+        netId: "net-bias",
+        position: { x: 140, y: 100 },
+        role: "route-anchor",
+      },
+    );
+    document.routes.push({
+      id: "route-bias",
+      netId: "net-bias",
+      from: { kind: "junction", junctionId: "left" },
+      to: { kind: "junction", junctionId: "right" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+    const vdd = {
+      id: "VDD2",
+      symbolId: "vdd",
+      placement: {
+        position: { x: 100, y: 80 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    };
+    const proposal = proposePlacementContact(document, resolver, vdd, []);
+    expect(proposal).toMatchObject({ matched: true, ambiguous: false });
+    expect(proposal.edits).toContainEqual(
+      expect.objectContaining({
+        kind: "attach_endpoint_to_route",
+        routeId: "route-bias",
+        endpoint: { kind: "terminal", instanceId: "VDD2", pinName: "P" },
+      }),
+    );
+    const result = executeTransaction(
+      document,
+      transaction(0, [
+        { kind: "add_instance", instance: vdd },
+        ...proposal.edits,
+      ]),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.routes).toHaveLength(2);
+    expect(
+      result.document.routes.every(
+        (route) =>
+          route.from.kind === "terminal" || route.to.kind === "terminal",
+      ),
+    ).toBe(true);
+  });
+
   it("creates one global VDD Net when a VDD pin lands exactly on the PMOS source", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push({
@@ -48,7 +116,7 @@ describe("component placement electrical contacts", () => {
       },
       properties: {},
     };
-    const contact = proposePlacementContact(resolver, vdd, [
+    const contact = proposePlacementContact(document, resolver, vdd, [
       {
         endpoint: { kind: "terminal", instanceId: "M4", pinName: "S" },
         netId: null,
@@ -120,7 +188,7 @@ describe("component placement electrical contacts", () => {
       },
       properties: {},
     };
-    const proposal = proposePlacementContact(resolver, vdd, [
+    const proposal = proposePlacementContact(document, resolver, vdd, [
       {
         endpoint: { kind: "terminal", instanceId: "M1", pinName: "S" },
         netId: null,

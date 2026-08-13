@@ -38,6 +38,52 @@ export interface WireCommitProposal {
   edits: SchematicEdit[];
 }
 
+export interface EndpointRouteAttachmentProposal {
+  netId: string;
+  routeIds: readonly [string, string];
+  edits: SchematicEdit[];
+}
+
+/**
+ * Make a real endpoint the common node of two Route halves. This is the one
+ * topology primitive used when a placed or moved pin lands on a conductor;
+ * no coincident decorative Junction or zero-length Route is introduced.
+ */
+export function proposeEndpointRouteAttachment(
+  document: SchematicDocument,
+  endpoint: RouteEndpoint,
+  endpointNetId: string | null,
+  routeId: string,
+  point: Point,
+  segmentIndex: number,
+  suffix: string,
+): EndpointRouteAttachmentProposal {
+  const route = document.routes.find((candidate) => candidate.id === routeId);
+  if (!route) throw new Error(`Route not found: ${routeId}`);
+  const edits: SchematicEdit[] = [];
+  if (endpointNetId && endpointNetId !== route.netId) {
+    edits.push({
+      kind: "merge_nets",
+      targetNetId: route.netId,
+      sourceNetId: endpointNetId,
+    });
+  }
+  const routeIds = [
+    `${route.id}-a-${suffix}`,
+    `${route.id}-b-${suffix}`,
+  ] as const;
+  edits.push({
+    kind: "attach_endpoint_to_route",
+    endpoint,
+    routeId: route.id,
+    point,
+    segmentIndex,
+    firstRouteId: routeIds[0],
+    secondRouteId: routeIds[1],
+  });
+  return { netId: route.netId, routeIds, edits };
+}
+
 export type WireIntentAnchor =
   | { kind: "endpoint"; endpoint: RouteEndpoint }
   | {

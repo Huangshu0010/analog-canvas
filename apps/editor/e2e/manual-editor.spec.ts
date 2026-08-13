@@ -304,6 +304,21 @@ test("authors components and connectivity manually from an empty canvas", async 
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(0);
 });
 
+test("connects one MOS Gate to Drain without false contact ambiguity", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "nmos", { x: 480, y: 260 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-M1-G").click();
+  await page.getByTestId("terminal-M1-D").click();
+  await expect(page.getByTestId("status")).toContainText("Committed route");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
+  await expect(
+    page.locator('[data-layer="junctions"] [data-node-kind="contact"]'),
+  ).toHaveCount(2);
+});
+
 test("keeps Wire input above labels and resolves a screen-tolerant route tap", async ({
   page,
 }) => {
@@ -1585,6 +1600,79 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   });
   await page.mouse.up();
   await expect(page.getByTestId("revision")).toHaveText("4");
+});
+
+test("places a component pin onto a Route and keeps real split topology", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const project = createRoutingDemoProject();
+  project.documents[0]!.routes.push({
+    id: "route-base",
+    netId: "net-h",
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
+    waypoints: [],
+    segmentModes: ["manual"],
+  });
+  await page.getByTestId("project-file").setInputFiles({
+    name: "component-route-contact.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await chooseComponent(page, "ground");
+  const origin = await page
+    .getByTestId("route-hit-route-base")
+    .evaluate((element) => {
+      const route = element as SVGPolylineElement;
+      const from = route.points.getItem(0);
+      const to = route.points.getItem(1);
+      const matrix = route.getScreenCTM();
+      if (!from || !to || !matrix) return null;
+      const screen = new DOMPoint(
+        (from.x + to.x) / 2,
+        (from.y + to.y) / 2 + 10,
+      ).matrixTransform(matrix);
+      return { x: screen.x, y: screen.y };
+    });
+  if (!origin) throw new Error("Route contact origin is not measurable");
+  await page.mouse.click(origin.x, origin.y);
+  if ((await page.getByTestId("hit-GND1").count()) === 0) {
+    throw new Error(
+      `Ground placement failed: ${await page.getByTestId("status").textContent()}`,
+    );
+  }
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByTestId("route-hit-route-base")).toHaveCount(0);
+  await expect(
+    page.locator('[data-testid^="route-hit-route-base-"]'),
+  ).toHaveCount(2);
+  await expect(
+    page.locator('[data-layer="junctions"] [data-node-kind="contact"]'),
+  ).toHaveCount(1);
+
+  await dragBy(page.getByTestId("hit-GND1"), { x: 40, y: 30 });
+  const splitPaths = await page
+    .locator('[data-testid^="route-hit-route-base-"]')
+    .evaluateAll((elements) =>
+      elements.map((element) =>
+        Array.from((element as SVGPolylineElement).points).map((point) => ({
+          x: point.x,
+          y: point.y,
+        })),
+      ),
+    );
+  expect(splitPaths).toHaveLength(2);
+  expect(
+    splitPaths.every((points) =>
+      points.slice(0, -1).every((point, index) => {
+        const next = points[index + 1]!;
+        return point.x === next.x || point.y === next.y;
+      }),
+    ),
+  ).toBe(true);
+  expect(splitPaths[0]!.at(-1)).toEqual(splitPaths[1]![0]);
 });
 
 test("rejects a SPICE netlist that needs unsupported symbols", async ({

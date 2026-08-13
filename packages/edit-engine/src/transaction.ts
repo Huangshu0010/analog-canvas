@@ -160,6 +160,15 @@ export const AddJunctionEditSchema = z.strictObject({
     })
     .optional(),
 });
+export const AttachEndpointToRouteEditSchema = z.strictObject({
+  kind: z.literal("attach_endpoint_to_route"),
+  endpoint: RouteEndpointSchema,
+  routeId: StableIdSchema,
+  point: PointSchema,
+  segmentIndex: z.number().int().nonnegative(),
+  firstRouteId: StableIdSchema,
+  secondRouteId: StableIdSchema,
+});
 export const RemoveJunctionEditSchema = z.strictObject({
   kind: z.literal("remove_junction"),
   junctionId: StableIdSchema,
@@ -296,6 +305,7 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   SetRoutePointsEditSchema,
   RouteOrthogonalEditSchema,
   AddJunctionEditSchema,
+  AttachEndpointToRouteEditSchema,
   RemoveJunctionEditSchema,
   MoveJunctionEditSchema,
   MakeFlightlineEditSchema,
@@ -1197,7 +1207,7 @@ function remapRouteMarkersAfterSplit(
 function splitRoute(
   document: SchematicDocument,
   route: RouteBranch,
-  junctionId: string,
+  splitEndpoint: RouteEndpoint,
   position: Point,
   firstRouteId: string,
   secondRouteId: string,
@@ -1216,7 +1226,6 @@ function splitRoute(
       point.x === position.x &&
       point.y === position.y,
   );
-  const junctionEndpoint: RouteEndpoint = { kind: "junction", junctionId };
   if (vertexIndex > 0) {
     // A manual orthogonal bend is already a geometric vertex, not a point in
     // the interior of either adjoining segment. Splitting it through the
@@ -1235,7 +1244,7 @@ function splitRoute(
         id: firstRouteId,
         netId: route.netId,
         from: structuredClone(route.from),
-        to: junctionEndpoint,
+        to: structuredClone(splitEndpoint),
         waypoints: firstNormalized.points.slice(1, -1),
         segmentModes: firstNormalized.segmentModes,
         ...(route.presentation ? { presentation: route.presentation } : {}),
@@ -1243,7 +1252,7 @@ function splitRoute(
       second: {
         id: secondRouteId,
         netId: route.netId,
-        from: junctionEndpoint,
+        from: structuredClone(splitEndpoint),
         to: structuredClone(route.to),
         waypoints: secondNormalized.points.slice(1, -1),
         segmentModes: secondNormalized.segmentModes,
@@ -1272,7 +1281,7 @@ function splitRoute(
       id: firstRouteId,
       netId: route.netId,
       from: structuredClone(route.from),
-      to: junctionEndpoint,
+      to: structuredClone(splitEndpoint),
       waypoints: firstNormalized.points.slice(1, -1),
       segmentModes: firstNormalized.segmentModes,
       ...(route.presentation ? { presentation: route.presentation } : {}),
@@ -1280,7 +1289,7 @@ function splitRoute(
     second: {
       id: secondRouteId,
       netId: route.netId,
-      from: junctionEndpoint,
+      from: structuredClone(splitEndpoint),
       to: structuredClone(route.to),
       waypoints: secondNormalized.points.slice(1, -1),
       segmentModes: secondNormalized.segmentModes,
@@ -2500,7 +2509,7 @@ export function executeTransaction(
           const split = splitRoute(
             draft,
             route,
-            edit.junctionId,
+            { kind: "junction", junctionId: edit.junctionId },
             edit.position,
             edit.split.firstRouteId,
             edit.split.secondRouteId,
@@ -2532,6 +2541,96 @@ export function executeTransaction(
           changedObjectIds.add(split.first.id);
           changedObjectIds.add(split.second.id);
         }
+        connectivityChanged = true;
+        break;
+      }
+      case "attach_endpoint_to_route": {
+        const resolver = context.symbolResolver;
+        if (!resolver) {
+          return rejectAt(
+            "EDIT_CONTEXT_REQUIRED",
+            "Route attachment requires a Symbol Resolver",
+          );
+        }
+        const endpointError = validateConnectableEndpoint(
+          draft,
+          edit.endpoint,
+          resolver,
+        );
+        if (endpointError) {
+          return rejectAt("EDIT_PRECONDITION", endpointError);
+        }
+        const routeIndex = draft.routes.findIndex(
+          (candidate) => candidate.id === edit.routeId,
+        );
+        const route = draft.routes[routeIndex];
+        if (!route) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Route does not exist: ${edit.routeId}`,
+          );
+        }
+        if (routeIsProtected(route)) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Route contains a locked segment: ${route.id}`,
+          );
+        }
+        const owner = endpointOwnerNetId(draft, edit.endpoint);
+        if (owner && owner !== route.netId) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Endpoint belongs to ${owner}; merge it with ${route.netId} explicitly`,
+          );
+        }
+        const endpointPoint = resolveEndpointPoint(
+          draft,
+          resolver,
+          edit.endpoint,
+        );
+        if (
+          !endpointPoint ||
+          endpointPoint.x !== edit.point.x ||
+          endpointPoint.y !== edit.point.y
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Attached endpoint must resolve exactly at the Route contact point",
+          );
+        }
+        const markerAnchors = captureRouteMarkerAnchors(draft, resolver).filter(
+          (anchor) => anchor.routeId === route.id,
+        );
+        const split = splitRoute(
+          draft,
+          route,
+          edit.endpoint,
+          edit.point,
+          edit.firstRouteId,
+          edit.secondRouteId,
+          edit.segmentIndex,
+          resolver,
+        );
+        if (typeof split === "string") {
+          return rejectAt("EDIT_PRECONDITION", split);
+        }
+        addEndpointToNet(draft, route.netId, edit.endpoint);
+        draft.routes.splice(routeIndex, 1, split.first, split.second);
+        for (const candidate of [split.first, split.second]) {
+          const routeError = validateRoute(draft, candidate, resolver);
+          if (routeError) return rejectAt("EDIT_PRECONDITION", routeError);
+        }
+        remapRouteMarkersAfterSplit(
+          draft,
+          resolver,
+          markerAnchors,
+          [split.first.id, split.second.id],
+          changedObjectIds,
+        );
+        changedObjectIds.add(route.id);
+        changedObjectIds.add(split.first.id);
+        changedObjectIds.add(split.second.id);
+        changedObjectIds.add(route.netId);
         connectivityChanged = true;
         break;
       }
