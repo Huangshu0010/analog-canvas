@@ -385,14 +385,13 @@ Agent `transact` schema.
 
 ### M1 — First-class Port presentation
 
-Add a Port-owned presentation discriminant covering hollow/filled visual form,
-lead direction, label policy, and placement. Migrate `port` and `port-filled`
-instances into real Ports, replace GUI palette insertion with one `create_port`
-intent, and retain retired symbols only for one reader migration.
+Ordinary schematic Ports remain the existing `port` and `port-filled` symbol
+instances. GUI placement and Agent edits use the standard `add_instance` and
+terminal-endpoint contracts. No Port-specific visual model, migration, or
+Project-level lifecycle API is in scope.
 
-Exit: a Port is represented once in Snapshot, one typed transaction creates or
-edits it, renderer/export consume the same record, and no editable Project
-needs a port-symbol instance for electrical or visual meaning.
+Exit: catalog, GUI, renderer, export, and Agent Snapshot preserve the ordinary
+component/terminal contract without parallel visual Port records.
 
 ### M2 — Required RichText and one attachment model
 
@@ -460,7 +459,7 @@ the entire roadmap in one change.
 
 | Target | Main owned paths                                                                 | Required behavior                                                | Must not regress                                                         |
 | ------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| M1     | model migration, edit engine, renderer, catalog, Agent Snapshot                  | first-class Port visual/electrical lifecycle                     | existing Port connectivity, external-port rendering, old Project opening |
+| M1     | symbol catalog, editor, renderer, Agent Snapshot                                  | ordinary Port symbol/terminal continuity                         | existing Port connectivity, external-port rendering, old Project opening |
 | M2     | model annotation/drafting schema, text editor, renderer, clipboard, Agent schema | AST-only RichText and one attachment record                      | existing labels, current arrow and drawing-object positioning            |
 | M3     | model/import/netlist facts, ERC, hierarchy, Snapshot                             | typed netlist facts and immutable provenance                     | structural SPICE import, round-trip source-status behavior, pin order    |
 | M4     | migrations, fixtures, generated legacy readers                                   | rewrite all supported old data then delete retired runtime forms | topology hash, formal output baseline, explicit source provenance        |

@@ -36,24 +36,25 @@ for (const fixture of fixtures) {
   );
   if (!document) throw new Error(`${fixture.input} has no top Document`);
   if (fixture.crossingRoutes) {
-    const port = (portId) => ({
-      kind: "port",
-      portId,
+    const terminal = (instanceId) => ({
+      kind: "terminal",
+      instanceId,
+      pinName: "P",
     });
     document.routes = [
       {
         id: "route-h",
         netId: "net-h",
-        from: port("A"),
-        to: port("B"),
+        from: terminal("A"),
+        to: terminal("B"),
         waypoints: [],
         segmentModes: ["manual"],
       },
       {
         id: "route-v",
         netId: "net-v",
-        from: port("C"),
-        to: port("D"),
+        from: terminal("C"),
+        to: terminal("D"),
         waypoints: [],
         segmentModes: ["manual"],
       },

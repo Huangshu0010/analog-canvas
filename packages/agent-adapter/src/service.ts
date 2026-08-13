@@ -469,7 +469,6 @@ export function agentEditCategory(
     case "move_instance":
     case "rotate_instance":
     case "mirror_instance":
-    case "add_port":
     case "place_port":
     case "move_port":
     case "move_junction":
@@ -479,9 +478,6 @@ export function agentEditCategory(
       return "presentation";
     case "set_instance_netlist":
     case "set_cell_netlist_interface":
-    case "remove_port":
-    case "rename_port":
-    case "set_port_direction":
       return "connectivity";
     case "set_route_points":
     case "route_orthogonal":
@@ -509,7 +505,6 @@ export function agentEditCategory(
     case "upsert_drafting_object":
     case "remove_drafting_object":
     case "set_presentation_style":
-    case "set_port_presentation":
     case "set_layout_group":
     case "remove_layout_group":
     case "set_layout_constraint":

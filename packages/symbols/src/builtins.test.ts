@@ -19,6 +19,8 @@ const PRODUCT_IDS = [
   "opamp",
   "pmos",
   "pnp",
+  "port",
+  "port-filled",
   "resistor",
   "vdd",
   "voltage-amplifier",

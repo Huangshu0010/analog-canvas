@@ -179,7 +179,6 @@ describe("editor shell", () => {
     expect(markup).toContain('aria-label="Tool rail"');
     expect(markup).toContain('aria-label="Shapes"');
     expect(markup).toContain('data-testid="shapes-chip-resistor"');
-    expect(markup).toContain('data-testid="shapes-chip-port"');
     expect(markup).toContain('data-testid="shapes-insert"');
     expect(markup).toContain('data-testid="library-toggle"');
     expect(markup).toContain('data-testid="shapes-library-panel"');

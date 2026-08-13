@@ -39,7 +39,6 @@ export interface ShapesPanelProps {
   recentSymbolIds: readonly string[];
   open: boolean;
   onOpenInsert(): void;
-  onCreatePort(): void;
   onQuickPlace(request: ComponentInsertRequest): void;
 }
 
@@ -48,7 +47,6 @@ export function ShapesPanel({
   recentSymbolIds,
   open,
   onOpenInsert,
-  onCreatePort,
   onQuickPlace,
 }: ShapesPanelProps) {
   const starters = STARTER_SYMBOL_IDS.map((symbolId) =>
@@ -95,33 +93,10 @@ export function ShapesPanel({
         >
           <summary className="shapes-fold-summary">
             <span className="shapes-fold-label">Starters</span>
-            <span className="shapes-fold-count">{starters.length + 1}</span>
+            <span className="shapes-fold-count">{starters.length}</span>
           </summary>
           <div className="shapes-fold-body">
             <div className="shapes-grid">
-              <button
-                type="button"
-                className="shapes-chip"
-                data-testid="shapes-chip-port"
-                title="Place Port"
-                onClick={onCreatePort}
-              >
-                <svg
-                  className="shapes-chip-art"
-                  viewBox="-12 -12 24 24"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="0"
-                    cy="0"
-                    r="3"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                </svg>
-                <span>Port</span>
-              </button>
               {starters.map((symbol) => (
                 <button
                   key={symbol.id}

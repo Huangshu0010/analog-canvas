@@ -6324,21 +6324,6 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/unified-electrical-contact` as
   `chore: satisfy contact mainline gate`.
 
-## 2026-08-13 - First-class Port presentation
-
-- Target: remove the duplicate editable `port`/`port-filled` Symbol model and
-  make Port electrical identity and presentation one first-class record.
-- Changed areas: schema v6 and v5-to-v6 migration; typed Port edits; renderer,
-  GUI quick place and exact-contact wiring; Agent schema/Snapshot/OpenAPI;
-  product catalog filtering; canonical projects, routing test fixtures and
-  visual goldens.
-- Validation: focused migration/transaction/contact/render/palette/Agent tests;
-  full `pnpm test:local` (115 files, 712 tests); typecheck; Agent artifact
-  write/check; docs/reference/visual checks; `git diff --check`; and
-  `pnpm verify:branch` passed.
-- Commit status: ready to commit on `codex/agent-project-lifecycle` as
-  `feat(model): make Ports first-class visual endpoints`.
-
 ## 2026-08-13 - Browser Agent takeover delivery roadmap
 
 - Target: freeze a detailed delivery plan for all remaining browser Agent
