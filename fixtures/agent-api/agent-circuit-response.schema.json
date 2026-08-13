@@ -80,6 +80,9 @@
                 "sourceSpans": {
                   "type": "boolean"
                 },
+                "semanticControl": {
+                  "type": "boolean"
+                },
                 "edit": {
                   "type": "object",
                   "properties": {
@@ -2044,6 +2047,39 @@
             ],
             "additionalProperties": false
           }
+        },
+        "semantic": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "activate-document",
+                "select",
+                "highlight-net",
+                "fit-document",
+                "clear-focus"
+              ]
+            },
+            "documentId": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "objectIds": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "netId": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "kind",
+            "documentId",
+            "objectIds"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [

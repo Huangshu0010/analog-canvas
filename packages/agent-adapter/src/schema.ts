@@ -18,6 +18,7 @@ import {
   SourceSpanSchema,
   StableIdSchema,
 } from "@icm/model";
+import { ObjectLocatorSchema } from "@icm/derived";
 import { SchematicEditSchema } from "@icm/edit-engine";
 import { z } from "zod";
 
@@ -51,6 +52,8 @@ export const AgentPermissionsSchema = z.strictObject({
   snapshot: z.boolean().optional(),
   render: z.boolean(),
   sourceSpans: z.boolean(),
+  /** Grants non-persisting selection, Net-highlight, and viewport control. */
+  semanticControl: z.boolean().optional(),
   edit: z.strictObject({
     geometry: z.boolean(),
     connectivity: z.boolean(),
@@ -169,6 +172,42 @@ export const AgentWireIntentSchema = z.strictObject({
   waypoints: z.array(PointSchema).max(256).optional(),
 });
 
+/** Public subset of the canonical derived `ObjectLocator` runtime schema. */
+export const AgentObjectLocatorSchema = ObjectLocatorSchema.omit({
+  sourceRef: true,
+}).extend({
+  kind: z.enum([
+    "instance",
+    "net",
+    "route",
+    "junction",
+    "terminal",
+    "port",
+    "annotation",
+    "no-connect",
+  ]),
+});
+
+/**
+ * Semantic intents deliberately live inside `transact` so the public operation
+ * set remains small. Unlike edits and wire intents, they never enter the
+ * Edit Engine and therefore cannot change a Document revision or history.
+ */
+export const AgentSemanticIntentSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("activate-document") }),
+  z.strictObject({
+    kind: z.literal("select"),
+    locator: AgentObjectLocatorSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("highlight-net"),
+    netId: StableIdSchema,
+    endpoint: RouteEndpointSchema.optional(),
+  }),
+  z.strictObject({ kind: z.literal("fit-document") }),
+  z.strictObject({ kind: z.literal("clear-focus") }),
+]);
+
 /**
  * New Agent writes use the current authoring contract even while the persisted
  * Project reader still accepts migration-only legacy shapes. This boundary is
@@ -230,11 +269,13 @@ export const AgentTransactRequestSchema = RequestBaseSchema.extend({
   dryRun: z.boolean().optional(),
   edits: z.array(AgentSchematicEditSchema).min(1).max(256).optional(),
   wireIntent: AgentWireIntentSchema.optional(),
+  semanticIntent: AgentSemanticIntentSchema.optional(),
 }).superRefine((request, context) => {
-  if ((request.edits === undefined) === (request.wireIntent === undefined)) {
+  const forms = [request.edits, request.wireIntent, request.semanticIntent];
+  if (forms.filter((form) => form !== undefined).length !== 1) {
     context.addIssue({
       code: "custom",
-      message: "Provide exactly one of edits or wireIntent",
+      message: "Provide exactly one of edits, wireIntent, or semanticIntent",
     });
   }
 });
@@ -278,12 +319,14 @@ const AgentProductionTransactRequestSchema = ProductionRequestBaseSchema.extend(
     dryRun: z.boolean().optional(),
     edits: z.array(AgentSchematicEditSchema).min(1).max(256).optional(),
     wireIntent: AgentWireIntentSchema.optional(),
+    semanticIntent: AgentSemanticIntentSchema.optional(),
   },
 ).superRefine((request, context) => {
-  if ((request.edits === undefined) === (request.wireIntent === undefined)) {
+  const forms = [request.edits, request.wireIntent, request.semanticIntent];
+  if (forms.filter((form) => form !== undefined).length !== 1) {
     context.addIssue({
       code: "custom",
-      message: "Provide exactly one of edits or wireIntent",
+      message: "Provide exactly one of edits, wireIntent, or semanticIntent",
     });
   }
 });
@@ -757,6 +800,18 @@ export const AgentSnapshotV3ResponseSchema = z.discriminatedUnion("target", [
   AgentSnapshotV3ProjectResponseSchema,
   AgentSnapshotV3CatalogResponseSchema,
 ]);
+export const AgentSemanticIntentResultSchema = z.strictObject({
+  kind: z.enum([
+    "activate-document",
+    "select",
+    "highlight-net",
+    "fit-document",
+    "clear-focus",
+  ]),
+  documentId: StableIdSchema,
+  objectIds: z.array(StableIdSchema),
+  netId: StableIdSchema.optional(),
+});
 export const AgentTransactSuccessResponseSchema = ResponseBaseSchema.extend({
   operation: z.literal("transact"),
   ok: z.literal(true),
@@ -779,6 +834,8 @@ export const AgentTransactSuccessResponseSchema = ResponseBaseSchema.extend({
       }),
     )
     .optional(),
+  /** Present only for a successful non-persisting semantic transaction. */
+  semantic: AgentSemanticIntentResultSchema.optional(),
 });
 export const AgentRenderResponseSchema = ResponseBaseSchema.extend({
   operation: z.literal("render"),
@@ -873,6 +930,8 @@ export type AgentCapabilitiesRequest = z.infer<
 export type AgentQueryRequest = z.infer<typeof AgentQueryRequestSchema>;
 export type AgentSnapshotRequest = z.infer<typeof AgentSnapshotRequestSchema>;
 export type AgentTransactRequest = z.infer<typeof AgentTransactRequestSchema>;
+export type AgentSemanticIntent = z.infer<typeof AgentSemanticIntentSchema>;
+export type AgentObjectLocator = z.infer<typeof AgentObjectLocatorSchema>;
 export type AgentRenderRequest = z.infer<typeof AgentRenderRequestSchema>;
 export type AgentCircuitResponse = z.infer<typeof AgentCircuitResponseSchema>;
 export type AgentProductionCircuitResponse = z.infer<

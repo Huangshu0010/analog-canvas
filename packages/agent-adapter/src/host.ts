@@ -11,6 +11,7 @@
 import type { EditTransactionResult, SchematicEdit } from "@icm/edit-engine";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
+import type { AgentSemanticIntent } from "./schema.js";
 
 /** An Agent transaction submitted to the host. The actor is always an Agent. */
 export interface AgentHostTransactionRequest {
@@ -21,6 +22,23 @@ export interface AgentHostTransactionRequest {
   dryRun?: boolean;
   edits: readonly SchematicEdit[];
 }
+
+/** A browser-only, non-persisting request to expose Agent reasoning in the UI. */
+export interface AgentHostSemanticIntentRequest {
+  documentId: string;
+  intent: AgentSemanticIntent;
+}
+
+/** Evidence returned after the live editor has accepted a semantic request. */
+export type AgentHostSemanticIntentResult =
+  | {
+      ok: true;
+      documentId: string;
+      kind: AgentSemanticIntent["kind"];
+      objectIds: readonly string[];
+      netId?: string;
+    }
+  | { ok: false; code: string; message: string };
 
 /**
  * What an Agent operation host exposes to the Agent Circuit service. `getDocument`
@@ -35,4 +53,10 @@ export interface AgentOperationHost {
   dispatchTransaction(
     request: AgentHostTransactionRequest,
   ): EditTransactionResult;
+  /** Optional because loopback/in-process hosts deliberately have no GUI. */
+  applySemanticIntent?(
+    request: AgentHostSemanticIntentRequest,
+  ): AgentHostSemanticIntentResult;
+  /** Whether this host has a live UI adapter for semantic control. */
+  semanticControlAvailable?(): boolean;
 }

@@ -53,7 +53,7 @@ API v2 has exactly four operations:
 | -------------- | ----------------------------------------------------------- | ----------------------------------------- |
 | `capabilities` | none                                                        | operations, permissions, limits, versions |
 | `snapshot`     | Document ID, optional source spans                          | complete AgentSessionSnapshot             |
-| `transact`     | Document ID, revision, transaction ID, edits or Wire intent | applied/dry-run diff and diagnostics      |
+| `transact`     | Document ID, revision, transaction ID, edits, Wire, or semantic intent | mutation diff or non-persisting UI evidence |
 | `render`       | Document ID, formal/diagnostics mode, optional bounds       | bounded SVG artifact and diagnostics      |
 
 API v1 remains accepted only by the optional local development adapter with
@@ -221,7 +221,17 @@ segment, or free point, with optional orthogonal waypoints. The adapter expands
 that intent through `proposeWireIntent` in the same routing planner used by GUI
 Wire; it does not synthesize Nets, Junctions, Route splits, or endpoint IDs in
 the transport layer. Primitive typed edits remain available for advanced batch
-operations, but a request must supply exactly one of `edits` or `wireIntent`.
+operations, but a request must supply exactly one of `edits`, `wireIntent`, or
+`semanticIntent`.
+
+`semanticIntent` is the scoped browser-editor form: `activate-document`,
+canonical `ObjectLocator` `select`, `highlight-net`, `fit-document`, and
+`clear-focus`. It requires `editor.semantic-control`, reuses the editor's
+existing locator, hierarchy Net-trace, selection, and viewport owners, and is
+not available to loopback/in-process hosts without a live GUI. A successful
+semantic transaction reports `applied: false`, an empty revision-preserving
+diff, and resolved UI evidence in `semantic`; it never reaches the Edit Engine,
+DocumentHistory, recovery, topology hash, formal export, or persisted Project.
 
 MOS bulk authoring uses the same typed boundary: `set_mos_bulk_defaults`
 configures Cell-level stable Net IDs, `reconcile_mos_bulk` materializes the

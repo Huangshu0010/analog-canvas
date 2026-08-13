@@ -85,6 +85,7 @@ individually.
 | `circuit.edit.geometry`     | Placement and Route geometry edits       | `edit.geometry`            |
 | `circuit.edit.connectivity` | Net/terminal/Route connectivity edits    | `edit.connectivity`        |
 | `circuit.edit.presentation` | Text, drafting, annotation, style intent | `edit.presentation`        |
+| `editor.semantic-control`   | Temporary Cell/selection/Net/view focus  | `semanticControl`          |
 
 The web session's only read path is the v2 Snapshot. Legacy v1 `query` is not
 published by the hosted session. Import/export, raw Project download, filesystem
@@ -183,8 +184,10 @@ commands must be delivered to it. Initial events:
 - `operation.started`, `operation.completed`, `operation.failed`.
 
 Selection, hover, viewport, pointer position, and in-progress gestures remain
-editor-local and are never streamed. Agent requests target a Document and render
-bounds explicitly.
+editor-local and are never streamed. An Agent with `editor.semantic-control`
+may submit one explicit non-persisting `semanticIntent` to select/highlight/fit
+the live editor; that request still targets a Document explicitly and is never
+recorded as a circuit transaction.
 
 ## Browser host dispatch contract
 
@@ -223,6 +226,20 @@ The existing `packages/agent-adapter` service must dispatch through this host
 contract instead of independently invoking `executeTransaction()` followed by
 `AgentDocumentStore.commitDocument()`. Snapshot and render obtain the resolver
 and Project at request time, not from stale service-construction options.
+
+### Semantic editor-control contract
+
+`transact` accepts exactly one of typed `edits`, `wireIntent`, or
+`semanticIntent`. The semantic form requires `editor.semantic-control` and is
+handled by the browser host's UI adapter rather than
+`EditorDocumentController.dispatchTransaction()`. It accepts only the existing
+Cell/Locator/Net identities: activate an existing Cell, select a canonical
+hierarchy-aware locator, highlight an existing Net, fit the target Cell, or
+clear focus. It returns normal transaction-shaped evidence with `applied: false`
+and the unchanged revision, but creates no history item, recovery write, Project
+mutation, geometry, or electrical-topology change. Missing, stale, cross-Project,
+or hierarchy-mismatched targets return typed errors; coordinates and raw SVG are
+not accepted.
 
 > Note (VDD increment): Route `presentation` now includes a non-electrical
 > `power-rail` value; the Edit Engine requires such a Route to belong to a VDD

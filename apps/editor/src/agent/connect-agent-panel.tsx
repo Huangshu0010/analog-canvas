@@ -47,7 +47,12 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
   {
     id: "review",
     label: "Review",
-    scopes: ["circuit.snapshot", "circuit.render", "circuit.source-spans"],
+    scopes: [
+      "circuit.snapshot",
+      "circuit.render",
+      "circuit.source-spans",
+      "editor.semantic-control",
+    ],
   },
   {
     id: "layout",
@@ -57,6 +62,7 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
       "circuit.render",
       "circuit.source-spans",
       "circuit.edit.geometry",
+      "editor.semantic-control",
     ],
   },
   {
@@ -69,6 +75,7 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
       "circuit.edit.geometry",
       "circuit.edit.connectivity",
       "circuit.edit.presentation",
+      "editor.semantic-control",
     ],
   },
 ];

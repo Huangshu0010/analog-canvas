@@ -64,13 +64,13 @@ roadmap:
 | SPICE/Spectre/design-netlist export                                       | Do not deliver    | no scope, endpoint, download kind, or capability               |
 | Arbitrary paths, filesystem enumeration, Project database, DOM automation | Do not deliver    | rejected at the File Resource and session boundary             |
 
-As of this roadmap, production v2 has the strict four-operation request parser,
-revisioned single-Document Snapshot/transaction/render path, browser claim and
-relay transport, and formal SVG result. It does **not** yet provide a complete
-Project lifecycle, file candidate workflow, durable same-Project reconnect,
-cross-Document history semantics, or semantic GUI-control intents. Existing
-v1/v3 parser/code/spec fragments are compatibility or historical material, not
-production capabilities.
+Production v2 has the strict four-operation request parser, revisioned
+single-Document Snapshot/transaction/render path, browser claim and relay
+transport, formal SVG result, bounded same-Project reconnect, and scoped
+non-persisting semantic GUI control. It does **not** provide a complete Project
+lifecycle, file candidate workflow, or cross-Document history semantics.
+Existing v1/v3 parser/code/spec fragments are compatibility or historical
+material, not production capabilities.
 
 ## Scope
 
@@ -141,8 +141,9 @@ Snapshot, ERC, hierarchy, search, component parameters, and transaction
 validation consume typed netlist facts; current Projects reject `spice.*`
 writes. Every shipped Project fixture is classified as current, sequentially
 migratable historic input, or explicitly rejected. The next active delivery
-slice is A2 session continuity. A1 Cell/hierarchy management is deliberately
-deferred and does not block same-Project session recovery.
+slice is A3 File Resource. A1 Cell/hierarchy management is deliberately
+deferred; A2 same-Project recovery and A4 semantic editor control are complete
+and do not depend on it.
 
 Every remaining row below is its own target plan, commit series, and validation
 boundary. No target may claim completion from types or transport scaffolding
@@ -302,19 +303,24 @@ secret or raw-byte leak, and browser approval E2E.
 
 ### A4. Shared semantic editor control
 
+**Status: complete (2026-08-13).**
+
 **Purpose.** Let an Agent make its review visible without coordinate guessing,
 DOM automation, or persisted canvas state. Add explicitly non-persisting
 `transact` intents for activate Cell, select canonical `ObjectLocator`s,
-highlight a resolved Net, fit to objects/Net/bounds/Document, and clear focus.
+highlight a resolved Net, fit an entire Document, and clear focus. Selection
+and Net highlighting retain the existing GUI point-focus behavior; arbitrary
+Agent-provided view bounds are intentionally excluded from this first public
+surface.
 
 The intents consume the existing Object Locator, connectivity index, resolved
-route geometry, and Net-highlighting service. They return resolved objects,
-bounds, and Net evidence, require `editor.semantic-control`, and emit an
-auditable session event. They never update Project/Document revision, history,
-recovery, topology hash, flightline policy, or formal render. GUI and Agent
-must render one overlay and return matching errors for stale, inaccessible, or
-deleted locators. Bind keyboard shortcuts only in the human UI; the Agent API
-uses the typed intent, not simulated keystrokes.
+route geometry, and Net-highlighting service. They return resolved objects and
+Net evidence, require `editor.semantic-control`, and never update
+Project/Document revision, history, recovery, topology hash, flightline policy,
+or formal render. GUI and Agent render the same existing overlay and return
+matching errors for stale, inaccessible, or deleted locators. Bind keyboard
+shortcuts only in the human UI; the Agent API uses the typed intent, not
+simulated keystrokes.
 
 ### A5. Project-aware history and connected duplication
 

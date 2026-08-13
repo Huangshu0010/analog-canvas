@@ -6471,3 +6471,18 @@ contracts (WP-R1)`.
   test files, 713 tests, all workspace builds, production smoke).
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `refactor(agent): publish only the external session surface`.
+
+## 2026-08-13 - Shared Agent semantic editor control
+
+- Target: let a scoped hosted Agent visibly activate/select/highlight/fit/clear
+  the live editor through the existing GUI authorities, without creating a
+  new Circuit operation or a persisted transaction.
+- Changed areas: canonical derived Locator runtime schema; Agent
+  `semanticIntent` schema/service/host/scope/OpenAPI; browser semantic adapter
+  and permission presets; worker scope gate; Agent E2E; current API/session
+  usage specs and roadmap.
+- Validation: focused unit suites (32 tests), browser Agent E2E, generated
+  artifacts, type/docs/diff checks, and `pnpm verify:branch` (119 files, 719
+  tests, all workspace builds and production smoke) passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(agent): add shared semantic editor control`.

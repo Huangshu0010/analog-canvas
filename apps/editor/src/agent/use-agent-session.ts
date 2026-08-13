@@ -125,6 +125,7 @@ function permissionsFromScopes(
     snapshot: scopes.includes("circuit.snapshot"),
     render: scopes.includes("circuit.render"),
     sourceSpans: scopes.includes("circuit.source-spans"),
+    semanticControl: scopes.includes("editor.semantic-control"),
     edit: {
       geometry: scopes.includes("circuit.edit.geometry"),
       connectivity: scopes.includes("circuit.edit.connectivity"),

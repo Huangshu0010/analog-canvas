@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@icm/model": "workspace:*",
-    "@icm/symbols": "workspace:*"
+    "@icm/symbols": "workspace:*",
+    "zod": "^4.3.6"
   }
 }

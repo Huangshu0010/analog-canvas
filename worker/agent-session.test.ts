@@ -711,5 +711,30 @@ describe("public Agent session routes", () => {
     );
     expect(forbidden?.status).toBe(403);
     expect(sent).toBe(2);
+
+    const semanticForbidden = await routeAgentSessionRequest(
+      new Request(
+        `https://editor.example/api/agent/sessions/${created.session.sessionId}/circuit`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${claim.agentToken}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            apiVersion: "2.0",
+            requestId: "semantic-without-scope",
+            operation: "transact",
+            documentId: "document-main",
+            transactionId: "semantic-without-scope-tx",
+            expectedRevision: 3,
+            semanticIntent: { kind: "fit-document" },
+          }),
+        },
+      ),
+      env,
+    );
+    expect(semanticForbidden?.status).toBe(403);
+    expect(sent).toBe(2);
   });
 });

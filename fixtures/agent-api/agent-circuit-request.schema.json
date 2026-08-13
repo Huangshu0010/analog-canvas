@@ -79,6 +79,9 @@
         },
         "wireIntent": {
           "$ref": "#/$defs/__schema102"
+        },
+        "semanticIntent": {
+          "$ref": "#/$defs/__schema104"
         }
       },
       "required": [
@@ -3304,6 +3307,144 @@
           "additionalProperties": false
         }
       ]
+    },
+    "__schema104": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "activate-document"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "select"
+            },
+            "locator": {
+              "type": "object",
+              "properties": {
+                "documentId": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "hierarchyPath": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema105"
+                  }
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "instance",
+                    "net",
+                    "route",
+                    "junction",
+                    "terminal",
+                    "port",
+                    "annotation",
+                    "no-connect"
+                  ]
+                },
+                "objectId": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "endpoint": {
+                  "$ref": "#/$defs/__schema51"
+                }
+              },
+              "required": [
+                "documentId",
+                "hierarchyPath",
+                "kind",
+                "objectId"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "locator"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "highlight-net"
+            },
+            "netId": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "endpoint": {
+              "$ref": "#/$defs/__schema51"
+            }
+          },
+          "required": [
+            "kind",
+            "netId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fit-document"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "clear-focus"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema105": {
+      "type": "object",
+      "properties": {
+        "parentDocumentId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "instanceId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "childDocumentId": {
+          "$ref": "#/$defs/__schema1"
+        }
+      },
+      "required": [
+        "parentDocumentId",
+        "instanceId",
+        "childDocumentId"
+      ],
+      "additionalProperties": false
     }
   }
 }

@@ -44,6 +44,7 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
       expect(body.projectSessionId).toMatch(/^project-main:\d+$/u);
       expect(body.documentIds).toEqual(["document-main"]);
       expect(body.scopes).toContain("circuit.edit.connectivity");
+      expect(body.scopes).toContain("editor.semantic-control");
       await route.fulfill({
         contentType: "application/json",
         json: {
@@ -150,6 +151,29 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
     operation: "snapshot",
     revision: 0,
   });
+
+  const semantic = await sendCircuitRequest("semantic-fit", {
+    apiVersion: "2.0",
+    requestId: "semantic-fit",
+    operation: "transact",
+    documentId: "document-main",
+    transactionId: "semantic-fit-transaction",
+    expectedRevision: 0,
+    semanticIntent: { kind: "fit-document" },
+  });
+  expect(semantic.payload).toMatchObject({
+    ok: true,
+    operation: "transact",
+    applied: false,
+    revision: 0,
+    proposedRevision: 0,
+    semantic: {
+      kind: "fit-document",
+      documentId: "document-main",
+      objectIds: [],
+    },
+  });
+  await expect(page.getByTestId("revision")).toHaveText("0");
 
   const transaction = await sendCircuitRequest("agent-edit", {
     apiVersion: "2.0",

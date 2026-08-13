@@ -4,6 +4,10 @@ import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
+import type {
+  AgentHostSemanticIntentRequest,
+  AgentHostSemanticIntentResult,
+} from "@icm/agent-adapter";
 
 import {
   buildManualWirePath,
@@ -508,9 +512,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     projectSessionId,
     synchronizeExternalCommit,
   } = useDocumentController(preparedInitialProject, stageRecovery);
+  const agentSemanticIntentRef = useRef<
+    (request: AgentHostSemanticIntentRequest) => AgentHostSemanticIntentResult
+  >(() => ({
+    ok: false,
+    code: "SEMANTIC_CONTROL_UNAVAILABLE",
+    message: "The editor is still initializing semantic controls",
+  }));
   const browserAgentHost = useMemo(
     () =>
-      new BrowserAgentHost(editorDocumentController, synchronizeExternalCommit),
+      new BrowserAgentHost(
+        editorDocumentController,
+        synchronizeExternalCommit,
+        (request) => agentSemanticIntentRef.current(request),
+      ),
     [editorDocumentController, projectSessionId],
   );
   const agentSession = useAgentSession({
@@ -1340,6 +1355,31 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       );
       selectOnly("instance", [locator.objectId]);
       if (instance?.placement) focusPoint(instance.placement.position);
+    } else if (locator.kind === "route") {
+      const route = opened.routes.find((item) => item.id === locator.objectId);
+      selectOnly("route", [locator.objectId]);
+      const centerline = route
+        ? projectConnectivityIndex.documents
+            .get(opened.id)
+            ?.routeGeometry.get(route.id)?.centerline
+        : undefined;
+      if (centerline?.[0]) focusPoint(centerline[0]);
+    } else if (locator.kind === "junction") {
+      const junction = opened.junctions.find(
+        (item) => item.id === locator.objectId,
+      );
+      selectOnly("junction", [locator.objectId]);
+      if (junction) focusPoint(junction.position);
+    } else if (locator.kind === "annotation") {
+      const annotation = opened.annotations.find(
+        (item) => item.id === locator.objectId,
+      );
+      selectOnly("annotation", [locator.objectId]);
+      const position =
+        annotation?.anchor.kind === "free"
+          ? annotation.anchor.position
+          : annotation?.anchor.fallbackPosition;
+      if (position) focusPoint(position);
     } else if (locator.kind === "net") {
       setHighlightedNetOrigin({
         documentId: opened.id,
@@ -1358,6 +1398,203 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setSelectionOpen(true);
     setStatus(statusMessage);
   }
+
+  function applyAgentSemanticIntent(
+    request: AgentHostSemanticIntentRequest,
+  ): AgentHostSemanticIntentResult {
+    const intent = request.intent;
+    const targetDocument = project.documents.find(
+      (candidate) => candidate.id === request.documentId,
+    );
+    if (!targetDocument) {
+      return {
+        ok: false,
+        code: "DOCUMENT_NOT_FOUND",
+        message: `Document ${request.documentId} is not present in this Project`,
+      };
+    }
+    const activateDocument = (message: string) => {
+      const hierarchyPath =
+        findHierarchyPath(
+          projectConnectivityIndex,
+          project.topDocumentId,
+          targetDocument.id,
+        ) ?? [];
+      navigateToLocator(
+        {
+          documentId: targetDocument.id,
+          hierarchyPath,
+          kind: "document",
+          objectId: targetDocument.id,
+        },
+        message,
+      );
+    };
+    const fail = (
+      code: string,
+      message: string,
+    ): AgentHostSemanticIntentResult => ({
+      ok: false,
+      code,
+      message,
+    });
+
+    switch (intent.kind) {
+      case "activate-document":
+        activateDocument(`Agent activated Cell ${targetDocument.name}`);
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [],
+        };
+      case "fit-document": {
+        activateDocument(`Agent fit Cell ${targetDocument.name}`);
+        setViewBox({ ...buildSvgScene(targetDocument, resolver).viewBox });
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [],
+        };
+      }
+      case "clear-focus":
+        resetInteractionState();
+        setHighlightedNetOrigin(null);
+        setSelectionOpen(false);
+        setStatus("Agent cleared semantic focus");
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [],
+        };
+      case "highlight-net": {
+        const net = targetDocument.nets.find(
+          (candidate) => candidate.id === intent.netId,
+        );
+        if (!net) {
+          return fail(
+            "OBJECT_NOT_FOUND",
+            `Net ${intent.netId} is not present in Document ${targetDocument.id}`,
+          );
+        }
+        activateDocument(`Agent highlighted Net ${net.name ?? net.id}`);
+        highlightNet(net.id, targetDocument.id, intent.endpoint);
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [net.id],
+          netId: net.id,
+        };
+      }
+      case "select": {
+        const { locator } = intent;
+        if (locator.documentId !== targetDocument.id) {
+          return fail(
+            "DOCUMENT_MISMATCH",
+            "A semantic locator must address the transaction Document",
+          );
+        }
+        const expectedHierarchyPath = findHierarchyPath(
+          projectConnectivityIndex,
+          project.topDocumentId,
+          targetDocument.id,
+        );
+        if (
+          !expectedHierarchyPath ||
+          expectedHierarchyPath.length !== locator.hierarchyPath.length ||
+          expectedHierarchyPath.some(
+            (frame, index) =>
+              frame.parentDocumentId !==
+                locator.hierarchyPath[index]?.parentDocumentId ||
+              frame.instanceId !== locator.hierarchyPath[index]?.instanceId ||
+              frame.childDocumentId !==
+                locator.hierarchyPath[index]?.childDocumentId,
+          )
+        ) {
+          return fail(
+            "LOCATOR_MISMATCH",
+            "The locator hierarchy path is not reachable from this Project top Cell",
+          );
+        }
+        const exists = (() => {
+          switch (locator.kind) {
+            case "instance":
+              return targetDocument.instances.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "net":
+              return targetDocument.nets.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "route":
+              return targetDocument.routes.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "junction":
+              return targetDocument.junctions.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "annotation":
+              return targetDocument.annotations.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "port":
+              return targetDocument.ports.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "no-connect":
+              return targetDocument.noConnects.some(
+                (item) => item.id === locator.objectId,
+              );
+            case "terminal": {
+              const endpoint = locator.endpoint;
+              if (endpoint?.kind !== "terminal") return false;
+              const instance = targetDocument.instances.find(
+                (item) => item.id === endpoint.instanceId,
+              );
+              const resolved = instance
+                ? resolver.resolve(instance.symbolId, instance.symbolVariantId)
+                : null;
+              return (
+                resolved?.definition.pins.some(
+                  (pin) => pin.name === endpoint.pinName,
+                ) ?? false
+              );
+            }
+          }
+        })();
+        if (!exists) {
+          return fail(
+            "OBJECT_NOT_FOUND",
+            `Locator ${locator.kind} ${locator.objectId} is not present in Document ${targetDocument.id}`,
+          );
+        }
+        const objectLocator: ObjectLocator = {
+          documentId: locator.documentId,
+          hierarchyPath: locator.hierarchyPath,
+          kind: locator.kind,
+          objectId: locator.objectId,
+          ...(locator.endpoint ? { endpoint: locator.endpoint } : {}),
+        };
+        navigateToLocator(
+          objectLocator,
+          `Agent selected ${locator.kind} ${locator.objectId}`,
+        );
+        return {
+          ok: true,
+          kind: intent.kind,
+          documentId: targetDocument.id,
+          objectIds: [locator.objectId],
+          ...(locator.kind === "net" ? { netId: locator.objectId } : {}),
+        };
+      }
+    }
+  }
+
+  agentSemanticIntentRef.current = applyAgentSemanticIntent;
 
   function enterHierarchy(instanceId: string): void {
     const instance = document.instances.find(

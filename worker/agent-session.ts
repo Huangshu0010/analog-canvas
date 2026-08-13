@@ -375,6 +375,9 @@ function operationScopes(request: AgentCircuitRequest): AgentSessionScope[] {
     case "render":
       return ["circuit.render"];
     case "transact":
+      if (request.semanticIntent) {
+        return ["editor.semantic-control"];
+      }
       if (request.wireIntent) {
         return ["circuit.edit.geometry", "circuit.edit.connectivity"];
       }

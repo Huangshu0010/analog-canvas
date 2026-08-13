@@ -19,6 +19,13 @@
 7. Request a fresh Snapshot before global review and handoff. On
    `STALE_REVISION`, refresh and reconsider; never blindly retry the old edit.
 
+When capabilities reports `semanticControl: true`, an Agent may submit one
+`transact.semanticIntent` to make review visible in the browser: select a
+canonical locator, highlight a Net, activate or fit an existing Cell, or clear
+focus. Use snapshot-returned IDs and hierarchy paths, never canvas coordinates.
+Semantic results always have `applied: false` and leave revision, undo, and
+Project data unchanged.
+
 A successful `transact` returns `resolvedRoutes`: the post-edit resolved
 polyline for each Route in `diff.changedObjectIds`. Read it to learn the actual
 stored geometry — including any normalization (e.g. `set_route_points`

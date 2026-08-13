@@ -180,6 +180,7 @@ export const AgentSessionScopeSchema = z.enum([
   "circuit.edit.geometry",
   "circuit.edit.connectivity",
   "circuit.edit.presentation",
+  "editor.semantic-control",
 ]);
 
 export type AgentSessionMessage = z.infer<typeof AgentSessionMessageSchema>;

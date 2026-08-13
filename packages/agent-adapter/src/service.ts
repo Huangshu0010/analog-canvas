@@ -598,9 +598,14 @@ export function createAgentCircuitService(
       if (request.operation === "capabilities") {
         const snapshotPermission =
           options.permissions.snapshot ?? options.permissions.query;
+        const semanticControl = Boolean(
+          options.permissions.semanticControl &&
+          host?.semanticControlAvailable?.(),
+        );
         const { query: _queryPermission, ...productionPermissions } = {
           ...options.permissions,
           snapshot: snapshotPermission,
+          semanticControl,
         };
         const {
           maxQueryObjects: _maxQueryObjects,
@@ -641,6 +646,7 @@ export function createAgentCircuitService(
                 : {
                     ...options.permissions,
                     snapshot: snapshotPermission,
+                    semanticControl,
                   },
             limits:
               request.apiVersion === AGENT_API_VERSION
@@ -946,6 +952,78 @@ export function createAgentCircuitService(
       }
 
       if (request.operation === "transact") {
+        if (request.semanticIntent) {
+          if (!options.permissions.semanticControl) {
+            return fail(
+              "transact",
+              "PERMISSION_DENIED",
+              "Semantic editor-control permission is not granted",
+              document.revision,
+            );
+          }
+          if (
+            !host?.applySemanticIntent ||
+            !host.semanticControlAvailable?.()
+          ) {
+            return fail(
+              "transact",
+              "SEMANTIC_CONTROL_UNAVAILABLE",
+              "This Agent host does not provide a live editor control surface",
+              document.revision,
+            );
+          }
+          if (request.expectedRevision !== document.revision) {
+            return fail(
+              "transact",
+              "STALE_REVISION",
+              `Expected revision ${request.expectedRevision}, current revision is ${document.revision}`,
+              document.revision,
+            );
+          }
+          const semantic = host.applySemanticIntent({
+            documentId: request.documentId,
+            intent: request.semanticIntent,
+          });
+          if (!semantic.ok) {
+            return fail(
+              "transact",
+              semantic.code,
+              semantic.message,
+              document.revision,
+            );
+          }
+          const diagnostics = project
+            ? agentProjectDiagnostics(
+                project,
+                resolver,
+                document.id,
+                document.revision,
+              )
+            : agentVisualDiagnostics(document, resolver);
+          return response({
+            apiVersion: request.apiVersion,
+            requestId: request.requestId,
+            operation: "transact",
+            ok: true,
+            applied: false,
+            revision: document.revision,
+            proposedRevision: document.revision,
+            diff: {
+              documentId: document.id,
+              fromRevision: document.revision,
+              toRevision: document.revision,
+              editKinds: [],
+              changedObjectIds: [],
+            },
+            diagnostics,
+            semantic: {
+              kind: semantic.kind,
+              documentId: semantic.documentId,
+              objectIds: [...semantic.objectIds],
+              ...(semantic.netId ? { netId: semantic.netId } : {}),
+            },
+          });
+        }
         if (request.wireIntent) {
           if (
             !options.permissions.edit.geometry ||
