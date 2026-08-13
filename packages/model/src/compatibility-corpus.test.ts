@@ -1,4 +1,5 @@
-import { globSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -24,6 +25,24 @@ function readProject(path: string): string {
   return readFileSync(resolve(repositoryRoot, path), "utf8");
 }
 
+function trackedProjectPaths(): string[] {
+  return execFileSync(
+    "git",
+    ["ls-files", "--", "fixtures/projects", "netlists"],
+    {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    },
+  )
+    .split("\n")
+    .filter((path) =>
+      /^(?:fixtures\/projects\/.+\/project|netlists\/.+)\.icproj\.json$/u.test(
+        path,
+      ),
+    )
+    .sort();
+}
+
 function assertCurrentForm(serialized: string): void {
   const project = parseProject(serialized);
   expect(project.schemaVersion).toBe(CURRENT_PROJECT_SCHEMA_VERSION);
@@ -39,12 +58,7 @@ describe("supported Project compatibility corpus", () => {
       ...corpus.migrationInputs,
       ...corpus.rejected.map((entry) => entry.path),
     ].sort();
-    const discovered = [
-      ...globSync("fixtures/projects/**/project.icproj.json"),
-      ...globSync("netlists/**/*.icproj.json"),
-    ]
-      .map((path) => path.replaceAll("\\", "/"))
-      .sort();
+    const discovered = trackedProjectPaths();
 
     expect(listed).toEqual(discovered);
   });

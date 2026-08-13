@@ -6546,3 +6546,15 @@ contracts (WP-R1)`.
   smoke); `git diff --check` passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `test(editor): refresh migrated routing fixtures`.
+
+## 2026-08-13 - Repair compatibility corpus inventory
+
+- Target: make the Project compatibility corpus reflect only Git-tracked,
+  shipped Projects after remote CI exposed an ignored local scratch export in
+  the declared migration list.
+- Changed areas: tracked-Project discovery in the compatibility corpus test
+  and the corpus list itself; no ignored local artifact was promoted.
+- Validation: focused corpus test (4 tests), full `pnpm ci:unit` (725 tests),
+  and `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `test(model): exclude ignored scratch Project from corpus`.
