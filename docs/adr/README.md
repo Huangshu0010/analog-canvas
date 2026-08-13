@@ -27,6 +27,8 @@ The active visual-authority decision is
 [`0011-retire-visio-vss-as-visual-authority.md`](0011-retire-visio-vss-as-visual-authority.md).
 The browser-authoritative web session decision is
 [`0016-browser-authoritative-agent-session.md`](0016-browser-authoritative-agent-session.md).
+The deterministic structural netlist decision is
+[`0017-deterministic-design-netlist-boundary.md`](0017-deterministic-design-netlist-boundary.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

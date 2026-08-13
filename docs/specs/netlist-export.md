@@ -1,0 +1,290 @@
+# Deterministic Netlist Export
+
+Status: `accepted`
+
+Version: `1.0-structural`
+
+Owning phase: `Netlist Export WP0/6`
+
+Primary owner: `packages/netlist`
+
+Related ADR: [`0017-deterministic-design-netlist-boundary.md`](../adr/0017-deterministic-design-netlist-boundary.md)
+
+## Purpose
+
+Define the deterministic boundary that converts persisted schematic electrical
+facts into structural SPICE `.spi` and Spectre `.scs` design netlists. Export
+is ordinary program logic. It never asks an AI, inspects drawing geometry, or
+searches the host for a PDK.
+
+The release exports a reusable circuit structure, not a complete simulation
+deck. A design netlist contains cells, ordered interfaces, devices, ordered
+nodes, model/subcircuit targets, global Nets, and raw instance parameters. A
+simulation deck additionally requires explicitly configured libraries,
+corners, stimuli, analyses, options, temperature, and saved outputs; those are
+outside this contract.
+
+## Consumers
+
+- `packages/model`: persisted cell and instance electrical facts
+- `packages/symbols`: reviewed device-to-netlist definitions
+- `packages/netlist`: extraction, validation, IR, and dialect printers
+- `apps/editor`: authoring, diagnostics, and downloads
+- `packages/spice`: structural reparse validation for generated `.spi`
+
+## Terminology
+
+| Term | Meaning |
+| --- | --- |
+| Design netlist | Structural hierarchy and device connectivity, without simulator setup |
+| Simulation deck | Design netlist plus libraries, process selection, stimuli, analyses, and outputs |
+| Explicit name | User/import-authored electrical identifier persisted in the Project |
+| Generated Net name | Deterministic transient identifier assigned to one unnamed local Net |
+| Device definition | Reviewed mapping from one Symbol to device class, prefix, pin order, target policy, and required parameters |
+| Export IR | Transient dialect-neutral normalized structure consumed by pure printers |
+
+## Authorities
+
+Every emitted token has exactly one authority:
+
+| Fact | Authority | Never inferred from |
+| --- | --- | --- |
+| Cell name | `Document.netlist.name` | Document title or filename |
+| Cell interface order | `Document.netlist.portOrder` | coordinates or alphabetical order |
+| Connectivity | `Net.terminals` and `Net.ports` | Routes, Junction geometry, labels, or overlap |
+| Explicit Net name/scope | `Net.name` and `Net.scope` | artwork or text appearance |
+| Instance reference | `Instance.netlist.reference` | instance-label annotation |
+| Device class and pin order | reviewed device definition or child interface | `symbolId` string conventions or orientation |
+| Model/subcircuit target | typed instance binding | symbol name or PDK search |
+| Parameters | typed raw parameter record | rendered text or numeric evaluation |
+| Dialect syntax | requested printer | persisted source lines |
+
+Legacy `spice.name`, `spice.target`, `spice.pin.Pn`, and `spice.param.*`
+properties are migration inputs only. Export extraction and printers do not
+read them.
+
+## Persisted data model
+
+The Project model supplies these normalized facts:
+
+```typescript
+interface CellNetlistInterface {
+  name: string;
+  portOrder: StableId[];
+}
+
+interface InstanceNetlistData {
+  reference: string;
+  binding:
+    | { kind: "primitive"; deviceClass: DeviceClass }
+    | { kind: "model"; deviceClass: DeviceClass; name: string }
+    | { kind: "subcircuit"; childDocumentId: StableId; name: string }
+    | { kind: "external-subcircuit"; name: string };
+  parameters: Record<string, string>;
+}
+```
+
+Cell names, references, target names, parameter names, and raw values are
+length-bounded. The shared first-release identifier subset is ASCII letters,
+digits, and `_`, with the first character restricted to a letter or `_`.
+Identifiers are compared case-insensitively for uniqueness. Explicit invalid
+names block export; printers do not silently rename them.
+
+`portOrder` contains every Document Port exactly once. Port array order,
+direction, and placement do not define an interface. A hierarchy instance uses
+its bound child Document and that child's explicit interface.
+
+Every manually inserted device receives an explicit reference. References are
+unique per cell and have the prefix required by their device definition. Model-
+backed devices carry an explicit target. Raw parameters remain strings such as
+`2u`, `60n`, or `{WBASE*2}` and are never evaluated by export.
+
+## Device definition
+
+Each exportable electrical Symbol has one reviewed definition:
+
+```typescript
+interface DeviceNetlistDefinition {
+  symbolId: StableId;
+  deviceClass:
+    | "resistor"
+    | "capacitor"
+    | "inductor"
+    | "mos"
+    | "voltage-source"
+    | "current-source"
+    | "net-marker"
+    | "hierarchical";
+  referencePrefix: string | null;
+  pinOrder: string[];
+  targetPolicy: "builtin" | "required-model" | "child-cell" | "none";
+  requiredParameters: string[];
+}
+```
+
+Pin order names canonical Symbol pins. Hidden or implicit pins remain present.
+Canonical MOS ordering is D/G/S/B. Ground and VDD are Net markers: they verify
+an explicit global Net but emit no instance line. Decorative symbols never
+have a device definition. An unsupported electrical Symbol blocks export.
+
+Independent source syntax is accepted only after its source specification is
+represented structurally. A display string is not a source specification.
+
+## Net rules
+
+- `Net.terminals` and `Net.ports` are the only connectivity truth.
+- Named Nets are unique within a cell under case folding.
+- An unnamed local Net receives an ephemeral collision-free `N0001`, `N0002`,
+  ... name in stable Net-ID order. This does not mutate the Project.
+- A global Net must have an explicit name.
+- The global Net named `0` is the reference node.
+- Other global Nets are emitted through the dialect's global declaration and
+  are not silently converted to cell ports.
+- A terminal or Port belongs to at most one Net.
+- A Port without a Net must carry an explicit `NoConnect`; otherwise export is
+  blocked. A `NoConnect` never creates a netlist node.
+- Routes, Junctions, flightlines, labels, placement, and drafting content do
+  not affect the Export IR.
+
+## Transient Export IR
+
+The export IR is distinct from the import-oriented `CircuitIR`:
+
+```typescript
+interface DesignNetlistIR {
+  topCellId: StableId;
+  cells: DesignNetlistCell[];
+  globals: string[];
+}
+
+interface DesignNetlistCell {
+  id: StableId;
+  name: string;
+  ports: Array<{ id: StableId; name: string; netName: string }>;
+  nets: Array<{ id: StableId; name: string; scope: "local" | "global" }>;
+  instances: DesignNetlistInstance[];
+}
+
+interface DesignNetlistInstance {
+  id: StableId;
+  reference: string;
+  deviceClass: string;
+  target: string | null;
+  nodes: Array<{ pinName: string; netName: string }>;
+  parameters: Array<{ name: string; rawValue: string }>;
+}
+```
+
+Extraction validates the entire reachable hierarchy before returning an IR.
+Cells are dependency-first with stable tie breaking. Ports follow the persisted
+interface. Nodes follow the device definition or child interface. Instances,
+globals, and parameter names use deterministic ordering. Hierarchy cycles are
+errors. Net-marker instances are validated and omitted.
+
+The IR contains no geometry, Route, Junction, annotation, source text, include,
+analysis, PDK path, or renderer state.
+
+## Printer contracts
+
+Printers are pure functions over a validated Export IR. They cannot access the
+Project, Symbol resolver, filesystem, network, or diagnostics repair path.
+
+SPICE `.spi` emits a generated-file/version comment, sorted `.global`
+declarations, dependency-first `.subckt`/`.ends` blocks, structural device
+lines, and deterministic continuations. It emits no guessed `.include`, `.lib`,
+analysis, stimulus, or `.end` deck marker.
+
+Spectre `.scs` emits a generated-file/version comment,
+`simulator lang=spectre`, sorted `global` declarations, dependency-first
+`subckt`/`ends` blocks, parenthesized nodes, and explicit primitive syntax. It
+emits no guessed `include`, section, parameters, options, analysis, stimulus,
+or save statement.
+
+Both files are structural libraries. Successful export does not claim that a
+simulator can run them without an external simulation setup.
+
+## Diagnostics and failure behavior
+
+Extraction returns structured diagnostics with stable code, severity,
+Document ID, and affected object IDs. Any error prevents printer invocation and
+download. Required error coverage includes:
+
+- invalid/duplicate cell, Port, Net, or instance identifiers;
+- missing/duplicate/mismatched port order;
+- unconnected Port without `NoConnect`;
+- unnamed global Net or duplicate explicit Net name;
+- unknown/multiply assigned terminal or Port;
+- missing device definition, required pin, reference, target, or parameter;
+- wrong reference prefix;
+- unresolved or mismatched child cell and hierarchy cycle;
+- unsupported dialect/device combination;
+- identifier, parameter, count, or output resource-limit violation.
+
+Warnings may report generated local Net names. They cannot downgrade a missing
+electrical fact required for meaningful output.
+
+## Operations and state transitions
+
+```text
+Project + Symbol definitions
+  -> validate and extract DesignNetlistIR
+  -> choose SPICE or Spectre printer
+  -> deterministic text
+  -> browser download
+```
+
+An electrical edit changes Project revision and invalidates a previous export.
+A presentation-only edit may change revision but must not change extracted IR
+or output bytes.
+
+## Persistence boundary
+
+Cell interfaces and instance electrical data are persisted in the Project.
+Device definitions ship with the Symbol library. Export IR, generated local Net
+names, diagnostics, and output text are transient. PDK libraries and simulation
+profiles are external to this version of the contract.
+
+## Valid example
+
+A four-terminal manually authored NMOS has reference `M1`, explicit model
+`nch_mac`, D/G/S/B Net membership, and raw `w=2u l=60n`. It deterministically
+prints as a model-backed device in both dialects. Moving or rotating it does not
+change either output.
+
+## Rejected example
+
+A manually authored NMOS with W/L values but no model target produces a
+blocking missing-target diagnostic. Export must not guess `nmos`, `nch_mac`, or
+a foundry model from its Symbol ID.
+
+## Compatibility and migration
+
+The Project schema advances explicitly. Migration may copy an imported cell
+name, instance name, target, ordered pin evidence, and raw parameters only when
+the existing record is unambiguous. It may assign deterministic references to
+known manual primitives. It never invents a model, child binding, Net
+connection, source specification, library path, or simulator directive.
+
+Old compatibility properties may remain preserved but are not read by export.
+Unknown future fields and schema versions remain rejected by the Project
+format contract.
+
+## Deterministic validation
+
+- Project schema, migration, and canonical save/load/save tests
+- complete reviewed device-definition coverage tests
+- extractor diagnostics and presentation-independence tests
+- repeated extraction deep equality and repeated output byte equality
+- `.spi` reparse and normalized structural equivalence through `packages/spice`
+- Spectre grammar-focused golden tests; licensed simulator parsing only when
+  available and never implied otherwise
+- focused editor download and blocked-diagnostic browser flows
+- full mainline gate before non-document delivery
+
+## Deferred simulation-deck contract
+
+A later accepted contract may persist named simulation profiles containing
+explicit library references and path policy, corner/section, parameters,
+temperature, structured sources, analyses, options, and save selections. It
+composes with the DesignNetlistIR and does not add simulator commands to Net,
+Instance, Symbol, Route, or drawing contracts.
