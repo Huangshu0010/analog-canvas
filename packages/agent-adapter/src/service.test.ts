@@ -285,6 +285,7 @@ describe("Agent Circuit API v1 service", () => {
       direction: "input",
       position: null,
     });
+    document.netlist!.portOrder.push("port-in");
     document.nets.push({
       id: "net-in",
       scope: "local",

@@ -66,7 +66,11 @@ import type {
 import { buildSvgScene, resolveSchematicStyleProfile } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
-import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
+import {
+  builtInSymbols,
+  deviceNetlistDefinition,
+  findUnsupportedProjectSymbolIds,
+} from "@icm/symbols";
 import {
   clipboardPlacementAnchor,
   clipboardPreviewDocument,
@@ -102,6 +106,10 @@ import {
   componentParameters,
   effectiveComponentParameterValue,
 } from "../features/component-insert/component-parameters";
+import {
+  bindingForEditedModel,
+  initialInstanceNetlist,
+} from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
 import { ShapesPanel } from "../features/editor-shell/shapes-panel";
 import { useDocumentController } from "../document/document-controller";
@@ -590,13 +598,27 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   );
   const [netLabelDraft, setNetLabelDraft] = useState("");
   const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
+  const [cellNetlistDraft, setCellNetlistDraft] = useState({
+    name: document.netlist?.name ?? document.name,
+    portOrder: (document.netlist?.portOrder ?? []).join(", "),
+  });
   const [instancePropertyDraft, setInstancePropertyDraft] = useState<{
     instanceId: string | null;
+    reference: string;
+    model: string;
     parameters: Record<string, string>;
     x: string;
     y: string;
     rotation: "0" | "90" | "180" | "270";
-  }>({ instanceId: null, parameters: {}, x: "", y: "", rotation: "0" });
+  }>({
+    instanceId: null,
+    reference: "",
+    model: "",
+    parameters: {},
+    x: "",
+    y: "",
+    rotation: "0",
+  });
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
@@ -1147,9 +1169,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }, [selectedRoute, selectedRouteNetLabel]);
 
   useEffect(() => {
+    setCellNetlistDraft({
+      name: document.netlist?.name ?? document.name,
+      portOrder: (document.netlist?.portOrder ?? []).join(", "),
+    });
+  }, [document.id, document.name, document.netlist]);
+
+  useEffect(() => {
     if (!selectedInstance) {
       setInstancePropertyDraft({
         instanceId: null,
+        reference: "",
+        model: "",
         parameters: {},
         x: "",
         y: "",
@@ -1159,6 +1190,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     setInstancePropertyDraft({
       instanceId: selectedInstance.id,
+      reference: selectedInstance.netlist?.reference ?? "",
+      model:
+        selectedInstance.netlist?.binding?.kind === "model"
+          ? selectedInstance.netlist.binding.name
+          : "",
       parameters: Object.fromEntries(
         componentParameters(selectedInstance.symbolId).map((parameter) => [
           parameter.key,
@@ -2684,6 +2720,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         mirror: "none" as const,
       },
       properties: placementRequest.properties,
+      netlist: initialInstanceNetlist(
+        document,
+        symbolId,
+        placementRequest.properties,
+      ),
     };
     // New authoring never relies on the renderer-only default label. The
     // explicit annotation is the one editable text object for all ordinary
@@ -3838,8 +3879,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     const edits: SchematicEdit[] = [];
+    const reference = instancePropertyDraft.reference.trim();
+    if (!reference) {
+      setStatus("Netlist reference is required");
+      return;
+    }
     const set: Record<string, string> = {};
     const unset: string[] = [];
+    const baseNetlist =
+      selectedInstance.netlist ??
+      initialInstanceNetlist(
+        document,
+        selectedInstance.symbolId,
+        selectedInstance.properties,
+      );
+    const netlistParameters = { ...baseNetlist.parameters };
     for (const parameter of componentParameters(selectedInstance.symbolId)) {
       const value = (
         instancePropertyDraft.parameters[parameter.key] ?? ""
@@ -3856,6 +3910,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       } else if (String(explicit) !== value) {
         set[parameter.key] = value;
       }
+      if (value === "") delete netlistParameters[parameter.key];
+      else netlistParameters[parameter.key] = value;
     }
     if (Object.keys(set).length > 0 || unset.length > 0) {
       edits.push({
@@ -3863,6 +3919,25 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         instanceId: selectedInstance.id,
         ...(Object.keys(set).length > 0 ? { set } : {}),
         ...(unset.length > 0 ? { unset } : {}),
+      });
+    }
+
+    const netlistBinding = bindingForEditedModel(
+      selectedInstance.symbolId,
+      instancePropertyDraft.model,
+    );
+    const nextNetlist = {
+      reference,
+      ...(netlistBinding ? { binding: netlistBinding } : {}),
+      parameters: netlistParameters,
+    };
+    if (
+      JSON.stringify(nextNetlist) !== JSON.stringify(selectedInstance.netlist)
+    ) {
+      edits.push({
+        kind: "set_instance_netlist",
+        instanceId: selectedInstance.id,
+        netlist: nextNetlist,
       });
     }
 
@@ -3906,10 +3981,34 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (result.ok) setStatus(`Updated properties for ${selectedInstance.id}`);
   }
 
+  function applyCellNetlistInterface(): void {
+    const name = cellNetlistDraft.name.trim();
+    if (!name) {
+      setStatus("Cell netlist name is required");
+      return;
+    }
+    const portOrder = cellNetlistDraft.portOrder
+      .split(/[\s,]+/u)
+      .map((portId) => portId.trim())
+      .filter(Boolean);
+    const result = transact([
+      {
+        kind: "set_cell_netlist_interface",
+        netlist: { name, portOrder },
+      },
+    ]);
+    if (result.ok) setStatus(`Updated netlist interface ${name}`);
+  }
+
   function discardInstancePropertyDraft(): void {
     if (!selectedInstance) return;
     setInstancePropertyDraft({
       instanceId: selectedInstance.id,
+      reference: selectedInstance.netlist?.reference ?? "",
+      model:
+        selectedInstance.netlist?.binding?.kind === "model"
+          ? selectedInstance.netlist.binding.name
+          : "",
       parameters: Object.fromEntries(
         componentParameters(selectedInstance.symbolId).map((parameter) => [
           parameter.key,
@@ -5779,6 +5878,44 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               </span>
             </button>
             <div className="selection-panel" hidden={!selectionOpen}>
+              <section
+                className="context-actions"
+                aria-label="Cell netlist interface"
+              >
+                <h2>Cell netlist</h2>
+                <label title="Electrical cell/subcircuit name">
+                  <span className="property-parameter-name">Cell name</span>
+                  <input
+                    aria-label="Cell netlist name"
+                    value={cellNetlistDraft.name}
+                    onChange={(event) => {
+                      const name = event.currentTarget.value;
+                      setCellNetlistDraft((current) => ({ ...current, name }));
+                    }}
+                  />
+                </label>
+                <label title="Ordered Port IDs used by the subcircuit interface">
+                  <span className="property-parameter-name">
+                    Port order
+                    <em>(Comma-separated Port IDs)</em>
+                  </span>
+                  <input
+                    aria-label="Cell netlist port order"
+                    value={cellNetlistDraft.portOrder}
+                    placeholder="port-in, port-out"
+                    onChange={(event) => {
+                      const portOrder = event.currentTarget.value;
+                      setCellNetlistDraft((current) => ({
+                        ...current,
+                        portOrder,
+                      }));
+                    }}
+                  />
+                </label>
+                <button type="button" onClick={applyCellNetlistInterface}>
+                  Apply Cell Netlist
+                </button>
+              </section>
               {!hasInspectableSelection ? (
                 <p className="inspect-empty">Select an object to inspect.</p>
               ) : null}
@@ -5805,8 +5942,48 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   aria-label="Component properties"
                 >
                   <h2>Component properties</h2>
+                  <label title="Unique instance name emitted to SPICE/Spectre">
+                    <span className="property-parameter-name">
+                      Reference
+                      <em>(Netlist instance name)</em>
+                    </span>
+                    <input
+                      ref={instanceValueInputRef}
+                      aria-label="Component reference"
+                      value={instancePropertyDraft.reference}
+                      placeholder="R1"
+                      onChange={(event) => {
+                        const reference = event.currentTarget.value;
+                        setInstancePropertyDraft((current) => ({
+                          ...current,
+                          reference,
+                        }));
+                      }}
+                    />
+                  </label>
+                  {deviceNetlistDefinition(selectedInstance.symbolId)
+                    ?.targetPolicy === "required-model" ? (
+                    <label title="Explicit simulator model name; no PDK model is guessed">
+                      <span className="property-parameter-name">
+                        Model
+                        <em>(Required for netlist export)</em>
+                      </span>
+                      <input
+                        aria-label="Component model"
+                        value={instancePropertyDraft.model}
+                        placeholder="nch_mac"
+                        onChange={(event) => {
+                          const model = event.currentTarget.value;
+                          setInstancePropertyDraft((current) => ({
+                            ...current,
+                            model,
+                          }));
+                        }}
+                      />
+                    </label>
+                  ) : null}
                   {componentParameters(selectedInstance.symbolId).map(
-                    (parameter, index) => (
+                    (parameter) => (
                       <label key={parameter.key} title={parameter.help}>
                         <span className="property-parameter-name">
                           {parameter.label}
@@ -5814,7 +5991,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                           <em>({parameter.help})</em>
                         </span>
                         <input
-                          ref={index === 0 ? instanceValueInputRef : undefined}
                           aria-label={`Component ${parameter.label.toLowerCase()}`}
                           inputMode={parameter.inputMode}
                           value={

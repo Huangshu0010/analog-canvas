@@ -50,6 +50,10 @@ updated before scope expansion:
   captured by the accepted specs
 - `packages/model/src/` for persisted electrical contract and migration work
 - `packages/symbols/src/` for the device-to-netlist definition registry
+- `packages/edit-engine/src/` for typed Cell-interface and Instance-netlist
+  edits after WP0 acceptance
+- focused Agent adapter classification/schema updates required by the new
+  public typed edits
 - `packages/spice/src/importer.ts` and its focused tests so newly imported
   schema-current Projects write typed netlist facts directly rather than
   relying on a migration that only runs for older files
@@ -67,8 +71,6 @@ Read-only shared dependencies unless the plan is expanded:
 - `packages/spice/src/` other than the owned importer seam: current source
   parser and import Circuit IR remain read-only
 - `packages/derived/src/connectivity-index.ts`: existing connectivity authority
-- `packages/edit-engine/src/`: transaction boundary that new typed edits may
-  consume, but should not be changed until the persisted contract is accepted
 - `packages/exporters/`: SVG/PNG/PDF pipeline; netlist export must not be added
   to this visual-artifact package
 - existing circuit files under `netlists/`: validation inputs, never rewritten

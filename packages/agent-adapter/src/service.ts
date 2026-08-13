@@ -486,6 +486,9 @@ export function agentEditCategory(
       return "geometry";
     case "patch_instance_properties":
       return "presentation";
+    case "set_instance_netlist":
+    case "set_cell_netlist_interface":
+      return "connectivity";
     case "set_route_points":
     case "route_orthogonal":
     case "add_junction":

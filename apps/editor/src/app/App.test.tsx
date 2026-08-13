@@ -105,6 +105,7 @@ describe("editor shell", () => {
       ...topDocument,
       id: "document-child",
       name: "child",
+      netlist: { name: "child", portOrder: [] },
       instances: [],
       nets: [],
       ports: [],
