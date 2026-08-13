@@ -6270,3 +6270,19 @@ contracts (WP-R1)`.
   `pnpm references:check`, `pnpm typecheck`, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `docs(agent): freeze v3 contract surface and ADR 0018`.
+
+## 2026-08-13 - AP1 exact Snapshot and component catalog
+
+- Target: make every writable persisted netlist/interface field Agent-readable
+  and publish a machine-readable component catalog via additive v3 `snapshot`
+  targets, without changing v1/v2.
+- Changed areas: agent-adapter schema (v3 version, snapshot request `target`,
+  v3 document/project/catalog response schemas), snapshot (exact instance
+  netlist + cell interface, project + document v3 builders), new catalog
+  builder from `builtInSymbols` joined with `deviceNetlistDefinition`, service
+  v3 snapshot dispatch + capabilities, regenerated `fixtures/agent-api`, new
+  v3 tests, and the AP0 characterization test updated for v3.
+- Validation: 39 adapter tests (incl. 6 new), `agent-api:artifacts --check`,
+  `pnpm typecheck`, `pnpm docs:check`, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(agent): v3 exact snapshot targets and component catalog`.

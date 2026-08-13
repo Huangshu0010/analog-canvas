@@ -25,7 +25,9 @@ import type { AgentOperationHost } from "./host.js";
 import {
   AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
+  AGENT_API_V3_VERSION,
   AGENT_SNAPSHOT_VERSION,
+  AGENT_SNAPSHOT_V3_VERSION,
   AgentCircuitRequestSchema,
   AgentCircuitResponseSchema,
 } from "./schema.js";
@@ -40,10 +42,24 @@ import type {
   AgentRenderRequest,
   AgentTransactRequest,
 } from "./schema.js";
-import { buildAgentSessionSnapshot } from "./snapshot.js";
+import { buildAgentCatalogSnapshot } from "./catalog.js";
+import {
+  buildAgentDocumentSnapshotV3,
+  buildAgentProjectSnapshot,
+  buildAgentSessionSnapshot,
+  canonicalSnapshotContent,
+} from "./snapshot.js";
 
 const V1_OPERATIONS = ["capabilities", "query", "transact", "render"] as const;
 const V2_OPERATIONS = [
+  "capabilities",
+  "snapshot",
+  "transact",
+  "render",
+] as const;
+// v3 advertises the implemented operation set; `artifact` and `collaborate` are
+// added by AP4/AP7 when those operations land.
+const V3_OPERATIONS = [
   "capabilities",
   "snapshot",
   "transact",
@@ -115,7 +131,10 @@ export interface AgentCircuitService {
 }
 
 function errorResponse(
-  apiVersion: typeof AGENT_API_V1_VERSION | typeof AGENT_API_VERSION,
+  apiVersion:
+    | typeof AGENT_API_V1_VERSION
+    | typeof AGENT_API_VERSION
+    | typeof AGENT_API_V3_VERSION,
   requestId: string,
   operation: "error" | "query" | "snapshot" | "transact" | "render",
   code: string,
@@ -549,7 +568,9 @@ export function createAgentCircuitService(
         const apiVersion =
           candidate?.apiVersion === AGENT_API_V1_VERSION
             ? AGENT_API_V1_VERSION
-            : AGENT_API_VERSION;
+            : candidate?.apiVersion === AGENT_API_V3_VERSION
+              ? AGENT_API_V3_VERSION
+              : AGENT_API_VERSION;
         return errorResponse(
           apiVersion,
           requestId,
@@ -582,12 +603,18 @@ export function createAgentCircuitService(
           operation: "capabilities",
           ok: true,
           capabilities: {
-            apiVersions: [AGENT_API_V1_VERSION, AGENT_API_VERSION],
-            snapshotVersions: [AGENT_SNAPSHOT_VERSION],
+            apiVersions: [
+              AGENT_API_V1_VERSION,
+              AGENT_API_VERSION,
+              AGENT_API_V3_VERSION,
+            ],
+            snapshotVersions: [AGENT_SNAPSHOT_VERSION, AGENT_SNAPSHOT_V3_VERSION],
             operations:
               request.apiVersion === AGENT_API_V1_VERSION
                 ? V1_OPERATIONS
-                : V2_OPERATIONS,
+                : request.apiVersion === AGENT_API_V3_VERSION
+                  ? V3_OPERATIONS
+                  : V2_OPERATIONS,
             queryScopes: QUERY_SCOPES,
             editKinds: AGENT_EDIT_KINDS,
             permissions: {
@@ -600,14 +627,157 @@ export function createAgentCircuitService(
         });
       }
 
+      if (
+        request.operation === "snapshot" &&
+        request.apiVersion === AGENT_API_V3_VERSION
+      ) {
+        if (!(options.permissions.snapshot ?? options.permissions.query)) {
+          return fail(
+            "snapshot",
+            "PERMISSION_DENIED",
+            "Snapshot permission is not granted",
+          );
+        }
+        const includeSourceSpans = request.includeSourceSpans === true;
+        if (includeSourceSpans && !options.permissions.sourceSpans) {
+          return fail(
+            "snapshot",
+            "PERMISSION_DENIED",
+            "Source-span permission is not granted",
+          );
+        }
+        const resolver = host ? host.getResolver() : storeOptions!.resolver;
+        const project = host
+          ? host.getProject?.()
+          : storeOptions!.store.getProject?.();
+
+        if (request.target === "catalog") {
+          const symbolLibrary = project?.symbolLibrary ?? {
+            id: "razavi-symbols",
+            version: "1",
+          };
+          const catalog = buildAgentCatalogSnapshot({ symbolLibrary });
+          const catalogBytes = utf8ByteLength(canonicalSnapshotContent(catalog));
+          if (catalogBytes > limits.maxSnapshotBytes) {
+            return fail(
+              "snapshot",
+              "SNAPSHOT_TOO_LARGE",
+              `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
+            );
+          }
+          return response({
+            apiVersion: request.apiVersion,
+            requestId: request.requestId,
+            operation: "snapshot",
+            ok: true,
+            target: "catalog",
+            catalog,
+            diagnostics: [],
+          });
+        }
+
+        if (request.target === "project") {
+          if (!project) {
+            return fail(
+              "snapshot",
+              "INVALID_REQUEST",
+              "The project target requires an active Project",
+            );
+          }
+          const projectSnapshot = buildAgentProjectSnapshot({ project });
+          const projectBytes = utf8ByteLength(
+            canonicalSnapshotContent(projectSnapshot),
+          );
+          if (projectBytes > limits.maxSnapshotBytes) {
+            return fail(
+              "snapshot",
+              "SNAPSHOT_TOO_LARGE",
+              `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
+            );
+          }
+          return response({
+            apiVersion: request.apiVersion,
+            requestId: request.requestId,
+            operation: "snapshot",
+            ok: true,
+            target: "project",
+            project: projectSnapshot,
+            diagnostics: [],
+          });
+        }
+
+        // request.target === "document"
+        const documentId = request.documentId;
+        if (!documentId) {
+          return fail(
+            "snapshot",
+            "INVALID_REQUEST",
+            "The document target requires a documentId",
+          );
+        }
+        const document = host
+          ? host.getDocument(documentId)
+          : storeOptions!.store.getDocument(documentId);
+        if (!document || documentId !== document.id) {
+          return fail(
+            "snapshot",
+            "DOCUMENT_NOT_FOUND",
+            `The service is not bound to Document ${documentId}`,
+            document?.revision,
+          );
+        }
+        const base = buildAgentSessionSnapshot({
+          ...(project ? { project } : {}),
+          document,
+          resolver,
+          includeSourceSpans,
+        });
+        const documentSnapshot = buildAgentDocumentSnapshotV3({
+          ...(project ? { project } : {}),
+          document,
+          resolver,
+          includeSourceSpans,
+        });
+        const documentBytes = utf8ByteLength(
+          canonicalSnapshotContent({
+            project: base.project,
+            document: documentSnapshot,
+          }),
+        );
+        if (documentBytes > limits.maxSnapshotBytes) {
+          return fail(
+            "snapshot",
+            "SNAPSHOT_TOO_LARGE",
+            `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
+            document.revision,
+          );
+        }
+        return response({
+          apiVersion: request.apiVersion,
+          requestId: request.requestId,
+          operation: "snapshot",
+          ok: true,
+          target: "document",
+          revision: document.revision,
+          electricalTopologyHash: base.electricalTopologyHash,
+          byteLength: documentBytes,
+          project: base.project,
+          document: documentSnapshot,
+          diagnostics: documentSnapshot.diagnostics,
+        });
+      }
+
+      // The v3 snapshot branch above returned; every remaining operation
+      // (v2 snapshot, query, transact, render) carries a required documentId.
+      const documentId = request.documentId!;
       const document = host
-        ? host.getDocument(request.documentId)
-        : storeOptions!.store.getDocument(request.documentId);
-      if (!document || request.documentId !== document.id) {
+        ? host.getDocument(documentId)
+        : storeOptions!.store.getDocument(documentId);
+      if (!document || documentId !== document.id) {
         return fail(
           request.operation,
           "DOCUMENT_NOT_FOUND",
-          `The service is not bound to Document ${request.documentId}`,
+          `The service is not bound to Document ${documentId}`,
           document?.revision,
         );
       }

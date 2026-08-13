@@ -838,19 +838,22 @@ export class AgentSessionDO {
       );
     }
     if ("documentId" in circuitRequest) {
-      const document = machine.assertDocument(
-        machine.projectId,
-        circuitRequest.documentId,
-      );
-      if (!document.ok) {
-        return jsonResponse(
-          errorBody(
-            document.code,
-            "Document is outside the authorized session",
-          ),
-          403,
-          allowedOrigin,
+      const requestDocumentId = circuitRequest.documentId;
+      if (requestDocumentId !== undefined) {
+        const document = machine.assertDocument(
+          machine.projectId,
+          requestDocumentId,
         );
+        if (!document.ok) {
+          return jsonResponse(
+            errorBody(
+              document.code,
+              "Document is outside the authorized session",
+            ),
+            403,
+            allowedOrigin,
+          );
+        }
       }
     }
     const payloadHash = await sha256Text(raw);

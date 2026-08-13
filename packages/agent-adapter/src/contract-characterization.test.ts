@@ -20,7 +20,9 @@ import { AgentSessionScopeSchema } from "./envelope.js";
 import {
   AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
+  AGENT_API_V3_VERSION,
   AGENT_SNAPSHOT_VERSION,
+  AGENT_SNAPSHOT_V3_VERSION,
   AgentApiVersionSchema,
   AgentErrorResponseSchema,
   AgentLimitsSchema,
@@ -52,7 +54,7 @@ function fixtureProject(): CircuitProject {
 
 function readCapabilities(
   service: ReturnType<typeof createAgentCircuitService>,
-  apiVersion: "1.0" | "2.0",
+  apiVersion: "1.0" | "2.0" | "3.0",
   requestId: string,
 ) {
   const response = service.handle({ apiVersion, requestId, operation: "capabilities" });
@@ -63,15 +65,20 @@ function readCapabilities(
 }
 
 describe("Agent Circuit API frozen v1/v2 boundary (characterization)", () => {
-  it("freezes apiVersion to exactly v1.0 and v2.0 (no v3 yet)", () => {
+  it("freezes apiVersion to v1.0, v2.0, and the additive v3.0", () => {
     expect([...AgentApiVersionSchema.options]).toEqual([
       AGENT_API_V1_VERSION,
       AGENT_API_VERSION,
+      AGENT_API_V3_VERSION,
     ]);
-    expect([AGENT_API_V1_VERSION, AGENT_API_VERSION]).toEqual(["1.0", "2.0"]);
+    expect([
+      AGENT_API_V1_VERSION,
+      AGENT_API_VERSION,
+      AGENT_API_V3_VERSION,
+    ]).toEqual(["1.0", "2.0", "3.0"]);
   });
 
-  it("publishes exactly four operations per version through capabilities", () => {
+  it("publishes four operations per version and advertises v3 snapshot targets", () => {
     const project = fixtureProject();
     const document = structuredClone(project.documents[0]!);
     const service = createAgentCircuitService({
@@ -87,11 +94,16 @@ describe("Agent Circuit API frozen v1/v2 boundary (characterization)", () => {
 
     const v1 = readCapabilities(service, "1.0", "capabilities-v1");
     const v2 = readCapabilities(service, "2.0", "capabilities-v2");
+    const v3 = readCapabilities(service, "3.0", "capabilities-v3");
 
     expect(v1.operations).toEqual(["capabilities", "query", "transact", "render"]);
     expect(v2.operations).toEqual(["capabilities", "snapshot", "transact", "render"]);
-    expect(v2.apiVersions).toEqual(["1.0", "2.0"]);
-    expect(v2.snapshotVersions).toEqual([AGENT_SNAPSHOT_VERSION]);
+    expect(v3.operations).toEqual(["capabilities", "snapshot", "transact", "render"]);
+    expect(v2.apiVersions).toEqual(["1.0", "2.0", "3.0"]);
+    expect(v2.snapshotVersions).toEqual([
+      AGENT_SNAPSHOT_VERSION,
+      AGENT_SNAPSHOT_V3_VERSION,
+    ]);
     expect([...v2.editKinds]).toEqual([...AGENT_EDIT_KINDS]);
   });
 

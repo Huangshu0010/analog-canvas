@@ -22,10 +22,18 @@ import { z } from "zod";
 
 export const AGENT_API_V1_VERSION = "1.0" as const;
 export const AGENT_API_VERSION = "2.0" as const;
+export const AGENT_API_V3_VERSION = "3.0" as const;
 export const AGENT_SNAPSHOT_VERSION = "1.0" as const;
+export const AGENT_SNAPSHOT_V3_VERSION = "2.0" as const;
 export const AgentApiVersionSchema = z.enum([
   AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
+  AGENT_API_V3_VERSION,
+]);
+export const AgentSnapshotTargetSchema = z.enum([
+  "document",
+  "project",
+  "catalog",
 ]);
 
 const RequestBaseSchema = z.strictObject({
@@ -98,10 +106,35 @@ export const AgentQueryRequestSchema = RequestBaseSchema.extend({
   includeSourceSpans: z.boolean().optional(),
 });
 export const AgentSnapshotRequestSchema = RequestBaseSchema.extend({
-  apiVersion: z.literal(AGENT_API_VERSION),
+  apiVersion: z.enum([AGENT_API_VERSION, AGENT_API_V3_VERSION]),
   operation: z.literal("snapshot"),
-  documentId: StableIdSchema,
+  target: AgentSnapshotTargetSchema.optional(),
+  documentId: StableIdSchema.optional(),
   includeSourceSpans: z.boolean().optional(),
+}).superRefine((request, context) => {
+  if (request.apiVersion === AGENT_API_V3_VERSION) {
+    if (request.target === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "v3 snapshot requires a target",
+        path: ["target"],
+      });
+    }
+  } else if (request.target !== undefined) {
+    context.addIssue({
+      code: "custom",
+      message: "target is only valid for v3 snapshots",
+      path: ["target"],
+    });
+  }
+  const documentTarget = request.target === undefined || request.target === "document";
+  if (documentTarget && request.documentId === undefined) {
+    context.addIssue({
+      code: "custom",
+      message: "documentId is required for document snapshots",
+      path: ["documentId"],
+    });
+  }
 });
 export const AgentWireIntentAnchorSchema = z.discriminatedUnion("kind", [
   z.strictObject({
@@ -374,6 +407,120 @@ export const AgentSessionSnapshotSchema = z.strictObject({
   document: AgentSnapshotDocumentSchema,
 });
 
+// --- API v3 snapshot targets (ADR 0018 / AP1) -------------------------------
+// v3 surfaces the exact persisted netlist/interface facts the v2 snapshot only
+// derives from legacy `spice.*` properties, plus Project-structural and
+// component-catalog reads. v1/v2 schemas above are unchanged.
+
+const AgentInstanceNetlistBindingSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("primitive"),
+    deviceClass: z.string().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal("model"),
+    deviceClass: z.string().min(1),
+    name: z.string().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal("subcircuit"),
+    childDocumentId: StableIdSchema,
+    name: z.string().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal("external-subcircuit"),
+    name: z.string().min(1),
+  }),
+]);
+
+export const AgentInstanceNetlistFactsSchema = z.strictObject({
+  reference: z.string().min(1),
+  binding: AgentInstanceNetlistBindingSchema.optional(),
+  parameters: z.record(z.string(), z.string()),
+});
+
+export const AgentCellInterfaceSchema = z.strictObject({
+  name: z.string().min(1),
+  portOrder: z.array(StableIdSchema),
+});
+
+// A v3 document snapshot is the v2 document snapshot plus the exact cell
+// interface; each instance additionally carries its exact typed netlist facts
+// when the persisted model record is present.
+export const AgentSnapshotInstanceV3Schema = AgentSnapshotInstanceSchema.extend({
+  netlist: AgentInstanceNetlistFactsSchema.optional(),
+});
+export const AgentSnapshotDocumentV3Schema = AgentSnapshotDocumentSchema.extend({
+  cellInterface: AgentCellInterfaceSchema.nullable(),
+  instances: z.array(AgentSnapshotInstanceV3Schema),
+});
+
+export const AgentProjectSnapshotDocumentSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  isTop: z.boolean(),
+  revision: z.number().int().nonnegative(),
+  cellInterface: AgentCellInterfaceSchema.nullable(),
+  portCount: z.number().int().nonnegative(),
+  instanceCount: z.number().int().nonnegative(),
+  references: z.array(
+    z.strictObject({
+      instanceId: StableIdSchema,
+      targetName: z.string().min(1),
+      targetDocumentId: StableIdSchema.nullable(),
+    }),
+  ),
+});
+
+export const AgentProjectSourceSummarySchema = z.strictObject({
+  entry: z.string().min(1).nullable(),
+  dialect: z.string().min(1),
+  sourcePolicy: z.enum(["copy", "reference"]),
+  fileCount: z.number().int().nonnegative(),
+});
+
+export const AgentProjectSnapshotSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  topDocumentId: StableIdSchema,
+  documents: z.array(AgentProjectSnapshotDocumentSchema).min(1),
+  sourceSummary: AgentProjectSourceSummarySchema,
+});
+
+export const AgentCatalogPinSchema = z.strictObject({
+  name: z.string().min(1),
+  role: z.string().min(1),
+  direction: z.enum(["north", "east", "south", "west"]),
+  visibility: z.enum(["visible", "implicit", "conditional"]),
+});
+export const AgentCatalogVariantSchema = z.strictObject({
+  id: StableIdSchema,
+  hiddenPinNames: z.array(z.string().min(1)),
+});
+export const AgentCatalogNetlistSchema = z.strictObject({
+  deviceClass: z.string().min(1),
+  referencePrefix: z.string().min(1).nullable(),
+  pinOrder: z.array(z.string().min(1)),
+  targetPolicy: z.enum(["builtin", "required-model", "child-cell", "none"]),
+  requiredParameters: z.array(z.string().min(1)),
+});
+export const AgentCatalogSymbolSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  aliases: z.array(StableIdSchema),
+  pins: z.array(AgentCatalogPinSchema),
+  variants: z.array(AgentCatalogVariantSchema),
+  decorative: z.boolean(),
+  netlist: AgentCatalogNetlistSchema.optional(),
+});
+export const AgentCatalogSnapshotSchema = z.strictObject({
+  symbolLibrary: z.strictObject({
+    id: StableIdSchema,
+    version: StableIdSchema,
+  }),
+  symbols: z.array(AgentCatalogSymbolSchema),
+});
+
 const ResponseBaseSchema = z.strictObject({
   apiVersion: AgentApiVersionSchema,
   requestId: StableIdSchema,
@@ -385,8 +532,12 @@ export const AgentCapabilitiesResponseSchema = ResponseBaseSchema.extend({
     apiVersions: z.tuple([
       z.literal(AGENT_API_V1_VERSION),
       z.literal(AGENT_API_VERSION),
+      z.literal(AGENT_API_V3_VERSION),
     ]),
-    snapshotVersions: z.tuple([z.literal(AGENT_SNAPSHOT_VERSION)]),
+    snapshotVersions: z.tuple([
+      z.literal(AGENT_SNAPSHOT_VERSION),
+      z.literal(AGENT_SNAPSHOT_V3_VERSION),
+    ]),
     operations: z.array(
       z.enum(["capabilities", "query", "snapshot", "transact", "render"]),
     ),
@@ -422,6 +573,48 @@ export const AgentSnapshotResponseSchema = ResponseBaseSchema.extend({
   snapshot: AgentSessionSnapshotSchema,
   diagnostics: z.array(AgentDiagnosticSchema),
 });
+
+// v3 snapshot responses are discriminated by `target` (ADR 0018). Each carries
+// apiVersion "3.0"; the `document` target mirrors the v2 envelope (hash,
+// byteLength, project index) and adds exact facts + an optional host-supplied
+// projectRevision.
+const AgentSnapshotProjectIndexSchema = AgentSessionSnapshotSchema.shape.project;
+
+export const AgentSnapshotV3DocumentResponseSchema = ResponseBaseSchema.extend({
+  apiVersion: z.literal(AGENT_API_V3_VERSION),
+  operation: z.literal("snapshot"),
+  ok: z.literal(true),
+  target: z.literal("document"),
+  revision: z.number().int().nonnegative(),
+  electricalTopologyHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  byteLength: z.number().int().nonnegative(),
+  project: AgentSnapshotProjectIndexSchema,
+  document: AgentSnapshotDocumentV3Schema,
+  projectRevision: z.number().int().nonnegative().optional(),
+  diagnostics: z.array(AgentDiagnosticSchema),
+});
+export const AgentSnapshotV3ProjectResponseSchema = ResponseBaseSchema.extend({
+  apiVersion: z.literal(AGENT_API_V3_VERSION),
+  operation: z.literal("snapshot"),
+  ok: z.literal(true),
+  target: z.literal("project"),
+  project: AgentProjectSnapshotSchema,
+  projectRevision: z.number().int().nonnegative().optional(),
+  diagnostics: z.array(AgentDiagnosticSchema),
+});
+export const AgentSnapshotV3CatalogResponseSchema = ResponseBaseSchema.extend({
+  apiVersion: z.literal(AGENT_API_V3_VERSION),
+  operation: z.literal("snapshot"),
+  ok: z.literal(true),
+  target: z.literal("catalog"),
+  catalog: AgentCatalogSnapshotSchema,
+  diagnostics: z.array(AgentDiagnosticSchema),
+});
+export const AgentSnapshotV3ResponseSchema = z.discriminatedUnion("target", [
+  AgentSnapshotV3DocumentResponseSchema,
+  AgentSnapshotV3ProjectResponseSchema,
+  AgentSnapshotV3CatalogResponseSchema,
+]);
 export const AgentTransactSuccessResponseSchema = ResponseBaseSchema.extend({
   operation: z.literal("transact"),
   ok: z.literal(true),
@@ -474,6 +667,7 @@ export const AgentCircuitResponseSchema = z.union([
   AgentCapabilitiesResponseSchema,
   AgentQueryResponseSchema,
   AgentSnapshotResponseSchema,
+  AgentSnapshotV3ResponseSchema,
   AgentTransactSuccessResponseSchema,
   AgentRenderResponseSchema,
   AgentErrorResponseSchema,
@@ -504,3 +698,14 @@ export type AgentDiagnostic = z.infer<typeof AgentDiagnosticSchema>;
 export type AgentDiff = z.infer<typeof AgentDiffSchema>;
 export type AgentSessionSnapshot = z.infer<typeof AgentSessionSnapshotSchema>;
 export type AgentSnapshotDocument = z.infer<typeof AgentSnapshotDocumentSchema>;
+export type AgentSnapshotDocumentV3 = z.infer<
+  typeof AgentSnapshotDocumentV3Schema
+>;
+export type AgentInstanceNetlistFacts = z.infer<
+  typeof AgentInstanceNetlistFactsSchema
+>;
+export type AgentProjectSnapshot = z.infer<typeof AgentProjectSnapshotSchema>;
+export type AgentCatalogSnapshot = z.infer<typeof AgentCatalogSnapshotSchema>;
+export type AgentSnapshotV3Response = z.infer<
+  typeof AgentSnapshotV3ResponseSchema
+>;

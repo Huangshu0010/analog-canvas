@@ -20,12 +20,17 @@ import {
 } from "./diagnostics.js";
 import {
   AGENT_SNAPSHOT_VERSION,
+  AgentProjectSnapshotSchema,
   AgentSessionSnapshotSchema,
+  AgentSnapshotDocumentV3Schema,
 } from "./schema.js";
 import type {
   AgentDiagnostic,
+  AgentInstanceNetlistFacts,
+  AgentProjectSnapshot,
   AgentSessionSnapshot,
   AgentSnapshotDocument,
+  AgentSnapshotDocumentV3,
 } from "./schema.js";
 
 export interface BuildAgentSessionSnapshotOptions {
@@ -449,5 +454,129 @@ export function buildAgentSessionSnapshot(
     electricalTopologyHash: topologyHash,
     byteLength: utf8ByteLength(canonical),
     ...content,
+  });
+}
+
+// --- API v3 snapshot targets (ADR 0018 / AP1) -------------------------------
+
+type DocumentInstance = SchematicDocument["instances"][number];
+
+function cellInterfaceOf(document: SchematicDocument) {
+  return document.netlist
+    ? {
+        name: document.netlist.name,
+        portOrder: [...document.netlist.portOrder],
+      }
+    : null;
+}
+
+function instanceNetlistFactsOf(instance: DocumentInstance): AgentInstanceNetlistFacts {
+  const netlist = instance.netlist!;
+  return {
+    reference: netlist.reference,
+    ...(netlist.binding ? { binding: netlist.binding } : {}),
+    parameters: Object.fromEntries(
+      Object.entries(netlist.parameters).sort(([left], [right]) =>
+        left.localeCompare(right, "en"),
+      ),
+    ),
+  };
+}
+
+export function buildAgentDocumentSnapshotV3(
+  options: BuildAgentSessionSnapshotOptions,
+): AgentSnapshotDocumentV3 {
+  const base = documentSnapshot(options);
+  const { document } = options;
+  const factsById = new Map<string, AgentInstanceNetlistFacts>();
+  for (const instance of document.instances) {
+    if (instance.netlist) {
+      factsById.set(instance.id, instanceNetlistFactsOf(instance));
+    }
+  }
+  const instances = base.instances.map((snapshot) => {
+    const netlist = factsById.get(snapshot.id);
+    return netlist ? { ...snapshot, netlist } : { ...snapshot };
+  });
+  return AgentSnapshotDocumentV3Schema.parse({
+    ...base,
+    cellInterface: cellInterfaceOf(document),
+    instances,
+  });
+}
+
+export interface BuildAgentProjectSnapshotOptions {
+  project: CircuitProject;
+}
+
+function projectReference(
+  instance: DocumentInstance,
+  documentIdByName: Map<string, string>,
+): { instanceId: string; targetName: string; targetDocumentId: string | null }[] {
+  const binding = instance.netlist?.binding;
+  if (binding && binding.kind === "subcircuit") {
+    return [
+      {
+        instanceId: instance.id,
+        targetName: binding.name,
+        targetDocumentId: binding.childDocumentId,
+      },
+    ];
+  }
+  const targetName = subcircuitTargetName(instanceTarget(instance.properties));
+  return targetName
+    ? [
+        {
+          instanceId: instance.id,
+          targetName,
+          targetDocumentId: documentIdByName.get(targetName.toLowerCase()) ?? null,
+        },
+      ]
+    : [];
+}
+
+export function buildAgentProjectSnapshot(
+  options: BuildAgentProjectSnapshotOptions,
+): AgentProjectSnapshot {
+  const { project } = options;
+  const documentIdByName = new Map<string, string>();
+  for (const document of project.documents) {
+    documentIdByName.set(document.name.toLowerCase(), document.id);
+    if (document.netlist) {
+      documentIdByName.set(document.netlist.name.toLowerCase(), document.id);
+    }
+    if (document.sourceBinding) {
+      documentIdByName.set(
+        document.sourceBinding.cellName.toLowerCase(),
+        document.id,
+      );
+    }
+  }
+  return AgentProjectSnapshotSchema.parse({
+    id: project.id,
+    name: project.name,
+    topDocumentId: project.topDocumentId,
+    documents: [...project.documents]
+      .sort((left, right) => left.id.localeCompare(right.id, "en"))
+      .map((document) => ({
+        id: document.id,
+        name: document.name,
+        isTop: document.id === project.topDocumentId,
+        revision: document.revision,
+        cellInterface: cellInterfaceOf(document),
+        portCount: document.ports.length,
+        instanceCount: document.instances.length,
+        references: document.instances
+          .flatMap((instance) => projectReference(instance, documentIdByName))
+          .sort((left, right) =>
+            left.instanceId.localeCompare(right.instanceId, "en"),
+          ),
+      })),
+    sourceSummary: {
+      entry: project.source.entry,
+      dialect: project.source.dialect,
+      sourcePolicy: project.source.sourcePolicy,
+      fileCount: project.source.files.length,
+    },
   });
 }

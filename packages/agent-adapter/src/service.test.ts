@@ -244,7 +244,7 @@ describe("Agent Circuit API v1 service", () => {
       ok: true,
       capabilities: {
         operations: ["capabilities", "snapshot", "transact", "render"],
-        snapshotVersions: ["1.0"],
+        snapshotVersions: ["1.0", "2.0"],
         permissions: { snapshot: true },
       },
     });
@@ -271,7 +271,7 @@ describe("Agent Circuit API v1 service", () => {
         },
       },
     });
-    if (!response.ok || response.operation !== "snapshot") return;
+    if (!response.ok || response.operation !== "snapshot" || !("snapshot" in response)) return;
     expect(
       response.snapshot.document.instances.find((item) => item.id === "M1")
         ?.pins,
