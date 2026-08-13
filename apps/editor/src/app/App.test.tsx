@@ -237,7 +237,7 @@ describe("editor shell", () => {
           },
         },
         {
-          kind: "upsert_annotation",
+          kind: "upsert_schematic_annotation",
           annotation: {
             id: "instance-label-V1",
             kind: "instance-label",

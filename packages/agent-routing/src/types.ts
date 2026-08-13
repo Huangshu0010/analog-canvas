@@ -67,7 +67,7 @@ export type RouteEdgeRole = "trunk" | "escape" | "link" | "label";
 
 /**
  * An edge in the Route graph. Each non-label edge becomes exactly one typed
- * edit; a `label` edge becomes an `upsert_annotation` net-label.
+ * edit; a `label` edge becomes an `upsert_schematic_annotation` net-label.
  */
 export interface RouteGraphEdge {
   id: string;

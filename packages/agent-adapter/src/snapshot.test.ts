@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { parseProject } from "@icm/model";
+import { createEmptyDocument, parseProject } from "@icm/model";
 import type { CircuitProject } from "@icm/model";
 import { resolveDocumentRoutingGeometry } from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
@@ -98,6 +98,35 @@ describe("Agent Document Snapshot", () => {
     });
     expect(snapshot.byteLength).toBe(Buffer.byteLength(canonical, "utf8"));
     expect(snapshot.electricalTopologyHash).toMatch(/^[a-f0-9]{64}$/u);
+  });
+
+  it("uses canonical Project ERC evidence in the Snapshot", () => {
+    const project = fixtureProject();
+    const document = createEmptyDocument("snapshot-erc", "Snapshot ERC");
+    document.instances.push({
+      id: "R-open",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    project.documents = [document];
+    project.topDocumentId = document.id;
+
+    const snapshot = buildAgentSessionSnapshot({ project, document, resolver });
+    expect(snapshot.document.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          domain: "erc",
+          code: "ERC_UNCONNECTED_PIN",
+          objectIds: ["R-open:1"],
+          parameters: { instanceId: "R-open", pinName: "1" },
+        }),
+      ]),
+    );
   });
 
   it("is deterministic across persisted collection order and resolves references", () => {

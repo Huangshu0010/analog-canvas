@@ -75,6 +75,12 @@ timeout, disconnect, or late response can never transform an unknown write into
 an automatic retry. Full endpoint, envelope, event, and error contracts are
 recorded in [`../specs/web-agent-session.md`](../specs/web-agent-session.md).
 
+A transient WebSocket loss may replace only the browser transport for the same
+in-memory session, `editorSecret`, Project identity, and authorized Document
+set. Replacement is bounded and never replays a domain request. Project
+replacement and browser refresh remain terminal; they are authorization
+lifecycle events, not transport recovery.
+
 ## Alternatives considered
 
 ### MCP or provider tool discovery in product core

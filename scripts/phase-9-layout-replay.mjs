@@ -136,7 +136,7 @@ function buildPhases(source, target) {
     {
       id: "annotations",
       edits: target.annotations.map((annotation) => ({
-        kind: "upsert_annotation",
+        kind: "upsert_schematic_annotation",
         annotation,
       })),
     },

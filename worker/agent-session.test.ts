@@ -64,7 +64,11 @@ describe("agent-session relay", () => {
   it("redeems a claim and rejects reuse with typed errors", () => {
     const { machine, session, now } = setup();
     const first = redeemClaimResponse(machine, session.claimCode, now());
-    expect(first.ok).toBe(true);
+    expect(first).toMatchObject({
+      ok: true,
+      projectId: "project-1",
+      documentIds: ["document-1"],
+    });
 
     const reuse = redeemClaimResponse(machine, session.claimCode, now());
     expect(reuse.ok).toBe(false);
@@ -330,6 +334,18 @@ describe("public Agent session routes", () => {
       ),
     ]);
     expect([first.status, second.status].sort()).toEqual([200, 409]);
+  });
+
+  it("does not mark the editor offline when a replacement socket is open", async () => {
+    const storage = new MemoryStorage();
+    const replacement = { readyState: WebSocket.OPEN } as WebSocket;
+    const object = new AgentSessionDO(
+      { storage, getWebSockets: () => [replacement] },
+      { AGENT_ALLOWED_ORIGIN: "https://editor.example" },
+    );
+    const put = vi.spyOn(storage, "put");
+    await object.webSocketClose({ readyState: WebSocket.CLOSED } as WebSocket);
+    expect(put).not.toHaveBeenCalled();
   });
 
   it("creates a real Project-bound session and redeems a body claim", async () => {

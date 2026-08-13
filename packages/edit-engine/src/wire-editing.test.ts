@@ -5,8 +5,8 @@ import {
   createFreeWireAnchor,
   createRouteWireAnchor,
   proposeWireCommit,
-} from "./wire-editing";
-import type { WireSource } from "./wire-editing";
+} from "./routing-planner.js";
+import type { WireSource } from "./routing-planner.js";
 
 function source(
   endpoint: RouteEndpoint,

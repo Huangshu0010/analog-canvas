@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -69,5 +69,21 @@ merge: integrate main into netlist export
 
 ## Outcome
 
-At close-out, record the merged main commit, conflict decisions, validation,
-and push status, then set `status: completed`.
+Merged `origin/main` at `56e929c` into the published netlist-export branch.
+Git resolved all code overlaps automatically; the only textual conflict was
+the append-only `plan/log.md`, where both factual histories were retained.
+
+The combined schema-v4 contract exposed two newly added main test fixtures
+whose Ports lacked explicit `netlist.portOrder`; those fixtures were updated
+without changing runtime behavior. Main's compact Agent contract generator was
+then rerun so its request/OpenAPI artifacts include the netlist branch's typed
+Cell/Instance edit operations.
+
+Validation passed from a frozen lockfile: formatting, pinned references,
+typecheck, 113 unit-test files / 692 tests, canonical Agent API artifact check,
+workspace/release builds, production and release smoke, performance/export/PWA
+goldens, and 101 Playwright scenarios. The focused hierarchical SPICE/Spectre
+download and blocked-diagnostic flows passed both independently and in the full
+browser suite. One known recovery E2E was flaky once under 16-worker load, then
+passed alone and in the required complete 101-test rerun. The merge is ready to
+commit and push with `experience: none`.

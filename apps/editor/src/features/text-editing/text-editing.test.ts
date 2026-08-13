@@ -106,7 +106,7 @@ describe("unified text editing", () => {
       {
         kind: "update",
         edit: {
-          kind: "upsert_annotation",
+          kind: "upsert_schematic_annotation",
           annotation: { text: "Vbias" },
         },
       },
@@ -171,7 +171,7 @@ describe("unified text editing", () => {
       object: annotation(),
     });
     expect(textDeletionEdit(session)).toEqual({
-      kind: "remove_annotation",
+      kind: "remove_schematic_annotation",
       annotationId: "annotation-1",
     });
   });

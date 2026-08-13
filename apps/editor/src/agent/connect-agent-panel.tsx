@@ -19,6 +19,7 @@ export type AgentConnectionStatus =
   | "connected"
   | "working"
   | "paused"
+  | "reconnecting"
   | "offline"
   | "revoked"
   | "expired";
@@ -84,6 +85,7 @@ export interface ConnectAgentPanelProps {
   onGrant: (scopes: AgentSessionScope[]) => void;
   onPause: () => void;
   onResume: () => void;
+  onReconnect: () => void;
   onRevoke: () => void;
   onClose: () => void;
 }
@@ -95,6 +97,7 @@ const STATUS_LABEL: Record<AgentConnectionStatus, string> = {
   connected: "Agent connected",
   working: "Agent working…",
   paused: "Paused",
+  reconnecting: "Reconnecting to Agent relay…",
   offline: "Editor relay offline",
   revoked: "Revoked",
   expired: "Expired",
@@ -123,130 +126,146 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
   return (
     <div
       className="agent-panel"
-      role="dialog"
-      aria-label="Connect Agent"
       data-testid="connect-agent-panel"
       data-status={props.status}
     >
-      <div className="agent-panel-header">
-        <h2>Connect Agent</h2>
-        <button type="button" onClick={props.onClose} aria-label="Close">
-          Close
-        </button>
-      </div>
-
-      <p className="agent-panel-status" data-testid="agent-status">
-        {STATUS_LABEL[props.status]}
-        <span className="agent-panel-expiry">
-          {" "}
-          (expires in {formatExpiry(props.expiresAt, clock)})
-        </span>
-      </p>
-
-      {props.error ? (
-        <p className="agent-panel-error" role="alert">
-          {props.error}
-        </p>
-      ) : null}
-
-      {!connected ? (
-        <div className="agent-panel-grant" data-testid="agent-grant">
-          <p>Grant a scoped, short-lived capability to an external Agent.</p>
-          <ul>
-            {AGENT_PERMISSION_PRESETS.map((preset) => (
-              <li key={preset.id}>
-                <button
-                  type="button"
-                  className="agent-preset-button"
-                  data-testid={`agent-preset-${preset.id}`}
-                  onClick={() => props.onGrant(preset.scopes)}
-                >
-                  {preset.label}
-                </button>
-                <span className="agent-preset-scopes">
-                  {preset.scopes.join(", ")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {props.claimCode !== null && !terminal ? (
-        <div className="agent-panel-claim" data-testid="agent-claim">
-          <p>
-            Give this one-time code and the editor address to the Agent. It
-            expires in minutes.
-          </p>
-          <code data-testid="agent-claim-code">{props.claimCode}</code>
-          <button
-            type="button"
-            data-testid="agent-copy-instructions"
-            onClick={() => {
-              const origin = window.location.origin;
-              void navigator.clipboard
-                .writeText(
-                  `Connect to the Interactive Circuit Maker Agent API. POST ${JSON.stringify({ claimCode: props.claimCode })} to ${origin}/api/agent/claims, then use the returned bearer token and sessionId. OpenAPI: ${origin}/api/agent/openapi.json`,
-                )
-                .catch(() => undefined);
-            }}
-          >
-            Copy Agent connection instructions
+      <section
+        className="agent-dialog"
+        role="dialog"
+        aria-label="Connect Agent"
+      >
+        <div className="agent-panel-header">
+          <h2>Connect Agent</h2>
+          <button type="button" onClick={props.onClose} aria-label="Close">
+            Close
           </button>
-          <p className="agent-panel-scopes">
-            Scopes: {props.scopes.join(", ")}
+        </div>
+
+        <p className="agent-panel-status" data-testid="agent-status">
+          {STATUS_LABEL[props.status]}
+          <span className="agent-panel-expiry">
+            {" "}
+            (expires in {formatExpiry(props.expiresAt, clock)})
+          </span>
+        </p>
+
+        {props.error ? (
+          <p className="agent-panel-error" role="alert">
+            {props.error}
           </p>
-        </div>
-      ) : null}
+        ) : null}
 
-      {connected ? (
-        <div className="agent-panel-controls">
-          {props.status === "connected" ||
-          props.status === "waiting-for-agent" ||
-          props.status === "working" ? (
-            <button
-              type="button"
-              data-testid="agent-pause"
-              onClick={props.onPause}
-            >
-              Pause
-            </button>
-          ) : null}
-          {props.status === "paused" ? (
-            <button
-              type="button"
-              data-testid="agent-resume"
-              onClick={props.onResume}
-            >
-              Resume
-            </button>
-          ) : null}
-          {!terminal ? (
-            <button
-              type="button"
-              data-testid="agent-revoke"
-              onClick={props.onRevoke}
-            >
-              Revoke
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+        {!connected ? (
+          <div className="agent-panel-grant" data-testid="agent-grant">
+            <p>Grant a scoped, short-lived capability to an external Agent.</p>
+            <ul>
+              {AGENT_PERMISSION_PRESETS.map((preset) => (
+                <li key={preset.id}>
+                  <button
+                    type="button"
+                    className="agent-preset-button"
+                    data-testid={`agent-preset-${preset.id}`}
+                    onClick={() => props.onGrant(preset.scopes)}
+                  >
+                    {preset.label}
+                  </button>
+                  <span className="agent-preset-scopes">
+                    {preset.scopes.join(", ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
-      {props.audit.length > 0 ? (
-        <ul className="agent-panel-audit" data-testid="agent-audit">
-          {props.audit
-            .slice()
-            .reverse()
-            .map((entry, index) => (
-              <li key={`${entry.at}-${index}`} data-testid="agent-audit-entry">
-                <span>{new Date(entry.at).toISOString()}</span>
-                <span>{entry.kind}</span>
-                {entry.detail ? <span>{entry.detail}</span> : null}
-              </li>
-            ))}
-        </ul>
-      ) : null}
+        {props.claimCode !== null && !terminal ? (
+          <div className="agent-panel-claim" data-testid="agent-claim">
+            <p>
+              Give this one-time code and the editor address to the Agent. It
+              expires in minutes.
+            </p>
+            <code data-testid="agent-claim-code">{props.claimCode}</code>
+            <button
+              type="button"
+              data-testid="agent-copy-instructions"
+              onClick={() => {
+                const origin = window.location.origin;
+                void navigator.clipboard
+                  .writeText(
+                    `Connect to the Interactive Circuit Maker Agent API. POST ${JSON.stringify({ claimCode: props.claimCode })} to ${origin}/api/agent/claims, then use the returned bearer token, sessionId, and documentIds. OpenAPI: ${origin}/api/agent/openapi.json`,
+                  )
+                  .catch(() => undefined);
+              }}
+            >
+              Copy Agent connection instructions
+            </button>
+            <p className="agent-panel-scopes">
+              Scopes: {props.scopes.join(", ")}
+            </p>
+          </div>
+        ) : null}
+
+        {connected ? (
+          <div className="agent-panel-controls">
+            {props.status === "connected" ||
+            props.status === "waiting-for-agent" ||
+            props.status === "working" ? (
+              <button
+                type="button"
+                data-testid="agent-pause"
+                onClick={props.onPause}
+              >
+                Pause
+              </button>
+            ) : null}
+            {props.status === "paused" ? (
+              <button
+                type="button"
+                data-testid="agent-resume"
+                onClick={props.onResume}
+              >
+                Resume
+              </button>
+            ) : null}
+            {props.status === "offline" || props.status === "reconnecting" ? (
+              <button
+                type="button"
+                data-testid="agent-reconnect"
+                onClick={props.onReconnect}
+              >
+                Reconnect
+              </button>
+            ) : null}
+            {!terminal ? (
+              <button
+                type="button"
+                data-testid="agent-revoke"
+                onClick={props.onRevoke}
+              >
+                Revoke
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {props.audit.length > 0 ? (
+          <ul className="agent-panel-audit" data-testid="agent-audit">
+            {props.audit
+              .slice()
+              .reverse()
+              .map((entry, index) => (
+                <li
+                  key={`${entry.at}-${index}`}
+                  data-testid="agent-audit-entry"
+                >
+                  <span>{new Date(entry.at).toISOString()}</span>
+                  <span>{entry.kind}</span>
+                  {entry.detail ? <span>{entry.detail}</span> : null}
+                </li>
+              ))}
+          </ul>
+        ) : null}
+      </section>
     </div>
   );
 }

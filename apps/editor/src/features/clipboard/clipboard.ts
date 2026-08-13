@@ -388,7 +388,7 @@ export function proposePaste(
   );
   edits.push(
     ...clipboard.annotations.map((annotation): SchematicEdit => ({
-      kind: "upsert_annotation",
+      kind: "upsert_schematic_annotation",
       annotation: {
         ...structuredClone(annotation),
         id: uniqueCopyId(annotation.id, sequence, occupied),

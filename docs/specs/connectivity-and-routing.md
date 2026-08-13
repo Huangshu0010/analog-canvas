@@ -267,6 +267,24 @@ and
 None of these read models is persisted or formally exported; they are absent
 from Project JSON, recovery, and SVG/PNG/PDF output.
 
+### Coincident contact is one derived fact
+
+`deriveDocumentContactEvidence` is the sole coordinate-contact derivation.
+For explicit endpoints on the same Net and exact page coordinate, it reports
+the participating terminals/Junctions/ports/Route anchors and their incident
+directions. Consumers do not independently infer contact from symbol bounds or
+SVG pixels:
+
+- visible connectivity unions the reported same-Net endpoint contact;
+- junction rendering uses its incident degree to decide whether to draw a dot;
+- wire-through diagnostics accept a terminal at a Route endpoint only when the
+  same contact evidence contains it.
+
+Route waypoints are deliberately not implicit contact points. Two centerlines
+that merely cross remain disconnected unless an explicit Junction/anchor makes
+the contact part of the Document. This derived layer changes no Net membership
+and is absent from persistence.
+
 ### Compatibility and deletion threshold
 
 The migration is additive and one-consumer-at-a-time. The existing

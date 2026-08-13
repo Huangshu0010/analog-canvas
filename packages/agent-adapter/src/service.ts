@@ -1,9 +1,9 @@
+import { resolveDocumentRoutingGeometry, sha256Hex } from "@icm/derived";
 import {
-  diagnoseVisualQuality,
-  resolveDocumentRoutingGeometry,
-  sha256Hex,
-} from "@icm/derived";
-import { executeTransaction } from "@icm/edit-engine";
+  executeTransaction,
+  proposeWireIntent,
+  SchematicEditSchema,
+} from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
 import { transformPoint } from "@icm/model";
 import type {
@@ -16,6 +16,11 @@ import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { base64EncodeUtf8, utf8ByteLength } from "./platform.js";
+import {
+  agentDiagnosticIdentity,
+  agentProjectDiagnostics,
+  agentVisualDiagnostics,
+} from "./diagnostics.js";
 import type { AgentOperationHost } from "./host.js";
 import {
   AGENT_API_V1_VERSION,
@@ -54,42 +59,17 @@ const QUERY_SCOPES = [
   "diagnostics",
   "changes",
 ] as const;
-export const AGENT_EDIT_KINDS = [
-  "noop",
-  "clear_document",
-  "add_instance",
-  "remove_instance",
-  "set_instance_symbol",
-  "place_instance",
-  "move_instance",
-  "rotate_instance",
-  "mirror_instance",
-  "patch_instance_properties",
-  "place_port",
-  "move_port",
-  "set_route_points",
-  "route_orthogonal",
-  "add_junction",
-  "remove_junction",
-  "move_junction",
-  "make_flightline",
-  "cut_connection",
-  "connect_endpoints",
-  "merge_nets",
-  "set_net_name",
-  "normalize_power_nets",
-  "set_mos_bulk_defaults",
-  "reconcile_mos_bulk",
-  "clear_mos_bulk_default",
-  "disconnect_endpoint",
-  "upsert_annotation",
-  "remove_annotation",
-  "set_layout_group",
-  "remove_layout_group",
-  "set_layout_constraint",
-  "remove_layout_constraint",
-  "align_instances",
-] as const;
+/**
+ * The Edit Engine schema is the sole list of typed edit kinds. `wire` is the
+ * one deliberate extra capability: it advertises the mutually-exclusive
+ * high-level `wireIntent` transaction form, not a SchematicEdit member.
+ */
+export const AGENT_EDIT_KINDS = Object.freeze([
+  ...SchematicEditSchema.options
+    .map((option) => option.shape.kind.value)
+    .filter((kind) => agentEditCategory(kind) !== "unsupported"),
+  "wire",
+]);
 
 export const DEFAULT_AGENT_LIMITS: AgentLimits = {
   maxQueryObjects: 200,
@@ -170,25 +150,6 @@ function collectResolvedRoutes(
     }
   }
   return result;
-}
-
-function visualDiagnostics(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-): AgentDiagnostic[] {
-  return diagnoseVisualQuality(document, resolver).map((item) => ({
-    code: item.code,
-    severity: item.severity,
-    category: item.category,
-    confidence: item.confidence,
-    gateEligible: item.gateEligible,
-    message: item.message,
-    objectIds: [...item.objectIds],
-    revision: document.revision,
-    ...(item.bounds ? { bounds: item.bounds } : {}),
-    ...(item.point ? { point: item.point } : {}),
-    ...(item.parameters ? { parameters: { ...item.parameters } } : {}),
-  }));
 }
 
 function sourceNetIds(document: SchematicDocument, objectId: string): string[] {
@@ -468,9 +429,9 @@ function selectQueryIds(
 }
 
 export function agentEditCategory(
-  edit: SchematicEdit,
+  kind: SchematicEdit["kind"],
 ): "geometry" | "connectivity" | "presentation" | "unsupported" {
-  switch (edit.kind) {
+  switch (kind) {
     case "noop":
     case "add_instance":
     case "remove_instance":
@@ -507,8 +468,6 @@ export function agentEditCategory(
     case "add_no_connect":
     case "remove_no_connect":
       return "connectivity";
-    case "upsert_annotation":
-    case "remove_annotation":
     case "upsert_schematic_annotation":
     case "remove_schematic_annotation":
     case "upsert_drafting_object":
@@ -537,10 +496,10 @@ function renderArtifact(
   request: AgentRenderRequest,
   document: SchematicDocument,
   resolver: SymbolResolver,
+  diagnostics: AgentDiagnostic[],
 ): { svg: string; diagnostics: AgentDiagnostic[] } {
   const options = request.bounds ? { bounds: request.bounds } : {};
   let svg = renderDocumentSvg(document, resolver, options);
-  const diagnostics = visualDiagnostics(document, resolver);
   if (request.mode === "diagnostics") {
     const scene = buildSvgScene(document, resolver, options);
     const lines = diagnostics
@@ -741,7 +700,14 @@ export function createAgentCircuitService(
           (id) => !all.some((item) => item.id === id),
         );
         const diagnostics = [
-          ...visualDiagnostics(document, resolver),
+          ...(project
+            ? agentProjectDiagnostics(
+                project,
+                resolver,
+                document.id,
+                document.revision,
+              )
+            : agentVisualDiagnostics(document, resolver)),
           ...missingIds.map((id) => ({
             code: "AGENT_QUERY_OBJECT_NOT_FOUND",
             severity: "info" as const,
@@ -784,7 +750,32 @@ export function createAgentCircuitService(
       }
 
       if (request.operation === "transact") {
-        if (request.edits.length > limits.maxTransactionEdits) {
+        if (request.wireIntent) {
+          if (
+            !options.permissions.edit.geometry ||
+            !options.permissions.edit.connectivity
+          ) {
+            return fail(
+              "transact",
+              "PERMISSION_DENIED",
+              "Wire intent requires geometry and connectivity edit permissions",
+              document.revision,
+            );
+          }
+        }
+        const plannedWire = request.wireIntent
+          ? proposeWireIntent(document, resolver, request.wireIntent)
+          : null;
+        if (typeof plannedWire === "string") {
+          return fail(
+            "transact",
+            "EDIT_PRECONDITION",
+            plannedWire,
+            document.revision,
+          );
+        }
+        const edits = request.edits ?? plannedWire?.edits ?? [];
+        if (edits.length > limits.maxTransactionEdits) {
           return fail(
             "transact",
             "LIMIT_EXCEEDED",
@@ -792,8 +783,8 @@ export function createAgentCircuitService(
             document.revision,
           );
         }
-        for (const edit of request.edits) {
-          const category = agentEditCategory(edit);
+        for (const edit of edits) {
+          const category = agentEditCategory(edit.kind);
           if (category === "unsupported") {
             return fail(
               "transact",
@@ -820,7 +811,7 @@ export function createAgentCircuitService(
               ...(request.dryRun === undefined
                 ? {}
                 : { dryRun: request.dryRun }),
-              edits: request.edits,
+              edits,
             })
           : executeTransaction(
               document,
@@ -832,7 +823,7 @@ export function createAgentCircuitService(
                 ...(request.dryRun === undefined
                   ? {}
                   : { dryRun: request.dryRun }),
-                edits: request.edits,
+                edits,
               },
               { symbolResolver: resolver },
             );
@@ -877,6 +868,36 @@ export function createAgentCircuitService(
           resolver,
           result.diff.changedObjectIds,
         );
+        const proposedProject = project
+          ? {
+              ...project,
+              documents: project.documents.map((candidate) =>
+                candidate.id === result.document.id
+                  ? result.document
+                  : candidate,
+              ),
+            }
+          : undefined;
+        const diagnostics = proposedProject
+          ? agentProjectDiagnostics(
+              proposedProject,
+              resolver,
+              result.document.id,
+              result.proposedRevision,
+            )
+          : agentVisualDiagnostics(result.document, resolver);
+        const beforeDiagnostics = project
+          ? agentProjectDiagnostics(
+              project,
+              resolver,
+              document.id,
+              document.revision,
+            )
+          : agentVisualDiagnostics(document, resolver);
+        const beforeIds = new Set(
+          beforeDiagnostics.map(agentDiagnosticIdentity),
+        );
+        const afterIds = new Set(diagnostics.map(agentDiagnosticIdentity));
         return response({
           apiVersion: request.apiVersion,
           requestId: request.requestId,
@@ -886,7 +907,17 @@ export function createAgentCircuitService(
           revision: result.revision,
           proposedRevision: result.proposedRevision,
           diff: result.diff,
-          diagnostics: result.diagnostics,
+          diagnostics,
+          diagnosticDelta: {
+            added: diagnostics.filter(
+              (diagnostic) =>
+                !beforeIds.has(agentDiagnosticIdentity(diagnostic)),
+            ),
+            removed: beforeDiagnostics.filter(
+              (diagnostic) =>
+                !afterIds.has(agentDiagnosticIdentity(diagnostic)),
+            ),
+          },
           ...(resolvedRoutes.length === 0 ? {} : { resolvedRoutes }),
         });
       }
@@ -900,7 +931,19 @@ export function createAgentCircuitService(
         );
       }
       try {
-        const rendered = renderArtifact(request, document, resolver);
+        const rendered = renderArtifact(
+          request,
+          document,
+          resolver,
+          project
+            ? agentProjectDiagnostics(
+                project,
+                resolver,
+                document.id,
+                document.revision,
+              )
+            : agentVisualDiagnostics(document, resolver),
+        );
         const byteLength = utf8ByteLength(rendered.svg);
         if (byteLength > limits.maxRenderBytes) {
           return fail(

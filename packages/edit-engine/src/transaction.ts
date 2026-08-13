@@ -230,22 +230,13 @@ export const RemoveNoConnectEditSchema = z.strictObject({
   kind: z.literal("remove_no_connect"),
   noConnectId: StableIdSchema,
 });
-export const UpsertAnnotationEditSchema = z.strictObject({
-  kind: z.literal("upsert_annotation"),
-  annotation: AnnotationSchema,
-});
-export const RemoveAnnotationEditSchema = z.strictObject({
-  kind: z.literal("remove_annotation"),
-  annotationId: StableIdSchema,
-});
 export const SetPresentationStyleEditSchema = z.strictObject({
   kind: z.literal("set_presentation_style"),
   styleProfileId: StableIdSchema,
 });
-// ADR 0010 Text & Peripheral Editing System edits (WP-A1a). These are
-// additive members of the union; the legacy upsert/remove_annotation remain.
-// SchematicAnnotation uses the explicit names; floating-symbol decorative
-// validation runs at execute time via the Symbol Resolver.
+// ADR 0010 Text & Peripheral Editing System edits. SchematicAnnotation uses
+// explicit names; floating-symbol decorative validation runs at execute time
+// via the Symbol Resolver.
 export const UpsertSchematicAnnotationEditSchema = z.strictObject({
   kind: z.literal("upsert_schematic_annotation"),
   annotation: AnnotationSchema,
@@ -319,8 +310,6 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   DisconnectEndpointEditSchema,
   AddNoConnectEditSchema,
   RemoveNoConnectEditSchema,
-  UpsertAnnotationEditSchema,
-  RemoveAnnotationEditSchema,
   SetPresentationStyleEditSchema,
   UpsertSchematicAnnotationEditSchema,
   RemoveSchematicAnnotationEditSchema,
@@ -3152,56 +3141,6 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
-      case "upsert_annotation": {
-        const existingIndex = draft.annotations.findIndex(
-          (annotation) => annotation.id === edit.annotation.id,
-        );
-        const existing = draft.annotations[existingIndex];
-        if (existing?.locked) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Annotation is locked: ${existing.id}`,
-          );
-        }
-        const annotation = AnnotationSchema.parse(edit.annotation);
-        const bindingError = validateNetLabelBinding(draft, annotation);
-        if (bindingError) return rejectAt("EDIT_PRECONDITION", bindingError);
-        if (existingIndex >= 0) draft.annotations[existingIndex] = annotation;
-        else draft.annotations.push(annotation);
-        changedObjectIds.add(annotation.id);
-        break;
-      }
-      case "remove_annotation": {
-        const index = draft.annotations.findIndex(
-          (annotation) => annotation.id === edit.annotationId,
-        );
-        const annotation = draft.annotations[index];
-        if (!annotation) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Annotation does not exist: ${edit.annotationId}`,
-          );
-        }
-        if (annotation.locked) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Annotation is locked: ${annotation.id}`,
-          );
-        }
-        if (
-          [...draft.layoutGroups, ...draft.constraints].some((item) =>
-            item.objectIds.includes(annotation.id),
-          )
-        ) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Annotation is referenced by layout intent: ${annotation.id}`,
-          );
-        }
-        draft.annotations.splice(index, 1);
-        changedObjectIds.add(annotation.id);
-        break;
-      }
       case "set_presentation_style": {
         draft.presentation.styleProfileId = edit.styleProfileId;
         changedObjectIds.add(draft.id);
@@ -3241,6 +3180,16 @@ export function executeTransaction(
           return rejectAt(
             "EDIT_PRECONDITION",
             `Annotation is locked: ${annotation.id}`,
+          );
+        }
+        if (
+          [...draft.layoutGroups, ...draft.constraints].some((item) =>
+            item.objectIds.includes(annotation.id),
+          )
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Annotation is referenced by layout intent: ${annotation.id}`,
           );
         }
         draft.annotations.splice(index, 1);

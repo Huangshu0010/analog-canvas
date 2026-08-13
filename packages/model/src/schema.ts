@@ -297,8 +297,18 @@ export const AnnotationSchema = z
 //
 // A1a accepts these alongside the legacy annotation kinds; the schema-1
 // constant is unchanged. Resource bounds are part of the frozen contract:
-// nesting depth <= 4, <= 64 runs per document, <= 256 chars per text run,
-// and a fraction numerator/denominator must each be non-empty.
+// nesting depth <= 4, <= 64 runs per document, and <= 256 chars per text run.
+
+export type RichTextStyle = "italic" | "bold" | "subscript" | "superscript";
+
+export type RichTextRun =
+  | { kind: "text"; value: string }
+  | { kind: "line-break" }
+  | { kind: "span"; style: RichTextStyle; children: RichTextRun[] };
+
+export interface RichTextDocument {
+  runs: RichTextRun[];
+}
 
 const RICH_TEXT_MAX_DEPTH = 4;
 const RICH_TEXT_MAX_RUNS = 64;
@@ -323,12 +333,7 @@ function richTextRunSchema(depth: number): z.ZodTypeAny {
       .min(1)
       .max(RICH_TEXT_MAX_RUNS),
   });
-  const fraction = z.strictObject({
-    kind: z.literal("fraction"),
-    numerator: richTextDocumentSchema(depth + 1),
-    denominator: richTextDocumentSchema(depth + 1),
-  });
-  return z.union([text, lineBreak, span, fraction]);
+  return z.union([text, lineBreak, span]);
 }
 
 function richTextDocumentSchema(depth: number): z.ZodTypeAny {
@@ -337,10 +342,10 @@ function richTextDocumentSchema(depth: number): z.ZodTypeAny {
   });
 }
 
-export const RichTextDocumentSchema = richTextDocumentSchema(0) as z.ZodType<{
-  runs: unknown[];
-}>;
-export const RichTextRunSchema = richTextRunSchema(0);
+export const RichTextDocumentSchema = richTextDocumentSchema(
+  0,
+) as z.ZodType<RichTextDocument>;
+export const RichTextRunSchema = richTextRunSchema(0) as z.ZodType<RichTextRun>;
 
 export const VisualAnchorSchema = z.discriminatedUnion("kind", [
   z.strictObject({
@@ -988,8 +993,6 @@ export type RouteAnnotationAttachment = z.infer<
   typeof RouteAnnotationAttachmentSchema
 >;
 export type Annotation = z.infer<typeof AnnotationSchema>;
-export type RichTextDocument = z.infer<typeof RichTextDocumentSchema>;
-export type RichTextRun = z.infer<typeof RichTextRunSchema>;
 export type VisualAnchor = z.infer<typeof VisualAnchorSchema>;
 export type DraftText = z.infer<typeof DraftTextSchema>;
 export type DraftArrow = z.infer<typeof DraftArrowSchema>;

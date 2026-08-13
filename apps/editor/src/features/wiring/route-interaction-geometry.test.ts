@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createEmptyDocument } from "@icm/model";
+import { resolveSchematicStyleProfile } from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
 import {
@@ -11,7 +12,6 @@ import {
   effectiveRouteAttachment,
   looseRouteAnchorIds,
 } from "./route-interaction-geometry";
-import { resolveSchematicStyleProfile } from "@icm/render-svg";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 

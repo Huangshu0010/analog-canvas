@@ -1,6 +1,11 @@
 import type { ProjectConnectivityIndex } from "../connectivity-index.js";
+import { buildProjectConnectivityIndex } from "../connectivity-index.js";
 import { directObjectLocator, type ObjectLocator } from "../object-locator.js";
 import type { VisualDiagnostic } from "../visual.js";
+import { diagnoseVisualQuality } from "../visual.js";
+import type { CircuitProject } from "@icm/model";
+import type { SymbolResolver } from "@icm/symbols";
+import { runErcChecks } from "./erc.js";
 
 /**
  * Unified diagnostic envelope and aggregation (ADR 0015 / roadmap §5.6, WP-R9
@@ -122,4 +127,18 @@ export function mergeDiagnostics(
         left.code.localeCompare(right.code, "en") ||
         left.primary.objectId.localeCompare(right.primary.objectId, "en"),
     );
+}
+
+/** Canonical Project diagnostic evidence consumed by the GUI and Agent API. */
+export function diagnoseProject(
+  project: CircuitProject,
+  resolver: SymbolResolver,
+  index = buildProjectConnectivityIndex(project, resolver),
+): readonly Diagnostic[] {
+  const visual = project.documents.flatMap((document) =>
+    diagnoseVisualQuality(document, resolver).map((diagnostic) =>
+      adaptVisualDiagnostic(diagnostic, document.id, index),
+    ),
+  );
+  return mergeDiagnostics(runErcChecks(project, index, resolver), visual);
 }

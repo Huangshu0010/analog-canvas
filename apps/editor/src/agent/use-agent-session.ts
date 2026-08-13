@@ -56,6 +56,11 @@ function isCreatedSessionResponse(
 type LiveSession = CreatedSessionResponse["session"] & {
   socket: WebSocket | null;
   claimed: boolean;
+  hasOpened: boolean;
+  allowReconnect: boolean;
+  reconnectAttempt: number;
+  reconnectTimer: number | null;
+  reconnect: () => void;
   requestCache: Map<
     string,
     { payloadHash: string; response: unknown; byteLength: number }
@@ -66,6 +71,15 @@ type LiveSession = CreatedSessionResponse["session"] & {
 
 const BROWSER_CACHE_MAX_ENTRIES = 32;
 const BROWSER_CACHE_MAX_BYTES = 16_000_000;
+const RECONNECT_DELAYS_MS = [250, 500, 1_000, 2_000, 4_000, 8_000] as const;
+
+function stopReconnect(live: LiveSession): void {
+  live.allowReconnect = false;
+  if (live.reconnectTimer !== null) {
+    window.clearTimeout(live.reconnectTimer);
+    live.reconnectTimer = null;
+  }
+}
 
 export interface AgentSessionViewModel {
   status: AgentConnectionStatus;
@@ -86,6 +100,7 @@ export interface UseAgentSessionResult extends AgentSessionViewModel {
   grant: (scopes: readonly AgentSessionScope[]) => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
+  reconnect: () => void;
   revoke: () => Promise<void>;
 }
 
@@ -175,6 +190,7 @@ export function useAgentSession(
       update({ status: "idle", claimCode: null });
       return;
     }
+    stopReconnect(live);
     try {
       await control("revoke");
     } catch {
@@ -216,6 +232,11 @@ export function useAgentSession(
           ...created.session,
           socket: null,
           claimed: false,
+          hasOpened: false,
+          allowReconnect: true,
+          reconnectAttempt: 0,
+          reconnectTimer: null,
+          reconnect: () => undefined,
           requestCache: new Map(),
           requestCacheBytes: 0,
           requestHashes: new Map(),
@@ -227,208 +248,244 @@ export function useAgentSession(
           host: options.host,
           permissions: permissionsFromScopes(scopes),
         });
-        const socket = new WebSocket(socketUrl(live.sessionId), [
-          "icm-agent-session",
-          live.editorSecret,
-        ]);
-        live.socket = socket;
-        socket.addEventListener("open", () => {
-          update(
-            {
-              status: "waiting-for-agent",
-              claimCode: live.claimCode,
-              scopes,
-              expiresAt: live.expiresAt,
-              error: null,
-            },
-            { at: Date.now(), kind: "granted" },
-          );
-        });
-        socket.addEventListener("message", (event) => {
-          let raw: unknown;
-          try {
-            raw = JSON.parse(String(event.data));
-          } catch {
+        const connect = () => {
+          if (
+            liveRef.current !== live ||
+            !live.allowReconnect ||
+            Date.now() >= live.expiresAt
+          ) {
             return;
           }
-          const parsed = AgentSessionMessageSchema.safeParse(raw);
-          if (!parsed.success || parsed.data.sessionId !== live.sessionId)
+          if (
+            live.socket?.readyState === WebSocket.OPEN ||
+            live.socket?.readyState === WebSocket.CONNECTING
+          ) {
             return;
-          if (parsed.data.kind === "event") {
-            const sessionEvent = AgentSessionEventSchema.safeParse(
+          }
+          if (live.reconnectTimer !== null) {
+            window.clearTimeout(live.reconnectTimer);
+            live.reconnectTimer = null;
+          }
+          const socket = new WebSocket(socketUrl(live.sessionId), [
+            "icm-agent-session",
+            live.editorSecret,
+          ]);
+          live.socket = socket;
+          socket.addEventListener("open", () => {
+            const firstConnection = !live.hasOpened;
+            live.hasOpened = true;
+            live.reconnectAttempt = 0;
+            live.reconnectTimer = null;
+            update(
+              {
+                status: live.claimed ? "connected" : "waiting-for-agent",
+                claimCode: live.claimed ? null : live.claimCode,
+                scopes,
+                expiresAt: live.expiresAt,
+                error: null,
+              },
+              firstConnection ? { at: Date.now(), kind: "granted" } : undefined,
+            );
+          });
+          socket.addEventListener("message", (event) => {
+            let raw: unknown;
+            try {
+              raw = JSON.parse(String(event.data));
+            } catch {
+              return;
+            }
+            const parsed = AgentSessionMessageSchema.safeParse(raw);
+            if (!parsed.success || parsed.data.sessionId !== live.sessionId)
+              return;
+            if (parsed.data.kind === "event") {
+              const sessionEvent = AgentSessionEventSchema.safeParse(
+                parsed.data.payload,
+              );
+              if (
+                sessionEvent.success &&
+                sessionEvent.data.type === "session.ready"
+              ) {
+                live.claimed = true;
+                update(
+                  { status: "connected", claimCode: null },
+                  { at: Date.now(), kind: "claimed" },
+                );
+              } else if (
+                sessionEvent.success &&
+                sessionEvent.data.type === "session.revoked"
+              ) {
+                stopReconnect(live);
+                socket.close(1000, "session revoked");
+                if (liveRef.current === live) liveRef.current = null;
+                update(
+                  { status: "revoked", claimCode: null },
+                  { at: Date.now(), kind: "revoked" },
+                );
+              } else if (
+                sessionEvent.success &&
+                sessionEvent.data.type === "session.paused"
+              ) {
+                update({ status: "paused" });
+              }
+              return;
+            }
+            if (parsed.data.kind !== "circuit-request") return;
+            const circuitRequest = AgentCircuitRequestSchema.safeParse(
               parsed.data.payload,
             );
-            if (
-              sessionEvent.success &&
-              sessionEvent.data.type === "session.ready"
-            ) {
-              live.claimed = true;
-              update(
-                { status: "connected", claimCode: null },
-                { at: Date.now(), kind: "claimed" },
-              );
-            } else if (
-              sessionEvent.success &&
-              sessionEvent.data.type === "session.revoked"
-            ) {
-              socket.close(1000, "session revoked");
-              if (liveRef.current === live) liveRef.current = null;
-              update(
-                { status: "revoked", claimCode: null },
-                { at: Date.now(), kind: "revoked" },
-              );
-            } else if (
-              sessionEvent.success &&
-              sessionEvent.data.type === "session.paused"
-            ) {
-              update({ status: "paused" });
-            }
-            return;
-          }
-          if (parsed.data.kind !== "circuit-request") return;
-          const circuitRequest = AgentCircuitRequestSchema.safeParse(
-            parsed.data.payload,
-          );
-          const payloadKey = JSON.stringify(parsed.data.payload);
-          const payloadHash = sha256Hex(payloadKey);
-          const cached = live.requestCache.get(parsed.data.requestId);
-          const sendResponse = (payload: unknown) => {
-            socket.send(
-              JSON.stringify({
-                protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
-                sessionId: live.sessionId,
-                messageId: crypto.randomUUID(),
-                requestId: parsed.data.requestId,
-                sentAt: new Date().toISOString(),
-                kind: "circuit-response",
-                payload,
-              }),
-            );
-          };
-          const sendRequestError = (
-            code: "REQUEST_ID_REUSED" | "REQUEST_RESULT_UNAVAILABLE",
-            message: string,
-          ) => {
-            const candidate = parsed.data.payload as {
-              apiVersion?: unknown;
-              operation?: unknown;
-            };
-            sendResponse({
-              apiVersion:
-                candidate.apiVersion === AGENT_API_V1_VERSION
-                  ? AGENT_API_V1_VERSION
-                  : AGENT_API_VERSION,
-              requestId: parsed.data.requestId,
-              operation:
-                typeof candidate.operation === "string" &&
-                ["query", "snapshot", "transact", "render"].includes(
-                  candidate.operation,
-                )
-                  ? candidate.operation
-                  : "error",
-              ok: false,
-              error: { code, message },
-              diagnostics: [],
-            });
-          };
-          if (cached) {
-            if (cached.payloadHash === payloadHash) {
-              sendResponse(cached.response);
-            } else {
-              sendRequestError(
-                "REQUEST_ID_REUSED",
-                "requestId was reused with a different payload",
-              );
-            }
-            return;
-          }
-          const knownHash = live.requestHashes.get(parsed.data.requestId);
-          if (knownHash) {
-            sendRequestError(
-              knownHash === payloadHash
-                ? "REQUEST_RESULT_UNAVAILABLE"
-                : "REQUEST_ID_REUSED",
-              knownHash === payloadHash
-                ? "The request was already executed but its cached result was evicted"
-                : "requestId was reused with a different payload",
-            );
-            return;
-          }
-          live.requestHashes.set(parsed.data.requestId, payloadHash);
-          const operation = circuitRequest.success
-            ? circuitRequest.data.operation
-            : "request";
-          update(
-            { status: "working" },
-            { at: Date.now(), kind: "operation", detail: operation },
-          );
-          const result = service.handle(parsed.data.payload);
-          const responseBytes = new TextEncoder().encode(
-            JSON.stringify(result),
-          ).byteLength;
-          if (responseBytes <= BROWSER_CACHE_MAX_BYTES) {
-            live.requestCache.set(parsed.data.requestId, {
-              payloadHash,
-              response: result,
-              byteLength: responseBytes,
-            });
-            live.requestCacheBytes += responseBytes;
-          }
-          while (
-            live.requestCache.size > BROWSER_CACHE_MAX_ENTRIES ||
-            live.requestCacheBytes > BROWSER_CACHE_MAX_BYTES
-          ) {
-            const oldest = live.requestCache.keys().next().value;
-            if (oldest === undefined) break;
-            const entry = live.requestCache.get(oldest);
-            live.requestCache.delete(oldest);
-            live.requestCacheBytes -= entry?.byteLength ?? 0;
-          }
-          sendResponse(result);
-          if (
-            result.ok &&
-            result.operation === "transact" &&
-            result.applied &&
-            circuitRequest.success &&
-            circuitRequest.data.operation === "transact"
-          ) {
-            agentRevisionRef.current.set(
-              circuitRequest.data.documentId,
-              result.revision,
-            );
-            socket.send(
-              JSON.stringify({
-                protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
-                sessionId: live.sessionId,
-                messageId: crypto.randomUUID(),
-                requestId: parsed.data.requestId,
-                sentAt: new Date().toISOString(),
-                kind: "event",
-                payload: {
-                  type: "document.revision-changed",
+            const payloadKey = JSON.stringify(parsed.data.payload);
+            const payloadHash = sha256Hex(payloadKey);
+            const cached = live.requestCache.get(parsed.data.requestId);
+            const sendResponse = (payload: unknown) => {
+              socket.send(
+                JSON.stringify({
+                  protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
                   sessionId: live.sessionId,
-                  documentId: circuitRequest.data.documentId,
-                  revision: result.revision,
-                  actorKind: "agent",
+                  messageId: crypto.randomUUID(),
                   requestId: parsed.data.requestId,
-                  changedObjectIds: [...result.diff.changedObjectIds],
-                },
-              }),
+                  sentAt: new Date().toISOString(),
+                  kind: "circuit-response",
+                  payload,
+                }),
+              );
+            };
+            const sendRequestError = (
+              code: "REQUEST_ID_REUSED" | "REQUEST_RESULT_UNAVAILABLE",
+              message: string,
+            ) => {
+              const candidate = parsed.data.payload as {
+                apiVersion?: unknown;
+                operation?: unknown;
+              };
+              sendResponse({
+                apiVersion:
+                  candidate.apiVersion === AGENT_API_V1_VERSION
+                    ? AGENT_API_V1_VERSION
+                    : AGENT_API_VERSION,
+                requestId: parsed.data.requestId,
+                operation:
+                  typeof candidate.operation === "string" &&
+                  ["query", "snapshot", "transact", "render"].includes(
+                    candidate.operation,
+                  )
+                    ? candidate.operation
+                    : "error",
+                ok: false,
+                error: { code, message },
+                diagnostics: [],
+              });
+            };
+            if (cached) {
+              if (cached.payloadHash === payloadHash) {
+                sendResponse(cached.response);
+              } else {
+                sendRequestError(
+                  "REQUEST_ID_REUSED",
+                  "requestId was reused with a different payload",
+                );
+              }
+              return;
+            }
+            const knownHash = live.requestHashes.get(parsed.data.requestId);
+            if (knownHash) {
+              sendRequestError(
+                knownHash === payloadHash
+                  ? "REQUEST_RESULT_UNAVAILABLE"
+                  : "REQUEST_ID_REUSED",
+                knownHash === payloadHash
+                  ? "The request was already executed but its cached result was evicted"
+                  : "requestId was reused with a different payload",
+              );
+              return;
+            }
+            live.requestHashes.set(parsed.data.requestId, payloadHash);
+            const operation = circuitRequest.success
+              ? circuitRequest.data.operation
+              : "request";
+            update(
+              { status: "working" },
+              { at: Date.now(), kind: "operation", detail: operation },
             );
-          }
-          update({ status: "connected" });
-        });
-        socket.addEventListener("close", () => {
-          if (liveRef.current === live) update({ status: "offline" });
-        });
-        socket.addEventListener("error", () => {
-          if (liveRef.current === live) {
-            update({
-              status: "offline",
-              error: "Agent relay connection failed",
-            });
-          }
-        });
+            const result = service.handle(parsed.data.payload);
+            const responseBytes = new TextEncoder().encode(
+              JSON.stringify(result),
+            ).byteLength;
+            if (responseBytes <= BROWSER_CACHE_MAX_BYTES) {
+              live.requestCache.set(parsed.data.requestId, {
+                payloadHash,
+                response: result,
+                byteLength: responseBytes,
+              });
+              live.requestCacheBytes += responseBytes;
+            }
+            while (
+              live.requestCache.size > BROWSER_CACHE_MAX_ENTRIES ||
+              live.requestCacheBytes > BROWSER_CACHE_MAX_BYTES
+            ) {
+              const oldest = live.requestCache.keys().next().value;
+              if (oldest === undefined) break;
+              const entry = live.requestCache.get(oldest);
+              live.requestCache.delete(oldest);
+              live.requestCacheBytes -= entry?.byteLength ?? 0;
+            }
+            sendResponse(result);
+            if (
+              result.ok &&
+              result.operation === "transact" &&
+              result.applied &&
+              circuitRequest.success &&
+              circuitRequest.data.operation === "transact"
+            ) {
+              agentRevisionRef.current.set(
+                circuitRequest.data.documentId,
+                result.revision,
+              );
+              socket.send(
+                JSON.stringify({
+                  protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+                  sessionId: live.sessionId,
+                  messageId: crypto.randomUUID(),
+                  requestId: parsed.data.requestId,
+                  sentAt: new Date().toISOString(),
+                  kind: "event",
+                  payload: {
+                    type: "document.revision-changed",
+                    sessionId: live.sessionId,
+                    documentId: circuitRequest.data.documentId,
+                    revision: result.revision,
+                    actorKind: "agent",
+                    requestId: parsed.data.requestId,
+                    changedObjectIds: [...result.diff.changedObjectIds],
+                  },
+                }),
+              );
+            }
+            update({ status: "connected" });
+          });
+          socket.addEventListener("close", () => {
+            if (live.socket === socket) live.socket = null;
+            if (liveRef.current !== live || !live.allowReconnect) return;
+            const delay = RECONNECT_DELAYS_MS[live.reconnectAttempt];
+            if (delay === undefined || Date.now() >= live.expiresAt) {
+              update({ status: "offline" });
+              return;
+            }
+            live.reconnectAttempt += 1;
+            update({ status: "reconnecting" });
+            live.reconnectTimer = window.setTimeout(connect, delay);
+          });
+          socket.addEventListener("error", () => {
+            if (liveRef.current === live) {
+              update({
+                status: "reconnecting",
+                error: "Agent relay connection failed",
+              });
+              socket.close();
+            }
+          });
+        };
+        live.reconnect = connect;
+        connect();
       } catch (error) {
         liveRef.current = null;
         update({
@@ -470,6 +527,19 @@ export function useAgentSession(
       });
     }
   }, [control, update]);
+
+  const reconnect = useCallback(() => {
+    const live = liveRef.current;
+    if (!live || Date.now() >= live.expiresAt) return;
+    if (live.reconnectTimer !== null) {
+      window.clearTimeout(live.reconnectTimer);
+      live.reconnectTimer = null;
+    }
+    live.allowReconnect = true;
+    live.reconnectAttempt = 0;
+    update({ status: "reconnecting", error: null });
+    live.reconnect();
+  }, [update]);
 
   useEffect(() => {
     if (projectSessionRef.current !== options.projectSessionId) return;
@@ -522,6 +592,7 @@ export function useAgentSession(
     agentRevisionRef.current.clear();
     const live = liveRef.current;
     if (!live) return;
+    stopReconnect(live);
     void control("replace-project").finally(() => {
       live.socket?.close(1000, "project replaced");
       liveRef.current = null;
@@ -536,6 +607,7 @@ export function useAgentSession(
     const timer = window.setInterval(() => {
       const live = liveRef.current;
       if (live && Date.now() >= live.expiresAt) {
+        stopReconnect(live);
         live.socket?.close(1000, "expired");
         liveRef.current = null;
         update({ status: "expired", claimCode: null });
@@ -548,6 +620,7 @@ export function useAgentSession(
     () => () => {
       const live = liveRef.current;
       if (live) {
+        stopReconnect(live);
         void fetch(`/api/agent/sessions/${live.sessionId}`, {
           method: "DELETE",
           headers: { "x-editor-secret": live.editorSecret },
@@ -559,5 +632,5 @@ export function useAgentSession(
     [],
   );
 
-  return { ...view, grant, pause, resume, revoke };
+  return { ...view, grant, pause, resume, reconnect, revoke };
 }

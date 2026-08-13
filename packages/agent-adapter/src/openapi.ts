@@ -28,6 +28,52 @@ const transportErrorSchema = {
   },
 } as const;
 
+function componentSchema(
+  value: Record<string, unknown>,
+  componentName: string,
+): Record<string, unknown> {
+  return componentSchemaValue(value, componentName) as Record<string, unknown>;
+}
+
+function componentSchemaValue(value: unknown, componentName: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => componentSchemaValue(item, componentName));
+  }
+  if (typeof value !== "object" || value === null) return value;
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, item]) => {
+      // OpenAPI 3.1 supplies the dialect for component schemas.
+      if (key === "$schema") return [];
+      if (
+        key === "$ref" &&
+        typeof item === "string" &&
+        item.startsWith("#/$defs/")
+      ) {
+        return [
+          [key, `#/components/schemas/${componentName}/${item.slice(2)}`],
+        ];
+      }
+      return [[key, componentSchemaValue(item, componentName)]];
+    }),
+  );
+}
+
+const agentCircuitRequestSchema = componentSchema(
+  AgentCircuitRequestJsonSchema as Record<string, unknown>,
+  "agentCircuitRequest",
+);
+const agentCircuitResponseSchema = componentSchema(
+  AgentCircuitResponseJsonSchema as Record<string, unknown>,
+  "agentCircuitResponse",
+);
+const agentCircuitRequestRef = {
+  $ref: "#/components/schemas/agentCircuitRequest",
+} as const;
+const agentCircuitResponseRef = {
+  $ref: "#/components/schemas/agentCircuitResponse",
+} as const;
+
 export const agentCircuitOpenApi = {
   openapi: "3.1.0",
   info: {
@@ -44,14 +90,14 @@ export const agentCircuitOpenApi = {
         requestBody: {
           required: true,
           content: {
-            "application/json": { schema: AgentCircuitRequestJsonSchema },
+            "application/json": { schema: agentCircuitRequestRef },
           },
         },
         responses: {
           "200": {
             description: "Agent Circuit API response",
             content: {
-              "application/json": { schema: AgentCircuitResponseJsonSchema },
+              "application/json": { schema: agentCircuitResponseRef },
             },
           },
         },
@@ -65,14 +111,14 @@ export const agentCircuitOpenApi = {
         requestBody: {
           required: true,
           content: {
-            "application/json": { schema: AgentCircuitRequestJsonSchema },
+            "application/json": { schema: agentCircuitRequestRef },
           },
         },
         responses: {
           "200": {
             description: "Agent Circuit API response",
             content: {
-              "application/json": { schema: AgentCircuitResponseJsonSchema },
+              "application/json": { schema: agentCircuitResponseRef },
             },
           },
         },
@@ -179,14 +225,14 @@ export const agentCircuitOpenApi = {
         requestBody: {
           required: true,
           content: {
-            "application/json": { schema: AgentCircuitRequestJsonSchema },
+            "application/json": { schema: agentCircuitRequestRef },
           },
         },
         responses: {
           "200": {
             description: "Circuit API response",
             content: {
-              "application/json": { schema: AgentCircuitResponseJsonSchema },
+              "application/json": { schema: agentCircuitResponseRef },
             },
           },
           default: {
@@ -303,6 +349,8 @@ export const agentCircuitOpenApi = {
       bearerAuth: { type: "http", scheme: "bearer" },
     },
     schemas: {
+      agentCircuitRequest: agentCircuitRequestSchema,
+      agentCircuitResponse: agentCircuitResponseSchema,
       agentSessionCreated: {
         type: "object",
         additionalProperties: false,
@@ -332,7 +380,15 @@ export const agentCircuitOpenApi = {
       agentClaimResponse: {
         type: "object",
         additionalProperties: false,
-        required: ["ok", "sessionId", "agentToken", "tokenExpiresAt", "scopes"],
+        required: [
+          "ok",
+          "sessionId",
+          "agentToken",
+          "tokenExpiresAt",
+          "scopes",
+          "projectId",
+          "documentIds",
+        ],
         properties: {
           ok: { type: "boolean", const: true },
           sessionId: { type: "string", minLength: 1 },
@@ -340,6 +396,12 @@ export const agentCircuitOpenApi = {
           tokenExpiresAt: { type: "integer", minimum: 0 },
           scopes: {
             type: "array",
+            items: { type: "string", minLength: 1 },
+          },
+          projectId: { type: "string", minLength: 1 },
+          documentIds: {
+            type: "array",
+            minItems: 1,
             items: { type: "string", minLength: 1 },
           },
         },

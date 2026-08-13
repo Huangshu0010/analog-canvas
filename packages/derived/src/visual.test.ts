@@ -11,6 +11,70 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("visual quality diagnostics", () => {
+  it("does not report a legal Route contact through a coincident same-Net terminal", () => {
+    const document = createEmptyDocument("doc-contact", "Contact diagnostics");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.ports.push(
+      {
+        id: "left",
+        name: "left",
+        direction: "passive",
+        position: { x: 60, y: 100 },
+      },
+      {
+        id: "right",
+        name: "right",
+        direction: "passive",
+        position: { x: 140, y: 100 },
+      },
+    );
+    document.nets.push({
+      id: "net-out",
+      scope: "local",
+      terminals: [{ instanceId: "R1", pinName: "1" }],
+      ports: ["left", "right"],
+    });
+    document.junctions.push({
+      id: "junction-out",
+      netId: "net-out",
+      position: { x: 100, y: 100 },
+      role: "branch",
+    });
+    document.routes.push(
+      {
+        id: "route-left",
+        netId: "net-out",
+        from: { kind: "port", portId: "left" },
+        to: { kind: "junction", junctionId: "junction-out" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-right",
+        netId: "net-out",
+        from: { kind: "junction", junctionId: "junction-out" },
+        to: { kind: "port", portId: "right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    expect(
+      diagnoseVisualQuality(document, resolver).filter(
+        (item) => item.code === "VISUAL_WIRE_THROUGH_SYMBOL",
+      ),
+    ).toEqual([]);
+  });
+
   it("reports unplaced, overlap, and alignment defects deterministically", () => {
     const document = createEmptyDocument("doc", "Visual diagnostics");
     document.instances = [
