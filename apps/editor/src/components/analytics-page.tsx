@@ -239,6 +239,19 @@ export function AnalyticsPage() {
 
           <section
             className="analytics-section"
+            aria-labelledby="analytics-map-h"
+          >
+            <SectionHead
+              title="Origins"
+              id="analytics-map-h"
+              aside="Map"
+              meta={<p className="analytics-note">≈1° request buckets</p>}
+            />
+            <WorldHeatmap points={summary?.points ?? []} />
+          </section>
+
+          <section
+            className="analytics-section"
             aria-labelledby="analytics-chart-h"
           >
             <SectionHead
@@ -302,19 +315,6 @@ export function AnalyticsPage() {
               <span className="analytics-range-hint">UTC</span>
             </form>
             <DailyChart days={visibleDays} />
-          </section>
-
-          <section
-            className="analytics-section"
-            aria-labelledby="analytics-map-h"
-          >
-            <SectionHead
-              title="Origins"
-              id="analytics-map-h"
-              aside="Map"
-              meta={<p className="analytics-note">≈1° request buckets</p>}
-            />
-            <WorldHeatmap points={summary?.points ?? []} />
           </section>
 
           <div className="analytics-cols">
