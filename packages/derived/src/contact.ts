@@ -65,8 +65,7 @@ function samePoint(left: Point, right: Point): boolean {
 
 function pointOnSegment(point: Point, from: Point, to: Point): boolean {
   const cross =
-    (point.x - from.x) * (to.y - from.y) -
-    (point.y - from.y) * (to.x - from.x);
+    (point.x - from.x) * (to.y - from.y) - (point.y - from.y) * (to.x - from.x);
   if (cross !== 0) return false;
   return (
     point.x >= Math.min(from.x, to.x) &&

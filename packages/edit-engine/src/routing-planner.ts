@@ -636,6 +636,12 @@ interface OrderedWireContact {
   offset: number;
 }
 
+function terminalInstanceId(source: WireSource): string | null {
+  return source.endpoint.kind === "terminal"
+    ? source.endpoint.instanceId
+    : null;
+}
+
 /**
  * Author one wire through every exact visible pin contact in one transaction.
  *
@@ -652,6 +658,11 @@ export function proposeWireCommitThroughContacts(
   suffixOrIds: number | { routeId: string; newNetId: string },
 ): WireCommitProposal {
   const path = buildManualWirePath(from, to, manualWaypoints);
+  const endpointInstanceIds = new Set(
+    [terminalInstanceId(from), terminalInstanceId(to)].filter(
+      (instanceId): instanceId is string => instanceId !== null,
+    ),
+  );
   const totalOffset = path.points.slice(0, -1).reduce((total, point, index) => {
     const next = path.points[index + 1]!;
     return total + Math.abs(next.x - point.x) + Math.abs(next.y - point.y);
@@ -660,7 +671,9 @@ export function proposeWireCommitThroughContacts(
     .flatMap((source): OrderedWireContact[] => {
       if (
         sameEndpoint(source.endpoint, from.endpoint) ||
-        sameEndpoint(source.endpoint, to.endpoint)
+        sameEndpoint(source.endpoint, to.endpoint) ||
+        (source.endpoint.kind === "terminal" &&
+          endpointInstanceIds.has(source.endpoint.instanceId))
       ) {
         return [];
       }

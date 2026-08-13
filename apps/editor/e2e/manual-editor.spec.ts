@@ -316,7 +316,7 @@ test("connects one MOS Gate to Drain without false contact ambiguity", async ({
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
   await expect(
     page.locator('[data-layer="junctions"] [data-node-kind="contact"]'),
-  ).toHaveCount(2);
+  ).toHaveCount(0);
 });
 
 test("keeps Wire input above labels and resolves a screen-tolerant route tap", async ({
@@ -1583,7 +1583,10 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await clickRouteWithScreenOffset(page, "route-ui-1", { x: 0, y: 5 }, 0.25);
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
-  await expect(page.getByTestId("crossing-count")).toHaveText("2");
+  // The new branch passes exactly through D.P. Pass-through pin capture makes
+  // that an explicit electrical contact, so only the original geometric
+  // crossing remains.
+  await expect(page.getByTestId("crossing-count")).toHaveText("1");
   await page.keyboard.press("Escape");
 
   await clickRoute(page, "route-ui-2", 0.25);

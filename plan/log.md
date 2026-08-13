@@ -6227,3 +6227,17 @@ contracts (WP-R1)`.
   typecheck, targeted browser regression, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/unified-electrical-contact` as
   `fix: connect compatible pins along authored wires`.
+
+## 2026-08-13 - Mainline contact delivery gate
+
+- Target: close the full mainline gate for unified contact authoring without
+  allowing automatic pass-through capture to short pins inside either
+  explicitly selected endpoint device.
+- Changed areas: contact formatting; endpoint-device exclusion in the shared
+  wire planner; focused planner/browser regressions; and the formal export
+  golden for the accepted dotless simple-corner rule.
+- Validation: frozen dependency install and complete `pnpm ci:check` passed,
+  including 683 unit tests, all workspace builds, export/PWA/production/release
+  verification, and 99 browser tests; `git diff --check` passed.
+- Commit status: ready to commit on `codex/unified-electrical-contact` as
+  `chore: satisfy contact mainline gate`.
