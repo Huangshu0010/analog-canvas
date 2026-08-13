@@ -6146,3 +6146,14 @@ contracts (WP-R1)`.
 - Validation: repository Prettier on changed Markdown and `git diff --check`.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(plan): format batch 2 archive index`.
+
+## 2026-08-13 - Retire unused platform-web package
+
+- Target: remove the isolated browser platform package without changing the
+  editor's active recovery or file workflows.
+- Changed areas: deleted `packages/platform-web/` and its workspace lockfile
+  importer; the editor's independent recovery implementation remains intact.
+- Validation: lockfile-only install, no-reference search, four focused editor
+  recovery tests, workspace typecheck, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(platform): retire unused browser platform package`.
