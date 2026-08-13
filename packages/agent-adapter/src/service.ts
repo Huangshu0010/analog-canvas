@@ -477,8 +477,10 @@ export function agentEditCategory(
     case "make_flightline":
     case "cut_connection":
     case "connect_endpoints":
+    case "add_power_rail":
     case "merge_nets":
     case "set_net_name":
+    case "set_net_power_domain":
     case "normalize_power_nets":
     case "clear_document":
     case "set_mos_bulk_defaults":

@@ -205,6 +205,7 @@ describe("derived connectivity and route geometry", () => {
         id: "net-vss",
         name: "VSS",
         scope: "global",
+        powerDomain: "ground",
         terminals: [{ instanceId: "XM1", pinName: "B" }],
         ports: ["port-vss"],
       },

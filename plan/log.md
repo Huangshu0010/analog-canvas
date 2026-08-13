@@ -6303,3 +6303,18 @@ contracts (WP-R1)`.
   passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `fix(agent): close the four-operation request contract`.
+
+## 2026-08-13 - Explicit Net power-domain authority
+
+- Target: remove runtime supply semantics from legacy VDD/ground marker
+  symbols and make VDD rail authoring an atomic, Agent-visible document edit.
+- Changed areas: Project schema v5 and v4-to-v5 migration; explicit
+  power-domain consumers in model/derived/render/edit engine; VDD rail and
+  component-placement behavior; Agent Snapshot/OpenAPI artifacts; compatibility
+  fixtures and current API/project documentation.
+- Validation: focused model, transaction, Agent, and editor tests; full local
+  unit suite (114 files, 708 tests); typecheck; generated Agent artifact
+  write/check; docs and reference checks; `git diff --check`; and
+  `pnpm verify:branch` (workspace build and production smoke) passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(model): make Net power-domain explicit`.

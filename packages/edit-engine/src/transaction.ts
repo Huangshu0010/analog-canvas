@@ -11,6 +11,7 @@ import {
   LayoutGroupSchema,
   MirrorSchema,
   NoConnectSchema,
+  NetPowerDomainSchema,
   PlacementSchema,
   PointSchema,
   RouteEndpointSchema,
@@ -194,6 +195,27 @@ export const ConnectEndpointsEditSchema = z.strictObject({
   newNetName: z.string().min(1).optional(),
   newNetScope: z.enum(["local", "global"]).optional(),
 });
+/**
+ * A VDD rail is electrical data, not a hidden marker instance plus an
+ * unrelated line. This edit creates the explicit supply Net and its only
+ * visible rail geometry atomically.
+ */
+export const AddPowerRailEditSchema = z.strictObject({
+  kind: z.literal("add_power_rail"),
+  netId: StableIdSchema,
+  routeId: StableIdSchema,
+  startJunctionId: StableIdSchema,
+  endJunctionId: StableIdSchema,
+  labelId: StableIdSchema,
+  domain: z.literal("vdd"),
+  start: PointSchema,
+  end: PointSchema,
+});
+export const SetNetPowerDomainEditSchema = z.strictObject({
+  kind: z.literal("set_net_power_domain"),
+  netId: StableIdSchema,
+  powerDomain: z.enum(["none", "vdd", "ground"]),
+});
 export const MergeNetsEditSchema = z.strictObject({
   kind: z.literal("merge_nets"),
   targetNetId: StableIdSchema,
@@ -311,8 +333,10 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MakeFlightlineEditSchema,
   CutConnectionEditSchema,
   ConnectEndpointsEditSchema,
+  AddPowerRailEditSchema,
   MergeNetsEditSchema,
   SetNetNameEditSchema,
+  SetNetPowerDomainEditSchema,
   NormalizePowerNetsEditSchema,
   SetMosBulkDefaultsEditSchema,
   ReconcileMosBulkEditSchema,
@@ -701,10 +725,7 @@ function validateRoute(
   }
   const net = document.nets.find((candidate) => candidate.id === route.netId);
   if (!net) return `Route net does not exist: ${route.netId}`;
-  if (
-    route.presentation === "power-rail" &&
-    powerDomainForNet(document, net) !== "vdd"
-  ) {
+  if (route.presentation === "power-rail" && powerDomainForNet(net) !== "vdd") {
     return `Power rail ${route.id} must belong to a VDD Net`;
   }
   if (!endpointBelongsToNet(document, net, route.from)) {
@@ -2450,6 +2471,7 @@ export function executeTransaction(
           draft.nets.push({
             id: edit.netId,
             scope: "local",
+            powerDomain: "none",
             terminals: [],
             ports: [],
           });
@@ -2856,6 +2878,7 @@ export function executeTransaction(
             draft.nets.push({
               id: groupNetId,
               scope: "local",
+              powerDomain: net.powerDomain ?? "none",
               terminals: terminalsFor(groupNetId),
               ports: portsFor(groupNetId),
             });
@@ -2937,6 +2960,7 @@ export function executeTransaction(
             id: netId,
             ...(edit.newNetName ? { name: edit.newNetName } : {}),
             scope: edit.newNetScope ?? "local",
+            powerDomain: "none",
             terminals: [],
             ports: [],
           });
@@ -2945,6 +2969,109 @@ export function executeTransaction(
         addEndpointToNet(draft, netId, edit.from);
         addEndpointToNet(draft, netId, edit.to);
         changedObjectIds.add(netId);
+        connectivityChanged = true;
+        break;
+      }
+      case "add_power_rail": {
+        if (edit.start.y !== edit.end.y || edit.start.x === edit.end.x) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "A VDD power rail must be a non-zero horizontal segment",
+          );
+        }
+        const ids = [
+          edit.netId,
+          edit.routeId,
+          edit.startJunctionId,
+          edit.endJunctionId,
+          edit.labelId,
+        ];
+        if (new Set(ids).size !== ids.length) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Power rail IDs must be distinct",
+          );
+        }
+        const existingIds = new Set([
+          ...draft.instances.map((instance) => instance.id),
+          ...draft.ports.map((port) => port.id),
+          ...draft.nets.map((net) => net.id),
+          ...draft.routes.map((route) => route.id),
+          ...draft.junctions.map((junction) => junction.id),
+          ...draft.annotations.map((annotation) => annotation.id),
+          ...(draft.drafting?.objects.map((object) => object.id) ?? []),
+          ...draft.layoutGroups.map((group) => group.id),
+          ...draft.constraints.map((constraint) => constraint.id),
+          ...draft.noConnects.map((noConnect) => noConnect.id),
+        ]);
+        const duplicate = ids.find((id) => existingIds.has(id));
+        if (duplicate) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Power rail object ID already exists: ${duplicate}`,
+            [],
+            [duplicate],
+          );
+        }
+        const right = edit.start.x < edit.end.x ? edit.end : edit.start;
+        draft.nets.push({
+          id: edit.netId,
+          name: "VDD",
+          scope: "global",
+          powerDomain: edit.domain,
+          terminals: [],
+          ports: [],
+        });
+        draft.junctions.push(
+          JunctionSchema.parse({
+            id: edit.startJunctionId,
+            netId: edit.netId,
+            position: edit.start,
+            role: "route-anchor",
+          }),
+          JunctionSchema.parse({
+            id: edit.endJunctionId,
+            netId: edit.netId,
+            position: edit.end,
+            role: "route-anchor",
+          }),
+        );
+        draft.routes.push({
+          id: edit.routeId,
+          netId: edit.netId,
+          from: { kind: "junction", junctionId: edit.startJunctionId },
+          to: { kind: "junction", junctionId: edit.endJunctionId },
+          waypoints: [],
+          segmentModes: ["manual"],
+          presentation: "power-rail",
+        });
+        draft.annotations.push(
+          AnnotationSchema.parse({
+            id: edit.labelId,
+            kind: "power-label",
+            text: "VDD",
+            content: {
+              runs: [
+                { kind: "text", value: "V" },
+                {
+                  kind: "span",
+                  style: "subscript",
+                  children: [{ kind: "text", value: "DD" }],
+                },
+              ],
+            },
+            position: { x: right.x + 6, y: right.y + 5 },
+            attachedObjectId:
+              edit.start.x < edit.end.x
+                ? edit.endJunctionId
+                : edit.startJunctionId,
+            offset: { x: 6, y: 5 },
+            alignment: "start",
+            rotation: 0,
+            locked: false,
+          }),
+        );
+        for (const id of ids) changedObjectIds.add(id);
         connectivityChanged = true;
         break;
       }
@@ -2965,6 +3092,21 @@ export function executeTransaction(
             "OBJECT_NOT_FOUND",
             `Net merge target/source does not exist: ${edit.targetNetId}, ${edit.sourceNetId}`,
           );
+        }
+        if (
+          (target.powerDomain ?? "none") !== "none" &&
+          (source.powerDomain ?? "none") !== "none" &&
+          target.powerDomain !== source.powerDomain
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Cannot merge Nets with incompatible power domains",
+            [],
+            [target.id, source.id],
+          );
+        }
+        if ((target.powerDomain ?? "none") === "none") {
+          target.powerDomain = source.powerDomain ?? "none";
         }
         for (const instance of draft.instances) {
           if (instance.mosBulkBinding?.netId === source.id) {
@@ -3055,6 +3197,27 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
+      case "set_net_power_domain": {
+        const net = draft.nets.find((candidate) => candidate.id === edit.netId);
+        if (!net) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Net does not exist: ${edit.netId}`,
+          );
+        }
+        if ((net.powerDomain ?? "none") === edit.powerDomain) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Power-domain edit does not change the Net",
+            [],
+            [net.id],
+          );
+        }
+        net.powerDomain = NetPowerDomainSchema.parse(edit.powerDomain);
+        changedObjectIds.add(net.id);
+        connectivityChanged = true;
+        break;
+      }
       case "normalize_power_nets": {
         if (normalizePowerNets(draft, changedObjectIds)) {
           connectivityChanged = true;
@@ -3116,6 +3279,7 @@ export function executeTransaction(
                 id,
                 name,
                 scope: "global",
+                powerDomain: name === "0" ? "ground" : "vdd",
                 terminals: [],
                 ports: [],
               };

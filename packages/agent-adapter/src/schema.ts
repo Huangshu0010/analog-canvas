@@ -6,6 +6,7 @@ import {
   LayoutGroupSchema,
   JunctionRoleSchema,
   NoConnectSchema,
+  NetPowerDomainSchema,
   PlacementSchema,
   PointSchema,
   ResolvedDraftingGeometrySchema,
@@ -206,6 +207,13 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
     }
 
     if (edit.kind === "add_instance") {
+      if (edit.instance.symbolId === "vdd") {
+        context.addIssue({
+          code: "custom",
+          path: ["instance", "symbolId"],
+          message: "Use add_power_rail instead of the legacy vdd symbol",
+        });
+      }
       for (const key of Object.keys(edit.instance.properties)) {
         if (!key.startsWith("spice.")) continue;
         context.addIssue({
@@ -215,6 +223,14 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
             "Use typed instance netlist data instead of legacy spice.* properties",
         });
       }
+    }
+
+    if (edit.kind === "set_instance_symbol" && edit.symbolId === "vdd") {
+      context.addIssue({
+        code: "custom",
+        path: ["symbolId"],
+        message: "Use add_power_rail instead of the legacy vdd symbol",
+      });
     }
 
     if (edit.kind === "patch_instance_properties") {
@@ -442,6 +458,7 @@ export const AgentSnapshotNetSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1).nullable(),
   scope: z.enum(["local", "global"]),
+  powerDomain: NetPowerDomainSchema,
   terminals: z.array(
     z.strictObject({
       instanceId: StableIdSchema,

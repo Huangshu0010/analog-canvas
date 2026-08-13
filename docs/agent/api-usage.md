@@ -7,8 +7,9 @@
 2. Read the returned Project Index and choose one Document. Request exactly one
    complete `snapshot` for that Document; do not construct a query plan first.
 3. Reason over the Snapshot's complete instance-pin/Net-terminal mapping,
-   hierarchy references, placements, routes, locks, and diagnostics. Load only
-   the circuit-knowledge pages relevant to the observed evidence.
+   explicit Net `powerDomain`, hierarchy references, placements, routes, locks,
+   and diagnostics. Never infer supply identity from a label, symbol, or Net
+   ID. Load only the circuit-knowledge pages relevant to the observed evidence.
 4. For ordinary wiring, submit one high-level `wireIntent`; for other work,
    prepare generic typed edits. In both cases use the Snapshot revision as
    `expectedRevision` and dry-run any non-trivial transaction.

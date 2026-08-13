@@ -100,7 +100,6 @@ import {
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import {
-  proposeLegacyPowerContactReconciliation,
   proposePlacementContact,
   proposedStandalonePowerConnection,
 } from "../features/component-insert/placement-connectivity";
@@ -985,17 +984,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const normalizationEdits = powerNetNormalizations(document).length
       ? [{ kind: "normalize_power_nets" as const }]
       : [];
-    const powerContactEdits = proposeLegacyPowerContactReconciliation(
-      resolver,
-      document.instances,
-      visibleEndpoints,
-    );
-    const edits = [...normalizationEdits, ...powerContactEdits];
+    const edits = normalizationEdits;
     if (edits.length === 0) return;
     const result = transact(edits);
     if (result.ok) {
       setStatus(
-        `Normalized ${normalizationEdits.length} power-Net rule(s) and reconciled ${powerContactEdits.length} visible power contact(s)`,
+        `Normalized ${normalizationEdits.length} explicit power-Net rule(s)`,
       );
     }
   }, [document, resolver, visibleEndpoints]);
@@ -2715,6 +2709,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     position: Point,
     placementRequest: NonNullable<typeof pendingComponentPlacement>,
   ): void {
+    if (symbolId === "vdd") {
+      setStatus(
+        "Use the VDD rail tool; legacy VDD marker placement is disabled",
+      );
+      return;
+    }
     instanceCounter.current += 1;
     const prefix: Record<string, string> = {
       resistor: "R",
@@ -2724,7 +2724,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       "voltage-source": "V",
       "current-source": "I",
       ground: "GND",
-      vdd: "VDD",
       port: "P",
       "port-filled": "P",
     };
@@ -2833,24 +2832,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             {
               kind: "upsert_schematic_annotation" as const,
               annotation: instanceLabel,
-            },
-          ]
-        : []),
-      ...(symbolId === "vdd"
-        ? [
-            {
-              kind: "upsert_schematic_annotation" as const,
-              annotation: {
-                id: `label-${id}`,
-                kind: "power-label" as const,
-                text: "VDD",
-                position: { x: position.x + 14, y: position.y + 5 },
-                attachedObjectId: id,
-                offset: { x: 14, y: 5 },
-                alignment: "start" as const,
-                rotation: 0 as const,
-                locked: false,
-              },
             },
           ]
         : []),

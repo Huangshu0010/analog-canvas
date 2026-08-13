@@ -368,6 +368,7 @@ function documentSnapshot(
         id: net.id,
         name: net.name ?? null,
         scope: net.scope,
+        powerDomain: net.powerDomain ?? "none",
         terminals: [...net.terminals].sort(
           (left, right) =>
             left.instanceId.localeCompare(right.instanceId, "en") ||

@@ -509,6 +509,7 @@ describe("textbook monochrome SVG renderer", () => {
     document.nets.push({
       id: "net-vdd",
       scope: "global",
+      powerDomain: "vdd",
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
       ports: [],
     });

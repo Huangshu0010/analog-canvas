@@ -4,7 +4,7 @@ import { createEmptyDocument } from "./factories.js";
 import { powerDomainForNet, powerNetNormalizations } from "./power-domain.js";
 
 describe("power-domain facts", () => {
-  it("derives power intent from symbol terminals instead of a Net name", () => {
+  it("reads explicit power intent without consulting legacy symbol terminals", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push({
       id: "VDD1",
@@ -15,18 +15,19 @@ describe("power-domain facts", () => {
     const net = {
       id: "net-ui-2",
       scope: "local" as const,
+      powerDomain: "vdd" as const,
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
       ports: [],
     };
     document.nets.push(net);
 
-    expect(powerDomainForNet(document, net)).toBe("vdd");
+    expect(powerDomainForNet(net)).toBe("vdd");
     expect(powerNetNormalizations(document)).toEqual([
       { netId: "net-ui-2", domain: "vdd", name: "VDD" },
     ]);
   });
 
-  it("keeps mixed VDD and ground terminals as an explicit conflict", () => {
+  it("does not infer a supply domain from old marker terminals at runtime", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(
       { id: "VDD1", symbolId: "vdd", placement: null, properties: {} },
@@ -35,6 +36,7 @@ describe("power-domain facts", () => {
     const net = {
       id: "net-short",
       scope: "local" as const,
+      powerDomain: "none" as const,
       terminals: [
         { instanceId: "VDD1", pinName: "P" },
         { instanceId: "GND1", pinName: "0" },
@@ -43,7 +45,7 @@ describe("power-domain facts", () => {
     };
     document.nets.push(net);
 
-    expect(powerDomainForNet(document, net)).toBe("conflict");
+    expect(powerDomainForNet(net)).toBe("none");
     expect(powerNetNormalizations(document)).toEqual([]);
   });
 });

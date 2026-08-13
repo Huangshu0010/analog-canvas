@@ -168,6 +168,28 @@ describe("electricalTopologyHash", () => {
     );
   });
 
+  it("changes when a Net's explicit power identity changes", () => {
+    const before = project([
+      baseDoc({
+        nets: [
+          {
+            id: "supply",
+            scope: "global",
+            powerDomain: "none",
+            terminals: [],
+            ports: [],
+          },
+        ],
+      }),
+    ]);
+    const after = structuredClone(before);
+    after.documents[0]!.nets[0]!.powerDomain = "vdd";
+
+    expect(electricalTopologyHash(after)).not.toBe(
+      electricalTopologyHash(before),
+    );
+  });
+
   it("changes when an explicit NoConnect declaration is added", () => {
     const base = project([
       baseDoc({

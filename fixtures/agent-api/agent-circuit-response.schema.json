@@ -650,6 +650,15 @@
                           "global"
                         ]
                       },
+                      "powerDomain": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "vdd",
+                          "ground",
+                          "conflict"
+                        ]
+                      },
                       "terminals": {
                         "type": "array",
                         "items": {
@@ -693,6 +702,7 @@
                       "id",
                       "name",
                       "scope",
+                      "powerDomain",
                       "terminals",
                       "portIds",
                       "routeIds",

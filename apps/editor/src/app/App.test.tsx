@@ -51,6 +51,7 @@ describe("editor shell", () => {
         id: "net-vdd",
         name: "VDD",
         scope: "global",
+        powerDomain: "vdd",
         terminals: [{ instanceId: "Msupply", pinName: "B" }],
         ports: [],
       },

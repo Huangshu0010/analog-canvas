@@ -308,6 +308,7 @@ describe("ERC engine", () => {
       {
         id: "net-short",
         scope: "local",
+        powerDomain: "conflict",
         terminals: [
           { instanceId: "VDD1", pinName: "P" },
           { instanceId: "GND1", pinName: "0" },
@@ -425,6 +426,7 @@ describe("ERC engine", () => {
         id: "net-ground-1",
         name: "0",
         scope: "global",
+        powerDomain: "ground",
         terminals: [{ instanceId: "GND1", pinName: "0" }],
         ports: [],
       },
@@ -432,6 +434,7 @@ describe("ERC engine", () => {
         id: "net-ground-2",
         name: "0",
         scope: "global",
+        powerDomain: "ground",
         terminals: [{ instanceId: "GND2", pinName: "0" }],
         ports: [],
       },
@@ -439,6 +442,7 @@ describe("ERC engine", () => {
         id: "net-global-0",
         name: "0",
         scope: "global",
+        powerDomain: "ground",
         terminals: [{ instanceId: "M1", pinName: "B" }],
         ports: [],
       },

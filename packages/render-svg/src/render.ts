@@ -1,7 +1,6 @@
 import {
   RectSchema,
   SchematicDocumentSchema,
-  powerDomainForNet,
   transformPoint,
 } from "@icm/model";
 import {
@@ -489,9 +488,7 @@ export function buildSvgScene(
       const net = document.nets.find(
         (candidate) => candidate.id === route.netId,
       );
-      return net && powerDomainForNet(document, net) === "vdd"
-        ? [route.netId]
-        : [];
+      return net && (net.powerDomain ?? "none") === "vdd" ? [route.netId] : [];
     }),
   );
   const viewBox = options.bounds

@@ -156,6 +156,59 @@ describe("Agent golden request contract", () => {
       ],
     });
     expect(legacySpice.success).toBe(false);
+
+    const legacyVdd = AgentProductionCircuitRequestSchema.safeParse({
+      apiVersion: "2.0",
+      requestId: "legacy-vdd",
+      operation: "transact",
+      documentId: "document-main",
+      transactionId: "legacy-vdd",
+      expectedRevision: 0,
+      edits: [
+        {
+          kind: "add_instance",
+          instance: {
+            id: "VDD1",
+            symbolId: "vdd",
+            placement: null,
+            properties: {},
+          },
+        },
+      ],
+    });
+    expect(legacyVdd.success).toBe(false);
+    if (!legacyVdd.success) {
+      expect(legacyVdd.error.issues[0]?.path).toEqual([
+        "edits",
+        0,
+        "instance",
+        "symbolId",
+      ]);
+    }
+
+    expect(
+      AgentProductionCircuitRequestSchema.safeParse({
+        apiVersion: "2.0",
+        requestId: "vdd-rail",
+        operation: "transact",
+        documentId: "document-main",
+        transactionId: "vdd-rail",
+        expectedRevision: 0,
+        edits: [
+          {
+            kind: "add_power_rail",
+            netId: "net-vdd",
+            routeId: "route-vdd",
+            startJunctionId: "junction-vdd-left",
+            endJunctionId: "junction-vdd-right",
+            labelId: "label-vdd",
+            domain: "vdd",
+            start: { x: 20, y: 20 },
+            end: { x: 180, y: 20 },
+          },
+        ],
+      }),
+    ).toMatchObject({ success: true });
   });
 
   it("declares every public Circuit transport outcome explicitly", () => {

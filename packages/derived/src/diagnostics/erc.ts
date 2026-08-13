@@ -1,4 +1,3 @@
-import { powerDomainForNet } from "@icm/model";
 import type { CircuitProject } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -35,22 +34,10 @@ function noConnectKey(endpoint: {
 }
 
 function isRepeatedGlobalPowerNet(
-  document: CircuitProject["documents"][number],
   nets: readonly CircuitProject["documents"][number]["nets"][number][],
 ): boolean {
   if (!nets.every((net) => net.scope === "global")) return false;
-  const domains = new Set(
-    nets.map((net) => {
-      const symbolDomain = powerDomainForNet(document, net);
-      if (symbolDomain !== "none") return symbolDomain;
-      // MOS bulk fallback predates power-symbol Net normalization. Its stable
-      // IDs intentionally express the same two global supply domains even
-      // though the fallback Net has no marker terminal of its own.
-      if (net.id === "net-global-0" && net.name === "0") return "ground";
-      if (net.id === "net-global-vdd" && net.name === "VDD") return "vdd";
-      return "none";
-    }),
-  );
+  const domains = new Set(nets.map((net) => net.powerDomain ?? "none"));
   return domains.size === 1 && (domains.has("vdd") || domains.has("ground"));
 }
 
@@ -99,7 +86,7 @@ export function runErcChecks(
     );
 
     for (const net of document.nets) {
-      if (powerDomainForNet(document, net) !== "conflict") continue;
+      if ((net.powerDomain ?? "none") !== "conflict") continue;
       diagnostics.push({
         id: `erc:power-domain-conflict:${document.id}:${net.id}`,
         domain: "erc",
@@ -326,7 +313,7 @@ export function runErcChecks(
       netsByName.set(name, group);
     }
     for (const [name, nets] of netsByName) {
-      if (nets.length < 2 || isRepeatedGlobalPowerNet(document, nets)) {
+      if (nets.length < 2 || isRepeatedGlobalPowerNet(nets)) {
         continue;
       }
       const [primary, ...rest] = [...nets].sort((a, b) =>

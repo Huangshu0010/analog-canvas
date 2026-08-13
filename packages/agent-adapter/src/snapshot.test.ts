@@ -100,6 +100,22 @@ describe("Agent Document Snapshot", () => {
     expect(snapshot.electricalTopologyHash).toMatch(/^[a-f0-9]{64}$/u);
   });
 
+  it("exposes the persisted power-domain fact rather than legacy marker inference", () => {
+    const document = createEmptyDocument("power-snapshot", "Power Snapshot");
+    document.nets.push({
+      id: "net-vdd",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+      ports: [],
+    });
+    const snapshot = buildAgentSessionSnapshot({ document, resolver });
+    expect(snapshot.document.nets).toContainEqual(
+      expect.objectContaining({ id: "net-vdd", powerDomain: "vdd" }),
+    );
+  });
+
   it("uses canonical Project ERC evidence in the Snapshot", () => {
     const project = fixtureProject();
     const document = createEmptyDocument("snapshot-erc", "Snapshot ERC");

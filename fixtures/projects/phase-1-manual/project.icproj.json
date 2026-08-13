@@ -46,7 +46,7 @@
   ],
   "id": "project-phase-1-manual",
   "name": "Phase 1 Manual Editor",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "source": {
     "dialect": "none",
     "entry": null,

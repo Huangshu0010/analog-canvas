@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `4.0`
+Version: `5.0`
 
 Owning phase: `Phase 0`
 
@@ -33,11 +33,11 @@ its validation, canonical serialization, and migration behavior.
 ## Data model or interface
 
 The authoritative runtime contract is `CircuitProjectSchema` in
-`packages/model`. The current released version is 4:
+`packages/model`. The current released version is 5:
 
 ```typescript
 interface CircuitProject {
-  schemaVersion: 4;
+  schemaVersion: 5;
   id: string;
   name: string;
   source: SourceManifest;
@@ -51,14 +51,14 @@ interface CircuitProject {
 declared policy, and selected source file IDs, paths, and hashes. In the Page
 release it does **not** mean that SPICE source text was copied into the Project
 file or a browser-created `sources/` directory. `SymbolLibraryLock` owns
-library ID, version, and content hash. Documents are embedded; version 4 has
+library ID, version, and content hash. Documents are embedded; version 5 has
 no separate document, source-lock, symbol-lock, cache, session, recovery, or
 export files. Version 3 adds a first-class `NoConnect` collection to each
 Document; migration never infers NoConnect intent.
 
 ## Invariants
 
-- `schemaVersion` is exactly `4` after migration.
+- `schemaVersion` is exactly `5` after migration.
 - At least one Document exists and `topDocumentId` resolves to it.
 - Document IDs are unique.
 - Unknown object fields are rejected.
@@ -75,7 +75,9 @@ validate → canonicalize → atomic storage write
 
 An unsupported future version is rejected. An older version is rejected unless
 every required advancing migration is registered. Migration never guesses a
-missing electrical relationship.
+missing electrical relationship; the reviewed v4-to-v5 power-marker transfer
+is the explicit, recorded exception that only sets a Net's persisted supply
+identity.
 
 ## Persistence boundary
 
@@ -107,6 +109,13 @@ setup. The authority and failure policy are defined by
 [`netlist-export.md`](netlist-export.md) and
 [`ADR 0017`](../adr/0017-deterministic-design-netlist-boundary.md).
 
+Version 5 persists `Net.powerDomain` as `none`, `vdd`, `ground`, or the
+diagnostic migration state `conflict`. The v4-to-v5 migration transfers the
+reviewed semantics of legacy VDD/ground marker terminals once; normal runtime
+code never infers a supply domain from a symbol, name, or fixed Net ID. New VDD
+rails create an explicit global VDD Net plus editable route anchors and a
+RichText label in one transaction, without a hidden `vdd` instance.
+
 ## Deterministic validation
 
 - Zod and generated JSON Schema inspection
@@ -119,13 +128,9 @@ setup. The authority and failure policy are defined by
 - Project splitting remains deferred until measured scale or collaboration
   requirements justify it.
 
-## Agent v3 extension (ADR 0018)
+## Historical Agent v3 extension (ADR 0018)
 
-[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) adds no persisted
-field. Runtime `projectRevision` is a browser-session value owned by the
-`EditorProjectController`; it is not written to `.icproj.json` and does not
-change `schemaVersion` 4. Canonical Project export uses `serializeProject()` and
-must be byte-stable across save/load/save; an Agent retrieves it as a scoped
-`artifact` (see [`export.md`](export.md)), never by filesystem path. Import
-candidates are validated in browser memory before any replacement and never
-imply a new schema version or an embedded source bundle.
+This section is non-normative planning history, superseded by
+[ADR 0019](../adr/0019-four-operation-agent-golden-contract.md). Runtime
+session state is not written to `.icproj.json`; the hosted Agent contract stays
+within `capabilities`, `snapshot`, `transact`, and `render`.

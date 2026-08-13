@@ -49,7 +49,7 @@ describe("Edit Transaction envelope", () => {
     ).toBe(false);
   });
 
-  it("permits a power rail only on a Net established by a VDD symbol", () => {
+  it("permits a power rail only on an explicitly tagged VDD Net", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "VDD1",
@@ -75,6 +75,7 @@ describe("Edit Transaction envelope", () => {
     document.nets.push({
       id: "net-vdd",
       scope: "global",
+      powerDomain: "vdd",
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
       ports: ["rail-left", "rail-right"],
     });
@@ -100,7 +101,7 @@ describe("Edit Transaction envelope", () => {
     );
     expect(accepted.ok).toBe(true);
 
-    document.nets[0]!.terminals = [];
+    document.nets[0]!.powerDomain = "none";
     const rejected = executeTransaction(
       document,
       {
@@ -124,6 +125,68 @@ describe("Edit Transaction envelope", () => {
       ok: false,
       error: { message: "Power rail rail must belong to a VDD Net" },
     });
+  });
+
+  it("rejects an invalid power rail atomically", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    const before = JSON.stringify(document);
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "add_power_rail",
+            netId: "net-vdd",
+            routeId: "rail-vdd",
+            startJunctionId: "junction-start",
+            endJunctionId: "junction-end",
+            labelId: "label-vdd",
+            domain: "vdd",
+            start: { x: 10, y: 10 },
+            end: { x: 10, y: 40 },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
+    expect(JSON.stringify(document)).toBe(before);
+  });
+
+  it("rejects a power rail whose generated IDs collide with an existing object", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "label-vdd",
+      symbolId: "resistor",
+      placement: null,
+      properties: {},
+    });
+    const before = JSON.stringify(document);
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "add_power_rail",
+            netId: "net-vdd",
+            routeId: "rail-vdd",
+            startJunctionId: "junction-start",
+            endJunctionId: "junction-end",
+            labelId: "label-vdd",
+            domain: "vdd",
+            start: { x: 10, y: 10 },
+            end: { x: 80, y: 10 },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
+    expect(JSON.stringify(document)).toBe(before);
   });
 
   it("sets a Cell bulk default by stable Net id before reconciliation", () => {
@@ -287,7 +350,7 @@ describe("Edit Transaction envelope", () => {
     expect(document.revision).toBe(0);
   });
 
-  it("normalizes a power-symbol Net regardless of how the Net was created", () => {
+  it("normalizes an explicitly tagged supply Net without inspecting symbols", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push(
       {
@@ -314,6 +377,11 @@ describe("Edit Transaction envelope", () => {
             to: { kind: "terminal", instanceId: "VDD3", pinName: "P" },
             newNetId: "net-ui-2",
           },
+          {
+            kind: "set_net_power_domain",
+            netId: "net-ui-2",
+            powerDomain: "vdd",
+          },
         ],
       },
       { symbolResolver: resolver },
@@ -327,6 +395,7 @@ describe("Edit Transaction envelope", () => {
             id: "net-ui-2",
             name: "VDD",
             scope: "global",
+            powerDomain: "vdd",
             terminals: [
               { instanceId: "M2", pinName: "S" },
               { instanceId: "VDD3", pinName: "P" },

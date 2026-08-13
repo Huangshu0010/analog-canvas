@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 4;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 5;
 
 export const StableIdSchema = z.string().min(1).max(256);
 export const PointSchema = z.strictObject({
@@ -160,10 +160,25 @@ export const PortSchema = z.strictObject({
   direction: z.enum(["input", "output", "bidirectional", "passive"]),
   position: PointSchema.nullable(),
 });
+/**
+ * Persisted electrical supply identity. `conflict` is migration/diagnostic
+ * state only; new authoring may choose vdd, ground, or none but never create a
+ * short intentionally.
+ */
+export const NetPowerDomainSchema = z.enum([
+  "none",
+  "vdd",
+  "ground",
+  "conflict",
+]);
 export const NetSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1).optional(),
   scope: z.enum(["local", "global"]),
+  // Schema-v5 migration and all current transactions write this explicitly.
+  // Optionality only admits pre-migration in-memory construction; runtime
+  // treats absence as `none` and never infers from symbol/name/ID.
+  powerDomain: NetPowerDomainSchema.optional(),
   terminals: z.array(TerminalRefSchema),
   ports: z.array(StableIdSchema),
 });
@@ -980,6 +995,7 @@ export type TerminalRef = z.infer<typeof TerminalRefSchema>;
 export type Instance = z.infer<typeof InstanceSchema>;
 export type Port = z.infer<typeof PortSchema>;
 export type Net = z.infer<typeof NetSchema>;
+export type NetPowerDomain = z.infer<typeof NetPowerDomainSchema>;
 export type RouteEndpoint = z.infer<typeof RouteEndpointSchema>;
 export type RouteBranch = z.infer<typeof RouteBranchSchema>;
 export type RoutePresentation = z.infer<typeof RoutePresentationSchema>;

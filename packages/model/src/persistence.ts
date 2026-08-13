@@ -6,6 +6,7 @@ import type { CircuitProject } from "./schema.js";
 import { migrateV1ToV2 } from "./migration-v1-to-v2.js";
 import { migrateV2ToV3 } from "./migration-v2-to-v3.js";
 import { migrateV3ToV4 } from "./migration-v3-to-v4.js";
+import { migrateV4ToV5 } from "./migration-v4-to-v5.js";
 
 export interface ProjectDiagnostic {
   code: "INVALID_JSON" | "INVALID_PROJECT" | "UNSUPPORTED_SCHEMA_VERSION";
@@ -114,6 +115,11 @@ defaultProjectMigrations.register(2, (input) =>
 // and instance netlist facts without inventing models or simulation setup.
 defaultProjectMigrations.register(3, (input) =>
   migrateV3ToV4(input as Record<string, unknown>),
+);
+// Schema 4 -> 5: persist Net power identity once, removing the runtime
+// dependency on legacy VDD/ground marker terminals.
+defaultProjectMigrations.register(4, (input) =>
+  migrateV4ToV5(input as Record<string, unknown>),
 );
 
 function isRecord(value: unknown): value is Record<string, unknown> {

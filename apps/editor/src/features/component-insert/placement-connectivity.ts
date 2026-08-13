@@ -18,8 +18,7 @@ import type {
 import type { SymbolResolver } from "@icm/symbols";
 
 const POWER_CONNECTION_BY_SYMBOL = {
-  vdd: { name: "VDD", pinName: "P" },
-  ground: { name: "0", pinName: "0" },
+  ground: { name: "0", pinName: "0", domain: "ground" },
 } as const;
 
 export interface PlacementContactProposal {
@@ -89,21 +88,6 @@ function pointOnSegment(point: Point, from: Point, to: Point): boolean {
   return false;
 }
 
-function sameEndpoint(left: RouteEndpoint, right: RouteEndpoint): boolean {
-  switch (left.kind) {
-    case "terminal":
-      return (
-        right.kind === "terminal" &&
-        right.instanceId === left.instanceId &&
-        right.pinName === left.pinName
-      );
-    case "port":
-      return right.kind === "port" && right.portId === left.portId;
-    case "junction":
-      return right.kind === "junction" && right.junctionId === left.junctionId;
-  }
-}
-
 /**
  * A component may acquire electrical connectivity only from an exact visible
  * pin-to-pin, pin-to-Junction, or pin-to-Route contact. Grid coincidence alone
@@ -116,6 +100,12 @@ export function proposePlacementContact(
   instance: Instance,
   targets: readonly WireSource[],
 ): PlacementContactProposal {
+  // New VDD authoring is exclusively the typed add_power_rail operation.
+  // A legacy VDD marker must not regain electrical authority merely because a
+  // caller reaches this generic component-placement helper.
+  if (instance.symbolId === "vdd") {
+    return { edits: [], matched: false, ambiguous: false };
+  }
   const contacts: Array<{
     source: WireSource;
     target: ElectricalContactTarget;
@@ -221,6 +211,15 @@ export function proposePlacementContact(
     }
     if (power) powerEndpoint = source.endpoint;
   }
+  // A visual marker may name a new Net, but it never remains the runtime
+  // source of electrical truth: persist that identity in the same edit batch.
+  if (power && powerNetId) {
+    edits.push({
+      kind: "set_net_power_domain",
+      netId: powerNetId,
+      powerDomain: power.domain,
+    });
+  }
   return {
     edits,
     matched: true,
@@ -254,65 +253,15 @@ export function proposedStandalonePowerConnection(
         newNetName: power.name,
         newNetScope: "global",
       },
+      {
+        kind: "set_net_power_domain",
+        netId,
+        powerDomain: power.domain,
+      },
     ],
     matched: false,
     ambiguous: false,
     powerNetId: netId,
     powerEndpoint: endpoint,
   };
-}
-
-/**
- * Repair only legacy visual contacts that are unambiguous by construction:
- * the P/0 pin of a placed power symbol touches exactly one other visible
- * endpoint. Existing distinct Nets are deliberately left alone; visual
- * overlap must never implicitly merge electrical Nets.
- */
-export function proposeLegacyPowerContactReconciliation(
-  resolver: SymbolResolver,
-  instances: readonly Instance[],
-  targets: readonly WireSource[],
-): readonly SchematicEdit[] {
-  return instances.flatMap((instance) => {
-    const power =
-      POWER_CONNECTION_BY_SYMBOL[
-        instance.symbolId as keyof typeof POWER_CONNECTION_BY_SYMBOL
-      ];
-    if (!power) return [];
-    const source = targets.find(
-      (target) =>
-        target.endpoint.kind === "terminal" &&
-        target.endpoint.instanceId === instance.id &&
-        target.endpoint.pinName === power.pinName,
-    );
-    if (!source) return [];
-    const contacts = targets.filter(
-      (target) =>
-        !sameEndpoint(source.endpoint, target.endpoint) &&
-        samePoint(source.point, target.point),
-    );
-    if (contacts.length !== 1) return [];
-    const target = contacts[0]!;
-    if (
-      (source.netId && source.netId === target.netId) ||
-      (source.netId && target.netId)
-    ) {
-      return [];
-    }
-    const createsNet = source.netId === null && target.netId === null;
-    return [
-      {
-        kind: "connect_endpoints" as const,
-        from: source.endpoint,
-        to: target.endpoint,
-        ...(createsNet
-          ? {
-              newNetId: `net-contact-${instance.id.toLowerCase()}`,
-              newNetName: power.name,
-              newNetScope: "global" as const,
-            }
-          : {}),
-      },
-    ];
-  });
 }

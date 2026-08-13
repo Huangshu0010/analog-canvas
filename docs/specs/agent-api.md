@@ -120,7 +120,10 @@ target cell/subcircuit name when available, and resolved `targetDocumentId` or
   applicable;
 - every pin's name, role/direction when resolvable, local/page position,
   visibility, and `netId | null`;
-- Nets with scope, complete terminal refs, port IDs, route IDs, and Junction IDs;
+- Nets with explicit `powerDomain` (`none`/`vdd`/`ground`/`conflict`), scope,
+  complete terminal refs, port IDs, route IDs, and Junction IDs. `powerDomain`
+  is the only current supply identity; Agents must not infer it from a symbol,
+  Net name, or fixed Net ID;
 - complete Route endpoints, waypoints, segment modes, optional presentation
   (`wire`/`bulk-dashed`/`power-rail`; a `power-rail` Route must belong to a VDD
   Net), and derived polyline;
