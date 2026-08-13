@@ -87,8 +87,10 @@ interface InstanceNetlistData {
 Cell names, references, target names, parameter names, and raw values are
 length-bounded. The shared first-release identifier subset is ASCII letters,
 digits, and `_`, with the first character restricted to a letter or `_`.
-Identifiers are compared case-insensitively for uniqueness. Explicit invalid
-names block export; printers do not silently rename them.
+Identifiers are compared case-insensitively for uniqueness. Persistence permits
+bounded source identifiers outside the shared subset so an imported Project can
+still open; explicit invalid names block export and printers do not silently
+rename them.
 
 `portOrder` contains every Document Port exactly once. Port array order,
 direction, and placement do not define an interface. A hierarchy instance uses

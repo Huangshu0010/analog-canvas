@@ -11,6 +11,10 @@
       "junctions": [],
       "layoutGroups": [],
       "name": "Main",
+      "netlist": {
+        "name": "Main",
+        "portOrder": []
+      },
       "nets": [],
       "noConnects": [],
       "ports": [],
@@ -26,7 +30,7 @@
   ],
   "id": "project-minimal",
   "name": "Minimal Project",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "source": {
     "dialect": "none",
     "entry": null,

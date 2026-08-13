@@ -50,16 +50,22 @@ updated before scope expansion:
   captured by the accepted specs
 - `packages/model/src/` for persisted electrical contract and migration work
 - `packages/symbols/src/` for the device-to-netlist definition registry
+- `packages/spice/src/importer.ts` and its focused tests so newly imported
+  schema-current Projects write typed netlist facts directly rather than
+  relying on a migration that only runs for older files
 - a new `packages/netlist/` package for extraction, validation, IR, and printers
 - `apps/editor/src/features/netlist-export/` for editor-facing orchestration
 - the smallest necessary hooks in `apps/editor/src/app/App.tsx`
 - focused fixtures under `fixtures/` when unit construction is insufficient
 - workspace manifests and TypeScript references needed to register the new
   package
+- focused downstream schema-version assertions such as
+  `packages/platform-web/src/file-system-access.test.ts`
 
 Read-only shared dependencies unless the plan is expanded:
 
-- `packages/spice/src/`: current source parser, import Circuit IR, and importer
+- `packages/spice/src/` other than the owned importer seam: current source
+  parser and import Circuit IR remain read-only
 - `packages/derived/src/connectivity-index.ts`: existing connectivity authority
 - `packages/edit-engine/src/`: transaction boundary that new typed edits may
   consume, but should not be changed until the persisted contract is accepted
