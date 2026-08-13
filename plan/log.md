@@ -6318,3 +6318,17 @@ contracts (WP-R1)`.
   `pnpm verify:branch` (workspace build and production smoke) passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `feat(model): make Net power-domain explicit`.
+
+## 2026-08-13 - Four-operation Agent takeover completion roadmap
+
+- Target: replace the superseded API-v3 expansion plan with a current,
+  detailed completion sequence for browser Agent takeover while explicitly
+  excluding simulation/PVT/waveforms and SPICE/design-netlist export.
+- Changed areas: current delivery-roadmap index and the new four-operation
+  completion plan, including authority migrations, Project lifecycle, browser
+  file transport, approval/replacement, semantic collaboration, scopes,
+  errors, and deployed acceptance flows.
+- Validation: `pnpm docs:check`, `pnpm references:check`, `git diff --check`,
+  and clean branch status passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `docs(agent): plan four-operation takeover completion`.
