@@ -48,22 +48,30 @@ Start product-planning navigation at `docs/README.md`.
 
 ## Validation Baseline
 
-Install and validate the TypeScript workspace:
+Install the TypeScript workspace once:
 
 ```powershell
 pnpm install --frozen-lockfile
-pnpm format:check
-pnpm references:check
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm performance:check
-pnpm test:e2e
-pnpm release:package
 ```
 
-Validation must match the changed behavior and risk. At minimum, close out a
-target with `git diff --check` and `git status --short --branch`.
+Use the smallest validation tier that matches the change:
+
+```powershell
+# During implementation: pass affected test files or browser specs.
+pnpm test:local <test-paths>
+pnpm test:e2e:local <spec-paths> --grep <pattern>
+
+# Branch-level integration: capped unit concurrency, one build, smoke check.
+pnpm verify:branch
+
+# Required before a non-document change can reach main: complete local gate.
+pnpm ci:check
+```
+
+The complete local gate retains every static, unit, release, and browser check,
+but caps test concurrency and reuses one build. GitHub Actions continues to run
+its independent jobs and browser shards. At minimum, close out every target
+with `git diff --check` and `git status --short --branch`.
 
 For netlist changes, also verify:
 

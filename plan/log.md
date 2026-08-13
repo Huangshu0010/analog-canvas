@@ -6067,3 +6067,16 @@ contracts (WP-R1)`.
   `git diff --check` clean.
 - Commit status: PR #32 merged to `main` as `6efbf3d`; integrated netlist PR
   #31 is ready for its refreshed remote checks and final merge.
+
+## 2026-08-13 - Local validation resource optimization
+
+- Target: reduce routine local validation load without weakening the mainline
+  gate or changing remote CI coverage.
+- Changed areas: package validation scripts, Agent and README command guidance,
+  and the machine-readable completed-plan queue.
+- Validation: focused 13-test unit run; focused one-scenario browser run;
+  `pnpm verify:branch`; canonical `pnpm ci:check` with 112 Vitest files / 675
+  tests, one workspace build, all release checks, and 96 Playwright scenarios;
+  GitHub Actions workflow unchanged.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(test): reduce local validation resource usage`.
