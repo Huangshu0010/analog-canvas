@@ -118,3 +118,14 @@ setup. The authority and failure policy are defined by
 
 - Project splitting remains deferred until measured scale or collaboration
   requirements justify it.
+
+## Agent v3 extension (ADR 0018)
+
+[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) adds no persisted
+field. Runtime `projectRevision` is a browser-session value owned by the
+`EditorProjectController`; it is not written to `.icproj.json` and does not
+change `schemaVersion` 4. Canonical Project export uses `serializeProject()` and
+must be byte-stable across save/load/save; an Agent retrieves it as a scoped
+`artifact` (see [`export.md`](export.md)), never by filesystem path. Import
+candidates are validated in browser memory before any replacement and never
+imply a new schema version or an embedded source bundle.

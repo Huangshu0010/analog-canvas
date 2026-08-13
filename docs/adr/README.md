@@ -29,6 +29,8 @@ The browser-authoritative web session decision is
 [`0016-browser-authoritative-agent-session.md`](0016-browser-authoritative-agent-session.md).
 The deterministic structural netlist decision is
 [`0017-deterministic-design-netlist-boundary.md`](0017-deterministic-design-netlist-boundary.md).
+The Agent Project lifecycle, artifact, and additive v3 API decision is
+[`0018-agent-project-lifecycle-and-v3-api.md`](0018-agent-project-lifecycle-and-v3-api.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

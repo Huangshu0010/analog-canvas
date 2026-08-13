@@ -357,3 +357,52 @@ refreshes the Snapshot and does not replay the old edit.
 - redacted logs/analytics/recovery assertions for secrets and circuit payloads;
 - CORS/origin and `Cache-Control: no-store` assertions;
 - payload and rate-limit enforcement before any forward.
+
+## Agent v3 extension (ADR 0018)
+
+[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) extends this
+session contract for the Agent Project lifecycle surface. The transport,
+envelope, identity, retry, expiry, and revocation rules above are unchanged;
+this section freezes only the additions.
+
+### v3 permission scopes
+
+The six `circuit.*` scopes are retained. v3 adds only orthogonal scopes:
+`project.snapshot`, `project.edit`, `project.export`, `visual.export`,
+`project.import.stage`, `history.own`, and `editor.collaborate`. No scope grants
+filesystem access; Project replacement is always a browser-owner approval action
+and is not representable by an Agent bearer scope.
+
+### Import candidate and approval state machine
+
+An Agent with `project.import.stage` may submit a bounded `ImportFile` bundle
+(bytes, media type, normalized relative POSIX path, encoding, size, SHA-256 as
+defined in ADR 0018), never a filesystem path. The browser parses, migrates,
+validates, and canonicalizes the candidate in memory and returns an opaque
+`candidateId`, expiry, source hashes, Project/hierarchy summary, diagnostics,
+migrations applied, and replacement consequences — without mutating Project,
+history, recovery, selection, or session identity. The relay never persists
+candidate or artifact bytes (`Cache-Control: no-store` continues to apply).
+
+Replacement requires an explicit browser decision: **Cancel** (delete the
+candidate, notify the Agent), **Open and disconnect** (replace Project, revoke
+the old session), or **Open and reconnect Agent** (replace Project, revoke the
+old session, issue a new one-time claim with user-confirmed scopes and Document
+set). The third action is explicit new authorization, not token transfer; the
+old bearer token never gains access to the replacement Project. Before
+replacement the editor cancels pending recovery for the outgoing Project,
+revalidates the imported Project immediately before activation, and stages the
+new Project's own recovery without marking it a formal save. Retry, timeout,
+offline editor, late response, expiry, cancel, and page refresh are terminal and
+deterministic; reusing an old `requestId` cannot reapply replacement.
+
+### v3 events and transport codes
+
+The terminal `document.replaced` event already exists; v3 adds an optional
+bounded continuation-claim event when the user explicitly reconnects the Agent.
+New transport/import codes are `IMPORT_REQUIRES_APPROVAL`,
+`IMPORT_CANDIDATE_EXPIRED`, and `IMPORT_AMBIGUOUS_ENTRY`; the domain codes
+`STALE_PROJECT_REVISION`, `HISTORY_DIVERGED`, `OBJECT_NOT_FOUND`, and
+`ARTIFACT_TOO_LARGE` are defined in [`agent-api.md`](agent-api.md). The threat
+table is extended with import-candidate leakage, ambiguous-entry coercion,
+size/depth exhaustion, replacement replay, and continuation-claim isolation.

@@ -665,3 +665,24 @@ non-electrical unless an explicit wire start/end gesture commits connectivity.
   extension.
 - Diagonal/any-angle drawing modes and whole-Net selection remain deferred;
   the accepted editor is orthogonal and segment-selective.
+
+## Agent v3 extension (ADR 0018)
+
+[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) adds an optional
+transient `collaborate` control surface so an authorized Agent can direct human
+attention without DOM, pointer, keyboard, or screenshot-driven mutation. It
+accepts semantic commands only:
+
+- `navigate_document(documentId)`;
+- `set_selection(ObjectLocator[])` and `clear_selection`;
+- `highlight_net(ObjectLocator)` and `clear_highlight`;
+- `fit_objects(ObjectLocator[])`, `fit_bounds(Rect)`, and `fit_document`.
+
+It validates all locators against the canonical Project Object Index and uses
+the same Net trace/highlight read model as the GUI. It cannot send pointer
+events, keystrokes, arbitrary zoom matrices, CSS, selectors, or DOM queries. It
+requires the `editor.collaborate` scope, produces audit/events, and never
+changes Project revision, topology hash, history, recovery, or formal export —
+consistent with the rule that selection, viewport, and highlight are
+editor-local transient state. A user toggle can disable collaboration control
+without revoking circuit read/edit scopes.

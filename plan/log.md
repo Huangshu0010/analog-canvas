@@ -6254,3 +6254,19 @@ contracts (WP-R1)`.
   test was required for the documentation-only target.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `docs: plan complete Agent project lifecycle interfaces`.
+
+## 2026-08-13 - AP0 Agent v3 contract freeze
+
+- Target: freeze the Agent v3 contract (three-authority split, additive v3
+  operations, runtime projectRevision, Project edit inventory, Agent-safe
+  history, artifact/import envelopes, import state machine, scopes, errors, and
+  limits) before any runtime change, and lock the current v2 boundary.
+- Changed areas: new ADR 0018 extending ADR 0016; additive "Agent v3 extension"
+  sections in agent-api, web-agent-session, persistence-and-recovery,
+  project-file-format, export, and editor-interaction specs; ADR index; and a
+  new contract-characterization test. No Zod schema or generated
+  `fixtures/agent-api/` change.
+- Validation: focused characterization suite (7 tests), `pnpm docs:check`,
+  `pnpm references:check`, `pnpm typecheck`, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `docs(agent): freeze v3 contract surface and ADR 0018`.

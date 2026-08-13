@@ -328,3 +328,60 @@ replaying blindly.
   accepts deprecation.
 - Deterministic transport chunks remain deferred until a real Document exceeds
   the accepted Snapshot budget.
+
+## Agent v3 extension (ADR 0018)
+
+[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) freezes an
+additive API v3 that retains v1/v2 unchanged. v3 publishes
+`capabilities | snapshot | transact | artifact | render | collaborate`; v1
+(`capabilities/query/transact/render`) and v2
+(`capabilities/snapshot/transact/render`) remain exactly as frozen above.
+`render` stays separate in v3 so existing render clients need no migration;
+`artifact` owns portable file products and import candidates and is not a second
+edit engine.
+
+### v3 Snapshot targets and write/read parity
+
+v3 `snapshot` accepts a target mode beyond a single Document: `project`
+(structure, exact Cell interfaces, source-manifest summary, runtime
+`projectRevision`), `document` (today's full Document snapshot plus exact
+persisted netlist/interface facts), `catalog` (every insertable product symbol:
+stable ID, variants, pins, roles/directions, default properties, supported
+parameters, style availability), and `editor-state` (transient read; see
+[`editor-interaction.md`](editor-interaction.md)). For every writable persisted
+field, the matching Snapshot target returns its exact current value. At minimum
+v3 adds:
+
+- Project schema version, source-manifest summary, symbol-library lock, and
+  runtime `projectRevision`;
+- each Cell's exact netlist name, kind, dialect-relevant binding facts, and
+  ordered Port IDs;
+- each Instance's exact netlist reference, primitive/subcircuit binding, ordered
+  pin mapping, model, and parameters;
+- hierarchy edges derived from those exact bindings;
+- catalog entries for every insertable product symbol;
+- capability/limit information needed before constructing a transaction.
+
+Raw imported source text remains excluded. A parity test must fail when a
+writable schema field is absent from the corresponding Snapshot target.
+
+### v3 transactions and history
+
+`transact` in v3 accepts a typed `document`, `project`, or `history`
+transaction. Project transactions carry `expectedProjectRevision` and, for
+multi-Document changes, expected revisions for every affected Document; the
+Project edit inventory and removal rules are frozen in ADR 0018. Agent history
+uses `undo_own_head(transactionId)` / `redo_own_head(transactionId)`, returning
+`HISTORY_DIVERGED` with current head/revision metadata when the requesting
+Agent's transaction is not the shared head; it never skips a human or other-
+Agent transaction.
+
+### v3 domain error codes
+
+The accepted domain-code set is the v2 set above plus the v3 additions
+`STALE_PROJECT_REVISION`, `HISTORY_DIVERGED`, `OBJECT_NOT_FOUND`,
+`ARTIFACT_TOO_LARGE`, `IMPORT_REQUIRES_APPROVAL`, `IMPORT_CANDIDATE_EXPIRED`,
+and `IMPORT_AMBIGUOUS_ENTRY`. `STALE_PROJECT_REVISION` returns the current
+`projectRevision` and is not terminal, mirroring `STALE_REVISION`. These codes
+are prose-defined here; closing the generated `error.code` open string into an
+enum is part of the work package that changes source schemas (AP1/AP8).

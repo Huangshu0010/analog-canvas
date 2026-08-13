@@ -104,3 +104,24 @@ through Phase 7.
   Agent API surface.
 - Native-shell storage integration is deferred by ADR 0006 without changing
   this contract.
+
+## Agent v3 extension (ADR 0018)
+
+[ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) distinguishes four
+states that the v2 recovery contract treats together:
+
+- **commit** — a successful typed transaction (Document or Project) is the only
+  point that schedules recovery, exactly as `applyResult()` is today;
+- **recovery** — origin-local IndexedDB only, never a formal save, coalesced to
+  the newest Project;
+- **artifact export** — a bounded, scoped, byte-stable artifact produced on
+  demand (canonical `.icproj.json`, SVG, PNG, PDF); it is never a save or a
+  recovery source;
+- **browser download** — a visible side effect the user may request alongside an
+  artifact; it is not a persistence authority.
+
+Runtime `projectRevision` is session-only and is not persisted. Project
+replacement (Agent-staged import or GUI Open/Import/Restore) cancels any pending
+recovery write for the outgoing Project before activation; the imported Project
+is revalidated immediately before activation and then stages its own recovery
+state. No state here authorizes server-side Project persistence.
