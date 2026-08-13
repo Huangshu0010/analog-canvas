@@ -1,5 +1,15 @@
 # Maintenance Log
 
+## 2026-08-13 - Show origins map above daily traffic
+
+- Target: put the analytics Origins heatmap above the Daily traffic chart.
+- Changed areas: `apps/editor/src/components/analytics-page.tsx` section order.
+- Validation: source-order review and `git diff --check` passed. Existing
+  analytics e2e heading checks still apply; no new test for markup order.
+- Commit status: prepared as
+  `feat(analytics): show origins map above daily traffic` on
+  `agent/analytics-map-above-traffic`.
+
 ## 2026-08-13 - Remove compatibility re-export layers
 
 - Target: make wiring, style, label-placement, and markup callers depend on
