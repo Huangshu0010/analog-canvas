@@ -19,6 +19,12 @@ import type {
   AgentAuditEntry,
   AgentConnectionStatus,
 } from "./connect-agent-panel";
+import {
+  clearAgentSessionRecovery,
+  readAgentSessionRecovery,
+  writeAgentSessionRecovery,
+  type AgentSessionRecoveryRecord,
+} from "./session-recovery";
 
 interface CreatedSessionResponse {
   ok: true;
@@ -53,7 +59,12 @@ function isCreatedSessionResponse(
   );
 }
 
-type LiveSession = CreatedSessionResponse["session"] & {
+type LiveSession = {
+  sessionId: string;
+  editorSecret: string;
+  claimCode: string | null;
+  claimExpiresAt: number | null;
+  expiresAt: number;
   scopes: AgentSessionScope[];
   socket: WebSocket | null;
   claimed: boolean;
@@ -135,6 +146,7 @@ export function useAgentSession(
   options: UseAgentSessionOptions,
 ): UseAgentSessionResult {
   const liveRef = useRef<LiveSession | null>(null);
+  const recoveryAttemptedForProjectRef = useRef<string | null>(null);
   const projectSessionRef = useRef(options.projectSessionId);
   const revisionRef = useRef(
     new Map(
@@ -189,10 +201,12 @@ export function useAgentSession(
   const revoke = useCallback(async () => {
     const live = liveRef.current;
     if (!live) {
+      clearAgentSessionRecovery(window.sessionStorage);
       update({ status: "idle", claimCode: null });
       return;
     }
     stopReconnect(live);
+    clearAgentSessionRecovery(window.sessionStorage);
     try {
       await control("revoke");
     } catch {
@@ -207,34 +221,49 @@ export function useAgentSession(
   }, [control, update]);
 
   const grant = useCallback(
-    async (scopes: readonly AgentSessionScope[]) => {
+    async (
+      scopes: readonly AgentSessionScope[],
+      recovery?: AgentSessionRecoveryRecord,
+    ) => {
       if (liveRef.current) await revoke();
-      update({ status: "creating", error: null, claimCode: null, scopes });
+      update({
+        status: recovery ? "reconnecting" : "creating",
+        error: null,
+        claimCode: null,
+        scopes,
+      });
       try {
-        const response = await fetch("/api/agent/sessions", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            projectSessionId: options.projectSessionId,
-            projectId: options.project.id,
-            documentIds: options.project.documents.map(
-              (document) => document.id,
-            ),
-            scopes,
-          }),
-        });
-        if (!response.ok)
-          throw new Error(`Session creation failed (${response.status})`);
-        const payload: unknown = await response.json();
-        if (!isCreatedSessionResponse(payload)) {
-          throw new Error("Session creation returned an invalid response");
+        let created: CreatedSessionResponse | null = null;
+        if (!recovery) {
+          const response = await fetch("/api/agent/sessions", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              projectSessionId: options.projectSessionId,
+              projectId: options.project.id,
+              documentIds: options.project.documents.map(
+                (document) => document.id,
+              ),
+              scopes,
+            }),
+          });
+          if (!response.ok)
+            throw new Error(`Session creation failed (${response.status})`);
+          const payload: unknown = await response.json();
+          if (!isCreatedSessionResponse(payload)) {
+            throw new Error("Session creation returned an invalid response");
+          }
+          created = payload;
         }
-        const created = payload;
         const live: LiveSession = {
-          ...created.session,
+          sessionId: recovery?.sessionId ?? created!.session.sessionId,
+          editorSecret: recovery?.editorSecret ?? created!.session.editorSecret,
+          claimCode: recovery ? null : created!.session.claimCode,
+          claimExpiresAt: recovery ? null : created!.session.claimExpiresAt,
+          expiresAt: recovery?.expiresAt ?? created!.session.expiresAt,
           scopes: [...scopes],
           socket: null,
-          claimed: false,
+          claimed: recovery !== undefined,
           hasOpened: false,
           allowReconnect: true,
           reconnectAttempt: 0,
@@ -309,6 +338,15 @@ export function useAgentSession(
                 sessionEvent.data.type === "session.ready"
               ) {
                 live.claimed = true;
+                writeAgentSessionRecovery(window.sessionStorage, {
+                  version: 1,
+                  sessionId: live.sessionId,
+                  editorSecret: live.editorSecret,
+                  projectId: options.project.id,
+                  projectSessionId: options.projectSessionId,
+                  scopes: live.scopes,
+                  expiresAt: live.expiresAt,
+                });
                 update(
                   { status: "connected", claimCode: null },
                   { at: Date.now(), kind: "claimed" },
@@ -318,6 +356,7 @@ export function useAgentSession(
                 sessionEvent.data.type === "session.revoked"
               ) {
                 stopReconnect(live);
+                clearAgentSessionRecovery(window.sessionStorage);
                 socket.close(1000, "session revoked");
                 if (liveRef.current === live) liveRef.current = null;
                 update(
@@ -495,6 +534,7 @@ export function useAgentSession(
         connect();
       } catch (error) {
         liveRef.current = null;
+        if (recovery) clearAgentSessionRecovery(window.sessionStorage);
         update({
           status: "idle",
           error: error instanceof Error ? error.message : String(error),
@@ -503,6 +543,19 @@ export function useAgentSession(
     },
     [options.host, options.project, options.projectSessionId, revoke, update],
   );
+
+  useEffect(() => {
+    if (recoveryAttemptedForProjectRef.current === options.projectSessionId) {
+      return;
+    }
+    recoveryAttemptedForProjectRef.current = options.projectSessionId;
+    const recovery = readAgentSessionRecovery(window.sessionStorage, {
+      projectId: options.project.id,
+      projectSessionId: options.projectSessionId,
+      now: Date.now(),
+    });
+    if (recovery) void grant(recovery.scopes, recovery);
+  }, [grant, options.project.id, options.projectSessionId]);
 
   const pause = useCallback(async () => {
     try {
@@ -596,6 +649,7 @@ export function useAgentSession(
   useEffect(() => {
     if (projectSessionRef.current === options.projectSessionId) return;
     projectSessionRef.current = options.projectSessionId;
+    recoveryAttemptedForProjectRef.current = options.projectSessionId;
     revisionRef.current = new Map(
       options.project.documents.map((document) => [
         document.id,
@@ -603,6 +657,7 @@ export function useAgentSession(
       ]),
     );
     agentRevisionRef.current.clear();
+    clearAgentSessionRecovery(window.sessionStorage);
     const live = liveRef.current;
     if (!live) return;
     stopReconnect(live);
@@ -621,6 +676,7 @@ export function useAgentSession(
       const live = liveRef.current;
       if (live && Date.now() >= live.expiresAt) {
         stopReconnect(live);
+        clearAgentSessionRecovery(window.sessionStorage);
         live.socket?.close(1000, "expired");
         liveRef.current = null;
         update({ status: "expired", claimCode: null });
@@ -634,11 +690,14 @@ export function useAgentSession(
       const live = liveRef.current;
       if (live) {
         stopReconnect(live);
-        void fetch(`/api/agent/sessions/${live.sessionId}`, {
-          method: "DELETE",
-          headers: { "x-editor-secret": live.editorSecret },
-          keepalive: true,
-        });
+        if (!live.claimed) {
+          clearAgentSessionRecovery(window.sessionStorage);
+          void fetch(`/api/agent/sessions/${live.sessionId}`, {
+            method: "DELETE",
+            headers: { "x-editor-secret": live.editorSecret },
+            keepalive: true,
+          });
+        }
         live.socket?.close(1000, "tab closed");
       }
     },

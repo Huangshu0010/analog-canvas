@@ -48,12 +48,12 @@ messages and persists no Project.
 
 The first release uses scoped capability tokens, not product accounts.
 
-| Secret         | Held by            | Lifetime / use                                                      |
-| -------------- | ------------------ | ------------------------------------------------------------------- |
-| `sessionId`    | public             | Opaque session id; **not** authorization                            |
-| `editorSecret` | browser tab only   | Authenticates the browser's WebSocket command channel               |
-| `claimCode`    | user → Agent, once | Single-use, expires in at most five minutes                         |
-| `agentToken`   | Agent host only    | Bearer, scoped, default one hour, never outlives the editor session |
+| Secret         | Held by            | Lifetime / use                                                                                              |
+| -------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `sessionId`    | public             | Opaque session id; **not** authorization                                                                    |
+| `editorSecret` | browser tab only   | Authenticates the browser's WebSocket command channel; may survive one same-tab refresh in `sessionStorage` |
+| `claimCode`    | user → Agent, once | Single-use, expires in at most five minutes                                                                 |
+| `agentToken`   | Agent host only    | Bearer, scoped, default one hour, never outlives the editor session                                         |
 
 Claim codes are single-use and expire after at most five minutes. Agent tokens
 default to one hour, never outlive their editor session, and are invalidated by
@@ -61,9 +61,13 @@ pause, revoke, Project replacement, a normal tab close, session expiry, or
 service-side abuse controls. An abrupt browser loss makes the editor offline;
 the session's fixed lifetime remains the terminal cleanup boundary.
 
-Secrets are never placed in analytics, URL query parameters, logs, local
+Secrets are never placed in analytics, URL query parameters, logs, Project
 recovery data, Snapshot data, render artifacts, or `Cache-Control`-able
-responses. All session responses use `Cache-Control: no-store`. Constant-time
+responses. The sole exception is a bounded same-tab reconnect proof in browser
+`sessionStorage`: it contains only `sessionId`, `editorSecret`, Project binding,
+scopes, and expiry. It never contains a bearer token, claim code, Project bytes,
+or request/response data, and is cleared on mismatch, expiry, replacement, or
+revoke. All session responses use `Cache-Control: no-store`. Constant-time
 comparison is used for secret/token equality where applicable.
 
 ## Permission scopes
@@ -287,21 +291,21 @@ advances the revision again.
 
 ## Threat model
 
-| Threat                             | Handling                                                                                                                    |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Claim link leaks                   | Single-use, ≤5 min expiry, explicit scopes, visible connected state, immediate revoke, no query-string analytics            |
-| Relay observes payloads in transit | HTTPS required; relay persists no payload and logs no body; end-to-end encryption deferred unless threat review requires it |
-| Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write        |
-| `agentToken` theft                 | Short TTL, scoped, revocable, never stored in recovery/localStorage by default                                              |
-| Browser refresh                    | Initial release revokes the session unless a later explicit reconnect design is accepted                                    |
-| Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged           |
-| Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                        |
-| Editor offline during write        | `EDITOR_OFFLINE`; no unbounded write queue; reconnect never auto-applies a rejected write                                   |
-| Project swap mid-session           | `document.replaced`; old token invalid for the new Project                                                                  |
-| Permission escalation              | Token scopes fixed at claim; no per-op prompt inside scope; user pause/revoke always available                              |
-| Relay compromise                   | No Project data persisted; capability-scoped; browser authoritative, so the relay cannot forge an actor or edit             |
-| Secret in cached/logged response   | `Cache-Control: no-store`; bodies and secrets redacted from logs and analytics                                              |
-| Multiple Agents                    | First release allows at most one Agent token per session; multi-Agent concurrency deferred                                  |
+| Threat                             | Handling                                                                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Claim link leaks                   | Single-use, ≤5 min expiry, explicit scopes, visible connected state, immediate revoke, no query-string analytics                                             |
+| Relay observes payloads in transit | HTTPS required; relay persists no payload and logs no body; end-to-end encryption deferred unless threat review requires it                                  |
+| Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write                                         |
+| `agentToken` theft                 | Short TTL, scoped, revocable, never stored in recovery/localStorage by default                                                                               |
+| Browser refresh                    | Same-tab reconnect may reuse only the bounded recovery proof when the Project binding still matches; otherwise it is cleared and reauthorization is required |
+| Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged                                            |
+| Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                                                         |
+| Editor offline during write        | `EDITOR_OFFLINE`; no unbounded write queue; reconnect never auto-applies a rejected write                                                                    |
+| Project swap mid-session           | `document.replaced`; old token invalid for the new Project                                                                                                   |
+| Permission escalation              | Token scopes fixed at claim; no per-op prompt inside scope; user pause/revoke always available                                                               |
+| Relay compromise                   | No Project data persisted; capability-scoped; browser authoritative, so the relay cannot forge an actor or edit                                              |
+| Secret in cached/logged response   | `Cache-Control: no-store`; bodies and secrets redacted from logs and analytics                                                                               |
+| Multiple Agents                    | First release allows at most one Agent token per session; multi-Agent concurrency deferred                                                                   |
 
 ## Valid example
 
@@ -336,8 +340,9 @@ refreshes the Snapshot and does not replay the old edit.
 
 ## Open decisions
 
-- Browser-refresh reconnect: deferred unless a secure explicit reconnect design
-  is accepted; the default remains revoke-on-refresh.
+- Browser-refresh reconnect is limited to the implemented same-tab recovery
+  proof. Cross-tab restoration, token persistence, and recovery across a
+  Project replacement remain out of scope.
 - End-to-end payload encryption: deferred unless threat review requires
   protection from the service operator.
 - Multi-Agent concurrency: deferred until demonstrated need.

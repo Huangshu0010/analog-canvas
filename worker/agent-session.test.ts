@@ -341,6 +341,54 @@ describe("public Agent session routes", () => {
     expect([first.status, second.status].sort()).toEqual([200, 409]);
   });
 
+  it("does not reopen a revoked browser session from a retained editor proof", async () => {
+    const storage = new MemoryStorage();
+    const object = new AgentSessionDO(
+      { storage },
+      { AGENT_ALLOWED_ORIGIN: "https://editor.example" },
+    );
+    const createdResponse = await object.fetch(
+      new Request("https://agent-session.internal/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "session-terminal",
+          projectSessionId: "project:1",
+          projectId: "project",
+          documentIds: ["document-main"],
+          scopes: ["circuit.snapshot"],
+        }),
+      }),
+    );
+    const created = (await createdResponse.json()) as {
+      session: { editorSecret: string };
+    };
+    const revoked = await object.fetch(
+      new Request("https://agent-session.internal/control", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-editor-secret": created.session.editorSecret,
+        },
+        body: JSON.stringify({ action: "revoke" }),
+      }),
+    );
+    expect(revoked.status).toBe(200);
+
+    const reconnect = await object.fetch(
+      new Request("https://agent-session.internal/editor", {
+        headers: {
+          upgrade: "websocket",
+          "sec-websocket-protocol": `icm-agent-session, ${created.session.editorSecret}`,
+        },
+      }),
+    );
+    expect(reconnect.status).toBe(409);
+    expect(await reconnect.json()).toMatchObject({
+      error: { code: "SESSION_REVOKED" },
+    });
+  });
+
   it("does not mark the editor offline when a replacement socket is open", async () => {
     const storage = new MemoryStorage();
     const replacement = { readyState: WebSocket.OPEN } as WebSocket;

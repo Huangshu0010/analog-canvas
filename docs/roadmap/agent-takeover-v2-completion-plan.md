@@ -98,19 +98,19 @@ Excluded:
 
 ## Delivery sequence and exit gates
 
-| Order | Package                 | Single authority to establish                   | Exit gate                                                                                                                  |
-| ----- | ----------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| M0    | Power identity          | `Net.powerDomain`                               | Completed in schema v5; no production supply identity is inferred from labels or symbols.                                  |
-| M1    | Port presentation       | first-class `Port.presentation`                 | Every live Port has one electrical/visual record; no product or Agent port-symbol authoring remains.                       |
-| M2    | Text and attachment     | required RichText AST + one `VisualAnchor`      | GUI, Agent, render/export, clipboard and hit-test use no string/markup or `routeAttachment` fallback.                      |
-| M3    | Typed netlist facts     | `Document.netlist` / `Instance.netlist`         | Every writable netlist fact is typed, visible in Snapshot, and no runtime `spice.*` fallback is consulted.                 |
-| M4    | Compatibility corpus    | tested sequential migrations                    | Shipped fixtures and representative projects rewrite to current form with topology and render stability evidence.          |
-| A1    | Project controller      | one browser-owned `EditorProjectController`     | GUI and Agent cannot create/rename/remove Documents or repair hierarchy through a second mutable path.                     |
-| A2    | Session continuity      | one session state machine                       | Claim, reconnect, refresh, pause, rotate, revoke, replacement and uncertain write states have deterministic outcomes.      |
-| A3    | File Resource           | one bounded in-memory candidate/artifact broker | Project/visual bytes flow through declared kinds, hashes and limits, never paths or hidden storage.                        |
-| A4    | Semantic collaboration  | one shared editor semantic controller           | Agent navigation/highlight/fit use the same resolved connectivity and locator service as GUI without persistence.          |
-| A5    | History and duplication | one project-aware history/closure planner       | Agent own-head undo/redo and duplicate have the same topology-safe semantics as the GUI.                                   |
-| A6    | Contract hardening      | generated OpenAPI + external-client proof       | All supported flows are discoverable, scoped, load-tested, and deploy-tested; no excluded feature leaks into capabilities. |
+| Order | Package                 | Single authority to establish                   | Exit gate                                                                                                                                                               |
+| ----- | ----------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0    | Power identity          | `Net.powerDomain`                               | Completed in schema v5; no production supply identity is inferred from labels or symbols.                                                                               |
+| M1    | Port presentation       | first-class `Port.presentation`                 | Every live Port has one electrical/visual record; no product or Agent port-symbol authoring remains.                                                                    |
+| M2    | Text and attachment     | required RichText AST + one `VisualAnchor`      | GUI, Agent, render/export, clipboard and hit-test use no string/markup or `routeAttachment` fallback.                                                                   |
+| M3    | Typed netlist facts     | `Document.netlist` / `Instance.netlist`         | Every writable netlist fact is typed, visible in Snapshot, and no runtime `spice.*` fallback is consulted.                                                              |
+| M4    | Compatibility corpus    | tested sequential migrations                    | Shipped fixtures and representative projects rewrite to current form with topology and render stability evidence.                                                       |
+| A1    | Project controller      | one browser-owned `EditorProjectController`     | **Deferred by product decision.** Cell creation/rename/delete, hierarchy transactions, and Project-level revision/history are not required for the current Agent scope. |
+| A2    | Session continuity      | one session state machine                       | Claim, reconnect, refresh, pause, rotate, revoke, replacement and uncertain write states have deterministic outcomes.                                                   |
+| A3    | File Resource           | one bounded in-memory candidate/artifact broker | Project/visual bytes flow through declared kinds, hashes and limits, never paths or hidden storage.                                                                     |
+| A4    | Semantic collaboration  | one shared editor semantic controller           | Agent navigation/highlight/fit use the same resolved connectivity and locator service as GUI without persistence.                                                       |
+| A5    | History and duplication | one project-aware history/closure planner       | Agent own-head undo/redo and duplicate have the same topology-safe semantics as the GUI.                                                                                |
+| A6    | Contract hardening      | generated OpenAPI + external-client proof       | All supported flows are discoverable, scoped, load-tested, and deploy-tested; no excluded feature leaks into capabilities.                                              |
 
 Each M target is a separate schema migration and must complete before a new
 Agent write relies on it. Existing legacy forms remain read-only compatibility
@@ -130,17 +130,19 @@ authorities are:
 | M0              | `Net.powerDomain`                                 | infer a supply from a marker Symbol, label, name, or fixed Net ID |
 | M1              | first-class `Port` plus `Port.presentation`       | author `port` or `port-filled` as an electrical Instance          |
 | M2              | required RichText AST and required `VisualAnchor` | author a string/markup annotation or `routeAttachment`            |
+| M3              | typed `Document.netlist` / `Instance.netlist`     | write or read runtime `spice.*` facts                             |
+| M4              | schema-v8 compatibility corpus                    | treat historic input forms as a second current Project contract   |
 
-The current Project schema is v7. These completed migrations remain migration
+The current Project schema is v8. These completed migrations remain migration
 evidence, not a reason to retain their former runtime fallbacks.
 
-The next verified authority gap is M3. `@icm/spice` still writes
-`spice.name`, `spice.target`, `spice.param.*`, `spice.pin.*`, and
-`spice.childDocumentId`; Snapshot, ERC, hierarchy, search, component parameter
-display, and one Edit Engine symbol-replacement path still read some of those
-properties. `Instance.netlist` already holds reference/binding/parameters and
-`Document.netlist` already holds Cell interface facts, but they are not yet
-complete enough to replace those consumers.
+M3 and the first M4 compatibility-corpus gate are complete: structural import,
+Snapshot, ERC, hierarchy, search, component parameters, and transaction
+validation consume typed netlist facts; current Projects reject `spice.*`
+writes. Every shipped Project fixture is classified as current, sequentially
+migratable historic input, or explicitly rejected. The next active delivery
+slice is A2 session continuity. A1 Cell/hierarchy management is deliberately
+deferred and does not block same-Project session recovery.
 
 Every remaining row below is its own target plan, commit series, and validation
 boundary. No target may claim completion from types or transport scaffolding
@@ -232,7 +234,7 @@ but never replaces, corpus tests. The target is blocked if any source Project
 cannot migrate without guessing an electrical fact; retain it as a named
 unsupported compatibility case instead of silently repairing it.
 
-### A1. Browser-owned Project controller and Project transactions
+### A1. Browser-owned Project controller and Project transactions (deferred)
 
 **Purpose.** Replace the current per-Document controller collection with one
 `EditorProjectController` that owns the live Project map/order, composite
@@ -354,16 +356,16 @@ Spectre, or design-netlist export/download kinds.
 
 ## Dependency gates and completion matrix
 
-| Target | Cannot start before             | May not leave behind                       | Completion evidence                                           |
-| ------ | ------------------------------- | ------------------------------------------ | ------------------------------------------------------------- |
-| M3     | M0--M2                          | any runtime `spice.*` decision             | schema-v8 migration and all typed consumers                   |
-| M4     | M3                              | untested current/legacy dual forms         | corpus migration, canonical/golden proof, docs reconciliation |
-| A1     | M4                              | a second live Project mutation path        | controller-only Project edits and composite rollback          |
-| A2     | A1 session identity             | hook/panel/relay state divergence          | reconnect/terminal-state proof                                |
-| A3     | A1 and A2 replacement semantics | paths, hidden storage, implicit import     | approved candidate/download proof                             |
-| A4     | M4 locator/connectivity facts   | coordinate-derived highlight state         | shared overlay and no-persistence proof                       |
-| A5     | A1 composite history            | React-only closure/remapping               | own-head and GUI-parity proof                                 |
-| A6     | A1--A5                          | undocumented or excluded public capability | deployed external-client and CI evidence                      |
+| Target | Cannot start before                         | May not leave behind                       | Completion evidence                                           |
+| ------ | ------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------- |
+| M3     | M0--M2                                      | any runtime `spice.*` decision             | schema-v8 migration and all typed consumers                   |
+| M4     | M3                                          | untested current/legacy dual forms         | corpus migration, canonical/golden proof, docs reconciliation |
+| A1     | M4                                          | a second live Project mutation path        | controller-only Project edits and composite rollback          |
+| A2     | existing immutable Project-session identity | hook/panel/relay state divergence          | reconnect/terminal-state proof                                |
+| A3     | A2 replacement semantics                    | paths, hidden storage, implicit import     | approved candidate/download proof                             |
+| A4     | M4 locator/connectivity facts               | coordinate-derived highlight state         | shared overlay and no-persistence proof                       |
+| A5     | A1 composite history                        | React-only closure/remapping               | own-head and GUI-parity proof                                 |
+| A6     | A1--A5                                      | undocumented or excluded public capability | deployed external-client and CI evidence                      |
 
 No simulation, PVT, waveform/measurement, SPICE/Spectre/design-netlist export,
 filesystem path, cloud Project store, or browser-automation work may be added

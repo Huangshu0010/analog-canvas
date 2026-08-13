@@ -1,0 +1,113 @@
+import type { AgentSessionScope } from "@icm/agent-adapter";
+
+export const AGENT_SESSION_RECOVERY_STORAGE_KEY =
+  "icm.agent-session-recovery.v1";
+
+export interface AgentSessionRecoveryRecord {
+  readonly version: 1;
+  readonly sessionId: string;
+  readonly editorSecret: string;
+  readonly projectId: string;
+  readonly projectSessionId: string;
+  readonly scopes: readonly AgentSessionScope[];
+  readonly expiresAt: number;
+}
+
+export interface SessionStorageLike {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+export interface RecoveryTarget {
+  readonly projectId: string;
+  readonly projectSessionId: string;
+  readonly now: number;
+}
+
+function isScope(value: unknown): value is AgentSessionScope {
+  return (
+    typeof value === "string" &&
+    [
+      "circuit.snapshot",
+      "circuit.render",
+      "circuit.source-spans",
+      "circuit.edit.geometry",
+      "circuit.edit.connectivity",
+      "circuit.edit.presentation",
+    ].includes(value)
+  );
+}
+
+function parseRecord(value: unknown): AgentSessionRecoveryRecord | null {
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  if (
+    record.version !== 1 ||
+    typeof record.sessionId !== "string" ||
+    record.sessionId.length === 0 ||
+    typeof record.editorSecret !== "string" ||
+    record.editorSecret.length === 0 ||
+    typeof record.projectId !== "string" ||
+    record.projectId.length === 0 ||
+    typeof record.projectSessionId !== "string" ||
+    record.projectSessionId.length === 0 ||
+    !Array.isArray(record.scopes) ||
+    !record.scopes.every(isScope) ||
+    typeof record.expiresAt !== "number" ||
+    !Number.isFinite(record.expiresAt)
+  ) {
+    return null;
+  }
+  return {
+    version: 1,
+    sessionId: record.sessionId,
+    editorSecret: record.editorSecret,
+    projectId: record.projectId,
+    projectSessionId: record.projectSessionId,
+    scopes: [...record.scopes],
+    expiresAt: record.expiresAt,
+  };
+}
+
+export function writeAgentSessionRecovery(
+  storage: SessionStorageLike,
+  record: AgentSessionRecoveryRecord,
+): void {
+  storage.setItem(AGENT_SESSION_RECOVERY_STORAGE_KEY, JSON.stringify(record));
+}
+
+export function clearAgentSessionRecovery(storage: SessionStorageLike): void {
+  storage.removeItem(AGENT_SESSION_RECOVERY_STORAGE_KEY);
+}
+
+/**
+ * Reads a same-tab reconnect proof only when it belongs to the Project that is
+ * currently open. Any malformed, expired, or Project-mismatched record is
+ * deleted before it can reach the relay.
+ */
+export function readAgentSessionRecovery(
+  storage: SessionStorageLike,
+  target: RecoveryTarget,
+): AgentSessionRecoveryRecord | null {
+  const raw = storage.getItem(AGENT_SESSION_RECOVERY_STORAGE_KEY);
+  if (raw === null) return null;
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(raw) as unknown;
+  } catch {
+    clearAgentSessionRecovery(storage);
+    return null;
+  }
+  const record = parseRecord(candidate);
+  if (
+    record === null ||
+    record.expiresAt <= target.now ||
+    record.projectId !== target.projectId ||
+    record.projectSessionId !== target.projectSessionId
+  ) {
+    clearAgentSessionRecovery(storage);
+    return null;
+  }
+  return record;
+}

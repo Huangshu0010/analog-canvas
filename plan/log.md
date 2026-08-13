@@ -19,6 +19,23 @@
   `fix(agent): enforce one hosted request contract` on
   `codex/agent-project-lifecycle`.
 
+## 2026-08-13 - Same-Project browser Agent session recovery
+
+- Target: recover an already claimed Agent session across a same-tab browser
+  refresh without implementing Project-level Cell/hierarchy control.
+- Changed areas: bounded browser recovery record and hook lifecycle; terminal
+  relay editor reconnection handling; session threat/spec and delivery-roadmap
+  scope; focused recovery and Worker tests.
+- Contract result: only a matching live Project may reuse the browser editor
+  proof; bearer/claim/Project/request data are not persisted. Revoke, expiry,
+  replacement, malformed storage, and mismatch remove the proof; uncertain
+  writes retain their original request-id path.
+- Validation: focused 44-test session suite, browser Agent E2E, generated
+  artifacts, docs/type/diff checks, and `pnpm verify:branch` passed (119 test
+  files, 717 tests, all builds, production smoke).
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `feat(agent): recover same-project browser sessions`.
+
 ## 2026-08-13 - Project compatibility corpus baseline
 
 - Target: establish the first M4 migration-corpus proof, without changing

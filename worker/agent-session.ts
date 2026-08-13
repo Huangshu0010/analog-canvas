@@ -749,6 +749,14 @@ export class AgentSessionDO {
         401,
       );
     }
+    const status = machine.statusAt(Date.now());
+    if (status === "revoked" || status === "expired") {
+      const code = status === "revoked" ? "SESSION_REVOKED" : "SESSION_EXPIRED";
+      return jsonResponse(
+        errorBody(code, errorMessage(code)),
+        transportStatus(code),
+      );
+    }
     const Pair = (
       globalThis as typeof globalThis & {
         WebSocketPair?: WebSocketPairConstructor;
@@ -766,7 +774,19 @@ export class AgentSessionDO {
         socket.close(4001, "editor transport replaced");
       }
     }
-    if (machine.claimed) {
+    if (status === "paused") {
+      pair[1].send(
+        JSON.stringify({
+          protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+          sessionId: machine.sessionId,
+          messageId: crypto.randomUUID(),
+          requestId: `event-${crypto.randomUUID()}`,
+          sentAt: new Date().toISOString(),
+          kind: "event",
+          payload: { type: "session.paused", sessionId: machine.sessionId },
+        }),
+      );
+    } else if (machine.claimed) {
       pair[1].send(
         JSON.stringify({
           protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
