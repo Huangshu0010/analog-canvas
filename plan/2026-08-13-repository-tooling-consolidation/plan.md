@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -86,4 +86,15 @@ refactor(tools): organize golden and calibration commands
 
 ## Outcome
 
-Pending implementation and validation.
+Removed the unreferenced text/current-arrow fixture chains and their generators.
+Phase 9 investigation proved that six historical executors no longer satisfy
+current schema, hierarchical-symbol grid, or route validation contracts; those
+programs were deleted, their inputs/results moved to the documentation archive,
+and the still-covered SPICE netlists retained. The two generic Phase 9 research
+tools remain runnable under `tools/research/phase9/`. Golden commands now use
+stable visual/export names, and all Razavi manual calibration tools live under
+`tools/calibration/razavi/` without a machine-specific output path. No product,
+test, worker, or GitHub Actions implementation changed. Focused migration,
+renderer, Agent adapter, SPICE corpus, research-tool, golden, and calibration
+checks passed, followed by `pnpm verify:branch` and the complete
+`pnpm ci:check` gate with 675 unit tests and 96 browser scenarios.

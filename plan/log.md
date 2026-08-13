@@ -6080,3 +6080,22 @@ contracts (WP-R1)`.
   GitHub Actions workflow unchanged.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(test): reduce local validation resource usage`.
+
+## 2026-08-13 - Repository tooling consolidation
+
+- Target: remove unowned historical fixtures and separate optional research
+  and manual calibration tools from the daily engineering surface.
+- Changed areas: deleted orphaned text/current-arrow projects and goldens;
+  archived stale Phase 9 programs' evidence while retaining corpus netlists;
+  retained two runnable research tools under `tools/research/phase9/`; renamed
+  visual/export golden commands; moved Razavi calibration to
+  `tools/calibration/razavi/`; removed the obsolete integration worktree and
+  local/remote branch.
+- Validation: 40 focused renderer/schema tests; 8 Agent snapshot/SPICE corpus
+  tests; retained Skill check and external-evaluation self-test; visual/export
+  golden checks; all three Razavi calibration tools; `pnpm verify:branch`;
+  canonical `pnpm ci:check` with 112 Vitest files / 675 tests, all release
+  checks, and 96 Playwright scenarios; product and GitHub Actions paths
+  unchanged; `git diff --check` clean.
+- Commit status: three reviewable implementation commits plus this close-out on
+  `codex/local-validation-optimization`.
