@@ -66,7 +66,7 @@ describe("Agent golden request contract", () => {
           kind: "add_instance",
           instance: {
             id: "VIN",
-            symbolId: "resistor",
+            symbolId: "port",
             symbolVariantId: "",
             placement: null,
             properties: {},

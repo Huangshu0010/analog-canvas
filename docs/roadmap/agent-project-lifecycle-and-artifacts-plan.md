@@ -152,8 +152,6 @@ The initial Project edit union must cover:
 - `rename_project`;
 - `create_document`, `remove_document`, `rename_document`;
 - `set_top_document`;
-- `create_port`, `remove_port`, `rename_port`, `set_port_direction`;
-- `set_port_position` through the same semantic operation used by GUI;
 - `set_cell_netlist_interface`, including explicit Port order;
 - `set_instance_cell_binding`, including validated caller/callee pin mapping;
 - an atomic multi-Document batch for interface changes and caller repairs.

@@ -34,69 +34,6 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
-  it("owns Port presentation and references through typed Port edits", () => {
-    const document = createEmptyDocument("document-main", "Main");
-    const added = executeTransaction(
-      document,
-      {
-        ...transaction(),
-        edits: [
-          {
-            kind: "add_port",
-            port: {
-              id: "VIN",
-              name: "Vin",
-              direction: "input",
-              position: { x: 40, y: 60 },
-              presentation: "filled",
-            },
-          },
-        ],
-      },
-      { symbolResolver: resolver },
-    );
-    expect(added.ok).toBe(true);
-    if (!added.ok) return;
-    expect(added.document.ports).toContainEqual({
-      id: "VIN",
-      name: "Vin",
-      direction: "input",
-      position: { x: 40, y: 60 },
-      presentation: "filled",
-    });
-    expect(added.document.netlist?.portOrder).toContain("VIN");
-
-    const connected = executeTransaction(
-      added.document,
-      {
-        ...transaction(added.document.revision),
-        edits: [
-          {
-            kind: "connect_endpoints",
-            from: { kind: "port", portId: "VIN" },
-            to: { kind: "port", portId: "VIN" },
-            newNetId: "net-vin",
-          },
-        ],
-      },
-      { symbolResolver: resolver },
-    );
-    expect(connected.ok).toBe(true);
-    if (!connected.ok) return;
-    const rejectedRemoval = executeTransaction(
-      connected.document,
-      {
-        ...transaction(connected.document.revision),
-        edits: [{ kind: "remove_port", portId: "VIN" }],
-      },
-      { symbolResolver: resolver },
-    );
-    expect(rejectedRemoval).toMatchObject({
-      ok: false,
-      error: { code: "EDIT_PRECONDITION" },
-    });
-  });
-
   it("rejects the retired ambiguous annotation edit names", () => {
     expect(
       SchematicEditSchema.safeParse({

@@ -12,7 +12,6 @@ import {
   MirrorSchema,
   NoConnectSchema,
   NetPowerDomainSchema,
-  PortPresentationSchema,
   PortSchema,
   PlacementSchema,
   PointSchema,
@@ -129,30 +128,6 @@ export const SetInstanceNetlistEditSchema = z.strictObject({
 export const SetCellNetlistInterfaceEditSchema = z.strictObject({
   kind: z.literal("set_cell_netlist_interface"),
   netlist: CellNetlistInterfaceSchema,
-});
-/** First-class Ports own both endpoint connectivity and visual presentation. */
-export const AddPortEditSchema = z.strictObject({
-  kind: z.literal("add_port"),
-  port: PortSchema,
-});
-export const RemovePortEditSchema = z.strictObject({
-  kind: z.literal("remove_port"),
-  portId: StableIdSchema,
-});
-export const RenamePortEditSchema = z.strictObject({
-  kind: z.literal("rename_port"),
-  portId: StableIdSchema,
-  name: z.string().trim().min(1).max(256),
-});
-export const SetPortDirectionEditSchema = z.strictObject({
-  kind: z.literal("set_port_direction"),
-  portId: StableIdSchema,
-  direction: z.enum(["input", "output", "bidirectional", "passive"]),
-});
-export const SetPortPresentationEditSchema = z.strictObject({
-  kind: z.literal("set_port_presentation"),
-  portId: StableIdSchema,
-  presentation: PortPresentationSchema,
 });
 export const PlacePortEditSchema = z.strictObject({
   kind: z.literal("place_port"),
@@ -360,11 +335,6 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   PatchInstancePropertiesEditSchema,
   SetInstanceNetlistEditSchema,
   SetCellNetlistInterfaceEditSchema,
-  AddPortEditSchema,
-  RemovePortEditSchema,
-  RenamePortEditSchema,
-  SetPortDirectionEditSchema,
-  SetPortPresentationEditSchema,
   PlacePortEditSchema,
   MovePortEditSchema,
   SetRoutePointsEditSchema,
@@ -2325,163 +2295,6 @@ export function executeTransaction(
         draft.netlist = structuredClone(edit.netlist);
         changedObjectIds.add(draft.id);
         connectivityChanged = true;
-        break;
-      }
-      case "add_port": {
-        const existingIds = new Set([
-          ...draft.ports.map((port) => port.id),
-          ...draft.instances.map((instance) => instance.id),
-          ...draft.nets.map((net) => net.id),
-          ...draft.routes.map((route) => route.id),
-          ...draft.junctions.map((junction) => junction.id),
-          ...draft.noConnects.map((noConnect) => noConnect.id),
-          ...draft.annotations.map((annotation) => annotation.id),
-          ...draft.layoutGroups.map((group) => group.id),
-          ...draft.constraints.map((constraint) => constraint.id),
-          ...(draft.drafting?.objects.map((object) => object.id) ?? []),
-        ]);
-        if (existingIds.has(edit.port.id)) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Port ID already exists: ${edit.port.id}`,
-            [],
-            [edit.port.id],
-          );
-        }
-        draft.ports.push({
-          ...structuredClone(edit.port),
-          presentation: edit.port.presentation ?? "hollow",
-        });
-        if (draft.netlist && !draft.netlist.portOrder.includes(edit.port.id)) {
-          draft.netlist.portOrder.push(edit.port.id);
-        }
-        changedObjectIds.add(edit.port.id);
-        changedObjectIds.add(draft.id);
-        connectivityChanged = true;
-        break;
-      }
-      case "remove_port": {
-        const index = draft.ports.findIndex(
-          (candidate) => candidate.id === edit.portId,
-        );
-        if (index < 0) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Port does not exist: ${edit.portId}`,
-          );
-        }
-        const usedByNet = draft.nets.some((net) =>
-          net.ports.includes(edit.portId),
-        );
-        const usedByRoute = draft.routes.some(
-          (route) =>
-            (route.from.kind === "port" && route.from.portId === edit.portId) ||
-            (route.to.kind === "port" && route.to.portId === edit.portId),
-        );
-        const usedByNoConnect = draft.noConnects.some(
-          (noConnect) =>
-            noConnect.endpoint.kind === "port" &&
-            noConnect.endpoint.portId === edit.portId,
-        );
-        const usedByAnnotation = draft.annotations.some(
-          (annotation) =>
-            annotation.anchor.kind === "object" &&
-            annotation.anchor.objectId === edit.portId,
-        );
-        const layoutOwner = [...draft.layoutGroups, ...draft.constraints].find(
-          (item) => item.objectIds.includes(edit.portId),
-        );
-        if (
-          usedByNet ||
-          usedByRoute ||
-          usedByNoConnect ||
-          usedByAnnotation ||
-          layoutOwner
-        ) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Port ${edit.portId} still has electrical or presentation references`,
-            [],
-            [edit.portId],
-          );
-        }
-        draft.ports.splice(index, 1);
-        if (draft.netlist) {
-          draft.netlist.portOrder = draft.netlist.portOrder.filter(
-            (portId) => portId !== edit.portId,
-          );
-        }
-        changedObjectIds.add(edit.portId);
-        changedObjectIds.add(draft.id);
-        connectivityChanged = true;
-        break;
-      }
-      case "rename_port": {
-        const port = draft.ports.find(
-          (candidate) => candidate.id === edit.portId,
-        );
-        if (!port) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Port does not exist: ${edit.portId}`,
-          );
-        }
-        if (port.name === edit.name) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "Port name is unchanged",
-            [],
-            [port.id],
-          );
-        }
-        port.name = edit.name;
-        changedObjectIds.add(port.id);
-        connectivityChanged = true;
-        break;
-      }
-      case "set_port_direction": {
-        const port = draft.ports.find(
-          (candidate) => candidate.id === edit.portId,
-        );
-        if (!port) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Port does not exist: ${edit.portId}`,
-          );
-        }
-        if (port.direction === edit.direction) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "Port direction is unchanged",
-            [],
-            [port.id],
-          );
-        }
-        port.direction = edit.direction;
-        changedObjectIds.add(port.id);
-        connectivityChanged = true;
-        break;
-      }
-      case "set_port_presentation": {
-        const port = draft.ports.find(
-          (candidate) => candidate.id === edit.portId,
-        );
-        if (!port) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Port does not exist: ${edit.portId}`,
-          );
-        }
-        if ((port.presentation ?? "hollow") === edit.presentation) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "Port presentation is unchanged",
-            [],
-            [port.id],
-          );
-        }
-        port.presentation = edit.presentation;
-        changedObjectIds.add(port.id);
         break;
       }
       case "place_port": {

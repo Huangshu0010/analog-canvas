@@ -96,20 +96,19 @@ to Project-structural and multi-Document operations.
 
 ### Project edit inventory
 
-The initial Project edit union covers `rename_project`; `create_document`,
-`remove_document`, `rename_document`; `set_top_document`; `create_port`,
-`remove_port`, `rename_port`, `set_port_direction`; `set_port_position` through
-the same semantic operation the GUI uses; `set_cell_netlist_interface`
-(including explicit Port order); `set_instance_cell_binding` (including
-validated caller/callee pin mapping); and an atomic multi-Document batch for
-interface changes and caller repairs.
+The initial Project edit union was proposed to cover `rename_project`;
+`create_document`, `remove_document`, `rename_document`; `set_top_document`;
+`set_cell_netlist_interface` (including explicit Port order);
+`set_instance_cell_binding` (including validated caller/callee pin mapping);
+and an atomic multi-Document batch for interface changes and caller repairs.
+
+**Superseded scope note (2026-08-14):** no Port-specific Project lifecycle
+operations are adopted. Ordinary visual Ports remain symbol instances and use
+the existing Document `add_instance` plus terminal-endpoint edit contract.
 
 Removal rejects dangling hierarchy references unless the same atomic transaction
 repairs them. The last Document cannot be removed. Removing the top Document
-requires setting another valid top Document in the same transaction. Port
-removal must explicitly remove or remap Net membership, Routes, NoConnect state,
-interface order, and caller mappings; it must never silently leave visual or
-electrical debris.
+requires setting another valid top Document in the same transaction.
 
 ### History semantics
 

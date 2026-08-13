@@ -442,8 +442,8 @@ test("hides flightlines after manually deleting an imported Route", async ({
     {
       id: "route-imported-partial",
       netId: "net-h",
-      from: { kind: "port", portId: "A" },
-      to: { kind: "port", portId: "B" },
+      from: { kind: "terminal", instanceId: "A", pinName: "P" },
+      to: { kind: "terminal", instanceId: "B", pinName: "P" },
       waypoints: [],
       segmentModes: ["manual"],
     },
@@ -604,8 +604,8 @@ test("focuses imported flightlines on the selected Net", async ({ page }) => {
   project.documents[0]!.routes.push({
     id: "route-imported-h",
     netId: "net-h",
-    from: { kind: "port", portId: "A" },
-    to: { kind: "port", portId: "B" },
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
     waypoints: [],
     segmentModes: ["manual"],
   });
@@ -1470,8 +1470,8 @@ test("deletes imported Net Labels with non-editor ids", async ({ page }) => {
   document.routes.push({
     id: "route-imported-h",
     netId: "net-h",
-    from: { kind: "port", portId: "A" },
-    to: { kind: "port", portId: "B" },
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
     waypoints: [],
     segmentModes: ["manual"],
   });
@@ -1560,16 +1560,16 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   });
 
   await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("port-A").click();
-  await page.getByTestId("port-B").click();
+  await page.getByTestId("terminal-A-P").click();
+  await page.getByTestId("terminal-B-P").click();
   await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("port-C").click();
-  await page.getByTestId("port-D").click();
+  await page.getByTestId("terminal-C-P").click();
+  await page.getByTestId("terminal-D-P").click();
   await expect(page.getByTestId("crossing-count")).toHaveText("1");
   await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(0);
 
   await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("port-E").click();
+  await page.getByTestId("terminal-E-P").click();
   await clickRoute(page, "route-ui-1", 0.5);
   await expect(page.getByTestId("status")).toContainText(
     "Ambiguous intersection",
@@ -1578,14 +1578,14 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await page.keyboard.press("Escape");
 
   await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("port-E").click();
+  await page.getByTestId("terminal-E-P").click();
   await clickRouteWithScreenOffset(page, "route-ui-1", { x: 0, y: 5 }, 0.25);
   await expect(page.getByTestId("revision")).toHaveText("3");
   await expect(page.getByTestId("junction-junction-ui-3")).toBeVisible();
-  // With the first-class Port fixture, the branch from E meets the horizontal
-  // route while the independent vertical route remains a crossing. The new
-  // endpoint-on-route junction must not collapse either geometric crossing.
-  await expect(page.getByTestId("crossing-count")).toHaveText("2");
+  // The new branch passes exactly through D.P. Pass-through pin capture makes
+  // that an explicit electrical contact, so only the original geometric
+  // crossing remains.
+  await expect(page.getByTestId("crossing-count")).toHaveText("1");
   await page.keyboard.press("Escape");
 
   await clickRoute(page, "route-ui-2", 0.25);
@@ -1702,8 +1702,8 @@ test("places a component pin onto a Route and keeps real split topology", async 
   project.documents[0]!.routes.push({
     id: "route-base",
     netId: "net-h",
-    from: { kind: "port", portId: "A" },
-    to: { kind: "port", portId: "B" },
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
     waypoints: [],
     segmentModes: ["manual"],
   });
@@ -2238,9 +2238,7 @@ test("navigates a project-search locator into an imported child Cell", async ({
 
   await page.keyboard.press("Control+f");
   await page.getByTestId("project-search-input").fill("RCHILD");
-  await page
-    .getByRole("button", { name: /resistor.*instance.*document-child/u })
-    .click();
+  await page.locator('[data-testid^="project-search-result-RCHILD-"]').click();
   await expect(page.getByTestId("active-document-name")).toHaveText(
     "Bias Child Cell",
   );
@@ -2422,36 +2420,20 @@ test("navigates a visible hierarchy Net trace hop into its child Cell", async ({
 }) => {
   const project = createRoutingDemoProject();
   const top = project.documents[0]!;
-  top.instances.push({
-    id: "XCHILD",
-    symbolId: "resistor",
-    placement: {
-      position: { x: 300, y: 220 },
-      rotation: 0,
-      mirror: "none",
+  top.instances.find((instance) => instance.id === "A")!.netlist = {
+    reference: "XA",
+    parameters: {},
+    binding: {
+      kind: "subcircuit",
+      name: "Trace Child Cell",
+      childDocumentId: "document-trace-child",
     },
-    properties: {},
-    netlist: {
-      reference: "XCHILD",
-      parameters: {},
-      binding: {
-        kind: "subcircuit",
-        name: "Trace Child Cell",
-        childDocumentId: "document-trace-child",
-      },
-    },
-  });
-  top.nets
-    .find((net) => net.id === "net-h")!
-    .terminals.push({
-      instanceId: "XCHILD",
-      pinName: "1",
-    });
+  };
   top.routes.push({
     id: "route-trace",
     netId: "net-h",
-    from: { kind: "port", portId: "A" },
-    to: { kind: "port", portId: "B" },
+    from: { kind: "terminal", instanceId: "A", pinName: "P" },
+    to: { kind: "terminal", instanceId: "B", pinName: "P" },
     waypoints: [],
     segmentModes: ["manual"],
   });
@@ -2462,7 +2444,7 @@ test("navigates a visible hierarchy Net trace hop into its child Cell", async ({
   child.ports = [
     {
       id: "port-trace",
-      name: "1",
+      name: "P",
       direction: "passive",
       position: { x: 120, y: 200 },
     },
@@ -2492,7 +2474,7 @@ test("navigates a visible hierarchy Net trace hop into its child Cell", async ({
   await clickRoute(page, "route-trace");
   await openSelectionShelf(page);
   await page.getByRole("button", { name: "Highlight Net" }).click();
-  await expect(page.getByTestId("net-trace-hops")).toContainText("XCHILD.1");
+  await expect(page.getByTestId("net-trace-hops")).toContainText("A.P");
   const traceHop = page.getByTestId("net-trace-hop-0");
   await traceHop.scrollIntoViewIfNeeded();
   await traceHop.click();

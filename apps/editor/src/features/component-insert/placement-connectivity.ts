@@ -12,7 +12,6 @@ import { transformPoint } from "@icm/model";
 import type {
   Instance,
   Point,
-  Port,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
@@ -28,12 +27,6 @@ export interface PlacementContactProposal {
   ambiguous: boolean;
   powerNetId?: string;
   powerEndpoint?: RouteEndpoint;
-}
-
-interface PlacementContactSubject {
-  id: string;
-  endpoints: readonly WireSource[];
-  power?: (typeof POWER_CONNECTION_BY_SYMBOL)[keyof typeof POWER_CONNECTION_BY_SYMBOL];
 }
 
 function newInstanceEndpoints(
@@ -113,63 +106,12 @@ export function proposePlacementContact(
   if (instance.symbolId === "vdd") {
     return { edits: [], matched: false, ambiguous: false };
   }
-  return proposeEndpointPlacementContact(
-    document,
-    resolver,
-    {
-      id: instance.id,
-      endpoints: newInstanceEndpoints(resolver, instance),
-      power:
-        POWER_CONNECTION_BY_SYMBOL[
-          instance.symbolId as keyof typeof POWER_CONNECTION_BY_SYMBOL
-        ],
-    },
-    targets,
-  );
-}
-
-/**
- * First-class Ports use exactly the same exact-contact rule as component pins.
- * The add_port edit and any derived connection edits are committed atomically
- * by the caller; this helper never treats visual overlap as connectivity.
- */
-export function proposePortPlacementContact(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  port: Pick<Port, "id" | "position">,
-  targets: readonly WireSource[],
-): PlacementContactProposal {
-  if (!port.position) return { edits: [], matched: false, ambiguous: false };
-  return proposeEndpointPlacementContact(
-    document,
-    resolver,
-    {
-      id: port.id,
-      endpoints: [
-        {
-          endpoint: { kind: "port", portId: port.id },
-          netId: null,
-          point: port.position,
-          preludeEdits: [],
-        },
-      ],
-    },
-    targets,
-  );
-}
-
-function proposeEndpointPlacementContact(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  subject: PlacementContactSubject,
-  targets: readonly WireSource[],
-): PlacementContactProposal {
   const contacts: Array<{
     source: WireSource;
     target: ElectricalContactTarget;
   }> = [];
   let ambiguous = false;
-  for (const source of subject.endpoints) {
+  for (const source of newInstanceEndpoints(resolver, instance)) {
     const candidates: ElectricalContactCandidate[] = targets
       .filter((target) => samePoint(source.point, target.point))
       .map((target) => ({
@@ -225,7 +167,10 @@ function proposeEndpointPlacementContact(
   if (new Set(routeIds).size !== routeIds.length) {
     return { edits: [], matched: false, ambiguous: true };
   }
-  const power = subject.power;
+  const power =
+    POWER_CONNECTION_BY_SYMBOL[
+      instance.symbolId as keyof typeof POWER_CONNECTION_BY_SYMBOL
+    ];
   const edits: SchematicEdit[] = [];
   let powerNetId: string | undefined;
   let powerEndpoint: RouteEndpoint | undefined;
@@ -234,8 +179,8 @@ function proposeEndpointPlacementContact(
     if (target.endpoint) {
       const newNetId =
         contacts.length === 1
-          ? `net-contact-${subject.id.toLowerCase()}`
-          : `net-contact-${subject.id.toLowerCase()}-${
+          ? `net-contact-${instance.id.toLowerCase()}`
+          : `net-contact-${instance.id.toLowerCase()}-${
               source.endpoint.kind === "terminal"
                 ? source.endpoint.pinName.toLowerCase()
                 : "pin"
@@ -260,7 +205,7 @@ function proposeEndpointPlacementContact(
           target.route.routeId,
           source.point,
           target.route.segmentIndex,
-          `contact-${subject.id.toLowerCase()}-${source.endpoint.kind === "terminal" ? source.endpoint.pinName.toLowerCase() : "port"}`,
+          `contact-${instance.id.toLowerCase()}-${source.endpoint.kind === "terminal" ? source.endpoint.pinName.toLowerCase() : "pin"}`,
         ).edits,
       );
     }

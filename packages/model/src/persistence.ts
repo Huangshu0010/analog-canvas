@@ -124,8 +124,8 @@ defaultProjectMigrations.register(3, (input) =>
 defaultProjectMigrations.register(4, (input) =>
   migrateV4ToV5(input as Record<string, unknown>),
 );
-// Schema 5 -> 6: first-class Port visual presentation and legacy port-symbol
-// conversion. Runtime never needs a port Symbol after this migration.
+// Schema 5 -> 6: retained continuity step. Port remains an ordinary Symbol
+// instance; no visual Port conversion occurs at runtime.
 defaultProjectMigrations.register(5, (input) =>
   migrateV5ToV6(input as Record<string, unknown>),
 );

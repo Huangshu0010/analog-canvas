@@ -128,7 +128,7 @@ describe("Agent Circuit API v1 service", () => {
           kind: "add_instance",
           instance: {
             id: "VIN",
-            symbolId: "resistor",
+            symbolId: "port",
             symbolVariantId: "",
             placement: null,
             properties: {},
@@ -510,6 +510,41 @@ describe("Agent Circuit API v1 service", () => {
     expect(direct.ok).toBe(true);
     expect(fixture.getDocument()).toEqual(direct.document);
     expect(fixture.getDocument().sourceStatus).toBe("connectivity-modified");
+  });
+
+  it("places an ordinary Port symbol through the standard Agent instance contract", () => {
+    const fixture = serviceFixture();
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "place-port-symbol",
+      operation: "transact",
+      documentId: fixture.getDocument().id,
+      transactionId: "place-port-symbol",
+      expectedRevision: fixture.getDocument().revision,
+      edits: [
+        {
+          kind: "add_instance",
+          instance: {
+            id: "PORT-OUT",
+            symbolId: "port",
+            placement: {
+              position: { x: 620, y: 300 },
+              rotation: 0,
+              mirror: "none",
+            },
+            properties: {},
+          },
+        },
+      ],
+    });
+
+    expect(response).toMatchObject({ ok: true, applied: true, revision: 1 });
+    expect(fixture.getDocument().instances).toContainEqual(
+      expect.objectContaining({ id: "PORT-OUT", symbolId: "port" }),
+    );
+    expect(resolver.resolve("port")?.definition.pins).toEqual([
+      expect.objectContaining({ name: "P" }),
+    ]);
   });
 
   it("applies an instance property patch through the same presentation boundary", () => {

@@ -117,6 +117,23 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain("font-style:normal;font-weight:700");
   });
 
+  it("renders the Razavi palette port as a hollow endpoint", () => {
+    const port = builtInSymbols.find((symbol) => symbol.id === "port");
+    expect(port).toBeDefined();
+
+    const body = renderSymbolDefinitionBody(
+      port!,
+      [],
+      [],
+      razaviTextbookProfile,
+    );
+
+    expect(body).toContain(
+      'r="2.47907" fill="none" stroke="#000" stroke-width="1.6"',
+    );
+    expect(body).toContain('x2="-4.607544"');
+  });
+
   it("preserves the resistor's sharp miter override", () => {
     const resistor = builtInSymbols.find((symbol) => symbol.id === "resistor");
     expect(resistor).toBeDefined();
@@ -842,24 +859,25 @@ describe("textbook monochrome SVG renderer", () => {
         "utf8",
       ),
     );
-    const port = (portId: string) => ({
-      kind: "port" as const,
-      portId,
+    const terminal = (instanceId: string) => ({
+      kind: "terminal" as const,
+      instanceId,
+      pinName: "P",
     });
     project.documents[0]!.routes = [
       {
         id: "route-h",
         netId: "net-h",
-        from: port("A"),
-        to: port("B"),
+        from: terminal("A"),
+        to: terminal("B"),
         waypoints: [],
         segmentModes: ["manual"],
       },
       {
         id: "route-v",
         netId: "net-v",
-        from: port("C"),
-        to: port("D"),
+        from: terminal("C"),
+        to: terminal("D"),
         waypoints: [],
         segmentModes: ["manual"],
       },
@@ -995,38 +1013,7 @@ describe("textbook monochrome SVG renderer", () => {
 
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain(
-      '<circle data-object-id="port-vin" data-node-kind="port-origin" data-port-presentation="hollow" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#000" stroke-width="1.6"/>',
-    );
-  });
-
-  it("renders filled and supply Ports only from Port presentation", () => {
-    const document = createEmptyProject("project-port-presentation", "Ports")
-      .documents[0]!;
-    document.presentation.styleProfileId = "razavi-textbook-v1";
-    document.ports.push(
-      {
-        id: "filled",
-        name: "Filled",
-        direction: "passive",
-        position: { x: 30, y: 40 },
-        presentation: "filled",
-      },
-      {
-        id: "supply",
-        name: "VDD",
-        direction: "passive",
-        position: { x: 60, y: 40 },
-        presentation: "supply",
-      },
-    );
-    document.netlist!.portOrder.push("filled", "supply");
-
-    const svg = renderDocumentSvg(document, resolver);
-    expect(svg).toContain(
-      'data-object-id="filled" data-node-kind="port-origin" data-port-presentation="filled"',
-    );
-    expect(svg).not.toContain(
-      'data-object-id="supply" data-node-kind="port-origin"',
+      '<circle data-object-id="port-vin" data-node-kind="port-origin" cx="40" cy="60" r="2.47907" fill="#fff" stroke="#000" stroke-width="1.6"/>',
     );
   });
 

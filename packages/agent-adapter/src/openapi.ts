@@ -111,13 +111,16 @@ export const agentCircuitRequestExamples = {
       dryRun: true,
       edits: [
         {
-          kind: "add_port",
-          port: {
+          kind: "add_instance",
+          instance: {
             id: "VIN",
-            name: "Vin",
-            direction: "input",
-            presentation: "hollow",
-            position: { x: 200, y: 260 },
+            symbolId: "port",
+            placement: {
+              position: { x: 200, y: 260 },
+              rotation: 0,
+              mirror: "none",
+            },
+            properties: {},
           },
         },
       ],

@@ -209,16 +209,11 @@ export const InstanceSchema = z
       pinNames.add(terminal.pinName);
     }
   });
-/** Visual presentation is owned by the electrical Port, never by a port Symbol. */
-export const PortPresentationSchema = z.enum(["hollow", "filled", "supply"]);
 export const PortSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1),
   direction: z.enum(["input", "output", "bidirectional", "passive"]),
   position: PointSchema.nullable(),
-  // Schema-v6 migration writes the field for every persisted Port. Optionality
-  // admits pre-migration in-memory test construction only.
-  presentation: PortPresentationSchema.optional(),
 });
 /**
  * Persisted electrical supply identity. `conflict` is migration/diagnostic
@@ -1089,7 +1084,6 @@ export type MosBulkBinding = z.infer<typeof MosBulkBindingSchema>;
 export type TerminalRef = z.infer<typeof TerminalRefSchema>;
 export type Instance = z.infer<typeof InstanceSchema>;
 export type Port = z.infer<typeof PortSchema>;
-export type PortPresentation = z.infer<typeof PortPresentationSchema>;
 export type Net = z.infer<typeof NetSchema>;
 export type NetPowerDomain = z.infer<typeof NetPowerDomainSchema>;
 export type RouteEndpoint = z.infer<typeof RouteEndpointSchema>;

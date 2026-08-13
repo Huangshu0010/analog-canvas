@@ -93,6 +93,45 @@ describe("schema 3 to 4 netlist migration", () => {
     expect(instance.netlist).not.toHaveProperty("binding");
   });
 
+  it("preserves an explicit legacy child document id without inventing a name link", () => {
+    const migrated = migrateV3ToV4({
+      schemaVersion: 3,
+      documents: [
+        {
+          id: "top",
+          name: "Top",
+          ports: [],
+          instances: [
+            {
+              id: "XCHILD",
+              symbolId: "port",
+              properties: { "spice.childDocumentId": "child" },
+            },
+          ],
+        },
+        { id: "child", name: "Bias Child", ports: [], instances: [] },
+      ],
+    });
+
+    expect(
+      (migrated.documents as Array<Record<string, unknown>>)[0],
+    ).toMatchObject({
+      instances: [
+        {
+          id: "XCHILD",
+          symbolId: "port",
+          netlist: {
+            binding: {
+              kind: "subcircuit",
+              childDocumentId: "child",
+              name: "Bias_Child",
+            },
+          },
+        },
+      ],
+    });
+  });
+
   it("makes duplicate legacy cell and instance names deterministic", () => {
     const migrated = migrateV3ToV4({
       schemaVersion: 3,

@@ -135,13 +135,10 @@ describe("Agent Circuit API frozen v1/v2 boundary (characterization)", () => {
     expect([...v2.editKinds]).toEqual([...AGENT_EDIT_KINDS]);
   });
 
-  it("exposes Document-level Port edits plus wire, but not undo/redo or Project/catalog ops", () => {
+  it("exposes Document-level edits plus wire, but not undo/redo or Project/catalog ops", () => {
     // Existing Document-level kinds that remain exposed today.
     expect(AGENT_EDIT_KINDS).toContain("add_instance");
     expect(AGENT_EDIT_KINDS).toContain("set_cell_netlist_interface");
-    expect(AGENT_EDIT_KINDS).toContain("add_port");
-    expect(AGENT_EDIT_KINDS).toContain("remove_port");
-    expect(AGENT_EDIT_KINDS).toContain("set_port_presentation");
     expect(AGENT_EDIT_KINDS).toContain("wire");
 
     // Agent undo/redo are rejected edit kinds, not exposed operations.
@@ -156,7 +153,6 @@ describe("Agent Circuit API frozen v1/v2 boundary (characterization)", () => {
       "remove_document",
       "rename_document",
       "set_top_document",
-      "create_port",
       "set_instance_cell_binding",
       "duplicate_subgraph",
     ]) {
