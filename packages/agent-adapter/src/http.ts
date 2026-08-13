@@ -7,7 +7,10 @@ import {
   AGENT_API_VERSION,
   AgentCircuitResponseSchema,
 } from "./schema.js";
-import { invalidAgentRequestResponse } from "./request-contract.js";
+import {
+  invalidAgentRequestResponse,
+  parseAgentCircuitRequest,
+} from "./request-contract.js";
 import type { AgentCircuitService } from "./service.js";
 
 export interface LoopbackAgentServerOptions {
@@ -170,6 +173,15 @@ export async function startLoopbackAgentServer(
             `${request.url} requires apiVersion ${apiVersion}`,
           ),
         );
+        return;
+      }
+      if (apiVersion === AGENT_API_VERSION) {
+        const parsed = parseAgentCircuitRequest(input);
+        if (!parsed.success) {
+          writeJson(response, 400, parsed.response);
+          return;
+        }
+        writeJson(response, 200, service.handle(parsed.data));
         return;
       }
       writeJson(response, 200, service.handle(input));

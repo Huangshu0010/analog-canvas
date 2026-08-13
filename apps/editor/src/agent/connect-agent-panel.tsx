@@ -101,7 +101,7 @@ export function agentConnectionInstructions(
   return `Connect to the Interactive Circuit Maker Agent API.
 1. Redeem claimCode exactly once by POSTing ${JSON.stringify({ claimCode })} to ${claimUrl}, and retain the complete response in memory.
 2. Never log or display agentToken.
-3. Use only sessionId and documentIds returned by the claim response; send agentToken only as the Bearer token.
+3. Use only sessionId and documentIds returned by the claim response; replace {sessionId} in the Circuit URL with that value, and send agentToken only as the Bearer token.
 4. Call capabilities once through POST ${circuitUrl}.
 5. Request one complete snapshot for the selected documentId.
 6. Validate every request against the published OpenAPI: ${openApiUrl}

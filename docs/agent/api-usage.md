@@ -34,6 +34,12 @@ fallback mutation endpoint. The deployed OpenAPI examples identify the current
 request version; API v1 `query` is compatibility history, not a production
 planning language.
 
+For a hosted session, treat the published OpenAPI as the only request contract.
+An HTTP `400` is an `INVALID_REQUEST` Circuit envelope: correct every returned
+diagnostic `path`, then retry with a fresh `requestId`. Never retry a changed
+payload under an old `requestId`; an invalid request was not forwarded or
+committed.
+
 ## Loopback example
 
 The desktop host creates a high-entropy token and starts the optional adapter.

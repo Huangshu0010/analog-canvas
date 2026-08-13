@@ -62,9 +62,10 @@ function issueMessage(issue: z.core.$ZodIssue): string {
 export function invalidAgentRequestResponse(
   input: unknown,
   issues: readonly z.core.$ZodIssue[] = [],
+  apiVersion = responseVersion(input),
 ): AgentCircuitResponse {
   return AgentCircuitResponseSchema.parse({
-    apiVersion: responseVersion(input),
+    apiVersion,
     requestId: responseRequestId(input),
     operation: "error",
     ok: false,
@@ -89,7 +90,14 @@ export function parseAgentCircuitRequest(input: unknown): RequestParseResult {
     ? { success: true, data: parsed.data }
     : {
         success: false,
-        response: invalidAgentRequestResponse(input, parsed.error.issues),
+        // Hosted traffic has exactly one supported response dialect. Returning
+        // v2 here prevents an unsupported requested version from becoming an
+        // accidental response-contract selector.
+        response: invalidAgentRequestResponse(
+          input,
+          parsed.error.issues,
+          AGENT_API_VERSION,
+        ),
       };
 }
 

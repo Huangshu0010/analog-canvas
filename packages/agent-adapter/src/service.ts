@@ -22,7 +22,10 @@ import {
   agentVisualDiagnostics,
 } from "./diagnostics.js";
 import type { AgentOperationHost } from "./host.js";
-import { parseCompatibleAgentCircuitRequest } from "./request-contract.js";
+import {
+  parseAgentCircuitRequest,
+  parseCompatibleAgentCircuitRequest,
+} from "./request-contract.js";
 import {
   AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
@@ -566,10 +569,12 @@ export function createAgentCircuitService(
   return {
     limits,
     handle(input: unknown): AgentCircuitResponse {
-      // Frozen local v1/v3 fixtures use the explicit migration reader. Hosted
-      // relay/browser traffic is already constrained to the production v2
-      // four-operation schema before it reaches this service.
-      const parsed = parseCompatibleAgentCircuitRequest(input);
+      // A browser-host service is the hosted public path and always parses the
+      // production v2 contract. The in-process store service retains only the
+      // explicit local v1/v3 migration reader.
+      const parsed = useHost
+        ? parseAgentCircuitRequest(input)
+        : parseCompatibleAgentCircuitRequest(input);
       if (!parsed.success) {
         return parsed.response;
       }

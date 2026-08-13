@@ -103,6 +103,16 @@ function serviceFixture(
 }
 
 describe("Agent Circuit API v1 service", () => {
+  it("keeps the store service's migration parser explicitly separate", () => {
+    const fixture = serviceFixture();
+    const legacy = fixture.service.handle({
+      apiVersion: "1.0",
+      requestId: "legacy-capabilities",
+      operation: "capabilities",
+    });
+    expect(legacy).toMatchObject({ ok: true, apiVersion: "1.0" });
+  });
+
   it("rejects a schema-invalid request without changing the revision", () => {
     const fixture = serviceFixture();
     const before = fixture.getDocument().revision;

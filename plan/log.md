@@ -1,5 +1,24 @@
 # Maintenance Log
 
+## 2026-08-13 - Agent golden-path request-contract closure
+
+- Target: enforce the browser Agent's one public v2 request path without adding
+  a Circuit operation or simulation/PVT/waveform/design-netlist-export scope.
+- Changed areas: strict service handler selection for browser and loopback v2;
+  v2-only invalid-request dialect; OpenAPI typed claim/Circuit failures;
+  copyable connection instructions; current API guidance and focused tests.
+- Contract result: relay, browser host, and service apply the same production
+  request Schema; invalid requests return redacted path-bearing
+  `INVALID_REQUEST`, are not forwarded, and cannot change a revision. Hosted
+  OpenAPI declares all observed Circuit/claim terminal HTTP outcomes.
+- Validation: focused 57-test Agent/worker/editor suite, web Agent E2E,
+  generated artifacts write/check, typecheck, docs, `git diff --check`, and
+  `pnpm verify:branch` (118 files / 713 tests, build and production smoke)
+  passed.
+- Commit status: ready to commit as
+  `fix(agent): enforce one hosted request contract` on
+  `codex/agent-project-lifecycle`.
+
 ## 2026-08-13 - Project compatibility corpus baseline
 
 - Target: establish the first M4 migration-corpus proof, without changing

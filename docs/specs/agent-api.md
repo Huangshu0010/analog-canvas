@@ -63,6 +63,16 @@ meaning across both versions.
 No request accepts Project JSON, a whole Snapshot/Document replacement,
 filesystem path, JavaScript, or SVG input.
 
+Hosted requests have one production parser: the schema published at
+`/api/agent/openapi.json`. The relay, browser WebSocket host, and Circuit
+service all apply that same v2 parser before a request can reach the Edit
+Engine. A malformed Circuit body receives HTTP `400` and the normal Circuit
+error envelope with `error.code: "INVALID_REQUEST"`; every schema violation
+has a stable diagnostic `path` when a field can be located. Responses never
+echo bearer tokens or rejected values. Invalid bodies do not forward to the
+browser, begin an idempotency record, or change a Document revision. JSON
+syntax failures use the same envelope with no invented field path.
+
 ## Implementation ownership and evidence flow
 
 Each semantic fact has one owning module. Transport and UI layers consume these
@@ -325,7 +335,8 @@ replaying blindly.
 - 100/500-instance payload/token/generation budgets
 - dry-run, stale revision, atomicity, lock, and GUI/Edit Engine parity tests
 - spatial diagnostic and formal/overlay artifact inspection
-- authenticated hosted `/v2/circuit` tests plus isolated local v1 migration tests
+- authenticated hosted session-Circuit endpoint tests plus isolated local v1
+  migration tests
 
 ## Open decisions
 

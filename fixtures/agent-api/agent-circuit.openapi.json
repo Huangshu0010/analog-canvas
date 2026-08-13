@@ -182,12 +182,70 @@
               }
             }
           },
-          "default": {
-            "description": "Claim error",
+          "401": {
+            "description": "Typed Agent session transport error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "TOKEN_INVALID",
+                    "message": "Bearer token is missing or unknown"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "SESSION_NOT_FOUND",
+                    "message": "Session is unknown or expired"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_ID_REUSED",
+                    "message": "requestId was already used with a different payload"
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_TOO_LARGE",
+                    "message": "Request exceeds the byte limit"
+                  }
                 }
               }
             }
@@ -361,6 +419,23 @@
               }
             }
           },
+          "404": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "SESSION_NOT_FOUND",
+                    "message": "Session is unknown or expired"
+                  }
+                }
+              }
+            }
+          },
           "409": {
             "description": "Typed Agent session transport error",
             "content": {
@@ -424,6 +499,23 @@
                   "error": {
                     "code": "EDITOR_OFFLINE",
                     "message": "Editor is offline"
+                  }
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_TIMEOUT",
+                    "message": "The browser did not complete the request in time"
                   }
                 }
               }

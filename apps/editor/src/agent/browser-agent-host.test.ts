@@ -45,6 +45,24 @@ function setup() {
 // token, or Worker. Agent commits enter the same history as human edits.
 
 describe("BrowserAgentHost + Agent Circuit service", () => {
+  it("uses the public v2 parser before a hosted request can reach the controller", () => {
+    const { controller, service } = setup();
+    const result = service.handle({
+      apiVersion: "1.0",
+      requestId: "legacy-hosted-request",
+      operation: "capabilities",
+    });
+
+    expect(result).toMatchObject({
+      apiVersion: "2.0",
+      requestId: "legacy-hosted-request",
+      operation: "error",
+      ok: false,
+      error: { code: "INVALID_REQUEST" },
+    });
+    expect(controller.document.revision).toBe(0);
+  });
+
   it("runs capabilities/snapshot/transact/render against the live document", () => {
     const { controller, service, committed } = setup();
     const documentId = controller.activeDocumentId;

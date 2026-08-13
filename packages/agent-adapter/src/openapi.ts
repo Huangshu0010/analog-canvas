@@ -122,6 +122,13 @@ export const agentClaimRequestExample = {
 } as const;
 
 export const agentTransportErrorExamples = {
+  "404": {
+    ok: false,
+    error: {
+      code: "SESSION_NOT_FOUND",
+      message: "Session is unknown or expired",
+    },
+  },
   "401": {
     ok: false,
     error: {
@@ -157,6 +164,13 @@ export const agentTransportErrorExamples = {
   "503": {
     ok: false,
     error: { code: "EDITOR_OFFLINE", message: "Editor is offline" },
+  },
+  "504": {
+    ok: false,
+    error: {
+      code: "REQUEST_TIMEOUT",
+      message: "The browser did not complete the request in time",
+    },
   },
 } as const;
 
@@ -208,10 +222,27 @@ const circuitSessionResponses = {
   },
   "401": transportErrorResponse(agentTransportErrorExamples["401"]),
   "403": transportErrorResponse(agentTransportErrorExamples["403"]),
+  "404": transportErrorResponse(agentTransportErrorExamples["404"]),
   "409": transportErrorResponse(agentTransportErrorExamples["409"]),
   "413": transportErrorResponse(agentTransportErrorExamples["413"]),
   "429": transportErrorResponse(agentTransportErrorExamples["429"]),
   "503": transportErrorResponse(agentTransportErrorExamples["503"]),
+  "504": transportErrorResponse(agentTransportErrorExamples["504"]),
+} as const;
+
+const claimResponses = {
+  "200": {
+    description: "Claim redeemed",
+    content: {
+      "application/json": {
+        schema: { $ref: "#/components/schemas/agentClaimResponse" },
+      },
+    },
+  },
+  "401": transportErrorResponse(agentTransportErrorExamples["401"]),
+  "404": transportErrorResponse(agentTransportErrorExamples["404"]),
+  "409": transportErrorResponse(agentTransportErrorExamples["409"]),
+  "413": transportErrorResponse(agentTransportErrorExamples["413"]),
 } as const;
 
 export const agentCircuitOpenApi = {
@@ -305,26 +336,7 @@ export const agentCircuitOpenApi = {
             },
           },
         },
-        responses: {
-          "200": {
-            description: "Claim redeemed",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/agentClaimResponse" },
-              },
-            },
-          },
-          default: {
-            description: "Claim error",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/agentTransportErrorResponse",
-                },
-              },
-            },
-          },
-        },
+        responses: claimResponses,
       },
     },
     "/api/agent/sessions/{sessionId}/circuit": {

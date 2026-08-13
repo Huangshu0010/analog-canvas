@@ -409,6 +409,10 @@ export function useAgentSession(
               { status: "working" },
               { at: Date.now(), kind: "operation", detail: operation },
             );
+            // The relay already rejects malformed public payloads, but the
+            // browser host repeats that same strict parse before it can touch
+            // the live Project. Never route hosted traffic through the local
+            // v1/v3 compatibility handler.
             const result = service.handle(parsed.data.payload);
             const responseBytes = new TextEncoder().encode(
               JSON.stringify(result),

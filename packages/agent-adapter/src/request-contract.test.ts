@@ -220,10 +220,12 @@ describe("Agent golden request contract", () => {
       "400",
       "401",
       "403",
+      "404",
       "409",
       "413",
       "429",
       "503",
+      "504",
     ]);
     const invalidExample = responses["400"].content["application/json"].example;
     expect(AgentCircuitResponseSchema.safeParse(invalidExample)).toMatchObject({
@@ -234,5 +236,14 @@ describe("Agent golden request contract", () => {
         AgentTransportErrorResponseSchema.safeParse(example),
       ).toMatchObject({ success: true });
     }
+    const claimResponses =
+      agentCircuitOpenApi.paths["/api/agent/claims"].post.responses;
+    expect(Object.keys(claimResponses).sort()).toEqual([
+      "200",
+      "401",
+      "404",
+      "409",
+      "413",
+    ]);
   });
 });

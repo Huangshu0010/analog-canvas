@@ -45,6 +45,9 @@ describe("ConnectAgentPanel", () => {
       'POSTing {"claimCode":"claim-once"} to https://editor.example/api/agent/claims',
     );
     expect(instructions).toContain("4. Call capabilities once");
+    expect(instructions).toContain(
+      "replace {sessionId} in the Circuit URL with that value",
+    );
     expect(instructions).toContain("7. Dry-run non-trivial transact requests");
     expect(instructions).toContain("9. Render, then request a fresh snapshot");
     expect(instructions).toContain(
