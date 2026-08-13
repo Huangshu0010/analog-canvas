@@ -6242,6 +6242,20 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/unified-electrical-contact` as
   `chore: satisfy contact mainline gate`.
 
+## 2026-08-13 - Browser Agent takeover delivery roadmap
+
+- Target: freeze a detailed delivery plan for all remaining browser Agent
+  takeover features while excluding simulation, PVT, waveform/measurement data,
+  and SPICE/design-netlist export.
+- Changed areas: four-operation Agent roadmap and its target plan; defines the
+  Project controller, stable session recovery, scoped Project/visual File
+  Resource, staged Project/structural-SPICE import approval, semantic editor
+  collaboration, own-head history/duplication, and delivery evidence.
+- Validation: `pnpm docs:check` and `git diff --check` passed. The unrelated
+  active first-class-Port migration stayed unstaged.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `docs(agent): detail browser takeover delivery roadmap`.
+
 ## 2026-08-13 - Agent Project lifecycle and artifact completion plan
 
 - Target: define the remaining interfaces required for complete browser Agent
