@@ -12,6 +12,7 @@
       "@icm/exporters/browser": ["./packages/exporters/src/browser.ts"],
       "@icm/exporters/node": ["./packages/exporters/src/node.ts"],
       "@icm/model": ["./packages/model/src/index.ts"],
+      "@icm/netlist": ["./packages/netlist/src/index.ts"],
       "@icm/platform-node": ["./packages/platform-node/src/index.ts"],
       "@icm/render-svg": ["./packages/render-svg/src/index.ts"],
       "@icm/spice": ["./packages/spice/src/index.ts"],
