@@ -5972,3 +5972,11 @@ contracts (WP-R1)`.
 - Validation: targeted Markdown formatting and `git diff --check` passed.
 - Commit status: ready to commit on `codex/shorten-citation-title` as
   `docs(readme): shorten citation title`.
+
+## 2026-08-13 - Citation title capitalization
+
+- Target: correct the citation's publication-style title to `Analog Canvas`.
+- Changed areas: prose and BibTeX titles; target plan.
+- Validation: targeted Markdown formatting and `git diff --check` passed.
+- Commit status: ready to commit on `codex/capitalize-citation-title` as
+  `docs(readme): capitalize citation title`.

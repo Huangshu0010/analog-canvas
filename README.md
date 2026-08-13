@@ -86,7 +86,7 @@ through the compatible manifest protocol defined by
 If you use Interactive Circuit Maker in research, teaching, or another
 published project, please cite the software as:
 
-> Zengchun Chen and Zhishuai Zhang. _analog-canvas_. 2026.
+> Zengchun Chen and Zhishuai Zhang. _Analog Canvas_. 2026.
 > Available at: https://github.com/chenzc24/interactive-circuit-maker
 
 For reproducible work, also include the release tag or commit hash used.
@@ -96,7 +96,7 @@ BibTeX:
 ```bibtex
 @software{chen2026analogcanvas,
   author = {Chen, Zengchun and Zhang, Zhishuai},
-  title = {analog-canvas},
+  title = {Analog Canvas},
   year = {2026},
   url = {https://github.com/chenzc24/interactive-circuit-maker},
   note = {Software repository}
