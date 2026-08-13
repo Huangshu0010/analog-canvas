@@ -91,28 +91,29 @@ and body API version must match.
 
 The published browser editor exposes the same Circuit API over a browser-
 authorized relay (ADR 0016). The human clicks **Connect Agent**, grants a
-scoped preset, and gives the Agent a one-time claim code. The Agent never needs
+scoped preset, and gives the Agent a short-lived claim code. The Agent never needs
 repository source — only this document and the claim code.
 
 The deployed machine-readable contract is available at
 `GET /api/agent/openapi.json`. The editor's **Copy Agent connection
 instructions** action includes this address, the claim endpoint, and the
-one-time code.
+claim code.
 
-1. **Redeem the claim** (single-use, short expiry):
+1. **Redeem the claim** (30-minute expiry):
 
    ```http
    POST /api/agent/claims HTTP/1.1
    Content-Type: application/json
 
-   {"claimCode":"<one-time-code>"}
+   {"claimCode":"<claim-code>"}
    ```
 
    On success the response carries `sessionId`, `projectId`, authorized
    `documentIds`, a scoped `agentToken` (bearer), and its expiry. Select the
    target from those returned IDs; do not guess `document-main` or infer an ID
    from a visible Cell name.
-   A claim is consumed once; reuse returns `CLAIM_ALREADY_USED`.
+   Repeating a still-valid claim is safe for recovery: it returns a fresh token
+   and immediately invalidates the earlier bearer. Keep only the latest response.
 
 2. **Call the Circuit API** through the session. The body is the same Circuit
    request schema as the loopback adapter; the relay forwards it to the live
@@ -156,11 +157,11 @@ A transient relay failure is not a revocation. Do not replay an uncertain write
 under a new `requestId`; repeat the original request ID to recover its terminal
 result, or request a fresh Snapshot after the browser is available again.
 
-Closing the Connect Agent panel does not pause, revoke, or disconnect the live
-session. If the Agent loses its bearer, the user may choose **Rotate Agent
-Access**. Rotation revokes the old capability and creates a new one-time claim
-for the same open Project, authorized Documents, and scopes; it is not a refresh
-token and never revives the old bearer.
+Hiding the Agent details does not pause, revoke, or disconnect the live session.
+If the Agent loses its bearer, it may redeem the still-valid claim again; the
+new token replaces the old bearer. The user may also choose **New connection**
+to create a separate session with the same Project, authorized Documents, and
+scopes.
 
 ## Failure handling
 
@@ -180,10 +181,10 @@ token and never revives the old bearer.
 
 Web-session transport errors (published editor only):
 
-- `CLAIM_INVALID` / `CLAIM_EXPIRED` / `CLAIM_ALREADY_USED`: ask the human for a
-  fresh claim code; a claim is one-time and short-lived.
-- `TOKEN_INVALID` / `TOKEN_EXPIRED`: request a newly authorized session from
-  the human; a consumed claim cannot mint a second token.
+- `CLAIM_INVALID` / `CLAIM_EXPIRED`: ask the human for a fresh claim code.
+- `TOKEN_INVALID`: if the original claim is still valid, redeem it again and
+  replace the cached token; otherwise ask the human for a new connection.
+- `TOKEN_EXPIRED`: request a newly authorized session from the human.
 - `TOKEN_SCOPE_INSUFFICIENT`: do not retry the same operation; request broader
   scope from the human.
 - `SESSION_PAUSED`: wait for `session.ready`; the human paused the session.

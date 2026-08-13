@@ -61,7 +61,7 @@ function tokenFor(
 // WebSocket browser channel is the deployment-verified transport.
 
 describe("agent-session relay", () => {
-  it("redeems a claim and rejects reuse with typed errors", () => {
+  it("redeems a valid claim again by replacing the prior bearer", () => {
     const { machine, session, now } = setup();
     const first = redeemClaimResponse(machine, session.claimCode, now());
     expect(first).toMatchObject({
@@ -70,9 +70,12 @@ describe("agent-session relay", () => {
       documentIds: ["document-1"],
     });
 
-    const reuse = redeemClaimResponse(machine, session.claimCode, now());
-    expect(reuse.ok).toBe(false);
-    if (!reuse.ok) expect(reuse.error.code).toBe("CLAIM_ALREADY_USED");
+    const retry = redeemClaimResponse(machine, session.claimCode, now());
+    expect(retry).toMatchObject({ ok: true, projectId: "project-1" });
+    if (!first.ok || !retry.ok) return;
+    expect(retry.agentToken).not.toBe(first.agentToken);
+    expect(machine.authorize(first.agentToken, now()).ok).toBe(false);
+    expect(machine.authorize(retry.agentToken, now()).ok).toBe(true);
   });
 
   it("forwards an authorized request and caches its result", async () => {

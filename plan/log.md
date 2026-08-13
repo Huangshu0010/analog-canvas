@@ -6569,3 +6569,20 @@ contracts (WP-R1)`.
   and the imported-child search E2E passed locally.
 - Commit status: committed on `codex/restore-port-symbols`; remote CI repair
   adds an explicit schema-v3 child-document-id reader migration.
+
+## 2026-08-14 - Simplify resilient browser Agent connection lifecycle
+
+- Target: make browser Agent authorization, claim retry, same-Project refresh
+  recovery, relay reconnect, and status management reliable without expanding
+  circuit-editing capability or adding a second collaboration UI.
+- Changed areas: session/claim defaults and replacement semantics; shared scope
+  guard for recovery; browser relay retry; compact Properties Agent section;
+  authorization hand-off wording and generated public OpenAPI artifact; focused
+  session, recovery, UI, and browser coverage.
+- Validation: focused session/recovery/panel suites (50 tests), the web-Agent
+  browser E2E, Agent artifact validation, `pnpm verify:branch`, and the final
+  `pnpm ci:check` (729 unit tests, 100 browser tests, builds, performance,
+  export/PWA goldens, production and release smoke) passed; `git diff --check`
+  passed.
+- Commit status: ready to commit on `codex/agent-connection-ux` as
+  `feat(agent): simplify resilient browser connection lifecycle`.

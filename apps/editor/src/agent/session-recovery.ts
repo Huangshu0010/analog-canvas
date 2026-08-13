@@ -1,4 +1,7 @@
-import type { AgentSessionScope } from "@icm/agent-adapter";
+import {
+  isAgentSessionScope,
+  type AgentSessionScope,
+} from "@icm/agent-adapter";
 
 export const AGENT_SESSION_RECOVERY_STORAGE_KEY =
   "icm.agent-session-recovery.v1";
@@ -25,20 +28,6 @@ export interface RecoveryTarget {
   readonly now: number;
 }
 
-function isScope(value: unknown): value is AgentSessionScope {
-  return (
-    typeof value === "string" &&
-    [
-      "circuit.snapshot",
-      "circuit.render",
-      "circuit.source-spans",
-      "circuit.edit.geometry",
-      "circuit.edit.connectivity",
-      "circuit.edit.presentation",
-    ].includes(value)
-  );
-}
-
 function parseRecord(value: unknown): AgentSessionRecoveryRecord | null {
   if (typeof value !== "object" || value === null) return null;
   const record = value as Record<string, unknown>;
@@ -53,7 +42,7 @@ function parseRecord(value: unknown): AgentSessionRecoveryRecord | null {
     typeof record.projectSessionId !== "string" ||
     record.projectSessionId.length === 0 ||
     !Array.isArray(record.scopes) ||
-    !record.scopes.every(isScope) ||
+    !record.scopes.every(isAgentSessionScope) ||
     typeof record.expiresAt !== "number" ||
     !Number.isFinite(record.expiresAt)
   ) {

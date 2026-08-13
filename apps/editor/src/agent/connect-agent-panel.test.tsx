@@ -2,9 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AgentPropertiesSection,
   ConnectAgentPanel,
   agentConnectionInstructions,
-  type AgentAuditEntry,
   type AgentConnectionStatus,
 } from "./connect-agent-panel";
 
@@ -15,25 +15,24 @@ function baseProps(
     open: true,
     status: "idle" as AgentConnectionStatus,
     claimCode: null,
+    claimExpiresAt: null,
     scopes: [],
     expiresAt: null,
-    audit: [],
     error: null,
     now: 0,
     onGrant: vi.fn(),
     onPause: vi.fn(),
     onResume: vi.fn(),
     onReconnect: vi.fn(),
-    onRotate: vi.fn(),
+    onNewConnection: vi.fn(),
     onRevoke: vi.fn(),
     onClose: vi.fn(),
     ...overrides,
   };
 }
 
-// WP-WA5: the panel renders the grant surface, the one-time claim code, status,
-// pause/resume/revoke controls, and the audit across connection states. Secrets
-// live only in props while the session is live; nothing here persists them.
+// The dialog is only authorization and hand-off; ongoing session controls live
+// in Properties. Secrets remain props-only and are never persisted here.
 
 describe("ConnectAgentPanel", () => {
   it("provides one complete golden-path lifecycle without a bearer value", () => {
@@ -42,19 +41,19 @@ describe("ConnectAgentPanel", () => {
       "claim-once",
     );
     expect(instructions).toContain(
-      'POSTing {"claimCode":"claim-once"} to https://editor.example/api/agent/claims',
+      'POST {"claimCode":"claim-once"} to https://editor.example/api/agent/claims',
     );
-    expect(instructions).toContain("4. Call capabilities once");
+    expect(instructions).toContain("5. Call capabilities once");
     expect(instructions).toContain(
       "replace {sessionId} in the Circuit URL with that value",
     );
     expect(instructions).toContain(
-      "7. Use https://editor.example/api/agent/sessions/{sessionId}/files",
+      "8. Use https://editor.example/api/agent/sessions/{sessionId}/files",
     );
-    expect(instructions).toContain("9. Dry-run non-trivial transact requests");
-    expect(instructions).toContain("11. Render, then request a fresh snapshot");
+    expect(instructions).toContain("10. Dry-run non-trivial transact requests");
+    expect(instructions).toContain("12. Render, then request a fresh snapshot");
     expect(instructions).toContain(
-      "12. Reuse a requestId only when retrying the exact same payload",
+      "13. Reuse a requestId only when retrying the exact same payload",
     );
     expect(instructions).not.toMatch(/Bearer [A-Za-z0-9_-]{20,}/u);
   });
@@ -79,12 +78,13 @@ describe("ConnectAgentPanel", () => {
     expect(markup).toContain("Full Circuit Edit");
   });
 
-  it("shows the one-time claim code while waiting for the Agent", () => {
+  it("shows an expiring connection hand-off while waiting for the Agent", () => {
     const markup = renderToStaticMarkup(
       <ConnectAgentPanel
         {...baseProps({
           status: "waiting-for-agent",
           claimCode: "CLAIM-12345",
+          claimExpiresAt: 30_000,
           scopes: ["circuit.snapshot", "circuit.render"],
           expiresAt: 60_000,
           now: 0,
@@ -97,6 +97,7 @@ describe("ConnectAgentPanel", () => {
     expect(markup).toContain("circuit.snapshot, circuit.render");
     expect(markup).toContain('data-testid="agent-pause"');
     expect(markup).toContain('data-testid="agent-revoke"');
+    expect(markup).toContain("Copy connection setup");
     // No grant presets after connecting.
     expect(markup).not.toContain('data-testid="agent-grant"');
   });
@@ -121,34 +122,77 @@ describe("ConnectAgentPanel", () => {
     }
   });
 
-  it("offers user-triggered access rotation while connected", () => {
+  it("offers a replacement connection while connected", () => {
     const markup = renderToStaticMarkup(
-      <ConnectAgentPanel {...baseProps({ status: "connected" })} />,
+      <ConnectAgentPanel
+        {...baseProps({
+          status: "connected",
+          claimCode: "still-valid-claim",
+          claimExpiresAt: 30_000,
+          expiresAt: 60_000,
+        })}
+      />,
     );
-    expect(markup).toContain('data-testid="agent-rotate"');
-    expect(markup).toContain("Rotate Agent Access");
+    expect(markup).toContain('data-testid="agent-new-connection"');
+    expect(markup).toContain("New connection");
+    expect(markup).toContain("still-valid-claim");
   });
 
-  it("hides the claim code and controls in a terminal revoked state", () => {
+  it("offers a new connection in a terminal revoked state", () => {
     const markup = renderToStaticMarkup(
       <ConnectAgentPanel
         {...baseProps({
           status: "revoked",
           claimCode: null,
-          audit: [
-            {
-              at: 0,
-              kind: "granted",
-            },
-            { at: 1, kind: "revoked" },
-          ] as AgentAuditEntry[],
         })}
       />,
     );
-    expect(markup).toContain("Revoked");
+    expect(markup).toContain("Disconnected");
     expect(markup).not.toContain('data-testid="agent-claim"');
     expect(markup).not.toContain('data-testid="agent-revoke"');
-    // The audit still records the grant and the revocation.
-    expect(markup).toContain('data-testid="agent-audit"');
+    expect(markup).toContain('data-testid="agent-new-connection"');
+  });
+
+  it("keeps active connection management inside Properties", () => {
+    const markup = renderToStaticMarkup(
+      <AgentPropertiesSection
+        status="connected"
+        claimCode={null}
+        claimExpiresAt={null}
+        scopes={["circuit.snapshot", "circuit.render"]}
+        expiresAt={8 * 60 * 60 * 1_000}
+        error={null}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+        onReconnect={vi.fn()}
+        onNewConnection={vi.fn()}
+        onRevoke={vi.fn()}
+        expanded={false}
+        onToggleDetails={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    expect(markup).toContain('data-testid="agent-properties"');
+    expect(markup).toContain("Connected");
+    expect(markup).toContain("Manage");
+    expect(markup).toContain('data-testid="agent-pause"');
+    expect(markup).not.toContain('data-testid="agent-revoke"');
+  });
+
+  it("does not expose an expired claim code", () => {
+    const markup = renderToStaticMarkup(
+      <ConnectAgentPanel
+        {...baseProps({
+          status: "waiting-for-agent",
+          claimCode: "expired-claim",
+          claimExpiresAt: 1,
+          expiresAt: 60_000,
+          now: 2,
+        })}
+      />,
+    );
+    expect(markup).toContain('data-testid="agent-claim-expired"');
+    expect(markup).not.toContain('data-testid="agent-claim-code"');
+    expect(markup).toContain("Generate another");
   });
 });

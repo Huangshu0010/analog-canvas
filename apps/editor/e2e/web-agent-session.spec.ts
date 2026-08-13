@@ -100,9 +100,7 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
       payload: { type: "session.ready", sessionId },
     }),
   );
-  await expect(page.getByTestId("agent-status")).toContainText(
-    "Agent connected",
-  );
+  await expect(page.getByTestId("agent-status")).toContainText("Connected");
 
   const sendCircuitRequest = async (
     requestId: string,
@@ -331,7 +329,7 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
 
   await page
     .getByTestId("connect-agent-panel")
-    .getByRole("button", { name: "Close" })
+    .getByRole("button", { name: "Hide Agent details" })
     .click();
   await clickCommand(page, "Edit", "Undo");
   await expect(page.getByTestId("active-instance-count")).toHaveText("0");
@@ -346,34 +344,28 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
     .toBe(true);
 
   const reopenedAgentMenu = await openMenu(page, "Agent");
-  await reopenedAgentMenu
-    .getByRole("button", { name: "Connect Agent" })
-    .click();
-  await expect(page.getByTestId("agent-status")).toContainText(
-    "Agent connected",
-  );
+  await reopenedAgentMenu.getByRole("button", { name: "Manage Agent" }).click();
+  await expect(page.getByTestId("agent-properties")).toContainText("Connected");
   const originalSocket = browserSocket as WebSocketRoute | null;
   if (!originalSocket) throw new Error("Agent WebSocket was not connected");
   originalSocket.close();
   await expect.poll(() => browserSocket !== originalSocket).toBe(true);
-  await expect(page.getByTestId("agent-status")).toContainText(
-    "Agent connected",
-  );
+  await expect(page.getByTestId("agent-properties")).toContainText("Connected");
   await page.getByTestId("agent-pause").click();
-  await expect(page.getByTestId("agent-status")).toContainText("Paused");
+  await expect(page.getByTestId("agent-properties")).toContainText("Paused");
   await page.getByTestId("agent-resume").click();
-  await expect(page.getByTestId("agent-status")).toContainText(
-    "Agent connected",
-  );
-  await page.getByTestId("agent-rotate").click();
+  await expect(page.getByTestId("agent-properties")).toContainText("Connected");
+  await page.getByTestId("agent-new-connection").click();
   await expect.poll(() => sessionCreates).toBe(2);
   await expect.poll(() => revokeControls).toBe(1);
   await expect(page.getByTestId("agent-claim-code")).toHaveText(
     `${sessionId}.one-time-claim`,
   );
-  await expect(page.getByTestId("agent-status")).toContainText(
-    "Waiting for Agent to claim",
+  await expect(page.getByTestId("agent-properties")).toContainText(
+    "Waiting for Agent",
   );
   await page.getByTestId("agent-revoke").click();
-  await expect(page.getByTestId("agent-status")).toContainText("Revoked");
+  await expect(page.getByTestId("agent-properties")).toContainText(
+    "Disconnected",
+  );
 });

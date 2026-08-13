@@ -195,6 +195,13 @@ export const AgentSessionScopeSchema = z.enum([
   "visual.download",
 ]);
 
+/** Single runtime scope guard for browser recovery and relay consumers. */
+export function isAgentSessionScope(
+  value: unknown,
+): value is AgentSessionScope {
+  return AgentSessionScopeSchema.safeParse(value).success;
+}
+
 export type AgentSessionMessage = z.infer<typeof AgentSessionMessageSchema>;
 export type AgentClaimRequest = z.infer<typeof AgentClaimRequestSchema>;
 export type AgentSessionMessageKind = z.infer<

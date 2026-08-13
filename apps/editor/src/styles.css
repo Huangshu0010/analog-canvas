@@ -1066,6 +1066,18 @@ body {
   box-shadow: 0 0 0 3px var(--icm-accent-soft);
 }
 
+.agent-shelf-indicator {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--icm-success, #2f855a);
+}
+
+.agent-shelf-indicator.terminal {
+  background: var(--icm-text-muted);
+}
+
 .selection-panel {
   flex: 1 1 auto;
   min-height: 0;
@@ -3206,8 +3218,9 @@ html.light .analytics-map-land path {
   color: var(--icm-text-muted);
 }
 
-.agent-panel .agent-panel-grant,
-.agent-panel .agent-panel-claim,
+.agent-panel .agent-grant,
+.agent-panel .agent-claim,
+.agent-panel .agent-controls,
 .agent-panel .agent-panel-controls {
   padding: 1rem;
   border: 1px solid var(--icm-border-strong);
@@ -3215,7 +3228,7 @@ html.light .analytics-map-land path {
   background: var(--icm-surface-muted);
 }
 
-.agent-panel .agent-panel-grant ul {
+.agent-panel .agent-grant ul {
   display: grid;
   gap: 0.5rem;
   margin: 0.5rem 0 0;
@@ -3223,7 +3236,7 @@ html.light .analytics-map-land path {
   list-style: none;
 }
 
-.agent-panel .agent-panel-grant li {
+.agent-panel .agent-grant li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -3239,13 +3252,13 @@ html.light .analytics-map-land path {
   font: inherit;
 }
 
-.agent-panel .agent-preset-scopes {
+.agent-panel .agent-preset-description {
   flex: 1 1 16rem;
   color: var(--icm-text-muted);
   font-size: 0.85rem;
 }
 
-.agent-panel code[data-testid="agent-claim-code"] {
+.agent-claim code[data-testid="agent-claim-code"] {
   display: block;
   margin: 0.5rem 0;
   padding: 0.6rem;
@@ -3257,7 +3270,8 @@ html.light .analytics-map-land path {
   word-break: break-all;
 }
 
-.agent-panel .agent-panel-controls {
+.agent-controls,
+.agent-panel-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -3267,7 +3281,11 @@ html.light .analytics-map-land path {
   box-shadow: none;
 }
 
-.agent-panel .agent-panel-controls button {
+.agent-controls button,
+.agent-panel-controls button,
+.agent-claim button,
+.agent-properties-actions button,
+.agent-dismiss {
   padding: 0.4rem 0.8rem;
   border: 1px solid var(--icm-border-strong);
   border-radius: var(--icm-radius-sm);
@@ -3275,7 +3293,86 @@ html.light .analytics-map-land path {
   font: inherit;
 }
 
-.agent-panel .agent-panel-audit {
+.agent-claim details {
+  margin-top: var(--icm-space-2);
+}
+
+.agent-claim summary,
+.agent-properties-details summary {
+  color: var(--icm-text-muted);
+  cursor: pointer;
+}
+
+.agent-technical-details {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  overflow-wrap: anywhere;
+}
+
+.agent-properties {
+  display: grid;
+  gap: var(--icm-space-2);
+  margin-top: auto;
+  padding: var(--icm-space-3) 0 0;
+  border-top: 1px solid var(--icm-border);
+}
+
+.agent-properties-summary {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--icm-space-2);
+}
+
+.agent-properties-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--icm-space-1);
+}
+
+.agent-properties-summary h2,
+.agent-properties-summary p,
+.agent-properties-details p {
+  margin: 0;
+}
+
+.agent-properties-summary h2 {
+  font-size: var(--icm-font-md);
+}
+
+.agent-properties-summary p {
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+}
+
+.agent-status-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.28rem;
+  border-radius: 50%;
+  background: var(--icm-success, #2f855a);
+}
+
+.agent-status-dot.terminal {
+  background: var(--icm-text-muted);
+}
+
+.agent-properties .agent-controls {
+  padding: 0;
+}
+
+.agent-properties-details {
+  display: grid;
+  gap: var(--icm-space-2);
+  padding: var(--icm-space-2);
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  background: var(--icm-surface-muted);
+}
+
+.agent-panel-audit {
   max-height: 10rem;
   margin: 0;
   padding: 0 0 0 1rem;
@@ -3284,7 +3381,7 @@ html.light .analytics-map-land path {
   font-size: 0.8rem;
 }
 
-.agent-panel .agent-panel-audit li {
+.agent-panel-audit li {
   display: flex;
   gap: 0.5rem;
 }

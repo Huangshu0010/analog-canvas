@@ -140,7 +140,10 @@ import {
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
-import { ConnectAgentPanel } from "../agent/connect-agent-panel";
+import {
+  AgentPropertiesSection,
+  ConnectAgentPanel,
+} from "../agent/connect-agent-panel";
 import { BrowserAgentHost } from "../agent/browser-agent-host";
 import { BrowserAgentFileHost } from "../agent/browser-agent-file-host";
 import { useAgentSession } from "../agent/use-agent-session";
@@ -455,6 +458,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const [status, setStatus] = useState("Ready");
   const [insertDialogOpen, setInsertDialogOpen] = useState(false);
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
+  const [agentDetailsOpen, setAgentDetailsOpen] = useState(false);
+  const [agentStatusDismissed, setAgentStatusDismissed] = useState(false);
   const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -567,6 +572,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     host: browserAgentHost,
     fileHost: browserAgentFileHost,
   });
+  useEffect(() => {
+    setAgentStatusDismissed(false);
+  }, [agentSession.status]);
   const [boxPreview, setBoxPreview] = useState<BoxPreview | null>(null);
   const [panPreview, setPanPreview] = useState<PanPreview | null>(null);
   const [routeStretchPreview, setRouteStretchPreview] =
@@ -5947,8 +5955,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               <details className="command-menu" name="editor-command-menu">
                 <summary>Agent</summary>
                 <div className="command-popover">
-                  <button type="button" onClick={() => setAgentPanelOpen(true)}>
-                    Connect Agent
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (agentSession.status === "idle") {
+                        setAgentPanelOpen(true);
+                        return;
+                      }
+                      setSelectionOpen(true);
+                      setAgentDetailsOpen(true);
+                    }}
+                  >
+                    {agentSession.status === "idle"
+                      ? "Connect Agent"
+                      : "Manage Agent"}
                   </button>
                 </div>
               </details>
@@ -6149,16 +6169,16 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         open={agentPanelOpen}
         status={agentSession.status}
         claimCode={agentSession.claimCode}
+        claimExpiresAt={agentSession.claimExpiresAt}
         scopes={agentSession.scopes}
         expiresAt={agentSession.expiresAt}
-        audit={agentSession.audit}
         error={agentSession.error}
         now={Date.now()}
         onGrant={agentSession.grant}
         onPause={agentSession.pause}
         onResume={agentSession.resume}
         onReconnect={agentSession.reconnect}
-        onRotate={agentSession.rotate}
+        onNewConnection={agentSession.newConnection}
         onRevoke={agentSession.revoke}
         onClose={() => {
           setAgentPanelOpen(false);
@@ -6323,6 +6343,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               <span className="selection-shelf-title">
                 <ToolIcon name="inspect" />
                 <span>Properties</span>
+                {agentSession.status !== "idle" && !agentStatusDismissed ? (
+                  <span
+                    className={`agent-shelf-indicator ${
+                      agentSession.status === "revoked" ||
+                      agentSession.status === "expired"
+                        ? "terminal"
+                        : ""
+                    }`}
+                    title={`Agent: ${agentSession.status}`}
+                    aria-label={`Agent: ${agentSession.status}`}
+                  />
+                ) : null}
               </span>
               <span className="selection-shelf-summary">
                 {selectedIds.length > 0
@@ -7040,6 +7072,27 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     onSelectVisualDiagnostic={jumpToVisualDiagnostic}
                   />
                 </section>
+              ) : null}
+              {agentSession.status !== "idle" && !agentStatusDismissed ? (
+                <AgentPropertiesSection
+                  status={agentSession.status}
+                  claimCode={agentSession.claimCode}
+                  claimExpiresAt={agentSession.claimExpiresAt}
+                  scopes={agentSession.scopes}
+                  expiresAt={agentSession.expiresAt}
+                  error={agentSession.error}
+                  onPause={agentSession.pause}
+                  onResume={agentSession.resume}
+                  onReconnect={agentSession.reconnect}
+                  onNewConnection={agentSession.newConnection}
+                  onRevoke={agentSession.revoke}
+                  expanded={agentDetailsOpen}
+                  onToggleDetails={() => setAgentDetailsOpen((open) => !open)}
+                  onDismiss={() => {
+                    setAgentDetailsOpen(false);
+                    setAgentStatusDismissed(true);
+                  }}
+                />
               ) : null}
             </div>
           </section>

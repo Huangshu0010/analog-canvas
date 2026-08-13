@@ -332,7 +332,7 @@ function errorMessage(code: AgentTransportErrorCode): string {
     PROJECT_REPLACED: "The browser opened a different Project",
     CLAIM_INVALID: "Claim code is unknown or malformed",
     CLAIM_EXPIRED: "Claim code has expired",
-    CLAIM_ALREADY_USED: "Claim code has already been used",
+    CLAIM_ALREADY_USED: "Claim code was already used by a legacy session",
     TOKEN_INVALID: "Bearer token is missing or unknown",
     TOKEN_EXPIRED: "Bearer token has expired",
     TOKEN_SCOPE_INSUFFICIENT: "The token does not grant this operation",

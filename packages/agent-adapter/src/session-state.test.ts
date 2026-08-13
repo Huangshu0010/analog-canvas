@@ -45,15 +45,17 @@ function setup(overrides: Partial<AgentSessionLimits> = {}) {
 
 describe("AgentSessionMachine", () => {
   it("creates a session, returns secrets once, and authenticates the editor", () => {
-    const { machine, session } = setup();
+    const { machine, session, now } = setup();
     expect(session.sessionId).toMatch(/^rand-/u);
     expect(session.editorSecret).toMatch(/^rand-/u);
     expect(session.claimCode).toMatch(/^rand-/u);
+    expect(session.claimExpiresAt - now()).toBe(30 * 60 * 1_000);
+    expect(session.expiresAt - now()).toBe(8 * 60 * 60 * 1_000);
     expect(machine.authorizeEditor(session.editorSecret)).toBe(true);
     expect(machine.authorizeEditor("wrong")).toBe(false);
   });
 
-  it("redeems a one-time claim for a scoped token and rejects reuse", () => {
+  it("reissues a token for a valid claim and invalidates the earlier bearer", () => {
     const { machine, session, now } = setup();
     expect(machine.claimed).toBe(false);
     const first = machine.redeemClaim(session.claimCode, now());
@@ -65,9 +67,14 @@ describe("AgentSessionMachine", () => {
     const auth = machine.authorize(first.claim.agentToken, now());
     expect(auth.ok).toBe(true);
 
-    const reuse = machine.redeemClaim(session.claimCode, now());
-    expect(reuse.ok).toBe(false);
-    if (!reuse.ok) expect(reuse.code).toBe("CLAIM_ALREADY_USED");
+    const retry = machine.redeemClaim(session.claimCode, now());
+    expect(retry.ok).toBe(true);
+    if (!retry.ok) return;
+    expect(retry.claim.agentToken).not.toBe(first.claim.agentToken);
+    const priorToken = machine.authorize(first.claim.agentToken, now());
+    expect(priorToken.ok).toBe(false);
+    if (!priorToken.ok) expect(priorToken.code).toBe("TOKEN_INVALID");
+    expect(machine.authorize(retry.claim.agentToken, now()).ok).toBe(true);
   });
 
   it("records one-shot artifacts without retaining or replaying their bytes", () => {

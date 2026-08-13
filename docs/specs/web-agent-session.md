@@ -40,26 +40,28 @@ messages and persists no Project.
 | ---------------- | -------------------------------------------------------------------- |
 | Relay            | Worker + AgentSession Durable Object; forwards, never executes edits |
 | Editor host      | In-browser `EditorDocumentController` + `DocumentHistory`; authority |
-| Capability token | Scoped, expiring bearer (`agentToken`) issued after a one-time claim |
-| Claim            | One-time short-expiry code/link the user gives to the Agent          |
+| Capability token | Scoped, expiring bearer (`agentToken`) issued after a user claim     |
+| Claim            | Short-expiry code/link the user gives to the Agent                   |
 | Document set     | The authorized Documents a session may target                        |
 
 ## Actors and secrets
 
 The first release uses scoped capability tokens, not product accounts.
 
-| Secret         | Held by            | Lifetime / use                                                                                              |
-| -------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `sessionId`    | public             | Opaque session id; **not** authorization                                                                    |
-| `editorSecret` | browser tab only   | Authenticates the browser's WebSocket command channel; may survive one same-tab refresh in `sessionStorage` |
-| `claimCode`    | user → Agent, once | Single-use, expires in at most five minutes                                                                 |
-| `agentToken`   | Agent host only    | Bearer, scoped, default one hour, never outlives the editor session                                         |
+| Secret         | Held by          | Lifetime / use                                                                                              |
+| -------------- | ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| `sessionId`    | public           | Opaque session id; **not** authorization                                                                    |
+| `editorSecret` | browser tab only | Authenticates the browser's WebSocket command channel; may survive one same-tab refresh in `sessionStorage` |
+| `claimCode`    | user → Agent     | Expires in 30 minutes; a valid retry replaces the previous bearer                                           |
+| `agentToken`   | Agent host only  | Bearer, scoped, default eight hours, never outlives the editor session                                      |
 
-Claim codes are single-use and expire after at most five minutes. Agent tokens
-default to one hour, never outlive their editor session, and are invalidated by
-pause, revoke, Project replacement, a normal tab close, session expiry, or
-service-side abuse controls. An abrupt browser loss makes the editor offline;
-the session's fixed lifetime remains the terminal cleanup boundary.
+Claim codes expire after 30 minutes. Repeating a valid claim mints a replacement
+token and immediately invalidates the prior bearer; the relay retains one token
+verifier, so retries cannot create parallel access. Agent tokens and editor
+sessions default to eight hours. They are invalidated by pause, revoke, Project
+replacement, normal tab close, session expiry, or service-side abuse controls.
+An abrupt browser loss makes the editor offline; the session's fixed lifetime
+remains the terminal cleanup boundary.
 
 Secrets are never placed in analytics, URL query parameters, logs, Project
 recovery data, Snapshot data, render artifacts, or `Cache-Control`-able
@@ -195,9 +197,10 @@ interface AgentSessionMessage {
   unknown.
 - The browser may replace a failed WebSocket transport for the same live
   session and Project using the existing in-memory `editorSecret`. Reconnection
-  uses bounded exponential backoff followed by an explicit manual action. It
-  never replays a Circuit request; `requestId` cache semantics remain the only
-  resolution mechanism for an uncertain write.
+  retries at 0.5, 1, 2, 4, 8, 15, and 30 seconds, then every 30 seconds until
+  the session ends or the user disconnects. It never replays a Circuit request;
+  `requestId` cache semantics remain the only resolution mechanism for an
+  uncertain write.
 
 ## Events
 
@@ -291,7 +294,6 @@ usable and the Agent must not retry without re-authorization.
 | `PROJECT_REPLACED`         | Project was replaced; see `document.replaced` | Terminal; authorize the new Project |
 | `CLAIM_INVALID`            | Claim code unknown/malformed                  | Obtain a new claim                  |
 | `CLAIM_EXPIRED`            | Claim code past its short expiry              | Obtain a new claim                  |
-| `CLAIM_ALREADY_USED`       | Claim code consumed (single-use)              | Obtain a new claim                  |
 | `TOKEN_INVALID`            | Bearer missing/malformed                      | Terminal; re-claim                  |
 | `TOKEN_EXPIRED`            | `agentToken` past its expiry                  | Ask for a newly authorized session  |
 | `TOKEN_SCOPE_INSUFFICIENT` | Operation outside granted scopes              | Do not retry; request broader scope |
@@ -338,10 +340,10 @@ advances the revision again.
 
 | Threat                             | Handling                                                                                                                                                     |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claim link leaks                   | Single-use, ≤5 min expiry, explicit scopes, visible connected state, immediate revoke, no query-string analytics                                             |
+| Claim link leaks                   | 30-minute expiry, one live bearer per session, explicit scopes, visible connected state, immediate revoke, no query-string analytics                         |
 | Relay observes payloads in transit | HTTPS required; relay persists no payload and logs no body; end-to-end encryption deferred unless threat review requires it                                  |
 | Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write                                         |
-| `agentToken` theft                 | Short TTL, scoped, revocable, never stored in recovery/localStorage by default                                                                               |
+| `agentToken` theft                 | Bounded lifetime, scoped, revocable, never stored in recovery/localStorage by default                                                                        |
 | Browser refresh                    | Same-tab reconnect may reuse only the bounded recovery proof when the Project binding still matches; otherwise it is cleared and reauthorization is required |
 | Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged                                            |
 | Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                                                         |
@@ -355,7 +357,7 @@ advances the revision again.
 ## Valid example
 
 A browser opens a Project and grants `circuit.snapshot`, `circuit.render`, and
-`circuit.edit.geometry` for one hour. The Agent exchanges the one-time claim for
+`circuit.edit.geometry` for eight hours. The Agent exchanges the claim for
 an `agentToken`, reads `capabilities` and a Snapshot at revision 42, dry-runs a
 move, then commits it with `expectedRevision: 42`. The relay forwards the typed
 `transact` to the browser host over the authenticated WebSocket; the host
@@ -397,7 +399,7 @@ refreshes the Snapshot and does not replay the old edit.
 ## Deterministic validation
 
 - claim/token/scope/expiry/revoke state-machine tests with fake time (WP-WA4);
-- one-time claim, single-use enforcement, and constant-time secret comparison;
+- claim replacement invalidates the prior token, and constant-time secret comparison;
 - `requestId` dedupe at relay and browser, including timeout and late response;
 - `STALE_REVISION`, `EDITOR_OFFLINE`, and `PROJECT_REPLACED` behavior;
 - redacted logs/analytics/recovery assertions for secrets and circuit payloads;
@@ -438,7 +440,7 @@ candidate or artifact bytes (`Cache-Control: no-store` continues to apply).
 Replacement requires an explicit browser decision: **Cancel** (delete the
 candidate, notify the Agent), **Open and disconnect** (replace Project, revoke
 the old session), or **Open and reconnect Agent** (replace Project, revoke the
-old session, issue a new one-time claim with user-confirmed scopes and Document
+old session, issue a new claim with user-confirmed scopes and Document
 set). The third action is explicit new authorization, not token transfer; the
 old bearer token never gains access to the replacement Project. Before
 replacement the editor cancels pending recovery for the outgoing Project,
