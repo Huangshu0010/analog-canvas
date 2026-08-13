@@ -6502,3 +6502,22 @@ contracts (WP-R1)`.
   production smoke) passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `feat(agent): add scoped browser file resource`.
+
+## 2026-08-13 - Show origins map above daily traffic
+
+- Target: put the analytics Origins heatmap above the Daily traffic chart.
+- Changed areas: `apps/editor/src/components/analytics-page.tsx` section order.
+- Validation: source-order review and `git diff --check` passed. Existing
+  analytics e2e heading checks still apply; no new test for markup order.
+- Commit status: committed as `cebdf90` on
+  `agent/analytics-map-above-traffic`.
+
+## 2026-08-13 - Properties Dock E2E Transition Stability
+
+- Target: make the Properties-dock canvas-width assertion wait for the
+  existing transition rather than sampling its pre-transition geometry.
+- Changed areas: one browser assertion and its target record.
+- Validation: the focused Properties-dock E2E and all remote CI checks on PR
+  #37 passed.
+- Commit status: committed as `f2a87fd` on
+  `codex/stabilize-properties-e2e`.

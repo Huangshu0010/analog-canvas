@@ -1869,8 +1869,12 @@ test("keeps component insertion and inspection from resizing the canvas", async 
     page.getByRole("complementary", { name: "Properties" }),
   ).toBeVisible();
   await page.getByTestId("selection-shelf").click();
-  const afterCanvas = await canvas.boundingBox();
-  await expect(afterCanvas?.width).toBeLessThan(beforePlaceCanvas.width);
+  // Opening the dock changes its CSS width through a short transition. Poll
+  // the resulting canvas geometry rather than sampling before that transition
+  // has started.
+  await expect
+    .poll(async () => (await canvas.boundingBox())?.width ?? 0)
+    .toBeLessThan(beforePlaceCanvas.width);
 
   await expect(page.getByTestId("selection-shelf")).toContainText("M1");
 });
