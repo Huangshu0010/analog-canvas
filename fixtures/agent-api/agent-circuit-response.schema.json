@@ -355,6 +355,14 @@
                           "passive"
                         ]
                       },
+                      "presentation": {
+                        "type": "string",
+                        "enum": [
+                          "hollow",
+                          "filled",
+                          "supply"
+                        ]
+                      },
                       "position": {
                         "anyOf": [
                           {
@@ -380,6 +388,7 @@
                       "id",
                       "name",
                       "direction",
+                      "presentation",
                       "position",
                       "netId"
                     ],

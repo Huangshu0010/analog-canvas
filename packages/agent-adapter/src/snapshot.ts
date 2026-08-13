@@ -358,6 +358,7 @@ function documentSnapshot(
         id: port.id,
         name: port.name,
         direction: port.direction,
+        presentation: port.presentation ?? "hollow",
         position: port.position ? { ...port.position } : null,
         netId: portNetById.get(port.id) ?? null,
       })),

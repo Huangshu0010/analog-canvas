@@ -8,7 +8,11 @@ import {
   isOrthogonal,
   routePolyline,
 } from "@icm/derived";
-import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
+import {
+  InMemorySymbolResolver,
+  builtInSymbols,
+  requireRazaviCatalogSymbol,
+} from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { executeTransaction } from "./transaction.js";
@@ -20,11 +24,14 @@ import {
   proposeWireSegmentMove,
 } from "./routing-planner.js";
 
-const resolver = new InMemorySymbolResolver(builtInSymbols);
+const resolver = new InMemorySymbolResolver([
+  ...builtInSymbols,
+  requireRazaviCatalogSymbol("port"),
+]);
 const context = { symbolResolver: resolver };
 
 function documentFixture() {
-  return parseProject(
+  const document = parseProject(
     readFileSync(
       resolve(
         process.cwd(),
@@ -33,6 +40,46 @@ function documentFixture() {
       "utf8",
     ),
   ).documents[0]!;
+  const placements = {
+    A: {
+      position: { x: 140, y: 300 },
+      rotation: 0 as const,
+      mirror: "none" as const,
+    },
+    B: {
+      position: { x: 460, y: 300 },
+      rotation: 0 as const,
+      mirror: "x" as const,
+    },
+    C: {
+      position: { x: 300, y: 140 },
+      rotation: 90 as const,
+      mirror: "none" as const,
+    },
+    D: {
+      position: { x: 300, y: 460 },
+      rotation: 270 as const,
+      mirror: "none" as const,
+    },
+    E: {
+      position: { x: 340, y: 440 },
+      rotation: 90 as const,
+      mirror: "none" as const,
+    },
+  };
+  document.instances = Object.entries(placements).map(([id, placement]) => ({
+    id,
+    symbolId: "port",
+    placement,
+    properties: {},
+  }));
+  document.nets = document.nets.map((net) => ({
+    ...net,
+    terminals: net.ports.map((instanceId) => ({ instanceId, pinName: "P" })),
+    ports: [],
+  }));
+  document.ports = [];
+  return document;
 }
 
 const terminal = (instanceId: string) => ({

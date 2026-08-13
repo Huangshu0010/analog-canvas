@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   proposePlacementContact,
+  proposePortPlacementContact,
   proposedStandalonePowerConnection,
 } from "./placement-connectivity";
 
@@ -89,6 +90,63 @@ describe("component placement electrical contacts", () => {
       powerDomain: "ground",
       terminals: [{ instanceId: "GND1", pinName: "0" }],
       ports: [],
+    });
+  });
+
+  it("uses the same exact-contact transaction for a first-class Port", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    const proposal = proposePortPlacementContact(
+      document,
+      resolver,
+      {
+        id: "VIN",
+        position: { x: 100, y: 100 },
+      },
+      [
+        {
+          endpoint: { kind: "terminal", instanceId: "R1", pinName: "1" },
+          netId: null,
+          point: { x: 100, y: 100 },
+          preludeEdits: [],
+        },
+      ],
+    );
+    expect(proposal).toMatchObject({ matched: true, ambiguous: false });
+    const result = executeTransaction(
+      document,
+      transaction(0, [
+        {
+          kind: "add_port",
+          port: {
+            id: "VIN",
+            name: "Vin",
+            direction: "input",
+            position: { x: 100, y: 100 },
+            presentation: "hollow",
+          },
+        },
+        ...proposal.edits,
+      ]),
+      context,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.nets).toContainEqual({
+      id: "net-contact-vin",
+      scope: "local",
+      powerDomain: "none",
+      terminals: [{ instanceId: "R1", pinName: "1" }],
+      ports: ["VIN"],
     });
   });
 });

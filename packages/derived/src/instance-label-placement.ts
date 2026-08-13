@@ -245,20 +245,6 @@ export function defaultInstanceLabelPlacement(
   const compactSideGap = 1.5;
   const baselineOffset = profile.typography.instanceFontSize * 0.35;
 
-  if (instance.symbolId === "port" || instance.symbolId === "port-filled") {
-    const localPosition = {
-      x: localBounds.x - compactSideGap,
-      y: middleY + baselineOffset,
-    };
-    return placeUprightInstanceLabel(
-      instance,
-      resolved,
-      profile,
-      localPosition,
-      "left",
-    );
-  }
-
   if (isMosSymbol(resolved) || isBjtSymbol(resolved)) {
     const localPosition = {
       x: localBounds.x + localBounds.width + compactSideGap,

@@ -101,6 +101,7 @@ import type { ComponentInsertRequest } from "../features/component-insert/insert
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import {
   proposePlacementContact,
+  proposePortPlacementContact,
   proposedStandalonePowerConnection,
 } from "../features/component-insert/placement-connectivity";
 import {
@@ -1578,6 +1579,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setStatus(`Place ${symbolName} on the canvas · R rotates · Esc cancels`);
   }
 
+  function beginPortPlacement(): void {
+    setInsertDialogOpen(false);
+    setComponentPlacementRotation(0);
+    setComponentPreviewPoint(null);
+    setVddRailStart(null);
+    beginComponentPlacement({
+      symbolId: "port",
+      properties: {},
+      initialRotation: 0,
+      showReference: false,
+      referenceText: null,
+    });
+    setStatus("Place Port on the canvas; Esc cancels");
+  }
+
   function cancelComponentInsert(): void {
     setInsertDialogOpen(false);
     setVddRailStart(null);
@@ -2715,6 +2731,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       );
       return;
     }
+    if (symbolId === "port" || symbolId === "port-filled") {
+      setStatus(
+        "Use the first-class Port tool; legacy port symbols are disabled",
+      );
+      return;
+    }
     instanceCounter.current += 1;
     const prefix: Record<string, string> = {
       resistor: "R",
@@ -2724,8 +2746,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       "voltage-source": "V",
       "current-source": "I",
       ground: "GND",
-      port: "P",
-      "port-filled": "P",
     };
     let id = `${prefix[symbolId] ?? "X"}${instanceCounter.current}`;
     while (document.instances.some((instance) => instance.id === id)) {
@@ -2867,6 +2887,47 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     );
   }
 
+  function placePort(position: Point): void {
+    instanceCounter.current += 1;
+    let id = `P${instanceCounter.current}`;
+    while (
+      document.ports.some((port) => port.id === id) ||
+      document.instances.some((instance) => instance.id === id)
+    ) {
+      instanceCounter.current += 1;
+      id = `P${instanceCounter.current}`;
+    }
+    const port = {
+      id,
+      name: id,
+      direction: "passive" as const,
+      position,
+      presentation: "hollow" as const,
+    };
+    const contact = proposePortPlacementContact(
+      document,
+      resolver,
+      port,
+      visibleEndpoints,
+    );
+    const result = transact([{ kind: "add_port", port }, ...contact.edits]);
+    if (!result.ok) return;
+    selectEndpoint({
+      endpoint: { kind: "port", portId: id },
+      netId: null,
+      point: position,
+      preludeEdits: [],
+    });
+    setComponentPreviewPoint(position);
+    setStatus(
+      contact.ambiguous
+        ? `Added ${id}; overlapping conductors are ambiguous, wire explicitly`
+        : contact.matched
+          ? `Added ${id} and connected it`
+          : `Added ${id}`,
+    );
+  }
+
   function commitPendingComponentAt(point: Point): void {
     if (!pendingSymbolId || !pendingComponentPlacement) return;
     if (pendingSymbolId === "vdd") {
@@ -2879,6 +2940,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       } else {
         placeVddRail(vddRailStart, { x: point.x, y: vddRailStart.y });
       }
+      return;
+    }
+    if (pendingSymbolId === "port") {
+      placePort(point);
       return;
     }
     placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
@@ -5949,6 +6014,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           recentSymbolIds={recentSymbolIds}
           open={libraryPanelOpen}
           onOpenInsert={openInsertComponentDialog}
+          onCreatePort={beginPortPlacement}
           onQuickPlace={beginInsertedComponentPlacement}
         />
         <aside
@@ -7011,6 +7077,17 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     strokeWidth={styleProfile.strokes.powerRail}
                   />
                 ) : null
+              ) : pendingSymbolId === "port" && componentPreviewPoint ? (
+                <circle
+                  data-testid="port-placement-preview"
+                  className="component-placement-preview"
+                  cx={componentPreviewPoint.x}
+                  cy={componentPreviewPoint.y}
+                  r={styleProfile.nodes.portOriginRadius}
+                  fill={styleProfile.background}
+                  stroke={styleProfile.foreground}
+                  strokeWidth={styleProfile.strokes.normal}
+                />
               ) : pendingSymbolId && componentPreviewPoint ? (
                 <ComponentPlacementPreview
                   styleProfileId={document.presentation.styleProfileId}

@@ -536,17 +536,6 @@ export function buildSvgScene(
       if (contact.endpoints.some((endpoint) => endpoint.kind === "port")) {
         return false;
       }
-      if (
-        contact.endpoints.some(
-          (endpoint) =>
-            endpoint.kind === "terminal" &&
-            document.instances.find(
-              (instance) => instance.id === endpoint.instanceId,
-            )?.symbolId === "port",
-        )
-      ) {
-        return false;
-      }
       return contactRequiresJunctionDot(contact);
     })
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -562,25 +551,20 @@ export function buildSvgScene(
       return `<circle data-object-id="${escapeXml(objectId)}"${derivedAttribute} cx="${contact.point.x}" cy="${contact.point.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`;
     })
     .join("");
-  const powerPortIds = new Set(
-    document.annotations
-      .filter((annotation) => annotation.kind === "power-label")
-      .map((annotation) => annotation.attachedObjectId)
-      .filter((id): id is string => id !== undefined),
-  );
   const portOrigins =
     profile.nodes.portOriginRadius === 0
       ? ""
       : [...document.ports]
           .filter(
-            (port) => port.position !== null && !powerPortIds.has(port.id),
+            (port) =>
+              port.position !== null &&
+              (port.presentation ?? "hollow") !== "supply",
           )
           .sort((left, right) => left.id.localeCompare(right.id, "en"))
-          .map((port) =>
-            profile.id === "razavi-textbook-v1"
-              ? `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.background}" stroke="${profile.foreground}" stroke-width="${profile.strokes.normal}"/>`
-              : `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.foreground}"/>`,
-          )
+          .map((port) => {
+            const filled = (port.presentation ?? "hollow") === "filled";
+            return `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" data-port-presentation="${filled ? "filled" : "hollow"}" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${filled ? profile.foreground : profile.background}"${filled ? "" : ` stroke="${profile.foreground}" stroke-width="${profile.strokes.normal}"`}/>`;
+          })
           .join("");
   const portLayer =
     profile.nodes.portOriginRadius === 0

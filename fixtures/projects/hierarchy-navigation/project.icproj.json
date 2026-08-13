@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 6,
   "id": "project-hierarchy-navigation",
   "name": "Hierarchy Navigation Fixture",
   "source": {
@@ -24,14 +24,21 @@
       "instances": [
         {
           "id": "XCHILD",
-          "symbolId": "port",
+          "symbolId": "opamp",
           "placement": {
             "position": { "x": 300, "y": 240 },
             "rotation": 0,
             "mirror": "none"
           },
-          "properties": {
-            "spice.childDocumentId": "document-child"
+          "properties": {},
+          "netlist": {
+            "reference": "XCHILD",
+            "binding": {
+              "kind": "subcircuit",
+              "childDocumentId": "document-child",
+              "name": "BiasChild"
+            },
+            "parameters": {}
           }
         }
       ],
@@ -59,7 +66,8 @@
           "id": "port-child-p",
           "name": "P",
           "direction": "passive",
-          "position": { "x": 120, "y": 240 }
+          "position": { "x": 120, "y": 240 },
+          "presentation": "hollow"
         }
       ],
       "instances": [

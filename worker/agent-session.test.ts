@@ -549,7 +549,7 @@ describe("public Agent session routes", () => {
                 kind: "add_instance",
                 instance: {
                   id: "VIN",
-                  symbolId: "port",
+                  symbolId: "resistor",
                   symbolVariantId: "",
                   placement: null,
                   properties: {},

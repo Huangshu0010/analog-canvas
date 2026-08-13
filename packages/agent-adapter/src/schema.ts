@@ -207,11 +207,18 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
     }
 
     if (edit.kind === "add_instance") {
-      if (edit.instance.symbolId === "vdd") {
+      if (
+        edit.instance.symbolId === "vdd" ||
+        edit.instance.symbolId === "port" ||
+        edit.instance.symbolId === "port-filled"
+      ) {
         context.addIssue({
           code: "custom",
           path: ["instance", "symbolId"],
-          message: "Use add_power_rail instead of the legacy vdd symbol",
+          message:
+            edit.instance.symbolId === "vdd"
+              ? "Use add_power_rail instead of the legacy vdd symbol"
+              : "Use add_port instead of a legacy port symbol",
         });
       }
       for (const key of Object.keys(edit.instance.properties)) {
@@ -225,11 +232,19 @@ export const AgentSchematicEditSchema = SchematicEditSchema.superRefine(
       }
     }
 
-    if (edit.kind === "set_instance_symbol" && edit.symbolId === "vdd") {
+    if (
+      edit.kind === "set_instance_symbol" &&
+      (edit.symbolId === "vdd" ||
+        edit.symbolId === "port" ||
+        edit.symbolId === "port-filled")
+    ) {
       context.addIssue({
         code: "custom",
         path: ["symbolId"],
-        message: "Use add_power_rail instead of the legacy vdd symbol",
+        message:
+          edit.symbolId === "vdd"
+            ? "Use add_power_rail instead of the legacy vdd symbol"
+            : "Use add_port instead of a legacy port symbol",
       });
     }
 
@@ -423,6 +438,7 @@ export const AgentSnapshotPortSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1),
   direction: z.enum(["input", "output", "bidirectional", "passive"]),
+  presentation: z.enum(["hollow", "filled", "supply"]),
   position: PointSchema.nullable(),
   netId: StableIdSchema.nullable(),
 });
