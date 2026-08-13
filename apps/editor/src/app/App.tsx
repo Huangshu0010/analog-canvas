@@ -9,9 +9,10 @@ import {
   buildManualWirePath,
   createFreeWireAnchor,
   createRouteWireAnchor,
+  proposeEndpointRouteAttachment,
   proposeGroupMoveEdits,
   proposeLooseRouteTranslation,
-  proposeWireCommit,
+  proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   proposeVisualRouteDeletion,
   type EditTransactionResult,
@@ -36,6 +37,7 @@ import {
   diagnoseProject,
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
+  resolveElectricalContactTargets,
   resolveNetLabelBinding,
   resolveMosBulkConnection,
   resolveSchematicStyleProfile,
@@ -201,7 +203,7 @@ import {
   SNAP_PROFILES,
   snapCoordinate,
 } from "../snap/engine";
-import type { SnapGuideLine, SnapResult } from "../snap/engine";
+import type { SnapAnchor, SnapGuideLine, SnapResult } from "../snap/engine";
 
 const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
 const RECENT_COMPONENTS_STORAGE_KEY = "icm.recent-components.v1";
@@ -1014,6 +1016,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       }),
     [document, projectConnectivityIndex],
   );
+  const contactComponents = useMemo(
+    () =>
+      [
+        ...(projectConnectivityIndex.documents
+          .get(document.id)
+          ?.nets.values() ?? []),
+      ].flatMap((net) => net.routedComponents),
+    [document.id, projectConnectivityIndex],
+  );
 
   const textEditingTarget = textEditing
     ? resolveTextEditingTarget(document, textEditing)
@@ -1668,10 +1679,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     const suffix = nextRoutingSuffix();
-    const proposal = proposeWireCommit(
+    const proposal = proposeWireCommitThroughContacts(
       wireSource,
       candidate,
       wireWaypoints,
+      visibleEndpoints.filter(
+        (endpoint) => endpoint.endpoint.kind === "terminal",
+      ),
       suffix,
     );
     const bulkEndpoint = [wireSource.endpoint, candidate.endpoint].find(
@@ -1829,6 +1843,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     routeId: string,
     hitTarget: SVGElement = event.currentTarget,
   ): void {
+    if (pendingSymbolId && pendingComponentPlacement) return;
     event.stopPropagation();
     if (event.altKey) {
       setStatus("Snap suppressed while Alt is held");
@@ -1863,14 +1878,33 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       setStatus("Wire must start or end inside a route segment");
       return;
     }
-    const overlappingTargets = routePolylines.filter((candidate) =>
-      resolveRouteTap(
+    const overlappingTargets = routePolylines.flatMap((candidate) => {
+      const candidateTap = resolveRouteTap(
         candidate.polyline.points,
         pointer,
         logicalRadiusForPixels(svg, 7),
-      ),
-    );
-    if (overlappingTargets.length > 1) {
+      );
+      return candidateTap
+        ? [
+            {
+              kind: "route" as const,
+              id: `route:${candidate.route.id}:${candidateTap.segmentIndex}`,
+              point: candidateTap.point,
+              netId: candidate.route.netId,
+              routeId: candidate.route.id,
+              segmentIndex: candidateTap.segmentIndex,
+            },
+          ]
+        : [];
+    });
+    if (
+      resolveElectricalContactTargets(
+        document,
+        resolver,
+        overlappingTargets,
+        contactComponents,
+      ).length > 1
+    ) {
       setStatus(
         "Ambiguous intersection: choose one conductor away from the crossing",
       );
@@ -2465,18 +2499,47 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       x: point.x + resolved.delta.x,
       y: point.y + resolved.delta.y,
     };
-    const bestTargetIds = new Set(
-      (resolved.pointMatches ?? []).map((target) => target.id),
+    const atPoint = (candidate: { anchor: { id: string; point: Point } }) =>
+      candidate.anchor.id !== activeSourceAnchorId &&
+      Math.abs(candidate.anchor.point.x - snappedPoint.x) < 1e-6 &&
+      Math.abs(candidate.anchor.point.y - snappedPoint.y) < 1e-6;
+    const contactTargets = resolveElectricalContactTargets(
+      document,
+      resolver,
+      [
+        ...endpointTargets.filter(atPoint).map((candidate) => ({
+          kind: "endpoint" as const,
+          id: candidate.anchor.id,
+          point: candidate.anchor.point,
+          netId: candidate.source.netId,
+          endpoint: candidate.source.endpoint,
+        })),
+        ...routeTargets.filter(atPoint).map((candidate) => ({
+          kind: "route" as const,
+          id: candidate.anchor.id,
+          point: candidate.anchor.point,
+          netId: document.routes.find(
+            (route) => route.id === candidate.routeId,
+          )!.netId,
+          routeId: candidate.routeId,
+          segmentIndex: candidate.segmentIndex,
+        })),
+      ],
+      contactComponents,
     );
-    const matchingEndpoints = endpointTargets.filter((candidate) =>
-      bestTargetIds.has(candidate.anchor.id),
-    );
-    const matchingRoutes = routeTargets.filter((candidate) =>
-      bestTargetIds.has(candidate.anchor.id),
-    );
-    const ambiguous = matchingEndpoints.length + matchingRoutes.length > 1;
-    const endpoint = ambiguous ? undefined : matchingEndpoints[0]?.source;
-    const route = ambiguous ? undefined : matchingRoutes[0];
+    const ambiguous = contactTargets.length > 1;
+    const contact = ambiguous ? undefined : contactTargets[0];
+    const endpoint = contact?.endpoint
+      ? endpointTargets.find(
+          (candidate) => candidate.anchor.id === contact.endpoint!.id,
+        )?.source
+      : undefined;
+    const route =
+      !endpoint && contact?.route
+        ? routeTargets.find(
+            (candidate) => candidate.anchor.id === contact.route!.id,
+          )
+        : undefined;
     return {
       point: snappedPoint,
       ...(ambiguous ? { ambiguous: true } : {}),
@@ -2545,6 +2608,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function handleCanvasHitPointerDown(
     event: ReactPointerEvent<SVGSVGElement>,
   ): void {
+    if (
+      (pendingSymbolId && pendingComponentPlacement) ||
+      copyPlacement !== null
+    ) {
+      return;
+    }
     if (tool !== "pointer" || event.button !== 0) return;
     if ((event.target as Element).closest(".draft-handle, .route-handle")) {
       return;
@@ -2704,6 +2773,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         }
       : null;
     const contact = proposePlacementContact(
+      document,
       resolver,
       instance,
       visibleEndpoints,
@@ -2814,6 +2884,23 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setStatus(
       `Added VDD rail ${instanceId} · click to place another · Esc exits`,
     );
+  }
+
+  function commitPendingComponentAt(point: Point): void {
+    if (!pendingSymbolId || !pendingComponentPlacement) return;
+    if (pendingSymbolId === "vdd") {
+      if (!vddRailStart) {
+        setVddRailStart(point);
+        setComponentPreviewPoint(point);
+        setStatus("VDD rail: click the right end (Esc cancels)");
+      } else if (point.x === vddRailStart.x) {
+        setStatus("VDD rail needs a non-zero horizontal length");
+      } else {
+        placeVddRail(vddRailStart, { x: point.x, y: vddRailStart.y });
+      }
+      return;
+    }
+    placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
   }
 
   function selectInstance(instanceId: string, additive: boolean): void {
@@ -2971,18 +3058,65 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       visibleEndpoints,
       movingIds,
     );
-    const snap: SnapResult = suppressSnap
+    const routeTargets: SnapAnchor[] = suppressSnap
+      ? []
+      : movingAnchors.flatMap((moving): SnapAnchor[] => {
+          if (moving.electrical?.kind !== "endpoint") return [];
+          const movedPoint = {
+            x: moving.point.x + rawDelta.x,
+            y: moving.point.y + rawDelta.y,
+          };
+          return routePolylines.flatMap(({ route, polyline }) => {
+            const belongsToMovingInstance = [route.from, route.to].some(
+              (endpoint) =>
+                endpoint.kind === "terminal" &&
+                movingIds.has(endpoint.instanceId),
+            );
+            if (belongsToMovingInstance) return [];
+            return polyline.points
+              .slice(0, -1)
+              .flatMap((from, segmentIndex) => {
+                const point = closestPointOnSegment(
+                  movedPoint,
+                  from,
+                  polyline.points[segmentIndex + 1]!,
+                );
+                if (
+                  Math.hypot(point.x - movedPoint.x, point.y - movedPoint.y) >
+                  tolerance
+                ) {
+                  return [];
+                }
+                return [
+                  {
+                    id: `move-route:${moving.id}:${route.id}:${segmentIndex}`,
+                    point,
+                    kind: "route" as const,
+                    acceptsMovingAnchorId: moving.id,
+                    electrical: {
+                      kind: "route" as const,
+                      routeId: route.id,
+                      segmentIndex,
+                      netId: route.netId,
+                    },
+                  },
+                ];
+              });
+          });
+        });
+    const staticTargets = buildSceneSnapTargets(
+      document,
+      resolver,
+      visibleEndpoints,
+      movingIds,
+    );
+    let snap: SnapResult = suppressSnap
       ? { delta: rawDelta, guides: [] }
       : resolveTranslationSnap(
           {
             rawDelta,
             movingAnchors,
-            targetAnchors: buildSceneSnapTargets(
-              document,
-              resolver,
-              visibleEndpoints,
-              movingIds,
-            ),
+            targetAnchors: [...staticTargets, ...routeTargets],
             primaryAnchorId: `instance:${preview.primaryInstanceId}:origin`,
             grid: document.presentation.grid,
             tolerance,
@@ -2990,6 +3124,48 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           },
           previous,
         );
+    if (snap.electricalMatch?.target.electrical?.kind === "route") {
+      const point = snap.electricalMatch.target.point;
+      const coincidentRoutes = routeTargets.filter(
+        (target) =>
+          target.electrical?.kind === "route" &&
+          target.point.x === point.x &&
+          target.point.y === point.y,
+      );
+      const conductors = resolveElectricalContactTargets(
+        document,
+        resolver,
+        coincidentRoutes.flatMap((target) =>
+          target.electrical?.kind === "route"
+            ? [
+                {
+                  kind: "route" as const,
+                  id: target.id,
+                  point: target.point,
+                  netId: target.electrical.netId,
+                  routeId: target.electrical.routeId,
+                  segmentIndex: target.electrical.segmentIndex,
+                },
+              ]
+            : [],
+        ),
+        contactComponents,
+      );
+      if (conductors.length > 1) {
+        snap = resolveTranslationSnap(
+          {
+            rawDelta,
+            movingAnchors,
+            targetAnchors: staticTargets,
+            primaryAnchorId: `instance:${preview.primaryInstanceId}:origin`,
+            grid: document.presentation.grid,
+            tolerance,
+            profile: SNAP_PROFILES.instanceMove,
+          },
+          previous,
+        );
+      }
+    }
     const moves = preview.instanceIds.map((instanceId) => {
       const original = preview.originalPositions[instanceId]!;
       return {
@@ -3029,23 +3205,41 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (delta.x !== 0 || delta.y !== 0) {
       try {
         const groupMove = proposeGroupMoveEdits(document, resolver, moves);
-        const result = transact([
-          ...groupMove.edits,
-          ...(electricalMatch?.moving.electrical &&
-          electricalMatch.target.electrical
-            ? [
-                {
-                  kind: "connect_endpoints" as const,
-                  from: electricalMatch.moving.electrical.endpoint,
-                  to: electricalMatch.target.electrical.endpoint,
-                  ...(!electricalMatch.moving.electrical.netId &&
-                  !electricalMatch.target.electrical.netId
-                    ? { newNetId: `net-ui-${nextRoutingSuffix()}` }
-                    : {}),
-                },
-              ]
-            : []),
-        ]);
+        const movingElectrical = electricalMatch?.moving.electrical;
+        const targetElectrical = electricalMatch?.target.electrical;
+        const projected = structuredClone(document);
+        for (const move of moves) {
+          const instance = projected.instances.find(
+            (candidate) => candidate.id === move.instanceId,
+          );
+          if (instance?.placement) instance.placement.position = move.position;
+        }
+        const contactEdits: SchematicEdit[] =
+          movingElectrical?.kind === "endpoint" &&
+          targetElectrical?.kind === "route"
+            ? proposeEndpointRouteAttachment(
+                projected,
+                movingElectrical.endpoint,
+                movingElectrical.netId,
+                targetElectrical.routeId,
+                electricalMatch!.target.point,
+                targetElectrical.segmentIndex,
+                `move-${nextRoutingSuffix()}`,
+              ).edits
+            : movingElectrical?.kind === "endpoint" &&
+                targetElectrical?.kind === "endpoint"
+              ? [
+                  {
+                    kind: "connect_endpoints" as const,
+                    from: movingElectrical.endpoint,
+                    to: targetElectrical.endpoint,
+                    ...(!movingElectrical.netId && !targetElectrical.netId
+                      ? { newNetId: `net-ui-${nextRoutingSuffix()}` }
+                      : {}),
+                  },
+                ]
+              : [];
+        const result = transact([...groupMove.edits, ...contactEdits]);
         if (result.ok && electricalMatch) {
           setStatus("Snapped pin endpoints and connected them without a wire");
         }
@@ -6548,6 +6742,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             aria-label="Schematic canvas"
             viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
             onWheel={handleWheel}
+            onClickCapture={(event) => {
+              if (!pendingSymbolId || !pendingComponentPlacement) return;
+              if (event.detail > 1) return;
+              event.stopPropagation();
+              const rawPoint = pointFromClient(
+                event.clientX,
+                event.clientY,
+                event.currentTarget,
+              );
+              commitPendingComponentAt({
+                x: snapCoordinate(rawPoint.x, document.presentation.grid),
+                y: snapCoordinate(rawPoint.y, document.presentation.grid),
+              });
+            }}
             onPointerDownCapture={(event) => {
               const target = event.target as Element;
               if (
@@ -6586,39 +6794,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   x: snapCoordinate(point.x, document.presentation.grid),
                   y: snapCoordinate(point.y, document.presentation.grid),
                 });
-                return;
-              }
-              if (pendingSymbolId && pendingComponentPlacement) {
-                if (event.detail > 1) return;
-                const rawPoint = pointFromClient(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget,
-                );
-                const point = {
-                  x: snapCoordinate(rawPoint.x, document.presentation.grid),
-                  y: snapCoordinate(rawPoint.y, document.presentation.grid),
-                };
-                if (pendingSymbolId === "vdd") {
-                  if (!vddRailStart) {
-                    setVddRailStart(point);
-                    setComponentPreviewPoint(point);
-                    setStatus("VDD rail: click the right end (Esc cancels)");
-                  } else if (point.x === vddRailStart.x) {
-                    setStatus("VDD rail needs a non-zero horizontal length");
-                  } else {
-                    placeVddRail(vddRailStart, {
-                      x: point.x,
-                      y: vddRailStart.y,
-                    });
-                  }
-                } else {
-                  placeNewComponent(
-                    pendingSymbolId,
-                    point,
-                    pendingComponentPlacement,
-                  );
-                }
                 return;
               }
               const target = event.target as Element;

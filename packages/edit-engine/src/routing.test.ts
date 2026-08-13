@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import { executeTransaction } from "./transaction.js";
 import {
   proposeGroupMoveEdits,
+  proposeEndpointRouteAttachment,
   proposeLooseRouteTranslation,
   proposeVisualRouteDeletion,
   proposeWireSegmentMove,
@@ -51,6 +52,71 @@ function transaction(documentId: string, revision: number, edits: unknown[]) {
 }
 
 describe("routing Edit Engine", () => {
+  it("attaches a real terminal to a Route interior and lets both halves follow it", () => {
+    const document = documentFixture();
+    document.instances.find((instance) => instance.id === "E")!.placement = {
+      position: { x: 300, y: 290 },
+      rotation: 90,
+      mirror: "none",
+    };
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+    const proposal = proposeEndpointRouteAttachment(
+      routed.document,
+      terminal("E"),
+      "net-h",
+      "route-h",
+      { x: 300, y: 300 },
+      0,
+      "e",
+    );
+    const attached = executeTransaction(
+      routed.document,
+      transaction(document.id, 1, proposal.edits),
+      context,
+    );
+    expect(attached.ok).toBe(true);
+    if (!attached.ok) return;
+    expect(attached.document.routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "route-h-a-e", to: terminal("E") }),
+        expect.objectContaining({ id: "route-h-b-e", from: terminal("E") }),
+      ]),
+    );
+    const moved = executeTransaction(
+      attached.document,
+      transaction(document.id, 2, [
+        {
+          kind: "move_instance",
+          instanceId: "E",
+          position: { x: 320, y: 310 },
+        },
+      ]),
+      context,
+    );
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) return;
+    for (const route of moved.document.routes) {
+      expect(routePolyline(moved.document, resolver, route)?.points).toSatisfy(
+        (points: Array<{ x: number; y: number }>) => isOrthogonal(points),
+      );
+    }
+  });
   it("centralizes bulk route deletion as disconnect plus fallback reconciliation", () => {
     const document = documentFixture();
     document.instances.push({

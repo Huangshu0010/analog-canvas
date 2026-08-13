@@ -48,9 +48,9 @@ node tools/research/phase9/external-quality-eval.mjs prepare `
 
 The prepared kit is runtime evidence and remains outside the tracked product
 file flow. Each tier must be executed in an isolated Agent context with the
-same declared provider, model, version, and decoding settings. Follow
-[`phase-9-external-quality-gate.md`](phase-9-external-quality-gate.md) for the
-result contract, finalization, anonymization, and independent scoring steps.
+same declared provider, model, version, and decoding settings. The former
+external-quality gate is archived with the companion historical studies; it is
+not a current result contract or pass/fail gate.
 
 Do not inspect one tier's result while producing another, modify the frozen
 contexts, enable optional helpers, call the v1 query path, or use the final

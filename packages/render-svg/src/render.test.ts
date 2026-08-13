@@ -168,7 +168,7 @@ describe("textbook monochrome SVG renderer", () => {
       {
         id: "junction-route",
         netId: "net-a",
-        position: { x: 180, y: 100 },
+        position: { x: 80, y: 100 },
         role: "route-anchor",
       },
       {
@@ -294,6 +294,205 @@ describe("textbook monochrome SVG renderer", () => {
 
     expect(renderDocumentSvg(document, resolver)).toContain(
       '<circle data-object-id="junction-out"',
+    );
+  });
+
+  it("keeps a two-arm Route ending on a device pin dotless", () => {
+    const document = createEmptyProject("project-pin-contact", "Pin contact")
+      .documents[0]!;
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-pin",
+      scope: "local",
+      terminals: [{ instanceId: "R1", pinName: "1" }],
+      ports: [],
+    });
+    document.junctions.push({
+      id: "loose-end",
+      netId: "net-pin",
+      position: { x: 60, y: 100 },
+      role: "route-anchor",
+    });
+    document.routes.push({
+      id: "route-pin",
+      netId: "net-pin",
+      from: { kind: "junction", junctionId: "loose-end" },
+      to: { kind: "terminal", instanceId: "R1", pinName: "1" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).not.toMatch(/data-node-kind="contact" cx="100" cy="100"/u);
+    expect(svg).not.toContain('data-object-id="loose-end"');
+  });
+
+  it.each(["resistor", "capacitor"])(
+    "renders a contact dot when a %s pin lands on a Route middle",
+    (symbolId) => {
+      const document = createEmptyProject(
+        `project-${symbolId}-mid-route`,
+        "Mid-route pin",
+      ).documents[0]!;
+      document.instances.push({
+        id: "X1",
+        symbolId,
+        placement: {
+          position: { x: 100, y: 120 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      });
+      document.ports.push(
+        {
+          id: "left",
+          name: "left",
+          direction: "passive",
+          position: { x: 60, y: 100 },
+        },
+        {
+          id: "right",
+          name: "right",
+          direction: "passive",
+          position: { x: 140, y: 100 },
+        },
+      );
+      document.netlist!.portOrder.push("left", "right");
+      document.nets.push({
+        id: "net-contact",
+        scope: "local",
+        terminals: [{ instanceId: "X1", pinName: "1" }],
+        ports: ["left", "right"],
+      });
+      document.routes.push({
+        id: "route-through",
+        netId: "net-contact",
+        from: { kind: "port", portId: "left" },
+        to: { kind: "port", portId: "right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      });
+
+      expect(renderDocumentSvg(document, resolver)).toMatch(
+        /data-node-kind="contact" cx="100" cy="100"/u,
+      );
+    },
+  );
+
+  it("distinguishes a two-arm pin corner from an extension with a side branch", () => {
+    const document = createEmptyProject("project-pin-branch", "Pin branch")
+      .documents[0]!;
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.ports.push(
+      {
+        id: "left",
+        name: "left",
+        direction: "passive",
+        position: { x: 60, y: 100 },
+      },
+      {
+        id: "top",
+        name: "top",
+        direction: "passive",
+        position: { x: 100, y: 60 },
+      },
+    );
+    document.netlist!.portOrder.push("left", "top");
+    document.nets.push({
+      id: "net-pin",
+      scope: "local",
+      terminals: [{ instanceId: "R1", pinName: "1" }],
+      ports: ["left", "top"],
+    });
+    document.routes.push({
+      id: "route-corner",
+      netId: "net-pin",
+      from: { kind: "port", portId: "left" },
+      to: { kind: "terminal", instanceId: "R1", pinName: "1" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+
+    expect(renderDocumentSvg(document, resolver)).not.toMatch(
+      /data-node-kind="contact" cx="100" cy="100"/u,
+    );
+
+    document.routes.push({
+      id: "route-extension",
+      netId: "net-pin",
+      from: { kind: "port", portId: "top" },
+      to: { kind: "terminal", instanceId: "R1", pinName: "1" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    });
+
+    expect(renderDocumentSvg(document, resolver)).toMatch(
+      /data-node-kind="contact" cx="100" cy="100"/u,
+    );
+  });
+
+  it("keeps two coincident pins dotless and dots three coincident pins", () => {
+    const document = createEmptyProject("project-pin-count", "Pin count")
+      .documents[0]!;
+    for (const instanceId of ["R1", "R2"]) {
+      document.instances.push({
+        id: instanceId,
+        symbolId: "resistor",
+        placement: {
+          position: { x: 100, y: 120 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      });
+    }
+    document.nets.push({
+      id: "net-pin",
+      scope: "local",
+      terminals: [
+        { instanceId: "R1", pinName: "1" },
+        { instanceId: "R2", pinName: "1" },
+      ],
+      ports: [],
+    });
+
+    expect(renderDocumentSvg(document, resolver)).not.toMatch(
+      /data-node-kind="contact" cx="100" cy="100"/u,
+    );
+
+    document.instances.push({
+      id: "R3",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.nets[0]!.terminals.push({ instanceId: "R3", pinName: "1" });
+
+    expect(renderDocumentSvg(document, resolver)).toMatch(
+      /data-node-kind="contact" cx="100" cy="100"/u,
     );
   });
 
@@ -920,7 +1119,9 @@ describe("textbook monochrome SVG renderer", () => {
       '<circle data-object-id="junction-bias" cx="225" cy="80" r="3.77907" fill="#000"/>',
     );
     expect(svg).not.toContain('data-node-kind="device-pin"');
-    expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
+    // Four actual three-arm branches and five hollow ports. Two-arm terminal
+    // joins and corners deliberately remain dotless.
+    expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(9);
     // A route-marker contributes a head; its attached route remains the shaft.
     expect(svg).not.toContain('data-role="current-arrow-shaft"');
     expect(svg).toContain('data-kind="route-marker"');

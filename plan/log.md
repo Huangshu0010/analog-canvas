@@ -6167,3 +6167,77 @@ contracts (WP-R1)`.
 - Validation: `pnpm ci:static`, frozen install, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(ci): format lockfile static contract`.
+
+## 2026-08-13 - Unified electrical contact authoring
+
+- Target: replace raw SVG-hit ambiguity and coordinate-only component contact
+  with one conductor-aware Wire/placement/movement contract.
+- Changed areas: derived contact targeting, typed endpoint-to-Route attachment,
+  editor Wire and component interaction, snap semantics, contact markers,
+  Agent API artifacts, specifications, and visual/browser regressions.
+- Validation: focused unit tests (75), targeted browser tests (5), Agent API
+  artifact check, `pnpm verify:branch` (675 tests plus build/smoke), and
+  `git diff --check` passed.
+- Commit status: implementation committed on
+  `codex/unified-electrical-contact` as `fe4c4ee`; archival recorded in the
+  following branch-maintenance commit.
+
+## 2026-08-13 - Documentation information architecture
+
+- Target: make current product, user, contributor, and Agent documentation
+  discoverable while removing redundant historical prose from active paths.
+- Changed areas: root and docs indexes; concise current product architecture;
+  user compatibility/troubleshooting; archive of completed Phase 0--8 records;
+  removal of three superseded Agent planning documents; and an all-CI local
+  Markdown-link checker.
+- Validation: Prettier, 102-file local-link scan, `pnpm ci:static` (format,
+  link scan, pinned references, typecheck), and `git diff --check` passed.
+- Commit status: ready to commit on `codex/docs-information-architecture` as
+  `docs: consolidate current documentation architecture`.
+
+## 2026-08-13 - Integrate docs architecture and contact authoring
+
+- Target: combine the completed documentation architecture and unified
+  electrical-contact branches into one validated review head.
+- Changed areas: merge metadata and preservation of both factual plan-log
+  records; no product-source conflict or behavior rewrite was required.
+- Validation: 102-file Markdown-link scan, five targeted browser regressions,
+  and `pnpm verify:branch` (675 tests, build, and production smoke) passed.
+- Commit status: merge committed on `codex/unified-electrical-contact` as
+  `a3f9264`; plan closure is recorded in the following maintenance commit.
+
+## 2026-08-13 - Junction dot branch semantics
+
+- Target: make connection dots describe actual electrical branches rather
+  than every pin/Route contact.
+- Changed areas: shared same-Net contact incident geometry, SVG junction-dot
+  eligibility, dense analog golden, and pin/passthrough/branch regressions.
+- Validation: focused derived and SVG tests (34), affected package builds and
+  typechecks, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/unified-electrical-contact` as
+  `fix: derive junction dots from electrical branch geometry`.
+
+## 2026-08-13 - Wire pass-through pin contacts
+
+- Target: connect every exact visible device pin crossed by a newly authored
+  wire instead of connecting only the gesture endpoints.
+- Changed areas: atomic wire planner, GUI wire commit, planner regressions, and
+  a browser scenario covering capacitor, resistor, and ground on one wire.
+- Validation: 40 focused unit/render tests, edit-engine build, workspace
+  typecheck, targeted browser regression, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/unified-electrical-contact` as
+  `fix: connect compatible pins along authored wires`.
+
+## 2026-08-13 - Mainline contact delivery gate
+
+- Target: close the full mainline gate for unified contact authoring without
+  allowing automatic pass-through capture to short pins inside either
+  explicitly selected endpoint device.
+- Changed areas: contact formatting; endpoint-device exclusion in the shared
+  wire planner; focused planner/browser regressions; and the formal export
+  golden for the accepted dotless simple-corner rule.
+- Validation: frozen dependency install and complete `pnpm ci:check` passed,
+  including 683 unit tests, all workspace builds, export/PWA/production/release
+  verification, and 99 browser tests; `git diff --check` passed.
+- Commit status: ready to commit on `codex/unified-electrical-contact` as
+  `chore: satisfy contact mainline gate`.

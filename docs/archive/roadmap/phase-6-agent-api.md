@@ -118,12 +118,12 @@ Human changes the Document after Agent query
 
 ## Risks and decisions
 
-| Risk or decision | Handling |
-|---|---|
-| API becomes a mirror of every internal function | Keep four operations and typed payload unions |
-| Agent receives excessive data | Require scope and enforce response budgets |
-| Prose is treated as safety enforcement | Hard rules remain in schema, permissions, and validators |
-| Transport choice leaks into core | Keep TypeScript service transport-independent |
+| Risk or decision                                | Handling                                                 |
+| ----------------------------------------------- | -------------------------------------------------------- |
+| API becomes a mirror of every internal function | Keep four operations and typed payload unions            |
+| Agent receives excessive data                   | Require scope and enforce response budgets               |
+| Prose is treated as safety enforcement          | Hard rules remain in schema, permissions, and validators |
+| Transport choice leaks into core                | Keep TypeScript service transport-independent            |
 
 ## Exit gate
 

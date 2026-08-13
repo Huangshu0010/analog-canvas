@@ -169,7 +169,7 @@ interactive-circuit-maker/
 三层：
 
 1. **governing Skill**（`skills/circuit-layout/SKILL.md`）：管「怎么工作」——要求 API 2.0/Snapshot 1.0，读 capabilities，取完整 Snapshot，选 document，推理边界/Net 角色/信号路径，选一个局部改进，表达成 typed edits（每 transaction ≤ maxTransactionEdits），dry-run 后 commit，查 diagnostics + render，refresh。硬边界：保电气拓扑、用当前 revision、保 locked 对象、不靠 crossing 当连接、不猜 pin order/bulk/PDK。**Skill 里零 Razavi 视觉内容**——无线宽、无排版规则、无节点处理、无构图 canon。
-2. **knowledge docs**（`docs/agent/knowledge/`）：`schematic-expression.md`（最接近 Razavi 构图指导，但全是软散文：「主信号左到右」「正电源在上负在下」「差分/匹配局部对称」）、`circuit-reading.md`、`routing-and-diagnostics.md`、`patterns/{differential-pair,current-mirror,arrays-and-ladders,switching-and-sampling}.md`、`pdk-and-symbols.md`、`hierarchy-and-large-circuits.md`。**所有坐标/折点/镜像/拐角选择全部留给 Agent 自由推理，无任何公式**（rule-guided-layout-architecture.md:52 明确）。
+2. **knowledge docs**（`docs/agent/knowledge/`）：`schematic-expression.md`（最接近 Razavi 构图指导，但全是软散文：「主信号左到右」「正电源在上负在下」「差分/匹配局部对称」）、`circuit-reading.md`、`routing-and-diagnostics.md`、`patterns/{differential-pair,current-mirror,arrays-and-ladders,switching-and-sampling}.md`、`pdk-and-symbols.md`、`hierarchy-and-large-circuits.md`。**所有坐标/折点/镜像/拐角选择全部留给 Agent 自由推理，无任何公式**（此结论后来并入现行 Agent workflow 与 style knowledge）。
 3. **recipe + runner**：`netlists/.../razavi-layout.mjs` 是**人手写的确定性坐标脚本**，被 `tools/agent-layout/generate.mjs` 消费。它**不走 capabilities/snapshot**，在 `prepareModel` 直接改 port 坐标，`buildEditPhases` 返回固定 place_instance/set_route_points/upsert_annotation。`agentId` 只是个标签，不是真 AI 调用。
 
 ---

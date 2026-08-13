@@ -38,10 +38,10 @@ unchanged. No interactive editor is promised yet.
 
 ## Dependencies
 
-- [`Overall product plan`](../overall-product-plan.md)
+- [`Overall product plan`](../../overall-product-plan.md)
 - Current `netlists/` fixtures as read-only contract evidence
 - Current `lib/circuit.vss` as a read-only binary source asset
-- Specifications owned by this phase in [`docs/specs`](../specs/README.md)
+- Specifications owned by this phase in [`docs/specs`](../../specs/README.md)
 
 ## Work packages
 
@@ -80,8 +80,7 @@ unchanged. No interactive editor is promised yet.
 
 - Goal: freeze transaction metadata and edit result/error shapes without
   implementing every edit.
-- Main modules: `packages/edit-engine`; history implementation begins in Phase
-  1.
+- Main modules: `packages/edit-engine`; history implementation begins in Phase 1.
 - Required specs: `edit-engine.md`.
 - Validation surface: stale revision and atomic no-op transaction tests.
 
@@ -131,12 +130,12 @@ Submit an edit with the wrong expectedRevision
 
 ## Risks and decisions
 
-| Risk or decision | Handling |
-|---|---|
-| Schema becomes coupled to React | Core package must have no React or DOM dependency |
-| Page layer reappears prematurely | Record an ADR before adding persisted Page/View data |
-| Too many empty packages | Create a workspace only with its first owned implementation target |
-| Circuit IR overfits current fixtures | Keep it terminal- and hierarchy-oriented, not renderer-oriented |
+| Risk or decision                     | Handling                                                           |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| Schema becomes coupled to React      | Core package must have no React or DOM dependency                  |
+| Page layer reappears prematurely     | Record an ADR before adding persisted Page/View data               |
+| Too many empty packages              | Create a workspace only with its first owned implementation target |
+| Circuit IR overfits current fixtures | Keep it terminal- and hierarchy-oriented, not renderer-oriented    |
 
 ## Exit gate
 

@@ -111,12 +111,12 @@ Export the current Document as SVG
 
 ## Risks and decisions
 
-| Risk or decision | Handling |
-|---|---|
-| UI mutates model directly | All committed gestures must produce typed edits |
-| Renderer becomes stateful | Renderer remains a deterministic read-only function |
+| Risk or decision                    | Handling                                                     |
+| ----------------------------------- | ------------------------------------------------------------ |
+| UI mutates model directly           | All committed gestures must produce typed edits              |
+| Renderer becomes stateful           | Renderer remains a deterministic read-only function          |
 | Early symbols lock poor proportions | Mark initial symbols as provisional and calibrate in Phase 5 |
-| React state duplicates Document | Store only session and presentation state outside the model |
+| React state duplicates Document     | Store only session and presentation state outside the model  |
 
 ## Exit gate
 

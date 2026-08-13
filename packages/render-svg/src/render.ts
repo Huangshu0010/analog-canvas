@@ -5,6 +5,7 @@ import {
   transformPoint,
 } from "@icm/model";
 import {
+  contactRequiresJunctionDot,
   deriveDocumentContactEvidence,
   defaultInstanceLabelPlacement,
   resolvePrimitiveStrokeWidth,
@@ -26,6 +27,7 @@ import type {
   DraftingObject,
   Point,
   Rect,
+  RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
 import type {
@@ -531,19 +533,37 @@ export function buildSvgScene(
     resolver,
     routingGeometry,
   );
-  const junctions = [...document.junctions]
-    .filter(
-      (junction) =>
-        (junction.role ?? "branch") === "branch" &&
-        (contactEvidence.byEndpointKey.get(`junction:${junction.id}`)?.incidents
-          .length ?? 0) >= 3 &&
-        !powerRailNetIds.has(junction.netId),
-    )
+  const junctions = contactEvidence.contacts
+    .filter((contact) => {
+      if (powerRailNetIds.has(contact.netId)) return false;
+      if (contact.endpoints.some((endpoint) => endpoint.kind === "port")) {
+        return false;
+      }
+      if (
+        contact.endpoints.some(
+          (endpoint) =>
+            endpoint.kind === "terminal" &&
+            document.instances.find(
+              (instance) => instance.id === endpoint.instanceId,
+            )?.symbolId === "port",
+        )
+      ) {
+        return false;
+      }
+      return contactRequiresJunctionDot(contact);
+    })
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
-    .map(
-      (junction) =>
-        `<circle data-object-id="${escapeXml(junction.id)}" cx="${junction.position.x}" cy="${junction.position.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`,
-    )
+    .map((contact) => {
+      const junctionEndpoint = contact.endpoints.find(
+        (endpoint): endpoint is Extract<RouteEndpoint, { kind: "junction" }> =>
+          endpoint.kind === "junction",
+      );
+      const objectId = junctionEndpoint?.junctionId ?? contact.id;
+      const derivedAttribute = junctionEndpoint
+        ? ""
+        : ' data-node-kind="contact"';
+      return `<circle data-object-id="${escapeXml(objectId)}"${derivedAttribute} cx="${contact.point.x}" cy="${contact.point.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`;
+    })
     .join("");
   const powerPortIds = new Set(
     document.annotations

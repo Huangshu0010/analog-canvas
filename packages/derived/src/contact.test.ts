@@ -3,7 +3,11 @@ import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
 import { deriveVisibleConnectivity } from "./connectivity.js";
-import { deriveDocumentContactEvidence } from "./contact.js";
+import {
+  contactRequiresJunctionDot,
+  deriveDocumentContactEvidence,
+} from "./contact.js";
+import { resolveElectricalContactTargets } from "./contact-target.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -67,6 +71,38 @@ function contactedResistorDocument() {
 }
 
 describe("coincident contact evidence", () => {
+  it("groups duplicate segment and endpoint hits by visible conductor", () => {
+    const document = contactedResistorDocument();
+    const targets = resolveElectricalContactTargets(document, resolver, [
+      {
+        kind: "endpoint",
+        id: "junction",
+        point: { x: 100, y: 100 },
+        netId: "net-out",
+        endpoint: { kind: "junction", junctionId: "junction-out" },
+      },
+      {
+        kind: "route",
+        id: "left-segment",
+        point: { x: 100, y: 100 },
+        netId: "net-out",
+        routeId: "route-left",
+        segmentIndex: 0,
+      },
+      {
+        kind: "route",
+        id: "right-segment",
+        point: { x: 100, y: 100 },
+        netId: "net-out",
+        routeId: "route-right",
+        segmentIndex: 0,
+      },
+    ]);
+    expect(targets).toHaveLength(1);
+    expect(targets[0]?.candidates).toHaveLength(3);
+    expect(targets[0]?.endpoint?.id).toBe("junction");
+  });
+
   it("contracts a same-Net terminal and Junction without treating crossings as contacts", () => {
     const document = contactedResistorDocument();
     const evidence = deriveDocumentContactEvidence(document, resolver);
@@ -81,8 +117,34 @@ describe("coincident contact evidence", () => {
       { x: 0, y: 1 },
       { x: 1, y: 0 },
     ]);
+    expect(contact && contactRequiresJunctionDot(contact)).toBe(true);
     expect(
       deriveVisibleConnectivity(document, resolver)[0]?.components,
     ).toHaveLength(1);
+  });
+
+  it("counts both Route arms when a same-Net Route passes through a pin", () => {
+    const document = contactedResistorDocument();
+    document.junctions = [];
+    document.routes = [
+      {
+        id: "route-through",
+        netId: "net-out",
+        from: { kind: "port", portId: "left" },
+        to: { kind: "port", portId: "right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    ];
+
+    const evidence = deriveDocumentContactEvidence(document, resolver);
+    const contact = evidence.byEndpointKey.get("terminal:R1:1");
+
+    expect(contact?.branchDirections).toEqual([
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 1, y: 0 },
+    ]);
+    expect(contact && contactRequiresJunctionDot(contact)).toBe(true);
   });
 });

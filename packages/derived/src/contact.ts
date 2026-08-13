@@ -23,10 +23,12 @@ export interface ContactIncident {
 /**
  * One derived electrical contact between explicit graph nodes on the same Net.
  *
- * Only endpoint coincidence participates. Route waypoints and geometric
- * crossings are deliberately excluded, so deriving contacts cannot turn a
- * crossing into a connection. This is the shared evidence used by visible
- * connectivity, junction rendering, and diagnostics.
+ * Contact locations come only from explicit same-Net endpoints. Once such a
+ * location exists, same-Net Route geometry through that point contributes its
+ * visible conductor arms. A free geometric crossing cannot create a contact;
+ * a terminal or Junction already owned by the Net must anchor it. This is the
+ * shared evidence used by visible connectivity, junction rendering, and
+ * diagnostics.
  */
 export interface CoincidentContact {
   id: string;
@@ -57,38 +59,59 @@ function inverseAxisDirection(direction: Point): Point {
   };
 }
 
-function routeEndpointDirection(
-  geometry: ResolvedDocumentRoutingGeometry,
-  routeId: string,
-  endpoint: "from" | "to",
-): Point | null {
-  const centerline = geometry.routes.get(routeId)?.centerline;
-  if (!centerline || centerline.length < 2) return null;
-  const at = endpoint === "from" ? centerline[0]! : centerline.at(-1)!;
-  const adjacent = endpoint === "from" ? centerline[1]! : centerline.at(-2)!;
-  const direction = {
-    x: Math.sign(adjacent.x - at.x),
-    y: Math.sign(adjacent.y - at.y),
-  };
-  return direction.x === 0 && direction.y === 0 ? null : direction;
+function samePoint(left: Point, right: Point): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
+function pointOnSegment(point: Point, from: Point, to: Point): boolean {
+  const cross =
+    (point.x - from.x) * (to.y - from.y) - (point.y - from.y) * (to.x - from.x);
+  if (cross !== 0) return false;
+  return (
+    point.x >= Math.min(from.x, to.x) &&
+    point.x <= Math.max(from.x, to.x) &&
+    point.y >= Math.min(from.y, to.y) &&
+    point.y <= Math.max(from.y, to.y)
+  );
+}
+
+/** Visible conductor arms of one resolved Route at an electrical contact. */
+function routeDirectionsAtPoint(
+  centerline: readonly Point[],
+  point: Point,
+): Point[] {
+  const directions = new Map<string, Point>();
+  for (let index = 0; index < centerline.length - 1; index += 1) {
+    const from = centerline[index]!;
+    const to = centerline[index + 1]!;
+    if (samePoint(from, to) || !pointOnSegment(point, from, to)) continue;
+    for (const candidate of [from, to]) {
+      if (samePoint(candidate, point)) continue;
+      const direction = {
+        x: Math.sign(candidate.x - point.x),
+        y: Math.sign(candidate.y - point.y),
+      };
+      directions.set(directionKey(direction), direction);
+    }
+  }
+  return [...directions.values()];
 }
 
 function contactIncidents(
   document: SchematicDocument,
   resolver: SymbolResolver,
+  netId: string,
+  point: Point,
   endpoints: readonly RouteEndpoint[],
   geometry: ResolvedDocumentRoutingGeometry,
 ): ContactIncident[] {
   const incidents: ContactIncident[] = [];
-  const endpointKeys = new Set(endpoints.map(endpointKey));
   for (const route of document.routes) {
-    for (const side of ["from", "to"] as const) {
-      const endpoint = route[side];
-      if (!endpointKeys.has(endpointKey(endpoint))) continue;
-      const direction = routeEndpointDirection(geometry, route.id, side);
-      if (direction) {
-        incidents.push({ kind: "route", objectId: route.id, direction });
-      }
+    if (route.netId !== netId) continue;
+    const centerline = geometry.routes.get(route.id)?.centerline;
+    if (!centerline) continue;
+    for (const direction of routeDirectionsAtPoint(centerline, point)) {
+      incidents.push({ kind: "route", objectId: route.id, direction });
     }
   }
   for (const endpoint of endpoints) {
@@ -145,6 +168,8 @@ function netContacts(
       const incidents = contactIncidents(
         document,
         resolver,
+        net.id,
+        point,
         endpoints,
         geometry,
       );
@@ -173,6 +198,24 @@ function netContacts(
         left.point.y - right.point.y ||
         left.id.localeCompare(right.id, "en"),
     );
+}
+
+/**
+ * Whether a confirmed same-Net contact needs a visible junction dot.
+ *
+ * A dot communicates a branch, not mere electrical continuity. Two incident
+ * arms form either a straight join or a corner and remain dotless. A terminal
+ * on a Route middle/bend contributes the Route arms on both sides and therefore
+ * becomes a three-way branch. Three coincident pins also require a dot even if
+ * two symbol stems happen to share the same geometric direction.
+ */
+export function contactRequiresJunctionDot(
+  contact: CoincidentContact,
+): boolean {
+  const terminalCount = contact.endpoints.filter(
+    (endpoint) => endpoint.kind === "terminal",
+  ).length;
+  return terminalCount >= 3 || contact.branchDirections.length >= 3;
 }
 
 export function deriveDocumentContactEvidence(

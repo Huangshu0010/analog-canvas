@@ -38,6 +38,52 @@ export interface WireCommitProposal {
   edits: SchematicEdit[];
 }
 
+export interface EndpointRouteAttachmentProposal {
+  netId: string;
+  routeIds: readonly [string, string];
+  edits: SchematicEdit[];
+}
+
+/**
+ * Make a real endpoint the common node of two Route halves. This is the one
+ * topology primitive used when a placed or moved pin lands on a conductor;
+ * no coincident decorative Junction or zero-length Route is introduced.
+ */
+export function proposeEndpointRouteAttachment(
+  document: SchematicDocument,
+  endpoint: RouteEndpoint,
+  endpointNetId: string | null,
+  routeId: string,
+  point: Point,
+  segmentIndex: number,
+  suffix: string,
+): EndpointRouteAttachmentProposal {
+  const route = document.routes.find((candidate) => candidate.id === routeId);
+  if (!route) throw new Error(`Route not found: ${routeId}`);
+  const edits: SchematicEdit[] = [];
+  if (endpointNetId && endpointNetId !== route.netId) {
+    edits.push({
+      kind: "merge_nets",
+      targetNetId: route.netId,
+      sourceNetId: endpointNetId,
+    });
+  }
+  const routeIds = [
+    `${route.id}-a-${suffix}`,
+    `${route.id}-b-${suffix}`,
+  ] as const;
+  edits.push({
+    kind: "attach_endpoint_to_route",
+    endpoint,
+    routeId: route.id,
+    point,
+    segmentIndex,
+    firstRouteId: routeIds[0],
+    secondRouteId: routeIds[1],
+  });
+  return { netId: route.netId, routeIds, edits };
+}
+
 export type WireIntentAnchor =
   | { kind: "endpoint"; endpoint: RouteEndpoint }
   | {
@@ -513,6 +559,213 @@ export function proposeWireCommit(
     ...(presentation ? { presentation } : {}),
   });
   return { routeId, netId, edits };
+}
+
+function sameEndpoint(left: RouteEndpoint, right: RouteEndpoint): boolean {
+  if (left.kind !== right.kind) return false;
+  switch (left.kind) {
+    case "terminal":
+      return (
+        right.kind === "terminal" &&
+        left.instanceId === right.instanceId &&
+        left.pinName === right.pinName
+      );
+    case "port":
+      return right.kind === "port" && left.portId === right.portId;
+    case "junction":
+      return right.kind === "junction" && left.junctionId === right.junctionId;
+  }
+}
+
+function endpointSortKey(endpoint: RouteEndpoint): string {
+  switch (endpoint.kind) {
+    case "terminal":
+      return `terminal:${endpoint.instanceId}:${endpoint.pinName}`;
+    case "port":
+      return `port:${endpoint.portId}`;
+    case "junction":
+      return `junction:${endpoint.junctionId}`;
+  }
+}
+
+function pathOffsetAtPoint(
+  points: readonly Point[],
+  point: Point,
+): number | null {
+  let offset = 0;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const from = points[index]!;
+    const to = points[index + 1]!;
+    const horizontal = from.y === to.y;
+    const vertical = from.x === to.x;
+    const onSegment = horizontal
+      ? point.y === from.y &&
+        point.x >= Math.min(from.x, to.x) &&
+        point.x <= Math.max(from.x, to.x)
+      : vertical
+        ? point.x === from.x &&
+          point.y >= Math.min(from.y, to.y) &&
+          point.y <= Math.max(from.y, to.y)
+        : false;
+    if (onSegment) {
+      return offset + Math.abs(point.x - from.x) + Math.abs(point.y - from.y);
+    }
+    offset += Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+  }
+  return null;
+}
+
+function waypointsBetweenOffsets(
+  path: ManualWirePath,
+  fromOffset: number,
+  toOffset: number,
+): Point[] {
+  const result: Point[] = [];
+  let offset = 0;
+  for (let index = 0; index < path.points.length - 1; index += 1) {
+    const from = path.points[index]!;
+    const to = path.points[index + 1]!;
+    offset += Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+    if (offset > fromOffset && offset < toOffset) result.push({ ...to });
+  }
+  return result;
+}
+
+interface OrderedWireContact {
+  source: WireSource;
+  offset: number;
+}
+
+function terminalInstanceId(source: WireSource): string | null {
+  return source.endpoint.kind === "terminal"
+    ? source.endpoint.instanceId
+    : null;
+}
+
+/**
+ * Author one wire through every exact visible pin contact in one transaction.
+ *
+ * The wire gesture is the connection intent: each interior contact becomes a
+ * real route endpoint, and any Net already owned by that pin is merged through
+ * the ordinary typed edit. Merely crossing a symbol body or passing near a pin
+ * never reaches this planner because callers supply resolved visible pins.
+ */
+export function proposeWireCommitThroughContacts(
+  from: WireSource,
+  to: WireSource,
+  manualWaypoints: readonly Point[],
+  contacts: readonly WireSource[],
+  suffixOrIds: number | { routeId: string; newNetId: string },
+): WireCommitProposal {
+  const path = buildManualWirePath(from, to, manualWaypoints);
+  const endpointInstanceIds = new Set(
+    [terminalInstanceId(from), terminalInstanceId(to)].filter(
+      (instanceId): instanceId is string => instanceId !== null,
+    ),
+  );
+  const totalOffset = path.points.slice(0, -1).reduce((total, point, index) => {
+    const next = path.points[index + 1]!;
+    return total + Math.abs(next.x - point.x) + Math.abs(next.y - point.y);
+  }, 0);
+  const ordered = contacts
+    .flatMap((source): OrderedWireContact[] => {
+      if (
+        sameEndpoint(source.endpoint, from.endpoint) ||
+        sameEndpoint(source.endpoint, to.endpoint) ||
+        (source.endpoint.kind === "terminal" &&
+          endpointInstanceIds.has(source.endpoint.instanceId))
+      ) {
+        return [];
+      }
+      const offset = pathOffsetAtPoint(path.points, source.point);
+      return offset !== null && offset > 0 && offset < totalOffset
+        ? [{ source, offset }]
+        : [];
+    })
+    .filter(
+      (contact, index, all) =>
+        all.findIndex((candidate) =>
+          sameEndpoint(candidate.source.endpoint, contact.source.endpoint),
+        ) === index,
+    )
+    .sort(
+      (left, right) =>
+        left.offset - right.offset ||
+        endpointSortKey(left.source.endpoint).localeCompare(
+          endpointSortKey(right.source.endpoint),
+          "en",
+        ),
+    );
+  if (ordered.length === 0) {
+    return proposeWireCommit(from, to, manualWaypoints, suffixOrIds);
+  }
+
+  const ids =
+    typeof suffixOrIds === "number"
+      ? {
+          routeId: `route-ui-${suffixOrIds}`,
+          newNetId: `net-ui-${suffixOrIds}`,
+        }
+      : suffixOrIds;
+  const groups = ordered.reduce<OrderedWireContact[][]>((result, contact) => {
+    const current = result.at(-1);
+    if (current?.[0]?.offset === contact.offset) current.push(contact);
+    else result.push([contact]);
+    return result;
+  }, []);
+  const presentation = from.routePresentation ?? to.routePresentation;
+  const nodes = [
+    { source: from, offset: 0, extras: [] as OrderedWireContact[] },
+    ...groups.map((group) => ({
+      source: {
+        ...group[0]!.source,
+        ...(presentation ? { routePresentation: presentation } : {}),
+      },
+      offset: group[0]!.offset,
+      extras: group.slice(1),
+    })),
+    { source: to, offset: totalOffset, extras: [] as OrderedWireContact[] },
+  ];
+  const edits: SchematicEdit[] = [];
+  let netId: string | null = from.netId;
+  const routeIds: string[] = [];
+  for (let index = 0; index < nodes.length - 1; index += 1) {
+    const current = nodes[index]!;
+    const next = nodes[index + 1]!;
+    const currentSource =
+      index === 0
+        ? current.source
+        : { ...current.source, netId, preludeEdits: [] };
+    const proposal = proposeWireCommit(
+      currentSource,
+      next.source,
+      waypointsBetweenOffsets(path, current.offset, next.offset),
+      {
+        routeId: `${ids.routeId}-part-${index + 1}`,
+        newNetId: ids.newNetId,
+      },
+    );
+    edits.push(...proposal.edits);
+    netId = proposal.netId;
+    routeIds.push(proposal.routeId);
+
+    for (const extra of next.extras) {
+      edits.push(...extra.source.preludeEdits);
+      if (extra.source.netId && extra.source.netId !== netId) {
+        edits.push({
+          kind: "merge_nets",
+          targetNetId: netId,
+          sourceNetId: extra.source.netId,
+        });
+      }
+      edits.push({
+        kind: "connect_endpoints",
+        from: next.source.endpoint,
+        to: extra.source.endpoint,
+      });
+    }
+  }
+  return { routeId: routeIds[0]!, netId: netId!, edits };
 }
 
 export function createFreeWireAnchor(

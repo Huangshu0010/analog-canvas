@@ -453,6 +453,7 @@ export function agentEditCategory(
     case "set_route_points":
     case "route_orthogonal":
     case "add_junction":
+    case "attach_endpoint_to_route":
     case "remove_junction":
     case "make_flightline":
     case "cut_connection":

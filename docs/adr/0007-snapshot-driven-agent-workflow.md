@@ -142,6 +142,6 @@ evidence after Snapshot-driven trials.
 
 - [`0005-agent-api-without-mcp.md`](0005-agent-api-without-mcp.md)
 - [`../specs/agent-api.md`](../specs/agent-api.md)
-- [`../agent/rule-guided-layout-architecture.md`](../agent/rule-guided-layout-architecture.md)
-- [`../agent/knowledge-and-skill-plan.md`](../agent/knowledge-and-skill-plan.md)
+- [`../agent/workflow.md`](../agent/workflow.md)
+- [`../agent/circuit-style-knowledge.md`](../agent/circuit-style-knowledge.md)
 - [`../roadmap/phase-9-agent-reasoning-and-observability.md`](../roadmap/phase-9-agent-reasoning-and-observability.md)

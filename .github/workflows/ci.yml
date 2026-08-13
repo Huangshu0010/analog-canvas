@@ -45,6 +45,8 @@ jobs:
             done < <(git diff --name-only "$BASE_SHA" HEAD)
           fi
           echo "heavy=$heavy" >> "$GITHUB_OUTPUT"
+      - name: Check local Markdown links
+        run: node scripts/check-markdown-links.mjs
 
   static:
     name: Static contracts
