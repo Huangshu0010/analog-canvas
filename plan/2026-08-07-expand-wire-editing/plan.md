@@ -1,3 +1,8 @@
+---
+status: completed
+experience: candidate
+---
+
 # Expand Virtuoso-Style Wire Editing
 
 ## Goal

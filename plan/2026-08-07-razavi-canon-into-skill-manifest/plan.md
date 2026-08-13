@@ -1,3 +1,8 @@
+---
+status: completed
+experience: candidate
+---
+
 # Expose Razavi fixed-style hard canon to the Skill manifest
 
 ## Goal
@@ -78,14 +83,14 @@ no shared runtime contract is altered by a docs-only change.
    knowledge-doc pattern (`Owner / Strength / Trigger` header, prose sections,
    a counterevidence/failure-modes section). Contents:
    - `Owner: render-svg/symbols packages for tokens; Agent reasoning for
-     applying the canon when placing and labeling. Strength: hard for the
-     coordinate, typography, and stroke/node canon only; guidance for nothing
-     routing-related. Trigger: placement, label text, or visual-token decisions
-     under the Razavi profile.`
+applying the canon when placing and labeling. Strength: hard for the
+coordinate, typography, and stroke/node canon only; guidance for nothing
+routing-related. Trigger: placement, label text, or visual-token decisions
+under the Razavi profile.`
    - Coordinate canon: grid `10`, pin anchors divisible by `10` on both axes,
      placement preserves grid alignment through rotation/mirror, formal
      foreground `#202020` / background `#ffffff`, no `vector-effect=
-     non-scaling-stroke` in formal output.
+non-scaling-stroke` in formal output.
    - Typography canon: schematic-math composition rules (explicit underscore
      priority; alphabetic designator is base + rest is subscript for instance
      labels; leading `V`/`I` is base + rest is subscript for recognized

@@ -6113,3 +6113,16 @@ contracts (WP-R1)`.
   Markdown formatting, and `git diff --check` pending final confirmation.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(plan): close completed root records`.
+
+## 2026-08-13 - Legacy plan metadata sweep, batch 1
+
+- Target: classify the first 25 root plans that predate lifecycle metadata.
+- Changed areas: archived 19 completed architecture, implementation, decision,
+  and integration records after individual Git/Outcome checks; marked six
+  records with explicit human-review signals as `completed/candidate`; updated
+  the root audit from 121 to 96 remaining unclassified legacy records.
+- Validation: recorded per-plan commit evidence and disposition; targeted
+  Markdown formatting, root-state count, `git diff --check`, and status review
+  pending final confirmation.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(plan): classify legacy records batch 1`.

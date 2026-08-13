@@ -9,8 +9,8 @@ an archive. Completed plans with resolved experience are stored under
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
 | `active`                  |     0 | No target is currently active in the root plan queue.                             |
-| `completed` + `candidate` |     5 | Human decides whether to extract, reject, or defer the experience signal.         |
-| missing metadata          |   121 | Audit against outcome text and Git evidence; never archive merely because of age. |
+| `completed` + `candidate` |    11 | Human decides whether to extract, reject, or defer the experience signal.         |
+| missing metadata          |    96 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
 ### Active
 
@@ -23,6 +23,12 @@ None.
 - `2026-08-11-correct-pdf-derived-fidelity-baselines`
 - `2026-08-12-web-agent-session-wa4`
 - `2026-08-12-wp-r0-behavior-baseline`
+- `2026-08-07-execute-phase-8`
+- `2026-08-07-expand-wire-editing`
+- `2026-08-07-integrate-interaction-redesign`
+- `2026-08-07-razavi-canon-into-skill-manifest`
+- `2026-08-07-record-rule-guided-agent-layout`
+- `2026-08-07-render-faithful-hierarchical-ports`
 
 ## 2026-08-13 Root Closure
 
@@ -37,8 +43,9 @@ superseded VDD plan's drawn-rail replacement is already archived.
 
 ## Legacy Metadata Sweep
 
-The 121 plans without a machine-readable state predate the current metadata
-contract. Their current distribution is evidence, not a disposition: 25 have
-an `Outcome` section, while 96 require reviewing their final intent, outcome,
-and Git history. A follow-up target must classify each into one current state
-before moving any of them. Do not bulk-rewrite their historical bodies.
+The first 25 oldest pre-metadata records were individually classified on
+2026-08-13 from their intent/outcome, factual log, and Git path history. Nineteen
+completed records with resolved experience were archived; six completed records
+with an explicit human-review signal remain above as candidates. The remaining
+96 plans still require the same individual evidence review; do not bulk-rewrite
+their historical bodies.
