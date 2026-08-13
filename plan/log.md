@@ -6216,3 +6216,14 @@ contracts (WP-R1)`.
   typechecks, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/unified-electrical-contact` as
   `fix: derive junction dots from electrical branch geometry`.
+
+## 2026-08-13 - Wire pass-through pin contacts
+
+- Target: connect every exact visible device pin crossed by a newly authored
+  wire instead of connecting only the gesture endpoints.
+- Changed areas: atomic wire planner, GUI wire commit, planner regressions, and
+  a browser scenario covering capacitor, resistor, and ground on one wire.
+- Validation: 40 focused unit/render tests, edit-engine build, workspace
+  typecheck, targeted browser regression, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/unified-electrical-contact` as
+  `fix: connect compatible pins along authored wires`.

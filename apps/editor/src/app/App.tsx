@@ -12,7 +12,7 @@ import {
   proposeEndpointRouteAttachment,
   proposeGroupMoveEdits,
   proposeLooseRouteTranslation,
-  proposeWireCommit,
+  proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
   proposeVisualRouteDeletion,
   type EditTransactionResult,
@@ -1679,10 +1679,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     const suffix = nextRoutingSuffix();
-    const proposal = proposeWireCommit(
+    const proposal = proposeWireCommitThroughContacts(
       wireSource,
       candidate,
       wireWaypoints,
+      visibleEndpoints.filter(
+        (endpoint) => endpoint.endpoint.kind === "terminal",
+      ),
       suffix,
     );
     const bulkEndpoint = [wireSource.endpoint, candidate.endpoint].find(

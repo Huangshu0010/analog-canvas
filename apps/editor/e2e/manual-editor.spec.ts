@@ -1675,6 +1675,90 @@ test("places a component pin onto a Route and keeps real split topology", async 
   expect(splitPaths[0]!.at(-1)).toEqual(splitPaths[1]![0]);
 });
 
+test("connects every compatible pin crossed by one wire", async ({ page }) => {
+  const project = createEmptyProject("wire-through-pins", "Wire through pins");
+  const document = project.documents[0]!;
+  document.instances.push(
+    {
+      id: "C1",
+      symbolId: "capacitor",
+      placement: {
+        position: { x: 80, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    },
+    {
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 120, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    },
+    {
+      id: "GND1",
+      symbolId: "ground",
+      placement: {
+        position: { x: 160, y: 110 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    },
+  );
+  document.nets.push({
+    id: "net-ground",
+    name: "0",
+    scope: "global",
+    terminals: [{ instanceId: "GND1", pinName: "0" }],
+    ports: [],
+  });
+
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "wire-through-pins.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  const canvas = page.getByTestId("schematic-canvas");
+  const screenPoints = await canvas.evaluate(
+    (element, points) => {
+      const matrix = (element as SVGSVGElement).getScreenCTM();
+      if (!matrix) return null;
+      return points.map((point) => {
+        const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+        return { x: screen.x, y: screen.y };
+      });
+    },
+    [
+      { x: 40, y: 100 },
+      { x: 200, y: 100 },
+    ],
+  );
+  if (!screenPoints) throw new Error("Wire path is not measurable");
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.mouse.click(screenPoints[0]!.x, screenPoints[0]!.y);
+  await page.mouse.dblclick(screenPoints[1]!.x, screenPoints[1]!.y);
+
+  await expect(page.getByTestId("status")).toContainText("Committed route");
+  await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(4);
+  await expect(
+    page.locator('[data-layer="junctions"] [data-node-kind="contact"]'),
+  ).toHaveCount(3);
+  for (const terminalId of [
+    "terminal-C1-1",
+    "terminal-R1-1",
+    "terminal-GND1-0",
+  ]) {
+    await expect(page.getByTestId(terminalId)).toBeVisible();
+  }
+});
+
 test("rejects a SPICE netlist that needs unsupported symbols", async ({
   page,
 }) => {

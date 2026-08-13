@@ -5,6 +5,7 @@ import {
   createFreeWireAnchor,
   createRouteWireAnchor,
   proposeWireCommit,
+  proposeWireCommitThroughContacts,
 } from "./routing-planner.js";
 import type { WireSource } from "./routing-planner.js";
 
@@ -91,6 +92,100 @@ describe("wire editing proposals", () => {
       kind: "set_route_points",
       presentation: "power-rail",
     });
+  });
+
+  it("segments one authored wire through every exact intermediate pin", () => {
+    const proposal = proposeWireCommitThroughContacts(
+      source({ kind: "port", portId: "in" }, { x: 0, y: 0 }, "net-wire"),
+      source({ kind: "port", portId: "out" }, { x: 120, y: 0 }, "net-wire"),
+      [],
+      [
+        source(
+          { kind: "terminal", instanceId: "C1", pinName: "1" },
+          { x: 40, y: 0 },
+        ),
+        source(
+          { kind: "terminal", instanceId: "R1", pinName: "1" },
+          { x: 80, y: 0 },
+          "net-resistor",
+        ),
+        source(
+          { kind: "terminal", instanceId: "OFF", pinName: "1" },
+          { x: 80, y: 10 },
+        ),
+      ],
+      12,
+    );
+
+    expect(proposal).toMatchObject({
+      routeId: "route-ui-12-part-1",
+      netId: "net-wire",
+    });
+    expect(
+      proposal.edits.filter((edit) => edit.kind === "set_route_points"),
+    ).toEqual([
+      expect.objectContaining({
+        routeId: "route-ui-12-part-1",
+        netId: "net-wire",
+        from: { kind: "port", portId: "in" },
+        to: { kind: "terminal", instanceId: "C1", pinName: "1" },
+        waypoints: [],
+      }),
+      expect.objectContaining({
+        routeId: "route-ui-12-part-2",
+        netId: "net-wire",
+        from: { kind: "terminal", instanceId: "C1", pinName: "1" },
+        to: { kind: "terminal", instanceId: "R1", pinName: "1" },
+        waypoints: [],
+      }),
+      expect.objectContaining({
+        routeId: "route-ui-12-part-3",
+        netId: "net-wire",
+        from: { kind: "terminal", instanceId: "R1", pinName: "1" },
+        to: { kind: "port", portId: "out" },
+        waypoints: [],
+      }),
+    ]);
+    expect(proposal.edits).toContainEqual({
+      kind: "merge_nets",
+      targetNetId: "net-wire",
+      sourceNetId: "net-resistor",
+    });
+    expect(
+      proposal.edits.some(
+        (edit) =>
+          edit.kind === "connect_endpoints" &&
+          [edit.from, edit.to].some(
+            (endpoint) =>
+              endpoint.kind === "terminal" && endpoint.instanceId === "OFF",
+          ),
+      ),
+    ).toBe(false);
+  });
+
+  it("preserves a manual bend while ordering pass-through pins by path arc", () => {
+    const proposal = proposeWireCommitThroughContacts(
+      source({ kind: "port", portId: "in" }, { x: 0, y: 0 }),
+      source({ kind: "port", portId: "out" }, { x: 80, y: 40 }),
+      [],
+      [
+        source(
+          { kind: "terminal", instanceId: "C1", pinName: "1" },
+          { x: 40, y: 0 },
+        ),
+        source(
+          { kind: "terminal", instanceId: "R1", pinName: "1" },
+          { x: 80, y: 20 },
+        ),
+      ],
+      13,
+    );
+
+    expect(
+      proposal.edits
+        .filter((edit) => edit.kind === "set_route_points")
+        .map((edit) => edit.waypoints),
+    ).toEqual([[], [{ x: 80, y: 0 }], []]);
   });
 
   it("creates free and route-tap anchors with stable IDs and snapped geometry", () => {
