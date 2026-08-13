@@ -97,6 +97,7 @@ describe("editor shell", () => {
     expect(markup).toContain("Schematic canvas");
     expect(markup).toContain("Export SPICE netlist");
     expect(markup).toContain("Export Spectre netlist");
+    expect(markup).toContain("Structural design netlist only");
     expect(markup).not.toContain('data-testid="cell-navigation"');
   });
 

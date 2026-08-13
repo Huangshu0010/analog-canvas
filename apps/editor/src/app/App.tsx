@@ -3211,6 +3211,53 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     );
   }
 
+  function locateNetlistDiagnostic(item: NetlistDiagnostic): void {
+    const target = project.documents.find(
+      (candidate) => candidate.id === item.documentId,
+    );
+    if (!target) {
+      setStatus(`Document not found: ${item.documentId}`);
+      return;
+    }
+    const objectId = item.objectIds.find((id) =>
+      [
+        ...target.instances,
+        ...target.nets,
+        ...target.ports,
+        ...target.routes,
+        ...target.junctions,
+        ...target.annotations,
+        ...target.noConnects,
+      ].some((object) => object.id === id),
+    );
+    const kind: ObjectLocator["kind"] = objectId
+      ? target.instances.some((instance) => instance.id === objectId)
+        ? "instance"
+        : target.nets.some((net) => net.id === objectId)
+          ? "net"
+          : target.ports.some((port) => port.id === objectId)
+            ? "port"
+            : target.routes.some((route) => route.id === objectId)
+              ? "route"
+              : target.junctions.some((junction) => junction.id === objectId)
+                ? "junction"
+                : target.annotations.some(
+                      (annotation) => annotation.id === objectId,
+                    )
+                  ? "annotation"
+                  : "no-connect"
+      : "document";
+    navigateToLocator(
+      {
+        documentId: target.id,
+        hierarchyPath: [],
+        kind,
+        objectId: objectId ?? target.id,
+      },
+      `${item.code}: ${item.message}`,
+    );
+  }
+
   function restoreRecovery(): void {
     if (recoveryCandidate) {
       const unsupported = findUnsupportedProjectSymbolIds(
@@ -5513,6 +5560,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   >
                     Spectre (.scs)
                   </button>
+                  <small>
+                    Structural design netlist only; simulation setup and PDK
+                    includes are not added.
+                  </small>
                   {netlistDiagnostics.length > 0 ? (
                     <section
                       className="netlist-export-diagnostics"
@@ -5525,7 +5576,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                             key={`${item.documentId}:${item.code}:${index}`}
                             data-severity={item.severity}
                           >
-                            {item.code}: {item.message}
+                            <button
+                              type="button"
+                              onClick={() => locateNetlistDiagnostic(item)}
+                            >
+                              {item.code}: {item.message}
+                            </button>
                           </li>
                         ))}
                       </ul>
