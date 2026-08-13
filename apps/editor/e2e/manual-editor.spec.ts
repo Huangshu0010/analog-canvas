@@ -1604,6 +1604,96 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await expect(page.getByTestId("revision")).toHaveText("4");
 });
 
+test("dots an ordinary VDD wire tap away from its thick power rail", async ({
+  page,
+}) => {
+  const project = createEmptyProject("vdd-wire-tap", "VDD wire tap");
+  const document = project.documents[0]!;
+  document.instances.push({
+    id: "VDD1",
+    symbolId: "vdd",
+    placement: null,
+    properties: {},
+  });
+  document.ports.push(
+    {
+      id: "wire-left",
+      name: "wire-left",
+      direction: "passive",
+      position: { x: 140, y: 300 },
+    },
+    {
+      id: "wire-right",
+      name: "wire-right",
+      direction: "passive",
+      position: { x: 460, y: 300 },
+    },
+    {
+      id: "tap-source",
+      name: "tap-source",
+      direction: "passive",
+      position: { x: 300, y: 420 },
+    },
+  );
+  document.netlist!.portOrder.push("wire-left", "wire-right", "tap-source");
+  document.nets.push({
+    id: "net-vdd",
+    scope: "global",
+    powerDomain: "vdd",
+    terminals: [{ instanceId: "VDD1", pinName: "P" }],
+    ports: ["wire-left", "wire-right", "tap-source"],
+  });
+  document.junctions.push(
+    {
+      id: "rail-left",
+      netId: "net-vdd",
+      position: { x: 220, y: 120 },
+      role: "route-anchor",
+    },
+    {
+      id: "rail-right",
+      netId: "net-vdd",
+      position: { x: 380, y: 120 },
+      role: "route-anchor",
+    },
+  );
+  document.routes.push(
+    {
+      id: "vdd-rail",
+      netId: "net-vdd",
+      from: { kind: "junction", junctionId: "rail-left" },
+      to: { kind: "junction", junctionId: "rail-right" },
+      waypoints: [],
+      segmentModes: ["manual"],
+      presentation: "power-rail",
+    },
+    {
+      id: "ordinary-vdd-wire",
+      netId: "net-vdd",
+      from: { kind: "port", portId: "wire-left" },
+      to: { kind: "port", portId: "wire-right" },
+      waypoints: [],
+      segmentModes: ["manual"],
+    },
+  );
+
+  await page.goto("/");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "vdd-wire-tap.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("port-tap-source").click();
+  await clickRoute(page, "ordinary-vdd-wire", 0.5);
+
+  await expect(page.getByTestId("status")).toContainText("Committed route");
+  await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(1);
+  await expect(
+    page.locator('[data-testid^="junction-junction-ui-"]'),
+  ).toHaveCount(1);
+});
+
 test("places a component pin onto a Route and keeps real split topology", async ({
   page,
 }) => {

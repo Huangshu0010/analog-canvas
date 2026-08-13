@@ -23,12 +23,11 @@ export interface ContactIncident {
 /**
  * One derived electrical contact between explicit graph nodes on the same Net.
  *
- * Contact locations come only from explicit same-Net endpoints. Once such a
- * location exists, same-Net Route geometry through that point contributes its
- * visible conductor arms. A free geometric crossing cannot create a contact;
- * a terminal or Junction already owned by the Net must anchor it. This is the
- * shared evidence used by visible connectivity, junction rendering, and
- * diagnostics.
+ * Contact locations come only from explicit same-Net endpoints. Route arms
+ * contribute only when the Route explicitly references one of those
+ * endpoints; a same-Net segment that merely passes through the coordinate is
+ * still a geometric crossing. This is the shared evidence used by visible
+ * connectivity, junction rendering, and diagnostics.
  */
 export interface CoincidentContact {
   id: string;
@@ -36,6 +35,8 @@ export interface CoincidentContact {
   point: Point;
   endpoints: readonly RouteEndpoint[];
   incidents: readonly ContactIncident[];
+  /** Number of independently authored Route ends incident on this node. */
+  routeArmCount: number;
   branchDirections: readonly Point[];
 }
 
@@ -59,58 +60,46 @@ function inverseAxisDirection(direction: Point): Point {
   };
 }
 
-function samePoint(left: Point, right: Point): boolean {
-  return left.x === right.x && left.y === right.y;
-}
-
-function pointOnSegment(point: Point, from: Point, to: Point): boolean {
-  const cross =
-    (point.x - from.x) * (to.y - from.y) - (point.y - from.y) * (to.x - from.x);
-  if (cross !== 0) return false;
-  return (
-    point.x >= Math.min(from.x, to.x) &&
-    point.x <= Math.max(from.x, to.x) &&
-    point.y >= Math.min(from.y, to.y) &&
-    point.y <= Math.max(from.y, to.y)
-  );
-}
-
-/** Visible conductor arms of one resolved Route at an electrical contact. */
-function routeDirectionsAtPoint(
+function routeEndpointDirections(
+  route: SchematicDocument["routes"][number],
   centerline: readonly Point[],
-  point: Point,
+  endpointKeys: ReadonlySet<string>,
 ): Point[] {
-  const directions = new Map<string, Point>();
-  for (let index = 0; index < centerline.length - 1; index += 1) {
-    const from = centerline[index]!;
-    const to = centerline[index + 1]!;
-    if (samePoint(from, to) || !pointOnSegment(point, from, to)) continue;
-    for (const candidate of [from, to]) {
-      if (samePoint(candidate, point)) continue;
-      const direction = {
-        x: Math.sign(candidate.x - point.x),
-        y: Math.sign(candidate.y - point.y),
-      };
-      directions.set(directionKey(direction), direction);
-    }
+  const directions: Point[] = [];
+  if (centerline.length < 2) return directions;
+  if (endpointKeys.has(endpointKey(route.from))) {
+    directions.push({
+      x: Math.sign(centerline[1]!.x - centerline[0]!.x),
+      y: Math.sign(centerline[1]!.y - centerline[0]!.y),
+    });
   }
-  return [...directions.values()];
+  if (endpointKeys.has(endpointKey(route.to))) {
+    directions.push({
+      x: Math.sign(centerline.at(-2)!.x - centerline.at(-1)!.x),
+      y: Math.sign(centerline.at(-2)!.y - centerline.at(-1)!.y),
+    });
+  }
+  return directions;
 }
 
 function contactIncidents(
   document: SchematicDocument,
   resolver: SymbolResolver,
   netId: string,
-  point: Point,
   endpoints: readonly RouteEndpoint[],
   geometry: ResolvedDocumentRoutingGeometry,
 ): ContactIncident[] {
   const incidents: ContactIncident[] = [];
+  const explicitEndpointKeys = new Set(endpoints.map(endpointKey));
   for (const route of document.routes) {
     if (route.netId !== netId) continue;
     const centerline = geometry.routes.get(route.id)?.centerline;
     if (!centerline) continue;
-    for (const direction of routeDirectionsAtPoint(centerline, point)) {
+    for (const direction of routeEndpointDirections(
+      route,
+      centerline,
+      explicitEndpointKeys,
+    )) {
       incidents.push({ kind: "route", objectId: route.id, direction });
     }
   }
@@ -169,7 +158,6 @@ function netContacts(
         document,
         resolver,
         net.id,
-        point,
         endpoints,
         geometry,
       );
@@ -188,6 +176,8 @@ function netContacts(
         point: { ...point },
         endpoints,
         incidents,
+        routeArmCount: incidents.filter((incident) => incident.kind === "route")
+          .length,
         branchDirections: [...directions.values()],
       };
     })
@@ -215,7 +205,7 @@ export function contactRequiresJunctionDot(
   const terminalCount = contact.endpoints.filter(
     (endpoint) => endpoint.kind === "terminal",
   ).length;
-  return terminalCount >= 3 || contact.branchDirections.length >= 3;
+  return terminalCount + contact.routeArmCount >= 3;
 }
 
 export function deriveDocumentContactEvidence(

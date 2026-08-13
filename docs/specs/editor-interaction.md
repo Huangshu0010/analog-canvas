@@ -389,6 +389,12 @@ The core rule is:
 > Passing across a conductor is a Crossing; ending or starting on a conductor
 > is a Junction.
 
+`Junction` in this rule is electrical topology, not an unconditional marker.
+The renderer shows a dot only for a canonical same-Net contact with at least
+three authored electrical arms. Two-arm straight joins, corners, pin-to-pin
+joins, and pin-to-Route endpoints remain dotless; three-arm contacts remain
+dotted even when two arms overlap or leave in the same direction.
+
 ### Starting and ending
 
 - Starting from a pin, existing Junction, Route segment, or blank grid point
@@ -535,7 +541,9 @@ semantic anchor on a global VDD Net, two dotless route-anchor Junctions, a
 thick `power-rail` Route using the reviewed VDD bar's width, and an attached
 VDD power label. Wires tapped onto
 the rail use the ordinary branch stroke while retaining real Junction
-connectivity; the renderer deliberately omits their node dots.
+connectivity; the renderer deliberately omits dots only at contacts incident
+on that thick rail. Ordinary VDD branches elsewhere on the same Net use the
+normal canonical contact-dot rule.
 
 ## Interaction state transitions
 
