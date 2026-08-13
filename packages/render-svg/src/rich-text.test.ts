@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { renderRichTextDocument } from "./rich-text.js";
-import { razaviTextbookProfile } from "./style-profile.js";
+import { razaviTextbookProfile } from "@icm/derived";
 
 describe("renderRichTextDocument", () => {
   it("renders a plain text run escaped", () => {
@@ -85,26 +85,6 @@ describe("renderRichTextDocument", () => {
     expect(svg).toContain('font-size="76%"');
     expect(svg).toContain('baseline-shift="-0.28em"');
     expect(svg).toContain('dx="0.046em"');
-  });
-
-  it("renders a fraction with numerator and denominator tspans", () => {
-    const svg = renderRichTextDocument(
-      {
-        runs: [
-          {
-            kind: "fraction",
-            numerator: { runs: [{ kind: "text", value: "g_m" }] },
-            denominator: { runs: [{ kind: "text", value: "r_o" }] },
-          },
-        ],
-      },
-      razaviTextbookProfile,
-    );
-    expect(svg).toContain('data-text-run="fraction"');
-    expect(svg).toContain('data-text-run="numerator"');
-    expect(svg).toContain('data-text-run="denominator"');
-    expect(svg).toContain("g_m");
-    expect(svg).toContain("r_o");
   });
 
   it("renders a line break", () => {

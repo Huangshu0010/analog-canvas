@@ -129,10 +129,48 @@ describe("presentation and layout edits", () => {
     const result = executeTransaction(
       document,
       transaction("doc", [
-        { kind: "remove_annotation", annotationId: "marker" },
+        { kind: "remove_schematic_annotation", annotationId: "marker" },
       ]),
     );
     expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
     expect(result.document.annotations[0]!.text).toBe("I_x");
+  });
+
+  it("does not remove a semantic annotation referenced by layout intent", () => {
+    const document = createEmptyDocument("doc", "Referenced label");
+    document.annotations.push({
+      id: "label",
+      kind: "net-label",
+      text: "OUT",
+      position: { x: 20, y: 20 },
+      attachedObjectId: "net-out",
+      offset: { x: 0, y: 0 },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    document.layoutGroups.push({
+      id: "reviewed-labels",
+      kind: "custom",
+      objectIds: ["label"],
+      locked: true,
+    });
+
+    const result = executeTransaction(
+      document,
+      transaction("doc", [
+        { kind: "remove_schematic_annotation", annotationId: "label" },
+      ]),
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      applied: false,
+      error: {
+        code: "EDIT_PRECONDITION",
+        message: "Annotation is referenced by layout intent: label",
+      },
+    });
+    expect(result.document.annotations).toHaveLength(1);
   });
 });

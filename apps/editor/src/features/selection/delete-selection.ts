@@ -102,7 +102,7 @@ export function proposeConnectedInstanceDeletion(
         selected.has(annotation.attachedObjectId),
     )
     .map((annotation): SchematicEdit => ({
-      kind: "remove_annotation",
+      kind: "remove_schematic_annotation",
       annotationId: annotation.id,
     }));
   const instanceEdits = document.instances
@@ -123,7 +123,7 @@ export function proposeConnectedInstanceDeletion(
 /**
  * `proposeConnectedInstanceDeletion()` removes annotations attached to a
  * selected instance. A marquee can independently select that same label, so
- * callers must not append a second remove_annotation edit for it.
+ * callers must not append a second remove_schematic_annotation edit for it.
  */
 export function explicitAnnotationRemovals(
   document: SchematicDocument,

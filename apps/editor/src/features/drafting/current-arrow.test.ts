@@ -72,10 +72,10 @@ describe("route-attached current arrows", () => {
 
     const proposal = proposePaste(document, copied!, { x: 20, y: 20 }, 1);
     const annotationEdit = proposal.edits.find(
-      (edit) => edit.kind === "upsert_annotation",
+      (edit) => edit.kind === "upsert_schematic_annotation",
     );
     expect(annotationEdit).toMatchObject({
-      kind: "upsert_annotation",
+      kind: "upsert_schematic_annotation",
       annotation: {
         id: "current-1-copy-1",
         kind: "route-marker",
@@ -153,10 +153,10 @@ describe("route-attached current arrows", () => {
 
     const proposal = proposePaste(document, copied!, { x: 20, y: 20 }, 1);
     const annotationEdit = proposal.edits.find(
-      (edit) => edit.kind === "upsert_annotation",
+      (edit) => edit.kind === "upsert_schematic_annotation",
     );
     expect(annotationEdit).toMatchObject({
-      kind: "upsert_annotation",
+      kind: "upsert_schematic_annotation",
       annotation: {
         id: "current-1-copy-1",
         position: { x: 180, y: 120 },

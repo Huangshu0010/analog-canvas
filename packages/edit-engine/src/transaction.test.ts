@@ -7,7 +7,7 @@ import {
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
-import { executeTransaction } from "./transaction.js";
+import { executeTransaction, SchematicEditSchema } from "./transaction.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -34,6 +34,21 @@ function transaction(expectedRevision = 0, dryRun = false) {
 }
 
 describe("Edit Transaction envelope", () => {
+  it("rejects the retired ambiguous annotation edit names", () => {
+    expect(
+      SchematicEditSchema.safeParse({
+        kind: "upsert_annotation",
+        annotation: {},
+      }).success,
+    ).toBe(false);
+    expect(
+      SchematicEditSchema.safeParse({
+        kind: "remove_annotation",
+        annotationId: "label",
+      }).success,
+    ).toBe(false);
+  });
+
   it("permits a power rail only on a Net established by a VDD symbol", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
@@ -227,7 +242,7 @@ describe("Edit Transaction envelope", () => {
     };
     const accepted = executeTransaction(document, {
       ...transaction(),
-      edits: [{ kind: "upsert_annotation", annotation }],
+      edits: [{ kind: "upsert_schematic_annotation", annotation }],
     });
     expect(accepted).toMatchObject({ ok: true });
 
@@ -235,7 +250,7 @@ describe("Edit Transaction envelope", () => {
       ...transaction(),
       edits: [
         {
-          kind: "upsert_annotation",
+          kind: "upsert_schematic_annotation",
           annotation: { ...annotation, attachedObjectId: "junction-signal" },
         },
       ],

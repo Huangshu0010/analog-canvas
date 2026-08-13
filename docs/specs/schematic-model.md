@@ -58,8 +58,9 @@ interface DraftingLayer {
 }
 ```
 
-RichText is a structured document, not an executable formula. V1 supports
-exactly four `RichTextRun` node kinds; `span` has four styles:
+RichText is a structured document, not an executable formula. The active
+contract supports exactly three `RichTextRun` node kinds; `span` has four
+styles:
 
 ```typescript
 type RichTextRun =
@@ -69,21 +70,18 @@ type RichTextRun =
       kind: "span";
       style: "italic" | "bold" | "subscript" | "superscript";
       children: RichTextRun[];
-    }
-  | {
-      kind: "fraction";
-      numerator: RichTextDocument;
-      denominator: RichTextDocument;
     };
 ```
 
 Resource bounds are part of the contract: maximum nesting depth 4, maximum 64
-runs per document, maximum 256 characters per `text` run, and a
-`fraction` numerator/denominator must each be non-empty. A restricted import
-shorthand (`M_{1}`, `V_{DD}`, `\it{...}`, `\frac{a}{b}`) is parsed to the AST
-on submit and is never persisted; unparseable shorthand is stored as plain text
-with a visible prompt and never dropped. Old single-string annotations migrate
-to a single `text` run.
+runs per document, and maximum 256 characters per `text` run. Formatting is
+authored through the canvas floating toolbar and persisted directly as the
+canonical AST. Command-like text such as `M_{1}`, `\it{...}`, or
+`\frac{a}{b}` remains literal when entered in the current editor; no markup
+input language is interpreted on submit. Old single-string annotations migrate
+to a single `text` run. When an annotation has no explicit RichText content, a
+read-only presentation fallback preserves historical underscore notation and
+standardized identifiers such as `M1` and `VDD`.
 
 Every attachable drafting object and route marker shares one `VisualAnchor`.
 The `object` and `route` variants persist a `fallbackPosition` (last-known

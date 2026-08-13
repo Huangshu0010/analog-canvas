@@ -18,56 +18,109 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Change scope
+    runs-on: ubuntu-latest
+    outputs:
+      heavy: ${{ steps.scope.outputs.heavy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: scope
+        name: Classify changed paths
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          heavy=true
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            heavy=false
+            while IFS= read -r path; do
+              case "$path" in
+                docs/*|plan/*|*.md) ;;
+                *) heavy=true; break ;;
+              esac
+            done < <(git diff --name-only "$BASE_SHA" HEAD)
+          fi
+          echo "heavy=$heavy" >> "$GITHUB_OUTPUT"
+
   static:
     name: Static contracts
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - if: needs.changes.outputs.heavy != 'true'
+        run: echo "Documentation-only change; static contracts are unchanged."
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: actions/checkout@v4
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: pnpm/action-setup@v4
         with:
           version: 11.16.0
-      - uses: actions/setup-node@v4
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm ci:static
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm ci:static
 
   unit:
     name: Unit and integration tests
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - if: needs.changes.outputs.heavy != 'true'
+        run: echo "Documentation-only change; unit contracts are unchanged."
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: actions/checkout@v4
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: pnpm/action-setup@v4
         with:
           version: 11.16.0
-      - uses: actions/setup-node@v4
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm ci:unit
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm ci:unit
 
   release:
     name: Release contracts
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - if: needs.changes.outputs.heavy != 'true'
+        run: echo "Documentation-only change; release contracts are unchanged."
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: actions/checkout@v4
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: pnpm/action-setup@v4
         with:
           version: 11.16.0
-      - uses: actions/setup-node@v4
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm ci:release
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm ci:release
 
   e2e:
     name: Browser tests (${{ matrix.shard }})
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -77,14 +130,22 @@ jobs:
           - 1/2
           - 2/2
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - if: needs.changes.outputs.heavy != 'true'
+        run: echo "Documentation-only change; browser contracts are unchanged."
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: actions/checkout@v4
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: pnpm/action-setup@v4
         with:
           version: 11.16.0
-      - uses: actions/setup-node@v4
+      - if: needs.changes.outputs.heavy == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm ci:e2e -- --shard=${{ matrix.shard }}
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: needs.changes.outputs.heavy == 'true'
+        run: pnpm ci:e2e -- --shard=${{ matrix.shard }}

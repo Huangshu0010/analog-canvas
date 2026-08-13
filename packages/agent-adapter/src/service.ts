@@ -84,8 +84,6 @@ export const AGENT_EDIT_KINDS = [
   "reconcile_mos_bulk",
   "clear_mos_bulk_default",
   "disconnect_endpoint",
-  "upsert_annotation",
-  "remove_annotation",
   "set_layout_group",
   "remove_layout_group",
   "set_layout_constraint",
@@ -487,8 +485,6 @@ export function agentEditCategory(
     case "add_no_connect":
     case "remove_no_connect":
       return "connectivity";
-    case "upsert_annotation":
-    case "remove_annotation":
     case "upsert_schematic_annotation":
     case "remove_schematic_annotation":
     case "upsert_drafting_object":

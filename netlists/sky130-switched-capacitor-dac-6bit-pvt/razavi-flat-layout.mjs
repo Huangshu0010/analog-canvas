@@ -15,7 +15,7 @@ const RESET_NET_X = RESET_X + 20;
 
 function annotation(input) {
   return {
-    kind: "upsert_annotation",
+    kind: "upsert_schematic_annotation",
     annotation: {
       offset: { x: 0, y: 0 },
       rotation: 0,

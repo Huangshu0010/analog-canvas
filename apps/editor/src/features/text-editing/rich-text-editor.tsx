@@ -1,23 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { normalizeRichText } from "@icm/model";
-import type { RichTextDocument } from "@icm/model";
-
-type EditableRun =
-  | { kind: "text"; value: string }
-  | { kind: "line-break" }
-  | {
-      kind: "span";
-      style: "italic" | "bold" | "subscript" | "superscript";
-      children: EditableRun[];
-    }
-  | {
-      kind: "fraction";
-      numerator: { runs: EditableRun[] };
-      denominator: { runs: EditableRun[] };
-    };
-
-type EditableDocument = { runs: EditableRun[] };
+import type { RichTextDocument, RichTextRun } from "@icm/model";
 
 export interface RichTextEditorProps {
   targetKey: string;
@@ -40,8 +24,8 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-function toEditableHtml(document: EditableDocument): string {
-  const render = (run: EditableRun): string => {
+function toEditableHtml(document: RichTextDocument): string {
+  const render = (run: RichTextRun): string => {
     switch (run.kind) {
       case "text":
         return escapeHtml(run.value);
@@ -59,8 +43,6 @@ function toEditableHtml(document: EditableDocument): string {
                 : "sup";
         return `<${tag}>${children}</${tag}>`;
       }
-      case "fraction":
-        return `<span data-rich-fraction="true" contenteditable="false"><span data-fraction-numerator="true">${toEditableHtml(run.numerator)}</span><span class="rich-text-fraction-rule">/</span><span data-fraction-denominator="true">${toEditableHtml(run.denominator)}</span></span>`;
     }
   };
   return document.runs.map(render).join("");
@@ -70,32 +52,19 @@ function isElement(node: Node): node is HTMLElement {
   return node.nodeType === Node.ELEMENT_NODE;
 }
 
-function readChildren(element: Element): EditableRun[] {
-  const runs: EditableRun[] = [];
+function readChildren(element: Element): RichTextRun[] {
+  const runs: RichTextRun[] = [];
   for (const child of element.childNodes) runs.push(...readNode(child));
   return runs;
 }
 
-function readNode(node: Node): EditableRun[] {
+function readNode(node: Node): RichTextRun[] {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.textContent ? [{ kind: "text", value: node.textContent }] : [];
   }
   if (!isElement(node)) return [];
   const tag = node.tagName.toLowerCase();
   if (tag === "br") return [{ kind: "line-break" }];
-  if (node.dataset.richFraction === "true") {
-    const numerator = node.querySelector("[data-fraction-numerator]");
-    const denominator = node.querySelector("[data-fraction-denominator]");
-    if (numerator && denominator) {
-      return [
-        {
-          kind: "fraction",
-          numerator: { runs: readChildren(numerator) },
-          denominator: { runs: readChildren(denominator) },
-        },
-      ];
-    }
-  }
   const children = readChildren(node);
   if (tag === "strong" || tag === "b") {
     return [{ kind: "span", style: "bold", children }];
@@ -116,11 +85,11 @@ function readNode(node: Node): EditableRun[] {
 }
 
 function editableDocument(element: HTMLElement): RichTextDocument {
-  const document = { runs: readChildren(element) } as EditableDocument;
+  const document: RichTextDocument = { runs: readChildren(element) };
   if (document.runs.length === 0) {
-    return { runs: [{ kind: "text", value: " " }] } as RichTextDocument;
+    return { runs: [{ kind: "text", value: " " }] };
   }
-  return normalizeRichText(document) as unknown as RichTextDocument;
+  return normalizeRichText(document);
 }
 
 export function RichTextEditor({
@@ -140,9 +109,7 @@ export function RichTextEditor({
 
   useEffect(() => {
     if (editableRef.current) {
-      editableRef.current.innerHTML = toEditableHtml(
-        content as unknown as EditableDocument,
-      );
+      editableRef.current.innerHTML = toEditableHtml(content);
       editableRef.current.focus();
     }
   }, [targetKey]);

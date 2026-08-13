@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildManualWirePath } from "./wire-path";
+import { buildManualWirePath } from "./routing-planner.js";
 
 describe("buildManualWirePath", () => {
   it("keeps a direct terminal right-angle at the exact electrical endpoint", () => {

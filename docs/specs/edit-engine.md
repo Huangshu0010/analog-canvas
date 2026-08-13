@@ -51,8 +51,9 @@ The executable union contains `noop`, `add_instance`, `remove_instance`,
 `set_instance_symbol`, `place_instance`, `move_instance`,
 `rotate_instance`, `mirror_instance`, `set_route_points`, `add_junction`,
 `remove_junction`, `move_junction`, `cut_connection`, `make_flightline`, `connect_endpoints`,
-`merge_nets`, `set_net_name`, `disconnect_endpoint`, `upsert_annotation`,
-`remove_annotation`, `set_layout_group`, `remove_layout_group`,
+`merge_nets`, `set_net_name`, `disconnect_endpoint`,
+`upsert_schematic_annotation`, `remove_schematic_annotation`,
+`set_layout_group`, `remove_layout_group`,
 `set_layout_constraint`, `remove_layout_constraint`, `align_instances`,
 `place_port`, `move_port`, `clear_document`, `undo`, and `redo`. Later phases extend the typed union and versioned schemas;
 they do not create separate mutation endpoints.
@@ -200,12 +201,11 @@ New edit kinds are additive within a versioned union. Changing the meaning of
 an existing kind requires a new API/schema version or explicit compatibility
 adapter.
 
-ADR 0010 adds the six drafting/annotation/guide edit kinds additively and
-migrates persisted Projects to schema 2 on read. `upsert_annotation` /
-`remove_annotation` remain accepted as the deprecated aliases of
-`upsert_schematic_annotation` / `remove_schematic_annotation` for the duration
-of migration; new callers use the explicit names. The migration does not
-change electrical topology or rewrite SPICE.
+ADR 0010 adds the drafting/annotation/guide edit kinds and migrates persisted
+Projects to schema 2 on read. The annotation protocol exposes only
+`upsert_schematic_annotation` / `remove_schematic_annotation`; the earlier
+ambiguous edit names are rejected. The migration does not change electrical
+topology or rewrite SPICE.
 
 ## Deterministic validation
 

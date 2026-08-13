@@ -1,12 +1,11 @@
 import type { SchematicEdit } from "@icm/edit-engine";
-import { flattenRichText } from "@icm/model";
+import { flattenRichText, schematicTextDocument } from "@icm/model";
 import type {
   Annotation,
   DraftingObject,
   RichTextDocument,
   SchematicDocument,
 } from "@icm/model";
-import { schematicTextDocument } from "@icm/render-svg";
 
 export type DraftingTextObject = Extract<DraftingObject, { kind: "text" }>;
 
@@ -44,7 +43,7 @@ export function createTextEditingSession(
   return {
     owner: "drafting",
     id: target.object.id,
-    content: target.object.content as unknown as RichTextDocument,
+    content: target.object.content,
     sizeScale: target.object.styleOverride?.sizeScale ?? 1,
   };
 }
@@ -75,13 +74,13 @@ export function resolveTextEditingTarget(
 
 export function textDeletionEdit(session: TextEditingSession): SchematicEdit {
   return session.owner === "annotation"
-    ? { kind: "remove_annotation", annotationId: session.id }
+    ? { kind: "remove_schematic_annotation", annotationId: session.id }
     : { kind: "remove_drafting_object", objectId: session.id };
 }
 
 function richTextEqual(
-  left: { runs: unknown[] },
-  right: { runs: unknown[] },
+  left: RichTextDocument,
+  right: RichTextDocument,
 ): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -92,9 +91,7 @@ export function proposeTextEditingCommit(
   document: SchematicDocument,
   session: TextEditingSession,
 ): TextEditingCommitProposal {
-  const plainText = flattenRichText(
-    session.content as unknown as Parameters<typeof flattenRichText>[0],
-  ).trim();
+  const plainText = flattenRichText(session.content).trim();
   if (!plainText) {
     return {
       kind: "delete",
@@ -124,7 +121,7 @@ export function proposeTextEditingCommit(
     }
     return {
       kind: "update",
-      edit: { kind: "upsert_annotation", annotation: next },
+      edit: { kind: "upsert_schematic_annotation", annotation: next },
       id: annotation.id,
     };
   }

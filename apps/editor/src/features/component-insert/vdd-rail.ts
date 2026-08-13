@@ -69,7 +69,7 @@ export function constructVddRailEdits({
       presentation: "power-rail",
     },
     {
-      kind: "upsert_annotation",
+      kind: "upsert_schematic_annotation",
       annotation: {
         id: `label-${instanceId}`,
         kind: "power-label",
