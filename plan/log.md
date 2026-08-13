@@ -6010,3 +6010,30 @@ contracts (WP-R1)`.
 - Commit status: ready to commit and push on
   `codex/netlist-export-system` as `feat(editor): hide web netlist surface`,
   then open a draft PR to `main`.
+
+## 2026-08-13 - README citation
+
+- Target: add a clear citation method naming Zengchun Chen and Zhishuai Zhang
+  as the project authors.
+- Changed areas: README human-readable citation, BibTeX entry, and
+  reproducibility guidance; target plan.
+- Validation: targeted Markdown formatting and `git diff --check` passed.
+- Commit status: ready to commit on `codex/add-readme-citation` as
+  `docs(readme): add project citation`.
+
+## 2026-08-13 - Citation title correction
+
+- Target: use the user-specified short project title `analog-canvas` in the
+  README citation.
+- Changed areas: prose citation, BibTeX key/title, and target plan.
+- Validation: targeted Markdown formatting and `git diff --check` passed.
+- Commit status: ready to commit on `codex/shorten-citation-title` as
+  `docs(readme): shorten citation title`.
+
+## 2026-08-13 - Citation title capitalization
+
+- Target: correct the citation's publication-style title to `Analog Canvas`.
+- Changed areas: prose and BibTeX titles; target plan.
+- Validation: targeted Markdown formatting and `git diff --check` passed.
+- Commit status: ready to commit on `codex/capitalize-citation-title` as
+  `docs(readme): capitalize citation title`.
