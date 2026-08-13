@@ -383,7 +383,7 @@ Agent `transact` schema.
 
 ## Work packages
 
-### M1 — First-class Port presentation
+### M1 — Port symbol continuity
 
 Ordinary schematic Ports remain the existing `port` and `port-filled` symbol
 instances. GUI placement and Agent edits use the standard `add_instance` and
