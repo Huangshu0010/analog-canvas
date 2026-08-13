@@ -201,11 +201,19 @@ interface AgentSessionMessage {
   the session ends or the user disconnects. It never replays a Circuit request;
   `requestId` cache semantics remain the only resolution mechanism for an
   uncertain write.
+- The browser sends an authenticated transport heartbeat every 15 seconds. If
+  no acknowledgement arrives for 45 seconds, it closes the stale socket and
+  enters the same reconnect loop. Returning online or bringing the page back
+  to the foreground triggers an immediate liveness check; this changes only
+  transport state and never replays a request.
 
 ## Events
 
 The Agent receives a bounded SSE event stream; the browser uses WebSocket because
-commands must be delivered to it. Initial events:
+commands must be delivered to it. The relay emits an SSE comment at least every
+25 seconds while the stream is idle. Clients ignore comment contents and still
+reconnect the event stream after a network failure; events are notifications,
+not an operation queue. Initial events:
 
 - `session.ready`, `session.paused`, `session.revoked`, `session.expiring`;
 - `editor.online`, `editor.offline`;
@@ -345,7 +353,7 @@ advances the revision again.
 | Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write                                         |
 | `agentToken` theft                 | Bounded lifetime, scoped, revocable, never stored in recovery/localStorage by default                                                                        |
 | Browser refresh                    | Same-tab reconnect may reuse only the bounded recovery proof when the Project binding still matches; otherwise it is cleared and reauthorization is required |
-| Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged                                            |
+| Transient WebSocket loss           | Heartbeat timeout and browser wake checks enter same-tab bounded reconnect; only transport is replaced, no request is replayed, and Project authorization is unchanged |
 | Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                                                         |
 | Editor offline during write        | `EDITOR_OFFLINE`; no unbounded write queue; reconnect never auto-applies a rejected write                                                                    |
 | Project swap mid-session           | `document.replaced`; old token invalid for the new Project                                                                                                   |

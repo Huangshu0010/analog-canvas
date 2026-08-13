@@ -157,6 +157,12 @@ A transient relay failure is not a revocation. Do not replay an uncertain write
 under a new `requestId`; repeat the original request ID to recover its terminal
 result, or request a fresh Snapshot after the browser is available again.
 
+The browser detects a silent relay connection after 45 seconds and reconnects
+automatically; returning online or foregrounding the page prompts an immediate
+check. The event stream also receives idle SSE comments. Agent clients must
+ignore comment contents and reconnect SSE after transport failure; neither
+heartbeat nor event reconnection replays an operation.
+
 Hiding the Agent details does not pause, revoke, or disconnect the live session.
 If the Agent loses its bearer, it may redeem the still-valid claim again; the
 new token replaces the old bearer. The user may also choose **New connection**

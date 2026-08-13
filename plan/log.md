@@ -6586,3 +6586,16 @@ contracts (WP-R1)`.
   passed.
 - Commit status: ready to commit on `codex/agent-connection-ux` as
   `feat(agent): simplify resilient browser connection lifecycle`.
+
+## 2026-08-14 - Add Agent transport liveness watchdog
+
+- Target: detect silent browser/relay transport failure and recover promptly
+  without adding a daemon, changing edit authority, or replaying requests.
+- Changed areas: shared WebSocket heartbeat control frame, browser heartbeat
+  timeout and foreground/online wake checks, Worker SSE keepalive handling,
+  focused transport tests, and current Agent connection documentation.
+- Validation: focused transport suites (25 tests), full typecheck, and
+  `pnpm verify:branch` (121 files, 733 tests, all workspace builds and
+  production smoke) passed; Agent API artifacts and `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-transport-watchdog` as
+  `fix(agent): add transport liveness watchdog`.
