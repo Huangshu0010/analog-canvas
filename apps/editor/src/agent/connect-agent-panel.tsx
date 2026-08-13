@@ -16,19 +16,6 @@ export type AgentConnectionStatus =
   | "revoked"
   | "expired";
 
-export interface AgentAuditEntry {
-  at: number;
-  kind:
-    | "granted"
-    | "claimed"
-    | "operation"
-    | "paused"
-    | "resumed"
-    | "revoked"
-    | "replaced";
-  detail?: string;
-}
-
 export interface PermissionPreset {
   id: "review" | "layout" | "full";
   label: string;
@@ -91,7 +78,6 @@ export interface ConnectAgentPanelProps {
   claimExpiresAt: number | null;
   scopes: readonly AgentSessionScope[];
   expiresAt: number | null;
-  audit: readonly AgentAuditEntry[];
   error: string | null;
   now: number;
   onGrant: (scopes: AgentSessionScope[]) => void;
@@ -105,7 +91,7 @@ export interface ConnectAgentPanelProps {
 
 export interface AgentPropertiesSectionProps extends Omit<
   ConnectAgentPanelProps,
-  "open" | "audit" | "now" | "onGrant" | "onClose"
+  "open" | "now" | "onGrant" | "onClose"
 > {
   expanded: boolean;
   onToggleDetails: () => void;
@@ -253,14 +239,20 @@ function ClaimHandOff({
   scopes,
   now,
   onNewConnection,
+  status,
 }: Pick<
   ConnectAgentPanelProps,
-  "claimCode" | "claimExpiresAt" | "expiresAt" | "scopes" | "onNewConnection"
+  | "claimCode"
+  | "claimExpiresAt"
+  | "expiresAt"
+  | "scopes"
+  | "onNewConnection"
+  | "status"
 > & { now: number }): ReactNode {
   const [copied, setCopied] = useState(false);
   const claimExpired = claimExpiresAt !== null && now >= claimExpiresAt;
   if (claimCode === null && !claimExpired) return null;
-  if (claimExpired) {
+  if (claimExpired && status === "waiting-for-agent") {
     return (
       <div className="agent-claim" data-testid="agent-claim-expired">
         <p>Connection setup expired.</p>
@@ -270,6 +262,7 @@ function ClaimHandOff({
       </div>
     );
   }
+  if (claimExpired) return null;
   return (
     <div className="agent-claim" data-testid="agent-claim">
       <p>
@@ -398,15 +391,54 @@ export function AgentPropertiesSection(
               : ""}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={props.onToggleDetails}
-          aria-expanded={props.expanded}
-        >
-          {props.expanded ? "Hide" : "Manage"}
-        </button>
+        <div className="agent-properties-actions">
+          {props.status === "connected" ||
+          props.status === "waiting-for-agent" ||
+          props.status === "working" ? (
+            <button
+              type="button"
+              data-testid="agent-pause"
+              onClick={props.onPause}
+            >
+              Pause
+            </button>
+          ) : null}
+          {props.status === "paused" ? (
+            <button
+              type="button"
+              data-testid="agent-resume"
+              onClick={props.onResume}
+            >
+              Resume
+            </button>
+          ) : null}
+          {props.status === "offline" || props.status === "reconnecting" ? (
+            <button
+              type="button"
+              data-testid="agent-reconnect"
+              onClick={props.onReconnect}
+            >
+              Retry relay
+            </button>
+          ) : null}
+          {terminal ? (
+            <button
+              type="button"
+              data-testid="agent-new-connection"
+              onClick={props.onNewConnection}
+            >
+              New connection
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={props.onToggleDetails}
+            aria-expanded={props.expanded}
+          >
+            {props.expanded ? "Hide" : "Manage"}
+          </button>
+        </div>
       </div>
-      <ConnectionControls {...props} />
       {props.expanded ? (
         <div className="agent-properties-details">
           <ClaimHandOff {...props} now={clock} />
@@ -417,6 +449,24 @@ export function AgentPropertiesSection(
               Scopes: {props.scopes.join(", ")}
             </p>
           </details>
+          {!terminal ? (
+            <div className="agent-controls">
+              <button
+                type="button"
+                data-testid="agent-new-connection"
+                onClick={props.onNewConnection}
+              >
+                New connection
+              </button>
+              <button
+                type="button"
+                data-testid="agent-revoke"
+                onClick={props.onRevoke}
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : null}
           {props.error ? (
             <p className="agent-panel-error" role="alert">
               {props.error}

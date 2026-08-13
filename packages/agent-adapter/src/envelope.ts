@@ -138,6 +138,7 @@ export const AgentTransportErrorCodeSchema = z.enum([
   // Claim exchange
   "CLAIM_INVALID",
   "CLAIM_EXPIRED",
+  "CLAIM_ALREADY_USED",
   // Token
   "TOKEN_INVALID",
   "TOKEN_EXPIRED",

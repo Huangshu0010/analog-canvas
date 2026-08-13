@@ -340,10 +340,10 @@ advances the revision again.
 
 | Threat                             | Handling                                                                                                                                                     |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claim link leaks                   | Single-use, ≤5 min expiry, explicit scopes, visible connected state, immediate revoke, no query-string analytics                                             |
+| Claim link leaks                   | 30-minute expiry, one live bearer per session, explicit scopes, visible connected state, immediate revoke, no query-string analytics                         |
 | Relay observes payloads in transit | HTTPS required; relay persists no payload and logs no body; end-to-end encryption deferred unless threat review requires it                                  |
 | Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write                                         |
-| `agentToken` theft                 | Short TTL, scoped, revocable, never stored in recovery/localStorage by default                                                                               |
+| `agentToken` theft                 | Bounded lifetime, scoped, revocable, never stored in recovery/localStorage by default                                                                        |
 | Browser refresh                    | Same-tab reconnect may reuse only the bounded recovery proof when the Project binding still matches; otherwise it is cleared and reauthorization is required |
 | Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged                                            |
 | Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                                                         |

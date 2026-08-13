@@ -6580,8 +6580,9 @@ contracts (WP-R1)`.
   authorization hand-off wording and generated public OpenAPI artifact; focused
   session, recovery, UI, and browser coverage.
 - Validation: focused session/recovery/panel suites (50 tests), the web-Agent
-  browser E2E, Agent artifact validation, and `pnpm verify:branch` (120 files,
-  729 tests, all workspace builds and production smoke) passed; `git diff
-  --check` passed.
+  browser E2E, Agent artifact validation, `pnpm verify:branch`, and the final
+  `pnpm ci:check` (729 unit tests, 100 browser tests, builds, performance,
+  export/PWA goldens, production and release smoke) passed; `git diff --check`
+  passed.
 - Commit status: ready to commit on `codex/agent-connection-ux` as
   `feat(agent): simplify resilient browser connection lifecycle`.

@@ -1066,6 +1066,18 @@ body {
   box-shadow: 0 0 0 3px var(--icm-accent-soft);
 }
 
+.agent-shelf-indicator {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--icm-success, #2f855a);
+}
+
+.agent-shelf-indicator.terminal {
+  background: var(--icm-text-muted);
+}
+
 .selection-panel {
   flex: 1 1 auto;
   min-height: 0;
@@ -3208,7 +3220,8 @@ html.light .analytics-map-land path {
 
 .agent-panel .agent-grant,
 .agent-panel .agent-claim,
-.agent-panel .agent-controls {
+.agent-panel .agent-controls,
+.agent-panel .agent-panel-controls {
   padding: 1rem;
   border: 1px solid var(--icm-border-strong);
   border-radius: var(--icm-radius-lg);
@@ -3257,7 +3270,8 @@ html.light .analytics-map-land path {
   word-break: break-all;
 }
 
-.agent-controls {
+.agent-controls,
+.agent-panel-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -3268,8 +3282,9 @@ html.light .analytics-map-land path {
 }
 
 .agent-controls button,
+.agent-panel-controls button,
 .agent-claim button,
-.agent-properties-summary > button,
+.agent-properties-actions button,
 .agent-dismiss {
   padding: 0.4rem 0.8rem;
   border: 1px solid var(--icm-border-strong);
@@ -3307,6 +3322,13 @@ html.light .analytics-map-land path {
   align-items: start;
   justify-content: space-between;
   gap: var(--icm-space-2);
+}
+
+.agent-properties-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--icm-space-1);
 }
 
 .agent-properties-summary h2,
@@ -3348,4 +3370,18 @@ html.light .analytics-map-land path {
   border: 1px solid var(--icm-border);
   border-radius: var(--icm-radius-sm);
   background: var(--icm-surface-muted);
+}
+
+.agent-panel-audit {
+  max-height: 10rem;
+  margin: 0;
+  padding: 0 0 0 1rem;
+  overflow: auto;
+  color: var(--icm-text-muted);
+  font-size: 0.8rem;
+}
+
+.agent-panel-audit li {
+  display: flex;
+  gap: 0.5rem;
 }

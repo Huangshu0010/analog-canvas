@@ -45,10 +45,12 @@ function setup(overrides: Partial<AgentSessionLimits> = {}) {
 
 describe("AgentSessionMachine", () => {
   it("creates a session, returns secrets once, and authenticates the editor", () => {
-    const { machine, session } = setup();
+    const { machine, session, now } = setup();
     expect(session.sessionId).toMatch(/^rand-/u);
     expect(session.editorSecret).toMatch(/^rand-/u);
     expect(session.claimCode).toMatch(/^rand-/u);
+    expect(session.claimExpiresAt - now()).toBe(30 * 60 * 1_000);
+    expect(session.expiresAt - now()).toBe(8 * 60 * 60 * 1_000);
     expect(machine.authorizeEditor(session.editorSecret)).toBe(true);
     expect(machine.authorizeEditor("wrong")).toBe(false);
   });

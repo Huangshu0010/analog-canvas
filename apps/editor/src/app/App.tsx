@@ -6172,7 +6172,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         claimExpiresAt={agentSession.claimExpiresAt}
         scopes={agentSession.scopes}
         expiresAt={agentSession.expiresAt}
-        audit={agentSession.audit}
         error={agentSession.error}
         now={Date.now()}
         onGrant={agentSession.grant}
@@ -6344,6 +6343,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               <span className="selection-shelf-title">
                 <ToolIcon name="inspect" />
                 <span>Properties</span>
+                {agentSession.status !== "idle" && !agentStatusDismissed ? (
+                  <span
+                    className={`agent-shelf-indicator ${
+                      agentSession.status === "revoked" ||
+                      agentSession.status === "expired"
+                        ? "terminal"
+                        : ""
+                    }`}
+                    title={`Agent: ${agentSession.status}`}
+                    aria-label={`Agent: ${agentSession.status}`}
+                  />
+                ) : null}
               </span>
               <span className="selection-shelf-summary">
                 {selectedIds.length > 0

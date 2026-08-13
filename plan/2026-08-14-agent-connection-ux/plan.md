@@ -87,6 +87,7 @@ eight-hour Session defaults, shared scope validation for same-Project recovery,
 and persistent 30-second relay retry after the short backoff sequence. The
 authorization dialog is now a human-readable hand-off surface; active session
 controls live in the Properties dock. No circuit-edit, file-resource, Agent
-timeline, highlight, Inspect, or undo capability was added. Focused session,
-recovery, panel, and browser tests passed; final `pnpm verify:branch` and Agent
-API artifact validation passed.
+timeline, highlight, Inspect, or undo capability was added. Final review kept
+the published error enum compatible, retained the valid claim hand-off after
+first redemption, removed unused audit state, and restored shared approval
+dialog styles. Focused checks and the required final `pnpm ci:check` passed.

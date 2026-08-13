@@ -5,7 +5,6 @@ import {
   AgentPropertiesSection,
   ConnectAgentPanel,
   agentConnectionInstructions,
-  type AgentAuditEntry,
   type AgentConnectionStatus,
 } from "./connect-agent-panel";
 
@@ -19,7 +18,6 @@ function baseProps(
     claimExpiresAt: null,
     scopes: [],
     expiresAt: null,
-    audit: [],
     error: null,
     now: 0,
     onGrant: vi.fn(),
@@ -126,10 +124,18 @@ describe("ConnectAgentPanel", () => {
 
   it("offers a replacement connection while connected", () => {
     const markup = renderToStaticMarkup(
-      <ConnectAgentPanel {...baseProps({ status: "connected" })} />,
+      <ConnectAgentPanel
+        {...baseProps({
+          status: "connected",
+          claimCode: "still-valid-claim",
+          claimExpiresAt: 30_000,
+          expiresAt: 60_000,
+        })}
+      />,
     );
     expect(markup).toContain('data-testid="agent-new-connection"');
     expect(markup).toContain("New connection");
+    expect(markup).toContain("still-valid-claim");
   });
 
   it("offers a new connection in a terminal revoked state", () => {
@@ -138,13 +144,6 @@ describe("ConnectAgentPanel", () => {
         {...baseProps({
           status: "revoked",
           claimCode: null,
-          audit: [
-            {
-              at: 0,
-              kind: "granted",
-            },
-            { at: 1, kind: "revoked" },
-          ] as AgentAuditEntry[],
         })}
       />,
     );
@@ -176,7 +175,8 @@ describe("ConnectAgentPanel", () => {
     expect(markup).toContain('data-testid="agent-properties"');
     expect(markup).toContain("Connected");
     expect(markup).toContain("Manage");
-    expect(markup).toContain('data-testid="agent-revoke"');
+    expect(markup).toContain('data-testid="agent-pause"');
+    expect(markup).not.toContain('data-testid="agent-revoke"');
   });
 
   it("does not expose an expired claim code", () => {

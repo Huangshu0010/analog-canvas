@@ -617,6 +617,7 @@
                   "PROJECT_REPLACED",
                   "CLAIM_INVALID",
                   "CLAIM_EXPIRED",
+                  "CLAIM_ALREADY_USED",
                   "TOKEN_INVALID",
                   "TOKEN_EXPIRED",
                   "TOKEN_SCOPE_INSUFFICIENT",

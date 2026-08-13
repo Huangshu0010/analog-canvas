@@ -19,10 +19,7 @@ import {
 import { sha256Hex } from "@icm/derived";
 import type { CircuitProject } from "@icm/model";
 
-import type {
-  AgentAuditEntry,
-  AgentConnectionStatus,
-} from "./connect-agent-panel";
+import type { AgentConnectionStatus } from "./connect-agent-panel";
 import {
   clearAgentSessionRecovery,
   readAgentSessionRecovery,
@@ -72,7 +69,6 @@ type LiveSession = {
   scopes: AgentSessionScope[];
   socket: WebSocket | null;
   claimed: boolean;
-  hasOpened: boolean;
   allowReconnect: boolean;
   reconnectAttempt: number;
   reconnectTimer: number | null;
@@ -105,7 +101,6 @@ export interface AgentSessionViewModel {
   claimExpiresAt: number | null;
   scopes: readonly AgentSessionScope[];
   expiresAt: number | null;
-  audit: readonly AgentAuditEntry[];
   error: string | null;
 }
 
@@ -178,20 +173,12 @@ export function useAgentSession(
     claimExpiresAt: null,
     scopes: [],
     expiresAt: null,
-    audit: [],
     error: null,
   });
 
-  const update = useCallback(
-    (next: Partial<AgentSessionViewModel>, entry?: AgentAuditEntry) => {
-      setView((previous) => ({
-        ...previous,
-        ...next,
-        audit: entry ? [...previous.audit, entry].slice(-32) : previous.audit,
-      }));
-    },
-    [],
-  );
+  const update = useCallback((next: Partial<AgentSessionViewModel>) => {
+    setView((previous) => ({ ...previous, ...next }));
+  }, []);
 
   const control = useCallback(
     async (action: "pause" | "resume" | "revoke" | "replace-project") => {
@@ -231,15 +218,12 @@ export function useAgentSession(
     }
     live.socket?.close(1000, "revoked");
     liveRef.current = null;
-    update(
-      {
-        status: "revoked",
-        claimCode: null,
-        claimExpiresAt: null,
-        error: null,
-      },
-      { at: Date.now(), kind: "revoked" },
-    );
+    update({
+      status: "revoked",
+      claimCode: null,
+      claimExpiresAt: null,
+      error: null,
+    });
   }, [control, options.fileHost, update]);
 
   const grant = useCallback(
@@ -288,7 +272,6 @@ export function useAgentSession(
           scopes: [...scopes],
           socket: null,
           claimed: recovery !== undefined,
-          hasOpened: false,
           allowReconnect: true,
           reconnectAttempt: 0,
           reconnectTimer: null,
@@ -344,21 +327,16 @@ export function useAgentSession(
           ]);
           live.socket = socket;
           socket.addEventListener("open", () => {
-            const firstConnection = !live.hasOpened;
-            live.hasOpened = true;
             live.reconnectAttempt = 0;
             live.reconnectTimer = null;
-            update(
-              {
-                status: live.claimed ? "connected" : "waiting-for-agent",
-                claimCode: live.claimed ? null : live.claimCode,
-                claimExpiresAt: live.claimed ? null : live.claimExpiresAt,
-                scopes,
-                expiresAt: live.expiresAt,
-                error: null,
-              },
-              firstConnection ? { at: Date.now(), kind: "granted" } : undefined,
-            );
+            update({
+              status: live.claimed ? "connected" : "waiting-for-agent",
+              claimCode: live.claimCode,
+              claimExpiresAt: live.claimExpiresAt,
+              scopes,
+              expiresAt: live.expiresAt,
+              error: null,
+            });
           });
           socket.addEventListener("message", (event) => {
             let raw: unknown;
@@ -388,14 +366,7 @@ export function useAgentSession(
                   scopes: live.scopes,
                   expiresAt: live.expiresAt,
                 });
-                update(
-                  {
-                    status: "connected",
-                    claimCode: null,
-                    claimExpiresAt: null,
-                  },
-                  { at: Date.now(), kind: "claimed" },
-                );
+                update({ status: "connected" });
               } else if (
                 sessionEvent.success &&
                 sessionEvent.data.type === "session.revoked"
@@ -405,14 +376,11 @@ export function useAgentSession(
                 options.fileHost?.clear?.();
                 socket.close(1000, "session revoked");
                 if (liveRef.current === live) liveRef.current = null;
-                update(
-                  {
-                    status: "revoked",
-                    claimCode: null,
-                    claimExpiresAt: null,
-                  },
-                  { at: Date.now(), kind: "revoked" },
-                );
+                update({
+                  status: "revoked",
+                  claimCode: null,
+                  claimExpiresAt: null,
+                });
               } else if (
                 sessionEvent.success &&
                 sessionEvent.data.type === "session.paused"
@@ -463,14 +431,7 @@ export function useAgentSession(
                 return;
               }
               live.requestHashes.set(parsed.data.requestId, payloadHash);
-              update(
-                { status: "working" },
-                {
-                  at: Date.now(),
-                  kind: "operation",
-                  detail: `file.${fileRequest.data.operation}`,
-                },
-              );
+              update({ status: "working" });
               void options.fileHost
                 .handle(fileRequest.data)
                 .then(sendFileResponse)
@@ -547,13 +508,7 @@ export function useAgentSession(
               return;
             }
             live.requestHashes.set(parsed.data.requestId, payloadHash);
-            const operation = circuitRequest.success
-              ? circuitRequest.data.operation
-              : "request";
-            update(
-              { status: "working" },
-              { at: Date.now(), kind: "operation", detail: operation },
-            );
+            update({ status: "working" });
             // The relay already rejects malformed public payloads, but the
             // browser host repeats that same strict parse before it can touch
             // the live Project. Never route hosted traffic through the local
@@ -676,10 +631,7 @@ export function useAgentSession(
   const pause = useCallback(async () => {
     try {
       await control("pause");
-      update(
-        { status: "paused", error: null },
-        { at: Date.now(), kind: "paused" },
-      );
+      update({ status: "paused", error: null });
     } catch (error) {
       update({
         error: error instanceof Error ? error.message : String(error),
@@ -690,13 +642,10 @@ export function useAgentSession(
   const resume = useCallback(async () => {
     try {
       await control("resume");
-      update(
-        {
-          status: liveRef.current?.claimed ? "connected" : "waiting-for-agent",
-          error: null,
-        },
-        { at: Date.now(), kind: "resumed" },
-      );
+      update({
+        status: liveRef.current?.claimed ? "connected" : "waiting-for-agent",
+        error: null,
+      });
     } catch (error) {
       update({
         error: error instanceof Error ? error.message : String(error),
@@ -781,10 +730,7 @@ export function useAgentSession(
     void control("replace-project").finally(() => {
       live.socket?.close(1000, "project replaced");
       liveRef.current = null;
-      update(
-        { status: "revoked", claimCode: null, claimExpiresAt: null },
-        { at: Date.now(), kind: "replaced" },
-      );
+      update({ status: "revoked", claimCode: null, claimExpiresAt: null });
     });
   }, [
     control,
@@ -799,11 +745,14 @@ export function useAgentSession(
       const live = liveRef.current;
       if (
         live &&
-        !live.claimed &&
+        live.claimCode !== null &&
         live.claimExpiresAt !== null &&
         Date.now() >= live.claimExpiresAt
       ) {
-        update({ claimCode: null });
+        const claimExpiresAt = live.claimExpiresAt;
+        live.claimCode = null;
+        live.claimExpiresAt = null;
+        update({ claimCode: null, claimExpiresAt });
       }
       if (live && Date.now() >= live.expiresAt) {
         stopReconnect(live);
