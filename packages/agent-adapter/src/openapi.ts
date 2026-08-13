@@ -139,7 +139,7 @@ export const agentCircuitRequestExamples = {
 } as const;
 
 export const agentClaimRequestExample = {
-  claimCode: "session-id.one-time-claim",
+  claimCode: "session-id.claim-code",
 } as const;
 
 export const agentTransportErrorExamples = {
@@ -294,7 +294,7 @@ export const agentCircuitOpenApi = {
       post: {
         operationId: "agentClaimRedeem",
         description:
-          "Exchange a one-time, short-lived claim code for a scoped, expiring bearer token. Single-use.",
+          "Exchange a short-lived claim code for a scoped, expiring bearer token. Repeating a valid claim replaces the prior token.",
         requestBody: {
           required: true,
           content: {

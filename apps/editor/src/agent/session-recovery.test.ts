@@ -37,7 +37,13 @@ function record() {
     editorSecret: "editor-secret",
     projectId: target.projectId,
     projectSessionId: target.projectSessionId,
-    scopes: ["circuit.snapshot", "circuit.render"] as const,
+    scopes: [
+      "circuit.snapshot",
+      "editor.semantic-control",
+      "project.download",
+      "project.import",
+      "visual.download",
+    ] as const,
     expiresAt: 2_000,
   };
 }

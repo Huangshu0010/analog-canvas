@@ -2,15 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import type { AgentSessionScope } from "@icm/agent-adapter";
 
-/**
- * Connect Agent panel (WP-WA5). Presentational component for the browser-side
- * authorization surface: permission presets, the one-time claim code shown after
- * grant, the connection status, pause/revoke controls, and a recent-operation
- * audit. State and secrets are owned by the parent (see `useAgentSession`); this
- * component never persists a secret and never sends one to analytics.
- *
- * Contract: [`docs/specs/web-agent-session.md`](../../../docs/specs/web-agent-session.md).
- */
+/** Browser authorization hand-off and compact Properties status controls. */
 
 export type AgentConnectionStatus =
   | "idle"
@@ -40,6 +32,7 @@ export interface AgentAuditEntry {
 export interface PermissionPreset {
   id: "review" | "layout" | "full";
   label: string;
+  description: string;
   scopes: AgentSessionScope[];
 }
 
@@ -47,6 +40,7 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
   {
     id: "review",
     label: "Review",
+    description: "Read the circuit, render it, and download approved views.",
     scopes: [
       "circuit.snapshot",
       "circuit.render",
@@ -59,6 +53,7 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
   {
     id: "layout",
     label: "Layout Edit",
+    description: "Review the circuit and change component placement or routes.",
     scopes: [
       "circuit.snapshot",
       "circuit.render",
@@ -72,6 +67,8 @@ export const AGENT_PERMISSION_PRESETS: readonly PermissionPreset[] = [
   {
     id: "full",
     label: "Full Circuit Edit",
+    description:
+      "Edit circuit, connectivity, annotations, and approved imports.",
     scopes: [
       "circuit.snapshot",
       "circuit.render",
@@ -91,6 +88,7 @@ export interface ConnectAgentPanelProps {
   open: boolean;
   status: AgentConnectionStatus;
   claimCode: string | null;
+  claimExpiresAt: number | null;
   scopes: readonly AgentSessionScope[];
   expiresAt: number | null;
   audit: readonly AgentAuditEntry[];
@@ -100,9 +98,18 @@ export interface ConnectAgentPanelProps {
   onPause: () => void;
   onResume: () => void;
   onReconnect: () => void;
-  onRotate: () => void;
+  onNewConnection: () => void;
   onRevoke: () => void;
   onClose: () => void;
+}
+
+export interface AgentPropertiesSectionProps extends Omit<
+  ConnectAgentPanelProps,
+  "open" | "audit" | "now" | "onGrant" | "onClose"
+> {
+  expanded: boolean;
+  onToggleDetails: () => void;
+  onDismiss: () => void;
 }
 
 export function agentConnectionInstructions(
@@ -114,52 +121,193 @@ export function agentConnectionInstructions(
   const fileUrl = `${origin}/api/agent/sessions/{sessionId}/files`;
   const openApiUrl = `${origin}/api/agent/openapi.json`;
   return `Connect to the Interactive Circuit Maker Agent API.
-1. Redeem claimCode exactly once by POSTing ${JSON.stringify({ claimCode })} to ${claimUrl}, and retain the complete response in memory.
-2. Never log or display agentToken.
-3. Use only sessionId and documentIds returned by the claim response; replace {sessionId} in the Circuit URL with that value, and send agentToken only as the Bearer token.
-4. Call capabilities once through POST ${circuitUrl}.
-5. Request one complete snapshot for the selected documentId.
-6. Validate every request against the published OpenAPI: ${openApiUrl}
-7. Use ${fileUrl} only for authorized Project/formal-file download or staging a bounded Project/structural-SPICE candidate; staging never changes the browser Project.
-8. A human must explicitly approve a staged candidate in the editor before it can replace the Project.
-9. Dry-run non-trivial transact requests using the snapshot revision.
-10. Commit the same edits only if dry-run succeeds and the revision is unchanged.
-11. Render, then request a fresh snapshot for final verification.
-12. Reuse a requestId only when retrying the exact same payload.`;
+1. POST ${JSON.stringify({ claimCode })} to ${claimUrl}, then retain only the latest response in memory.
+2. A retry with this still-valid claim creates a replacement token and immediately invalidates the earlier token.
+3. Never log or display agentToken.
+4. Use only sessionId and documentIds returned by the claim response; replace {sessionId} in the Circuit URL with that value, and send agentToken only as the Bearer token.
+5. Call capabilities once through POST ${circuitUrl}.
+6. Request one complete snapshot for the selected documentId.
+7. Validate every request against the published OpenAPI: ${openApiUrl}
+8. Use ${fileUrl} only for authorized Project/formal-file download or staging a bounded Project/structural-SPICE candidate; staging never changes the browser Project.
+9. A human must explicitly approve a staged candidate in the editor before it can replace the Project.
+10. Dry-run non-trivial transact requests using the snapshot revision.
+11. Commit the same edits only if dry-run succeeds and the revision is unchanged.
+12. Render, then request a fresh snapshot for final verification.
+13. Reuse a requestId only when retrying the exact same payload.`;
 }
 
 const STATUS_LABEL: Record<AgentConnectionStatus, string> = {
   idle: "Not connected",
-  creating: "Creating secure session…",
-  "waiting-for-agent": "Waiting for Agent to claim",
-  connected: "Agent connected",
-  working: "Agent working…",
+  creating: "Creating connection…",
+  "waiting-for-agent": "Waiting for Agent",
+  connected: "Connected",
+  working: "Working",
   paused: "Paused",
-  reconnecting: "Reconnecting to Agent relay…",
-  offline: "Editor relay offline",
-  revoked: "Revoked",
-  expired: "Expired",
+  reconnecting: "Reconnecting",
+  offline: "Relay offline",
+  revoked: "Disconnected",
+  expired: "Session expired",
 };
 
-function formatExpiry(expiresAt: number | null, now: number): string {
-  if (expiresAt === null) return "\u2014";
-  const seconds = Math.max(0, Math.round((expiresAt - now) / 1000));
-  const minutes = Math.floor(seconds / 60);
+function formatRemaining(expiresAt: number | null, now: number): string {
+  if (expiresAt === null) return "—";
+  const seconds = Math.max(0, Math.ceil((expiresAt - now) / 1_000));
+  const hours = Math.floor(seconds / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
   const remainder = seconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}:${remainder.toString().padStart(2, "0")}`;
 }
 
-export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
-  const [clock, setClock] = useState(props.now);
+function permissionLabel(scopes: readonly AgentSessionScope[]): string {
+  const preset = AGENT_PERMISSION_PRESETS.find(
+    (candidate) =>
+      candidate.scopes.length === scopes.length &&
+      candidate.scopes.every((scope) => scopes.includes(scope)),
+  );
+  return preset?.label ?? "Custom access";
+}
+
+function useClock(active: boolean, initial: number): number {
+  const [clock, setClock] = useState(initial);
   useEffect(() => {
-    if (!props.open) return;
+    if (!active) return;
     setClock(Date.now());
     const timer = window.setInterval(() => setClock(Date.now()), 1_000);
     return () => window.clearInterval(timer);
-  }, [props.open]);
-  if (!props.open) return null;
-  const connected = props.status !== "idle" && props.status !== "creating";
+  }, [active]);
+  return clock;
+}
+
+function ConnectionControls(
+  props: Pick<
+    ConnectAgentPanelProps,
+    | "status"
+    | "onPause"
+    | "onResume"
+    | "onReconnect"
+    | "onNewConnection"
+    | "onRevoke"
+  >,
+): ReactNode {
   const terminal = props.status === "revoked" || props.status === "expired";
+  if (terminal) {
+    return (
+      <div className="agent-controls">
+        <button
+          type="button"
+          data-testid="agent-new-connection"
+          onClick={props.onNewConnection}
+        >
+          New connection
+        </button>
+      </div>
+    );
+  }
+  if (props.status === "idle" || props.status === "creating") return null;
+  return (
+    <div className="agent-controls">
+      {props.status === "connected" ||
+      props.status === "waiting-for-agent" ||
+      props.status === "working" ? (
+        <button type="button" data-testid="agent-pause" onClick={props.onPause}>
+          Pause
+        </button>
+      ) : null}
+      {props.status === "paused" ? (
+        <button
+          type="button"
+          data-testid="agent-resume"
+          onClick={props.onResume}
+        >
+          Resume
+        </button>
+      ) : null}
+      {props.status === "offline" || props.status === "reconnecting" ? (
+        <button
+          type="button"
+          data-testid="agent-reconnect"
+          onClick={props.onReconnect}
+        >
+          Retry relay
+        </button>
+      ) : null}
+      <button
+        type="button"
+        data-testid="agent-new-connection"
+        onClick={props.onNewConnection}
+      >
+        New connection
+      </button>
+      <button type="button" data-testid="agent-revoke" onClick={props.onRevoke}>
+        Disconnect
+      </button>
+    </div>
+  );
+}
+
+function ClaimHandOff({
+  claimCode,
+  claimExpiresAt,
+  expiresAt,
+  scopes,
+  now,
+  onNewConnection,
+}: Pick<
+  ConnectAgentPanelProps,
+  "claimCode" | "claimExpiresAt" | "expiresAt" | "scopes" | "onNewConnection"
+> & { now: number }): ReactNode {
+  const [copied, setCopied] = useState(false);
+  const claimExpired = claimExpiresAt !== null && now >= claimExpiresAt;
+  if (claimCode === null && !claimExpired) return null;
+  if (claimExpired) {
+    return (
+      <div className="agent-claim" data-testid="agent-claim-expired">
+        <p>Connection setup expired.</p>
+        <button type="button" onClick={onNewConnection}>
+          Generate another
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="agent-claim" data-testid="agent-claim">
+      <p>
+        Give the Agent this setup. The setup expires in{" "}
+        {formatRemaining(claimExpiresAt, now)}; the connected session lasts{" "}
+        {formatRemaining(expiresAt, now)}.
+      </p>
+      <button
+        type="button"
+        data-testid="agent-copy-instructions"
+        onClick={() => {
+          void navigator.clipboard
+            .writeText(
+              agentConnectionInstructions(window.location.origin, claimCode!),
+            )
+            .then(() => {
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 2_000);
+            })
+            .catch(() => undefined);
+        }}
+      >
+        {copied ? "Copied ✓ Paste it into your Agent" : "Copy connection setup"}
+      </button>
+      <details>
+        <summary>Show connection code and technical details</summary>
+        <code data-testid="agent-claim-code">{claimCode}</code>
+        <p className="agent-technical-details">Scopes: {scopes.join(", ")}</p>
+      </details>
+    </div>
+  );
+}
+
+export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
+  const clock = useClock(props.open, props.now);
+  if (!props.open) return null;
+  const terminal = props.status === "revoked" || props.status === "expired";
+  const showGrant = props.status === "idle" || terminal;
 
   return (
     <div
@@ -174,28 +322,29 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
       >
         <div className="agent-panel-header">
           <h2>Connect Agent</h2>
-          <button type="button" onClick={props.onClose} aria-label="Close">
-            Close
+          <button
+            type="button"
+            onClick={props.onClose}
+            aria-label="Hide Agent details"
+          >
+            Hide details
           </button>
         </div>
-
         <p className="agent-panel-status" data-testid="agent-status">
           {STATUS_LABEL[props.status]}
-          <span className="agent-panel-expiry">
-            {" "}
-            (expires in {formatExpiry(props.expiresAt, clock)})
-          </span>
+          {props.expiresAt !== null
+            ? ` · session ${formatRemaining(props.expiresAt, clock)} remaining`
+            : ""}
         </p>
-
         {props.error ? (
           <p className="agent-panel-error" role="alert">
             {props.error}
           </p>
         ) : null}
 
-        {!connected ? (
-          <div className="agent-panel-grant" data-testid="agent-grant">
-            <p>Grant a scoped, short-lived capability to an external Agent.</p>
+        {showGrant ? (
+          <div className="agent-grant" data-testid="agent-grant">
+            <p>Choose what the Agent may do in this Project.</p>
             <ul>
               {AGENT_PERMISSION_PRESETS.map((preset) => (
                 <li key={preset.id}>
@@ -207,8 +356,8 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
                   >
                     {preset.label}
                   </button>
-                  <span className="agent-preset-scopes">
-                    {preset.scopes.join(", ")}
+                  <span className="agent-preset-description">
+                    {preset.description}
                   </span>
                 </li>
               ))}
@@ -216,103 +365,74 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
           </div>
         ) : null}
 
-        {props.claimCode !== null && !terminal ? (
-          <div className="agent-panel-claim" data-testid="agent-claim">
-            <p>
-              Give this one-time code and the editor address to the Agent. It
-              expires in minutes.
-            </p>
-            <code data-testid="agent-claim-code">{props.claimCode}</code>
-            <button
-              type="button"
-              data-testid="agent-copy-instructions"
-              onClick={() => {
-                const origin = window.location.origin;
-                void navigator.clipboard
-                  .writeText(
-                    agentConnectionInstructions(origin, props.claimCode!),
-                  )
-                  .catch(() => undefined);
-              }}
-            >
-              Copy Agent connection instructions
-            </button>
-            <p className="agent-panel-scopes">
-              Scopes: {props.scopes.join(", ")}
-            </p>
-          </div>
-        ) : null}
-
-        {connected ? (
-          <div className="agent-panel-controls">
-            {props.status === "connected" ||
-            props.status === "waiting-for-agent" ||
-            props.status === "working" ? (
-              <button
-                type="button"
-                data-testid="agent-pause"
-                onClick={props.onPause}
-              >
-                Pause
-              </button>
-            ) : null}
-            {props.status === "paused" ? (
-              <button
-                type="button"
-                data-testid="agent-resume"
-                onClick={props.onResume}
-              >
-                Resume
-              </button>
-            ) : null}
-            {props.status === "offline" || props.status === "reconnecting" ? (
-              <button
-                type="button"
-                data-testid="agent-reconnect"
-                onClick={props.onReconnect}
-              >
-                Reconnect
-              </button>
-            ) : null}
-            {!terminal ? (
-              <>
-                <button
-                  type="button"
-                  data-testid="agent-rotate"
-                  onClick={props.onRotate}
-                >
-                  Rotate Agent Access
-                </button>
-                <button
-                  type="button"
-                  data-testid="agent-revoke"
-                  onClick={props.onRevoke}
-                >
-                  Revoke
-                </button>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-
-        {props.audit.length > 0 ? (
-          <ul className="agent-panel-audit" data-testid="agent-audit">
-            {props.audit
-              .slice()
-              .reverse()
-              .map((entry, index) => (
-                <li
-                  key={`${entry.at}-${index}`}
-                  data-testid="agent-audit-entry"
-                >
-                  <span>{new Date(entry.at).toISOString()}</span>
-                  <span>{entry.kind}</span>
-                  {entry.detail ? <span>{entry.detail}</span> : null}
-                </li>
-              ))}
-          </ul>
-        ) : null}
+        <ClaimHandOff {...props} now={clock} />
+        <ConnectionControls {...props} />
       </section>
     </div>
+  );
+}
+
+export function AgentPropertiesSection(
+  props: AgentPropertiesSectionProps,
+): ReactNode {
+  const clock = useClock(true, Date.now());
+  if (props.status === "idle") return null;
+  const terminal = props.status === "revoked" || props.status === "expired";
+  return (
+    <section
+      className="agent-properties"
+      aria-label="Agent connection"
+      data-testid="agent-properties"
+    >
+      <div className="agent-properties-summary">
+        <div>
+          <h2>Agent</h2>
+          <p>
+            <span
+              className={`agent-status-dot ${terminal ? "terminal" : ""}`}
+              aria-hidden="true"
+            />
+            {STATUS_LABEL[props.status]} · {permissionLabel(props.scopes)}
+            {props.expiresAt !== null
+              ? ` · ${formatRemaining(props.expiresAt, clock)}`
+              : ""}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={props.onToggleDetails}
+          aria-expanded={props.expanded}
+        >
+          {props.expanded ? "Hide" : "Manage"}
+        </button>
+      </div>
+      <ConnectionControls {...props} />
+      {props.expanded ? (
+        <div className="agent-properties-details">
+          <ClaimHandOff {...props} now={clock} />
+          <details>
+            <summary>Connection details</summary>
+            <p>Access: {permissionLabel(props.scopes)}</p>
+            <p className="agent-technical-details">
+              Scopes: {props.scopes.join(", ")}
+            </p>
+          </details>
+          {props.error ? (
+            <p className="agent-panel-error" role="alert">
+              {props.error}
+            </p>
+          ) : null}
+          {terminal ? (
+            <button
+              type="button"
+              className="agent-dismiss"
+              onClick={props.onDismiss}
+            >
+              Dismiss
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   );
 }

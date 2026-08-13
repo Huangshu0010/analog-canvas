@@ -8,7 +8,7 @@
     "/api/agent/claims": {
       "post": {
         "operationId": "agentClaimRedeem",
-        "description": "Exchange a one-time, short-lived claim code for a scoped, expiring bearer token. Single-use.",
+        "description": "Exchange a short-lived claim code for a scoped, expiring bearer token. Repeating a valid claim replaces the prior token.",
         "requestBody": {
           "required": true,
           "content": {
@@ -17,7 +17,7 @@
                 "$ref": "#/components/schemas/agentClaimRequest"
               },
               "example": {
-                "claimCode": "session-id.one-time-claim"
+                "claimCode": "session-id.claim-code"
               }
             }
           }
@@ -617,7 +617,6 @@
                   "PROJECT_REPLACED",
                   "CLAIM_INVALID",
                   "CLAIM_EXPIRED",
-                  "CLAIM_ALREADY_USED",
                   "TOKEN_INVALID",
                   "TOKEN_EXPIRED",
                   "TOKEN_SCOPE_INSUFFICIENT",

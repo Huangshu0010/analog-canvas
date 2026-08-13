@@ -87,7 +87,9 @@ type LiveSession = {
 
 const BROWSER_CACHE_MAX_ENTRIES = 32;
 const BROWSER_CACHE_MAX_BYTES = 16_000_000;
-const RECONNECT_DELAYS_MS = [250, 500, 1_000, 2_000, 4_000, 8_000] as const;
+const RECONNECT_DELAYS_MS = [
+  500, 1_000, 2_000, 4_000, 8_000, 15_000, 30_000,
+] as const;
 
 function stopReconnect(live: LiveSession): void {
   live.allowReconnect = false;
@@ -100,6 +102,7 @@ function stopReconnect(live: LiveSession): void {
 export interface AgentSessionViewModel {
   status: AgentConnectionStatus;
   claimCode: string | null;
+  claimExpiresAt: number | null;
   scopes: readonly AgentSessionScope[];
   expiresAt: number | null;
   audit: readonly AgentAuditEntry[];
@@ -123,7 +126,7 @@ export interface UseAgentSessionResult extends AgentSessionViewModel {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   reconnect: () => void;
-  rotate: () => Promise<void>;
+  newConnection: () => Promise<void>;
   revoke: () => Promise<void>;
 }
 
@@ -157,6 +160,7 @@ export function useAgentSession(
   options: UseAgentSessionOptions,
 ): UseAgentSessionResult {
   const liveRef = useRef<LiveSession | null>(null);
+  const lastScopesRef = useRef<AgentSessionScope[]>([]);
   const recoveryAttemptedForProjectRef = useRef<string | null>(null);
   const projectSessionRef = useRef(options.projectSessionId);
   const revisionRef = useRef(
@@ -171,6 +175,7 @@ export function useAgentSession(
   const [view, setView] = useState<AgentSessionViewModel>({
     status: "idle",
     claimCode: null,
+    claimExpiresAt: null,
     scopes: [],
     expiresAt: null,
     audit: [],
@@ -213,7 +218,7 @@ export function useAgentSession(
     const live = liveRef.current;
     if (!live) {
       clearAgentSessionRecovery(window.sessionStorage);
-      update({ status: "idle", claimCode: null });
+      update({ status: "idle", claimCode: null, claimExpiresAt: null });
       return;
     }
     stopReconnect(live);
@@ -227,7 +232,12 @@ export function useAgentSession(
     live.socket?.close(1000, "revoked");
     liveRef.current = null;
     update(
-      { status: "revoked", claimCode: null, error: null },
+      {
+        status: "revoked",
+        claimCode: null,
+        claimExpiresAt: null,
+        error: null,
+      },
       { at: Date.now(), kind: "revoked" },
     );
   }, [control, options.fileHost, update]);
@@ -238,10 +248,12 @@ export function useAgentSession(
       recovery?: AgentSessionRecoveryRecord,
     ) => {
       if (liveRef.current) await revoke();
+      lastScopesRef.current = [...scopes];
       update({
         status: recovery ? "reconnecting" : "creating",
         error: null,
         claimCode: null,
+        claimExpiresAt: null,
         scopes,
       });
       try {
@@ -340,6 +352,7 @@ export function useAgentSession(
               {
                 status: live.claimed ? "connected" : "waiting-for-agent",
                 claimCode: live.claimed ? null : live.claimCode,
+                claimExpiresAt: live.claimed ? null : live.claimExpiresAt,
                 scopes,
                 expiresAt: live.expiresAt,
                 error: null,
@@ -376,7 +389,11 @@ export function useAgentSession(
                   expiresAt: live.expiresAt,
                 });
                 update(
-                  { status: "connected", claimCode: null },
+                  {
+                    status: "connected",
+                    claimCode: null,
+                    claimExpiresAt: null,
+                  },
                   { at: Date.now(), kind: "claimed" },
                 );
               } else if (
@@ -389,7 +406,11 @@ export function useAgentSession(
                 socket.close(1000, "session revoked");
                 if (liveRef.current === live) liveRef.current = null;
                 update(
-                  { status: "revoked", claimCode: null },
+                  {
+                    status: "revoked",
+                    claimCode: null,
+                    claimExpiresAt: null,
+                  },
                   { at: Date.now(), kind: "revoked" },
                 );
               } else if (
@@ -596,11 +617,14 @@ export function useAgentSession(
           socket.addEventListener("close", () => {
             if (live.socket === socket) live.socket = null;
             if (liveRef.current !== live || !live.allowReconnect) return;
-            const delay = RECONNECT_DELAYS_MS[live.reconnectAttempt];
-            if (delay === undefined || Date.now() >= live.expiresAt) {
+            if (Date.now() >= live.expiresAt) {
               update({ status: "offline" });
               return;
             }
+            const delay =
+              RECONNECT_DELAYS_MS[
+                Math.min(live.reconnectAttempt, RECONNECT_DELAYS_MS.length - 1)
+              ]!;
             live.reconnectAttempt += 1;
             update({ status: "reconnecting" });
             live.reconnectTimer = window.setTimeout(connect, delay);
@@ -693,10 +717,10 @@ export function useAgentSession(
     live.reconnect();
   }, [update]);
 
-  const rotate = useCallback(async () => {
-    const live = liveRef.current;
-    if (!live) return;
-    await grant([...live.scopes]);
+  const newConnection = useCallback(async () => {
+    const scopes = liveRef.current?.scopes ?? lastScopesRef.current;
+    if (scopes.length === 0) return;
+    await grant(scopes);
   }, [grant]);
 
   useEffect(() => {
@@ -758,7 +782,7 @@ export function useAgentSession(
       live.socket?.close(1000, "project replaced");
       liveRef.current = null;
       update(
-        { status: "revoked", claimCode: null },
+        { status: "revoked", claimCode: null, claimExpiresAt: null },
         { at: Date.now(), kind: "replaced" },
       );
     });
@@ -773,13 +797,21 @@ export function useAgentSession(
   useEffect(() => {
     const timer = window.setInterval(() => {
       const live = liveRef.current;
+      if (
+        live &&
+        !live.claimed &&
+        live.claimExpiresAt !== null &&
+        Date.now() >= live.claimExpiresAt
+      ) {
+        update({ claimCode: null });
+      }
       if (live && Date.now() >= live.expiresAt) {
         stopReconnect(live);
         clearAgentSessionRecovery(window.sessionStorage);
         options.fileHost?.clear?.();
         live.socket?.close(1000, "expired");
         liveRef.current = null;
-        update({ status: "expired", claimCode: null });
+        update({ status: "expired", claimCode: null, claimExpiresAt: null });
       }
     }, 1_000);
     return () => window.clearInterval(timer);
@@ -805,5 +837,5 @@ export function useAgentSession(
     [options.fileHost],
   );
 
-  return { ...view, grant, pause, resume, reconnect, rotate, revoke };
+  return { ...view, grant, pause, resume, reconnect, newConnection, revoke };
 }

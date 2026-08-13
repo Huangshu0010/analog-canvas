@@ -138,7 +138,6 @@ export const AgentTransportErrorCodeSchema = z.enum([
   // Claim exchange
   "CLAIM_INVALID",
   "CLAIM_EXPIRED",
-  "CLAIM_ALREADY_USED",
   // Token
   "TOKEN_INVALID",
   "TOKEN_EXPIRED",
@@ -194,6 +193,13 @@ export const AgentSessionScopeSchema = z.enum([
   "project.import",
   "visual.download",
 ]);
+
+/** Single runtime scope guard for browser recovery and relay consumers. */
+export function isAgentSessionScope(
+  value: unknown,
+): value is AgentSessionScope {
+  return AgentSessionScopeSchema.safeParse(value).success;
+}
 
 export type AgentSessionMessage = z.infer<typeof AgentSessionMessageSchema>;
 export type AgentClaimRequest = z.infer<typeof AgentClaimRequestSchema>;

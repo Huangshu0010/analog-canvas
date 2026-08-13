@@ -36,9 +36,9 @@ export interface AgentSessionLimits {
 }
 
 export const DEFAULT_AGENT_SESSION_LIMITS: AgentSessionLimits = {
-  claimTtlMs: 5 * 60 * 1000,
-  tokenTtlMs: 60 * 60 * 1000,
-  sessionTtlMs: 60 * 60 * 1000,
+  claimTtlMs: 30 * 60 * 1000,
+  tokenTtlMs: 8 * 60 * 60 * 1000,
+  sessionTtlMs: 8 * 60 * 60 * 1000,
   maxRequestBytes: 2_000_000,
   maxMessageBytes: 6_000_000,
   rateLimit: { windowMs: 60_000, maxRequests: 60 },
@@ -81,6 +81,7 @@ export type RequestBeginResult =
 interface ClaimRecord {
   codeVerifier: string;
   expiresAt: number;
+  /** Retained only to distinguish an unclaimed session in persisted state. */
   used: boolean;
 }
 
@@ -252,7 +253,7 @@ export class AgentSessionMachine {
     return this.internals.expiresAt;
   }
 
-  /** Whether the one-time claim has produced a live Agent capability. */
+  /** Whether this session currently has a live Agent capability. */
   get claimed(): boolean {
     return this.internals.claim?.used === true && this.internals.token !== null;
   }
@@ -330,7 +331,10 @@ export class AgentSessionMachine {
     );
   }
 
-  /** Exchange a one-time claim code for a scoped capability token. */
+  /**
+   * Exchange a valid hand-off claim for a scoped capability token. A retry
+   * replaces the previous token because the session retains one verifier.
+   */
   redeemClaim(
     code: string,
     now: number,
@@ -346,7 +350,6 @@ export class AgentSessionMachine {
     ) {
       return { ok: false, code: "CLAIM_INVALID" };
     }
-    if (claim.used) return { ok: false, code: "CLAIM_ALREADY_USED" };
     if (now >= claim.expiresAt) return { ok: false, code: "CLAIM_EXPIRED" };
 
     claim.used = true;
