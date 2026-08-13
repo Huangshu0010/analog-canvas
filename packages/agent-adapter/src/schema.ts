@@ -481,11 +481,11 @@ export const AgentCircuitResponseSchema = z.union([
 
 export const AgentCircuitRequestJsonSchema = z.toJSONSchema(
   AgentCircuitRequestSchema,
-  { target: "draft-2020-12" },
+  { target: "draft-2020-12", reused: "ref" },
 );
 export const AgentCircuitResponseJsonSchema = z.toJSONSchema(
   AgentCircuitResponseSchema,
-  { target: "draft-2020-12" },
+  { target: "draft-2020-12", reused: "ref" },
 );
 
 export type AgentPermissions = z.infer<typeof AgentPermissionsSchema>;

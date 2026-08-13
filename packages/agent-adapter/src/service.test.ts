@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { executeTransaction } from "@icm/edit-engine";
+import { executeTransaction, SchematicEditSchema } from "@icm/edit-engine";
 import { resolveDocumentRoutingGeometry } from "@icm/derived";
 import { createEmptyDocument, parseProject } from "@icm/model";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
@@ -12,10 +12,15 @@ import { agentCircuitOpenApi } from "./openapi.js";
 import {
   AgentCircuitRequestJsonSchema,
   AgentCircuitRequestSchema,
+  AgentCircuitResponseJsonSchema,
   AgentCircuitResponseSchema,
 } from "./schema.js";
 import type { AgentPermissions } from "./schema.js";
-import { createAgentCircuitService } from "./service.js";
+import {
+  AGENT_EDIT_KINDS,
+  agentEditCategory,
+  createAgentCircuitService,
+} from "./service.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 const allPermissions: AgentPermissions = {
@@ -24,6 +29,37 @@ const allPermissions: AgentPermissions = {
   sourceSpans: false,
   edit: { geometry: true, connectivity: true, presentation: true },
 };
+
+function resolveLocalJsonPointer(root: unknown, reference: string): unknown {
+  if (!reference.startsWith("#/")) return undefined;
+  return reference
+    .slice(2)
+    .split("/")
+    .map((part) => part.replaceAll("~1", "/").replaceAll("~0", "~"))
+    .reduce<unknown>((current, part) => {
+      if (typeof current !== "object" || current === null) return undefined;
+      return (current as Record<string, unknown>)[part];
+    }, root);
+}
+
+function localReferences(root: unknown): string[] {
+  const references: string[] = [];
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    if (typeof value !== "object" || value === null) return;
+    for (const [key, item] of Object.entries(value)) {
+      if (key === "$ref" && typeof item === "string" && item.startsWith("#")) {
+        references.push(item);
+      }
+      visit(item);
+    }
+  };
+  visit(root);
+  return references;
+}
 
 function fixtureProject(): CircuitProject {
   return parseProject(
@@ -89,6 +125,8 @@ describe("Agent Circuit API v1 service", () => {
           "route_orthogonal",
           "set_net_name",
           "disconnect_endpoint",
+          "upsert_schematic_annotation",
+          "remove_schematic_annotation",
         ]),
       },
     });
@@ -117,6 +155,80 @@ describe("Agent Circuit API v1 service", () => {
     expect(agentCircuitOpenApi.paths["/v2/circuit"].post.operationId).toBe(
       "agentCircuitV2Operation",
     );
+  });
+
+  it("derives advertised typed edits from the Edit Engine schema", () => {
+    const typedKinds = SchematicEditSchema.options.map(
+      (option) => option.shape.kind.value,
+    );
+    const supportedKinds = typedKinds.filter(
+      (kind) => agentEditCategory(kind) !== "unsupported",
+    );
+
+    expect(AGENT_EDIT_KINDS).toEqual([...supportedKinds, "wire"]);
+    expect(AGENT_EDIT_KINDS).toEqual(
+      expect.arrayContaining([
+        "add_no_connect",
+        "remove_no_connect",
+        "set_presentation_style",
+        "upsert_schematic_annotation",
+        "remove_schematic_annotation",
+        "upsert_drafting_object",
+        "remove_drafting_object",
+      ]),
+    );
+    expect(AGENT_EDIT_KINDS).not.toEqual(
+      expect.arrayContaining(["undo", "redo"]),
+    );
+  });
+
+  it("publishes one reusable request and response schema in OpenAPI", () => {
+    const schemas = agentCircuitOpenApi.components.schemas;
+    const paths = ["/v1/circuit", "/v2/circuit"] as const;
+    for (const path of paths) {
+      expect(
+        agentCircuitOpenApi.paths[path].post.requestBody.content[
+          "application/json"
+        ].schema,
+      ).toEqual({ $ref: "#/components/schemas/agentCircuitRequest" });
+      expect(
+        agentCircuitOpenApi.paths[path].post.responses["200"].content[
+          "application/json"
+        ].schema,
+      ).toEqual({ $ref: "#/components/schemas/agentCircuitResponse" });
+    }
+    expect(JSON.stringify(schemas.agentCircuitRequest)).toContain(
+      "#/components/schemas/agentCircuitRequest/$defs/",
+    );
+    expect(JSON.stringify(schemas.agentCircuitResponse)).toContain(
+      "#/components/schemas/agentCircuitResponse/$defs/",
+    );
+    expect(JSON.stringify(agentCircuitOpenApi)).not.toContain('"$schema"');
+  });
+
+  it("keeps every generated local reference resolvable and bounded", () => {
+    for (const artifact of [
+      AgentCircuitRequestJsonSchema,
+      AgentCircuitResponseJsonSchema,
+      agentCircuitOpenApi,
+    ]) {
+      const references = localReferences(artifact);
+      expect(references.length).toBeGreaterThan(0);
+      for (const reference of references) {
+        expect(
+          resolveLocalJsonPointer(artifact, reference),
+          `unresolved local schema reference: ${reference}`,
+        ).toBeDefined();
+      }
+    }
+
+    expect(JSON.stringify(AgentCircuitRequestJsonSchema).length).toBeLessThan(
+      100_000,
+    );
+    expect(JSON.stringify(AgentCircuitResponseJsonSchema).length).toBeLessThan(
+      150_000,
+    );
+    expect(JSON.stringify(agentCircuitOpenApi).length).toBeLessThan(500_000);
   });
 
   it("publishes the flat v2 Snapshot workflow and returns complete facts", () => {

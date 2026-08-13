@@ -5940,3 +5940,16 @@ contracts (WP-R1)`.
   post-merge ancestry verification.
 - Commit status: integration commit `3ecda02` merged through PR #25 into
   `main` as `e9782e4`.
+
+## 2026-08-13 - Agent contract single source and compaction
+
+- Target: eliminate Agent edit-capability drift and compact generated API
+  contracts without changing request/response or editing semantics.
+- Changed areas: Edit Engine-derived capability kinds; annotation/drafting/
+  NoConnect advertisement; shared relay scope classification; reusable JSON
+  Schema/OpenAPI components; deterministic reference and size gates.
+- Validation: 69 focused tests; typecheck and artifact check; frozen install;
+  full `pnpm ci:check` with 671 unit/integration and 99 Playwright tests plus
+  build, performance, export, PWA, packaging, and release-smoke gates.
+- Commit status: ready to commit on `codex/agent-contract-compaction` as
+  `refactor(agent): compact and unify generated contracts`.
