@@ -13,6 +13,7 @@ implementation context.
 | Phase 9: Snapshot-driven Agent workflow                                   | review                                                        | [Phase 9 record](phase-9-agent-reasoning-and-observability.md)                                                          |
 | Connectivity, routing, and electrical debugging                           | proposed                                                      | [unification plan](connectivity-routing-debugging-plan.md)                                                              |
 | Browser-authorized Agent sessions                                         | implementation validation complete; deployment review pending | [session integration plan](web-agent-session-integration-plan.md) and [web-session spec](../specs/web-agent-session.md) |
+| Agent Project lifecycle, files, and editor collaboration                  | proposed                                                      | [completion plan](agent-project-lifecycle-and-artifacts-plan.md)                                                        |
 
 ## Active planning rules
 

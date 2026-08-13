@@ -6241,3 +6241,16 @@ contracts (WP-R1)`.
   verification, and 99 browser tests; `git diff --check` passed.
 - Commit status: ready to commit on `codex/unified-electrical-contact` as
   `chore: satisfy contact mainline gate`.
+
+## 2026-08-13 - Agent Project lifecycle and artifact completion plan
+
+- Target: define the remaining interfaces required for complete browser Agent
+  takeover while excluding simulation/PVT/waveforms and design-netlist export.
+- Changed areas: current roadmap index and a new AP0--AP9 cross-module plan for
+  exact Snapshot reads, Project transactions, history, Project/visual artifacts,
+  staged Project/SPICE import, explicit replacement authorization, and semantic
+  editor collaboration.
+- Validation: `pnpm references:check` and `git diff --check` passed; no runtime
+  test was required for the documentation-only target.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `docs: plan complete Agent project lifecycle interfaces`.
