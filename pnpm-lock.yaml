@@ -176,6 +176,10 @@ importers:
       "@icm/symbols":
         specifier: workspace:*
         version: link:../symbols
+    devDependencies:
+      "@icm/spice":
+        specifier: workspace:*
+        version: link:../spice
 
   packages/platform-node:
     dependencies:
