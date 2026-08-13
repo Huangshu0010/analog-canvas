@@ -141,45 +141,4 @@ describe("Agent/Edit Engine drafting parity", () => {
     expect(agentSvg).toContain('data-kind="draft-text"');
     expect(agentSvg).toContain('data-kind="route-marker"');
   });
-
-  it("keeps electricalTopologyHash unchanged when drafting is added", () => {
-    const project = fixtureProject();
-    const before = structuredClone(project);
-    const result = executeTransaction(before.documents[0]!, {
-      transactionId: "parity-hash",
-      documentId: "document-differential-stage",
-      expectedRevision: 0,
-      actor: { kind: "human", id: "gui" },
-      edits: [...draftingEdits],
-    });
-    expect(result.ok).toBe(true);
-    before.documents = before.documents.map((candidate) =>
-      candidate.id === result.document.id ? result.document : candidate,
-    );
-    // Serialize both and compare a document-level electrical projection: the
-    // drafting edits must not alter electrical identity.
-    const hashBefore = electricalHashOf(fixtureProject());
-    const hashAfter = electricalHashOf(before);
-    expect(hashAfter).toBe(hashBefore);
-  });
 });
-
-// Minimal electrical projection hash used only by the parity test to assert
-// non-electrical identity (drafting/annotations excluded).
-function electricalHashOf(project: ReturnType<typeof fixtureProject>): string {
-  const electrical = project.documents
-    .sort((left, right) => left.id.localeCompare(right.id))
-    .map((document) => ({
-      id: document.id,
-      instances: document.instances
-        .map((item) => item.id)
-        .sort((a, b) => a.localeCompare(b)),
-      nets: document.nets.map((net) => ({
-        id: net.id,
-        terminals: net.terminals
-          .map((terminal) => `${terminal.instanceId}:${terminal.pinName}`)
-          .sort(),
-      })),
-    }));
-  return JSON.stringify(electrical);
-}

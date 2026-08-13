@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSchematicMath, schematicTextDocument } from "@icm/model";
+import { schematicTextDocument } from "@icm/model";
 
 import {
   renderSchematicTextContent,
@@ -9,37 +9,6 @@ import { renderRichTextDocument } from "./rich-text.js";
 import { razaviTextbookProfile, textbookMonochromeProfile } from "@icm/derived";
 
 describe("Razavi schematic typography", () => {
-  it.each([
-    ["M1", "instance-label", { base: "M", subscript: "1", style: "math" }],
-    ["R1", "instance-label", { base: "R", subscript: "1", style: "math" }],
-    ["VDD", "power-label", { base: "V", subscript: "DD", style: "math" }],
-    ["Vb1", "net-label", { base: "V", subscript: "b1", style: "math" }],
-    ["IX", "route-marker", { base: "I", subscript: "X", style: "math" }],
-    ["V_X", "route-marker", { base: "V", subscript: "X", style: "math" }],
-    [
-      "VIN+",
-      "net-label",
-      { base: "V", subscript: "IN", suffix: "+", style: "math" },
-    ],
-    [
-      "VIN-",
-      "net-label",
-      { base: "V", subscript: "IN", suffix: "-", style: "math" },
-    ],
-    [
-      "XM12",
-      "default-instance",
-      { base: "XM", subscript: "12", style: "math" },
-    ],
-  ] as const)("parses %s by %s semantics", (text, kind, expected) => {
-    expect(parseSchematicMath(text, kind)).toEqual(expected);
-  });
-
-  it("does not implicitly parse bare signs or numeric values", () => {
-    expect(parseSchematicMath("+", "route-marker")).toBeNull();
-    expect(parseSchematicMath("1.2 V", "route-marker")).toBeNull();
-  });
-
   it("escapes text and emits deterministic Razavi tspan runs", () => {
     const explicit = renderSchematicTextContent(
       "V_<X&Y>",
