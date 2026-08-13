@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -70,4 +70,15 @@ bounded conflict-resolution/closeout commits when required.
 
 ## Outcome
 
-Pending integration and validation.
+Merged `origin/codex/ci-contract-cleanup` into the Agent contract hardening
+branch as `3ecda02`, preserving canonical Project diagnostics, shared Wire
+intent, contact-aware junction rendering, the consolidated RichText contract,
+and the cleanup branch's CI/API reductions. Regenerated Agent API artifacts
+from the merged source contract.
+
+Focused validation passed across 16 files and 132 tests. A frozen install and
+full `pnpm ci:check` also passed with 668 unit/integration tests and 99
+Playwright tests, plus build, export, PWA, release-smoke, and performance gates.
+All six required GitHub checks passed. PR #25 merged into `main` as `e9782e4`,
+and post-merge ancestry confirmed that integration commit `3ecda02` is present
+on `origin/main`.
