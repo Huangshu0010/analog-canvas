@@ -6137,3 +6137,12 @@ contracts (WP-R1)`.
   count, `git diff --check`, and status review pending final confirmation.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(plan): classify legacy records batch 2`.
+
+## 2026-08-13 - Batch-2 archive index formatting
+
+- Target: repair the missed Prettier formatting pass on the batch-2 archive
+  index.
+- Changed areas: archive index formatting and this factual closure record.
+- Validation: repository Prettier on changed Markdown and `git diff --check`.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(plan): format batch 2 archive index`.

@@ -75,33 +75,33 @@ chore(plan): classify legacy records batch 2
 
 Each record was classified from its final body and Git path history.
 
-| Plan | Evidence | Disposition |
-| --- | --- | --- |
-| migrated MOS variant | `21b85fd` | archived, completed/none |
-| Visio MOS assets | `4d7b66b` | archived, completed/none |
-| Visio non-transistor assets | `7a38734` | archived, completed/none |
-| anchor-driven expander | `13b05c9` | archived, completed/none |
-| Razavi coordination | `12aafbb` | archived, completed/none |
-| diagnostic policy | `00ba9dd` | archived, completed/none |
-| drafting runtime repair | `6b2cfc6` | retained, completed/candidate |
-| browser crypto regression | `7aec788` | retained, completed/candidate |
-| zero-length fixture | `db0f3fa` | archived, completed/none |
-| flat-CDAC audit | `8d2cd19` | archived, completed/none |
-| four-layer Agent guidance | `6a2b8e9` | retained, completed/candidate |
-| four-terminal bulk | `16c7566` | archived, completed/none |
-| terminal presentation | `145987b` | archived, completed/none |
-| MOS pixel map | `febad41` | archived, completed/none |
-| current-arrow alignment | `f652396` | archived, completed/none |
-| existing MOS migration | `e2687a1` | retained, completed/candidate |
-| fidelity diff harness | `d0a1bf6` | archived, completed/none |
-| arrow-family unification | `2fab4a9` | archived, completed/none |
-| arrow seam/PMOS parity | `498ec27` | archived, completed/none |
-| canonical-arrow diff | `19e1e99` | retained, completed/candidate |
-| MOS/ground reference geometry | `8d2cd19` | archived, completed/none |
-| measured-arrow finalization | `21e5dc9` | archived, completed/none |
-| peripheral assets | `5f827d5` | archived, completed/none |
-| raster-authoritative MOS | `49a8ed9` | archived, completed/none |
-| symbol proportion calibration | `12aafbb` | archived, completed/none |
+| Plan                          | Evidence  | Disposition                   |
+| ----------------------------- | --------- | ----------------------------- |
+| migrated MOS variant          | `21b85fd` | archived, completed/none      |
+| Visio MOS assets              | `4d7b66b` | archived, completed/none      |
+| Visio non-transistor assets   | `7a38734` | archived, completed/none      |
+| anchor-driven expander        | `13b05c9` | archived, completed/none      |
+| Razavi coordination           | `12aafbb` | archived, completed/none      |
+| diagnostic policy             | `00ba9dd` | archived, completed/none      |
+| drafting runtime repair       | `6b2cfc6` | retained, completed/candidate |
+| browser crypto regression     | `7aec788` | retained, completed/candidate |
+| zero-length fixture           | `db0f3fa` | archived, completed/none      |
+| flat-CDAC audit               | `8d2cd19` | archived, completed/none      |
+| four-layer Agent guidance     | `6a2b8e9` | retained, completed/candidate |
+| four-terminal bulk            | `16c7566` | archived, completed/none      |
+| terminal presentation         | `145987b` | archived, completed/none      |
+| MOS pixel map                 | `febad41` | archived, completed/none      |
+| current-arrow alignment       | `f652396` | archived, completed/none      |
+| existing MOS migration        | `e2687a1` | retained, completed/candidate |
+| fidelity diff harness         | `d0a1bf6` | archived, completed/none      |
+| arrow-family unification      | `2fab4a9` | archived, completed/none      |
+| arrow seam/PMOS parity        | `498ec27` | archived, completed/none      |
+| canonical-arrow diff          | `19e1e99` | retained, completed/candidate |
+| MOS/ground reference geometry | `8d2cd19` | archived, completed/none      |
+| measured-arrow finalization   | `21e5dc9` | archived, completed/none      |
+| peripheral assets             | `5f827d5` | archived, completed/none      |
+| raster-authoritative MOS      | `49a8ed9` | archived, completed/none      |
+| symbol proportion calibration | `12aafbb` | archived, completed/none      |
 
 No record met the narrow deletion conditions. The five retained records each
 contain an explicit human-review experience signal.
