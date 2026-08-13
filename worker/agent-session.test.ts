@@ -296,12 +296,17 @@ describe("public Agent session routes", () => {
       env,
     );
     expect(response?.status).toBe(200);
-    expect(await response!.json()).toMatchObject({
+    const contract = await response!.json();
+    expect(contract).toMatchObject({
       openapi: "3.1.0",
       paths: {
         "/api/agent/claims": { post: { operationId: "agentClaimRedeem" } },
       },
     });
+    expect(Object.keys(contract.paths).sort()).toEqual([
+      "/api/agent/claims",
+      "/api/agent/sessions/{sessionId}/circuit",
+    ]);
   });
 
   it("allows only one concurrent creation for a session object", async () => {

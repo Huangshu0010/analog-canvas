@@ -6442,3 +6442,15 @@ contracts (WP-R1)`.
   smoke) passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `feat(model): make RichText and VisualAnchor canonical`.
+
+## 2026-08-13 - Public Agent OpenAPI surface
+
+- Target: publish only the two externally usable hosted Agent paths, while
+  retaining browser-owner and loopback transport as private implementation.
+- Changed areas: Agent OpenAPI declaration/artifact; deployed OpenAPI and
+  contract tests; hosted-versus-local API/session documentation; target plan.
+- Validation: focused Agent/Worker tests (41 tests), generated Agent artifact
+  write/check, docs/type/diff checks, and `pnpm verify:branch` passed (118
+  test files, 713 tests, all workspace builds, production smoke).
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `refactor(agent): publish only the external session surface`.

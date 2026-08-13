@@ -195,10 +195,10 @@ describe("Agent Circuit API v1 service", () => {
     expect(AgentCircuitRequestJsonSchema).toMatchObject({
       $schema: "https://json-schema.org/draft/2020-12/schema",
     });
-    expect(agentCircuitOpenApi.paths).not.toHaveProperty("/v1/circuit");
-    expect(agentCircuitOpenApi.paths["/v2/circuit"].post.operationId).toBe(
-      "agentCircuitV2Operation",
-    );
+    expect(Object.keys(agentCircuitOpenApi.paths).sort()).toEqual([
+      "/api/agent/claims",
+      "/api/agent/sessions/{sessionId}/circuit",
+    ]);
   });
 
   it("derives advertised typed edits from the Edit Engine schema", () => {
@@ -228,7 +228,7 @@ describe("Agent Circuit API v1 service", () => {
 
   it("publishes one reusable request and response schema in OpenAPI", () => {
     const schemas = agentCircuitOpenApi.components.schemas;
-    const paths = ["/v2/circuit"] as const;
+    const paths = ["/api/agent/sessions/{sessionId}/circuit"] as const;
     for (const path of paths) {
       expect(
         agentCircuitOpenApi.paths[path].post.requestBody.content[

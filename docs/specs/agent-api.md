@@ -56,7 +56,8 @@ API v2 has exactly four operations:
 | `transact`     | Document ID, revision, transaction ID, edits or Wire intent | applied/dry-run diff and diagnostics      |
 | `render`       | Document ID, formal/diagnostics mode, optional bounds       | bounded SVG artifact and diagnostics      |
 
-API v1 remains accepted with `capabilities/query/transact/render`. No new query
+API v1 remains accepted only by the optional local development adapter with
+`capabilities/query/transact/render`. No new query
 planner or semantic scope is added to v1. `transact` and `render` retain their
 meaning across both versions.
 
@@ -72,6 +73,11 @@ has a stable diagnostic `path` when a field can be located. Responses never
 echo bearer tokens or rejected values. Invalid bodies do not forward to the
 browser, begin an idempotency record, or change a Document revision. JSON
 syntax failures use the same envelope with no invented field path.
+
+The published web OpenAPI exposes only claim redemption and the authenticated
+session Circuit endpoint. Browser-owner control, WebSocket forwarding, local
+loopback, and relay-event routes are implementation details, not Agent API
+operations.
 
 ## Implementation ownership and evidence flow
 
@@ -285,7 +291,8 @@ add a separate overlay group. Render data is base64 encoded and rejected above
 The optional local adapter accepts JSON only, uses `Cache-Control: no-store`,
 requires a bearer token of at least 32 characters, and binds only to
 `127.0.0.1` or `::1`. It may retain `/v1/circuit` as an explicit migration
-reader beside `/v2/circuit`; the hosted Agent session publishes only the v2
+reader beside `/v2/circuit`. The hosted public OpenAPI instead exposes the
+claim endpoint and one authenticated session Circuit endpoint carrying the v2
 four-operation contract. Request bodies remain bounded and no filesystem route
 exists.
 

@@ -40,10 +40,12 @@ diagnostic `path`, then retry with a fresh `requestId`. Never retry a changed
 payload under an old `requestId`; an invalid request was not forwarded or
 committed.
 
-## Loopback example
+## Local development only: loopback example
 
-The desktop host creates a high-entropy token and starts the optional adapter.
-Clients send one JSON operation per request:
+The desktop host may start the optional loopback adapter for repository-local
+development. It is not published in the browser OpenAPI and is never part of
+the hosted Agent authorization workflow. External Agents must use the hosted
+session flow below, not this endpoint.
 
 ```http
 POST /v2/circuit HTTP/1.1
@@ -117,20 +119,14 @@ one-time code.
    result for a retry without persisting Snapshot/render payloads or reapplying
    the edit.
 
-3. **Stream events** (`GET /api/agent/sessions/{id}/events`, SSE) for
-   `editor.online`/`editor.offline`, `document.revision-changed`,
-   `operation.started`/`completed`/`failed`, and the terminal
-   `document.replaced`/`session.*` events.
-
 The browser must remain open and online; closing the tab or revoking access ends
 the session. Open/Import/Restore replaces the Project and emits
 `document.replaced`; the old token cannot read or edit the new Project — request
 a new authorized session.
 
-A transient relay failure is not a revocation. The editor reconnects the same
-in-memory authorization with bounded backoff and exposes a manual **Reconnect**
-action. Wait for `editor.online`; never replay an uncertain write under a new
-`requestId`.
+A transient relay failure is not a revocation. Do not replay an uncertain write
+under a new `requestId`; repeat the original request ID to recover its terminal
+result, or request a fresh Snapshot after the browser is available again.
 
 Closing the Connect Agent panel does not pause, revoke, or disconnect the live
 session. If the Agent loses its bearer, the user may choose **Rotate Agent

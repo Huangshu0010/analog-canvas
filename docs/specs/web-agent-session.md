@@ -101,21 +101,18 @@ a different Project.
 
 ## Transport resource model
 
-The minimum resources (exact paths are frozen in WP-WA1):
+The published external-Agent resources are deliberately limited to:
 
 ```text
 GET    /api/agent/openapi.json             public machine-readable contract
-POST   /api/agent/sessions                 browser creates a session
 POST   /api/agent/claims                   Agent exchanges claim from JSON body
 POST   /api/agent/sessions/{id}/circuit    Agent sends one Circuit API request
-GET    /api/agent/sessions/{id}/events     Agent receives bounded SSE events
-DELETE /api/agent/sessions/{id}            Agent disconnects its capability
-WS     /api/agent/sessions/{id}/editor     browser command/result channel
-POST   /api/agent/sessions/{id}/control    browser pause/resume/revoke/replace
 ```
 
-- Browser creation and WebSocket authentication use the `editorSecret` returned
-  over the session-creation response.
+- Browser session creation, control/revocation, WebSocket forwarding, and
+  relay event plumbing are private implementation routes. They are not part of
+  the external Agent contract and are intentionally absent from the published
+  OpenAPI, so an Agent never receives or needs an `editorSecret`.
 - A successful claim returns `sessionId`, `projectId`, and the authorized
   `documentIds` with the bearer token, so an Agent never guesses Project or
   Document identity from examples or UI labels.
