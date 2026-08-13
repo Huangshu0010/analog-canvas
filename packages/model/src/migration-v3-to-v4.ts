@@ -76,7 +76,11 @@ function deviceClassFor(instance: Record_): string | undefined {
   return symbolId ? SYMBOL_DEVICE_CLASS[symbolId] : undefined;
 }
 
-function typedBinding(instance: Record_, deviceClass: string | undefined) {
+function typedBinding(
+  instance: Record_,
+  deviceClass: string | undefined,
+  childCellNames: ReadonlyMap<string, string>,
+) {
   const evidence = isRecord(instance.binding) ? instance.binding : undefined;
   const kind = asString(evidence?.kind);
   const name = asString(evidence?.name);
@@ -91,6 +95,21 @@ function typedBinding(instance: Record_, deviceClass: string | undefined) {
   }
   if (kind === "primitive" && deviceClass) {
     return { kind: "primitive", deviceClass };
+  }
+  // Schema-v3 importer fixtures recorded only a stable child document id in
+  // properties. Preserve that explicit link when the referenced document is
+  // present; do not guess a child by display name.
+  const properties = isRecord(instance.properties) ? instance.properties : {};
+  const legacyChildDocumentId = asString(properties["spice.childDocumentId"]);
+  const childName = legacyChildDocumentId
+    ? childCellNames.get(legacyChildDocumentId)
+    : undefined;
+  if (legacyChildDocumentId && childName) {
+    return {
+      kind: "subcircuit",
+      childDocumentId: legacyChildDocumentId,
+      name: childName,
+    };
   }
   if (
     deviceClass &&
@@ -130,7 +149,10 @@ function parameterRecord(
   return parameters;
 }
 
-function migrateInstances(instances: unknown[]): unknown[] {
+function migrateInstances(
+  instances: unknown[],
+  childCellNames: ReadonlyMap<string, string>,
+): unknown[] {
   const usedReferences = new Set<string>();
   const nextByPrefix = new Map<string, number>();
 
@@ -165,7 +187,7 @@ function migrateInstances(instances: unknown[]): unknown[] {
     }
     usedReferences.add(reference.toLowerCase());
 
-    const binding = typedBinding(value, deviceClass);
+    const binding = typedBinding(value, deviceClass, childCellNames);
     return {
       ...value,
       netlist: {
@@ -180,8 +202,11 @@ function migrateInstances(instances: unknown[]): unknown[] {
 export function migrateV3ToV4(input: Record_): Record_ {
   const usedCellNames = new Set<string>();
   const documents = Array.isArray(input.documents) ? input.documents : [];
-  const migratedDocuments = documents.map((value, index) => {
-    if (!isRecord(value)) return value;
+  const documentMetadata: Array<{
+    id: string | undefined;
+    cellName: string | undefined;
+  }> = documents.map((value, index) => {
+    if (!isRecord(value)) return { id: undefined, cellName: undefined };
     const existingNetlist = isRecord(value.netlist) ? value.netlist : undefined;
     const sourceBinding = isRecord(value.sourceBinding)
       ? value.sourceBinding
@@ -195,17 +220,34 @@ export function migrateV3ToV4(input: Record_): Record_ {
       sanitizeIdentifier(preferredName, `Cell_${index + 1}`),
       usedCellNames,
     );
+    return {
+      id: asString(value.id),
+      cellName,
+    };
+  });
+  const childCellNames = new Map<string, string>();
+  for (const metadata of documentMetadata) {
+    if (metadata.id && metadata.cellName) {
+      childCellNames.set(metadata.id, metadata.cellName);
+    }
+  }
+  const migratedDocuments = documents.map((value, index) => {
+    if (!isRecord(value)) return value;
+    const existingNetlist = isRecord(value.netlist) ? value.netlist : undefined;
     const ports = Array.isArray(value.ports) ? value.ports : [];
     const portOrder = Array.isArray(existingNetlist?.portOrder)
       ? existingNetlist.portOrder
       : ports.flatMap((port) =>
           isRecord(port) && asString(port.id) ? [asString(port.id)!] : [],
         );
+    const metadata = documentMetadata[index];
+    const cellName = metadata?.cellName ?? `Cell_${index + 1}`;
     return {
       ...value,
       netlist: { name: cellName, portOrder },
       instances: migrateInstances(
         Array.isArray(value.instances) ? value.instances : [],
+        childCellNames,
       ),
     };
   });

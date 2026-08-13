@@ -1,125 +1,92 @@
 {
+  "schemaVersion": 3,
+  "id": "project-hierarchy-navigation",
+  "name": "Hierarchy Navigation Fixture",
+  "source": {
+    "entry": null,
+    "dialect": "none",
+    "sourcePolicy": "copy",
+    "files": []
+  },
+  "symbolLibrary": {
+    "id": "razavi-symbols",
+    "version": "1",
+    "hash": "razavi-reference-v1"
+  },
+  "topDocumentId": "document-top",
   "documents": [
     {
-      "annotations": [],
-      "constraints": [],
-      "drafting": {
-        "objects": []
-      },
       "id": "document-top",
+      "name": "Top Cell",
+      "revision": 0,
+      "sourceStatus": "in-sync",
+      "ports": [],
       "instances": [
         {
           "id": "XCHILD",
-          "netlist": {
-            "parameters": {},
-            "reference": "X1"
-          },
+          "symbolId": "port",
           "placement": {
-            "mirror": "none",
-            "position": {
-              "x": 300,
-              "y": 240
-            },
-            "rotation": 0
+            "position": { "x": 300, "y": 240 },
+            "rotation": 0,
+            "mirror": "none"
           },
-          "properties": {},
-          "symbolId": "port"
-        }
-      ],
-      "junctions": [],
-      "layoutGroups": [],
-      "name": "Top Cell",
-      "netlist": {
-        "name": "Top_Cell",
-        "portOrder": []
-      },
-      "nets": [],
-      "noConnects": [],
-      "ports": [],
-      "presentation": {
-        "compactness": "normal",
-        "grid": 10,
-        "styleProfileId": "razavi-textbook-v1"
-      },
-      "revision": 0,
-      "routes": [],
-      "sourceStatus": "in-sync"
-    },
-    {
-      "annotations": [],
-      "constraints": [],
-      "drafting": {
-        "objects": []
-      },
-      "id": "document-child",
-      "instances": [
-        {
-          "id": "RCHILD",
-          "netlist": {
-            "binding": {
-              "deviceClass": "resistor",
-              "kind": "primitive"
-            },
-            "parameters": {},
-            "reference": "R1"
-          },
-          "placement": {
-            "mirror": "none",
-            "position": {
-              "x": 320,
-              "y": 240
-            },
-            "rotation": 0
-          },
-          "properties": {},
-          "symbolId": "resistor"
-        }
-      ],
-      "junctions": [],
-      "layoutGroups": [],
-      "name": "Bias Child Cell",
-      "netlist": {
-        "name": "Bias_Child_Cell",
-        "portOrder": [
-          "port-child-p"
-        ]
-      },
-      "nets": [],
-      "noConnects": [],
-      "ports": [
-        {
-          "direction": "passive",
-          "id": "port-child-p",
-          "name": "P",
-          "position": {
-            "x": 120,
-            "y": 240
+          "properties": {
+            "spice.childDocumentId": "document-child"
           }
         }
       ],
-      "presentation": {
-        "compactness": "normal",
-        "grid": 10,
-        "styleProfileId": "razavi-textbook-v1"
-      },
-      "revision": 0,
+      "nets": [],
       "routes": [],
-      "sourceStatus": "in-sync"
+      "junctions": [],
+      "annotations": [],
+      "presentation": {
+        "styleProfileId": "razavi-textbook-v1",
+        "grid": 10,
+        "compactness": "normal"
+      },
+      "layoutGroups": [],
+      "constraints": [],
+      "noConnects": [],
+      "drafting": { "objects": [] }
+    },
+    {
+      "id": "document-child",
+      "name": "Bias Child Cell",
+      "revision": 0,
+      "sourceStatus": "in-sync",
+      "ports": [
+        {
+          "id": "port-child-p",
+          "name": "P",
+          "direction": "passive",
+          "position": { "x": 120, "y": 240 }
+        }
+      ],
+      "instances": [
+        {
+          "id": "RCHILD",
+          "symbolId": "resistor",
+          "placement": {
+            "position": { "x": 320, "y": 240 },
+            "rotation": 0,
+            "mirror": "none"
+          },
+          "properties": {}
+        }
+      ],
+      "nets": [],
+      "routes": [],
+      "junctions": [],
+      "annotations": [],
+      "presentation": {
+        "styleProfileId": "razavi-textbook-v1",
+        "grid": 10,
+        "compactness": "normal"
+      },
+      "layoutGroups": [],
+      "constraints": [],
+      "noConnects": [],
+      "drafting": { "objects": [] }
     }
-  ],
-  "id": "project-hierarchy-navigation",
-  "name": "Hierarchy Navigation Fixture",
-  "schemaVersion": 8,
-  "source": {
-    "dialect": "none",
-    "entry": null,
-    "files": [],
-    "sourcePolicy": "copy"
-  },
-  "symbolLibrary": {
-    "hash": "razavi-reference-v1",
-    "id": "razavi-symbols",
-    "version": "1"
-  },
-  "topDocumentId": "document-top"
+  ]
 }

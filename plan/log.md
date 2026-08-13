@@ -6558,3 +6558,14 @@ contracts (WP-R1)`.
   passed.
 - Commit status: ready to commit on `codex/canonical-junction-nodes` as
   `fix(connectivity): canonicalize junction node presentation`.
+
+## 2026-08-14 - Restore ordinary Port component contract
+
+- Target: revert the unrequested visual first-class Port replacement while
+  preserving ordinary Port creation for the GUI and browser Agent.
+- Changed areas: symbol catalog/palette, edit and Agent API contracts, legacy
+  rendering, migration fixtures, generated artifacts, and focused regressions.
+- Validation: static checks, 724 unit tests, visual and Agent artifact checks,
+  and the imported-child search E2E passed locally.
+- Commit status: committed on `codex/restore-port-symbols`; remote CI repair
+  adds an explicit schema-v3 child-document-id reader migration.

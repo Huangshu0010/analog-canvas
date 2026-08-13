@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -43,6 +43,10 @@ Cell hierarchy behavior under another name.
    to the symbol-based Port contract; regenerate only deterministic artifacts.
 4. Prove that the Agent can place and wire existing Port symbols through the
    ordinary transaction path, with no hierarchy surface.
+5. Repair only the historical schema-v3 `spice.childDocumentId` migration
+   required for the existing compatibility fixture to retain its already
+   supported child-document link after the visual-Port rollback. This is a
+   reader compatibility fix, not a new hierarchy feature or API.
 
 ## Validation
 
@@ -61,5 +65,19 @@ revert(model): restore Port symbols as the sole Port contract
 
 ## Outcome
 
-At close-out, record removed contracts, preserved Agent path and validation,
-then set `status: completed`.
+Reverted the unrequested visual first-class Port migration and restored the
+ordinary `port` / `port-filled` component and terminal contract in the GUI,
+renderer, fixtures, and Agent artifacts. The Agent is covered creating a Port
+through standard `add_instance`; no Port-specific Agent edit remains. Existing
+document Port data remains only for legacy hierarchy rendering, without a new
+visual path or API.
+
+Remote CI exposed one related historic-reader gap: schema-v3 compatibility
+fixtures stored an explicit `spice.childDocumentId` but schema-v3-to-v4 did not
+carry it into the existing typed subcircuit binding. The migration now preserves
+only valid explicit ids, never infers a child by name, and the fixture remains a
+schema-v3 migration input. This restores the existing search-navigation test;
+it does not add hierarchy authoring behavior.
+
+Validation: `pnpm ci:static`; `pnpm test:local` (724 tests); focused migration
+and imported-child search E2E; Agent artifact check and visual Golden check.
