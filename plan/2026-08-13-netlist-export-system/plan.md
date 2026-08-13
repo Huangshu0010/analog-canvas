@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -594,9 +594,32 @@ record.
 
 ## Outcome
 
-At implementation close-out, record the accepted contracts, actual package and
-schema decisions, delivered formats, unsupported cases, validation evidence,
-and commit/PR status. Set `status: completed` only after both editor exports and
-all required validation are complete. Set `experience: candidate` only if the
-work exposes a repeated or contradicted project rule; otherwise leave it as
-`none`.
+Delivered a deterministic, program-only structural netlist pipeline. Project
+schema v4 persists explicit Cell names/Port order and Instance references,
+typed binding targets, and raw parameters; migration/import write those facts
+without inventing a PDK model. The reviewed Symbol registry owns device class,
+reference prefix, pin order, target policy, and required parameters.
+
+The new `@icm/netlist` package validates the reachable hierarchy and produces a
+dependency-first dialect-neutral IR. It assigns stable transient names only to
+unnamed local Nets and blocks invalid/missing identifiers, globals, ports,
+pins, references, targets, parameters, child mappings, cycles, and unsupported
+devices. Pure printers emit structural SPICE `.spi` and Spectre `.scs` files
+with deterministic ordering and no `.include`/`include`, corner, stimulus,
+analysis, save, or deck `.end` inference.
+
+The editor now assigns references on insertion and copy, exposes Cell and
+Instance netlist properties, and offers both downloads from File > Export.
+Export errors prevent download and appear as clickable diagnostics that locate
+the affected Cell or electrical object. The UI explicitly labels the output as
+a structural design netlist without simulation setup or PDK includes.
+
+Validation completed from a frozen lockfile with `pnpm ci:check`: formatting,
+pinned references, workspace typecheck, 113 unit-test files / 693 tests,
+release and production smoke checks, performance budgets, export/PWA goldens,
+and 101 Playwright tests all passed. Generated SPICE is reparsed by the current
+SPICE frontend; Spectre uses deterministic grammar-focused goldens because no
+licensed Spectre executable is available in this environment. Simulation-deck
+profiles and ordered external-subcircuit interfaces remain intentionally
+deferred to WP7. All implementation work is committed on
+`codex/netlist-export-system`; the target closes with `experience: none`.

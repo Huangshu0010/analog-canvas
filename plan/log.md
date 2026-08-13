@@ -5853,3 +5853,23 @@ contracts (WP-R1)`.
   passed.
 - Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
   `docs(plan): prune routine completed records`.
+
+## 2026-08-13 - Deterministic SPICE and Spectre netlist export
+
+- Target: export the persisted schematic electrical model as deterministic
+  structural SPICE `.spi` or Spectre `.scs` without AI, geometry inference, or
+  guessed PDK/simulation setup.
+- Changed areas: accepted netlist spec and ADR; Project schema v4 migration;
+  reviewed Symbol netlist registry; typed Cell/Instance editor operations;
+  new `@icm/netlist` validation, IR, diagnostics, and pure printers; File-menu
+  downloads, clickable blocking diagnostics, and copy-safe reference allocation.
+- Validation: frozen-lockfile install; final `pnpm ci:check` green; 113 unit
+  files / 693 tests; release/production smoke and performance/golden checks;
+  101 Playwright scenarios including two-format hierarchical downloads and
+  blocked missing-model diagnostics; `git diff --check` clean.
+- Limitation: output is a structural library, not a runnable simulation deck;
+  PDK includes/corners/analyses remain deferred, external subcircuits without a
+  persisted ordered interface are blocked, and Spectre validation is
+  grammar/golden based because no licensed executable is available.
+- Commit status: implementation and target close-out committed on
+  `codex/netlist-export-system`; ready to push for review.
