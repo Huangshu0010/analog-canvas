@@ -6,7 +6,7 @@
 // originPx. Outputs IoU scores, miss/extra counts, and side-by-side diff PNGs.
 //
 // Usage:
-//   node scripts/razavi-fidelity-diff.mjs [device...] [--threshold 160] [--out dir]
+//   node tools/calibration/razavi/fidelity-diff.mjs [device...] [--threshold 160] [--out dir]
 //
 //   device: any ID registered in
 //           fixtures/visual-reference/razavi-reference-v1/fidelity-targets.json
@@ -20,23 +20,23 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createEmptyProject } from "../packages/model/dist/index.js";
+import { createEmptyProject } from "../../../packages/model/dist/index.js";
 import {
   builtInSymbols,
   getRazaviCatalogSymbol,
   InMemorySymbolResolver,
-} from "../packages/symbols/dist/index.js";
-import { renderDocumentSvg } from "../packages/render-svg/dist/index.js";
-import { rasterizeSvgBytes } from "../packages/exporters/dist/node.js";
+} from "../../../packages/symbols/dist/index.js";
+import { renderDocumentSvg } from "../../../packages/render-svg/dist/index.js";
+import { rasterizeSvgBytes } from "../../../packages/exporters/dist/node.js";
 import {
   compareDevice,
   loadReferenceRaster,
   encodeReportRasters,
-} from "./lib/razavi-fidelity.mjs";
-import { decodePng } from "./lib/png-io.mjs";
-import { loadRazaviReferenceAuthority } from "./lib/razavi-reference-authority.mjs";
+} from "../../../scripts/lib/razavi-fidelity.mjs";
+import { decodePng } from "../../../scripts/lib/png-io.mjs";
+import { loadRazaviReferenceAuthority } from "../../../scripts/lib/razavi-reference-authority.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const referenceRoot = resolve(
   root,
   "fixtures/visual-reference/razavi-reference-v1",

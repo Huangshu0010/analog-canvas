@@ -8,14 +8,14 @@
 // at anti-aliased edges, so it never acts as an absolute visual gate.
 //
 // Usage:
-//   node scripts/razavi-text-fidelity-diff.mjs --reference C:/.../ota.png
-//     [--font Arial] [--subscript-face upright-bold] [--out C:/.../text-diff]
+//   node tools/calibration/razavi/text-fidelity-diff.mjs --reference C:/.../ota.png
+//     [--font Arial] [--subscript-face upright-bold] [--out output/calibration/razavi-text]
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { chromium } from "@playwright/test";
-import { rasterizeSvgBytes } from "../packages/exporters/dist/node.js";
+import { rasterizeSvgBytes } from "../../../packages/exporters/dist/node.js";
 import {
   binarize,
   composeDiff,
@@ -24,7 +24,7 @@ import {
   encodePng,
   iou,
   toLuminance,
-} from "./lib/png-io.mjs";
+} from "../../../scripts/lib/png-io.mjs";
 
 const args = process.argv.slice(2);
 const referenceIndex = args.indexOf("--reference");
@@ -36,7 +36,7 @@ const outIndex = args.indexOf("--out");
 const outDirectory = resolve(
   outIndex >= 0 && args[outIndex + 1]
     ? args[outIndex + 1]
-    : "C:/Users/90590/AppData/Local/Temp/icm-razavi-text-diff",
+    : "output/calibration/razavi-text",
 );
 const engineIndex = args.indexOf("--engine");
 const engine = engineIndex >= 0 ? args[engineIndex + 1] : "browser";

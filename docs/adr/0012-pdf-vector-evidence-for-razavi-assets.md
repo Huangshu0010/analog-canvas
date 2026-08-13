@@ -39,7 +39,7 @@ The tool boundaries are mandatory:
 1. `tools/pdf-vector-extract/` parses the PDF and creates evidence.
 2. A family generator converts pinned evidence to Symbol DSL and supplies
    electrical pin anchors explicitly.
-3. `scripts/razavi-fidelity-diff.mjs` compares the rendered Symbol with the
+3. `tools/calibration/razavi/fidelity-diff.mjs` compares the rendered Symbol with the
    witness and never edits either source.
 
 This decision is applied one reviewed component at a time. It does not
