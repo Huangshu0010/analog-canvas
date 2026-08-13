@@ -6178,5 +6178,6 @@ contracts (WP-R1)`.
 - Validation: focused unit tests (75), targeted browser tests (5), Agent API
   artifact check, `pnpm verify:branch` (675 tests plus build/smoke), and
   `git diff --check` passed.
-- Commit status: ready to commit on `codex/unified-electrical-contact` as
-  `refactor(connectivity): unify electrical contact authoring`.
+- Commit status: implementation committed on
+  `codex/unified-electrical-contact` as `fe4c4ee`; archival recorded in the
+  following branch-maintenance commit.
