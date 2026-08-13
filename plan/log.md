@@ -6051,3 +6051,19 @@ contracts (WP-R1)`.
 - Validation: targeted Markdown formatting and `git diff --check` passed.
 - Commit status: ready to commit on `codex/capitalize-citation-title` as
   `docs(readme): capitalize citation title`.
+
+## 2026-08-13 - Test-contract and netlist delivery integration
+
+- Target: review and merge the test-contract deduplication, then combine it
+  with the hidden-surface deterministic netlist branch for final delivery.
+- Changed areas: PR #32 removed same-behavior test duplication without product
+  changes; merge `3594c01` brought its retained contract ownership into the
+  netlist branch while preserving the hidden web-surface assertion and all
+  lower-level netlist tests.
+- Validation: test-contract PR six-check GitHub gate; 49 focused combined unit
+  tests; two focused overlap browser scenarios; frozen install; canonical
+  `pnpm ci:check` with 112 Vitest files / 675 tests, builds, performance,
+  goldens, production/release smoke, and 96 Playwright scenarios;
+  `git diff --check` clean.
+- Commit status: PR #32 merged to `main` as `6efbf3d`; integrated netlist PR
+  #31 is ready for its refreshed remote checks and final merge.
