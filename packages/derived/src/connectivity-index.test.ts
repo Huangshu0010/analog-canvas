@@ -1,19 +1,7 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
-import {
-  createEmptyProject,
-  parseProject,
-  type CircuitProject,
-} from "@icm/model";
-import {
-  InMemorySymbolResolver,
-  builtInSymbols,
-  createProjectSymbolResolver,
-} from "@icm/symbols";
+import { createEmptyProject, type CircuitProject } from "@icm/model";
+import { InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
-import { deriveFlightlines, endpointKey } from "./index.js";
 import { buildProjectConnectivityIndex } from "./connectivity-index.js";
 
 // Minimal two-pin symbol with known pin names L/R; used for the hierarchy test
@@ -46,77 +34,8 @@ const dual = {
   aliases: [],
 };
 
-function loadFixtureProject(name: string): CircuitProject {
-  return parseProject(
-    readFileSync(
-      resolve(process.cwd(), `fixtures/projects/${name}/project.icproj.json`),
-      "utf8",
-    ),
-  );
-}
-
-/**
- * Reduce a flightline to its partition-invariant canonical form: from/to
- * ordered by endpoint key, points carried with that order, distance kept.
- */
-function canonicalFlightline(
-  line: ReturnType<typeof deriveFlightlines>[number],
-) {
-  const swap =
-    endpointKey(line.from).localeCompare(endpointKey(line.to), "en") > 0;
-  const from = swap ? line.to : line.from;
-  const to = swap ? line.from : line.to;
-  const fromPoint = swap ? line.toPoint : line.fromPoint;
-  const toPoint = swap ? line.fromPoint : line.toPoint;
-  return {
-    endpoints: `${endpointKey(from)}|${endpointKey(to)}`,
-    distance: line.distance,
-    fromPoint,
-    toPoint,
-  };
-}
-
-function sortFlightlines(
-  lines: readonly ReturnType<typeof deriveFlightlines>[number][],
-) {
-  return lines
-    .map(canonicalFlightline)
-    .sort(
-      (a, b) =>
-        a.endpoints.localeCompare(b.endpoints, "en") || a.distance - b.distance,
-    );
-}
-
 describe("ProjectConnectivityIndex", () => {
-  describe("flightline parity with deriveFlightlines", () => {
-    // The index wraps the existing derivation and normalizes direction/id
-    // (ADR 0013). Content (endpoint pair + distance + points) must match the
-    // raw derivation on every fixture.
-    for (const fixture of [
-      "phase-1-manual",
-      "phase-2-imported-rlc",
-      "phase-3-routing",
-      "phase-5-dense-analog",
-    ]) {
-      it(`matches deriveFlightlines content on ${fixture}`, () => {
-        const project = loadFixtureProject(fixture);
-        const resolver = createProjectSymbolResolver(project, builtInSymbols);
-        const index = buildProjectConnectivityIndex(project, resolver);
-
-        for (const document of project.documents) {
-          const docIndex = index.documents.get(document.id)!;
-          const indexFlightlines = [...docIndex.nets.values()].flatMap(
-            (net) => net.flightlines,
-          );
-          expect(sortFlightlines(indexFlightlines)).toEqual(
-            sortFlightlines(deriveFlightlines(document, resolver)),
-          );
-        }
-      });
-    }
-  });
-
-  describe("flightline id normalization (ADR 0013, resolves WP-R0)", () => {
+  describe("partition-invariant flightline identity", () => {
     function buildPartitionProject(
       partition: "single" | "split",
     ): CircuitProject {

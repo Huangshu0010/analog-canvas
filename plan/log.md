@@ -5928,6 +5928,19 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/ci-contract-cleanup` as
   `refactor(rich-text): consolidate the active text contract`.
 
+## 2026-08-13 - Test contract deduplication
+
+- Target: remove same-source, migration-only, and cross-layer duplicate tests
+  while retaining one primary gate for every current behavior.
+- Changed areas: semantic-text model/renderer tests, connectivity-index parity
+  gates, Agent host/parity tests, SVG drafting coverage, and non-netlist editor
+  browser scenarios. No product or netlist-export implementation changed.
+- Validation: 107 Vitest files / 654 tests with two workers; 81 focused tests;
+  three focused Playwright scenarios; 95-test Playwright discovery; typecheck,
+  Prettier, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/test-contract-dedup` as
+  `refactor(test): deduplicate behavioral contracts`.
+
 ## 2026-08-13 - CI cleanup and Agent contract integration
 
 - Target: combine `codex/ci-contract-cleanup` with Agent contract hardening in

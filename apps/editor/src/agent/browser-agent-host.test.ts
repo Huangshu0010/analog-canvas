@@ -134,38 +134,6 @@ describe("BrowserAgentHost + Agent Circuit service", () => {
     expect(render.artifact.sha256).toBe(sha256Hex(directSvg));
   });
 
-  it("rejects a stale revision and reports the current revision", () => {
-    const { controller, service } = setup();
-    const documentId = controller.activeDocumentId;
-
-    service.handle({
-      apiVersion: "2.0",
-      requestId: "r-tx1",
-      operation: "transact",
-      documentId,
-      transactionId: "tx-1",
-      expectedRevision: 0,
-      edits: [{ kind: "add_instance", instance: instance("R1") }],
-    });
-
-    const stale = service.handle({
-      apiVersion: "2.0",
-      requestId: "r-tx2",
-      operation: "transact",
-      documentId,
-      transactionId: "tx-2",
-      expectedRevision: 0, // behind the current revision 1
-      edits: [{ kind: "add_instance", instance: instance("R2") }],
-    });
-
-    expect(stale.ok).toBe(false);
-    if (!stale.ok) {
-      expect(stale.error.code).toBe("STALE_REVISION");
-      expect(stale.revision).toBe(1);
-    }
-    expect(controller.document.instances).not.toContainEqual(instance("R2"));
-  });
-
   it("keeps the old host fenced off after whole-Project replacement", () => {
     const { controller, host, service } = setup();
     const oldDocumentId = controller.activeDocumentId;
