@@ -21,7 +21,7 @@
             "place_instance": 14,
             "place_port": 3,
             "set_route_points": 40,
-            "upsert_annotation": 19
+            "upsert_schematic_annotation": 19
           },
           "finalDiagnostics": {},
           "renderBytes": 18559,
@@ -51,7 +51,7 @@
             "place_instance": 4,
             "place_port": 5,
             "set_route_points": 24,
-            "upsert_annotation": 11
+            "upsert_schematic_annotation": 11
           },
           "finalDiagnostics": {},
           "renderBytes": 12451,
@@ -71,7 +71,7 @@
             "place_instance": 14,
             "place_port": 10,
             "set_route_points": 58,
-            "upsert_annotation": 32
+            "upsert_schematic_annotation": 32
           },
           "finalDiagnostics": {},
           "renderBytes": 28903,

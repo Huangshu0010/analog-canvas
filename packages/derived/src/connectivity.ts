@@ -8,6 +8,7 @@ import {
   netEndpoints,
   resolveEndpointPoint,
 } from "./endpoint.js";
+import { deriveDocumentContactEvidence } from "./contact.js";
 import { resolveNetLabelBindings } from "./net-label.js";
 
 export interface VisibleConnectivityNode {
@@ -95,6 +96,17 @@ export function deriveNetConnectivity(
     const from = endpointKey(route.from);
     const to = endpointKey(route.to);
     if (nodes.has(from) && nodes.has(to)) sets.union(from, to);
+  }
+  const contacts = deriveDocumentContactEvidence(document, resolver);
+  for (const contact of contacts.contacts.filter(
+    (candidate) => candidate.netId === net.id,
+  )) {
+    const keys = contact.endpoints
+      .map(endpointKey)
+      .filter((key) => nodes.has(key));
+    const first = keys[0];
+    if (!first) continue;
+    for (const key of keys.slice(1)) sets.union(first, key);
   }
   const labeledEndpoints = new Map<string, string[]>();
   for (const binding of resolveNetLabelBindings(document, resolver, net.id)) {

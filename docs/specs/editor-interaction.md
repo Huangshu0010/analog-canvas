@@ -105,7 +105,7 @@ enter formal export.
 Fit and zoom are direct canvas controls and shortcuts, so a second `View` menu
 must not duplicate them. Formal SVG/PNG/PDF export remains grouped in `File`.
 
-## Text, markup, and peripheral editing
+## Text and peripheral editing
 
 This section is `proposed` (ADR 0010); interaction lands in WP-A3/A4. It
 freezes the V1 tool surface and command mapping.
@@ -133,12 +133,13 @@ the line, `Ctrl+Enter` commits, `Escape` cancels or exits. A floating format
 bar is placed completely above or below its target when space allows. Its
 opaque frame owns pointer and wheel input across its complete bounds, so
 editing cannot select, move, or draw on underlying canvas objects. The bar acts
-on the selection: italic `Ctrl+I`, bold `Ctrl+B`, subscript
-`Ctrl+=`, superscript `Ctrl+Shift+=`, and a fraction button. Font size uses a
-token dropdown (caption/body/label) plus +/- levels, never an unbounded numeric
-field. The import shorthand (`M_{1}`, `\it{...}`, `\frac{a}{b}`) is parse-on-
-submit input convenience only; the persisted truth is the canonical RichText
-AST.
+on the selection with italic, bold, subscript, and superscript buttons;
+`Ctrl+I` and `Ctrl+B` are keyboard aliases. Font size uses bounded +/- levels,
+never an unbounded numeric field. Formatting is persisted directly as the
+canonical RichText AST. Text that resembles former markup commands, including
+`M_{1}` and `\frac{a}{b}`, remains literal when entered in this editor. A
+read-only semantic fallback for annotations that predate explicit RichText
+content does not constitute an authoring input language.
 
 Route markers, arrows, leaders, and callouts use the shared `VisualAnchor`: a
 current marker dragged along a Route updates `segmentIndex/t`, a normal drag

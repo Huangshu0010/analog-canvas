@@ -332,7 +332,15 @@ export const agentCircuitOpenApi = {
       agentClaimResponse: {
         type: "object",
         additionalProperties: false,
-        required: ["ok", "sessionId", "agentToken", "tokenExpiresAt", "scopes"],
+        required: [
+          "ok",
+          "sessionId",
+          "agentToken",
+          "tokenExpiresAt",
+          "scopes",
+          "projectId",
+          "documentIds",
+        ],
         properties: {
           ok: { type: "boolean", const: true },
           sessionId: { type: "string", minLength: 1 },
@@ -340,6 +348,12 @@ export const agentCircuitOpenApi = {
           tokenExpiresAt: { type: "integer", minimum: 0 },
           scopes: {
             type: "array",
+            items: { type: "string", minLength: 1 },
+          },
+          projectId: { type: "string", minLength: 1 },
+          documentIds: {
+            type: "array",
+            minItems: 1,
             items: { type: "string", minLength: 1 },
           },
         },

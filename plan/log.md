@@ -1,5 +1,47 @@
 # Maintenance Log
 
+## 2026-08-13 - Remove compatibility re-export layers
+
+- Target: make wiring, style, label-placement, and markup callers depend on
+  their actual contract owners rather than private compatibility modules.
+- Changed areas: removed two editor wiring shims and five render-svg wrapper or
+  wrapper-test modules; redirected imports to Edit Engine, Derived, and model.
+- Coverage decision: moved the unique wiring tests to Edit Engine and merged
+  unique style/label assertions into Derived; no behavior coverage was dropped.
+- Validation: removed-path reference audit; 67 focused tests; workspace
+  typecheck; production build; full formatting check; and `git diff --check`
+  passed.
+- Commit status: prepared as `refactor: remove compatibility re-exports` on
+  `codex/ci-contract-cleanup`.
+
+## 2026-08-13 - Retire legacy annotation edit protocol
+
+- Target: keep only the explicit schematic-annotation edit protocol and reject
+  the earlier ambiguous edit names without compatibility.
+- Changed areas: Edit Engine schema/runtime, Agent capability and generated API
+  artifacts, editor/routing/recipe callers, fixtures, tests, and normative
+  protocol documentation.
+- Contract preservation: the current remove path now includes the layout-intent
+  reference protection that previously existed only in the legacy branch.
+- Validation: 68 focused cross-package tests plus 19 focused Edit Engine tests;
+  Agent API artifact check; typecheck; production build; formatting;
+  `git diff --check`; and absence audit outside explicit negative tests passed.
+- Commit status: prepared as
+  `refactor(api): retire legacy annotation edits` on
+  `codex/ci-contract-cleanup`.
+
+## 2026-08-13 - Scope CI by changed surface
+
+- Target: keep required PR check names while avoiding release and browser work
+  for documentation-only changes.
+- Changed areas: CI change classifier and conditional lightweight/full paths
+  for static, unit, release, and both browser-shard checks.
+- Validation: workflow Prettier parse/check, pull-request and push path-policy
+  review, and `git diff --check` passed.
+- Commit status: prepared as
+  `ci: skip heavy gates for documentation-only changes` on
+  `codex/ci-contract-cleanup`.
+
 ## 2026-08-13 - Expand routine plan record pruning
 
 - Target: reduce archived plan-body bloat beyond the initial 14-record sweep
@@ -5672,7 +5714,7 @@ contracts (WP-R1)`.
   tests; 93/95 browser tests passed on the initial parallel run, with both
   stale persistent-tool test assumptions corrected and passing individually;
   six directly affected browser regressions passed together; `git diff
-  --check` clean.
+--check` clean.
 - Commit status: ready to commit on
   `codex/persistent-authoring-input-safety` as
   `feat(editor): remove guides and add clear and refresh`.
@@ -5742,7 +5784,7 @@ contracts (WP-R1)`.
 - Validation: 6 host-mode integration tests (4 ops, undo parity, render-hash
   equality, stale revision, unknown document, project replacement); 29 adapter
   store-mode tests preserved; workspace `typecheck` clean; Prettier; `git diff
-  --check` clean.
+--check` clean.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `feat(agent): in-browser Agent host without network (WP-WA3)`.
 
@@ -5853,3 +5895,35 @@ contracts (WP-R1)`.
   passed.
 - Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
   `docs(plan): prune routine completed records`.
+
+## 2026-08-13 - Agent authoring and evidence contract hardening
+
+- Target: remove Agent-side guesses for identity, wiring, contact, diagnostics,
+  and transient session recovery while retaining the browser as authority.
+- Changed areas: canonical coincident-contact and Project-diagnostic derivation;
+  shared GUI/Agent `wireIntent` planner; claim Project/Document bootstrap;
+  bounded same-session WebSocket replacement; reconnect UI; generated OpenAPI
+  artifacts; accepted Agent/session/connectivity specifications.
+- Validation: focused 99-test cross-package suite; frozen install; final local
+  `pnpm ci:check` green with 679 unit/integration and 99 Playwright tests plus
+  build, export, PWA, release smoke, and performance gates. An initial remote
+  Linux-only E2E typing failure was repaired; PR #25 then passed Static,
+  Unit/integration, Release, and both Browser required checks.
+- Commit status: implementation `37513a2` plus cross-platform test correction
+  `ee7b854` pushed to `codex/agent-contract-hardening`; PR #25 is ready for
+  review.
+
+## 2026-08-13 - RichText contract consolidation
+
+- Target: make the floating toolbar the current formatting surface, retire
+  fractions and markup-command authoring, and unify canvas text on one model
+  AST without changing retained schematic-label visuals.
+- Changed areas: explicit model RichText types and helpers; shared semantic
+  label conversion; editor/layout/SVG consumers; generated Agent schemas;
+  current interaction/model specs and focused tests.
+- Validation: 135 focused Vitest assertions, one focused Playwright floating-
+  toolbar scenario, typecheck, workspace build, generated Agent artifact check,
+  Phase 1/3/5 and current-arrow visual goldens, Prettier, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `codex/ci-contract-cleanup` as
+  `refactor(rich-text): consolidate the active text contract`.

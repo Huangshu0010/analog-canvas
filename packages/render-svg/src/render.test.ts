@@ -19,7 +19,7 @@ import {
   renderDocumentSvg,
   renderSymbolDefinitionBody,
 } from "./render.js";
-import { razaviTextbookProfile } from "./style-profile.js";
+import { razaviTextbookProfile } from "@icm/derived";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -230,6 +230,69 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).not.toContain('data-object-id="junction-label"');
     expect(svg).not.toContain('data-object-id="junction-route"');
     expect(svg).not.toContain('data-object-id="junction-legacy-loose"');
+  });
+
+  it("counts a coincident same-Net terminal as a physical Junction branch", () => {
+    const document = createEmptyProject("project-contact-dot", "Contact dot")
+      .documents[0]!;
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.ports.push(
+      {
+        id: "left",
+        name: "left",
+        direction: "passive",
+        position: { x: 60, y: 100 },
+      },
+      {
+        id: "right",
+        name: "right",
+        direction: "passive",
+        position: { x: 140, y: 100 },
+      },
+    );
+    document.nets.push({
+      id: "net-out",
+      scope: "local",
+      terminals: [{ instanceId: "R1", pinName: "1" }],
+      ports: ["left", "right"],
+    });
+    document.junctions.push({
+      id: "junction-out",
+      netId: "net-out",
+      position: { x: 100, y: 100 },
+      role: "branch",
+    });
+    document.routes.push(
+      {
+        id: "route-left",
+        netId: "net-out",
+        from: { kind: "port", portId: "left" },
+        to: { kind: "junction", junctionId: "junction-out" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-right",
+        netId: "net-out",
+        from: { kind: "junction", junctionId: "junction-out" },
+        to: { kind: "port", portId: "right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    expect(renderDocumentSvg(document, resolver)).toContain(
+      '<circle data-object-id="junction-out"',
+    );
   });
 
   it("renders a VDD power rail without weakening or dotting its real branches", () => {

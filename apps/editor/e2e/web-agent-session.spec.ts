@@ -227,6 +227,13 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
   await expect(page.getByTestId("agent-status")).toContainText(
     "Agent connected",
   );
+  const originalSocket = browserSocket as WebSocketRoute | null;
+  if (!originalSocket) throw new Error("Agent WebSocket was not connected");
+  originalSocket.close();
+  await expect.poll(() => browserSocket !== originalSocket).toBe(true);
+  await expect(page.getByTestId("agent-status")).toContainText(
+    "Agent connected",
+  );
   await page.getByTestId("agent-pause").click();
   await expect(page.getByTestId("agent-status")).toContainText("Paused");
   await page.getByTestId("agent-resume").click();

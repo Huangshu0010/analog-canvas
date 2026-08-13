@@ -1,9 +1,5 @@
-import {
-  diagnoseVisualQuality,
-  resolveDocumentRoutingGeometry,
-  sha256Hex,
-} from "@icm/derived";
-import { executeTransaction } from "@icm/edit-engine";
+import { resolveDocumentRoutingGeometry, sha256Hex } from "@icm/derived";
+import { executeTransaction, proposeWireIntent } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
 import { transformPoint } from "@icm/model";
 import type {
@@ -16,6 +12,11 @@ import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { base64EncodeUtf8, utf8ByteLength } from "./platform.js";
+import {
+  agentDiagnosticIdentity,
+  agentProjectDiagnostics,
+  agentVisualDiagnostics,
+} from "./diagnostics.js";
 import type { AgentOperationHost } from "./host.js";
 import {
   AGENT_API_V1_VERSION,
@@ -69,6 +70,7 @@ export const AGENT_EDIT_KINDS = [
   "move_port",
   "set_route_points",
   "route_orthogonal",
+  "wire",
   "add_junction",
   "remove_junction",
   "move_junction",
@@ -82,8 +84,6 @@ export const AGENT_EDIT_KINDS = [
   "reconcile_mos_bulk",
   "clear_mos_bulk_default",
   "disconnect_endpoint",
-  "upsert_annotation",
-  "remove_annotation",
   "set_layout_group",
   "remove_layout_group",
   "set_layout_constraint",
@@ -170,25 +170,6 @@ function collectResolvedRoutes(
     }
   }
   return result;
-}
-
-function visualDiagnostics(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-): AgentDiagnostic[] {
-  return diagnoseVisualQuality(document, resolver).map((item) => ({
-    code: item.code,
-    severity: item.severity,
-    category: item.category,
-    confidence: item.confidence,
-    gateEligible: item.gateEligible,
-    message: item.message,
-    objectIds: [...item.objectIds],
-    revision: document.revision,
-    ...(item.bounds ? { bounds: item.bounds } : {}),
-    ...(item.point ? { point: item.point } : {}),
-    ...(item.parameters ? { parameters: { ...item.parameters } } : {}),
-  }));
 }
 
 function sourceNetIds(document: SchematicDocument, objectId: string): string[] {
@@ -504,8 +485,6 @@ export function agentEditCategory(
     case "add_no_connect":
     case "remove_no_connect":
       return "connectivity";
-    case "upsert_annotation":
-    case "remove_annotation":
     case "upsert_schematic_annotation":
     case "remove_schematic_annotation":
     case "upsert_drafting_object":
@@ -534,10 +513,10 @@ function renderArtifact(
   request: AgentRenderRequest,
   document: SchematicDocument,
   resolver: SymbolResolver,
+  diagnostics: AgentDiagnostic[],
 ): { svg: string; diagnostics: AgentDiagnostic[] } {
   const options = request.bounds ? { bounds: request.bounds } : {};
   let svg = renderDocumentSvg(document, resolver, options);
-  const diagnostics = visualDiagnostics(document, resolver);
   if (request.mode === "diagnostics") {
     const scene = buildSvgScene(document, resolver, options);
     const lines = diagnostics
@@ -738,7 +717,14 @@ export function createAgentCircuitService(
           (id) => !all.some((item) => item.id === id),
         );
         const diagnostics = [
-          ...visualDiagnostics(document, resolver),
+          ...(project
+            ? agentProjectDiagnostics(
+                project,
+                resolver,
+                document.id,
+                document.revision,
+              )
+            : agentVisualDiagnostics(document, resolver)),
           ...missingIds.map((id) => ({
             code: "AGENT_QUERY_OBJECT_NOT_FOUND",
             severity: "info" as const,
@@ -781,7 +767,32 @@ export function createAgentCircuitService(
       }
 
       if (request.operation === "transact") {
-        if (request.edits.length > limits.maxTransactionEdits) {
+        if (request.wireIntent) {
+          if (
+            !options.permissions.edit.geometry ||
+            !options.permissions.edit.connectivity
+          ) {
+            return fail(
+              "transact",
+              "PERMISSION_DENIED",
+              "Wire intent requires geometry and connectivity edit permissions",
+              document.revision,
+            );
+          }
+        }
+        const plannedWire = request.wireIntent
+          ? proposeWireIntent(document, resolver, request.wireIntent)
+          : null;
+        if (typeof plannedWire === "string") {
+          return fail(
+            "transact",
+            "EDIT_PRECONDITION",
+            plannedWire,
+            document.revision,
+          );
+        }
+        const edits = request.edits ?? plannedWire?.edits ?? [];
+        if (edits.length > limits.maxTransactionEdits) {
           return fail(
             "transact",
             "LIMIT_EXCEEDED",
@@ -789,7 +800,7 @@ export function createAgentCircuitService(
             document.revision,
           );
         }
-        for (const edit of request.edits) {
+        for (const edit of edits) {
           const category = agentEditCategory(edit);
           if (category === "unsupported") {
             return fail(
@@ -817,7 +828,7 @@ export function createAgentCircuitService(
               ...(request.dryRun === undefined
                 ? {}
                 : { dryRun: request.dryRun }),
-              edits: request.edits,
+              edits,
             })
           : executeTransaction(
               document,
@@ -829,7 +840,7 @@ export function createAgentCircuitService(
                 ...(request.dryRun === undefined
                   ? {}
                   : { dryRun: request.dryRun }),
-                edits: request.edits,
+                edits,
               },
               { symbolResolver: resolver },
             );
@@ -874,6 +885,36 @@ export function createAgentCircuitService(
           resolver,
           result.diff.changedObjectIds,
         );
+        const proposedProject = project
+          ? {
+              ...project,
+              documents: project.documents.map((candidate) =>
+                candidate.id === result.document.id
+                  ? result.document
+                  : candidate,
+              ),
+            }
+          : undefined;
+        const diagnostics = proposedProject
+          ? agentProjectDiagnostics(
+              proposedProject,
+              resolver,
+              result.document.id,
+              result.proposedRevision,
+            )
+          : agentVisualDiagnostics(result.document, resolver);
+        const beforeDiagnostics = project
+          ? agentProjectDiagnostics(
+              project,
+              resolver,
+              document.id,
+              document.revision,
+            )
+          : agentVisualDiagnostics(document, resolver);
+        const beforeIds = new Set(
+          beforeDiagnostics.map(agentDiagnosticIdentity),
+        );
+        const afterIds = new Set(diagnostics.map(agentDiagnosticIdentity));
         return response({
           apiVersion: request.apiVersion,
           requestId: request.requestId,
@@ -883,7 +924,17 @@ export function createAgentCircuitService(
           revision: result.revision,
           proposedRevision: result.proposedRevision,
           diff: result.diff,
-          diagnostics: result.diagnostics,
+          diagnostics,
+          diagnosticDelta: {
+            added: diagnostics.filter(
+              (diagnostic) =>
+                !beforeIds.has(agentDiagnosticIdentity(diagnostic)),
+            ),
+            removed: beforeDiagnostics.filter(
+              (diagnostic) =>
+                !afterIds.has(agentDiagnosticIdentity(diagnostic)),
+            ),
+          },
           ...(resolvedRoutes.length === 0 ? {} : { resolvedRoutes }),
         });
       }
@@ -897,7 +948,19 @@ export function createAgentCircuitService(
         );
       }
       try {
-        const rendered = renderArtifact(request, document, resolver);
+        const rendered = renderArtifact(
+          request,
+          document,
+          resolver,
+          project
+            ? agentProjectDiagnostics(
+                project,
+                resolver,
+                document.id,
+                document.revision,
+              )
+            : agentVisualDiagnostics(document, resolver),
+        );
         const byteLength = utf8ByteLength(rendered.svg);
         if (byteLength > limits.maxRenderBytes) {
           return fail(

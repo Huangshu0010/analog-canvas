@@ -117,6 +117,9 @@ POST   /api/agent/sessions/{id}/control    browser pause/resume/revoke/replace
 
 - Browser creation and WebSocket authentication use the `editorSecret` returned
   over the session-creation response.
+- A successful claim returns `sessionId`, `projectId`, and the authorized
+  `documentIds` with the bearer token, so an Agent never guesses Project or
+  Document identity from examples or UI labels.
 - Agent requests present the `agentToken` as a bearer credential.
 - CORS is allowlisted/configurable, never `Access-Control-Allow-Origin: *` with
   credentials.
@@ -161,6 +164,11 @@ interface AgentSessionMessage {
   unknown write into an automatic retry. After reconnect, the cached `requestId`
   result resolves whether a transaction committed; until then its state is
   unknown.
+- The browser may replace a failed WebSocket transport for the same live
+  session and Project using the existing in-memory `editorSecret`. Reconnection
+  uses bounded exponential backoff followed by an explicit manual action. It
+  never replays a Circuit request; `requestId` cache semantics remain the only
+  resolution mechanism for an uncertain write.
 
 ## Events
 
@@ -290,6 +298,7 @@ advances the revision again.
 | Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write        |
 | `agentToken` theft                 | Short TTL, scoped, revocable, never stored in recovery/localStorage by default                                              |
 | Browser refresh                    | Initial release revokes the session unless a later explicit reconnect design is accepted                                    |
+| Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged            |
 | Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                        |
 | Editor offline during write        | `EDITOR_OFFLINE`; no unbounded write queue; reconnect never auto-applies a rejected write                                   |
 | Project swap mid-session           | `document.replaced`; old token invalid for the new Project                                                                  |

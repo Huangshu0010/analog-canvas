@@ -221,7 +221,7 @@ export function expandRouteGraph(
     if (edge.role === "label") {
       labelIndex += 1;
       edits.push({
-        kind: "upsert_annotation",
+        kind: "upsert_schematic_annotation",
         annotation: {
           id: `route-${graph.netId}-label-${labelIndex}`,
           kind: "net-label",
@@ -482,7 +482,8 @@ function collectIds(edits: SchematicEdit[]): string[] {
   for (const edit of edits) {
     if (edit.kind === "add_junction") ids.push(edit.junctionId);
     if (edit.kind === "set_route_points") ids.push(edit.routeId);
-    if (edit.kind === "upsert_annotation") ids.push(edit.annotation.id);
+    if (edit.kind === "upsert_schematic_annotation")
+      ids.push(edit.annotation.id);
   }
   return ids;
 }

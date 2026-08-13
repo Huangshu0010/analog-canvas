@@ -1,5 +1,6 @@
 export * from "./anchor.js";
 export * from "./connectivity.js";
+export * from "./contact.js";
 export * from "./connectivity-index.js";
 export * from "./diagnostics/diagnostic.js";
 export * from "./diagnostics/erc.js";

@@ -1,4 +1,4 @@
-import type { RichTextDocument } from "@icm/model";
+import type { RichTextDocument, RichTextRun } from "@icm/model";
 
 import type { SchematicStyleProfile } from "./style-profile.js";
 
@@ -17,20 +17,6 @@ export interface RichTextLayout {
 }
 
 type Line = { width: number; height: number };
-type LayoutRun =
-  | { kind: "text"; value: string }
-  | { kind: "line-break" }
-  | {
-      kind: "span";
-      style: "italic" | "bold" | "subscript" | "superscript";
-      children: LayoutRun[];
-    }
-  | {
-      kind: "fraction";
-      numerator: { runs: LayoutRun[] };
-      denominator: { runs: LayoutRun[] };
-    };
-
 export function typographyFontSize(
   token: "caption" | "body" | "label",
   profile: SchematicStyleProfile,
@@ -58,7 +44,7 @@ export function measureRichTextDocument(
   document: RichTextDocument,
   metrics: RichTextMetrics,
 ): RichTextLayout {
-  const lines = measureRuns(document.runs as LayoutRun[], metrics);
+  const lines = measureRuns(document.runs, metrics);
   return {
     width: Math.max(0, ...lines.map((line) => line.width)),
     height: lines.reduce((sum, line) => sum + line.height, 0),
@@ -67,7 +53,7 @@ export function measureRichTextDocument(
   };
 }
 
-function measureRuns(runs: LayoutRun[], metrics: RichTextMetrics): Line[] {
+function measureRuns(runs: RichTextRun[], metrics: RichTextMetrics): Line[] {
   const baseHeight = metrics.fontSize * metrics.lineHeight;
   const lines: Line[] = [{ width: 0, height: baseHeight }];
   for (const run of runs) {
@@ -80,7 +66,7 @@ function measureRuns(runs: LayoutRun[], metrics: RichTextMetrics): Line[] {
   return lines;
 }
 
-function measureRun(run: LayoutRun, metrics: RichTextMetrics): Line[] {
+function measureRun(run: RichTextRun, metrics: RichTextMetrics): Line[] {
   if (run.kind === "text") {
     return [
       {
@@ -112,26 +98,8 @@ function measureRun(run: LayoutRun, metrics: RichTextMetrics): Line[] {
     }
     return child;
   }
-  const fractionMetrics = {
-    ...metrics,
-    fontSize: metrics.fontSize * metrics.subscriptScale,
-  };
-  const numerator = measureRuns(run.numerator.runs, fractionMetrics);
-  const denominator = measureRuns(run.denominator.runs, fractionMetrics);
-  return [
-    {
-      width:
-        Math.max(
-          ...numerator.map((line) => line.width),
-          ...denominator.map((line) => line.width),
-        ) +
-        metrics.fontSize * 0.25,
-      height:
-        numerator.reduce((sum, line) => sum + line.height, 0) +
-        denominator.reduce((sum, line) => sum + line.height, 0) +
-        metrics.fontSize * 0.2,
-    },
-  ];
+  const exhaustive: never = run;
+  return exhaustive;
 }
 
 function appendInline(target: Line[], addition: Line[]): void {

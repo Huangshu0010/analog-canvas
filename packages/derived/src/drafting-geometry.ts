@@ -547,7 +547,7 @@ function unionRects(rects: Rect[]): Rect {
 // P1: rich-text layout bounds approximated from the document structure and a
 // per-token font size (the caller passes the size; derived cannot depend on the
 // renderer's style profile). Line breaks split the text into lines, so
-// multi-line content gets its full height, and nested spans/fractions are
+// multi-line content gets its full height, and nested spans are
 // flattened recursively rather than as a fixed "XX".
 function textBounds(
   position: Point,
