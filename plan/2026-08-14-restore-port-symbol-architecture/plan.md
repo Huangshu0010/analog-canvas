@@ -1,5 +1,5 @@
 ---
-status: completed
+status: active
 experience: none
 ---
 
@@ -81,3 +81,7 @@ it does not add hierarchy authoring behavior.
 
 Validation: `pnpm ci:static`; `pnpm test:local` (724 tests); focused migration
 and imported-child search E2E; Agent artifact check and visual Golden check.
+
+Delivery follow-up: rebase this branch onto the subsequently merged canonical
+junction-node work. The preflight identifies a `plan/log.md`-only conflict;
+preserve both factual entries and do not alter the unrelated connectivity code.
