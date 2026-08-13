@@ -2,18 +2,15 @@
 
 The schemas and request fixtures in
 [`../../fixtures/agent-api/`](../../fixtures/agent-api/) are checked by the
-Agent adapter tests. Phase 9 traces and reports live in
-[`../../fixtures/agent-layout-eval/`](../../fixtures/agent-layout-eval/).
+Agent adapter tests. The retained guidance-structure report lives in
+[`../../fixtures/agent-layout-eval/`](../../fixtures/agent-layout-eval/);
+retired Phase 9 traces live under [`../archive/`](../archive/).
 
-Detailed Phase 9 evidence:
+Current optional Phase 9 research:
 
-- [`examples/phase-9-first-vertical-trials.md`](examples/phase-9-first-vertical-trials.md)
-- [`examples/phase-9-generalization-and-performance.md`](examples/phase-9-generalization-and-performance.md)
-- [`examples/phase-9-heldout-flash-adc.md`](examples/phase-9-heldout-flash-adc.md)
-- [`examples/phase-9-heldout-chopper-afe.md`](examples/phase-9-heldout-chopper-afe.md)
 - [`examples/phase-9-external-quality-gate.md`](examples/phase-9-external-quality-gate.md)
-- [`examples/phase-9-external-quality-run-1.md`](examples/phase-9-external-quality-run-1.md)
-- [`examples/phase-9-external-quality-run-2.md`](examples/phase-9-external-quality-run-2.md)
+- [Archived external quality run 1](../archive/phase9-external-quality-studies/run-1-flash-adc.md)
+- [Archived external quality run 2](../archive/phase9-external-quality-studies/run-2-chopper-afe.md)
 
 ## 1. Read once, edit, render, refresh
 
@@ -28,19 +25,7 @@ Detailed Phase 9 evidence:
 Expected result: one read supplies the Document facts, the revision advances
 only on commit, and formal topology remains unchanged by presentation edits.
 
-## 2. Recover layouts without a circuit-specific endpoint
-
-[`phase-9-layout-replay.mjs`](../../scripts/phase-9-layout-replay.mjs) imports
-the untouched RLC and hierarchical SKY130 CDAC sources, then reconstructs the
-reviewed layouts exclusively through v2 generic typed edits. Its checked report
-is
-[`recovery-layout-replay.json`](../../fixtures/agent-layout-eval/recovery-layout-replay.json).
-
-Expected result: both circuits preserve their imported electrical topology,
-use no v1 query, Layout Intent, or CDAC endpoint, and finish with refreshed
-Snapshots and zero blocking visual diagnostics.
-
-## 3. Add an explicit branch without inventing crossing connectivity
+## 2. Add an explicit branch without inventing crossing connectivity
 
 1. Inspect the Snapshot's complete Net, Route, and Junction facts.
 2. Dry-run one `wireIntent` from the terminal endpoint to the target

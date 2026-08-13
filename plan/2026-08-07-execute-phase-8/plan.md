@@ -1,3 +1,8 @@
+---
+status: completed
+experience: candidate
+---
+
 # Execute Phase 8 Direct Manipulation and Manual Authoring
 
 ## Goal

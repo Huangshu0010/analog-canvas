@@ -187,12 +187,6 @@ importers:
         specifier: workspace:*
         version: link:../model
 
-  packages/platform-web:
-    dependencies:
-      "@icm/model":
-        specifier: workspace:*
-        version: link:../model
-
   packages/render-svg:
     dependencies:
       "@icm/derived":

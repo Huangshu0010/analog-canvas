@@ -59,6 +59,12 @@ the owned set without updating the plan first.
 - Do not run a full suite by default. Expand from focused checks when the
   change crosses shared contracts or subsystems, carries broader risk, or a
   project gate requires it.
+- Use `pnpm test:local <test-paths>` for affected unit contracts and
+  `pnpm test:e2e:local <spec-paths> [--grep <pattern>]` for affected
+  browser behavior. Both commands cap local concurrency.
+- Use `pnpm verify:branch` when a completed branch crosses enough workspace
+  boundaries to justify static checks, all unit tests, one build, and the
+  production smoke check. It is not the mainline delivery gate.
 - Record unresolved questions in the plan or a review note.
 
 ## Circuit Asset Rules

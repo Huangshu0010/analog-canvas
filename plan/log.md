@@ -6067,3 +6067,103 @@ contracts (WP-R1)`.
   `git diff --check` clean.
 - Commit status: PR #32 merged to `main` as `6efbf3d`; integrated netlist PR
   #31 is ready for its refreshed remote checks and final merge.
+
+## 2026-08-13 - Local validation resource optimization
+
+- Target: reduce routine local validation load without weakening the mainline
+  gate or changing remote CI coverage.
+- Changed areas: package validation scripts, Agent and README command guidance,
+  and the machine-readable completed-plan queue.
+- Validation: focused 13-test unit run; focused one-scenario browser run;
+  `pnpm verify:branch`; canonical `pnpm ci:check` with 112 Vitest files / 675
+  tests, one workspace build, all release checks, and 96 Playwright scenarios;
+  GitHub Actions workflow unchanged.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(test): reduce local validation resource usage`.
+
+## 2026-08-13 - Repository tooling consolidation
+
+- Target: remove unowned historical fixtures and separate optional research
+  and manual calibration tools from the daily engineering surface.
+- Changed areas: deleted orphaned text/current-arrow projects and goldens;
+  archived stale Phase 9 programs' evidence while retaining corpus netlists;
+  retained two runnable research tools under `tools/research/phase9/`; renamed
+  visual/export golden commands; moved Razavi calibration to
+  `tools/calibration/razavi/`; removed the obsolete integration worktree and
+  local/remote branch.
+- Validation: 40 focused renderer/schema tests; 8 Agent snapshot/SPICE corpus
+  tests; retained Skill check and external-evaluation self-test; visual/export
+  golden checks; all three Razavi calibration tools; `pnpm verify:branch`;
+  canonical `pnpm ci:check` with 112 Vitest files / 675 tests, all release
+  checks, and 96 Playwright scenarios; product and GitHub Actions paths
+  unchanged; `git diff --check` clean.
+- Commit status: three reviewable implementation commits plus this close-out on
+  `codex/local-validation-optimization`.
+
+## 2026-08-13 - Plan root lifecycle closure
+
+- Target: remove completed plan records from the active root queue without
+  erasing architecture, CI, migration, or integration evidence.
+- Changed areas: archived 23 completed or superseded non-routine target plans;
+  deleted three routine README citation plans; corrected four stale `active`
+  records and one legacy WP-A1 `proposed` record from their existing evidence;
+  refreshed the root audit.
+- Validation: every lifecycle action was checked against the plan Outcome,
+  matching factual log evidence, and Git path history; stale-root-path search,
+  Markdown formatting, and `git diff --check` pending final confirmation.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(plan): close completed root records`.
+
+## 2026-08-13 - Legacy plan metadata sweep, batch 1
+
+- Target: classify the first 25 root plans that predate lifecycle metadata.
+- Changed areas: archived 19 completed architecture, implementation, decision,
+  and integration records after individual Git/Outcome checks; marked six
+  records with explicit human-review signals as `completed/candidate`; updated
+  the root audit from 121 to 96 remaining unclassified legacy records.
+- Validation: recorded per-plan commit evidence and disposition; targeted
+  Markdown formatting, root-state count, `git diff --check`, and status review
+  pending final confirmation.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(plan): classify legacy records batch 1`.
+
+## 2026-08-13 - Legacy plan metadata sweep, batch 2
+
+- Target: classify the next 25 root plans that predate lifecycle metadata.
+- Changed areas: archived 20 individually evidenced completed records; marked
+  five explicit human-review signals as `completed/candidate`; reduced the
+  unclassified root queue from 96 to 71 records.
+- Validation: per-plan Git evidence table, Markdown formatting, root-state
+  count, `git diff --check`, and status review pending final confirmation.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(plan): classify legacy records batch 2`.
+
+## 2026-08-13 - Batch-2 archive index formatting
+
+- Target: repair the missed Prettier formatting pass on the batch-2 archive
+  index.
+- Changed areas: archive index formatting and this factual closure record.
+- Validation: repository Prettier on changed Markdown and `git diff --check`.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(plan): format batch 2 archive index`.
+
+## 2026-08-13 - Retire unused platform-web package
+
+- Target: remove the isolated browser platform package without changing the
+  editor's active recovery or file workflows.
+- Changed areas: deleted `packages/platform-web/` and its workspace lockfile
+  importer; the editor's independent recovery implementation remains intact.
+- Validation: lockfile-only install, no-reference search, four focused editor
+  recovery tests, workspace typecheck, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(platform): retire unused browser platform package`.
+
+## 2026-08-13 - Restore lockfile static CI contract
+
+- Target: repair PR #33 Static contracts failure from unformatted
+  `pnpm-lock.yaml`.
+- Changed areas: Prettier serialization only for the lockfile; dependency
+  resolution is unchanged.
+- Validation: `pnpm ci:static`, frozen install, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/local-validation-optimization` as
+  `chore(ci): format lockfile static contract`.

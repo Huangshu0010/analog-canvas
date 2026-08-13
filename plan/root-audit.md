@@ -6,30 +6,15 @@ an archive. Completed plans with resolved experience are stored under
 
 ## Retained Work
 
-| State | Count | Required disposition |
-| --- | ---: | --- |
-| `active` | 4 | Confirm ownership and close only after its stated validation and log entry. |
-| `completed` + `none` | 6 | Each awaits a later archive sweep; their commits and log entries are complete. |
-| `completed` + `candidate` | 5 | Human decides whether to extract, reject, or defer the experience signal. |
-| `superseded` | 1 | Retain until its replacement is recorded, then archive. |
-| legacy ``proposed`` | 1 | Replace the invalid legacy state with `active`, `completed`, or `superseded`. |
-| missing metadata | 121 | Audit against outcome text and Git evidence; never archive merely because of age. |
+| State                     | Count | Required disposition                                                              |
+| ------------------------- | ----: | --------------------------------------------------------------------------------- |
+| `active`                  |     0 | No target is currently active in the root plan queue.                             |
+| `completed` + `candidate` |    16 | Human decides whether to extract, reject, or defer the experience signal.         |
+| missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
 ### Active
 
-- `2026-08-11-transient-canvas-and-cache-bounds`
-- `2026-08-12-ci-delivery-and-archive-governance`
-- `2026-08-12-connectivity-recovery-c3d`
-- `2026-08-12-integrate-razavi-bulk-latest-main`
-
-### Commit-gated completion
-
-- `2026-08-13-plan-lifecycle-hygiene`
-- `2026-08-13-prune-routine-plan-records`
-- `2026-08-13-expand-routine-plan-pruning`
-- `2026-08-13-scope-ci-by-change`
-- `2026-08-13-retire-legacy-annotation-protocol`
-- `2026-08-13-remove-compatibility-reexports`
+None.
 
 ### Completed plans awaiting an experience decision
 
@@ -38,17 +23,34 @@ an archive. Completed plans with resolved experience are stored under
 - `2026-08-11-correct-pdf-derived-fidelity-baselines`
 - `2026-08-12-web-agent-session-wa4`
 - `2026-08-12-wp-r0-behavior-baseline`
+- `2026-08-07-execute-phase-8`
+- `2026-08-07-expand-wire-editing`
+- `2026-08-07-integrate-interaction-redesign`
+- `2026-08-07-razavi-canon-into-skill-manifest`
+- `2026-08-07-record-rule-guided-agent-layout`
+- `2026-08-07-render-faithful-hierarchical-ports`
+- `2026-08-08-drafting-runtime-final-repair`
+- `2026-08-08-editor-browser-crypto-regression`
+- `2026-08-08-four-layer-agent-guidance`
+- `2026-08-08-razavi-existing-mos-migration`
+- `2026-08-08-razavi-mos-canonical-arrow-diff`
 
-### State correction queue
+## 2026-08-13 Root Closure
 
-- `2026-08-12-vdd-power-rail` is `superseded`.
-- `2026-08-08-wp-a1-model-drafting-anchor` uses the legacy invalid state
-  ``proposed`` and needs an explicit disposition.
+The completed technical, CI, migration, integration, and governance plans were
+verified against their Outcome, factual log entry, and Git path history, then
+moved to `archived/2026-08/`. The three routine README citation plans were
+deleted after the same verification because their independent commits and log
+entries reconstruct the full record. The formerly active plans had completed
+Outcomes and corresponding implementation commits; the legacy WP-A1 proposal
+was confirmed as completed from its A1a/A1b/schema-gate log evidence; and the
+superseded VDD plan's drawn-rail replacement is already archived.
 
 ## Legacy Metadata Sweep
 
-The 121 plans without a machine-readable state predate the current metadata
-contract. Their current distribution is evidence, not a disposition: 25 have
-an `Outcome` section, while 96 require reviewing their final intent, outcome,
-and Git history. A follow-up target must classify each into one current state
-before moving any of them. Do not bulk-rewrite their historical bodies.
+The first 50 oldest pre-metadata records were individually classified on
+2026-08-13 from their intent/outcome, factual log, and Git path history. Thirty-nine
+completed records with resolved experience were archived; eleven completed
+records with an explicit human-review signal remain above as candidates. The
+remaining 71 plans still require the same individual evidence review; do not
+bulk-rewrite their historical bodies.

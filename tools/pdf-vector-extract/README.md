@@ -1,7 +1,7 @@
 # PDF vector extraction
 
 This directory contains source-PDF extraction tools. It is deliberately
-separate from `scripts/razavi-fidelity-diff.mjs` and `scripts/lib/`, which own
+separate from `tools/calibration/razavi/fidelity-diff.mjs` and `scripts/lib/`, which own
 the raster comparison workflow.
 
 The family extractors currently cover:

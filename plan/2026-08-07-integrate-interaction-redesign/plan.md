@@ -1,3 +1,8 @@
+---
+status: completed
+experience: candidate
+---
+
 # Integrate Interaction Redesign
 
 ## Goal
