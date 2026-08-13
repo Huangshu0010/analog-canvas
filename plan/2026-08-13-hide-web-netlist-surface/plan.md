@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -72,5 +72,15 @@ feat(editor): hide web netlist surface
 
 ## Outcome
 
-At close-out, record the exact hidden surfaces, retained internal contracts,
-validation, commit, push, and draft PR URL; then set `status: completed`.
+Removed every public web surface for netlist export and authoring: the
+SPICE/Spectre download commands, export explanation and diagnostics, Cell
+interface controls, Instance Reference/Model controls, and imported-model
+source text. The existing SPICE importer remains visible, while the internal
+model, migrations, automatic reference/parameter facts, extractor, printers,
+and typed Edit Engine/Agent contracts remain available for later exposure.
+
+Committed as `96d1d8f`, refreshed current `main` with merge commit `d19cf58`,
+and opened draft PR #31. Focused tests, the complete local delivery gate, a
+100-scenario reduced-concurrency browser run, and all six GitHub Actions checks
+passed. One pre-existing canvas-width timing assertion failed on the first
+remote browser run and passed unchanged when the failed workflow was rerun.

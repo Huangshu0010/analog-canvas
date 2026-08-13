@@ -6007,9 +6007,10 @@ contracts (WP-R1)`.
   recovery-refresh scenario passed alone but flaked under 16-worker full-suite
   load; the full suite was repeated at reduced concurrency for deterministic
   coverage. `git diff --check` clean.
-- Commit status: ready to commit and push on
-  `codex/netlist-export-system` as `feat(editor): hide web netlist surface`,
-  then open a draft PR to `main`.
+- Commit status: implementation `96d1d8f` and latest-main merge `d19cf58`
+  pushed on `codex/netlist-export-system`; draft PR #31 is open and all six
+  required GitHub checks passed. The first Browser 1/2 run hit an existing
+  canvas-width timing assertion and passed unchanged on rerun.
 
 ## 2026-08-13 - README citation
 
