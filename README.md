@@ -80,3 +80,26 @@ retain their provenance. The reference manifest under
 hash-pins are the only visual authority. PDF vector evidence is permitted only
 through the compatible manifest protocol defined by
 [`docs/adr/0012-pdf-vector-evidence-for-razavi-assets.md`](docs/adr/0012-pdf-vector-evidence-for-razavi-assets.md).
+
+## Citation
+
+If you use Interactive Circuit Maker in research, teaching, or another
+published project, please cite the software as:
+
+> Zengchun Chen and Zhishuai Zhang. _Interactive Circuit Maker: A
+> Connectivity-Aware Schematic Editor for Human–Agent Collaboration_. 2026.
+> Available at: https://github.com/chenzc24/interactive-circuit-maker
+
+For reproducible work, also include the release tag or commit hash used.
+
+BibTeX:
+
+```bibtex
+@software{chen2026interactivecircuitmaker,
+  author = {Chen, Zengchun and Zhang, Zhishuai},
+  title = {Interactive Circuit Maker: A Connectivity-Aware Schematic Editor for Human--Agent Collaboration},
+  year = {2026},
+  url = {https://github.com/chenzc24/interactive-circuit-maker},
+  note = {Software repository}
+}
+```

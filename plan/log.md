@@ -5953,3 +5953,13 @@ contracts (WP-R1)`.
   build, performance, export, PWA, packaging, and release-smoke gates.
 - Commit status: ready to commit on `codex/agent-contract-compaction` as
   `refactor(agent): compact and unify generated contracts`.
+
+## 2026-08-13 - README citation
+
+- Target: add a clear citation method naming Zengchun Chen and Zhishuai Zhang
+  as the project authors.
+- Changed areas: README human-readable citation, BibTeX entry, and
+  reproducibility guidance; target plan.
+- Validation: targeted Markdown formatting and `git diff --check` passed.
+- Commit status: ready to commit on `codex/add-readme-citation` as
+  `docs(readme): add project citation`.
