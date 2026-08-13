@@ -38,7 +38,6 @@ import {
   schematicTextSizeAttribute,
 } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
-import type { RichTextDocumentInput } from "./rich-text.js";
 
 export interface SvgRenderOptions {
   bounds?: Rect;
@@ -60,10 +59,7 @@ function renderAnnotationText(
   // it in the canvas editor, that persisted AST is the visual source of truth;
   // flattening it back through `text` loses selected multi-character spans.
   if (annotation.content) {
-    return renderRichTextDocument(
-      annotation.content as unknown as RichTextDocumentInput,
-      profile,
-    );
+    return renderRichTextDocument(annotation.content, profile);
   }
   return renderSchematicTextContent(annotation.text, annotation.kind, profile);
 }
@@ -897,11 +893,9 @@ function renderDraftText(
   const fontSize =
     typographyFontSize(object.typographyToken ?? "body", profile) *
     (object.styleOverride?.sizeScale ?? 1);
-  const content = renderRichTextDocument(
-    object.content as unknown as RichTextDocumentInput,
-    profile,
-    { lineOriginX: position.x },
-  );
+  const content = renderRichTextDocument(object.content, profile, {
+    lineOriginX: position.x,
+  });
   const weight = object.styleOverride?.weight === "bold" ? "bold" : "normal";
   const italic = object.styleOverride?.italic === true ? "italic" : "normal";
   // P1: the renderer consumes geometry.rotation (the single rotation truth),
@@ -1072,11 +1066,9 @@ function renderDraftCallout(
   const fontSize =
     typographyFontSize(object.typographyToken ?? "body", profile) *
     (object.styleOverride?.sizeScale ?? 1);
-  const content = renderRichTextDocument(
-    object.content as unknown as RichTextDocumentInput,
-    profile,
-    { lineOriginX: textPosition.x },
-  );
+  const content = renderRichTextDocument(object.content, profile, {
+    lineOriginX: textPosition.x,
+  });
   const weight = object.styleOverride?.weight === "bold" ? "bold" : "normal";
   const italic = object.styleOverride?.italic === true ? "italic" : "normal";
   // P1: renderer consumes geometry.rotation (the single rotation truth).

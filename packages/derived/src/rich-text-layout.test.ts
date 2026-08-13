@@ -31,22 +31,6 @@ describe("shared rich-text layout", () => {
     );
   });
 
-  it("measures fractions from their real operands and vertical stack", () => {
-    const content = {
-      runs: [
-        {
-          kind: "fraction",
-          numerator: { runs: [{ kind: "text", value: "VERY_LONG_NUMERATOR" }] },
-          denominator: { runs: [{ kind: "text", value: "2" }] },
-        },
-      ],
-    } as RichTextDocument;
-    const metrics = richTextMetrics(razaviTextbookProfile);
-    const layout = measureRichTextDocument(content, metrics);
-    expect(layout.width).toBeGreaterThan(metrics.fontSize * 6);
-    expect(layout.height).toBeGreaterThan(metrics.fontSize);
-  });
-
   it("takes exact profile and size override metrics", () => {
     const content = {
       runs: [{ kind: "text", value: "caption" }],

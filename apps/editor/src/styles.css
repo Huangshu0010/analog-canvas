@@ -1801,10 +1801,6 @@ body {
   box-shadow: 0 0 0 2px rgb(var(--icm-accent-rgb) / 25%);
 }
 
-.rich-text-fraction-rule {
-  padding: 0 0.08em;
-}
-
 .smart-snap-guide {
   stroke: rgb(var(--icm-accent-rgb) / 90%);
   stroke-width: 1;

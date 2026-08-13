@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { parseSchematicMath, schematicTextDocument } from "@icm/model";
 
 import {
-  parseSchematicMath,
   renderSchematicTextContent,
-  schematicTextDocument,
   schematicTextFontSize,
 } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
-import type { RichTextDocumentInput } from "./rich-text.js";
 import { razaviTextbookProfile, textbookMonochromeProfile } from "@icm/derived";
 
 describe("Razavi schematic typography", () => {
@@ -95,13 +93,7 @@ describe("Razavi schematic typography", () => {
 
   it("uses the same base/subscript convention in editor RichText defaults", () => {
     const rendered = renderRichTextDocument(
-      schematicTextDocument(
-        "M1",
-        "instance-label",
-      ) as unknown as RichTextDocumentInput,
-      // The renderer's input admits compatibility-role metadata while the
-      // persisted model intentionally keeps its run union opaque here.
-      // The generated document itself remains model-valid.
+      schematicTextDocument("M1", "instance-label"),
       razaviTextbookProfile,
     );
     expect(rendered).toContain("font-style:italic;font-weight:700");

@@ -5714,7 +5714,7 @@ contracts (WP-R1)`.
   tests; 93/95 browser tests passed on the initial parallel run, with both
   stale persistent-tool test assumptions corrected and passing individually;
   six directly affected browser regressions passed together; `git diff
-  --check` clean.
+--check` clean.
 - Commit status: ready to commit on
   `codex/persistent-authoring-input-safety` as
   `feat(editor): remove guides and add clear and refresh`.
@@ -5784,7 +5784,7 @@ contracts (WP-R1)`.
 - Validation: 6 host-mode integration tests (4 ops, undo parity, render-hash
   equality, stale revision, unknown document, project replacement); 29 adapter
   store-mode tests preserved; workspace `typecheck` clean; Prettier; `git diff
-  --check` clean.
+--check` clean.
 - Commit status: ready to commit on `codex/web-agent-session-architecture` as
   `feat(agent): in-browser Agent host without network (WP-WA3)`.
 
@@ -5895,3 +5895,18 @@ contracts (WP-R1)`.
   passed.
 - Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
   `docs(plan): prune routine completed records`.
+
+## 2026-08-13 - RichText contract consolidation
+
+- Target: make the floating toolbar the current formatting surface, retire
+  fractions and markup-command authoring, and unify canvas text on one model
+  AST without changing retained schematic-label visuals.
+- Changed areas: explicit model RichText types and helpers; shared semantic
+  label conversion; editor/layout/SVG consumers; generated Agent schemas;
+  current interaction/model specs and focused tests.
+- Validation: 135 focused Vitest assertions, one focused Playwright floating-
+  toolbar scenario, typecheck, workspace build, generated Agent artifact check,
+  Phase 1/3/5 and current-arrow visual goldens, Prettier, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `codex/ci-contract-cleanup` as
+  `refactor(rich-text): consolidate the active text contract`.

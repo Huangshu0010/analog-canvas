@@ -1,4 +1,4 @@
-import { parseMarkup, transformPoint } from "@icm/model";
+import { schematicTextDocument, transformPoint } from "@icm/model";
 import type { Point, Rect, SchematicDocument } from "@icm/model";
 import type {
   ResolvedSymbol,
@@ -606,7 +606,8 @@ export function diagnoseVisualQuality(
     .filter((annotation) => annotation.text.trim().length > 0)
     .map((annotation) => {
       const measured = measureRichTextDocument(
-        parseMarkup(annotation.text),
+        annotation.content ??
+          schematicTextDocument(annotation.text, annotation.kind),
         richTextMetrics(styleProfile, "label", annotation.sizeScale ?? 1),
       );
       const rotated = annotation.rotation === 90 || annotation.rotation === 270;

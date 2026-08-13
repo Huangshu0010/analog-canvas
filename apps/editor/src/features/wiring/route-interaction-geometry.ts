@@ -13,7 +13,8 @@ import type {
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
-import { schematicTextDocument, schematicTextFontSize } from "@icm/render-svg";
+import { schematicTextDocument } from "@icm/model";
+import { schematicTextFontSize } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { clamp, closestPointOnSegment } from "../../canvas/canvas-geometry";
