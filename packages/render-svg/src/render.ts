@@ -5,6 +5,7 @@ import {
   transformPoint,
 } from "@icm/model";
 import {
+  contactRequiresJunctionDot,
   deriveDocumentContactEvidence,
   defaultInstanceLabelPlacement,
   resolvePrimitiveStrokeWidth,
@@ -538,9 +539,6 @@ export function buildSvgScene(
       if (contact.endpoints.some((endpoint) => endpoint.kind === "port")) {
         return false;
       }
-      const terminalCount = contact.endpoints.filter(
-        (endpoint) => endpoint.kind === "terminal",
-      ).length;
       if (
         contact.endpoints.some(
           (endpoint) =>
@@ -552,20 +550,7 @@ export function buildSvgScene(
       ) {
         return false;
       }
-      const routeCount = contact.incidents.filter(
-        (incident) => incident.kind === "route",
-      ).length;
-      const physicalBranch = contact.endpoints.some((endpoint) => {
-        if (endpoint.kind !== "junction") return false;
-        const junction = document.junctions.find(
-          (candidate) => candidate.id === endpoint.junctionId,
-        );
-        return (junction?.role ?? "branch") === "branch";
-      });
-      return (
-        (terminalCount > 0 && (routeCount > 0 || terminalCount > 1)) ||
-        (physicalBranch && contact.incidents.length >= 3)
-      );
+      return contactRequiresJunctionDot(contact);
     })
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map((contact) => {

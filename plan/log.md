@@ -6205,3 +6205,14 @@ contracts (WP-R1)`.
   and `pnpm verify:branch` (675 tests, build, and production smoke) passed.
 - Commit status: merge committed on `codex/unified-electrical-contact` as
   `a3f9264`; plan closure is recorded in the following maintenance commit.
+
+## 2026-08-13 - Junction dot branch semantics
+
+- Target: make connection dots describe actual electrical branches rather
+  than every pin/Route contact.
+- Changed areas: shared same-Net contact incident geometry, SVG junction-dot
+  eligibility, dense analog golden, and pin/passthrough/branch regressions.
+- Validation: focused derived and SVG tests (34), affected package builds and
+  typechecks, and `git diff --check` passed.
+- Commit status: ready to commit on `codex/unified-electrical-contact` as
+  `fix: derive junction dots from electrical branch geometry`.
