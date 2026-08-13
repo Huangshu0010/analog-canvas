@@ -54,8 +54,6 @@
     "symbols:razavi-common:check": "node scripts/generate-razavi-common-assets.mjs --check",
     "visual:phase5": "pnpm build && node scripts/phase-5-golden.mjs",
     "visual:phase5:check": "pnpm build && node scripts/phase-5-golden.mjs --check",
-    "visual:current-arrow": "pnpm build && node scripts/route-attached-current-arrow-golden.mjs",
-    "visual:current-arrow:check": "pnpm build && node scripts/route-attached-current-arrow-golden.mjs --check",
     "test": "vitest run",
     "test:local": "vitest run --maxWorkers=2",
     "test:e2e": "playwright test",
