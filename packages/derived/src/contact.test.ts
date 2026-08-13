@@ -123,7 +123,7 @@ describe("coincident contact evidence", () => {
     ).toHaveLength(1);
   });
 
-  it("counts both Route arms when a same-Net Route passes through a pin", () => {
+  it("does not turn a same-Net geometric pass-through into a contact", () => {
     const document = contactedResistorDocument();
     document.junctions = [];
     document.routes = [
@@ -140,11 +140,121 @@ describe("coincident contact evidence", () => {
     const evidence = deriveDocumentContactEvidence(document, resolver);
     const contact = evidence.byEndpointKey.get("terminal:R1:1");
 
+    expect(contact?.routeArmCount).toBe(0);
+    expect(contact?.branchDirections).toEqual([{ x: 0, y: 1 }]);
+    expect(contact && contactRequiresJunctionDot(contact)).toBe(false);
+    expect(
+      deriveVisibleConnectivity(document, resolver)[0]?.components,
+    ).toHaveLength(2);
+  });
+
+  it("dots three authored Route arms even when two are collinear", () => {
+    const document = createEmptyDocument("collinear-branch", "Collinear");
+    document.nets.push({
+      id: "net-branch",
+      scope: "local",
+      terminals: [],
+      ports: [],
+    });
+    document.junctions.push(
+      {
+        id: "center",
+        netId: "net-branch",
+        position: { x: 100, y: 100 },
+        role: "branch",
+      },
+      ...[60, 140, 180].map((x, index) => ({
+        id: `end-${index}`,
+        netId: "net-branch",
+        position: { x, y: 100 },
+        role: "route-anchor" as const,
+      })),
+    );
+    document.routes.push(
+      ...document.junctions.slice(1).map((junction, index) => ({
+        id: `route-${index}`,
+        netId: "net-branch",
+        from: { kind: "junction" as const, junctionId: "center" },
+        to: { kind: "junction" as const, junctionId: junction.id },
+        waypoints: [],
+        segmentModes: ["manual" as const],
+      })),
+    );
+
+    const contact = deriveDocumentContactEvidence(
+      document,
+      resolver,
+    ).byEndpointKey.get("junction:center");
+
+    expect(contact?.routeArmCount).toBe(3);
     expect(contact?.branchDirections).toEqual([
       { x: -1, y: 0 },
-      { x: 0, y: 1 },
       { x: 1, y: 0 },
     ]);
+    expect(contact && contactRequiresJunctionDot(contact)).toBe(true);
+  });
+
+  it("dots a terminal plus two authored Route arms even when they are collinear", () => {
+    const document = createEmptyDocument("mixed-branch", "Mixed branch");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: {
+        position: { x: 100, y: 120 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.ports.push(
+      {
+        id: "left-a",
+        name: "left-a",
+        direction: "passive",
+        position: { x: 40, y: 100 },
+      },
+      {
+        id: "left-b",
+        name: "left-b",
+        direction: "passive",
+        position: { x: 20, y: 100 },
+      },
+    );
+    document.nets.push({
+      id: "net-mixed",
+      scope: "local",
+      terminals: [{ instanceId: "R1", pinName: "1" }],
+      ports: ["left-a", "left-b"],
+    });
+    document.routes.push(
+      {
+        id: "route-a",
+        netId: "net-mixed",
+        from: { kind: "terminal", instanceId: "R1", pinName: "1" },
+        to: { kind: "port", portId: "left-a" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-b",
+        netId: "net-mixed",
+        from: { kind: "terminal", instanceId: "R1", pinName: "1" },
+        to: { kind: "port", portId: "left-b" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    const contact = deriveDocumentContactEvidence(
+      document,
+      resolver,
+    ).contacts.find(
+      (candidate) => candidate.point.x === 100 && candidate.point.y === 100,
+    );
+
+    expect(contact?.routeArmCount).toBe(2);
+    expect(contact?.incidents).toHaveLength(3);
+    expect(contact?.branchDirections).toHaveLength(2);
     expect(contact && contactRequiresJunctionDot(contact)).toBe(true);
   });
 });

@@ -6558,3 +6558,18 @@ contracts (WP-R1)`.
   and `git diff --check` passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `test(model): exclude ignored scratch Project from corpus`.
+
+## 2026-08-14 - Canonical junction node presentation
+
+- Target: make junction dots follow explicit electrical topology across
+  Route, pin, overlapping-arm, and VDD power-rail cases without converting
+  geometric pass-through into connectivity.
+- Changed areas: shared contact evidence and renderer consumption; focused
+  derived/render/browser regressions; accepted connectivity/editor specs; the
+  intentional dense-analog visual and formal-export baselines.
+- Validation: focused contact/render/edit tests (44), four routing browser
+  regressions, `pnpm verify:branch` (120 files, 728 tests, all workspace builds
+  and production smoke), visual/export golden checks, and `git diff --check`
+  passed.
+- Commit status: ready to commit on `codex/canonical-junction-nodes` as
+  `fix(connectivity): canonicalize junction node presentation`.

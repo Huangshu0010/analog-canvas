@@ -363,14 +363,24 @@ describe("textbook monochrome SVG renderer", () => {
         terminals: [{ instanceId: "X1", pinName: "1" }],
         ports: ["left", "right"],
       });
-      document.routes.push({
-        id: "route-through",
-        netId: "net-contact",
-        from: { kind: "port", portId: "left" },
-        to: { kind: "port", portId: "right" },
-        waypoints: [],
-        segmentModes: ["manual"],
-      });
+      document.routes.push(
+        {
+          id: "route-left-half",
+          netId: "net-contact",
+          from: { kind: "port", portId: "left" },
+          to: { kind: "terminal", instanceId: "X1", pinName: "1" },
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+        {
+          id: "route-right-half",
+          netId: "net-contact",
+          from: { kind: "terminal", instanceId: "X1", pinName: "1" },
+          to: { kind: "port", portId: "right" },
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      );
 
       expect(renderDocumentSvg(document, resolver)).toMatch(
         /data-node-kind="contact" cx="100" cy="100"/u,
@@ -568,6 +578,67 @@ describe("textbook monochrome SVG renderer", () => {
       netId: "net-vdd",
       role: "branch",
     });
+  });
+
+  it("dots an ordinary VDD branch away from the actual power rail", () => {
+    const project = createEmptyProject("project-vdd-wire-branch", "VDD wire");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "VDD1",
+      symbolId: "vdd",
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-vdd",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+      ports: [],
+    });
+    document.junctions.push(
+      ...[
+        ["rail-left", 40, 40],
+        ["rail-right", 160, 40],
+        ["wire-center", 100, 100],
+        ["wire-left", 40, 100],
+        ["wire-right", 160, 100],
+        ["wire-down", 100, 160],
+      ].map(([id, x, y]) => ({
+        id: id as string,
+        netId: "net-vdd",
+        position: { x: x as number, y: y as number },
+        role:
+          id === "wire-center"
+            ? ("branch" as const)
+            : ("route-anchor" as const),
+      })),
+    );
+    document.routes.push(
+      {
+        id: "power-rail",
+        netId: "net-vdd",
+        from: { kind: "junction", junctionId: "rail-left" },
+        to: { kind: "junction", junctionId: "rail-right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+        presentation: "power-rail",
+      },
+      ...["wire-left", "wire-right", "wire-down"].map((junctionId) => ({
+        id: `route-${junctionId}`,
+        netId: "net-vdd",
+        from: { kind: "junction" as const, junctionId: "wire-center" },
+        to: { kind: "junction" as const, junctionId },
+        waypoints: [],
+        segmentModes: ["manual" as const],
+      })),
+    );
+
+    const svg = renderDocumentSvg(document, resolver);
+
+    expect(svg).toContain('data-object-id="wire-center"');
+    expect(svg).not.toContain('data-object-id="rail-left"');
+    expect(svg).not.toContain('data-object-id="rail-right"');
   });
 
   it("renders terminal and port No Connect declarations in the formal scene", () => {
@@ -1160,9 +1231,9 @@ describe("textbook monochrome SVG renderer", () => {
       '<circle data-object-id="junction-bias" cx="225" cy="80" r="3.77907" fill="#000"/>',
     );
     expect(svg).not.toContain('data-node-kind="device-pin"');
-    // Four actual three-arm branches and five hollow ports. Two-arm terminal
+    // Five actual topological branches and five hollow ports. Two-arm terminal
     // joins and corners deliberately remain dotless.
-    expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(9);
+    expect([...svg.matchAll(/<circle data-object-id=/gu)].length).toBe(10);
     // A route-marker contributes a head; its attached route remains the shaft.
     expect(svg).not.toContain('data-role="current-arrow-shaft"');
     expect(svg).toContain('data-kind="route-marker"');

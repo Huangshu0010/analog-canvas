@@ -484,6 +484,15 @@ export function buildSvgScene(
       return net && (net.powerDomain ?? "none") === "vdd" ? [route.netId] : [];
     }),
   );
+  const powerRailRouteIds = new Set(
+    document.routes
+      .filter(
+        (route) =>
+          route.presentation === "power-rail" &&
+          powerRailNetIds.has(route.netId),
+      )
+      .map((route) => route.id),
+  );
   const viewBox = options.bounds
     ? RectSchema.parse(options.bounds)
     : deriveBounds(document, resolver, routingGeometry, margin, profile);
@@ -525,7 +534,15 @@ export function buildSvgScene(
   );
   const junctions = contactEvidence.contacts
     .filter((contact) => {
-      if (powerRailNetIds.has(contact.netId)) return false;
+      if (
+        contact.incidents.some(
+          (incident) =>
+            incident.kind === "route" &&
+            powerRailRouteIds.has(incident.objectId),
+        )
+      ) {
+        return false;
+      }
       if (contact.endpoints.some((endpoint) => endpoint.kind === "port")) {
         return false;
       }

@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.5`
+Version: `1.6`
 
 Owning phase: `Phase 3/8`
 
@@ -88,9 +88,10 @@ duplicates and collinear interior points while retaining endpoint identity.
 `RouteBranch.presentation` is optional: omitted/`wire` is a normal conductor;
 `bulk-dashed` is the Razavi body appearance. `power-rail` is allowed only on a
 Net whose reviewed VDD terminal establishes the VDD power domain; it renders
-with the supply stroke and suppresses otherwise-visible branch dots on that
-same Net without changing their persisted Junction objects. All presentations
-share Net membership,
+with the supply stroke. A contact incident on the thick `power-rail` Route
+suppresses its otherwise-visible dot without changing its persisted Junction;
+ordinary branches elsewhere on the same VDD Net retain their dots. All
+presentations share Net membership,
 snapping, selection, split, stretch, highlight, deletion, clipboard, undo,
 Agent snapshot, and formal export behavior.
 
@@ -117,11 +118,18 @@ not translate them.
 ## Junction and crossing semantics
 
 - Continuous geometry within one RouteBranch is connected without a dot.
-- A branch through a Junction endpoint is connected and the Junction renders
-  as a solid dot.
-- A visible device terminal that is an explicit Route endpoint renders the
-  same solid contact marker. This marker is derived presentation, not a
-  persisted decorative Junction. Hollow Ports remain hollow.
+- Explicit same-Net endpoints at one exact coordinate form one canonical
+  contact. Only Routes that explicitly reference one of those endpoints
+  contribute a Route arm; a centerline merely passing through the coordinate
+  does not.
+- A canonical contact renders a solid dot when it has at least three authored
+  electrical arms. This includes three Route ends, a pin plus two Route ends,
+  and three coincident pins even when two arms initially overlap or leave in
+  the same direction.
+- A two-arm straight join, corner, pin-to-pin join, or pin-to-Route endpoint is
+  connected but remains dotless. Persisting a Junction establishes topology;
+  it does not by itself require a decorative dot. Hollow Ports remain hollow
+  and do not receive an additional solid marker.
 - Any X or T intersection lacking an explicit shared Junction remains a
   crossing, including intersections between branches of the same Net.
 - A crossing never causes automatic Net merge, route split, or Junction repair.
@@ -249,7 +257,7 @@ as project navigation that have no visible origin.
 This section is `proposed`, owned by `packages/derived`, and is implemented by
 WP-R2/R3/R5 of the connectivity-routing-debugging roadmap. It freezes the
 consumer boundary for the unified read models ahead of implementation; it does
-not change the accepted v1.5 connectivity/flightline/crossing rules above.
+not change the accepted connectivity/flightline/crossing rules above.
 
 Three additive, derived read models are accepted in
 [`../adr/0013-project-connectivity-index.md`](../adr/0013-project-connectivity-index.md),
@@ -283,12 +291,13 @@ from Project JSON, recovery, and SVG/PNG/PDF output.
 
 `deriveDocumentContactEvidence` is the sole coordinate-contact derivation.
 For explicit endpoints on the same Net and exact page coordinate, it reports
-the participating terminals/Junctions/ports/Route anchors and their incident
-directions. Consumers do not independently infer contact from symbol bounds or
-SVG pixels:
+the participating terminals/Junctions/ports, independently authored Route
+arms, and incident directions. Consumers do not independently infer contact
+from symbol bounds, centerline pass-through, or SVG pixels:
 
 - visible connectivity unions the reported same-Net endpoint contact;
-- junction rendering uses its incident degree to decide whether to draw a dot;
+- junction rendering uses its authored topological degree to decide whether to
+  draw a dot, retaining multiplicity even when arms share a direction;
 - contact-marker rendering also identifies explicit terminal/Route contacts
   without adding a Junction to the Document;
 - wire-through diagnostics accept a terminal at a Route endpoint only when the
