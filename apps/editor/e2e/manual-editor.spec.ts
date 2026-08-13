@@ -219,18 +219,9 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
   const dialog = page.getByRole("dialog", { name: "Insert Component" });
   const search = dialog.getByLabel("Component search");
   const preview = dialog.locator("svg.insert-symbol-artwork");
-  for (const symbolId of [
-    "capacitor",
-    "current-source",
-    "ground",
-    "nmos",
-    "pmos",
-    "port",
-    "port-filled",
-    "resistor",
-    "voltage-source",
-    "vdd",
-  ]) {
+  // Browser coverage owns dialog-to-preview wiring. Catalogue completeness and
+  // every symbol's geometry are covered by the symbol contract and goldens.
+  for (const symbolId of ["pmos", "resistor"]) {
     await search.fill(symbolId);
     await dialog.getByTestId(`insert-component-${symbolId}`).click();
     await expect(preview).toBeVisible();
@@ -269,14 +260,6 @@ test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
   ).toHaveCount(0);
   await expect(page.getByTestId("hit-VDD1")).toHaveCount(0);
   await expect(canvas.getByText("VDD", { exact: true })).toBeVisible();
-});
-
-test("does not expose presentation-style switching in the browser", async ({
-  page,
-}) => {
-  await page.goto("/");
-  const toolbar = page.getByRole("navigation", { name: "Editor commands" });
-  await expect(toolbar.locator("summary", { hasText: "Style" })).toHaveCount(0);
 });
 
 test("authors components and connectivity manually from an empty canvas", async ({

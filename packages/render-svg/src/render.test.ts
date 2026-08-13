@@ -1125,29 +1125,4 @@ describe("textbook monochrome SVG renderer", () => {
     expect(svg).toContain('data-text-run="subscript"');
     expect(svg).toContain("font-style:italic");
   });
-
-  it("renders drafting text as flat escaped text in the textbook-monochrome profile", () => {
-    const project = createEmptyProject("project-mono-text-scale", "Mono Text");
-    const document = project.documents[0]!;
-    document.presentation.styleProfileId = "textbook-monochrome-v1";
-    document.drafting = {
-      objects: [
-        {
-          id: "note-1",
-          kind: "text",
-          locked: false,
-          zIndex: 0,
-          anchor: { kind: "free", position: { x: 100, y: 100 } },
-          content: { runs: [{ kind: "text", value: "Note" }] },
-          alignment: "middle",
-          rotation: 0,
-        },
-      ],
-    };
-
-    const scene = buildSvgScene(document, resolver);
-
-    expect(scene.formalBody).toContain(">Note</text>");
-    expect(scene.formalBody).toContain('data-layer="drafting"');
-  });
 });

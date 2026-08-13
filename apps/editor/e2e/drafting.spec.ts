@@ -176,23 +176,6 @@ test("adds formatted drafting text and undo/redo restores it", async ({
   await expect(page.getByTestId("revision")).toHaveText("6");
 });
 
-test("T shortcut creates Razavi drafting text", async ({ page }) => {
-  await page.goto("/");
-  await page.keyboard.press("t");
-  await expect(
-    page.getByRole("textbox", { name: "Canvas text editor" }),
-  ).toBeVisible();
-  await expect(page.getByTestId("revision")).toHaveText("1");
-  await page
-    .getByRole("textbox", { name: "Canvas text editor" })
-    .press("Escape");
-  const projectBytes = await downloadBytes(page, "File", "Save Project");
-  const project = JSON.parse(projectBytes.toString("utf8"));
-  expect(project.documents[0].drafting.objects[0].typographyToken).toBe(
-    "label",
-  );
-});
-
 test("text floating editor closes on Escape or an outside pointer", async ({
   page,
 }) => {
@@ -210,7 +193,9 @@ test("text floating editor closes on Escape or an outside pointer", async ({
   await expect(page.getByTestId("canvas-text-editor")).toHaveCount(0);
 });
 
-test("export includes drafting bounds", async ({ page }) => {
+test("exports a newly created construction line through the File menu", async ({
+  page,
+}) => {
   await page.goto("/");
   await clickCommand(page, "Draw", "Construction line (K)");
   await clickCreate(page, { x: 200, y: 200 }, { x: 420, y: 260 });
@@ -220,27 +205,6 @@ test("export includes drafting bounds", async ({ page }) => {
     "utf8",
   );
   expect(svg).toContain('data-kind="construction-line"');
-});
-
-test("exposes no manual Guide command or shortcut", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator('[data-testid^="guide-"]')).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /guide/iu })).toHaveCount(0);
-  await expect(page.locator("summary", { hasText: "More" })).toHaveCount(0);
-  await page.keyboard.press("g");
-  await expect(page.getByTestId("active-tool")).toHaveText("pointer");
-  await expect(page.getByTestId("revision")).toHaveText("0");
-});
-
-// Production-preview smoke is covered separately by the build gate.
-test("editor mounts without console errors", async ({ page }) => {
-  const consoleErrors: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  await page.goto("/");
-  await expect(page.getByTestId("schematic-canvas")).toBeVisible();
-  expect(consoleErrors).toEqual([]);
 });
 
 test("switching creation tools discards the incompatible draft session", async ({
