@@ -34,6 +34,11 @@ export function constructVddRailEdits({
         symbolId: "vdd",
         placement: null,
         properties: {},
+        netlist: {
+          reference: instanceId,
+          binding: { kind: "primitive", deviceClass: "net-marker" },
+          parameters: {},
+        },
       },
     },
     {

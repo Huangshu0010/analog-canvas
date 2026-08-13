@@ -1,6 +1,8 @@
 import {
   AnnotationSchema,
+  CellNetlistInterfaceSchema,
   DraftingObjectSchema,
+  InstanceNetlistDataSchema,
   InstanceSchema,
   InstancePropertyValueSchema,
   JunctionRoleSchema,
@@ -103,6 +105,15 @@ export const PatchInstancePropertiesEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   set: z.record(z.string().min(1), InstancePropertyValueSchema).optional(),
   unset: z.array(z.string().min(1)).max(64).optional(),
+});
+export const SetInstanceNetlistEditSchema = z.strictObject({
+  kind: z.literal("set_instance_netlist"),
+  instanceId: StableIdSchema,
+  netlist: InstanceNetlistDataSchema,
+});
+export const SetCellNetlistInterfaceEditSchema = z.strictObject({
+  kind: z.literal("set_cell_netlist_interface"),
+  netlist: CellNetlistInterfaceSchema,
 });
 export const PlacePortEditSchema = z.strictObject({
   kind: z.literal("place_port"),
@@ -278,6 +289,8 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   RotateInstanceEditSchema,
   MirrorInstanceEditSchema,
   PatchInstancePropertiesEditSchema,
+  SetInstanceNetlistEditSchema,
+  SetCellNetlistInterfaceEditSchema,
   PlacePortEditSchema,
   MovePortEditSchema,
   SetRoutePointsEditSchema,
@@ -1716,6 +1729,7 @@ export function executeTransaction(
         draft.layoutGroups = [];
         draft.constraints = [];
         draft.drafting = { objects: [] };
+        if (draft.netlist) draft.netlist.portOrder = [];
         delete draft.mosBulkDefaults;
         connectivityChanged = true;
         geometryChanged = true;
@@ -2200,6 +2214,49 @@ export function executeTransaction(
           );
         }
         changedObjectIds.add(edit.instanceId);
+        break;
+      }
+      case "set_instance_netlist": {
+        const instance = draft.instances.find(
+          (candidate) => candidate.id === edit.instanceId,
+        );
+        if (!instance) {
+          return rejectAt(
+            "OBJECT_NOT_FOUND",
+            `Instance does not exist: ${edit.instanceId}`,
+            [],
+            [edit.instanceId],
+          );
+        }
+        if (
+          instance.netlist &&
+          JSON.stringify(instance.netlist) === JSON.stringify(edit.netlist)
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Netlist edit does not change the instance",
+            [],
+            [edit.instanceId],
+          );
+        }
+        instance.netlist = structuredClone(edit.netlist);
+        changedObjectIds.add(edit.instanceId);
+        connectivityChanged = true;
+        break;
+      }
+      case "set_cell_netlist_interface": {
+        if (
+          draft.netlist &&
+          JSON.stringify(draft.netlist) === JSON.stringify(edit.netlist)
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            "Cell netlist interface is unchanged",
+          );
+        }
+        draft.netlist = structuredClone(edit.netlist);
+        changedObjectIds.add(draft.id);
+        connectivityChanged = true;
         break;
       }
       case "place_port": {

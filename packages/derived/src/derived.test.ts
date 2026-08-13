@@ -186,6 +186,7 @@ describe("derived connectivity and route geometry", () => {
         position: { x: 120, y: 200 },
       },
     ];
+    document.netlist!.portOrder = ["port-vss", "port-tail"];
     document.instances = [
       {
         id: "XM1",

@@ -40,8 +40,9 @@ describe("migrateV2ToV3", () => {
     expect(twice).toEqual(once);
   });
 
-  it("targets the current schema version", () => {
-    expect(CURRENT_PROJECT_SCHEMA_VERSION).toBe(3);
+  it("remains the explicit predecessor of the current schema", () => {
+    expect(CURRENT_PROJECT_SCHEMA_VERSION).toBe(4);
+    expect(migrateV2ToV3({ schemaVersion: 2 }).schemaVersion).toBe(3);
   });
 });
 
@@ -65,6 +66,7 @@ describe("NoConnect schema invariants", () => {
         position: { x: 0, y: 0 },
       },
     ];
+    document.netlist!.portOrder = ["port1"];
     if (net) document.nets = [net as never];
     document.noConnects = [noConnect] as never;
     return CircuitProjectSchema.safeParse(project);
@@ -106,6 +108,7 @@ describe("NoConnect schema invariants", () => {
         position: { x: 0, y: 0 },
       },
     ];
+    document.netlist!.portOrder = ["port1"];
     document.noConnects = [
       { id: "nc1", endpoint: { kind: "port", portId: "port1" } },
       { id: "nc2", endpoint: { kind: "port", portId: "port1" } },

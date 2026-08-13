@@ -1625,6 +1625,30 @@ test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
   expect(pdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
 });
 
+test("does not expose netlist export or authoring semantics", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const fileMenu = await openMenu(page, "File");
+  await expect(
+    fileMenu.getByRole("button", { name: "Export SPICE netlist" }),
+  ).toHaveCount(0);
+  await expect(
+    fileMenu.getByRole("button", { name: "Export Spectre netlist" }),
+  ).toHaveCount(0);
+  await expect(fileMenu).not.toContainText("Structural design netlist");
+
+  await page.keyboard.press("Escape");
+  await placeComponent(page, "nmos", { x: 360, y: 220 });
+  await openSelectionShelf(page);
+  const properties = page.getByRole("complementary", { name: "Properties" });
+  await expect(properties.getByLabel("Cell netlist name")).toHaveCount(0);
+  await expect(properties.getByLabel("Cell netlist port order")).toHaveCount(0);
+  await expect(properties.getByLabel("Component reference")).toHaveCount(0);
+  await expect(properties.getByLabel("Component model")).toHaveCount(0);
+  await expect(properties.getByText(/^Model:/u)).toHaveCount(0);
+});
+
 test("uses automatic recovery and guards shortcuts while typing", async ({
   page,
 }) => {

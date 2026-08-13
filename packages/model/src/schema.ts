@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 3;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 4;
 
 export const StableIdSchema = z.string().min(1).max(256);
 export const PointSchema = z.strictObject({
@@ -81,6 +81,49 @@ export const InstancePropertyValueSchema = z.union([
   z.number().finite(),
   z.boolean(),
 ]);
+export const NetlistIdentifierSchema = z.string().min(1).max(128);
+export const NetlistParameterNameSchema = NetlistIdentifierSchema;
+export const NetlistParameterValueSchema = z.string().min(1).max(1024);
+export const NetlistDeviceClassSchema = z.enum([
+  "resistor",
+  "capacitor",
+  "inductor",
+  "mos",
+  "diode",
+  "bjt",
+  "voltage-source",
+  "current-source",
+  "net-marker",
+]);
+export const InstanceNetlistBindingSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("primitive"),
+    deviceClass: NetlistDeviceClassSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("model"),
+    deviceClass: NetlistDeviceClassSchema,
+    name: NetlistIdentifierSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("subcircuit"),
+    childDocumentId: StableIdSchema,
+    name: NetlistIdentifierSchema,
+  }),
+  z.strictObject({
+    kind: z.literal("external-subcircuit"),
+    name: NetlistIdentifierSchema,
+  }),
+]);
+export const InstanceNetlistDataSchema = z.strictObject({
+  reference: NetlistIdentifierSchema,
+  binding: InstanceNetlistBindingSchema.optional(),
+  parameters: z
+    .record(NetlistParameterNameSchema, NetlistParameterValueSchema)
+    .refine((parameters) => Object.keys(parameters).length <= 128, {
+      message: "An instance may contain at most 128 netlist parameters",
+    }),
+});
 // Stable import-time evidence for a model/subcircuit binding. It intentionally
 // does not replace the lossless `spice.*` compatibility properties; consumers
 // such as ERC must use this fact rather than attempt to re-parse those strings.
@@ -109,6 +152,7 @@ export const InstanceSchema = z.strictObject({
   mosBulkBinding: MosBulkBindingSchema.optional(),
   placement: PlacementSchema.nullable(),
   properties: z.record(z.string(), InstancePropertyValueSchema),
+  netlist: InstanceNetlistDataSchema.optional(),
 });
 export const PortSchema = z.strictObject({
   id: StableIdSchema,
@@ -475,6 +519,10 @@ export const SourceBindingSchema = z.strictObject({
   cellName: z.string().min(1),
   sourceRef: SourceSpanSchema,
 });
+export const CellNetlistInterfaceSchema = z.strictObject({
+  name: NetlistIdentifierSchema,
+  portOrder: z.array(StableIdSchema),
+});
 
 const SchematicDocumentBaseSchema = z.strictObject({
   id: StableIdSchema,
@@ -486,6 +534,7 @@ const SchematicDocumentBaseSchema = z.strictObject({
     "geometry-only-changed",
     "connectivity-modified",
   ]),
+  netlist: CellNetlistInterfaceSchema.optional(),
   ports: z.array(PortSchema),
   instances: z.array(InstanceSchema),
   nets: z.array(NetSchema),
@@ -544,6 +593,48 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
           path: ["mosBulkDefaults", key],
         });
       }
+    }
+    if (document.netlist) {
+      const orderedPortIds = new Set<string>();
+      for (const [orderIndex, portId] of document.netlist.portOrder.entries()) {
+        if (orderedPortIds.has(portId)) {
+          context.addIssue({
+            code: "custom",
+            message: `Duplicate netlist Port order entry: ${portId}`,
+            path: ["netlist", "portOrder", orderIndex],
+          });
+        }
+        orderedPortIds.add(portId);
+        if (!document.ports.some((port) => port.id === portId)) {
+          context.addIssue({
+            code: "custom",
+            message: `Unknown netlist Port order entry: ${portId}`,
+            path: ["netlist", "portOrder", orderIndex],
+          });
+        }
+      }
+      for (const [portIndex, port] of document.ports.entries()) {
+        if (!orderedPortIds.has(port.id)) {
+          context.addIssue({
+            code: "custom",
+            message: `Port is absent from the netlist interface: ${port.id}`,
+            path: ["ports", portIndex, "id"],
+          });
+        }
+      }
+    }
+    const netlistReferences = new Set<string>();
+    for (const [instanceIndex, instance] of document.instances.entries()) {
+      const reference = instance.netlist?.reference.toLowerCase();
+      if (!reference) continue;
+      if (netlistReferences.has(reference)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate netlist instance reference: ${instance.netlist!.reference}`,
+          path: ["instances", instanceIndex, "netlist", "reference"],
+        });
+      }
+      netlistReferences.add(reference);
     }
     for (const [instanceIndex, instance] of document.instances.entries()) {
       const binding = instance.mosBulkBinding;
@@ -830,6 +921,19 @@ export const CircuitProjectSchema = z
     documents: z.array(SchematicDocumentSchema).min(1),
   })
   .superRefine((project, context) => {
+    const cellNames = new Set<string>();
+    for (const [documentIndex, document] of project.documents.entries()) {
+      const name = document.netlist?.name.toLowerCase();
+      if (!name) continue;
+      if (cellNames.has(name)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate netlist Cell name: ${document.netlist!.name}`,
+          path: ["documents", documentIndex, "netlist", "name"],
+        });
+      }
+      cellNames.add(name);
+    }
     reportDuplicateIds(project.documents, "documents", context);
     if (
       !project.documents.some(
@@ -865,6 +969,12 @@ export type SourceSpan = z.infer<typeof SourceSpanSchema>;
 export type SourceManifest = z.infer<typeof SourceManifestSchema>;
 export type SymbolLibraryLock = z.infer<typeof SymbolLibraryLockSchema>;
 export type SourceBindingEvidence = z.infer<typeof SourceBindingEvidenceSchema>;
+export type NetlistDeviceClass = z.infer<typeof NetlistDeviceClassSchema>;
+export type InstanceNetlistBinding = z.infer<
+  typeof InstanceNetlistBindingSchema
+>;
+export type InstanceNetlistData = z.infer<typeof InstanceNetlistDataSchema>;
+export type CellNetlistInterface = z.infer<typeof CellNetlistInterfaceSchema>;
 export type MosBulkBinding = z.infer<typeof MosBulkBindingSchema>;
 export type TerminalRef = z.infer<typeof TerminalRefSchema>;
 export type Instance = z.infer<typeof InstanceSchema>;

@@ -11,7 +11,12 @@ describe("editor session project helpers", () => {
   it("replaces only the matching document and validates the project", () => {
     const project = createEmptyProject("session", "Session");
     const original = project.documents[0]!;
-    const child = { ...original, id: "child", name: "Child" };
+    const child = {
+      ...original,
+      id: "child",
+      name: "Child",
+      netlist: { name: "Child", portOrder: [] },
+    };
     project.documents.push(child);
 
     const replacement = { ...child, name: "Renamed child", revision: 1 };
@@ -32,7 +37,12 @@ describe("editor session project helpers", () => {
   it("uses only a stable child document id", () => {
     const project = createEmptyProject("session", "Session");
     const top = project.documents[0]!;
-    const child = { ...top, id: "child", name: "GainCell" };
+    const child = {
+      ...top,
+      id: "child",
+      name: "GainCell",
+      netlist: { name: "GainCell", portOrder: [] },
+    };
     project.documents.push(child);
 
     expect(

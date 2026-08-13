@@ -8,6 +8,8 @@ import type { PdkSymbolMappingOverride } from "@icm/symbols";
 import type {
   CircuitProject,
   Instance,
+  InstanceNetlistBinding,
+  NetlistDeviceClass,
   Net,
   SchematicDocument,
 } from "@icm/model";
@@ -32,6 +34,43 @@ interface ImportSymbolMapping {
   symbolId: string;
   pinNames?: readonly string[];
   registryId?: string;
+}
+
+function netlistDeviceClass(symbolId: string): NetlistDeviceClass | null {
+  const classes: Readonly<Record<string, NetlistDeviceClass>> = {
+    resistor: "resistor",
+    capacitor: "capacitor",
+    inductor: "inductor",
+    nmos: "mos",
+    pmos: "mos",
+    diode: "diode",
+    npn: "bjt",
+    pnp: "bjt",
+    "voltage-source": "voltage-source",
+    "current-source": "current-source",
+    ground: "net-marker",
+    vdd: "net-marker",
+  };
+  return classes[symbolId] ?? null;
+}
+
+function importedNetlistBinding(
+  instance: CircuitInstanceIR,
+  mapping: ImportSymbolMapping,
+): InstanceNetlistBinding | undefined {
+  if (instance.target.kind === "subcircuit") {
+    return { kind: "external-subcircuit", name: instance.target.cellName };
+  }
+  const deviceClass = netlistDeviceClass(mapping.symbolId);
+  if (!deviceClass) return undefined;
+  switch (instance.target.kind) {
+    case "primitive":
+      return { kind: "primitive", deviceClass };
+    case "model":
+      return { kind: "model", deviceClass, name: instance.target.modelName };
+    case "opaque":
+      return { kind: "model", deviceClass, name: instance.target.sourceName };
+  }
 }
 
 function symbolFor(
@@ -204,6 +243,7 @@ function importInstance(
       terminal.name ??
       `P${terminal.position + 1}`;
   }
+  const netlistBinding = importedNetlistBinding(instance, mapping);
   return {
     id: instance.id,
     symbolId: mapping.symbolId,
@@ -211,6 +251,16 @@ function importInstance(
     binding: bindingEvidence(instance, modelTypeByName),
     placement: null,
     properties,
+    netlist: {
+      reference: instance.name,
+      ...(netlistBinding ? { binding: netlistBinding } : {}),
+      parameters: Object.fromEntries(
+        Object.entries(instance.parameters).map(([name, parameter]) => [
+          name,
+          parameter.rawText,
+        ]),
+      ),
+    },
   };
 }
 
@@ -279,6 +329,7 @@ function importDocument(
     revision: 0,
     sourceBinding: { cellName: cell.name, sourceRef: cell.sourceRef },
     sourceStatus: "in-sync",
+    netlist: { name: cell.name, portOrder: ports.map((port) => port.id) },
     ports,
     instances,
     nets,
@@ -333,6 +384,21 @@ function bindImportedChildDocuments(
             ? { "spice.childDocumentId": childDocumentId }
             : {}),
         },
+        netlist: instance.netlist
+          ? {
+              ...instance.netlist,
+              binding: childDocumentId
+                ? {
+                    kind: "subcircuit" as const,
+                    name: instance.binding.name,
+                    childDocumentId,
+                  }
+                : {
+                    kind: "external-subcircuit" as const,
+                    name: instance.binding.name,
+                  },
+            }
+          : undefined,
       };
     }),
   }));

@@ -5896,6 +5896,26 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/plan-lifecycle-hygiene` as
   `docs(plan): prune routine completed records`.
 
+## 2026-08-13 - Deterministic SPICE and Spectre netlist export
+
+- Target: export the persisted schematic electrical model as deterministic
+  structural SPICE `.spi` or Spectre `.scs` without AI, geometry inference, or
+  guessed PDK/simulation setup.
+- Changed areas: accepted netlist spec and ADR; Project schema v4 migration;
+  reviewed Symbol netlist registry; typed Cell/Instance editor operations;
+  new `@icm/netlist` validation, IR, diagnostics, and pure printers; File-menu
+  downloads, clickable blocking diagnostics, and copy-safe reference allocation.
+- Validation: frozen-lockfile install; final `pnpm ci:check` green; 113 unit
+  files / 693 tests; release/production smoke and performance/golden checks;
+  101 Playwright scenarios including two-format hierarchical downloads and
+  blocked missing-model diagnostics; `git diff --check` clean.
+- Limitation: output is a structural library, not a runnable simulation deck;
+  PDK includes/corners/analyses remain deferred, external subcircuits without a
+  persisted ordered interface are blocked, and Spectre validation is
+  grammar/golden based because no licensed executable is available.
+- Commit status: implementation and target close-out committed on
+  `codex/netlist-export-system`; ready to push for review.
+
 ## 2026-08-13 - Agent authoring and evidence contract hardening
 
 - Target: remove Agent-side guesses for identity, wiring, contact, diagnostics,
@@ -5967,6 +5987,44 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/agent-contract-compaction` as
   `refactor(agent): compact and unify generated contracts`.
 
+## 2026-08-13 - Netlist export main integration
+
+- Target: merge current `origin/main` (`56e929c`) into the deterministic
+  netlist-export branch for integrated hands-on testing.
+- Changed areas: retained both plan-log histories; aligned two new main Port
+  fixtures with schema-v4 `portOrder`; regenerated compact Agent API artifacts
+  so typed netlist edits remain public; otherwise preserved both branches'
+  automatically merged contracts.
+- Validation: frozen install; static checks; 113 unit files / 692 tests;
+  canonical Agent artifacts; release/production smoke and performance/goldens;
+  101 Playwright scenarios, including hierarchical `.spi`/`.scs` downloads and
+  blocked-diagnostic location; `git diff --check` clean.
+- Commit status: ready to commit and push on
+  `codex/netlist-export-system` as `merge: integrate main into netlist export`.
+
+## 2026-08-13 - Hide web netlist surface
+
+- Target: retain deterministic netlist contracts and conversion code while
+  temporarily removing all netlist export and authoring semantics from the
+  public web editor.
+- Changed areas: removed the File-menu SPICE/Spectre downloads, export
+  diagnostics and explanatory copy, Cell netlist-interface controls, and
+  Instance Reference/Model controls and imported-model source text; removed the
+  editor's direct netlist runtime dependency; added negative unit and browser
+  coverage for the hidden surface. SPICE import and internal
+  model/migration/extractor/printer/typed-edit contracts remain intact.
+- Validation: focused 26-test unit suite; focused hidden-surface Playwright
+  scenario; typecheck and build; frozen install; static, 692-unit, release,
+  performance, golden, production, and release-smoke gates; all 99 unrelated
+  browser scenarios plus the new hidden-surface scenario. The existing
+  recovery-refresh scenario passed alone but flaked under 16-worker full-suite
+  load; the full suite was repeated at reduced concurrency for deterministic
+  coverage. `git diff --check` clean.
+- Commit status: implementation `96d1d8f` and latest-main merge `d19cf58`
+  pushed on `codex/netlist-export-system`; draft PR #31 is open and all six
+  required GitHub checks passed. The first Browser 1/2 run hit an existing
+  canvas-width timing assertion and passed unchanged on rerun.
+
 ## 2026-08-13 - README citation
 
 - Target: add a clear citation method naming Zengchun Chen and Zhishuai Zhang
@@ -5993,3 +6051,19 @@ contracts (WP-R1)`.
 - Validation: targeted Markdown formatting and `git diff --check` passed.
 - Commit status: ready to commit on `codex/capitalize-citation-title` as
   `docs(readme): capitalize citation title`.
+
+## 2026-08-13 - Test-contract and netlist delivery integration
+
+- Target: review and merge the test-contract deduplication, then combine it
+  with the hidden-surface deterministic netlist branch for final delivery.
+- Changed areas: PR #32 removed same-behavior test duplication without product
+  changes; merge `3594c01` brought its retained contract ownership into the
+  netlist branch while preserving the hidden web-surface assertion and all
+  lower-level netlist tests.
+- Validation: test-contract PR six-check GitHub gate; 49 focused combined unit
+  tests; two focused overlap browser scenarios; frozen install; canonical
+  `pnpm ci:check` with 112 Vitest files / 675 tests, builds, performance,
+  goldens, production/release smoke, and 96 Playwright scenarios;
+  `git diff --check` clean.
+- Commit status: PR #32 merged to `main` as `6efbf3d`; integrated netlist PR
+  #31 is ready for its refreshed remote checks and final merge.

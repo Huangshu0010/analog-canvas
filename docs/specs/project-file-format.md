@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `2.0`
+Version: `4.0`
 
 Owning phase: `Phase 0`
 
@@ -33,11 +33,11 @@ its validation, canonical serialization, and migration behavior.
 ## Data model or interface
 
 The authoritative runtime contract is `CircuitProjectSchema` in
-`packages/model`. The current released version is 2:
+`packages/model`. The current released version is 4:
 
 ```typescript
 interface CircuitProject {
-  schemaVersion: 2;
+  schemaVersion: 4;
   id: string;
   name: string;
   source: SourceManifest;
@@ -51,13 +51,14 @@ interface CircuitProject {
 declared policy, and selected source file IDs, paths, and hashes. In the Page
 release it does **not** mean that SPICE source text was copied into the Project
 file or a browser-created `sources/` directory. `SymbolLibraryLock` owns
-library ID, version, and content hash. Documents are embedded; version 2 has
+library ID, version, and content hash. Documents are embedded; version 4 has
 no separate document, source-lock, symbol-lock, cache, session, recovery, or
-export files.
+export files. Version 3 adds a first-class `NoConnect` collection to each
+Document; migration never infers NoConnect intent.
 
 ## Invariants
 
-- `schemaVersion` is exactly `2` after migration.
+- `schemaVersion` is exactly `4` after migration.
 - At least one Document exists and `topDocumentId` resolves to it.
 - Document IDs are unique.
 - Unknown object fields are rejected.
@@ -98,6 +99,13 @@ Readers accept only the current version plus explicitly registered older
 versions. Writers always emit the current version. The static Page layer does
 not change this file contract. Splitting Documents into files or embedding a
 source bundle requires a new schema version and ADR.
+
+Version 4 persists optional Cell interfaces and Instance electrical export
+facts. A schema-3 migration creates deterministic Cell names and Port order,
+copies only unambiguous source facts, and never invents a model or simulation
+setup. The authority and failure policy are defined by
+[`netlist-export.md`](netlist-export.md) and
+[`ADR 0017`](../adr/0017-deterministic-design-netlist-boundary.md).
 
 ## Deterministic validation
 

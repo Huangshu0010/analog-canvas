@@ -4,6 +4,11 @@ import {
 } from "./schema.js";
 import type { CircuitProject, SchematicDocument } from "./schema.js";
 
+function defaultCellName(name: string): string {
+  const normalized = name.replace(/[^A-Za-z0-9_]+/gu, "_") || "Cell";
+  return /^[A-Za-z_]/u.test(normalized) ? normalized : `_${normalized}`;
+}
+
 export function createEmptyDocument(
   id: string,
   name: string,
@@ -13,6 +18,7 @@ export function createEmptyDocument(
     name,
     revision: 0,
     sourceStatus: "in-sync",
+    netlist: { name: defaultCellName(name), portOrder: [] },
     ports: [],
     instances: [],
     nets: [],

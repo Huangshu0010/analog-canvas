@@ -306,6 +306,7 @@ describe("Agent Circuit API v1 service", () => {
         position: { x: 20, y: -20 },
       },
     );
+    document.netlist!.portOrder.push("left", "right", "top");
     let stored = document;
     const service = createAgentCircuitService({
       agentId: "agent-wire",
@@ -509,6 +510,7 @@ describe("Agent Circuit API v1 service", () => {
       direction: "input",
       position: null,
     });
+    document.netlist!.portOrder.push("port-in");
     document.nets.push({
       id: "net-in",
       scope: "local",

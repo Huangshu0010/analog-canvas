@@ -28,6 +28,60 @@ describe("CircuitProject schema", () => {
     ).toThrow(/Unknown top document/);
   });
 
+  it("validates persisted Cell interface and reference uniqueness", () => {
+    const project = createEmptyProject("project-netlist", "Netlist Project");
+    const document = project.documents[0]!;
+    document.ports.push({
+      id: "port-in",
+      name: "IN",
+      direction: "input",
+      position: null,
+    });
+    document.netlist!.portOrder.push("port-in");
+    document.instances.push(
+      {
+        id: "r-a",
+        symbolId: "resistor",
+        placement: null,
+        properties: {},
+        netlist: {
+          reference: "R1",
+          binding: { kind: "primitive", deviceClass: "resistor" },
+          parameters: { value: "10k" },
+        },
+      },
+      {
+        id: "r-b",
+        symbolId: "resistor",
+        placement: null,
+        properties: {},
+        netlist: {
+          reference: "r1",
+          binding: { kind: "primitive", deviceClass: "resistor" },
+          parameters: { value: "20k" },
+        },
+      },
+    );
+
+    const duplicate = CircuitProjectSchema.safeParse(project);
+    expect(duplicate.success).toBe(false);
+    if (!duplicate.success) {
+      expect(duplicate.error.message).toContain(
+        "Duplicate netlist instance reference",
+      );
+    }
+
+    document.instances[1]!.netlist!.reference = "R2";
+    document.netlist!.portOrder = [];
+    const missingPort = CircuitProjectSchema.safeParse(project);
+    expect(missingPort.success).toBe(false);
+    if (!missingPort.success) {
+      expect(missingPort.error.message).toContain(
+        "Port is absent from the netlist interface",
+      );
+    }
+  });
+
   it("rejects geometry-only crossings as implicit connectivity data", () => {
     const project = createEmptyProject("project-test", "Test Project");
     const [document] = project.documents;

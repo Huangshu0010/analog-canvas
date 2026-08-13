@@ -5,6 +5,7 @@ import {
 import type { CircuitProject } from "./schema.js";
 import { migrateV1ToV2 } from "./migration-v1-to-v2.js";
 import { migrateV2ToV3 } from "./migration-v2-to-v3.js";
+import { migrateV3ToV4 } from "./migration-v3-to-v4.js";
 
 export interface ProjectDiagnostic {
   code: "INVALID_JSON" | "INVALID_PROJECT" | "UNSUPPORTED_SCHEMA_VERSION";
@@ -108,6 +109,11 @@ defaultProjectMigrations.register(1, (input) => migrateV1ToV2(input).project);
 // and infers nothing; auto-applied on read so legacy Projects upgrade.
 defaultProjectMigrations.register(2, (input) =>
   migrateV2ToV3(input as Record<string, unknown>),
+);
+// ADR 0017 schema 3 -> 4 migration: persists deterministic cell interfaces
+// and instance netlist facts without inventing models or simulation setup.
+defaultProjectMigrations.register(3, (input) =>
+  migrateV3ToV4(input as Record<string, unknown>),
 );
 
 function isRecord(value: unknown): value is Record<string, unknown> {

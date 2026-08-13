@@ -8,6 +8,10 @@ Owning phase: `Phase 0`
 
 Primary owner: `packages/model`
 
+Related netlist contract:
+[`netlist-export.md`](netlist-export.md) and
+[`ADR 0017`](../adr/0017-deterministic-design-netlist-boundary.md).
+
 ## Purpose
 
 Define the persisted electrical and presentation truth shared by human edits,
@@ -216,6 +220,12 @@ ERC engine consume; they are not derived state.
 - Route segment mode count equals waypoint count plus one.
 - A geometric crossing creates no connectivity.
 - A connected branch requires an explicit endpoint or Junction object.
+- Netlist export reads logical Net membership only. It never derives a Net,
+  pin order, reference, model, or Cell interface from drawing geometry or
+  annotation text.
+- Persisted Cell interfaces and Instance netlist data are the sole export
+  authority once introduced by a versioned Project migration; legacy
+  `spice.*` properties are compatibility inputs only.
 - `placement: null` preserves an unplaced logical instance.
 - Layout intent and annotation placement never modify logical connectivity.
 - Annotation attachments reference an existing visual/electrical object.

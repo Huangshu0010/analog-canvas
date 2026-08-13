@@ -1,0 +1,755 @@
+import type {
+  CircuitProject,
+  Instance,
+  Net,
+  SchematicDocument,
+  StableId,
+} from "@icm/model";
+import { deviceNetlistDefinition } from "@icm/symbols";
+
+import type {
+  DesignNetlistCell,
+  DesignNetlistExtractionResult,
+  DesignNetlistInstance,
+  NetlistDiagnostic,
+} from "./ir.js";
+
+const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/u;
+const MAX_CELLS = 1024;
+const MAX_INSTANCES_PER_CELL = 100_000;
+const MAX_NETS_PER_CELL = 100_000;
+
+function isIdentifier(value: string, allowGround = false): boolean {
+  return (allowGround && value === "0") || IDENTIFIER.test(value);
+}
+
+function compareText(left: string, right: string): number {
+  return left.localeCompare(right, "en", { sensitivity: "base" });
+}
+
+function diagnostic(
+  diagnostics: NetlistDiagnostic[],
+  documentId: StableId,
+  code: string,
+  message: string,
+  objectIds: StableId[] = [],
+  severity: "error" | "warning" = "error",
+): void {
+  diagnostics.push({ code, severity, documentId, objectIds, message });
+}
+
+function reachableDocuments(
+  project: CircuitProject,
+  diagnostics: NetlistDiagnostic[],
+): SchematicDocument[] {
+  const byId = new Map(
+    project.documents.map((document) => [document.id, document]),
+  );
+  const ordered: SchematicDocument[] = [];
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+
+  function visit(
+    documentId: string,
+    parentId?: string,
+    instanceId?: string,
+  ): void {
+    if (visiting.has(documentId)) {
+      diagnostic(
+        diagnostics,
+        parentId ?? documentId,
+        "HIERARCHY_CYCLE",
+        `Hierarchy cycle reaches Document ${documentId}`,
+        instanceId ? [instanceId] : [],
+      );
+      return;
+    }
+    if (visited.has(documentId)) return;
+    const document = byId.get(documentId);
+    if (!document) {
+      diagnostic(
+        diagnostics,
+        parentId ?? project.topDocumentId,
+        "MISSING_CHILD_CELL",
+        `Hierarchy binding references unknown Document ${documentId}`,
+        instanceId ? [instanceId] : [],
+      );
+      return;
+    }
+    visiting.add(documentId);
+    const children = document.instances
+      .filter((instance) => instance.netlist?.binding?.kind === "subcircuit")
+      .sort((left, right) => left.id.localeCompare(right.id));
+    for (const instance of children) {
+      const binding = instance.netlist?.binding;
+      if (binding?.kind === "subcircuit") {
+        visit(binding.childDocumentId, document.id, instance.id);
+      }
+    }
+    visiting.delete(documentId);
+    visited.add(documentId);
+    ordered.push(document);
+  }
+
+  visit(project.topDocumentId);
+  if (ordered.length > MAX_CELLS) {
+    diagnostic(
+      diagnostics,
+      project.topDocumentId,
+      "CELL_LIMIT_EXCEEDED",
+      `Reachable hierarchy has ${ordered.length} cells; maximum is ${MAX_CELLS}`,
+    );
+  }
+  return ordered;
+}
+
+interface CellNetContext {
+  nameByNetId: Map<string, string>;
+  netByTerminal: Map<string, Net>;
+  netByPort: Map<string, Net>;
+  nets: DesignNetlistCell["nets"];
+}
+
+function buildNetContext(
+  document: SchematicDocument,
+  documentsById: Map<string, SchematicDocument>,
+  diagnostics: NetlistDiagnostic[],
+): CellNetContext {
+  if (document.nets.length > MAX_NETS_PER_CELL) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "NET_LIMIT_EXCEEDED",
+      `Cell has ${document.nets.length} Nets; maximum is ${MAX_NETS_PER_CELL}`,
+    );
+  }
+  const explicitNames = new Map<string, string>();
+  const occupiedNames = new Set<string>();
+  for (const net of document.nets) {
+    if (!net.name) continue;
+    const folded = net.name.toLowerCase();
+    const prior = explicitNames.get(folded);
+    if (prior) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "DUPLICATE_NET_NAME",
+        `Net name ${net.name} duplicates Net ${prior} under case folding`,
+        [prior, net.id],
+      );
+    } else {
+      explicitNames.set(folded, net.id);
+    }
+    occupiedNames.add(folded);
+    if (!isIdentifier(net.name, true)) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "INVALID_NET_NAME",
+        `Net name is outside the portable identifier subset: ${net.name}`,
+        [net.id],
+      );
+    }
+  }
+
+  const nameByNetId = new Map<string, string>();
+  let generatedIndex = 1;
+  for (const net of [...document.nets].sort((a, b) =>
+    a.id.localeCompare(b.id),
+  )) {
+    if (net.name) {
+      nameByNetId.set(net.id, net.name);
+      continue;
+    }
+    if (net.scope === "global") {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "UNNAMED_GLOBAL_NET",
+        "A global Net requires an explicit name",
+        [net.id],
+      );
+      continue;
+    }
+    let generated = "";
+    do {
+      generated = `N${String(generatedIndex).padStart(4, "0")}`;
+      generatedIndex += 1;
+    } while (occupiedNames.has(generated.toLowerCase()));
+    occupiedNames.add(generated.toLowerCase());
+    nameByNetId.set(net.id, generated);
+    diagnostic(
+      diagnostics,
+      document.id,
+      "GENERATED_NET_NAME",
+      `Unnamed local Net ${net.id} exports as ${generated}`,
+      [net.id],
+      "warning",
+    );
+  }
+
+  const netByTerminal = new Map<string, Net>();
+  const netByPort = new Map<string, Net>();
+  const instanceById = new Map(
+    document.instances.map((instance) => [instance.id, instance]),
+  );
+  const portIds = new Set(document.ports.map((port) => port.id));
+  for (const net of document.nets) {
+    for (const terminal of net.terminals) {
+      const instance = instanceById.get(terminal.instanceId);
+      if (!instance) {
+        diagnostic(
+          diagnostics,
+          document.id,
+          "UNKNOWN_TERMINAL_INSTANCE",
+          `Net ${net.id} references unknown instance ${terminal.instanceId}`,
+          [net.id, terminal.instanceId],
+        );
+      } else {
+        const binding = instance.netlist?.binding;
+        const child =
+          binding?.kind === "subcircuit"
+            ? documentsById.get(binding.childDocumentId)
+            : undefined;
+        const allowedPins =
+          child?.netlist?.portOrder.flatMap((portId) => {
+            const port = child.ports.find(
+              (candidate) => candidate.id === portId,
+            );
+            return port ? [port.name] : [];
+          }) ?? deviceNetlistDefinition(instance.symbolId)?.pinOrder;
+        if (allowedPins && !allowedPins.includes(terminal.pinName)) {
+          diagnostic(
+            diagnostics,
+            document.id,
+            "UNKNOWN_TERMINAL_PIN",
+            `Net ${net.id} references unknown pin ${terminal.instanceId}.${terminal.pinName}`,
+            [net.id, terminal.instanceId],
+          );
+        }
+      }
+      const key = `${terminal.instanceId}\u0000${terminal.pinName}`;
+      const prior = netByTerminal.get(key);
+      if (prior) {
+        diagnostic(
+          diagnostics,
+          document.id,
+          "MULTIPLY_ASSIGNED_TERMINAL",
+          `Terminal ${terminal.instanceId}.${terminal.pinName} belongs to multiple Nets`,
+          [prior.id, net.id, terminal.instanceId],
+        );
+      } else {
+        netByTerminal.set(key, net);
+      }
+    }
+    for (const portId of net.ports) {
+      if (!portIds.has(portId)) {
+        diagnostic(
+          diagnostics,
+          document.id,
+          "UNKNOWN_NET_PORT",
+          `Net ${net.id} references unknown Port ${portId}`,
+          [net.id, portId],
+        );
+      }
+      const prior = netByPort.get(portId);
+      if (prior) {
+        diagnostic(
+          diagnostics,
+          document.id,
+          "MULTIPLY_ASSIGNED_PORT",
+          `Port ${portId} belongs to multiple Nets`,
+          [prior.id, net.id, portId],
+        );
+      } else {
+        netByPort.set(portId, net);
+      }
+    }
+  }
+
+  return {
+    nameByNetId,
+    netByTerminal,
+    netByPort,
+    nets: [...document.nets]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .flatMap((net) => {
+        const name = nameByNetId.get(net.id);
+        return name ? [{ id: net.id, name, scope: net.scope }] : [];
+      }),
+  };
+}
+
+function terminalNetName(
+  document: SchematicDocument,
+  instance: Instance,
+  pinName: string,
+  context: CellNetContext,
+  diagnostics: NetlistDiagnostic[],
+): string | null {
+  const net = context.netByTerminal.get(`${instance.id}\u0000${pinName}`);
+  const name = net ? context.nameByNetId.get(net.id) : undefined;
+  if (!name) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "MISSING_PIN_NET",
+      `Required pin ${instance.netlist?.reference ?? instance.id}.${pinName} is not connected to an exportable Net`,
+      [instance.id],
+    );
+    return null;
+  }
+  return name;
+}
+
+function extractHierarchyInstance(
+  document: SchematicDocument,
+  instance: Instance,
+  documentsById: Map<string, SchematicDocument>,
+  context: CellNetContext,
+  diagnostics: NetlistDiagnostic[],
+): DesignNetlistInstance | null {
+  const netlist = instance.netlist;
+  const binding = netlist?.binding;
+  if (!netlist || binding?.kind !== "subcircuit") return null;
+  if (!isIdentifier(netlist.reference)) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "INVALID_INSTANCE_REFERENCE",
+      `Instance reference is outside the portable identifier subset: ${netlist.reference}`,
+      [instance.id],
+    );
+  }
+  if (!netlist.reference.toUpperCase().startsWith("X")) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "WRONG_REFERENCE_PREFIX",
+      `Hierarchy reference ${netlist.reference} must start with X`,
+      [instance.id],
+    );
+  }
+  for (const parameter of Object.keys(netlist.parameters)) {
+    if (!isIdentifier(parameter)) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "INVALID_PARAMETER_NAME",
+        `Parameter name is outside the portable identifier subset: ${parameter}`,
+        [instance.id],
+      );
+    }
+  }
+  const child = documentsById.get(binding.childDocumentId);
+  if (!child?.netlist) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "MISSING_CHILD_INTERFACE",
+      `Hierarchy instance ${netlist.reference} has no resolved child netlist interface`,
+      [instance.id, binding.childDocumentId],
+    );
+    return null;
+  }
+  if (binding.name.toLowerCase() !== child.netlist.name.toLowerCase()) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "CHILD_NAME_MISMATCH",
+      `Hierarchy target ${binding.name} does not match child cell ${child.netlist.name}`,
+      [instance.id, child.id],
+    );
+  }
+  const childPortById = new Map(child.ports.map((port) => [port.id, port]));
+  const nodes = child.netlist.portOrder.flatMap((portId) => {
+    const port = childPortById.get(portId);
+    if (!port) return [];
+    const netName = terminalNetName(
+      document,
+      instance,
+      port.name,
+      context,
+      diagnostics,
+    );
+    return netName ? [{ pinName: port.name, netName }] : [];
+  });
+  return {
+    id: instance.id,
+    reference: netlist.reference,
+    deviceClass: "hierarchical",
+    target: child.netlist.name,
+    nodes,
+    parameters: Object.entries(netlist.parameters)
+      .sort(([a], [b]) => compareText(a, b))
+      .map(([name, rawValue]) => ({ name, rawValue })),
+  };
+}
+
+function extractDeviceInstance(
+  document: SchematicDocument,
+  instance: Instance,
+  context: CellNetContext,
+  diagnostics: NetlistDiagnostic[],
+): DesignNetlistInstance | null {
+  const definition = deviceNetlistDefinition(instance.symbolId);
+  if (!definition) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "MISSING_DEVICE_DEFINITION",
+      `Symbol ${instance.symbolId} has no reviewed netlist definition`,
+      [instance.id],
+    );
+    return null;
+  }
+  const netlist = instance.netlist;
+  if (!netlist) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "MISSING_INSTANCE_NETLIST",
+      `Instance ${instance.id} has no netlist data`,
+      [instance.id],
+    );
+    return null;
+  }
+  if (!isIdentifier(netlist.reference)) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "INVALID_INSTANCE_REFERENCE",
+      `Instance reference is outside the portable identifier subset: ${netlist.reference}`,
+      [instance.id],
+    );
+  }
+  if (
+    definition.referencePrefix &&
+    !netlist.reference.toUpperCase().startsWith(definition.referencePrefix)
+  ) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "WRONG_REFERENCE_PREFIX",
+      `Reference ${netlist.reference} must start with ${definition.referencePrefix}`,
+      [instance.id],
+    );
+  }
+  if (definition.targetPolicy === "required-model") {
+    if (netlist.binding?.kind !== "model") {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "MISSING_MODEL_TARGET",
+        `Instance ${netlist.reference} requires an explicit model target`,
+        [instance.id],
+      );
+    } else if (netlist.binding.deviceClass !== definition.deviceClass) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "DEVICE_CLASS_MISMATCH",
+        `Binding class ${netlist.binding.deviceClass} does not match ${definition.deviceClass}`,
+        [instance.id],
+      );
+    }
+  } else if (
+    definition.targetPolicy === "builtin" &&
+    (netlist.binding?.kind !== "primitive" ||
+      netlist.binding.deviceClass !== definition.deviceClass)
+  ) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "DEVICE_CLASS_MISMATCH",
+      `Instance ${netlist.reference} requires primitive class ${definition.deviceClass}`,
+      [instance.id],
+    );
+  }
+  for (const parameter of definition.requiredParameters) {
+    if (!netlist.parameters[parameter]?.trim()) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "MISSING_REQUIRED_PARAMETER",
+        `Instance ${netlist.reference} requires parameter ${parameter}`,
+        [instance.id],
+      );
+    }
+  }
+  for (const parameter of Object.keys(netlist.parameters)) {
+    if (!isIdentifier(parameter)) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "INVALID_PARAMETER_NAME",
+        `Parameter name is outside the portable identifier subset: ${parameter}`,
+        [instance.id],
+      );
+    }
+  }
+  const nodes = definition.pinOrder.flatMap((pinName) => {
+    const netName = terminalNetName(
+      document,
+      instance,
+      pinName,
+      context,
+      diagnostics,
+    );
+    return netName ? [{ pinName, netName }] : [];
+  });
+  if (definition.deviceClass === "net-marker") {
+    const markerNet = context.netByTerminal.get(
+      `${instance.id}\u0000${definition.pinOrder[0]}`,
+    );
+    if (!markerNet || markerNet.scope !== "global" || !markerNet.name) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "INVALID_NET_MARKER",
+        `Net marker ${instance.id} must connect to an explicitly named global Net`,
+        [instance.id],
+      );
+    } else if (instance.symbolId === "ground" && markerNet.name !== "0") {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "GROUND_NAME_MISMATCH",
+        `Ground marker must connect to global Net 0, not ${markerNet.name}`,
+        [instance.id, markerNet.id],
+      );
+    }
+    return null;
+  }
+  const target =
+    netlist.binding?.kind === "model" ? netlist.binding.name : null;
+  if (target && !isIdentifier(target)) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "INVALID_TARGET_NAME",
+      `Model target is outside the portable identifier subset: ${target}`,
+      [instance.id],
+    );
+  }
+  return {
+    id: instance.id,
+    reference: netlist.reference,
+    deviceClass: definition.deviceClass,
+    target,
+    nodes,
+    parameters: Object.entries(netlist.parameters)
+      .sort(([a], [b]) => compareText(a, b))
+      .map(([name, rawValue]) => ({ name, rawValue })),
+  };
+}
+
+function extractCell(
+  document: SchematicDocument,
+  documentsById: Map<string, SchematicDocument>,
+  diagnostics: NetlistDiagnostic[],
+): DesignNetlistCell | null {
+  if (!document.netlist) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "MISSING_CELL_INTERFACE",
+      `Document ${document.id} has no netlist interface`,
+    );
+    return null;
+  }
+  if (!isIdentifier(document.netlist.name)) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "INVALID_CELL_NAME",
+      `Cell name is outside the portable identifier subset: ${document.netlist.name}`,
+    );
+  }
+  if (document.instances.length > MAX_INSTANCES_PER_CELL) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "INSTANCE_LIMIT_EXCEEDED",
+      `Cell has ${document.instances.length} instances; maximum is ${MAX_INSTANCES_PER_CELL}`,
+    );
+  }
+  const context = buildNetContext(document, documentsById, diagnostics);
+  const portById = new Map(document.ports.map((port) => [port.id, port]));
+  const orderedPortIds = new Set(document.netlist.portOrder);
+  if (
+    orderedPortIds.size !== document.netlist.portOrder.length ||
+    orderedPortIds.size !== document.ports.length ||
+    document.ports.some((port) => !orderedPortIds.has(port.id))
+  ) {
+    diagnostic(
+      diagnostics,
+      document.id,
+      "INVALID_PORT_ORDER",
+      "Cell netlist portOrder must contain every Port exactly once",
+      document.netlist.portOrder,
+    );
+  }
+  const portNames = new Map<string, string>();
+  const noConnectPorts = new Set(
+    document.noConnects.flatMap((record) =>
+      record.endpoint.kind === "port" ? [record.endpoint.portId] : [],
+    ),
+  );
+  const ports = document.netlist.portOrder.flatMap((portId) => {
+    const port = portById.get(portId);
+    if (!port) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "MISSING_INTERFACE_PORT",
+        `Netlist interface references unknown Port ${portId}`,
+        [portId],
+      );
+      return [];
+    }
+    if (!isIdentifier(port.name, true)) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "INVALID_PORT_NAME",
+        `Port name is outside the portable identifier subset: ${port.name}`,
+        [port.id],
+      );
+    }
+    const priorPort = portNames.get(port.name.toLowerCase());
+    if (priorPort) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "DUPLICATE_PORT_NAME",
+        `Port name ${port.name} duplicates Port ${priorPort} under case folding`,
+        [priorPort, port.id],
+      );
+    } else {
+      portNames.set(port.name.toLowerCase(), port.id);
+    }
+    const portNet = context.netByPort.get(portId);
+    const netName = portNet ? context.nameByNetId.get(portNet.id) : undefined;
+    if (!netName && !noConnectPorts.has(portId)) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "UNCONNECTED_PORT",
+        `Port ${port.name} is not connected and has no NoConnect declaration`,
+        [port.id],
+      );
+    }
+    return [{ id: port.id, name: port.name, netName: netName ?? port.name }];
+  });
+
+  const references = new Map<string, string>();
+  const instances: DesignNetlistInstance[] = [];
+  for (const instance of [...document.instances].sort((a, b) => {
+    const left = a.netlist?.reference ?? a.id;
+    const right = b.netlist?.reference ?? b.id;
+    return compareText(left, right) || a.id.localeCompare(b.id);
+  })) {
+    const reference = instance.netlist?.reference;
+    if (reference) {
+      const folded = reference.toLowerCase();
+      const prior = references.get(folded);
+      if (prior) {
+        diagnostic(
+          diagnostics,
+          document.id,
+          "DUPLICATE_INSTANCE_REFERENCE",
+          `Reference ${reference} duplicates instance ${prior} under case folding`,
+          [prior, instance.id],
+        );
+      } else {
+        references.set(folded, instance.id);
+      }
+    }
+    const binding = instance.netlist?.binding;
+    if (binding?.kind === "external-subcircuit") {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "EXTERNAL_SUBCIRCUIT_INTERFACE_UNAVAILABLE",
+        `External subcircuit ${binding.name} has no persisted ordered interface`,
+        [instance.id],
+      );
+      continue;
+    }
+    const extracted =
+      binding?.kind === "subcircuit"
+        ? extractHierarchyInstance(
+            document,
+            instance,
+            documentsById,
+            context,
+            diagnostics,
+          )
+        : extractDeviceInstance(document, instance, context, diagnostics);
+    if (extracted) instances.push(extracted);
+  }
+  return {
+    id: document.id,
+    name: document.netlist.name,
+    ports,
+    nets: context.nets,
+    instances,
+  };
+}
+
+export function extractDesignNetlist(
+  project: CircuitProject,
+): DesignNetlistExtractionResult {
+  const diagnostics: NetlistDiagnostic[] = [];
+  const documents = reachableDocuments(project, diagnostics);
+  const documentsById = new Map(
+    project.documents.map((document) => [document.id, document]),
+  );
+  const cellNames = new Map<string, string>();
+  const cells: DesignNetlistCell[] = [];
+  for (const document of documents) {
+    const name = document.netlist?.name;
+    if (name) {
+      const folded = name.toLowerCase();
+      const prior = cellNames.get(folded);
+      if (prior) {
+        diagnostic(
+          diagnostics,
+          document.id,
+          "DUPLICATE_CELL_NAME",
+          `Cell name ${name} duplicates Document ${prior} under case folding`,
+          [prior, document.id],
+        );
+      } else {
+        cellNames.set(folded, document.id);
+      }
+    }
+    const cell = extractCell(document, documentsById, diagnostics);
+    if (cell) cells.push(cell);
+  }
+  diagnostics.sort(
+    (left, right) =>
+      left.documentId.localeCompare(right.documentId) ||
+      left.code.localeCompare(right.code) ||
+      left.objectIds
+        .join("\u0000")
+        .localeCompare(right.objectIds.join("\u0000")),
+  );
+  if (diagnostics.some((item) => item.severity === "error")) {
+    return { ir: null, diagnostics };
+  }
+  const globals = [
+    ...new Set(
+      cells.flatMap((cell) =>
+        cell.nets
+          .filter((net) => net.scope === "global")
+          .map((net) => net.name),
+      ),
+    ),
+  ].sort(compareText);
+  return {
+    ir: { topCellId: project.topDocumentId, cells, globals },
+    diagnostics,
+  };
+}

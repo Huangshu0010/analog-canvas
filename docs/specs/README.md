@@ -19,6 +19,7 @@ against. They describe required behavior and invariants, not task history.
 | [`agent-api.md`](agent-api.md)                               |          6/9 | accepted                 | v1 query compatibility; v2 Snapshot, typed edits, render, permissions        |
 | [`persistence-and-recovery.md`](persistence-and-recovery.md) |          0/7 | accepted boundary        | Atomic save, AppData cache/session/recovery, migrations                      |
 | [`export.md`](export.md)                                     |            7 | accepted                 | Formal SVG source and derived PNG/PDF contracts                              |
+| [`netlist-export.md`](netlist-export.md)                     | Netlist WP0/6 | accepted                 | Deterministic structural SPICE/Spectre export and diagnostics                |
 | [`performance.md`](performance.md)                           |            7 | accepted                 | Representative workloads and release budgets                                 |
 | [`editor-interaction.md`](editor-interaction.md)             |            8 | accepted                 | Direct manipulation, manual authoring, gestures, and automation boundary     |
 | [`web-agent-session.md`](web-agent-session.md)               |    Web Agent | proposed                 | Browser-authoritative relay: scopes, transport, events, errors, threat       |

@@ -45,5 +45,7 @@ describe("component parameter catalogue", () => {
     expect(effectiveComponentParameterValue(instance, parameter)).toBe("1u");
     instance.properties.w = "2u";
     expect(effectiveComponentParameterValue(instance, parameter)).toBe("2u");
+    instance.netlist = { reference: "M1", parameters: { w: "3u" } };
+    expect(effectiveComponentParameterValue(instance, parameter)).toBe("3u");
   });
 });

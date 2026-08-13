@@ -106,6 +106,7 @@ import {
   componentParameters,
   effectiveComponentParameterValue,
 } from "../features/component-insert/component-parameters";
+import { initialInstanceNetlist } from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
 import { ShapesPanel } from "../features/editor-shell/shapes-panel";
 import { useDocumentController } from "../document/document-controller";
@@ -593,7 +594,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     x: string;
     y: string;
     rotation: "0" | "90" | "180" | "270";
-  }>({ instanceId: null, parameters: {}, x: "", y: "", rotation: "0" });
+  }>({
+    instanceId: null,
+    parameters: {},
+    x: "",
+    y: "",
+    rotation: "0",
+  });
   const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
     null,
   );
@@ -2668,6 +2675,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         mirror: "none" as const,
       },
       properties: placementRequest.properties,
+      netlist: initialInstanceNetlist(
+        document,
+        symbolId,
+        placementRequest.properties,
+      ),
     };
     // New authoring never relies on the renderer-only default label. The
     // explicit annotation is the one editable text object for all ordinary
@@ -3832,6 +3844,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const edits: SchematicEdit[] = [];
     const set: Record<string, string> = {};
     const unset: string[] = [];
+    const baseNetlist =
+      selectedInstance.netlist ??
+      initialInstanceNetlist(
+        document,
+        selectedInstance.symbolId,
+        selectedInstance.properties,
+      );
+    const netlistParameters = { ...baseNetlist.parameters };
     for (const parameter of componentParameters(selectedInstance.symbolId)) {
       const value = (
         instancePropertyDraft.parameters[parameter.key] ?? ""
@@ -3848,6 +3868,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       } else if (String(explicit) !== value) {
         set[parameter.key] = value;
       }
+      if (value === "") delete netlistParameters[parameter.key];
+      else netlistParameters[parameter.key] = value;
     }
     if (Object.keys(set).length > 0 || unset.length > 0) {
       edits.push({
@@ -3855,6 +3877,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         instanceId: selectedInstance.id,
         ...(Object.keys(set).length > 0 ? { set } : {}),
         ...(unset.length > 0 ? { unset } : {}),
+      });
+    }
+
+    const nextNetlist = {
+      ...baseNetlist,
+      parameters: netlistParameters,
+    };
+    if (
+      JSON.stringify(nextNetlist) !== JSON.stringify(selectedInstance.netlist)
+    ) {
+      edits.push({
+        kind: "set_instance_netlist",
+        instanceId: selectedInstance.id,
+        netlist: nextNetlist,
       });
     }
 
@@ -5833,12 +5869,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                       </label>
                     ),
                   )}
-                  {typeof selectedInstance.properties["spice.target"] ===
-                  "string" ? (
-                    <p className="property-source-fact">
-                      Model: {selectedInstance.properties["spice.target"]}
-                    </p>
-                  ) : null}
                   {selectedInstance.placement ? (
                     <>
                       <div

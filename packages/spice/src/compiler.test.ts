@@ -23,6 +23,10 @@ Q2 collector base emitter QPREF
       ),
     );
     expect(imported.successful).toBe(true);
+    expect(imported.project?.documents[0]?.netlist).toMatchObject({
+      name: "__flat__",
+      portOrder: [],
+    });
     expect(
       imported.project?.documents[0]?.instances.map((instance) => [
         instance.properties["spice.name"],
@@ -202,6 +206,15 @@ Q2 collector base emitter QPREF
       name: "sky130_fd_pr__nfet_01v8",
       status: "resolved",
       sourceRef: document.instances[0]!.sourceRef,
+    });
+    expect(document.instances[0]!.netlist).toEqual({
+      reference: "XM1",
+      binding: {
+        kind: "model",
+        deviceClass: "mos",
+        name: "sky130_fd_pr__nfet_01v8",
+      },
+      parameters: { l: "1.0", w: "96", nf: "12" },
     });
     expect(
       document.nets

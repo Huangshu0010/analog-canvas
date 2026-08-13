@@ -88,6 +88,10 @@ Project. Successful mappings persist their registry ID in instance properties.
   provenance evidence rather than final rendered widths.
 - PDK mapping never infers pin order from a symbol name alone; a rule includes
   terminal count and the complete ordered pin list.
+- Netlist-capable electrical Symbols have a separate reviewed device definition
+  that owns device class, reference prefix, canonical pin order, target policy,
+  and required parameters. Printers never infer these from artwork, orientation,
+  or `symbolId` spelling. See [`netlist-export.md`](netlist-export.md).
 
 ## Operations and state transitions
 

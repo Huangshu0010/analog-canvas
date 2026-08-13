@@ -25,6 +25,11 @@ describe("schematic clipboard", () => {
           mirror: "none",
         },
         properties: {},
+        netlist: {
+          reference: "R1",
+          binding: { kind: "primitive", deviceClass: "resistor" },
+          parameters: { value: "1k" },
+        },
       },
       {
         id: "R2",
@@ -35,6 +40,11 @@ describe("schematic clipboard", () => {
           mirror: "none",
         },
         properties: {},
+        netlist: {
+          reference: "R2",
+          binding: { kind: "primitive", deviceClass: "resistor" },
+          parameters: { value: "2k" },
+        },
       },
     );
     document.nets.push({
@@ -73,6 +83,9 @@ describe("schematic clipboard", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.document.instances).toHaveLength(4);
+    expect(
+      result.document.instances.map((instance) => instance.netlist?.reference),
+    ).toEqual(["R1", "R2", "R3", "R4"]);
     expect(result.document.routes).toHaveLength(2);
     expect(result.document.nets).toHaveLength(1);
     expect(result.document.nets[0]?.terminals).toHaveLength(4);

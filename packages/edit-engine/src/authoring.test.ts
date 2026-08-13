@@ -33,6 +33,84 @@ function addInstance(id: string, symbolId: string, x: number) {
 }
 
 describe("semantic authoring", () => {
+  it("updates typed Cell and Instance netlist facts through one transaction", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "device-1",
+      symbolId: "nmos",
+      placement: null,
+      properties: {},
+    });
+    const result = executeTransaction(
+      document,
+      transaction([
+        {
+          kind: "set_cell_netlist_interface",
+          netlist: { name: "ota_core", portOrder: [] },
+        },
+        {
+          kind: "set_instance_netlist",
+          instanceId: "device-1",
+          netlist: {
+            reference: "M1",
+            binding: {
+              kind: "model",
+              deviceClass: "mos",
+              name: "nch_mac",
+            },
+            parameters: { w: "2u", l: "60n" },
+          },
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        sourceStatus: "connectivity-modified",
+        netlist: { name: "ota_core", portOrder: [] },
+        instances: [
+          {
+            netlist: {
+              reference: "M1",
+              binding: {
+                kind: "model",
+                deviceClass: "mos",
+                name: "nch_mac",
+              },
+              parameters: { w: "2u", l: "60n" },
+            },
+          },
+        ],
+      },
+    });
+    expect(document.instances[0]!.netlist).toBeUndefined();
+  });
+
+  it("rejects an invalid persisted Port order atomically", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.ports.push({
+      id: "port-in",
+      name: "IN",
+      direction: "input",
+      position: null,
+    });
+    document.netlist!.portOrder.push("port-in");
+    const result = executeTransaction(
+      document,
+      transaction([
+        {
+          kind: "set_cell_netlist_interface",
+          netlist: { name: "main", portOrder: ["missing"] },
+        },
+      ]),
+      { symbolResolver: resolver },
+    );
+    expect(result).toMatchObject({ ok: false, applied: false });
+    expect(document.netlist!.portOrder).toEqual(["port-in"]);
+  });
+
   it("adds devices and connects two previously unconnected pins atomically", () => {
     const document = createEmptyDocument("document-main", "Main");
     const result = executeTransaction(
@@ -229,6 +307,7 @@ describe("semantic authoring", () => {
       direction: "input",
       position: null,
     });
+    document.netlist!.portOrder.push("port-in");
     document.annotations.push(
       {
         id: "label-in",
