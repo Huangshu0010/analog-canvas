@@ -4,7 +4,7 @@ Status: `complete`
 
 > Historical completion record. Its VSS extraction/review and Visio-derived
 > visual-source claims were superseded on 2026-08-09 by
-> [ADR 0011](../adr/0011-retire-visio-vss-as-visual-authority.md). Current
+> [ADR 0011](../../adr/0011-retire-visio-vss-as-visual-authority.md). Current
 > symbol appearance is authored and accepted only from the raster reference.
 
 ## Objective

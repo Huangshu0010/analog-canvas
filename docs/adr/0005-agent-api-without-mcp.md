@@ -77,4 +77,4 @@ MCP is not implemented and no MCP package is added.
 
 - [`../specs/agent-api.md`](../specs/agent-api.md)
 - [`../specs/edit-engine.md`](../specs/edit-engine.md)
-- [`../roadmap/phase-6-agent-api.md`](../roadmap/phase-6-agent-api.md)
+- [`../archive/roadmap/phase-6-agent-api.md`](../archive/roadmap/phase-6-agent-api.md)

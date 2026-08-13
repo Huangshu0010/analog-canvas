@@ -133,12 +133,12 @@ Detach a routed branch
 
 ## Risks and decisions
 
-| Risk or decision | Handling |
-|---|---|
+| Risk or decision                                 | Handling                                                      |
+| ------------------------------------------------ | ------------------------------------------------------------- |
 | Geometry accidentally becomes connectivity truth | Only explicit endpoints and Junction objects affect the graph |
-| Independent branches duplicate segments | Add deterministic per-net route normalization |
-| Local move rewrites manual work | Preserve trunk/manual/locked modes and limit stretch scope |
-| Flightline order flickers | Stable IDs are mandatory MST tie-breakers |
+| Independent branches duplicate segments          | Add deterministic per-net route normalization                 |
+| Local move rewrites manual work                  | Preserve trunk/manual/locked modes and limit stretch scope    |
+| Flightline order flickers                        | Stable IDs are mandatory MST tie-breakers                     |
 
 ## Exit gate
 

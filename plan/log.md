@@ -6167,3 +6167,16 @@ contracts (WP-R1)`.
 - Validation: `pnpm ci:static`, frozen install, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/local-validation-optimization` as
   `chore(ci): format lockfile static contract`.
+
+## 2026-08-13 - Documentation information architecture
+
+- Target: make current product, user, contributor, and Agent documentation
+  discoverable while removing redundant historical prose from active paths.
+- Changed areas: root and docs indexes; concise current product architecture;
+  user compatibility/troubleshooting; archive of completed Phase 0--8 records;
+  removal of three superseded Agent planning documents; and an all-CI local
+  Markdown-link checker.
+- Validation: Prettier, 102-file local-link scan, `pnpm ci:static` (format,
+  link scan, pinned references, typecheck), and `git diff --check` passed.
+- Commit status: ready to commit on `codex/docs-information-architecture` as
+  `docs: consolidate current documentation architecture`.

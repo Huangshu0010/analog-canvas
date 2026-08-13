@@ -82,7 +82,7 @@ the same diagnostics, lock accepted work, and continue in the GUI.
 
 ## Dependencies
 
-- Completed [`Phase 8`](phase-8-direct-manipulation-and-manual-authoring.md)
+- Completed [`Phase 8`](../archive/roadmap/phase-8-direct-manipulation-and-manual-authoring.md)
   authoring baseline.
 - Accepted [`Agent API`](../specs/agent-api.md),
   [`Edit Engine`](../specs/edit-engine.md),
@@ -92,9 +92,9 @@ the same diagnostics, lock accepted work, and continue in the GUI.
   [`Project File Format`](../specs/project-file-format.md), revised through an
   ADR/version change where Phase 9 is incompatible.
 - Accepted
-  [`Snapshot-Driven Agent Architecture`](../agent/rule-guided-layout-architecture.md)
+  [`Agent workflow`](../agent/workflow.md)
   and
-  [`Agent Skill and Knowledge Plan`](../agent/knowledge-and-skill-plan.md).
+  [`Agent circuit-style knowledge`](../agent/circuit-style-knowledge.md).
 - Existing RLC, SKY130 CDAC, hierarchy, dense analog, symbol, and performance
   fixtures plus one reviewed unseen non-regular large circuit.
 

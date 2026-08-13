@@ -4,7 +4,7 @@ Status: `complete`
 
 > Historical completion record. References below to Visio/VSS-faithful
 > components or VSS review are superseded by
-> [ADR 0011](../adr/0011-retire-visio-vss-as-visual-authority.md). They remain
+> [ADR 0011](../../adr/0011-retire-visio-vss-as-visual-authority.md). They remain
 > only as evidence of the completed interaction work, not current style rules.
 
 ## Objective
@@ -55,13 +55,13 @@ the existing non-MCP API boundary.
 ## Dependencies
 
 - Completed [`Phase 7`](phase-7-export-and-hardening.md) release baseline.
-- Accepted [`Editor Interaction Contract`](../specs/editor-interaction.md).
-- Accepted [`Edit Engine`](../specs/edit-engine.md),
-  [`Connectivity and Routing`](../specs/connectivity-and-routing.md),
-  [`Symbol DSL`](../specs/symbol-dsl.md),
+- Accepted [`Editor Interaction Contract`](../../specs/editor-interaction.md).
+- Accepted [`Edit Engine`](../../specs/edit-engine.md),
+  [`Connectivity and Routing`](../../specs/connectivity-and-routing.md),
+  [`Symbol DSL`](../../specs/symbol-dsl.md),
   the archived
-  [`VSS Development Import`](../archive/visio-vss/vss-development-import.md), and
-  [`Agent API`](../specs/agent-api.md) contracts, each revised compatibly when
+  [`VSS Development Import`](../visio-vss/vss-development-import.md), and
+  [`Agent API`](../../specs/agent-api.md) contracts, each revised compatibly when
   its Phase 8 surface changes.
 - Immutable `lib/circuit.vss` evidence and existing visual/contact-sheet tools.
 
