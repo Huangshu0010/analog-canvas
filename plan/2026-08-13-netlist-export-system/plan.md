@@ -54,6 +54,8 @@ updated before scope expansion:
   edits after WP0 acceptance
 - focused Agent adapter classification/schema updates required by the new
   public typed edits
+- focused downstream test fixtures that construct Documents manually and must
+  remain valid after the accepted schema-v4 Cell/Instance contract
 - `packages/spice/src/importer.ts` and its focused tests so newly imported
   schema-current Projects write typed netlist facts directly rather than
   relying on a migration that only runs for older files
@@ -125,19 +127,19 @@ The accepted shared contracts that this target must preserve are:
 
 The implementation must establish one authority for each exported fact:
 
-| Exported fact | Authority | Forbidden fallback |
-| --- | --- | --- |
-| Cell identity | typed Document netlist metadata | visible document title or source filename |
-| Cell port order | explicit ordered Port IDs | canvas position or alphabetical sort |
-| Net membership | `Net.terminals` and `Net.ports` | Route contact or geometric overlap |
-| Net name | `Net.name`, otherwise deterministic generated name | annotation text not bound through the Net-name edit |
-| Global/ground meaning | `Net.scope` and the electrical name `0` | symbol artwork, vertical placement, or text appearance |
-| Instance reference | typed instance reference | visible instance-label annotation |
-| Device class/prefix | reviewed device-netlist definition | parsing `symbolId` ad hoc in a printer |
-| Model/subcircuit target | typed instance binding | symbol name, label text, or guessed PDK convention |
-| Instance pin order | reviewed device definition or child-cell interface | symbol orientation, x/y position, or object-key order |
-| Parameter name/value | typed raw parameter map | visual label parsing or numeric normalization |
-| Dialect spelling | SPICE/Spectre printer | values stored as preformatted source lines |
+| Exported fact           | Authority                                          | Forbidden fallback                                     |
+| ----------------------- | -------------------------------------------------- | ------------------------------------------------------ |
+| Cell identity           | typed Document netlist metadata                    | visible document title or source filename              |
+| Cell port order         | explicit ordered Port IDs                          | canvas position or alphabetical sort                   |
+| Net membership          | `Net.terminals` and `Net.ports`                    | Route contact or geometric overlap                     |
+| Net name                | `Net.name`, otherwise deterministic generated name | annotation text not bound through the Net-name edit    |
+| Global/ground meaning   | `Net.scope` and the electrical name `0`            | symbol artwork, vertical placement, or text appearance |
+| Instance reference      | typed instance reference                           | visible instance-label annotation                      |
+| Device class/prefix     | reviewed device-netlist definition                 | parsing `symbolId` ad hoc in a printer                 |
+| Model/subcircuit target | typed instance binding                             | symbol name, label text, or guessed PDK convention     |
+| Instance pin order      | reviewed device definition or child-cell interface | symbol orientation, x/y position, or object-key order  |
+| Parameter name/value    | typed raw parameter map                            | visual label parsing or numeric normalization          |
+| Dialect spelling        | SPICE/Spectre printer                              | values stored as preformatted source lines             |
 
 `spice.name`, `spice.target`, `spice.pin.Pn`, and `spice.param.*` remain
 compatibility inputs for migration only. Once a Project is migrated, neither

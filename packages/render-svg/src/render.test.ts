@@ -40,6 +40,7 @@ describe("textbook monochrome SVG renderer", () => {
       direction: "input",
       position: { x: 100, y: 40 },
     });
+    document.netlist!.portOrder.push("VB");
     document.nets.push({
       id: "net-vb",
       scope: "local",
@@ -335,6 +336,7 @@ describe("textbook monochrome SVG renderer", () => {
       direction: "passive",
       position: { x: 180, y: 100 },
     });
+    document.netlist!.portOrder.push("port-a");
     document.noConnects.push(
       {
         id: "nc-terminal",
@@ -451,6 +453,7 @@ describe("textbook monochrome SVG renderer", () => {
         position: null,
       }),
     );
+    document.netlist!.portOrder = document.ports.map((port) => port.id);
     document.instances = [
       {
         id: "XDRIVER",
@@ -577,6 +580,7 @@ describe("textbook monochrome SVG renderer", () => {
         position: { x: 160, y: 60 },
       },
     );
+    document.netlist!.portOrder.push("port-left", "port-right");
     document.nets.push({
       id: "net-current",
       scope: "local",
@@ -643,6 +647,7 @@ describe("textbook monochrome SVG renderer", () => {
       direction: "passive",
       position: { x: 40, y: 60 },
     });
+    document.netlist!.portOrder.push("port-vin");
 
     const svg = renderDocumentSvg(document, resolver);
     expect(svg).toContain(

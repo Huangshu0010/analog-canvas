@@ -56,6 +56,7 @@ describe("Edit Transaction envelope", () => {
         position: { x: 40, y: 0 },
       },
     );
+    document.netlist!.portOrder.push("rail-left", "rail-right");
     document.nets.push({
       id: "net-vdd",
       scope: "global",
