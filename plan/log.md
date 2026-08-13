@@ -6286,3 +6286,20 @@ contracts (WP-R1)`.
   `pnpm typecheck`, `pnpm docs:check`, and `git diff --check` passed.
 - Commit status: ready to commit on `codex/agent-project-lifecycle` as
   `feat(agent): v3 exact snapshot targets and component catalog`.
+
+## 2026-08-13 - Hosted Agent four-operation golden contract
+
+- Target: make external browser Agent takeover self-contained and repairable
+  through one hosted v2 `capabilities/snapshot/transact/render` contract,
+  without adding Circuit operations, SDKs, or source-code dependencies.
+- Changed areas: production-only request/response schemas and generated
+  OpenAPI; shared structured request and transport errors; strict current
+  Agent authoring boundary; ten-step copied lifecycle; explicit access
+  rotation; relay/browser rejection ordering; contract, session, and E2E tests;
+  and ADR/spec supersession of the AP2/v3 surface expansion.
+- Validation: focused Agent tests (63), web-session E2E, generated artifact
+  check, typecheck, docs check, and `pnpm verify:branch` passed (113 test files,
+  705 tests, all workspace builds, production smoke); `git diff --check`
+  passed.
+- Commit status: ready to commit on `codex/agent-project-lifecycle` as
+  `fix(agent): close the four-operation request contract`.

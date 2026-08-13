@@ -16,6 +16,8 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
   const editorSecret = "editor-secret-e2e";
   const responses: SessionMessage[] = [];
   let browserSocket: WebSocketRoute | null = null;
+  let sessionCreates = 0;
+  let revokeControls = 0;
 
   await page.routeWebSocket(
     `**/api/agent/sessions/${sessionId}/editor`,
@@ -31,6 +33,7 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "POST" && url.pathname === "/api/agent/sessions") {
+      sessionCreates += 1;
       const body = request.postDataJSON() as {
         projectId: string;
         projectSessionId: string;
@@ -57,6 +60,8 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
       return;
     }
     if (request.method() === "POST" && url.pathname.endsWith("/control")) {
+      const body = request.postDataJSON() as { action?: string };
+      if (body.action === "revoke") revokeControls += 1;
       await route.fulfill({
         contentType: "application/json",
         json: { ok: true, status: "active" },
@@ -239,6 +244,15 @@ test("grants a browser Agent, edits through the live host, and shares undo", asy
   await page.getByTestId("agent-resume").click();
   await expect(page.getByTestId("agent-status")).toContainText(
     "Agent connected",
+  );
+  await page.getByTestId("agent-rotate").click();
+  await expect.poll(() => sessionCreates).toBe(2);
+  await expect.poll(() => revokeControls).toBe(1);
+  await expect(page.getByTestId("agent-claim-code")).toHaveText(
+    `${sessionId}.one-time-claim`,
+  );
+  await expect(page.getByTestId("agent-status")).toContainText(
+    "Waiting for Agent to claim",
   );
   await page.getByTestId("agent-revoke").click();
   await expect(page.getByTestId("agent-status")).toContainText("Revoked");

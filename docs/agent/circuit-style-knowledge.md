@@ -56,11 +56,11 @@ Document graph available while focusing on one electrically coherent region.
 
 Use three visibly distinct concepts:
 
-| Concept | Model object | Appearance |
-| --- | --- | --- |
-| Direction change only | transient `bend` folded into waypoint | no dot |
-| Real electrical branch | explicit Junction with branch role | dot |
-| Geometric crossing without connection | crossing Routes, no shared Junction | no dot |
+| Concept                               | Model object                          | Appearance |
+| ------------------------------------- | ------------------------------------- | ---------- |
+| Direction change only                 | transient `bend` folded into waypoint | no dot     |
+| Real electrical branch                | explicit Junction with branch role    | dot        |
+| Geometric crossing without connection | crossing Routes, no shared Junction   | no dot     |
 
 Do not create a Junction for every waypoint. Do not rely on two overlapping
 lines to imply a branch. A branch dot should answer “these conductors connect,”
@@ -180,8 +180,10 @@ For each important multi-terminal Net, be able to state briefly:
   do not label every pin when one compact rail is clearer.
 - A caption is not electrical connectivity. A label-based relation must attach
   to the relevant Net branch.
-- Under `razavi-textbook-v1`, use human-readable names such as `M1`, `VDD`,
-  `VIN+`, or explicit underscore notation; the renderer owns math composition.
+- Keep the semantic identifier human-readable, but provide canonical RichText
+  AST `content` for every newly authored annotation. Represent subscripts and
+  superscripts as span nodes; do not depend on underscore/string parsing at
+  render time.
 
 ## Review the image, not only the metrics
 

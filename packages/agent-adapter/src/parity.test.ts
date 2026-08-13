@@ -42,6 +42,7 @@ const draftingEdits = [
       kind: "route-marker",
       markerKind: "current",
       text: "I_x",
+      content: { runs: [{ kind: "text", value: "I_x" }] },
       position: { x: 200, y: 120 },
       anchor: {
         kind: "route",

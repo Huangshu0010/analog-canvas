@@ -103,6 +103,42 @@ function serviceFixture(
 }
 
 describe("Agent Circuit API v1 service", () => {
+  it("rejects a schema-invalid request without changing the revision", () => {
+    const fixture = serviceFixture();
+    const before = fixture.getDocument().revision;
+    const response = fixture.service.handle({
+      apiVersion: "2.0",
+      requestId: "invalid-variant",
+      operation: "transact",
+      documentId: fixture.getDocument().id,
+      transactionId: "invalid-variant",
+      expectedRevision: before,
+      edits: [
+        {
+          kind: "add_instance",
+          instance: {
+            id: "VIN",
+            symbolId: "port",
+            symbolVariantId: "",
+            placement: null,
+            properties: {},
+          },
+        },
+      ],
+    });
+    expect(response).toMatchObject({
+      operation: "error",
+      ok: false,
+      error: { code: "INVALID_REQUEST" },
+      diagnostics: [
+        {
+          path: ["edits", 0, "instance", "symbolVariantId"],
+        },
+      ],
+    });
+    expect(fixture.getDocument().revision).toBe(before);
+  });
+
   it("publishes exactly four operations and validates checked request examples", () => {
     const fixture = serviceFixture();
     const response = fixture.service.handle({
@@ -149,9 +185,7 @@ describe("Agent Circuit API v1 service", () => {
     expect(AgentCircuitRequestJsonSchema).toMatchObject({
       $schema: "https://json-schema.org/draft/2020-12/schema",
     });
-    expect(agentCircuitOpenApi.paths["/v1/circuit"].post.operationId).toBe(
-      "agentCircuitV1Operation",
-    );
+    expect(agentCircuitOpenApi.paths).not.toHaveProperty("/v1/circuit");
     expect(agentCircuitOpenApi.paths["/v2/circuit"].post.operationId).toBe(
       "agentCircuitV2Operation",
     );
@@ -184,7 +218,7 @@ describe("Agent Circuit API v1 service", () => {
 
   it("publishes one reusable request and response schema in OpenAPI", () => {
     const schemas = agentCircuitOpenApi.components.schemas;
-    const paths = ["/v1/circuit", "/v2/circuit"] as const;
+    const paths = ["/v2/circuit"] as const;
     for (const path of paths) {
       expect(
         agentCircuitOpenApi.paths[path].post.requestBody.content[
@@ -244,7 +278,8 @@ describe("Agent Circuit API v1 service", () => {
       ok: true,
       capabilities: {
         operations: ["capabilities", "snapshot", "transact", "render"],
-        snapshotVersions: ["1.0", "2.0"],
+        apiVersions: ["2.0"],
+        snapshotVersions: ["1.0"],
         permissions: { snapshot: true },
       },
     });
@@ -271,7 +306,12 @@ describe("Agent Circuit API v1 service", () => {
         },
       },
     });
-    if (!response.ok || response.operation !== "snapshot" || !("snapshot" in response)) return;
+    if (
+      !response.ok ||
+      response.operation !== "snapshot" ||
+      !("snapshot" in response)
+    )
+      return;
     expect(
       response.snapshot.document.instances.find((item) => item.id === "M1")
         ?.pins,
@@ -792,6 +832,7 @@ describe("Agent Circuit API v1 service", () => {
             kind: "route-marker",
             markerKind: "current",
             text: "I_x",
+            content: { runs: [{ kind: "text", value: "I_x" }] },
             position: { x: 100, y: 100 },
             anchor: {
               kind: "free",

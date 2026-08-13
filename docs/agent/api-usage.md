@@ -1,6 +1,6 @@
 # Agent API Usage
 
-## Recommended v2 lifecycle
+## One production lifecycle
 
 1. Call `capabilities` once and obey the returned operations, permissions, edit
    kinds, and byte/transaction limits.
@@ -27,9 +27,11 @@ edit position (`["edits", index]`) or, for a Route geometry failure, at the
 Route (`["routes", routeId]`), and `objectIds` names the offending object. Read
 `path`/`objectIds` to pinpoint the failing edit rather than parsing the message.
 
-The normal v2 operation surface is intentionally flat:
-`capabilities`, `snapshot`, `transact`, and `render`. API v1 `query` remains a
-compatibility boundary, not a recommended planning language.
+The production operation surface is exactly `capabilities`, `snapshot`,
+`transact`, and `render`. Do not invent a validation, planning, compilation, or
+fallback mutation endpoint. The deployed OpenAPI examples identify the current
+request version; API v1 `query` is compatibility history, not a production
+planning language.
 
 ## Loopback example
 
@@ -123,9 +125,18 @@ in-memory authorization with bounded backoff and exposes a manual **Reconnect**
 action. Wait for `editor.online`; never replay an uncertain write under a new
 `requestId`.
 
+Closing the Connect Agent panel does not pause, revoke, or disconnect the live
+session. If the Agent loses its bearer, the user may choose **Rotate Agent
+Access**. Rotation revokes the old capability and creates a new one-time claim
+for the same open Project, authorized Documents, and scopes; it is not a refresh
+token and never revives the old bearer.
+
 ## Failure handling
 
-- `INVALID_REQUEST`: repair the payload against the checked schema.
+- `INVALID_REQUEST`: repair every reported `SCHEMA_VIOLATION` at its machine-
+  readable `path`, then submit a new dry run. The response never echoes the
+  rejected value. Malformed JSON uses the same envelope without a fabricated
+  field path.
 - `PERMISSION_DENIED`: request narrower authority or ask the human/host for a
   new authorized session; do not route around it.
 - `LIMIT_EXCEEDED`: split a transaction. Do not drop electrical edits silently.

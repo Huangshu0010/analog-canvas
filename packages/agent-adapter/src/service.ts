@@ -22,13 +22,13 @@ import {
   agentVisualDiagnostics,
 } from "./diagnostics.js";
 import type { AgentOperationHost } from "./host.js";
+import { parseCompatibleAgentCircuitRequest } from "./request-contract.js";
 import {
   AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
   AGENT_API_V3_VERSION,
   AGENT_SNAPSHOT_VERSION,
   AGENT_SNAPSHOT_V3_VERSION,
-  AgentCircuitRequestSchema,
   AgentCircuitResponseSchema,
 } from "./schema.js";
 import type {
@@ -555,29 +555,12 @@ export function createAgentCircuitService(
   return {
     limits,
     handle(input: unknown): AgentCircuitResponse {
-      const parsed = AgentCircuitRequestSchema.safeParse(input);
+      // Frozen local v1/v3 fixtures use the explicit migration reader. Hosted
+      // relay/browser traffic is already constrained to the production v2
+      // four-operation schema before it reaches this service.
+      const parsed = parseCompatibleAgentCircuitRequest(input);
       if (!parsed.success) {
-        const candidate = input as {
-          apiVersion?: unknown;
-          requestId?: unknown;
-        } | null;
-        const requestId =
-          candidate && typeof candidate.requestId === "string"
-            ? candidate.requestId
-            : "invalid-request";
-        const apiVersion =
-          candidate?.apiVersion === AGENT_API_V1_VERSION
-            ? AGENT_API_V1_VERSION
-            : candidate?.apiVersion === AGENT_API_V3_VERSION
-              ? AGENT_API_V3_VERSION
-              : AGENT_API_VERSION;
-        return errorResponse(
-          apiVersion,
-          requestId,
-          "error",
-          "INVALID_REQUEST",
-          parsed.error.issues.map((issue) => issue.message).join("; "),
-        );
+        return parsed.response;
       }
       const request = parsed.data;
       const fail = (
@@ -597,32 +580,56 @@ export function createAgentCircuitService(
           diagnostics,
         );
       if (request.operation === "capabilities") {
+        const snapshotPermission =
+          options.permissions.snapshot ?? options.permissions.query;
+        const { query: _queryPermission, ...productionPermissions } = {
+          ...options.permissions,
+          snapshot: snapshotPermission,
+        };
+        const {
+          maxQueryObjects: _maxQueryObjects,
+          maxQueryBytes: _maxQueryBytes,
+          ...productionLimits
+        } = limits;
         return response({
           apiVersion: request.apiVersion,
           requestId: request.requestId,
           operation: "capabilities",
           ok: true,
           capabilities: {
-            apiVersions: [
-              AGENT_API_V1_VERSION,
-              AGENT_API_VERSION,
-              AGENT_API_V3_VERSION,
-            ],
-            snapshotVersions: [AGENT_SNAPSHOT_VERSION, AGENT_SNAPSHOT_V3_VERSION],
+            apiVersions:
+              request.apiVersion === AGENT_API_VERSION
+                ? [AGENT_API_VERSION]
+                : [
+                    AGENT_API_V1_VERSION,
+                    AGENT_API_VERSION,
+                    AGENT_API_V3_VERSION,
+                  ],
+            snapshotVersions:
+              request.apiVersion === AGENT_API_VERSION
+                ? [AGENT_SNAPSHOT_VERSION]
+                : [AGENT_SNAPSHOT_VERSION, AGENT_SNAPSHOT_V3_VERSION],
             operations:
               request.apiVersion === AGENT_API_V1_VERSION
                 ? V1_OPERATIONS
                 : request.apiVersion === AGENT_API_V3_VERSION
                   ? V3_OPERATIONS
                   : V2_OPERATIONS,
-            queryScopes: QUERY_SCOPES,
+            ...(request.apiVersion === AGENT_API_V1_VERSION
+              ? { queryScopes: QUERY_SCOPES }
+              : {}),
             editKinds: AGENT_EDIT_KINDS,
-            permissions: {
-              ...options.permissions,
-              snapshot:
-                options.permissions.snapshot ?? options.permissions.query,
-            },
-            limits,
+            permissions:
+              request.apiVersion === AGENT_API_VERSION
+                ? productionPermissions
+                : {
+                    ...options.permissions,
+                    snapshot: snapshotPermission,
+                  },
+            limits:
+              request.apiVersion === AGENT_API_VERSION
+                ? productionLimits
+                : limits,
           },
         });
       }
@@ -657,7 +664,9 @@ export function createAgentCircuitService(
             version: "1",
           };
           const catalog = buildAgentCatalogSnapshot({ symbolLibrary });
-          const catalogBytes = utf8ByteLength(canonicalSnapshotContent(catalog));
+          const catalogBytes = utf8ByteLength(
+            canonicalSnapshotContent(catalog),
+          );
           if (catalogBytes > limits.maxSnapshotBytes) {
             return fail(
               "snapshot",

@@ -470,7 +470,9 @@ function cellInterfaceOf(document: SchematicDocument) {
     : null;
 }
 
-function instanceNetlistFactsOf(instance: DocumentInstance): AgentInstanceNetlistFacts {
+function instanceNetlistFactsOf(
+  instance: DocumentInstance,
+): AgentInstanceNetlistFacts {
   const netlist = instance.netlist!;
   return {
     reference: netlist.reference,
@@ -512,7 +514,11 @@ export interface BuildAgentProjectSnapshotOptions {
 function projectReference(
   instance: DocumentInstance,
   documentIdByName: Map<string, string>,
-): { instanceId: string; targetName: string; targetDocumentId: string | null }[] {
+): {
+  instanceId: string;
+  targetName: string;
+  targetDocumentId: string | null;
+}[] {
   const binding = instance.netlist?.binding;
   if (binding && binding.kind === "subcircuit") {
     return [
@@ -529,7 +535,8 @@ function projectReference(
         {
           instanceId: instance.id,
           targetName,
-          targetDocumentId: documentIdByName.get(targetName.toLowerCase()) ?? null,
+          targetDocumentId:
+            documentIdByName.get(targetName.toLowerCase()) ?? null,
         },
       ]
     : [];

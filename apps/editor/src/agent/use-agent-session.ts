@@ -4,10 +4,10 @@ import {
   AGENT_API_VERSION,
   AGENT_API_V1_VERSION,
   AGENT_SESSION_PROTOCOL_VERSION,
-  AgentCircuitRequestSchema,
   AgentSessionEventSchema,
   AgentSessionMessageSchema,
   createAgentCircuitService,
+  parseAgentCircuitRequest,
   type AgentOperationHost,
   type AgentPermissions,
   type AgentSessionScope,
@@ -54,6 +54,7 @@ function isCreatedSessionResponse(
 }
 
 type LiveSession = CreatedSessionResponse["session"] & {
+  scopes: AgentSessionScope[];
   socket: WebSocket | null;
   claimed: boolean;
   hasOpened: boolean;
@@ -101,6 +102,7 @@ export interface UseAgentSessionResult extends AgentSessionViewModel {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   reconnect: () => void;
+  rotate: () => Promise<void>;
   revoke: () => Promise<void>;
 }
 
@@ -230,6 +232,7 @@ export function useAgentSession(
         const created = payload;
         const live: LiveSession = {
           ...created.session,
+          scopes: [...scopes],
           socket: null,
           claimed: false,
           hasOpened: false,
@@ -330,7 +333,7 @@ export function useAgentSession(
               return;
             }
             if (parsed.data.kind !== "circuit-request") return;
-            const circuitRequest = AgentCircuitRequestSchema.safeParse(
+            const circuitRequest = parseAgentCircuitRequest(
               parsed.data.payload,
             );
             const payloadKey = JSON.stringify(parsed.data.payload);
@@ -541,6 +544,12 @@ export function useAgentSession(
     live.reconnect();
   }, [update]);
 
+  const rotate = useCallback(async () => {
+    const live = liveRef.current;
+    if (!live) return;
+    await grant([...live.scopes]);
+  }, [grant]);
+
   useEffect(() => {
     if (projectSessionRef.current !== options.projectSessionId) return;
     const live = liveRef.current;
@@ -632,5 +641,5 @@ export function useAgentSession(
     [],
   );
 
-  return { ...view, grant, pause, resume, reconnect, revoke };
+  return { ...view, grant, pause, resume, reconnect, rotate, revoke };
 }

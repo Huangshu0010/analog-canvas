@@ -7,13 +7,13 @@ implementation context.
 
 ## Delivery status
 
-| Area                                                                      | Status                                                        | Current authority                                                                                                       |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Phases 0--8: contracts, editor, import, routing, export, manual authoring | complete                                                      | [archived phase records](../archive/roadmap/README.md) and current specs/ADRs                                           |
-| Phase 9: Snapshot-driven Agent workflow                                   | review                                                        | [Phase 9 record](phase-9-agent-reasoning-and-observability.md)                                                          |
-| Connectivity, routing, and electrical debugging                           | proposed                                                      | [unification plan](connectivity-routing-debugging-plan.md)                                                              |
-| Browser-authorized Agent sessions                                         | implementation validation complete; deployment review pending | [session integration plan](web-agent-session-integration-plan.md) and [web-session spec](../specs/web-agent-session.md) |
-| Agent Project lifecycle, files, and editor collaboration                  | proposed                                                      | [completion plan](agent-project-lifecycle-and-artifacts-plan.md)                                                        |
+| Area                                                                      | Status                                                        | Current authority                                                                                                                               |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phases 0--8: contracts, editor, import, routing, export, manual authoring | complete                                                      | [archived phase records](../archive/roadmap/README.md) and current specs/ADRs                                                                   |
+| Phase 9: Snapshot-driven Agent workflow                                   | review                                                        | [Phase 9 record](phase-9-agent-reasoning-and-observability.md)                                                                                  |
+| Connectivity, routing, and electrical debugging                           | proposed                                                      | [unification plan](connectivity-routing-debugging-plan.md)                                                                                      |
+| Browser-authorized Agent sessions                                         | implementation validation complete; deployment review pending | [session integration plan](web-agent-session-integration-plan.md) and [web-session spec](../specs/web-agent-session.md)                         |
+| Agent Project lifecycle, files, and editor collaboration                  | superseded; four-operation contract first                     | [historical completion plan](agent-project-lifecycle-and-artifacts-plan.md) and [ADR 0019](../adr/0019-four-operation-agent-golden-contract.md) |
 
 ## Active planning rules
 

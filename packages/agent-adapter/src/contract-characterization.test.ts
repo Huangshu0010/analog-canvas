@@ -1,4 +1,5 @@
-// Characterization tests locking the frozen Agent Circuit API v1/v2 boundary.
+// Characterization tests for the explicit migration-only v1/v3 boundary and
+// the sole hosted v2 production path.
 //
 // API v3 (ADR 0018) extends this contract additively: it adds the
 // `artifact` and `collaborate` operations, Project/catalog/editor-state
@@ -57,9 +58,15 @@ function readCapabilities(
   apiVersion: "1.0" | "2.0" | "3.0",
   requestId: string,
 ) {
-  const response = service.handle({ apiVersion, requestId, operation: "capabilities" });
+  const response = service.handle({
+    apiVersion,
+    requestId,
+    operation: "capabilities",
+  });
   if (!response.ok || response.operation !== "capabilities") {
-    throw new Error(`expected a capabilities response, got: ${JSON.stringify(response)}`);
+    throw new Error(
+      `expected a capabilities response, got: ${JSON.stringify(response)}`,
+    );
   }
   return response.capabilities;
 }
@@ -96,11 +103,32 @@ describe("Agent Circuit API frozen v1/v2 boundary (characterization)", () => {
     const v2 = readCapabilities(service, "2.0", "capabilities-v2");
     const v3 = readCapabilities(service, "3.0", "capabilities-v3");
 
-    expect(v1.operations).toEqual(["capabilities", "query", "transact", "render"]);
-    expect(v2.operations).toEqual(["capabilities", "snapshot", "transact", "render"]);
-    expect(v3.operations).toEqual(["capabilities", "snapshot", "transact", "render"]);
-    expect(v2.apiVersions).toEqual(["1.0", "2.0", "3.0"]);
-    expect(v2.snapshotVersions).toEqual([
+    expect(v1.operations).toEqual([
+      "capabilities",
+      "query",
+      "transact",
+      "render",
+    ]);
+    expect(v2.operations).toEqual([
+      "capabilities",
+      "snapshot",
+      "transact",
+      "render",
+    ]);
+    expect(v3.operations).toEqual([
+      "capabilities",
+      "snapshot",
+      "transact",
+      "render",
+    ]);
+    expect(v2.apiVersions).toEqual(["2.0"]);
+    expect(v2.snapshotVersions).toEqual([AGENT_SNAPSHOT_VERSION]);
+    expect(v2).not.toHaveProperty("queryScopes");
+    expect(v2.permissions).not.toHaveProperty("query");
+    expect(v2.limits).not.toHaveProperty("maxQueryObjects");
+    expect(v2.limits).not.toHaveProperty("maxQueryBytes");
+    expect(v1.apiVersions).toEqual(["1.0", "2.0", "3.0"]);
+    expect(v3.snapshotVersions).toEqual([
       AGENT_SNAPSHOT_VERSION,
       AGENT_SNAPSHOT_V3_VERSION,
     ]);
@@ -206,7 +234,8 @@ describe("Agent Circuit API frozen v1/v2 boundary (characterization)", () => {
       "changeHistoryEntries",
     ]);
 
-    const errorOperation = AgentErrorResponseSchema.shape.operation as unknown as {
+    const errorOperation = AgentErrorResponseSchema.shape
+      .operation as unknown as {
       options: readonly string[];
     };
     expect([...errorOperation.options]).toEqual([

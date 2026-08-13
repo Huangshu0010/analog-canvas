@@ -86,8 +86,29 @@ export interface ConnectAgentPanelProps {
   onPause: () => void;
   onResume: () => void;
   onReconnect: () => void;
+  onRotate: () => void;
   onRevoke: () => void;
   onClose: () => void;
+}
+
+export function agentConnectionInstructions(
+  origin: string,
+  claimCode: string,
+): string {
+  const claimUrl = `${origin}/api/agent/claims`;
+  const circuitUrl = `${origin}/api/agent/sessions/{sessionId}/circuit`;
+  const openApiUrl = `${origin}/api/agent/openapi.json`;
+  return `Connect to the Interactive Circuit Maker Agent API.
+1. Redeem claimCode exactly once by POSTing ${JSON.stringify({ claimCode })} to ${claimUrl}, and retain the complete response in memory.
+2. Never log or display agentToken.
+3. Use only sessionId and documentIds returned by the claim response; send agentToken only as the Bearer token.
+4. Call capabilities once through POST ${circuitUrl}.
+5. Request one complete snapshot for the selected documentId.
+6. Validate every request against the published OpenAPI: ${openApiUrl}
+7. Dry-run non-trivial transact requests using the snapshot revision.
+8. Commit the same edits only if dry-run succeeds and the revision is unchanged.
+9. Render, then request a fresh snapshot for final verification.
+10. Reuse a requestId only when retrying the exact same payload.`;
 }
 
 const STATUS_LABEL: Record<AgentConnectionStatus, string> = {
@@ -192,7 +213,7 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
                 const origin = window.location.origin;
                 void navigator.clipboard
                   .writeText(
-                    `Connect to the Interactive Circuit Maker Agent API. POST ${JSON.stringify({ claimCode: props.claimCode })} to ${origin}/api/agent/claims, then use the returned bearer token, sessionId, and documentIds. OpenAPI: ${origin}/api/agent/openapi.json`,
+                    agentConnectionInstructions(origin, props.claimCode!),
                   )
                   .catch(() => undefined);
               }}
@@ -237,13 +258,22 @@ export function ConnectAgentPanel(props: ConnectAgentPanelProps): ReactNode {
               </button>
             ) : null}
             {!terminal ? (
-              <button
-                type="button"
-                data-testid="agent-revoke"
-                onClick={props.onRevoke}
-              >
-                Revoke
-              </button>
+              <>
+                <button
+                  type="button"
+                  data-testid="agent-rotate"
+                  onClick={props.onRotate}
+                >
+                  Rotate Agent Access
+                </button>
+                <button
+                  type="button"
+                  data-testid="agent-revoke"
+                  onClick={props.onRevoke}
+                >
+                  Revoke
+                </button>
+              </>
             ) : null}
           </div>
         ) : null}

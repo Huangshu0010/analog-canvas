@@ -1,8 +1,15 @@
 # Agent Project Lifecycle and Artifact Completion
 
-Status: `proposed`
+Status: `superseded`
 
 Date: `2026-08-13`
+
+Superseded by
+[`ADR 0019`](../adr/0019-four-operation-agent-golden-contract.md). The AP2--AP9
+operation-expansion sequence below is retained as planning history and is not a
+current implementation authority. Current work closes the existing
+`capabilities/snapshot/transact/render` contract before any Project lifecycle
+surface is reconsidered.
 
 Primary owners: `packages/agent-adapter`, `apps/editor/src/agent`,
 `apps/editor/src/document`, `worker`

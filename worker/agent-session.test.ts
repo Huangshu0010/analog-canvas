@@ -528,6 +528,53 @@ describe("public Agent session routes", () => {
     } as unknown as WebSocket;
     sockets.set(created.session.sessionId, [socket]);
 
+    const invalid = await routeAgentSessionRequest(
+      new Request(
+        `https://editor.example/api/agent/sessions/${created.session.sessionId}/circuit`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${claim.agentToken}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            apiVersion: "2.0",
+            requestId: "invalid-edit-1",
+            operation: "transact",
+            documentId: "document-main",
+            transactionId: "invalid-edit-1",
+            expectedRevision: 0,
+            edits: [
+              {
+                kind: "add_instance",
+                instance: {
+                  id: "VIN",
+                  symbolId: "port",
+                  symbolVariantId: "",
+                  placement: null,
+                  properties: {},
+                },
+              },
+            ],
+          }),
+        },
+      ),
+      env,
+    );
+    expect(invalid?.status).toBe(400);
+    expect(await invalid!.json()).toMatchObject({
+      operation: "error",
+      ok: false,
+      error: { code: "INVALID_REQUEST" },
+      diagnostics: [
+        {
+          code: "SCHEMA_VIOLATION",
+          path: ["edits", 0, "instance", "symbolVariantId"],
+        },
+      ],
+    });
+    expect(sent).toBe(0);
+
     const snapshot = await routeAgentSessionRequest(
       new Request(
         `https://editor.example/api/agent/sessions/${created.session.sessionId}/circuit`,

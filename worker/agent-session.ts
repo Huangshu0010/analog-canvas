@@ -1,18 +1,22 @@
 import {
   AGENT_SESSION_PROTOCOL_VERSION,
+  AgentClaimRequestSchema,
   AgentCircuitResponseSchema,
-  AgentCircuitRequestSchema,
   DEFAULT_AGENT_SESSION_LIMITS,
   AgentSessionEventSchema,
   AgentSessionMachine,
   AgentSessionMessageSchema,
+  AgentTransportErrorResponseSchema,
   agentEditCategory,
   agentCircuitOpenApi,
+  invalidAgentRequestResponse,
+  parseAgentCircuitRequest,
   type AgentCircuitRequest,
   type AgentSessionEvent,
   type AgentSessionLimits,
   type AgentSessionScope,
   type AgentTransportErrorCode,
+  type AgentTransportErrorResponse,
   type PersistedAgentSessionState,
 } from "@icm/agent-adapter";
 
@@ -29,10 +33,7 @@ export interface AgentRelayConfig {
   limits: AgentSessionLimits;
 }
 
-export interface RelayError {
-  ok: false;
-  error: { code: AgentTransportErrorCode; message: string };
-}
+export type RelayError = AgentTransportErrorResponse;
 
 export type AgentSessionNamespaceLike = {
   getByName(name: string): {
@@ -223,10 +224,8 @@ export async function routeAgentSessionRequest(
         allowedOrigin,
       );
     }
-    const body = parsedBody.value as {
-      claimCode?: unknown;
-    };
-    const claimCode = typeof body?.claimCode === "string" ? body.claimCode : "";
+    const parsedClaim = AgentClaimRequestSchema.safeParse(parsedBody.value);
+    const claimCode = parsedClaim.success ? parsedClaim.data.claimCode : "";
     const separator = claimCode.indexOf(".");
     if (separator <= 0) {
       return jsonResponse(
@@ -288,7 +287,10 @@ function jsonResponse(
 }
 
 function errorBody(code: AgentTransportErrorCode, message: string): RelayError {
-  return { ok: false, error: { code, message } };
+  return AgentTransportErrorResponseSchema.parse({
+    ok: false,
+    error: { code, message },
+  });
 }
 
 function transportStatus(code: AgentTransportErrorCode): number {
@@ -803,18 +805,14 @@ export class AgentSessionDO {
       input = JSON.parse(raw);
     } catch {
       return jsonResponse(
-        { error: "Invalid Circuit request" },
+        invalidAgentRequestResponse(undefined),
         400,
         allowedOrigin,
       );
     }
-    const parsed = AgentCircuitRequestSchema.safeParse(input);
+    const parsed = parseAgentCircuitRequest(input);
     if (!parsed.success)
-      return jsonResponse(
-        { error: "Invalid Circuit request" },
-        400,
-        allowedOrigin,
-      );
+      return jsonResponse(parsed.response, 400, allowedOrigin);
     const circuitRequest = parsed.data;
     const auth = machine.authorize(bearerToken(request), Date.now());
     if (!auth.ok) {

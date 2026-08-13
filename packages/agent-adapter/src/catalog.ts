@@ -55,7 +55,10 @@ export function buildAgentCatalogSnapshot(
     });
 
   return AgentCatalogSnapshotSchema.parse({
-    symbolLibrary: { id: options.symbolLibrary.id, version: options.symbolLibrary.version },
+    symbolLibrary: {
+      id: options.symbolLibrary.id,
+      version: options.symbolLibrary.version,
+    },
     symbols,
   });
 }

@@ -7,6 +7,7 @@ import {
   AGENT_API_VERSION,
   AgentCircuitResponseSchema,
 } from "./schema.js";
+import { invalidAgentRequestResponse } from "./request-contract.js";
 import type { AgentCircuitService } from "./service.js";
 
 export interface LoopbackAgentServerOptions {
@@ -178,13 +179,12 @@ export async function startLoopbackAgentServer(
       writeJson(
         response,
         code === "HTTP_BODY_TOO_LARGE" ? 413 : 400,
-        httpError(
-          apiVersion,
-          code,
-          code === "HTTP_BODY_TOO_LARGE"
-            ? `Request body exceeds ${maximum} bytes`
-            : "Request body is not valid JSON",
-        ),
+        code === "HTTP_BODY_TOO_LARGE"
+          ? httpError(apiVersion, code, `Request body exceeds ${maximum} bytes`)
+          : invalidAgentRequestResponse({
+              apiVersion,
+              requestId: "http-error",
+            }),
       );
     }
   });

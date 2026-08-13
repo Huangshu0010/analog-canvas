@@ -26,8 +26,10 @@ Snapshot evidence makes them relevant. A card name is not circuit evidence.
 
 ## Establish the contract
 
-1. Require API `2.0`, Snapshot `1.0`, and the operations
-   `capabilities/snapshot/transact/render` for live product work.
+1. Start from the deployed OpenAPI capabilities example and require exactly
+   `capabilities/snapshot/transact/render` for live product work. Use the
+   advertised current API/Snapshot versions rather than a version remembered
+   from this Skill.
 2. Check permissions, edit kinds, limits, `documentId`, and `revision` before
    planning edits.
 3. Require one complete selected Document: ports, every instance and resolved
@@ -35,7 +37,7 @@ Snapshot evidence makes them relevant. A card name is not circuit evidence.
    constraints, bounds, presentation, hierarchy context, and diagnostics.
 4. Treat Snapshot as read-only evidence. Never return it as a replacement
    Document or Project.
-5. Use v1 `query` only for an explicitly requested legacy-compatibility task.
+5. Do not use v1 `query` for production work.
 
 Stop when pin mapping, bulk connection, model semantics, hierarchy binding, or
 the authority to change topology is unavailable. Never fill an electrical fact

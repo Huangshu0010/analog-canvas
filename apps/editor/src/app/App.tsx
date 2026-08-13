@@ -5883,6 +5883,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         onPause={agentSession.pause}
         onResume={agentSession.resume}
         onReconnect={agentSession.reconnect}
+        onRotate={agentSession.rotate}
         onRevoke={agentSession.revoke}
         onClose={() => {
           setAgentPanelOpen(false);

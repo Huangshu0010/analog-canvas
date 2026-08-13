@@ -68,21 +68,33 @@ describe("Agent v3 document snapshot — exact netlist/interface parity", () => 
   it("surfaces the exact cell interface and every typed instance netlist fact", () => {
     const project = fixtureProject();
     const document = project.documents[0]!;
-    const snapshot = buildAgentDocumentSnapshotV3({ project, document, resolver });
+    const snapshot = buildAgentDocumentSnapshotV3({
+      project,
+      document,
+      resolver,
+    });
 
     expect(snapshot.cellInterface).toEqual({
       name: document.netlist!.name,
       portOrder: [...document.netlist!.portOrder],
     });
 
-    const modelById = new Map(document.instances.map((instance) => [instance.id, instance]));
+    const modelById = new Map(
+      document.instances.map((instance) => [instance.id, instance]),
+    );
     for (const instanceSnapshot of snapshot.instances) {
       const model = modelById.get(instanceSnapshot.id)!;
       if (model.netlist) {
         expect(instanceSnapshot.netlist).toBeDefined();
-        expect(instanceSnapshot.netlist!.reference).toBe(model.netlist.reference);
-        expect(instanceSnapshot.netlist!.binding).toEqual(model.netlist.binding);
-        expect(instanceSnapshot.netlist!.parameters).toEqual(model.netlist.parameters);
+        expect(instanceSnapshot.netlist!.reference).toBe(
+          model.netlist.reference,
+        );
+        expect(instanceSnapshot.netlist!.binding).toEqual(
+          model.netlist.binding,
+        );
+        expect(instanceSnapshot.netlist!.parameters).toEqual(
+          model.netlist.parameters,
+        );
       } else {
         expect(instanceSnapshot.netlist).toBeUndefined();
       }
@@ -93,7 +105,11 @@ describe("Agent v3 document snapshot — exact netlist/interface parity", () => 
     const project = fixtureProject();
     const document = project.documents[0]!;
     const first = buildAgentDocumentSnapshotV3({ project, document, resolver });
-    const second = buildAgentDocumentSnapshotV3({ project, document, resolver });
+    const second = buildAgentDocumentSnapshotV3({
+      project,
+      document,
+      resolver,
+    });
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
   });
 });
@@ -122,7 +138,10 @@ describe("Agent v3 project snapshot", () => {
       const model = modelById.get(docSnapshot.id)!;
       expect(docSnapshot.cellInterface).toEqual(
         model.netlist
-          ? { name: model.netlist.name, portOrder: [...model.netlist.portOrder] }
+          ? {
+              name: model.netlist.name,
+              portOrder: [...model.netlist.portOrder],
+            }
           : null,
       );
       expect(docSnapshot.portCount).toBe(model.ports.length);
@@ -215,7 +234,8 @@ describe("Agent v3 snapshot service behavior", () => {
       target: "document",
       documentId: document.id,
     });
-    const documentParsed = AgentSnapshotV3ResponseSchema.parse(documentResponse);
+    const documentParsed =
+      AgentSnapshotV3ResponseSchema.parse(documentResponse);
     expect(documentParsed.target).toBe("document");
     if (documentParsed.target === "document") {
       expect(documentParsed.revision).toBe(document.revision);

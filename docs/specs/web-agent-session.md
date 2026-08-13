@@ -73,18 +73,17 @@ presets (Review, Layout Edit, Full Circuit Edit); the token always contains the
 explicit scope set. Within a granted scope, operations do not prompt
 individually.
 
-| Scope                       | Allows                                     | Maps to `AgentPermissions` |
-| --------------------------- | ------------------------------------------ | -------------------------- |
-| `circuit.snapshot`          | v2 Snapshot read; v1 query read for legacy | `snapshot` (and `query`)   |
-| `circuit.render`            | Bounded formal/diagnostics render          | `render`                   |
-| `circuit.source-spans`      | Source locations, never raw source text    | `sourceSpans`              |
-| `circuit.edit.geometry`     | Placement and Route geometry edits         | `edit.geometry`            |
-| `circuit.edit.connectivity` | Net/terminal/Route connectivity edits      | `edit.connectivity`        |
-| `circuit.edit.presentation` | Text, drafting, annotation, style intent   | `edit.presentation`        |
+| Scope                       | Allows                                   | Maps to `AgentPermissions` |
+| --------------------------- | ---------------------------------------- | -------------------------- |
+| `circuit.snapshot`          | Complete v2 Snapshot read                | `snapshot`                 |
+| `circuit.render`            | Bounded formal/diagnostics render        | `render`                   |
+| `circuit.source-spans`      | Source locations, never raw source text  | `sourceSpans`              |
+| `circuit.edit.geometry`     | Placement and Route geometry edits       | `edit.geometry`            |
+| `circuit.edit.connectivity` | Net/terminal/Route connectivity edits    | `edit.connectivity`        |
+| `circuit.edit.presentation` | Text, drafting, annotation, style intent | `edit.presentation`        |
 
-The web session's primary read path is the v2 Snapshot. v1 `query` is available
-for compatibility and is gated by the `circuit.snapshot` read scope; it is not a
-separate web-session scope. Import/export, raw Project download, filesystem
+The web session's only read path is the v2 Snapshot. Legacy v1 `query` is not
+published by the hosted session. Import/export, raw Project download, filesystem
 access, and arbitrary code are **not** implied by full circuit edit and require
 separate scopes and user-visible controls if ever added.
 
@@ -298,7 +297,7 @@ advances the revision again.
 | Replay/retry after timeout         | Per-session `requestId` dedupe at relay and browser; exactly-once visible effect; never blind-retry an unknown write        |
 | `agentToken` theft                 | Short TTL, scoped, revocable, never stored in recovery/localStorage by default                                              |
 | Browser refresh                    | Initial release revokes the session unless a later explicit reconnect design is accepted                                    |
-| Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged            |
+| Transient WebSocket loss           | Same-tab bounded reconnect replaces only transport; no request is replayed and Project authorization is unchanged           |
 | Stale-revision blind replay        | `STALE_REVISION` carries current revision; Agent refreshes Snapshot and re-evaluates                                        |
 | Editor offline during write        | `EDITOR_OFFLINE`; no unbounded write queue; reconnect never auto-applies a rejected write                                   |
 | Project swap mid-session           | `document.replaced`; old token invalid for the new Project                                                                  |
@@ -359,6 +358,11 @@ refreshes the Snapshot and does not replay the old edit.
 - payload and rate-limit enforcement before any forward.
 
 ## Agent v3 extension (ADR 0018)
+
+> **Superseded:** ADR 0019 retains claim/bearer authorization and exactly four
+> Circuit operations. The additional scopes, import candidate protocol, and
+> continuation events below are non-normative planning history and are not an
+> implemented or approved web-session surface.
 
 [ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) extends this
 session contract for the Agent Project lifecycle surface. The transport,

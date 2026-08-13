@@ -49,12 +49,12 @@ Every request contains a stable `requestId`, an `apiVersion`, and one operation.
 
 API v2 has exactly four operations:
 
-| Operation      | Required payload                                      | Result                                    |
-| -------------- | ----------------------------------------------------- | ----------------------------------------- |
-| `capabilities` | none                                                  | operations, permissions, limits, versions |
-| `snapshot`     | Document ID, optional source spans                    | complete AgentSessionSnapshot             |
-| `transact`     | Document ID, revision, transaction ID, edits or Wire intent | applied/dry-run diff and diagnostics |
-| `render`       | Document ID, formal/diagnostics mode, optional bounds | bounded SVG artifact and diagnostics      |
+| Operation      | Required payload                                            | Result                                    |
+| -------------- | ----------------------------------------------------------- | ----------------------------------------- |
+| `capabilities` | none                                                        | operations, permissions, limits, versions |
+| `snapshot`     | Document ID, optional source spans                          | complete AgentSessionSnapshot             |
+| `transact`     | Document ID, revision, transaction ID, edits or Wire intent | applied/dry-run diff and diagnostics      |
+| `render`       | Document ID, formal/diagnostics mode, optional bounds       | bounded SVG artifact and diagnostics      |
 
 API v1 remains accepted with `capabilities/query/transact/render`. No new query
 planner or semantic scope is added to v1. `transact` and `render` retain their
@@ -68,18 +68,18 @@ filesystem path, JavaScript, or SVG input.
 Each semantic fact has one owning module. Transport and UI layers consume these
 contracts; they do not derive substitutes.
 
-| Concern | Sole production owner | Consumers |
-| --- | --- | --- |
-| Session authorization, claim, token, expiry | `worker/agent-session.ts` | browser session hook, external Agent |
-| Project/Document bootstrap identity | claim response + generated OpenAPI | external Agent |
-| Snapshot schema and serialization | `packages/agent-adapter/src/snapshot.ts` | web/loopback transports |
-| Endpoint coordinate contact | `packages/derived/src/contact.ts` | connectivity, renderer, visual diagnostics |
-| Visible/logical connectivity | `packages/derived` connectivity index/read models | highlight, ERC, trace, Agent Snapshot |
-| Route geometry | resolved Route geometry in `packages/derived` | renderer, hit/drag, diagnostics, Snapshot |
-| Wire authoring expansion | `proposeWireIntent`/`proposeWireCommit` in `packages/edit-engine/src/routing-planner.ts` | GUI Wire, Agent `wireIntent` |
-| Transaction validation and mutation | Edit Engine through browser `DocumentHistory` | human and Agent dispatch |
-| Project diagnostics | `diagnoseProject` in `packages/derived/src/diagnostics` | GUI log, Agent transact/snapshot/render |
-| Formal SVG | `packages/render-svg` | GUI/export/Agent render |
+| Concern                                     | Sole production owner                                                                    | Consumers                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Session authorization, claim, token, expiry | `worker/agent-session.ts`                                                                | browser session hook, external Agent       |
+| Project/Document bootstrap identity         | claim response + generated OpenAPI                                                       | external Agent                             |
+| Snapshot schema and serialization           | `packages/agent-adapter/src/snapshot.ts`                                                 | web/loopback transports                    |
+| Endpoint coordinate contact                 | `packages/derived/src/contact.ts`                                                        | connectivity, renderer, visual diagnostics |
+| Visible/logical connectivity                | `packages/derived` connectivity index/read models                                        | highlight, ERC, trace, Agent Snapshot      |
+| Route geometry                              | resolved Route geometry in `packages/derived`                                            | renderer, hit/drag, diagnostics, Snapshot  |
+| Wire authoring expansion                    | `proposeWireIntent`/`proposeWireCommit` in `packages/edit-engine/src/routing-planner.ts` | GUI Wire, Agent `wireIntent`               |
+| Transaction validation and mutation         | Edit Engine through browser `DocumentHistory`                                            | human and Agent dispatch                   |
+| Project diagnostics                         | `diagnoseProject` in `packages/derived/src/diagnostics`                                  | GUI log, Agent transact/snapshot/render    |
+| Formal SVG                                  | `packages/render-svg`                                                                    | GUI/export/Agent render                    |
 
 An API consumer may choose an intent and inspect returned evidence. It must not
 recreate junction rules, Net equivalence, Route splitting, ERC, or visual
@@ -268,11 +268,12 @@ add a separate overlay group. Render data is base64 encoded and rejected above
 
 ## Loopback transport
 
-The optional adapter accepts JSON only, uses `Cache-Control: no-store`, requires
-a bearer token of at least 32 characters, and binds only to `127.0.0.1` or
-`::1`. It serves `/v1/circuit` for legacy requests and `/v2/circuit` for v2;
-the body version must match the path. Request bodies remain bounded and no
-filesystem route exists.
+The optional local adapter accepts JSON only, uses `Cache-Control: no-store`,
+requires a bearer token of at least 32 characters, and binds only to
+`127.0.0.1` or `::1`. It may retain `/v1/circuit` as an explicit migration
+reader beside `/v2/circuit`; the hosted Agent session publishes only the v2
+four-operation contract. Request bodies remain bounded and no filesystem route
+exists.
 
 ## Invariants
 
@@ -304,11 +305,11 @@ replaying blindly.
 
 ## Compatibility and migration
 
-- v1 remains supported during Phase 9 and is covered by its existing fixtures.
-- v2 introduces the Snapshot read path and `/v2/circuit` without changing
-  persisted Projects.
-- Removing v1, changing Snapshot required fields, permission meaning, hash
-  coverage, or typed edit semantics requires a compatible version decision.
+- v1 remains only in local migration fixtures and the optional loopback reader;
+  it is absent from hosted OpenAPI and v2 capabilities.
+- v2 is the sole hosted Snapshot and mutation path.
+- Changing Snapshot required fields, permission meaning, hash coverage, or
+  typed edit semantics requires a compatible version decision.
 - Additive diagnostic parameters may appear when clients can ignore them.
 
 ## Deterministic validation
@@ -320,16 +321,21 @@ replaying blindly.
 - 100/500-instance payload/token/generation budgets
 - dry-run, stale revision, atomicity, lock, and GUI/Edit Engine parity tests
 - spatial diagnostic and formal/overlay artifact inspection
-- authenticated `/v1/circuit` and `/v2/circuit` tests
+- authenticated hosted `/v2/circuit` tests plus isolated local v1 migration tests
 
 ## Open decisions
 
-- v1 removal is deferred until compatibility usage is measured and a later ADR
-  accepts deprecation.
+- final deletion of the local v1 migration reader is deferred until compatibility
+  usage is measured.
 - Deterministic transport chunks remain deferred until a real Document exceeds
   the accepted Snapshot budget.
 
 ## Agent v3 extension (ADR 0018)
+
+> **Superseded:** ADR 0019 restores the four-operation Circuit boundary. The
+> proposed `artifact` and `collaborate` operations and AP2 expansion below are
+> non-normative planning history. Current work may enrich
+> `capabilities/snapshot/transact/render` but must not add a Circuit operation.
 
 [ADR 0018](../adr/0018-agent-project-lifecycle-and-v3-api.md) freezes an
 additive API v3 that retains v1/v2 unchanged. v3 publishes
