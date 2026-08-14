@@ -106,20 +106,15 @@ export function agentConnectionInstructions(
   const circuitUrl = `${origin}/api/agent/sessions/{sessionId}/circuit`;
   const fileUrl = `${origin}/api/agent/sessions/{sessionId}/files`;
   const openApiUrl = `${origin}/api/agent/openapi.json`;
+  const kitUrl = `${origin}/api/agent/kit`;
   return `Connect to the Interactive Circuit Maker Agent API.
-1. POST ${JSON.stringify({ claimCode })} to ${claimUrl}, then retain only the latest response in memory.
-2. A retry with this still-valid claim creates a replacement token and immediately invalidates the earlier token.
-3. Never log or display agentToken.
-4. Use only sessionId and documentIds returned by the claim response; replace {sessionId} in the Circuit URL with that value, and send agentToken only as the Bearer token.
-5. Call capabilities once through POST ${circuitUrl}.
-6. Request one complete snapshot for the selected documentId.
-7. Validate every request against the published OpenAPI: ${openApiUrl}
-8. Use ${fileUrl} only for authorized Project/formal-file download or staging a bounded Project/structural-SPICE candidate; staging never changes the browser Project.
-9. A human must explicitly approve a staged candidate in the editor before it can replace the Project.
-10. Dry-run non-trivial transact requests using the snapshot revision.
-11. Commit the same edits only if dry-run succeeds and the revision is unchanged.
-12. Render, then request a fresh snapshot for final verification.
-13. Reuse a requestId only when retrying the exact same payload.`;
+1. Fetch ${kitUrl}. It is a small JSON Agent Kit: create a private working folder, write every files[].path, then read README.md and skills/icm-circuit-session/SKILL.md.
+2. POST ${JSON.stringify({ claimCode })} to ${claimUrl}. Keep only the latest response in memory; never log or display agentToken.
+3. Use only sessionId and documentIds returned by the claim response. Replace {sessionId} in ${circuitUrl}, and send agentToken only as the Bearer token.
+4. Read the published OpenAPI ${openApiUrl}, call capabilities once, then request one complete snapshot for an authorized documentId.
+5. Dry-run non-trivial transact requests using the snapshot revision. Commit the same edits only if dry-run succeeds and the revision is unchanged.
+6. Use ${fileUrl} only for authorized Project/formal-file download or candidate staging; staging needs explicit browser-human approval. Render, then request a fresh snapshot for final verification.
+7. Reuse a requestId only when retrying the exact same payload.`;
 }
 
 const STATUS_LABEL: Record<AgentConnectionStatus, string> = {

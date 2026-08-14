@@ -95,8 +95,10 @@ repository source — only this document and the claim code.
 
 The deployed machine-readable contract is available at
 `GET /api/agent/openapi.json`. The editor's **Copy Agent connection
-instructions** action includes this address, the claim endpoint, and the
-claim code.
+instructions** action first includes `GET /api/agent/kit`, then the claim
+endpoint and claim code. The Kit is a small JSON payload whose listed files are
+written into an Agent-private scratch folder. It provides operating rules only;
+the published OpenAPI remains the request-contract authority.
 
 1. **Redeem the claim** (30-minute expiry):
 

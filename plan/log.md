@@ -6683,3 +6683,16 @@ contracts (WP-R1)`.
   --check` passed.
 - Commit status: committed on `codex/agent-copy-card` as
   `feat(agent): present handoff as copy card`.
+
+## 2026-08-14 - Publish compact Agent operating Kit
+
+- Target: give an external Agent without repository source a minimal private
+  operating folder before claim redemption, without adding a new edit protocol.
+- Changed areas: browser-safe Kit content, public Worker route, compact copied
+  hand-off, relay/component tests, and session/Agent documentation.
+- Validation: 32 focused unit tests, `pnpm typecheck`, `pnpm docs:check`, a
+  dependency-aware editor production build, and `git diff --check` passed. The
+  Kit was confirmed absent from the editor bundle and is transferred only on
+  its explicit route request.
+- Commit status: committed on `codex/agent-copy-card` as
+  `feat(agent): publish compact operating kit`.

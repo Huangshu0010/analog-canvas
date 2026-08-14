@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AGENT_SSE_KEEPALIVE_INTERVAL_MS,
   AgentSessionMachine,
+  type AgentOperatingKit,
   type AgentSessionLimits,
 } from "@icm/agent-adapter";
 
@@ -311,6 +312,24 @@ describe("public Agent session routes", () => {
       "/api/agent/claims",
       "/api/agent/sessions/{sessionId}/circuit",
       "/api/agent/sessions/{sessionId}/files",
+    ]);
+  });
+
+  it("publishes the small static Agent Kit without creating another API operation", async () => {
+    const { env } = routedFixture();
+    const response = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/kit"),
+      env,
+    );
+    expect(response?.status).toBe(200);
+    expect(response?.headers.get("cache-control")).toBe("no-store");
+    const kit = (await response!.json()) as AgentOperatingKit;
+    expect(kit).toMatchObject({ format: "icm-agent-kit-v1", version: "1" });
+    expect(kit.files.map((file) => file.path)).toEqual([
+      "README.md",
+      "AGENTS.md",
+      "skills/icm-circuit-session/SKILL.md",
+      "references/session-contract.md",
     ]);
   });
 

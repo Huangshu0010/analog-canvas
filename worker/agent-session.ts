@@ -13,6 +13,7 @@ import {
   AgentTransportErrorResponseSchema,
   agentEditCategory,
   agentCircuitOpenApi,
+  agentOperatingKit,
   invalidAgentRequestResponse,
   parseAgentCircuitRequest,
   parseAgentFileResourceRequest,
@@ -167,6 +168,9 @@ export async function routeAgentSessionRequest(
   }
   if (request.method === "GET" && url.pathname === "/api/agent/openapi.json") {
     return jsonResponse(agentCircuitOpenApi, 200, allowedOrigin);
+  }
+  if (request.method === "GET" && url.pathname === "/api/agent/kit") {
+    return jsonResponse(agentOperatingKit, 200, allowedOrigin);
   }
 
   if (request.method === "POST" && url.pathname === "/api/agent/sessions") {
