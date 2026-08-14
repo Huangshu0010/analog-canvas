@@ -15,7 +15,7 @@ export function defaultRazaviSymbolVariantId(
   return DEFAULT_SYMBOL_VARIANTS[symbolId];
 }
 
-/** Compatibility helper: explicit body-bias is information, never an error. */
+/** Explicit body-bias is information, never an error. */
 export function razaviHiddenBulkRisk(
   document: SchematicDocument,
   instanceId: string,
@@ -27,7 +27,7 @@ export function razaviHiddenBulkRisk(
     : undefined;
 }
 
-/** One Edit-Engine operation owns all manual MOS default/fallback materialization. */
+/** One Edit-Engine operation owns configured cell-default materialization. */
 export function razaviManualBulkConnectionEdits(
   document: SchematicDocument,
   instances: readonly SchematicDocument["instances"][number][],
@@ -38,8 +38,7 @@ export function razaviManualBulkConnectionEdits(
       return Boolean(
         resolution &&
         !resolution.materialized &&
-        (resolution.status === "cell-default" ||
-          resolution.status === "product-fallback"),
+        resolution.status === "cell-default",
       );
     })
     .map((instance) => instance.id);
@@ -49,10 +48,8 @@ export function razaviManualBulkConnectionEdits(
 }
 
 /**
- * Upgrade manual-authoring bulk defaults at a Project entry boundary. This is
- * intentionally performed before the editor history/recovery graph is
- * installed, so compatibility materialization is not presented as a human
- * edit or stored as a spurious unsaved recovery.
+ * Materialize configured bulk defaults at a Project entry boundary before the
+ * editor history/recovery graph is installed.
  */
 export function materializeRazaviProjectBulkConnections(
   project: CircuitProject,
@@ -75,8 +72,8 @@ export function materializeRazaviProjectBulkConnections(
         transactionId: `razavi-bulk-entry-${sourceDocument.id}`,
         documentId: sourceDocument.id,
         expectedRevision: sourceDocument.revision,
-        // This is a deterministic editor compatibility transform, not an
-        // Agent request. It executes before user history is installed.
+        // This deterministic cell-default transform executes before user
+        // history is installed; it is not an Agent request.
         actor: { kind: "human", id: "razavi-bulk-entry" },
         edits,
       },

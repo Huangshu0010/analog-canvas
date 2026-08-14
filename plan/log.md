@@ -6599,3 +6599,16 @@ contracts (WP-R1)`.
   production smoke) passed; Agent API artifacts and `git diff --check` passed.
 - Commit status: ready to commit on `codex/agent-transport-watchdog` as
   `fix(agent): add transport liveness watchdog`.
+
+## 2026-08-14 - Complete current circuit contract clean break
+
+- Target: retain hollow and filled Ports as ordinary component assets while
+  deleting obsolete Project, asset, routing, text, power, and Agent contracts.
+- Changed areas: Project schema and fixtures; exact symbol catalog; explicit
+  VDD/MOS connectivity; persisted RichText labels; Agent 2.0/OpenAPI/browser
+  state machine; editor behavior, documentation, generated assets, and tests.
+- Validation: 541 unit tests, all workspace builds, `pnpm verify:branch`,
+  frozen-lockfile install, full `pnpm ci:check`, and all 95 browser E2E tests
+  passed.
+- Commit status: ready to commit on `codex/agent-transport-watchdog` as
+  `refactor(circuit): remove legacy contract routing`.

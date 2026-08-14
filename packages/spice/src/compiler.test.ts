@@ -25,7 +25,7 @@ Q2 collector base emitter QPREF
     expect(imported.successful).toBe(true);
     expect(imported.project?.documents[0]?.netlist).toMatchObject({
       name: "__flat__",
-      portOrder: [],
+      terminals: [],
     });
     expect(
       imported.project?.documents[0]?.instances.map((instance) => [

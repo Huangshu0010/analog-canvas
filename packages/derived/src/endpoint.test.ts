@@ -50,7 +50,6 @@ const resolver = new InMemorySymbolResolver([
       { kind: "line" as const, from: { x: -10, y: 0 }, to: { x: 10, y: 0 } },
     ],
     variants: [{ id: "hide-r", hiddenPinNames: ["R"] }],
-    aliases: [],
   },
 ]);
 
@@ -74,53 +73,30 @@ function placeDual(
 
 describe("endpoint primitives", () => {
   describe("endpointKey", () => {
-    it("encodes each endpoint kind in a stable string format", () => {
+    it("encodes terminal and junction identities", () => {
       expect(endpointKey(terminal("A", "P"))).toBe("terminal:A:P");
-      expect(endpointKey({ kind: "port", portId: "port-1" })).toBe(
-        "port:port-1",
-      );
       expect(endpointKey({ kind: "junction", junctionId: "j-1" })).toBe(
         "junction:j-1",
-      );
-    });
-
-    it("distinguishes kinds even when ids coincide", () => {
-      expect(endpointKey(terminal("shared", "P"))).not.toBe(
-        endpointKey({ kind: "port", portId: "shared" }),
       );
     });
   });
 
   describe("endpointsEqual", () => {
-    it("compares by endpoint key across all kinds", () => {
+    it("compares the current endpoint union", () => {
       expect(endpointsEqual(terminal("A", "P"), terminal("A", "P"))).toBe(true);
       expect(endpointsEqual(terminal("A", "P"), terminal("A", "Q"))).toBe(
         false,
       );
       expect(
-        endpointsEqual(
-          { kind: "port", portId: "p" },
-          { kind: "junction", junctionId: "p" },
-        ),
+        endpointsEqual(terminal("j-1", "P"), {
+          kind: "junction",
+          junctionId: "j-1",
+        }),
       ).toBe(false);
     });
   });
 
   describe("isVisibleEndpoint", () => {
-    it("treats non-terminal endpoints as always visible", () => {
-      const project = createEmptyProject("ep", "EP");
-      const document = project.documents[0]!;
-      expect(
-        isVisibleEndpoint(document, resolver, { kind: "port", portId: "p" }),
-      ).toBe(true);
-      expect(
-        isVisibleEndpoint(document, resolver, {
-          kind: "junction",
-          junctionId: "j",
-        }),
-      ).toBe(true);
-    });
-
     it("sees a visible pin, hides a variant-hidden pin, and hides an implicit pin", () => {
       const project = createEmptyProject("ep", "EP");
       const document = project.documents[0]!;
@@ -159,34 +135,6 @@ describe("endpoint primitives", () => {
   });
 
   describe("resolveEndpointPoint", () => {
-    it("resolves ports and junctions from the document collections", () => {
-      const project = createEmptyProject("ep", "EP");
-      const document = project.documents[0]!;
-      document.ports = [
-        {
-          id: "port-1",
-          name: "in",
-          direction: "passive",
-          position: { x: 5, y: 7 },
-        },
-      ];
-      document.junctions = [
-        { id: "j-1", netId: "n", position: { x: 9, y: 3 } },
-      ];
-      expect(
-        resolveEndpointPoint(document, resolver, {
-          kind: "port",
-          portId: "port-1",
-        }),
-      ).toEqual({ x: 5, y: 7 });
-      expect(
-        resolveEndpointPoint(document, resolver, {
-          kind: "junction",
-          junctionId: "j-1",
-        }),
-      ).toEqual({ x: 9, y: 3 });
-    });
-
     it("resolves a terminal pin through the instance placement transform", () => {
       const project = createEmptyProject("ep", "EP");
       const document = project.documents[0]!;
@@ -196,48 +144,9 @@ describe("endpoint primitives", () => {
         resolveEndpointPoint(document, resolver, terminal("I1", "R")),
       ).toEqual({ x: 120, y: 100 });
     });
-
-    it("returns null for unknown ids, missing placement, or unknown pins", () => {
-      const project = createEmptyProject("ep", "EP");
-      const document = project.documents[0]!;
-      document.instances = [placeDual()];
-      expect(
-        resolveEndpointPoint(document, resolver, {
-          kind: "port",
-          portId: "no",
-        }),
-      ).toBeNull();
-      expect(
-        resolveEndpointPoint(document, resolver, {
-          kind: "junction",
-          junctionId: "no",
-        }),
-      ).toBeNull();
-      expect(
-        resolveEndpointPoint(document, resolver, terminal("I1", "nope")),
-      ).toBeNull();
-
-      document.instances = [
-        { id: "I1", symbolId: "dual", placement: null, properties: {} },
-      ];
-      expect(
-        resolveEndpointPoint(document, resolver, terminal("I1", "R")),
-      ).toBeNull();
-    });
   });
 
   describe("resolveEndpointOutwardDirection", () => {
-    it("returns null for non-terminal endpoints", () => {
-      const project = createEmptyProject("ep", "EP");
-      const document = project.documents[0]!;
-      expect(
-        resolveEndpointOutwardDirection(document, resolver, {
-          kind: "port",
-          portId: "p",
-        }),
-      ).toBeNull();
-    });
-
     it("maps a pin direction through rotation", () => {
       const project = createEmptyProject("ep", "EP");
       const document = project.documents[0]!;
@@ -292,75 +201,33 @@ describe("endpoint primitives", () => {
   });
 
   describe("endpointBelongsToNet and netEndpoints", () => {
-    it("reports membership across terminals, ports, and net-owned junctions", () => {
-      const project = createEmptyProject("ep", "EP");
-      const document = project.documents[0]!;
+    it("unions terminal and net-owned Junction endpoints", () => {
+      const document = createEmptyProject("ep", "EP").documents[0]!;
       const net: Net = {
         id: "net-a",
-        name: "a",
         scope: "local",
         terminals: [
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
         ],
-        ports: ["port-z", "port-a"],
       };
       document.junctions = [
         { id: "j-in", netId: "net-a", position: { x: 0, y: 0 } },
-        { id: "j-out", netId: "other-net", position: { x: 0, y: 0 } },
+        { id: "j-out", netId: "other", position: { x: 0, y: 0 } },
       ];
-
       expect(endpointBelongsToNet(document, net, terminal("I1", "L"))).toBe(
         true,
       );
-      expect(endpointBelongsToNet(document, net, terminal("I1", "X"))).toBe(
-        false,
-      );
-      expect(
-        endpointBelongsToNet(document, net, { kind: "port", portId: "port-a" }),
-      ).toBe(true);
-      expect(
-        endpointBelongsToNet(document, net, { kind: "port", portId: "port-q" }),
-      ).toBe(false);
       expect(
         endpointBelongsToNet(document, net, {
           kind: "junction",
           junctionId: "j-in",
         }),
       ).toBe(true);
-      // A junction endpoint only belongs to the net that owns it.
-      expect(
-        endpointBelongsToNet(document, net, {
-          kind: "junction",
-          junctionId: "j-out",
-        }),
-      ).toBe(false);
-    });
-
-    it("unions terminals, ports, and net junctions sorted by endpoint key", () => {
-      const project = createEmptyProject("ep", "EP");
-      const document = project.documents[0]!;
-      const net: Net = {
-        id: "net-a",
-        name: "a",
-        scope: "local",
-        terminals: [
-          { instanceId: "I1", pinName: "L" },
-          { instanceId: "I1", pinName: "R" },
-        ],
-        ports: ["port-z", "port-a"],
-      };
-      document.junctions = [
-        { id: "j-in", netId: "net-a", position: { x: 0, y: 0 } },
-        { id: "j-out", netId: "other-net", position: { x: 0, y: 0 } },
-      ];
-
       expect(netEndpoints(document, net)).toEqual<RouteEndpoint[]>([
         { kind: "junction", junctionId: "j-in" },
-        { kind: "port", portId: "port-a" },
-        { kind: "port", portId: "port-z" },
-        { kind: "terminal", instanceId: "I1", pinName: "L" },
-        { kind: "terminal", instanceId: "I1", pinName: "R" },
+        terminal("I1", "L"),
+        terminal("I1", "R"),
       ]);
     });
   });

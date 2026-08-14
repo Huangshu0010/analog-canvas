@@ -8,7 +8,6 @@ retired Phase 9 traces live under [`../archive/`](../archive/).
 
 Current optional Phase 9 research:
 
-- [`examples/phase-9-external-quality-gate.md`](examples/phase-9-external-quality-gate.md)
 - [Archived external quality run 1](../archive/phase9-external-quality-studies/run-1-flash-adc.md)
 - [Archived external quality run 2](../archive/phase9-external-quality-studies/run-2-chopper-afe.md)
 

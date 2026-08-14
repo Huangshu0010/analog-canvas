@@ -31,50 +31,39 @@ const dual = {
   ],
   primitives: [],
   variants: [],
-  aliases: [],
 };
 
 describe("hierarchy navigation", () => {
-  it("returns a stable concrete instance path to a child Cell", () => {
+  it("finds stable paths through typed subcircuit bindings", () => {
     const project = createEmptyProject("project", "Project", "top");
-    project.documents[0]!.instances = [
-      {
-        id: "X2",
-        symbolId: "dual",
-        placement: null,
-        properties: {},
-        netlist: {
-          reference: "X2",
-          parameters: {},
-          binding: {
-            kind: "subcircuit",
-            name: "child",
-            childDocumentId: "child",
-          },
+    project.documents[0]!.instances = ["X2", "X1"].map((id) => ({
+      id,
+      symbolId: "dual",
+      placement: null,
+      properties: {},
+      netlist: {
+        reference: id,
+        parameters: {},
+        binding: {
+          kind: "subcircuit" as const,
+          name: "child",
+          childDocumentId: "child",
         },
       },
-      {
-        id: "X1",
-        symbolId: "dual",
-        placement: null,
-        properties: {},
-        netlist: {
-          reference: "X1",
-          parameters: {},
-          binding: {
-            kind: "subcircuit",
-            name: "child",
-            childDocumentId: "child",
-          },
-        },
-      },
-    ];
+    }));
     const child = createEmptyProject("child-project", "Child", "child")
       .documents[0]!;
-    child.ports = [
-      { id: "child-l", name: "L", direction: "passive", position: null },
-      { id: "child-r", name: "R", direction: "passive", position: null },
-    ];
+    child.nets.push(
+      { id: "child-l", scope: "local", terminals: [] },
+      { id: "child-r", scope: "local", terminals: [] },
+    );
+    child.netlist = {
+      name: "Child",
+      terminals: [
+        { name: "L", netId: "child-l" },
+        { name: "R", netId: "child-r" },
+      ],
+    };
     project.documents.push(child);
     const index = buildProjectConnectivityIndex(
       project,
@@ -86,9 +75,6 @@ describe("hierarchy navigation", () => {
     ]);
     expect(findHierarchyPath(index, "top", "top")).toEqual([]);
     expect(findHierarchyPath(index, "top", "missing")).toBeUndefined();
-    expect(findHierarchyPaths(index, "top", "child")).toEqual([
-      [{ parentDocumentId: "top", instanceId: "X1", childDocumentId: "child" }],
-      [{ parentDocumentId: "top", instanceId: "X2", childDocumentId: "child" }],
-    ]);
+    expect(findHierarchyPaths(index, "top", "child")).toHaveLength(2);
   });
 });

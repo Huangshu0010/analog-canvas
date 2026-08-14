@@ -296,8 +296,6 @@ function objectAnchor(
       ? annotation.anchor.position
       : annotation.anchor.fallbackPosition;
   }
-  const port = document.ports.find((item) => item.id === objectId);
-  if (port?.position) return port.position;
   const junction = document.junctions.find((item) => item.id === objectId);
   return junction?.position ?? null;
 }

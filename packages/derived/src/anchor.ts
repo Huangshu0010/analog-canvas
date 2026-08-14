@@ -161,7 +161,7 @@ function unresolvedRoute(
 }
 
 /**
- * Find the placement Point of an attachable object: an Instance, Port, or
+ * Find the placement Point of an attachable object: an Instance or Junction.
  * Junction. A DraftingObject is intentionally not a valid V1 anchor target
  * (ADR 0010: no drafting-to-drafting attachment).
  */
@@ -173,8 +173,6 @@ function findObjectPlacement(
     (candidate) => candidate.id === objectId,
   );
   if (instance?.placement) return instance.placement.position;
-  const port = document.ports.find((candidate) => candidate.id === objectId);
-  if (port) return port.position;
   const junction = document.junctions.find(
     (candidate) => candidate.id === objectId,
   );

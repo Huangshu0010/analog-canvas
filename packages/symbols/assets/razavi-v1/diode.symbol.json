@@ -110,6 +110,5 @@
       }
     }
   ],
-  "variants": [],
-  "aliases": ["pn-diode", "rectifier-diode"]
+  "variants": []
 }

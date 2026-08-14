@@ -63,6 +63,5 @@ export function createHierarchicalBlockGeometry(
       })),
     ],
     variants: [],
-    aliases: [],
   };
 }

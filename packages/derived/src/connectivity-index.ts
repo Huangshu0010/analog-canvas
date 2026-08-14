@@ -69,7 +69,8 @@ export interface HierarchyEdge {
   instanceId: string;
   parentPinName: string;
   childDocumentId: string;
-  childPortId: string;
+  childTerminalName: string;
+  childNetId: string;
 }
 
 export interface HierarchyConnectivityIndex {
@@ -94,11 +95,6 @@ export interface ProjectConnectivityIndex {
 const junctionEndpoint = (junctionId: string): EndpointRef => ({
   kind: "junction",
   junctionId,
-});
-
-const portEndpoint = (portId: string): EndpointRef => ({
-  kind: "port",
-  portId,
 });
 
 const terminalEndpoint = (
@@ -208,7 +204,6 @@ function buildNetRecord(
     ...net.terminals.map((terminal) =>
       terminalEndpoint(terminal.instanceId, terminal.pinName),
     ),
-    ...net.ports.map((portId) => portEndpoint(portId)),
   ].sort((a, b) => endpointKey(a).localeCompare(endpointKey(b), "en"));
 
   const visibleEndpoints = netEndpoints(document, net).filter((endpoint) =>
@@ -330,14 +325,17 @@ function buildHierarchyIndex(
       );
       if (!resolved) continue;
       for (const pin of resolved.definition.pins) {
-        const childPort = child.ports.find((port) => port.name === pin.name);
-        if (!childPort) continue;
+        const childTerminal = child.netlist?.terminals.find(
+          (terminal) => terminal.name === pin.name,
+        );
+        if (!childTerminal) continue;
         edges.push({
           parentDocumentId: parent.id,
           instanceId: instance.id,
           parentPinName: pin.name,
           childDocumentId: childId,
-          childPortId: childPort.id,
+          childTerminalName: childTerminal.name,
+          childNetId: childTerminal.netId,
         });
       }
     }
@@ -389,9 +387,6 @@ function buildObjectIndex(project: CircuitProject): ProjectObjectIndex {
       }
       if (document.junctions.some((candidate) => candidate.id === objectId)) {
         return directObjectLocator(documentId, "junction", objectId);
-      }
-      if (document.ports.some((candidate) => candidate.id === objectId)) {
-        return directObjectLocator(documentId, "port", objectId);
       }
       if (document.annotations.some((candidate) => candidate.id === objectId)) {
         return directObjectLocator(documentId, "annotation", objectId);

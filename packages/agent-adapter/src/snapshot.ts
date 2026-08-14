@@ -20,17 +20,12 @@ import {
 } from "./diagnostics.js";
 import {
   AGENT_SNAPSHOT_VERSION,
-  AgentProjectSnapshotSchema,
   AgentSessionSnapshotSchema,
-  AgentSnapshotDocumentV3Schema,
 } from "./schema.js";
 import type {
   AgentDiagnostic,
-  AgentInstanceNetlistFacts,
-  AgentProjectSnapshot,
   AgentSessionSnapshot,
   AgentSnapshotDocument,
-  AgentSnapshotDocumentV3,
 } from "./schema.js";
 
 export interface BuildAgentSessionSnapshotOptions {
@@ -168,7 +163,6 @@ function projectIndex(options: BuildAgentSessionSnapshotOptions) {
         id: document.id,
         name: document.name,
         instanceCount: document.instances.length,
-        portCount: document.ports.length,
         netCount: document.nets.length,
         references: document.instances
           .flatMap((instance) => {
@@ -214,11 +208,6 @@ function documentSnapshot(
       );
     }
   }
-  const portNetById = new Map<string, string>();
-  for (const net of document.nets) {
-    for (const portId of net.ports) portNetById.set(portId, net.id);
-  }
-
   const instances = [...document.instances]
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map((instance) => {
@@ -261,7 +250,29 @@ function documentSnapshot(
         properties,
         parameters,
         ...(instance.netlist
-          ? { netlist: instanceNetlistFactsOf(instance) }
+          ? {
+              netlist: {
+                reference: instance.netlist.reference,
+                ...(instance.netlist.binding
+                  ? { binding: instance.netlist.binding }
+                  : {}),
+                parameters: Object.fromEntries(
+                  Object.entries(instance.netlist.parameters).sort(
+                    ([left], [right]) => left.localeCompare(right, "en"),
+                  ),
+                ),
+                ...(instance.netlist.terminals
+                  ? {
+                      terminals: [...instance.netlist.terminals]
+                        .sort(
+                          (left, right) =>
+                            left.sourcePosition - right.sourcePosition,
+                        )
+                        .map((terminal) => ({ ...terminal })),
+                    }
+                  : {}),
+              },
+            }
           : {}),
         placement: instance.placement
           ? structuredClone(instance.placement)
@@ -324,9 +335,6 @@ function documentSnapshot(
     ...instances.flatMap((instance) =>
       instance.bounds ? [instance.bounds] : [],
     ),
-    ...document.ports.flatMap((port) =>
-      port.position ? [pointBounds(port.position)] : [],
-    ),
     ...document.junctions.map((junction) => pointBounds(junction.position)),
     ...document.annotations.map((annotation) =>
       pointBounds(
@@ -357,15 +365,14 @@ function documentSnapshot(
       : {}),
     bounds,
     presentation: structuredClone(document.presentation),
-    ports: [...document.ports]
-      .sort((left, right) => left.id.localeCompare(right.id, "en"))
-      .map((port) => ({
-        id: port.id,
-        name: port.name,
-        direction: port.direction,
-        position: port.position ? { ...port.position } : null,
-        netId: portNetById.get(port.id) ?? null,
-      })),
+    cellInterface: document.netlist
+      ? {
+          name: document.netlist.name,
+          terminals: document.netlist.terminals.map((terminal) => ({
+            ...terminal,
+          })),
+        }
+      : null,
     instances,
     nets: [...document.nets]
       .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -378,9 +385,6 @@ function documentSnapshot(
           (left, right) =>
             left.instanceId.localeCompare(right.instanceId, "en") ||
             left.pinName.localeCompare(right.pinName, "en"),
-        ),
-        portIds: [...net.ports].sort((left, right) =>
-          left.localeCompare(right, "en"),
         ),
         routeIds: document.routes
           .filter((route) => route.netId === net.id)
@@ -440,11 +444,11 @@ export function buildAgentSessionSnapshot(
   };
   const canonical = canonicalSnapshotContent(content);
   // ADR 0010: the Snapshot identity hash covers only electrical facts
-  // (instances and pin inventory, ports, Nets and their membership,
+  // (instances and pin inventory, Nets and their terminal membership,
   // hierarchical edges). Placement, route geometry, Junction placement,
   // annotations, drafting objects, and diagnostics never change it, so
-  // an electrically identical Document hashes identically across the schema-2
-  // migration. When only a single Document is available (no Project view), the
+  // an electrically identical Document hashes identically across presentation
+  // edits. When only a single Document is available (no Project view), the
   // hash is computed over that one Document's electrical projection.
   const projectView: Pick<
     CircuitProject,
@@ -460,143 +464,5 @@ export function buildAgentSessionSnapshot(
     electricalTopologyHash: topologyHash,
     byteLength: utf8ByteLength(canonical),
     ...content,
-  });
-}
-
-// --- API v3 snapshot targets (ADR 0018 / AP1) -------------------------------
-
-type DocumentInstance = SchematicDocument["instances"][number];
-
-function cellInterfaceOf(document: SchematicDocument) {
-  return document.netlist
-    ? {
-        name: document.netlist.name,
-        portOrder: [...document.netlist.portOrder],
-      }
-    : null;
-}
-
-function instanceNetlistFactsOf(
-  instance: DocumentInstance,
-): AgentInstanceNetlistFacts {
-  const netlist = instance.netlist!;
-  return {
-    reference: netlist.reference,
-    ...(netlist.binding ? { binding: netlist.binding } : {}),
-    parameters: Object.fromEntries(
-      Object.entries(netlist.parameters).sort(([left], [right]) =>
-        left.localeCompare(right, "en"),
-      ),
-    ),
-    ...(netlist.terminals
-      ? {
-          terminals: [...netlist.terminals]
-            .sort((left, right) => left.sourcePosition - right.sourcePosition)
-            .map((terminal) => ({ ...terminal })),
-        }
-      : {}),
-  };
-}
-
-export function buildAgentDocumentSnapshotV3(
-  options: BuildAgentSessionSnapshotOptions,
-): AgentSnapshotDocumentV3 {
-  const base = documentSnapshot(options);
-  const { document } = options;
-  const factsById = new Map<string, AgentInstanceNetlistFacts>();
-  for (const instance of document.instances) {
-    if (instance.netlist) {
-      factsById.set(instance.id, instanceNetlistFactsOf(instance));
-    }
-  }
-  const instances = base.instances.map((snapshot) => {
-    const netlist = factsById.get(snapshot.id);
-    return netlist ? { ...snapshot, netlist } : { ...snapshot };
-  });
-  return AgentSnapshotDocumentV3Schema.parse({
-    ...base,
-    cellInterface: cellInterfaceOf(document),
-    instances,
-  });
-}
-
-export interface BuildAgentProjectSnapshotOptions {
-  project: CircuitProject;
-}
-
-function projectReference(
-  instance: DocumentInstance,
-  documentIdByName: Map<string, string>,
-): {
-  instanceId: string;
-  targetName: string;
-  targetDocumentId: string | null;
-}[] {
-  const binding = instance.netlist?.binding;
-  if (binding && binding.kind === "subcircuit") {
-    return [
-      {
-        instanceId: instance.id,
-        targetName: binding.name,
-        targetDocumentId: binding.childDocumentId,
-      },
-    ];
-  }
-  const targetName = subcircuitTargetName(instanceTarget(instance));
-  return targetName
-    ? [
-        {
-          instanceId: instance.id,
-          targetName,
-          targetDocumentId:
-            documentIdByName.get(targetName.toLowerCase()) ?? null,
-        },
-      ]
-    : [];
-}
-
-export function buildAgentProjectSnapshot(
-  options: BuildAgentProjectSnapshotOptions,
-): AgentProjectSnapshot {
-  const { project } = options;
-  const documentIdByName = new Map<string, string>();
-  for (const document of project.documents) {
-    documentIdByName.set(document.name.toLowerCase(), document.id);
-    if (document.netlist) {
-      documentIdByName.set(document.netlist.name.toLowerCase(), document.id);
-    }
-    if (document.sourceBinding) {
-      documentIdByName.set(
-        document.sourceBinding.cellName.toLowerCase(),
-        document.id,
-      );
-    }
-  }
-  return AgentProjectSnapshotSchema.parse({
-    id: project.id,
-    name: project.name,
-    topDocumentId: project.topDocumentId,
-    documents: [...project.documents]
-      .sort((left, right) => left.id.localeCompare(right.id, "en"))
-      .map((document) => ({
-        id: document.id,
-        name: document.name,
-        isTop: document.id === project.topDocumentId,
-        revision: document.revision,
-        cellInterface: cellInterfaceOf(document),
-        portCount: document.ports.length,
-        instanceCount: document.instances.length,
-        references: document.instances
-          .flatMap((instance) => projectReference(instance, documentIdByName))
-          .sort((left, right) =>
-            left.instanceId.localeCompare(right.instanceId, "en"),
-          ),
-      })),
-    sourceSummary: {
-      entry: project.source.entry,
-      dialect: project.source.dialect,
-      sourcePolicy: project.source.sourcePolicy,
-      fileCount: project.source.files.length,
-    },
   });
 }

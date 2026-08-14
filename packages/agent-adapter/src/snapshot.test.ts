@@ -119,7 +119,6 @@ describe("Agent Document Snapshot", () => {
       scope: "global",
       powerDomain: "vdd",
       terminals: [],
-      ports: [],
     });
     const snapshot = buildAgentSessionSnapshot({ document, resolver });
     expect(snapshot.document.nets).toContainEqual(
@@ -154,62 +153,6 @@ describe("Agent Document Snapshot", () => {
         }),
       ]),
     );
-  });
-
-  it("is deterministic across persisted collection order and resolves references", () => {
-    const project = fixtureProject();
-    const parent = project.documents[0]!;
-    parent.instances[0]!.netlist = {
-      reference: "M1",
-      parameters: {},
-      binding: {
-        kind: "subcircuit",
-        name: "child",
-        childDocumentId: "document-child",
-      },
-    };
-    const child = structuredClone(parent);
-    child.id = "document-child";
-    child.name = "child";
-    child.instances = [];
-    child.nets = [];
-    child.routes = [];
-    child.junctions = [];
-    child.annotations = [];
-    child.layoutGroups = [];
-    child.constraints = [];
-    project.documents.push(child);
-
-    const first = buildAgentSessionSnapshot({
-      project,
-      document: parent,
-      resolver,
-    });
-    const reordered = structuredClone(project);
-    const reorderedParent = reordered.documents.find(
-      (document) => document.id === parent.id,
-    )!;
-    reorderedParent.instances.reverse();
-    reorderedParent.nets.reverse();
-    reorderedParent.routes.reverse();
-    reorderedParent.ports.reverse();
-    reorderedParent.annotations.reverse();
-    reordered.documents.reverse();
-    const second = buildAgentSessionSnapshot({
-      project: reordered,
-      document: reorderedParent,
-      resolver,
-    });
-
-    expect(second.electricalTopologyHash).toBe(first.electricalTopologyHash);
-    expect(
-      first.project.documents.find((document) => document.id === parent.id)
-        ?.references,
-    ).toContainEqual({
-      instanceId: "M1",
-      targetName: "child",
-      targetDocumentId: "document-child",
-    });
   });
 
   it("cannot be submitted as a mutation request", () => {

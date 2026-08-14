@@ -4,7 +4,6 @@ import {
   AGENT_HEARTBEAT_INTERVAL_MS,
   AGENT_API_VERSION,
   AGENT_FILE_RESOURCE_MAX_BYTES,
-  AGENT_API_V1_VERSION,
   AGENT_SESSION_PROTOCOL_VERSION,
   AgentSessionEventSchema,
   AgentSessionMessageSchema,
@@ -21,6 +20,7 @@ import { sha256Hex } from "@icm/derived";
 import type { CircuitProject } from "@icm/model";
 
 import type { AgentConnectionStatus } from "./connect-agent-panel";
+import { transitionAgentSession } from "./agent-session-state-machine";
 import {
   clearAgentSessionRecovery,
   readAgentSessionRecovery,
@@ -152,7 +152,6 @@ function permissionsFromScopes(
   scopes: readonly AgentSessionScope[],
 ): AgentPermissions {
   return {
-    query: scopes.includes("circuit.snapshot"),
     snapshot: scopes.includes("circuit.snapshot"),
     render: scopes.includes("circuit.render"),
     sourceSpans: scopes.includes("circuit.source-spans"),
@@ -200,7 +199,14 @@ export function useAgentSession(
   });
 
   const update = useCallback((next: Partial<AgentSessionViewModel>) => {
-    setView((previous) => ({ ...previous, ...next }));
+    setView((previous) => ({
+      ...previous,
+      ...next,
+      status:
+        next.status === undefined
+          ? previous.status
+          : transitionAgentSession(previous.status, next.status),
+    }));
   }, []);
 
   const control = useCallback(
@@ -519,14 +525,11 @@ export function useAgentSession(
                 operation?: unknown;
               };
               sendResponse({
-                apiVersion:
-                  candidate.apiVersion === AGENT_API_V1_VERSION
-                    ? AGENT_API_V1_VERSION
-                    : AGENT_API_VERSION,
+                apiVersion: AGENT_API_VERSION,
                 requestId: parsed.data.requestId,
                 operation:
                   typeof candidate.operation === "string" &&
-                  ["query", "snapshot", "transact", "render"].includes(
+                  ["snapshot", "transact", "render"].includes(
                     candidate.operation,
                   )
                     ? candidate.operation
@@ -563,8 +566,7 @@ export function useAgentSession(
             update({ status: "working" });
             // The relay already rejects malformed public payloads, but the
             // browser host repeats that same strict parse before it can touch
-            // the live Project. Never route hosted traffic through the local
-            // v1/v3 compatibility handler.
+            // the live Project.
             const result = service.handle(parsed.data.payload);
             const responseBytes = new TextEncoder().encode(
               JSON.stringify(result),

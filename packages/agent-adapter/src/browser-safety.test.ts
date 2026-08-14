@@ -18,7 +18,7 @@ import { createAgentCircuitService } from "./service.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 const allPermissions: AgentPermissions = {
-  query: true,
+  snapshot: true,
   render: true,
   sourceSpans: false,
   edit: { geometry: true, connectivity: true, presentation: true },

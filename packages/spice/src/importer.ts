@@ -291,16 +291,6 @@ function importDocument(
   const importedInstanceById = new Map(
     instances.map((instance) => [instance.id, instance]),
   );
-  const importedPorts = cell.ports.map((port) => ({
-    source: port,
-    id: deriveStableId("port", cell.name, String(port.position), port.name),
-  }));
-  const ports = importedPorts.map(({ source: port, id }) => ({
-    id,
-    name: port.name,
-    direction: "passive" as const,
-    position: null,
-  }));
   const nets: Net[] = cell.nets.map((net) => ({
     id: net.id,
     name: net.name,
@@ -321,9 +311,6 @@ function importDocument(
             ),
           })),
       ),
-    ports: importedPorts
-      .filter(({ source: port }) => port.netId === net.id)
-      .map(({ id }) => id),
   }));
   return {
     id: deriveStableId("document", cell.name.toLowerCase()),
@@ -331,8 +318,13 @@ function importDocument(
     revision: 0,
     sourceBinding: { cellName: cell.name, sourceRef: cell.sourceRef },
     sourceStatus: "in-sync",
-    netlist: { name: cell.name, portOrder: ports.map((port) => port.id) },
-    ports,
+    netlist: {
+      name: cell.name,
+      terminals: cell.ports.map((port) => ({
+        name: port.name,
+        netId: port.netId,
+      })),
+    },
     instances,
     nets,
     routes: [],

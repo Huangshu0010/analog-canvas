@@ -7,7 +7,6 @@ export type SnapTargetKind =
   | "instance-center"
   | "instance-edge"
   | "pin"
-  | "port"
   | "junction"
   | "route"
   | "drafting";
@@ -86,7 +85,6 @@ export const SNAP_PROFILES = {
       "instance-center",
       "instance-edge",
       "pin",
-      "port",
       "junction",
       "route",
     ]),
@@ -109,7 +107,6 @@ export const SNAP_PROFILES = {
       "instance-center",
       "instance-edge",
       "pin",
-      "port",
       "junction",
       "route",
       "drafting",
@@ -118,13 +115,7 @@ export const SNAP_PROFILES = {
     gridAlignedTranslation: false,
   },
   wire: {
-    kinds: new Set<SnapTargetKind>([
-      "grid",
-      "pin",
-      "port",
-      "junction",
-      "route",
-    ]),
+    kinds: new Set<SnapTargetKind>(["grid", "pin", "junction", "route"]),
     exactElectrical: true,
     gridAlignedTranslation: false,
   },
@@ -132,7 +123,6 @@ export const SNAP_PROFILES = {
 
 const KIND_PRIORITY: Record<SnapTargetKind, number> = {
   pin: 0,
-  port: 0,
   junction: 0,
   route: 2,
   "instance-center": 3,
@@ -162,8 +152,6 @@ function endpointKey(endpoint: RouteEndpoint): string {
   switch (endpoint.kind) {
     case "terminal":
       return `terminal:${endpoint.instanceId}:${endpoint.pinName}`;
-    case "port":
-      return `port:${endpoint.portId}`;
     case "junction":
       return `junction:${endpoint.junctionId}`;
   }
@@ -193,7 +181,6 @@ function compatibleAxisKinds(moving: SnapAnchor, target: SnapAnchor): boolean {
     case "instance-edge":
       return moving.kind === "instance-edge" || moving.kind === "drafting";
     case "pin":
-    case "port":
     case "junction":
       return moving.electrical !== undefined || moving.kind === "drafting";
     case "route":
@@ -476,7 +463,6 @@ export function resolvePointSnap(
 ): SnapResult {
   const pointKinds = new Set<SnapTargetKind>([
     "pin",
-    "port",
     "junction",
     "route",
     "drafting",

@@ -6,13 +6,13 @@ import { directObjectLocator, type ObjectLocator } from "./object-locator.js";
 
 /**
  * Deterministic project-wide search index (ADR 0015 / roadmap WP-R5 core).
- * Case-insensitive exact/prefix/substring matching over instances, nets, and
- * ports, returning `ObjectLocator`s ranked exact > prefix > substring with no
+ * Case-insensitive exact/prefix/substring matching over instances and nets,
+ * returning `ObjectLocator`s ranked exact > prefix > substring with no
  * fuzzy ranking. Pure backend; the `Ctrl+F` UI and hierarchy navigation consume
  * it later (R9/R10).
  */
 
-export type SearchObjectKind = "instance" | "net" | "port";
+export type SearchObjectKind = "instance" | "net";
 
 export type SearchObjectLocator = ObjectLocator & {
   kind: SearchObjectKind;
@@ -24,9 +24,7 @@ export type SearchField =
   | "netlist-reference"
   | "property"
   | "net-name"
-  | "net-id"
-  | "port-name"
-  | "port-id";
+  | "net-id";
 
 export type MatchType = "exact" | "prefix" | "substring";
 
@@ -46,7 +44,6 @@ const MATCH_RANK: Record<MatchType, number> = {
 const KIND_RANK: Record<SearchObjectKind, number> = {
   instance: 0,
   net: 1,
-  port: 2,
 };
 
 interface Candidate {
@@ -154,22 +151,6 @@ function collectCandidates(
           value: net.name.toLowerCase(),
         });
       }
-    }
-    for (const port of document.ports) {
-      const locator = searchLocator(document.id, "port", port.id, objectIndex);
-      const label = port.name;
-      candidates.push({
-        locator,
-        label,
-        field: "port-id",
-        value: port.id.toLowerCase(),
-      });
-      candidates.push({
-        locator,
-        label,
-        field: "port-name",
-        value: port.name.toLowerCase(),
-      });
     }
   }
   return candidates;

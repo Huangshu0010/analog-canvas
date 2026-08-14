@@ -22,7 +22,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:C"],
     assetPath: "capacitor.symbol.json",
     assetHash:
-      "72c059b96f5fb93a9397647fcfa8b5b882053843750b6ba829f9c601d5110fbf",
+      "6ccdd4cdcbbd95bd10c0a59f83edd58c1b7ace5fca39a7a485b45e7dca3fe6b2",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -46,7 +46,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
     assetPath: "closed-switch.symbol.json",
     assetHash:
-      "f6ee7f08ec2d454978e26bb845645c95bc06184b5cd24befe443478581656fd0",
+      "b28f94edb706cc30d505eb0e26cdbb98e815c8c5a2838312df0f148aa6ed525a",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -78,7 +78,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:I"],
     assetPath: "current-source.symbol.json",
     assetHash:
-      "26427f16b5e60f7100d80c086747b2ce832a869e551dac5249f13ccb43722673",
+      "fa00a8c4aac387e2d5531d560dabf0897df079fdbcb3cef9823f67d6a564e796",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -109,7 +109,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:D"],
     assetPath: "diode.symbol.json",
     assetHash:
-      "8bf77cb8f9988277a8e915132c1f1cae37c1d177e9db9278bbd4924d8ae58f83",
+      "9f7b396145d285f43d3a88ff74ab75ebf9177b0bb32223dd3c9f03e353167899",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -141,7 +141,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "ground.symbol.json",
     assetHash:
-      "8aa38b7c438675e1dcb161b57be65d62609fe544e9ba19fc411e19f6c56a43e8",
+      "b2ca65ec6b08eb1395070f3442dac5374d62472ae02789121466767bd09d6a1a",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -174,7 +174,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Two-terminal Razavi switch; SPICE S has a four-terminal control contract.",
     assetPath: "ideal-switch.symbol.json",
     assetHash:
-      "ff8579302d5566296ceafdc1711554c5f42a4c04e16b6d7366101cc1e1ba91a7",
+      "953a05399eae5ecbedf4f237020bac864f46b94621082065e60f555226d0bce2",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -206,7 +206,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:L"],
     assetPath: "inductor.symbol.json",
     assetHash:
-      "a0e4bf19ef973f7fcbe184e568f691c4986ca8517aa2623eb06c633c070ebe10",
+      "b281e6f3fcca59eb84a5dfc1f9b9fd93a29bef226cc5b7113a3fd91f3c10d55e",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -248,29 +248,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:nmos", "pdk:model-type:nmos"],
     assetPath: "nmos.symbol.json",
     assetHash:
-      "4418daabba55eed90e21e90010cce9c1b62589a7e52ce4964d1eaf2fd5eb1e3c",
-  },
-  {
-    symbolId: "nmos3",
-    name: "NMOS (3-terminal)",
-    category: "transistor",
-    reviewStatus: "provisional",
-    visualAuthority: {
-      kind: "razavi-reference-v1",
-      referenceManifestPath:
-        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
-      ],
-      calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/mos-geometry.json",
-    },
-    pinOrder: ["D", "G", "S"],
-    palette: true,
-    automaticMappings: [],
-    assetPath: "nmos3.symbol.json",
-    assetHash:
-      "93636dfafd0690edaa7a9402e3bc2da014d048a404a558e8d3765c3c30126cc8",
+      "ed4a97e6d6192f83e24a20d29a311858bfe45d19b1b3810cbc3af903f5b99b87",
   },
   {
     symbolId: "npn",
@@ -282,7 +260,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:npn", "pdk:model-type:npn"],
     assetPath: "npn.symbol.json",
     assetHash:
-      "c7330d7e9a9d69801f37584377b4d39bb6f7c28eb830dc15020c26dcee1dba7f",
+      "f69f4959593133c3be35d4a1517ceca4ab82f7c78678a9807ffcd1de9280099e",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -316,7 +294,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Three-terminal textbook op-amp; SPICE subcircuit pin and supply contracts require an explicit PDK mapping.",
     assetPath: "opamp.symbol.json",
     assetHash:
-      "0710b34aa1ae4f39d555155bfc51e66495cf6b0b02ae094707a41df8733e4ee3",
+      "2e248f3880f7d03ccc2e15649f7053751cc5312cf915a251fcd0e07da35de16a",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -358,29 +336,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:M:pmos", "pdk:model-type:pmos"],
     assetPath: "pmos.symbol.json",
     assetHash:
-      "6d8bd29ed2d365417209dd2844ddc677355b1729cc000c29adc789dc235df20b",
-  },
-  {
-    symbolId: "pmos3",
-    name: "PMOS (3-terminal)",
-    category: "transistor",
-    reviewStatus: "provisional",
-    visualAuthority: {
-      kind: "razavi-reference-v1",
-      referenceManifestPath:
-        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/razavi-six-panel.png",
-      ],
-      calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/mos-geometry.json",
-    },
-    pinOrder: ["D", "G", "S"],
-    palette: true,
-    automaticMappings: [],
-    assetPath: "pmos3.symbol.json",
-    assetHash:
-      "8dca33880e073396eb45f79f6a2fb882a759d0ca4ddd473275b6f4de820c335f",
+      "72080a26eb50b6c46ea14faa57cc1c468361c26731a1817cad467e620bb8620a",
   },
   {
     symbolId: "pnp",
@@ -392,7 +348,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:Q:pnp", "pdk:model-type:pnp"],
     assetPath: "pnp.symbol.json",
     assetHash:
-      "8d9d61bde7cb0cf92a10ec86b37272ee7b76be0d69da9516e2edd1e1e29c1266",
+      "df46a5c79a677de1e536cb0f612c9f9fb51e98acc2683357125d7f321da15818",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -424,7 +380,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: [],
     assetPath: "port.symbol.json",
     assetHash:
-      "d0ca494905a2975920898719f15c59d35be44c85f627308b8bfadccc549707ab",
+      "4d17eea1df130c008fa194c65012a9d6893c7245b7d4bb78b4f37e0187c569ea",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -448,7 +404,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Explicit solid endpoint style; no automatic SPICE mapping.",
     assetPath: "port-filled.symbol.json",
     assetHash:
-      "bb266895c22ed004c7706ca7c3825e84f51bcd78b00f000b4a47830cc1e0ab12",
+      "fa0159b800b6df515bfd876704b1cd448de280b63fc48df14221dcc5bb89bbcb",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -470,7 +426,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:R"],
     assetPath: "resistor.symbol.json",
     assetHash:
-      "474648eca063d107fb39f641a6ce6b3a99c2b5bd4d26f6ebff926cccd184c0a7",
+      "28c1b0fcbd541685dec951e05b1a1f1fe71a6aabf572c5b706143b377b7677c1",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -480,28 +436,6 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       ],
       calibrationPath:
         "fixtures/visual-reference/razavi-reference-v1/passive-geometry.json",
-    },
-  },
-  {
-    symbolId: "vdd",
-    name: "VDD Power Port",
-    category: "power",
-    reviewStatus: "reviewed",
-    pinOrder: ["P"],
-    palette: true,
-    automaticMappings: [],
-    assetPath: "vdd.symbol.json",
-    assetHash:
-      "080d4e5412ab70aff3c275b8391fd308101bc96c7c81625e60200b12248e864c",
-    visualAuthority: {
-      kind: "razavi-reference-v1",
-      referenceManifestPath:
-        "fixtures/visual-reference/razavi-reference-v1/manifest.json",
-      referencePaths: [
-        "fixtures/visual-reference/razavi-reference-v1/vdd-reference.png",
-      ],
-      calibrationPath:
-        "fixtures/visual-reference/razavi-reference-v1/vdd-geometry.json",
     },
   },
   {
@@ -516,7 +450,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
       "Textbook gain block has implicit reference nodes and no exact primitive SPICE terminal contract.",
     assetPath: "voltage-amplifier.symbol.json",
     assetHash:
-      "cea1803199391aac352d037d820be8f5bdc69c878d128184eed2575193fc8bf7",
+      "538411b2fc3df120f910c47c92502b1b4bdefef52f1296170167180c61109816",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -548,7 +482,7 @@ export const razaviSymbolCatalogEntries: readonly RazaviSymbolCatalogEntry[] = [
     automaticMappings: ["spice:V"],
     assetPath: "voltage-source.symbol.json",
     assetHash:
-      "33082df048526fd6520fe5c69ef9b7f4e6ef04dce29528688b5753a90e621590",
+      "9f295fd28893155c8e3e73f26fd5f858f99a54b77b1917720ee2fbb02fb2942c",
     visualAuthority: {
       kind: "razavi-reference-v1",
       referenceManifestPath:
@@ -692,7 +626,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: [],
   },
   {
     schemaVersion: 1,
@@ -813,7 +746,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["switch-closed", "two-terminal-closed-switch"],
   },
   {
     schemaVersion: 1,
@@ -936,7 +868,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["dc-current"],
   },
   {
     schemaVersion: 1,
@@ -1051,7 +982,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["pn-diode", "rectifier-diode"],
   },
   {
     schemaVersion: 1,
@@ -1145,7 +1075,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["gnd"],
     labelVisibility: "hidden",
   },
   {
@@ -1267,7 +1196,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["switch-open", "two-terminal-switch"],
   },
   {
     schemaVersion: 1,
@@ -1319,7 +1247,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["coil"],
   },
   {
     schemaVersion: 1,
@@ -1612,192 +1539,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         ],
       },
     ],
-    aliases: ["mos-n"],
-  },
-  {
-    schemaVersion: 1,
-    id: "nmos3",
-    name: "NMOS (3-terminal)",
-    viewBox: {
-      x: -24,
-      y: -24,
-      width: 39,
-      height: 48,
-    },
-    pins: [
-      {
-        name: "D",
-        role: "drain",
-        at: {
-          x: 10,
-          y: -20,
-        },
-        direction: "north",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "G",
-        role: "gate",
-        at: {
-          x: -20,
-          y: 0,
-        },
-        direction: "west",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "S",
-        role: "source",
-        at: {
-          x: 10,
-          y: 20,
-        },
-        direction: "south",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-    ],
-    primitives: [
-      {
-        kind: "polyline",
-        points: [
-          {
-            x: -4.244186,
-            y: -6.976744,
-          },
-          {
-            x: 10,
-            y: -6.976744,
-          },
-          {
-            x: 10,
-            y: -20,
-          },
-        ],
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -11.802326,
-            y: -9.593023,
-          },
-          {
-            x: -11.802326,
-            y: 9.593023,
-          },
-          {
-            x: -8.895349,
-            y: 9.593023,
-          },
-          {
-            x: -8.895349,
-            y: -9.593023,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "gate-bar",
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -6.569767,
-            y: -12.5,
-          },
-          {
-            x: -6.569767,
-            y: 12.5,
-          },
-          {
-            x: -3.662791,
-            y: 12.5,
-          },
-          {
-            x: -3.662791,
-            y: -12.5,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "gate-bar",
-      },
-      {
-        kind: "line",
-        from: {
-          x: -8.895349,
-          y: 0,
-        },
-        to: {
-          x: -20,
-          y: 0,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polyline",
-        points: [
-          {
-            x: -3.662791,
-            y: 6.976744,
-          },
-          {
-            x: 10,
-            y: 6.976744,
-          },
-          {
-            x: 10,
-            y: 20,
-          },
-        ],
-        part: "source-arrow",
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: 10.581395,
-            y: 6.976744,
-          },
-          {
-            x: 1.27907,
-            y: 2.906977,
-          },
-          {
-            x: 1.27907,
-            y: 11.046512,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "source-arrow",
-      },
-    ],
-    variants: [],
-    aliases: ["mos-n-3"],
+    defaultVariantId: "textbook-3terminal",
   },
   {
     schemaVersion: 1,
@@ -1964,7 +1706,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["bjt-npn", "bipolar-npn"],
   },
   {
     schemaVersion: 1,
@@ -2126,7 +1867,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["op-amp", "operational-amplifier"],
   },
   {
     schemaVersion: 1,
@@ -2402,192 +2142,7 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
         ],
       },
     ],
-    aliases: ["mos-p"],
-  },
-  {
-    schemaVersion: 1,
-    id: "pmos3",
-    name: "PMOS (3-terminal)",
-    viewBox: {
-      x: -24,
-      y: -24,
-      width: 38,
-      height: 48,
-    },
-    pins: [
-      {
-        name: "D",
-        role: "drain",
-        at: {
-          x: 10,
-          y: 20,
-        },
-        direction: "south",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "G",
-        role: "gate",
-        at: {
-          x: -20,
-          y: 0,
-        },
-        direction: "west",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-      {
-        name: "S",
-        role: "source",
-        at: {
-          x: 10,
-          y: -20,
-        },
-        direction: "north",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-    ],
-    primitives: [
-      {
-        kind: "polyline",
-        points: [
-          {
-            x: -4.244186,
-            y: 6.976744,
-          },
-          {
-            x: 10,
-            y: 6.976744,
-          },
-          {
-            x: 10,
-            y: 20,
-          },
-        ],
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -11.802326,
-            y: -9.593023,
-          },
-          {
-            x: -11.802326,
-            y: 9.593023,
-          },
-          {
-            x: -8.895349,
-            y: 9.593023,
-          },
-          {
-            x: -8.895349,
-            y: -9.593023,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "gate-bar",
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -6.569767,
-            y: -12.5,
-          },
-          {
-            x: -6.569767,
-            y: 12.5,
-          },
-          {
-            x: -3.662791,
-            y: 12.5,
-          },
-          {
-            x: -3.662791,
-            y: -12.5,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "gate-bar",
-      },
-      {
-        kind: "line",
-        from: {
-          x: -8.895349,
-          y: 0,
-        },
-        to: {
-          x: -20,
-          y: 0,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polyline",
-        points: [
-          {
-            x: 5.639535,
-            y: -7.122093,
-          },
-          {
-            x: 10,
-            y: -7.122093,
-          },
-          {
-            x: 10,
-            y: -20,
-          },
-        ],
-        part: "source-arrow",
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -3.662791,
-            y: -7.122093,
-          },
-          {
-            x: 5.639535,
-            y: -11.19186,
-          },
-          {
-            x: 5.639535,
-            y: -3.052326,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-        part: "source-arrow",
-      },
-    ],
-    variants: [],
-    aliases: ["mos-p-3"],
+    defaultVariantId: "textbook-3terminal",
   },
   {
     schemaVersion: 1,
@@ -2738,7 +2293,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["bjt-pnp", "bipolar-pnp"],
   },
   {
     schemaVersion: 1,
@@ -2799,7 +2353,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: [],
   },
   {
     schemaVersion: 1,
@@ -2860,7 +2413,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["solid-port"],
   },
   {
     schemaVersion: 1,
@@ -2913,77 +2465,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: [],
-  },
-  {
-    schemaVersion: 1,
-    id: "vdd",
-    name: "VDD Power Port",
-    viewBox: {
-      x: -12,
-      y: -2,
-      width: 24,
-      height: 26,
-    },
-    pins: [
-      {
-        name: "P",
-        role: "power",
-        at: {
-          x: 0,
-          y: 20,
-        },
-        direction: "south",
-        presentation: {
-          visibility: "visible",
-          leadLength: 10,
-        },
-      },
-    ],
-    primitives: [
-      {
-        kind: "line",
-        from: {
-          x: 0,
-          y: 20,
-        },
-        to: {
-          x: 0,
-          y: 1.5,
-        },
-        style: {
-          strokeRole: "normal",
-          lineCap: "butt",
-          lineJoin: "miter",
-        },
-      },
-      {
-        kind: "polygon",
-        points: [
-          {
-            x: -10,
-            y: -0.88,
-          },
-          {
-            x: 10,
-            y: -0.88,
-          },
-          {
-            x: 10,
-            y: 2.36,
-          },
-          {
-            x: -10,
-            y: 2.36,
-          },
-        ],
-        fill: "foreground",
-        stroke: "none",
-      },
-    ],
-    variants: [],
-    aliases: ["power-vdd", "vpwr"],
-    labelVisibility: "hidden",
   },
   {
     schemaVersion: 1,
@@ -3067,7 +2548,6 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["gain-block", "voltage-gain", "a0"],
   },
   {
     schemaVersion: 1,
@@ -3203,6 +2683,5 @@ export const razaviCatalogSymbols: readonly SymbolDefinition[] = [
       },
     ],
     variants: [],
-    aliases: ["dc-voltage"],
   },
 ];

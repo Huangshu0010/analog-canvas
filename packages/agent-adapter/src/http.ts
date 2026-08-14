@@ -2,11 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import {
-  AGENT_API_V1_VERSION,
-  AGENT_API_VERSION,
-  AgentCircuitResponseSchema,
-} from "./schema.js";
+import { AGENT_API_VERSION, AgentCircuitResponseSchema } from "./schema.js";
 import {
   invalidAgentRequestResponse,
   parseAgentCircuitRequest,
@@ -21,10 +17,7 @@ export interface LoopbackAgentServerOptions {
 }
 
 export interface LoopbackAgentServer {
-  /** Legacy v1 compatibility endpoint. */
   url: string;
-  /** Snapshot-driven v2 endpoint. */
-  v2Url: string;
   close(): Promise<void>;
 }
 
@@ -42,25 +35,15 @@ function writeJson(
   response.end(data);
 }
 
-function httpError(
-  apiVersion: typeof AGENT_API_V1_VERSION | typeof AGENT_API_VERSION,
-  code: string,
-  message: string,
-) {
+function httpError(code: string, message: string) {
   return AgentCircuitResponseSchema.parse({
-    apiVersion,
+    apiVersion: AGENT_API_VERSION,
     requestId: "http-error",
     operation: "error",
     ok: false,
     error: { code, message },
     diagnostics: [],
   });
-}
-
-function apiVersionForPath(
-  path: string | undefined,
-): typeof AGENT_API_V1_VERSION | typeof AGENT_API_VERSION {
-  return path === "/v1/circuit" ? AGENT_API_V1_VERSION : AGENT_API_VERSION;
 }
 
 function authorized(request: IncomingMessage, token: string): boolean {
@@ -111,24 +94,19 @@ export async function startLoopbackAgentServer(
   }
   const maximum = options.maxRequestBytes ?? service.limits.maxRequestBytes;
   const server = createServer(async (request, response) => {
-    const apiVersion = apiVersionForPath(request.url);
     if (request.method !== "POST") {
       writeJson(
         response,
         405,
-        httpError(
-          apiVersion,
-          "HTTP_METHOD_NOT_ALLOWED",
-          "Use POST /v1/circuit or POST /v2/circuit",
-        ),
+        httpError("HTTP_METHOD_NOT_ALLOWED", "Use POST /circuit"),
       );
       return;
     }
-    if (request.url !== "/v1/circuit" && request.url !== "/v2/circuit") {
+    if (request.url !== "/circuit") {
       writeJson(
         response,
         404,
-        httpError(apiVersion, "HTTP_NOT_FOUND", "Unknown Agent API path"),
+        httpError("HTTP_NOT_FOUND", "Unknown Agent API path"),
       );
       return;
     }
@@ -136,11 +114,7 @@ export async function startLoopbackAgentServer(
       writeJson(
         response,
         401,
-        httpError(
-          apiVersion,
-          "HTTP_UNAUTHORIZED",
-          "A valid bearer token is required",
-        ),
+        httpError("HTTP_UNAUTHORIZED", "A valid bearer token is required"),
       );
       return;
     }
@@ -150,7 +124,6 @@ export async function startLoopbackAgentServer(
         response,
         415,
         httpError(
-          apiVersion,
           "HTTP_UNSUPPORTED_MEDIA",
           "Content-Type must be application/json",
         ),
@@ -163,28 +136,23 @@ export async function startLoopbackAgentServer(
         input && typeof input === "object" && "apiVersion" in input
           ? (input as { apiVersion?: unknown }).apiVersion
           : undefined;
-      if (inputVersion !== apiVersion) {
+      if (inputVersion !== AGENT_API_VERSION) {
         writeJson(
           response,
           400,
           httpError(
-            apiVersion,
             "HTTP_API_VERSION_MISMATCH",
-            `${request.url} requires apiVersion ${apiVersion}`,
+            `/circuit requires apiVersion ${AGENT_API_VERSION}`,
           ),
         );
         return;
       }
-      if (apiVersion === AGENT_API_VERSION) {
-        const parsed = parseAgentCircuitRequest(input);
-        if (!parsed.success) {
-          writeJson(response, 400, parsed.response);
-          return;
-        }
-        writeJson(response, 200, service.handle(parsed.data));
+      const parsed = parseAgentCircuitRequest(input);
+      if (!parsed.success) {
+        writeJson(response, 400, parsed.response);
         return;
       }
-      writeJson(response, 200, service.handle(input));
+      writeJson(response, 200, service.handle(parsed.data));
     } catch (error) {
       const code =
         error instanceof Error ? error.message : "HTTP_INVALID_REQUEST";
@@ -192,9 +160,8 @@ export async function startLoopbackAgentServer(
         response,
         code === "HTTP_BODY_TOO_LARGE" ? 413 : 400,
         code === "HTTP_BODY_TOO_LARGE"
-          ? httpError(apiVersion, code, `Request body exceeds ${maximum} bytes`)
+          ? httpError(code, `Request body exceeds ${maximum} bytes`)
           : invalidAgentRequestResponse({
-              apiVersion,
               requestId: "http-error",
             }),
       );
@@ -215,8 +182,7 @@ export async function startLoopbackAgentServer(
   }
   const displayHost = host === "::1" ? `[${host}]` : host;
   return {
-    url: `http://${displayHost}:${address.port}/v1/circuit`,
-    v2Url: `http://${displayHost}:${address.port}/v2/circuit`,
+    url: `http://${displayHost}:${address.port}/circuit`,
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 import { createEmptyProject } from "./factories.js";
 import {
   ProjectFormatError,
-  ProjectMigrationRegistry,
   loadProject,
   parseProject,
   saveProject,
@@ -70,26 +69,13 @@ describe("Project persistence", () => {
     }
   });
 
-  it("rejects an unknown future schema version", () => {
+  it("rejects every non-current schema version", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/newer than supported/);
-  });
-
-  it("registers explicit advancing migrations", () => {
-    const registry = new ProjectMigrationRegistry();
-    registry.register(0, (input) => ({ ...input, schemaVersion: 1 }));
-    registry.register(1, (input) => ({ ...input, schemaVersion: 2 }));
-    registry.register(2, (input) => ({ ...input, schemaVersion: 3 }));
-    registry.register(3, (input) => ({ ...input, schemaVersion: 4 }));
-    registry.register(4, (input) => ({ ...input, schemaVersion: 5 }));
-    registry.register(5, (input) => ({ ...input, schemaVersion: 6 }));
-    registry.register(6, (input) => ({ ...input, schemaVersion: 7 }));
-    registry.register(7, (input) => ({ ...input, schemaVersion: 8 }));
-    const current = createEmptyProject("project-test", "Test Project");
-    const legacy = { ...current, schemaVersion: 0 };
-    expect(parseProject(serializeProject(current), registry)).toEqual(current);
-    expect(parseProject(JSON.stringify(legacy), registry)).toEqual(current);
+    ).toThrow(/exactly 9/);
+    expect(() =>
+      parseProject(JSON.stringify({ ...project, schemaVersion: 8 })),
+    ).toThrow(/exactly 9/);
   });
 });

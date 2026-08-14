@@ -37,9 +37,9 @@ four separated layers:
 4. `apps/editor` authors the facts, shows diagnostics, and downloads only after
    validation succeeds.
 
-Net membership remains authoritative in `Net.terminals` and `Net.ports`.
-Geometry and annotations do not enter export. Legacy `spice.*` properties are
-migration inputs only.
+Net membership remains authoritative in `Net.terminals`.
+Geometry and annotations do not enter export. Retired `spice.*` properties are
+invalid.
 
 Import `CircuitIR` is not reused because it owns source declarations,
 preserved statements, spans, dialect evidence, and unresolved syntax. The
@@ -92,27 +92,22 @@ explicit facts with DesignNetlistIR.
 
 ### Negative or limiting
 
-- The Project schema migrates and editor Properties gains explicit fields.
-- Ambiguous legacy source properties may require user repair.
+- Current Projects and editor Properties require explicit typed fields.
+- Incompatible external data requires explicit conversion before open.
 - Structural files may not run until simulation setup supplies models and
   analyses.
 - Both printers require continuing structural-equivalence coverage.
 
-## Compatibility and migration
+## Compatibility boundary
 
-The schema advances through the migration registry. Existing typed binding and
-unambiguous `spice.*` facts may populate new records. Known manual primitives
-may receive deterministic references. Migration never creates a model target,
-hierarchy relationship, source specification, Net membership, include, or
-analysis absent from the old Project.
-
-Compatibility properties may remain for provenance, but export does not read
-them. Visual exports, SPICE import, rendering, and connectivity semantics remain
-unchanged.
+Extraction accepts only the current schema and typed facts. It never creates a
+model target, hierarchy relationship, source specification, Net membership,
+include, or analysis absent from the Project. Compatibility properties and
+non-current schema versions are rejected before export.
 
 ## Validation
 
-- schema migration and canonical persistence tests;
+- current schema and canonical persistence tests;
 - device-definition completeness and pin-order tests;
 - extractor presentation-independence, hierarchy, naming, and diagnostics;
 - byte-deterministic SPICE/Spectre goldens;

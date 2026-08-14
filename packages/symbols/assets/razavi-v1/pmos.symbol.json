@@ -272,5 +272,5 @@
       ]
     }
   ],
-  "aliases": ["mos-p"]
+  "defaultVariantId": "textbook-3terminal"
 }

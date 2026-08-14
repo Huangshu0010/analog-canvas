@@ -32,7 +32,6 @@ const dual = {
     { kind: "line" as const, from: { x: -10, y: 0 }, to: { x: 10, y: 0 } },
   ],
   variants: [],
-  aliases: [],
 };
 
 const resolver = new InMemorySymbolResolver([dual]);

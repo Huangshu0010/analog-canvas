@@ -195,17 +195,16 @@ and adds its Route. It commits one revision and sets `sourceStatus` to
 A transaction with `expectedRevision: 8` against revision 9 returns
 `STALE_REVISION`; no edit is evaluated and the original Document is returned.
 
-## Compatibility and migration
+## Contract evolution
 
-New edit kinds are additive within a versioned union. Changing the meaning of
-an existing kind requires a new API/schema version or explicit compatibility
+The current strict edit union is the only accepted authoring contract. Changing
+an existing kind or adding a kind requires coordinated model, Agent schema,
+permission, transaction, and parity validation. There is no compatibility edit
 adapter.
 
-ADR 0010 adds the drafting/annotation/guide edit kinds and migrates persisted
-Projects to schema 2 on read. The annotation protocol exposes only
-`upsert_schematic_annotation` / `remove_schematic_annotation`; the earlier
-ambiguous edit names are rejected. The migration does not change electrical
-topology or rewrite SPICE.
+ADR 0010 defines the current drafting/annotation edit kinds. The annotation
+protocol exposes only `upsert_schematic_annotation` and
+`remove_schematic_annotation`; retired ambiguous edit names are invalid.
 
 ## Deterministic validation
 

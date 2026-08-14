@@ -22,7 +22,7 @@ const budgets = {
   generateProject: 2000,
   serialize: 1000,
   renderSvg: 2000,
-  agentSummary: 1000,
+  agentSnapshot: 1000,
   editTransaction: 1000,
   spiceImport: 2000,
   atomicSave: 1000,
@@ -76,24 +76,23 @@ const service = createAgentCircuitService({
   },
   resolver,
   permissions: {
-    query: true,
+    snapshot: true,
     render: true,
     sourceSpans: false,
     edit: { geometry: true, connectivity: false, presentation: false },
   },
 });
-const summary = await measure(() =>
+const snapshot = await measure(() =>
   service.handle({
-    apiVersion: "1.0",
-    requestId: "performance-summary",
-    operation: "query",
+    apiVersion: "2.0",
+    requestId: "performance-snapshot",
+    operation: "snapshot",
     documentId: document.id,
-    scope: { kind: "summary" },
   }),
 );
 const edit = await measure(() =>
   service.handle({
-    apiVersion: "1.0",
+    apiVersion: "2.0",
     requestId: "performance-edit",
     operation: "transact",
     documentId: document.id,
@@ -128,7 +127,7 @@ const measurements = {
   generateProject: generated.milliseconds,
   serialize: serialized.milliseconds,
   renderSvg: rendered.milliseconds,
-  agentSummary: summary.milliseconds,
+  agentSnapshot: snapshot.milliseconds,
   editTransaction: edit.milliseconds,
   spiceImport: imported.milliseconds,
   atomicSave: saved.milliseconds,

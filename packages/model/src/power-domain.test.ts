@@ -17,7 +17,6 @@ describe("power-domain facts", () => {
       scope: "local" as const,
       powerDomain: "vdd" as const,
       terminals: [{ instanceId: "VDD1", pinName: "P" }],
-      ports: [],
     };
     document.nets.push(net);
 
@@ -41,7 +40,6 @@ describe("power-domain facts", () => {
         { instanceId: "VDD1", pinName: "P" },
         { instanceId: "GND1", pinName: "0" },
       ],
-      ports: [],
     };
     document.nets.push(net);
 

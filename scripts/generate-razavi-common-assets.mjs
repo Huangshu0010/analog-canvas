@@ -63,6 +63,7 @@ for (const [symbolId, name, category, pinOrder, automaticMappings] of entries) {
   ) {
     fail(`evidence contract mismatch for ${symbolId}`);
   }
+  delete symbol.aliases;
   const assetPath = resolve(assetRoot, `${symbolId}.symbol.json`);
   const assetSource = normalize(
     await format(JSON.stringify(symbol, null, 2), { parser: "json" }),

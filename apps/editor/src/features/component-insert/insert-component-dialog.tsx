@@ -397,9 +397,6 @@ export function InsertComponentDialog({
                 <div>
                   <h3>{selected.name}</h3>
                   <p>{selected.id}</p>
-                  {selected.aliases.length > 0 ? (
-                    <small>{selected.aliases.join(" · ")}</small>
-                  ) : null}
                 </div>
               </>
             ) : (

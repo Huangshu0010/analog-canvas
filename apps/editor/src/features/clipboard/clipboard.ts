@@ -91,7 +91,6 @@ export function clipboardPreviewDocument(
       ...structuredClone(junction),
       position: movePoint(junction.position, offset),
     })),
-    ports: [],
     noConnects: structuredClone(clipboard.noConnects),
     annotations,
     drafting: undefined,
@@ -191,16 +190,13 @@ function mapEndpoint(
         ...endpoint,
         junctionId: junctionIds.get(endpoint.junctionId) ?? endpoint.junctionId,
       };
-    case "port":
-      return endpoint;
   }
 }
 
 function firstNetEndpoint(net: Net): RouteEndpoint | null {
   const terminal = net.terminals[0];
   if (terminal) return { kind: "terminal", ...terminal };
-  const portId = net.ports[0];
-  return portId ? { kind: "port", portId } : null;
+  return null;
 }
 
 export function proposePaste(

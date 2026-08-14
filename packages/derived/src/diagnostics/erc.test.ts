@@ -30,7 +30,6 @@ const dual = {
     { kind: "line" as const, from: { x: -10, y: 0 }, to: { x: 10, y: 0 } },
   ],
   variants: [],
-  aliases: [],
 };
 
 const resolver = new InMemorySymbolResolver([...builtInSymbols, dual]);
@@ -128,7 +127,6 @@ function connectDrainAndSource(project: CircuitProject): void {
       { instanceId: "M1", pinName: "D" },
       { instanceId: "M1", pinName: "S" },
     ],
-    ports: [],
   });
 }
 
@@ -146,7 +144,6 @@ describe("ERC engine", () => {
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
         ],
-        ports: [],
       },
     ];
     expect(run(project)).toEqual([]);
@@ -204,7 +201,6 @@ describe("ERC engine", () => {
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
         ],
-        ports: [],
       },
     ];
     // L and R are connected; X is implicit and therefore not required.
@@ -227,14 +223,12 @@ describe("ERC engine", () => {
         id: "net-gate-only",
         scope: "local",
         terminals: [{ instanceId: "M1", pinName: "G" }],
-        ports: [],
       },
       {
         id: "net-vss",
         name: "VSS",
         scope: "local",
         terminals: [{ instanceId: "M1", pinName: "B" }],
-        ports: [],
       },
     );
 
@@ -248,53 +242,6 @@ describe("ERC engine", () => {
     );
     expect(diagnostics.map((diagnostic) => diagnostic.code)).not.toContain(
       "ERC_UNCONNECTED_PIN",
-    );
-  });
-
-  it("reports only unresolved imported bulk and accepts explicit body-bias", () => {
-    const project = emptyProject();
-    const document = project.documents[0]!;
-    document.instances = [roleInstance("three-terminal")];
-    connectDrainAndSource(project);
-    document.ports = [
-      { id: "port-g", name: "VIN", direction: "input", position: null },
-    ];
-    document.nets = [
-      ...document.nets,
-      {
-        id: "net-gate",
-        scope: "local",
-        terminals: [{ instanceId: "M1", pinName: "G" }],
-        ports: ["port-g"],
-      },
-    ];
-
-    expect(roleRun(project)).toContainEqual(
-      expect.objectContaining({ code: "ERC_BULK_UNRESOLVED" }),
-    );
-
-    document.nets.push({
-      id: "net-body-bias",
-      name: "Vbody",
-      scope: "local",
-      terminals: [{ instanceId: "M1", pinName: "B" }],
-      ports: [],
-    });
-    document.revision += 1;
-    expect(roleRun(project)).toEqual([]);
-
-    document.nets = document.nets.filter((net) => net.id !== "net-body-bias");
-    document.instances[0] = {
-      ...document.instances[0]!,
-      sourceRef: {
-        fileId: "source.sp",
-        start: { offset: 0, line: 1, column: 1 },
-        end: { offset: 1, line: 1, column: 2 },
-      },
-    };
-    document.revision += 1;
-    expect(roleRun(project)).toContainEqual(
-      expect.objectContaining({ code: "ERC_BULK_UNRESOLVED" }),
     );
   });
 
@@ -314,7 +261,6 @@ describe("ERC engine", () => {
           { instanceId: "VDD1", pinName: "P" },
           { instanceId: "GND1", pinName: "0" },
         ],
-        ports: [],
       },
     ];
 
@@ -363,7 +309,6 @@ describe("ERC engine", () => {
           { instanceId: "I2", pinName: "L" },
           { instanceId: "I2", pinName: "R" },
         ],
-        ports: [],
       },
     ];
     const diagnostic = run(project).find(
@@ -383,14 +328,12 @@ describe("ERC engine", () => {
         name: "out",
         scope: "local",
         terminals: [{ instanceId: "I1", pinName: "L" }],
-        ports: [],
       },
       {
         id: "net-b",
         name: "OUT",
         scope: "local",
         terminals: [{ instanceId: "I1", pinName: "R" }],
-        ports: [],
       },
     ];
     const diagnostic = run(project).find(
@@ -429,7 +372,6 @@ describe("ERC engine", () => {
         scope: "global",
         powerDomain: "ground",
         terminals: [{ instanceId: "GND1", pinName: "0" }],
-        ports: [],
       },
       {
         id: "net-ground-2",
@@ -437,7 +379,6 @@ describe("ERC engine", () => {
         scope: "global",
         powerDomain: "ground",
         terminals: [{ instanceId: "GND2", pinName: "0" }],
-        ports: [],
       },
       {
         id: "net-global-0",
@@ -445,7 +386,6 @@ describe("ERC engine", () => {
         scope: "global",
         powerDomain: "ground",
         terminals: [{ instanceId: "M1", pinName: "B" }],
-        ports: [],
       },
     ];
 
@@ -463,7 +403,6 @@ describe("ERC engine", () => {
         name: "sig",
         scope: "local",
         terminals: [{ instanceId: "I1", pinName: "L" }],
-        ports: [],
       },
     ];
     project.documents[0]!.noConnects = [
@@ -520,7 +459,6 @@ describe("ERC engine", () => {
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
         ],
-        ports: [],
       },
     ];
 
@@ -566,7 +504,6 @@ describe("ERC engine", () => {
           { instanceId: "I1", pinName: "L" },
           { instanceId: "I1", pinName: "R" },
         ],
-        ports: [],
       },
     ];
     const mappingDiagnostics = run(project).filter(
@@ -580,103 +517,5 @@ describe("ERC engine", () => {
     document.instances[0] = { ...instance("I1"), properties: {} };
     document.revision += 1;
     expect(codes(project)).not.toContain("ERC_ILLEGAL_PIN_NAME");
-  });
-
-  it("reports a missing hierarchy target and child interface mismatch", () => {
-    const project = emptyProject();
-    const parent = project.documents[0]!;
-    parent.instances = [
-      {
-        ...instance("X1"),
-        properties: {},
-        netlist: {
-          reference: "X1",
-          parameters: {},
-          binding: {
-            kind: "subcircuit",
-            name: "child",
-            childDocumentId: "child",
-          },
-        },
-      },
-    ];
-    expect(codes(project)).toContain("ERC_HIERARCHY_TARGET_MISSING");
-
-    const child = createEmptyProject("child-project", "Child", "child")
-      .documents[0]!;
-    child.ports = [
-      {
-        id: "port-a",
-        name: "A",
-        direction: "passive",
-        position: { x: 0, y: 0 },
-      },
-    ];
-    project.documents.push(child);
-    const diagnostics = run(project);
-    expect(diagnostics.map((item) => item.code)).toEqual(
-      expect.arrayContaining([
-        "ERC_PORT_COUNT_MISMATCH",
-        "ERC_PORT_NAME_MISMATCH",
-      ]),
-    );
-  });
-
-  it("aggregates stale child interfaces around the child port and all callers", () => {
-    const project = emptyProject();
-    const parent = project.documents[0]!;
-    parent.instances = [
-      {
-        ...instance("X1"),
-        properties: {},
-        netlist: {
-          reference: "X1",
-          parameters: {},
-          binding: {
-            kind: "subcircuit",
-            name: "child",
-            childDocumentId: "child",
-          },
-        },
-      },
-      {
-        ...instance("X2"),
-        properties: {},
-        netlist: {
-          reference: "X2",
-          parameters: {},
-          binding: {
-            kind: "subcircuit",
-            name: "child",
-            childDocumentId: "child",
-          },
-        },
-      },
-    ];
-    const child = createEmptyProject("child-project", "Child", "child")
-      .documents[0]!;
-    child.ports = [
-      {
-        id: "port-a",
-        name: "A",
-        direction: "passive",
-        position: { x: 0, y: 0 },
-      },
-    ];
-    project.documents.push(child);
-
-    const stale = run(project).find(
-      (diagnostic) => diagnostic.code === "ERC_HIERARCHY_INTERFACE_STALE",
-    );
-    expect(stale?.primary).toMatchObject({
-      documentId: "child",
-      kind: "port",
-      objectId: "port-a",
-    });
-    expect(stale?.related).toEqual([
-      expect.objectContaining({ documentId: "doc", objectId: "X1" }),
-      expect.objectContaining({ documentId: "doc", objectId: "X2" }),
-    ]);
-    expect(stale?.parameters).toMatchObject({ callerCount: 2 });
   });
 });

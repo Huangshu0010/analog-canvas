@@ -3,26 +3,33 @@
     {
       "annotations": [],
       "constraints": [],
+      "drafting": {
+        "objects": []
+      },
       "id": "document-main",
       "instances": [],
       "junctions": [],
       "layoutGroups": [],
       "name": "Main",
+      "netlist": {
+        "name": "Main",
+        "terminals": []
+      },
       "nets": [],
-      "ports": [],
+      "noConnects": [],
       "presentation": {
         "compactness": "normal",
         "grid": 10,
-        "styleProfileId": "textbook-monochrome-v1"
+        "styleProfileId": "razavi-textbook-v1"
       },
       "revision": 0,
       "routes": [],
       "sourceStatus": "in-sync"
     }
   ],
-  "id": "project-invalid",
-  "name": "Invalid Project",
-  "schemaVersion": 1,
+  "id": "project-rejected",
+  "name": "Rejected",
+  "schemaVersion": 9,
   "source": {
     "dialect": "none",
     "entry": null,
@@ -30,9 +37,9 @@
     "sourcePolicy": "copy"
   },
   "symbolLibrary": {
-    "hash": "development",
-    "id": "builtin-analog",
-    "version": "0.0.0"
+    "hash": "razavi-reference-v1",
+    "id": "razavi-symbols",
+    "version": "1"
   },
-  "topDocumentId": "document-missing"
+  "topDocumentId": "missing-document"
 }

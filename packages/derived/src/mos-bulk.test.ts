@@ -26,14 +26,12 @@ describe("MOS bulk resolution", () => {
         name: "VSS",
         scope: "global",
         terminals: [],
-        ports: [],
       },
       {
         id: "net-body",
         name: "VBODY",
         scope: "local",
         terminals: [{ instanceId: "M1", pinName: "B" }],
-        ports: [],
       },
     );
     document.mosBulkDefaults = { nmosNetId: "net-vss" };
@@ -54,14 +52,12 @@ describe("MOS bulk resolution", () => {
         name: "SUBSTRATE",
         scope: "local",
         terminals: [],
-        ports: [],
       },
       {
         id: "net-vss",
         name: "VSS",
         scope: "global",
         terminals: [],
-        ports: [],
       },
     );
     document.mosBulkDefaults = { nmosNetId: "net-cell-substrate" };
@@ -81,7 +77,6 @@ describe("MOS bulk resolution", () => {
       name: "SUBSTRATE",
       scope: "local",
       terminals: [{ instanceId: "M1", pinName: "B" }],
-      ports: [],
     });
     document.mosBulkDefaults = { nmosNetId: "net-cell-substrate" };
 

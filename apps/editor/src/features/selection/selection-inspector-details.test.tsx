@@ -177,7 +177,7 @@ describe("selection inspector details", () => {
             instanceId: "XBIAS",
             parentPinName: "OUT",
             childDocumentId: "document-child",
-            childPortId: "port-out",
+            childTerminalName: "OUT",
             childNetId: "net-child",
           },
         },

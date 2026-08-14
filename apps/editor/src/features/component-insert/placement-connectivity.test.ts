@@ -88,7 +88,6 @@ describe("component placement electrical contacts", () => {
       scope: "global",
       powerDomain: "ground",
       terminals: [{ instanceId: "GND1", pinName: "0" }],
-      ports: [],
     });
   });
 });

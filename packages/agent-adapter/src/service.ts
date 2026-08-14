@@ -5,13 +5,8 @@ import {
   SchematicEditSchema,
 } from "@icm/edit-engine";
 import type { SchematicEdit } from "@icm/edit-engine";
-import { flattenRichText, transformPoint } from "@icm/model";
-import type {
-  CircuitProject,
-  Point,
-  Rect,
-  SchematicDocument,
-} from "@icm/model";
+import { flattenRichText } from "@icm/model";
+import type { CircuitProject, Point, SchematicDocument } from "@icm/model";
 import { buildSvgScene, renderDocumentSvg } from "@icm/render-svg";
 import type { SymbolResolver } from "@icm/symbols";
 
@@ -22,16 +17,10 @@ import {
   agentVisualDiagnostics,
 } from "./diagnostics.js";
 import type { AgentOperationHost } from "./host.js";
+import { parseAgentCircuitRequest } from "./request-contract.js";
 import {
-  parseAgentCircuitRequest,
-  parseCompatibleAgentCircuitRequest,
-} from "./request-contract.js";
-import {
-  AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
-  AGENT_API_V3_VERSION,
   AGENT_SNAPSHOT_VERSION,
-  AGENT_SNAPSHOT_V3_VERSION,
   AgentCircuitResponseSchema,
 } from "./schema.js";
 import type {
@@ -40,45 +29,16 @@ import type {
   AgentDiff,
   AgentLimits,
   AgentFileResourceCapability,
-  AgentObjectDescriptor,
   AgentPermissions,
-  AgentQueryRequest,
   AgentRenderRequest,
   AgentTransactRequest,
 } from "./schema.js";
-import { buildAgentCatalogSnapshot } from "./catalog.js";
 import {
-  buildAgentDocumentSnapshotV3,
-  buildAgentProjectSnapshot,
   buildAgentSessionSnapshot,
   canonicalSnapshotContent,
 } from "./snapshot.js";
 
-const V1_OPERATIONS = ["capabilities", "query", "transact", "render"] as const;
-const V2_OPERATIONS = [
-  "capabilities",
-  "snapshot",
-  "transact",
-  "render",
-] as const;
-// v3 advertises the implemented operation set; `artifact` and `collaborate` are
-// added by AP4/AP7 when those operations land.
-const V3_OPERATIONS = [
-  "capabilities",
-  "snapshot",
-  "transact",
-  "render",
-] as const;
-const QUERY_SCOPES = [
-  "summary",
-  "selection",
-  "objects",
-  "region",
-  "net",
-  "constraints",
-  "diagnostics",
-  "changes",
-] as const;
+const OPERATIONS = ["capabilities", "snapshot", "transact", "render"] as const;
 /**
  * The Edit Engine schema is the sole list of typed edit kinds. `wire` is the
  * one deliberate extra capability: it advertises the mutually-exclusive
@@ -92,8 +52,6 @@ export const AGENT_EDIT_KINDS = Object.freeze([
 ]);
 
 export const DEFAULT_AGENT_LIMITS: AgentLimits = {
-  maxQueryObjects: 200,
-  maxQueryBytes: 128_000,
   maxSnapshotBytes: 4_000_000,
   maxTransactionEdits: 64,
   maxRenderBytes: 1_000_000,
@@ -137,12 +95,9 @@ export interface AgentCircuitService {
 }
 
 function errorResponse(
-  apiVersion:
-    | typeof AGENT_API_V1_VERSION
-    | typeof AGENT_API_VERSION
-    | typeof AGENT_API_V3_VERSION,
+  apiVersion: typeof AGENT_API_VERSION,
   requestId: string,
-  operation: "error" | "query" | "snapshot" | "transact" | "render",
+  operation: "error" | "snapshot" | "transact" | "render",
   code: string,
   message: string,
   revision?: number,
@@ -177,286 +132,6 @@ function collectResolvedRoutes(
   return result;
 }
 
-function sourceNetIds(document: SchematicDocument, objectId: string): string[] {
-  return document.nets
-    .filter(
-      (net) =>
-        net.id === objectId ||
-        net.ports.includes(objectId) ||
-        net.terminals.some((terminal) => terminal.instanceId === objectId),
-    )
-    .map((net) => net.id)
-    .sort((left, right) => left.localeCompare(right, "en"));
-}
-
-function instanceBounds(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  instanceId: string,
-): Rect | undefined {
-  const instance = document.instances.find((item) => item.id === instanceId);
-  if (!instance?.placement) return undefined;
-  const resolved = resolver.resolve(
-    instance.symbolId,
-    instance.symbolVariantId,
-  );
-  if (!resolved) return undefined;
-  const box = resolved.definition.viewBox;
-  const corners = [
-    { x: box.x, y: box.y },
-    { x: box.x + box.width, y: box.y },
-    { x: box.x, y: box.y + box.height },
-    { x: box.x + box.width, y: box.y + box.height },
-  ].map((point) =>
-    transformPoint(point, instance.placement!.position, instance.placement!),
-  );
-  const xs = corners.map((point) => point.x);
-  const ys = corners.map((point) => point.y);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  return {
-    x,
-    y,
-    width: Math.max(...xs) - x,
-    height: Math.max(...ys) - y,
-  };
-}
-
-function limitedAttributes(
-  input: Record<string, string | number | boolean>,
-): Record<string, string | number | boolean> {
-  return Object.fromEntries(
-    Object.entries(input)
-      .sort(([left], [right]) => left.localeCompare(right, "en"))
-      .slice(0, 32)
-      .map(([key, value]) => [
-        key,
-        typeof value === "string" ? value.slice(0, 256) : value,
-      ]),
-  );
-}
-
-function describeObjects(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  includeSourceSpans: boolean,
-): AgentObjectDescriptor[] {
-  const descriptors: AgentObjectDescriptor[] = [];
-  for (const port of document.ports) {
-    descriptors.push({
-      id: port.id,
-      kind: "port",
-      name: port.name,
-      ...(port.position ? { position: port.position } : {}),
-      netIds: sourceNetIds(document, port.id),
-      attributes: { direction: port.direction, placed: port.position !== null },
-    });
-  }
-  for (const instance of document.instances) {
-    const bounds = instanceBounds(document, resolver, instance.id);
-    descriptors.push({
-      id: instance.id,
-      kind: "instance",
-      ...(instance.placement ? { position: instance.placement.position } : {}),
-      ...(bounds ? { bounds } : {}),
-      netIds: sourceNetIds(document, instance.id),
-      attributes: limitedAttributes({
-        symbolId: instance.symbolId,
-        ...(instance.symbolVariantId
-          ? { symbolVariantId: instance.symbolVariantId }
-          : {}),
-        placed: instance.placement !== null,
-        ...instance.properties,
-      }),
-      ...(includeSourceSpans && instance.sourceRef
-        ? { sourceRef: instance.sourceRef }
-        : {}),
-    });
-  }
-  for (const net of document.nets) {
-    descriptors.push({
-      id: net.id,
-      kind: "net",
-      ...(net.name ? { name: net.name } : {}),
-      netIds: [net.id],
-      attributes: {
-        scope: net.scope,
-        terminalCount: net.terminals.length,
-        portCount: net.ports.length,
-      },
-    });
-  }
-  for (const route of document.routes) {
-    descriptors.push({
-      id: route.id,
-      kind: "route",
-      netIds: [route.netId],
-      attributes: {
-        waypointCount: route.waypoints.length,
-        locked: route.segmentModes.includes("locked"),
-      },
-    });
-  }
-  for (const junction of document.junctions) {
-    descriptors.push({
-      id: junction.id,
-      kind: "junction",
-      position: junction.position,
-      netIds: [junction.netId],
-      attributes: { role: junction.role ?? "branch" },
-    });
-  }
-  for (const annotation of document.annotations) {
-    descriptors.push({
-      id: annotation.id,
-      kind: "annotation",
-      name: flattenRichText(annotation.content).slice(0, 128),
-      position:
-        annotation.anchor.kind === "free"
-          ? annotation.anchor.position
-          : annotation.anchor.fallbackPosition,
-      netIds: annotation.netId ? [annotation.netId] : [],
-      attributes: {
-        kind: annotation.kind,
-        locked: annotation.locked,
-        anchorKind: annotation.anchor.kind,
-      },
-    });
-  }
-  for (const group of document.layoutGroups) {
-    descriptors.push({
-      id: group.id,
-      kind: "layout-group",
-      netIds: [],
-      attributes: {
-        kind: group.kind,
-        objectCount: group.objectIds.length,
-        locked: group.locked,
-      },
-    });
-  }
-  for (const constraint of document.constraints) {
-    descriptors.push({
-      id: constraint.id,
-      kind: "constraint",
-      netIds: [],
-      attributes: {
-        kind: constraint.kind,
-        objectCount: constraint.objectIds.length,
-        locked: constraint.locked,
-      },
-    });
-  }
-  return descriptors.sort(
-    (left, right) =>
-      left.kind.localeCompare(right.kind, "en") ||
-      left.id.localeCompare(right.id, "en"),
-  );
-}
-
-function pointInBounds(point: Point, bounds: Rect): boolean {
-  return (
-    point.x >= bounds.x &&
-    point.x <= bounds.x + bounds.width &&
-    point.y >= bounds.y &&
-    point.y <= bounds.y + bounds.height
-  );
-}
-
-function selectQueryIds(
-  request: AgentQueryRequest,
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  changes: readonly AgentDiff[],
-): { ids: Set<string>; selectedChanges?: AgentDiff[] } {
-  const scope = request.scope;
-  switch (scope.kind) {
-    case "summary":
-    case "diagnostics":
-      return { ids: new Set() };
-    case "selection":
-    case "objects":
-      return { ids: new Set(scope.objectIds) };
-    case "constraints":
-      return {
-        ids: new Set([
-          ...document.layoutGroups.map((item) => item.id),
-          ...document.constraints.map((item) => item.id),
-        ]),
-      };
-    case "net": {
-      const net = document.nets.find((item) => item.id === scope.netId);
-      if (!net) return { ids: new Set([scope.netId]) };
-      return {
-        ids: new Set([
-          net.id,
-          ...net.ports,
-          ...net.terminals.map((terminal) => terminal.instanceId),
-          ...document.routes
-            .filter((route) => route.netId === net.id)
-            .map((route) => route.id),
-          ...document.junctions
-            .filter((junction) => junction.netId === net.id)
-            .map((junction) => junction.id),
-          ...document.annotations
-            .filter((annotation) => annotation.netId === net.id)
-            .map((annotation) => annotation.id),
-        ]),
-      };
-    }
-    case "region": {
-      const ids = new Set<string>();
-      const routingGeometry = resolveDocumentRoutingGeometry(
-        document,
-        resolver,
-      );
-      for (const instance of document.instances) {
-        if (
-          instance.placement &&
-          pointInBounds(instance.placement.position, scope.bounds)
-        )
-          ids.add(instance.id);
-      }
-      for (const port of document.ports) {
-        if (port.position && pointInBounds(port.position, scope.bounds))
-          ids.add(port.id);
-      }
-      for (const junction of document.junctions) {
-        if (pointInBounds(junction.position, scope.bounds))
-          ids.add(junction.id);
-      }
-      for (const annotation of document.annotations) {
-        const position =
-          annotation.anchor.kind === "free"
-            ? annotation.anchor.position
-            : annotation.anchor.fallbackPosition;
-        if (pointInBounds(position, scope.bounds)) ids.add(annotation.id);
-      }
-      for (const route of document.routes) {
-        const polyline = routingGeometry.routes.get(route.id);
-        if (
-          polyline?.centerline.some((point) =>
-            pointInBounds(point, scope.bounds),
-          )
-        )
-          ids.add(route.id);
-      }
-      return { ids };
-    }
-    case "changes": {
-      const selectedChanges = changes.filter(
-        (change) => change.toRevision > scope.sinceRevision,
-      );
-      return {
-        ids: new Set(
-          selectedChanges.flatMap((change) => change.changedObjectIds),
-        ),
-        selectedChanges,
-      };
-    }
-  }
-}
-
 export function agentEditCategory(
   kind: SchematicEdit["kind"],
 ): "geometry" | "connectivity" | "presentation" | "unsupported" {
@@ -469,15 +144,12 @@ export function agentEditCategory(
     case "move_instance":
     case "rotate_instance":
     case "mirror_instance":
-    case "place_port":
-    case "move_port":
     case "move_junction":
     case "align_instances":
       return "geometry";
     case "patch_instance_properties":
       return "presentation";
     case "set_instance_netlist":
-    case "set_cell_netlist_interface":
       return "connectivity";
     case "set_route_points":
     case "route_orthogonal":
@@ -570,18 +242,13 @@ export function createAgentCircuitService(
   return {
     limits,
     handle(input: unknown): AgentCircuitResponse {
-      // A browser-host service is the hosted public path and always parses the
-      // production v2 contract. The in-process store service retains only the
-      // explicit local v1/v3 migration reader.
-      const parsed = useHost
-        ? parseAgentCircuitRequest(input)
-        : parseCompatibleAgentCircuitRequest(input);
+      const parsed = parseAgentCircuitRequest(input);
       if (!parsed.success) {
         return parsed.response;
       }
       const request = parsed.data;
       const fail = (
-        operation: "error" | "query" | "snapshot" | "transact" | "render",
+        operation: "error" | "snapshot" | "transact" | "render",
         code: string,
         message: string,
         revision?: number,
@@ -597,211 +264,34 @@ export function createAgentCircuitService(
           diagnostics,
         );
       if (request.operation === "capabilities") {
-        const snapshotPermission =
-          options.permissions.snapshot ?? options.permissions.query;
+        const snapshotPermission = options.permissions.snapshot;
         const semanticControl = Boolean(
           options.permissions.semanticControl &&
           host?.semanticControlAvailable?.(),
         );
-        const { query: _queryPermission, ...productionPermissions } = {
+        const productionPermissions = {
           ...options.permissions,
           snapshot: snapshotPermission,
           semanticControl,
         };
-        const {
-          maxQueryObjects: _maxQueryObjects,
-          maxQueryBytes: _maxQueryBytes,
-          ...productionLimits
-        } = limits;
         return response({
           apiVersion: request.apiVersion,
           requestId: request.requestId,
           operation: "capabilities",
           ok: true,
           capabilities: {
-            apiVersions:
-              request.apiVersion === AGENT_API_VERSION
-                ? [AGENT_API_VERSION]
-                : [
-                    AGENT_API_V1_VERSION,
-                    AGENT_API_VERSION,
-                    AGENT_API_V3_VERSION,
-                  ],
-            snapshotVersions:
-              request.apiVersion === AGENT_API_VERSION
-                ? [AGENT_SNAPSHOT_VERSION]
-                : [AGENT_SNAPSHOT_VERSION, AGENT_SNAPSHOT_V3_VERSION],
-            operations:
-              request.apiVersion === AGENT_API_V1_VERSION
-                ? V1_OPERATIONS
-                : request.apiVersion === AGENT_API_V3_VERSION
-                  ? V3_OPERATIONS
-                  : V2_OPERATIONS,
-            ...(request.apiVersion === AGENT_API_V1_VERSION
-              ? { queryScopes: QUERY_SCOPES }
-              : {}),
+            apiVersions: [AGENT_API_VERSION],
+            snapshotVersions: [AGENT_SNAPSHOT_VERSION],
+            operations: OPERATIONS,
             editKinds: AGENT_EDIT_KINDS,
-            permissions:
-              request.apiVersion === AGENT_API_VERSION
-                ? productionPermissions
-                : {
-                    ...options.permissions,
-                    snapshot: snapshotPermission,
-                    semanticControl,
-                  },
-            limits:
-              request.apiVersion === AGENT_API_VERSION
-                ? productionLimits
-                : limits,
+            permissions: productionPermissions,
+            limits,
             ...(fileResource ? { resources: { file: fileResource } } : {}),
           },
         });
       }
 
-      if (
-        request.operation === "snapshot" &&
-        request.apiVersion === AGENT_API_V3_VERSION
-      ) {
-        if (!(options.permissions.snapshot ?? options.permissions.query)) {
-          return fail(
-            "snapshot",
-            "PERMISSION_DENIED",
-            "Snapshot permission is not granted",
-          );
-        }
-        const includeSourceSpans = request.includeSourceSpans === true;
-        if (includeSourceSpans && !options.permissions.sourceSpans) {
-          return fail(
-            "snapshot",
-            "PERMISSION_DENIED",
-            "Source-span permission is not granted",
-          );
-        }
-        const resolver = host ? host.getResolver() : storeOptions!.resolver;
-        const project = host
-          ? host.getProject?.()
-          : storeOptions!.store.getProject?.();
-
-        if (request.target === "catalog") {
-          const symbolLibrary = project?.symbolLibrary ?? {
-            id: "razavi-symbols",
-            version: "1",
-          };
-          const catalog = buildAgentCatalogSnapshot({ symbolLibrary });
-          const catalogBytes = utf8ByteLength(
-            canonicalSnapshotContent(catalog),
-          );
-          if (catalogBytes > limits.maxSnapshotBytes) {
-            return fail(
-              "snapshot",
-              "SNAPSHOT_TOO_LARGE",
-              `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
-            );
-          }
-          return response({
-            apiVersion: request.apiVersion,
-            requestId: request.requestId,
-            operation: "snapshot",
-            ok: true,
-            target: "catalog",
-            catalog,
-            diagnostics: [],
-          });
-        }
-
-        if (request.target === "project") {
-          if (!project) {
-            return fail(
-              "snapshot",
-              "INVALID_REQUEST",
-              "The project target requires an active Project",
-            );
-          }
-          const projectSnapshot = buildAgentProjectSnapshot({ project });
-          const projectBytes = utf8ByteLength(
-            canonicalSnapshotContent(projectSnapshot),
-          );
-          if (projectBytes > limits.maxSnapshotBytes) {
-            return fail(
-              "snapshot",
-              "SNAPSHOT_TOO_LARGE",
-              `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
-            );
-          }
-          return response({
-            apiVersion: request.apiVersion,
-            requestId: request.requestId,
-            operation: "snapshot",
-            ok: true,
-            target: "project",
-            project: projectSnapshot,
-            diagnostics: [],
-          });
-        }
-
-        // request.target === "document"
-        const documentId = request.documentId;
-        if (!documentId) {
-          return fail(
-            "snapshot",
-            "INVALID_REQUEST",
-            "The document target requires a documentId",
-          );
-        }
-        const document = host
-          ? host.getDocument(documentId)
-          : storeOptions!.store.getDocument(documentId);
-        if (!document || documentId !== document.id) {
-          return fail(
-            "snapshot",
-            "DOCUMENT_NOT_FOUND",
-            `The service is not bound to Document ${documentId}`,
-            document?.revision,
-          );
-        }
-        const base = buildAgentSessionSnapshot({
-          ...(project ? { project } : {}),
-          document,
-          resolver,
-          includeSourceSpans,
-        });
-        const documentSnapshot = buildAgentDocumentSnapshotV3({
-          ...(project ? { project } : {}),
-          document,
-          resolver,
-          includeSourceSpans,
-        });
-        const documentBytes = utf8ByteLength(
-          canonicalSnapshotContent({
-            project: base.project,
-            document: documentSnapshot,
-          }),
-        );
-        if (documentBytes > limits.maxSnapshotBytes) {
-          return fail(
-            "snapshot",
-            "SNAPSHOT_TOO_LARGE",
-            `Snapshot content exceeds ${limits.maxSnapshotBytes} bytes`,
-            document.revision,
-          );
-        }
-        return response({
-          apiVersion: request.apiVersion,
-          requestId: request.requestId,
-          operation: "snapshot",
-          ok: true,
-          target: "document",
-          revision: document.revision,
-          electricalTopologyHash: base.electricalTopologyHash,
-          byteLength: documentBytes,
-          project: base.project,
-          document: documentSnapshot,
-          diagnostics: documentSnapshot.diagnostics,
-        });
-      }
-
-      // The v3 snapshot branch above returned; every remaining operation
-      // (v2 snapshot, query, transact, render) carries a required documentId.
+      // Every stateful operation carries the selected documentId.
       const documentId = request.documentId!;
       const document = host
         ? host.getDocument(documentId)
@@ -820,7 +310,7 @@ export function createAgentCircuitService(
         : storeOptions!.store.getProject?.();
 
       if (request.operation === "snapshot") {
-        if (!(options.permissions.snapshot ?? options.permissions.query)) {
+        if (!options.permissions.snapshot) {
           return fail(
             "snapshot",
             "PERMISSION_DENIED",
@@ -859,97 +349,6 @@ export function createAgentCircuitService(
           revision: document.revision,
           snapshot,
           diagnostics: snapshot.document.diagnostics,
-        });
-      }
-
-      if (request.operation === "query") {
-        if (!options.permissions.query) {
-          return fail(
-            "query",
-            "PERMISSION_DENIED",
-            "Query permission is not granted",
-            document.revision,
-          );
-        }
-        const includeSourceSpans = request.includeSourceSpans === true;
-        if (includeSourceSpans && !options.permissions.sourceSpans) {
-          return fail(
-            "query",
-            "PERMISSION_DENIED",
-            "Source-span permission is not granted",
-            document.revision,
-          );
-        }
-        const all = describeObjects(document, resolver, includeSourceSpans);
-        const selected = selectQueryIds(request, document, resolver, history);
-        const requested = all.filter((item) => selected.ids.has(item.id));
-        const requestedLimit = Math.min(
-          request.limit ?? limits.maxQueryObjects,
-          limits.maxQueryObjects,
-        );
-        const objects: AgentObjectDescriptor[] = [];
-        let bytes = 0;
-        for (const item of requested) {
-          const itemBytes = utf8ByteLength(JSON.stringify(item));
-          if (
-            objects.length >= requestedLimit ||
-            bytes + itemBytes > limits.maxQueryBytes
-          ) {
-            break;
-          }
-          objects.push(item);
-          bytes += itemBytes;
-        }
-        const missingIds = [...selected.ids].filter(
-          (id) => !all.some((item) => item.id === id),
-        );
-        const diagnostics = [
-          ...(project
-            ? agentProjectDiagnostics(
-                project,
-                resolver,
-                document.id,
-                document.revision,
-              )
-            : agentVisualDiagnostics(document, resolver)),
-          ...missingIds.map((id) => ({
-            code: "AGENT_QUERY_OBJECT_NOT_FOUND",
-            severity: "info" as const,
-            message: `Object ${id} is not present in the current Document`,
-            objectIds: [id],
-          })),
-        ];
-        return response({
-          apiVersion: request.apiVersion,
-          requestId: request.requestId,
-          operation: "query",
-          ok: true,
-          revision: document.revision,
-          ...(request.scope.kind === "summary"
-            ? {
-                summary: {
-                  name: document.name,
-                  styleProfileId: document.presentation.styleProfileId,
-                  counts: {
-                    ports: document.ports.length,
-                    instances: document.instances.length,
-                    nets: document.nets.length,
-                    routes: document.routes.length,
-                    junctions: document.junctions.length,
-                    annotations: document.annotations.length,
-                    layoutGroups: document.layoutGroups.length,
-                    constraints: document.constraints.length,
-                  },
-                },
-              }
-            : {}),
-          objects,
-          ...(selected.selectedChanges
-            ? { changes: selected.selectedChanges }
-            : {}),
-          diagnostics,
-          truncated: objects.length < requested.length,
-          omittedCount: requested.length - objects.length,
         });
       }
 

@@ -228,7 +228,6 @@ interface DragPreview {
   originalPositions: Record<string, Point>;
   pointerStart: Point;
 }
-
 interface BoxPreview {
   start: Point;
   end: Point;
@@ -296,8 +295,6 @@ function endpointTestId(endpoint: RouteEndpoint): string {
   switch (endpoint.kind) {
     case "terminal":
       return `terminal-${endpoint.instanceId}-${endpoint.pinName}`;
-    case "port":
-      return `port-${endpoint.portId}`;
     case "junction":
       return `junction-${endpoint.junctionId}`;
   }
@@ -357,7 +354,6 @@ function quadraticTangentAngle(
 
 function maxRoutingCounter(document: SchematicDocument): number {
   const ids = [
-    ...document.ports.map((item) => item.id),
     ...document.instances.map((item) => item.id),
     ...document.nets.map((item) => item.id),
     ...document.routes.map((item) => item.id),
@@ -475,6 +471,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     0 | 90 | 180 | 270
   >(0);
   const [vddRailStart, setVddRailStart] = useState<Point | null>(null);
+  const [vddRailMode, setVddRailMode] = useState(false);
   const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -718,7 +715,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
-  const unplacedPorts = document.ports.filter((port) => port.position === null);
   const selectedIds = visualSelection.instanceIds;
   const projectConnectivityIndex = useMemo(
     () => buildProjectConnectivityIndex(project, resolver),
@@ -840,10 +836,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const styleProfile = resolveSchematicStyleProfile(
     document.presentation.styleProfileId,
   );
-  const selectedPortId =
-    selectedEndpoint?.endpoint.kind === "port"
-      ? selectedEndpoint.endpoint.portId
-      : null;
   const selectedNoConnect =
     selectedEndpoint && selectedEndpoint.endpoint.kind !== "junction"
       ? document.noConnects.find(
@@ -953,21 +945,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             };
           });
       }),
-      ...document.ports.flatMap((port): WireSource[] =>
-        port.position
-          ? [
-              {
-                endpoint: { kind: "port", portId: port.id },
-                netId: endpointNetId(document, {
-                  kind: "port",
-                  portId: port.id,
-                }),
-                point: port.position,
-                preludeEdits: [],
-              },
-            ]
-          : [],
-      ),
       ...document.junctions
         .filter((junction) => {
           const role = junction.role ?? "branch";
@@ -1121,7 +1098,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const zoomPercent = Math.round((DEFAULT_VIEWBOX.width / viewBox.width) * 100);
   const canvasIsEmpty =
     document.instances.every((instance) => instance.placement === null) &&
-    document.ports.every((port) => port.position === null) &&
     document.routes.length === 0 &&
     document.annotations.length === 0 &&
     (document.drafting?.objects.length ?? 0) === 0;
@@ -1332,40 +1308,33 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const endpoint =
       locator.kind === "terminal"
         ? locator.endpoint
-        : locator.kind === "port"
-          ? { kind: "port" as const, portId: locator.objectId }
-          : locator.kind === "no-connect"
-            ? opened.noConnects.find(
-                (noConnect) => noConnect.id === locator.objectId,
-              )?.endpoint
-            : undefined;
+        : locator.kind === "no-connect"
+          ? opened.noConnects.find(
+              (noConnect) => noConnect.id === locator.objectId,
+            )?.endpoint
+          : undefined;
     if (endpoint) {
       const point =
-        endpoint.kind === "port"
-          ? opened.ports.find((port) => port.id === endpoint.portId)?.position
-          : endpoint.kind === "terminal"
-            ? (() => {
-                const instance = opened.instances.find(
-                  (candidate) => candidate.id === endpoint.instanceId,
-                );
-                const resolved = instance
-                  ? resolver.resolve(
-                      instance.symbolId,
-                      instance.symbolVariantId,
-                    )
-                  : undefined;
-                const pin = resolved?.definition.pins.find(
-                  (candidate) => candidate.name === endpoint.pinName,
-                );
-                return instance?.placement && pin
-                  ? transformPoint(
-                      pin.at,
-                      instance.placement.position,
-                      instance.placement,
-                    )
-                  : null;
-              })()
-            : null;
+        endpoint.kind === "terminal"
+          ? (() => {
+              const instance = opened.instances.find(
+                (candidate) => candidate.id === endpoint.instanceId,
+              );
+              const resolved = instance
+                ? resolver.resolve(instance.symbolId, instance.symbolVariantId)
+                : undefined;
+              const pin = resolved?.definition.pins.find(
+                (candidate) => candidate.name === endpoint.pinName,
+              );
+              return instance?.placement && pin
+                ? transformPoint(
+                    pin.at,
+                    instance.placement.position,
+                    instance.placement,
+                  )
+                : null;
+            })()
+          : null;
       if (point) {
         setSelectedEndpoint({
           endpoint,
@@ -1565,10 +1534,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               );
             case "annotation":
               return targetDocument.annotations.some(
-                (item) => item.id === locator.objectId,
-              );
-            case "port":
-              return targetDocument.ports.some(
                 (item) => item.id === locator.objectId,
               );
             case "no-connect":
@@ -1784,7 +1749,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   const clearableObjectCount =
-    document.ports.length +
     document.instances.length +
     document.nets.length +
     document.routes.length +
@@ -1822,6 +1786,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function activateTool(nextTool: EditorTool): void {
     paintSnapGuides([]);
+    setVddRailMode(false);
+    setVddRailStart(null);
+    setComponentPreviewPoint(null);
     setTool(nextTool);
     if (nextTool !== "pointer") {
       replaceSelectionKind("route", []);
@@ -1846,6 +1813,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setComponentPreviewPoint(null);
     setComponentPlacementRotation(0);
     setVddRailStart(null);
+    setVddRailMode(false);
     setInsertDialogOpen(true);
     setStatus("Choose a component to place");
   }
@@ -1872,6 +1840,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setComponentPlacementRotation(initialRotation);
     setComponentPreviewPoint(null);
     setVddRailStart(null);
+    setVddRailMode(false);
     beginComponentPlacement(request);
     setStatus(`Place ${symbolName} on the canvas · R rotates · Esc cancels`);
   }
@@ -1879,7 +1848,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function cancelComponentInsert(): void {
     setInsertDialogOpen(false);
     setVddRailStart(null);
+    setVddRailMode(false);
     setStatus("Component insertion cancelled");
+  }
+
+  function beginVddRailPlacement(): void {
+    clearTransientCanvasState();
+    cancelInteraction();
+    setInsertDialogOpen(false);
+    setComponentPreviewPoint(null);
+    setVddRailStart(null);
+    setVddRailMode(true);
+    setStatus("VDD rail: click the first end (Esc cancels)");
   }
 
   function rotatePendingComponent(delta: 90 | -90): void {
@@ -2135,7 +2115,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     routeId: string,
     hitTarget: SVGElement = event.currentTarget,
   ): void {
-    if (pendingSymbolId && pendingComponentPlacement) return;
+    if (vddRailMode || (pendingSymbolId && pendingComponentPlacement)) return;
     event.stopPropagation();
     if (event.altKey) {
       setStatus("Snap suppressed while Alt is held");
@@ -2588,54 +2568,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     });
   }
 
-  // Renderer defaults have no persisted object. A first click selects the
-  // component without mutating the document; double-click makes the label
-  // explicit and opens its editor. This prevents a label click from becoming
-  // an accidental, persistent label drag.
-  function selectDefaultInstanceLabel(
-    event: ReactPointerEvent<SVGElement>,
-    instance: SchematicDocument["instances"][number],
-  ): void {
-    event.stopPropagation();
-    if (event.altKey) {
-      const annotation = defaultInstanceLabel(
-        document,
-        instance,
-        resolver,
-        styleProfile,
-      );
-      if (!annotation) return;
-      const result = transact([
-        { kind: "upsert_schematic_annotation", annotation },
-      ]);
-      if (result.ok) {
-        selectOnly("annotation", [annotation.id]);
-        setStatus(`Selected label ${annotation.id}; drag again to move`);
-      }
-      return;
-    }
-    selectInstance(instance.id, false);
-    setStatus(`Selected ${instance.id}; double-click its label to edit`);
-  }
-
-  function editDefaultInstanceLabel(
-    event: ReactMouseEvent<SVGRectElement>,
-    instance: SchematicDocument["instances"][number],
-  ): void {
-    event.stopPropagation();
-    const annotation = defaultInstanceLabel(
-      document,
-      instance,
-      resolver,
-      styleProfile,
-    );
-    if (!annotation) return;
-    const result = transact([
-      { kind: "upsert_schematic_annotation", annotation },
-    ]);
-    if (result.ok) beginAnnotationTextEditing(annotation);
-  }
-
   function completeAnnotationDrag(
     preview: AnnotationDragPreview,
     position: Point,
@@ -2917,6 +2849,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   ): void {
     if (
       (pendingSymbolId && pendingComponentPlacement) ||
+      vddRailMode ||
       copyPlacement !== null
     ) {
       return;
@@ -2955,13 +2888,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
     if (hit.kind === "instance") {
       beginMove(event, hit.id, hitTarget);
-      return;
-    }
-    if (hit.kind === "instance-label") {
-      const instance = document.instances.find(
-        (candidate) => candidate.id === hit.id,
-      );
-      if (instance) selectDefaultInstanceLabel(event, instance);
       return;
     }
     if (hit.kind === "annotation") {
@@ -3022,12 +2948,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     position: Point,
     placementRequest: NonNullable<typeof pendingComponentPlacement>,
   ): void {
-    if (symbolId === "vdd") {
-      setStatus(
-        "Use the VDD rail tool; legacy VDD marker placement is disabled",
-      );
-      return;
-    }
     instanceCounter.current += 1;
     const prefix: Record<string, string> = {
       resistor: "R",
@@ -3062,31 +2982,23 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         placementRequest.properties,
       ),
     };
-    // New authoring never relies on the renderer-only default label. The
-    // explicit annotation is the one editable text object for all ordinary
-    // components, including independent voltage sources.
+    // The persisted annotation is the only visible instance-label authority.
     const defaultLabel = defaultInstanceLabel(
       document,
       instance,
       resolver,
       styleProfile,
     );
-    // The renderer supplies an implicit reference when no instance-label is
-    // present. A deliberately hidden reference therefore needs the established
-    // empty, attached label suppressor rather than simply omitting an
-    // annotation. It remains an ordinary annotation: no hidden UI-only state
-    // or special persistence field is introduced.
-    const instanceLabel = defaultLabel
-      ? {
-          ...defaultLabel,
-          content: semanticTextDocument(
-            placementRequest.showReference
-              ? (placementRequest.referenceText ?? instance.id)
-              : " ",
-            "instance-label",
-          ),
-        }
-      : null;
+    const instanceLabel =
+      placementRequest.showReference && defaultLabel
+        ? {
+            ...defaultLabel,
+            content: semanticTextDocument(
+              placementRequest.referenceText ?? instance.id,
+              "instance-label",
+            ),
+          }
+        : null;
     const contact = proposePlacementContact(
       document,
       resolver,
@@ -3123,12 +3035,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   candidate.pinName === terminal.pinName,
               ) === index,
           ),
-        ports: [edit.from, edit.to]
-          .filter(
-            (endpoint): endpoint is Extract<RouteEndpoint, { kind: "port" }> =>
-              endpoint.kind === "port",
-          )
-          .map((endpoint) => endpoint.portId),
       });
     }
     const bulkEdits = razaviManualBulkConnectionEdits(
@@ -3183,9 +3089,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     );
   }
 
-  function commitPendingComponentAt(point: Point): void {
-    if (!pendingSymbolId || !pendingComponentPlacement) return;
-    if (pendingSymbolId === "vdd") {
+  function commitPendingPlacementAt(point: Point): void {
+    if (vddRailMode) {
       if (!vddRailStart) {
         setVddRailStart(point);
         setComponentPreviewPoint(point);
@@ -3197,6 +3102,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       }
       return;
     }
+    if (!pendingSymbolId || !pendingComponentPlacement) return;
     placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
   }
 
@@ -4679,30 +4585,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     });
   }
 
-  function placePortAtViewCenter(portId: string): void {
-    const port = document.ports.find((candidate) => candidate.id === portId);
-    if (!port) return;
-    const position = {
-      x: snapCoordinate(
-        viewBox.x + viewBox.width / 2,
-        document.presentation.grid,
-      ),
-      y: snapCoordinate(
-        viewBox.y + viewBox.height / 2,
-        document.presentation.grid,
-      ),
-    };
-    const result = transact([
-      {
-        kind: port.position ? "move_port" : "place_port",
-        portId,
-        position,
-      },
-    ]);
-    if (result.ok)
-      setStatus(`${port.position ? "Moved" : "Placed"} ${port.name}`);
-  }
-
   function handleWheel(event: React.WheelEvent<SVGSVGElement>): void {
     // Ctrl/Command+wheel is a browser-reserved page-zoom gesture. The canvas
     // owns an unmodified wheel gesture only while the pointer is over it, so
@@ -4750,6 +4632,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     // pending, regardless of which SVG child was hit.
     if (
       (pendingSymbolId && pendingComponentPlacement) ||
+      vddRailMode ||
       copyPlacement !== null
     )
       return;
@@ -4801,15 +4684,19 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       event.clientY,
       event.currentTarget,
     );
-    if (pendingSymbolId) {
+    if (vddRailMode) {
       setComponentPreviewPoint(
-        pendingSymbolId === "vdd" && vddRailStart
+        vddRailStart
           ? {
               x: snapCoordinate(point.x, document.presentation.grid),
               y: vddRailStart.y,
             }
           : point,
       );
+      return;
+    }
+    if (pendingSymbolId) {
+      setComponentPreviewPoint(point);
       return;
     }
     if (copyPlacement) {
@@ -4876,25 +4763,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             document.instances
               .filter((instance) => {
                 const bounds = instanceHitBox(instance, resolver);
-                const defaultLabel = defaultInstanceLabel(
-                  document,
-                  instance,
-                  resolver,
-                  styleProfile,
-                );
-                return (
-                  (bounds !== null && rectsIntersect(bounds, rect)) ||
-                  (defaultLabel !== null &&
-                    rectsIntersect(
-                      annotationHitBox(
-                        defaultLabel,
-                        annotationAnchor(defaultLabel, routePolylines),
-                        routePolylines,
-                        styleProfile,
-                      ),
-                      rect,
-                    ))
-                );
+                return bounds !== null && rectsIntersect(bounds, rect);
               })
               .map((instance) => instance.id),
           ),
@@ -5383,7 +5252,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       ...document.routes.map((route) => route.id),
       ...document.junctions.map((junction) => junction.id),
       ...document.noConnects.map((noConnect) => noConnect.id),
-      ...document.ports.map((port) => port.id),
       ...document.annotations.map((annotation) => annotation.id),
       ...document.layoutGroups.map((group) => group.id),
       ...document.constraints.map((constraint) => constraint.id),
@@ -5701,6 +5569,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           setComponentPreviewPoint(null);
           setComponentPlacementRotation(0);
           setVddRailStart(null);
+          setVddRailMode(false);
           setBoxPreview(null);
           setStatus(
             interactionState.kind === "drawing"
@@ -6322,6 +6191,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           open={libraryPanelOpen}
           onOpenInsert={openInsertComponentDialog}
           onQuickPlace={beginInsertedComponentPlacement}
+          onPlaceVddRail={beginVddRailPlacement}
         />
         <aside
           className={selectionOpen ? "selection-dock open" : "selection-dock"}
@@ -6863,17 +6733,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   {instance.id} · {instance.symbolId}
                 </button>
               ))}
-              {unplacedPorts.length > 0 ? <h3>Unplaced Ports</h3> : null}
-              {unplacedPorts.map((port) => (
-                <button
-                  type="button"
-                  data-testid={`unplaced-port-${port.id}`}
-                  key={port.id}
-                  onClick={() => placePortAtViewCenter(port.id)}
-                >
-                  Place {port.name}
-                </button>
-              ))}
               {selectedInstance && selectedBulkResolution ? (
                 <section
                   className="context-actions"
@@ -6885,9 +6744,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     {selectedBulkResolution.net
                       ? (selectedBulkResolution.net.name ??
                         selectedBulkResolution.net.id)
-                      : selectedBulkResolution.status === "product-fallback"
-                        ? selectedBulkResolution.fallbackName
-                        : "unresolved"}
+                      : "unresolved"}
                     {" · "}
                     {selectedBulkResolution.status}
                   </p>
@@ -6965,14 +6822,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     <small>
                       Disconnect this endpoint before marking No Connect.
                     </small>
-                  ) : null}
-                  {selectedPortId ? (
-                    <button
-                      type="button"
-                      onClick={() => placePortAtViewCenter(selectedPortId)}
-                    >
-                      Move port to view center
-                    </button>
                   ) : null}
                 </section>
               ) : null}
@@ -7114,7 +6963,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             className={[
               "schematic-canvas",
               tool === "wire" ? "wire-mode" : "",
-              pendingSymbolId ? "component-mode" : "",
+              pendingSymbolId || vddRailMode ? "component-mode" : "",
               tool === "arrow" ||
               tool === "construction-line" ||
               tool === "rectangle"
@@ -7130,7 +6979,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
             onWheel={handleWheel}
             onClickCapture={(event) => {
-              if (!pendingSymbolId || !pendingComponentPlacement) return;
+              if (
+                !vddRailMode &&
+                (!pendingSymbolId || !pendingComponentPlacement)
+              )
+                return;
               if (event.detail > 1) return;
               event.stopPropagation();
               const rawPoint = pointFromClient(
@@ -7138,7 +6991,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 event.clientY,
                 event.currentTarget,
               );
-              commitPendingComponentAt({
+              commitPendingPlacementAt({
                 x: snapCoordinate(rawPoint.x, document.presentation.grid),
                 y: snapCoordinate(rawPoint.y, document.presentation.grid),
               });
@@ -7164,7 +7017,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             onPointerDown={beginCanvasGesture}
             onPointerMove={continueCanvasGesture}
             onPointerLeave={() => {
-              if (pendingSymbolId) setComponentPreviewPoint(null);
+              if (pendingSymbolId || vddRailMode)
+                setComponentPreviewPoint(null);
               if (copyPlacement) setCopyPreviewPoint(null);
             }}
             onPointerUp={finishCanvasGesture}
@@ -7389,7 +7243,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 height={viewBox.height}
               />
             ) : null}
-            {pendingSymbolId || copyPlacement ? (
+            {pendingSymbolId || vddRailMode || copyPlacement ? (
               <rect
                 data-testid={
                   copyPlacement
@@ -7404,7 +7258,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               />
             ) : null}
             <g data-layer="editor-overlay">
-              {pendingSymbolId === "vdd" ? (
+              {vddRailMode ? (
                 vddRailStart && componentPreviewPoint ? (
                   <line
                     data-testid="vdd-rail-preview"
@@ -7614,49 +7468,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     />
                   );
                 })}
-              {document.instances.map((instance) => {
-                if (
-                  document.annotations.some(
-                    (annotation) =>
-                      annotation.kind === "instance-label" &&
-                      annotation.anchor.kind === "object" &&
-                      annotation.anchor.objectId === instance.id,
-                  )
-                ) {
-                  return null;
-                }
-                const label = defaultInstanceLabel(
-                  document,
-                  instance,
-                  resolver,
-                  styleProfile,
-                );
-                if (!label) return null;
-                return (
-                  <rect
-                    key={`default-label-hit-${instance.id}`}
-                    data-testid={`default-label-hit-${instance.id}`}
-                    data-canvas-hit-kind="instance-label"
-                    data-canvas-hit-id={instance.id}
-                    data-drag-object-id={instance.id}
-                    className="annotation-hit"
-                    {...annotationHitBox(
-                      label,
-                      annotationAnchor(label, routePolylines),
-                      routePolylines,
-                      styleProfile,
-                    )}
-                    onClick={(event) => event.stopPropagation()}
-                    onPointerDown={(event) =>
-                      selectDefaultInstanceLabel(event, instance)
-                    }
-                    onDoubleClick={(event) =>
-                      editDefaultInstanceLabel(event, instance)
-                    }
-                    pointerEvents={tool === "wire" ? "none" : undefined}
-                  />
-                );
-              })}
               {routePolylines.map(({ route, polyline }) => (
                 <polyline
                   key={route.id}
@@ -8212,13 +8023,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             {status}
           </p>
           <span className="statusbar-tool" data-testid="statusbar-tool">
-            {pendingSymbolId
-              ? `Placing ${pendingSymbolId}`
-              : tool === "pointer"
-                ? "Select"
-                : tool === "construction-line"
-                  ? "Line"
-                  : tool.charAt(0).toUpperCase() + tool.slice(1)}
+            {vddRailMode
+              ? "Drawing VDD rail"
+              : pendingSymbolId
+                ? `Placing ${pendingSymbolId}`
+                : tool === "pointer"
+                  ? "Select"
+                  : tool === "construction-line"
+                    ? "Line"
+                    : tool.charAt(0).toUpperCase() + tool.slice(1)}
           </span>
         </div>
         <div className="canvas-controls" aria-label="Canvas zoom controls">

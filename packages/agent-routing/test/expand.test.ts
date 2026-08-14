@@ -192,40 +192,6 @@ describe("expandRouteGraph", () => {
     expect(result.metrics.routeCount).toBe(0);
   });
 
-  it("folds bend nodes into waypoints instead of persistent junctions", () => {
-    const graph = baseGraph({
-      nodes: [
-        {
-          id: "a",
-          role: "endpoint",
-          endpoint: { kind: "port", portId: "port-a" },
-        },
-        { id: "bend0", role: "bend", at: { x: 200, y: 100 } },
-        { id: "tap0", role: "tap", at: { x: 200, y: 200 } },
-      ],
-      edges: [
-        { id: "link0", from: "a", to: "bend0", role: "link" },
-        { id: "link1", from: "bend0", to: "tap0", role: "link" },
-      ],
-    });
-
-    const result = expandRouteGraph(
-      graph,
-      input([endpoint("a", 100, 100, { kind: "port", portId: "port-a" })]),
-    );
-
-    expect(result.conflicts).toEqual([]);
-    expect(
-      result.edits
-        .filter((edit) => edit.kind === "add_junction")
-        .map((edit) => edit.junctionId),
-    ).toEqual(["tap0"]);
-    const route = result.edits.find((edit) => edit.kind === "set_route_points");
-    expect(route?.kind === "set_route_points" ? route.waypoints : []).toEqual([
-      { x: 200, y: 100 },
-    ]);
-  });
-
   it("emits a label edge as a net-label annotation", () => {
     const graph = baseGraph({
       nodes: [{ id: "tap0", role: "tap", at: { x: 200, y: 200 } }],

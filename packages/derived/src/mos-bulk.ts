@@ -3,17 +3,10 @@ import type { Instance, Net, SchematicDocument } from "@icm/model";
 export type MosBulkKind = "nmos" | "pmos";
 export type MosBulkResolution =
   | {
-      status: "explicit" | "cell-default" | "product-fallback";
+      status: "explicit" | "cell-default";
       instance: Instance;
       net: Net;
       materialized: boolean;
-    }
-  | {
-      status: "product-fallback";
-      instance: Instance;
-      net: undefined;
-      materialized: false;
-      fallbackName: "0" | "VDD";
     }
   | {
       status: "no-connect" | "unresolved";
@@ -111,21 +104,12 @@ export function resolveMosBulkConnection(
     };
   }
 
-  const fallback = fallbackNet(document, kind);
-  return fallback
-    ? {
-        status: "product-fallback",
-        instance,
-        net: fallback,
-        materialized: false,
-      }
-    : {
-        status: "product-fallback",
-        instance,
-        net: undefined,
-        materialized: false,
-        fallbackName: kind === "nmos" ? "0" : "VDD",
-      };
+  return {
+    status: "unresolved",
+    instance,
+    net: undefined,
+    materialized: false,
+  };
 }
 
 export function mosBulkShouldBeVisible(

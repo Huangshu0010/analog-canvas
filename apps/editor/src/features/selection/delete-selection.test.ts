@@ -92,7 +92,6 @@ describe("connected instance deletion", () => {
         { instanceId: "R1", pinName: "2" },
         { instanceId: "R2", pinName: "1" },
       ],
-      ports: [],
     });
     document.routes.push({
       id: "route-1",
@@ -144,7 +143,6 @@ function documentWithJunctionRoute() {
     name: "N1",
     scope: "local",
     terminals: [],
-    ports: [],
   });
   document.junctions.push(
     { id: "junction-left", netId: "net-1", position: { x: 100, y: 100 } },

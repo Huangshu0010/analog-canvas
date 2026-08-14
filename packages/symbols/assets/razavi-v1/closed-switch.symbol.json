@@ -116,6 +116,5 @@
       }
     }
   ],
-  "variants": [],
-  "aliases": ["switch-closed", "two-terminal-closed-switch"]
+  "variants": []
 }

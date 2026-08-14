@@ -384,57 +384,46 @@
                   ],
                   "additionalProperties": false
                 },
-                "ports": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "$ref": "#/$defs/__schema0"
-                      },
-                      "name": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "direction": {
-                        "type": "string",
-                        "enum": [
-                          "input",
-                          "output",
-                          "bidirectional",
-                          "passive"
-                        ]
-                      },
-                      "position": {
-                        "anyOf": [
-                          {
-                            "$ref": "#/$defs/__schema5"
-                          },
-                          {
-                            "type": "null"
+                "cellInterface": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "terminals": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "netId": {
+                                "$ref": "#/$defs/__schema0"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "netId"
+                            ],
+                            "additionalProperties": false
                           }
-                        ]
+                        }
                       },
-                      "netId": {
-                        "anyOf": [
-                          {
-                            "$ref": "#/$defs/__schema0"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      }
+                      "required": [
+                        "name",
+                        "terminals"
+                      ],
+                      "additionalProperties": false
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "direction",
-                      "position",
-                      "netId"
-                    ],
-                    "additionalProperties": false
-                  }
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "instances": {
                   "type": "array",
@@ -487,7 +476,7 @@
                           "type": "string"
                         },
                         "additionalProperties": {
-                          "$ref": "#/$defs/__schema6"
+                          "$ref": "#/$defs/__schema5"
                         }
                       },
                       "parameters": {
@@ -496,7 +485,7 @@
                           "type": "string"
                         },
                         "additionalProperties": {
-                          "$ref": "#/$defs/__schema6"
+                          "$ref": "#/$defs/__schema5"
                         }
                       },
                       "placement": {
@@ -505,7 +494,7 @@
                             "type": "object",
                             "properties": {
                               "position": {
-                                "$ref": "#/$defs/__schema5"
+                                "$ref": "#/$defs/__schema6"
                               },
                               "rotation": {
                                 "$ref": "#/$defs/__schema7"
@@ -584,7 +573,7 @@
                             "localPosition": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/$defs/__schema5"
+                                  "$ref": "#/$defs/__schema6"
                                 },
                                 {
                                   "type": "null"
@@ -594,7 +583,7 @@
                             "pagePosition": {
                               "anyOf": [
                                 {
-                                  "$ref": "#/$defs/__schema5"
+                                  "$ref": "#/$defs/__schema6"
                                 },
                                 {
                                   "type": "null"
@@ -632,7 +621,6 @@
                             "enum": [
                               "explicit",
                               "cell-default",
-                              "product-fallback",
                               "no-connect",
                               "unresolved"
                             ]
@@ -859,12 +847,6 @@
                           "additionalProperties": false
                         }
                       },
-                      "portIds": {
-                        "type": "array",
-                        "items": {
-                          "$ref": "#/$defs/__schema0"
-                        }
-                      },
                       "routeIds": {
                         "type": "array",
                         "items": {
@@ -884,7 +866,6 @@
                       "scope",
                       "powerDomain",
                       "terminals",
-                      "portIds",
                       "routeIds",
                       "junctionIds"
                     ],
@@ -911,7 +892,7 @@
                       "waypoints": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema5"
+                          "$ref": "#/$defs/__schema6"
                         }
                       },
                       "segmentModes": {
@@ -941,7 +922,7 @@
                             "minItems": 2,
                             "type": "array",
                             "items": {
-                              "$ref": "#/$defs/__schema5"
+                              "$ref": "#/$defs/__schema6"
                             }
                           },
                           {
@@ -974,7 +955,7 @@
                         "$ref": "#/$defs/__schema0"
                       },
                       "position": {
-                        "$ref": "#/$defs/__schema5"
+                        "$ref": "#/$defs/__schema6"
                       },
                       "role": {
                         "type": "string",
@@ -1002,47 +983,26 @@
                         "$ref": "#/$defs/__schema0"
                       },
                       "endpoint": {
-                        "oneOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "const": "terminal"
-                              },
-                              "instanceId": {
-                                "$ref": "#/$defs/__schema0"
-                              },
-                              "pinName": {
-                                "type": "string",
-                                "minLength": 1
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "instanceId",
-                              "pinName"
-                            ],
-                            "additionalProperties": false
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "terminal"
                           },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "const": "port"
-                              },
-                              "portId": {
-                                "$ref": "#/$defs/__schema0"
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "portId"
-                            ],
-                            "additionalProperties": false
+                          "instanceId": {
+                            "$ref": "#/$defs/__schema0"
+                          },
+                          "pinName": {
+                            "type": "string",
+                            "minLength": 1
                           }
-                        ]
+                        },
+                        "required": [
+                          "kind",
+                          "instanceId",
+                          "pinName"
+                        ],
+                        "additionalProperties": false
                       },
                       "reason": {
                         "type": "string"
@@ -1201,7 +1161,7 @@
                                   "waypoints": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema5"
+                                      "$ref": "#/$defs/__schema6"
                                     }
                                   },
                                   "curveControls": {
@@ -1209,7 +1169,7 @@
                                     "items": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/$defs/__schema5"
+                                          "$ref": "#/$defs/__schema6"
                                         },
                                         {
                                           "type": "null"
@@ -1352,7 +1312,7 @@
                                     "minItems": 2,
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema5"
+                                      "$ref": "#/$defs/__schema6"
                                     }
                                   },
                                   "curveControls": {
@@ -1360,7 +1320,7 @@
                                     "items": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/$defs/__schema5"
+                                          "$ref": "#/$defs/__schema6"
                                         },
                                         {
                                           "type": "null"
@@ -1411,7 +1371,7 @@
                                     "const": "rectangle"
                                   },
                                   "center": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "width": {
                                     "type": "integer",
@@ -1516,7 +1476,7 @@
                                     "const": "text"
                                   },
                                   "position": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "rotation": {
                                     "$ref": "#/$defs/__schema7"
@@ -1548,21 +1508,21 @@
                                     "const": "arrow"
                                   },
                                   "from": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "to": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "points": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema5"
+                                      "$ref": "#/$defs/__schema6"
                                     }
                                   },
                                   "vertices": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema5"
+                                      "$ref": "#/$defs/__schema6"
                                     }
                                   },
                                   "curveControls": {
@@ -1570,7 +1530,7 @@
                                     "items": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/$defs/__schema5"
+                                          "$ref": "#/$defs/__schema6"
                                         },
                                         {
                                           "type": "null"
@@ -1579,7 +1539,7 @@
                                     }
                                   },
                                   "center": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "bounds": {
                                     "$ref": "#/$defs/__schema28"
@@ -1612,10 +1572,10 @@
                                     "const": "leader"
                                   },
                                   "anchor": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "target": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "bounds": {
                                     "$ref": "#/$defs/__schema28"
@@ -1644,10 +1604,10 @@
                                     "const": "callout"
                                   },
                                   "textPosition": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "target": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "rotation": {
                                     "$ref": "#/$defs/__schema7"
@@ -1686,13 +1646,13 @@
                                   "points": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema5"
+                                      "$ref": "#/$defs/__schema6"
                                     }
                                   },
                                   "vertices": {
                                     "type": "array",
                                     "items": {
-                                      "$ref": "#/$defs/__schema5"
+                                      "$ref": "#/$defs/__schema6"
                                     }
                                   },
                                   "curveControls": {
@@ -1700,7 +1660,7 @@
                                     "items": {
                                       "anyOf": [
                                         {
-                                          "$ref": "#/$defs/__schema5"
+                                          "$ref": "#/$defs/__schema6"
                                         },
                                         {
                                           "type": "null"
@@ -1736,7 +1696,7 @@
                                     "const": "rectangle"
                                   },
                                   "center": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "width": {
                                     "type": "number",
@@ -1787,7 +1747,7 @@
                                     "const": "floating-symbol"
                                   },
                                   "position": {
-                                    "$ref": "#/$defs/__schema5"
+                                    "$ref": "#/$defs/__schema6"
                                   },
                                   "rotation": {
                                     "$ref": "#/$defs/__schema7"
@@ -1923,7 +1883,7 @@
                 "sourceStatus",
                 "bounds",
                 "presentation",
-                "ports",
+                "cellInterface",
                 "instances",
                 "nets",
                 "routes",
@@ -2075,7 +2035,7 @@
                 "minItems": 2,
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema5"
+                  "$ref": "#/$defs/__schema6"
                 }
               }
             },
@@ -2299,11 +2259,6 @@
           "minimum": 0,
           "maximum": 9007199254740991
         },
-        "portCount": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
         "netCount": {
           "type": "integer",
           "minimum": 0,
@@ -2345,7 +2300,6 @@
         "id",
         "name",
         "instanceCount",
-        "portCount",
         "netCount",
         "references"
       ],
@@ -2430,6 +2384,19 @@
       "additionalProperties": false
     },
     "__schema5": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "__schema6": {
       "type": "object",
       "properties": {
         "x": {
@@ -2448,19 +2415,6 @@
         "y"
       ],
       "additionalProperties": false
-    },
-    "__schema6": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "boolean"
-        }
-      ]
     },
     "__schema7": {
       "anyOf": [
@@ -2510,23 +2464,6 @@
             "kind",
             "instanceId",
             "pinName"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "port"
-            },
-            "portId": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "required": [
-            "kind",
-            "portId"
           ],
           "additionalProperties": false
         },
@@ -2899,7 +2836,7 @@
               "const": "free"
             },
             "position": {
-              "$ref": "#/$defs/__schema5"
+              "$ref": "#/$defs/__schema6"
             }
           },
           "required": [
@@ -2919,10 +2856,10 @@
               "$ref": "#/$defs/__schema0"
             },
             "localOffset": {
-              "$ref": "#/$defs/__schema5"
+              "$ref": "#/$defs/__schema6"
             },
             "fallbackPosition": {
-              "$ref": "#/$defs/__schema5"
+              "$ref": "#/$defs/__schema6"
             }
           },
           "required": [
@@ -2971,7 +2908,7 @@
               ]
             },
             "fallbackPosition": {
-              "$ref": "#/$defs/__schema5"
+              "$ref": "#/$defs/__schema6"
             }
           },
           "required": [
@@ -3286,7 +3223,7 @@
           "additionalProperties": false
         },
         "point": {
-          "$ref": "#/$defs/__schema5"
+          "$ref": "#/$defs/__schema6"
         },
         "parameters": {
           "type": "object",

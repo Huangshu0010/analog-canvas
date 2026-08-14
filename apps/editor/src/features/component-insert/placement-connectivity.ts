@@ -100,12 +100,6 @@ export function proposePlacementContact(
   instance: Instance,
   targets: readonly WireSource[],
 ): PlacementContactProposal {
-  // New VDD authoring is exclusively the typed add_power_rail operation.
-  // A legacy VDD marker must not regain electrical authority merely because a
-  // caller reaches this generic component-placement helper.
-  if (instance.symbolId === "vdd") {
-    return { edits: [], matched: false, ambiguous: false };
-  }
   const contacts: Array<{
     source: WireSource;
     target: ElectricalContactTarget;

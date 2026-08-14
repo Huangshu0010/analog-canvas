@@ -347,7 +347,6 @@ export function deriveInternalGroupSelection(
   const netIds = document.nets
     .filter(
       (net) =>
-        net.ports.length === 0 &&
         net.terminals.length > 0 &&
         net.terminals.every((terminal) => selectedIds.has(terminal.instanceId)),
     )
@@ -402,9 +401,7 @@ export function deriveInternalGroupSelection(
       let hasSelectedTerminal = false;
       let crossesSelectionBoundary = false;
       for (const endpoint of componentEndpoints.values()) {
-        if (endpoint.kind === "port") {
-          crossesSelectionBoundary = true;
-        } else if (endpoint.kind === "terminal") {
+        if (endpoint.kind === "terminal") {
           if (selectedIds.has(endpoint.instanceId)) hasSelectedTerminal = true;
           else crossesSelectionBoundary = true;
         }

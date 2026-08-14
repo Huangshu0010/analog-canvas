@@ -3,6 +3,9 @@
     {
       "annotations": [],
       "constraints": [],
+      "drafting": {
+        "objects": []
+      },
       "id": "document-routing",
       "instances": [
         {
@@ -74,11 +77,14 @@
       "junctions": [],
       "layoutGroups": [],
       "name": "Phase 3 Routing",
+      "netlist": {
+        "name": "Phase_3_Routing",
+        "terminals": []
+      },
       "nets": [
         {
           "id": "net-h",
           "name": "HORIZONTAL",
-          "ports": [],
           "scope": "local",
           "terminals": [
             {
@@ -98,7 +104,6 @@
         {
           "id": "net-v",
           "name": "VERTICAL",
-          "ports": [],
           "scope": "local",
           "terminals": [
             {
@@ -113,7 +118,6 @@
         }
       ],
       "noConnects": [],
-      "ports": [],
       "presentation": {
         "compactness": "normal",
         "grid": 10,
@@ -126,7 +130,7 @@
   ],
   "id": "project-routing",
   "name": "Phase 3 Routing Demo",
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "source": {
     "dialect": "none",
     "entry": null,

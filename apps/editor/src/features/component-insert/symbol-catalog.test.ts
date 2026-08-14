@@ -27,7 +27,7 @@ describe("component insertion catalog", () => {
     expect(symbolCategory("closed-switch")).toBe("Switches");
   });
 
-  it("searches names, ids, and aliases without exposing retired MOS entries", () => {
+  it("searches canonical names and ids without exposing retired MOS entries", () => {
     const symbols = flattenComponentCatalog(
       componentCatalog("razavi-textbook-v1", "nmos"),
     );

@@ -9,7 +9,6 @@ import { parseProject, serializeProject } from "./persistence.js";
 
 interface CompatibilityCorpus {
   readonly current: readonly string[];
-  readonly migrationInputs: readonly string[];
   readonly rejected: readonly { path: string; error: string }[];
 }
 
@@ -55,7 +54,6 @@ describe("supported Project compatibility corpus", () => {
   it("lists every shipped fixture and saved circuit Project exactly once", () => {
     const listed = [
       ...corpus.current,
-      ...corpus.migrationInputs,
       ...corpus.rejected.map((entry) => entry.path),
     ].sort();
     const discovered = trackedProjectPaths();
@@ -63,17 +61,9 @@ describe("supported Project compatibility corpus", () => {
     expect(listed).toEqual(discovered);
   });
 
-  it("keeps current fixtures canonical schema-v8 Projects", () => {
+  it("keeps every accepted fixture in canonical current form", () => {
     for (const path of corpus.current) {
       assertCurrentForm(readProject(path));
-    }
-  });
-
-  it("sequentially migrates every supported historic Project to a stable current form", () => {
-    for (const path of corpus.migrationInputs) {
-      const migrated = serializeProject(parseProject(readProject(path)));
-      assertCurrentForm(migrated);
-      expect(serializeProject(parseProject(migrated))).toBe(migrated);
     }
   });
 

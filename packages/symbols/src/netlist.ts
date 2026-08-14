@@ -88,15 +88,15 @@ const definitions = [
     requiredParameters: ["dc"],
     dialects: ["spice", "spectre"],
   },
-  ...(["ground", "vdd"] as const).map((symbolId): DeviceNetlistDefinition => ({
-    symbolId,
+  {
+    symbolId: "ground",
     deviceClass: "net-marker",
     referencePrefix: null,
-    pinOrder: [symbolId === "ground" ? "0" : "P"],
+    pinOrder: ["0"],
     targetPolicy: "none",
     requiredParameters: [],
     dialects: ["spice", "spectre"],
-  })),
+  },
 ] satisfies readonly DeviceNetlistDefinition[];
 
 export const deviceNetlistDefinitions: readonly DeviceNetlistDefinition[] =

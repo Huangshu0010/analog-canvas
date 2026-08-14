@@ -27,9 +27,8 @@ export interface CrossCellTraceFrame {
   instanceId: string;
   parentPinName: string;
   childDocumentId: string;
-  childPortId: string;
-  /** Net in the child Document that the traced port belongs to, if any. */
-  childNetId: string | undefined;
+  childTerminalName: string;
+  childNetId: string;
 }
 
 export interface NetTrace {
@@ -114,18 +113,13 @@ export function traceNet(
       pinName: edge.parentPinName,
     });
     if (parentEndpointToNet?.get(parentPinKey) !== netId) continue;
-    const childNetId = index.documents
-      .get(edge.childDocumentId)
-      ?.endpointToNet.get(
-        endpointKey({ kind: "port", portId: edge.childPortId }),
-      );
     crossCell.push({
       parentDocumentId: edge.parentDocumentId,
       instanceId: edge.instanceId,
       parentPinName: edge.parentPinName,
       childDocumentId: edge.childDocumentId,
-      childPortId: edge.childPortId,
-      childNetId,
+      childTerminalName: edge.childTerminalName,
+      childNetId: edge.childNetId,
     });
   }
 
@@ -182,22 +176,16 @@ export function traceHierarchyNet(
           }),
         );
         if (parentNetId !== current.netId) continue;
-        const childNetId = index.documents
-          .get(edge.childDocumentId)
-          ?.endpointToNet.get(
-            endpointKey({ kind: "port", portId: edge.childPortId }),
-          );
-        if (!childNetId) continue;
-        const frame: CrossCellTraceFrame = { ...edge, childNetId };
-        const to = { documentId: edge.childDocumentId, netId: childNetId };
+        const frame: CrossCellTraceFrame = { ...edge };
+        const to = {
+          documentId: edge.childDocumentId,
+          netId: edge.childNetId,
+        };
         hops.push({ direction: "down", from: current, to, frame });
         queue.push(to);
       }
       if (edge.childDocumentId === current.documentId) {
-        const childNetId = endpointToNet?.get(
-          endpointKey({ kind: "port", portId: edge.childPortId }),
-        );
-        if (childNetId !== current.netId) continue;
+        if (edge.childNetId !== current.netId) continue;
         const parentNetId = index.documents
           .get(edge.parentDocumentId)
           ?.endpointToNet.get(
@@ -208,7 +196,7 @@ export function traceHierarchyNet(
             }),
           );
         if (!parentNetId) continue;
-        const frame: CrossCellTraceFrame = { ...edge, childNetId };
+        const frame: CrossCellTraceFrame = { ...edge };
         const to = { documentId: edge.parentDocumentId, netId: parentNetId };
         hops.push({ direction: "up", from: current, to, frame });
         queue.push(to);

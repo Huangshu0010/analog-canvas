@@ -378,7 +378,6 @@ function operationScopes(request: AgentCircuitRequest): AgentSessionScope[] {
     case "capabilities":
       return [];
     case "snapshot":
-    case "query":
       return [
         "circuit.snapshot",
         ...(request.includeSourceSpans

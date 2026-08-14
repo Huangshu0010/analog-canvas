@@ -43,10 +43,4 @@ describe("transient Circuit IR", () => {
       }).success,
     ).toBe(false);
   });
-
-  it("rejects a terminal that references an unknown net", () => {
-    const invalid = structuredClone(minimalIr);
-    invalid.cells[0]!.ports[0]!.netId = "net-missing";
-    expect(CircuitIRSchema.safeParse(invalid).success).toBe(false);
-  });
 });

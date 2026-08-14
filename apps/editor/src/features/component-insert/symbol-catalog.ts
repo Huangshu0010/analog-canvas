@@ -39,7 +39,7 @@ export function paletteSymbols(_styleProfileId: string): SymbolDefinition[] {
 }
 
 function searchableText(symbol: SymbolDefinition): string {
-  return `${symbol.name} ${symbol.id} ${symbol.aliases.join(" ")}`.toLowerCase();
+  return `${symbol.name} ${symbol.id}`.toLowerCase();
 }
 
 export function componentCatalog(

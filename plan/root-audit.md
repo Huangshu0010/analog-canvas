@@ -1,6 +1,6 @@
 # Root Plan Audit
 
-Snapshot: 2026-08-13. The root `plan/` directory is an operational queue, not
+Snapshot: 2026-08-14. The root `plan/` directory is an operational queue, not
 an archive. Completed plans with resolved experience are stored under
 [`archived/2026-08/`](archived/2026-08/).
 
@@ -8,16 +8,13 @@ an archive. Completed plans with resolved experience are stored under
 
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
-| `active`                  |     0 | No target is currently active in the root plan queue.                             |
-| `completed` + `candidate` |    16 | Human decides whether to extract, reject, or defer the experience signal.         |
+| `active`                  |     0 | No active target remains in the root queue.                                       |
+| `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
-
-### Active
-
-None.
 
 ### Completed plans awaiting an experience decision
 
+- `2026-08-14-current-contract-clean-break`
 - `2026-08-11-correct-closed-switch-pdf-crop`
 - `2026-08-11-correct-common-razavi-assets`
 - `2026-08-11-correct-pdf-derived-fidelity-baselines`

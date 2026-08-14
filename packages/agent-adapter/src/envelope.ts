@@ -193,7 +193,7 @@ export const AgentTransportErrorResponseJsonSchema = z.toJSONSchema(
 /**
  * Web-session permission scopes carried by an `agentToken`. They map to
  * `AgentPermissions` as documented in the spec. `circuit.snapshot` is the
- * primary read scope and also admits the legacy v1 query read path.
+ * sole circuit read scope.
  */
 export const AgentSessionScopeSchema = z.enum([
   "circuit.snapshot",

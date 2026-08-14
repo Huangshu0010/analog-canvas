@@ -33,84 +33,6 @@ function addInstance(id: string, symbolId: string, x: number) {
 }
 
 describe("semantic authoring", () => {
-  it("updates typed Cell and Instance netlist facts through one transaction", () => {
-    const document = createEmptyDocument("document-main", "Main");
-    document.instances.push({
-      id: "device-1",
-      symbolId: "nmos",
-      placement: null,
-      properties: {},
-    });
-    const result = executeTransaction(
-      document,
-      transaction([
-        {
-          kind: "set_cell_netlist_interface",
-          netlist: { name: "ota_core", portOrder: [] },
-        },
-        {
-          kind: "set_instance_netlist",
-          instanceId: "device-1",
-          netlist: {
-            reference: "M1",
-            binding: {
-              kind: "model",
-              deviceClass: "mos",
-              name: "nch_mac",
-            },
-            parameters: { w: "2u", l: "60n" },
-          },
-        },
-      ]),
-      { symbolResolver: resolver },
-    );
-
-    expect(result).toMatchObject({
-      ok: true,
-      document: {
-        sourceStatus: "connectivity-modified",
-        netlist: { name: "ota_core", portOrder: [] },
-        instances: [
-          {
-            netlist: {
-              reference: "M1",
-              binding: {
-                kind: "model",
-                deviceClass: "mos",
-                name: "nch_mac",
-              },
-              parameters: { w: "2u", l: "60n" },
-            },
-          },
-        ],
-      },
-    });
-    expect(document.instances[0]!.netlist).toBeUndefined();
-  });
-
-  it("rejects an invalid persisted Port order atomically", () => {
-    const document = createEmptyDocument("document-main", "Main");
-    document.ports.push({
-      id: "port-in",
-      name: "IN",
-      direction: "input",
-      position: null,
-    });
-    document.netlist!.portOrder.push("port-in");
-    const result = executeTransaction(
-      document,
-      transaction([
-        {
-          kind: "set_cell_netlist_interface",
-          netlist: { name: "main", portOrder: ["missing"] },
-        },
-      ]),
-      { symbolResolver: resolver },
-    );
-    expect(result).toMatchObject({ ok: false, applied: false });
-    expect(document.netlist!.portOrder).toEqual(["port-in"]);
-  });
-
   it("adds devices and connects two previously unconnected pins atomically", () => {
     const document = createEmptyDocument("document-main", "Main");
     const result = executeTransaction(
@@ -181,25 +103,21 @@ describe("semantic authoring", () => {
         id: "net-d",
         scope: "local",
         terminals: [{ instanceId: "XM1", pinName: "P1" }],
-        ports: [],
       },
       {
         id: "net-g",
         scope: "local",
         terminals: [{ instanceId: "XM1", pinName: "P2" }],
-        ports: [],
       },
       {
         id: "net-s",
         scope: "local",
         terminals: [{ instanceId: "XM1", pinName: "P3" }],
-        ports: [],
       },
       {
         id: "net-b",
         scope: "local",
         terminals: [{ instanceId: "XM1", pinName: "P4" }],
-        ports: [],
       },
     );
     document.junctions.push({
@@ -299,7 +217,6 @@ describe("semantic authoring", () => {
       id: "net-a",
       scope: "local",
       terminals: [{ instanceId: "X1", pinName: "P1" }],
-      ports: [],
     });
     const result = executeTransaction(
       document,
@@ -317,140 +234,6 @@ describe("semantic authoring", () => {
     expect(document.instances[0]!.symbolId).toBe("generic-block-4");
   });
 
-  it("places and moves a port with its attached annotation", () => {
-    const document = createEmptyDocument("document-main", "Main");
-    document.ports.push({
-      id: "port-in",
-      name: "IN",
-      direction: "input",
-      position: null,
-    });
-    document.netlist!.portOrder.push("port-in");
-    document.nets.push({
-      id: "net-in",
-      scope: "local",
-      terminals: [],
-      ports: ["port-in"],
-    });
-    document.annotations.push(
-      {
-        id: "label-in",
-        kind: "net-label",
-        content: { runs: [{ kind: "text", value: "IN" }] },
-        netId: "net-in",
-        anchor: {
-          kind: "object",
-          objectId: "port-in",
-          localOffset: { x: -20, y: 0 },
-          fallbackPosition: { x: 80, y: 100 },
-        },
-        alignment: "end",
-        rotation: 0,
-        locked: false,
-      },
-      {
-        id: "marker-in",
-        kind: "route-marker",
-        markerKind: "voltage",
-        content: { runs: [{ kind: "text", value: "V_IN" }] },
-        anchor: {
-          kind: "object",
-          objectId: "port-in",
-          localOffset: { x: -20, y: 10 },
-          fallbackPosition: { x: 80, y: 110 },
-        },
-        alignment: "end",
-        rotation: 0,
-        locked: false,
-      },
-    );
-    const placed = executeTransaction(
-      document,
-      transaction([
-        { kind: "place_port", portId: "port-in", position: { x: 100, y: 100 } },
-      ]),
-    );
-    expect(placed).toMatchObject({
-      ok: true,
-      document: { ports: [{ position: { x: 100, y: 100 } }] },
-    });
-    const moved = executeTransaction(
-      placed.document,
-      transaction(
-        [
-          {
-            kind: "move_port",
-            portId: "port-in",
-            position: { x: 140, y: 120 },
-          },
-        ],
-        1,
-      ),
-    );
-    expect(moved).toMatchObject({
-      ok: true,
-      document: {
-        ports: [{ position: { x: 140, y: 120 } }],
-      },
-    });
-    expect(
-      moved.document.annotations.find(
-        (annotation) => annotation.id === "label-in",
-      ),
-    ).toMatchObject({ anchor: { fallbackPosition: { x: 120, y: 120 } } });
-    expect(
-      moved.document.annotations.find(
-        (annotation) => annotation.id === "marker-in",
-      ),
-    ).toMatchObject({
-      anchor: { fallbackPosition: { x: 120, y: 130 } },
-    });
-  });
-
-  it("protects reviewed symbol and port layout with the same lock boundary", () => {
-    const document = createEmptyDocument("document-main", "Main");
-    document.instances.push({
-      id: "X1",
-      symbolId: "generic-block-4",
-      placement: null,
-      properties: {},
-    });
-    document.ports.push({
-      id: "port-in",
-      name: "IN",
-      direction: "input",
-      position: null,
-    });
-    document.layoutGroups.push({
-      id: "human-reviewed",
-      kind: "custom",
-      objectIds: ["X1", "port-in"],
-      locked: true,
-    });
-    const before = structuredClone(document);
-    const result = executeTransaction(
-      document,
-      transaction([
-        {
-          kind: "set_instance_symbol",
-          instanceId: "X1",
-          symbolId: "nmos",
-        },
-        {
-          kind: "place_port",
-          portId: "port-in",
-          position: { x: 40, y: 100 },
-        },
-      ]),
-      { symbolResolver: resolver },
-    );
-    expect(result).toMatchObject({
-      ok: false,
-      error: { message: expect.stringContaining("human-reviewed") },
-    });
-    expect(document).toEqual(before);
-  });
-
   it("merges complete route and junction ownership into one target Net", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push(
@@ -462,13 +245,11 @@ describe("semantic authoring", () => {
         id: "net-a",
         scope: "local",
         terminals: [{ instanceId: "R1", pinName: "2" }],
-        ports: [],
       },
       {
         id: "net-b",
         scope: "local",
         terminals: [{ instanceId: "R2", pinName: "1" }],
-        ports: [],
       },
     );
     document.junctions.push({
@@ -511,7 +292,6 @@ describe("semantic authoring", () => {
       id: "net-a",
       scope: "local",
       terminals: [{ instanceId: "R1", pinName: "1" }],
-      ports: [],
     });
     const before = structuredClone(document);
 
@@ -529,8 +309,8 @@ describe("semantic authoring", () => {
   it("names Nets uniquely and requires an explicit merge for electrical label reuse", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push(
-      { id: "net-a", name: "SIGNAL", scope: "local", terminals: [], ports: [] },
-      { id: "net-b", scope: "local", terminals: [], ports: [] },
+      { id: "net-a", name: "SIGNAL", scope: "local", terminals: [] },
+      { id: "net-b", scope: "local", terminals: [] },
     );
     const rejected = executeTransaction(
       document,
@@ -561,7 +341,6 @@ describe("semantic authoring", () => {
       id: "net-a",
       scope: "local",
       terminals: [],
-      ports: [],
     });
     document.junctions.push({
       id: "junction-a",
@@ -606,7 +385,7 @@ describe("semantic authoring", () => {
     expect(result).toMatchObject({
       ok: true,
       document: {
-        nets: [{ id: "net-free", terminals: [], ports: [] }],
+        nets: [{ id: "net-free", terminals: [] }],
         junctions: [{ id: "junction-free", netId: "net-free" }],
       },
     });

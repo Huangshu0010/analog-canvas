@@ -45,9 +45,8 @@ Route (`["routes", routeId]`), and `objectIds` names the offending object. Read
 
 The production operation surface is exactly `capabilities`, `snapshot`,
 `transact`, and `render`. Do not invent a validation, planning, compilation, or
-fallback mutation endpoint. The deployed OpenAPI examples identify the current
-request version; API v1 `query` is compatibility history, not a production
-planning language.
+fallback mutation endpoint. The deployed OpenAPI examples identify the sole
+current request version. No query or compatibility operation exists.
 
 For a hosted session, treat the published OpenAPI as the only request contract.
 An HTTP `400` is an `INVALID_REQUEST` Circuit envelope: correct every returned
@@ -63,7 +62,7 @@ the hosted Agent authorization workflow. External Agents must use the hosted
 session flow below, not this endpoint.
 
 ```http
-POST /v2/circuit HTTP/1.1
+POST /circuit HTTP/1.1
 Host: 127.0.0.1:PORT
 Authorization: Bearer HOST_GENERATED_TOKEN
 Content-Type: application/json
