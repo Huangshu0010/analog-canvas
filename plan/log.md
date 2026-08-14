@@ -14,9 +14,12 @@
   from the editor bundle and is transferred only by `GET /api/agent/kit`.
 - Validation: focused 24-test Kit/Worker suite, generator check, typecheck,
   Markdown links, `git diff --check`, and `pnpm verify:branch` (104 files / 567
-  tests, workspace builds, production smoke) passed.
-- Commit status: ready to commit as `feat(agent): publish Razavi authoring kit`
-  on `codex/agent-authoring-kit`.
+  tests, workspace builds, production smoke) passed. Remote static checking
+  then exposed the absent source mapping for the Kit subpath; after adding it,
+  a clean frozen-install `pnpm ci:check` passed (567 unit tests, 103 browser
+  tests, release/performance/export/PWA gates).
+- Commit status: feature committed as `9d257b7`; CI source-map repair committed
+  as `9b12e6f` and pushed on `codex/agent-authoring-kit`.
 
 ## 2026-08-13 - Agent golden-path request-contract closure
 

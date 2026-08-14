@@ -27,6 +27,8 @@ and factual plan records:
 - `packages/agent-adapter/src/agent-kit.ts` and focused tests
 - `packages/agent-adapter/src/index.ts` and package export metadata to keep the
   Kit out of the browser editor bundle
+- `tsconfig.check.json` source-path mapping for the Kit subpath in a clean CI
+  typecheck
 - `worker/agent-session.ts` and its focused test for the public Kit-route
   payload version
 - a compact generated authoring-catalog module plus its deterministic generator
@@ -94,6 +96,8 @@ the editor browser bundle and is delivered only by the Worker route.
 
 Validation passed: focused Kit/Worker tests (24 tests), generator freshness,
 typecheck, Markdown-link checks, `git diff --check`, and `pnpm verify:branch`
-(104 files / 567 tests, all workspace builds, production smoke). The mainline
-frozen-install/`pnpm ci:check` and remote required checks remain pending before
-merge.
+(104 files / 567 tests, all workspace builds, production smoke). A clean remote
+source typecheck initially exposed a missing `@icm/agent-adapter/kit` mapping;
+the mapping is now explicit in `tsconfig.check.json`. A second frozen-install
+`pnpm ci:check` passed (567 unit tests and 103 browser tests). Required remote
+checks are pending their re-run before merge.
