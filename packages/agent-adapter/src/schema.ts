@@ -1,5 +1,7 @@
 import {
   AnnotationSchema,
+  DerivedPointSchema,
+  DerivedRectSchema,
   DraftingDiagnosticSchema,
   DraftingObjectSchema,
   LayoutConstraintSchema,
@@ -11,12 +13,13 @@ import {
   PointSchema,
   ResolvedDraftingGeometrySchema,
   PresentationIntentSchema,
-  RectSchema,
+  GridRectSchema,
   RouteEndpointSchema,
   RoutePresentationSchema,
   SegmentModeSchema,
   SourceSpanSchema,
   StableIdSchema,
+  SymbolLocalPointSchema,
 } from "@icm/model";
 import { ObjectLocatorSchema } from "@icm/derived";
 import { SchematicEditSchema } from "@icm/edit-engine";
@@ -185,7 +188,7 @@ export const AgentRenderRequestSchema = RequestBaseSchema.extend({
   operation: z.literal("render"),
   documentId: StableIdSchema,
   mode: z.enum(["formal", "diagnostics"]),
-  bounds: RectSchema.optional(),
+  bounds: GridRectSchema.optional(),
 });
 
 /** Sole Circuit request schema. */
@@ -224,7 +227,7 @@ const AgentProductionRenderRequestSchema = ProductionRequestBaseSchema.extend({
   operation: z.literal("render"),
   documentId: StableIdSchema,
   mode: z.enum(["formal", "diagnostics"]),
-  bounds: RectSchema.optional(),
+  bounds: GridRectSchema.optional(),
 });
 export const AgentProductionCircuitRequestSchema = z.discriminatedUnion(
   "operation",
@@ -259,7 +262,7 @@ export const AgentDiagnosticSchema = z.strictObject({
   path: z.array(z.union([z.string(), z.number().int()])).optional(),
   revision: z.number().int().nonnegative().optional(),
   bounds: AgentDiagnosticBoundsSchema.optional(),
-  point: PointSchema.optional(),
+  point: DerivedPointSchema.optional(),
   parameters: z
     .record(
       z.string(),
@@ -285,7 +288,7 @@ export const AgentSnapshotPinSchema = z.strictObject({
   role: z.string().min(1).nullable(),
   direction: z.enum(["north", "east", "south", "west"]).nullable(),
   visibility: z.enum(["visible", "implicit", "conditional", "unknown"]),
-  localPosition: PointSchema.nullable(),
+  localPosition: SymbolLocalPointSchema.nullable(),
   pagePosition: PointSchema.nullable(),
   netId: StableIdSchema.nullable(),
 });
@@ -335,7 +338,7 @@ export const AgentSnapshotInstanceSchema = z.strictObject({
   properties: z.record(z.string(), SnapshotPrimitiveSchema),
   parameters: z.record(z.string(), SnapshotPrimitiveSchema),
   placement: PlacementSchema.nullable(),
-  bounds: RectSchema.nullable(),
+  bounds: DerivedRectSchema.nullable(),
   pins: z.array(AgentSnapshotPinSchema),
   mosBulk: z
     .strictObject({
@@ -403,7 +406,7 @@ export const AgentSnapshotDocumentSchema = z.strictObject({
       sourceRef: SourceSpanSchema.optional(),
     })
     .optional(),
-  bounds: RectSchema.nullable(),
+  bounds: DerivedRectSchema.nullable(),
   presentation: PresentationIntentSchema,
   cellInterface: z
     .strictObject({

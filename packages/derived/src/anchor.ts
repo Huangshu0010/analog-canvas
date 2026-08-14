@@ -1,4 +1,9 @@
-import type { Point, SchematicDocument, VisualAnchor } from "@icm/model";
+import type {
+  DerivedPoint,
+  GridPoint,
+  SchematicDocument,
+  VisualAnchor,
+} from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import {
@@ -14,7 +19,7 @@ import { routeAttachmentPlacement } from "./routes.js";
 // and a diagnostic; it never silently re-attaches to another conductor.
 
 export interface ResolvedAnchor {
-  position: Point;
+  position: DerivedPoint;
   rotation: 0 | 90 | 180 | 270;
   resolved: boolean;
   /**
@@ -168,7 +173,7 @@ function unresolvedRoute(
 function findObjectPlacement(
   document: SchematicDocument,
   objectId: string,
-): Point | null {
+): GridPoint | null {
   const instance = document.instances.find(
     (candidate) => candidate.id === objectId,
   );

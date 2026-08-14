@@ -1,4 +1,9 @@
-import type { Annotation, Point, Rect, SchematicDocument } from "@icm/model";
+import type {
+  Annotation,
+  DerivedPoint,
+  DerivedRect,
+  SchematicDocument,
+} from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { resolveVisualAnchor, type ResolvedAnchor } from "./anchor.js";
@@ -16,10 +21,10 @@ import type { SchematicStyleProfile } from "./style-profile.js";
 export interface AnnotationPresentation {
   readonly anchor: ResolvedAnchor;
   /** Visible SVG text baseline; never substitute fallback while resolved. */
-  readonly position: Point;
+  readonly position: DerivedPoint;
   readonly rotation: 0 | 90 | 180 | 270;
   readonly alignment: "start" | "middle" | "end";
-  readonly bounds: Rect;
+  readonly bounds: DerivedRect;
 }
 
 export function resolveAnnotationPresentation(

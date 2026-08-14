@@ -166,6 +166,7 @@ export function placeUprightInstanceLabel(
   profile: SchematicStyleProfile,
   localAnchor: Point,
   localSide: InstanceLabelSide,
+  grid: number,
   sizeScale = 1,
   minimumClearance = 1.5,
 ): InstanceLabelPlacement | null {
@@ -184,28 +185,29 @@ export function placeUprightInstanceLabel(
     sideClearance(localAnchor, localBounds, localSide),
   );
   const fontSize = profile.typography.instanceFontSize * sizeScale;
+  const snap = (value: number) => Math.round(value / grid) * grid;
   switch (worldSide) {
     case "right":
       return {
         position: {
-          x: Math.round(worldBounds.x + worldBounds.width + clearance),
-          y: Math.round(semanticPosition.y),
+          x: snap(worldBounds.x + worldBounds.width + clearance),
+          y: snap(semanticPosition.y),
         },
         alignment: "start",
       };
     case "left":
       return {
         position: {
-          x: Math.round(worldBounds.x - clearance),
-          y: Math.round(semanticPosition.y),
+          x: snap(worldBounds.x - clearance),
+          y: snap(semanticPosition.y),
         },
         alignment: "end",
       };
     case "bottom":
       return {
         position: {
-          x: Math.round(semanticPosition.x),
-          y: Math.round(
+          x: snap(semanticPosition.x),
+          y: snap(
             worldBounds.y + worldBounds.height + clearance + fontSize * 1.05,
           ),
         },
@@ -214,8 +216,8 @@ export function placeUprightInstanceLabel(
     case "top":
       return {
         position: {
-          x: Math.round(semanticPosition.x),
-          y: Math.round(worldBounds.y - clearance - fontSize * 0.3),
+          x: snap(semanticPosition.x),
+          y: snap(worldBounds.y - clearance - fontSize * 0.3),
         },
         alignment: "middle",
       };
@@ -227,6 +229,7 @@ export function defaultInstanceLabelPlacement(
   instance: SchematicDocument["instances"][number],
   resolved: ResolvedSymbol,
   profile: SchematicStyleProfile,
+  grid: number,
 ): InstanceLabelPlacement | null {
   if (!instance.placement) return null;
   const localBounds = visibleSymbolLocalBounds(resolved);
@@ -246,6 +249,7 @@ export function defaultInstanceLabelPlacement(
       profile,
       localPosition,
       "left",
+      grid,
     );
   }
 
@@ -260,6 +264,7 @@ export function defaultInstanceLabelPlacement(
       profile,
       localPosition,
       "right",
+      grid,
     );
   }
 
@@ -274,6 +279,7 @@ export function defaultInstanceLabelPlacement(
       profile,
       localPosition,
       "right",
+      grid,
     );
   }
 
@@ -283,5 +289,6 @@ export function defaultInstanceLabelPlacement(
     profile,
     { x: middleX, y: localBounds.y + localBounds.height + compactSideGap },
     "bottom",
+    grid,
   );
 }

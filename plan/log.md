@@ -6823,3 +6823,21 @@ contracts (WP-R1)`.
   passed.
 - Commit status: committed on `codex/fix-fit-view-grid-bounds`; remote CI and
   merge remain pending.
+
+## 2026-08-14 - Close coordinate domains and grid normalization boundaries
+
+- Target: make current Project page coordinates and camera rectangles grid
+  aligned while retaining renderer, text, curve, and pointer precision in
+  non-persistent coordinate domains.
+- Changed areas: model coordinate schemas/helpers; Document and typed-edit
+  validation; derived/render/Agent contracts; editor fit, pan, zoom, focus,
+  preview, drafting and annotation commit paths; current fixtures and generated
+  Agent API artifacts; ADR 0021 and model/edit/editor specs.
+- Validation: complete local suite (115 files / 654 tests), typecheck,
+  formatting, Markdown-link validation, Agent catalog/artifact checks, and
+  `git diff --check` passed. Frozen-lockfile `pnpm ci:check` also passed its
+  static, unit, workspace-build, performance, and release verification stages;
+  local Playwright startup produced no output before tool timeout on both the
+  full gate and a direct rerun, so remote browser CI is still required.
+- Commit status: committed on `codex/coordinate-domain-contract`; merge to
+  `main` requires remote browser CI and review checks.

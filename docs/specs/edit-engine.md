@@ -105,6 +105,9 @@ Undo.
 - Dry run returns a proposed revision and deterministic diff but preserves the
   current Document and revision.
 - GUI and Agent callers cannot bypass Document validation.
+- Every typed-edit page Point is validated against the target Document grid;
+  schema-valid integers that are not grid-aligned reject atomically with their
+  edit path. The Edit Engine never silently snaps an Agent or import payload.
 - Locked annotation and layout-intent records cannot be replaced or removed.
 - Moving or aligning an instance translates its attached annotations by the
   same delta in the same atomic transaction.

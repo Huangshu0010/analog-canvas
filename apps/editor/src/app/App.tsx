@@ -62,6 +62,7 @@ import {
   flattenRichText,
   parseProject,
   powerNetNormalizations,
+  snapGridPoint,
   serializeProject,
   semanticTextDocument,
   transformPoint,
@@ -69,7 +70,9 @@ import {
 import type {
   Annotation,
   CircuitProject,
+  DerivedPoint,
   DraftingObject,
+  GridRect,
   Point,
   Rect,
   RouteEndpoint,
@@ -87,7 +90,11 @@ import {
 } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
-import { fitCameraToBounds } from "../canvas/fit-view";
+import {
+  fitCameraToBounds,
+  normalizeCameraRect,
+  type CameraRectInput,
+} from "../canvas/fit-view";
 import type { CanvasDragSession } from "../canvas/canvas-drag-session";
 import { startCanvasDragVisual } from "../canvas/canvas-drag-visual";
 import { resolveCanvasHitAtPoint } from "../canvas/canvas-hit-resolver";
@@ -216,7 +223,7 @@ import {
 } from "../snap/engine";
 import type { SnapAnchor, SnapGuideLine, SnapResult } from "../snap/engine";
 
-const DEFAULT_VIEWBOX: Rect = { x: 0, y: 0, width: 960, height: 640 };
+const DEFAULT_VIEWBOX: GridRect = { x: 0, y: 0, width: 960, height: 640 };
 const RECENT_COMPONENTS_STORAGE_KEY = "icm.recent-components.v1";
 const LIBRARY_PANEL_STORAGE_KEY = "icm.library-panel-open.v1";
 const REFRESH_RESTORE_STORAGE_KEY = "icm.restore-after-refresh.v1";
@@ -227,17 +234,17 @@ interface DragPreview {
   instanceIds: string[];
   primaryInstanceId: string;
   originalPositions: Record<string, Point>;
-  pointerStart: Point;
+  pointerStart: DerivedPoint;
 }
 interface BoxPreview {
-  start: Point;
-  end: Point;
+  start: DerivedPoint;
+  end: DerivedPoint;
   pointerId: number;
 }
 
 interface PanPreview {
   clientStart: Point;
-  viewBoxStart: Rect;
+  viewBoxStart: GridRect;
   pointerId: number;
 }
 
@@ -245,14 +252,14 @@ interface RouteStretchPreview {
   routeId: string;
   segmentIndex: number;
   kind: "segment" | "translate";
-  start: Point;
-  point: Point;
+  start: DerivedPoint;
+  point: DerivedPoint;
 }
 
 interface AnnotationDragPreview {
   annotationId: string;
   originalPosition: Point;
-  pointerStart: Point;
+  pointerStart: DerivedPoint;
 }
 
 // Handle drags are geometry edits rather than translations.  Keep a complete
@@ -531,7 +538,18 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     reset: resetSelection,
   } = useSelectionController();
   const uniqueSuffixCounter = useRef(0);
-  const [viewBox, setViewBox] = useState<Rect>(DEFAULT_VIEWBOX);
+  const [viewBox, setRawViewBox] = useState<GridRect>(DEFAULT_VIEWBOX);
+  const setViewBox = (
+    next: GridRect | CameraRectInput | ((current: GridRect) => CameraRectInput),
+    grid = document.presentation.grid,
+  ): void => {
+    setRawViewBox((current) =>
+      normalizeCameraRect(
+        typeof next === "function" ? next(current) : next,
+        grid,
+      ),
+    );
+  };
   const [importDiagnostics, setImportDiagnostics] = useState<SpiceDiagnostic[]>(
     [],
   );
@@ -668,7 +686,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const netLabelEditorInputRef = useRef<HTMLInputElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const helpCloseRef = useRef<HTMLButtonElement>(null);
-  const documentViewBoxes = useRef(new Map<string, Rect>());
+  const documentViewBoxes = useRef(new Map<string, GridRect>());
   const renderedDocument = useMemo(() => {
     if (!draftingHandlePreview && !annotationDragPreview) return document;
     return {
@@ -1269,6 +1287,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     setViewBox(
       documentViewBoxes.current.get(nextDocument.id) ?? DEFAULT_VIEWBOX,
+      nextDocument.presentation.grid,
     );
     resetInteractionState();
     setStatus(`Opened Cell ${nextDocument.name}`);
@@ -1301,16 +1320,22 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return;
     }
     setDocumentStack([...hierarchyPath]);
-    setViewBox(documentViewBoxes.current.get(opened.id) ?? DEFAULT_VIEWBOX);
+    setViewBox(
+      documentViewBoxes.current.get(opened.id) ?? DEFAULT_VIEWBOX,
+      opened.presentation.grid,
+    );
     resetInteractionState();
 
     const focusPoint = (point: Point) =>
-      setViewBox({
-        x: point.x - 80,
-        y: point.y - 60,
-        width: 160,
-        height: 120,
-      });
+      setViewBox(
+        {
+          x: point.x - 80,
+          y: point.y - 60,
+          width: 160,
+          height: 120,
+        },
+        opened.presentation.grid,
+      );
     const endpoint =
       locator.kind === "terminal"
         ? locator.endpoint
@@ -1451,7 +1476,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         };
       case "fit-document": {
         activateDocument(`Agent fit Cell ${targetDocument.name}`);
-        setViewBox({ ...buildSvgScene(targetDocument, resolver).viewBox });
+        setViewBox(
+          fitCameraToBounds(
+            buildSvgScene(targetDocument, resolver).viewBox,
+            targetDocument.presentation.grid,
+          ),
+          targetDocument.presentation.grid,
+        );
         return {
           ok: true,
           kind: intent.kind,
@@ -1627,7 +1658,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function replaceActiveProject(
     nextProject: CircuitProject,
-    nextViewBox: Rect = DEFAULT_VIEWBOX,
+    nextViewBox: GridRect = DEFAULT_VIEWBOX,
   ): SchematicDocument {
     // Drop any pending recovery write for the outgoing project so it cannot
     // revive after Save/Discard/Open/Import/Restore/demo-load swaps the project.
@@ -1639,7 +1670,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const nextDocument = replaceProject(prepared.project);
     documentViewBoxes.current = new Map();
     setDocumentStack([]);
-    setViewBox(nextViewBox);
+    setViewBox(nextViewBox, nextDocument.presentation.grid);
     resetInteractionState();
     return nextDocument;
   }
@@ -2307,7 +2338,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function completeRouteStretch(
     preview: RouteStretchPreview,
-    point: Point,
+    point: DerivedPoint,
   ): void {
     const record = routePolylines.find(
       (candidate) => candidate.route.id === preview.routeId,
@@ -2359,7 +2390,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function constrainAnnotationPosition(
     annotation: Annotation,
-    candidate: Point,
+    candidate: DerivedPoint,
   ): Point {
     if (
       annotation.kind === "instance-label" &&
@@ -2382,22 +2413,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             2 +
             30,
         );
-        return {
-          x: Math.round(
-            clamp(
+        return snapGridPoint(
+          {
+            x: clamp(
               candidate.x,
               instance.placement.position.x - radius,
               instance.placement.position.x + radius,
             ),
-          ),
-          y: Math.round(
-            clamp(
+            y: clamp(
               candidate.y,
               instance.placement.position.y - radius,
               instance.placement.position.y + radius,
             ),
-          ),
-        };
+          },
+          document.presentation.grid,
+        );
       }
     }
     if (annotation.kind === "net-label" && annotation.netId) {
@@ -2422,18 +2452,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         return leftDistance - rightDistance;
       })[0];
       if (closest) {
-        return {
-          x: Math.round(clamp(candidate.x, closest.x - 30, closest.x + 30)),
-          y: Math.round(clamp(candidate.y, closest.y - 30, closest.y + 30)),
-        };
+        return snapGridPoint(
+          {
+            x: clamp(candidate.x, closest.x - 30, closest.x + 30),
+            y: clamp(candidate.y, closest.y - 30, closest.y + 30),
+          },
+          document.presentation.grid,
+        );
       }
     }
-    return { x: Math.round(candidate.x), y: Math.round(candidate.y) };
+    return snapGridPoint(candidate, document.presentation.grid);
   }
 
   function draggedAnnotationAtPosition(
     annotation: Annotation,
-    candidate: Point,
+    candidate: DerivedPoint,
   ): Annotation {
     const currentAttachment = effectiveRouteAttachment(annotation);
     if (isRoutedMarker(annotation) && currentAttachment) {
@@ -2538,7 +2571,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
     const dragVisual = () =>
       (visual ??= startCanvasDragVisual(svg, [annotation.id]));
-    const positionAt = (clientX: number, clientY: number): Point => {
+    const positionAt = (clientX: number, clientY: number): DerivedPoint => {
       const pointer = pointFromClient(clientX, clientY, svg, false);
       return {
         x: preview.originalPosition.x + pointer.x - preview.pointerStart.x,
@@ -2581,7 +2614,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function completeAnnotationDrag(
     preview: AnnotationDragPreview,
-    position: Point,
+    position: DerivedPoint,
   ): void {
     const annotation = document.annotations.find(
       (candidate) => candidate.id === preview.annotationId,
@@ -2590,7 +2623,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     transact([
       {
         kind: "upsert_schematic_annotation",
-        annotation: draggedAnnotationAtPosition(annotation, position),
+        annotation: draggedAnnotationAtPosition(
+          annotation,
+          snapGridPoint(position, document.presentation.grid),
+        ),
       },
     ]);
   }
@@ -2599,8 +2635,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     clientX: number,
     clientY: number,
     svg: SVGSVGElement,
+    snapToGrid?: true,
+  ): Point;
+  function pointFromClient(
+    clientX: number,
+    clientY: number,
+    svg: SVGSVGElement,
+    snapToGrid: false,
+  ): DerivedPoint;
+  function pointFromClient(
+    clientX: number,
+    clientY: number,
+    svg: SVGSVGElement,
     snapToGrid = true,
-  ): Point {
+  ): DerivedPoint {
     const grid = document.presentation.grid;
     const matrix = svg.getScreenCTM();
     if (matrix) {
@@ -3289,7 +3337,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function instanceMoveAt(
     preview: DragPreview,
-    position: Point,
+    position: DerivedPoint,
     tolerance: number,
     suppressSnap: boolean,
     previous?: SnapResult,
@@ -3417,10 +3465,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       const original = preview.originalPositions[instanceId]!;
       return {
         instanceId,
-        position: {
-          x: original.x + snap.delta.x,
-          y: original.y + snap.delta.y,
-        },
+        position: snapGridPoint(
+          {
+            x: original.x + snap.delta.x,
+            y: original.y + snap.delta.y,
+          },
+          document.presentation.grid,
+        ),
       };
     });
     return { snap, moves };
@@ -3428,7 +3479,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function completeInstanceMove(
     preview: DragPreview,
-    position: Point,
+    position: DerivedPoint,
     tolerance: number,
     suppressSnap: boolean,
     previous?: SnapResult,
@@ -3527,6 +3578,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           object,
           resolveDraftingObjectGeometry(document, resolver, object),
           deltaDegrees,
+          document.presentation.grid,
         );
         return next ? [{ kind: "upsert_drafting_object", object: next }] : [];
       },
@@ -3775,10 +3827,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             transact([
               {
                 kind: "upsert_drafting_object",
-                object: translateDraftingObject(latest, {
-                  x: position.x - original.x,
-                  y: position.y - original.y,
-                }),
+                object: translateDraftingObject(
+                  latest,
+                  {
+                    x: position.x - original.x,
+                    y: position.y - original.y,
+                  },
+                  document.presentation.grid,
+                ),
               },
             ]);
           }
@@ -3839,6 +3895,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             handle,
             snapped.point,
             originalGeometry,
+            document.presentation.grid,
           ),
         });
       },
@@ -3862,6 +3919,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               handle,
               point,
               originalGeometry,
+              document.presentation.grid,
             );
             if (next !== latest) {
               transact([{ kind: "upsert_drafting_object", object: next }]);
@@ -3988,6 +4046,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       geometry,
       index,
       angleDegrees,
+      document.presentation.grid,
     );
     if (!next) return;
     transact([
@@ -4018,6 +4077,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       selectedDrafting,
       geometry,
       bearingDegrees,
+      document.presentation.grid,
     );
     if (next.kind === "attached-arrow") {
       setStatus(
@@ -4878,7 +4938,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   // resulting segment from the origin to horizontal/vertical/45°. Purely visual
   // — never creates a Net, junction, or short.
   function snapDraftingPoint(
-    point: Point,
+    point: DerivedPoint,
     altKey: boolean,
     shiftKey: boolean,
     origin?: Point,
@@ -4887,7 +4947,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (altKey) {
       const constrained =
         shiftKey && origin ? constrainAngle(origin, point) : point;
-      return { point: constrained, snap: null, guides: [] };
+      return {
+        point: snapGridPoint(constrained, document.presentation.grid),
+        snap: null,
+        guides: [],
+      };
     }
     const routeTargets = routePolylines.flatMap(({ route, polyline }) =>
       polyline.points.slice(0, -1).map((from, segmentIndex) => ({
@@ -4912,7 +4976,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         profile: SNAP_PROFILES.draftingHandle,
       },
     );
-    let snapped = {
+    let snapped: DerivedPoint = {
       x: point.x + resolved.delta.x,
       y: point.y + resolved.delta.y,
     };
@@ -4925,13 +4989,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       snapped = constrainAngle(origin, snapped);
     }
     return {
-      point: snapped,
-      snap: hasObjectSnap ? snapped : null,
+      point: snapGridPoint(snapped, document.presentation.grid),
+      snap: hasObjectSnap
+        ? snapGridPoint(snapped, document.presentation.grid)
+        : null,
       guides: resolved.guides,
     };
   }
 
-  function constrainAngle(origin: Point, target: Point): Point {
+  function constrainAngle(origin: Point, target: DerivedPoint): DerivedPoint {
     const dx = target.x - origin.x;
     const dy = target.y - origin.y;
     const angle = Math.atan2(dy, dx);

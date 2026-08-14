@@ -1,16 +1,17 @@
-import { PointSchema, RectSchema, StableIdSchema } from "@icm/model";
+import {
+  StableIdSchema,
+  SymbolLocalPointSchema,
+  SymbolLocalRectSchema,
+} from "@icm/model";
 import { z } from "zod";
 
 export const SYMBOL_CONNECTION_GRID = 10;
-const SymbolGeometryPointSchema = z.strictObject({
-  x: z.number().finite(),
-  y: z.number().finite(),
-});
+const SymbolGeometryPointSchema = SymbolLocalPointSchema;
 
 export const SymbolPinSchema = z.strictObject({
   name: z.string().min(1),
   role: z.string().min(1),
-  at: PointSchema,
+  at: SymbolLocalPointSchema,
   direction: z.enum(["north", "east", "south", "west"]),
   presentation: z.strictObject({
     visibility: z.enum(["visible", "implicit", "conditional"]),
@@ -89,7 +90,7 @@ export const SymbolVariantSchema = z.strictObject({
     .array(
       z.strictObject({
         name: z.string().min(1),
-        at: PointSchema,
+        at: SymbolLocalPointSchema,
         direction: z.enum(["north", "east", "south", "west"]),
       }),
     )
@@ -102,7 +103,7 @@ export const SymbolDefinitionSchema = z
     schemaVersion: z.literal(1),
     id: StableIdSchema,
     name: z.string().min(1),
-    viewBox: RectSchema,
+    viewBox: SymbolLocalRectSchema,
     pins: z.array(SymbolPinSchema).min(0),
     primitives: z.array(SymbolPrimitiveSchema),
     variants: z.array(SymbolVariantSchema),

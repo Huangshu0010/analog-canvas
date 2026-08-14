@@ -7,12 +7,12 @@
           "anchor": {
             "fallbackPosition": {
               "x": 70,
-              "y": 186
+              "y": 190
             },
             "kind": "object",
             "localOffset": {
               "x": -10,
-              "y": -14
+              "y": -10
             },
             "objectId": "VINP"
           },
@@ -44,12 +44,12 @@
           "anchor": {
             "fallbackPosition": {
               "x": 390,
-              "y": 146
+              "y": 150
             },
             "kind": "object",
             "localOffset": {
               "x": 10,
-              "y": -14
+              "y": -10
             },
             "objectId": "VOUT"
           },

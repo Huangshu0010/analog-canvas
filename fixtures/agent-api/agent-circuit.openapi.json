@@ -4490,7 +4490,20 @@
                                   "localPosition": {
                                     "anyOf": [
                                       {
-                                        "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                        "type": "object",
+                                        "properties": {
+                                          "x": {
+                                            "type": "number"
+                                          },
+                                          "y": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        "required": [
+                                          "x",
+                                          "y"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -5394,13 +5407,13 @@
                                           "const": "text"
                                         },
                                         "position": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "rotation": {
                                           "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema7"
                                         },
                                         "bounds": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
                                         },
                                         "diagnostics": {
                                           "type": "array",
@@ -5426,21 +5439,21 @@
                                           "const": "arrow"
                                         },
                                         "from": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "to": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "points": {
                                           "type": "array",
                                           "items": {
-                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                           }
                                         },
                                         "vertices": {
                                           "type": "array",
                                           "items": {
-                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                           }
                                         },
                                         "curveControls": {
@@ -5448,7 +5461,7 @@
                                           "items": {
                                             "anyOf": [
                                               {
-                                                "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                                "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                               },
                                               {
                                                 "type": "null"
@@ -5457,10 +5470,10 @@
                                           }
                                         },
                                         "center": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "bounds": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
                                         },
                                         "diagnostics": {
                                           "type": "array",
@@ -5490,13 +5503,13 @@
                                           "const": "leader"
                                         },
                                         "anchor": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "target": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "bounds": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
                                         },
                                         "diagnostics": {
                                           "type": "array",
@@ -5522,19 +5535,19 @@
                                           "const": "callout"
                                         },
                                         "textPosition": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "target": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "rotation": {
                                           "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema7"
                                         },
                                         "textBounds": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
                                         },
                                         "bounds": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
                                         },
                                         "diagnostics": {
                                           "type": "array",
@@ -5564,13 +5577,13 @@
                                         "points": {
                                           "type": "array",
                                           "items": {
-                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                           }
                                         },
                                         "vertices": {
                                           "type": "array",
                                           "items": {
-                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                           }
                                         },
                                         "curveControls": {
@@ -5578,7 +5591,7 @@
                                           "items": {
                                             "anyOf": [
                                               {
-                                                "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                                "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                               },
                                               {
                                                 "type": "null"
@@ -5587,7 +5600,7 @@
                                           }
                                         },
                                         "bounds": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
                                         },
                                         "diagnostics": {
                                           "type": "array",
@@ -5614,7 +5627,7 @@
                                           "const": "rectangle"
                                         },
                                         "center": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "width": {
                                           "type": "number",
@@ -5632,11 +5645,11 @@
                                           "maxItems": 4,
                                           "type": "array",
                                           "items": {
-                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema30"
+                                            "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                           }
                                         },
                                         "bounds": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
                                         },
                                         "diagnostics": {
                                           "type": "array",
@@ -5665,13 +5678,13 @@
                                           "const": "floating-symbol"
                                         },
                                         "position": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
                                         },
                                         "rotation": {
                                           "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema7"
                                         },
                                         "bounds": {
-                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
                                         },
                                         "diagnostics": {
                                           "type": "array",
@@ -5790,7 +5803,7 @@
                       "diagnostics": {
                         "type": "array",
                         "items": {
-                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema31"
+                          "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema30"
                         }
                       }
                     },
@@ -5828,7 +5841,7 @@
               "diagnostics": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema31"
+                  "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema30"
                 }
               }
             },
@@ -5916,7 +5929,7 @@
               "diagnostics": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema31"
+                  "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema30"
                 }
               },
               "diagnosticDelta": {
@@ -5925,13 +5938,13 @@
                   "added": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema31"
+                      "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema30"
                     }
                   },
                   "removed": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema31"
+                      "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema30"
                     }
                   }
                 },
@@ -6078,7 +6091,7 @@
               "diagnostics": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema31"
+                  "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema30"
                 }
               }
             },
@@ -6141,7 +6154,7 @@
               "diagnostics": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema31"
+                  "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema30"
                 }
               }
             },
@@ -6273,24 +6286,18 @@
             "type": "object",
             "properties": {
               "x": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+                "type": "number"
               },
               "y": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+                "type": "number"
               },
               "width": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
+                "type": "number",
+                "minimum": 0
               },
               "height": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
+                "type": "number",
+                "minimum": 0
               }
             },
             "required": [
@@ -6960,19 +6967,11 @@
               },
               "y": {
                 "type": "number"
-              },
-              "width": {
-                "type": "number"
-              },
-              "height": {
-                "type": "number"
               }
             },
             "required": [
               "x",
-              "y",
-              "width",
-              "height"
+              "y"
             ],
             "additionalProperties": false
           },
@@ -7013,7 +7012,7 @@
                 "type": "string"
               },
               "bounds": {
-                "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
+                "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema4"
               }
             },
             "required": [
@@ -7027,22 +7026,6 @@
             "additionalProperties": false
           },
           "__schema30": {
-            "type": "object",
-            "properties": {
-              "x": {
-                "type": "number"
-              },
-              "y": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "x",
-              "y"
-            ],
-            "additionalProperties": false
-          },
-          "__schema31": {
             "type": "object",
             "properties": {
               "code": {
@@ -7141,7 +7124,7 @@
                 "additionalProperties": false
               },
               "point": {
-                "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema6"
+                "$ref": "#/components/schemas/agentCircuitResponse/$defs/__schema28"
               },
               "parameters": {
                 "type": "object",

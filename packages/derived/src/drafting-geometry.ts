@@ -1,7 +1,7 @@
 import type {
+  DerivedPoint,
+  DerivedRect,
   DraftingObject,
-  Point,
-  Rect,
   RichTextDocument,
   SchematicDocument,
   VisualAnchor,
@@ -37,73 +37,73 @@ export interface DraftingDiagnostic {
   anchorRole: DraftingAnchorRole;
   targetObjectIds: string[];
   message: string;
-  bounds?: Rect;
+  bounds?: DerivedRect;
 }
 
 export type ResolvedDraftingGeometry =
   | {
       kind: "text";
-      position: Point;
+      position: DerivedPoint;
       rotation: 0 | 90 | 180 | 270;
-      bounds: Rect;
+      bounds: DerivedRect;
       diagnostics: DraftingDiagnostic[];
     }
   | {
       kind: "arrow";
-      from: Point;
-      to: Point;
+      from: DerivedPoint;
+      to: DerivedPoint;
       // The complete visible shaft path. `waypoints` remain free geometry;
       // from/to retain their independently-resolved VisualAnchor semantics.
-      points: Point[];
-      vertices: Point[];
-      curveControls: Array<Point | null>;
+      points: DerivedPoint[];
+      vertices: DerivedPoint[];
+      curveControls: Array<DerivedPoint | null>;
       // Midpoint of from/to. Editor handle placement and 90° rotation pivot.
-      center: Point;
-      bounds: Rect;
+      center: DerivedPoint;
+      bounds: DerivedRect;
       diagnostics: DraftingDiagnostic[];
     }
   | {
       kind: "leader";
-      anchor: Point;
-      target: Point;
-      bounds: Rect;
+      anchor: DerivedPoint;
+      target: DerivedPoint;
+      bounds: DerivedRect;
       diagnostics: DraftingDiagnostic[];
     }
   | {
       kind: "callout";
-      textPosition: Point;
-      target: Point;
+      textPosition: DerivedPoint;
+      target: DerivedPoint;
       rotation: 0 | 90 | 180 | 270;
-      textBounds: Rect;
-      bounds: Rect;
+      textBounds: DerivedRect;
+      bounds: DerivedRect;
       diagnostics: DraftingDiagnostic[];
     }
   | {
       kind: "construction-line";
-      points: Point[];
+      points: DerivedPoint[];
       // Same vertices as points, exposed as the editable handle set so the
       // editor does not alias the persisted array by accident. Per-vertex
       // handle placement and vertex insert/delete use this list.
-      vertices: Point[];
-      curveControls: Array<Point | null>;
-      bounds: Rect;
+      vertices: DerivedPoint[];
+      curveControls: Array<DerivedPoint | null>;
+      bounds: DerivedRect;
       diagnostics: [];
     }
   | {
       kind: "rectangle";
-      center: Point;
+      center: DerivedPoint;
       width: number;
       height: number;
       rotation: number;
-      corners: Point[];
-      bounds: Rect;
+      corners: DerivedPoint[];
+      bounds: DerivedRect;
       diagnostics: [];
     }
   | {
       kind: "floating-symbol";
-      position: Point;
+      position: DerivedPoint;
       rotation: 0 | 90 | 180 | 270;
-      bounds: Rect;
+      bounds: DerivedRect;
       diagnostics: DraftingDiagnostic[];
     };
 
@@ -458,7 +458,7 @@ function resolveFloatingSymbol(
   const position = anchor.anchor.position;
   const rotation = object.transform.rotation;
   const viewBox = resolvedSymbol?.definition.viewBox;
-  let bounds: Rect = {
+  let bounds: DerivedRect = {
     x: position.x - 12,
     y: position.y - 12,
     width: 24,
@@ -469,7 +469,7 @@ function resolveFloatingSymbol(
     // (translate(position) rotate(rotation) scale(-1 1) when mirror=x) to all
     // four viewBox corners and take the AABB, so the bounds match the rendered
     // symbol for any rotation/mirror combination.
-    const corners: Point[] = [
+    const corners: DerivedPoint[] = [
       { x: viewBox.x, y: viewBox.y },
       { x: viewBox.x + viewBox.width, y: viewBox.y },
       { x: viewBox.x, y: viewBox.y + viewBox.height },
@@ -496,11 +496,11 @@ function resolveFloatingSymbol(
 // Mirrors the SVG transform order in render.ts: translate(position), then
 // rotate(rotation) about the origin, then scale(-1 1) for mirror-x.
 function transformSymbolCorner(
-  corner: Point,
-  position: Point,
+  corner: DerivedPoint,
+  position: DerivedPoint,
   rotation: 0 | 90 | 180 | 270,
   mirror: "none" | "x",
-): Point {
+): DerivedPoint {
   const rad = (rotation * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
@@ -514,7 +514,7 @@ function transformSymbolCorner(
 
 // --- bounds helpers -------------------------------------------------------
 
-function unionBounds(points: Point[]): Rect {
+function unionBounds(points: DerivedPoint[]): DerivedRect {
   if (points.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
   const xs = points.map((point) => point.x);
   const ys = points.map((point) => point.y);
@@ -525,7 +525,7 @@ function unionBounds(points: Point[]): Rect {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
-function paddedBounds(bounds: Rect, padding: number): Rect {
+function paddedBounds(bounds: DerivedRect, padding: number): DerivedRect {
   return {
     x: bounds.x - padding,
     y: bounds.y - padding,
@@ -534,7 +534,7 @@ function paddedBounds(bounds: Rect, padding: number): Rect {
   };
 }
 
-function unionRects(rects: Rect[]): Rect {
+function unionRects(rects: DerivedRect[]): DerivedRect {
   const nonEmpty = rects.filter((rect) => rect.width > 0 || rect.height > 0);
   if (nonEmpty.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
   const minX = Math.min(...nonEmpty.map((rect) => rect.x));
@@ -550,12 +550,12 @@ function unionRects(rects: Rect[]): Rect {
 // multi-line content gets its full height, and nested spans are
 // flattened recursively rather than as a fixed "XX".
 function textBounds(
-  position: Point,
+  position: DerivedPoint,
   alignment: "start" | "middle" | "end",
   rotation: 0 | 90 | 180 | 270,
   content: RichTextDocument,
   metrics: ReturnType<typeof richTextMetrics>,
-): Rect {
+): DerivedRect {
   const layout = measureRichTextDocument(content, metrics);
   const width = layout.width + TEXT_PADDING_X * 2;
   const height = layout.height + TEXT_PADDING_Y * 2;
@@ -566,16 +566,16 @@ function textBounds(
         ? position.x - width + TEXT_PADDING_X
         : position.x - width / 2;
   const top = position.y - height / 2;
-  const box: Rect = { x: left, y: top, width, height };
+  const box: DerivedRect = { x: left, y: top, width, height };
   if (rotation === 0) return box;
   return rotatedRectBounds(box, position, rotation);
 }
 
 function rotatedRectBounds(
-  rect: Rect,
-  origin: Point,
+  rect: DerivedRect,
+  origin: DerivedPoint,
   rotation: 90 | 180 | 270,
-): Rect {
+): DerivedRect {
   const radians = (rotation * Math.PI) / 180;
   const cos = Math.cos(radians);
   const sin = Math.sin(radians);
