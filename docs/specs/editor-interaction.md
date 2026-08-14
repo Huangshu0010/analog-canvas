@@ -32,7 +32,9 @@ product Symbol Resolver. Before the first click the artwork follows the
 pointer; after the first click the preview becomes the horizontal rail. The
 second click creates/reuses an explicit global VDD Net, creates two route-anchor
 Junctions and one `power-rail` Route, and persists one RichText power-label
-annotation. It creates no VDD Instance and exits placement after the commit.
+annotation. The Route is the only rail geometry: the annotation adds no supply
+bar or terminal stub, and its complete `V_DD` text is bold italic with `DD` as
+a subscript. It creates no VDD Instance and exits placement after the commit.
 Deleting the rail also deletes its power label and rail-only Junctions while
 preserving a VDD Net still used elsewhere.
 
@@ -53,6 +55,9 @@ Box selection, selection move, pan, and text-edit sessions remain bounded
 gesture owners, but every reset boundary cancels them together with the
 canonical interaction. No component preview, rail endpoint, clipboard, Wire
 waypoint, drawing point, or snap guide is stored in a parallel React mode flag.
+Command arbitration reads the reducer's synchronously advanced state, not the
+last rendered React closure, so consecutive native events such as `Escape -> C`
+observe the first transition even when React batches the next render.
 
 Activating the same tool is idempotent: repeated C, W, A, K, or selection of the
 same Library item preserves the active session. Activating a different creation
@@ -105,10 +110,12 @@ topology hash, history, recovery, or formal export.
 ## Deterministic validation
 
 - state-transition, shortcut focus-guard, and command-by-interaction matrix
-  tests, including repeated C/W/A/K and I/Escape/re-entry;
+  tests, including repeated C/W/A/K, I/Escape/re-entry, and render-free
+  `Escape -> C` bursts after NMOS, PMOS, and passive placement;
 - component placement and ordinary terminal connectivity for both Port assets;
 - VDD rail picker/Library preview, cancellation at both phases, creation with no
-  VDD Instance, default exit, selection, and complete visual deletion;
+  VDD Instance or annotation-owned stub, bold italic subscript label, default
+  exit, selection, and complete visual deletion;
 - canonical MOS default-variant and explicit bulk behavior;
 - move/stretch, segment tap, crossing non-connectivity, cancel, delete, and
   undo/redo tests;

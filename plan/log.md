@@ -6640,3 +6640,18 @@ contracts (WP-R1)`.
   workspace builds and production smoke), and `git diff --check` passed.
 - Commit status: ready to commit on `codex/interaction-state-machine` as
   `refactor(editor): unify transient interaction state`.
+
+## 2026-08-14 - Stabilize rapid MOS Copy and VDD rail presentation
+
+- Target: make render-free `Escape -> C` command bursts observe the canonical
+  interaction transition after NMOS/PMOS placement, and remove the VDD Rail's
+  thin terminal stub while styling all of `V_DD` bold italic.
+- Changed areas: synchronous interaction-state publication and safe keyboard
+  target detection; VDD label RichText authoring; power-label rendering;
+  focused unit/browser regressions and accepted interaction specification.
+- Validation: 31 focused unit tests, 2 focused browser tests, all 15 component
+  insertion browser tests, `pnpm verify:branch` (558 unit tests, all workspace
+  builds and production smoke), live VDD DOM inspection, and
+  `git diff --check` passed.
+- Commit status: ready to commit on `codex/mos-copy-vdd-visual-fix` as
+  `fix(editor): stabilize MOS copy transition and VDD rail`.

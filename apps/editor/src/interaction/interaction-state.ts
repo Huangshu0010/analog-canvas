@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useReducer, useRef } from "react";
 import type { SetStateAction } from "react";
 
 import type { Point } from "@icm/model";
@@ -285,15 +285,29 @@ export function interactionTool<TClipboard>(
 }
 
 export function useInteractionState<TClipboard>() {
-  const [state, dispatch] = useReducer(
+  const [state, reactDispatch] = useReducer(
     interactionReducer<TClipboard>,
     IDLE_INTERACTION_STATE as InteractionState<TClipboard>,
   );
+  // React may batch two native key events before rendering the first reducer
+  // transition. Keep the reducer's authoritative current value available to
+  // command arbitration synchronously, while React owns render publication.
+  // Queued actions are reduced in the same order on both paths.
+  const currentStateRef = useRef(state);
+  currentStateRef.current = state;
+  const dispatch = (action: InteractionAction<TClipboard>): void => {
+    currentStateRef.current = interactionReducer(
+      currentStateRef.current,
+      action,
+    );
+    reactDispatch(action);
+  };
   const componentPlacement = state.kind === "placing-component" ? state : null;
   const vddRailPlacement = state.kind === "placing-vdd-rail" ? state : null;
   const copyPlacement = state.kind === "copy-placement" ? state.copy : null;
   return {
     state,
+    getCurrentState: () => currentStateRef.current,
     tool: interactionTool(state),
     pendingSymbolId: componentPlacement?.placement.symbolId ?? null,
     pendingComponentPlacement: componentPlacement?.placement ?? null,
