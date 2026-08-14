@@ -3,9 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AGENT_SSE_KEEPALIVE_INTERVAL_MS,
   AgentSessionMachine,
-  type AgentOperatingKit,
   type AgentSessionLimits,
 } from "@icm/agent-adapter";
+import {
+  AGENT_OPERATING_KIT_FORMAT,
+  AGENT_OPERATING_KIT_VERSION,
+  type AgentOperatingKit,
+} from "@icm/agent-adapter/kit";
 
 import {
   AgentSessionDO,
@@ -324,12 +328,17 @@ describe("public Agent session routes", () => {
     expect(response?.status).toBe(200);
     expect(response?.headers.get("cache-control")).toBe("no-store");
     const kit = (await response!.json()) as AgentOperatingKit;
-    expect(kit).toMatchObject({ format: "icm-agent-kit-v1", version: "1" });
+    expect(kit).toMatchObject({
+      format: AGENT_OPERATING_KIT_FORMAT,
+      version: AGENT_OPERATING_KIT_VERSION,
+    });
     expect(kit.files.map((file) => file.path)).toEqual([
       "README.md",
       "AGENTS.md",
       "skills/icm-circuit-session/SKILL.md",
       "references/session-contract.md",
+      "references/authoring-contract.md",
+      "references/razavi-authoring-catalog.json",
     ]);
   });
 

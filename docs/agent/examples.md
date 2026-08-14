@@ -24,7 +24,27 @@ Current optional Phase 9 research:
 Expected result: one read supplies the Document facts, the revision advances
 only on commit, and formal topology remains unchanged by presentation edits.
 
-## 2. Add an explicit branch without inventing crossing connectivity
+## 2. Create a blank CMOS inverter in two phases
+
+1. Download the Agent Kit and use its reviewed authoring catalog to identify
+   `pmos`, `nmos`, `ground`, `port`, and the `vdd-rail` primitive. Do not infer
+   their IDs or pins from appearance.
+2. Read the blank Document Snapshot. Dry-run then commit placement of the two
+   MOS instances, ground, input/output Ports, and a VDD rail. `vdd` is not a
+   Symbol: submit the catalog-defined `add_power_rail` primitive.
+3. Read a new Snapshot. Use its returned terminal IDs and positions to submit
+   ordinary `wireIntent` connections for gates, drains/output, NMOS source to
+   ground, and PMOS source to the VDD rail.
+4. Read another Snapshot, set/reconcile an explicit NMOS ground bulk default
+   only when the returned `mosBulk` facts require it, then verify both MOS body
+   connections from the final Snapshot.
+5. Render and review the final Document. The Kit catalog supplied the initial
+   product facts; every live connection came from Snapshot plus the Edit Engine.
+
+Expected result: a browser Agent can create a basic inverter without repository
+source, manual seed components, dynamic catalog lookup, or guessed pin order.
+
+## 3. Add an explicit branch without inventing crossing connectivity
 
 1. Inspect the Snapshot's complete Net, Route, and Junction facts.
 2. Dry-run one `wireIntent` from the terminal endpoint to the target

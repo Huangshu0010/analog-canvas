@@ -6,11 +6,16 @@
    kinds, and byte/transaction limits.
 2. Read the returned Project Index and choose one Document. Request exactly one
    complete `snapshot` for that Document; do not construct a query plan first.
+   For a blank Document, use only the downloaded Kit's static authoring catalog
+   to select reviewed built-in symbols and the VDD primitive; it is not a
+   Circuit query or Project state.
 3. Reason over the Snapshot's complete instance-pin/Net-terminal mapping,
    explicit Net `powerDomain`, hierarchy references, placements, routes, locks,
    and diagnostics. Never infer supply identity from a label, symbol, or Net
    ID. Load only the circuit-knowledge pages relevant to the observed evidence.
-4. For ordinary wiring, submit one high-level `wireIntent`; for other work,
+4. After creating new instances, request a fresh Snapshot before wiring so all
+   instance IDs, resolved pins, page positions, and MOS bulk facts come from
+   the browser. For ordinary wiring, submit one high-level `wireIntent`; for other work,
    prepare generic typed edits. In both cases use the Snapshot revision as
    `expectedRevision` and dry-run any non-trivial transaction.
 5. Inspect the dry-run diff and diagnostics, then submit the same edits without
@@ -97,8 +102,10 @@ The deployed machine-readable contract is available at
 `GET /api/agent/openapi.json`. The editor's **Copy Agent connection
 instructions** action first includes `GET /api/agent/kit`, then the claim
 endpoint and claim code. The Kit is a small JSON payload whose listed files are
-written into an Agent-private scratch folder. It provides operating rules only;
-the published OpenAPI remains the request-contract authority.
+written into an Agent-private scratch folder. It provides operating rules plus a
+static, reviewed built-in Razavi authoring catalog; the published OpenAPI
+remains the request-contract authority. The catalog is used only before first
+placement; the next Snapshot is authoritative for the live Document.
 
 1. **Redeem the claim** (30-minute expiry):
 

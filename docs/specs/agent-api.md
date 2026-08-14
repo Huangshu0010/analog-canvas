@@ -17,16 +17,18 @@ POST /api/agent/sessions/{sessionId}/circuit
 Every request uses `apiVersion: "2.0"`, a stable `requestId`, and the
 `sessionId` returned by claim redemption. The bearer token is sent only in the
 Authorization header. There are no versioned URL aliases, query operations,
-catalog snapshots, whole-Project mutations, or compatibility readers.
+dynamic catalog snapshots, whole-Project mutations, or compatibility readers.
+The separate public Agent Kit may carry a static projection of reviewed built-in
+product assets; it is not Document state or a Circuit operation.
 
 ## Operation contract
 
-| Operation | Purpose |
-| --- | --- |
+| Operation      | Purpose                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------- |
 | `capabilities` | Report the exact operations, permissions, edit kinds, resource capabilities, and server-owned limits. |
-| `snapshot` | Return one complete, read-only selected Document plus the bounded Project index. |
-| `transact` | Dry-run or atomically commit typed edits against one exact Document revision. |
-| `render` | Return a bounded formal or diagnostics SVG artifact. |
+| `snapshot`     | Return one complete, read-only selected Document plus the bounded Project index.                      |
+| `transact`     | Dry-run or atomically commit typed edits against one exact Document revision.                         |
+| `render`       | Return a bounded formal or diagnostics SVG artifact.                                                  |
 
 Snapshot connectivity is bidirectional: every resolved Instance pin reports
 its `netId`, and every Net reports its complete terminal membership. Canvas
