@@ -7,7 +7,6 @@ import { visibleSymbolLocalBounds } from "./visual.js";
 
 export interface InstanceLabelPlacement {
   readonly position: Point;
-  readonly semanticPosition: Point;
   readonly alignment: "start" | "middle" | "end";
 }
 
@@ -157,10 +156,9 @@ function transformedSide(
 }
 
 /**
- * Places horizontal SVG text around the active symbol variant. `localAnchor`
- * remains the semantic transform point; vertical sides convert between that
- * point and an upright glyph baseline so the visible glyph edge, rather than
- * the baseline itself, preserves the authored clearance.
+ * Places horizontal SVG text around the active symbol variant. Vertical sides
+ * convert the internal clearance point to the upright glyph baseline before
+ * returning it, so persisted object anchors have one visible position.
  */
 export function placeUprightInstanceLabel(
   instance: SchematicDocument["instances"][number],
@@ -186,10 +184,6 @@ export function placeUprightInstanceLabel(
     sideClearance(localAnchor, localBounds, localSide),
   );
   const fontSize = profile.typography.instanceFontSize * sizeScale;
-  const roundedSemanticPosition = {
-    x: Math.round(semanticPosition.x),
-    y: Math.round(semanticPosition.y),
-  };
   switch (worldSide) {
     case "right":
       return {
@@ -197,7 +191,6 @@ export function placeUprightInstanceLabel(
           x: Math.round(worldBounds.x + worldBounds.width + clearance),
           y: Math.round(semanticPosition.y),
         },
-        semanticPosition: roundedSemanticPosition,
         alignment: "start",
       };
     case "left":
@@ -206,7 +199,6 @@ export function placeUprightInstanceLabel(
           x: Math.round(worldBounds.x - clearance),
           y: Math.round(semanticPosition.y),
         },
-        semanticPosition: roundedSemanticPosition,
         alignment: "end",
       };
     case "bottom":
@@ -217,7 +209,6 @@ export function placeUprightInstanceLabel(
             worldBounds.y + worldBounds.height + clearance + fontSize * 1.05,
           ),
         },
-        semanticPosition: roundedSemanticPosition,
         alignment: "middle",
       };
     case "top":
@@ -226,7 +217,6 @@ export function placeUprightInstanceLabel(
           x: Math.round(semanticPosition.x),
           y: Math.round(worldBounds.y - clearance - fontSize * 0.3),
         },
-        semanticPosition: roundedSemanticPosition,
         alignment: "middle",
       };
   }

@@ -11,13 +11,9 @@ import {
   resolveDocumentRoutingGeometry,
   type ResolvedDocumentRoutingGeometry,
 } from "./resolved-route-geometry.js";
-import {
-  measureRichTextDocument,
-  richTextMetrics,
-} from "./rich-text-layout.js";
 import { resolveSchematicStyleProfile } from "./style-profile.js";
 import { deriveDocumentContactEvidence } from "./contact.js";
-import { resolveVisualAnchor } from "./anchor.js";
+import { resolveAnnotationPresentation } from "./annotation-presentation.js";
 
 export interface VisualDiagnostic {
   code: string;
@@ -628,24 +624,15 @@ export function diagnoseVisualQuality(
       (annotation) => flattenRichText(annotation.content).trim().length > 0,
     )
     .map((annotation) => {
-      const measured = measureRichTextDocument(
-        annotation.content,
-        richTextMetrics(styleProfile, "label", annotation.sizeScale ?? 1),
-      );
-      const anchor = resolveVisualAnchor(document, resolver, annotation.anchor);
-      const position = anchor.position;
-      const rotated = annotation.rotation === 90 || annotation.rotation === 270;
-      const width = Math.max(1, rotated ? measured.height : measured.width);
-      const height = Math.max(1, rotated ? measured.width : measured.height);
-      const x =
-        annotation.alignment === "middle"
-          ? position.x - width / 2
-          : annotation.alignment === "end"
-            ? position.x - width
-            : position.x;
       return {
         id: annotation.id,
-        bounds: { x, y: position.y - height, width, height },
+        bounds: resolveAnnotationPresentation(
+          document,
+          resolver,
+          annotation,
+          styleProfile,
+          routingGeometry,
+        ).bounds,
       };
     });
   for (const cluster of overlappingClusters(annotationBounds)) {
