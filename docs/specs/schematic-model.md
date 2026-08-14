@@ -31,8 +31,15 @@ supply identity from names, IDs, labels, or retired assets.
 
 Canonical MOS Instances use `nmos`/`pmos` with D/G/S/B electrical pins. The
 default `textbook-3terminal` variant is presentation-only. B membership is
-either explicit or materialized from an existing configured cell-default Net;
-there is no product fallback or synthetic VDD/ground Net.
+explicit first, then materialized from a configured cell-default Net, then
+from the current supply default. The supply default reuses a matching global
+ground/VDD Net or creates canonical `net-global-0`/`net-global-vdd`; its
+persisted `mosBulkBinding` records `supply-default`. Imported/source-bound MOS
+instances with missing fourth-node evidence remain unresolved.
+
+A visible `bulk-dashed` route is an explicit override. The override atomically
+removes the implicit cell/supply binding before connecting B to the selected
+body-bias Net, so the default never remains as a hidden parallel connection.
 
 ## Presentation authority
 

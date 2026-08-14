@@ -339,7 +339,13 @@ export const AgentSnapshotInstanceSchema = z.strictObject({
   pins: z.array(AgentSnapshotPinSchema),
   mosBulk: z
     .strictObject({
-      status: z.enum(["explicit", "cell-default", "no-connect", "unresolved"]),
+      status: z.enum([
+        "explicit",
+        "cell-default",
+        "supply-default",
+        "no-connect",
+        "unresolved",
+      ]),
       netId: StableIdSchema.nullable(),
     })
     .optional(),

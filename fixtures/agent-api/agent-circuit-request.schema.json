@@ -528,7 +528,10 @@
       "properties": {
         "origin": {
           "type": "string",
-          "const": "cell-default"
+          "enum": [
+            "cell-default",
+            "supply-default"
+          ]
         },
         "netId": {
           "$ref": "#/$defs/__schema1"

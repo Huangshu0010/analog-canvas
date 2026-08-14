@@ -3008,7 +3008,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const standalonePower =
       contact.matched || contact.ambiguous
         ? { edits: [], matched: false, ambiguous: false }
-        : proposedStandalonePowerConnection(instance);
+        : proposedStandalonePowerConnection(document, instance);
     // Build only the future global-Net facts needed to decide hidden B policy.
     // The real transaction below remains the sole persistence boundary.
     const projectedDocument = structuredClone(document);
@@ -3079,7 +3079,25 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       instanceId = `VDD${instanceCounter.current}`;
     }
     const routeId = `route-${instanceId.toLowerCase()}-rail`;
-    const result = transact(constructVddRailEdits({ instanceId, start, end }));
+    const existingVddNet =
+      document.nets.find(
+        (net) =>
+          net.id === "net-global-vdd" &&
+          net.scope === "global" &&
+          (net.powerDomain ?? "none") === "vdd",
+      ) ??
+      document.nets.find(
+        (net) =>
+          net.scope === "global" && (net.powerDomain ?? "none") === "vdd",
+      );
+    const result = transact(
+      constructVddRailEdits({
+        instanceId,
+        start,
+        end,
+        ...(existingVddNet ? { netId: existingVddNet.id } : {}),
+      }),
+    );
     if (!result.ok) return;
     selectOnly("route", [routeId]);
     setComponentPreviewPoint(null);

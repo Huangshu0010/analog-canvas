@@ -147,6 +147,66 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("creates a canonical supply default and permits an explicit bulk override", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: { position: { x: 0, y: 0 }, rotation: 0, mirror: "none" },
+      properties: {},
+    });
+    const reconciled = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [{ kind: "reconcile_mos_bulk", instanceIds: ["M1"] }],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(reconciled.ok).toBe(true);
+    if (!reconciled.ok) return;
+    expect(reconciled.document.instances[0]?.mosBulkBinding).toEqual({
+      origin: "supply-default",
+      netId: "net-global-0",
+    });
+    expect(reconciled.document.nets).toContainEqual({
+      id: "net-global-0",
+      name: "0",
+      scope: "global",
+      powerDomain: "ground",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+
+    const overridden = executeTransaction(
+      reconciled.document,
+      {
+        ...transaction(reconciled.document.revision),
+        edits: [
+          { kind: "clear_mos_bulk_default", instanceId: "M1" },
+          {
+            kind: "connect_endpoints",
+            from: { kind: "terminal", instanceId: "M1", pinName: "B" },
+            to: { kind: "terminal", instanceId: "M1", pinName: "B" },
+            newNetId: "net-explicit-body",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(overridden.ok).toBe(true);
+    if (!overridden.ok) return;
+    expect(overridden.document.instances[0]?.mosBulkBinding).toBeUndefined();
+    expect(
+      overridden.document.nets.find((net) => net.id === "net-global-0")
+        ?.terminals,
+    ).not.toContainEqual({ instanceId: "M1", pinName: "B" });
+    expect(
+      overridden.document.nets.find((net) => net.id === "net-explicit-body")
+        ?.terminals,
+    ).toContainEqual({ instanceId: "M1", pinName: "B" });
+  });
+
   it("accepts Net-id Label bindings and rejects overloaded object ids", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({

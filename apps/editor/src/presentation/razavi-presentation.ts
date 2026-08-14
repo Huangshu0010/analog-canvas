@@ -27,7 +27,7 @@ export function razaviHiddenBulkRisk(
     : undefined;
 }
 
-/** One Edit-Engine operation owns configured cell-default materialization. */
+/** One Edit-Engine operation owns cell and supply-default materialization. */
 export function razaviManualBulkConnectionEdits(
   document: SchematicDocument,
   instances: readonly SchematicDocument["instances"][number][],
@@ -38,7 +38,8 @@ export function razaviManualBulkConnectionEdits(
       return Boolean(
         resolution &&
         !resolution.materialized &&
-        resolution.status === "cell-default",
+        (resolution.status === "cell-default" ||
+          resolution.status === "supply-default"),
       );
     })
     .map((instance) => instance.id);
@@ -48,7 +49,7 @@ export function razaviManualBulkConnectionEdits(
 }
 
 /**
- * Materialize configured bulk defaults at a Project entry boundary before the
+ * Materialize current bulk defaults at a Project entry boundary before the
  * editor history/recovery graph is installed.
  */
 export function materializeRazaviProjectBulkConnections(
@@ -72,7 +73,7 @@ export function materializeRazaviProjectBulkConnections(
         transactionId: `razavi-bulk-entry-${sourceDocument.id}`,
         documentId: sourceDocument.id,
         expectedRevision: sourceDocument.revision,
-        // This deterministic cell-default transform executes before user
+        // This deterministic default transform executes before user
         // history is installed; it is not an Agent request.
         actor: { kind: "human", id: "razavi-bulk-entry" },
         edits,

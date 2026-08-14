@@ -126,6 +126,36 @@ describe("Agent Document Snapshot", () => {
     );
   });
 
+  it("reports a materialized MOS supply default distinctly from an explicit B route", () => {
+    const document = createEmptyDocument("bulk-snapshot", "Bulk Snapshot");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      mosBulkBinding: {
+        origin: "supply-default",
+        netId: "net-global-0",
+      },
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-global-0",
+      name: "0",
+      scope: "global",
+      powerDomain: "ground",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+
+    const snapshot = buildAgentSessionSnapshot({ document, resolver });
+
+    expect(snapshot.document.instances[0]?.mosBulk).toEqual({
+      status: "supply-default",
+      netId: "net-global-0",
+    });
+    expect(AgentSessionSnapshotSchema.parse(snapshot)).toEqual(snapshot);
+  });
+
   it("uses canonical Project ERC evidence in the Snapshot", () => {
     const project = fixtureProject();
     const document = createEmptyDocument("snapshot-erc", "Snapshot ERC");

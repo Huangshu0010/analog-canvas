@@ -17,14 +17,18 @@ ordinary snap, wire, move/stretch, selection, clipboard, and delete behavior.
 No canvas interaction creates a first-class Port object.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by
-default while retaining D/G/S/B electrically. A B connection is explicit or
-uses an existing configured cell-default Net. The editor never creates a
-synthetic VDD/ground Net or applies a product fallback.
+default while retaining D/G/S/B electrically. A manual MOS uses explicit B
+membership first, then a configured cell default, then the canonical supply
+default: NMOS bulk uses/creates global ground and PMOS bulk uses/creates global
+VDD. Drawing the visible `bulk-dashed` connection clears that implicit binding
+and connects B to the selected Net in the same transaction. Imported MOS
+instances do not receive a guessed fourth node.
 
-Ground is the `ground` component connected through pin `0`. VDD Rail is a
-separate two-click construction tool. It creates/reuses an explicit global VDD
-Net, creates two route-anchor Junctions and one `power-rail` Route, and persists
-one RichText power-label annotation. It creates no VDD Instance.
+Ground is the `ground` component connected through pin `0`; placement reuses an
+existing global ground supply Net. VDD Rail is a separate two-click
+construction tool. It creates/reuses an explicit global VDD Net, creates two
+route-anchor Junctions and one `power-rail` Route, and persists one RichText
+power-label annotation. It creates no VDD Instance.
 
 ## Interaction states
 

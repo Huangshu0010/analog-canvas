@@ -263,6 +263,45 @@ test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
   await expect(canvas.getByText("VDD", { exact: true })).toHaveCount(1);
 });
 
+test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "pmos", { x: 360, y: 260 });
+  await page.getByTestId("shapes-tool-vdd-rail").click();
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 240, y: 100 } });
+  await canvas.click({ position: { x: 520, y: 100 } });
+  await page.keyboard.press("Escape");
+
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      nets: Array<{
+        id: string;
+        powerDomain?: string;
+        terminals: Array<{ instanceId: string; pinName: string }>;
+      }>;
+      routes: Array<{ netId: string; presentation?: string }>;
+    }>;
+  };
+  const document = saved.documents[0]!;
+  const vddNets = document.nets.filter((net) => net.powerDomain === "vdd");
+  expect(vddNets).toEqual([
+    expect.objectContaining({
+      id: "net-global-vdd",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    }),
+  ]);
+  expect(document.routes).toContainEqual(
+    expect.objectContaining({
+      netId: "net-global-vdd",
+      presentation: "power-rail",
+    }),
+  );
+});
+
 test("treats hollow and filled Ports as ordinary wired components", async ({
   page,
 }) => {
@@ -628,6 +667,54 @@ test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
   await expect(
     page.getByRole("button", { name: "Show Bulk (4-terminal)" }),
   ).toHaveCount(0);
+});
+
+test("materializes a MOS supply default and lets a dashed bulk route override it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "nmos", { x: 360, y: 220 });
+  await placeComponent(page, "ground", { x: 620, y: 280 });
+
+  await page.getByTestId("hit-M1").click();
+  await openSelectionShelf(page);
+  await expect(page.getByLabel("MOS bulk connection")).toContainText(
+    "supply-default",
+  );
+  await page.getByRole("button", { name: "Draw bulk connection" }).click();
+  await page.getByTestId("terminal-GND2-0").click();
+  await page.keyboard.press("Escape");
+
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      instances: Array<{
+        id: string;
+        mosBulkBinding?: { origin: string; netId: string };
+      }>;
+      routes: Array<{ presentation?: string }>;
+      nets: Array<{
+        id: string;
+        terminals: Array<{ instanceId: string; pinName: string }>;
+      }>;
+    }>;
+  };
+  const document = saved.documents[0]!;
+  expect(
+    document.instances.find((instance) => instance.id === "M1")?.mosBulkBinding,
+  ).toBeUndefined();
+  expect(document.routes).toContainEqual(
+    expect.objectContaining({ presentation: "bulk-dashed" }),
+  );
+  expect(
+    document.nets.find((net) => net.id === "net-global-0")?.terminals,
+  ).toEqual(
+    expect.arrayContaining([
+      { instanceId: "M1", pinName: "B" },
+      { instanceId: "GND2", pinName: "0" },
+    ]),
+  );
 });
 
 test("places free wire bends and finishes at an arbitrary grid point", async ({

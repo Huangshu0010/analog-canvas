@@ -158,7 +158,7 @@ export const InstanceImportProvenanceSchema = z.strictObject({
     .optional(),
 });
 export const MosBulkBindingSchema = z.strictObject({
-  origin: z.literal("cell-default"),
+  origin: z.enum(["cell-default", "supply-default"]),
   netId: StableIdSchema,
 });
 export const InstanceSchema = z

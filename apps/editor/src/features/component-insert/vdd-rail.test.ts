@@ -94,4 +94,56 @@ describe("drawn VDD rail construction", () => {
       },
     ]);
   });
+
+  it("adds rail geometry to an existing canonical PMOS supply Net", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.instances.push({
+      id: "M1",
+      symbolId: "pmos",
+      mosBulkBinding: {
+        origin: "supply-default",
+        netId: "net-global-vdd",
+      },
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-global-vdd",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "reuse-vdd-supply",
+        documentId: document.id,
+        expectedRevision: document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: constructVddRailEdits({
+          instanceId: "VDD2",
+          netId: "net-global-vdd",
+          start: { x: 40, y: 20 },
+          end: { x: 180, y: 20 },
+        }),
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.nets).toHaveLength(1);
+    expect(result.document.nets[0]).toMatchObject({
+      id: "net-global-vdd",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    expect(result.document.routes).toContainEqual(
+      expect.objectContaining({
+        netId: "net-global-vdd",
+        presentation: "power-rail",
+      }),
+    );
+  });
 });

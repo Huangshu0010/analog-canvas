@@ -6612,3 +6612,16 @@ contracts (WP-R1)`.
   passed.
 - Commit status: committed on `codex/agent-transport-watchdog` as `9a552d3`
   (`refactor(circuit): remove legacy contract routing`).
+
+## 2026-08-14 - Restore overridable MOS supply defaults
+
+- Target: make manual NMOS/PMOS bulk default to canonical global ground/VDD
+  while preserving the visible dashed bulk connection as an explicit override.
+- Changed areas: MOS binding schema/resolution/reconciliation; Ground and VDD
+  rail supply-Net reuse; Agent Snapshot/OpenAPI status; current specifications;
+  focused unit and browser regressions.
+- Validation: 550 unit tests, `pnpm verify:branch`, frozen-lockfile install,
+  full `pnpm ci:check`, performance/export/PWA/release checks, and all 97
+  browser E2E tests passed; `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-transport-watchdog` as
+  `fix(mos): restore overridable supply bulk defaults`.

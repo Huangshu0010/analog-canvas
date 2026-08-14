@@ -194,8 +194,8 @@ export const ConnectEndpointsEditSchema = z.strictObject({
 });
 /**
  * A VDD rail is electrical data, not a hidden marker instance plus an
- * unrelated line. This edit creates the explicit supply Net and its only
- * visible rail geometry atomically.
+ * unrelated line. This edit creates or reuses the explicit supply Net and
+ * persists its visible rail geometry atomically.
  */
 export const AddPowerRailEditSchema = z.strictObject({
   kind: z.literal("add_power_rail"),
@@ -2875,9 +2875,26 @@ export function executeTransaction(
             "Power rail IDs must be distinct",
           );
         }
+        const existingSupplyNet = draft.nets.find(
+          (net) => net.id === edit.netId,
+        );
+        if (
+          existingSupplyNet &&
+          (existingSupplyNet.scope !== "global" ||
+            (existingSupplyNet.powerDomain ?? "none") !== edit.domain)
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Power rail Net ${edit.netId} is not a global VDD Net`,
+            [],
+            [edit.netId],
+          );
+        }
         const existingIds = new Set([
           ...draft.instances.map((instance) => instance.id),
-          ...draft.nets.map((net) => net.id),
+          ...draft.nets
+            .filter((net) => net.id !== existingSupplyNet?.id)
+            .map((net) => net.id),
           ...draft.routes.map((route) => route.id),
           ...draft.junctions.map((junction) => junction.id),
           ...draft.annotations.map((annotation) => annotation.id),
@@ -2896,13 +2913,15 @@ export function executeTransaction(
           );
         }
         const right = edit.start.x < edit.end.x ? edit.end : edit.start;
-        draft.nets.push({
-          id: edit.netId,
-          name: "VDD",
-          scope: "global",
-          powerDomain: edit.domain,
-          terminals: [],
-        });
+        if (!existingSupplyNet) {
+          draft.nets.push({
+            id: edit.netId,
+            name: "VDD",
+            scope: "global",
+            powerDomain: edit.domain,
+            terminals: [],
+          });
+        }
         draft.junctions.push(
           JunctionSchema.parse({
             id: edit.startJunctionId,
@@ -3146,11 +3165,41 @@ export function executeTransaction(
           ) {
             continue;
           }
-          const target = resolution.net;
-          if (!target) continue;
+          let target = resolution.net;
+          if (!target) {
+            if (
+              resolution.status !== "supply-default" ||
+              !("defaultName" in resolution)
+            ) {
+              continue;
+            }
+            const name = resolution.defaultName;
+            const id = name === "0" ? "net-global-0" : "net-global-vdd";
+            const conflictingNet = draft.nets.find((net) => net.id === id);
+            if (conflictingNet) {
+              return rejectAt(
+                "EDIT_PRECONDITION",
+                `Canonical MOS supply Net ${id} exists without the required ${name === "0" ? "ground" : "vdd"} global identity`,
+                [],
+                [id],
+              );
+            }
+            target = {
+              id,
+              name,
+              scope: "global",
+              powerDomain: name === "0" ? "ground" : "vdd",
+              terminals: [],
+            };
+            draft.nets.push(target);
+            changedObjectIds.add(id);
+          }
           target.terminals.push({ instanceId: instance.id, pinName: "B" });
           instance.mosBulkBinding = {
-            origin: "cell-default",
+            origin:
+              resolution.status === "cell-default"
+                ? "cell-default"
+                : "supply-default",
             netId: target.id,
           };
           changedObjectIds.add(instance.id);

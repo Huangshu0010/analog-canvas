@@ -1186,7 +1186,10 @@
             "properties": {
               "origin": {
                 "type": "string",
-                "const": "cell-default"
+                "enum": [
+                  "cell-default",
+                  "supply-default"
+                ]
               },
               "netId": {
                 "$ref": "#/components/schemas/agentCircuitRequest/$defs/__schema1"
@@ -4415,6 +4418,7 @@
                                   "enum": [
                                     "explicit",
                                     "cell-default",
+                                    "supply-default",
                                     "no-connect",
                                     "unresolved"
                                   ]

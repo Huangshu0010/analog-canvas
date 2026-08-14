@@ -621,6 +621,7 @@
                             "enum": [
                               "explicit",
                               "cell-default",
+                              "supply-default",
                               "no-connect",
                               "unresolved"
                             ]

@@ -37,7 +37,7 @@ describe("component placement electrical contacts", () => {
     };
     const proposal = proposePlacementContact(document, resolver, vdd, []);
     expect(proposal).toEqual({ edits: [], matched: false, ambiguous: false });
-    expect(proposedStandalonePowerConnection(vdd)).toEqual({
+    expect(proposedStandalonePowerConnection(document, vdd)).toEqual({
       edits: [],
       matched: false,
       ambiguous: false,
@@ -55,7 +55,8 @@ describe("component placement electrical contacts", () => {
       },
       properties: {},
     };
-    const proposal = proposedStandalonePowerConnection(ground);
+    const document = createEmptyDocument("main", "Main");
+    const proposal = proposedStandalonePowerConnection(document, ground);
     expect(proposal).toMatchObject({
       powerNetId: "net-power-gnd1",
       edits: [
@@ -73,7 +74,7 @@ describe("component placement electrical contacts", () => {
       ],
     });
     const connected = executeTransaction(
-      createEmptyDocument("main", "Main"),
+      document,
       transaction(0, [
         { kind: "add_instance", instance: ground },
         ...proposal.edits,
@@ -88,6 +89,63 @@ describe("component placement electrical contacts", () => {
       scope: "global",
       powerDomain: "ground",
       terminals: [{ instanceId: "GND1", pinName: "0" }],
+    });
+  });
+
+  it("merges a later Ground component into the canonical bulk supply Net", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.nets.push({
+      id: "net-global-0",
+      name: "0",
+      scope: "global",
+      powerDomain: "ground",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      mosBulkBinding: {
+        origin: "supply-default",
+        netId: "net-global-0",
+      },
+      placement: null,
+      properties: {},
+    });
+    const ground = {
+      id: "GND2",
+      symbolId: "ground",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    };
+    const proposal = proposedStandalonePowerConnection(document, ground);
+
+    expect(proposal.powerNetId).toBe("net-global-0");
+    expect(proposal.edits.at(-1)).toEqual({
+      kind: "merge_nets",
+      targetNetId: "net-global-0",
+      sourceNetId: "net-power-gnd2",
+    });
+    const connected = executeTransaction(
+      document,
+      transaction(0, [
+        { kind: "add_instance", instance: ground },
+        ...proposal.edits,
+      ]),
+      context,
+    );
+    expect(connected.ok).toBe(true);
+    if (!connected.ok) return;
+    expect(connected.document.nets).toHaveLength(1);
+    expect(connected.document.nets[0]).toMatchObject({
+      id: "net-global-0",
+      terminals: expect.arrayContaining([
+        { instanceId: "M1", pinName: "B" },
+        { instanceId: "GND2", pinName: "0" },
+      ]),
     });
   });
 });

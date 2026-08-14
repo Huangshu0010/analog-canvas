@@ -29,8 +29,13 @@ contact.
 
 Routes may present as `wire`, `bulk-dashed`, or `power-rail`; presentation does
 not alter Net identity. `bulk-dashed` is used for explicit MOS B routing.
-Deleting an explicit bulk route may reconcile only an already configured
-cell-default Net; there is no product fallback or synthetic supply Net.
+Manual MOS instances without explicit B membership first use a configured
+cell-default Net, otherwise a `supply-default` creates or reuses canonical
+global ground/VDD. Starting a `bulk-dashed` route from B treats the implicit
+membership as unowned; committing clears the binding before connecting the
+explicit Net. Deleting the explicit route may reconcile the configured or
+canonical supply default. Source-bound/imported MOS instances remain governed
+by their fourth-node evidence and are never guessed.
 
 A `power-rail` Route is valid only on an explicit Net whose persisted
 `powerDomain` is `vdd`. VDD rail authoring creates the global Net when needed,
