@@ -173,7 +173,8 @@ import {
 } from "../features/selection/delete-selection";
 import { createRoutingDemoProject } from "../demos/routing-demo";
 import { createVisualDemoProject } from "../demos/visual-demo";
-import { useProjectRecovery } from "../document/project-recovery";
+import { useRecoveryCoordinator } from "../document/recovery-coordinator";
+import type { BrowserRecoverySource } from "../document/browser-recovery-contract";
 import { useSelectionController } from "../features/selection/selection-controller";
 import {
   NetTraceSection,
@@ -483,14 +484,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     return requested;
   });
+  const refreshRestoreAttemptedRef = useRef(false);
   const {
-    candidate: recoveryCandidate,
+    state: recoveryState,
+    sessions: recoverySessions,
+    ready: recoveryReady,
+    workingCopyId: recoveryWorkingCopyId,
     stage: stageRecovery,
     cancelPending: cancelRecovery,
-    flush: flushRecovery,
-    clearStored: clearRecovery,
-    consumeCandidate: consumeRecoveryCandidate,
-  } = useProjectRecovery(setStatus);
+    flushNow: flushRecovery,
+    beginWorkingCopy: beginRecoveryWorkingCopy,
+    discover: discoverRecovery,
+    readSessionProject: readRecoveryProject,
+    deleteSession: deleteRecoverySession,
+  } = useRecoveryCoordinator(setStatus);
   const {
     project,
     document,
@@ -1628,11 +1635,16 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function replaceActiveProject(
     nextProject: CircuitProject,
     nextViewBox: Rect = DEFAULT_VIEWBOX,
+    options: { source?: BrowserRecoverySource; keepWorkingCopy?: boolean } = {},
   ): SchematicDocument {
     // Drop any pending recovery write for the outgoing project so it cannot
-    // revive after Save/Discard/Open/Import/Restore/demo-load swaps the project.
-    // Callers that also remove the recovery key do so after this cancels.
+    // revive after Save/Discard/Open/Import/Restore/demo-load swaps the
+    // project, then give the incoming project its own working-copy identity
+    // (an explicit-refresh restore keeps the identity it is continuing).
     cancelRecovery();
+    if (options.keepWorkingCopy !== true) {
+      beginRecoveryWorkingCopy(options.source ?? "new");
+    }
     browserAgentFileHost.clear();
     setAgentFileCandidate(null);
     const prepared = materializeRazaviProjectBulkConnections(nextProject);
@@ -1641,6 +1653,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setDocumentStack([]);
     setViewBox(nextViewBox);
     resetInteractionState();
+    // Seed the incoming working copy immediately; the outgoing project's
+    // stored records are retained under its own session.
+    stageRecovery(prepared.project);
     return nextDocument;
   }
 
@@ -1656,8 +1671,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       );
       return;
     }
-    replaceActiveProject(candidate);
-    stageRecovery(candidate);
+    replaceActiveProject(candidate, DEFAULT_VIEWBOX, {
+      source: "opened-file",
+    });
     setStatus(
       `Accepted Agent ${agentFileCandidate.kind} candidate: ${candidate.name}`,
     );
@@ -3576,15 +3592,28 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function saveProjectFile(): void {
-    clearRecovery();
+    // Saving or downloading never clears the browser recovery copies.
     download(serializeProject(project), "application/json", "icproj.json");
     setStatus(`Saved formal Project revision ${document.revision}`);
   }
 
   function restoreRecovery(): void {
-    if (recoveryCandidate) {
+    const session = recoverySessions[0];
+    if (!session) return;
+    void (async () => {
+      const read = await readRecoveryProject(session.workingCopyId, "latest");
+      if (read.status !== "valid") {
+        setStatus(
+          read.status === "unsupported-schema"
+            ? "Recovery uses a newer Project schema and cannot be restored; download it instead"
+            : `Recovery is not readable: ${
+                read.status === "missing" ? "no stored record" : read.message
+              }`,
+        );
+        return;
+      }
       const unsupported = findUnsupportedProjectSymbolIds(
-        recoveryCandidate,
+        read.project,
         builtInSymbols,
       );
       if (unsupported.length > 0) {
@@ -3593,28 +3622,69 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         );
         return;
       }
-    }
-    const recoveredProject = consumeRecoveryCandidate();
-    if (!recoveredProject) return;
-    const recoveredDocument = replaceActiveProject(recoveredProject);
-    setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
+      // Restoring forks a fresh working copy instead of overwriting the
+      // stored record another tab may still be writing.
+      const recoveredDocument = replaceActiveProject(
+        read.project,
+        DEFAULT_VIEWBOX,
+        {
+          source: "recovered",
+        },
+      );
+      setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
+    })();
   }
 
   useEffect(() => {
-    if (!restoreAfterRefresh || !recoveryCandidate) return;
-    restoreRecovery();
-  }, [recoveryCandidate, restoreAfterRefresh]);
+    if (!restoreAfterRefresh || !recoveryReady) return;
+    if (refreshRestoreAttemptedRef.current) return;
+    refreshRestoreAttemptedRef.current = true;
+    void (async () => {
+      // An explicit in-app Refresh may restore only the exact working copy
+      // recorded for that refresh, validated before installation.
+      const read = await readRecoveryProject(recoveryWorkingCopyId, "latest");
+      if (read.status !== "valid") {
+        setStatus("No restorable recovery was found for this refresh");
+        return;
+      }
+      const unsupported = findUnsupportedProjectSymbolIds(
+        read.project,
+        builtInSymbols,
+      );
+      if (unsupported.length > 0) {
+        setStatus(
+          `Recovery uses unsupported non-Razavi symbols: ${unsupported.join(", ")}`,
+        );
+        return;
+      }
+      const restoredDocument = replaceActiveProject(
+        read.project,
+        DEFAULT_VIEWBOX,
+        { source: "recovered", keepWorkingCopy: true },
+      );
+      setStatus(`Restored recovery revision ${restoredDocument.revision}`);
+    })();
+  }, [restoreAfterRefresh, recoveryReady, recoveryWorkingCopyId]);
 
   function refreshApp(): void {
-    stageRecovery(project);
-    flushRecovery();
-    window.sessionStorage.setItem(REFRESH_RESTORE_STORAGE_KEY, "true");
-    window.location.reload();
+    void (async () => {
+      stageRecovery(project);
+      // Wait for the IndexedDB write to settle before reloading; recovery
+      // correctness otherwise does not depend on last-moment page events.
+      await flushRecovery();
+      window.sessionStorage.setItem(REFRESH_RESTORE_STORAGE_KEY, "true");
+      window.location.reload();
+    })();
   }
 
   function discardRecovery(): void {
-    clearRecovery();
-    setStatus("Discarded recovery");
+    const session = recoverySessions[0];
+    if (!session) return;
+    void (async () => {
+      const removed = await deleteRecoverySession(session.workingCopyId);
+      await discoverRecovery();
+      setStatus(removed ? "Discarded recovery" : "Could not discard recovery");
+    })();
   }
 
   async function openProjectFile(file: File | null): Promise<void> {
@@ -3633,10 +3703,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       const openedDocument = opened.documents.find(
         (candidate) => candidate.id === opened.topDocumentId,
       )!;
-      replaceActiveProject(opened);
+      // A successful open retains the outgoing Project's recovery records
+      // and immediately seeds the incoming Project's own working copy.
+      replaceActiveProject(opened, DEFAULT_VIEWBOX, {
+        source: "opened-file",
+      });
       setImportDiagnostics([]);
       setImportReviewOpen(false);
-      clearRecovery();
       setStatus(`Opened ${file.name} at revision ${openedDocument.revision}`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Project open failed");
@@ -4588,8 +4661,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         (count, candidate) => count + candidate.instances.length,
         0,
       );
-      replaceActiveProject(result.project);
-      stageRecovery(result.project);
+      replaceActiveProject(result.project, DEFAULT_VIEWBOX, {
+        source: "spice-import",
+      });
       setImportReviewOpen(true);
       setSelectionOpen(true);
       setStatus(
@@ -5811,7 +5885,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   >
                     PDF
                   </button>
-                  {recoveryCandidate ? (
+                  {recoverySessions.length > 0 ? (
                     <>
                       <button type="button" onClick={restoreRecovery}>
                         Restore recovery

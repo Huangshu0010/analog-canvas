@@ -1,5 +1,23 @@
 # Maintenance Log
 
+## 2026-08-14 - WP-2 recovery coordinator and Project lifecycle
+
+- Target: replace the synchronous localStorage recovery hook with an
+  IndexedDB-backed coordinator; third work package of
+  `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `recovery-coordinator.ts` (+17 unit tests), `App.tsx`
+  recovery/replacement/refresh/restore wiring, `project-recovery.ts` reduced
+  to the legacy migration key (writer hook and test removed),
+  `editor-fixtures.ts` IndexedDB read helper, manual-editor/component-insert
+  recovery E2E updated to retained-recovery semantics.
+- Validation: `pnpm test:local apps/editor/src/document apps/editor/src/app/App.test.tsx`
+  93/93 green; E2E recovery/refresh greps plus full drafting and
+  web-agent-session specs green; typecheck, prettier, `git diff --check`
+  clean.
+- Commit status: committed as
+  `refactor(editor): coordinate durable working copies` on
+  `agent/robust-page-persistence-recovery`.
+
 ## 2026-08-14 - WP-1 IndexedDB recovery store and legacy migration
 
 - Target: transactional IndexedDB adapter for the WP-0 recovery contract plus

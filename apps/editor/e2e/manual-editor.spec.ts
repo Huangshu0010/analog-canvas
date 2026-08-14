@@ -10,6 +10,8 @@ import {
   clickCommand,
   downloadBytes,
   openMenu,
+  readRecoveryRecords,
+  recoveryProjectTexts,
 } from "./editor-fixtures.js";
 
 async function placeComponent(
@@ -1908,7 +1910,7 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await expect(page.getByTestId("revision")).toHaveText("1");
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
+    .poll(() => recoveryProjectTexts(page))
     .toContain('"revision": 1');
 
   await page.reload();
@@ -1957,23 +1959,29 @@ test("keeps component insertion and inspection from resizing the canvas", async 
   await expect(page.getByTestId("selection-shelf")).toContainText("M1");
 });
 
-test("cancels pending recovery before save or project replacement", async ({
+test("retains recovery across save and project replacement", async ({
   page,
 }) => {
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await expect(page.getByTestId("revision")).toHaveText("1");
 
-  // Save clears the slot while a debounced write is pending. Waiting past the
-  // debounce proves the old timer cannot recreate it.
+  // Saving downloads the formal Project but never clears the browser
+  // recovery copies; waiting past the debounce proves they survive.
   await downloadBytes(page, "File", "Save Project");
   await page.waitForTimeout(500);
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
-    .toBeNull();
+    .poll(() => recoveryProjectTexts(page))
+    .toContain('"revision": 1');
 
   await placeComponent(page, "resistor", { x: 500, y: 220 });
   await expect(page.getByTestId("revision")).toHaveText("2");
+  // Let the debounced recovery write for revision 2 settle before replacing;
+  // a replacement inside the window intentionally drops only the pending
+  // write (stale-write protection), never the stored one.
+  await expect
+    .poll(() => recoveryProjectTexts(page))
+    .toContain('"revision": 2');
   await page
     .getByTestId("project-file")
     .setInputFiles(
@@ -1985,24 +1993,31 @@ test("cancels pending recovery before save or project replacement", async ({
   await expect(page.getByTestId("active-document-name")).toHaveText(
     "Manual Editor Demo",
   );
-  await page.waitForTimeout(500);
+  // The outgoing Project stays recoverable and the incoming Project seeds
+  // its own working copy.
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
-    .toBeNull();
+    .poll(async () => {
+      const texts = await recoveryProjectTexts(page);
+      return (
+        texts.includes('"revision": 2') &&
+        texts.includes('"name": "Phase 1 Manual Editor"')
+      );
+    })
+    .toBe(true);
 });
 
 test("discard recovery clears the recovery slot", async ({ page }) => {
   await page.goto("/");
   await placeComponent(page, "resistor", { x: 360, y: 220 });
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
+    .poll(() => recoveryProjectTexts(page))
     .toContain('"revision": 1');
 
   await page.reload();
   await clickCommand(page, "File", "Discard recovery");
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem("icm.recovery.v1")))
-    .toBeNull();
+    .poll(async () => (await readRecoveryRecords(page)).length)
+    .toBe(0);
 });
 
 test("keeps the production command surface compact and publishes PWA metadata", async ({

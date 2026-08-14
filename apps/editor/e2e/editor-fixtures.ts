@@ -41,3 +41,66 @@ export async function downloadBytes(
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   return Buffer.concat(chunks);
 }
+
+export interface RecoveryRecordView {
+  workingCopyId: string;
+  generation: string;
+  projectText: string;
+}
+
+/**
+ * Read the editor's bounded browser recovery records straight from the
+ * application's IndexedDB store (no service API exists on purpose).
+ */
+export async function readRecoveryRecords(
+  page: Page,
+): Promise<RecoveryRecordView[]> {
+  return page.evaluate(
+    () =>
+      new Promise<
+        Array<{
+          workingCopyId: string;
+          generation: string;
+          projectText: string;
+        }>
+      >((resolve, reject) => {
+        const request = indexedDB.open("analog-canvas-recovery");
+        request.onerror = () =>
+          reject(request.error ?? new Error("recovery db open failed"));
+        request.onsuccess = () => {
+          const database = request.result;
+          if (!database.objectStoreNames.contains("browser-recovery-v2")) {
+            resolve([]);
+            database.close();
+            return;
+          }
+          const transaction = database.transaction(
+            "browser-recovery-v2",
+            "readonly",
+          );
+          const getAll = transaction
+            .objectStore("browser-recovery-v2")
+            .getAll();
+          getAll.onsuccess = () => {
+            resolve(
+              (getAll.result as Array<Record<string, unknown>>).map(
+                (record) => ({
+                  workingCopyId: String(record.workingCopyId),
+                  generation: String(record.generation),
+                  projectText: String(record.projectText ?? ""),
+                }),
+              ),
+            );
+            database.close();
+          };
+          getAll.onerror = () =>
+            reject(getAll.error ?? new Error("recovery store read failed"));
+        };
+      }),
+  );
+}
+
+export async function recoveryProjectTexts(page: Page): Promise<string> {
+  const records = await readRecoveryRecords(page);
+  return records.map((record) => record.projectText).join("\n");
+}
