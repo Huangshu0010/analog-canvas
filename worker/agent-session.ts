@@ -14,6 +14,7 @@ import {
   AgentTransportErrorResponseSchema,
   agentEditCategory,
   agentCircuitOpenApi,
+  agentMcpBootstrapManifest,
   invalidAgentRequestResponse,
   parseAgentCircuitRequest,
   parseAgentFileResourceRequest,
@@ -173,6 +174,18 @@ export async function routeAgentSessionRequest(
   }
   if (request.method === "GET" && url.pathname === "/api/agent/kit") {
     return jsonResponse(agentOperatingKit, 200, allowedOrigin);
+  }
+  if (
+    request.method === "GET" &&
+    url.pathname === "/api/agent/mcp-manifest.json"
+  ) {
+    const response = jsonResponse(
+      agentMcpBootstrapManifest(url.origin),
+      200,
+      allowedOrigin,
+    );
+    response.headers.set("cache-control", "public, max-age=300");
+    return response;
   }
 
   if (request.method === "POST" && url.pathname === "/api/agent/sessions") {

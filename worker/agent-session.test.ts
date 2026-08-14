@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AGENT_SSE_KEEPALIVE_INTERVAL_MS,
+  AGENT_MCP_BOOTSTRAP_FORMAT,
   AgentSessionMachine,
+  type AgentMcpBootstrapManifest,
   type AgentSessionLimits,
 } from "@icm/agent-adapter";
 import {
@@ -342,6 +344,35 @@ describe("public Agent session routes", () => {
       "references/authoring-contract.md",
       "references/razavi-authoring-catalog.json",
     ]);
+  });
+
+  it("publishes a compact versioned MCP bootstrap manifest", async () => {
+    const { env } = routedFixture();
+    const response = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/mcp-manifest.json"),
+      env,
+    );
+    expect(response?.status).toBe(200);
+    expect(response?.headers.get("cache-control")).toBe("public, max-age=300");
+    const manifest = (await response!.json()) as AgentMcpBootstrapManifest;
+    expect(manifest).toMatchObject({
+      format: AGENT_MCP_BOOTSTRAP_FORMAT,
+      name: "analog-canvas",
+      version: "0.1.0",
+      transport: "stdio",
+      requirements: { node: ">=24.0.0" },
+      fallback: {
+        kitUrl: "https://editor.example/api/agent/kit",
+        openApiUrl: "https://editor.example/api/agent/openapi.json",
+      },
+    });
+    expect(manifest.launch.args.join(" ")).toContain(
+      "analog-canvas-mcp-server-0.1.0.tgz",
+    );
+    expect(manifest.hosts.codex.command).toContain("codex mcp add");
+    expect(manifest.hosts.cursor.config.mcpServers["analog-canvas"]).toEqual(
+      manifest.launch,
+    );
   });
 
   it("allows only one concurrent creation for a session object", async () => {

@@ -41,12 +41,14 @@ describe("ConnectAgentPanel", () => {
       "claim-once",
     );
     expect(instructions).toContain("Connect to Analog Canvas");
+    expect(instructions).toContain('Claim: {"claimCode":"claim-once"}');
     expect(instructions).toContain(
-      'Call connect with {"claimCode":"claim-once"}',
+      "https://editor.example/api/agent/mcp-manifest.json",
     );
     expect(instructions).toContain("analog-canvas://reference/quickstart");
     expect(instructions).toContain("connector resumes automatically");
     expect(instructions).toContain("https://editor.example/api/agent/kit");
+    expect(instructions).toContain("continue immediately");
     expect(instructions).not.toMatch(/Bearer [A-Za-z0-9_-]{20,}/u);
   });
 
@@ -88,12 +90,12 @@ describe("ConnectAgentPanel", () => {
     expect(markup).toContain('data-testid="agent-copy-text"');
     expect(markup).toContain('class="agent-copy-card"');
     expect(markup).toContain("Plain text");
+    expect(markup).toContain("Connect to Analog Canvas.");
     expect(markup).toContain(
-      "Connect to Analog Canvas through its configured MCP server.",
+      "Claim: {&quot;claimCode&quot;:&quot;CLAIM-12345&quot;}",
     );
-    expect(markup).toContain(
-      "Call connect with {&quot;claimCode&quot;:&quot;CLAIM-12345&quot;}",
-    );
+    expect(markup).toContain("/api/agent/mcp-manifest.json");
+    expect(markup).toContain("MCP bootstrap manifest");
     expect(markup).toContain("CLAIM-12345");
     expect(markup).toContain("circuit.snapshot, circuit.render");
     expect(markup).toContain('data-testid="agent-pause"');

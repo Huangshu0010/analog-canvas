@@ -12,7 +12,9 @@ engine.
    connect a host such as Codex, Claude Code, or Cursor to it. The adapter
    owns claim redemption, persistent connector resume, process-local bearers,
    revisions, idempotent retries, and compact tools; the model never sees
-   tokens or the raw OpenAPI. See [mcp-install.md](mcp-install.md).
+   tokens or the raw OpenAPI. The copied handoff points the Agent to the
+   versioned bootstrap manifest, so first-time setup can start from the same
+   text. See [mcp-install.md](mcp-install.md).
 2. **Fallback: Kit + HTTP API.** For hosts without the packaged
    MCP entry point, fetch the public
    `GET /api/agent/kit` JSON, write its listed files to a private scratch
