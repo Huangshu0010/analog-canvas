@@ -19,8 +19,10 @@ The normal surface has four operations:
 | `transact`     | Dry-runs or atomically commits generic typed edits against an exact revision. |
 | `render`       | Returns bounded base64 SVG in `formal` or `diagnostics` mode.                 |
 
-The API intentionally has no query, region, topology-classifier, layout-intent,
-compatibility, or circuit-specific edit endpoint.
+The API intentionally has no dynamic catalog query, region,
+topology-classifier, layout-intent, compatibility, or circuit-specific edit
+endpoint. A browser Agent may receive a static reviewed built-in catalog in its
+Kit; it is product material, not Project state or an API operation.
 
 The complete Snapshot contains both directions of connectivity: every resolved
 instance pin has `netId`, and every Net has complete terminal membership. These

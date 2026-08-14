@@ -10,14 +10,16 @@ engine.
 An Agent without this repository receives a connection setup from the editor.
 It first fetches the public `GET /api/agent/kit` JSON, writes its listed files
 to a private scratch directory, and reads `README.md` followed by the session
-`SKILL.md`. The Kit is a small operating guide only: it contains neither a
-Project, a token, nor an alternate API. The Agent then redeems the claim and
-uses the published OpenAPI as the wire-contract authority.
+`SKILL.md`. The Kit contains a small static projection of reviewed built-in
+Razavi authoring facts, but neither a Project, token, nor alternate API. The
+Agent then redeems the claim and uses the published OpenAPI as the
+wire-contract authority.
 
 ## Read in this order
 
-1. Kit `README.md` and `skills/icm-circuit-session/SKILL.md` for an external
-   session; repository contributors begin with the next document instead.
+1. Kit `README.md`, `skills/icm-circuit-session/SKILL.md`, and
+   `references/authoring-contract.md` for an external session; repository
+   contributors begin with the next document instead.
 2. [`../specs/agent-api.md`](../specs/agent-api.md) — normative domain contract.
 3. [`workflow.md`](workflow.md) — required read, edit, refresh, render, and
    review loop.

@@ -23,17 +23,20 @@ GET  /api/agent/openapi.json
 
 `GET /api/agent/kit` is one small public, static JSON download for the Agent's
 private scratch folder. It contains `README.md`, `AGENTS.md`, one session
-`SKILL.md`, and a short reference. It contains no Project data, claim code,
-token, or mutation operation; it is not part of the Circuit OpenAPI. The Agent
-fetches it only when a human gives it a connection setup, then writes the
-listed files locally before redeeming the claim.
+`SKILL.md`, concise authoring rules, and a reviewed built-in Razavi catalog
+projection. It contains no Project data, claim code, token, or mutation
+operation; it is not part of the Circuit OpenAPI. The catalog supplies only
+known built-in authoring facts before first placement; a Snapshot remains the
+authority for every object in the live Project. The Agent fetches the Kit only
+when a human gives it a connection setup, then writes the listed files locally
+before redeeming the claim.
 
 The Circuit resource implements only API 2.0
 `capabilities/snapshot/transact/render`. The File Resource implements only
 advertised bounded Project/formal-artifact download and Project/structural-
 SPICE candidate staging flows. No endpoint provides arbitrary filesystem,
-code-execution, simulator, waveform, query, catalog-snapshot, or whole-Project
-mutation access.
+code-execution, simulator, waveform, query, dynamic catalog-snapshot, or
+whole-Project mutation access.
 
 ## Binding and authority
 

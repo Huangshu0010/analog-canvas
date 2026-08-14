@@ -1,5 +1,23 @@
 # Maintenance Log
 
+## 2026-08-14 - External Agent Razavi authoring Kit
+
+- Target: allow a browser-authorized Agent without repository source or manually
+  seeded components to author a small Razavi circuit from an empty Document,
+  without adding a catalog query or another mutation protocol.
+- Changed areas: generated compact built-in authoring catalog; Kit v2 workflow
+  and authority rules; public Agent/session/API guidance; Worker Kit subpath;
+  generator freshness gate and black-box inverter contract coverage.
+- Contract result: the static Kit provides reviewed initial symbol/pin/variant
+  and VDD facts, Snapshot supplies live objects and coordinates, and
+  OpenAPI/capabilities remain the sole request authority. The Kit is excluded
+  from the editor bundle and is transferred only by `GET /api/agent/kit`.
+- Validation: focused 24-test Kit/Worker suite, generator check, typecheck,
+  Markdown links, `git diff --check`, and `pnpm verify:branch` (104 files / 567
+  tests, workspace builds, production smoke) passed.
+- Commit status: ready to commit as `feat(agent): publish Razavi authoring kit`
+  on `codex/agent-authoring-kit`.
+
 ## 2026-08-13 - Agent golden-path request-contract closure
 
 - Target: enforce the browser Agent's one public v2 request path without adding

@@ -13,7 +13,6 @@ import {
   AgentTransportErrorResponseSchema,
   agentEditCategory,
   agentCircuitOpenApi,
-  agentOperatingKit,
   invalidAgentRequestResponse,
   parseAgentCircuitRequest,
   parseAgentFileResourceRequest,
@@ -26,6 +25,7 @@ import {
   type AgentTransportErrorResponse,
   type PersistedAgentSessionState,
 } from "@icm/agent-adapter";
+import { agentOperatingKit } from "@icm/agent-adapter/kit";
 
 const SESSION_STATE_KEY = "agent-session-v1";
 const EDITOR_SOCKET_TAG = "editor";

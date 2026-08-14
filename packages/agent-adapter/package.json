@@ -13,6 +13,11 @@
       "development": "./src/loopback.ts",
       "types": "./dist/loopback.d.ts",
       "default": "./dist/loopback.js"
+    },
+    "./kit": {
+      "development": "./src/agent-kit.ts",
+      "types": "./dist/agent-kit.d.ts",
+      "default": "./dist/agent-kit.js"
     }
   },
   "scripts": {
