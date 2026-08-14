@@ -659,18 +659,10 @@ export function buildSvgScene(
         profile.id !== "textbook-monochrome-v1" &&
         annotation.kind === "power-label"
       ) {
-        const annotationAnchor = annotation.anchor;
-        const junction =
-          annotationAnchor.kind === "object"
-            ? document.junctions.find(
-                (candidate) => candidate.id === annotationAnchor.objectId,
-              )
-            : undefined;
-        const supplyBar =
-          junction?.position && profile.annotations.supplyBarWidth > 0
-            ? `<line data-role="supply-bar" x1="${junction.position.x - profile.annotations.supplyBarWidth / 2}" y1="${junction.position.y}" x2="${junction.position.x + profile.annotations.supplyBarWidth / 2}" y2="${junction.position.y}" transform="rotate(${rotation} ${junction.position.x} ${junction.position.y})" stroke="${profile.foreground}" stroke-width="${profile.strokes.supply}" stroke-linecap="${profile.lineCap}"/>`
-            : "";
-        return `<g ${attributes}>${supplyBar}<text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
+        // The power-rail Route is the complete supply bar. Drawing a second,
+        // thinner annotation-owned bar at its endpoint creates the visible
+        // terminal stub and makes hit geometry disagree with presentation.
+        return `<g ${attributes}><text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
       }
       if (
         profile.id !== "textbook-monochrome-v1" &&

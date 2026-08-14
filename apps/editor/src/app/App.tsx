@@ -433,9 +433,9 @@ function polylineBounds(points: readonly Point[]): Rect {
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
-  const element = target as HTMLElement | null;
-  return Boolean(
-    element?.closest("input, textarea, select, [contenteditable='true']"),
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("input, textarea, select, [contenteditable='true']"))
   );
 }
 
@@ -570,7 +570,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     useState<Annotation | null>(null);
   const snapGuideLayerRef = useRef<SVGGElement | null>(null);
   const {
-    state: interactionState,
+    getCurrentState: getCurrentInteractionState,
     tool,
     pendingSymbolId,
     pendingComponentPlacement,
@@ -1739,15 +1739,16 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   ): EditTransactionResult {
     const result = transactDocument(edits);
     applyResult(result);
+    const currentInteraction = getCurrentInteractionState();
     const preservesCurrentInteraction =
       options.preserveInteraction ||
-      (interactionState.kind === "wire" && options.completesWireSession);
+      (currentInteraction.kind === "wire" && options.completesWireSession);
     if (
       result.ok &&
-      interactionState.kind !== "idle" &&
+      currentInteraction.kind !== "idle" &&
       !preservesCurrentInteraction
     ) {
-      const cancelledKind = interactionState.kind;
+      const cancelledKind = currentInteraction.kind;
       cancelAllTransientInteraction();
       setStatus(
         cancelledKind === "wire"
@@ -1795,11 +1796,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function activateTool(nextTool: EditorTool): void {
+    const currentInteraction = getCurrentInteractionState();
     const alreadyActive =
-      (nextTool === "wire" && interactionState.kind === "wire") ||
-      (interactionState.kind === "drawing" &&
-        interactionState.tool === nextTool) ||
-      (nextTool === "pointer" && interactionState.kind === "idle");
+      (nextTool === "wire" && currentInteraction.kind === "wire") ||
+      (currentInteraction.kind === "drawing" &&
+        currentInteraction.tool === nextTool) ||
+      (nextTool === "pointer" && currentInteraction.kind === "idle");
     if (alreadyActive) return;
     canvasDragSessionRef.current?.cancel();
     clearTransientCanvasState();
@@ -5336,11 +5338,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function beginCopyPlacement(): void {
-    if (interactionState.kind === "copy-placement") {
+    const currentInteraction = getCurrentInteractionState();
+    if (currentInteraction.kind === "copy-placement") {
       setStatus("Copy placement is already active · Esc cancels");
       return;
     }
-    if (interactionState.kind !== "idle") {
+    if (currentInteraction.kind !== "idle") {
       setStatus("Finish or cancel the active tool before copying");
       return;
     }
@@ -5448,9 +5451,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         setStatus("Cancelled text editing");
         return;
       }
+      const currentInteraction = getCurrentInteractionState();
       const shortcut = resolveEditorShortcut(event, {
         isTyping: isTypingTarget(event.target),
-        interactionMode: interactionState.kind,
+        interactionMode: currentInteraction.kind,
         hasRoutedMarkerSelection: Boolean(
           selectedAnnotation && isRoutedMarker(selectedAnnotation),
         ),
@@ -5594,7 +5598,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           setStatus("Cancelled canvas drag");
           return;
         case "cancel-interaction": {
-          const cancelledKind = interactionState.kind;
+          const cancelledKind = getCurrentInteractionState().kind;
           cancelAllTransientInteraction();
           setStatus(
             cancelledKind === "copy-placement"

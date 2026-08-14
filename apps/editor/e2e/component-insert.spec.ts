@@ -174,6 +174,44 @@ test("reopens I and starts Copy from retained selection without stacking modes",
   ).toBeVisible();
 });
 
+test("publishes placement cancellation synchronously before rapid Copy", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+  const symbols = ["nmos", "pmos", "resistor"] as const;
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
+  });
+  await expect(
+    page.getByRole("heading", { name: "Circuit Maker" }),
+  ).toBeVisible();
+
+  for (const [index, symbolId] of symbols.entries()) {
+    await chooseComponent(page, symbolId);
+    await canvas.click({ position: { x: 320 + index * 150, y: 240 } });
+
+    // A fast physical Esc -> C sequence can arrive before React publishes a
+    // render between the two native events. The command state must still see
+    // the reducer transition synchronously, especially after MOS bulk-default
+    // reconciliation makes the committed scene more expensive to derive.
+    await page.evaluate(() => {
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "c", bubbles: true }),
+      );
+    });
+
+    await canvas.hover({ position: { x: 400 + index * 130, y: 380 } });
+    await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("copy-placement-preview")).toHaveCount(0);
+  }
+});
+
 test("carries a manual Value through placement and Q property editing", async ({
   page,
 }) => {

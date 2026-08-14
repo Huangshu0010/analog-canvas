@@ -86,11 +86,23 @@ describe("drawn VDD rail construction", () => {
         kind: "power-label",
         content: {
           runs: [
-            { kind: "text", value: "V" },
             {
               kind: "span",
-              style: "subscript",
-              children: [{ kind: "text", value: "DD" }],
+              style: "italic",
+              children: [
+                {
+                  kind: "span",
+                  style: "bold",
+                  children: [
+                    { kind: "text", value: "V" },
+                    {
+                      kind: "span",
+                      style: "subscript",
+                      children: [{ kind: "text", value: "DD" }],
+                    },
+                  ],
+                },
+              ],
             },
           ],
         },
