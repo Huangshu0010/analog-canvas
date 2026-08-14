@@ -17,5 +17,9 @@ produce and validate a complete v9 candidate before a human chooses to load it.
 
 Viewport, selection, canvas overlays, import compiler state, Agent session
 credentials, and recovery envelopes are not part of the Project file. Browser
-recovery is a non-authoritative safety copy; use **File / Save Project** for the
-portable editable Project.
+recovery is a non-authoritative safety copy kept in this browser's IndexedDB:
+at most two recent working copies, each with a current and a previous
+generation, each copy at most 4 MB and 12 MB in total. It does not survive
+explicitly clearing site data. Use **File / Save Project** for the portable
+editable Project; saving or downloading a Project never deletes the browser
+recovery copies.

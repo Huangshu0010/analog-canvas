@@ -1,5 +1,18 @@
 # Maintenance Log
 
+## 2026-08-14 - WP-0 recovery contract and retention core
+
+- Target: freeze the browser-recovery record contract as pure functions before
+  any storage or GUI change; first work package of
+  `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `apps/editor/src/document/browser-recovery-contract.ts`
+  (+23 unit tests), `docs/specs/persistence-and-recovery.md` v2 contract,
+  user compatibility statement.
+- Validation: `pnpm test:local apps/editor/src/document` 50/50 green;
+  prettier, `tsc` project check, `git diff --check` clean.
+- Commit status: committed as `feat(editor): define bounded recovery records`
+  (`08af5d3`) on `agent/robust-page-persistence-recovery`.
+
 ## 2026-08-14 - Agent-side MCP adapter (M0-M3)
 
 - Target: give Codex/Claude/Cursor hosts a local stdio MCP entry over the
