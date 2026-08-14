@@ -41,6 +41,22 @@ function reviewLabel(status: ReviewStatus): string {
   }
 }
 
+function generationLine(
+  summary: RecoverySessionSummary,
+  generation: BrowserRecoveryGeneration,
+): string {
+  const record = generation === "latest" ? summary.latest : summary.previous;
+  const label = reviewLabel(reviewStatus(summary, generation));
+  if (
+    record !== null &&
+    record.review === "valid" &&
+    record.revision !== null
+  ) {
+    return `${label} · revision ${record.revision}`;
+  }
+  return label;
+}
+
 const SOURCE_LABELS: Record<BrowserRecoverySource, string> = {
   new: "New Project",
   "opened-file": "Opened file",
@@ -146,11 +162,11 @@ export function RecentRecoveryDialog({
                   <dl className="recovery-generation-list">
                     <div>
                       <dt>Latest copy</dt>
-                      <dd>{reviewLabel(latestStatus)}</dd>
+                      <dd>{generationLine(session, "latest")}</dd>
                     </div>
                     <div>
                       <dt>Previous copy</dt>
-                      <dd>{reviewLabel(previousStatus)}</dd>
+                      <dd>{generationLine(session, "previous")}</dd>
                     </div>
                   </dl>
                   {restorable === null ? (

@@ -1,5 +1,22 @@
 # Maintenance Log
 
+## 2026-08-14 - WP-5 browser hardening and release delivery
+
+- Target: prove the failure matrix (abrupt tab death, two tabs, quota,
+  Cache Storage isolation) and deliver the release note; final work package
+  of `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `recovery-hardening.spec.ts` (4 tests), recovery dialog
+  generation lines now include the revision (fixes a card-scoping
+  ReferenceError found by the two-tab run), `scripts/editor-production-smoke.mjs`
+  cache-isolation check + regenerated golden report, scheduler comment
+  cleanup, `docs/release/browser-recovery-v2.md`.
+- Validation: hardening spec 4/4; typecheck, prettier, docs links, and the
+  production smoke in both modes against a fresh build green;
+  `git diff --check` clean. Branch gate (`pnpm verify:branch`) and clean-state
+  `pnpm ci:check` follow as the delivery steps.
+- Commit status: committed as `test(editor): prove project recovery failure
+  modes` on `agent/robust-page-persistence-recovery`.
+
 ## 2026-08-14 - WP-4 recovery UX and operational visibility
 
 - Target: non-blocking recovery banner, per-session recovery dialog with
