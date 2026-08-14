@@ -1,5 +1,18 @@
 # Maintenance Log
 
+## 2026-08-14 - WP-1 IndexedDB recovery store and legacy migration
+
+- Target: transactional IndexedDB adapter for the WP-0 recovery contract plus
+  the one-time `icm.recovery.v1` localStorage migration; second work package
+  of `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `apps/editor/src/document/browser-recovery-store.ts`
+  (+18 unit tests on `fake-indexeddb` 6.2.5, new editor dev dependency,
+  lockfile re-verified frozen).
+- Validation: `pnpm test:local apps/editor/src/document` 68/68 green;
+  typecheck, prettier, `git diff --check` clean.
+- Commit status: committed as `feat(editor): persist bounded browser recovery`
+  on `agent/robust-page-persistence-recovery`.
+
 ## 2026-08-14 - WP-0 recovery contract and retention core
 
 - Target: freeze the browser-recovery record contract as pure functions before
