@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -85,8 +85,14 @@ only to `codex/agent-mcp-adapter` and do not merge in this target.
 - Focused contracts passed (187 tests), `pnpm verify:branch` passed (648
   tests), Cloudflare Worker deploy dry-run passed, and the clean-install
   `pnpm ci:check` gate passed (648 unit tests and 103 browser tests).
-- Remote PR checks remain pending; the target stays active until they pass.
+- PR #49 required checks passed: Change scope, Static contracts, Unit and
+  integration, Browser 1/2, Browser 2/2, and Release contracts.
 
 ## Outcome
 
-Pending.
+M4/M5 are deployable on PR #49 without adding another Circuit mutation
+protocol. The browser can recover its authorized relay after restart; the
+local MCP persists only a revocable connector, refreshes short-lived bearers,
+wraps the existing human-approved file workflow, and ships as a self-contained
+Node package inside the release. The implementation is committed as `0b36b78`
+and intentionally remains unmerged for user review.

@@ -6778,3 +6778,20 @@ contracts (WP-R1)`.
 - Commit status: ready to commit on `codex/agent-mcp-adapter` as
   `fix(agent): close MCP adapter review gaps`; intentionally not merging until
   the separately scoped M4/M5 work is ready.
+
+## 2026-08-14 - Complete deployable MCP lifecycle
+
+- Target: finish M4/M5 on PR #49 with restart-safe browser/Agent pairing,
+  compact file tools, an installable MCP package, and a deployment golden path
+  while keeping the four Circuit operations authoritative.
+- Changed areas: connector issue/resume/revoke transport; Helper credential
+  storage and bearer refresh; same-browser editor recovery and MCP-first
+  hand-off; existing File Resource wrappers; MCP/release packaging, docs,
+  generated OpenAPI/resources, and deterministic deployment smoke.
+- Validation: 187 focused contracts; `pnpm verify:branch` (648 tests); clean
+  install plus `pnpm ci:check` (648 unit and 103 browser tests); Cloudflare
+  Worker deploy dry-run; packaged two-process MCP claim/edit/render/file/resume
+  smoke; all six PR #49 required checks passed.
+- Commit status: implementation committed and pushed on
+  `codex/agent-mcp-adapter` as `0b36b78`; PR #49 remains open and unmerged by
+  request.
