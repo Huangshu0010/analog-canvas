@@ -6681,8 +6681,9 @@ contracts (WP-R1)`.
   current model/editor specifications.
 - Validation: 80 focused derived/editor/edit-engine/render tests, `pnpm
   typecheck`, `pnpm format:check`, `git diff --check`, and focused Playwright
-  VDD rail creation/deletion passed. Editor production build remains blocked
-  by the pre-existing static-service-worker plugin read of missing
-  `apps/editor/dist/index.html` after Vite transforms 399 modules.
-- Commit status: ready to commit on `codex/unify-annotation-presentation` as
-  `fix(editor): unify annotation presentation geometry`.
+  VDD rail creation/deletion passed. The reviewed export goldens were
+  regenerated to include the true RichText bounds; frozen-lockfile install and
+  canonical `pnpm ci:check` then passed (562 unit tests, 103 browser E2E,
+  workspace builds, golden/export/PWA/production/release checks).
+- Commit status: initial implementation `5be6e16`; golden completion ready to
+  commit on `codex/unify-annotation-presentation`.

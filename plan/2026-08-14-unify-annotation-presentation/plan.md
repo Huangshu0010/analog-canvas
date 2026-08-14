@@ -30,6 +30,7 @@ annotation shape, electrical topology, or Agent API.
 - `packages/derived/src/*annotation*.test.ts` (new or existing focused tests)
 - `packages/derived/src/visual.ts`
 - `packages/render-svg/src/render.ts`
+- `fixtures/exports/phase-7-dense-analog/*` (generated formal-export goldens)
 - `apps/editor/src/features/wiring/route-interaction-geometry.ts`
 - `apps/editor/src/app/App.tsx`
 - `apps/editor/e2e/manual-editor.spec.ts`
@@ -93,3 +94,16 @@ was attempted but is blocked after Vite transforms modules by the existing
 `version-static-service-worker` plugin attempting to read missing
 `apps/editor/dist/index.html`; no Vite/build configuration is owned by this
 target. This review branch is not a mainline delivery.
+
+Mainline CI on 2026-08-14 subsequently confirmed that the editor build is
+healthy when run in the full workspace sequence. It stopped only at the formal
+export golden for `schematic.svg`; that output must be reviewed and, if it
+reflects the intentional unified annotation bounds, regenerated before this
+target can return to completed.
+
+The reviewed golden now reflects the intentional non-clipping label bounds.
+After regeneration, frozen-lockfile installation and `pnpm ci:check` passed:
+562 unit tests, 103 browser E2E tests, all workspace builds, export/PWA/
+production/release checks, and the formal export goldens. The earlier direct
+editor-build failure was an invocation-order artifact and is not reproducible
+in the canonical CI sequence.
