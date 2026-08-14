@@ -176,6 +176,29 @@ test("adds formatted drafting text and undo/redo restores it", async ({
   await expect(page.getByTestId("revision")).toHaveText("6");
 });
 
+test("fits drafting text with F using an integer grid camera", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await clickCommand(page, "Draw", "Text");
+  const draftInput = page.getByRole("textbox", {
+    name: "Canvas text editor",
+  });
+  await draftInput.fill("Vout");
+  await page.getByRole("button", { name: "Apply text changes" }).click();
+
+  const canvas = page.getByTestId("schematic-canvas");
+  await page.keyboard.press("f");
+  await expect(page.getByTestId("status")).toHaveText("Fit Document");
+  const camera = (await canvas.getAttribute("viewBox"))!.split(" ").map(Number);
+  expect(camera).toHaveLength(4);
+  expect(camera.every((value) => Number.isInteger(value))).toBe(true);
+  expect(camera.every((value) => value % 10 === 0)).toBe(true);
+  await expect(
+    page.getByRole("heading", { name: "Circuit Maker" }),
+  ).toBeVisible();
+});
+
 test("text floating editor closes on Escape or an outside pointer", async ({
   page,
 }) => {

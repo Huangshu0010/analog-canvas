@@ -87,6 +87,7 @@ import {
 } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
+import { fitCameraToBounds } from "../canvas/fit-view";
 import type { CanvasDragSession } from "../canvas/canvas-drag-session";
 import { startCanvasDragVisual } from "../canvas/canvas-drag-visual";
 import { resolveCanvasHitAtPoint } from "../canvas/canvas-hit-resolver";
@@ -4600,8 +4601,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function fitView(): void {
-    const box = contentScene.viewBox;
-    setViewBox({ ...box });
+    setViewBox(
+      fitCameraToBounds(contentScene.viewBox, document.presentation.grid),
+    );
     setStatus("Fit Document");
   }
 
