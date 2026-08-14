@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "analog-canvas",
+  "version": "0.1.0",
+  "node": ">=24.0.0",
+  "packageName": "@analog-canvas/mcp-server",
+  "binaryName": "analog-canvas-mcp",
+  "npmPublished": false,
+  "release": {
+    "repository": "chenzc24/Analog-Canvas",
+    "tag": "mcp-v0.1.0",
+    "asset": "analog-canvas-mcp-server-0.1.0.tgz",
+    "sha256": "a3a8fbed3604b52e0bb1a4d75a557b325342b40aae60102979fc6114f645cda1"
+  }
+}

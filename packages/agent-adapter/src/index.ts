@@ -5,6 +5,7 @@
 export * from "./envelope.js";
 export * from "./file-resource.js";
 export * from "./host.js";
+export * from "./mcp-distribution.js";
 export * from "./openapi.js";
 export * from "./platform.js";
 export * from "./request-contract.js";

@@ -103,11 +103,16 @@ export function agentConnectionInstructions(
   claimCode: string,
 ): string {
   const kitUrl = `${origin}/api/agent/kit`;
-  return `Connect to Analog Canvas through its configured MCP server.
-1. Call connect with ${JSON.stringify({ claimCode })}.
-2. Read analog-canvas://reference/quickstart, then call get_context.
-3. Use the compact MCP tools for inspection, edits, verification, rendering, import, and export. The connector resumes automatically until the user disconnects it.
-If Analog Canvas MCP is unavailable, use the HTTP Agent Kit fallback: ${kitUrl}`;
+  const manifestUrl = `${origin}/api/agent/mcp-manifest.json`;
+  return `Connect to Analog Canvas.
+Claim: ${JSON.stringify({ claimCode })}
+Bootstrap: ${manifestUrl}
+
+1. If the Analog Canvas MCP is available, call connect with the Claim, read analog-canvas://reference/quickstart, then call get_context.
+2. If it is unavailable, read the Bootstrap manifest and configure its version-pinned stdio server for this Agent host. If the host must restart to load it, tell the user once.
+3. If MCP cannot load in this session, continue immediately with the HTTP Agent Kit: ${kitUrl}
+
+Do not invent symbol IDs, pin names, revisions, or raw API requests. The connector resumes automatically until the user disconnects it.`;
 }
 
 const STATUS_LABEL: Record<AgentConnectionStatus, string> = {
@@ -306,6 +311,18 @@ function ClaimHandOff({
         <summary>Show connection code and technical details</summary>
         <code data-testid="agent-claim-code">{claimCode}</code>
         <p className="agent-technical-details">Scopes: {scopes.join(", ")}</p>
+        <p className="agent-technical-details">
+          First-time setup:{" "}
+          <a
+            href="/api/agent/mcp-manifest.json"
+            target="_blank"
+            rel="noreferrer"
+          >
+            MCP bootstrap manifest
+          </a>
+          . No MCP support is required when the Agent uses the bundled Kit
+          fallback.
+        </p>
       </details>
     </div>
   );
