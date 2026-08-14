@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -76,4 +76,16 @@ feat(agent): publish self-bootstrapping MCP distribution
 
 ## Outcome
 
-Pending.
+PR #50 merged the self-bootstrapping MCP distribution into `main`. The
+production Worker now serves the versioned manifest used by **Copy to Agent**;
+the same declaration drives package/release metadata and host setup. GitHub
+Release `mcp-v0.1.0` publishes the 90.5 kB tarball, release metadata, and
+checksums. Its public tarball SHA-256 is
+`0383d9d26d4665339a89e80a9d8ecff91edcecb3022b268a038503260643dfda`.
+
+Focused tests, typecheck, frozen install, local `pnpm ci:check` (649 unit and
+integration tests plus 103 browser tests), all six PR checks, production
+Cloudflare deployment, canonical Linux packaging, public download/hash
+verification, and an `npx` MCP initialize against the Release URL passed.
+The repository has no npm credential, so npm publication was truthfully
+skipped and the manifest selects the fully working GitHub Release path.
