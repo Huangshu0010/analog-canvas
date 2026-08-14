@@ -6867,3 +6867,14 @@ contracts (WP-R1)`.
   passed.
 - Commit status: committed as `59bba32` on `codex/import-flightline-guidance`;
   pushed as PR #54. The MCP release checksum was refreshed after the package changed.
+
+## 2026-08-15 - Integrate imported flightline guidance on coordinate domains
+
+- Target: rebase imported-SPICE flightline guidance on the coordinate-domain
+  contract and deliver the combined change through required CI.
+- Changed areas: resolved `App.tsx` and transaction-layer integration;
+  refreshed the Linux MCP package SHA-256 release pin.
+- Validation: 24 focused engine/SPICE tests, 3 isolated browser flightline
+  tests, typecheck, workspace build, formatting, distribution/release checks,
+  and all six PR #54 GitHub Actions checks passed.
+- Commit status: PR #54 merged to `main` as `354cf3a`.
