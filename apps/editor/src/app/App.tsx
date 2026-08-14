@@ -891,21 +891,19 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     [document.id, document.nets, projectConnectivityIndex],
   );
   const displayedFlightlines = useMemo(() => {
-    // Flightlines are migration guidance for an untouched SPICE import only.
-    // A human-created document has no source binding, and any later edit of an
-    // import changes sourceStatus; neither state should be cluttered with
-    // inferred dashed connectivity.
-    if (!document.sourceBinding || document.sourceStatus !== "in-sync") {
+    // Flightlines guide placement and partial routing of imported topology.
+    // They are intentionally independent from sourceStatus: placement changes
+    // geometry without changing the imported electrical intent. A deliberate
+    // geometry/Net-label edit dismisses guidance through the persisted state.
+    // Net highlighting already provides a stronger complete-conductor overlay.
+    if (
+      !document.sourceBinding ||
+      document.flightlineGuidance === "dismissed" ||
+      highlightedNetId
+    ) {
       return [];
     }
-    // A highlighted Net is already presented as a strong complete conductor
-    // overlay. Do not also draw its dashed incomplete-routing guidance.
-    const unhighlightedFlightlines = highlightedNetId
-      ? flightlines.filter(
-          (flightline) => flightline.netId !== highlightedNetId,
-        )
-      : flightlines;
-    return unhighlightedFlightlines;
+    return flightlines;
   }, [document, flightlines, highlightedNetId]);
   const crossings = useMemo(
     () => deriveCrossings(document, resolver),

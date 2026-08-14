@@ -6854,3 +6854,16 @@ contracts (WP-R1)`.
   cases passed locally.
 - Commit status: pending follow-up commit on
   `codex/coordinate-domain-contract`; remote PR checks will decide merge.
+## 2026-08-14 - Restore imported flightline guidance during placement
+
+- Target: keep SPICE-imported routing guidance usable after placement and
+  partial Wire authoring, while dismissing it after Net-label or ordinary
+  geometry intervention and hiding it during Net highlight.
+- Changed areas: Document guidance schema/import initialization; edit-engine
+  lifecycle policy; editor flightline visibility; focused SPICE/engine/browser
+  contracts.
+- Validation: 24 focused engine/SPICE tests, isolated browser flightline suite
+  (3 tests), workspace build, typecheck, Prettier, and `git diff --check`
+  passed.
+- Commit status: committed as `59bba32` on `codex/import-flightline-guidance`;
+  pushed as PR #54. The MCP release checksum was refreshed after the package changed.
