@@ -10,7 +10,7 @@ import {
   resolveDraftingObjectGeometry,
   resolveEndpointPoint,
   resolveDocumentRoutingGeometry,
-  resolveVisualAnchor,
+  resolveAnnotationPresentation,
   resolveSchematicStyleProfile,
   routeAttachmentPlacement,
   textbookMonochromeProfile,
@@ -388,37 +388,28 @@ function deriveBounds(
     });
   }
   for (const annotation of document.annotations) {
-    const resolvedAnchor = resolveVisualAnchor(
+    const presentation = resolveAnnotationPresentation(
       document,
       resolver,
-      annotation.anchor,
+      annotation,
+      profile,
       routingGeometry,
     );
     const routePlacement =
       annotation.anchor.kind === "route"
         ? resolveRouteMarkerPlacement(routingGeometry, annotation.anchor)
         : null;
-    const annotationPosition =
-      routePlacement?.position ?? resolvedAnchor.position;
-    const verticalCurrent =
-      (routePlacement?.rotation ?? annotation.rotation) === 90 ||
-      (routePlacement?.rotation ?? annotation.rotation) === 270;
-    const textPosition = routePlacement
-      ? routePlacement.labelPosition
-      : {
-          x: annotationPosition.x + (verticalCurrent ? 15 : 0),
-          y: annotationPosition.y + (verticalCurrent ? 4 : 0),
-        };
+    if (!routePlacement) {
+      bounds.push(presentation.bounds);
+      continue;
+    }
+    const textPosition = routePlacement.labelPosition;
     bounds.push(
       estimatedTextBounds(
         flattenRichText(annotation.content),
         textPosition.x,
         textPosition.y,
-        routePlacement
-          ? "middle"
-          : verticalCurrent
-            ? "start"
-            : annotation.alignment,
+        "middle",
         annotation.sizeScale ?? 1,
       ),
     );
@@ -591,12 +582,14 @@ export function buildSvgScene(
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map((annotation) => {
       const attachment = ` data-anchor-kind="${annotation.anchor.kind}"`;
-      const resolvedAnchor = resolveVisualAnchor(
+      const presentation = resolveAnnotationPresentation(
         document,
         resolver,
-        annotation.anchor,
+        annotation,
+        profile,
         routingGeometry,
       );
+      const resolvedAnchor = presentation.anchor;
       const routeMarkerPlacement =
         annotation.kind === "route-marker"
           ? annotation.anchor.kind === "free"
@@ -613,9 +606,8 @@ export function buildSvgScene(
                 }
               : resolveRouteMarkerPlacement(routingGeometry, annotation.anchor)
           : null;
-      const position =
-        routeMarkerPlacement?.position ?? resolvedAnchor.position;
-      const rotation = routeMarkerPlacement?.rotation ?? annotation.rotation;
+      const position = routeMarkerPlacement?.position ?? presentation.position;
+      const rotation = routeMarkerPlacement?.rotation ?? presentation.rotation;
       const transform = `rotate(${rotation} ${position.x} ${position.y})`;
       const attributes = `data-object-id="${escapeXml(annotation.id)}" data-kind="${annotation.kind}"${attachment}`;
       if (

@@ -6670,3 +6670,19 @@ contracts (WP-R1)`.
   passed; `git diff --check` passed.
 - Commit status: committed on `codex/fix-mos-external-net-copy` as `766c098`
   (`fix(editor): preserve shared MOS bulk nets during copy`).
+
+## 2026-08-14 - Unify annotation presentation geometry
+
+- Target: remove divergent text glyph/hit/fallback coordinates after instance
+  rotation and make a selected VDD rail plus its label delete atomically.
+- Changed areas: derived annotation presentation/bounds; label materialization
+  and rotation follow; SVG/export and visual diagnostics; editor annotation
+  hit/marquee/edit geometry; visual-route deletion contract; focused tests and
+  current model/editor specifications.
+- Validation: 80 focused derived/editor/edit-engine/render tests, `pnpm
+  typecheck`, `pnpm format:check`, `git diff --check`, and focused Playwright
+  VDD rail creation/deletion passed. Editor production build remains blocked
+  by the pre-existing static-service-worker plugin read of missing
+  `apps/editor/dist/index.html` after Vite transforms 399 modules.
+- Commit status: ready to commit on `codex/unify-annotation-presentation` as
+  `fix(editor): unify annotation presentation geometry`.

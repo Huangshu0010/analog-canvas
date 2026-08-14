@@ -1058,7 +1058,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const textEditingBounds = editingAnnotation
     ? annotationHitBox(
         editingAnnotation,
-        annotationAnchor(editingAnnotation, routePolylines),
+        annotationAnchor(
+          document,
+          resolver,
+          editingAnnotation,
+          routePolylines,
+          styleProfile,
+        ),
         routePolylines,
         styleProfile,
       )
@@ -4821,7 +4827,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               rectsIntersect(
                 annotationHitBox(
                   annotation,
-                  annotationAnchor(annotation, routePolylines),
+                  annotationAnchor(
+                    document,
+                    resolver,
+                    annotation,
+                    routePolylines,
+                    styleProfile,
+                  ),
                   routePolylines,
                   styleProfile,
                 ),
@@ -5172,7 +5184,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         const explicitAnnotationIds = explicitAnnotationRemovals(
           document,
           selectedIds,
-          [...selectedAnnotationIds],
+          [...selectedAnnotationIds].filter(
+            (annotationId) =>
+              !visualRouteDeletion.annotationIds.includes(annotationId),
+          ),
         );
         const result = transact([
           ...instanceEdits,
@@ -7603,7 +7618,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 />
               ))}
               {document.annotations.map((annotation) => {
-                const anchor = annotationAnchor(annotation, routePolylines);
+                const anchor = annotationAnchor(
+                  document,
+                  resolver,
+                  annotation,
+                  routePolylines,
+                  styleProfile,
+                );
                 const hitBox = annotationHitBox(
                   annotation,
                   anchor,

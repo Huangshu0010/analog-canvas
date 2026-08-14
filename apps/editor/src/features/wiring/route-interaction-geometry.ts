@@ -2,6 +2,7 @@ import {
   defaultInstanceLabelPlacement,
   measureRichTextDocument,
   richTextMetrics,
+  resolveAnnotationPresentation,
   routeAttachmentPlacement,
 } from "@icm/derived";
 import type { RoutePolyline, SchematicStyleProfile } from "@icm/derived";
@@ -245,21 +246,20 @@ export function isRoutedMarker(annotation: Annotation): boolean {
 }
 
 export function annotationAnchor(
+  document: SchematicDocument,
+  resolver: SymbolResolver,
   annotation: Annotation,
   routePolylines: readonly RoutePolylineRecord[],
+  styleProfile: SchematicStyleProfile,
 ): Point {
   const attachment = effectiveRouteAttachment(annotation);
   if (!isRoutedMarker(annotation) || !attachment) {
-    if (
-      annotation.kind === "route-marker" &&
-      (annotation.anchor.kind === "object" ||
-        annotation.anchor.kind === "route")
-    ) {
-      return annotation.anchor.fallbackPosition;
-    }
-    return annotation.anchor.kind === "free"
-      ? annotation.anchor.position
-      : annotation.anchor.fallbackPosition;
+    return resolveAnnotationPresentation(
+      document,
+      resolver,
+      annotation,
+      styleProfile,
+    ).position;
   }
   const record = routePolylines.find(
     ({ route }) => route.id === attachment.routeId,
@@ -267,9 +267,8 @@ export function annotationAnchor(
   return (
     (record &&
       routeAttachmentPlacement(record.polyline, attachment)?.position) ??
-    (annotation.anchor.kind === "free"
-      ? annotation.anchor.position
-      : annotation.anchor.fallbackPosition)
+    resolveAnnotationPresentation(document, resolver, annotation, styleProfile)
+      .position
   );
 }
 
@@ -435,8 +434,8 @@ export function defaultInstanceLabel(
       kind: "object",
       objectId: instance.id,
       localOffset: {
-        x: placement.semanticPosition.x - instance.placement.position.x,
-        y: placement.semanticPosition.y - instance.placement.position.y,
+        x: position.x - instance.placement.position.x,
+        y: position.y - instance.placement.position.y,
       },
       fallbackPosition: position,
     },

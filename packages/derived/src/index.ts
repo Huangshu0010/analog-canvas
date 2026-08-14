@@ -1,4 +1,5 @@
 export * from "./anchor.js";
+export * from "./annotation-presentation.js";
 export * from "./connectivity.js";
 export * from "./contact.js";
 export * from "./contact-target.js";

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { parseProject } from "@icm/model";
+import { createEmptyDocument, parseProject } from "@icm/model";
 import {
   deriveCrossings,
   deriveFlightlines,
@@ -52,6 +52,69 @@ function transaction(documentId: string, revision: number, edits: unknown[]) {
 }
 
 describe("routing Edit Engine", () => {
+  it("plans a power rail and its label as one visual deletion", () => {
+    const document = createEmptyDocument("vdd-delete", "VDD delete");
+    document.nets.push({
+      id: "VDD",
+      scope: "global",
+      terminals: [],
+    });
+    document.junctions.push(
+      {
+        id: "vdd-start",
+        netId: "VDD",
+        position: { x: 0, y: 0 },
+        role: "route-anchor",
+      },
+      {
+        id: "vdd-end",
+        netId: "VDD",
+        position: { x: 100, y: 0 },
+        role: "route-anchor",
+      },
+    );
+    document.routes.push({
+      id: "vdd-rail",
+      netId: "VDD",
+      from: { kind: "junction", junctionId: "vdd-start" },
+      to: { kind: "junction", junctionId: "vdd-end" },
+      waypoints: [],
+      segmentModes: ["manual"],
+      presentation: "power-rail",
+    });
+    document.annotations.push({
+      id: "label-VDD",
+      kind: "power-label",
+      netId: "VDD",
+      content: { runs: [{ kind: "text", value: "VDD" }] },
+      anchor: {
+        kind: "object",
+        objectId: "vdd-end",
+        localOffset: { x: 6, y: 5 },
+        fallbackPosition: { x: 106, y: 5 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+
+    const proposal = proposeVisualRouteDeletion(document, ["vdd-rail"], []);
+    expect(proposal.annotationIds).toEqual(["label-VDD"]);
+    expect(
+      proposal.edits.filter(
+        (edit) => edit.kind === "remove_schematic_annotation",
+      ),
+    ).toHaveLength(1);
+    const deleted = executeTransaction(
+      document,
+      transaction(document.id, 0, proposal.edits),
+      context,
+    );
+    if (!deleted.ok) throw new Error(deleted.error.message);
+    expect(deleted.document.annotations).toHaveLength(0);
+    expect(deleted.document.routes).toHaveLength(0);
+  });
+
   it("attaches a real terminal to a Route interior and lets both halves follow it", () => {
     const document = documentFixture();
     document.instances.find((instance) => instance.id === "E")!.placement = {
@@ -636,8 +699,8 @@ describe("routing Edit Engine", () => {
       ),
     ).toMatchObject({
       anchor: {
-        localOffset: { x: 20, y: 41 },
-        fallbackPosition: { x: 180, y: 361 },
+        localOffset: { x: 20, y: 36 },
+        fallbackPosition: { x: 180, y: 356 },
       },
       alignment: "start",
       rotation: 0,
@@ -685,7 +748,7 @@ describe("routing Edit Engine", () => {
         {
           rotation: 90 as const,
           position: { x: 92, y: 132 },
-          offset: { x: -8, y: 16 },
+          offset: { x: -8, y: 32 },
           alignment: "middle" as const,
         },
         {
@@ -697,13 +760,13 @@ describe("routing Edit Engine", () => {
         {
           rotation: 270 as const,
           position: { x: 108, y: 79 },
-          offset: { x: 8, y: -16 },
+          offset: { x: 8, y: -21 },
           alignment: "middle" as const,
         },
         {
           rotation: 0 as const,
-          position: { x: 116, y: 108 },
-          offset: { x: 16, y: 8 },
+          position: { x: 121, y: 108 },
+          offset: { x: 21, y: 8 },
           alignment: "start" as const,
         },
       ];
