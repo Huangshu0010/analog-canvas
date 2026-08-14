@@ -25,22 +25,49 @@ and connects B to the selected Net in the same transaction. Imported MOS
 instances do not receive a guessed fourth node.
 
 Ground is the `ground` component connected through pin `0`; placement reuses an
-existing global ground supply Net. VDD Rail is a separate two-click
-construction tool. It creates/reuses an explicit global VDD Net, creates two
-route-anchor Junctions and one `power-rail` Route, and persists one RichText
-power-label annotation. It creates no VDD Instance.
+existing global ground supply Net. VDD Rail is a virtual Library item presented
+through the same I-dialog, Library, and placement input plane as components.
+Its editor-local VDD artwork is preview-only and is not registered with the
+product Symbol Resolver. Before the first click the artwork follows the
+pointer; after the first click the preview becomes the horizontal rail. The
+second click creates/reuses an explicit global VDD Net, creates two route-anchor
+Junctions and one `power-rail` Route, and persists one RichText power-label
+annotation. It creates no VDD Instance and exits placement after the commit.
+Deleting the rail also deletes its power label and rail-only Junctions while
+preserving a VDD Net still used elsewhere.
 
 ## Interaction states
 
+The canonical reducer owns exactly one exclusive canvas interaction:
+
 ```text
-Pointer
-  -> BoxSelect -> Pointer
-  -> MoveSelection -> Pointer
-  -> ComponentDialog -> PlaceComponent -> Pointer
-  -> Wire -> Pointer
-  -> VddRail(first point) -> VddRail(second point) -> Pointer
-  -> TextEdit -> Pointer
+Idle
+  -> SymbolPlacement(preview, rotation)
+  -> VddRailPlacement(preview, optional first point)
+  -> CopyPlacement(clipboard, anchor, preview)
+  -> Wire(source, waypoints, preview)
+  -> Drawing(tool, source, waypoints, preview, snap)
 ```
+
+Box selection, selection move, pan, and text-edit sessions remain bounded
+gesture owners, but every reset boundary cancels them together with the
+canonical interaction. No component preview, rail endpoint, clipboard, Wire
+waypoint, drawing point, or snap guide is stored in a parallel React mode flag.
+
+Activating the same tool is idempotent: repeated C, W, A, K, or selection of the
+same Library item preserves the active session. Activating a different creation
+tool replaces the current interaction atomically after drag and snap cleanup.
+Opening I cancels the current canvas interaction before showing the dialog.
+Escape, Document switch, Project replacement, Clear Canvas, restore, and Agent
+focus reset all use the same transient-cancellation boundary.
+
+Shortcut arbitration is centralized. Escape, viewport pan/zoom, same-tool
+re-entry, and explicit creation-tool switches are valid while an interaction
+owns the canvas. Selection-dependent commands such as Copy, Delete, Q, L,
+rotate, mirror, and marker editing cannot act on a stale selection underneath
+another active interaction. Undo/Redo may mutate the Document and therefore
+cancel a snapshot-dependent active interaction. Shortcut key assignments are
+independent of this state policy and remain unchanged.
 
 Escape cancels the active preview without mutation. A committed gesture is one
 atomic transaction. Hover, geometric crossing, selection, and preview never
@@ -77,9 +104,11 @@ topology hash, history, recovery, or formal export.
 
 ## Deterministic validation
 
-- state-transition and shortcut focus-guard unit tests;
+- state-transition, shortcut focus-guard, and command-by-interaction matrix
+  tests, including repeated C/W/A/K and I/Escape/re-entry;
 - component placement and ordinary terminal connectivity for both Port assets;
-- VDD rail creation with no VDD Instance and one explicit VDD Net;
+- VDD rail picker/Library preview, cancellation at both phases, creation with no
+  VDD Instance, default exit, selection, and complete visual deletion;
 - canonical MOS default-variant and explicit bulk behavior;
 - move/stretch, segment tap, crossing non-connectivity, cancel, delete, and
   undo/redo tests;

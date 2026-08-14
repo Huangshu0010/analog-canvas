@@ -8,19 +8,17 @@ import type {
 
 const baseContext: EditorShortcutContext = {
   isTyping: false,
-  componentPlacementActive: false,
+  interactionMode: "idle",
   hasRoutedMarkerSelection: false,
   hasRotatableSelection: false,
   hasDraftingSelection: false,
   hasInspectableSelection: false,
   hasRouteSelection: false,
   hasHighlightableNet: false,
-  wireSessionActive: false,
   wireReadyToFinish: false,
   draftingReadyToFinish: false,
   helpOpen: false,
   canvasDragActive: false,
-  interactionActive: false,
   hasClearableDraftingSelection: false,
   hasRemovableWireWaypoint: false,
 };
@@ -106,12 +104,16 @@ describe("editor shortcut contract", () => {
     expect(resolve("i")).toEqual({ kind: "open-component-insert" });
     expect(
       resolve("r", {
-        componentPlacementActive: true,
+        interactionMode: "placing-component",
         hasRotatableSelection: true,
       }),
     ).toEqual({ kind: "rotate-placement", deltaDegrees: 90 });
     expect(
-      resolve("r", { componentPlacementActive: true }, { shiftKey: true }),
+      resolve(
+        "r",
+        { interactionMode: "placing-component" },
+        { shiftKey: true },
+      ),
     ).toEqual({ kind: "rotate-placement", deltaDegrees: 90 });
   });
 
@@ -128,8 +130,11 @@ describe("editor shortcut contract", () => {
       kind: "edit-net-label",
     });
     expect(
-      resolve("l", { hasRouteSelection: true, wireSessionActive: true }),
-    ).toBeNull();
+      resolve("l", { hasRouteSelection: true, interactionMode: "wire" }),
+    ).toEqual({
+      kind: "blocked-interaction-command",
+      command: "Net Label",
+    });
     expect(resolve("h")).toBeNull();
     expect(resolve("h", { hasHighlightableNet: true })).toEqual({
       kind: "toggle-net-highlight",
@@ -190,17 +195,17 @@ describe("editor shortcut contract", () => {
       resolve("Escape", {
         helpOpen: true,
         canvasDragActive: true,
-        interactionActive: true,
+        interactionMode: "wire",
         hasClearableDraftingSelection: true,
       }),
     ).toEqual({ kind: "close-help" });
     expect(
       resolve("Escape", {
         canvasDragActive: true,
-        interactionActive: true,
+        interactionMode: "wire",
       }),
     ).toEqual({ kind: "cancel-canvas-drag" });
-    expect(resolve("Escape", { interactionActive: true })).toEqual({
+    expect(resolve("Escape", { interactionMode: "wire" })).toEqual({
       kind: "cancel-interaction",
     });
     expect(resolve("Escape", { hasClearableDraftingSelection: true })).toEqual({
@@ -214,6 +219,52 @@ describe("editor shortcut contract", () => {
       kind: "remove-wire-waypoint",
     });
     expect(resolve("Backspace")).toEqual({ kind: "delete-selection" });
+  });
+
+  it("arbitrates competing commands while one interaction owns the canvas", () => {
+    const active = { interactionMode: "drawing" as const };
+    expect(resolve("c", active)).toEqual({
+      kind: "blocked-interaction-command",
+      command: "Copy",
+    });
+    expect(resolve("c", { interactionMode: "copy-placement" })).toEqual({
+      kind: "copy",
+    });
+    expect(resolve("q", active)).toEqual({
+      kind: "blocked-interaction-command",
+      command: "Properties",
+    });
+    expect(resolve("Delete", active)).toEqual({
+      kind: "blocked-interaction-command",
+      command: "Delete",
+    });
+    expect(
+      resolve("Delete", {
+        interactionMode: "wire",
+        hasInspectableSelection: true,
+      }),
+    ).toEqual({ kind: "delete-selection" });
+    expect(resolve("i", active)).toEqual({ kind: "open-component-insert" });
+    expect(resolve("w", active)).toEqual({
+      kind: "activate-tool",
+      tool: "wire",
+    });
+    expect(resolve("f", active)).toEqual({ kind: "fit-view" });
+  });
+
+  it("does not rotate a stale selection underneath another active tool", () => {
+    expect(
+      resolve("r", {
+        interactionMode: "drawing",
+        hasRotatableSelection: true,
+      }),
+    ).toEqual({ kind: "activate-tool", tool: "rectangle" });
+    expect(
+      resolve("r", {
+        interactionMode: "placing-component",
+        hasRotatableSelection: true,
+      }),
+    ).toEqual({ kind: "rotate-placement", deltaDegrees: 90 });
   });
 
   it("suppresses every global shortcut while typing", () => {

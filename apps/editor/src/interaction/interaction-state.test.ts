@@ -48,6 +48,22 @@ describe("editor interaction state", () => {
     ).toBe(state);
   });
 
+  it("keeps in-progress drawing geometry when the same tool is activated", () => {
+    let state = activateInteractionTool("arrow");
+    state = interactionReducer(state, {
+      type: "set-drawing-source",
+      point: { x: 10, y: 20 },
+    });
+    state = interactionReducer(state, {
+      type: "set-drawing-hover",
+      point: { x: 80, y: 20 },
+    });
+
+    expect(
+      interactionReducer(state, { type: "activate-tool", tool: "arrow" }),
+    ).toBe(state);
+  });
+
   it("cancels every creation mode to one idle state", () => {
     for (const tool of [
       "wire",
@@ -136,8 +152,74 @@ describe("editor interaction state", () => {
         showReference: false,
         referenceText: "MIN",
       },
+      rotation: 90,
+      previewPoint: null,
     });
     expect(interactionReducer(state, { type: "cancel" })).toEqual({
+      kind: "idle",
+    });
+  });
+
+  it("keeps repeated Copy idempotent and replaces it atomically with a tool", () => {
+    const clipboard = { ids: ["M1"] };
+    const copying = interactionReducer<{ ids: string[] }>(
+      { kind: "idle" },
+      {
+        type: "begin-copy-placement",
+        clipboard,
+        anchor: { x: 10, y: 20 },
+      },
+    );
+    const previewing = interactionReducer(copying, {
+      type: "set-copy-preview",
+      point: { x: 40, y: 50 },
+    });
+
+    expect(
+      interactionReducer(previewing, {
+        type: "begin-copy-placement",
+        clipboard: { ids: ["M2"] },
+        anchor: { x: 0, y: 0 },
+      }),
+    ).toBe(previewing);
+    expect(
+      interactionReducer(previewing, {
+        type: "activate-tool",
+        tool: "wire",
+      }),
+    ).toEqual({
+      kind: "wire",
+      source: null,
+      sourceRevision: null,
+      previewPoint: null,
+      waypoints: [],
+    });
+  });
+
+  it("owns the complete VDD rail gesture and exits after commit", () => {
+    let state = interactionReducer(
+      { kind: "idle" },
+      { type: "begin-vdd-rail" },
+    );
+    state = interactionReducer(state, {
+      type: "set-vdd-rail-preview",
+      point: { x: 20, y: 30 },
+    });
+    state = interactionReducer(state, {
+      type: "set-vdd-rail-start",
+      point: { x: 20, y: 30 },
+    });
+    state = interactionReducer(state, {
+      type: "set-vdd-rail-preview",
+      point: { x: 120, y: 30 },
+    });
+
+    expect(state).toEqual({
+      kind: "placing-vdd-rail",
+      start: { x: 20, y: 30 },
+      previewPoint: { x: 120, y: 30 },
+    });
+    expect(interactionReducer(state, { type: "complete-vdd-rail" })).toEqual({
       kind: "idle",
     });
   });

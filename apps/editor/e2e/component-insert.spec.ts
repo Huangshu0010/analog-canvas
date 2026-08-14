@@ -126,6 +126,54 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
   );
 });
 
+test("offers VDD rail in I with preview-only symbol artwork", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByLabel("Component search").fill("vdd");
+  await dialog.getByTestId("insert-component-vdd").click();
+  await expect(dialog.locator("svg.insert-symbol-artwork")).toBeVisible();
+  await expect(dialog.getByLabel("Placement options")).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Apply" }).click();
+
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.hover({ position: { x: 260, y: 140 } });
+  await expect(page.getByTestId("component-placement-preview")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
+  await expect(page.getByTestId("instance-count")).toHaveText("0");
+});
+
+test("reopens I and starts Copy from retained selection without stacking modes", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await chooseComponent(page, "resistor");
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 360, y: 230 } });
+  await page.keyboard.press("Escape");
+  await page.getByTestId("hit-R1").click();
+
+  await page.keyboard.press("i");
+  await expect(
+    page.getByRole("dialog", { name: "Insert Component" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("c");
+  await page.keyboard.press("c");
+  await canvas.hover({ position: { x: 560, y: 330 } });
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("copy-placement-preview")).toHaveCount(0);
+
+  await page.keyboard.press("i");
+  await expect(
+    page.getByRole("dialog", { name: "Insert Component" }),
+  ).toBeVisible();
+});
+
 test("carries a manual Value through placement and Q property editing", async ({
   page,
 }) => {

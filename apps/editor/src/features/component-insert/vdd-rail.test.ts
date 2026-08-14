@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { executeTransaction } from "@icm/edit-engine";
+import {
+  executeTransaction,
+  proposeVisualRouteDeletion,
+} from "@icm/edit-engine";
 import { createEmptyDocument } from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 
@@ -145,5 +148,56 @@ describe("drawn VDD rail construction", () => {
         presentation: "power-rail",
       }),
     );
+  });
+
+  it("deletes a power rail with its label and rail-only junctions", () => {
+    const document = createEmptyDocument("main", "Main");
+    const created = executeTransaction(
+      document,
+      {
+        transactionId: "create-vdd-rail-for-delete",
+        documentId: document.id,
+        expectedRevision: document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: constructVddRailEdits({
+          instanceId: "VDD1",
+          start: { x: 40, y: 20 },
+          end: { x: 180, y: 20 },
+        }),
+      },
+      { symbolResolver: resolver },
+    );
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const proposal = proposeVisualRouteDeletion(
+      created.document,
+      ["route-vdd1-rail"],
+      [],
+    );
+    expect(proposal.edits[0]).toEqual({
+      kind: "remove_schematic_annotation",
+      annotationId: "label-VDD1",
+    });
+    const deleted = executeTransaction(
+      created.document,
+      {
+        transactionId: "delete-vdd-rail",
+        documentId: document.id,
+        expectedRevision: created.document.revision,
+        actor: { kind: "human", id: "test" },
+        edits: proposal.edits,
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(deleted.ok).toBe(true);
+    if (!deleted.ok) return;
+    expect(deleted.document.routes).toEqual([]);
+    expect(deleted.document.junctions).toEqual([]);
+    expect(deleted.document.annotations).toEqual([]);
+    expect(deleted.document.nets).toMatchObject([
+      { name: "VDD", scope: "global", powerDomain: "vdd" },
+    ]);
   });
 });

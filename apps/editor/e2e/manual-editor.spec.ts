@@ -237,9 +237,11 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
 
 test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
   await page.goto("/");
-  await page.getByTestId("shapes-tool-vdd-rail").click();
+  await page.getByTestId("shapes-chip-vdd").click();
   const canvas = page.getByTestId("schematic-canvas");
 
+  await canvas.hover({ position: { x: 180, y: 120 } });
+  await expect(page.getByTestId("component-placement-preview")).toBeVisible();
   await canvas.click({ position: { x: 180, y: 120 } });
   await canvas.hover({ position: { x: 520, y: 120 } });
   const preview = page.getByTestId("vdd-rail-preview");
@@ -261,6 +263,11 @@ test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
   await expect(page.getByTestId("hit-VDD1")).toHaveCount(0);
   await expect(canvas.locator('[data-symbol-id="vdd"]')).toHaveCount(0);
   await expect(canvas.getByText("VDD", { exact: true })).toHaveCount(1);
+  await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
+
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("route-hit-route-vdd1-rail")).toHaveCount(0);
+  await expect(canvas.getByText("VDD", { exact: true })).toHaveCount(0);
 });
 
 test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
@@ -268,7 +275,7 @@ test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
 }) => {
   await page.goto("/");
   await placeComponent(page, "pmos", { x: 360, y: 260 });
-  await page.getByTestId("shapes-tool-vdd-rail").click();
+  await page.getByTestId("shapes-chip-vdd").click();
   const canvas = page.getByTestId("schematic-canvas");
   await canvas.click({ position: { x: 240, y: 100 } });
   await canvas.click({ position: { x: 520, y: 100 } });
@@ -300,6 +307,32 @@ test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
       presentation: "power-rail",
     }),
   );
+});
+
+test("cancels VDD rail placement before or after its first endpoint", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  await page.getByTestId("shapes-chip-vdd").click();
+  await canvas.hover({ position: { x: 180, y: 120 } });
+  await expect(page.getByTestId("component-placement-preview")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
+
+  await page.getByTestId("shapes-chip-vdd").click();
+  await canvas.click({ position: { x: 180, y: 120 } });
+  await canvas.hover({ position: { x: 520, y: 120 } });
+  await expect(page.getByTestId("vdd-rail-preview")).toHaveAttribute(
+    "stroke-width",
+    "3.24",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("vdd-rail-preview")).toHaveCount(0);
+  await expect(
+    page.locator('[data-route-presentation="power-rail"]'),
+  ).toHaveCount(0);
 });
 
 test("treats hollow and filled Ports as ordinary wired components", async ({
@@ -1442,6 +1475,8 @@ test("C previews one copy and Escape cancels without a revision", async ({
   if (!box) throw new Error("Canvas is not measurable");
   await page.keyboard.press("c");
   await page.mouse.move(box.x + 560, box.y + 340);
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+  await page.keyboard.press("c");
   await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
   await page.keyboard.press("Escape");
 

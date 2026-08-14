@@ -14,6 +14,8 @@ export type DrawingTool = Extract<
   "construction-line" | "arrow" | "rectangle"
 >;
 
+export type InteractionMode = InteractionState<unknown>["kind"];
+
 export interface PendingComponentPlacement {
   symbolId: string;
   properties: Record<string, string>;
@@ -22,11 +24,28 @@ export interface PendingComponentPlacement {
   referenceText: string | null;
 }
 
-export type InteractionState =
+export interface CopyPlacement<TClipboard> {
+  clipboard: TClipboard;
+  anchor: Point;
+  previewPoint: Point | null;
+}
+
+export type InteractionState<TClipboard = never> =
   | { kind: "idle" }
   | {
       kind: "placing-component";
       placement: PendingComponentPlacement;
+      rotation: 0 | 90 | 180 | 270;
+      previewPoint: Point | null;
+    }
+  | {
+      kind: "placing-vdd-rail";
+      start: Point | null;
+      previewPoint: Point | null;
+    }
+  | {
+      kind: "copy-placement";
+      copy: CopyPlacement<TClipboard>;
     }
   | {
       kind: "wire";
@@ -44,9 +63,21 @@ export type InteractionState =
       snapPoint: Point | null;
     };
 
-export type InteractionAction =
+export type InteractionAction<TClipboard = never> =
   | { type: "activate-tool"; tool: EditorTool }
   | { type: "place-component"; placement: PendingComponentPlacement }
+  | { type: "set-component-preview"; point: Point | null }
+  | { type: "rotate-component"; deltaDegrees: 90 | -90 }
+  | { type: "begin-vdd-rail" }
+  | { type: "set-vdd-rail-start"; point: Point | null }
+  | { type: "set-vdd-rail-preview"; point: Point | null }
+  | { type: "complete-vdd-rail" }
+  | {
+      type: "begin-copy-placement";
+      clipboard: TClipboard;
+      anchor: Point;
+    }
+  | { type: "set-copy-preview"; point: Point | null }
   | {
       type: "set-wire-source";
       source: WireSource | null;
@@ -64,7 +95,9 @@ export type InteractionAction =
 
 export const IDLE_INTERACTION_STATE: InteractionState = { kind: "idle" };
 
-function drawingState(tool: DrawingTool): InteractionState {
+function drawingState<TClipboard>(
+  tool: DrawingTool,
+): InteractionState<TClipboard> {
   return {
     kind: "drawing",
     tool,
@@ -75,7 +108,9 @@ function drawingState(tool: DrawingTool): InteractionState {
   };
 }
 
-export function activateInteractionTool(tool: EditorTool): InteractionState {
+export function activateInteractionTool<TClipboard>(
+  tool: EditorTool,
+): InteractionState<TClipboard> {
   switch (tool) {
     case "pointer":
       return IDLE_INTERACTION_STATE;
@@ -94,25 +129,96 @@ export function activateInteractionTool(tool: EditorTool): InteractionState {
   }
 }
 
+function sameComponentPlacement(
+  left: PendingComponentPlacement,
+  right: PendingComponentPlacement,
+): boolean {
+  if (
+    left.symbolId !== right.symbolId ||
+    left.initialRotation !== right.initialRotation ||
+    left.showReference !== right.showReference ||
+    left.referenceText !== right.referenceText
+  ) {
+    return false;
+  }
+  const leftEntries = Object.entries(left.properties);
+  const rightEntries = Object.entries(right.properties);
+  return (
+    leftEntries.length === rightEntries.length &&
+    leftEntries.every(([key, value]) => right.properties[key] === value)
+  );
+}
+
 function applyUpdate<T>(value: T, update: SetStateAction<T>): T {
   return typeof update === "function"
     ? (update as (current: T) => T)(value)
     : update;
 }
 
-export function interactionReducer(
-  state: InteractionState,
-  action: InteractionAction,
-): InteractionState {
+export function interactionReducer<TClipboard>(
+  state: InteractionState<TClipboard>,
+  action: InteractionAction<TClipboard>,
+): InteractionState<TClipboard> {
   switch (action.type) {
     case "activate-tool":
       if (action.tool === "wire" && state.kind === "wire") return state;
-      return activateInteractionTool(action.tool);
+      if (state.kind === "drawing" && state.tool === action.tool) return state;
+      return activateInteractionTool<TClipboard>(action.tool);
     case "place-component":
+      if (
+        state.kind === "placing-component" &&
+        sameComponentPlacement(state.placement, action.placement)
+      ) {
+        return state;
+      }
       return {
         kind: "placing-component",
         placement: action.placement,
+        rotation: action.placement.initialRotation,
+        previewPoint: null,
       };
+    case "set-component-preview":
+      return state.kind === "placing-component"
+        ? { ...state, previewPoint: action.point }
+        : state;
+    case "rotate-component":
+      return state.kind === "placing-component"
+        ? {
+            ...state,
+            rotation: ((state.rotation + action.deltaDegrees + 360) % 360) as
+              0 | 90 | 180 | 270,
+          }
+        : state;
+    case "begin-vdd-rail":
+      return state.kind === "placing-vdd-rail"
+        ? state
+        : { kind: "placing-vdd-rail", start: null, previewPoint: null };
+    case "set-vdd-rail-start":
+      return state.kind === "placing-vdd-rail"
+        ? { ...state, start: action.point }
+        : state;
+    case "set-vdd-rail-preview":
+      return state.kind === "placing-vdd-rail"
+        ? { ...state, previewPoint: action.point }
+        : state;
+    case "complete-vdd-rail":
+      return state.kind === "placing-vdd-rail"
+        ? (IDLE_INTERACTION_STATE as InteractionState<TClipboard>)
+        : state;
+    case "begin-copy-placement":
+      if (state.kind === "copy-placement") return state;
+      return {
+        kind: "copy-placement",
+        copy: {
+          clipboard: action.clipboard,
+          anchor: action.anchor,
+          previewPoint: null,
+        },
+      };
+    case "set-copy-preview":
+      return state.kind === "copy-placement"
+        ? { ...state, copy: { ...state.copy, previewPoint: action.point } }
+        : state;
     case "set-wire-source":
       return state.kind === "wire"
         ? {
@@ -162,10 +268,14 @@ export function interactionReducer(
   }
 }
 
-export function interactionTool(state: InteractionState): EditorTool {
+export function interactionTool<TClipboard>(
+  state: InteractionState<TClipboard>,
+): EditorTool {
   switch (state.kind) {
     case "idle":
     case "placing-component":
+    case "placing-vdd-rail":
+    case "copy-placement":
       return "pointer";
     case "wire":
       return "wire";
@@ -174,18 +284,27 @@ export function interactionTool(state: InteractionState): EditorTool {
   }
 }
 
-export function useInteractionState() {
+export function useInteractionState<TClipboard>() {
   const [state, dispatch] = useReducer(
-    interactionReducer,
-    IDLE_INTERACTION_STATE,
+    interactionReducer<TClipboard>,
+    IDLE_INTERACTION_STATE as InteractionState<TClipboard>,
   );
+  const componentPlacement = state.kind === "placing-component" ? state : null;
+  const vddRailPlacement = state.kind === "placing-vdd-rail" ? state : null;
+  const copyPlacement = state.kind === "copy-placement" ? state.copy : null;
   return {
     state,
     tool: interactionTool(state),
-    pendingSymbolId:
-      state.kind === "placing-component" ? state.placement.symbolId : null,
-    pendingComponentPlacement:
-      state.kind === "placing-component" ? state.placement : null,
+    pendingSymbolId: componentPlacement?.placement.symbolId ?? null,
+    pendingComponentPlacement: componentPlacement?.placement ?? null,
+    componentPlacementRotation: componentPlacement?.rotation ?? 0,
+    componentPreviewPoint:
+      componentPlacement?.previewPoint ??
+      vddRailPlacement?.previewPoint ??
+      null,
+    vddRailMode: vddRailPlacement !== null,
+    vddRailStart: vddRailPlacement?.start ?? null,
+    copyPlacement,
     wireSource: state.kind === "wire" ? state.source : null,
     wireSourceRevision: state.kind === "wire" ? state.sourceRevision : null,
     wirePreviewPoint: state.kind === "wire" ? state.previewPoint : null,
@@ -197,6 +316,20 @@ export function useInteractionState() {
     setTool: (tool: EditorTool) => dispatch({ type: "activate-tool", tool }),
     beginComponentPlacement: (placement: PendingComponentPlacement) =>
       dispatch({ type: "place-component", placement }),
+    setComponentPreviewPoint: (point: Point | null) =>
+      dispatch({ type: "set-component-preview", point }),
+    rotateComponentPlacement: (deltaDegrees: 90 | -90) =>
+      dispatch({ type: "rotate-component", deltaDegrees }),
+    beginVddRailPlacement: () => dispatch({ type: "begin-vdd-rail" }),
+    setVddRailStart: (point: Point | null) =>
+      dispatch({ type: "set-vdd-rail-start", point }),
+    setVddRailPreviewPoint: (point: Point | null) =>
+      dispatch({ type: "set-vdd-rail-preview", point }),
+    completeVddRailPlacement: () => dispatch({ type: "complete-vdd-rail" }),
+    beginCopyPlacement: (clipboard: TClipboard, anchor: Point) =>
+      dispatch({ type: "begin-copy-placement", clipboard, anchor }),
+    setCopyPreviewPoint: (point: Point | null) =>
+      dispatch({ type: "set-copy-preview", point }),
     setWireSource: (source: WireSource | null, sourceRevision: number | null) =>
       dispatch({ type: "set-wire-source", source, sourceRevision }),
     setWirePreviewPoint: (point: Point | null) =>

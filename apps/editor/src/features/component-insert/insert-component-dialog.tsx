@@ -97,6 +97,7 @@ export function InsertComponentDialog({
   const symbols = useMemo(() => flattenComponentCatalog(groups), [groups]);
   const selected =
     symbols.find((symbol) => symbol.id === selectedId) ?? symbols[0] ?? null;
+  const selectedIsVddRail = selected?.id === "vdd";
   const parameters = componentParameters(selected?.id ?? "");
 
   useEffect(() => {
@@ -143,6 +144,7 @@ export function InsertComponentDialog({
   };
 
   const rotatePreview = (): void => {
+    if (selectedIsVddRail) return;
     setInitialRotation(
       (current) => ((current + 90) % 360) as 0 | 90 | 180 | 270,
     );
@@ -150,6 +152,14 @@ export function InsertComponentDialog({
 
   const apply = (): void => {
     if (!selected) return;
+    if (selectedIsVddRail) {
+      onApply({
+        kind: "vdd-rail",
+        symbolId: "vdd",
+        symbolName: "VDD Rail",
+      });
+      return;
+    }
     const properties = Object.fromEntries(
       Object.entries(parameterValues)
         .map(([key, value]) => [key, value.trim()] as const)
@@ -157,6 +167,7 @@ export function InsertComponentDialog({
     );
     const trimmedReference = referenceText.trim();
     onApply({
+      kind: "symbol",
       symbolId: selected.id,
       symbolName: selected.name,
       properties,
@@ -305,49 +316,51 @@ export function InsertComponentDialog({
               ) : null}
             </section>
 
-            <section
-              className="insert-placement-options"
-              aria-label="Placement options"
-            >
-              <label className="insert-rotation-control">
-                <span>Rotate</span>
-                <select
-                  aria-label="Initial rotation"
-                  value={initialRotation}
-                  onChange={(event) =>
-                    setInitialRotation(
-                      Number(event.currentTarget.value) as 0 | 90 | 180 | 270,
-                    )
-                  }
-                >
-                  <option value="0">0°</option>
-                  <option value="90">90°</option>
-                  <option value="180">180°</option>
-                  <option value="270">270°</option>
-                </select>
-              </label>
-              <div className="insert-label-control">
-                <label className="insert-reference-toggle">
-                  <input
-                    type="checkbox"
-                    checked={showReference}
+            {!selectedIsVddRail ? (
+              <section
+                className="insert-placement-options"
+                aria-label="Placement options"
+              >
+                <label className="insert-rotation-control">
+                  <span>Rotate</span>
+                  <select
+                    aria-label="Initial rotation"
+                    value={initialRotation}
                     onChange={(event) =>
-                      setShowReference(event.currentTarget.checked)
+                      setInitialRotation(
+                        Number(event.currentTarget.value) as 0 | 90 | 180 | 270,
+                      )
+                    }
+                  >
+                    <option value="0">0°</option>
+                    <option value="90">90°</option>
+                    <option value="180">180°</option>
+                    <option value="270">270°</option>
+                  </select>
+                </label>
+                <div className="insert-label-control">
+                  <label className="insert-reference-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showReference}
+                      onChange={(event) =>
+                        setShowReference(event.currentTarget.checked)
+                      }
+                    />
+                    <span>Label</span>
+                  </label>
+                  <input
+                    aria-label="Label name"
+                    value={referenceText}
+                    disabled={!showReference}
+                    placeholder="Name (auto)"
+                    onChange={(event) =>
+                      setReferenceText(event.currentTarget.value)
                     }
                   />
-                  <span>Label</span>
-                </label>
-                <input
-                  aria-label="Label name"
-                  value={referenceText}
-                  disabled={!showReference}
-                  placeholder="Name (auto)"
-                  onChange={(event) =>
-                    setReferenceText(event.currentTarget.value)
-                  }
-                />
-              </div>
-            </section>
+                </div>
+              </section>
+            ) : null}
 
             {parameters.length > 0 ? (
               <section
@@ -406,9 +419,7 @@ export function InsertComponentDialog({
         </div>
 
         <footer className="insert-dialog-actions">
-          <small>
-            Type to search · ↑↓ choose · R rotate · Enter place · Esc cancel
-          </small>
+          <small>Type to search · ↑↓ choose · Enter place · Esc cancel</small>
           <div>
             <button type="button" onClick={onCancel}>
               Cancel
