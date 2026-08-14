@@ -6795,3 +6795,18 @@ contracts (WP-R1)`.
 - Commit status: implementation committed and pushed on
   `codex/agent-mcp-adapter` as `0b36b78`; PR #49 remains open and unmerged by
   request.
+
+## 2026-08-14 - Publish self-bootstrapping MCP distribution
+
+- Target: let a first-time external Agent install or discover Analog Canvas
+  MCP from the editor's existing copied handoff, with immediate Agent Kit
+  fallback and no circuit API expansion.
+- Changed areas: shared distribution declaration; public Worker bootstrap
+  manifest; editor copy/setup text; MCP and application release packaging;
+  GitHub Release/optional npm workflow; installation documentation.
+- Validation: 32 focused editor/Worker tests, typecheck, public `npx`
+  initialize, frozen install plus `pnpm ci:check` (649 unit/integration and
+  103 browser tests), all six PR #50 checks, production Cloudflare deployment,
+  Release SHA-256 verification, and public Release URL initialize passed.
+- Commit status: implementation `b3f4d70`, canonical integrity fix
+  `fe6ea74`, merged as PR #50; GitHub Release `mcp-v0.1.0` published.
