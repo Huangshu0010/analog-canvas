@@ -5378,6 +5378,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       },
       copyCounter.current,
     );
+    if (proposal.errors.length > 0) {
+      copyCounter.current -= 1;
+      setStatus(proposal.errors[0]!);
+      cancelAllTransientInteraction();
+      return;
+    }
     const result = transact(proposal.edits, { preserveInteraction: true });
     if (result.ok) {
       selectOnly("instance", proposal.instanceIds);

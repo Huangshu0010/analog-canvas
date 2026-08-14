@@ -13,7 +13,18 @@ import type {
 
 export interface SchematicClipboard {
   instances: Instance[];
+  /**
+   * Nets entirely inside the copied selection. They are duplicated (or merged
+   * by name) when the copy is committed.
+   */
   nets: Net[];
+  /**
+   * A projection of Nets that cross the selection boundary. Only terminals on
+   * copied instances are retained. These Nets make the isolated preview a
+   * valid document and, on paste, reconnect the copied terminals to the
+   * already-existing Net instead of cloning it.
+   */
+  boundaryNets: Net[];
   routes: RouteBranch[];
   junctions: SchematicDocument["junctions"];
   annotations: Annotation[];
@@ -23,6 +34,7 @@ export interface SchematicClipboard {
 export interface PasteProposal {
   edits: SchematicEdit[];
   instanceIds: string[];
+  errors: string[];
 }
 
 /**
@@ -82,7 +94,7 @@ export function clipboardPreviewDocument(
           }
         : null,
     })),
-    nets: structuredClone(clipboard.nets),
+    nets: structuredClone([...clipboard.nets, ...clipboard.boundaryNets]),
     routes: clipboard.routes.map((route) => ({
       ...structuredClone(route),
       waypoints: route.waypoints.map((point) => movePoint(point, offset)),
@@ -119,6 +131,20 @@ export function copySelection(
   return structuredClone({
     instances,
     nets: document.nets.filter((net) => netIds.has(net.id)),
+    boundaryNets: document.nets
+      .filter(
+        (net) =>
+          !netIds.has(net.id) &&
+          net.terminals.some((terminal) =>
+            selectedIds.has(terminal.instanceId),
+          ),
+      )
+      .map((net) => ({
+        ...net,
+        terminals: net.terminals.filter((terminal) =>
+          selectedIds.has(terminal.instanceId),
+        ),
+      })),
     routes: document.routes.filter((route) => routeIds.has(route.id)),
     junctions: document.junctions.filter((junction) =>
       junctionIds.has(junction.id),
@@ -263,6 +289,7 @@ export function proposePaste(
     ]),
   );
   const existingAnchors = new Map<string, RouteEndpoint>();
+  const errors: string[] = [];
   for (const net of clipboard.nets) {
     const existing = net.name
       ? document.nets.find((candidate) => candidate.name === net.name)
@@ -348,6 +375,27 @@ export function proposePaste(
       }
     }
   }
+  for (const boundaryNet of clipboard.boundaryNets) {
+    const target = document.nets.find(
+      (candidate) => candidate.id === boundaryNet.id,
+    );
+    const anchor = target ? firstNetEndpoint(target) : null;
+    if (!anchor) {
+      errors.push(
+        `Cannot paste: external Net ${boundaryNet.name ?? boundaryNet.id} is no longer available`,
+      );
+      continue;
+    }
+    for (const terminal of boundaryNet.terminals) {
+      const instanceId = instanceIds.get(terminal.instanceId);
+      if (!instanceId) continue;
+      edits.push({
+        kind: "connect_endpoints",
+        from: anchor,
+        to: { kind: "terminal", instanceId, pinName: terminal.pinName },
+      });
+    }
+  }
   edits.push(
     ...clipboard.noConnects.map((noConnect): SchematicEdit => {
       if (noConnect.endpoint.kind !== "terminal") {
@@ -425,5 +473,5 @@ export function proposePaste(
       },
     })),
   );
-  return { edits, instanceIds: [...instanceIds.values()] };
+  return { edits, instanceIds: [...instanceIds.values()], errors };
 }

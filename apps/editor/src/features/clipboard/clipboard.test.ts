@@ -1,5 +1,6 @@
 import { executeTransaction } from "@icm/edit-engine";
 import { createEmptyDocument } from "@icm/model";
+import { buildSvgScene } from "@icm/render-svg";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 import { describe, expect, it } from "vitest";
 
@@ -161,6 +162,84 @@ describe("schematic clipboard", () => {
     expect(result.document.noConnects).toContainEqual({
       id: "nc-r1-1-copy-1",
       endpoint: { kind: "terminal", instanceId: "R1-copy-1", pinName: "1" },
+    });
+  });
+
+  it("keeps a copied MOS connected to its shared external bulk Net", () => {
+    const document = createEmptyDocument("document-main", "Shared MOS bulk");
+    document.instances.push(
+      {
+        id: "M1",
+        symbolId: "nmos",
+        mosBulkBinding: { origin: "supply-default", netId: "net-global-0" },
+        placement: {
+          position: { x: 100, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+      {
+        id: "M2",
+        symbolId: "nmos",
+        mosBulkBinding: { origin: "supply-default", netId: "net-global-0" },
+        placement: {
+          position: { x: 220, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    );
+    document.nets.push({
+      id: "net-global-0",
+      name: "0",
+      scope: "global",
+      powerDomain: "ground",
+      terminals: [
+        { instanceId: "M1", pinName: "B" },
+        { instanceId: "M2", pinName: "B" },
+      ],
+    });
+
+    const copied = copySelection(document, ["M1"]);
+    expect(copied?.nets).toEqual([]);
+    expect(copied?.boundaryNets).toEqual([
+      expect.objectContaining({
+        id: "net-global-0",
+        terminals: [{ instanceId: "M1", pinName: "B" }],
+      }),
+    ]);
+
+    const preview = clipboardPreviewDocument(document, copied!, {
+      x: 80,
+      y: 0,
+    });
+    expect(() => buildSvgScene(preview, resolver)).not.toThrow();
+
+    const proposal = proposePaste(document, copied!, { x: 80, y: 0 }, 1);
+    expect(proposal.errors).toEqual([]);
+    const result = executeTransaction(
+      document,
+      {
+        transactionId: "paste-shared-mos-bulk",
+        documentId: document.id,
+        expectedRevision: 0,
+        actor: { kind: "human", id: "test" },
+        edits: proposal.edits,
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.nets[0]?.terminals).toEqual([
+      { instanceId: "M1", pinName: "B" },
+      { instanceId: "M2", pinName: "B" },
+      { instanceId: "M1-copy-1", pinName: "B" },
+    ]);
+    expect(result.document.instances[2]?.mosBulkBinding).toEqual({
+      origin: "supply-default",
+      netId: "net-global-0",
     });
   });
 });

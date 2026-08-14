@@ -212,6 +212,30 @@ test("publishes placement cancellation synchronously before rapid Copy", async (
   }
 });
 
+test("copies a MOS whose bulk belongs to a shared supply Net", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  await chooseComponent(page, "nmos");
+  await canvas.click({ position: { x: 280, y: 220 } });
+  await page.keyboard.press("Escape");
+  await chooseComponent(page, "nmos");
+  await canvas.click({ position: { x: 460, y: 220 } });
+  await page.keyboard.press("Escape");
+
+  await page.getByTestId("hit-M1").click();
+  await page.keyboard.press("c");
+  await canvas.hover({ position: { x: 620, y: 340 } });
+  await expect(page.getByTestId("copy-placement-preview")).toBeVisible();
+  await canvas.click({ position: { x: 620, y: 340 } });
+  await expect(page.getByTestId("hit-M1-copy-1")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Circuit Maker" }),
+  ).toBeVisible();
+});
+
 test("carries a manual Value through placement and Q property editing", async ({
   page,
 }) => {
