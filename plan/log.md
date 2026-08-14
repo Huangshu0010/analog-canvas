@@ -6655,3 +6655,18 @@ contracts (WP-R1)`.
   `git diff --check` passed.
 - Commit status: ready to commit on `codex/mos-copy-vdd-visual-fix` as
   `fix(editor): stabilize MOS copy transition and VDD rail`.
+
+## 2026-08-14 - Preserve shared MOS bulk Nets during copy
+
+- Target: prevent a copied NMOS/PMOS with a shared implicit bulk Net from
+  invalidating the transient preview document or creating an electrically
+  incomplete pasted instance.
+- Changed areas: clipboard boundary-Net projection and paste reconnection;
+  graceful stale-boundary handling; focused unit and browser regression
+  coverage.
+- Validation: focused clipboard unit tests, full component-insert browser spec,
+  `pnpm typecheck`, frozen-lockfile install, and full `pnpm ci:check` (559 unit
+  tests, 103 browser tests, builds, performance/export/PWA/release smoke)
+  passed; `git diff --check` passed.
+- Commit status: committed on `codex/fix-mos-external-net-copy` as `766c098`
+  (`fix(editor): preserve shared MOS bulk nets during copy`).
