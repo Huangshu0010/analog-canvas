@@ -6810,3 +6810,16 @@ contracts (WP-R1)`.
   Release SHA-256 verification, and public Release URL initialize passed.
 - Commit status: implementation `b3f4d70`, canonical integrity fix
   `fe6ea74`, merged as PR #50; GitHub Release `mcp-v0.1.0` published.
+
+## 2026-08-14 - Normalize Fit View bounds to the editor grid
+
+- Target: prevent Fit View (`F`, `Home`, and the command button) from feeding
+  fractional renderer geometry back into the integer-grid editor camera.
+- Changed areas: one derived-bounds-to-camera adapter in the editor, its unit
+  contract, and a browser regression that fits drafted text through `F`.
+- Validation: focused unit and browser checks, `pnpm typecheck`, formatting,
+  full drafting E2E (24 tests), `git diff --check`, and canonical `pnpm
+  ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
+  passed.
+- Commit status: committed on `codex/fix-fit-view-grid-bounds`; remote CI and
+  merge remain pending.
