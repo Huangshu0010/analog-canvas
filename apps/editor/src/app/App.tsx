@@ -139,6 +139,12 @@ import {
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
 import { ReplaceGuardDialog } from "../components/replace-guard-dialog";
+import { RecentRecoveryDialog } from "../components/recent-recovery-dialog";
+import {
+  RecoveryFailureBanner,
+  StartupRecoveryBanner,
+  recoveryStateLabel,
+} from "../components/recovery-banners";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
 import {
   AgentPropertiesSection,
@@ -178,12 +184,15 @@ import type {
   BrowserRecoverySource,
 } from "../document/browser-recovery-contract";
 import {
+  downloadTextArtifact,
   formatProjectOpenDiagnostics,
   requestProjectDownload,
   saveProjectArtifact,
   stageProjectFile,
   type ProjectFileState,
 } from "../document/project-file-service";
+import type { BrowserRecoveryGeneration } from "../document/browser-recovery-contract";
+import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import {
   NetTraceSection,
@@ -510,6 +519,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const [replaceGuard, setReplaceGuard] = useState<ReplaceGuardState | null>(
     null,
   );
+  const [recoveryDialogOpen, setRecoveryDialogOpen] = useState(false);
+  const [recoveryBannerDismissed, setRecoveryBannerDismissed] = useState(false);
+  const [recoveryFailureDismissed, setRecoveryFailureDismissed] =
+    useState(false);
   const {
     state: recoveryState,
     sessions: recoverySessions,
@@ -3714,11 +3727,22 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
   }
 
-  function restoreRecovery(): void {
-    const session = recoverySessions[0];
-    if (!session) return;
+  function openRecoveryDialog(): void {
+    setRecoveryBannerDismissed(true);
+    // Refresh summaries so the dialog reflects records written after the
+    // startup discovery (including this session's own latest commits).
     void (async () => {
-      const read = await readRecoveryProject(session.workingCopyId, "latest");
+      await discoverRecovery();
+      setRecoveryDialogOpen(true);
+    })();
+  }
+
+  function restoreRecoverySession(
+    workingCopyId: string,
+    generation: BrowserRecoveryGeneration,
+  ): void {
+    void (async () => {
+      const read = await readRecoveryProject(workingCopyId, generation);
       if (read.status !== "valid") {
         setStatus(
           read.status === "unsupported-schema"
@@ -3744,11 +3768,54 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       const recoveredDocument = replaceActiveProject(
         read.project,
         DEFAULT_VIEWBOX,
-        {
-          source: "recovered",
-        },
+        { source: "recovered" },
       );
+      setRecoveryDialogOpen(false);
+      setRecoveryBannerDismissed(true);
+      await discoverRecovery();
       setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
+    })();
+  }
+
+  function downloadRecoveryBackup(
+    workingCopyId: string,
+    generation: BrowserRecoveryGeneration,
+  ): void {
+    void (async () => {
+      const read = await readRecoveryProject(workingCopyId, generation);
+      const summary = recoverySessions.find(
+        (session) => session.workingCopyId === workingCopyId,
+      );
+      if (read.status === "valid" || read.status === "unsupported-schema") {
+        const text =
+          read.status === "valid" ? read.record.projectText : read.projectText;
+        const name =
+          summary?.projectName ??
+          (read.status === "valid" ? read.record.projectName : "recovery");
+        const fileName = `${projectFileBaseName(name)}-backup.icproj.json`;
+        const outcome = downloadTextArtifact(text, fileName);
+        setStatus(
+          outcome.status === "download-requested"
+            ? `Download requested: ${outcome.fileName}`
+            : `Download failed: ${outcome.message}`,
+        );
+        return;
+      }
+      setStatus(
+        `Backup not available: ${
+          read.status === "missing" ? "no stored record" : read.message
+        }`,
+      );
+    })();
+  }
+
+  function deleteRecoverySessionFromDialog(workingCopyId: string): void {
+    void (async () => {
+      const removed = await deleteRecoverySession(workingCopyId);
+      await discoverRecovery();
+      setStatus(
+        removed ? "Deleted recovery copy" : "Could not delete recovery copy",
+      );
     })();
   }
 
@@ -3779,6 +3846,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         DEFAULT_VIEWBOX,
         { source: "recovered", keepWorkingCopy: true },
       );
+      setRecoveryBannerDismissed(true);
       setStatus(`Restored recovery revision ${restoredDocument.revision}`);
     })();
   }, [restoreAfterRefresh, recoveryReady, recoveryWorkingCopyId]);
@@ -3812,16 +3880,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       await flushRecovery();
       window.sessionStorage.setItem(REFRESH_RESTORE_STORAGE_KEY, "true");
       window.location.reload();
-    })();
-  }
-
-  function discardRecovery(): void {
-    const session = recoverySessions[0];
-    if (!session) return;
-    void (async () => {
-      const removed = await deleteRecoverySession(session.workingCopyId);
-      await discoverRecovery();
-      setStatus(removed ? "Discarded recovery" : "Could not discard recovery");
     })();
   }
 
@@ -6025,14 +6083,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     PDF
                   </button>
                   {recoverySessions.length > 0 ? (
-                    <>
-                      <button type="button" onClick={restoreRecovery}>
-                        Restore recovery
-                      </button>
-                      <button type="button" onClick={discardRecovery}>
-                        Discard recovery
-                      </button>
-                    </>
+                    <button type="button" onClick={openRecoveryDialog}>
+                      Recover recent work…
+                    </button>
                   ) : null}
                 </div>
               </details>
@@ -6295,6 +6348,41 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       </header>
       {helpOpen ? (
         <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
+      ) : null}
+      {recoveryReady &&
+      recoverySessions.length > 0 &&
+      !recoveryBannerDismissed &&
+      !recoveryDialogOpen ? (
+        <StartupRecoveryBanner
+          onOpen={openRecoveryDialog}
+          onDismiss={() => setRecoveryBannerDismissed(true)}
+        />
+      ) : null}
+      {(recoveryState === "quota-exceeded" ||
+        recoveryState === "unavailable" ||
+        recoveryState === "failed") &&
+      !recoveryFailureDismissed ? (
+        <RecoveryFailureBanner
+          state={recoveryState}
+          onDownload={() => {
+            const outcome = requestProjectDownload(project);
+            setStatus(
+              outcome.status === "download-requested"
+                ? `Download requested: ${outcome.fileName}`
+                : `Download failed: ${outcome.message}`,
+            );
+          }}
+          onDismiss={() => setRecoveryFailureDismissed(true)}
+        />
+      ) : null}
+      {recoveryDialogOpen && recoverySessions.length > 0 ? (
+        <RecentRecoveryDialog
+          sessions={recoverySessions}
+          onRestore={restoreRecoverySession}
+          onDownloadBackup={downloadRecoveryBackup}
+          onDeleteSession={deleteRecoverySessionFromDialog}
+          onClose={() => setRecoveryDialogOpen(false)}
+        />
       ) : null}
       {replaceGuard !== null ? (
         <ReplaceGuardDialog
@@ -8330,6 +8418,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     ? "Line"
                     : tool.charAt(0).toUpperCase() + tool.slice(1)}
           </span>
+          {recoveryStateLabel(recoveryState) === null ? null : (
+            <output
+              className="statusbar-recovery"
+              data-testid="recovery-state"
+              aria-label="Browser recovery state"
+            >
+              {recoveryStateLabel(recoveryState)}
+            </output>
+          )}
         </div>
         <div className="canvas-controls" aria-label="Canvas zoom controls">
           <button

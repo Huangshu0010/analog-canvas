@@ -165,6 +165,21 @@ export function requestProjectDownload(
     return { status: "failed", message: errorMessage(error) };
   }
   const fileName = `${projectFileBaseName(project.name)}.icproj.json`;
+  return downloadTextArtifact(text, fileName, seams);
+}
+
+/**
+ * Download stored recovery text exactly as it was saved — including records
+ * with a newer, non-installable Project schema, which stay exportable raw
+ * data instead of being treated as corruption.
+ */
+export function downloadTextArtifact(
+  text: string,
+  fileName: string,
+  seams: ProjectFileServiceSeams = {},
+):
+  | { status: "download-requested"; fileName: string; bytes: number }
+  | { status: "failed"; message: string } {
   const documentLike = seams.getDocument?.() ?? defaultDocument();
   if (documentLike === null) {
     return { status: "failed", message: "no document available for download" };

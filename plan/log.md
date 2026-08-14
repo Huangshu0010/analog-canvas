@@ -1,5 +1,21 @@
 # Maintenance Log
 
+## 2026-08-14 - WP-4 recovery UX and operational visibility
+
+- Target: non-blocking recovery banner, per-session recovery dialog with
+  Restore/Download/Delete, persistent storage-failure warning, statusbar
+  recovery label, and Help/troubleshooting updates; fifth work package of
+  `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `recent-recovery-dialog.tsx` + `recovery-banners.tsx`,
+  `downloadTextArtifact` in `project-file-service.ts`, `App.tsx` dialog/
+  banner/menu/statusbar wiring, help dialog + troubleshooting docs, new
+  `recovery-dialog.spec.ts` (6 tests) and dialog-based manual-editor flows.
+- Validation: 106 unit tests; 90 E2E tests across manual-editor,
+  recovery-dialog, project-file, component-insert; typecheck, prettier,
+  `git diff --check` clean.
+- Commit status: committed as `feat(editor): add recent-work recovery UX` on
+  `agent/robust-page-persistence-recovery`.
+
 ## 2026-08-14 - WP-3 project file service and replacement protection
 
 - Target: truthful Save/Open semantics with File System Access enhancement,

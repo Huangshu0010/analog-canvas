@@ -925,8 +925,12 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
     .poll(() => recoveryProjectTexts(page))
     .toContain(`"revision": ${revision}`);
   await page.reload();
-  await openMenu(page, "File");
-  await page.getByRole("button", { name: "Restore recovery" }).click();
+  const fileMenu = await openMenu(page, "File");
+  await fileMenu.getByRole("button", { name: "Recover recent work…" }).click();
+  await page
+    .getByRole("dialog", { name: "Recover recent work" })
+    .getByRole("button", { name: "Restore" })
+    .click();
   await expect(page.getByTestId("instance-count")).toHaveText("4");
 
   await clickCommand(page, "Draw", "Wire (W)");
@@ -1926,8 +1930,12 @@ test("uses automatic recovery and guards shortcuts while typing", async ({
     .toContain('"revision": 1');
 
   await page.reload();
-  await openMenu(page, "File");
-  await page.getByRole("button", { name: "Restore recovery" }).click();
+  const fileMenu = await openMenu(page, "File");
+  await fileMenu.getByRole("button", { name: "Recover recent work…" }).click();
+  await page
+    .getByRole("dialog", { name: "Recover recent work" })
+    .getByRole("button", { name: "Restore" })
+    .click();
   await expect(page.getByTestId("revision")).toHaveText("1");
 
   await page.keyboard.press("i");
@@ -2026,7 +2034,11 @@ test("discard recovery clears the recovery slot", async ({ page }) => {
     .toContain('"revision": 1');
 
   await page.reload();
-  await clickCommand(page, "File", "Discard recovery");
+  await clickCommand(page, "File", "Recover recent work…");
+  await page
+    .getByRole("dialog", { name: "Recover recent work" })
+    .getByRole("button", { name: "Delete" })
+    .click();
   await expect
     .poll(async () => (await readRecoveryRecords(page)).length)
     .toBe(0);
