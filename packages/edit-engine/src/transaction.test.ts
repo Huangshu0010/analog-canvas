@@ -515,8 +515,8 @@ describe("Edit Transaction envelope", () => {
         kind: "object",
         objectId: "Q1",
         localOffset: {
-          x: initial.semanticPosition.x - instance.placement.position.x,
-          y: initial.semanticPosition.y - instance.placement.position.y,
+          x: initial.position.x - instance.placement.position.x,
+          y: initial.position.y - instance.placement.position.y,
         },
         fallbackPosition: initial.position,
       },

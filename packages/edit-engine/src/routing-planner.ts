@@ -104,6 +104,8 @@ export interface WireIntent {
 export interface VisualRouteDeletion {
   routeIds: string[];
   junctionIds: string[];
+  /** Annotations removed as an inseparable part of the selected visual route. */
+  annotationIds: string[];
   edits: SchematicEdit[];
 }
 
@@ -443,6 +445,7 @@ export function proposeVisualRouteDeletion(
   return {
     routeIds: sortedRouteIds,
     junctionIds: sortedJunctionIds,
+    annotationIds: removedPowerLabelIds,
     edits: [
       ...removedPowerLabelIds.map((annotationId): SchematicEdit => ({
         kind: "remove_schematic_annotation",

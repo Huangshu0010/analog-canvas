@@ -110,7 +110,15 @@ describe("route interaction geometry", () => {
       locked: false,
     };
     expect(effectiveRouteAttachment(marker)?.t).toBe(0.5);
-    expect(annotationAnchor(marker, [record])).toEqual({ x: 50, y: 0 });
+    expect(
+      annotationAnchor(
+        document,
+        resolver,
+        marker,
+        [record],
+        resolveSchematicStyleProfile(document.presentation.styleProfileId),
+      ),
+    ).toEqual({ x: 50, y: 0 });
 
     expect(
       dragRouteAttachmentAtPoint(
@@ -190,7 +198,7 @@ describe("route interaction geometry", () => {
     ).toBeNull();
   });
 
-  it("keeps a rotated MOS label semantic offset separate from its glyph baseline", () => {
+  it("stores a rotated MOS label at the visible glyph baseline", () => {
     const document = createEmptyDocument("mos-label", "MOS Label");
     const instance = {
       id: "M1",
@@ -212,7 +220,7 @@ describe("route interaction geometry", () => {
       defaultInstanceLabel(document, instance, resolver, profile),
     ).toMatchObject({
       anchor: {
-        localOffset: { x: -8, y: 13 },
+        localOffset: { x: -8, y: 29 },
         fallbackPosition: { x: 92, y: 129 },
       },
       alignment: "middle",

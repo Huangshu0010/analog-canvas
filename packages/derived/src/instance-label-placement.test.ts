@@ -127,14 +127,12 @@ describe("instance label placement", () => {
       placedDefaultLabel("nmos", 90, "none", "textbook-3terminal"),
     ).toMatchObject({
       position: { x: 92, y: 129 },
-      semanticPosition: { x: 92, y: 113 },
       alignment: "middle",
     });
     expect(
       placedDefaultLabel("nmos", 270, "none", "textbook-3terminal"),
     ).toMatchObject({
       position: { x: 108, y: 82 },
-      semanticPosition: { x: 108, y: 87 },
       alignment: "middle",
     });
     expect(placedDefaultLabel("nmos", 0, "x")).toMatchObject({

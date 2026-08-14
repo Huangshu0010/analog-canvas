@@ -46,8 +46,11 @@ body-bias Net, so the default never remains as a hidden parallel connection.
 Every visible editable label is a `SchematicAnnotation` with bounded RichText
 `content` and one `VisualAnchor`. Anchors are free, object-relative, or
 route-relative and include a deterministic fallback position for dangling
-visual references. Renderers never derive visible instance text from IDs or
-properties. Drafting objects are visual-only and cannot create connectivity.
+visual references. While an anchor resolves, its resolved position is the one
+text baseline used by rendering, editor hit/marquee geometry, export bounds,
+and visual diagnostics; `fallbackPosition` is used only for a dangling target.
+Renderers never derive visible instance text from IDs or properties. Drafting
+objects are visual-only and cannot create connectivity.
 
 ## Core invariants
 
