@@ -6610,5 +6610,5 @@ contracts (WP-R1)`.
 - Validation: 541 unit tests, all workspace builds, `pnpm verify:branch`,
   frozen-lockfile install, full `pnpm ci:check`, and all 95 browser E2E tests
   passed.
-- Commit status: ready to commit on `codex/agent-transport-watchdog` as
-  `refactor(circuit): remove legacy contract routing`.
+- Commit status: committed on `codex/agent-transport-watchdog` as `9a552d3`
+  (`refactor(circuit): remove legacy contract routing`).
