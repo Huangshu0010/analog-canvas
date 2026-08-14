@@ -50,7 +50,7 @@ describe("AgentSessionMachine", () => {
     expect(session.editorSecret).toMatch(/^rand-/u);
     expect(session.claimCode).toMatch(/^rand-/u);
     expect(session.claimExpiresAt - now()).toBe(30 * 60 * 1_000);
-    expect(session.expiresAt - now()).toBe(8 * 60 * 60 * 1_000);
+    expect(session.expiresAt - now()).toBe(7 * 24 * 60 * 60 * 1_000);
     expect(machine.authorizeEditor(session.editorSecret)).toBe(true);
     expect(machine.authorizeEditor("wrong")).toBe(false);
   });
@@ -75,6 +75,26 @@ describe("AgentSessionMachine", () => {
     expect(priorToken.ok).toBe(false);
     if (!priorToken.ok) expect(priorToken.code).toBe("TOKEN_INVALID");
     expect(machine.authorize(retry.claim.agentToken, now()).ok).toBe(true);
+  });
+
+  it("resumes a connector with a fresh bearer and revokes both together", () => {
+    const { machine, session, now } = setup();
+    const claimed = machine.redeemClaim(session.claimCode, now());
+    if (!claimed.ok) throw new Error("claim failed");
+    const resumed = machine.resumeConnector(
+      claimed.claim.connectorToken,
+      now(),
+    );
+    expect(resumed.ok).toBe(true);
+    if (!resumed.ok) return;
+    expect(resumed.claim.agentToken).not.toBe(claimed.claim.agentToken);
+    expect(machine.authorize(claimed.claim.agentToken, now()).ok).toBe(false);
+    expect(machine.authorize(resumed.claim.agentToken, now()).ok).toBe(true);
+
+    machine.revoke();
+    expect(
+      machine.resumeConnector(claimed.claim.connectorToken, now()),
+    ).toMatchObject({ ok: false, code: "SESSION_REVOKED" });
   });
 
   it("records one-shot artifacts without retaining or replaying their bytes", () => {

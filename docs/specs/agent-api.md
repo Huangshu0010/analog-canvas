@@ -21,6 +21,11 @@ dynamic catalog snapshots, whole-Project mutations, or compatibility readers.
 The separate public Agent Kit may carry a static projection of reviewed built-in
 product assets; it is not Document state or a Circuit operation.
 
+Session pairing and bearer refresh are transport concerns, not Circuit
+operations. The local MCP Helper redeems a claim once, persists only the
+revocable connector, and uses `/api/agent/connectors/resume` to obtain fresh
+process-local bearers.
+
 ## Operation contract
 
 | Operation      | Purpose                                                                                               |

@@ -46,6 +46,7 @@ describe("Agent golden request contract", () => {
     }
     expect(Object.keys(agentCircuitOpenApi.paths).sort()).toEqual([
       "/api/agent/claims",
+      "/api/agent/connectors/resume",
       "/api/agent/sessions/{sessionId}/circuit",
       "/api/agent/sessions/{sessionId}/files",
     ]);

@@ -72,6 +72,7 @@ describe("agent-session relay", () => {
     const first = redeemClaimResponse(machine, session.claimCode, now());
     expect(first).toMatchObject({
       ok: true,
+      sessionId: machine.sessionId,
       projectId: "project-1",
       documentIds: ["document-1"],
     });
@@ -314,6 +315,7 @@ describe("public Agent session routes", () => {
     });
     expect(Object.keys(contract.paths).sort()).toEqual([
       "/api/agent/claims",
+      "/api/agent/connectors/resume",
       "/api/agent/sessions/{sessionId}/circuit",
       "/api/agent/sessions/{sessionId}/files",
     ]);
@@ -424,6 +426,55 @@ describe("public Agent session routes", () => {
     expect(response?.status).toBe(403);
     expect(await response!.json()).toMatchObject({
       error: { code: "TOKEN_SCOPE_INSUFFICIENT" },
+    });
+  });
+
+  it("resumes a claimed session with its connector credential", async () => {
+    const { env } = routedFixture();
+    const createdResponse = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          projectSessionId: "project:connector",
+          projectId: "project",
+          documentIds: ["document-main"],
+          scopes: ["circuit.snapshot"],
+        }),
+      }),
+      env,
+    );
+    const created = (await createdResponse!.json()) as {
+      session: { sessionId: string; claimCode: string };
+    };
+    const claimResponse = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/claims", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ claimCode: created.session.claimCode }),
+      }),
+      env,
+    );
+    const claim = (await claimResponse!.json()) as {
+      agentToken: string;
+      connectorToken: string;
+    };
+    const resumeResponse = await routeAgentSessionRequest(
+      new Request("https://editor.example/api/agent/connectors/resume", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: created.session.sessionId,
+          connectorToken: claim.connectorToken,
+        }),
+      }),
+      env,
+    );
+    expect(resumeResponse?.status).toBe(200);
+    expect(await resumeResponse!.json()).toMatchObject({
+      ok: true,
+      sessionId: created.session.sessionId,
+      connectorToken: claim.connectorToken,
     });
   });
 

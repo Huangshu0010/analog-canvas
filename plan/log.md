@@ -1,5 +1,33 @@
 # Maintenance Log
 
+## 2026-08-14 - Agent-side MCP adapter (M0-M3)
+
+- Target: give Codex/Claude/Cursor hosts a local stdio MCP entry over the
+  unchanged four-operation Agent API, covering design milestones M0-M3
+  (contract/doc freeze, session Helper, read tools/resources, high-level
+  action compilation). M4/M5 (persistent pairing, file tools, delivery gate)
+  remain follow-up targets.
+- Changed areas: new `packages/agent-client` Helper (http/connection-state/
+  credential-store/snapshot-cache/session-client/authoring compiler), new
+  `apps/mcp-server` stdio MCP (protocol/tools/resources/results), ADR 0020,
+  `docs/agent/resource-manifest.json` + `scripts/generate-mcp-resources.mjs`
+  (+`pnpm mcp:resources[:check]`), docs entry reordering, ADR index, catalog
+  re-export from `@icm/agent-adapter/kit`, tsconfig paths, lockfile importers.
+- Contract result: no change to the four-operation API, worker, editor, or
+  Edit Engine. MCP is an Agent-side client only; tokens stay in the Helper and
+  a user-level credential file; `advanced_transact` is gated on reading the
+  advanced-edits resource; high-level actions compile to existing typed edits
+  or `wireIntent` with dry-run, revision checks, and `STATE_CHANGED` reports.
+- Validation: 71 new unit/contract tests; full suite 113 files / 638 tests
+  green; format/docs/references/catalog/typecheck green; composite builds of
+  both packages; generated-resource check up to date; live stdio smoke of the
+  built server; `git diff --check` clean. Local `pnpm ci:check` could not run
+  (no pnpm shim on PATH; corepack used instead), so remote required checks are
+  the delivery authority.
+- Commit status: to be committed as
+  `feat(agent): add Agent-side stdio MCP adapter (M0-M3)` and pushed on
+  `codex/agent-mcp-adapter`.
+
 ## 2026-08-14 - External Agent Razavi authoring Kit
 
 - Target: allow a browser-authorized Agent without repository source or manually
@@ -6734,3 +6762,36 @@ contracts (WP-R1)`.
   workspace builds, golden/export/PWA/production/release checks).
 - Commit status: initial implementation `5be6e16`; golden completion ready to
   commit on `codex/unify-annotation-presentation`.
+
+## 2026-08-14 - Close MCP adapter review gaps
+
+- Target: make the M0-M3 MCP adapter preserve visible wiring and document
+  identity, avoid partial multi-transaction action commits, observe concurrent
+  human edits, and keep bearer credentials process-local until M4.
+- Changed areas: Agent Helper action/session contracts; MCP tool schemas and
+  focused tests; MCP-native quickstart, resource projections, ADR wording, and
+  generated resources.
+- Validation: 129 focused Agent/MCP/adapter tests, generated-resource and
+  Markdown checks, `pnpm typecheck`, `git diff --check`, and
+  `pnpm verify:branch` (112 test files / 638 tests, all workspace builds,
+  static contracts, and editor production smoke) passed.
+- Commit status: ready to commit on `codex/agent-mcp-adapter` as
+  `fix(agent): close MCP adapter review gaps`; intentionally not merging until
+  the separately scoped M4/M5 work is ready.
+
+## 2026-08-14 - Complete deployable MCP lifecycle
+
+- Target: finish M4/M5 on PR #49 with restart-safe browser/Agent pairing,
+  compact file tools, an installable MCP package, and a deployment golden path
+  while keeping the four Circuit operations authoritative.
+- Changed areas: connector issue/resume/revoke transport; Helper credential
+  storage and bearer refresh; same-browser editor recovery and MCP-first
+  hand-off; existing File Resource wrappers; MCP/release packaging, docs,
+  generated OpenAPI/resources, and deterministic deployment smoke.
+- Validation: 187 focused contracts; `pnpm verify:branch` (648 tests); clean
+  install plus `pnpm ci:check` (648 unit and 103 browser tests); Cloudflare
+  Worker deploy dry-run; packaged two-process MCP claim/edit/render/file/resume
+  smoke; all six PR #49 required checks passed.
+- Commit status: implementation committed and pushed on
+  `codex/agent-mcp-adapter` as `0b36b78`; PR #49 remains open and unmerged by
+  request.

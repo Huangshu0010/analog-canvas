@@ -5,7 +5,30 @@ Snapshot and typed edits through the same Schematic Edit Engine used by humans;
 it does not bundle an LLM provider, browser automation, or a second command
 engine.
 
-## External Agent bootstrap
+## Choose the entry point
+
+1. **Default: packaged local stdio MCP.** Install or unpack the Agent-side MCP adapter
+   (`apps/mcp-server`, [ADR 0020](../adr/0020-agent-side-mcp-adapter.md)) and
+   connect a host such as Codex, Claude Code, or Cursor to it. The adapter
+   owns claim redemption, persistent connector resume, process-local bearers,
+   revisions, idempotent retries, and compact tools; the model never sees
+   tokens or the raw OpenAPI. See [mcp-install.md](mcp-install.md).
+2. **Fallback: Kit + HTTP API.** For hosts without the packaged
+   MCP entry point, fetch the public
+   `GET /api/agent/kit` JSON, write its listed files to a private scratch
+   directory, redeem the claim, and call the four operations directly.
+3. **Advanced: direct OpenAPI.** `GET /api/agent/openapi.json` is the
+   wire-contract authority for direct API integrations. An MCP-based Agent
+   does not need it; `advanced_transact` requires reading the
+   `analog-canvas://contract/advanced-edits` resource first.
+
+For an MCP session: start the adapter, call `connect` with a Claim Code, read
+`analog-canvas://reference/quickstart`, call
+`get_context`, then operate. Knowledge documents surface as MCP Resources
+declared by [`resource-manifest.json`](resource-manifest.json); the same
+manifest projects the shared sources into the HTTP Kit.
+
+## External Agent bootstrap (no MCP)
 
 An Agent without this repository receives a connection setup from the editor.
 It first fetches the public `GET /api/agent/kit` JSON, writes its listed files

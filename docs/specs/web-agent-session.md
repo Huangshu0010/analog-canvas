@@ -5,17 +5,19 @@ Status: `accepted`
 Primary owner: `worker/agent-session.ts` and `apps/editor/src/agent`
 
 The browser Project is authoritative. A user creates a bounded session and
-chooses scopes. The relay returns a one-time claim code; claim redemption
-returns `sessionId`, authorized `documentIds`, and a bearer token. A still-valid
-claim may be redeemed again only to replace the token, immediately invalidating
-the prior token. Tokens are never logged, persisted in Projects, placed in
-URLs, or displayed by Agents.
+chooses scopes. The relay returns a short-lived pairing code; claim redemption
+returns `sessionId`, authorized `documentIds`, a short-lived bearer, and a
+session-bound connector credential. A still-valid claim may be redeemed again
+only to rotate both credentials. Bearers are never persisted. The local MCP
+Helper may persist the connector in the user's private profile; the relay
+stores only its verifier, and session revoke invalidates both credentials.
 
 ## Resources
 
 ```text
 GET  /api/agent/kit
 POST /api/agent/claims
+POST /api/agent/connectors/resume
 POST /api/agent/sessions/{sessionId}/circuit
 POST /api/agent/sessions/{sessionId}/files
 GET  /api/agent/openapi.json
@@ -64,7 +66,7 @@ any live state -> revoked|expired
 Only declared transitions are applied. Heartbeats detect a stale transport;
 bounded exponential reconnect keeps the same Project/session binding. Bearer
 tokens remain Agent-side only; browser recovery stores only the editor-side
-session record required for same-tab reconnect.
+session record required for same-browser reconnect.
 
 ## Idempotency and revisions
 
@@ -95,7 +97,7 @@ enters undo history, or changes Project data.
 - Claim codes and tokens use constant-time comparison and redacted telemetry.
 - Responses use `Cache-Control: no-store`; payloads and secrets are excluded
   from analytics and recovery.
-- Browser offline, revoked, expired, replaced, permission-denied, stale-
+- Browser offline, revoked, expired, replaced, connector-invalid, permission-denied, stale-
   revision, invalid-request, and request-ID-reuse failures are typed.
 - Revoke is locally terminal even when the relay is unreachable.
 - CORS/origin, payload, rate, cache, expiry, and reconnect behavior are covered

@@ -31,6 +31,9 @@ The deterministic structural netlist decision is
 [`0017-deterministic-design-netlist-boundary.md`](0017-deterministic-design-netlist-boundary.md).
 The current Agent API reliability decision is
 [`0019-four-operation-agent-golden-contract.md`](0019-four-operation-agent-golden-contract.md).
+The Agent-side local MCP adapter decision (ADR 0005/0016 keep their
+domain-independence judgments) is
+[`0020-agent-side-mcp-adapter.md`](0020-agent-side-mcp-adapter.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

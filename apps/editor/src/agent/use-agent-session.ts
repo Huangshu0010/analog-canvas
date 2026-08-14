@@ -233,12 +233,12 @@ export function useAgentSession(
   const revoke = useCallback(async () => {
     const live = liveRef.current;
     if (!live) {
-      clearAgentSessionRecovery(window.sessionStorage);
+      clearAgentSessionRecovery(window.localStorage);
       update({ status: "idle", claimCode: null, claimExpiresAt: null });
       return;
     }
     stopReconnect(live);
-    clearAgentSessionRecovery(window.sessionStorage);
+    clearAgentSessionRecovery(window.localStorage);
     options.fileHost?.clear?.();
     try {
       await control("revoke");
@@ -415,7 +415,7 @@ export function useAgentSession(
                 sessionEvent.data.type === "session.ready"
               ) {
                 live.claimed = true;
-                writeAgentSessionRecovery(window.sessionStorage, {
+                writeAgentSessionRecovery(window.localStorage, {
                   version: 1,
                   sessionId: live.sessionId,
                   editorSecret: live.editorSecret,
@@ -430,7 +430,7 @@ export function useAgentSession(
                 sessionEvent.data.type === "session.revoked"
               ) {
                 stopReconnect(live);
-                clearAgentSessionRecovery(window.sessionStorage);
+                clearAgentSessionRecovery(window.localStorage);
                 options.fileHost?.clear?.();
                 socket.close(1000, "session revoked");
                 if (liveRef.current === live) liveRef.current = null;
@@ -654,7 +654,7 @@ export function useAgentSession(
         connect();
       } catch (error) {
         liveRef.current = null;
-        if (recovery) clearAgentSessionRecovery(window.sessionStorage);
+        if (recovery) clearAgentSessionRecovery(window.localStorage);
         update({
           status: "idle",
           error: error instanceof Error ? error.message : String(error),
@@ -676,7 +676,7 @@ export function useAgentSession(
       return;
     }
     recoveryAttemptedForProjectRef.current = options.projectSessionId;
-    const recovery = readAgentSessionRecovery(window.sessionStorage, {
+    const recovery = readAgentSessionRecovery(window.localStorage, {
       projectId: options.project.id,
       projectSessionId: options.projectSessionId,
       now: Date.now(),
@@ -818,7 +818,7 @@ export function useAgentSession(
       ]),
     );
     agentRevisionRef.current.clear();
-    clearAgentSessionRecovery(window.sessionStorage);
+    clearAgentSessionRecovery(window.localStorage);
     options.fileHost?.clear?.();
     const live = liveRef.current;
     if (!live) return;
@@ -852,7 +852,7 @@ export function useAgentSession(
       }
       if (live && Date.now() >= live.expiresAt) {
         stopReconnect(live);
-        clearAgentSessionRecovery(window.sessionStorage);
+        clearAgentSessionRecovery(window.localStorage);
         options.fileHost?.clear?.();
         live.socket?.close(1000, "expired");
         liveRef.current = null;
@@ -869,7 +869,7 @@ export function useAgentSession(
       if (live) {
         stopReconnect(live);
         if (!live.claimed) {
-          clearAgentSessionRecovery(window.sessionStorage);
+          clearAgentSessionRecovery(window.localStorage);
           void fetch(`/api/agent/sessions/${live.sessionId}`, {
             method: "DELETE",
             headers: { "x-editor-secret": live.editorSecret },
