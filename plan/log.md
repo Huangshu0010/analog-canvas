@@ -19,7 +19,7 @@
   a clean frozen-install `pnpm ci:check` passed (567 unit tests, 103 browser
   tests, release/performance/export/PWA gates).
 - Commit status: feature committed as `9d257b7`; CI source-map repair committed
-  as `9b12e6f` and pushed on `codex/agent-authoring-kit`.
+  as `a87fcb6` and pushed on `codex/agent-authoring-kit`.
 
 ## 2026-08-13 - Agent golden-path request-contract closure
 
