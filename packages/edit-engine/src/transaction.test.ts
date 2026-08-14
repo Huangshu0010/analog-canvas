@@ -49,84 +49,6 @@ describe("Edit Transaction envelope", () => {
     ).toBe(false);
   });
 
-  it("permits a power rail only on an explicitly tagged VDD Net", () => {
-    const document = createEmptyDocument("document-main", "Main");
-    document.instances.push({
-      id: "VDD1",
-      symbolId: "vdd",
-      placement: null,
-      properties: {},
-    });
-    document.ports.push(
-      {
-        id: "rail-left",
-        name: "L",
-        direction: "passive",
-        position: { x: 0, y: 0 },
-      },
-      {
-        id: "rail-right",
-        name: "R",
-        direction: "passive",
-        position: { x: 40, y: 0 },
-      },
-    );
-    document.netlist!.portOrder.push("rail-left", "rail-right");
-    document.nets.push({
-      id: "net-vdd",
-      scope: "global",
-      powerDomain: "vdd",
-      terminals: [{ instanceId: "VDD1", pinName: "P" }],
-      ports: ["rail-left", "rail-right"],
-    });
-
-    const accepted = executeTransaction(
-      document,
-      {
-        ...transaction(),
-        edits: [
-          {
-            kind: "set_route_points",
-            routeId: "rail",
-            netId: "net-vdd",
-            from: { kind: "port", portId: "rail-left" },
-            to: { kind: "port", portId: "rail-right" },
-            waypoints: [],
-            segmentModes: ["manual"],
-            presentation: "power-rail",
-          },
-        ],
-      },
-      { symbolResolver: resolver },
-    );
-    expect(accepted.ok).toBe(true);
-
-    document.nets[0]!.powerDomain = "none";
-    const rejected = executeTransaction(
-      document,
-      {
-        ...transaction(),
-        edits: [
-          {
-            kind: "set_route_points",
-            routeId: "rail",
-            netId: "net-vdd",
-            from: { kind: "port", portId: "rail-left" },
-            to: { kind: "port", portId: "rail-right" },
-            waypoints: [],
-            segmentModes: ["manual"],
-            presentation: "power-rail",
-          },
-        ],
-      },
-      { symbolResolver: resolver },
-    );
-    expect(rejected).toMatchObject({
-      ok: false,
-      error: { message: "Power rail rail must belong to a VDD Net" },
-    });
-  });
-
   it("rejects an invalid power rail atomically", () => {
     const document = createEmptyDocument("document-main", "Main");
     const before = JSON.stringify(document);
@@ -202,7 +124,6 @@ describe("Edit Transaction envelope", () => {
       name: "SUBSTRATE",
       scope: "local",
       terminals: [],
-      ports: [],
     });
     const result = executeTransaction(
       document,
@@ -226,7 +147,7 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
-  it("materializes manual MOS fallback bulk and permits an explicit override", () => {
+  it("creates a canonical supply default and permits an explicit bulk override", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "M1",
@@ -246,21 +167,17 @@ describe("Edit Transaction envelope", () => {
     expect(reconciled.ok).toBe(true);
     if (!reconciled.ok) return;
     expect(reconciled.document.instances[0]?.mosBulkBinding).toEqual({
-      origin: "product-fallback",
+      origin: "supply-default",
       netId: "net-global-0",
     });
-    expect(reconciled.document.nets[0]?.terminals).toContainEqual({
-      instanceId: "M1",
-      pinName: "B",
+    expect(reconciled.document.nets).toContainEqual({
+      id: "net-global-0",
+      name: "0",
+      scope: "global",
+      powerDomain: "ground",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
     });
 
-    reconciled.document.nets.push({
-      id: "net-vbody",
-      name: "VBODY",
-      scope: "local",
-      terminals: [],
-      ports: [],
-    });
     const overridden = executeTransaction(
       reconciled.document,
       {
@@ -284,14 +201,18 @@ describe("Edit Transaction envelope", () => {
       overridden.document.nets.find((net) => net.id === "net-global-0")
         ?.terminals,
     ).not.toContainEqual({ instanceId: "M1", pinName: "B" });
+    expect(
+      overridden.document.nets.find((net) => net.id === "net-explicit-body")
+        ?.terminals,
+    ).toContainEqual({ instanceId: "M1", pinName: "B" });
   });
+
   it("accepts Net-id Label bindings and rejects overloaded object ids", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push({
       id: "net-signal",
       scope: "local",
       terminals: [],
-      ports: [],
     });
     const annotation = {
       id: "label-signal",
@@ -349,32 +270,25 @@ describe("Edit Transaction envelope", () => {
     expect(document.revision).toBe(0);
   });
 
-  it("normalizes an explicitly tagged supply Net without inspecting symbols", () => {
+  it("normalizes an explicitly tagged supply Net without a supply symbol", () => {
     const document = createEmptyDocument("document-main", "Main");
-    document.instances.push(
-      {
-        id: "M2",
-        symbolId: "pmos",
-        placement: null,
-        properties: {},
-      },
-      {
-        id: "VDD3",
-        symbolId: "vdd",
-        placement: null,
-        properties: {},
-      },
-    );
+    document.instances.push({
+      id: "M2",
+      symbolId: "pmos",
+      placement: null,
+      properties: {},
+    });
     const result = executeTransaction(
       document,
       {
         ...transaction(),
         edits: [
           {
-            kind: "connect_endpoints",
-            from: { kind: "terminal", instanceId: "M2", pinName: "S" },
-            to: { kind: "terminal", instanceId: "VDD3", pinName: "P" },
-            newNetId: "net-ui-2",
+            kind: "add_junction",
+            junctionId: "vdd-rail-start",
+            netId: "net-ui-2",
+            position: { x: 100, y: 100 },
+            createNet: true,
           },
           {
             kind: "set_net_power_domain",
@@ -395,10 +309,7 @@ describe("Edit Transaction envelope", () => {
             name: "VDD",
             scope: "global",
             powerDomain: "vdd",
-            terminals: [
-              { instanceId: "M2", pinName: "S" },
-              { instanceId: "VDD3", pinName: "P" },
-            ],
+            terminals: [],
           },
         ],
       },

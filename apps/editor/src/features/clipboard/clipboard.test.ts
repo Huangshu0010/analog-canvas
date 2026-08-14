@@ -55,7 +55,6 @@ describe("schematic clipboard", () => {
         { instanceId: "R1", pinName: "2" },
         { instanceId: "R2", pinName: "1" },
       ],
-      ports: [],
     });
     document.routes.push({
       id: "route-signal",

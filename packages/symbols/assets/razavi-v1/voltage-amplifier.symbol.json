@@ -79,6 +79,5 @@
       }
     }
   ],
-  "variants": [],
-  "aliases": ["gain-block", "voltage-gain", "a0"]
+  "variants": []
 }

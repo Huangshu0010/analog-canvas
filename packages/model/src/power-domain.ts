@@ -9,26 +9,6 @@ export interface PowerNetNormalization {
   name?: string;
 }
 
-/**
- * Migration-only legacy inference. No runtime consumer may call this: a v5
- * Net owns its power identity explicitly.
- */
-export function inferLegacyPowerDomainForTerminal(
-  document: SchematicDocument,
-  terminal: Net["terminals"][number],
-): PowerDomain | undefined {
-  const instance = document.instances.find(
-    (candidate) => candidate.id === terminal.instanceId,
-  );
-  if (instance?.symbolId === "vdd" && terminal.pinName === "P") {
-    return "vdd";
-  }
-  if (instance?.symbolId === "ground" && terminal.pinName === "0") {
-    return "ground";
-  }
-  return undefined;
-}
-
 export function powerDomainForNet(net: Net): NetPowerDomain {
   return net.powerDomain ?? "none";
 }

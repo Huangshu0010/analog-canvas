@@ -409,9 +409,6 @@ function sameEndpoint(left: RouteEndpoint, right: RouteEndpoint): boolean {
       left.instanceId === right.instanceId && left.pinName === right.pinName
     );
   }
-  if (left.kind === "port" && right.kind === "port") {
-    return left.portId === right.portId;
-  }
   if (left.kind === "junction" && right.kind === "junction") {
     return left.junctionId === right.junctionId;
   }

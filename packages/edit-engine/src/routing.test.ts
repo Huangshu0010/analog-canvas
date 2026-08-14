@@ -117,90 +117,6 @@ describe("routing Edit Engine", () => {
       );
     }
   });
-  it("centralizes bulk route deletion as disconnect plus fallback reconciliation", () => {
-    const document = documentFixture();
-    document.instances.push({
-      id: "MB",
-      symbolId: "nmos",
-      symbolVariantId: "textbook-3terminal",
-      placement: { position: { x: 600, y: 200 }, rotation: 0, mirror: "none" },
-      properties: {},
-    });
-    document.nets.push({
-      id: "net-body",
-      name: "VBODY",
-      scope: "local",
-      terminals: [{ instanceId: "MB", pinName: "B" }],
-      ports: [],
-    });
-    document.junctions.push({
-      id: "body-end",
-      netId: "net-body",
-      position: { x: 720, y: 200 },
-      role: "route-anchor",
-    });
-    document.routes.push({
-      id: "route-body",
-      netId: "net-body",
-      from: { kind: "terminal", instanceId: "MB", pinName: "B" },
-      to: { kind: "junction", junctionId: "body-end" },
-      waypoints: [],
-      segmentModes: ["manual"],
-      presentation: "bulk-dashed",
-    });
-    document.junctions.push({
-      id: "body-middle",
-      netId: "net-body",
-      position: { x: 680, y: 200 },
-      role: "route-anchor",
-    });
-    document.routes[document.routes.length - 1] = {
-      ...document.routes.at(-1)!,
-      id: "route-body-head",
-      to: { kind: "junction", junctionId: "body-middle" },
-    };
-    document.routes.push({
-      id: "route-body-tail",
-      netId: "net-body",
-      from: { kind: "junction", junctionId: "body-middle" },
-      to: { kind: "junction", junctionId: "body-end" },
-      waypoints: [],
-      segmentModes: ["manual"],
-      presentation: "bulk-dashed",
-    });
-
-    const proposal = proposeVisualRouteDeletion(
-      document,
-      ["route-body-tail"],
-      [],
-    );
-    expect(proposal.edits).toEqual([
-      { kind: "cut_connection", routeId: "route-body-head" },
-      { kind: "cut_connection", routeId: "route-body-tail" },
-      {
-        kind: "disconnect_endpoint",
-        endpoint: { kind: "terminal", instanceId: "MB", pinName: "B" },
-      },
-      { kind: "reconcile_mos_bulk", instanceIds: ["MB"] },
-    ]);
-    const result = executeTransaction(
-      document,
-      transaction(document.id, 0, proposal.edits),
-      context,
-    );
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(
-      result.document.routes.some((route) => route.id.startsWith("route-body")),
-    ).toBe(false);
-    expect(
-      result.document.instances.find((instance) => instance.id === "MB")
-        ?.mosBulkBinding,
-    ).toEqual({
-      origin: "product-fallback",
-      netId: "net-global-0",
-    });
-  });
 
   it("plans a segment drag as transaction edits", () => {
     const document = documentFixture();
@@ -237,60 +153,6 @@ describe("routing Edit Engine", () => {
       context,
     );
     expect(moved.ok).toBe(true);
-  });
-
-  it("plans whole loose-route translation with both endpoint anchors", () => {
-    const document = documentFixture();
-    document.instances = [];
-    document.ports = [];
-    document.nets = [
-      { id: "net-loose", scope: "local", terminals: [], ports: [] },
-    ];
-    document.junctions = [
-      {
-        id: "junction-left",
-        netId: "net-loose",
-        position: { x: 100, y: 100 },
-        role: "route-anchor",
-      },
-      {
-        id: "junction-right",
-        netId: "net-loose",
-        position: { x: 200, y: 100 },
-        role: "route-anchor",
-      },
-    ];
-    document.routes = [
-      {
-        id: "route-loose",
-        netId: "net-loose",
-        from: { kind: "junction", junctionId: "junction-left" },
-        to: { kind: "junction", junctionId: "junction-right" },
-        waypoints: [],
-        segmentModes: ["manual"],
-      },
-    ];
-    const plan = proposeLooseRouteTranslation(document, "route-loose", {
-      x: 30,
-      y: 20,
-    });
-    expect(
-      plan.edits.filter((edit) => edit.kind === "move_junction"),
-    ).toHaveLength(2);
-    const moved = executeTransaction(
-      document,
-      transaction(document.id, 0, plan.edits),
-      context,
-    );
-    expect(moved.ok).toBe(true);
-    if (!moved.ok) return;
-    expect(
-      routePolyline(moved.document, resolver, moved.document.routes[0]!)
-        ?.points,
-    ).toEqual([
-      { x: 130, y: 120 },
-      { x: 230, y: 120 },
-    ]);
   });
 
   it("plans internal group route follow as one engine edit proposal", () => {
@@ -1504,7 +1366,6 @@ describe("routing Edit Engine", () => {
       id: "net-free",
       scope: "local",
       terminals: [],
-      ports: [],
     });
     document.junctions.push(
       {

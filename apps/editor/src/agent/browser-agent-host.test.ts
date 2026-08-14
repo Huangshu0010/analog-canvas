@@ -10,7 +10,7 @@ import { EditorDocumentController } from "../document/document-controller";
 import { BrowserAgentHost } from "./browser-agent-host";
 
 const allPermissions: AgentPermissions = {
-  query: true,
+  snapshot: true,
   render: true,
   sourceSpans: false,
   semanticControl: true,

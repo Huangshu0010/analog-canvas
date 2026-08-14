@@ -109,10 +109,9 @@ for (const target of fidelityRegistry.targets) {
 
 const symbols = [];
 const ids = new Set();
-const aliases = new Set();
 const assetPaths = new Set();
 for (const entry of catalog.entries) {
-  if (ids.has(entry.symbolId) || aliases.has(entry.symbolId)) {
+  if (ids.has(entry.symbolId)) {
     fail(`duplicate symbol ID ${entry.symbolId}`);
   }
   ids.add(entry.symbolId);
@@ -181,12 +180,6 @@ for (const entry of catalog.entries) {
     if (pin.at.x % 10 !== 0 || pin.at.y % 10 !== 0) {
       fail(`off-grid pin ${entry.symbolId}.${pin.name}`);
     }
-  }
-  for (const alias of symbol.aliases) {
-    if (ids.has(alias) || aliases.has(alias)) {
-      fail(`duplicate symbol alias ${alias}`);
-    }
-    aliases.add(alias);
   }
   const assetHash = hash(assetSource);
   if (check && entry.assetHash !== assetHash) {

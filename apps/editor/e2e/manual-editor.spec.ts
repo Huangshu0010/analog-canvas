@@ -237,7 +237,7 @@ test("shows faithful symbol previews for the reviewed Razavi palette", async ({
 
 test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
   await page.goto("/");
-  await chooseComponent(page, "vdd");
+  await page.getByTestId("shapes-tool-vdd-rail").click();
   const canvas = page.getByTestId("schematic-canvas");
 
   await canvas.click({ position: { x: 180, y: 120 } });
@@ -259,7 +259,102 @@ test("constructs VDD as a drawn dotless power rail", async ({ page }) => {
     canvas.locator('[data-object-id="junction-vdd1-start"]'),
   ).toHaveCount(0);
   await expect(page.getByTestId("hit-VDD1")).toHaveCount(0);
-  await expect(canvas.getByText("VDD", { exact: true })).toBeVisible();
+  await expect(canvas.locator('[data-symbol-id="vdd"]')).toHaveCount(0);
+  await expect(canvas.getByText("VDD", { exact: true })).toHaveCount(1);
+});
+
+test("reuses the PMOS bulk supply Net when drawing a VDD rail", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "pmos", { x: 360, y: 260 });
+  await page.getByTestId("shapes-tool-vdd-rail").click();
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 240, y: 100 } });
+  await canvas.click({ position: { x: 520, y: 100 } });
+  await page.keyboard.press("Escape");
+
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      nets: Array<{
+        id: string;
+        powerDomain?: string;
+        terminals: Array<{ instanceId: string; pinName: string }>;
+      }>;
+      routes: Array<{ netId: string; presentation?: string }>;
+    }>;
+  };
+  const document = saved.documents[0]!;
+  const vddNets = document.nets.filter((net) => net.powerDomain === "vdd");
+  expect(vddNets).toEqual([
+    expect.objectContaining({
+      id: "net-global-vdd",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    }),
+  ]);
+  expect(document.routes).toContainEqual(
+    expect.objectContaining({
+      netId: "net-global-vdd",
+      presentation: "power-rail",
+    }),
+  );
+});
+
+test("treats hollow and filled Ports as ordinary wired components", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 460, y: 240 });
+  await placeComponent(page, "port", { x: 260, y: 220 });
+  await placeComponent(page, "port-filled", { x: 260, y: 300 });
+
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-P2-P").click();
+  await page.getByTestId("terminal-R1-1").click();
+  await page.keyboard.press("Escape");
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-P3-P").click();
+  await page.getByTestId("terminal-R1-2").click();
+  await page.keyboard.press("Escape");
+
+  await expect(page.locator('[data-testid^="route-hit-"]')).toHaveCount(2);
+  await dragBy(page.getByTestId("hit-P2"), { x: 40, y: 0 });
+  await dragBy(page.getByTestId("hit-P3"), { x: 40, y: 20 });
+  await expect(page.locator('[data-testid^="route-hit-"]')).toHaveCount(2);
+
+  await page.getByTestId("hit-P2").click();
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("hit-P2")).toHaveCount(0);
+  await page.getByTestId("hit-P3").click();
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("hit-P3")).toHaveCount(0);
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      nets: Array<{ terminals: Array<{ instanceId: string }> }>;
+      routes: Array<{
+        from: { kind: string; instanceId?: string };
+        to: { kind: string; instanceId?: string };
+      }>;
+    }>;
+  };
+  const document = saved.documents[0]!;
+  expect(
+    document.nets
+      .flatMap((net) => net.terminals)
+      .map((item) => item.instanceId),
+  ).not.toEqual(expect.arrayContaining(["P2", "P3"]));
+  expect(
+    document.routes.flatMap((route) => [route.from, route.to]),
+  ).not.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ instanceId: "P2" }),
+      expect.objectContaining({ instanceId: "P3" }),
+    ]),
+  );
 });
 
 test("authors components and connectivity manually from an empty canvas", async ({
@@ -469,105 +564,6 @@ test("hides flightlines after manually deleting an imported Route", async ({
   await expect(page.getByTestId("flightline")).toHaveCount(0);
 });
 
-test("normalizes a legacy VDD Net and completes its PMOS bulk", async ({
-  page,
-}) => {
-  const project = createEmptyProject("legacy-contact", "Legacy contact");
-  const document = project.documents[0]!;
-  document.instances.push(
-    {
-      id: "M4",
-      symbolId: "pmos",
-      symbolVariantId: "textbook-3terminal",
-      placement: {
-        position: { x: 90, y: 120 },
-        rotation: 0,
-        mirror: "none",
-      },
-      properties: {},
-    },
-    {
-      id: "VDD9",
-      symbolId: "vdd",
-      placement: {
-        position: { x: 100, y: 80 },
-        rotation: 0,
-        mirror: "none",
-      },
-      properties: {},
-    },
-  );
-  document.nets.push({
-    id: "net-ui-2",
-    scope: "local",
-    terminals: [
-      { instanceId: "M4", pinName: "S" },
-      { instanceId: "VDD9", pinName: "P" },
-    ],
-    ports: [],
-  });
-  await page.goto("/");
-  await page.getByTestId("project-file").setInputFiles({
-    name: "legacy-contact.icproj.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(project)),
-  });
-
-  await expect(page.getByTestId("status")).toContainText(
-    "Opened legacy-contact.icproj.json",
-  );
-  await page.getByTestId("hit-M4").click();
-  await openSelectionShelf(page);
-  await expect(page.getByText(/M4\.B → VDD · product-fallback/u)).toBeVisible();
-});
-
-test("draws and deletes one Razavi bulk route through the normal Wire workflow", async ({
-  page,
-}) => {
-  const project = createEmptyProject("bulk-route", "Bulk route");
-  const document = project.documents[0]!;
-  document.instances.push({
-    id: "M1",
-    symbolId: "nmos",
-    symbolVariantId: "textbook-3terminal",
-    placement: {
-      position: { x: 200, y: 160 },
-      rotation: 0,
-      mirror: "none",
-    },
-    properties: {},
-  });
-  await page.goto("/");
-  await page.getByTestId("project-file").setInputFiles({
-    name: "bulk-route.icproj.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(project)),
-  });
-  await page.getByTestId("hit-M1").click();
-  await openSelectionShelf(page);
-  await expect(page.getByText(/M1\.B → 0 · product-fallback/u)).toBeVisible();
-  await page.getByRole("button", { name: "Draw bulk connection" }).click();
-  await expect(page.getByTestId("terminal-M1-B")).toBeVisible();
-  const canvas = page.getByTestId("schematic-canvas");
-  await canvas.dblclick({ position: { x: 320, y: 160 } });
-  await page.keyboard.press("Escape");
-
-  const route = page.locator(
-    '[data-layer="routes"] [data-route-presentation="bulk-dashed"]',
-  );
-  await expect(route).toHaveCount(1);
-  const routeId = await onlyRouteId(page);
-  // Select away from the MOS hit box; the route intentionally starts at an
-  // internal body anchor below the instance selection surface.
-  await clickRoute(page, routeId, 0.85);
-  await page.keyboard.press("Delete");
-  await expect(route).toHaveCount(0);
-
-  await page.getByTestId("hit-M1").click();
-  await openSelectionShelf(page);
-  await expect(page.getByText(/M1\.B → 0 · product-fallback/u)).toBeVisible();
-});
-
 test("uses a flightline as direct Wire guidance", async ({ page }) => {
   const project = createRoutingDemoProject();
   project.documents[0]!.sourceBinding = {
@@ -671,6 +667,54 @@ test("keeps a selected MOS in its fixed Razavi three-terminal view", async ({
   await expect(
     page.getByRole("button", { name: "Show Bulk (4-terminal)" }),
   ).toHaveCount(0);
+});
+
+test("materializes a MOS supply default and lets a dashed bulk route override it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "nmos", { x: 360, y: 220 });
+  await placeComponent(page, "ground", { x: 620, y: 280 });
+
+  await page.getByTestId("hit-M1").click();
+  await openSelectionShelf(page);
+  await expect(page.getByLabel("MOS bulk connection")).toContainText(
+    "supply-default",
+  );
+  await page.getByRole("button", { name: "Draw bulk connection" }).click();
+  await page.getByTestId("terminal-GND2-0").click();
+  await page.keyboard.press("Escape");
+
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      instances: Array<{
+        id: string;
+        mosBulkBinding?: { origin: string; netId: string };
+      }>;
+      routes: Array<{ presentation?: string }>;
+      nets: Array<{
+        id: string;
+        terminals: Array<{ instanceId: string; pinName: string }>;
+      }>;
+    }>;
+  };
+  const document = saved.documents[0]!;
+  expect(
+    document.instances.find((instance) => instance.id === "M1")?.mosBulkBinding,
+  ).toBeUndefined();
+  expect(document.routes).toContainEqual(
+    expect.objectContaining({ presentation: "bulk-dashed" }),
+  );
+  expect(
+    document.nets.find((net) => net.id === "net-global-0")?.terminals,
+  ).toEqual(
+    expect.arrayContaining([
+      { instanceId: "M1", pinName: "B" },
+      { instanceId: "GND2", pinName: "0" },
+    ]),
+  );
 });
 
 test("places free wire bends and finishes at an arbitrary grid point", async ({
@@ -1604,96 +1648,6 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await expect(page.getByTestId("revision")).toHaveText("4");
 });
 
-test("dots an ordinary VDD wire tap away from its thick power rail", async ({
-  page,
-}) => {
-  const project = createEmptyProject("vdd-wire-tap", "VDD wire tap");
-  const document = project.documents[0]!;
-  document.instances.push({
-    id: "VDD1",
-    symbolId: "vdd",
-    placement: null,
-    properties: {},
-  });
-  document.ports.push(
-    {
-      id: "wire-left",
-      name: "wire-left",
-      direction: "passive",
-      position: { x: 140, y: 300 },
-    },
-    {
-      id: "wire-right",
-      name: "wire-right",
-      direction: "passive",
-      position: { x: 460, y: 300 },
-    },
-    {
-      id: "tap-source",
-      name: "tap-source",
-      direction: "passive",
-      position: { x: 300, y: 420 },
-    },
-  );
-  document.netlist!.portOrder.push("wire-left", "wire-right", "tap-source");
-  document.nets.push({
-    id: "net-vdd",
-    scope: "global",
-    powerDomain: "vdd",
-    terminals: [{ instanceId: "VDD1", pinName: "P" }],
-    ports: ["wire-left", "wire-right", "tap-source"],
-  });
-  document.junctions.push(
-    {
-      id: "rail-left",
-      netId: "net-vdd",
-      position: { x: 220, y: 120 },
-      role: "route-anchor",
-    },
-    {
-      id: "rail-right",
-      netId: "net-vdd",
-      position: { x: 380, y: 120 },
-      role: "route-anchor",
-    },
-  );
-  document.routes.push(
-    {
-      id: "vdd-rail",
-      netId: "net-vdd",
-      from: { kind: "junction", junctionId: "rail-left" },
-      to: { kind: "junction", junctionId: "rail-right" },
-      waypoints: [],
-      segmentModes: ["manual"],
-      presentation: "power-rail",
-    },
-    {
-      id: "ordinary-vdd-wire",
-      netId: "net-vdd",
-      from: { kind: "port", portId: "wire-left" },
-      to: { kind: "port", portId: "wire-right" },
-      waypoints: [],
-      segmentModes: ["manual"],
-    },
-  );
-
-  await page.goto("/");
-  await page.getByTestId("project-file").setInputFiles({
-    name: "vdd-wire-tap.icproj.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(project)),
-  });
-  await clickCommand(page, "Draw", "Wire (W)");
-  await page.getByTestId("port-tap-source").click();
-  await clickRoute(page, "ordinary-vdd-wire", 0.5);
-
-  await expect(page.getByTestId("status")).toContainText("Committed route");
-  await expect(page.locator('[data-layer="junctions"] circle')).toHaveCount(1);
-  await expect(
-    page.locator('[data-testid^="junction-junction-ui-"]'),
-  ).toHaveCount(1);
-});
-
 test("places a component pin onto a Route and keeps real split topology", async ({
   page,
 }) => {
@@ -1807,7 +1761,6 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
     name: "0",
     scope: "global",
     terminals: [{ instanceId: "GND1", pinName: "0" }],
-    ports: [],
   });
 
   await page.goto("/");
@@ -2223,63 +2176,6 @@ test("opens project search with Ctrl+F and selects a matching component", async 
   await expect(page.getByTestId("project-search-input")).toHaveCount(0);
 });
 
-test("navigates a project-search locator into an imported child Cell", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page
-    .getByTestId("project-file")
-    .setInputFiles(
-      resolve(
-        process.cwd(),
-        "fixtures/projects/hierarchy-navigation/project.icproj.json",
-      ),
-    );
-
-  await page.keyboard.press("Control+f");
-  await page.getByTestId("project-search-input").fill("RCHILD");
-  await page.locator('[data-testid^="project-search-result-RCHILD-"]').click();
-  await expect(page.getByTestId("active-document-name")).toHaveText(
-    "Bias Child Cell",
-  );
-  await expect(page.getByTestId("status")).toContainText(
-    "Selected instance RCHILD",
-  );
-
-  await page.getByRole("button", { name: "Up" }).click();
-  await expect(page.getByTestId("active-document-name")).toHaveText("Top Cell");
-});
-
-test("navigates a project ERC diagnostic into its imported child Cell", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page
-    .getByTestId("project-file")
-    .setInputFiles(
-      resolve(
-        process.cwd(),
-        "fixtures/projects/hierarchy-navigation/project.icproj.json",
-      ),
-    );
-  await openSelectionShelf(page);
-
-  const childDiagnostic = page
-    .locator(
-      '[data-testid="project-diagnostics"] li[data-document-id="document-child"] button',
-    )
-    .first();
-  await expect(childDiagnostic).toContainText("Cell: Bias Child Cell");
-  await childDiagnostic.click();
-  await expect(page.getByTestId("active-document-name")).toHaveText(
-    "Bias Child Cell",
-  );
-  await expect(page.getByTestId("status")).toContainText("ERC_");
-  await expect(
-    page.getByRole("region", { name: "Endpoint actions" }),
-  ).toBeVisible();
-});
-
 test("highlights the complete current-document Net from a selected route", async ({
   page,
 }) => {
@@ -2322,7 +2218,6 @@ test("recomputes highlighted routed components after a Net Label is deleted", as
       id: "net-historically-merged",
       scope: "local",
       terminals: [],
-      ports: [],
     },
   ];
   document.junctions = [
@@ -2413,79 +2308,6 @@ test("recomputes highlighted routed components after a Net Label is deleted", as
       '.net-highlight-overlay .net-highlight-core[points="180,260 320,260"]',
     ),
   ).toHaveCount(1);
-});
-
-test("navigates a visible hierarchy Net trace hop into its child Cell", async ({
-  page,
-}) => {
-  const project = createRoutingDemoProject();
-  const top = project.documents[0]!;
-  top.instances.find((instance) => instance.id === "A")!.netlist = {
-    reference: "XA",
-    parameters: {},
-    binding: {
-      kind: "subcircuit",
-      name: "Trace Child Cell",
-      childDocumentId: "document-trace-child",
-    },
-  };
-  top.routes.push({
-    id: "route-trace",
-    netId: "net-h",
-    from: { kind: "terminal", instanceId: "A", pinName: "P" },
-    to: { kind: "terminal", instanceId: "B", pinName: "P" },
-    waypoints: [],
-    segmentModes: ["manual"],
-  });
-  const child = structuredClone(top);
-  child.id = "document-trace-child";
-  child.name = "Trace Child Cell";
-  child.instances = [];
-  child.ports = [
-    {
-      id: "port-trace",
-      name: "P",
-      direction: "passive",
-      position: { x: 120, y: 200 },
-    },
-  ];
-  child.nets = [
-    {
-      id: "net-child-trace",
-      name: "CHILD_TRACE",
-      scope: "local",
-      terminals: [],
-      ports: ["port-trace"],
-    },
-  ];
-  child.routes = [];
-  child.junctions = [];
-  child.annotations = [];
-  child.layoutGroups = [];
-  child.constraints = [];
-  project.documents.push(child);
-
-  await page.goto("/");
-  await page.getByTestId("project-file").setInputFiles({
-    name: "trace.icproj.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(project)),
-  });
-  await clickRoute(page, "route-trace");
-  await openSelectionShelf(page);
-  await page.getByRole("button", { name: "Highlight Net" }).click();
-  await expect(page.getByTestId("net-trace-hops")).toContainText("A.P");
-  const traceHop = page.getByTestId("net-trace-hop-0");
-  await traceHop.scrollIntoViewIfNeeded();
-  await traceHop.click();
-  await expect(page.getByTestId("active-document-name")).toHaveText(
-    "Trace Child Cell",
-  );
-  await expect(page.getByTestId("net-highlight-overlay")).toHaveAttribute(
-    "data-net-id",
-    "net-child-trace",
-  );
-  await expect(page.getByTestId("status")).toContainText("Traced Net");
 });
 
 test("marks and clears an unconnected endpoint as No Connect", async ({

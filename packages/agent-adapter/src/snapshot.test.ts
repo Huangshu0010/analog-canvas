@@ -119,12 +119,41 @@ describe("Agent Document Snapshot", () => {
       scope: "global",
       powerDomain: "vdd",
       terminals: [],
-      ports: [],
     });
     const snapshot = buildAgentSessionSnapshot({ document, resolver });
     expect(snapshot.document.nets).toContainEqual(
       expect.objectContaining({ id: "net-vdd", powerDomain: "vdd" }),
     );
+  });
+
+  it("reports a materialized MOS supply default distinctly from an explicit B route", () => {
+    const document = createEmptyDocument("bulk-snapshot", "Bulk Snapshot");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      mosBulkBinding: {
+        origin: "supply-default",
+        netId: "net-global-0",
+      },
+      placement: null,
+      properties: {},
+    });
+    document.nets.push({
+      id: "net-global-0",
+      name: "0",
+      scope: "global",
+      powerDomain: "ground",
+      terminals: [{ instanceId: "M1", pinName: "B" }],
+    });
+
+    const snapshot = buildAgentSessionSnapshot({ document, resolver });
+
+    expect(snapshot.document.instances[0]?.mosBulk).toEqual({
+      status: "supply-default",
+      netId: "net-global-0",
+    });
+    expect(AgentSessionSnapshotSchema.parse(snapshot)).toEqual(snapshot);
   });
 
   it("uses canonical Project ERC evidence in the Snapshot", () => {
@@ -154,62 +183,6 @@ describe("Agent Document Snapshot", () => {
         }),
       ]),
     );
-  });
-
-  it("is deterministic across persisted collection order and resolves references", () => {
-    const project = fixtureProject();
-    const parent = project.documents[0]!;
-    parent.instances[0]!.netlist = {
-      reference: "M1",
-      parameters: {},
-      binding: {
-        kind: "subcircuit",
-        name: "child",
-        childDocumentId: "document-child",
-      },
-    };
-    const child = structuredClone(parent);
-    child.id = "document-child";
-    child.name = "child";
-    child.instances = [];
-    child.nets = [];
-    child.routes = [];
-    child.junctions = [];
-    child.annotations = [];
-    child.layoutGroups = [];
-    child.constraints = [];
-    project.documents.push(child);
-
-    const first = buildAgentSessionSnapshot({
-      project,
-      document: parent,
-      resolver,
-    });
-    const reordered = structuredClone(project);
-    const reorderedParent = reordered.documents.find(
-      (document) => document.id === parent.id,
-    )!;
-    reorderedParent.instances.reverse();
-    reorderedParent.nets.reverse();
-    reorderedParent.routes.reverse();
-    reorderedParent.ports.reverse();
-    reorderedParent.annotations.reverse();
-    reordered.documents.reverse();
-    const second = buildAgentSessionSnapshot({
-      project: reordered,
-      document: reorderedParent,
-      resolver,
-    });
-
-    expect(second.electricalTopologyHash).toBe(first.electricalTopologyHash);
-    expect(
-      first.project.documents.find((document) => document.id === parent.id)
-        ?.references,
-    ).toContainEqual({
-      instanceId: "M1",
-      targetName: "child",
-      targetDocumentId: "document-child",
-    });
   });
 
   it("cannot be submitted as a mutation request", () => {

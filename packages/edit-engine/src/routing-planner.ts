@@ -570,8 +570,6 @@ function sameEndpoint(left: RouteEndpoint, right: RouteEndpoint): boolean {
         left.instanceId === right.instanceId &&
         left.pinName === right.pinName
       );
-    case "port":
-      return right.kind === "port" && left.portId === right.portId;
     case "junction":
       return right.kind === "junction" && left.junctionId === right.junctionId;
   }
@@ -581,8 +579,6 @@ function endpointSortKey(endpoint: RouteEndpoint): string {
   switch (endpoint.kind) {
     case "terminal":
       return `terminal:${endpoint.instanceId}:${endpoint.pinName}`;
-    case "port":
-      return `port:${endpoint.portId}`;
     case "junction":
       return `junction:${endpoint.junctionId}`;
   }
@@ -859,11 +855,6 @@ function endpointNetId(
               terminal.pinName === endpoint.pinName,
           ),
         )?.id ?? null
-      );
-    case "port":
-      return (
-        document.nets.find((net) => net.ports.includes(endpoint.portId))?.id ??
-        null
       );
     case "junction":
       return (

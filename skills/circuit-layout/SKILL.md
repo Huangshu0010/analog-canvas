@@ -32,12 +32,14 @@ Snapshot evidence makes them relevant. A card name is not circuit evidence.
    from this Skill.
 2. Check permissions, edit kinds, limits, `documentId`, and `revision` before
    planning edits.
-3. Require one complete selected Document: ports, every instance and resolved
-   or connected pin, Nets and terminals, Routes, Junctions, annotations, groups,
+3. Require one complete selected Document: cell interface facts, every
+   instance and resolved or connected pin, Nets and terminals, Routes,
+   Junctions, annotations, groups,
    constraints, bounds, presentation, hierarchy context, and diagnostics.
 4. Treat Snapshot as read-only evidence. Never return it as a replacement
    Document or Project.
-5. Do not use v1 `query` for production work.
+5. Use only the published `2.0` capabilities/snapshot/transact/render contract;
+   no query or compatibility operation exists.
 
 Stop when pin mapping, bulk connection, model semantics, hierarchy binding, or
 the authority to change topology is unavailable. Never fill an electrical fact

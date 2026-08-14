@@ -3,17 +3,17 @@ import type { Instance, Net, SchematicDocument } from "@icm/model";
 export type MosBulkKind = "nmos" | "pmos";
 export type MosBulkResolution =
   | {
-      status: "explicit" | "cell-default" | "product-fallback";
+      status: "explicit" | "cell-default" | "supply-default";
       instance: Instance;
       net: Net;
       materialized: boolean;
     }
   | {
-      status: "product-fallback";
+      status: "supply-default";
       instance: Instance;
       net: undefined;
       materialized: false;
-      fallbackName: "0" | "VDD";
+      defaultName: "0" | "VDD";
     }
   | {
       status: "no-connect" | "unresolved";
@@ -28,18 +28,29 @@ export function mosBulkKind(instance: Instance): MosBulkKind | undefined {
     : undefined;
 }
 
-function fallbackNet(
+function supplyDefaultNet(
   document: SchematicDocument,
   kind: MosBulkKind,
 ): Net | undefined {
   const domain = kind === "nmos" ? "ground" : "vdd";
-  return document.nets.find((net) => (net.powerDomain ?? "none") === domain);
+  const canonicalId = kind === "nmos" ? "net-global-0" : "net-global-vdd";
+  return (
+    document.nets.find(
+      (net) =>
+        net.id === canonicalId &&
+        net.scope === "global" &&
+        (net.powerDomain ?? "none") === domain,
+    ) ??
+    document.nets.find(
+      (net) => net.scope === "global" && (net.powerDomain ?? "none") === domain,
+    )
+  );
 }
 
 /**
  * Single authority for MOS body intent. Net membership remains the electrical
  * truth; this function only explains whether that truth was explicit or was
- * materialized from a cell/product default.
+ * materialized from a cell or canonical supply default.
  */
 export function resolveMosBulkConnection(
   document: SchematicDocument,
@@ -111,20 +122,20 @@ export function resolveMosBulkConnection(
     };
   }
 
-  const fallback = fallbackNet(document, kind);
-  return fallback
+  const supply = supplyDefaultNet(document, kind);
+  return supply
     ? {
-        status: "product-fallback",
+        status: "supply-default",
         instance,
-        net: fallback,
+        net: supply,
         materialized: false,
       }
     : {
-        status: "product-fallback",
+        status: "supply-default",
         instance,
         net: undefined,
         materialized: false,
-        fallbackName: kind === "nmos" ? "0" : "VDD",
+        defaultName: kind === "nmos" ? "0" : "VDD",
       };
 }
 
@@ -143,6 +154,6 @@ export function mosBulkShouldBeVisible(
   const expectedDomain = kind === "nmos" ? "ground" : "vdd";
   return (
     (resolution.net.powerDomain ?? "none") !== expectedDomain &&
-    fallbackNet(document, kind)?.id !== resolution.net.id
+    supplyDefaultNet(document, kind)?.id !== resolution.net.id
   );
 }

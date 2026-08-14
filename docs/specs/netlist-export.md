@@ -50,8 +50,8 @@ Every emitted token has exactly one authority:
 | Fact | Authority | Never inferred from |
 | --- | --- | --- |
 | Cell name | `Document.netlist.name` | Document title or filename |
-| Cell interface order | `Document.netlist.portOrder` | coordinates or alphabetical order |
-| Connectivity | `Net.terminals` and `Net.ports` | Routes, Junction geometry, labels, or overlap |
+| Cell interface order | `Document.netlist.terminals` | coordinates or alphabetical order |
+| Connectivity | `Net.terminals` | Routes, Junction geometry, labels, or overlap |
 | Explicit Net name/scope | `Net.name` and `Net.scope` | artwork or text appearance |
 | Instance reference | `Instance.netlist.reference` | instance-label annotation |
 | Device class and pin order | reviewed device definition or child interface | `symbolId` string conventions or orientation |
@@ -59,9 +59,8 @@ Every emitted token has exactly one authority:
 | Parameters | typed raw parameter record | rendered text or numeric evaluation |
 | Dialect syntax | requested printer | persisted source lines |
 
-Legacy `spice.name`, `spice.target`, `spice.pin.Pn`, and `spice.param.*`
-properties are migration inputs only. Export extraction and printers do not
-read them.
+Retired `spice.name`, `spice.target`, `spice.pin.Pn`, and `spice.param.*`
+properties are invalid. Export extraction and printers do not read them.
 
 ## Persisted data model
 
@@ -70,7 +69,7 @@ The Project model supplies these normalized facts:
 ```typescript
 interface CellNetlistInterface {
   name: string;
-  portOrder: StableId[];
+  terminals: Array<{ name: string; netId: StableId }>;
 }
 
 interface InstanceNetlistData {
@@ -92,9 +91,10 @@ bounded source identifiers outside the shared subset so an imported Project can
 still open; explicit invalid names block export and printers do not silently
 rename them.
 
-`portOrder` contains every Document Port exactly once. Port array order,
-direction, and placement do not define an interface. A hierarchy instance uses
-its bound child Document and that child's explicit interface.
+`terminals` maps each ordered formal cell-terminal name to one existing Net.
+Canvas `port` and `port-filled` symbols are ordinary single-pin Instances; they
+do not define or reorder the formal cell interface. A hierarchy instance uses
+its bound child Document and that child's explicit private interface.
 
 Every manually inserted device receives an explicit reference. References are
 unique per cell and have the prefix required by their device definition. Model-
@@ -125,16 +125,17 @@ interface DeviceNetlistDefinition {
 ```
 
 Pin order names canonical Symbol pins. Hidden or implicit pins remain present.
-Canonical MOS ordering is D/G/S/B. Ground and VDD are Net markers: they verify
-an explicit global Net but emit no instance line. Decorative symbols never
-have a device definition. An unsupported electrical Symbol blocks export.
+Canonical MOS ordering is D/G/S/B. Ground is a Net marker that verifies an
+explicit global Net and emits no instance line. VDD is an explicit global Net
+and Route rail, never a symbol instance. Decorative symbols never have a device
+definition. An unsupported electrical Symbol blocks export.
 
 Independent source syntax is accepted only after its source specification is
 represented structurally. A display string is not a source specification.
 
 ## Net rules
 
-- `Net.terminals` and `Net.ports` are the only connectivity truth.
+- `Net.terminals` is the only connectivity truth.
 - Named Nets are unique within a cell under case folding.
 - An unnamed local Net receives an ephemeral collision-free `N0001`, `N0002`,
   ... name in stable Net-ID order. This does not mutate the Project.
@@ -142,9 +143,9 @@ represented structurally. A display string is not a source specification.
 - The global Net named `0` is the reference node.
 - Other global Nets are emitted through the dialect's global declaration and
   are not silently converted to cell ports.
-- A terminal or Port belongs to at most one Net.
-- A Port without a Net must carry an explicit `NoConnect`; otherwise export is
-  blocked. A `NoConnect` never creates a netlist node.
+- A terminal belongs to at most one Net.
+- An unconnected terminal must carry an explicit `NoConnect`; otherwise export
+  is blocked. A `NoConnect` never creates a netlist node.
 - Routes, Junctions, flightlines, labels, placement, and drafting content do
   not affect the Export IR.
 
@@ -211,11 +212,11 @@ Extraction returns structured diagnostics with stable code, severity,
 Document ID, and affected object IDs. Any error prevents printer invocation and
 download. Required error coverage includes:
 
-- invalid/duplicate cell, Port, Net, or instance identifiers;
-- missing/duplicate/mismatched port order;
-- unconnected Port without `NoConnect`;
+- invalid/duplicate cell terminal, Net, or instance identifiers;
+- missing/duplicate/mismatched formal terminal mappings;
+- unconnected required terminal without `NoConnect`;
 - unnamed global Net or duplicate explicit Net name;
-- unknown/multiply assigned terminal or Port;
+- unknown or multiply assigned terminal;
 - missing device definition, required pin, reference, target, or parameter;
 - wrong reference prefix;
 - unresolved or mismatched child cell and hierarchy cycle;
@@ -259,21 +260,16 @@ A manually authored NMOS with W/L values but no model target produces a
 blocking missing-target diagnostic. Export must not guess `nmos`, `nch_mac`, or
 a foundry model from its Symbol ID.
 
-## Compatibility and migration
+## Compatibility boundary
 
-The Project schema advances explicitly. Migration may copy an imported cell
-name, instance name, target, ordered pin evidence, and raw parameters only when
-the existing record is unambiguous. It may assign deterministic references to
-known manual primitives. It never invents a model, child binding, Net
+Export accepts only the current Project schema. Retired compatibility
+properties and all non-current schema versions are rejected by persistence
+before extraction. No export path invents a model, child binding, Net
 connection, source specification, library path, or simulator directive.
-
-Old compatibility properties may remain preserved but are not read by export.
-Unknown future fields and schema versions remain rejected by the Project
-format contract.
 
 ## Deterministic validation
 
-- Project schema, migration, and canonical save/load/save tests
+- current Project schema and canonical save/load/save tests
 - complete reviewed device-definition coverage tests
 - extractor diagnostics and presentation-independence tests
 - repeated extraction deep equality and repeated output byte equality

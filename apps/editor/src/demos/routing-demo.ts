@@ -37,7 +37,7 @@ export function createRoutingDemoProject(): CircuitProject {
         name: "Phase 3 Routing",
         revision: 0,
         sourceStatus: "in-sync",
-        ports: [],
+        netlist: { name: "Phase_3_Routing", terminals: [] },
         instances: [
           instance("A", 140, 300, 0),
           instance("B", 460, 300, 0, "x"),
@@ -54,7 +54,6 @@ export function createRoutingDemoProject(): CircuitProject {
               instanceId,
               pinName: "P",
             })),
-            ports: [],
           },
           {
             id: "net-v",
@@ -64,12 +63,13 @@ export function createRoutingDemoProject(): CircuitProject {
               instanceId,
               pinName: "P",
             })),
-            ports: [],
           },
         ],
         routes: [],
         junctions: [],
         annotations: [],
+        noConnects: [],
+        drafting: { objects: [] },
         presentation: {
           styleProfileId: "razavi-textbook-v1",
           grid: 10,

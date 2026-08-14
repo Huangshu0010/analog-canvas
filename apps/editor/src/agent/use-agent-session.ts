@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  AGENT_HEARTBEAT_INTERVAL_MS,
   AGENT_API_VERSION,
   AGENT_FILE_RESOURCE_MAX_BYTES,
-  AGENT_API_V1_VERSION,
   AGENT_SESSION_PROTOCOL_VERSION,
   AgentSessionEventSchema,
   AgentSessionMessageSchema,
@@ -20,12 +20,18 @@ import { sha256Hex } from "@icm/derived";
 import type { CircuitProject } from "@icm/model";
 
 import type { AgentConnectionStatus } from "./connect-agent-panel";
+import { transitionAgentSession } from "./agent-session-state-machine";
 import {
   clearAgentSessionRecovery,
   readAgentSessionRecovery,
   writeAgentSessionRecovery,
   type AgentSessionRecoveryRecord,
 } from "./session-recovery";
+import {
+  createHeartbeat,
+  isHeartbeatAck,
+  isTransportStale,
+} from "./transport-liveness";
 
 interface CreatedSessionResponse {
   ok: true;
@@ -72,6 +78,8 @@ type LiveSession = {
   allowReconnect: boolean;
   reconnectAttempt: number;
   reconnectTimer: number | null;
+  heartbeatTimer: number | null;
+  lastHeartbeatAckAt: number;
   reconnect: () => void;
   requestCache: Map<
     string,
@@ -87,8 +95,23 @@ const RECONNECT_DELAYS_MS = [
   500, 1_000, 2_000, 4_000, 8_000, 15_000, 30_000,
 ] as const;
 
+function stopHeartbeat(live: LiveSession): void {
+  if (live.heartbeatTimer !== null) {
+    window.clearInterval(live.heartbeatTimer);
+    live.heartbeatTimer = null;
+  }
+}
+
+function sendHeartbeat(live: LiveSession, socket: WebSocket): void {
+  if (socket.readyState !== WebSocket.OPEN) return;
+  socket.send(
+    JSON.stringify(createHeartbeat(live.sessionId, crypto.randomUUID())),
+  );
+}
+
 function stopReconnect(live: LiveSession): void {
   live.allowReconnect = false;
+  stopHeartbeat(live);
   if (live.reconnectTimer !== null) {
     window.clearTimeout(live.reconnectTimer);
     live.reconnectTimer = null;
@@ -129,7 +152,6 @@ function permissionsFromScopes(
   scopes: readonly AgentSessionScope[],
 ): AgentPermissions {
   return {
-    query: scopes.includes("circuit.snapshot"),
     snapshot: scopes.includes("circuit.snapshot"),
     render: scopes.includes("circuit.render"),
     sourceSpans: scopes.includes("circuit.source-spans"),
@@ -177,7 +199,14 @@ export function useAgentSession(
   });
 
   const update = useCallback((next: Partial<AgentSessionViewModel>) => {
-    setView((previous) => ({ ...previous, ...next }));
+    setView((previous) => ({
+      ...previous,
+      ...next,
+      status:
+        next.status === undefined
+          ? previous.status
+          : transitionAgentSession(previous.status, next.status),
+    }));
   }, []);
 
   const control = useCallback(
@@ -275,6 +304,8 @@ export function useAgentSession(
           allowReconnect: true,
           reconnectAttempt: 0,
           reconnectTimer: null,
+          heartbeatTimer: null,
+          lastHeartbeatAckAt: Date.now(),
           reconnect: () => undefined,
           requestCache: new Map(),
           requestCacheBytes: 0,
@@ -329,6 +360,29 @@ export function useAgentSession(
           socket.addEventListener("open", () => {
             live.reconnectAttempt = 0;
             live.reconnectTimer = null;
+            live.lastHeartbeatAckAt = Date.now();
+            stopHeartbeat(live);
+            sendHeartbeat(live, socket);
+            live.heartbeatTimer = window.setInterval(() => {
+              if (
+                liveRef.current !== live ||
+                live.socket !== socket ||
+                socket.readyState !== WebSocket.OPEN
+              ) {
+                stopHeartbeat(live);
+                return;
+              }
+              if (isTransportStale(live.lastHeartbeatAckAt, Date.now())) {
+                stopHeartbeat(live);
+                update({
+                  status: "reconnecting",
+                  error: "Agent relay heartbeat timed out",
+                });
+                socket.close(4000, "heartbeat timeout");
+                return;
+              }
+              sendHeartbeat(live, socket);
+            }, AGENT_HEARTBEAT_INTERVAL_MS);
             update({
               status: live.claimed ? "connected" : "waiting-for-agent",
               claimCode: live.claimCode,
@@ -343,6 +397,10 @@ export function useAgentSession(
             try {
               raw = JSON.parse(String(event.data));
             } catch {
+              return;
+            }
+            if (isHeartbeatAck(raw, live.sessionId)) {
+              live.lastHeartbeatAckAt = Date.now();
               return;
             }
             const parsed = AgentSessionMessageSchema.safeParse(raw);
@@ -467,14 +525,11 @@ export function useAgentSession(
                 operation?: unknown;
               };
               sendResponse({
-                apiVersion:
-                  candidate.apiVersion === AGENT_API_V1_VERSION
-                    ? AGENT_API_V1_VERSION
-                    : AGENT_API_VERSION,
+                apiVersion: AGENT_API_VERSION,
                 requestId: parsed.data.requestId,
                 operation:
                   typeof candidate.operation === "string" &&
-                  ["query", "snapshot", "transact", "render"].includes(
+                  ["snapshot", "transact", "render"].includes(
                     candidate.operation,
                   )
                     ? candidate.operation
@@ -511,8 +566,7 @@ export function useAgentSession(
             update({ status: "working" });
             // The relay already rejects malformed public payloads, but the
             // browser host repeats that same strict parse before it can touch
-            // the live Project. Never route hosted traffic through the local
-            // v1/v3 compatibility handler.
+            // the live Project.
             const result = service.handle(parsed.data.payload);
             const responseBytes = new TextEncoder().encode(
               JSON.stringify(result),
@@ -570,7 +624,9 @@ export function useAgentSession(
             update({ status: "connected" });
           });
           socket.addEventListener("close", () => {
-            if (live.socket === socket) live.socket = null;
+            if (live.socket !== socket) return;
+            live.socket = null;
+            stopHeartbeat(live);
             if (liveRef.current !== live || !live.allowReconnect) return;
             if (Date.now() >= live.expiresAt) {
               update({ status: "offline" });
@@ -585,7 +641,7 @@ export function useAgentSession(
             live.reconnectTimer = window.setTimeout(connect, delay);
           });
           socket.addEventListener("error", () => {
-            if (liveRef.current === live) {
+            if (liveRef.current === live && live.socket === socket) {
               update({
                 status: "reconnecting",
                 error: "Agent relay connection failed",
@@ -664,6 +720,46 @@ export function useAgentSession(
     live.reconnectAttempt = 0;
     update({ status: "reconnecting", error: null });
     live.reconnect();
+  }, [update]);
+
+  useEffect(() => {
+    const wakeTransport = () => {
+      const live = liveRef.current;
+      if (!live || !live.allowReconnect || Date.now() >= live.expiresAt) {
+        return;
+      }
+      const socket = live.socket;
+      if (socket?.readyState === WebSocket.OPEN) {
+        if (isTransportStale(live.lastHeartbeatAckAt, Date.now())) {
+          stopHeartbeat(live);
+          update({
+            status: "reconnecting",
+            error: "Agent relay connection became stale",
+          });
+          socket.close(4000, "stale after browser wake");
+        } else {
+          sendHeartbeat(live, socket);
+        }
+        return;
+      }
+      if (socket?.readyState === WebSocket.CONNECTING) return;
+      if (live.reconnectTimer !== null) {
+        window.clearTimeout(live.reconnectTimer);
+        live.reconnectTimer = null;
+      }
+      live.reconnectAttempt = 0;
+      update({ status: "reconnecting", error: null });
+      live.reconnect();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") wakeTransport();
+    };
+    window.addEventListener("online", wakeTransport);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("online", wakeTransport);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [update]);
 
   const newConnection = useCallback(async () => {

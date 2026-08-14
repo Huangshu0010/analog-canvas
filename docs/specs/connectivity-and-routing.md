@@ -2,362 +2,68 @@
 
 Status: `accepted`
 
-Version: `1.6`
-
-Owning phase: `Phase 3/8`
-
-Primary owners: `packages/derived`, `packages/edit-engine`
-
-## Purpose
-
-Define how persisted logical Nets and explicit Route/Junction geometry produce
-visible connectivity, flightlines, crossings, and safe manual routing edits.
-
-## Consumers
-
-- editor direct Wire, Move, route-handle, and contextual removal interactions
-- Schematic Edit Engine
-- SVG renderer
-- Agent adapter in Phase 6
-
-## Endpoint coordinates
-
-An endpoint resolves as follows:
-
-- terminal: transform the matching Symbol pin by the Instance placement;
-- port: use the persisted Port position;
-- junction: use the persisted Junction position.
-
-An unplaced Instance, unresolved Symbol/pin, or unpositioned Port has no visible
-coordinate. Missing coordinates are diagnostics, not guessed geometry.
-
-## Visible connectivity graph
-
-For each logical Net, the visible graph starts from its visible terminal and
-port members plus its Junctions. A variant-hidden terminal or a base pin with
-`visibility: implicit` remains a logical Net member but is excluded from this
-visible graph. A base `conditional` pin remains visible until a context-aware
-Net policy explicitly proves hiding it is safe. A RouteBranch adds one
-explicit graph edge between its `from` and `to` endpoints. Waypoints and
-geometric intersections add no graph edge.
-
-Each terminal and port belongs to at most one logical Net within a Document.
-Multiple-Net membership is rejected because it would make endpoint ownership
-and visible-component derivation ambiguous.
-
-Routed components are deterministic connected components ordered by the
-lexicographically smallest endpoint key. A route endpoint must be a member of
-the route Net; Junction and route `netId` values must match.
-
-## Flightlines
-
-Flightlines are derived overlay edges and are never persisted or formally
-exported.
-
-1. Resolve positioned graph nodes and explicit routed components.
-2. For every component pair, evaluate every positioned endpoint pair and keep
-   the shortest straight-line candidate. At equal distance, prefer an open
-   route-anchor Junction, then a terminal or port, then another Junction;
-   endpoint keys provide the final stable tie-break.
-3. Form the complete weighted graph from those nearest frontier pairs.
-4. Run Kruskal MST ordered by straight-line distance, endpoint priority, and
-   endpoint keys.
-
-A net with zero or one positioned component has no flightline. Adding a Route
-may merge components and remove flightlines. Flightlines are routing guidance:
-they can start or finish a Wire operation but cannot be selected or deleted.
-For a SPICE-bound Document, the editor shows them only for the currently
-selected Route, endpoint, Junction, or instance Nets; an unselected imported
-Document does not display every unresolved Net at once.
-
-Flightlines never request routing for implicit terminals. Hiding a terminal
-cannot remove or rewrite its logical terminal record, merge its Net with
-another Net, or imply a device-specific short such as MOS `B=S`.
-
-The Razavi MOS bulk is the context-gated exception: when canonical `B` has an
-explicit non-default Net, its variant auxiliary anchor participates in imported
-flightline guidance. Completing that guidance persists an ordinary Route with
-`presentation: "bulk-dashed"`.
-
-## Orthogonal route geometry
-
-The rendered polyline is `[fromPoint, ...waypoints, toPoint]`. Every segment
-must be horizontal or vertical and non-zero. Normalization removes consecutive
-duplicates and collinear interior points while retaining endpoint identity.
-`segmentModes.length` is always `waypoints.length + 1` after normalization.
-`RouteBranch.presentation` is optional: omitted/`wire` is a normal conductor;
-`bulk-dashed` is the Razavi body appearance. `power-rail` is allowed only on a
-Net whose reviewed VDD terminal establishes the VDD power domain; it renders
-with the supply stroke. A contact incident on the thick `power-rail` Route
-suppresses its otherwise-visible dot without changing its persisted Junction;
-ordinary branches elsewhere on the same VDD Net retain their dots. All
-presentations share Net membership,
-snapping, selection, split, stretch, highlight, deletion, clipboard, undo,
-Agent snapshot, and formal export behavior.
-
-Deleting an ordinary Route cuts stored geometry while retaining its Net fact.
-Deleting any segment of one connected `bulk-dashed` chain removes that visual
-chain, disconnects the explicit B terminal, and reconciles the configured Cell
-default or product fallback atomically. This semantic exception is implemented
-in the common route-deletion planner rather than in individual GUI commands.
-
-Segment modes mean:
-
-| Mode     | Meaning                                                         |
-| -------- | --------------------------------------------------------------- |
-| `auto`   | tool-generated and freely replaceable                           |
-| `escape` | short terminal escape owned by local stretch                    |
-| `manual` | user-authored geometry                                          |
-| `locked` | geometry cannot be changed without an explicit unlock operation |
-| `trunk`  | shared manual backbone preserved by local stretch               |
-
-Phase 3 rejects changes to a route containing a locked segment. Trunk segments
-remain editable only through explicit route edits; local endpoint stretch does
-not translate them.
-
-## Junction and crossing semantics
-
-- Continuous geometry within one RouteBranch is connected without a dot.
-- Explicit same-Net endpoints at one exact coordinate form one canonical
-  contact. Only Routes that explicitly reference one of those endpoints
-  contribute a Route arm; a centerline merely passing through the coordinate
-  does not.
-- A canonical contact renders a solid dot when it has at least three authored
-  electrical arms. This includes three Route ends, a pin plus two Route ends,
-  and three coincident pins even when two arms initially overlap or leave in
-  the same direction.
-- A two-arm straight join, corner, pin-to-pin join, or pin-to-Route endpoint is
-  connected but remains dotless. Persisting a Junction establishes topology;
-  it does not by itself require a decorative dot. Hollow Ports remain hollow
-  and do not receive an additional solid marker.
-- Any X or T intersection lacking an explicit shared Junction remains a
-  crossing, including intersections between branches of the same Net.
-- A crossing never causes automatic Net merge, route split, or Junction repair.
-- Explicit segment targeting atomically replaces the selected branch with two
-  branches meeting at a newly persisted Junction.
-- Explicit segment targeting splits only that branch. The editor rejects a
-  wire end that simultaneously hits multiple branches instead of guessing a
-  connected set; intersections merely passed through remain crossings.
-- A Junction referenced by any Route cannot be removed.
-
-Crossing diagnostics report geometry that may be visually ambiguous while
-preserving the explicit graph unchanged.
-
-## Typed edits
-
-- `set_route_points` creates or replaces one complete RouteBranch.
-- `add_junction` creates a Junction and may atomically split one RouteBranch at
-  a specified segment into caller-named first/second branches. With explicit
-  `createNet: true`, it may also create the caller-named empty local Net needed
-  for a free wire endpoint.
-- `attach_endpoint_to_route` adds one existing terminal/Port endpoint to the
-  Route Net and replaces the selected Route with two caller-named halves that
-  share that endpoint. The endpoint must resolve exactly at the split point.
-  This is the canonical component-on-conductor operation: later instance
-  movement stretches both halves through their real endpoint reference.
-- `remove_junction` removes an unused Junction.
-- `move_junction` changes a Junction coordinate without changing Net
-  membership; the caller includes corresponding Route replacements atomically.
-- `cut_connection` is the ordinary Delete semantic for a RouteBranch. It
-  always removes the visible branch. When that removal divides a fully routed
-  local Net, it deterministically partitions the Net records. A redundant
-  cycle retains one Net. A global or already-partially-routed/imported Net
-  retains its logical membership and derives new flightlines instead of
-  guessing at unresolved electrical partitions.
-- `make_flightline` removes only Route geometry and retains its logical Net.
-  It is an advanced API operation for rerouting workflows and is not exposed
-  as the ordinary GUI Delete action.
-- `connect_endpoints`, `merge_nets`, and `disconnect_endpoint` author logical
-  membership independently of route geometry.
-- `set_net_name` assigns one non-empty logical Net name. Reusing a name is not
-  implicit: the UI must submit an explicit `merge_nets` transaction.
-
-All edit preconditions are evaluated on a cloned candidate. A failure rejects
-the entire transaction and returns the original Document.
-
-## Move and local stretch
-
-Moving an Instance never changes logical Net membership. The GUI may include
-`set_route_points` edits in the same transaction as `move_instance` using a
-derived local-stretch proposal:
-
-- only the first or last waypoint adjacent to a moved terminal may change;
-- the adjacent waypoint moves on the axis that kept the old endpoint segment
-  orthogonal;
-- manual interior, trunk, and unrelated routes remain unchanged;
-- locked adjacent segments reject the proposal;
-- when no waypoint exists, a deterministic elbow is introduced if needed.
-
-Automatic instance follow is transaction-aware. If the transaction explicitly
-authors a Route through `set_route_points` or `route_orthogonal`, the Engine
-does not also stretch that Route. In a group move, terminal-only and
-terminal-to-fixed-endpoint Routes use Engine follow; explicit Route geometry is
-reserved for Routes incident to a Junction moved by the same plan.
-
-When a moved visible pin snaps to an unrelated Route interior, the same atomic
-transaction moves the instance and applies `attach_endpoint_to_route`. A
-different-Net contact includes an explicit Net merge. Multiple coincident but
-visibly disconnected conductors remain ambiguous and are never selected by id
-ordering.
-
-For an equal-delta group move, a connected Route component is internal when it
-contains at least one selected terminal and contains no port or terminal owned
-by an unselected instance. Its Routes and Junctions translate by the same
-delta, including attached Route and Junction annotations. A disconnected
-component on the same logical Net remains fixed. Net annotations move only
-when the whole logical Net has no ports and all its terminals are selected.
-Routes that cross the component boundary use local endpoint stretch. A
-protected route or one whose endpoints request different deltas rejects the
-complete transaction.
-
-Direct segment movement keeps both Route endpoints fixed. The selected segment
-moves only perpendicular to its orientation; adjacent vertices stretch or a
-deterministic dogleg is introduced. Interior, manual geometry outside the
-neighboring segments remains unchanged. A locked or trunk selected/neighboring
-segment rejects the complete edit.
-
-Deleting a connected instance is expressed as one transaction: add replacement
-Junctions at routed terminal coordinates, repoint affected Routes, disconnect
-the terminals, remove attached instance annotations, then remove the instance.
-This preserves intentional wiring and never leaves a Route referencing a
-missing terminal.
-
-## Electrical labels
-
-A visible `net-label` annotation and a logical Net name are related but
-distinct records. Applying a label names the Net. If another Net already has
-that name, the interaction must make the same-name merge explicit and atomic;
-plain text placed near a wire never changes connectivity. Moving or deleting a
-label's presentation does not move or disconnect the conductor.
-
-`net-label.netId` has exactly one accepted meaning: it is the id of the bound
-logical Net. The visual `anchor` may be free, object, or Route-based but never
-changes that electrical identity. All connectivity consumers must use the
-shared Net-label resolver rather than interpreting visual placement as a Net
-binding.
-
-`Net.name` is not a fallback visible annotation. Route Properties and the
-canvas label editor read the actual `net-label` annotation only. Removing that
-annotation therefore leaves the Label field empty even when an imported or
-previously authored logical Net name remains for source identity. Removing a
-Label does not infer a conductor cut or reverse a prior explicit Net merge.
-
-Net highlight never equates a persisted Net record with one connected visible
-component. Its caller supplies a selected Route/endpoint/Label origin, and the
-`ProjectConnectivityIndex` resolves the routed component containing that
-origin, including typed Label virtual edges. The highlight renderer consumes
-only the resulting Route, Junction, and endpoint ids. Consequently, removing a
-Label immediately removes its virtual edge and separates the visible
-highlights even when a historic merge leaves both components under one
-persisted Net id. Unseeded whole-Net highlights are reserved for callers such
-as project navigation that have no visible origin.
-
-## Unified read models (proposed)
-
-This section is `proposed`, owned by `packages/derived`, and is implemented by
-WP-R2/R3/R5 of the connectivity-routing-debugging roadmap. It freezes the
-consumer boundary for the unified read models ahead of implementation; it does
-not change the accepted connectivity/flightline/crossing rules above.
-
-Three additive, derived read models are accepted in
-[`../adr/0013-project-connectivity-index.md`](../adr/0013-project-connectivity-index.md),
-[`../adr/0014-resolved-route-geometry.md`](../adr/0014-resolved-route-geometry.md),
-and
-[`../adr/0015-object-locator-and-diagnostic-envelope.md`](../adr/0015-object-locator-and-diagnostic-envelope.md):
-
-- **`ProjectConnectivityIndex`** (ADR 0013) — the single connectivity read model
-  for flightline derivation, net highlight, cross-Cell trace, project search,
-  and ERC. It expresses logical membership, the visible routed graph, and typed
-  virtual edges (net-label, power-label, hierarchy port) as three distinct
-  facts. The current `deriveVisibleConnectivity`, `deriveNetConnectivity`,
-  `deriveFlightlines`, and `deriveCrossings` remain the production path until
-  their consumers migrate.
-- **`ResolvedRouteGeometry`** (ADR 0014) — the single Route geometry truth for
-  rendering, hit testing, segment drag, marker attachment, routing/visual
-  diagnostics, and formal export. Its `centerline` keeps the accepted
-  `[fromPoint, …waypoints, toPoint]` shape; its `endpointJoins` formalize the
-  terminal and route-anchor miter bridges the renderer currently computes
-  privately.
-- **`ObjectLocator` + `HierarchyFrame` + unified `Diagnostic` envelope**
-  (ADR 0015) — the Project-level object identity and navigation contract shared
-  by search, net trace, ERC, and the diagnostic UI. `navigateTo` switches Cell,
-  restores the instance path, reveals/zooms, selects, and highlights without
-  ever mutating a revision or clearing an undo history.
-
-None of these read models is persisted or formally exported; they are absent
-from Project JSON, recovery, and SVG/PNG/PDF output.
-
-### Coincident contact is one derived fact
-
-`deriveDocumentContactEvidence` is the sole coordinate-contact derivation.
-For explicit endpoints on the same Net and exact page coordinate, it reports
-the participating terminals/Junctions/ports, independently authored Route
-arms, and incident directions. Consumers do not independently infer contact
-from symbol bounds, centerline pass-through, or SVG pixels:
-
-- visible connectivity unions the reported same-Net endpoint contact;
-- junction rendering uses its authored topological degree to decide whether to
-  draw a dot, retaining multiplicity even when arms share a direction;
-- contact-marker rendering also identifies explicit terminal/Route contacts
-  without adding a Junction to the Document;
-- wire-through diagnostics accept a terminal at a Route endpoint only when the
-  same contact evidence contains it.
-
-Route waypoints are deliberately not implicit contact points. Two centerlines
-that merely cross remain disconnected unless an explicit Junction/anchor makes
-the contact part of the Document. This derived layer changes no Net membership
-and is absent from persistence.
-
-`resolveElectricalContactTargets` is the companion authoring read model. It
-groups raw endpoint and Route-segment hits by routed component rather than SVG
-hit count. Two segments at one bend, or a pin plus its incident Route, are one
-conductor; two disconnected branches at a crossing remain two conductors even
-when they share a logical Net record.
-
-### Compatibility and deletion threshold
-
-The migration is additive and one-consumer-at-a-time. The existing
-`deriveVisibleConnectivity` / `deriveFlightlines` / `deriveCrossings` helpers,
-the renderer's private `renderTerminalMiterBridges` /
-`renderRouteAnchorMiterBridges`, and the Document-id-only navigation stack
-remain until WP-R10 proves:
-
-- `rg` shows no production consumer of the old helper;
-- the old/new characterization fixtures agree, or their differences are
-  explicitly accepted in the ADRs (notably the flightline id/direction
-  normalization in ADR 0013); and
-- full routing/editor/Agent/export regression passes.
-
-Only then are the old helpers and private bridges deleted. No old behavior is
-removed in the name of refactoring before its characterization test pins it.
-
-## Valid example
-
-Two independent orthogonal branches cross at `(300, 300)` without a Junction.
-They render as an X, remain separate graph components on separate Nets, and no
-dot is emitted.
-
-## Rejected example
-
-A Route on `net-a` whose terminal endpoint is a member of `net-b`, a diagonal
-segment, or a replacement of a locked route is rejected atomically.
-
-## Persistence boundary
-
-Routes and Junctions persist. Endpoint coordinates, polylines, visible graph,
-components, flightlines, crossings, diagnostics, tool state, and previews are
-derived and absent from Project JSON.
-
-## Deterministic validation
-
-- endpoint transform and unresolved-endpoint tests;
-- implicit MOS bulk exclusion with unchanged B/S Net membership;
-- routed-component and stable MST tests;
-- route normalization and orthogonality tests;
-- T/X crossing-without-Junction regressions;
-- targeted crossing branch split, ambiguous-intersection UI rejection, and
-  locked replacement tests;
-- `cut_connection` branch coverage: split a fully routed local net, delete the
-  empty net of an isolated free wire, retain membership for a partially routed
-  or SPICE-imported net, and retain membership for a global net;
-- formal SVG and Playwright routing closure.
+Primary owners: `packages/model`, `packages/edit-engine`, `packages/derived`
+
+`Net.terminals` is logical connectivity. A terminal is an Instance pin; both
+`port` and `port-filled` participate through their ordinary pin `P`. There is
+no first-class Port membership or Port Route endpoint.
+
+A Route belongs to one Net and connects terminal or Junction endpoints. Its
+editable centerline is endpoint, zero or more waypoints, endpoint;
+`segmentModes.length` is always `waypoints.length + 1`. Junctions are explicit
+branch/route anchors. Geometric crossing or overlap does not create electrical
+contact.
+
+## Authoring rules
+
+- Starting and ending a wire on terminals or explicit Junctions creates or
+  joins real Net membership through one atomic Edit Engine transaction.
+- A Route-segment tap splits geometry at an explicit Junction. A mere crossing
+  remains disconnected.
+- Moving a connected Instance stretches the attached Route while preserving
+  endpoint identity.
+- Deleting geometry does not silently invent an alternate connection.
+- `NoConnect` and Net membership are mutually exclusive.
+- Snap, selection, highlight, clipboard, undo, Agent Snapshot, and formal render
+  consume the same resolved endpoint geometry.
+
+Routes may present as `wire`, `bulk-dashed`, or `power-rail`; presentation does
+not alter Net identity. `bulk-dashed` is used for explicit MOS B routing.
+Manual MOS instances without explicit B membership first use a configured
+cell-default Net, otherwise a `supply-default` creates or reuses canonical
+global ground/VDD. Starting a `bulk-dashed` route from B treats the implicit
+membership as unowned; committing clears the binding before connecting the
+explicit Net. Deleting the explicit route may reconcile the configured or
+canonical supply default. Source-bound/imported MOS instances remain governed
+by their fourth-node evidence and are never guessed.
+
+A `power-rail` Route is valid only on an explicit Net whose persisted
+`powerDomain` is `vdd`. VDD rail authoring creates the global Net when needed,
+two route-anchor Junctions, the rail Route, and one attached RichText power
+label. It creates no VDD Instance. Branch wires on the same Net use ordinary
+wire presentation and explicit contact evidence.
+
+## Derived read models
+
+`ProjectConnectivityIndex` is the shared logical/routed connectivity view.
+`ResolvedRouteGeometry` is the shared geometry for render, hit testing, drag,
+marker attachment, diagnostics, export, and Agent Snapshot.
+`deriveDocumentContactEvidence` is the sole coincident-endpoint contact source;
+consumers do not infer contact independently from pixels or bounds.
+
+For explicit same-Net endpoints at the same page coordinate, contact evidence
+records terminals/Junctions, independently authored Route arms, and incident
+directions. Route waypoints are not implicit contacts. A visible dot represents
+authored branch topology, not line intersection.
+
+## Transaction invariants
+
+- Every terminal and Junction reference exists.
+- Every Route endpoint agrees with the Route Net.
+- A terminal belongs to at most one Net.
+- Route normalization removes duplicate and collinear interior points without
+  changing endpoint identity.
+- A failed multi-edit transaction changes nothing; a successful one advances
+  revision once.
+- GUI and Agent use the same planners, transaction engine, derived geometry,
+  and diagnostics.

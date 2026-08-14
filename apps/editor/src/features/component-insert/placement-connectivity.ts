@@ -100,12 +100,6 @@ export function proposePlacementContact(
   instance: Instance,
   targets: readonly WireSource[],
 ): PlacementContactProposal {
-  // New VDD authoring is exclusively the typed add_power_rail operation.
-  // A legacy VDD marker must not regain electrical authority merely because a
-  // caller reaches this generic component-placement helper.
-  if (instance.symbolId === "vdd") {
-    return { edits: [], matched: false, ambiguous: false };
-  }
   const contacts: Array<{
     source: WireSource;
     target: ElectricalContactTarget;
@@ -230,6 +224,7 @@ export function proposePlacementContact(
 }
 
 export function proposedStandalonePowerConnection(
+  document: SchematicDocument,
   instance: Instance,
 ): PlacementContactProposal {
   const power =
@@ -243,6 +238,10 @@ export function proposedStandalonePowerConnection(
     pinName: power.pinName,
   };
   const netId = `net-power-${instance.id.toLowerCase()}`;
+  const existingSupplyNet = document.nets.find(
+    (net) =>
+      net.scope === "global" && (net.powerDomain ?? "none") === power.domain,
+  );
   return {
     edits: [
       {
@@ -258,10 +257,19 @@ export function proposedStandalonePowerConnection(
         netId,
         powerDomain: power.domain,
       },
+      ...(existingSupplyNet
+        ? [
+            {
+              kind: "merge_nets" as const,
+              targetNetId: existingSupplyNet.id,
+              sourceNetId: netId,
+            },
+          ]
+        : []),
     ],
     matched: false,
     ambiguous: false,
-    powerNetId: netId,
+    powerNetId: existingSupplyNet?.id ?? netId,
     powerEndpoint: endpoint,
   };
 }

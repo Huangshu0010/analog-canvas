@@ -15,7 +15,7 @@ describe("editor session project helpers", () => {
       ...original,
       id: "child",
       name: "Child",
-      netlist: { name: "Child", portOrder: [] },
+      netlist: { name: "Child", terminals: [] },
     };
     project.documents.push(child);
 
@@ -41,7 +41,7 @@ describe("editor session project helpers", () => {
       ...top,
       id: "child",
       name: "GainCell",
-      netlist: { name: "GainCell", portOrder: [] },
+      netlist: { name: "GainCell", terminals: [] },
     };
     project.documents.push(child);
 

@@ -11,70 +11,6 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("visual quality diagnostics", () => {
-  it("does not report a legal Route contact through a coincident same-Net terminal", () => {
-    const document = createEmptyDocument("doc-contact", "Contact diagnostics");
-    document.instances.push({
-      id: "R1",
-      symbolId: "resistor",
-      placement: {
-        position: { x: 100, y: 120 },
-        rotation: 0,
-        mirror: "none",
-      },
-      properties: {},
-    });
-    document.ports.push(
-      {
-        id: "left",
-        name: "left",
-        direction: "passive",
-        position: { x: 60, y: 100 },
-      },
-      {
-        id: "right",
-        name: "right",
-        direction: "passive",
-        position: { x: 140, y: 100 },
-      },
-    );
-    document.nets.push({
-      id: "net-out",
-      scope: "local",
-      terminals: [{ instanceId: "R1", pinName: "1" }],
-      ports: ["left", "right"],
-    });
-    document.junctions.push({
-      id: "junction-out",
-      netId: "net-out",
-      position: { x: 100, y: 100 },
-      role: "branch",
-    });
-    document.routes.push(
-      {
-        id: "route-left",
-        netId: "net-out",
-        from: { kind: "port", portId: "left" },
-        to: { kind: "junction", junctionId: "junction-out" },
-        waypoints: [],
-        segmentModes: ["manual"],
-      },
-      {
-        id: "route-right",
-        netId: "net-out",
-        from: { kind: "junction", junctionId: "junction-out" },
-        to: { kind: "port", portId: "right" },
-        waypoints: [],
-        segmentModes: ["manual"],
-      },
-    );
-
-    expect(
-      diagnoseVisualQuality(document, resolver).filter(
-        (item) => item.code === "VISUAL_WIRE_THROUGH_SYMBOL",
-      ),
-    ).toEqual([]);
-  });
-
   it("reports unplaced, overlap, and alignment defects deterministically", () => {
     const document = createEmptyDocument("doc", "Visual diagnostics");
     document.instances = [
@@ -157,7 +93,7 @@ describe("visual quality diagnostics", () => {
     expect(diagnoseVisualQuality(document, resolver)).toEqual([]);
   });
 
-  it("uses visible variant geometry instead of a hidden canonical bulk view", () => {
+  it("uses the canonical MOS default variant when none is specified", () => {
     const document = createEmptyDocument("doc", "Visible MOS bounds");
     document.instances = [0, 40].map((x, index) => ({
       id: `M${index + 1}`,
@@ -183,29 +119,28 @@ describe("visual quality diagnostics", () => {
       diagnoseVisualQuality(document, resolver).filter(
         (item) => item.code === "VISUAL_SYMBOL_OVERLAP",
       ),
-    ).toHaveLength(1);
+    ).toEqual([]);
   });
 
-  it("does not report a precise same-Net power-symbol terminal contact as overlap", () => {
-    const document = createEmptyDocument("doc", "Power contact");
+  it("includes ordinary Port assets in overlap diagnostics", () => {
+    const document = createEmptyDocument("doc", "Port contact");
     document.instances.push(
       {
-        id: "M2",
-        symbolId: "pmos",
-        symbolVariantId: "textbook-3terminal",
+        id: "P1",
+        symbolId: "port",
         placement: {
-          position: { x: 490, y: 290 },
+          position: { x: 100, y: 100 },
           rotation: 0,
           mirror: "none",
         },
         properties: {},
       },
       {
-        id: "VDD3",
-        symbolId: "vdd",
+        id: "P2",
+        symbolId: "port-filled",
         placement: {
-          position: { x: 500, y: 250 },
-          rotation: 0,
+          position: { x: 120, y: 100 },
+          rotation: 180,
           mirror: "none",
         },
         properties: {},
@@ -215,99 +150,15 @@ describe("visual quality diagnostics", () => {
       id: "net-ui-2",
       scope: "local",
       terminals: [
-        { instanceId: "M2", pinName: "S" },
-        { instanceId: "VDD3", pinName: "P" },
+        { instanceId: "P1", pinName: "P" },
+        { instanceId: "P2", pinName: "P" },
       ],
-      ports: [],
     });
 
-    expect(
-      diagnoseVisualQuality(document, resolver).filter(
-        (item) => item.code === "VISUAL_SYMBOL_OVERLAP",
-      ),
-    ).toEqual([]);
-
-    document.nets[0]!.terminals = [{ instanceId: "M2", pinName: "S" }];
     expect(
       diagnoseVisualQuality(document, resolver).some(
         (item) => item.code === "VISUAL_SYMBOL_OVERLAP",
       ),
     ).toBe(true);
-  });
-
-  it("reports wire-through-symbol, same-Net overlap, and terminal departure as evidence", () => {
-    const document = createEmptyDocument("doc", "Routing metrics");
-    document.nets.push({
-      id: "net-1",
-      name: "N1",
-      scope: "local",
-      terminals: [],
-      ports: ["p1", "p2"],
-    });
-    // A placed instance whose silhouette sits between two route endpoints.
-    document.instances.push({
-      id: "M1",
-      symbolId: "resistor",
-      placement: { position: { x: 200, y: 200 }, rotation: 0, mirror: "none" },
-      properties: {},
-    });
-    // A route whose segment passes through M1's silhouette. from/to are ports
-    // (not M1 terminals) so M1 is not exempted as a terminal endpoint.
-    document.ports.push(
-      {
-        id: "p1",
-        name: "P1",
-        direction: "passive",
-        position: { x: 100, y: 200 },
-      },
-      {
-        id: "p2",
-        name: "P2",
-        direction: "passive",
-        position: { x: 300, y: 200 },
-      },
-    );
-    document.routes.push({
-      id: "route-1",
-      netId: "net-1",
-      from: { kind: "port", portId: "p1" },
-      to: { kind: "port", portId: "p2" },
-      waypoints: [],
-      segmentModes: ["auto"],
-    });
-    // A second route on the same Net overlapping route-1's segment.
-    document.routes.push({
-      id: "route-2",
-      netId: "net-1",
-      from: { kind: "port", portId: "p1" },
-      to: { kind: "port", portId: "p2" },
-      waypoints: [],
-      segmentModes: ["auto"],
-    });
-    const codes = diagnoseVisualQuality(document, resolver).map(
-      (item) => item.code,
-    );
-    expect(codes).toContain("VISUAL_WIRE_THROUGH_SYMBOL");
-    expect(codes).toContain("VISUAL_ROUTE_OVERLAP");
-    expect(
-      diagnoseVisualQuality(document, resolver).find(
-        (item) => item.code === "VISUAL_ROUTE_OVERLAP",
-      ),
-    ).toMatchObject({
-      category: "observation",
-      confidence: "medium",
-      gateEligible: false,
-    });
-    const routeOverlap = diagnoseVisualQuality(document, resolver).find(
-      (item) => item.code === "VISUAL_ROUTE_OVERLAP",
-    )!;
-    expect(
-      isVisualDiagnosticGateFailure(
-        routeOverlap,
-        new Set(["VISUAL_ROUTE_OVERLAP"]),
-      ),
-    ).toBe(false);
-    // Metrics never move objects.
-    expect(document.routes).toHaveLength(2);
   });
 });

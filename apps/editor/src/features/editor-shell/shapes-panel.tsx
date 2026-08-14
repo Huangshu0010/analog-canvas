@@ -11,7 +11,6 @@ export const STARTER_SYMBOL_IDS = [
   "pmos",
   "voltage-source",
   "ground",
-  "vdd",
   "opamp",
 ] as const;
 
@@ -40,6 +39,7 @@ export interface ShapesPanelProps {
   open: boolean;
   onOpenInsert(): void;
   onQuickPlace(request: ComponentInsertRequest): void;
+  onPlaceVddRail(): void;
 }
 
 export function ShapesPanel({
@@ -48,6 +48,7 @@ export function ShapesPanel({
   open,
   onOpenInsert,
   onQuickPlace,
+  onPlaceVddRail,
 }: ShapesPanelProps) {
   const starters = STARTER_SYMBOL_IDS.map((symbolId) =>
     findPaletteSymbol(styleProfileId, symbolId),
@@ -97,6 +98,25 @@ export function ShapesPanel({
           </summary>
           <div className="shapes-fold-body">
             <div className="shapes-grid">
+              <button
+                type="button"
+                className="shapes-chip"
+                data-testid="shapes-tool-vdd-rail"
+                title="Draw VDD rail"
+                onClick={onPlaceVddRail}
+              >
+                <svg
+                  className="shapes-chip-art"
+                  viewBox="0 0 80 50"
+                  aria-hidden="true"
+                >
+                  <path d="M 8 24 H 72" />
+                  <text x="54" y="18">
+                    VDD
+                  </text>
+                </svg>
+                <span>VDD Rail</span>
+              </button>
               {starters.map((symbol) => (
                 <button
                   key={symbol.id}

@@ -12,7 +12,7 @@ import type { AgentPermissions } from "./schema.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 const allPermissions: AgentPermissions = {
-  query: true,
+  snapshot: true,
   render: true,
   sourceSpans: false,
   edit: { geometry: true, connectivity: true, presentation: true },
@@ -44,7 +44,7 @@ const draftingEdits = [
       content: { runs: [{ kind: "text", value: "I_x" }] },
       anchor: {
         kind: "route",
-        routeId: "route-bias-right",
+        routeId: "route-vout",
         segmentIndex: 0,
         t: 0.5,
         normalOffset: -14,

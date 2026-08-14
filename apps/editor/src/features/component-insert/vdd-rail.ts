@@ -6,6 +6,7 @@ export interface VddRailConstruction {
   instanceId: string;
   start: Point;
   end: Point;
+  netId?: string;
 }
 
 /**
@@ -17,15 +18,16 @@ export function constructVddRailEdits({
   instanceId,
   start,
   end,
+  netId,
 }: VddRailConstruction): SchematicEdit[] {
   const key = instanceId.toLowerCase();
-  const netId = `net-power-${key}`;
+  const targetNetId = netId ?? `net-power-${key}`;
   const startJunctionId = `junction-${key}-start`;
   const endJunctionId = `junction-${key}-end`;
   return [
     {
       kind: "add_power_rail",
-      netId,
+      netId: targetNetId,
       routeId: `route-${key}-rail`,
       startJunctionId,
       endJunctionId,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 8;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 9;
 
 export const StableIdSchema = z.string().min(1).max(256);
 export const PointSchema = z.strictObject({
@@ -146,9 +146,8 @@ export const InstanceImportProvenanceSchema = z.strictObject({
   kind: z.enum(["primitive", "model", "subcircuit", "opaque"]),
   name: z.string().min(1),
   sourceTarget: z.string().min(1).max(1024),
-  // Older source files can preserve an exact target spelling without a safely
-  // knowable resolution status. Current importers always write this field;
-  // migration never guesses it from a target string.
+  // External source evidence can preserve a target spelling whose resolution
+  // status is unavailable; current importers write status when it is known.
   status: z.enum(["resolved", "missing", "unsupported"]).optional(),
   modelType: z.string().min(1).optional(),
   attributes: z
@@ -159,7 +158,7 @@ export const InstanceImportProvenanceSchema = z.strictObject({
     .optional(),
 });
 export const MosBulkBindingSchema = z.strictObject({
-  origin: z.enum(["cell-default", "product-fallback"]),
+  origin: z.enum(["cell-default", "supply-default"]),
   netId: StableIdSchema,
 });
 export const InstanceSchema = z
@@ -183,7 +182,7 @@ export const InstanceSchema = z
         code: "custom",
         path: ["properties", key],
         message:
-          "Legacy spice.* properties are only accepted by schema migration; use typed netlist facts or import provenance",
+          "spice.* properties are invalid; use typed netlist facts or import provenance",
       });
     }
     const terminals = instance.netlist?.terminals;
@@ -209,15 +208,9 @@ export const InstanceSchema = z
       pinNames.add(terminal.pinName);
     }
   });
-export const PortSchema = z.strictObject({
-  id: StableIdSchema,
-  name: z.string().min(1),
-  direction: z.enum(["input", "output", "bidirectional", "passive"]),
-  position: PointSchema.nullable(),
-});
 /**
- * Persisted electrical supply identity. `conflict` is migration/diagnostic
- * state only; new authoring may choose vdd, ground, or none but never create a
+ * Persisted electrical supply identity. `conflict` is diagnostic state only;
+ * new authoring may choose vdd, ground, or none but never create a
  * short intentionally.
  */
 export const NetPowerDomainSchema = z.enum([
@@ -230,12 +223,10 @@ export const NetSchema = z.strictObject({
   id: StableIdSchema,
   name: z.string().min(1).optional(),
   scope: z.enum(["local", "global"]),
-  // Schema-v5 migration and all current transactions write this explicitly.
-  // Optionality only admits pre-migration in-memory construction; runtime
-  // treats absence as `none` and never infers from symbol/name/ID.
+  // Runtime treats absence as `none` for in-memory construction and never
+  // infers power identity from a symbol, name, or fixed Net ID.
   powerDomain: NetPowerDomainSchema.optional(),
   terminals: z.array(TerminalRefSchema),
-  ports: z.array(StableIdSchema),
 });
 
 export const RouteEndpointSchema = z.discriminatedUnion("kind", [
@@ -244,7 +235,6 @@ export const RouteEndpointSchema = z.discriminatedUnion("kind", [
     instanceId: StableIdSchema,
     pinName: z.string().min(1),
   }),
-  z.strictObject({ kind: z.literal("port"), portId: StableIdSchema }),
   z.strictObject({ kind: z.literal("junction"), junctionId: StableIdSchema }),
 ]);
 export const SegmentModeSchema = z.enum([
@@ -298,14 +288,11 @@ export const JunctionSchema = z.strictObject({
 // edits, undo/redo, clipboard, export), not an annotation. A NoConnect endpoint
 // must not also belong to a Net, Route, or another NoConnect (enforced in the
 // document superRefine).
-export const NoConnectEndpointSchema = z.discriminatedUnion("kind", [
-  z.strictObject({
-    kind: z.literal("terminal"),
-    instanceId: StableIdSchema,
-    pinName: z.string().min(1),
-  }),
-  z.strictObject({ kind: z.literal("port"), portId: StableIdSchema }),
-]);
+export const NoConnectEndpointSchema = z.strictObject({
+  kind: z.literal("terminal"),
+  instanceId: StableIdSchema,
+  pinName: z.string().min(1),
+});
 export const NoConnectSchema = z.strictObject({
   id: StableIdSchema,
   endpoint: NoConnectEndpointSchema,
@@ -378,10 +365,8 @@ export const AnnotationSchema = z
     }
   });
 
-// --- Text & Peripheral Editing System (ADR 0010) schema-2 types ----------
-//
-// A1a accepts these alongside the legacy annotation kinds; the schema-1
-// constant is unchanged. Resource bounds are part of the frozen contract:
+// --- Text & Peripheral Editing System (ADR 0010) --------------------------
+// Resource bounds are part of the current contract:
 // nesting depth <= 4, <= 64 runs per document, and <= 256 chars per text run.
 
 export type RichTextStyle = "italic" | "bold" | "subscript" | "superscript";
@@ -604,9 +589,13 @@ export const SourceBindingSchema = z.strictObject({
   cellName: z.string().min(1),
   sourceRef: SourceSpanSchema,
 });
+export const CellNetlistTerminalSchema = z.strictObject({
+  name: NetlistIdentifierSchema,
+  netId: StableIdSchema,
+});
 export const CellNetlistInterfaceSchema = z.strictObject({
   name: NetlistIdentifierSchema,
-  portOrder: z.array(StableIdSchema),
+  terminals: z.array(CellNetlistTerminalSchema),
 });
 
 const SchematicDocumentBaseSchema = z.strictObject({
@@ -620,22 +609,19 @@ const SchematicDocumentBaseSchema = z.strictObject({
     "connectivity-modified",
   ]),
   netlist: CellNetlistInterfaceSchema.optional(),
-  ports: z.array(PortSchema),
   instances: z.array(InstanceSchema),
   nets: z.array(NetSchema),
   routes: z.array(RouteBranchSchema),
   junctions: z.array(JunctionSchema),
   annotations: z.array(AnnotationSchema),
   presentation: PresentationIntentSchema,
-  // Stable Net references for cell-level well/substrate intent. When absent,
-  // manual MOS authoring falls back to NMOS -> ground and PMOS -> VDD.
+  // Stable Net references for explicit cell-level well/substrate intent.
   mosBulkDefaults: MosBulkDefaultsSchema.optional(),
   layoutGroups: z.array(LayoutGroupSchema),
   constraints: z.array(LayoutConstraintSchema),
   noConnects: z.array(NoConnectSchema).default([]),
-  // ADR 0010 drafting layer. Optional in A1a so schema-1 Projects (which have
-  // no drafting container) still validate; the integration gate makes it
-  // required and the migration backfills it for all loaded Projects.
+  // Drafting remains optional for programmatic in-memory Documents; canonical
+  // factories and persisted fixtures write an explicit empty layer.
   drafting: DraftingLayerSchema.optional(),
 });
 
@@ -660,7 +646,6 @@ function reportDuplicateIds(
 export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
   (document, context) => {
     const objectCollections = [
-      ...document.ports,
       ...document.instances,
       ...document.nets,
       ...document.routes,
@@ -680,30 +665,25 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       }
     }
     if (document.netlist) {
-      const orderedPortIds = new Set<string>();
-      for (const [orderIndex, portId] of document.netlist.portOrder.entries()) {
-        if (orderedPortIds.has(portId)) {
+      const terminalNames = new Set<string>();
+      for (const [
+        terminalIndex,
+        terminal,
+      ] of document.netlist.terminals.entries()) {
+        const normalizedName = terminal.name.toLowerCase();
+        if (terminalNames.has(normalizedName)) {
           context.addIssue({
             code: "custom",
-            message: `Duplicate netlist Port order entry: ${portId}`,
-            path: ["netlist", "portOrder", orderIndex],
+            message: `Duplicate netlist terminal name: ${terminal.name}`,
+            path: ["netlist", "terminals", terminalIndex, "name"],
           });
         }
-        orderedPortIds.add(portId);
-        if (!document.ports.some((port) => port.id === portId)) {
+        terminalNames.add(normalizedName);
+        if (!document.nets.some((net) => net.id === terminal.netId)) {
           context.addIssue({
             code: "custom",
-            message: `Unknown netlist Port order entry: ${portId}`,
-            path: ["netlist", "portOrder", orderIndex],
-          });
-        }
-      }
-      for (const [portIndex, port] of document.ports.entries()) {
-        if (!orderedPortIds.has(port.id)) {
-          context.addIssue({
-            code: "custom",
-            message: `Port is absent from the netlist interface: ${port.id}`,
-            path: ["ports", portIndex, "id"],
+            message: `Unknown netlist terminal Net: ${terminal.netId}`,
+            path: ["netlist", "terminals", terminalIndex, "netId"],
           });
         }
       }
@@ -745,14 +725,12 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
     const instanceIds = new Set(
       document.instances.map((instance) => instance.id),
     );
-    const portIds = new Set(document.ports.map((port) => port.id));
     const netIds = new Set(document.nets.map((net) => net.id));
     const netById = new Map(document.nets.map((net) => [net.id, net]));
     const junctionById = new Map(
       document.junctions.map((junction) => [junction.id, junction]),
     );
     const anchorObjectIds = new Set([
-      ...document.ports.map((item) => item.id),
       ...document.instances.map((item) => item.id),
       ...document.junctions.map((item) => item.id),
     ]);
@@ -766,7 +744,6 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       ...document.annotations.map((item) => item.id),
     ]);
     const terminalNetByKey = new Map<string, string>();
-    const portNetById = new Map<string, string>();
 
     for (const [
       annotationIndex,
@@ -854,34 +831,6 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
           });
         }
       }
-      const seenPorts = new Set<string>();
-      for (const [portIndex, portId] of net.ports.entries()) {
-        if (seenPorts.has(portId)) {
-          context.addIssue({
-            code: "custom",
-            message: `Duplicate port on net: ${portId}`,
-            path: ["nets", netIndex, "ports", portIndex],
-          });
-        }
-        seenPorts.add(portId);
-        const portOwner = portNetById.get(portId);
-        if (portOwner && portOwner !== net.id) {
-          context.addIssue({
-            code: "custom",
-            message: `Port belongs to multiple nets: ${portId}`,
-            path: ["nets", netIndex, "ports", portIndex],
-          });
-        } else {
-          portNetById.set(portId, net.id);
-        }
-        if (!portIds.has(portId)) {
-          context.addIssue({
-            code: "custom",
-            message: `Unknown port: ${portId}`,
-            path: ["nets", netIndex, "ports", portIndex],
-          });
-        }
-      }
     }
 
     const noConnectEndpointKeys = new Set<string>();
@@ -889,27 +838,15 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       const endpoint = noConnect.endpoint;
       let key: string;
       let netOwner: string | undefined;
-      if (endpoint.kind === "terminal") {
-        if (!instanceIds.has(endpoint.instanceId)) {
-          context.addIssue({
-            code: "custom",
-            message: `Unknown NoConnect terminal instance: ${endpoint.instanceId}`,
-            path: ["noConnects", noConnectIndex, "endpoint", "instanceId"],
-          });
-        }
-        key = `${endpoint.instanceId}\u0000${endpoint.pinName}`;
-        netOwner = terminalNetByKey.get(key);
-      } else {
-        if (!portIds.has(endpoint.portId)) {
-          context.addIssue({
-            code: "custom",
-            message: `Unknown NoConnect port: ${endpoint.portId}`,
-            path: ["noConnects", noConnectIndex, "endpoint", "portId"],
-          });
-        }
-        key = endpoint.portId;
-        netOwner = portNetById.get(endpoint.portId);
+      if (!instanceIds.has(endpoint.instanceId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown NoConnect terminal instance: ${endpoint.instanceId}`,
+          path: ["noConnects", noConnectIndex, "endpoint", "instanceId"],
+        });
       }
+      key = `${endpoint.instanceId}\u0000${endpoint.pinName}`;
+      netOwner = terminalNetByKey.get(key);
       if (netOwner) {
         context.addIssue({
           code: "custom",
@@ -971,23 +908,6 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
             code: "custom",
             message:
               "Route terminal endpoint must be a member of the route net",
-            path: ["routes", routeIndex, endpointName],
-          });
-        }
-        if (endpoint.kind === "port" && !portIds.has(endpoint.portId)) {
-          context.addIssue({
-            code: "custom",
-            message: `Unknown route port: ${endpoint.portId}`,
-            path: ["routes", routeIndex, endpointName, "portId"],
-          });
-        } else if (
-          endpoint.kind === "port" &&
-          routeNet &&
-          !routeNet.ports.includes(endpoint.portId)
-        ) {
-          context.addIssue({
-            code: "custom",
-            message: "Route port endpoint must be a member of the route net",
             path: ["routes", routeIndex, endpointName],
           });
         }
@@ -1080,10 +1000,10 @@ export type InstanceNetlistBinding = z.infer<
 >;
 export type InstanceNetlistData = z.infer<typeof InstanceNetlistDataSchema>;
 export type CellNetlistInterface = z.infer<typeof CellNetlistInterfaceSchema>;
+export type CellNetlistTerminal = z.infer<typeof CellNetlistTerminalSchema>;
 export type MosBulkBinding = z.infer<typeof MosBulkBindingSchema>;
 export type TerminalRef = z.infer<typeof TerminalRefSchema>;
 export type Instance = z.infer<typeof InstanceSchema>;
-export type Port = z.infer<typeof PortSchema>;
 export type Net = z.infer<typeof NetSchema>;
 export type NetPowerDomain = z.infer<typeof NetPowerDomainSchema>;
 export type RouteEndpoint = z.infer<typeof RouteEndpointSchema>;

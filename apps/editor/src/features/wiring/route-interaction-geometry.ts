@@ -39,13 +39,11 @@ export function endpointNetId(
   }
   return (
     document.nets.find((net) =>
-      endpoint.kind === "terminal"
-        ? net.terminals.some(
-            (terminal) =>
-              terminal.instanceId === endpoint.instanceId &&
-              terminal.pinName === endpoint.pinName,
-          )
-        : net.ports.includes(endpoint.portId),
+      net.terminals.some(
+        (terminal) =>
+          terminal.instanceId === endpoint.instanceId &&
+          terminal.pinName === endpoint.pinName,
+      ),
     )?.id ?? null
   );
 }

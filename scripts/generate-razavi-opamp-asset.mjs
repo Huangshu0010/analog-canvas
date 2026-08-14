@@ -105,7 +105,6 @@ const symbol = {
     line(geometry.minusHorizontal),
   ],
   variants: [],
-  aliases: ["op-amp", "operational-amplifier"],
 };
 const assetSource = normalize(
   await format(JSON.stringify(symbol, null, 2), { parser: "json" }),

@@ -256,7 +256,7 @@ test("keeps preview fixed while the compact catalog expands and collapses", asyn
   expect(after.footer.bottom).toBeLessThanOrEqual(after.dialog.bottom);
 });
 
-test("places MOS parameters and orientation while preserving deliberate reference visibility", async ({
+test("places MOS parameters and orientation without a hidden-label suppressor", async ({
   page,
 }) => {
   await page.goto("/");
@@ -299,9 +299,9 @@ test("places MOS parameters and orientation while preserving deliberate referenc
   await canvas.click({ position: { x: 360, y: 230 } });
   await page.keyboard.press("Escape");
 
-  await expect(page.locator('[data-object-id="instance-label-M1"]')).toHaveText(
-    "",
-  );
+  await expect(
+    page.locator('[data-object-id="instance-label-M1"]'),
+  ).toHaveCount(0);
   await page.keyboard.press("q");
   await expect(page.getByLabel("Component w", { exact: true })).toHaveValue(
     "2u",

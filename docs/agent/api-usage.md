@@ -45,9 +45,8 @@ Route (`["routes", routeId]`), and `objectIds` names the offending object. Read
 
 The production operation surface is exactly `capabilities`, `snapshot`,
 `transact`, and `render`. Do not invent a validation, planning, compilation, or
-fallback mutation endpoint. The deployed OpenAPI examples identify the current
-request version; API v1 `query` is compatibility history, not a production
-planning language.
+fallback mutation endpoint. The deployed OpenAPI examples identify the sole
+current request version. No query or compatibility operation exists.
 
 For a hosted session, treat the published OpenAPI as the only request contract.
 An HTTP `400` is an `INVALID_REQUEST` Circuit envelope: correct every returned
@@ -63,7 +62,7 @@ the hosted Agent authorization workflow. External Agents must use the hosted
 session flow below, not this endpoint.
 
 ```http
-POST /v2/circuit HTTP/1.1
+POST /circuit HTTP/1.1
 Host: 127.0.0.1:PORT
 Authorization: Bearer HOST_GENERATED_TOKEN
 Content-Type: application/json
@@ -156,6 +155,12 @@ a new authorized session.
 A transient relay failure is not a revocation. Do not replay an uncertain write
 under a new `requestId`; repeat the original request ID to recover its terminal
 result, or request a fresh Snapshot after the browser is available again.
+
+The browser detects a silent relay connection after 45 seconds and reconnects
+automatically; returning online or foregrounding the page prompts an immediate
+check. The event stream also receives idle SSE comments. Agent clients must
+ignore comment contents and reconnect SSE after transport failure; neither
+heartbeat nor event reconnection replays an operation.
 
 Hiding the Agent details does not pause, revoke, or disconnect the live session.
 If the Agent loses its bearer, it may redeem the still-valid claim again; the

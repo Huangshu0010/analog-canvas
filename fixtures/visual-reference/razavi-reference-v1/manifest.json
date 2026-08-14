@@ -8,10 +8,7 @@
     {
       "path": "capacitor-reference.png",
       "sha256": "e2b13a01eed7e7565080bc9d0d7c98bc8dc6714ceed3c7159096c8b5deb3dcbc",
-      "scope": [
-        "capacitor geometry",
-        "capacitor stroke treatment"
-      ]
+      "scope": ["capacitor geometry", "capacitor stroke treatment"]
     },
     {
       "path": "current-port-reference.png",
@@ -20,13 +17,6 @@
         "route current-arrow treatment",
         "current-source geometry",
         "hollow port origin"
-      ]
-    },
-    {
-      "path": "vdd-reference.png",
-      "sha256": "fae2ed83a534e62bfdb9f0f7cef97892ef46fa8630be481ad1d8a83611361f84",
-      "scope": [
-        "VDD supply marker geometry"
       ]
     }
   ],
@@ -45,10 +35,7 @@
       "extractSha256": "ee09b0e94c9e539cea13fa10f5986776ce9a16e18689d0d0fd61f99e5dc2a903",
       "rasterPath": "inductor-reference.png",
       "rasterSha256": "f3327aecd75ddc7231a0e90117904d2815ba07c30e1761eccfdb7f27bb471070",
-      "scope": [
-        "inductor geometry",
-        "inductor stroke treatment"
-      ]
+      "scope": ["inductor geometry", "inductor stroke treatment"]
     },
     {
       "id": "razavi-textbook-figure-8-26-opamp",
@@ -102,10 +89,7 @@
       "extractSha256": "6f4914befafb3340b9d8544625c15ad7fa381ecb0f7fac67e2a5c07817ad3d41",
       "rasterPath": "diode-reference.png",
       "rasterSha256": "2b098110b525242efcb3f7d27e1856ef484c475f6e7c365c128a6a4c63a10c03",
-      "scope": [
-        "outline diode geometry",
-        "double-width cathode bar"
-      ]
+      "scope": ["outline diode geometry", "double-width cathode bar"]
     },
     {
       "id": "razavi-textbook-ideal-switch",
@@ -121,9 +105,7 @@
       "extractSha256": "7bd12b0f49271d1b1ee6fb758a616bdf894e8c113a986d6e6201506e17ed42fe",
       "rasterPath": "ideal-switch-reference.png",
       "rasterSha256": "22cca5b94043dc9163c146ef615441c0f376804accf422f3c0d2bdfe03a3b2c7",
-      "scope": [
-        "two-terminal ideal switch geometry"
-      ]
+      "scope": ["two-terminal ideal switch geometry"]
     },
     {
       "id": "razavi-textbook-npn",
@@ -139,9 +121,7 @@
       "extractSha256": "97f8b5cd5140fd5aa27c84f083dc3473e0789f1b19db22296a9e931460627b60",
       "rasterPath": "npn-reference.png",
       "rasterSha256": "9d8cde835580aefdf0bb7f1b2f3d06b751ef2c986897507bfe31fffff5c275e0",
-      "scope": [
-        "direct NPN body and outward emitter arrow"
-      ]
+      "scope": ["direct NPN body and outward emitter arrow"]
     },
     {
       "id": "razavi-textbook-pnp",
@@ -157,9 +137,7 @@
       "extractSha256": "581f93c074737fcb2c78d80d86ab3852bcc6083dc8bbaa1289749068da68b7eb",
       "rasterPath": "pnp-reference.png",
       "rasterSha256": "c0b3a2efb8ecddf8db9020c7f8734408fbc02e6010dba6cc17802efe839ff19d",
-      "scope": [
-        "direct PNP body and inward upper-emitter arrow"
-      ]
+      "scope": ["direct PNP body and inward upper-emitter arrow"]
     },
     {
       "id": "razavi-textbook-voltage-amplifier",
@@ -175,9 +153,7 @@
       "extractSha256": "b2b2eee81b7e7ce00bc21bd30f84291be8b39b9e8c5b873b1a65fe59e3dce564",
       "rasterPath": "voltage-amplifier-reference.png",
       "rasterSha256": "f111f61f91eb2d45fb909c68eae62d083716a1be4a3865ce0ee2dcaf51c070f1",
-      "scope": [
-        "single-ended voltage-gain block geometry"
-      ]
+      "scope": ["single-ended voltage-gain block geometry"]
     }
   ],
   "mosGeometryPath": "mos-geometry.json",
@@ -190,8 +166,6 @@
   "capacitorGeometrySha256": "9137e7a492c6a5e66ae0476618942f099899260a09e80f47b3d5ebe57c97cf6a",
   "currentPortGeometryPath": "current-port-geometry.json",
   "currentPortGeometrySha256": "182bc62fdec937cec49051ba5ad1ff802b8d23a576ff2695f8fdce02b0fa66fd",
-  "vddGeometryPath": "vdd-geometry.json",
-  "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
   "inductorGeometryPath": "inductor-geometry.json",
   "inductorGeometrySha256": "a45c05a9335545e202626bae7e0da1bcbbc314ab46e0b964522dccd0cee55b19",
   "opampGeometryPath": "opamp-geometry.json",
@@ -199,7 +173,7 @@
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
   "commonSymbolGeometrySha256": "de9531139628f23ecdadf7dbc51d64ad176d790cb17f6929ef7fbaae597c398a",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "e5cea73042d07f4169782d1a95f3b29c6ae8170a59e8a272487bf6e68ea30165",
+  "fidelityTargetsSha256": "2d13bc726b52d072c64d7c06296259d3caefe6eeae040838c1e1db577c903e87",
   "pixels": {
     "width": 1204,
     "height": 794

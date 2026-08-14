@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { builtInSymbols } from "./builtins.js";
 import {
   getRazaviCatalogEntry,
+  getRazaviCatalogSymbol,
   isRazaviProductCatalogEntry,
   requireRazaviCatalogSymbol,
   razaviCatalogSymbols,
@@ -127,16 +128,13 @@ describe("Razavi symbol catalog", () => {
       ["ideal-switch", "reviewed", "razavi-reference-v1"],
       ["inductor", "reviewed", "razavi-reference-v1"],
       ["nmos", "reviewed", "razavi-reference-v1"],
-      ["nmos3", "provisional", "razavi-reference-v1"],
       ["npn", "reviewed", "razavi-reference-v1"],
       ["opamp", "reviewed", "razavi-reference-v1"],
       ["pmos", "reviewed", "razavi-reference-v1"],
-      ["pmos3", "provisional", "razavi-reference-v1"],
       ["pnp", "reviewed", "razavi-reference-v1"],
       ["port", "reviewed", "razavi-reference-v1"],
       ["port-filled", "reviewed", "razavi-reference-v1"],
       ["resistor", "reviewed", "razavi-reference-v1"],
-      ["vdd", "reviewed", "razavi-reference-v1"],
       ["voltage-amplifier", "reviewed", "razavi-reference-v1"],
       ["voltage-source", "reviewed", "razavi-reference-v1"],
     ]);
@@ -186,7 +184,7 @@ describe("Razavi symbol catalog", () => {
   });
 
   it("uses reviewed catalog objects as the sole built-in product library", () => {
-    expect(razaviCatalogSymbols).toHaveLength(20);
+    expect(razaviCatalogSymbols).toHaveLength(17);
     for (const catalogSymbol of razaviProductSymbols) {
       expect(
         builtInSymbols.find((symbol) => symbol.id === catalogSymbol.id),
@@ -213,7 +211,6 @@ describe("Razavi symbol catalog", () => {
       "port",
       "port-filled",
       "resistor",
-      "vdd",
       "voltage-amplifier",
       "voltage-source",
     ]);
@@ -224,16 +221,10 @@ describe("Razavi symbol catalog", () => {
     }
   });
 
-  it("keeps provisional three-terminal MOS assets out of automatic mappings", () => {
-    for (const symbolId of ["nmos3", "pmos3"]) {
-      expect(getRazaviCatalogEntry(symbolId)).toMatchObject({
-        reviewStatus: "provisional",
-        automaticMappings: [],
-        palette: true,
-        visualAuthority: {
-          kind: "razavi-reference-v1",
-        },
-      });
+  it("does not publish removed standalone three-terminal MOS or VDD assets", () => {
+    for (const symbolId of ["nmos3", "pmos3", "vdd"]) {
+      expect(getRazaviCatalogEntry(symbolId)).toBeUndefined();
+      expect(getRazaviCatalogSymbol(symbolId)).toBeUndefined();
     }
   });
 
@@ -314,30 +305,6 @@ describe("Razavi symbol catalog", () => {
       ]),
     );
     expect(requireRazaviCatalogSymbol("ground").labelVisibility).toBe("hidden");
-    const vdd = requireRazaviCatalogSymbol("vdd");
-    const vddStem = vdd.primitives.find(
-      (primitive) =>
-        primitive.kind === "line" &&
-        primitive.from.x === 0 &&
-        primitive.from.y === 20,
-    );
-    const vddBar = vdd.primitives.find(
-      (primitive) =>
-        primitive.kind === "polygon" && primitive.fill === "foreground",
-    );
-    if (
-      !vddStem ||
-      vddStem.kind !== "line" ||
-      !vddBar ||
-      vddBar.kind !== "polygon"
-    ) {
-      throw new Error("missing VDD stem or bar");
-    }
-    const barBottom = Math.max(...vddBar.points.map((point) => point.y));
-    expect(vddStem.to).toEqual({ x: 0, y: 1.5 });
-    // Butt-capped primitives need a real interior overlap, not a merely
-    // coincident endpoint, to avoid an anti-aliased VDD T-junction seam.
-    expect(vddStem.to.y).toBeLessThan(barBottom);
   });
 
   it("keeps canonical MOS assets four-terminal and three-terminal mode visual-only", () => {
@@ -347,8 +314,8 @@ describe("Razavi symbol catalog", () => {
       expect(
         symbol.variants.find((variant) => variant.id === "textbook-3terminal"),
       ).toMatchObject({ hiddenPinNames: ["B"] });
+      expect(symbol.defaultVariantId).toBe("textbook-3terminal");
     }
-    expect(getRazaviCatalogEntry("nmos3")?.reviewStatus).toBe("provisional");
   });
 
   it("assigns PMOS source and drain to the Razavi-facing terminals", () => {

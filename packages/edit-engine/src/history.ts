@@ -25,7 +25,6 @@ export const DEFAULT_DOCUMENT_HISTORY_LIMIT = 64;
 function collectObjects(document: SchematicDocument): Map<string, unknown> {
   return new Map(
     [
-      ...document.ports,
       ...document.instances,
       ...document.nets,
       ...document.routes,

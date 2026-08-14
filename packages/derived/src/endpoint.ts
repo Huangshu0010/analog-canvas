@@ -7,8 +7,6 @@ export function endpointKey(endpoint: RouteEndpoint): string {
   switch (endpoint.kind) {
     case "terminal":
       return `terminal:${endpoint.instanceId}:${endpoint.pinName}`;
-    case "port":
-      return `port:${endpoint.portId}`;
     case "junction":
       return `junction:${endpoint.junctionId}`;
   }
@@ -62,11 +60,6 @@ export function resolveEndpointPoint(
   endpoint: RouteEndpoint,
 ): Point | null {
   switch (endpoint.kind) {
-    case "port":
-      return (
-        document.ports.find((port) => port.id === endpoint.portId)?.position ??
-        null
-      );
     case "junction":
       return (
         document.junctions.find(
@@ -139,8 +132,6 @@ export function endpointBelongsToNet(
           terminal.instanceId === endpoint.instanceId &&
           terminal.pinName === endpoint.pinName,
       );
-    case "port":
-      return net.ports.includes(endpoint.portId);
     case "junction":
       return document.junctions.some(
         (junction) =>
@@ -158,7 +149,6 @@ export function netEndpoints(
       kind: "terminal",
       ...terminal,
     })),
-    ...net.ports.map((portId): RouteEndpoint => ({ kind: "port", portId })),
     ...document.junctions
       .filter((junction) => junction.netId === net.id)
       .map((junction): RouteEndpoint => ({

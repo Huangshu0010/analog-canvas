@@ -1,10 +1,7 @@
 import type { z } from "zod";
 
 import {
-  AGENT_API_V1_VERSION,
   AGENT_API_VERSION,
-  AGENT_API_V3_VERSION,
-  AgentCircuitRequestSchema,
   AgentProductionCircuitRequestSchema,
   AgentCircuitResponseSchema,
   type AgentCircuitRequest,
@@ -22,13 +19,6 @@ function candidateRecord(input: unknown): Record<string, unknown> | null {
   return typeof input === "object" && input !== null
     ? (input as Record<string, unknown>)
     : null;
-}
-
-function responseVersion(input: unknown) {
-  const candidate = candidateRecord(input)?.apiVersion;
-  if (candidate === AGENT_API_V1_VERSION) return AGENT_API_V1_VERSION;
-  if (candidate === AGENT_API_V3_VERSION) return AGENT_API_V3_VERSION;
-  return AGENT_API_VERSION;
 }
 
 function responseRequestId(input: unknown): string {
@@ -62,7 +52,7 @@ function issueMessage(issue: z.core.$ZodIssue): string {
 export function invalidAgentRequestResponse(
   input: unknown,
   issues: readonly z.core.$ZodIssue[] = [],
-  apiVersion = responseVersion(input),
+  apiVersion = AGENT_API_VERSION,
 ): AgentCircuitResponse {
   return AgentCircuitResponseSchema.parse({
     apiVersion,
@@ -90,26 +80,11 @@ export function parseAgentCircuitRequest(input: unknown): RequestParseResult {
     ? { success: true, data: parsed.data }
     : {
         success: false,
-        // Hosted traffic has exactly one supported response dialect. Returning
-        // v2 here prevents an unsupported requested version from becoming an
-        // accidental response-contract selector.
+        // Hosted traffic has exactly one supported response dialect.
         response: invalidAgentRequestResponse(
           input,
           parsed.error.issues,
           AGENT_API_VERSION,
         ),
-      };
-}
-
-/** Explicit migration-only parser; hosted traffic must never call it. */
-export function parseCompatibleAgentCircuitRequest(
-  input: unknown,
-): RequestParseResult {
-  const parsed = AgentCircuitRequestSchema.safeParse(input);
-  return parsed.success
-    ? { success: true, data: parsed.data }
-    : {
-        success: false,
-        response: invalidAgentRequestResponse(input, parsed.error.issues),
       };
 }

@@ -26,14 +26,12 @@ describe("MOS bulk resolution", () => {
         name: "VSS",
         scope: "global",
         terminals: [],
-        ports: [],
       },
       {
         id: "net-body",
         name: "VBODY",
         scope: "local",
         terminals: [{ instanceId: "M1", pinName: "B" }],
-        ports: [],
       },
     );
     document.mosBulkDefaults = { nmosNetId: "net-vss" };
@@ -45,7 +43,7 @@ describe("MOS bulk resolution", () => {
     expect(mosBulkShouldBeVisible(document, "M1")).toBe(true);
   });
 
-  it("uses the stable cell default before the named product fallback", () => {
+  it("uses the stable cell default before the supply default", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(mos("M1", "nmos"));
     document.nets.push(
@@ -54,14 +52,12 @@ describe("MOS bulk resolution", () => {
         name: "SUBSTRATE",
         scope: "local",
         terminals: [],
-        ports: [],
       },
       {
         id: "net-vss",
         name: "VSS",
         scope: "global",
         terminals: [],
-        ports: [],
       },
     );
     document.mosBulkDefaults = { nmosNetId: "net-cell-substrate" };
@@ -73,6 +69,47 @@ describe("MOS bulk resolution", () => {
     });
   });
 
+  it.each([
+    ["nmos", "net-global-0", "ground"],
+    ["pmos", "net-global-vdd", "vdd"],
+  ] as const)(
+    "uses an existing global %s supply Net as the default",
+    (symbolId, netId, powerDomain) => {
+      const document = createEmptyDocument("main", "Main");
+      document.instances.push(mos("M1", symbolId));
+      document.nets.push({
+        id: netId,
+        name: symbolId === "nmos" ? "0" : "VDD",
+        scope: "global",
+        powerDomain,
+        terminals: [],
+      });
+
+      expect(resolveMosBulkConnection(document, "M1")).toMatchObject({
+        status: "supply-default",
+        net: { id: netId },
+        materialized: false,
+      });
+    },
+  );
+
+  it.each([
+    ["nmos", "0"],
+    ["pmos", "VDD"],
+  ] as const)(
+    "requests canonical %s supply creation when none exists",
+    (symbolId, defaultName) => {
+      const document = createEmptyDocument("main", "Main");
+      document.instances.push(mos("M1", symbolId));
+
+      expect(resolveMosBulkConnection(document, "M1")).toMatchObject({
+        status: "supply-default",
+        net: undefined,
+        defaultName,
+      });
+    },
+  );
+
   it("keeps a materialized Cell default visually implicit", () => {
     const document = createEmptyDocument("main", "Main");
     document.instances.push(mos("M1", "nmos"));
@@ -81,7 +118,6 @@ describe("MOS bulk resolution", () => {
       name: "SUBSTRATE",
       scope: "local",
       terminals: [{ instanceId: "M1", pinName: "B" }],
-      ports: [],
     });
     document.mosBulkDefaults = { nmosNetId: "net-cell-substrate" };
 

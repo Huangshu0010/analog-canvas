@@ -117,7 +117,7 @@ describe("instance label placement", () => {
 
   it("uses visible MOS edges through variants, rotations, and mirrors", () => {
     expect(placedDefaultLabel("nmos")).toMatchObject({
-      position: { x: 123, y: 108 },
+      position: { x: 113, y: 108 },
       alignment: "start",
     });
     expect(
@@ -138,7 +138,7 @@ describe("instance label placement", () => {
       alignment: "middle",
     });
     expect(placedDefaultLabel("nmos", 0, "x")).toMatchObject({
-      position: { x: 78, y: 108 },
+      position: { x: 87, y: 108 },
       alignment: "end",
     });
   });

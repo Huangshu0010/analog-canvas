@@ -84,7 +84,6 @@ const symbol = {
     },
   ],
   variants: [],
-  aliases: ["coil"],
 };
 const assetSource = normalize(
   await format(JSON.stringify(symbol, null, 2), { parser: "json" }),

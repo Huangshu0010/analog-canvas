@@ -106,7 +106,6 @@ function reachableDocuments(
 interface CellNetContext {
   nameByNetId: Map<string, string>;
   netByTerminal: Map<string, Net>;
-  netByPort: Map<string, Net>;
   nets: DesignNetlistCell["nets"];
 }
 
@@ -189,11 +188,9 @@ function buildNetContext(
   }
 
   const netByTerminal = new Map<string, Net>();
-  const netByPort = new Map<string, Net>();
   const instanceById = new Map(
     document.instances.map((instance) => [instance.id, instance]),
   );
-  const portIds = new Set(document.ports.map((port) => port.id));
   for (const net of document.nets) {
     for (const terminal of net.terminals) {
       const instance = instanceById.get(terminal.instanceId);
@@ -212,12 +209,8 @@ function buildNetContext(
             ? documentsById.get(binding.childDocumentId)
             : undefined;
         const allowedPins =
-          child?.netlist?.portOrder.flatMap((portId) => {
-            const port = child.ports.find(
-              (candidate) => candidate.id === portId,
-            );
-            return port ? [port.name] : [];
-          }) ?? deviceNetlistDefinition(instance.symbolId)?.pinOrder;
+          child?.netlist?.terminals.map((terminal) => terminal.name) ??
+          deviceNetlistDefinition(instance.symbolId)?.pinOrder;
         if (allowedPins && !allowedPins.includes(terminal.pinName)) {
           diagnostic(
             diagnostics,
@@ -242,35 +235,11 @@ function buildNetContext(
         netByTerminal.set(key, net);
       }
     }
-    for (const portId of net.ports) {
-      if (!portIds.has(portId)) {
-        diagnostic(
-          diagnostics,
-          document.id,
-          "UNKNOWN_NET_PORT",
-          `Net ${net.id} references unknown Port ${portId}`,
-          [net.id, portId],
-        );
-      }
-      const prior = netByPort.get(portId);
-      if (prior) {
-        diagnostic(
-          diagnostics,
-          document.id,
-          "MULTIPLY_ASSIGNED_PORT",
-          `Port ${portId} belongs to multiple Nets`,
-          [prior.id, net.id, portId],
-        );
-      } else {
-        netByPort.set(portId, net);
-      }
-    }
   }
 
   return {
     nameByNetId,
     netByTerminal,
-    netByPort,
     nets: [...document.nets]
       .sort((a, b) => a.id.localeCompare(b.id))
       .flatMap((net) => {
@@ -361,18 +330,15 @@ function extractHierarchyInstance(
       [instance.id, child.id],
     );
   }
-  const childPortById = new Map(child.ports.map((port) => [port.id, port]));
-  const nodes = child.netlist.portOrder.flatMap((portId) => {
-    const port = childPortById.get(portId);
-    if (!port) return [];
+  const nodes = child.netlist.terminals.flatMap((terminal) => {
     const netName = terminalNetName(
       document,
       instance,
-      port.name,
+      terminal.name,
       context,
       diagnostics,
     );
-    return netName ? [{ pinName: port.name, netName }] : [];
+    return netName ? [{ pinName: terminal.name, netName }] : [];
   });
   return {
     id: instance.id,
@@ -575,72 +541,44 @@ function extractCell(
     );
   }
   const context = buildNetContext(document, documentsById, diagnostics);
-  const portById = new Map(document.ports.map((port) => [port.id, port]));
-  const orderedPortIds = new Set(document.netlist.portOrder);
-  if (
-    orderedPortIds.size !== document.netlist.portOrder.length ||
-    orderedPortIds.size !== document.ports.length ||
-    document.ports.some((port) => !orderedPortIds.has(port.id))
-  ) {
-    diagnostic(
-      diagnostics,
-      document.id,
-      "INVALID_PORT_ORDER",
-      "Cell netlist portOrder must contain every Port exactly once",
-      document.netlist.portOrder,
-    );
-  }
   const portNames = new Map<string, string>();
-  const noConnectPorts = new Set(
-    document.noConnects.flatMap((record) =>
-      record.endpoint.kind === "port" ? [record.endpoint.portId] : [],
-    ),
-  );
-  const ports = document.netlist.portOrder.flatMap((portId) => {
-    const port = portById.get(portId);
-    if (!port) {
+  const ports = document.netlist.terminals.flatMap((terminal) => {
+    const net = document.nets.find(
+      (candidate) => candidate.id === terminal.netId,
+    );
+    if (!net) {
       diagnostic(
         diagnostics,
         document.id,
-        "MISSING_INTERFACE_PORT",
-        `Netlist interface references unknown Port ${portId}`,
-        [portId],
+        "MISSING_INTERFACE_NET",
+        `Netlist terminal ${terminal.name} references unknown Net ${terminal.netId}`,
+        [terminal.netId],
       );
       return [];
     }
-    if (!isIdentifier(port.name, true)) {
+    if (!isIdentifier(terminal.name, true)) {
       diagnostic(
         diagnostics,
         document.id,
         "INVALID_PORT_NAME",
-        `Port name is outside the portable identifier subset: ${port.name}`,
-        [port.id],
+        `Port name is outside the portable identifier subset: ${terminal.name}`,
+        [terminal.netId],
       );
     }
-    const priorPort = portNames.get(port.name.toLowerCase());
+    const priorPort = portNames.get(terminal.name.toLowerCase());
     if (priorPort) {
       diagnostic(
         diagnostics,
         document.id,
         "DUPLICATE_PORT_NAME",
-        `Port name ${port.name} duplicates Port ${priorPort} under case folding`,
-        [priorPort, port.id],
+        `Port name ${terminal.name} duplicates Net ${priorPort} under case folding`,
+        [priorPort, terminal.netId],
       );
     } else {
-      portNames.set(port.name.toLowerCase(), port.id);
+      portNames.set(terminal.name.toLowerCase(), terminal.netId);
     }
-    const portNet = context.netByPort.get(portId);
-    const netName = portNet ? context.nameByNetId.get(portNet.id) : undefined;
-    if (!netName && !noConnectPorts.has(portId)) {
-      diagnostic(
-        diagnostics,
-        document.id,
-        "UNCONNECTED_PORT",
-        `Port ${port.name} is not connected and has no NoConnect declaration`,
-        [port.id],
-      );
-    }
-    return [{ id: port.id, name: port.name, netName: netName ?? port.name }];
+    const netName = context.nameByNetId.get(net.id) ?? terminal.name;
+    return [{ id: terminal.netId, name: terminal.name, netName }];
   });
 
   const references = new Map<string, string>();

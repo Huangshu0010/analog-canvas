@@ -89,17 +89,6 @@ export function resolveNetLabelBinding(
         endpoint: { kind: "junction", junctionId: junction.id },
       };
     }
-    if (
-      document.nets
-        .find((net) => net.id === netId)
-        ?.ports.includes(anchor.objectId)
-    ) {
-      return {
-        annotationId: annotation.id,
-        netId,
-        endpoint: { kind: "port", portId: anchor.objectId },
-      };
-    }
   }
   const position = resolveVisualAnchor(
     document,

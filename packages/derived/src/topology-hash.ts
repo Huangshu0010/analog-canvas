@@ -101,7 +101,7 @@ export function sha256Hex(value: string): string {
 
 /**
  * Canonical electrical projection of one Document: instance ids + symbol +
- * variant, port ids + direction, and per-Net terminal/port membership. Order
+ * variant and per-Net terminal membership. Order
  * is deterministic so identical electrical content hashes identically.
  */
 function electricalProjection(document: SchematicDocument): unknown {
@@ -112,9 +112,6 @@ function electricalProjection(document: SchematicDocument): unknown {
       symbolId: instance.symbolId,
       symbolVariantId: instance.symbolVariantId,
     }));
-  const ports = [...document.ports]
-    .sort((left, right) => left.id.localeCompare(right.id))
-    .map((port) => ({ id: port.id, direction: port.direction }));
   const nets = [...document.nets]
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((net) => ({
@@ -128,7 +125,6 @@ function electricalProjection(document: SchematicDocument): unknown {
           `${right.instanceId}:${right.pinName}`,
         ),
       ),
-      ports: [...net.ports].sort((left, right) => left.localeCompare(right)),
     }));
   const noConnects = [...document.noConnects]
     .sort((left, right) => left.id.localeCompare(right.id))
@@ -136,7 +132,7 @@ function electricalProjection(document: SchematicDocument): unknown {
       id: noConnect.id,
       endpoint: noConnect.endpoint,
     }));
-  return { instances, ports, nets, noConnects };
+  return { instances, nets, noConnects };
 }
 
 /**

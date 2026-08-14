@@ -44,8 +44,6 @@ function endpointKind(source: WireSource): SnapTargetKind {
   switch (source.endpoint.kind) {
     case "terminal":
       return "pin";
-    case "port":
-      return "port";
     case "junction":
       return "junction";
   }
@@ -55,9 +53,7 @@ export function endpointSnapAnchor(source: WireSource): SnapAnchor {
   const endpointId =
     source.endpoint.kind === "terminal"
       ? `${source.endpoint.instanceId}:${source.endpoint.pinName}`
-      : source.endpoint.kind === "port"
-        ? source.endpoint.portId
-        : source.endpoint.junctionId;
+      : source.endpoint.junctionId;
   return {
     id: `endpoint:${source.endpoint.kind}:${endpointId}`,
     point: source.point,

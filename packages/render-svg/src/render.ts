@@ -1,13 +1,11 @@
 import {
   RectSchema,
-  semanticTextDocument,
   SchematicDocumentSchema,
   transformPoint,
 } from "@icm/model";
 import {
   contactRequiresJunctionDot,
   deriveDocumentContactEvidence,
-  defaultInstanceLabelPlacement,
   resolvePrimitiveStrokeWidth,
   resolveDraftingObjectGeometry,
   resolveEndpointPoint,
@@ -389,18 +387,6 @@ function deriveBounds(
       height: 0,
     });
   }
-  if (profile.nodes.portOriginRadius > 0) {
-    for (const port of document.ports) {
-      if (!port.position) continue;
-      const radius = profile.nodes.portOriginRadius;
-      bounds.push({
-        x: port.position.x - radius,
-        y: port.position.y - radius,
-        width: radius * 2,
-        height: radius * 2,
-      });
-    }
-  }
   for (const annotation of document.annotations) {
     const resolvedAnchor = resolveVisualAnchor(
       document,
@@ -543,16 +529,15 @@ export function buildSvgScene(
       ) {
         return false;
       }
-      if (contact.endpoints.some((endpoint) => endpoint.kind === "port")) {
-        return false;
-      }
       if (
         contact.endpoints.some(
           (endpoint) =>
             endpoint.kind === "terminal" &&
-            document.instances.find(
-              (instance) => instance.id === endpoint.instanceId,
-            )?.symbolId === "port",
+            ["port", "port-filled"].includes(
+              document.instances.find(
+                (instance) => instance.id === endpoint.instanceId,
+              )?.symbolId ?? "",
+            ),
         )
       ) {
         return false;
@@ -572,54 +557,10 @@ export function buildSvgScene(
       return `<circle data-object-id="${escapeXml(objectId)}"${derivedAttribute} cx="${contact.point.x}" cy="${contact.point.y}" r="${profile.nodes.junctionRadius}" fill="${profile.foreground}"/>`;
     })
     .join("");
-  // Document ports predate the rejected first-class visual Port migration.
-  // Preserve their legacy rendering for existing hierarchy documents, but do
-  // not use them as the UI or Agent path for ordinary Port components.
-  const powerPortIds = new Set(
-    document.annotations.flatMap((annotation) =>
-      annotation.kind === "power-label" && annotation.anchor.kind === "object"
-        ? [annotation.anchor.objectId]
-        : [],
-    ),
-  );
-  const portOrigins =
-    profile.nodes.portOriginRadius === 0
-      ? ""
-      : [...document.ports]
-          .filter(
-            (port) => port.position !== null && !powerPortIds.has(port.id),
-          )
-          .sort((left, right) => left.id.localeCompare(right.id, "en"))
-          .map((port) =>
-            profile.id === "razavi-textbook-v1"
-              ? `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.background}" stroke="${profile.foreground}" stroke-width="${profile.strokes.normal}"/>`
-              : `<circle data-object-id="${escapeXml(port.id)}" data-node-kind="port-origin" cx="${port.position!.x}" cy="${port.position!.y}" r="${profile.nodes.portOriginRadius}" fill="${profile.foreground}"/>`,
-          )
-          .join("");
-  const portLayer =
-    profile.nodes.portOriginRadius === 0
-      ? ""
-      : `<g data-layer="ports">${portOrigins}</g>`;
   const noConnectMarkers = renderNoConnectMarkers(document, resolver, profile);
   const noConnectLayer = noConnectMarkers
     ? `<g data-layer="no-connects">${noConnectMarkers}</g>`
     : "";
-  const explicitInstanceLabels = new Set(
-    document.annotations
-      .filter(
-        (
-          annotation,
-        ): annotation is SchematicDocument["annotations"][number] & {
-          anchor: Extract<
-            SchematicDocument["annotations"][number]["anchor"],
-            { kind: "object" }
-          >;
-        } =>
-          annotation.kind === "instance-label" &&
-          annotation.anchor.kind === "object",
-      )
-      .map((annotation) => annotation.anchor.objectId),
-  );
   const symbols = [...document.instances]
     .filter((instance) => instance.placement !== null)
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
@@ -643,20 +584,7 @@ export function buildSvgScene(
         instance,
         profile,
       );
-      const labelPlacement = defaultInstanceLabelPlacement(
-        instance,
-        resolved,
-        profile,
-      );
-      const labelHiddenBySymbol =
-        resolved.definition.labelVisibility === "hidden";
-      const defaultLabel =
-        explicitInstanceLabels.has(instance.id) ||
-        labelHiddenBySymbol ||
-        !labelPlacement
-          ? ""
-          : `<text x="${labelPlacement.position.x}" y="${labelPlacement.position.y}" text-anchor="${labelPlacement.alignment}"${schematicTextSizeAttribute("default-instance", profile)}>${renderRichTextDocument(profile.id === "textbook-monochrome-v1" ? { runs: [{ kind: "text", value: instance.id }] } : semanticTextDocument(instance.id, "default-instance"), profile)}</text>`;
-      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}>${primitives}</g></g>${pinNames}${defaultLabel}</g>`;
+      return `<g data-object-id="${escapeXml(instance.id)}" data-symbol-id="${escapeXml(resolved.definition.id)}"><g transform="${instanceTransform(instance)}"><g fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.symbol}" stroke-linecap="${profile.lineCap}" stroke-linejoin="${profile.lineJoin}"${profileMiterAttribute(profile)}>${primitives}</g></g>${pinNames}</g>`;
     })
     .join("");
   const annotations = [...document.annotations]
@@ -732,15 +660,15 @@ export function buildSvgScene(
         annotation.kind === "power-label"
       ) {
         const annotationAnchor = annotation.anchor;
-        const port =
+        const junction =
           annotationAnchor.kind === "object"
-            ? document.ports.find(
+            ? document.junctions.find(
                 (candidate) => candidate.id === annotationAnchor.objectId,
               )
             : undefined;
         const supplyBar =
-          port?.position && profile.annotations.supplyBarWidth > 0
-            ? `<line data-role="supply-bar" x1="${port.position.x - profile.annotations.supplyBarWidth / 2}" y1="${port.position.y}" x2="${port.position.x + profile.annotations.supplyBarWidth / 2}" y2="${port.position.y}" transform="rotate(${rotation} ${port.position.x} ${port.position.y})" stroke="${profile.foreground}" stroke-width="${profile.strokes.supply}" stroke-linecap="${profile.lineCap}"/>`
+          junction?.position && profile.annotations.supplyBarWidth > 0
+            ? `<line data-role="supply-bar" x1="${junction.position.x - profile.annotations.supplyBarWidth / 2}" y1="${junction.position.y}" x2="${junction.position.x + profile.annotations.supplyBarWidth / 2}" y2="${junction.position.y}" transform="rotate(${rotation} ${junction.position.x} ${junction.position.y})" stroke="${profile.foreground}" stroke-width="${profile.strokes.supply}" stroke-linecap="${profile.lineCap}"/>`
             : "";
         return `<g ${attributes}>${supplyBar}<text x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${schematicTextSizeAttribute("power-label", profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text></g>`;
       }
@@ -772,7 +700,7 @@ export function buildSvgScene(
 
   return {
     viewBox,
-    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}${routeAnchorBridges}</g>${portLayer}<g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g>${noConnectLayer}<g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
+    formalBody: `<g data-layer="formal"><g data-layer="routes">${routes}${routeAnchorBridges}</g><g data-layer="junctions">${junctions}</g><g data-layer="symbols">${symbols}</g>${noConnectLayer}<g data-layer="annotations">${annotations}</g>${renderDraftingLayer(document, resolver, profile)}</g>`,
   };
 }
 

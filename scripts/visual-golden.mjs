@@ -10,11 +10,6 @@ import {
 
 const fixtures = [
   {
-    input: "fixtures/projects/phase-1-rendered/project.icproj.json",
-    output: "fixtures/visual-golden/phase-1-manual.svg",
-    title: null,
-  },
-  {
     input: "fixtures/projects/phase-3-routing/project.icproj.json",
     output: "fixtures/visual-golden/phase-3-crossing.svg",
     title: "Phase 3 Crossing",

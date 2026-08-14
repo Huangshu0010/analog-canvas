@@ -97,7 +97,6 @@ function voltageSource(measurement) {
       line({ x: 0, y: radius }, { x: 0, y: 20 }),
     ],
     variants: [],
-    aliases: ["dc-voltage"],
   };
 }
 
@@ -142,7 +141,6 @@ function currentSource(measurement) {
       line({ x: 0, y: radius }, { x: 0, y: 20 }),
     ],
     variants: [],
-    aliases: ["dc-current"],
   };
 }
 
@@ -176,7 +174,6 @@ function ground(measurement) {
       ),
     ],
     variants: [],
-    aliases: ["gnd"],
     labelVisibility: "hidden",
   };
 }

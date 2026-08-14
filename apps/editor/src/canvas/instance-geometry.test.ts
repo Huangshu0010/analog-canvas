@@ -10,23 +10,27 @@ import {
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
 describe("selection geometry", () => {
-  it("uses painted geometry and pins instead of unused viewBox space", () => {
-    const resolved = resolver.resolve("vdd");
+  it("keeps painted geometry and pins inside the Symbol viewBox", () => {
+    const resolved = resolver.resolve("opamp");
     expect(resolved).toBeDefined();
     const bounds = visibleSymbolLocalBounds(resolved!);
-    expect(bounds.x).toBeGreaterThan(resolved!.definition.viewBox.x);
-    expect(bounds.width).toBeLessThan(resolved!.definition.viewBox.width);
-    expect(bounds.height).toBeLessThan(resolved!.definition.viewBox.height);
+    expect(bounds.x).toBeGreaterThanOrEqual(resolved!.definition.viewBox.x);
+    expect(bounds.width).toBeLessThanOrEqual(
+      resolved!.definition.viewBox.width,
+    );
+    expect(bounds.height).toBeLessThanOrEqual(
+      resolved!.definition.viewBox.height,
+    );
   });
 
   it("transforms the tight envelope with the instance placement", () => {
-    const resolved = resolver.resolve("vdd");
+    const resolved = resolver.resolve("opamp");
     expect(resolved).toBeDefined();
     const localBounds = visibleSymbolLocalBounds(resolved!);
     const bounds = instanceVisibleHitBox(
       {
-        id: "VDD1",
-        symbolId: "vdd",
+        id: "U1",
+        symbolId: "opamp",
         placement: {
           position: { x: 100, y: 200 },
           rotation: 90,

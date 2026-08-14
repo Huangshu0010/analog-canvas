@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AGENT_SESSION_PROTOCOL_VERSION,
+  AgentSessionControlMessageSchema,
   AgentSessionMessageSchema,
   AgentSessionScopeSchema,
   AgentTransportErrorCodeSchema,
@@ -17,7 +18,7 @@ import { createAgentCircuitService } from "./service.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 const allPermissions: AgentPermissions = {
-  query: true,
+  snapshot: true,
   render: true,
   sourceSpans: false,
   edit: { geometry: true, connectivity: true, presentation: true },
@@ -116,6 +117,15 @@ describe("agent-adapter browser-safe boundary", () => {
       payload: { example: true },
     });
     expect(message.kind).toBe("circuit-request");
+
+    expect(
+      AgentSessionControlMessageSchema.parse({
+        protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+        sessionId: "s1",
+        kind: "heartbeat",
+        nonce: "heartbeat-1",
+      }).kind,
+    ).toBe("heartbeat");
 
     expect(AgentSessionScopeSchema.parse("circuit.edit.geometry")).toBe(
       "circuit.edit.geometry",

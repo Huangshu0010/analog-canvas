@@ -12,15 +12,16 @@ it is both `reviewed` and has:
 
 The product set is exactly the reviewed, Reference-calibrated entries:
 
-- `nmos`, `pmos`, `ground`, `vdd`;
+- `nmos`, `pmos`, and `ground`;
 - `voltage-source`, `current-source`;
 - `resistor`, `capacitor`, `port`, and `port-filled`.
 
-`nmos3` and `pmos3` use the same visual authority but remain provisional and
-are deliberately excluded from the product set. There is no legacy symbol
-catalog and no generic fallback. A device without a reviewed Razavi symbol is
-an unsupported import error until its Reference calibration is approved and
-added here.
+`nmos` and `pmos` are the only MOS asset IDs. Their default visual variant is
+`textbook-3terminal`; explicit bulk-capable variants remain properties of the
+same canonical assets. VDD is authored as an explicit Net/Route rail, not a
+symbol. There is no legacy symbol catalog or generic fallback. A device without
+a reviewed Razavi symbol is an unsupported import error until its Reference
+calibration is approved and added here.
 
 The catalog records only runtime electrical pin order and visual authority.
 It does not read or cite VSS/Visio. Historic VSS material is archival evidence

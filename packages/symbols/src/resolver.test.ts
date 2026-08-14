@@ -34,13 +34,14 @@ const resistor = {
     { kind: "line" as const, from: { x: -10, y: 0 }, to: { x: 10, y: 0 } },
   ],
   variants: [{ id: "compact", hiddenPinNames: [] }],
-  aliases: ["res"],
+  defaultVariantId: "compact",
 };
 
 describe("Symbol Resolver boundary", () => {
-  it("resolves canonical IDs, aliases, and variants", () => {
+  it("resolves only canonical IDs and applies the canonical default variant", () => {
     const resolver = new InMemorySymbolResolver([resistor]);
-    expect(resolver.resolve("res")?.definition.id).toBe("resistor");
+    expect(resolver.resolve("res")).toBeUndefined();
+    expect(resolver.resolve("resistor")?.variant?.id).toBe("compact");
     expect(resolver.resolve("resistor", "compact")?.variant?.id).toBe(
       "compact",
     );
@@ -59,6 +60,7 @@ describe("Symbol Resolver boundary", () => {
   it("does not remove an electrical pin when a variant hides it", () => {
     const hidden = SymbolDefinitionSchema.parse({
       ...resistor,
+      defaultVariantId: "implicit-terminal",
       variants: [{ id: "implicit-terminal", hiddenPinNames: ["2"] }],
     });
     expect(hidden.pins.map((pin) => pin.name)).toEqual(["1", "2"]);
@@ -68,40 +70,6 @@ describe("Symbol Resolver boundary", () => {
     const resolver = new InMemorySymbolResolver([resistor]);
     expect(resolver.resolve("generic-block-5")).toBeUndefined();
     expect(resolver.resolve("generic-block-0")).toBeUndefined();
-  });
-
-  it("derives a named hierarchy symbol from the imported Document interface", () => {
-    const project = createEmptyProject("project-test", "Hierarchy Test");
-    const document = project.documents[0]!;
-    document.name = "Filter Cell";
-    document.sourceBinding = {
-      cellName: "filter_cell",
-      sourceRef: {
-        fileId: "source-main",
-        start: { offset: 0, line: 1, column: 1 },
-        end: { offset: 1, line: 1, column: 2 },
-      },
-    };
-    document.ports = ["IN", "OUT", "VSS"].map((name, index) => ({
-      id: `port-${index}`,
-      name,
-      direction: "passive",
-      position: null,
-    }));
-
-    const resolver = createProjectSymbolResolver(project, [resistor]);
-    const definition = resolver.resolve(
-      hierarchicalSymbolId("filter_cell"),
-    )?.definition;
-    expect(definition?.name).toBe("Filter Cell");
-    expect(definition?.pins.map((pin) => pin.name)).toEqual([
-      "IN",
-      "OUT",
-      "VSS",
-    ]);
-    expect(definition?.pins.every((pin) => pin.presentation.showName)).toBe(
-      true,
-    );
   });
 
   it("reports unsupported Project device symbols without rejecting hierarchy", () => {

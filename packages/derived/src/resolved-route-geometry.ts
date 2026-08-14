@@ -34,7 +34,7 @@ export interface ResolvedRouteSegment {
 }
 
 export type ResolvedRouteVertexKind =
-  "terminal" | "port" | "junction" | "bend" | "route-anchor";
+  "terminal" | "junction" | "bend" | "route-anchor";
 
 export interface ResolvedRouteVertex {
   index: number;
@@ -131,7 +131,6 @@ function vertexKindForEndpoint(
   endpoint: RouteEndpoint,
 ): ResolvedRouteVertexKind {
   if (endpoint.kind === "terminal") return "terminal";
-  if (endpoint.kind === "port") return "port";
   const junction = document.junctions.find(
     (candidate) => candidate.id === endpoint.junctionId,
   );

@@ -7,7 +7,6 @@ Build the workspace before running the JavaScript tools:
 
 ```powershell
 pnpm build
-node tools/calibration/razavi/fidelity-diff.mjs [device...] [--out output/calibration/razavi]
 node tools/calibration/razavi/text-fidelity-diff.mjs --reference <reference.png>
 ```
 

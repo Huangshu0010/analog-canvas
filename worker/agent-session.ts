@@ -1,4 +1,5 @@
 import {
+  AGENT_SSE_KEEPALIVE_INTERVAL_MS,
   AGENT_SESSION_PROTOCOL_VERSION,
   AgentClaimRequestSchema,
   AgentCircuitResponseSchema,
@@ -6,6 +7,7 @@ import {
   AgentSessionScopeSchema,
   DEFAULT_AGENT_SESSION_LIMITS,
   AgentSessionEventSchema,
+  AgentSessionControlMessageSchema,
   AgentSessionMachine,
   AgentSessionMessageSchema,
   AgentTransportErrorResponseSchema,
@@ -376,7 +378,6 @@ function operationScopes(request: AgentCircuitRequest): AgentSessionScope[] {
     case "capabilities":
       return [];
     case "snapshot":
-    case "query":
       return [
         "circuit.snapshot",
         ...(request.includeSourceSpans
@@ -498,8 +499,9 @@ export class AgentSessionDO {
   private readonly ready: Promise<void>;
   private creating = false;
   private readonly pendingForwards = new Map<string, PendingForward>();
-  private readonly eventSubscribers = new Set<
-    ReadableStreamDefaultController<Uint8Array>
+  private readonly eventSubscribers = new Map<
+    ReadableStreamDefaultController<Uint8Array>,
+    ReturnType<typeof setInterval>
   >();
 
   constructor(
@@ -549,7 +551,7 @@ export class AgentSessionDO {
     return jsonResponse({ error: "Not found" }, 404, allowedOrigin);
   }
 
-  async webSocketMessage(_socket: WebSocket, message: string | ArrayBuffer) {
+  async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer) {
     await this.ready;
     const machine = await this.loadMachine();
     if (!machine) return;
@@ -572,6 +574,22 @@ export class AgentSessionDO {
     try {
       raw = JSON.parse(text);
     } catch {
+      return;
+    }
+    const control = AgentSessionControlMessageSchema.safeParse(raw);
+    if (
+      control.success &&
+      control.data.sessionId === machine.sessionId &&
+      control.data.kind === "heartbeat"
+    ) {
+      socket.send(
+        JSON.stringify({
+          protocolVersion: AGENT_SESSION_PROTOCOL_VERSION,
+          sessionId: machine.sessionId,
+          kind: "heartbeat-ack",
+          nonce: control.data.nonce,
+        }),
+      );
       return;
     }
     const parsed = AgentSessionMessageSchema.safeParse(raw);
@@ -661,8 +679,9 @@ export class AgentSessionDO {
       pending.reject(new Error("SESSION_EXPIRED"));
     }
     this.pendingForwards.clear();
-    for (const subscriber of this.eventSubscribers) subscriber.close();
-    this.eventSubscribers.clear();
+    for (const subscriber of [...this.eventSubscribers.keys()]) {
+      this.removeEventSubscriber(subscriber, true);
+    }
     await this.state.storage.deleteAll?.();
     this.machine = null;
   }
@@ -1115,11 +1134,18 @@ export class AgentSessionDO {
     const stream = new ReadableStream<Uint8Array>({
       start: (controller) => {
         subscriber = controller;
-        this.eventSubscribers.add(controller);
         controller.enqueue(encoder.encode(": connected\n\n"));
+        const keepalive = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode(": keepalive\n\n"));
+          } catch {
+            this.removeEventSubscriber(controller);
+          }
+        }, AGENT_SSE_KEEPALIVE_INTERVAL_MS);
+        this.eventSubscribers.set(controller, keepalive);
       },
       cancel: () => {
-        if (subscriber) this.eventSubscribers.delete(subscriber);
+        if (subscriber) this.removeEventSubscriber(subscriber);
       },
     });
     const headers = relayHeaders(allowedOrigin);
@@ -1241,13 +1267,23 @@ export class AgentSessionDO {
     const encoded = new TextEncoder().encode(
       `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`,
     );
-    for (const subscriber of [...this.eventSubscribers]) {
+    for (const subscriber of [...this.eventSubscribers.keys()]) {
       try {
         subscriber.enqueue(encoded);
       } catch {
-        this.eventSubscribers.delete(subscriber);
+        this.removeEventSubscriber(subscriber);
       }
     }
+  }
+
+  private removeEventSubscriber(
+    subscriber: ReadableStreamDefaultController<Uint8Array>,
+    close = false,
+  ): void {
+    const keepalive = this.eventSubscribers.get(subscriber);
+    if (keepalive !== undefined) clearInterval(keepalive);
+    this.eventSubscribers.delete(subscriber);
+    if (close) subscriber.close();
   }
 
   private notifyEditor(event: AgentSessionEvent): void {

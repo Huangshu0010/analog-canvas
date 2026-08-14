@@ -26,7 +26,7 @@ const demoProject = CircuitProjectSchema.parse({
       name: "Manual Editor Demo",
       revision: 0,
       sourceStatus: "in-sync",
-      ports: [],
+      netlist: { name: "Manual_Editor_Demo", terminals: [] },
       instances: [
         {
           id: "M1",
@@ -53,6 +53,8 @@ const demoProject = CircuitProjectSchema.parse({
       routes: [],
       junctions: [],
       annotations: [],
+      noConnects: [],
+      drafting: { objects: [] },
       presentation: {
         styleProfileId: "razavi-textbook-v1",
         grid: 10,

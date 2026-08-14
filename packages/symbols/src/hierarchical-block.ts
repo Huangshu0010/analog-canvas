@@ -10,13 +10,14 @@ export function hierarchicalSymbolId(cellName: string): string {
 }
 
 export function createHierarchicalBlockSymbol(
-  document: Pick<SchematicDocument, "name" | "sourceBinding" | "ports">,
+  document: Pick<SchematicDocument, "name" | "sourceBinding" | "netlist">,
 ): SymbolDefinition | null {
   const cellName = document.sourceBinding?.cellName;
-  if (!cellName || document.ports.length === 0) return null;
-  const positional = createHierarchicalBlockGeometry(document.ports.length);
-  const implicitSupplyPins = document.ports
-    .map((port) => port.name)
+  const terminals = document.netlist?.terminals ?? [];
+  if (!cellName || terminals.length === 0) return null;
+  const positional = createHierarchicalBlockGeometry(terminals.length);
+  const implicitSupplyPins = terminals
+    .map((terminal) => terminal.name)
     .filter((name) => /^(?:gnd|ground|vcc|vdd|vee|vss)$/iu.test(name));
   return SymbolDefinitionSchema.parse({
     ...positional,
@@ -24,7 +25,7 @@ export function createHierarchicalBlockSymbol(
     name: document.name,
     pins: positional.pins.map((pin, index) => ({
       ...pin,
-      name: document.ports[index]!.name,
+      name: terminals[index]!.name,
       role: "hierarchical-port",
       presentation: {
         ...pin.presentation,

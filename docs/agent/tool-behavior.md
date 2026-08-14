@@ -8,7 +8,7 @@ This page describes behavior an Agent must account for. It is not a substitute
 for the normative schemas in [`../specs/`](../specs/); schema and runtime
 validation win if this page drifts.
 
-## Agent API v2
+## Agent API 2.0
 
 The normal surface has four operations:
 
@@ -19,8 +19,8 @@ The normal surface has four operations:
 | `transact`     | Dry-runs or atomically commits generic typed edits against an exact revision. |
 | `render`       | Returns bounded base64 SVG in `formal` or `diagnostics` mode.                 |
 
-API v1 `query` is compatibility-only. API v2 intentionally has no region,
-topology-classifier, layout-intent, or circuit-specific edit endpoint.
+The API intentionally has no query, region, topology-classifier, layout-intent,
+compatibility, or circuit-specific edit endpoint.
 
 The complete Snapshot contains both directions of connectivity: every resolved
 instance pin has `netId`, and every Net has complete terminal membership. These

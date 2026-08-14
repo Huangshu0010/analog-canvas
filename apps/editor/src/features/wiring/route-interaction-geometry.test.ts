@@ -21,7 +21,6 @@ function looseRouteDocument() {
     id: "net-1",
     scope: "local",
     terminals: [],
-    ports: [],
   });
   document.junctions.push(
     {

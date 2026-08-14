@@ -271,7 +271,7 @@ function symbol(polarity, measurement, threeTerminal, bodyMeasurement) {
             additionalPrimitives: sourceArrowPrimitives(measurement, polarity),
           },
         ],
-    aliases: [threeTerminal ? `mos-${polarity[0]}-3` : `mos-${polarity[0]}`],
+    ...(threeTerminal ? {} : { defaultVariantId: "textbook-3terminal" }),
   };
   result.viewBox = viewBoxFor(result);
   return result;
@@ -302,32 +302,27 @@ if (!nmosMeasurement) fail("missing complete NMOS pixel map");
 for (const polarity of ["nmos", "pmos"]) {
   const measurement = geometry.symbols?.[polarity];
   if (!measurement) fail(`missing complete pixel map for ${polarity}`);
-  for (const threeTerminal of [false, true]) {
-    const generated = await format(
-      JSON.stringify(
-        symbol(polarity, measurement, threeTerminal, nmosMeasurement),
-        null,
-        2,
-      ),
-      { parser: "json" },
-    );
-    const target = resolve(
-      assetRoot,
-      `${polarity}${threeTerminal ? "3" : ""}.symbol.json`,
-    );
-    if (!target.startsWith(`${assetRoot}${sep}`))
-      fail(`invalid output ${target}`);
-    if (check) {
-      const existing = await readFile(target, "utf8");
-      if (existing.replaceAll("\r\n", "\n") !== generated) {
-        fail(`${relative(root, target)} is stale`);
-      }
-    } else {
-      await writeFile(target, generated, "utf8");
+  const generated = await format(
+    JSON.stringify(
+      symbol(polarity, measurement, false, nmosMeasurement),
+      null,
+      2,
+    ),
+    { parser: "json" },
+  );
+  const target = resolve(assetRoot, `${polarity}.symbol.json`);
+  if (!target.startsWith(`${assetRoot}${sep}`))
+    fail(`invalid output ${target}`);
+  if (check) {
+    const existing = await readFile(target, "utf8");
+    if (existing.replaceAll("\r\n", "\n") !== generated) {
+      fail(`${relative(root, target)} is stale`);
     }
+  } else {
+    await writeFile(target, generated, "utf8");
   }
 }
 
 console.log(
-  `${check ? "Validated" : "Generated"} 4 complete pixel-mapped Razavi MOS assets`,
+  `${check ? "Validated" : "Generated"} 2 canonical pixel-mapped Razavi MOS assets`,
 );

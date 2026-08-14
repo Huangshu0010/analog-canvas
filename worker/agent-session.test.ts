@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AGENT_SSE_KEEPALIVE_INTERVAL_MS,
   AgentSessionMachine,
   type AgentSessionLimits,
 } from "@icm/agent-adapter";
@@ -456,6 +457,97 @@ describe("public Agent session routes", () => {
     const put = vi.spyOn(storage, "put");
     await object.webSocketClose({ readyState: WebSocket.CLOSED } as WebSocket);
     expect(put).not.toHaveBeenCalled();
+  });
+
+  it("acknowledges a session-bound browser heartbeat outside business dispatch", async () => {
+    const storage = new MemoryStorage();
+    const object = new AgentSessionDO(
+      { storage },
+      { AGENT_ALLOWED_ORIGIN: "https://editor.example" },
+    );
+    await object.fetch(
+      new Request("https://agent-session.internal/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "session-heartbeat",
+          projectSessionId: "project:1",
+          projectId: "project",
+          documentIds: ["document-main"],
+          scopes: ["circuit.snapshot"],
+        }),
+      }),
+    );
+    const send = vi.fn();
+    await object.webSocketMessage(
+      { send } as unknown as WebSocket,
+      JSON.stringify({
+        protocolVersion: "1.0",
+        sessionId: "session-heartbeat",
+        kind: "heartbeat",
+        nonce: "heartbeat-1",
+      }),
+    );
+
+    expect(send).toHaveBeenCalledOnce();
+    expect(JSON.parse(send.mock.calls[0]![0] as string)).toEqual({
+      protocolVersion: "1.0",
+      sessionId: "session-heartbeat",
+      kind: "heartbeat-ack",
+      nonce: "heartbeat-1",
+    });
+  });
+
+  it("keeps an idle Agent event stream alive with SSE comments", async () => {
+    const storage = new MemoryStorage();
+    const object = new AgentSessionDO(
+      { storage },
+      { AGENT_ALLOWED_ORIGIN: "https://editor.example" },
+    );
+    const createdResponse = await object.fetch(
+      new Request("https://agent-session.internal/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "session-events",
+          projectSessionId: "project:1",
+          projectId: "project",
+          documentIds: ["document-main"],
+          scopes: ["circuit.snapshot"],
+        }),
+      }),
+    );
+    const created = (await createdResponse.json()) as {
+      session: { claimCode: string };
+    };
+    const claimResponse = await object.fetch(
+      new Request("https://agent-session.internal/claim", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: created.session.claimCode }),
+      }),
+    );
+    const claim = (await claimResponse.json()) as { agentToken: string };
+
+    vi.useFakeTimers();
+    try {
+      const response = await object.fetch(
+        new Request("https://agent-session.internal/events", {
+          headers: { authorization: `Bearer ${claim.agentToken}` },
+        }),
+      );
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      expect(decoder.decode((await reader.read()).value)).toBe(
+        ": connected\n\n",
+      );
+      const keepalive = reader.read();
+      await vi.advanceTimersByTimeAsync(AGENT_SSE_KEEPALIVE_INTERVAL_MS);
+      expect(decoder.decode((await keepalive).value)).toBe(": keepalive\n\n");
+      await reader.cancel();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("creates a real Project-bound session and redeems a body claim", async () => {

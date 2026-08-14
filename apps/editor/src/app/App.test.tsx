@@ -53,14 +53,12 @@ describe("editor shell", () => {
         scope: "global",
         powerDomain: "vdd",
         terminals: [{ instanceId: "Msupply", pinName: "B" }],
-        ports: [],
       },
       {
         id: "net-body-bias",
         name: "Vbody",
         scope: "local",
         terminals: [{ instanceId: "MbodyBias", pinName: "B" }],
-        ports: [],
       },
     );
 
@@ -111,10 +109,9 @@ describe("editor shell", () => {
       ...topDocument,
       id: "document-child",
       name: "child",
-      netlist: { name: "child", portOrder: [] },
+      netlist: { name: "child", terminals: [] },
       instances: [],
       nets: [],
-      ports: [],
       routes: [],
       junctions: [],
       annotations: [],
@@ -191,7 +188,7 @@ describe("editor shell", () => {
     expect(markup).not.toContain("Browse all");
   });
 
-  it("gives an implicit instance label its own selection surface", () => {
+  it("does not create an implicit instance-label selection surface", () => {
     const project = createEmptyProject("implicit-label", "Implicit label");
     project.documents[0]!.instances.push({
       id: "M1",
@@ -205,7 +202,7 @@ describe("editor shell", () => {
     });
 
     const markup = renderToStaticMarkup(<App project={project} />);
-    expect(markup).toContain('data-testid="default-label-hit-M1"');
+    expect(markup).not.toContain('data-testid="default-label-hit-M1"');
   });
 
   it("uses the compact four-unit endpoint hit target", () => {

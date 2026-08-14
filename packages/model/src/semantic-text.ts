@@ -3,9 +3,9 @@ import type { RichTextDocument, RichTextRun, RichTextStyle } from "./schema.js";
 /**
  * Semantic text emitted by current authoring for standardized schematic names.
  *
- * This is deliberately not a markup parser: `_{}`, `\\it{}`, and other legacy
- * spellings are accepted only by the versioned Project migration. New callers
- * either supply an explicit RichText AST or use this helper for a semantic
+ * This is deliberately not a markup parser: `_{}`, `\\it{}`, and other markup
+ * spellings are invalid Project text. Callers either supply an explicit
+ * RichText AST or use this helper for a semantic
  * identifier such as an instance reference or a conventional voltage/current
  * label.
  */

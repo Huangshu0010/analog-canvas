@@ -6586,3 +6586,42 @@ contracts (WP-R1)`.
   passed.
 - Commit status: ready to commit on `codex/agent-connection-ux` as
   `feat(agent): simplify resilient browser connection lifecycle`.
+
+## 2026-08-14 - Add Agent transport liveness watchdog
+
+- Target: detect silent browser/relay transport failure and recover promptly
+  without adding a daemon, changing edit authority, or replaying requests.
+- Changed areas: shared WebSocket heartbeat control frame, browser heartbeat
+  timeout and foreground/online wake checks, Worker SSE keepalive handling,
+  focused transport tests, and current Agent connection documentation.
+- Validation: focused transport suites (25 tests), full typecheck, and
+  `pnpm verify:branch` (121 files, 733 tests, all workspace builds and
+  production smoke) passed; Agent API artifacts and `git diff --check` passed.
+- Commit status: ready to commit on `codex/agent-transport-watchdog` as
+  `fix(agent): add transport liveness watchdog`.
+
+## 2026-08-14 - Complete current circuit contract clean break
+
+- Target: retain hollow and filled Ports as ordinary component assets while
+  deleting obsolete Project, asset, routing, text, power, and Agent contracts.
+- Changed areas: Project schema and fixtures; exact symbol catalog; explicit
+  VDD/MOS connectivity; persisted RichText labels; Agent 2.0/OpenAPI/browser
+  state machine; editor behavior, documentation, generated assets, and tests.
+- Validation: 541 unit tests, all workspace builds, `pnpm verify:branch`,
+  frozen-lockfile install, full `pnpm ci:check`, and all 95 browser E2E tests
+  passed.
+- Commit status: committed on `codex/agent-transport-watchdog` as `9a552d3`
+  (`refactor(circuit): remove legacy contract routing`).
+
+## 2026-08-14 - Restore overridable MOS supply defaults
+
+- Target: make manual NMOS/PMOS bulk default to canonical global ground/VDD
+  while preserving the visible dashed bulk connection as an explicit override.
+- Changed areas: MOS binding schema/resolution/reconciliation; Ground and VDD
+  rail supply-Net reuse; Agent Snapshot/OpenAPI status; current specifications;
+  focused unit and browser regressions.
+- Validation: 550 unit tests, `pnpm verify:branch`, frozen-lockfile install,
+  full `pnpm ci:check`, performance/export/PWA/release checks, and all 97
+  browser E2E tests passed; `git diff --check` passed.
+- Commit status: committed on `codex/agent-transport-watchdog` as `5d2d640`
+  (`fix(mos): restore overridable supply bulk defaults`).

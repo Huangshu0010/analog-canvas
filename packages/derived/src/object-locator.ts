@@ -20,7 +20,6 @@ export const ObjectLocatorKindSchema = z.enum([
   "route",
   "junction",
   "terminal",
-  "port",
   "annotation",
   "no-connect",
 ]);

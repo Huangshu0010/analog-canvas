@@ -13,6 +13,11 @@ import { z } from "zod";
 /** Relay protocol version. Bumped only on an incompatible envelope change. */
 export const AGENT_SESSION_PROTOCOL_VERSION = "1.0" as const;
 
+/** Browser/relay liveness policy. These control frames never enter Circuit API dispatch. */
+export const AGENT_HEARTBEAT_INTERVAL_MS = 15_000;
+export const AGENT_HEARTBEAT_TIMEOUT_MS = 45_000;
+export const AGENT_SSE_KEEPALIVE_INTERVAL_MS = 25_000;
+
 const OpaqueIdSchema = z.string().min(1);
 const IsoTimestampSchema = z
   .string()
@@ -50,6 +55,14 @@ export const AgentSessionMessageSchema = z.strictObject({
   sentAt: IsoTimestampSchema,
   kind: AgentSessionMessageKindSchema,
   payload: z.unknown(),
+});
+
+/** Lightweight authenticated WebSocket control frame used only for liveness. */
+export const AgentSessionControlMessageSchema = z.strictObject({
+  protocolVersion: z.literal(AGENT_SESSION_PROTOCOL_VERSION),
+  sessionId: OpaqueIdSchema,
+  kind: z.enum(["heartbeat", "heartbeat-ack"]),
+  nonce: OpaqueIdSchema,
 });
 
 /** Agent-facing event types. `document.replaced` terminates the session. */
@@ -180,7 +193,7 @@ export const AgentTransportErrorResponseJsonSchema = z.toJSONSchema(
 /**
  * Web-session permission scopes carried by an `agentToken`. They map to
  * `AgentPermissions` as documented in the spec. `circuit.snapshot` is the
- * primary read scope and also admits the legacy v1 query read path.
+ * sole circuit read scope.
  */
 export const AgentSessionScopeSchema = z.enum([
   "circuit.snapshot",
@@ -203,6 +216,9 @@ export function isAgentSessionScope(
 }
 
 export type AgentSessionMessage = z.infer<typeof AgentSessionMessageSchema>;
+export type AgentSessionControlMessage = z.infer<
+  typeof AgentSessionControlMessageSchema
+>;
 export type AgentClaimRequest = z.infer<typeof AgentClaimRequestSchema>;
 export type AgentSessionMessageKind = z.infer<
   typeof AgentSessionMessageKindSchema

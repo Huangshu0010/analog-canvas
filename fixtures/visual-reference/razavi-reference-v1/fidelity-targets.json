@@ -72,13 +72,6 @@
       "useVariant": false
     },
     {
-      "id": "vdd",
-      "measurementPath": "vdd-geometry.json",
-      "measurementKey": "vdd",
-      "symbolId": "vdd",
-      "useVariant": false
-    },
-    {
       "id": "formal-port",
       "measurementPath": "current-port-geometry.json",
       "measurementCollection": "ports",

@@ -106,7 +106,7 @@ export const SymbolDefinitionSchema = z
     pins: z.array(SymbolPinSchema).min(0),
     primitives: z.array(SymbolPrimitiveSchema),
     variants: z.array(SymbolVariantSchema),
-    aliases: z.array(StableIdSchema),
+    defaultVariantId: StableIdSchema.optional(),
     labelVisibility: z.enum(["shown", "hidden"]).optional(),
     // ADR 0010: a decorative symbol is a non-electrical catalog entry usable
     // only as a DraftFloatingSymbol. It must carry no terminals (pins).
@@ -147,6 +147,16 @@ export const SymbolDefinitionSchema = z
           });
         }
       }
+    }
+    if (
+      symbol.defaultVariantId !== undefined &&
+      !symbol.variants.some((variant) => variant.id === symbol.defaultVariantId)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["defaultVariantId"],
+        message: `Unknown default Symbol variant: ${symbol.defaultVariantId}`,
+      });
     }
     const variantIds = new Set<string>();
     for (const [variantIndex, variant] of symbol.variants.entries()) {

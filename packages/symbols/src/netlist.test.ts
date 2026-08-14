@@ -22,19 +22,14 @@ describe("reviewed device netlist definitions", () => {
     });
   });
 
-  it("defines power artwork as non-emitting Net markers", () => {
+  it("defines Ground artwork as a non-emitting Net marker", () => {
     expect(deviceNetlistDefinition("ground")).toMatchObject({
       deviceClass: "net-marker",
       referencePrefix: null,
       pinOrder: ["0"],
       targetPolicy: "none",
     });
-    expect(deviceNetlistDefinition("vdd")).toMatchObject({
-      deviceClass: "net-marker",
-      referencePrefix: null,
-      pinOrder: ["P"],
-      targetPolicy: "none",
-    });
+    expect(deviceNetlistDefinition("vdd")).toBeUndefined();
   });
 
   it("leaves unsupported catalog blocks explicit instead of guessing", () => {

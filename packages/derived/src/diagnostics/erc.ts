@@ -23,14 +23,11 @@ export type ErcSeverity = DiagnosticSeverity;
 export type ErcDiagnostic = Diagnostic & { domain: "erc" };
 
 function noConnectKey(endpoint: {
-  kind: "terminal" | "port";
-  instanceId?: string;
-  pinName?: string;
-  portId?: string;
+  kind: "terminal";
+  instanceId: string;
+  pinName: string;
 }): string {
-  return endpoint.kind === "terminal"
-    ? `terminal:${endpoint.instanceId}:${endpoint.pinName}`
-    : `port:${endpoint.portId}`;
+  return `terminal:${endpoint.instanceId}:${endpoint.pinName}`;
 }
 
 function isRepeatedGlobalPowerNet(
@@ -61,7 +58,6 @@ function endpointHasOnlyInternalMembership(
   const net = document.nets.find((candidate) => candidate.id === netId);
   return Boolean(
     net &&
-    net.ports.length === 0 &&
     net.terminals.length === 1 &&
     net.terminals[0]?.instanceId === instanceId &&
     net.terminals[0]?.pinName === pinName,
@@ -215,8 +211,10 @@ export function runErcChecks(
       }
       if (!resolved) continue;
       const pinNames = new Set(resolved.definition.pins.map((pin) => pin.name));
-      const childPortNames = new Set(child.ports.map((port) => port.name));
-      if (pinNames.size !== childPortNames.size) {
+      const childTerminalNames = new Set(
+        child.netlist?.terminals.map((terminal) => terminal.name) ?? [],
+      );
+      if (pinNames.size !== childTerminalNames.size) {
         diagnostics.push({
           id: `erc:port-count-mismatch:${document.id}:${instance.id}`,
           domain: "erc",
@@ -224,25 +222,23 @@ export function runErcChecks(
           severity: "error",
           confidence: "high",
           gateEligible: true,
-          message: `Instance ${instance.id} has ${pinNames.size} symbol pins but child document ${child.id} has ${childPortNames.size} ports`,
+          message: `Instance ${instance.id} has ${pinNames.size} symbol pins but child document ${child.id} has ${childTerminalNames.size} interface terminals`,
           primary: directObjectLocator(document.id, "instance", instance.id),
-          related: child.ports.map((port) =>
-            directObjectLocator(child.id, "port", port.id),
-          ),
+          related: [],
           parameters: {
             instanceId: instance.id,
             pinCount: pinNames.size,
-            portCount: childPortNames.size,
+            portCount: childTerminalNames.size,
           },
         });
       }
-      const mismatchedPorts = child.ports.filter(
-        (port) => !pinNames.has(port.name),
+      const mismatchedTerminals = (child.netlist?.terminals ?? []).filter(
+        (terminal) => !pinNames.has(terminal.name),
       );
       const unmatchedPins = resolved.definition.pins.filter(
-        (pin) => !childPortNames.has(pin.name),
+        (pin) => !childTerminalNames.has(pin.name),
       );
-      if (mismatchedPorts.length > 0 || unmatchedPins.length > 0) {
+      if (mismatchedTerminals.length > 0 || unmatchedPins.length > 0) {
         diagnostics.push({
           id: `erc:port-name-mismatch:${document.id}:${instance.id}`,
           domain: "erc",
@@ -250,15 +246,13 @@ export function runErcChecks(
           severity: "error",
           confidence: "high",
           gateEligible: true,
-          message: `Instance ${instance.id} symbol pins do not match child document ${child.id} port names`,
+          message: `Instance ${instance.id} symbol pins do not match child document ${child.id} interface terminal names`,
           primary: directObjectLocator(document.id, "instance", instance.id),
-          related: mismatchedPorts.map((port) =>
-            directObjectLocator(child.id, "port", port.id),
-          ),
+          related: [],
           parameters: {
             instanceId: instance.id,
             childDocumentId: child.id,
-            unmatchedPortCount: mismatchedPorts.length,
+            unmatchedPortCount: mismatchedTerminals.length,
             unmatchedPinCount: unmatchedPins.length,
           },
         });
@@ -423,7 +417,7 @@ export function runErcChecks(
               severity: "warning",
               confidence: "high",
               gateEligible: false,
-              message: `Bulk ${instance.id}.${pin.name} has no explicit, cell-default, or product-fallback connection`,
+              message: `Bulk ${instance.id}.${pin.name} has no explicit, cell-default, or supply-default connection`,
               primary: terminalLocator(document.id, instance.id, pin.name),
               related: [],
               parameters: {
@@ -489,7 +483,9 @@ export function runErcChecks(
       );
       if (!child || !resolved) continue;
       const pinNames = new Set(resolved.definition.pins.map((pin) => pin.name));
-      const childPortNames = new Set(child.ports.map((port) => port.name));
+      const childPortNames = new Set(
+        child.netlist?.terminals.map((terminal) => terminal.name) ?? [],
+      );
       const compatible =
         pinNames.size === childPortNames.size &&
         [...pinNames].every((pinName) => childPortNames.has(pinName));
@@ -512,12 +508,14 @@ export function runErcChecks(
     const expectedNames = new Set(
       group.callers.flatMap((caller) => [...caller.pinNames]),
     );
-    const mismatchedPort = [...group.child.ports]
-      .filter((port) => !expectedNames.has(port.name))
-      .sort((left, right) => left.id.localeCompare(right.id, "en"))[0];
-    const primary = mismatchedPort
-      ? directObjectLocator(group.child.id, "port", mismatchedPort.id)
-      : directObjectLocator(group.child.id, "document", group.child.id);
+    const mismatchedTerminal = [...(group.child.netlist?.terminals ?? [])]
+      .filter((terminal) => !expectedNames.has(terminal.name))
+      .sort((left, right) => left.name.localeCompare(right.name, "en"))[0];
+    const primary = directObjectLocator(
+      group.child.id,
+      "document",
+      group.child.id,
+    );
     diagnostics.push({
       id: `erc:hierarchy-interface-stale:${childDocumentId}`,
       domain: "erc",
@@ -537,7 +535,9 @@ export function runErcChecks(
       parameters: {
         childDocumentId,
         callerCount: group.callers.length,
-        ...(mismatchedPort ? { childPortId: mismatchedPort.id } : {}),
+        ...(mismatchedTerminal
+          ? { childTerminalName: mismatchedTerminal.name }
+          : {}),
       },
     });
   }

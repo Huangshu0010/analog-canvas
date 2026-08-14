@@ -1,6 +1,5 @@
 import {
   AnnotationSchema,
-  CellNetlistInterfaceSchema,
   DraftingObjectSchema,
   InstanceNetlistDataSchema,
   InstanceSchema,
@@ -12,7 +11,6 @@ import {
   MirrorSchema,
   NoConnectSchema,
   NetPowerDomainSchema,
-  PortSchema,
   PlacementSchema,
   PointSchema,
   RouteEndpointSchema,
@@ -125,20 +123,6 @@ export const SetInstanceNetlistEditSchema = z.strictObject({
   instanceId: StableIdSchema,
   netlist: InstanceNetlistDataSchema,
 });
-export const SetCellNetlistInterfaceEditSchema = z.strictObject({
-  kind: z.literal("set_cell_netlist_interface"),
-  netlist: CellNetlistInterfaceSchema,
-});
-export const PlacePortEditSchema = z.strictObject({
-  kind: z.literal("place_port"),
-  portId: StableIdSchema,
-  position: PointSchema,
-});
-export const MovePortEditSchema = z.strictObject({
-  kind: z.literal("move_port"),
-  portId: StableIdSchema,
-  position: PointSchema,
-});
 export const SetRoutePointsEditSchema = z.strictObject({
   kind: z.literal("set_route_points"),
   routeId: StableIdSchema,
@@ -210,8 +194,8 @@ export const ConnectEndpointsEditSchema = z.strictObject({
 });
 /**
  * A VDD rail is electrical data, not a hidden marker instance plus an
- * unrelated line. This edit creates the explicit supply Net and its only
- * visible rail geometry atomically.
+ * unrelated line. This edit creates or reuses the explicit supply Net and
+ * persists its visible rail geometry atomically.
  */
 export const AddPowerRailEditSchema = z.strictObject({
   kind: z.literal("add_power_rail"),
@@ -257,14 +241,11 @@ export const ClearMosBulkDefaultEditSchema = z.strictObject({
 });
 export const DisconnectEndpointEditSchema = z.strictObject({
   kind: z.literal("disconnect_endpoint"),
-  endpoint: z.discriminatedUnion("kind", [
-    z.strictObject({
-      kind: z.literal("terminal"),
-      instanceId: StableIdSchema,
-      pinName: z.string().min(1),
-    }),
-    z.strictObject({ kind: z.literal("port"), portId: StableIdSchema }),
-  ]),
+  endpoint: z.strictObject({
+    kind: z.literal("terminal"),
+    instanceId: StableIdSchema,
+    pinName: z.string().min(1),
+  }),
 });
 export const AddNoConnectEditSchema = z.strictObject({
   kind: z.literal("add_no_connect"),
@@ -334,9 +315,6 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MirrorInstanceEditSchema,
   PatchInstancePropertiesEditSchema,
   SetInstanceNetlistEditSchema,
-  SetCellNetlistInterfaceEditSchema,
-  PlacePortEditSchema,
-  MovePortEditSchema,
   SetRoutePointsEditSchema,
   RouteOrthogonalEditSchema,
   AddJunctionEditSchema,
@@ -539,11 +517,6 @@ function endpointOwnerNetId(
           ),
         )?.id ?? null
       );
-    case "port":
-      return (
-        document.nets.find((net) => net.ports.includes(endpoint.portId))?.id ??
-        null
-      );
     case "junction":
       return (
         document.junctions.find(
@@ -620,10 +593,6 @@ function validateConnectableEndpoint(
       }
       return null;
     }
-    case "port":
-      return document.ports.some((port) => port.id === endpoint.portId)
-        ? null
-        : `Port does not exist: ${endpoint.portId}`;
     case "junction":
       return document.junctions.some(
         (junction) => junction.id === endpoint.junctionId,
@@ -665,8 +634,6 @@ function addEndpointToNet(
         pinName: endpoint.pinName,
       });
     }
-  } else if (endpoint.kind === "port" && !net.ports.includes(endpoint.portId)) {
-    net.ports.push(endpoint.portId);
   }
 }
 
@@ -1740,7 +1707,6 @@ export function executeTransaction(
         continue;
       case "clear_document": {
         const removedObjects = [
-          ...draft.ports,
           ...draft.instances,
           ...draft.nets,
           ...draft.routes,
@@ -1752,7 +1718,6 @@ export function executeTransaction(
           ...(draft.drafting?.objects ?? []),
         ];
         for (const object of removedObjects) changedObjectIds.add(object.id);
-        draft.ports = [];
         draft.instances = [];
         draft.nets = [];
         draft.routes = [];
@@ -1762,7 +1727,7 @@ export function executeTransaction(
         draft.layoutGroups = [];
         draft.constraints = [];
         draft.drafting = { objects: [] };
-        if (draft.netlist) draft.netlist.portOrder = [];
+        if (draft.netlist) draft.netlist.terminals = [];
         delete draft.mosBulkDefaults;
         connectivityChanged = true;
         geometryChanged = true;
@@ -1770,7 +1735,6 @@ export function executeTransaction(
       }
       case "add_instance": {
         const objectIdExists = [
-          ...draft.ports,
           ...draft.instances,
           ...draft.nets,
           ...draft.routes,
@@ -1850,7 +1814,6 @@ export function executeTransaction(
       }
       case "add_no_connect": {
         const idExists = [
-          ...draft.ports,
           ...draft.instances,
           ...draft.nets,
           ...draft.routes,
@@ -2282,88 +2245,6 @@ export function executeTransaction(
         connectivityChanged = true;
         break;
       }
-      case "set_cell_netlist_interface": {
-        if (
-          draft.netlist &&
-          JSON.stringify(draft.netlist) === JSON.stringify(edit.netlist)
-        ) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            "Cell netlist interface is unchanged",
-          );
-        }
-        draft.netlist = structuredClone(edit.netlist);
-        changedObjectIds.add(draft.id);
-        connectivityChanged = true;
-        break;
-      }
-      case "place_port": {
-        const port = draft.ports.find(
-          (candidate) => candidate.id === edit.portId,
-        );
-        if (!port) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Port does not exist: ${edit.portId}`,
-          );
-        }
-        const lockOwner = lockedLayoutOwner(draft, edit.portId);
-        if (lockOwner) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Port ${edit.portId} is locked by layout intent ${lockOwner}`,
-          );
-        }
-        if (port.position !== null) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Port is already placed: ${edit.portId}`,
-          );
-        }
-        port.position = structuredClone(edit.position);
-        changedObjectIds.add(port.id);
-        break;
-      }
-      case "move_port": {
-        const port = draft.ports.find(
-          (candidate) => candidate.id === edit.portId,
-        );
-        if (!port) {
-          return rejectAt(
-            "OBJECT_NOT_FOUND",
-            `Port does not exist: ${edit.portId}`,
-          );
-        }
-        const lockOwner = lockedLayoutOwner(draft, edit.portId);
-        if (lockOwner) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Port ${edit.portId} is locked by layout intent ${lockOwner}`,
-          );
-        }
-        if (port.position === null) {
-          return rejectAt(
-            "EDIT_PRECONDITION",
-            `Port is not placed: ${edit.portId}`,
-          );
-        }
-        const delta = {
-          x: edit.position.x - port.position.x,
-          y: edit.position.y - port.position.y,
-        };
-        port.position = structuredClone(edit.position);
-        for (const annotation of draft.annotations) {
-          if (
-            annotation.anchor.kind === "object" &&
-            annotation.anchor.objectId === edit.portId
-          ) {
-            translateObjectAnchoredAnnotation(annotation, edit.portId, delta);
-            changedObjectIds.add(annotation.id);
-          }
-        }
-        changedObjectIds.add(port.id);
-        break;
-      }
       case "set_route_points": {
         const resolver = context.symbolResolver;
         if (!resolver) {
@@ -2484,7 +2365,6 @@ export function executeTransaction(
             scope: "local",
             powerDomain: "none",
             terminals: [],
-            ports: [],
           });
           changedObjectIds.add(edit.netId);
         }
@@ -2869,7 +2749,6 @@ export function executeTransaction(
             }
           }
           const originalTerminals = [...net.terminals];
-          const originalPorts = [...net.ports];
           const terminalsFor = (groupNetId: string) =>
             originalTerminals.filter(
               (terminal) =>
@@ -2877,14 +2756,7 @@ export function executeTransaction(
                   endpointKey({ kind: "terminal", ...terminal }),
                 ) === groupNetId,
             );
-          const portsFor = (groupNetId: string) =>
-            originalPorts.filter(
-              (portId) =>
-                netIdByEndpoint.get(endpointKey({ kind: "port", portId })) ===
-                groupNetId,
-            );
           net.terminals = terminalsFor(net.id);
-          net.ports = portsFor(net.id);
           changedObjectIds.add(net.id);
           for (const group of groups.slice(1)) {
             const groupNetId = netIdByEndpoint.get(group[0]!)!;
@@ -2893,7 +2765,6 @@ export function executeTransaction(
               scope: "local",
               powerDomain: net.powerDomain ?? "none",
               terminals: terminalsFor(groupNetId),
-              ports: portsFor(groupNetId),
             });
             changedObjectIds.add(groupNetId);
           }
@@ -2975,7 +2846,6 @@ export function executeTransaction(
             scope: edit.newNetScope ?? "local",
             powerDomain: "none",
             terminals: [],
-            ports: [],
           });
           changedObjectIds.add(netId);
         }
@@ -3005,10 +2875,26 @@ export function executeTransaction(
             "Power rail IDs must be distinct",
           );
         }
+        const existingSupplyNet = draft.nets.find(
+          (net) => net.id === edit.netId,
+        );
+        if (
+          existingSupplyNet &&
+          (existingSupplyNet.scope !== "global" ||
+            (existingSupplyNet.powerDomain ?? "none") !== edit.domain)
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Power rail Net ${edit.netId} is not a global VDD Net`,
+            [],
+            [edit.netId],
+          );
+        }
         const existingIds = new Set([
           ...draft.instances.map((instance) => instance.id),
-          ...draft.ports.map((port) => port.id),
-          ...draft.nets.map((net) => net.id),
+          ...draft.nets
+            .filter((net) => net.id !== existingSupplyNet?.id)
+            .map((net) => net.id),
           ...draft.routes.map((route) => route.id),
           ...draft.junctions.map((junction) => junction.id),
           ...draft.annotations.map((annotation) => annotation.id),
@@ -3027,14 +2913,15 @@ export function executeTransaction(
           );
         }
         const right = edit.start.x < edit.end.x ? edit.end : edit.start;
-        draft.nets.push({
-          id: edit.netId,
-          name: "VDD",
-          scope: "global",
-          powerDomain: edit.domain,
-          terminals: [],
-          ports: [],
-        });
+        if (!existingSupplyNet) {
+          draft.nets.push({
+            id: edit.netId,
+            name: "VDD",
+            scope: "global",
+            powerDomain: edit.domain,
+            terminals: [],
+          });
+        }
         draft.junctions.push(
           JunctionSchema.parse({
             id: edit.startJunctionId,
@@ -3147,7 +3034,6 @@ export function executeTransaction(
             target.terminals.push(structuredClone(terminal));
           }
         }
-        target.ports = [...new Set([...target.ports, ...source.ports])];
         for (const route of draft.routes) {
           if (route.netId === source.id) {
             route.netId = target.id;
@@ -3282,33 +3168,38 @@ export function executeTransaction(
           let target = resolution.net;
           if (!target) {
             if (
-              resolution.status !== "product-fallback" ||
-              !("fallbackName" in resolution)
+              resolution.status !== "supply-default" ||
+              !("defaultName" in resolution)
             ) {
               continue;
             }
-            const name = resolution.fallbackName;
+            const name = resolution.defaultName;
             const id = name === "0" ? "net-global-0" : "net-global-vdd";
-            target = draft.nets.find((net) => net.id === id);
-            if (!target) {
-              target = {
-                id,
-                name,
-                scope: "global",
-                powerDomain: name === "0" ? "ground" : "vdd",
-                terminals: [],
-                ports: [],
-              };
-              draft.nets.push(target);
-              changedObjectIds.add(id);
+            const conflictingNet = draft.nets.find((net) => net.id === id);
+            if (conflictingNet) {
+              return rejectAt(
+                "EDIT_PRECONDITION",
+                `Canonical MOS supply Net ${id} exists without the required ${name === "0" ? "ground" : "vdd"} global identity`,
+                [],
+                [id],
+              );
             }
+            target = {
+              id,
+              name,
+              scope: "global",
+              powerDomain: name === "0" ? "ground" : "vdd",
+              terminals: [],
+            };
+            draft.nets.push(target);
+            changedObjectIds.add(id);
           }
           target.terminals.push({ instanceId: instance.id, pinName: "B" });
           instance.mosBulkBinding = {
             origin:
               resolution.status === "cell-default"
                 ? "cell-default"
-                : "product-fallback",
+                : "supply-default",
             netId: target.id,
           };
           changedObjectIds.add(instance.id);
@@ -3396,25 +3287,19 @@ export function executeTransaction(
         }
         const owner = draft.nets.find((net) => net.id === ownerId)!;
         const endpoint = edit.endpoint;
-        if (endpoint.kind === "terminal") {
-          owner.terminals = owner.terminals.filter(
-            (terminal) =>
-              terminal.instanceId !== endpoint.instanceId ||
-              terminal.pinName !== endpoint.pinName,
+        owner.terminals = owner.terminals.filter(
+          (terminal) =>
+            terminal.instanceId !== endpoint.instanceId ||
+            terminal.pinName !== endpoint.pinName,
+        );
+        if (endpoint.pinName === "B") {
+          const instance = draft.instances.find(
+            (candidate) => candidate.id === endpoint.instanceId,
           );
-          if (endpoint.pinName === "B") {
-            const instance = draft.instances.find(
-              (candidate) => candidate.id === endpoint.instanceId,
-            );
-            if (instance?.mosBulkBinding) {
-              delete instance.mosBulkBinding;
-              changedObjectIds.add(instance.id);
-            }
+          if (instance?.mosBulkBinding) {
+            delete instance.mosBulkBinding;
+            changedObjectIds.add(instance.id);
           }
-        } else {
-          owner.ports = owner.ports.filter(
-            (portId) => portId !== endpoint.portId,
-          );
         }
         changedObjectIds.add(owner.id);
         connectivityChanged = true;

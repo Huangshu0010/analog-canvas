@@ -2,171 +2,60 @@
 
 Status: `accepted`
 
-Version: `1.9`
-
-Owning phase: `Phase 0/1`
-
 Primary owner: `packages/symbols`
 
-## Purpose
+The Symbol DSL defines runtime-independent electrical pins, reviewed vector
+geometry, and visual variants. Runtime resolution is exact by canonical asset
+ID; symbol aliases and compatibility libraries do not exist.
 
-Define versioned, runtime-independent electrical pins and vector geometry for
-built-in and project symbols. Raw VSS masters are development inputs, not
-runtime symbols.
+## Current product assets
 
-## Consumers
+The product library is exactly the reviewed Razavi catalog: `nmos`, `pmos`,
+`npn`, `pnp`, resistor, capacitor, inductor, diode, ground, voltage/current
+sources, op-amp, switches, voltage amplifier, `port`, and `port-filled`.
+VDD is not an asset; the editor constructs an explicit Net/Route rail.
 
-- symbol compiler and resolver
-- SVG renderer
-- SPICE importer symbol validation
-- Razavi catalog generation and review tools
+Both Port assets are ordinary single-pin components with pin `P`. Their future
+selection policy is intentionally unspecified; both remain manually reachable
+through the same insertion, placement, snapping, wiring, transform, and delete
+mechanisms as every other component.
 
-## Terminology
+Canonical `nmos` and `pmos` retain D/G/S/B electrical pins. Their
+`textbook-3terminal` visual variant is the deterministic default and may hide
+bulk presentation without deleting the B electrical terminal. Separate
+`nmos3`/`pmos3` assets do not exist.
 
-| Term           | Meaning                                                                      |
-| -------------- | ---------------------------------------------------------------------------- |
-| Electrical pin | Named logical terminal that always remains in the definition                 |
-| Visual variant | Presentation choice that may hide a lead but never delete its electrical pin |
-| Alias          | Alternate symbol ID resolved to one canonical definition                     |
+## Resolution and variants
 
-## Data model or interface
+`SymbolResolver.resolve(symbolId, variantId?)` returns the exact validated
+definition and either the requested variant or the definition's declared
+default. Unknown asset or variant IDs return `undefined`; resolution never
+substitutes a different pin order or asset.
 
-Version 1 defines ID, name, integer-grid view box, electrical pins, vector
-primitives, visual variants, and aliases. A pin has name, role, anchor,
-direction, and visibility metadata. Primitives are line, polyline, polygon,
-circle, and path. Primitive geometry accepts finite decimal coordinates so a
-decoded source asset does not lose sub-unit geometry. A primitive may carry a stable `part`; a variant may hide
-parts and add reviewed presentation primitives as well as hide pin presentation
-without changing electrical pins. Polygon fill is explicitly `none` or
-`foreground`. A primitive may select semantic `strokeRole` (`normal`,
-`emphasis`, `supply`, or `annotation`) plus an optional reviewed line cap/join.
-The renderer resolves that role through the Document's style profile. Numeric
-`strokeWidth` remains a mutually exclusive legacy compatibility field for
-assets not yet migrated to a catalog role.
+A visual variant may hide named pin presentation or named primitive parts and
+add reviewed presentation primitives. It cannot add, delete, reconnect, or
+rename electrical pins. Selecting `textbook-3terminal` never implies `B=S`.
 
-The product library contains exactly the reviewed, Reference-calibrated Razavi
-catalog entries: resistor, capacitor, NMOS, PMOS, ground, VDD, port, filled
-port, and independent voltage/current source. Provisional catalog entries are
-not runtime product symbols. There is no legacy compatibility library and no
-procedural generic device fallback.
+## Geometry and style
 
-`SymbolResolver.resolve(symbolId, variantId?)` returns one validated definition
-and optional variant, or `undefined`. Resolution never silently substitutes a
-different electrical pin order.
-
-The PDK registry is a separate reviewed mapping from source model name and
-terminal count to `symbolId` plus an explicit ordered pin list. An exact
-override is accepted only when it names an approved Razavi product symbol;
-otherwise it is ignored. The initial reviewed rules map four-terminal SKY130
-`sky130_fd_pr__nfet_*` and `pfet_*` models to NMOS/PMOS with D/G/S/B order. A
-namespace or terminal-count mismatch returns no mapping; the importer returns
-`SPICE_IMPORT_UNSUPPORTED_SYMBOL` as a blocking error and does not produce a
-Project. Successful mappings persist their registry ID in instance properties.
+Primitives are line, polyline, polygon, circle, and path. Pins carry stable
+name, electrical role, anchor, direction, and visibility metadata. Pin anchors
+lie on the canonical 10-unit electrical grid; artwork may use finite decimal
+coordinates. Razavi assets use semantic stroke roles resolved through the
+Document style profile. Raw per-asset compatibility widths are not accepted.
 
 ## Invariants
 
-- Pin names are unique within a definition.
-- Symbol and alias IDs are unique within a library.
-- Every variant-hidden pin names an existing electrical pin.
-- Every variant-hidden primitive part names presentation geometry only.
-- Variant-added primitives carry no electrical-pin or Net semantics.
-- Hiding a pin changes presentation only; the pin remains addressable.
-- Variant-hidden and base `implicit` pins are absent from visible connectivity,
-  flightlines, snap targets, and formal pin presentation while retaining their
-  electrical Net membership.
-- A base `conditional` pin is treated as visible unless a separate
-  context-aware Net policy authorizes implicit presentation. Unknown or normal
-  signal Nets therefore fail safe toward visibility.
-- Pin anchors use the canonical 10-unit electrical connection grid. Symbol
-  artwork may use arbitrary finite decimal coordinates, but every pin anchor must be
-  divisible by 10 on both axes. With grid-aligned instance placement, this
-  keeps every terminal on-grid after rotation or mirroring, including
-  multi-port devices whose pins cannot be aligned by translating the instance.
-- Symbol geometry contains no instance placement or net identity.
-- A primitive style cannot contain both `strokeRole` and `strokeWidth`.
-- Razavi catalog assets use semantic stroke roles; raw source weights remain
-  provenance evidence rather than final rendered widths.
-- PDK mapping never infers pin order from a symbol name alone; a rule includes
-  terminal count and the complete ordered pin list.
-- Netlist-capable electrical Symbols have a separate reviewed device definition
-  that owns device class, reference prefix, canonical pin order, target policy,
-  and required parameters. Printers never infer these from artwork, orientation,
-  or `symbolId` spelling. See [`netlist-export.md`](netlist-export.md).
+- Symbol IDs and pin names are unique.
+- Every hidden pin or primitive part names an existing member.
+- Hidden or implicit pins retain electrical membership while disappearing from
+  visible snap/flightline/formal-pin presentation.
+- Geometry contains no placement, Net, model, or reference-label authority.
+- PDK mappings name an exact canonical symbol, terminal count, and full ordered
+  pin list; no mapping is inferred from model spelling alone.
+- Netlist device definitions separately own class, reference prefix, canonical
+  pin order, target policy, and required parameters.
 
-## Operations and state transitions
-
-```text
-reviewed Symbol DSL → validate → compile library → resolve at runtime
-```
-
-Historical VSS extraction and review evidence is archived and cannot authorize
-new visual geometry. Existing electrical provenance remains auditable, while
-new Razavi work follows
-[`razavi-visual-contract.md`](razavi-visual-contract.md). See
-[`ADR 0011`](../adr/0011-retire-visio-vss-as-visual-authority.md) for the
-retirement boundary.
-
-## Persistence boundary
-
-The application ships compiled built-ins. A Project persists only the selected
-symbol IDs/variants and a library lock. Project-specific symbol files are
-external inputs referenced by the Project directory.
-
-## Valid example
-
-A four-pin MOS symbol may provide a textbook variant whose bulk pin is
-implicit and whose visible source arrow reuses reviewed three-terminal artwork.
-The definition still contains D, G, S, and B.
-
-Selecting that variant never means `B=S`. For example, an NMOS may show three
-terminals while its persisted `B` belongs to VSS and its distinct `S` belongs
-to a tail-current Net.
-
-## Rejected example
-
-A variant that hides pin `B` when the definition contains no `B` is rejected.
-Duplicate pin names and duplicate aliases are rejected.
-
-## Compatibility and migration
-
-Phase 5 calibrated geometry against reviewed VSS masters without changing
-canonical IDs or the electrical-pin rule. Four-terminal NMOS and PMOS use
-distinct bulk-arrow direction rather than an invented PMOS gate bubble.
-Three-terminal MOS devices remain separate migration-candidate definitions.
-Their reviewed geometry may also be reused by a presentation variant of the
-canonical four-pin definition when SPICE connectivity must retain the hidden
-fourth pin.
-
-Symbol DSL 1.7 adds `strokeRole` compatibly. Existing numeric widths continue
-to render byte-identically under `textbook-monochrome-v1`. Under a semantic
-profile, remaining legacy widths are deterministically clustered into normal
-or emphasis roles until their assets receive explicit reviewed roles.
-
-Symbol DSL 1.8 clarifies the existing visibility contract without changing
-the JSON shape: `hiddenPinNames` is interpreted as implicit presentation by
-visible-connectivity consumers. Net-class-driven automatic selection remains
-a separate compatibility feature; Agents must not force this variant across
-all MOS instances without checking bulk connectivity.
-
-Symbol DSL 1.9 separates visual geometry precision from electrical grid
-precision. Primitive points may retain finite decimals decoded from VSS, while
-pin anchors and instance placement remain integer grid coordinates.
-
-Symbol DSL 1.10 adds variant `auxiliaryPins`. An auxiliary pin names an existing
-canonical electrical pin and supplies context-gated artwork coordinates; it
-does not create another terminal or connectivity protocol. Razavi MOS uses it
-to expose canonical `B` from the internal body region only while an explicit
-body connection is being authored or displayed.
-
-## Deterministic validation
-
-- schema and generated JSON Schema inspection
-- pin and alias uniqueness tests
-- rotation/mirror property tests in the renderer
-- canonical connection-grid checks across every built-in pin
-- implicit-pin connectivity tests
-
-## Open decisions
-
-- Rich text beyond semantic annotation kinds remains a later compatible
-  extension.
+The application ships the compiled catalog and a Project persists only exact
+symbol and optional variant IDs plus its library lock. Generated catalog tests
+prove every advertised asset resolves and that retired IDs and aliases fail.

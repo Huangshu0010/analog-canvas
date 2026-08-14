@@ -7,7 +7,7 @@ import type { AgentPermissions } from "./schema.js";
 import { createAgentCircuitService } from "./service.js";
 
 const permissions: AgentPermissions = {
-  query: true,
+  snapshot: true,
   render: false,
   sourceSpans: false,
   edit: { geometry: false, connectivity: false, presentation: false },
@@ -37,7 +37,7 @@ describe("authenticated loopback Agent HTTP adapter", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          apiVersion: "1.0",
+          apiVersion: "2.0",
           requestId: "unauthorized",
           operation: "capabilities",
         }),
@@ -51,7 +51,7 @@ describe("authenticated loopback Agent HTTP adapter", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          apiVersion: "1.0",
+          apiVersion: "2.0",
           requestId: "authorized",
           operation: "capabilities",
         }),
@@ -63,7 +63,7 @@ describe("authenticated loopback Agent HTTP adapter", () => {
       });
       expect(authorized.headers.get("cache-control")).toBe("no-store");
 
-      const snapshotCapabilities = await fetch(server.v2Url, {
+      const snapshotCapabilities = await fetch(server.url, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -84,7 +84,7 @@ describe("authenticated loopback Agent HTTP adapter", () => {
         },
       });
 
-      const malformedV2 = await fetch(server.v2Url, {
+      const malformedV2 = await fetch(server.url, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -120,7 +120,7 @@ describe("authenticated loopback Agent HTTP adapter", () => {
       });
       expect(document.revision).toBe(0);
 
-      const versionMismatch = await fetch(server.v2Url, {
+      const versionMismatch = await fetch(server.url, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

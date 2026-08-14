@@ -21,7 +21,7 @@ function hierarchicalProject() {
     ...structuredClone(top),
     id: "document-child",
     name: "child",
-    netlist: { name: "child", portOrder: [] },
+    netlist: { name: "child", terminals: [] },
   };
   project.documents.push(child);
   return project;

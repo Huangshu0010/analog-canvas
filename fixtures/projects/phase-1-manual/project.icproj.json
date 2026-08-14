@@ -3,6 +3,9 @@
     {
       "annotations": [],
       "constraints": [],
+      "drafting": {
+        "objects": []
+      },
       "id": "document-main",
       "instances": [
         {
@@ -31,9 +34,12 @@
       "junctions": [],
       "layoutGroups": [],
       "name": "Manual Editor Demo",
+      "netlist": {
+        "name": "Manual_Editor_Demo",
+        "terminals": []
+      },
       "nets": [],
       "noConnects": [],
-      "ports": [],
       "presentation": {
         "compactness": "normal",
         "grid": 10,
@@ -46,7 +52,7 @@
   ],
   "id": "project-phase-1-manual",
   "name": "Phase 1 Manual Editor",
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "source": {
     "dialect": "none",
     "entry": null,
