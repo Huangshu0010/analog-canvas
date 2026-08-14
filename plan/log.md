@@ -6623,5 +6623,5 @@ contracts (WP-R1)`.
 - Validation: 550 unit tests, `pnpm verify:branch`, frozen-lockfile install,
   full `pnpm ci:check`, performance/export/PWA/release checks, and all 97
   browser E2E tests passed; `git diff --check` passed.
-- Commit status: ready to commit on `codex/agent-transport-watchdog` as
-  `fix(mos): restore overridable supply bulk defaults`.
+- Commit status: committed on `codex/agent-transport-watchdog` as `5d2d640`
+  (`fix(mos): restore overridable supply bulk defaults`).
