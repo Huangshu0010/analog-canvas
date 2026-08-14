@@ -1,5 +1,11 @@
 import type { ResolvedDraftingGeometry } from "@icm/derived";
-import type { DraftingObject, Point, VisualAnchor } from "@icm/model";
+import { snapGridPoint } from "@icm/model";
+import type {
+  DerivedPoint,
+  DraftingObject,
+  GridPoint,
+  VisualAnchor,
+} from "@icm/model";
 
 import {
   centerOfBounds,
@@ -22,7 +28,7 @@ export type DraftingStylePatch = Partial<{
   arrowHeadScale: 0.75 | 1 | 1.25 | 1.5;
 }>;
 
-export function draftingDragOrigin(object: DraftingObject): Point | null {
+export function draftingDragOrigin(object: DraftingObject): GridPoint | null {
   if (object.kind === "construction-line") return object.points[0] ?? null;
   if (object.kind === "rectangle") return object.center;
   if (object.kind === "arrow") {
@@ -33,71 +39,87 @@ export function draftingDragOrigin(object: DraftingObject): Point | null {
   return object.anchor.kind === "free" ? object.anchor.position : null;
 }
 
-function translatePoint(point: Point, delta: Point): Point {
-  return {
-    x: Math.round(point.x + delta.x),
-    y: Math.round(point.y + delta.y),
-  };
+function translatePoint(
+  point: GridPoint,
+  delta: GridPoint,
+  grid: number,
+): GridPoint {
+  return snapGridPoint({ x: point.x + delta.x, y: point.y + delta.y }, grid);
 }
 
 function translateFreeAnchor<T extends VisualAnchor>(
   anchor: T,
-  delta: Point,
+  delta: GridPoint,
+  grid: number,
 ): T {
   return anchor.kind === "free"
-    ? ({ ...anchor, position: translatePoint(anchor.position, delta) } as T)
+    ? ({
+        ...anchor,
+        position: translatePoint(anchor.position, delta, grid),
+      } as T)
     : anchor;
 }
 
 export function translateDraftingObject(
   object: DraftingObject,
-  delta: Point,
+  delta: GridPoint,
+  grid: number,
 ): DraftingObject {
   if (object.kind === "construction-line") {
     return {
       ...object,
-      anchor: translateFreeAnchor(object.anchor, delta),
-      points: object.points.map((point) => translatePoint(point, delta)),
+      anchor: translateFreeAnchor(object.anchor, delta, grid),
+      points: object.points.map((point) => translatePoint(point, delta, grid)),
       curveControls: object.curveControls?.map((point) =>
-        point ? translatePoint(point, delta) : null,
+        point ? translatePoint(point, delta, grid) : null,
       ),
     };
   }
   if (object.kind === "arrow") {
     return {
       ...object,
-      anchor: translateFreeAnchor(object.anchor, delta),
-      from: translateFreeAnchor(object.from, delta),
-      to: translateFreeAnchor(object.to, delta),
-      waypoints: object.waypoints?.map((point) => translatePoint(point, delta)),
+      anchor: translateFreeAnchor(object.anchor, delta, grid),
+      from: translateFreeAnchor(object.from, delta, grid),
+      to: translateFreeAnchor(object.to, delta, grid),
+      waypoints: object.waypoints?.map((point) =>
+        translatePoint(point, delta, grid),
+      ),
       curveControls: object.curveControls?.map((point) =>
-        point ? translatePoint(point, delta) : null,
+        point ? translatePoint(point, delta, grid) : null,
       ),
     };
   }
   if (object.kind === "rectangle") {
-    const center = translatePoint(object.center, delta);
+    const center = translatePoint(object.center, delta, grid);
     return { ...object, center, anchor: { kind: "free", position: center } };
   }
-  return { ...object, anchor: translateFreeAnchor(object.anchor, delta) };
+  return {
+    ...object,
+    anchor: translateFreeAnchor(object.anchor, delta, grid),
+  };
 }
 
 function controlForQuadraticMidpoint(
-  from: Point,
-  midpoint: Point,
-  to: Point,
-): Point {
-  return {
-    x: Math.round(2 * midpoint.x - (from.x + to.x) / 2),
-    y: Math.round(2 * midpoint.y - (from.y + to.y) / 2),
-  };
+  from: DerivedPoint,
+  midpoint: GridPoint,
+  to: DerivedPoint,
+  grid: number,
+): GridPoint {
+  return snapGridPoint(
+    {
+      x: 2 * midpoint.x - (from.x + to.x) / 2,
+      y: 2 * midpoint.y - (from.y + to.y) / 2,
+    },
+    grid,
+  );
 }
 
 export function applyDraftingHandle(
   object: DraftingObject,
   handle: DraftingHandle,
-  point: Point,
+  point: GridPoint,
   originalGeometry: ResolvedDraftingGeometry,
+  grid: number,
 ): DraftingObject {
   if (object.kind === "arrow") {
     if (handle.kind === "waypoint") {
@@ -116,7 +138,12 @@ export function applyDraftingHandle(
         { length: originalGeometry.points.length - 1 },
         (_, index) => object.curveControls?.[index] ?? null,
       );
-      controls[handle.index] = controlForQuadraticMidpoint(from, point, to);
+      controls[handle.index] = controlForQuadraticMidpoint(
+        from,
+        point,
+        to,
+        grid,
+      );
       return { ...object, curveControls: controls };
     }
     if (handle.kind === "vertex" || handle.kind === "rectangle-corner") {
@@ -147,7 +174,7 @@ export function applyDraftingHandle(
       { length: originalGeometry.points.length - 1 },
       (_, index) => object.curveControls?.[index] ?? null,
     );
-    controls[handle.index] = controlForQuadraticMidpoint(from, point, to);
+    controls[handle.index] = controlForQuadraticMidpoint(from, point, to, grid);
     return { ...object, curveControls: controls };
   }
   if (
@@ -163,16 +190,19 @@ export function applyDraftingHandle(
     const delta = { x: point.x - opposite.x, y: point.y - opposite.y };
     const localWidth = delta.x * ux.x + delta.y * ux.y;
     const localHeight = delta.x * uy.x + delta.y * uy.y;
-    const center = {
-      x: Math.round(opposite.x + (localWidth * ux.x + localHeight * uy.x) / 2),
-      y: Math.round(opposite.y + (localWidth * ux.y + localHeight * uy.y) / 2),
-    };
+    const center = snapGridPoint(
+      {
+        x: opposite.x + (localWidth * ux.x + localHeight * uy.x) / 2,
+        y: opposite.y + (localWidth * ux.y + localHeight * uy.y) / 2,
+      },
+      grid,
+    );
     return {
       ...object,
       center,
       anchor: { kind: "free", position: center },
-      width: Math.max(1, Math.round(Math.abs(localWidth))),
-      height: Math.max(1, Math.round(Math.abs(localHeight))),
+      width: Math.max(grid, Math.round(Math.abs(localWidth) / grid) * grid),
+      height: Math.max(grid, Math.round(Math.abs(localHeight) / grid) * grid),
     };
   }
   return object;
@@ -180,7 +210,7 @@ export function applyDraftingHandle(
 
 export function insertConstructionVertex(
   object: Extract<DraftingObject, { kind: "construction-line" }>,
-  point: Point,
+  point: GridPoint,
 ): {
   object: Extract<DraftingObject, { kind: "construction-line" }>;
   index: number;
@@ -212,7 +242,7 @@ export function insertConstructionVertex(
 export function insertArrowWaypoint(
   object: Extract<DraftingObject, { kind: "arrow" }>,
   geometry: Extract<ResolvedDraftingGeometry, { kind: "arrow" }>,
-  point: Point,
+  point: GridPoint,
 ): {
   object: Extract<DraftingObject, { kind: "arrow" }>;
   index: number;
@@ -295,12 +325,16 @@ export function applyDraftingStylePatch(
 
 function rotateFreeAnchor(
   anchor: Extract<VisualAnchor, { kind: "free" }>,
-  pivot: Point,
+  pivot: DerivedPoint,
   deltaDegrees: number,
+  grid: number,
 ): Extract<VisualAnchor, { kind: "free" }> {
   return {
     ...anchor,
-    position: rotatePointByDegrees(anchor.position, pivot, deltaDegrees),
+    position: snapGridPoint(
+      rotatePointByDegrees(anchor.position, pivot, deltaDegrees),
+      grid,
+    ),
   };
 }
 
@@ -308,6 +342,7 @@ export function rotateDraftingObject(
   object: DraftingObject,
   geometry: ResolvedDraftingGeometry,
   deltaDegrees: 90 | -90,
+  grid: number,
 ): DraftingObject | null {
   if (object.locked) return null;
   if (object.kind === "arrow" && geometry.kind === "arrow") {
@@ -316,17 +351,22 @@ export function rotateDraftingObject(
       ...object,
       from:
         object.from.kind === "free"
-          ? rotateFreeAnchor(object.from, pivot, deltaDegrees)
+          ? rotateFreeAnchor(object.from, pivot, deltaDegrees, grid)
           : object.from,
       to:
         object.to.kind === "free"
-          ? rotateFreeAnchor(object.to, pivot, deltaDegrees)
+          ? rotateFreeAnchor(object.to, pivot, deltaDegrees, grid)
           : object.to,
       waypoints: object.waypoints?.map((point) =>
-        rotatePointByDegrees(point, pivot, deltaDegrees),
+        snapGridPoint(rotatePointByDegrees(point, pivot, deltaDegrees), grid),
       ),
       curveControls: object.curveControls?.map((point) =>
-        point ? rotatePointByDegrees(point, pivot, deltaDegrees) : null,
+        point
+          ? snapGridPoint(
+              rotatePointByDegrees(point, pivot, deltaDegrees),
+              grid,
+            )
+          : null,
       ),
     };
   }
@@ -338,10 +378,15 @@ export function rotateDraftingObject(
     return {
       ...object,
       points: object.points.map((point) =>
-        rotatePointByDegrees(point, pivot, deltaDegrees),
+        snapGridPoint(rotatePointByDegrees(point, pivot, deltaDegrees), grid),
       ),
       curveControls: object.curveControls?.map((point) =>
-        point ? rotatePointByDegrees(point, pivot, deltaDegrees) : null,
+        point
+          ? snapGridPoint(
+              rotatePointByDegrees(point, pivot, deltaDegrees),
+              grid,
+            )
+          : null,
       ),
     };
   }
@@ -355,11 +400,12 @@ export function rotateDraftingObject(
 }
 
 function controlForTangentAngle(
-  from: Point,
-  to: Point,
+  from: DerivedPoint,
+  to: DerivedPoint,
   angleDegrees: number,
-  existingControl: Point | null,
-): Point | null {
+  existingControl: GridPoint | null,
+  grid: number,
+): GridPoint | null {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const chordLength = Math.hypot(dx, dy);
@@ -374,10 +420,13 @@ function controlForTangentAngle(
       )
     : 1;
   const offset = (chordLength / 2) * Math.tan((boundedAngle * Math.PI) / 360);
-  return {
-    x: Math.round(midpoint.x + normal.x * offset * (existingSide || 1)),
-    y: Math.round(midpoint.y + normal.y * offset * (existingSide || 1)),
-  };
+  return snapGridPoint(
+    {
+      x: midpoint.x + normal.x * offset * (existingSide || 1),
+      y: midpoint.y + normal.y * offset * (existingSide || 1),
+    },
+    grid,
+  );
 }
 
 export function setDraftingTangentAngle(
@@ -388,6 +437,7 @@ export function setDraftingTangentAngle(
   >,
   index: number,
   angleDegrees: number,
+  grid: number,
 ): DraftingObject | null {
   if (
     object.locked ||
@@ -403,6 +453,7 @@ export function setDraftingTangentAngle(
     geometry.points[index + 1]!,
     angleDegrees,
     curveControls[index] ?? null,
+    grid,
   );
   return { ...object, curveControls };
 }
@@ -416,6 +467,7 @@ export function setDraftingBearing(
   object: DraftingObject,
   geometry: ResolvedDraftingGeometry,
   bearingDegrees: number,
+  grid: number,
 ): SetDraftingBearingResult {
   if (object.locked || !Number.isFinite(bearingDegrees)) {
     return { kind: "unsupported" };
@@ -451,17 +503,25 @@ export function setDraftingBearing(
         ...object,
         from: {
           ...object.from,
-          position: rotatePointByDegrees(object.from.position, pivot, delta),
+          position: snapGridPoint(
+            rotatePointByDegrees(object.from.position, pivot, delta),
+            grid,
+          ),
         },
         to: {
           ...object.to,
-          position: rotatePointByDegrees(object.to.position, pivot, delta),
+          position: snapGridPoint(
+            rotatePointByDegrees(object.to.position, pivot, delta),
+            grid,
+          ),
         },
         waypoints: object.waypoints?.map((point) =>
-          rotatePointByDegrees(point, pivot, delta),
+          snapGridPoint(rotatePointByDegrees(point, pivot, delta), grid),
         ),
         curveControls: object.curveControls?.map((point) =>
-          point ? rotatePointByDegrees(point, pivot, delta) : null,
+          point
+            ? snapGridPoint(rotatePointByDegrees(point, pivot, delta), grid)
+            : null,
         ),
       },
     };
@@ -475,10 +535,12 @@ export function setDraftingBearing(
     object: {
       ...object,
       points: object.points.map((point) =>
-        rotatePointByDegrees(point, pivot, delta),
+        snapGridPoint(rotatePointByDegrees(point, pivot, delta), grid),
       ),
       curveControls: object.curveControls?.map((point) =>
-        point ? rotatePointByDegrees(point, pivot, delta) : null,
+        point
+          ? snapGridPoint(rotatePointByDegrees(point, pivot, delta), grid)
+          : null,
       ),
     },
   };

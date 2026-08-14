@@ -318,6 +318,7 @@ function importDocument(
     revision: 0,
     sourceBinding: { cellName: cell.name, sourceRef: cell.sourceRef },
     sourceStatus: "in-sync",
+    flightlineGuidance: "active",
     netlist: {
       name: cell.name,
       terminals: cell.ports.map((port) => ({

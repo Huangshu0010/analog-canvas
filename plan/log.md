@@ -6922,3 +6922,58 @@ contracts (WP-R1)`.
   passed.
 - Commit status: committed on `codex/fix-fit-view-grid-bounds`; remote CI and
   merge remain pending.
+
+## 2026-08-14 - Close coordinate domains and grid normalization boundaries
+
+- Target: make current Project page coordinates and camera rectangles grid
+  aligned while retaining renderer, text, curve, and pointer precision in
+  non-persistent coordinate domains.
+- Changed areas: model coordinate schemas/helpers; Document and typed-edit
+  validation; derived/render/Agent contracts; editor fit, pan, zoom, focus,
+  preview, drafting and annotation commit paths; current fixtures and generated
+  Agent API artifacts; ADR 0021 and model/edit/editor specs.
+- Validation: complete local suite (115 files / 654 tests), typecheck,
+  formatting, Markdown-link validation, Agent catalog/artifact checks, and
+  `git diff --check` passed. Frozen-lockfile `pnpm ci:check` also passed its
+  static, unit, workspace-build, performance, and release verification stages;
+  local Playwright startup produced no output before tool timeout on both the
+  full gate and a direct rerun, so remote browser CI is still required.
+- Commit status: committed on `codex/coordinate-domain-contract`; merge to
+  `main` requires remote browser CI and review checks.
+
+## 2026-08-14 - Coordinate-domain CI follow-up
+
+- Target: repair PR #53 failures caused by two annotation creation paths that
+  skipped grid normalization and by the Linux MCP package digest changing with
+  the Agent schema payload.
+- Changed areas: route Net Label/current-marker fallback placement, Linux MCP
+  release integrity pin, and the active coordinate-domain target record.
+- Validation: focused route/Edit Engine contracts, typecheck, formatting,
+  complete release verification, and the two previously failing Playwright
+  cases passed locally.
+- Commit status: pending follow-up commit on
+  `codex/coordinate-domain-contract`; remote PR checks will decide merge.
+## 2026-08-14 - Restore imported flightline guidance during placement
+
+- Target: keep SPICE-imported routing guidance usable after placement and
+  partial Wire authoring, while dismissing it after Net-label or ordinary
+  geometry intervention and hiding it during Net highlight.
+- Changed areas: Document guidance schema/import initialization; edit-engine
+  lifecycle policy; editor flightline visibility; focused SPICE/engine/browser
+  contracts.
+- Validation: 24 focused engine/SPICE tests, isolated browser flightline suite
+  (3 tests), workspace build, typecheck, Prettier, and `git diff --check`
+  passed.
+- Commit status: committed as `59bba32` on `codex/import-flightline-guidance`;
+  pushed as PR #54. The MCP release checksum was refreshed after the package changed.
+
+## 2026-08-15 - Integrate imported flightline guidance on coordinate domains
+
+- Target: rebase imported-SPICE flightline guidance on the coordinate-domain
+  contract and deliver the combined change through required CI.
+- Changed areas: resolved `App.tsx` and transaction-layer integration;
+  refreshed the Linux MCP package SHA-256 release pin.
+- Validation: 24 focused engine/SPICE tests, 3 isolated browser flightline
+  tests, typecheck, workspace build, formatting, distribution/release checks,
+  and all six PR #54 GitHub Actions checks passed.
+- Commit status: PR #54 merged to `main` as `354cf3a`.

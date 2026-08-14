@@ -1,4 +1,4 @@
-import type { Rect } from "@icm/model";
+import type { DerivedRect, GridRect } from "@icm/model";
 
 import { RichTextEditor } from "./rich-text-editor";
 import type { TextEditingSession } from "./text-editing";
@@ -9,8 +9,8 @@ type TextEditingUpdate = Partial<
 
 export interface CanvasTextEditorOverlayProps {
   session: TextEditingSession;
-  bounds: Rect;
-  viewBox: Rect;
+  bounds: DerivedRect;
+  viewBox: GridRect;
   disabled: boolean;
   onUpdate(change: TextEditingUpdate): void;
   onCommit(): void;
@@ -20,10 +20,10 @@ export interface CanvasTextEditorOverlayProps {
 }
 
 export function resolveCanvasTextEditorFrame(
-  bounds: Rect,
-  viewBox: Rect,
+  bounds: DerivedRect,
+  viewBox: GridRect,
   sizeScale: number,
-): Rect {
+): DerivedRect {
   const width = Math.min(Math.max(420, bounds.width + 12), viewBox.width - 16);
   const height = Math.min(
     Math.max(110, bounds.height + 68, 78 + 15.116 * sizeScale * 1.3),

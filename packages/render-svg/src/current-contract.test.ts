@@ -122,8 +122,8 @@ describe("current rendering contract", () => {
       anchor: {
         kind: "object",
         objectId: "rail-right",
-        localOffset: { x: 6, y: 5 },
-        fallbackPosition: { x: 186, y: 85 },
+        localOffset: { x: 10, y: 10 },
+        fallbackPosition: { x: 190, y: 90 },
       },
       alignment: "start",
       rotation: 0,

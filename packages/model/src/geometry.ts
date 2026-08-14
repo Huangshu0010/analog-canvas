@@ -1,10 +1,20 @@
-import type { Mirror, Orientation, Point, Rotation } from "./schema.js";
+import type {
+  DerivedPoint,
+  GridPoint,
+  Mirror,
+  Orientation,
+  Rotation,
+  SymbolLocalPoint,
+} from "./schema.js";
 
-function mirrorLocal(point: Point, mirror: Mirror): Point {
+function mirrorLocal(
+  point: GridPoint | SymbolLocalPoint,
+  mirror: Mirror,
+): DerivedPoint {
   return mirror === "x" ? { x: -point.x, y: point.y } : point;
 }
 
-function rotateLocal(point: Point, rotation: Rotation): Point {
+function rotateLocal(point: DerivedPoint, rotation: Rotation): DerivedPoint {
   switch (rotation) {
     case 0:
       return point;
@@ -17,15 +27,18 @@ function rotateLocal(point: Point, rotation: Rotation): Point {
   }
 }
 
-function inverseRotateLocal(point: Point, rotation: Rotation): Point {
+function inverseRotateLocal(
+  point: DerivedPoint,
+  rotation: Rotation,
+): DerivedPoint {
   return rotateLocal(point, ((360 - rotation) % 360) as Rotation);
 }
 
 export function transformPoint(
-  localPoint: Point,
-  origin: Point,
+  localPoint: GridPoint | SymbolLocalPoint,
+  origin: GridPoint,
   orientation: Orientation,
-): Point {
+): DerivedPoint {
   const transformed = rotateLocal(
     mirrorLocal(localPoint, orientation.mirror),
     orientation.rotation,
@@ -37,10 +50,10 @@ export function transformPoint(
 }
 
 export function inverseTransformPoint(
-  worldPoint: Point,
-  origin: Point,
+  worldPoint: DerivedPoint,
+  origin: GridPoint,
   orientation: Orientation,
-): Point {
+): DerivedPoint {
   const translated = {
     x: worldPoint.x - origin.x,
     y: worldPoint.y - origin.y,
@@ -49,6 +62,9 @@ export function inverseTransformPoint(
   return mirrorLocal(rotated, orientation.mirror);
 }
 
-export function manhattanDistance(left: Point, right: Point): number {
+export function manhattanDistance(
+  left: GridPoint | DerivedPoint,
+  right: GridPoint | DerivedPoint,
+): number {
   return Math.abs(left.x - right.x) + Math.abs(left.y - right.y);
 }

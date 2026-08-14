@@ -8,6 +8,24 @@ The Project contains Documents; each Document owns revisioned electrical,
 geometric, and presentation facts. The current model is strict schema 9 and has
 no compatibility shape.
 
+## Coordinate domains
+
+ADR 0021 separates persisted grid coordinates from transient and derived
+geometry. Every persisted page Point in a Document is a finite integer multiple
+of that Document's `presentation.grid`: Instance placements, Junctions, Route
+waypoints, persisted VisualAnchor point fields, and drafting points/controls/
+centers. This is a complete-Document invariant, not merely an editor snap
+preference.
+
+Renderer bounds, rich-text layout, route-relative anchor resolution, curves,
+rotated corners, diagnostics, pointer/screen positions, and symbol-local
+artwork may use finite floats. They are read-only or transient coordinate
+domains and must never be persisted as a Document Point. Parametric scalars
+such as route-anchor `t` and normal offset are not page Points.
+
+Project parse accepts no legacy non-grid shape and performs no rounding or
+migration. Invalid coordinates are rejected with their data path.
+
 ## Electrical authority
 
 - `Instance` selects one exact canonical symbol and optional visual variant.

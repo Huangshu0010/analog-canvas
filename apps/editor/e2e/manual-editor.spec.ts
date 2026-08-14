@@ -604,7 +604,9 @@ test("hides flightlines after manually deleting an imported Route", async ({
   await expect(page.getByTestId("flightline")).toHaveCount(0);
 });
 
-test("uses a flightline as direct Wire guidance", async ({ page }) => {
+test("keeps remaining imported flightlines after routing one guided connection", async ({
+  page,
+}) => {
   const project = createRoutingDemoProject();
   project.documents[0]!.sourceBinding = {
     cellName: "routing_demo",
@@ -632,10 +634,12 @@ test("uses a flightline as direct Wire guidance", async ({ page }) => {
   await hint.click({ force: true });
   await expect(page.getByTestId("active-tool")).toHaveText("wire");
   await expect(page.locator('[data-layer="routes"] polyline')).toHaveCount(1);
-  await expect(page.getByTestId("flightline")).toHaveCount(0);
+  await expect(page.getByTestId("flightline")).toHaveCount(2);
 });
 
-test("focuses imported flightlines on the selected Net", async ({ page }) => {
+test("hides imported flightlines while a Net is highlighted", async ({
+  page,
+}) => {
   const project = createRoutingDemoProject();
   project.documents[0]!.routes.push({
     id: "route-imported-h",
@@ -668,7 +672,7 @@ test("focuses imported flightlines on the selected Net", async ({ page }) => {
     "data-net-id",
     "net-h",
   );
-  await expect(page.getByTestId("flightline")).toHaveCount(1);
+  await expect(page.getByTestId("flightline")).toHaveCount(0);
   await page.keyboard.press("h");
   await expect(page.getByTestId("net-highlight-overlay")).toHaveCount(0);
   await expect(page.getByTestId("flightline")).toHaveCount(2);

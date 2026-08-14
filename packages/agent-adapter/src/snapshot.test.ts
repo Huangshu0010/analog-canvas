@@ -218,7 +218,7 @@ describe("Agent Document Snapshot", () => {
     const edited = structuredClone(project);
     const document = edited.documents[0]!;
     document.instances[0]!.placement = {
-      position: { x: 999, y: 999 },
+      position: { x: 1000, y: 1000 },
       rotation: 90,
       mirror: "x",
     };
@@ -232,7 +232,7 @@ describe("Agent Document Snapshot", () => {
           kind: "text",
           locked: false,
           zIndex: 0,
-          anchor: { kind: "free", position: { x: 1, y: 1 } },
+          anchor: { kind: "free", position: { x: 10, y: 10 } },
           content: { runs: [{ kind: "text", value: "note" }] },
           alignment: "start",
           rotation: 0,
@@ -279,7 +279,7 @@ describe("Agent Document Snapshot", () => {
           anchor: {
             kind: "object",
             objectId: document.instances[0]!.id,
-            localOffset: { x: 10, y: 5 },
+            localOffset: { x: 10, y: 10 },
             fallbackPosition: { x: 0, y: 0 },
           },
           content: { runs: [{ kind: "text", value: "note" }] },
@@ -300,7 +300,7 @@ describe("Agent Document Snapshot", () => {
     const instance = document.instances[0]!.placement!.position;
     expect(geometry.position).toEqual({
       x: instance.x + 10,
-      y: instance.y + 5,
+      y: instance.y + 10,
     });
     // The persisted anchor is unchanged (still references the instance).
     expect(entry.object.anchor).toMatchObject({

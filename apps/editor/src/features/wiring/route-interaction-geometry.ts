@@ -409,6 +409,7 @@ export function defaultInstanceLabel(
     instance,
     resolved,
     styleProfile,
+    document.presentation.grid,
   );
   if (!placement) return null;
   const position = placement.position;

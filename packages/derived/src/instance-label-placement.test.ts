@@ -44,6 +44,7 @@ function placedDefaultLabel(
     },
     resolved,
     profile,
+    10,
   );
   if (!placement) throw new Error("Placed instance must receive a label");
   return placement;
@@ -60,7 +61,12 @@ describe("instance label placement", () => {
 
       expect(isBjtSymbol(resolved)).toBe(true);
       expect(isMosSymbol(resolved)).toBe(false);
-      const label = defaultInstanceLabelPlacement(instance, resolved, profile);
+      const label = defaultInstanceLabelPlacement(
+        instance,
+        resolved,
+        profile,
+        10,
+      );
       expect(label).toMatchObject({
         alignment: "start",
         position: {
@@ -71,11 +77,12 @@ describe("instance label placement", () => {
       const localBounds = visibleSymbolLocalBounds(resolved);
       expect(label!.position.x).toBe(
         Math.round(
-          instance.placement.position.x +
+          (instance.placement.position.x +
             localBounds.x +
             localBounds.width +
-            1.5,
-        ),
+            1.5) /
+            10,
+        ) * 10,
       );
     }
   });
@@ -85,58 +92,61 @@ describe("instance label placement", () => {
     const resolved = resolver.resolve("npn");
     if (!resolved) throw new Error("missing npn");
 
-    expect(defaultInstanceLabelPlacement(instance, resolved, profile)).toEqual(
+    expect(
+      defaultInstanceLabelPlacement(instance, resolved, profile, 10),
+    ).toEqual(
       expect.objectContaining({
         alignment: "middle",
         position: expect.objectContaining({ y: expect.any(Number) }),
       }),
     );
     expect(
-      defaultInstanceLabelPlacement(instance, resolved, profile)!.position.y,
+      defaultInstanceLabelPlacement(instance, resolved, profile, 10)!.position
+        .y,
     ).toBeGreaterThan(instance.placement.position.y);
   });
 
   it("places passive, source, and Port labels on their semantic sides", () => {
     expect(placedDefaultLabel("resistor")).toMatchObject({
-      position: { x: 112, y: 105 },
+      position: { x: 110, y: 110 },
       alignment: "start",
     });
     expect(placedDefaultLabel("voltage-source")).toMatchObject({
-      position: { x: 113, y: 105 },
+      position: { x: 110, y: 110 },
       alignment: "start",
     });
     expect(placedDefaultLabel("capacitor", 90)).toMatchObject({
-      position: { x: 95, y: 126 },
+      position: { x: 90, y: 130 },
       alignment: "middle",
     });
     expect(placedDefaultLabel("port")).toMatchObject({
-      position: { x: 88, y: 105 },
+      position: { x: 90, y: 110 },
       alignment: "end",
     });
   });
 
   it("uses visible MOS edges through variants, rotations, and mirrors", () => {
     expect(placedDefaultLabel("nmos")).toMatchObject({
-      position: { x: 113, y: 108 },
+      position: { x: 110, y: 110 },
       alignment: "start",
     });
     expect(
       placedDefaultLabel("nmos", 0, "none", "textbook-3terminal"),
-    ).toMatchObject({ position: { x: 113, y: 108 }, alignment: "start" });
+    ).toMatchObject({ position: { x: 110, y: 110 }, alignment: "start" });
     expect(
       placedDefaultLabel("nmos", 90, "none", "textbook-3terminal"),
     ).toMatchObject({
-      position: { x: 92, y: 129 },
+      position: { x: 90, y: 130 },
       alignment: "middle",
     });
     expect(
       placedDefaultLabel("nmos", 270, "none", "textbook-3terminal"),
     ).toMatchObject({
-      position: { x: 108, y: 82 },
+      position: { x: 110, y: 80 },
       alignment: "middle",
     });
     expect(placedDefaultLabel("nmos", 0, "x")).toMatchObject({
-      position: { x: 87, y: 108 },
+      position: { x: 90, y: 110 },
       alignment: "end",
     });
   });

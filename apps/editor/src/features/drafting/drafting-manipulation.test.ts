@@ -66,7 +66,7 @@ const rectangle = (): Extract<DraftingObject, { kind: "rectangle" }> => ({
 
 describe("drafting manipulation", () => {
   it("translates every free geometry point without detaching anchors", () => {
-    const moved = translateDraftingObject(arrow(), { x: 10, y: 20 });
+    const moved = translateDraftingObject(arrow(), { x: 10, y: 20 }, 10);
     expect(moved).toMatchObject({
       anchor: { kind: "free", position: { x: 60, y: 20 } },
       from: { kind: "free", position: { x: 10, y: 20 } },
@@ -84,7 +84,9 @@ describe("drafting manipulation", () => {
       },
     };
     expect(draftingDragOrigin(attached)).toBeNull();
-    expect(translateDraftingObject(attached, { x: 10, y: 20 })).toMatchObject({
+    expect(
+      translateDraftingObject(attached, { x: 10, y: 20 }, 10),
+    ).toMatchObject({
       to: { kind: "object", objectId: "R1" },
     });
   });
@@ -102,6 +104,7 @@ describe("drafting manipulation", () => {
         { kind: "to" },
         { x: 120, y: 10 },
         arrowGeometry,
+        10,
       ),
     ).toMatchObject({
       from: { position: { x: 0, y: 0 } },
@@ -118,10 +121,11 @@ describe("drafting manipulation", () => {
       applyDraftingHandle(
         line,
         { kind: "curve", index: 0 },
-        { x: 25, y: 20 },
+        { x: 30, y: 20 },
         lineGeometry,
+        10,
       ),
-    ).toMatchObject({ curveControls: [{ x: 25, y: 40 }, null] });
+    ).toMatchObject({ curveControls: [{ x: 40, y: 40 }, null] });
 
     const box = rectangle();
     const boxGeometry = resolveDraftingObjectGeometry(document, resolver, box);
@@ -130,19 +134,20 @@ describe("drafting manipulation", () => {
       { kind: "rectangle-corner", index: 0 },
       { x: 20, y: 30 },
       boxGeometry,
+      10,
     );
     expect(resized).toMatchObject({
-      center: { x: 45, y: 45 },
+      center: { x: 50, y: 50 },
       width: 50,
       height: 30,
-      anchor: { position: { x: 45, y: 45 } },
+      anchor: { position: { x: 50, y: 50 } },
     });
   });
 
   it("inserts and deletes vertices while preserving explicit invariants", () => {
-    const inserted = insertConstructionVertex(construction(), { x: 75, y: 3 });
+    const inserted = insertConstructionVertex(construction(), { x: 80, y: 0 });
     expect(inserted?.index).toBe(2);
-    expect(inserted?.object.points[2]).toEqual({ x: 75, y: 3 });
+    expect(inserted?.object.points[2]).toEqual({ x: 80, y: 0 });
     expect(inserted?.object.curveControls).toEqual([null, null, null]);
 
     const deleted = deleteConstructionVertex(inserted!.object, 2);
@@ -163,11 +168,11 @@ describe("drafting manipulation", () => {
     const object = arrow();
     const geometry = resolveDraftingObjectGeometry(document, resolver, object);
     if (geometry.kind !== "arrow") throw new Error("Expected arrow geometry");
-    const inserted = insertArrowWaypoint(object, geometry, { x: 75, y: 5 });
+    const inserted = insertArrowWaypoint(object, geometry, { x: 80, y: 10 });
     expect(inserted?.index).toBe(1);
     expect(inserted?.object.waypoints).toEqual([
       { x: 50, y: 0 },
-      { x: 75, y: 5 },
+      { x: 80, y: 10 },
     ]);
   });
 
@@ -191,11 +196,11 @@ describe("drafting manipulation", () => {
   it("rotates and sets bearing without detaching an attached arrow", () => {
     const object = arrow();
     const geometry = resolveDraftingObjectGeometry(document, resolver, object);
-    expect(rotateDraftingObject(object, geometry, 90)).toMatchObject({
+    expect(rotateDraftingObject(object, geometry, 90, 10)).toMatchObject({
       from: { position: { x: 50, y: -50 } },
       to: { position: { x: 50, y: 50 } },
     });
-    expect(setDraftingBearing(object, geometry, 90)).toMatchObject({
+    expect(setDraftingBearing(object, geometry, 90, 10)).toMatchObject({
       kind: "updated",
       object: {
         from: { position: { x: 50, y: -50 } },
@@ -217,7 +222,7 @@ describe("drafting manipulation", () => {
       resolver,
       attached,
     );
-    expect(setDraftingBearing(attached, attachedGeometry, 90)).toEqual({
+    expect(setDraftingBearing(attached, attachedGeometry, 90, 10)).toEqual({
       kind: "attached-arrow",
     });
   });
@@ -228,13 +233,13 @@ describe("drafting manipulation", () => {
     if (geometry.kind !== "construction-line") {
       throw new Error("Expected construction-line geometry");
     }
-    expect(setDraftingTangentAngle(line, geometry, 0, 45)).toMatchObject({
-      curveControls: [{ x: 25, y: 10 }, null],
+    expect(setDraftingTangentAngle(line, geometry, 0, 45, 10)).toMatchObject({
+      curveControls: [{ x: 30, y: 10 }, null],
     });
 
     const box = rectangle();
     const boxGeometry = resolveDraftingObjectGeometry(document, resolver, box);
-    expect(setDraftingBearing(box, boxGeometry, -90)).toMatchObject({
+    expect(setDraftingBearing(box, boxGeometry, -90, 10)).toMatchObject({
       kind: "updated",
       object: { rotation: 270 },
     });

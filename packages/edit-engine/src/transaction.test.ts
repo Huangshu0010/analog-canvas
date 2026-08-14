@@ -245,6 +245,132 @@ describe("Edit Transaction envelope", () => {
     });
   });
 
+  it("keeps imported flightline guidance through placement and Wire, then dismisses it for a Net Label", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.sourceBinding = {
+      cellName: "main",
+      sourceRef: {
+        fileId: "main.sp",
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 1, line: 1, column: 2 },
+      },
+    };
+    document.flightlineGuidance = "active";
+    document.instances.push(
+      {
+        id: "A",
+        symbolId: "port",
+        placement: null,
+        properties: {},
+      },
+      {
+        id: "B",
+        symbolId: "port",
+        placement: {
+          position: { x: 200, y: 100 },
+          rotation: 0,
+          mirror: "none",
+        },
+        properties: {},
+      },
+    );
+
+    const placed = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "place_instance",
+            instanceId: "A",
+            placement: {
+              position: { x: 100, y: 100 },
+              rotation: 0,
+              mirror: "none",
+            },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(placed).toMatchObject({
+      ok: true,
+      document: { flightlineGuidance: "active" },
+    });
+    if (!placed.ok) return;
+
+    const moved = executeTransaction(placed.document, {
+      ...transaction(placed.document.revision),
+      transactionId: "transaction-move",
+      edits: [
+        {
+          kind: "move_instance",
+          instanceId: "A",
+          position: { x: 110, y: 100 },
+        },
+      ],
+    });
+    expect(moved).toMatchObject({
+      ok: true,
+      document: { flightlineGuidance: "dismissed" },
+    });
+
+    const wired = executeTransaction(
+      placed.document,
+      {
+        ...transaction(placed.document.revision),
+        transactionId: "transaction-wire",
+        edits: [
+          {
+            kind: "connect_endpoints",
+            from: { kind: "terminal", instanceId: "A", pinName: "P" },
+            to: { kind: "terminal", instanceId: "B", pinName: "P" },
+            newNetId: "net-ab",
+          },
+          {
+            kind: "set_route_points",
+            routeId: "route-ab",
+            netId: "net-ab",
+            from: { kind: "terminal", instanceId: "A", pinName: "P" },
+            to: { kind: "terminal", instanceId: "B", pinName: "P" },
+            waypoints: [],
+            segmentModes: ["manual"],
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(wired).toMatchObject({
+      ok: true,
+      document: { flightlineGuidance: "active" },
+    });
+    if (!wired.ok) return;
+
+    const labelled = executeTransaction(wired.document, {
+      ...transaction(wired.document.revision),
+      transactionId: "transaction-label",
+      edits: [
+        {
+          kind: "upsert_schematic_annotation",
+          annotation: {
+            id: "label-ab",
+            kind: "net-label",
+            content: { runs: [{ kind: "text", value: "AB" }] },
+            netId: "net-ab",
+            anchor: { kind: "free", position: { x: 150, y: 100 } },
+            alignment: "middle",
+            rotation: 0,
+            locked: false,
+          },
+        },
+      ],
+    });
+    expect(labelled).toMatchObject({
+      ok: true,
+      document: { flightlineGuidance: "dismissed" },
+    });
+  });
+
   it("rejects a stale revision without changing the Document", () => {
     const document = createEmptyDocument("document-main", "Main");
     const before = JSON.stringify(document);
@@ -505,7 +631,12 @@ describe("Edit Transaction envelope", () => {
     const profile = resolveSchematicStyleProfile(
       document.presentation.styleProfileId,
     );
-    const initial = defaultInstanceLabelPlacement(instance, resolved, profile);
+    const initial = defaultInstanceLabelPlacement(
+      instance,
+      resolved,
+      profile,
+      10,
+    );
     if (!initial) throw new Error("missing default label placement");
     document.annotations.push({
       id: "instance-label-Q1",
