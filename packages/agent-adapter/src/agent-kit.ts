@@ -1,5 +1,9 @@
 import { agentRazaviAuthoringCatalog } from "./agent-authoring-catalog.generated.js";
 
+// Node-side consumers (local MCP helper) read the same catalog object the Kit
+// serializes, so there is exactly one generated catalog source.
+export { agentRazaviAuthoringCatalog };
+
 /**
  * Small, provider-neutral operating material for an Agent that has no checkout
  * of this repository. The Kit has no Project data, credentials, or mutation

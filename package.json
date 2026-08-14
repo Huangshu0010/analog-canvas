@@ -25,6 +25,8 @@
     "agent-api:artifacts:check": "pnpm --filter @icm/agent-adapter... build && node scripts/agent-api-artifacts.mjs --check",
     "agent-kit:catalog": "node scripts/generate-agent-authoring-catalog.mjs",
     "agent-kit:catalog:check": "node scripts/generate-agent-authoring-catalog.mjs --check",
+    "mcp:resources": "pnpm --filter @icm/agent-adapter... build && node scripts/generate-mcp-resources.mjs",
+    "mcp:resources:check": "pnpm --filter @icm/agent-adapter... build && node scripts/generate-mcp-resources.mjs --check",
     "dev": "pnpm --filter @icm/editor dev",
     "ci:static": "pnpm format:check && pnpm docs:check && pnpm references:check && pnpm agent-kit:catalog:check && pnpm typecheck",
     "ci:unit": "pnpm test",

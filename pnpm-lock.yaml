@@ -81,6 +81,18 @@ importers:
 
   apps/local-host: {}
 
+  apps/mcp-server:
+    dependencies:
+      "@icm/agent-adapter":
+        specifier: workspace:*
+        version: link:../../packages/agent-adapter
+      "@icm/agent-client":
+        specifier: workspace:*
+        version: link:../../packages/agent-client
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   packages/agent-adapter:
     dependencies:
       "@icm/derived":
@@ -98,6 +110,15 @@ importers:
       "@icm/symbols":
         specifier: workspace:*
         version: link:../symbols
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
+  packages/agent-client:
+    dependencies:
+      "@icm/agent-adapter":
+        specifier: workspace:*
+        version: link:../agent-adapter
       zod:
         specifier: 4.4.3
         version: 4.4.3
