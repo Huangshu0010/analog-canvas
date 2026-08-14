@@ -81,7 +81,11 @@ const tarball = resolve(outputRoot, distribution.release.asset);
 const digest = createHash("sha256")
   .update(await readFile(tarball))
   .digest("hex");
-if (distribution.release.sha256 && digest !== distribution.release.sha256) {
+if (
+  process.platform === distribution.release.buildPlatform &&
+  distribution.release.sha256 &&
+  digest !== distribution.release.sha256
+) {
   throw new Error(
     `MCP tarball SHA-256 mismatch: expected ${distribution.release.sha256}, received ${digest}`,
   );

@@ -7,9 +7,10 @@
   "binaryName": "analog-canvas-mcp",
   "npmPublished": false,
   "release": {
+    "buildPlatform": "linux",
     "repository": "chenzc24/Analog-Canvas",
     "tag": "mcp-v0.1.0",
     "asset": "analog-canvas-mcp-server-0.1.0.tgz",
-    "sha256": "a3a8fbed3604b52e0bb1a4d75a557b325342b40aae60102979fc6114f645cda1"
+    "sha256": "0383d9d26d4665339a89e80a9d8ecff91edcecb3022b268a038503260643dfda"
   }
 }

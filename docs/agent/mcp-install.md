@@ -15,6 +15,10 @@ current version, Node requirement, immutable GitHub Release asset, SHA-256,
 version-pinned launch command, host setup snippets, and Agent Kit fallback.
 Node.js 24 or newer is the only runtime requirement.
 
+The declared SHA-256 belongs to the canonical Linux-built GitHub Release
+tarball. Local development tarballs built on another operating system may have
+different archive metadata without changing the bundled MCP program.
+
 For Codex, the equivalent first-time command is:
 
     codex mcp add analog-canvas -- <the manifest launch command>

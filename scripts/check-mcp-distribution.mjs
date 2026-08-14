@@ -15,6 +15,8 @@ if (distribution.release.tag !== expectedTag)
   failures.push(`release.tag must be ${expectedTag}`);
 if (distribution.release.asset !== expectedAsset)
   failures.push(`release.asset must be ${expectedAsset}`);
+if (distribution.release.buildPlatform !== "linux")
+  failures.push("release.buildPlatform must be linux for GitHub Actions");
 if (!/^\d+\.\d+\.\d+$/u.test(distribution.version))
   failures.push("version must be plain semver");
 if (!/^[a-f0-9]{64}$/u.test(distribution.release.sha256))
