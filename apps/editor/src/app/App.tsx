@@ -60,9 +60,7 @@ import type {
 import {
   createEmptyProject,
   flattenRichText,
-  parseProject,
   powerNetNormalizations,
-  serializeProject,
   semanticTextDocument,
   transformPoint,
 } from "@icm/model";
@@ -140,6 +138,7 @@ import {
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
+import { ReplaceGuardDialog } from "../components/replace-guard-dialog";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
 import {
   AgentPropertiesSection,
@@ -174,7 +173,17 @@ import {
 import { createRoutingDemoProject } from "../demos/routing-demo";
 import { createVisualDemoProject } from "../demos/visual-demo";
 import { useRecoveryCoordinator } from "../document/recovery-coordinator";
-import type { BrowserRecoverySource } from "../document/browser-recovery-contract";
+import type {
+  BrowserRecoveryFormalFileHint,
+  BrowserRecoverySource,
+} from "../document/browser-recovery-contract";
+import {
+  formatProjectOpenDiagnostics,
+  requestProjectDownload,
+  saveProjectArtifact,
+  stageProjectFile,
+  type ProjectFileState,
+} from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import {
   NetTraceSection,
@@ -272,6 +281,11 @@ const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
   annotationIds: [],
   draftingIds: [],
 };
+
+interface ReplaceGuardState {
+  intent: string;
+  perform: () => void | Promise<void>;
+}
 
 export interface AppProps {
   project?: CircuitProject;
@@ -485,6 +499,17 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     return requested;
   });
   const refreshRestoreAttemptedRef = useRef(false);
+  // Formal-file lifecycle of the current working copy, orthogonal to recovery
+  // state: a commit makes it dirty again, only a confirmed File System
+  // Access close or an explicit download transitions it out of dirty.
+  const [fileState, setFileState] = useState<ProjectFileState>("new");
+  const fileStateBaselineRef = useRef<{
+    session: string;
+    revision: number;
+  } | null>(null);
+  const [replaceGuard, setReplaceGuard] = useState<ReplaceGuardState | null>(
+    null,
+  );
   const {
     state: recoveryState,
     sessions: recoverySessions,
@@ -494,6 +519,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     cancelPending: cancelRecovery,
     flushNow: flushRecovery,
     beginWorkingCopy: beginRecoveryWorkingCopy,
+    noteFormalFileHint: noteRecoveryFormalFileHint,
     discover: discoverRecovery,
     readSessionProject: readRecoveryProject,
     deleteSession: deleteRecoverySession,
@@ -1635,7 +1661,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function replaceActiveProject(
     nextProject: CircuitProject,
     nextViewBox: Rect = DEFAULT_VIEWBOX,
-    options: { source?: BrowserRecoverySource; keepWorkingCopy?: boolean } = {},
+    options: {
+      source?: BrowserRecoverySource;
+      keepWorkingCopy?: boolean;
+      formalFileHint?: BrowserRecoveryFormalFileHint;
+    } = {},
   ): SchematicDocument {
     // Drop any pending recovery write for the outgoing project so it cannot
     // revive after Save/Discard/Open/Import/Restore/demo-load swaps the
@@ -1645,6 +1675,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (options.keepWorkingCopy !== true) {
       beginRecoveryWorkingCopy(options.source ?? "new");
     }
+    if (options.formalFileHint !== undefined) {
+      noteRecoveryFormalFileHint(options.formalFileHint);
+    }
     browserAgentFileHost.clear();
     setAgentFileCandidate(null);
     const prepared = materializeRazaviProjectBulkConnections(nextProject);
@@ -1653,6 +1686,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setDocumentStack([]);
     setViewBox(nextViewBox);
     resetInteractionState();
+    setFileState(options.source === "opened-file" ? "opened" : "new");
     // Seed the incoming working copy immediately; the outgoing project's
     // stored records are retained under its own session.
     stageRecovery(prepared.project);
@@ -1661,22 +1695,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function approveAgentFileCandidate(): void {
     if (!agentFileCandidate) return;
-    const candidate = browserAgentFileHost.consumeApproved(
-      agentFileCandidate.candidateId,
-    );
-    setAgentFileCandidate(null);
-    if (!candidate) {
-      setStatus(
-        "Agent file candidate expired; ask the Agent to stage it again",
-      );
-      return;
-    }
-    replaceActiveProject(candidate, DEFAULT_VIEWBOX, {
-      source: "opened-file",
+    const meta = agentFileCandidate;
+    void guardDirtyReplacement(`Accept Agent ${meta.kind} candidate`, () => {
+      const candidate = browserAgentFileHost.consumeApproved(meta.candidateId);
+      setAgentFileCandidate(null);
+      if (!candidate) {
+        setStatus(
+          "Agent file candidate expired; ask the Agent to stage it again",
+        );
+        return;
+      }
+      replaceActiveProject(candidate, DEFAULT_VIEWBOX, {
+        source: "opened-file",
+      });
+      setStatus(`Accepted Agent ${meta.kind} candidate: ${candidate.name}`);
     });
-    setStatus(
-      `Accepted Agent ${agentFileCandidate.kind} candidate: ${candidate.name}`,
-    );
   }
 
   function rejectAgentFileCandidate(): void {
@@ -3591,10 +3624,94 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
-  function saveProjectFile(): void {
-    // Saving or downloading never clears the browser recovery copies.
-    download(serializeProject(project), "application/json", "icproj.json");
-    setStatus(`Saved formal Project revision ${document.revision}`);
+  async function saveProjectFile(): Promise<void> {
+    // Saving or downloading never clears the browser recovery copies. Only a
+    // confirmed File System Access close reports a confirmed write; the
+    // fallback download is reported as requested, not saved.
+    const outcome = await saveProjectArtifact(project);
+    if (outcome.status === "write-confirmed") {
+      noteRecoveryFormalFileHint({
+        name: outcome.fileName,
+        lastConfirmedWriteAt: outcome.at,
+      });
+      setFileState("write-confirmed");
+      setStatus(`Saved ${outcome.fileName} (write confirmed)`);
+      return;
+    }
+    if (outcome.status === "download-requested") {
+      noteRecoveryFormalFileHint({
+        name: outcome.fileName,
+        lastDownloadRequestedAt: new Date().toISOString(),
+      });
+      setFileState("download-requested");
+      setStatus(`Download requested: ${outcome.fileName}`);
+      return;
+    }
+    if (outcome.status === "picker-cancelled") {
+      setStatus("Save cancelled");
+      return;
+    }
+    if (outcome.status === "permission-denied") {
+      setStatus(
+        `Save location unavailable and download failed: ${outcome.message}`,
+      );
+      return;
+    }
+    if (outcome.status === "write-failed") {
+      setFileState("write-failed");
+      setStatus(
+        `Save failed at ${outcome.stage}: ${outcome.message} — recovery kept; download the Project instead`,
+      );
+      return;
+    }
+    setStatus(`Project could not be serialized: ${outcome.message}`);
+  }
+
+  function isDirtyWork(): boolean {
+    return fileState === "dirty" || fileState === "write-failed";
+  }
+
+  /**
+   * Protect outgoing dirty work before Open/Import/Replace: first confirm the
+   * newest revision is stored in recovery; if recovery cannot confirm, let
+   * the human choose between downloading, replacing anyway, and cancelling.
+   */
+  async function guardDirtyReplacement(
+    intent: string,
+    perform: () => void | Promise<void>,
+  ): Promise<void> {
+    if (!isDirtyWork()) {
+      await perform();
+      return;
+    }
+    stageRecovery(project);
+    const recoveryAfterFlush = await flushRecovery();
+    if (recoveryAfterFlush === "stored") {
+      await perform();
+      return;
+    }
+    setReplaceGuard({ intent, perform });
+  }
+
+  function cancelReplaceGuard(): void {
+    setReplaceGuard(null);
+  }
+
+  function confirmReplaceGuard(): void {
+    const guard = replaceGuard;
+    if (!guard) return;
+    setReplaceGuard(null);
+    void guard.perform();
+  }
+
+  function downloadCurrentProjectFromGuard(): void {
+    const outcome = requestProjectDownload(project);
+    if (outcome.status === "download-requested") {
+      setFileState("download-requested");
+      setStatus(`Download requested: ${outcome.fileName}`);
+    } else {
+      setStatus(`Download failed: ${outcome.message}`);
+    }
   }
 
   function restoreRecovery(): void {
@@ -3666,6 +3783,27 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     })();
   }, [restoreAfterRefresh, recoveryReady, recoveryWorkingCopyId]);
 
+  // Any committed revision inside one Project session makes the working copy
+  // dirty relative to its formal file again. A replacement re-baselines via
+  // its own projectSessionId and sets the state explicitly.
+  useEffect(() => {
+    const baseline = fileStateBaselineRef.current;
+    if (baseline === null || baseline.session !== projectSessionId) {
+      fileStateBaselineRef.current = {
+        session: projectSessionId,
+        revision: document.revision,
+      };
+      return;
+    }
+    if (baseline.revision !== document.revision) {
+      fileStateBaselineRef.current = {
+        session: projectSessionId,
+        revision: document.revision,
+      };
+      setFileState("dirty");
+    }
+  }, [document.revision, projectSessionId]);
+
   function refreshApp(): void {
     void (async () => {
       stageRecovery(project);
@@ -3689,31 +3827,30 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   async function openProjectFile(file: File | null): Promise<void> {
     if (!file) return;
-    try {
-      const opened = parseProject(await file.text());
-      const unsupported = findUnsupportedProjectSymbolIds(
-        opened,
-        builtInSymbols,
+    await guardDirtyReplacement(`Open ${file.name}`, async () => {
+      const staged = await stageProjectFile(file, (candidate) =>
+        findUnsupportedProjectSymbolIds(candidate, builtInSymbols),
       );
-      if (unsupported.length > 0) {
-        throw new Error(
-          `Project uses unsupported non-Razavi symbols: ${unsupported.join(", ")}`,
+      if (staged.status === "rejected") {
+        // A rejected user file keeps a code and path in the status line so
+        // the reason survives later status updates.
+        setStatus(
+          `Project not opened — ${formatProjectOpenDiagnostics(staged.diagnostics)}`,
         );
+        return;
       }
-      const openedDocument = opened.documents.find(
-        (candidate) => candidate.id === opened.topDocumentId,
-      )!;
       // A successful open retains the outgoing Project's recovery records
       // and immediately seeds the incoming Project's own working copy.
-      replaceActiveProject(opened, DEFAULT_VIEWBOX, {
+      replaceActiveProject(staged.project, DEFAULT_VIEWBOX, {
         source: "opened-file",
+        formalFileHint: { name: staged.fileName },
       });
       setImportDiagnostics([]);
       setImportReviewOpen(false);
-      setStatus(`Opened ${file.name} at revision ${openedDocument.revision}`);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Project open failed");
-    }
+      setStatus(
+        `Opened ${staged.fileName} at revision ${staged.topDocumentRevision}`,
+      );
+    });
   }
 
   function loadVisualDemo(): void {
@@ -4661,14 +4798,16 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         (count, candidate) => count + candidate.instances.length,
         0,
       );
-      replaceActiveProject(result.project, DEFAULT_VIEWBOX, {
-        source: "spice-import",
+      await guardDirtyReplacement("Import SPICE sources", () => {
+        replaceActiveProject(result.project!, DEFAULT_VIEWBOX, {
+          source: "spice-import",
+        });
+        setImportReviewOpen(true);
+        setSelectionOpen(true);
+        setStatus(
+          `Imported ${result.project!.documents.length} Documents and ${instanceCount} Razavi-supported instances`,
+        );
       });
-      setImportReviewOpen(true);
-      setSelectionOpen(true);
-      setStatus(
-        `Imported ${result.project.documents.length} Documents and ${instanceCount} Razavi-supported instances`,
-      );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "SPICE import failed");
     }
@@ -6156,6 +6295,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       </header>
       {helpOpen ? (
         <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
+      ) : null}
+      {replaceGuard !== null ? (
+        <ReplaceGuardDialog
+          intent={replaceGuard.intent}
+          onCancel={cancelReplaceGuard}
+          onConfirm={confirmReplaceGuard}
+          onDownload={downloadCurrentProjectFromGuard}
+        />
       ) : null}
       <ProjectSearchDialog
         open={searchOpen}

@@ -1,5 +1,27 @@
 # Maintenance Log
 
+## 2026-08-14 - WP-3 project file service and replacement protection
+
+- Target: truthful Save/Open semantics with File System Access enhancement,
+  staged typed open diagnostics, file-state machine, and dirty-work
+  replacement guard; fourth work package of
+  `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `project-file-service.ts` (+13 unit tests), new
+  `replace-guard-dialog.tsx`, `App.tsx` file-state/guard/save/open wiring,
+  download-only E2E emulation in manual-editor/drafting specs, new
+  `project-file.spec.ts` (7 tests).
+- Investigation: in-page probes proved Chromium aborts even synchronously
+  dispatched IndexedDB puts during pagehide unload; the old
+  reload-inside-debounce durability cannot survive async storage. A
+  trusted-snapshot write path was built, disproven, and fully reverted; the
+  affected E2E now waits for the debounced write before reloading. Recorded
+  as `experience: candidate` on the WP-3 plan for human review.
+- Validation: 106 unit tests; 111 E2E tests across
+  drafting/manual-editor/project-file/component-insert/web-agent-session/
+  chrome-isolation; typecheck, prettier, `git diff --check` clean.
+- Commit status: committed as `feat(editor): harden project open and save` on
+  `agent/robust-page-persistence-recovery`.
+
 ## 2026-08-14 - WP-2 recovery coordinator and Project lifecycle
 
 - Target: replace the synchronous localStorage recovery hook with an

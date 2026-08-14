@@ -9,10 +9,15 @@ import {
   chooseComponent,
   clickCommand,
   downloadBytes,
+  emulateDownloadOnlyBrowser,
   openMenu,
   readRecoveryRecords,
   recoveryProjectTexts,
 } from "./editor-fixtures.js";
+
+test.beforeEach(async ({ page }) => {
+  await emulateDownloadOnlyBrowser(page);
+});
 
 async function placeComponent(
   page: Page,
@@ -912,6 +917,13 @@ test("connects copied multi-pin groups through a manually bent wire", async ({
   await copySelectionAt(page, { x: 560, y: 300 });
   await expect(page.getByTestId("instance-count")).toHaveText("4");
 
+  // Let the debounced recovery write settle before reloading. A reload inside
+  // the debounce window cannot carry the last edit: the browser aborts
+  // uncommitted IndexedDB transactions while the page unloads.
+  const revision = await page.getByTestId("revision").textContent();
+  await expect
+    .poll(() => recoveryProjectTexts(page))
+    .toContain(`"revision": ${revision}`);
   await page.reload();
   await openMenu(page, "File");
   await page.getByRole("button", { name: "Restore recovery" }).click();
