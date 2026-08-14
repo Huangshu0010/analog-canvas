@@ -1,5 +1,5 @@
 ---
-status: completed
+status: active
 experience: none
 ---
 
@@ -38,6 +38,8 @@ This target owns:
 - editor camera, preview, fit/focus/zoom/pan code and focused tests
 - Edit Engine grid validation and focused regressions
 - `plan/log.md` and this plan
+- `config/agent-mcp-distribution.json` only to refresh the Linux release
+  package integrity pin after the owned Agent schema changes its contents
 
 Read-only dependencies:
 
@@ -114,13 +116,17 @@ now cross the boundary through named grid conversion helpers rather than
 implicit rounding. Existing current fixtures were normalized deliberately; no
 legacy migration path was added.
 
-Validation passed: complete local unit suite (115 files / 654 tests),
+Initial validation passed: complete local unit suite (115 files / 654 tests),
 `pnpm typecheck`, `pnpm format:check`, `pnpm docs:check`, Agent catalog and
 API artifact checks, and `git diff --check`. A clean frozen-lockfile
 `pnpm ci:check` also passed static checks, unit tests, all workspace builds,
 performance, and release-artifact verification; its final local Playwright
 stage produced no output before the tool timeout, and a direct rerun likewise
 stalled during browser startup. Remote CI remains required before any merge to
-`main`.
+`main`. Remote PR #53 then found two remaining GUI annotation commit paths
+that had not crossed the grid normalizer, plus the expected Linux MCP package
+digest change. This target is active again until those exact failures are
+repaired and the remote gate is green.
 
-Commit status: committed on `codex/coordinate-domain-contract`.
+Commit status: initial implementation committed as `2cc807c`; CI follow-up is
+pending on `codex/coordinate-domain-contract`.

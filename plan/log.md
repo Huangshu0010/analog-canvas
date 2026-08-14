@@ -6841,3 +6841,16 @@ contracts (WP-R1)`.
   full gate and a direct rerun, so remote browser CI is still required.
 - Commit status: committed on `codex/coordinate-domain-contract`; merge to
   `main` requires remote browser CI and review checks.
+
+## 2026-08-14 - Coordinate-domain CI follow-up
+
+- Target: repair PR #53 failures caused by two annotation creation paths that
+  skipped grid normalization and by the Linux MCP package digest changing with
+  the Agent schema payload.
+- Changed areas: route Net Label/current-marker fallback placement, Linux MCP
+  release integrity pin, and the active coordinate-domain target record.
+- Validation: focused route/Edit Engine contracts, typecheck, formatting,
+  complete release verification, and the two previously failing Playwright
+  cases passed locally.
+- Commit status: pending follow-up commit on
+  `codex/coordinate-domain-contract`; remote PR checks will decide merge.

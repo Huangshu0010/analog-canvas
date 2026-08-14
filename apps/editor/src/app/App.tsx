@@ -4206,7 +4206,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     uniqueSuffixCounter.current += 1;
     const id = `current-${uniqueSuffixCounter.current}`;
-    const fallbackPosition = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+    const fallbackPosition = snapGridPoint(
+      { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 },
+      document.presentation.grid,
+    );
     const result = transact([
       {
         kind: "upsert_schematic_annotation",
@@ -4276,14 +4279,17 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     const segment = Math.max(0, Math.floor((polyline.points.length - 1) / 2));
     const from = polyline.points[segment]!;
     const to = polyline.points[segment + 1] ?? from;
-    const position = (existingLabel
-      ? existingLabel.anchor.kind === "free"
-        ? existingLabel.anchor.position
-        : existingLabel.anchor.fallbackPosition
-      : undefined) ?? {
-      x: Math.round((from.x + to.x) / 2),
-      y: Math.round((from.y + to.y) / 2 - 8),
-    };
+    const position = snapGridPoint(
+      (existingLabel
+        ? existingLabel.anchor.kind === "free"
+          ? existingLabel.anchor.position
+          : existingLabel.anchor.fallbackPosition
+        : undefined) ?? {
+        x: (from.x + to.x) / 2,
+        y: (from.y + to.y) / 2 - 8,
+      },
+      document.presentation.grid,
+    );
     const edits: SchematicEdit[] = sameNameNet
       ? [
           {
