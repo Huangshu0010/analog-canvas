@@ -24,9 +24,10 @@ import type {
   SchematicStyleProfile,
 } from "@icm/derived";
 import type {
+  DerivedRect,
   DraftingObject,
+  GridRect,
   Point,
-  Rect,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
@@ -40,13 +41,15 @@ import { schematicTextSizeAttribute } from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
 
 export interface SvgRenderOptions {
-  bounds?: Rect;
+  /** Explicit render crop is a caller-owned grid rectangle. */
+  bounds?: GridRect;
   margin?: number;
   title?: string;
 }
 
 export interface SvgScene {
-  viewBox: Rect;
+  /** Formal visual bounds may include fractional text/curve geometry. */
+  viewBox: DerivedRect;
   formalBody: string;
 }
 
@@ -302,7 +305,7 @@ function renderVisiblePinNames(
 function symbolBounds(
   definition: SymbolDefinition,
   instance: SchematicDocument["instances"][number],
-): Rect {
+): DerivedRect {
   const placement = instance.placement;
   if (!placement) {
     throw new Error(
@@ -334,15 +337,15 @@ function deriveBounds(
   routingGeometry: ResolvedDocumentRoutingGeometry,
   margin: number,
   profile: SchematicStyleProfile,
-): Rect {
-  const bounds: Rect[] = [];
+): DerivedRect {
+  const bounds: DerivedRect[] = [];
   const estimatedTextBounds = (
     text: string,
     x: number,
     y: number,
     alignment: "start" | "middle" | "end",
     sizeScale: number,
-  ): Rect => {
+  ): DerivedRect => {
     const width = Math.max(7 * sizeScale, text.length * 7 * sizeScale);
     const left =
       alignment === "start"

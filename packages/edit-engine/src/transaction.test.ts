@@ -505,7 +505,12 @@ describe("Edit Transaction envelope", () => {
     const profile = resolveSchematicStyleProfile(
       document.presentation.styleProfileId,
     );
-    const initial = defaultInstanceLabelPlacement(instance, resolved, profile);
+    const initial = defaultInstanceLabelPlacement(
+      instance,
+      resolved,
+      profile,
+      10,
+    );
     if (!initial) throw new Error("missing default label placement");
     document.annotations.push({
       id: "instance-label-Q1",

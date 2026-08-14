@@ -474,6 +474,44 @@ function schemaDiagnostics(error: z.ZodError, code: string): EditDiagnostic[] {
   }));
 }
 
+function gridAlignmentDiagnostics(
+  value: unknown,
+  grid: number,
+  path: ReadonlyArray<string | number> = [],
+): EditDiagnostic[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) =>
+      gridAlignmentDiagnostics(item, grid, [...path, index]),
+    );
+  }
+  if (!value || typeof value !== "object") return [];
+  const record = value as Record<string, unknown>;
+  const diagnostics: EditDiagnostic[] = [];
+  if (typeof record.x === "number" && typeof record.y === "number") {
+    for (const axis of ["x", "y"] as const) {
+      const coordinate = record[axis] as number;
+      if (coordinate % grid === 0) continue;
+      diagnostics.push({
+        code: "GRID_ALIGNMENT",
+        severity: "error",
+        message: `Document page coordinates must align to grid ${grid}`,
+        path: [...path, axis],
+      });
+    }
+  }
+  for (const [key, child] of Object.entries(record)) {
+    diagnostics.push(...gridAlignmentDiagnostics(child, grid, [...path, key]));
+  }
+  return diagnostics;
+}
+
+function snapPointToDocumentGrid(point: Point, grid: number): Point {
+  return {
+    x: Math.round(point.x / grid) * grid,
+    y: Math.round(point.y / grid) * grid,
+  };
+}
+
 function isHistoryEdit(
   edit: SchematicEdit,
 ): edit is Extract<SchematicEdit, { kind: "undo" | "redo" }> {
@@ -1062,10 +1100,10 @@ function followNetLabelsOnChangedRoutes(
       segmentIndex: attachment.segmentIndex,
       t: attachment.t,
       normalOffset: Math.round(offset.x * normal.x + offset.y * normal.y),
-      fallbackPosition: {
-        x: Math.round(anchor.x + offset.x),
-        y: Math.round(anchor.y + offset.y),
-      },
+      fallbackPosition: snapPointToDocumentGrid(
+        { x: anchor.x + offset.x, y: anchor.y + offset.y },
+        draft.presentation.grid,
+      ),
     };
     changedObjectIds.add(annotation.id);
   }
@@ -1130,10 +1168,13 @@ function followRouteMarkersOnChangedRoutes(
     if (!attachment) continue;
     const from = polyline.points[attachment.segmentIndex]!;
     const to = polyline.points[attachment.segmentIndex + 1]!;
-    const position = {
-      x: Math.round(from.x + (to.x - from.x) * attachment.t),
-      y: Math.round(from.y + (to.y - from.y) * attachment.t),
-    };
+    const position = snapPointToDocumentGrid(
+      {
+        x: from.x + (to.x - from.x) * attachment.t,
+        y: from.y + (to.y - from.y) * attachment.t,
+      },
+      draft.presentation.grid,
+    );
     if (annotation.anchor.kind === "route") {
       annotation.anchor = {
         ...annotation.anchor,
@@ -1181,10 +1222,13 @@ function remapRouteMarkersAfterSplit(
     const { segmentIndex, t } = closest.attachment;
     const from = closest.polyline.points[segmentIndex]!;
     const to = closest.polyline.points[segmentIndex + 1]!;
-    const position = {
-      x: Math.round(from.x + (to.x - from.x) * t),
-      y: Math.round(from.y + (to.y - from.y) * t),
-    };
+    const position = snapPointToDocumentGrid(
+      {
+        x: from.x + (to.x - from.x) * t,
+        y: from.y + (to.y - from.y) * t,
+      },
+      draft.presentation.grid,
+    );
     if (annotation.anchor.kind === "route") {
       annotation.anchor = {
         ...annotation.anchor,
@@ -1660,6 +1704,7 @@ function followAttachedAnnotations(
             resolveSchematicStyleProfile(draft.presentation.styleProfileId),
             local,
             localSide,
+            draft.presentation.grid,
             annotation.sizeScale,
           );
           if (placement) {
@@ -1674,16 +1719,19 @@ function followAttachedAnnotations(
     }
     annotation.anchor = {
       ...annotation.anchor,
-      localOffset: {
-        // Object anchors resolve localOffset directly in world space. Persist
-        // the upright glyph baseline, not its pre-baseline semantic point.
-        x: position.x - newPosition.x,
-        y: position.y - newPosition.y,
-      },
-      fallbackPosition: {
-        x: Math.round(position.x),
-        y: Math.round(position.y),
-      },
+      localOffset: snapPointToDocumentGrid(
+        {
+          // Object anchors resolve localOffset directly in world space. Persist
+          // the upright glyph baseline, not its pre-baseline semantic point.
+          x: position.x - newPosition.x,
+          y: position.y - newPosition.y,
+        },
+        draft.presentation.grid,
+      ),
+      fallbackPosition: snapPointToDocumentGrid(
+        position,
+        draft.presentation.grid,
+      ),
     };
     if (annotation.kind === "instance-label") {
       annotation.rotation = 0;
@@ -1804,6 +1852,35 @@ export function executeTransaction(
         ["edits", editIndex],
         objectIds,
       );
+    const coordinateDiagnostics = gridAlignmentDiagnostics(
+      edit,
+      draft.presentation.grid,
+    );
+    if (coordinateDiagnostics.length > 0) {
+      return rejectAt(
+        "EDIT_PRECONDITION",
+        `Edit coordinates must align to Document grid ${draft.presentation.grid}`,
+        coordinateDiagnostics,
+      );
+    }
+    if (
+      edit.kind === "align_instances" &&
+      edit.coordinate !== undefined &&
+      edit.coordinate % draft.presentation.grid !== 0
+    ) {
+      return rejectAt(
+        "EDIT_PRECONDITION",
+        `Alignment coordinate must align to Document grid ${draft.presentation.grid}`,
+        [
+          {
+            code: "GRID_ALIGNMENT",
+            severity: "error",
+            message: `Document page coordinates must align to grid ${draft.presentation.grid}`,
+            path: ["coordinate"],
+          },
+        ],
+      );
+    }
     switch (edit.kind) {
       case "noop":
       case "undo":
@@ -3082,8 +3159,8 @@ export function executeTransaction(
                 edit.start.x < edit.end.x
                   ? edit.endJunctionId
                   : edit.startJunctionId,
-              localOffset: { x: 6, y: 5 },
-              fallbackPosition: { x: right.x + 6, y: right.y + 5 },
+              localOffset: { x: 10, y: 10 },
+              fallbackPosition: { x: right.x + 10, y: right.y + 10 },
             },
             alignment: "start",
             rotation: 0,

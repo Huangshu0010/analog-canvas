@@ -64,8 +64,8 @@ describe("presentation and layout edits", () => {
         anchor: {
           kind: "object",
           objectId: "M2",
-          localOffset: { x: 0, y: 25 },
-          fallbackPosition: { x: 180, y: 145 },
+          localOffset: { x: 0, y: 20 },
+          fallbackPosition: { x: 180, y: 140 },
         },
         alignment: "middle",
         rotation: 0,
@@ -79,8 +79,8 @@ describe("presentation and layout edits", () => {
         anchor: {
           kind: "object",
           objectId: "M2",
-          localOffset: { x: 10, y: 25 },
-          fallbackPosition: { x: 190, y: 145 },
+          localOffset: { x: 10, y: 20 },
+          fallbackPosition: { x: 190, y: 140 },
         },
         alignment: "middle",
         rotation: 0,
@@ -105,10 +105,10 @@ describe("presentation and layout edits", () => {
     expect(result.ok).toBe(true);
     expect(result.document.instances[1]!.placement!.position.y).toBe(100);
     expect(result.document.annotations[0]!.anchor).toMatchObject({
-      fallbackPosition: { x: 180, y: 125 },
+      fallbackPosition: { x: 180, y: 120 },
     });
     expect(result.document.annotations[1]).toMatchObject({
-      anchor: { fallbackPosition: { x: 190, y: 125 } },
+      anchor: { fallbackPosition: { x: 190, y: 120 } },
     });
     expect(result.document.constraints[0]!.id).toBe("matched-y");
   });

@@ -1,6 +1,6 @@
-import type { Rect } from "@icm/model";
+import type { DerivedRect, GridRect } from "@icm/model";
 
-export interface DerivedBounds {
+export interface CameraRectInput {
   x: number;
   y: number;
   width: number;
@@ -15,7 +15,11 @@ export interface DerivedBounds {
  * coordinates. Rounding outward preserves every visible pixel of the formal
  * scene without letting derived floats enter editor state.
  */
-export function fitCameraToBounds(bounds: DerivedBounds, grid: number): Rect {
+function assertFinitePositiveRect(
+  bounds: CameraRectInput,
+  grid: number,
+  operation: string,
+): void {
   if (
     !Number.isInteger(grid) ||
     grid <= 0 ||
@@ -27,9 +31,37 @@ export function fitCameraToBounds(bounds: DerivedBounds, grid: number): Rect {
     bounds.height <= 0
   ) {
     throw new Error(
-      "Fit View requires finite positive bounds and an integer grid",
+      `${operation} requires finite positive bounds and an integer grid`,
     );
   }
+}
+
+/**
+ * Quantizes an editor viewport to the current Document grid. Camera is
+ * transient, but retaining the same grid contract prevents it from becoming a
+ * covert float path into SVG rendering and pointer conversion.
+ */
+export function normalizeCameraRect(
+  rect: CameraRectInput,
+  grid: number,
+): GridRect {
+  assertFinitePositiveRect(rect, grid, "Camera normalization");
+  const snap = (value: number) => Math.round(value / grid) * grid;
+  return {
+    x: snap(rect.x),
+    y: snap(rect.y),
+    width: Math.max(grid, snap(rect.width)),
+    height: Math.max(grid, snap(rect.height)),
+  };
+}
+
+/**
+ * Converts renderer-derived bounds into the editor camera's grid-domain Rect.
+ * Unlike ordinary camera normalization, fit expands outward so no formal
+ * visual geometry is clipped.
+ */
+export function fitCameraToBounds(bounds: DerivedRect, grid: number): GridRect {
+  assertFinitePositiveRect(bounds, grid, "Fit View");
 
   const x = Math.floor(bounds.x / grid) * grid;
   const y = Math.floor(bounds.y / grid) * grid;

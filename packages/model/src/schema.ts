@@ -3,16 +3,45 @@ import { z } from "zod";
 export const CURRENT_PROJECT_SCHEMA_VERSION = 9;
 
 export const StableIdSchema = z.string().min(1).max(256);
-export const PointSchema = z.strictObject({
+/** A persisted Document page point before its Document-grid relation is known. */
+export const GridPointSchema = z.strictObject({
   x: z.number().int(),
   y: z.number().int(),
 });
-export const RectSchema = z.strictObject({
+/** A grid-domain rectangle. Alignment is validated with a Document grid. */
+export const GridRectSchema = z.strictObject({
   x: z.number().int(),
   y: z.number().int(),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
 });
+/** Read-only renderer/diagnostic geometry. It may be fractional. */
+export const DerivedPointSchema = z.strictObject({
+  x: z.number().finite(),
+  y: z.number().finite(),
+});
+/** Read-only renderer/diagnostic bounds. Empty geometry may have zero extent. */
+export const DerivedRectSchema = z.strictObject({
+  x: z.number().finite(),
+  y: z.number().finite(),
+  width: z.number().finite().nonnegative(),
+  height: z.number().finite().nonnegative(),
+});
+/** Symbol-library artwork coordinates, unrelated to a Document page grid. */
+export const SymbolLocalPointSchema = z.strictObject({
+  x: z.number().finite(),
+  y: z.number().finite(),
+});
+export const SymbolLocalRectSchema = z.strictObject({
+  x: z.number().finite(),
+  y: z.number().finite(),
+  width: z.number().finite().positive(),
+  height: z.number().finite().positive(),
+});
+// Compatibility aliases remain internal migration aids. New code must name
+// Grid* or Derived* explicitly at package boundaries.
+export const PointSchema = GridPointSchema;
+export const RectSchema = GridRectSchema;
 export const RotationSchema = z.union([
   z.literal(0),
   z.literal(90),
@@ -643,6 +672,136 @@ function reportDuplicateIds(
   }
 }
 
+function reportGridPoint(
+  point: GridPoint,
+  grid: number,
+  path: ReadonlyArray<string | number>,
+  context: z.RefinementCtx,
+): void {
+  for (const axis of ["x", "y"] as const) {
+    if (point[axis] % grid === 0) continue;
+    context.addIssue({
+      code: "custom",
+      message: `Document page coordinates must align to grid ${grid}`,
+      path: [...path, axis],
+    });
+  }
+}
+
+function reportVisualAnchorGridAlignment(
+  anchor: VisualAnchor,
+  grid: number,
+  path: ReadonlyArray<string | number>,
+  context: z.RefinementCtx,
+): void {
+  switch (anchor.kind) {
+    case "free":
+      reportGridPoint(anchor.position, grid, [...path, "position"], context);
+      return;
+    case "object":
+      reportGridPoint(
+        anchor.localOffset,
+        grid,
+        [...path, "localOffset"],
+        context,
+      );
+      reportGridPoint(
+        anchor.fallbackPosition,
+        grid,
+        [...path, "fallbackPosition"],
+        context,
+      );
+      return;
+    case "route":
+      // `t` and normalOffset are parametric scalars, not page coordinates.
+      reportGridPoint(
+        anchor.fallbackPosition,
+        grid,
+        [...path, "fallbackPosition"],
+        context,
+      );
+  }
+}
+
+function reportDraftingObjectGridAlignment(
+  object: DraftingObject,
+  grid: number,
+  path: ReadonlyArray<string | number>,
+  context: z.RefinementCtx,
+): void {
+  reportVisualAnchorGridAlignment(
+    object.anchor,
+    grid,
+    [...path, "anchor"],
+    context,
+  );
+  switch (object.kind) {
+    case "text":
+    case "floating-symbol":
+      return;
+    case "arrow":
+      reportVisualAnchorGridAlignment(
+        object.from,
+        grid,
+        [...path, "from"],
+        context,
+      );
+      reportVisualAnchorGridAlignment(
+        object.to,
+        grid,
+        [...path, "to"],
+        context,
+      );
+      object.waypoints?.forEach((point, index) =>
+        reportGridPoint(point, grid, [...path, "waypoints", index], context),
+      );
+      object.curveControls?.forEach((point, index) => {
+        if (point) {
+          reportGridPoint(
+            point,
+            grid,
+            [...path, "curveControls", index],
+            context,
+          );
+        }
+      });
+      return;
+    case "leader":
+      reportVisualAnchorGridAlignment(
+        object.target,
+        grid,
+        [...path, "target"],
+        context,
+      );
+      return;
+    case "callout":
+      reportVisualAnchorGridAlignment(
+        object.target,
+        grid,
+        [...path, "target"],
+        context,
+      );
+      return;
+    case "construction-line":
+      object.points.forEach((point, index) =>
+        reportGridPoint(point, grid, [...path, "points", index], context),
+      );
+      object.curveControls?.forEach((point, index) => {
+        if (point) {
+          reportGridPoint(
+            point,
+            grid,
+            [...path, "curveControls", index],
+            context,
+          );
+        }
+      });
+      return;
+    case "rectangle":
+      reportGridPoint(object.center, grid, [...path, "center"], context);
+  }
+}
+
 export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
   (document, context) => {
     const objectCollections = [
@@ -721,6 +880,51 @@ export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
       }
     }
     reportDuplicateIds(objectCollections, "objects", context);
+    const grid = document.presentation.grid;
+    document.instances.forEach((instance, index) => {
+      if (instance.placement) {
+        reportGridPoint(
+          instance.placement.position,
+          grid,
+          ["instances", index, "placement", "position"],
+          context,
+        );
+      }
+    });
+    document.routes.forEach((route, routeIndex) => {
+      route.waypoints.forEach((point, pointIndex) =>
+        reportGridPoint(
+          point,
+          grid,
+          ["routes", routeIndex, "waypoints", pointIndex],
+          context,
+        ),
+      );
+    });
+    document.junctions.forEach((junction, index) =>
+      reportGridPoint(
+        junction.position,
+        grid,
+        ["junctions", index, "position"],
+        context,
+      ),
+    );
+    document.annotations.forEach((annotation, index) =>
+      reportVisualAnchorGridAlignment(
+        annotation.anchor,
+        grid,
+        ["annotations", index, "anchor"],
+        context,
+      ),
+    );
+    document.drafting?.objects.forEach((object, index) =>
+      reportDraftingObjectGridAlignment(
+        object,
+        grid,
+        ["drafting", "objects", index],
+        context,
+      ),
+    );
 
     const instanceIds = new Set(
       document.instances.map((instance) => instance.id),
@@ -982,8 +1186,16 @@ export const SchematicDocumentJsonSchema = z.toJSONSchema(
 );
 
 export type StableId = z.infer<typeof StableIdSchema>;
-export type Point = z.infer<typeof PointSchema>;
-export type Rect = z.infer<typeof RectSchema>;
+export type GridPoint = z.infer<typeof GridPointSchema>;
+export type GridRect = z.infer<typeof GridRectSchema>;
+export type DerivedPoint = z.infer<typeof DerivedPointSchema>;
+export type DerivedRect = z.infer<typeof DerivedRectSchema>;
+export type SymbolLocalPoint = z.infer<typeof SymbolLocalPointSchema>;
+export type SymbolLocalRect = z.infer<typeof SymbolLocalRectSchema>;
+/** @deprecated Name the coordinate domain as GridPoint or DerivedPoint. */
+export type Point = GridPoint;
+/** @deprecated Name the coordinate domain as GridRect or DerivedRect. */
+export type Rect = GridRect;
 export type Rotation = z.infer<typeof RotationSchema>;
 export type Mirror = z.infer<typeof MirrorSchema>;
 export type Orientation = z.infer<typeof OrientationSchema>;

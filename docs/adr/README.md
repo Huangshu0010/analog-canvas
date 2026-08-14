@@ -34,6 +34,8 @@ The current Agent API reliability decision is
 The Agent-side local MCP adapter decision (ADR 0005/0016 keep their
 domain-independence judgments) is
 [`0020-agent-side-mcp-adapter.md`](0020-agent-side-mcp-adapter.md).
+The coordinate-domain and current-only grid-normalization decision is
+[`0021-coordinate-domains-and-grid-normalization.md`](0021-coordinate-domains-and-grid-normalization.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

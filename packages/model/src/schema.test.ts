@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { createEmptyProject } from "./factories.js";
-import { CircuitProjectJsonSchema, CircuitProjectSchema } from "./schema.js";
+import {
+  CircuitProjectJsonSchema,
+  CircuitProjectSchema,
+  SchematicDocumentSchema,
+} from "./schema.js";
 
 describe("CircuitProject schema", () => {
   it("accepts a minimal Project with one Document", () => {
@@ -15,6 +19,29 @@ describe("CircuitProject schema", () => {
 
     expect(project.documents[0]!.presentation.styleProfileId).toBe(
       "razavi-textbook-v1",
+    );
+  });
+
+  it("rejects a persisted page point that is not aligned to its Document grid", () => {
+    const document = createEmptyProject("project-grid", "Grid").documents[0]!;
+    document.drafting!.objects.push({
+      id: "draft-off-grid",
+      kind: "text",
+      locked: false,
+      zIndex: 0,
+      anchor: { kind: "free", position: { x: 15, y: 20 } },
+      content: { runs: [{ kind: "text", value: "off grid" }] },
+      alignment: "start",
+      rotation: 0,
+    });
+
+    const result = SchematicDocumentSchema.safeParse(document);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues).toContainEqual(
+      expect.objectContaining({
+        path: ["drafting", "objects", 0, "anchor", "position", "x"],
+      }),
     );
   });
 

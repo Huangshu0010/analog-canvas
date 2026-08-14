@@ -33,6 +33,28 @@ function addInstance(id: string, symbolId: string, x: number) {
 }
 
 describe("semantic authoring", () => {
+  it("rejects an integer typed-edit point that is not aligned to the Document grid", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    const result = executeTransaction(
+      document,
+      transaction([addInstance("R1", "resistor", 105)]),
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+    });
+    if (result.ok) return;
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "GRID_ALIGNMENT",
+        path: ["edits", 0, "instance", "placement", "position", "x"],
+      }),
+    );
+    expect(result.document).toBe(document);
+  });
+
   it("adds devices and connects two previously unconnected pins atomically", () => {
     const document = createEmptyDocument("document-main", "Main");
     const result = executeTransaction(

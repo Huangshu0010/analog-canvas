@@ -74,6 +74,17 @@ another active interaction. Undo/Redo may mutate the Document and therefore
 cancel a snapshot-dependent active interaction. Shortcut key assignments are
 independent of this state policy and remain unchanged.
 
+## Coordinate normalization
+
+Pointer and drag previews may retain finite float positions. Before an editor
+gesture creates or changes a Project point, it explicitly snaps to the active
+Document grid; preview or SVG geometry is never committed directly. Camera is
+also grid-aligned: Fit expands derived visual bounds outward to the grid, and
+zoom, pan, focus, Document activation, replacement, and Agent semantic focus
+all pass through the same camera normalizer. The viewport remains transient,
+but it cannot carry derived float bounds into the renderer's integer grid
+camera contract.
+
 Escape cancels the active preview without mutation. A committed gesture is one
 atomic transaction. Hover, geometric crossing, selection, and preview never
 change connectivity. A wire endpoint or explicit segment tap is required to

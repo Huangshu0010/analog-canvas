@@ -1,8 +1,13 @@
 import { transformPoint } from "@icm/model";
-import type { Point, Rect, SchematicDocument } from "@icm/model";
+import type {
+  DerivedRect,
+  SymbolLocalPoint,
+  SymbolLocalRect,
+  SchematicDocument,
+} from "@icm/model";
 import type { ResolvedSymbol } from "@icm/symbols";
 
-function viewBoxCorners(viewBox: Rect): Point[] {
+function viewBoxCorners(viewBox: SymbolLocalRect): SymbolLocalPoint[] {
   return [
     { x: viewBox.x, y: viewBox.y },
     { x: viewBox.x + viewBox.width, y: viewBox.y },
@@ -17,14 +22,16 @@ function viewBoxCorners(viewBox: Rect): Point[] {
  * the safe fallback. Other primitive types are bounded from their painted
  * points plus visible electrical pins.
  */
-export function visibleSymbolLocalBounds(resolved: ResolvedSymbol): Rect {
+export function visibleSymbolLocalBounds(
+  resolved: ResolvedSymbol,
+): SymbolLocalRect {
   const hiddenParts = new Set(resolved.variant?.hiddenPrimitiveParts ?? []);
   const hiddenPins = new Set(resolved.variant?.hiddenPinNames ?? []);
   const primitives = [
     ...resolved.definition.primitives,
     ...(resolved.variant?.additionalPrimitives ?? []),
   ].filter((primitive) => !primitive.part || !hiddenParts.has(primitive.part));
-  const points: Point[] = [];
+  const points: SymbolLocalPoint[] = [];
 
   for (const primitive of primitives) {
     switch (primitive.kind) {
@@ -70,7 +77,7 @@ export function visibleSymbolLocalBounds(resolved: ResolvedSymbol): Rect {
 export function instanceVisibleHitBox(
   instance: SchematicDocument["instances"][number],
   resolved: ResolvedSymbol,
-): Rect | null {
+): DerivedRect | null {
   if (!instance.placement) return null;
   const localBounds = visibleSymbolLocalBounds(resolved);
   const corners = viewBoxCorners(localBounds).map((point) =>

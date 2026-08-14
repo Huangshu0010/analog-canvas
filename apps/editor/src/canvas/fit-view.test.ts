@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fitCameraToBounds } from "./fit-view";
+import { fitCameraToBounds, normalizeCameraRect } from "./fit-view";
 
 describe("fitCameraToBounds", () => {
   it("rounds fractional visual bounds outward to the editor grid", () => {
@@ -13,5 +13,14 @@ describe("fitCameraToBounds", () => {
     expect(
       fitCameraToBounds({ x: -40, y: 20, width: 960, height: 640 }, 10),
     ).toEqual({ x: -40, y: 20, width: 960, height: 640 });
+  });
+
+  it("normalizes zoom, pan, and focus camera updates onto the grid", () => {
+    expect(
+      normalizeCameraRect(
+        { x: 97.55, y: -43.2, width: 61.3, height: 16.7 },
+        10,
+      ),
+    ).toEqual({ x: 100, y: -40, width: 60, height: 20 });
   });
 });

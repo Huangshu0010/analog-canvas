@@ -90,8 +90,8 @@ describe("routing Edit Engine", () => {
       anchor: {
         kind: "object",
         objectId: "vdd-end",
-        localOffset: { x: 6, y: 5 },
-        fallbackPosition: { x: 106, y: 5 },
+        localOffset: { x: 10, y: 10 },
+        fallbackPosition: { x: 110, y: 10 },
       },
       alignment: "start",
       rotation: 0,
@@ -432,7 +432,7 @@ describe("routing Edit Engine", () => {
         normalOffset: -8,
         direction: "forward",
         orientation: "horizontal",
-        fallbackPosition: { x: 300, y: 292 },
+        fallbackPosition: { x: 300, y: 290 },
       },
       alignment: "middle",
       rotation: 0,
@@ -464,7 +464,7 @@ describe("routing Edit Engine", () => {
         (annotation) => annotation.id === "net-label-route-h",
       ),
     ).toMatchObject({
-      anchor: { fallbackPosition: { x: 300, y: 332 } },
+      anchor: { fallbackPosition: { x: 300, y: 330 } },
       rotation: 0,
     });
     expect(reshaped.diff.changedObjectIds).toEqual(
@@ -579,8 +579,8 @@ describe("routing Edit Engine", () => {
       anchor: {
         kind: "object",
         objectId: "A",
-        localOffset: { x: -41, y: -20 },
-        fallbackPosition: { x: 99, y: 280 },
+        localOffset: { x: -40, y: -20 },
+        fallbackPosition: { x: 100, y: 280 },
       },
       alignment: "middle",
       rotation: 0,
@@ -634,8 +634,8 @@ describe("routing Edit Engine", () => {
       ),
     ).toMatchObject({
       anchor: {
-        localOffset: { x: -41, y: -20 },
-        fallbackPosition: { x: 119, y: 300 },
+        localOffset: { x: -40, y: -20 },
+        fallbackPosition: { x: 120, y: 300 },
       },
       alignment: "middle",
       rotation: 0,
@@ -666,8 +666,8 @@ describe("routing Edit Engine", () => {
       ),
     ).toMatchObject({
       anchor: {
-        localOffset: { x: 20, y: -41 },
-        fallbackPosition: { x: 180, y: 279 },
+        localOffset: { x: 20, y: -40 },
+        fallbackPosition: { x: 180, y: 280 },
       },
       alignment: "start",
       rotation: 0,
@@ -699,8 +699,8 @@ describe("routing Edit Engine", () => {
       ),
     ).toMatchObject({
       anchor: {
-        localOffset: { x: 20, y: 36 },
-        fallbackPosition: { x: 180, y: 356 },
+        localOffset: { x: 20, y: 40 },
+        fallbackPosition: { x: 180, y: 360 },
       },
       alignment: "start",
       rotation: 0,
@@ -747,26 +747,26 @@ describe("routing Edit Engine", () => {
       const expected = [
         {
           rotation: 90 as const,
-          position: { x: 92, y: 132 },
-          offset: { x: -8, y: 32 },
+          position: { x: 90, y: 130 },
+          offset: { x: -10, y: 30 },
           alignment: "middle" as const,
         },
         {
           rotation: 180 as const,
-          position: { x: 84, y: 92 },
-          offset: { x: -16, y: -8 },
+          position: { x: 90, y: 90 },
+          offset: { x: -10, y: -10 },
           alignment: "end" as const,
         },
         {
           rotation: 270 as const,
-          position: { x: 108, y: 79 },
-          offset: { x: 8, y: -21 },
+          position: { x: 110, y: 80 },
+          offset: { x: 10, y: -20 },
           alignment: "middle" as const,
         },
         {
           rotation: 0 as const,
-          position: { x: 121, y: 108 },
-          offset: { x: 21, y: 8 },
+          position: { x: 120, y: 110 },
+          offset: { x: 20, y: 10 },
           alignment: "start" as const,
         },
       ];
@@ -815,8 +815,8 @@ describe("routing Edit Engine", () => {
         anchor: {
           kind: "object",
           objectId: "A",
-          localOffset: { x: 20, y: -35 },
-          fallbackPosition: { x: 185, y: 257 },
+          localOffset: { x: 20, y: -40 },
+          fallbackPosition: { x: 190, y: 260 },
         },
         alignment: "middle",
         rotation: 0,
@@ -856,8 +856,8 @@ describe("routing Edit Engine", () => {
         expect.objectContaining({
           id: "label-a",
           anchor: expect.objectContaining({
-            localOffset: { x: 20, y: -35 },
-            fallbackPosition: { x: 205, y: 287 },
+            localOffset: { x: 20, y: -40 },
+            fallbackPosition: { x: 210, y: 290 },
           }),
           alignment: "middle",
         }),
@@ -888,8 +888,8 @@ describe("routing Edit Engine", () => {
       ),
     ).toMatchObject({
       anchor: {
-        localOffset: { x: 20, y: -35 },
-        fallbackPosition: { x: 255, y: 307 },
+        localOffset: { x: 20, y: -40 },
+        fallbackPosition: { x: 260, y: 310 },
       },
       alignment: "middle",
     });
