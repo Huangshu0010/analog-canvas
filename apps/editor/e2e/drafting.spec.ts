@@ -225,6 +225,31 @@ test("switching creation tools discards the incompatible draft session", async (
   await expect(page.getByTestId("active-tool")).toHaveText("pointer");
 });
 
+test("repeating A or K preserves the current drafting session", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+
+  await page.keyboard.press("a");
+  await canvas.click({ position: { x: 220, y: 220 } });
+  await canvas.hover({ position: { x: 420, y: 260 } });
+  await expect(page.getByTestId("drafting-create-preview")).toBeVisible();
+  await page.keyboard.press("a");
+  await expect(page.getByTestId("drafting-create-preview")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.keyboard.press("k");
+  await canvas.click({ position: { x: 220, y: 300 } });
+  await canvas.hover({ position: { x: 420, y: 340 } });
+  await expect(page.getByTestId("drafting-create-preview")).toBeVisible();
+  await page.keyboard.press("k");
+  await expect(page.getByTestId("drafting-create-preview")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByTestId("revision")).toHaveText("0");
+});
+
 // Moving an existing drafting object commits exactly one transaction, so one
 // Ctrl+Z restores its original persisted anchor.
 test("existing text drag commits once and undoes atomically", async ({

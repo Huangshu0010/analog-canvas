@@ -6625,3 +6625,18 @@ contracts (WP-R1)`.
   browser E2E tests passed; `git diff --check` passed.
 - Commit status: committed on `codex/agent-transport-watchdog` as `5d2d640`
   (`fix(mos): restore overridable supply bulk defaults`).
+
+## 2026-08-14 - Unify transient editor interaction state
+
+- Target: remove parallel placement modes behind repeated-C/I crashes and
+  restore VDD Rail through the ordinary insertion flow without persisting it as
+  a component instance or changing shortcut assignments.
+- Changed areas: exclusive editor interaction reducer and shortcut arbitration;
+  App cancellation/mutation boundaries; virtual VDD preview catalog entry;
+  atomic VDD visual deletion; focused unit and browser regressions; accepted
+  editor interaction specification.
+- Validation: focused interaction and VDD suites, 9 focused browser
+  regressions, `pnpm verify:branch` (102 unit-test files / 557 tests, all
+  workspace builds and production smoke), and `git diff --check` passed.
+- Commit status: ready to commit on `codex/interaction-state-machine` as
+  `refactor(editor): unify transient interaction state`.

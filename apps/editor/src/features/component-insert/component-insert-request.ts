@@ -1,4 +1,5 @@
-export interface ComponentInsertRequest {
+export interface SymbolInsertRequest {
+  kind: "symbol";
   symbolId: string;
   symbolName: string;
   properties: Record<string, string>;
@@ -6,3 +7,11 @@ export interface ComponentInsertRequest {
   showReference: boolean;
   referenceText: string | null;
 }
+
+export interface VddRailInsertRequest {
+  kind: "vdd-rail";
+  symbolId: "vdd";
+  symbolName: "VDD Rail";
+}
+
+export type ComponentInsertRequest = SymbolInsertRequest | VddRailInsertRequest;

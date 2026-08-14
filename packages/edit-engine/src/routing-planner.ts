@@ -382,6 +382,21 @@ export function proposeVisualRouteDeletion(
   const sortedJunctionIds = [...junctionsToRemove].sort((a, b) =>
     a.localeCompare(b, "en"),
   );
+  const removedPowerLabelIds = document.annotations
+    .filter(
+      (annotation) =>
+        annotation.kind === "power-label" &&
+        annotation.anchor.kind === "object" &&
+        sortedJunctionIds.includes(annotation.anchor.objectId) &&
+        document.routes.some(
+          (route) =>
+            routesToRemove.has(route.id) &&
+            route.presentation === "power-rail" &&
+            route.netId === annotation.netId,
+        ),
+    )
+    .map((annotation) => annotation.id)
+    .sort((a, b) => a.localeCompare(b, "en"));
   // `cut_connection` removes a junction that becomes orphaned. Only a selected
   // junction already detached before this transaction needs an explicit edit;
   // otherwise a second remove would reject the transaction.
@@ -429,6 +444,10 @@ export function proposeVisualRouteDeletion(
     routeIds: sortedRouteIds,
     junctionIds: sortedJunctionIds,
     edits: [
+      ...removedPowerLabelIds.map((annotationId): SchematicEdit => ({
+        kind: "remove_schematic_annotation",
+        annotationId,
+      })),
       ...sortedRouteIds.map((routeId): SchematicEdit => ({
         kind: "cut_connection",
         routeId,

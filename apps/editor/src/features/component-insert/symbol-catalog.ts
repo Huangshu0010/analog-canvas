@@ -1,6 +1,8 @@
 import { razaviProductSymbols } from "@icm/symbols";
 import type { SymbolDefinition } from "@icm/symbols";
 
+import { vddRailPreviewSymbol } from "./vdd-rail-preview-symbol";
+
 const CATEGORY_ORDER = [
   "Transistors",
   "Analog Blocks",
@@ -35,7 +37,7 @@ export function symbolCategory(symbolId: string): string {
 }
 
 export function paletteSymbols(_styleProfileId: string): SymbolDefinition[] {
-  return [...razaviProductSymbols];
+  return [vddRailPreviewSymbol, ...razaviProductSymbols];
 }
 
 function searchableText(symbol: SymbolDefinition): string {

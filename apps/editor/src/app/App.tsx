@@ -240,11 +240,6 @@ interface PanPreview {
   pointerId: number;
 }
 
-interface CopyPlacement {
-  clipboard: SchematicClipboard;
-  anchor: Point;
-}
-
 interface RouteStretchPreview {
   routeId: string;
   segmentIndex: number;
@@ -465,13 +460,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
   });
   const [selectionOpen, setSelectionOpen] = useState(false);
-  const [componentPreviewPoint, setComponentPreviewPoint] =
-    useState<Point | null>(null);
-  const [componentPlacementRotation, setComponentPlacementRotation] = useState<
-    0 | 90 | 180 | 270
-  >(0);
-  const [vddRailStart, setVddRailStart] = useState<Point | null>(null);
-  const [vddRailMode, setVddRailMode] = useState(false);
   const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -594,8 +582,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     draftingHover,
     draftingWaypoints,
     draftingSnapPoint,
+    componentPlacementRotation,
+    componentPreviewPoint,
+    vddRailMode,
+    vddRailStart,
+    copyPlacement,
     setTool,
     beginComponentPlacement,
+    setComponentPreviewPoint,
+    rotateComponentPlacement,
+    beginVddRailPlacement: beginVddRailInteraction,
+    setVddRailStart,
+    setVddRailPreviewPoint,
+    completeVddRailPlacement,
+    beginCopyPlacement: beginCopyPlacementInteraction,
+    setCopyPreviewPoint,
     setWireSource,
     setWirePreviewPoint,
     setWireWaypoints,
@@ -606,7 +607,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setDraftingSnapPoint,
     clearDraftingCreate,
     cancelInteraction,
-  } = useInteractionState();
+  } = useInteractionState<SchematicClipboard>();
   const [draftingInspectorSegment, setDraftingInspectorSegment] = useState<{
     objectId: string;
     index: number;
@@ -658,10 +659,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const instanceCounter = useRef(0);
   const copyCounter = useRef(0);
-  const [copyPlacement, setCopyPlacement] = useState<CopyPlacement | null>(
-    null,
-  );
-  const [copyPreviewPoint, setCopyPreviewPoint] = useState<Point | null>(null);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const selectionShelfRef = useRef<HTMLButtonElement>(null);
@@ -701,17 +698,17 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     [renderedDocument, resolver, viewBox],
   );
   const copyPreviewScene = useMemo(() => {
-    if (!copyPlacement || !copyPreviewPoint) return null;
+    if (!copyPlacement || !copyPlacement.previewPoint) return null;
     const offset = {
-      x: copyPreviewPoint.x - copyPlacement.anchor.x,
-      y: copyPreviewPoint.y - copyPlacement.anchor.y,
+      x: copyPlacement.previewPoint.x - copyPlacement.anchor.x,
+      y: copyPlacement.previewPoint.y - copyPlacement.anchor.y,
     };
     return buildSvgScene(
       clipboardPreviewDocument(document, copyPlacement.clipboard, offset),
       resolver,
       { bounds: viewBox },
     );
-  }, [copyPlacement, copyPreviewPoint, document, resolver, viewBox]);
+  }, [copyPlacement, document, resolver, viewBox]);
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
@@ -1230,13 +1227,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function resetInteractionState(): void {
-    clearTransientCanvasState();
+    cancelAllTransientInteraction();
     resetSelection();
     setSelectedRouteSegmentIndex(null);
     setTextEditing(null);
     setSelectedEndpoint(null);
+  }
+
+  function cancelAllTransientInteraction(): void {
+    canvasDragSessionRef.current?.cancel();
+    clearTransientCanvasState();
+    paintSnapGuides([]);
     cancelInteraction();
     setBulkDrawInstanceId(null);
+    setBoxPreview(null);
   }
 
   function selectEndpoint(candidate: WireSource): void {
@@ -1291,12 +1295,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     setDocumentStack([...hierarchyPath]);
     setViewBox(documentViewBoxes.current.get(opened.id) ?? DEFAULT_VIEWBOX);
-    clearTransientCanvasState();
-    resetSelection();
-    setSelectedRouteSegmentIndex(null);
-    setTextEditing(null);
-    setSelectedEndpoint(null);
-    cancelInteraction();
+    resetInteractionState();
 
     const focusPoint = (point: Point) =>
       setViewBox({
@@ -1733,16 +1732,27 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function transact(
     edits: SchematicEdit[],
-    options: { completesWireSession?: boolean } = {},
+    options: {
+      completesWireSession?: boolean;
+      preserveInteraction?: boolean;
+    } = {},
   ): EditTransactionResult {
     const result = transactDocument(edits);
     applyResult(result);
-    if (result.ok && wireSource && !options.completesWireSession) {
-      clearTransientCanvasState();
-      cancelInteraction();
-      setBulkDrawInstanceId(null);
+    const preservesCurrentInteraction =
+      options.preserveInteraction ||
+      (interactionState.kind === "wire" && options.completesWireSession);
+    if (
+      result.ok &&
+      interactionState.kind !== "idle" &&
+      !preservesCurrentInteraction
+    ) {
+      const cancelledKind = interactionState.kind;
+      cancelAllTransientInteraction();
       setStatus(
-        `Committed revision ${result.revision}; Wire cancelled because the circuit changed`,
+        cancelledKind === "wire"
+          ? `Committed revision ${result.revision}; Wire cancelled because the circuit changed`
+          : `Committed revision ${result.revision}; active tool cancelled because the circuit changed`,
       );
     }
     return result;
@@ -1785,13 +1795,19 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function activateTool(nextTool: EditorTool): void {
+    const alreadyActive =
+      (nextTool === "wire" && interactionState.kind === "wire") ||
+      (interactionState.kind === "drawing" &&
+        interactionState.tool === nextTool) ||
+      (nextTool === "pointer" && interactionState.kind === "idle");
+    if (alreadyActive) return;
+    canvasDragSessionRef.current?.cancel();
+    clearTransientCanvasState();
     paintSnapGuides([]);
-    setVddRailMode(false);
-    setVddRailStart(null);
-    setComponentPreviewPoint(null);
     setTool(nextTool);
     if (nextTool !== "pointer") {
-      replaceSelectionKind("route", []);
+      resetSelection();
+      setSelectedEndpoint(null);
       setSelectedRouteSegmentIndex(null);
     }
     setStatus(
@@ -1808,12 +1824,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function openInsertComponentDialog(): void {
-    clearTransientCanvasState();
-    cancelInteraction();
-    setComponentPreviewPoint(null);
-    setComponentPlacementRotation(0);
-    setVddRailStart(null);
-    setVddRailMode(false);
+    cancelAllTransientInteraction();
     setInsertDialogOpen(true);
     setStatus("Choose a component to place");
   }
@@ -1821,7 +1832,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function beginInsertedComponentPlacement(
     request: ComponentInsertRequest,
   ): void {
-    const { symbolId, symbolName, initialRotation } = request;
+    const { symbolId, symbolName } = request;
     const nextRecent = [
       symbolId,
       ...recentSymbolIds.filter((candidate) => candidate !== symbolId),
@@ -1837,35 +1848,26 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       // convenience-only and must never block component placement.
     }
     setInsertDialogOpen(false);
-    setComponentPlacementRotation(initialRotation);
-    setComponentPreviewPoint(null);
-    setVddRailStart(null);
-    setVddRailMode(false);
+    canvasDragSessionRef.current?.cancel();
+    clearTransientCanvasState();
+    paintSnapGuides([]);
+    if (request.kind === "vdd-rail") {
+      beginVddRailInteraction();
+      setStatus("Place VDD Rail: click the first end · Esc cancels");
+      return;
+    }
     beginComponentPlacement(request);
     setStatus(`Place ${symbolName} on the canvas · R rotates · Esc cancels`);
   }
 
   function cancelComponentInsert(): void {
     setInsertDialogOpen(false);
-    setVddRailStart(null);
-    setVddRailMode(false);
+    cancelAllTransientInteraction();
     setStatus("Component insertion cancelled");
   }
 
-  function beginVddRailPlacement(): void {
-    clearTransientCanvasState();
-    cancelInteraction();
-    setInsertDialogOpen(false);
-    setComponentPreviewPoint(null);
-    setVddRailStart(null);
-    setVddRailMode(true);
-    setStatus("VDD rail: click the first end (Esc cancels)");
-  }
-
   function rotatePendingComponent(delta: 90 | -90): void {
-    setComponentPlacementRotation(
-      (current) => ((current + delta + 360) % 360) as 0 | 90 | 180 | 270,
-    );
+    rotateComponentPlacement(delta);
     setStatus(`Component rotation ${delta > 0 ? "+90°" : "−90°"}`);
   }
 
@@ -3041,23 +3043,26 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       projectedDocument,
       projectedDocument.instances,
     );
-    const result = transact([
-      {
-        kind: "add_instance",
-        instance,
-      },
-      ...contact.edits,
-      ...standalonePower.edits,
-      ...bulkEdits,
-      ...(instanceLabel
-        ? [
-            {
-              kind: "upsert_schematic_annotation" as const,
-              annotation: instanceLabel,
-            },
-          ]
-        : []),
-    ]);
+    const result = transact(
+      [
+        {
+          kind: "add_instance",
+          instance,
+        },
+        ...contact.edits,
+        ...standalonePower.edits,
+        ...bulkEdits,
+        ...(instanceLabel
+          ? [
+              {
+                kind: "upsert_schematic_annotation" as const,
+                annotation: instanceLabel,
+              },
+            ]
+          : []),
+      ],
+      { preserveInteraction: true },
+    );
     if (result.ok) {
       selectOnly("instance", [id]);
       setComponentPreviewPoint(position);
@@ -3074,7 +3079,22 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function placeVddRail(start: Point, end: Point): void {
     instanceCounter.current += 1;
     let instanceId = `VDD${instanceCounter.current}`;
-    while (document.instances.some((instance) => instance.id === instanceId)) {
+    const vddRailIdsExist = (candidate: string): boolean => {
+      const key = candidate.toLowerCase();
+      return (
+        document.instances.some((instance) => instance.id === candidate) ||
+        document.routes.some((route) => route.id === `route-${key}-rail`) ||
+        document.junctions.some(
+          (junction) =>
+            junction.id === `junction-${key}-start` ||
+            junction.id === `junction-${key}-end`,
+        ) ||
+        document.annotations.some(
+          (annotation) => annotation.id === `label-${candidate}`,
+        )
+      );
+    };
+    while (vddRailIdsExist(instanceId)) {
       instanceCounter.current += 1;
       instanceId = `VDD${instanceCounter.current}`;
     }
@@ -3100,18 +3120,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     );
     if (!result.ok) return;
     selectOnly("route", [routeId]);
-    setComponentPreviewPoint(null);
-    setVddRailStart(null);
-    setStatus(
-      `Added VDD rail ${instanceId} · click to place another · Esc exits`,
-    );
+    completeVddRailPlacement();
+    setStatus(`Added VDD rail ${instanceId}`);
   }
 
   function commitPendingPlacementAt(point: Point): void {
     if (vddRailMode) {
       if (!vddRailStart) {
         setVddRailStart(point);
-        setComponentPreviewPoint(point);
+        setVddRailPreviewPoint(point);
         setStatus("VDD rail: click the right end (Esc cancels)");
       } else if (point.x === vddRailStart.x) {
         setStatus("VDD rail needs a non-zero horizontal length");
@@ -4703,7 +4720,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       event.currentTarget,
     );
     if (vddRailMode) {
-      setComponentPreviewPoint(
+      setVddRailPreviewPoint(
         vddRailStart
           ? {
               x: snapCoordinate(point.x, document.presentation.grid),
@@ -5319,6 +5336,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function beginCopyPlacement(): void {
+    if (interactionState.kind === "copy-placement") {
+      setStatus("Copy placement is already active · Esc cancels");
+      return;
+    }
+    if (interactionState.kind !== "idle") {
+      setStatus("Finish or cancel the active tool before copying");
+      return;
+    }
     const copied = copySelection(document, selectedIds);
     if (!copied) {
       setStatus("Select at least one component to copy");
@@ -5329,9 +5354,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       setStatus("Selected components have no placeable origin");
       return;
     }
-    cancelInteraction();
-    setCopyPlacement({ clipboard: copied, anchor });
-    setCopyPreviewPoint(null);
+    canvasDragSessionRef.current?.cancel();
+    clearTransientCanvasState();
+    paintSnapGuides([]);
+    beginCopyPlacementInteraction(copied, anchor);
     setStatus(
       `Place copy of ${copied.instances.length} components · Esc cancels`,
     );
@@ -5349,7 +5375,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       },
       copyCounter.current,
     );
-    const result = transact(proposal.edits);
+    const result = transact(proposal.edits, { preserveInteraction: true });
     if (result.ok) {
       selectOnly("instance", proposal.instanceIds);
       setCopyPreviewPoint(point);
@@ -5357,13 +5383,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         `Copied ${proposal.instanceIds.length} components · click to place another · Esc exits`,
       );
     }
-  }
-
-  function cancelCopyPlacement(): void {
-    if (!copyPlacement) return;
-    setCopyPlacement(null);
-    setCopyPreviewPoint(null);
-    setStatus("Copy placement cancelled");
   }
 
   useEffect(() => {
@@ -5431,7 +5450,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       }
       const shortcut = resolveEditorShortcut(event, {
         isTyping: isTypingTarget(event.target),
-        componentPlacementActive: interactionState.kind === "placing-component",
+        interactionMode: interactionState.kind,
         hasRoutedMarkerSelection: Boolean(
           selectedAnnotation && isRoutedMarker(selectedAnnotation),
         ),
@@ -5440,7 +5459,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         hasInspectableSelection,
         hasRouteSelection: Boolean(selectedRoute),
         hasHighlightableNet: selectedHighlightNetId !== null,
-        wireSessionActive: interactionState.kind === "wire",
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
         draftingReadyToFinish:
           (tool === "arrow" ||
@@ -5449,8 +5467,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           draftingSource !== null,
         helpOpen,
         canvasDragActive: canvasDragSessionRef.current !== null,
-        interactionActive:
-          interactionState.kind !== "idle" || copyPlacement !== null,
         hasClearableDraftingSelection:
           selectedDrafting?.kind === "arrow" ||
           selectedDrafting?.kind === "construction-line" ||
@@ -5577,24 +5593,22 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           canvasDragSessionRef.current?.cancel();
           setStatus("Cancelled canvas drag");
           return;
-        case "cancel-interaction":
-          if (copyPlacement) {
-            cancelCopyPlacement();
-            return;
-          }
-          clearTransientCanvasState();
-          cancelInteraction();
-          setComponentPreviewPoint(null);
-          setComponentPlacementRotation(0);
-          setVddRailStart(null);
-          setVddRailMode(false);
-          setBoxPreview(null);
+        case "cancel-interaction": {
+          const cancelledKind = interactionState.kind;
+          cancelAllTransientInteraction();
           setStatus(
-            interactionState.kind === "drawing"
-              ? "Drawing cancelled"
-              : "Cancelled active tool",
+            cancelledKind === "copy-placement"
+              ? "Copy placement cancelled"
+              : cancelledKind === "placing-vdd-rail"
+                ? "VDD rail cancelled"
+                : cancelledKind === "placing-component"
+                  ? "Component placement cancelled"
+                  : cancelledKind === "drawing"
+                    ? "Drawing cancelled"
+                    : "Cancelled active tool",
           );
           return;
+        }
         case "clear-drafting-selection":
           replaceSelectionKind("drafting", []);
           setStatus("Cleared drawing selection");
@@ -5607,6 +5621,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         case "remove-wire-waypoint":
           setWireWaypoints(wireWaypoints.slice(0, -1));
           setStatus("Removed last wire bend");
+          return;
+        case "blocked-interaction-command":
+          setStatus(
+            `${shortcut.command} is unavailable while an active tool owns the canvas · Esc cancels`,
+          );
           return;
         case "delete-selection":
           deleteSelection();
@@ -6209,7 +6228,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           open={libraryPanelOpen}
           onOpenInsert={openInsertComponentDialog}
           onQuickPlace={beginInsertedComponentPlacement}
-          onPlaceVddRail={beginVddRailPlacement}
         />
         <aside
           className={selectionOpen ? "selection-dock open" : "selection-dock"}
@@ -7035,8 +7053,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             onPointerDown={beginCanvasGesture}
             onPointerMove={continueCanvasGesture}
             onPointerLeave={() => {
-              if (pendingSymbolId || vddRailMode)
-                setComponentPreviewPoint(null);
+              if (pendingSymbolId) setComponentPreviewPoint(null);
+              if (vddRailMode) setVddRailPreviewPoint(null);
               if (copyPlacement) setCopyPreviewPoint(null);
             }}
             onPointerUp={finishCanvasGesture}
@@ -7286,6 +7304,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     x2={componentPreviewPoint.x}
                     y2={vddRailStart.y}
                     strokeWidth={styleProfile.strokes.powerRail}
+                  />
+                ) : componentPreviewPoint ? (
+                  <ComponentPlacementPreview
+                    styleProfileId={document.presentation.styleProfileId}
+                    symbolId="vdd"
+                    position={componentPreviewPoint}
+                    rotation={0}
                   />
                 ) : null
               ) : pendingSymbolId && componentPreviewPoint ? (
