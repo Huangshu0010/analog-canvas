@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -61,4 +61,13 @@ chore(integration): rebase flightline guidance on coordinate domains
 
 ## Outcome
 
-Pending.
+Rebased the imported-flightline guidance change on the coordinate-domain/grid
+normalization work. The resolved editor keeps both policies, while the
+transaction layer retains both coordinate validation and guidance dismissal.
+The Linux MCP package hash was recalculated from the required release check.
+
+Focused engine/SPICE tests (24), isolated flightline browser tests (3),
+typecheck, workspace build, formatting, distribution validation, and local
+release verification passed. The full local `ci:check` reached browser tests
+but had one unrelated pre-existing download timeout; all six required remote
+checks passed on PR #54 before merge.
