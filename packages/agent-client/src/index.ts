@@ -10,6 +10,12 @@ export {
   type ConnectionSnapshot,
 } from "./connection-state.js";
 export {
+  CONNECTOR_FILE_VERSION,
+  ConnectorStore,
+  defaultConnectorFilePath,
+  type StoredConnectorCredential,
+} from "./connector-store.js";
+export {
   AgentSessionError,
   networkFailure,
   transportFailure,

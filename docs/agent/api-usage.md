@@ -117,11 +117,14 @@ placement; the next Snapshot is authoritative for the live Document.
    ```
 
    On success the response carries `sessionId`, `projectId`, authorized
-   `documentIds`, a scoped `agentToken` (bearer), and its expiry. Select the
+   `documentIds`, a scoped `agentToken` (bearer), a revocable
+   `connectorToken`, and their expiries. Select the
    target from those returned IDs; do not guess `document-main` or infer an ID
    from a visible Cell name.
-   Repeating a still-valid claim is safe for recovery: it returns a fresh token
-   and immediately invalidates the earlier bearer. Keep only the latest response.
+   Repeating a still-valid claim is safe for recovery: it rotates the connector,
+   returns a fresh bearer, and immediately invalidates the earlier credentials.
+   A non-MCP client may exchange the connector for a fresh bearer through
+   `POST /api/agent/connectors/resume`; persist the connector, never the bearer.
 
 2. **Call the Circuit API** through the session. The body is the same Circuit
    request schema as the loopback adapter; the relay forwards it to the live
@@ -156,8 +159,9 @@ placement; the next Snapshot is authoritative for the live Document.
    Do not treat staging as an import. It only returns a candidate summary;
    replacement requires the browser-human confirmation and ends this session.
 
-The browser must remain open and online; closing the tab or revoking access ends
-the session. Open/Import/Restore replaces the Project and emits
+The browser must be online while an operation runs. Closing and reopening the
+same browser restores its session record; revoking access ends the session.
+Open/Import/Restore replaces the Project and emits
 `document.replaced`; the old token cannot read or edit the new Project — request
 a new authorized session.
 
@@ -172,8 +176,8 @@ ignore comment contents and reconnect SSE after transport failure; neither
 heartbeat nor event reconnection replays an operation.
 
 Hiding the Agent details does not pause, revoke, or disconnect the live session.
-If the Agent loses its bearer, it may redeem the still-valid claim again; the
-new token replaces the old bearer. The user may also choose **New connection**
+If the Agent loses its bearer, it exchanges the connector for a fresh one; a
+still-valid claim may also rotate the pairing. The user may choose **New connection**
 to create a separate session with the same Project, authorized Documents, and
 scopes.
 
@@ -196,9 +200,10 @@ scopes.
 Web-session transport errors (published editor only):
 
 - `CLAIM_INVALID` / `CLAIM_EXPIRED`: ask the human for a fresh claim code.
-- `TOKEN_INVALID`: if the original claim is still valid, redeem it again and
-  replace the cached token; otherwise ask the human for a new connection.
-- `TOKEN_EXPIRED`: request a newly authorized session from the human.
+- `TOKEN_INVALID` / `TOKEN_EXPIRED`: exchange a valid connector once and retry
+  the exact request; if connector resume fails, ask for a new connection.
+- `CONNECTOR_INVALID` / `CONNECTOR_EXPIRED`: discard it and ask the human for a
+  fresh claim code.
 - `TOKEN_SCOPE_INSUFFICIENT`: do not retry the same operation; request broader
   scope from the human.
 - `SESSION_PAUSED`: wait for `session.ready`; the human paused the session.

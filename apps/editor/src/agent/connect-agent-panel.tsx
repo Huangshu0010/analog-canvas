@@ -102,19 +102,12 @@ export function agentConnectionInstructions(
   origin: string,
   claimCode: string,
 ): string {
-  const claimUrl = `${origin}/api/agent/claims`;
-  const circuitUrl = `${origin}/api/agent/sessions/{sessionId}/circuit`;
-  const fileUrl = `${origin}/api/agent/sessions/{sessionId}/files`;
-  const openApiUrl = `${origin}/api/agent/openapi.json`;
   const kitUrl = `${origin}/api/agent/kit`;
-  return `Connect to the Interactive Circuit Maker Agent API.
-1. Fetch ${kitUrl}. It is a small JSON Agent Kit: create a private working folder, write every files[].path, then read README.md and skills/icm-circuit-session/SKILL.md.
-2. POST ${JSON.stringify({ claimCode })} to ${claimUrl}. Keep only the latest response in memory; never log or display agentToken.
-3. Use only sessionId and documentIds returned by the claim response. Replace {sessionId} in ${circuitUrl}, and send agentToken only as the Bearer token.
-4. Read the published OpenAPI ${openApiUrl}, call capabilities once, then request one complete snapshot for an authorized documentId.
-5. Dry-run non-trivial transact requests using the snapshot revision. Commit the same edits only if dry-run succeeds and the revision is unchanged.
-6. Use ${fileUrl} only for authorized Project/formal-file download or candidate staging; staging needs explicit browser-human approval. Render, then request a fresh snapshot for final verification.
-7. Reuse a requestId only when retrying the exact same payload.`;
+  return `Connect to Analog Canvas through its configured MCP server.
+1. Call connect with ${JSON.stringify({ claimCode })}.
+2. Read analog-canvas://reference/quickstart, then call get_context.
+3. Use the compact MCP tools for inspection, edits, verification, rendering, import, and export. The connector resumes automatically until the user disconnects it.
+If Analog Canvas MCP is unavailable, use the HTTP Agent Kit fallback: ${kitUrl}`;
 }
 
 const STATUS_LABEL: Record<AgentConnectionStatus, string> = {
@@ -265,9 +258,10 @@ function ClaimHandOff({
   return (
     <div className="agent-claim" data-testid="agent-claim">
       <p>
-        Give the Agent this setup. The setup expires in{" "}
+        Give the Agent this one-time setup. It expires in{" "}
         {formatRemaining(claimExpiresAt, now)}; the connected session lasts{" "}
-        {formatRemaining(expiresAt, now)}.
+        {formatRemaining(expiresAt, now)} and closing this panel does not
+        disconnect it.
       </p>
       <div className="agent-copy-card">
         <div className="agent-copy-card-header">

@@ -1,7 +1,11 @@
 import {
+  AgentConnectionCredentialResponseSchema,
   AgentCircuitResponseSchema,
+  AgentFileResourceResponseSchema,
   type AgentCircuitRequest,
   type AgentCircuitResponse,
+  type AgentFileResourceRequest,
+  type AgentFileResourceResponse,
 } from "@icm/agent-adapter";
 import {
   invalidResponseFailure,
@@ -14,6 +18,9 @@ export interface ClaimSuccess {
   /** Secret bearer. Stays inside the Helper; never returned to a model. */
   agentToken: string;
   tokenExpiresAt: number;
+  /** Durable, revocable pairing secret. Persist this instead of the bearer. */
+  connectorToken: string;
+  connectorExpiresAt: number;
   scopes: string[];
   projectId: string;
   documentIds: string[];
@@ -25,7 +32,7 @@ export interface AgentHttpClientOptions {
   requestTimeoutMs?: number;
 }
 
-interface ClaimResponseBody {
+interface ErrorResponseBody {
   ok?: boolean;
   agentToken?: unknown;
   tokenExpiresAt?: unknown;
@@ -70,30 +77,23 @@ export class AgentHttpClient {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ claimCode }),
     });
-    const body = (await response
-      .json()
-      .catch(() => null)) as ClaimResponseBody | null;
-    if (response.ok && body?.ok === true) {
-      if (
-        typeof body.agentToken !== "string" ||
-        typeof body.tokenExpiresAt !== "number" ||
-        !Array.isArray(body.scopes) ||
-        typeof body.projectId !== "string" ||
-        !Array.isArray(body.documentIds)
-      ) {
-        throw invalidResponseFailure(
-          "Claim response is missing required fields",
-        );
-      }
-      return {
-        sessionId: claimCode.slice(0, claimCode.indexOf(".")),
-        agentToken: body.agentToken,
-        tokenExpiresAt: body.tokenExpiresAt,
-        scopes: body.scopes.map((scope) => String(scope)),
-        projectId: body.projectId,
-        documentIds: body.documentIds.map((id) => String(id)),
-      };
-    }
+    const body: unknown = await response.json().catch(() => null);
+    if (response.ok) return this.parseCredential(body, "Claim");
+    throw this.transportError(response.status, body);
+  }
+
+  /** Resume a prior browser-approved pairing and mint a fresh bearer. */
+  async resumeConnector(
+    sessionId: string,
+    connectorToken: string,
+  ): Promise<ClaimSuccess> {
+    const response = await this.send("/api/agent/connectors/resume", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId, connectorToken }),
+    });
+    const body: unknown = await response.json().catch(() => null);
+    if (response.ok) return this.parseCredential(body, "Connector resume");
     throw this.transportError(response.status, body);
   }
 
@@ -120,16 +120,52 @@ export class AgentHttpClient {
     );
     const body: unknown = await response.json().catch(() => null);
     if (!response.ok) {
-      throw this.transportError(
-        response.status,
-        body as ClaimResponseBody | null,
-      );
+      throw this.transportError(response.status, body);
     }
     const parsed = AgentCircuitResponseSchema.safeParse(body);
     if (!parsed.success) {
       throw invalidResponseFailure("Circuit response failed schema validation");
     }
     return parsed.data;
+  }
+
+  async files(
+    sessionId: string,
+    agentToken: string,
+    request: AgentFileResourceRequest,
+  ): Promise<AgentFileResourceResponse> {
+    const response = await this.send(
+      `/api/agent/sessions/${encodeURIComponent(sessionId)}/files`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${agentToken}`,
+        },
+        body: JSON.stringify(request),
+      },
+    );
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) throw this.transportError(response.status, body);
+    const parsed = AgentFileResourceResponseSchema.safeParse(body);
+    if (!parsed.success) {
+      throw invalidResponseFailure("File response failed schema validation");
+    }
+    return parsed.data;
+  }
+
+  async disconnect(sessionId: string, agentToken: string): Promise<void> {
+    const response = await this.send(
+      `/api/agent/sessions/${encodeURIComponent(sessionId)}`,
+      {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${agentToken}` },
+      },
+    );
+    if (!response.ok) {
+      const body: unknown = await response.json().catch(() => null);
+      throw this.transportError(response.status, body);
+    }
   }
 
   private async send(path: string, init: RequestInit): Promise<Response> {
@@ -147,13 +183,14 @@ export class AgentHttpClient {
     return response;
   }
 
-  private transportError(
-    status: number,
-    body: ClaimResponseBody | null,
-  ): Error {
-    const code = typeof body?.error?.code === "string" ? body.error.code : "";
+  private transportError(status: number, body: unknown): Error {
+    const errorBody = body as ErrorResponseBody | null;
+    const code =
+      typeof errorBody?.error?.code === "string" ? errorBody.error.code : "";
     const message =
-      typeof body?.error?.message === "string" ? body.error.message : "";
+      typeof errorBody?.error?.message === "string"
+        ? errorBody.error.message
+        : "";
     if (code && message) {
       return transportFailure(code, message, status);
     }
@@ -168,5 +205,15 @@ export class AgentHttpClient {
       `HTTP ${status}${message ? `: ${message}` : ""}`,
       status,
     );
+  }
+
+  private parseCredential(body: unknown, source: string): ClaimSuccess {
+    const parsed = AgentConnectionCredentialResponseSchema.safeParse(body);
+    if (!parsed.success) {
+      throw invalidResponseFailure(
+        `${source} response is missing required fields`,
+      );
+    }
+    return parsed.data;
   }
 }

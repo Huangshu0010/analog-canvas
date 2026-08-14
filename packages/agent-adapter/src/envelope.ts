@@ -42,6 +42,33 @@ export const AgentClaimRequestJsonSchema = z.toJSONSchema(
   { target: "draft-2020-12", reused: "ref" },
 );
 
+/** Durable Agent-side connector exchange. The connector is never a Circuit bearer. */
+export const AgentConnectorResumeRequestSchema = z.strictObject({
+  sessionId: OpaqueIdSchema,
+  connectorToken: OpaqueIdSchema,
+});
+export const AgentConnectorResumeRequestJsonSchema = z.toJSONSchema(
+  AgentConnectorResumeRequestSchema,
+  { target: "draft-2020-12", reused: "ref" },
+);
+
+/** Successful claim or connector resume. Secrets are returned only once. */
+export const AgentConnectionCredentialResponseSchema = z.strictObject({
+  ok: z.literal(true),
+  sessionId: OpaqueIdSchema,
+  agentToken: OpaqueIdSchema,
+  tokenExpiresAt: z.number().int().nonnegative(),
+  connectorToken: OpaqueIdSchema,
+  connectorExpiresAt: z.number().int().nonnegative(),
+  scopes: z.array(z.string().min(1)),
+  projectId: OpaqueIdSchema,
+  documentIds: z.array(OpaqueIdSchema).min(1),
+});
+export const AgentConnectionCredentialResponseJsonSchema = z.toJSONSchema(
+  AgentConnectionCredentialResponseSchema,
+  { target: "draft-2020-12", reused: "ref" },
+);
+
 /**
  * One forwarded relay message. The `circuit-request`/`circuit-response` payload
  * is the strict Circuit API schema from `schema.ts`; the relay never interprets
@@ -152,6 +179,9 @@ export const AgentTransportErrorCodeSchema = z.enum([
   "CLAIM_INVALID",
   "CLAIM_EXPIRED",
   "CLAIM_ALREADY_USED",
+  // Persistent connector
+  "CONNECTOR_INVALID",
+  "CONNECTOR_EXPIRED",
   // Token
   "TOKEN_INVALID",
   "TOKEN_EXPIRED",
@@ -220,6 +250,12 @@ export type AgentSessionControlMessage = z.infer<
   typeof AgentSessionControlMessageSchema
 >;
 export type AgentClaimRequest = z.infer<typeof AgentClaimRequestSchema>;
+export type AgentConnectorResumeRequest = z.infer<
+  typeof AgentConnectorResumeRequestSchema
+>;
+export type AgentConnectionCredentialResponse = z.infer<
+  typeof AgentConnectionCredentialResponseSchema
+>;
 export type AgentSessionMessageKind = z.infer<
   typeof AgentSessionMessageKindSchema
 >;

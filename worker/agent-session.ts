@@ -2,6 +2,7 @@ import {
   AGENT_SSE_KEEPALIVE_INTERVAL_MS,
   AGENT_SESSION_PROTOCOL_VERSION,
   AgentClaimRequestSchema,
+  AgentConnectorResumeRequestSchema,
   AgentCircuitResponseSchema,
   AgentFileResourceResponseSchema,
   AgentSessionScopeSchema,
@@ -34,6 +35,7 @@ const FORWARD_TIMEOUT_MS = 30_000;
 const EXPIRY_WARNING_MS = 60_000;
 const CREATE_BODY_LIMIT = 64_000;
 const CLAIM_BODY_LIMIT = 8_000;
+const CONNECTOR_BODY_LIMIT = 8_000;
 
 export interface AgentRelayConfig {
   allowedOrigin: string | null;
@@ -256,6 +258,43 @@ export async function routeAgentSessionRequest(
     );
   }
 
+  if (
+    request.method === "POST" &&
+    url.pathname === "/api/agent/connectors/resume"
+  ) {
+    const parsedBody = await readBoundedJson(request, CONNECTOR_BODY_LIMIT);
+    if (!parsedBody.ok) {
+      return jsonResponse(
+        errorBody(
+          parsedBody.tooLarge ? "REQUEST_TOO_LARGE" : "CONNECTOR_INVALID",
+          errorMessage(
+            parsedBody.tooLarge ? "REQUEST_TOO_LARGE" : "CONNECTOR_INVALID",
+          ),
+        ),
+        parsedBody.tooLarge ? 413 : 401,
+        allowedOrigin,
+      );
+    }
+    const parsed = AgentConnectorResumeRequestSchema.safeParse(
+      parsedBody.value,
+    );
+    if (!parsed.success) {
+      return jsonResponse(
+        errorBody("CONNECTOR_INVALID", errorMessage("CONNECTOR_INVALID")),
+        401,
+        allowedOrigin,
+      );
+    }
+    return env.AGENT_SESSION.getByName(parsed.data.sessionId).fetch(
+      "https://agent-session.internal/resume-connector",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ connectorToken: parsed.data.connectorToken }),
+      },
+    );
+  }
+
   const match =
     /^\/api\/agent\/sessions\/([^/]+)(?:\/(circuit|files|events|editor|control))?$/u.exec(
       url.pathname,
@@ -308,6 +347,8 @@ function transportStatus(code: AgentTransportErrorCode): number {
     case "TOKEN_INVALID":
     case "TOKEN_EXPIRED":
     case "CLAIM_INVALID":
+    case "CONNECTOR_INVALID":
+    case "CONNECTOR_EXPIRED":
       return 401;
     case "TOKEN_SCOPE_INSUFFICIENT":
       return 403;
@@ -339,6 +380,8 @@ function errorMessage(code: AgentTransportErrorCode): string {
     CLAIM_INVALID: "Claim code is unknown or malformed",
     CLAIM_EXPIRED: "Claim code has expired",
     CLAIM_ALREADY_USED: "Claim code was already used by a legacy session",
+    CONNECTOR_INVALID: "Connector credential is unknown or replaced",
+    CONNECTOR_EXPIRED: "Connector credential has expired",
     TOKEN_INVALID: "Bearer token is missing or unknown",
     TOKEN_EXPIRED: "Bearer token has expired",
     TOKEN_SCOPE_INSUFFICIENT: "The token does not grant this operation",
@@ -443,8 +486,11 @@ export function redeemClaimResponse(
 ):
   | {
       ok: true;
+      sessionId: string;
       agentToken: string;
       tokenExpiresAt: number;
+      connectorToken: string;
+      connectorExpiresAt: number;
       scopes: string[];
       projectId: string;
       documentIds: string[];
@@ -454,8 +500,11 @@ export function redeemClaimResponse(
   return result.ok
     ? {
         ok: true,
+        sessionId: machine.sessionId,
         agentToken: result.claim.agentToken,
         tokenExpiresAt: result.claim.tokenExpiresAt,
+        connectorToken: result.claim.connectorToken,
+        connectorExpiresAt: result.claim.connectorExpiresAt,
         scopes: [...result.claim.scopes],
         projectId: machine.projectId,
         documentIds: machine.documentIds,
@@ -533,6 +582,9 @@ export class AgentSessionDO {
     }
     if (request.method === "POST" && url.pathname === "/claim") {
       return this.claim(request, machine, allowedOrigin);
+    }
+    if (request.method === "POST" && url.pathname === "/resume-connector") {
+      return this.resumeConnector(request, machine, allowedOrigin);
     }
     if (url.pathname === "/editor") {
       return this.connectEditor(request, machine);
@@ -785,6 +837,44 @@ export class AgentSessionDO {
     this.notifyEditor({ type: "session.ready", sessionId: machine.sessionId });
     return jsonResponse(
       { ...result, sessionId: machine.sessionId },
+      200,
+      allowedOrigin,
+    );
+  }
+
+  private async resumeConnector(
+    request: Request,
+    machine: AgentSessionMachine,
+    allowedOrigin: string | null,
+  ): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as {
+      connectorToken?: unknown;
+    } | null;
+    const token =
+      typeof body?.connectorToken === "string" ? body.connectorToken : "";
+    const result = machine.resumeConnector(token, Date.now());
+    await this.persist();
+    if (!result.ok) {
+      return jsonResponse(
+        errorBody(result.code, errorMessage(result.code)),
+        transportStatus(result.code),
+        allowedOrigin,
+      );
+    }
+    this.emit({ type: "session.ready", sessionId: machine.sessionId });
+    this.notifyEditor({ type: "session.ready", sessionId: machine.sessionId });
+    return jsonResponse(
+      {
+        ok: true,
+        sessionId: machine.sessionId,
+        agentToken: result.claim.agentToken,
+        tokenExpiresAt: result.claim.tokenExpiresAt,
+        connectorToken: result.claim.connectorToken,
+        connectorExpiresAt: result.claim.connectorExpiresAt,
+        scopes: [...result.claim.scopes],
+        projectId: machine.projectId,
+        documentIds: machine.documentIds,
+      },
       200,
       allowedOrigin,
     );

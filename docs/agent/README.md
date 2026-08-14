@@ -7,14 +7,13 @@ engine.
 
 ## Choose the entry point
 
-1. **Development preview: local stdio MCP.** Run the Agent-side MCP adapter
+1. **Default: packaged local stdio MCP.** Install or unpack the Agent-side MCP adapter
    (`apps/mcp-server`, [ADR 0020](../adr/0020-agent-side-mcp-adapter.md)) and
    connect a host such as Codex, Claude Code, or Cursor to it. The adapter
-   owns claim redemption, process-local tokens, revisions, idempotent retries, and
-   compact tools; the model never sees tokens or the raw OpenAPI. Build and
-   start it with `pnpm --filter @icm/mcp-server start`. M5 will package and
-   promote this as the default external entry point.
-2. **Current deployed path: Kit + HTTP API.** For hosts without the packaged
+   owns claim redemption, persistent connector resume, process-local bearers,
+   revisions, idempotent retries, and compact tools; the model never sees
+   tokens or the raw OpenAPI. See [mcp-install.md](mcp-install.md).
+2. **Fallback: Kit + HTTP API.** For hosts without the packaged
    MCP entry point, fetch the public
    `GET /api/agent/kit` JSON, write its listed files to a private scratch
    directory, redeem the claim, and call the four operations directly.

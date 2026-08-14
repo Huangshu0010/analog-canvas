@@ -1,6 +1,8 @@
 import type {
   AgentCircuitRequest,
   AgentCircuitResponse,
+  AgentFileResourceRequest,
+  AgentFileResourceResponse,
 } from "@icm/agent-adapter";
 import { AgentHttpClient, type ClaimSuccess } from "../http-client.js";
 import { testSnapshot } from "./snapshot-fixture.js";
@@ -123,16 +125,28 @@ export function renderResponse(requestId: string): AgentCircuitResponse {
 
 export interface FakeRelayOptions {
   claim?: (claimCode: string) => Promise<ClaimSuccess> | ClaimSuccess;
+  resume?: (
+    sessionId: string,
+    connectorToken: string,
+  ) => Promise<ClaimSuccess> | ClaimSuccess;
   circuit?: (call: RecordedCircuitCall) => Promise<AgentCircuitResponse>;
+  files?: (
+    request: AgentFileResourceRequest,
+  ) => Promise<AgentFileResourceResponse> | AgentFileResourceResponse;
   baseUrl?: string;
 }
 
 export class FakeAgentHttp extends AgentHttpClient {
   readonly circuitCalls: RecordedCircuitCall[] = [];
   readonly claims: string[] = [];
+  readonly resumes: Array<{ sessionId: string; connectorToken: string }> = [];
+  readonly fileCalls: AgentFileResourceRequest[] = [];
+  readonly disconnects: string[] = [];
   /** Replaceable per-test dispatch over recorded circuit calls. */
   circuitHandler: (call: RecordedCircuitCall) => Promise<AgentCircuitResponse>;
   private readonly claimHandler: NonNullable<FakeRelayOptions["claim"]>;
+  private readonly resumeHandler: NonNullable<FakeRelayOptions["resume"]>;
+  private readonly fileHandler: NonNullable<FakeRelayOptions["files"]>;
 
   constructor(options: FakeRelayOptions = {}) {
     super({ baseUrl: options.baseUrl ?? "https://relay.test" });
@@ -142,9 +156,21 @@ export class FakeAgentHttp extends AgentHttpClient {
         sessionId: "session-1",
         agentToken: "token-0123456789abcdef0123456789abcdef",
         tokenExpiresAt: Number.MAX_SAFE_INTEGER,
+        connectorToken: "connector-0123456789abcdef0123456789abcdef",
+        connectorExpiresAt: Number.MAX_SAFE_INTEGER,
         scopes: ["circuit.snapshot", "circuit.render"],
         projectId: "project-1",
         documentIds: ["main"],
+      }));
+    this.resumeHandler = options.resume ?? (() => this.claimHandler("resume"));
+    this.fileHandler =
+      options.files ??
+      ((request) => ({
+        apiVersion: "2.0",
+        requestId: request.requestId,
+        operation: "discard",
+        ok: true,
+        discarded: true,
       }));
     this.circuitHandler =
       options.circuit ??
@@ -172,6 +198,14 @@ export class FakeAgentHttp extends AgentHttpClient {
     return this.claimHandler(claimCode);
   }
 
+  override async resumeConnector(
+    sessionId: string,
+    connectorToken: string,
+  ): Promise<ClaimSuccess> {
+    this.resumes.push({ sessionId, connectorToken });
+    return this.resumeHandler(sessionId, connectorToken);
+  }
+
   override async circuit(
     sessionId: string,
     agentToken: string,
@@ -185,5 +219,18 @@ export class FakeAgentHttp extends AgentHttpClient {
     };
     this.circuitCalls.push(call);
     return this.circuitHandler(call);
+  }
+
+  override async files(
+    _sessionId: string,
+    _agentToken: string,
+    request: AgentFileResourceRequest,
+  ): Promise<AgentFileResourceResponse> {
+    this.fileCalls.push(request);
+    return this.fileHandler(request);
+  }
+
+  override async disconnect(sessionId: string): Promise<void> {
+    this.disconnects.push(sessionId);
   }
 }

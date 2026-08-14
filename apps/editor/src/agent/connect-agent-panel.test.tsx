@@ -40,26 +40,13 @@ describe("ConnectAgentPanel", () => {
       "https://editor.example",
       "claim-once",
     );
+    expect(instructions).toContain("Connect to Analog Canvas");
     expect(instructions).toContain(
-      'POST {"claimCode":"claim-once"} to https://editor.example/api/agent/claims',
+      'Call connect with {"claimCode":"claim-once"}',
     );
-    expect(instructions).toContain(
-      "1. Fetch https://editor.example/api/agent/kit",
-    );
-    expect(instructions).toContain("write every files[].path");
-    expect(instructions).toContain("skills/icm-circuit-session/SKILL.md");
-    expect(instructions).toContain("4. Read the published OpenAPI");
-    expect(instructions).toContain(
-      "Replace {sessionId} in https://editor.example/api/agent/sessions/{sessionId}/circuit",
-    );
-    expect(instructions).toContain(
-      "6. Use https://editor.example/api/agent/sessions/{sessionId}/files",
-    );
-    expect(instructions).toContain("5. Dry-run non-trivial transact requests");
-    expect(instructions).toContain("Render, then request a fresh snapshot");
-    expect(instructions).toContain(
-      "7. Reuse a requestId only when retrying the exact same payload",
-    );
+    expect(instructions).toContain("analog-canvas://reference/quickstart");
+    expect(instructions).toContain("connector resumes automatically");
+    expect(instructions).toContain("https://editor.example/api/agent/kit");
     expect(instructions).not.toMatch(/Bearer [A-Za-z0-9_-]{20,}/u);
   });
 
@@ -102,10 +89,10 @@ describe("ConnectAgentPanel", () => {
     expect(markup).toContain('class="agent-copy-card"');
     expect(markup).toContain("Plain text");
     expect(markup).toContain(
-      "Connect to the Interactive Circuit Maker Agent API.",
+      "Connect to Analog Canvas through its configured MCP server.",
     );
     expect(markup).toContain(
-      "POST {&quot;claimCode&quot;:&quot;CLAIM-12345&quot;} to",
+      "Call connect with {&quot;claimCode&quot;:&quot;CLAIM-12345&quot;}",
     );
     expect(markup).toContain("CLAIM-12345");
     expect(markup).toContain("circuit.snapshot, circuit.render");

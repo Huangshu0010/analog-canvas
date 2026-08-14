@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { AgentSessionError } from "./errors.js";
 import {
   capabilitiesResponse,
@@ -9,6 +12,7 @@ import {
 } from "./test-support/fake-relay.js";
 import { testSnapshot } from "./test-support/snapshot-fixture.js";
 import { AgentSessionClient } from "./session-client.js";
+import { ConnectorStore } from "./connector-store.js";
 
 async function freshClient(
   options: { http?: FakeAgentHttp; now?: () => number } = {},
@@ -51,13 +55,76 @@ describe("agent session client", () => {
     expect(status).not.toContain("agentToken");
   });
 
-  it("re-checks the process-local session without a new claim", async () => {
+  it("re-checks the active session without a new claim", async () => {
     const { client, http } = await freshClient();
     await client.connect("session-1.claim-code");
     const report = await client.connect();
     expect(report.mode).toBe("resumed");
     expect(http.claims).toEqual(["session-1.claim-code"]);
     expect(http.circuitCalls.at(-1)?.request.operation).toBe("capabilities");
+  });
+
+  it("resumes a browser-approved connector in a new Helper process", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "analog-session-client-"));
+    try {
+      const store = new ConnectorStore(join(directory, "connector.json"));
+      const http = new FakeAgentHttp();
+      const first = new AgentSessionClient({ http, connectorStore: store });
+      await first.connect("session-1.claim-code");
+
+      const restarted = new AgentSessionClient({ http, connectorStore: store });
+      const report = await restarted.connect();
+      expect(report.mode).toBe("resumed");
+      expect(http.resumes).toEqual([
+        {
+          sessionId: "session-1",
+          connectorToken: "connector-0123456789abcdef0123456789abcdef",
+        },
+      ]);
+      expect(JSON.stringify(await restarted.status())).not.toContain(
+        "connectorToken",
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("refreshes an expired bearer from the connector and retries the request", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "analog-session-refresh-"));
+    let nowMs = 1_000;
+    try {
+      const store = new ConnectorStore(join(directory, "connector.json"));
+      const claim = {
+        sessionId: "session-1",
+        agentToken: "initial-token",
+        tokenExpiresAt: 50_000,
+        connectorToken: "connector-token",
+        connectorExpiresAt: 500_000,
+        scopes: ["circuit.snapshot"],
+        projectId: "project-1",
+        documentIds: ["main"],
+      };
+      const http = new FakeAgentHttp({
+        claim: () => claim,
+        resume: () => ({
+          ...claim,
+          agentToken: "refreshed-token",
+          tokenExpiresAt: 400_000,
+        }),
+      });
+      const client = new AgentSessionClient({
+        http,
+        connectorStore: store,
+        now: () => nowMs,
+      });
+      await client.connect("session-1.code");
+      nowMs = 100_000;
+      await client.refreshSnapshot();
+      expect(http.resumes).toHaveLength(1);
+      expect(http.circuitCalls.at(-1)?.token).toBe("refreshed-token");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it("requires a claim code when nothing valid is stored", async () => {
@@ -75,6 +142,8 @@ describe("agent session client", () => {
           sessionId: "session-1",
           agentToken: "token-0123456789abcdef0123456789abcdef",
           tokenExpiresAt: 1_000_000,
+          connectorToken: "connector-expiring-token",
+          connectorExpiresAt: 3_000_000,
           scopes: [],
           projectId: "project-1",
           documentIds: ["main"],
@@ -91,7 +160,7 @@ describe("agent session client", () => {
     expect(client.connection.snapshot.state).toBe("revoked");
   });
 
-  it("clears the process-local credential when the server revokes the session", async () => {
+  it("clears the active credential when the server revokes the session", async () => {
     let revoked = false;
     const { client } = await freshClient({
       http: new FakeAgentHttp({
@@ -282,6 +351,8 @@ describe("agent session client", () => {
         sessionId: "session-1",
         agentToken: "token-0123456789abcdef0123456789abcdef",
         tokenExpiresAt: Number.MAX_SAFE_INTEGER,
+        connectorToken: "connector-multi-document",
+        connectorExpiresAt: Number.MAX_SAFE_INTEGER,
         scopes: ["circuit.snapshot", "circuit.edit.geometry"],
         projectId: "project-1",
         documentIds: ["main", "child"],
@@ -376,7 +447,7 @@ describe("agent session client", () => {
     expect(report.mode).toBe("claimed");
     expect(report.context).toBeNull();
     expect(client.connection.snapshot.state).toBe("editor-offline");
-    // The process-local pairing survives for a later connect() re-check.
+    // The active pairing survives for a later connect() re-check.
     await expect(client.connect()).resolves.toMatchObject({ mode: "resumed" });
   });
 

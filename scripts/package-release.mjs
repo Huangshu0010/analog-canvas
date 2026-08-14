@@ -11,6 +11,9 @@ await cp(resolve(root, "apps/editor/dist"), resolve(output, "editor"), {
 await cp(resolve(root, "apps/local-host/dist"), resolve(output, "host"), {
   recursive: true,
 });
+await cp(resolve(root, "output/mcp"), resolve(output, "mcp"), {
+  recursive: true,
+});
 await writeFile(
   resolve(output, "start.mjs"),
   `import { resolve } from "node:path";\nimport { startLocalHost } from "./host/index.js";\nconst running = await startLocalHost({ editorRoot: resolve(import.meta.dirname, "editor"), port: 4173 });\nprocess.stdout.write(\`Interactive Circuit Maker v0.1.0: \${running.origin}\\n\`);\n`,
@@ -23,6 +26,6 @@ const manifest = JSON.parse(
 );
 await writeFile(
   resolve(output, "release.json"),
-  `${JSON.stringify({ name: "interactive-circuit-maker", version: "0.1.0", node: ">=24.0.0", pwa: manifest.name }, null, 2)}\n`,
+  `${JSON.stringify({ name: "interactive-circuit-maker", version: "0.1.0", node: ">=24.0.0", pwa: manifest.name, mcp: "mcp/analog-canvas-mcp-v0.1.0/bin/analog-canvas-mcp.mjs" }, null, 2)}\n`,
 );
 process.stdout.write(`${output}\n`);

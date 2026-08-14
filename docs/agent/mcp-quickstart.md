@@ -7,7 +7,9 @@ manually.
 
 ## Connect and inspect
 
-1. Call `connect` with the Claim Code shown by the browser editor.
+1. Call `connect` with the Claim Code shown by the browser editor. The Helper
+   saves only the revocable connector credential; it never stores or returns
+   the short-lived bearer.
 2. Call `get_context`; provide `documentId` when the session authorizes more
    than one Document.
 3. Read `analog-canvas://catalog/builtins` before placing a reviewed built-in
@@ -41,7 +43,12 @@ After editing, call `verify`, then `render` when visual review matters. On
 `STATE_CHANGED`, inspect the reported objects and re-plan; never replay a
 changed payload. `EDITOR_OFFLINE` means the authorized browser is not attached.
 
-M0-M3 credentials are process-local. Calling `connect` without a Claim Code
-only re-checks the active session in the same MCP process. A new process needs
-a new Claim Code until M4 delivers a server-issued, revocable connector
-credential and browser Revoke UI.
+Calling `connect` without a Claim Code resumes the saved connector across MCP
+process restarts and refreshes the bearer automatically. `disconnect` revokes
+the browser session and removes the local connector. Closing the editor's
+details panel does neither.
+
+Use `export_file` to write an authorized Project/SVG/PNG/PDF to an explicit
+local path. Use `import_file` to stage a Project or structural SPICE bundle;
+inspect it and request approval, but never describe staging as an import until
+the browser user approves the replacement.

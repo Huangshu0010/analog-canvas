@@ -5,6 +5,8 @@ import {
   AGENT_API_VERSION,
   type AgentCircuitRequest,
   type AgentCircuitResponse,
+  type AgentFileResourceRequest,
+  type AgentFileResourceResponse,
   type AgentTransactRequest,
 } from "@icm/agent-adapter";
 import { z } from "zod";
@@ -19,6 +21,10 @@ type AgentCapabilitiesResponse = z.infer<
 type AgentRenderResponse = z.infer<typeof AgentRenderResponseSchema>;
 import { AgentSessionError } from "./errors.js";
 import { AgentHttpClient, type ClaimSuccess } from "./http-client.js";
+import {
+  type ConnectorStore,
+  type StoredConnectorCredential,
+} from "./connector-store.js";
 import {
   SnapshotCache,
   changedObjectIds,
@@ -48,6 +54,7 @@ export interface AgentSessionClientOptions {
   /** Automatic exact-payload retry attempts after a local network failure. */
   networkRetryAttempts?: number;
   tokenExpiryGraceMs?: number;
+  connectorStore?: ConnectorStore;
 }
 
 export interface ConnectReport {
@@ -101,8 +108,8 @@ function baseRequest(requestId: string): {
  * state, capabilities/revision caches, exact-payload request-ID retry, the
  * Snapshot cache, and compilation-plus-execution of high-level actions.
  * Bearer tokens remain process-local and are sent only in Authorization
- * headers. Cross-process connector credentials are deliberately deferred to
- * M4.
+ * headers. A revocable connector credential may be persisted by M4 so a new
+ * MCP process can resume without another claim-code hand-off.
  */
 export class AgentSessionClient {
   readonly connection: ConnectionTracker;
@@ -112,9 +119,11 @@ export class AgentSessionClient {
   private readonly newRequestId: () => string;
   private readonly networkRetryAttempts: number;
   private readonly tokenExpiryGraceMs: number;
+  private readonly connectorStore: ConnectorStore | undefined;
   private readonly inflight = new Map<string, Promise<AgentCircuitResponse>>();
   private session: ActiveSession | null = null;
   private capabilitiesCache: AgentCapabilitiesResponse | null = null;
+  private resumePromise: Promise<ActiveSession | null> | null = null;
 
   constructor(options: AgentSessionClientOptions) {
     this.http = options.http;
@@ -123,13 +132,14 @@ export class AgentSessionClient {
       options.newRequestId ?? (() => `req-${crypto.randomUUID()}`);
     this.networkRetryAttempts = options.networkRetryAttempts ?? 1;
     this.tokenExpiryGraceMs = options.tokenExpiryGraceMs ?? 30_000;
+    this.connectorStore = options.connectorStore;
     this.connection = new ConnectionTracker(this.now);
   }
 
   /**
-   * Pair or re-check the current process-local session. With a claim code,
-   * redeem it and replace prior local state. Without one, reuse the active
-   * in-memory bearer while valid; otherwise fail with `CLAIM_REQUIRED`.
+   * Pair or re-check the current session. With a claim code, redeem it and
+   * replace prior local state. Without one, reuse the in-memory bearer or
+   * resume the persisted connector.
    */
   async connect(claimCode?: string): Promise<ConnectReport> {
     if (claimCode === undefined || claimCode.trim() === "") {
@@ -137,7 +147,7 @@ export class AgentSessionClient {
       if (resumed === null) {
         throw new AgentSessionError(
           "CLAIM_REQUIRED",
-          "no valid process-local pairing; pass a claim code from the editor's connect panel",
+          "no valid saved connector; pass a claim code from the editor's connect panel",
           "unrecoverable-credential",
         );
       }
@@ -146,14 +156,8 @@ export class AgentSessionClient {
     this.connection.apply("claim-started");
     try {
       const claim: ClaimSuccess = await this.http.claim(claimCode.trim());
-      this.session = {
-        sessionId: claim.sessionId,
-        agentToken: claim.agentToken,
-        tokenExpiresAt: claim.tokenExpiresAt,
-        scopes: claim.scopes,
-        projectId: claim.projectId,
-        documentIds: claim.documentIds,
-      };
+      this.session = this.activeSession(claim);
+      await this.persistConnector(claim);
       return await this.establishContext("claimed");
     } catch (error) {
       if (!this.session) this.connection.apply("reset");
@@ -162,8 +166,11 @@ export class AgentSessionClient {
   }
 
   private async tryResume(): Promise<ConnectReport | null> {
-    const stored = this.session;
-    if (!stored || !this.tokenValid(stored)) return null;
+    let stored = this.session;
+    if (!stored || !this.tokenValid(stored)) {
+      stored = await this.resumeConnector();
+    }
+    if (!stored) return null;
     this.connection.apply("resume-started");
     try {
       return await this.establishContext("resumed");
@@ -172,7 +179,7 @@ export class AgentSessionClient {
         error instanceof AgentSessionError &&
         error.category === "unrecoverable-credential"
       ) {
-        this.discardCredential(error.code);
+        await this.discardCredential(error.code);
       }
       throw error;
     }
@@ -235,6 +242,25 @@ export class AgentSessionClient {
       tokenValid: this.session ? this.tokenValid(this.session) : false,
       cachedDocuments: [...this.cache.documents()],
     };
+  }
+
+  /** Invoke the canonical browser-hosted file-resource contract. */
+  async fileResource(
+    request: AgentFileResourceRequest,
+  ): Promise<AgentFileResourceResponse> {
+    return this.withAuthorization((session) =>
+      this.http.files(session.sessionId, session.agentToken, request),
+    );
+  }
+
+  /** Revoke the server session and forget the durable connector locally. */
+  async disconnect(): Promise<void> {
+    try {
+      const session = await this.ensureSession();
+      await this.http.disconnect(session.sessionId, session.agentToken);
+    } finally {
+      await this.discardCredential("DISCONNECTED");
+    }
   }
 
   async capabilities(
@@ -576,19 +602,9 @@ export class AgentSessionClient {
   private async send(
     request: AgentCircuitRequest,
   ): Promise<AgentCircuitResponse> {
-    const session = this.requireSession();
-    if (!this.tokenValid(session)) {
-      this.connection.apply("credential-revoked", "TOKEN_EXPIRED");
-      this.session = null;
-      throw new AgentSessionError(
-        "TOKEN_EXPIRED",
-        "agent token expired; a new claim code is required",
-        "unrecoverable-credential",
-      );
-    }
     const existing = this.inflight.get(request.requestId);
     if (existing) return existing;
-    const pending = this.dispatch(request, session);
+    const pending = this.dispatch(request);
     this.inflight.set(request.requestId, pending);
     try {
       return await pending;
@@ -599,15 +615,12 @@ export class AgentSessionClient {
 
   private async dispatch(
     request: AgentCircuitRequest,
-    session: ActiveSession,
   ): Promise<AgentCircuitResponse> {
     let attempts = 0;
     for (;;) {
       try {
-        const response = await this.http.circuit(
-          session.sessionId,
-          session.agentToken,
-          request,
+        const response = await this.withAuthorization((session) =>
+          this.http.circuit(session.sessionId, session.agentToken, request),
         );
         this.connection.apply("request-succeeded");
         return response;
@@ -626,7 +639,7 @@ export class AgentSessionClient {
           throw error;
         }
         if (error.category === "unrecoverable-credential") {
-          this.discardCredential(error.code);
+          await this.discardCredential(error.code);
           throw error;
         }
         throw error;
@@ -634,21 +647,124 @@ export class AgentSessionClient {
     }
   }
 
-  private discardCredential(code: string): void {
+  private async discardCredential(code: string): Promise<void> {
     this.connection.apply("credential-revoked", code);
     this.session = null;
     this.capabilitiesCache = null;
+    await this.connectorStore?.clear();
   }
 
-  private requireSession(): ActiveSession {
-    if (!this.session) {
+  private async ensureSession(): Promise<ActiveSession> {
+    if (this.session && this.tokenValid(this.session)) return this.session;
+    const resumed = await this.resumeConnector();
+    if (!resumed) {
       throw new AgentSessionError(
-        "NOT_CONNECTED",
-        "not paired; call connect first",
+        this.session ? "TOKEN_EXPIRED" : "NOT_CONNECTED",
+        "no valid connector pairing; call connect with a claim code",
         "unrecoverable-credential",
       );
     }
-    return this.session;
+    return resumed;
+  }
+
+  private async withAuthorization<T>(
+    operation: (session: ActiveSession) => Promise<T>,
+  ): Promise<T> {
+    let session = await this.ensureSession();
+    try {
+      return await operation(session);
+    } catch (error) {
+      if (
+        error instanceof AgentSessionError &&
+        (error.code === "TOKEN_INVALID" || error.code === "TOKEN_EXPIRED")
+      ) {
+        this.session = null;
+        session = await this.ensureSession();
+        try {
+          return await operation(session);
+        } catch (retryError) {
+          if (
+            retryError instanceof AgentSessionError &&
+            retryError.category === "unrecoverable-credential"
+          ) {
+            await this.discardCredential(retryError.code);
+          }
+          throw retryError;
+        }
+      }
+      if (
+        error instanceof AgentSessionError &&
+        error.category === "unrecoverable-credential"
+      ) {
+        await this.discardCredential(error.code);
+      }
+      throw error;
+    }
+  }
+
+  private async resumeConnector(): Promise<ActiveSession | null> {
+    if (!this.connectorStore) return null;
+    if (this.resumePromise) return this.resumePromise;
+    this.resumePromise = this.resumeConnectorOnce();
+    try {
+      return await this.resumePromise;
+    } finally {
+      this.resumePromise = null;
+    }
+  }
+
+  private async resumeConnectorOnce(): Promise<ActiveSession | null> {
+    const stored = await this.connectorStore?.load();
+    if (
+      !stored ||
+      stored.apiBaseUrl !== this.http.baseUrl ||
+      this.now() >= stored.connectorExpiresAt
+    ) {
+      if (stored) await this.connectorStore?.clear();
+      return null;
+    }
+    this.connection.apply("resume-started");
+    try {
+      const claim = await this.http.resumeConnector(
+        stored.sessionId,
+        stored.connectorToken,
+      );
+      this.session = this.activeSession(claim);
+      await this.persistConnector(claim);
+      return this.session;
+    } catch (error) {
+      if (
+        error instanceof AgentSessionError &&
+        error.category === "unrecoverable-credential"
+      ) {
+        await this.discardCredential(error.code);
+      }
+      throw error;
+    }
+  }
+
+  private activeSession(claim: ClaimSuccess): ActiveSession {
+    return {
+      sessionId: claim.sessionId,
+      agentToken: claim.agentToken,
+      tokenExpiresAt: claim.tokenExpiresAt,
+      scopes: [...claim.scopes],
+      projectId: claim.projectId,
+      documentIds: [...claim.documentIds],
+    };
+  }
+
+  private async persistConnector(claim: ClaimSuccess): Promise<void> {
+    if (!this.connectorStore) return;
+    const credential: StoredConnectorCredential = {
+      version: 1,
+      apiBaseUrl: this.http.baseUrl,
+      sessionId: claim.sessionId,
+      connectorToken: claim.connectorToken,
+      connectorExpiresAt: claim.connectorExpiresAt,
+      storedAt: this.now(),
+    };
+    await this.connectorStore.save(credential);
   }
 
   private tokenValid(session: { tokenExpiresAt: number }): boolean {

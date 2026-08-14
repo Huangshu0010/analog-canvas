@@ -16,7 +16,7 @@ export interface AgentSessionRecoveryRecord {
   readonly expiresAt: number;
 }
 
-export interface SessionStorageLike {
+export interface BrowserStorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
@@ -60,23 +60,23 @@ function parseRecord(value: unknown): AgentSessionRecoveryRecord | null {
 }
 
 export function writeAgentSessionRecovery(
-  storage: SessionStorageLike,
+  storage: BrowserStorageLike,
   record: AgentSessionRecoveryRecord,
 ): void {
   storage.setItem(AGENT_SESSION_RECOVERY_STORAGE_KEY, JSON.stringify(record));
 }
 
-export function clearAgentSessionRecovery(storage: SessionStorageLike): void {
+export function clearAgentSessionRecovery(storage: BrowserStorageLike): void {
   storage.removeItem(AGENT_SESSION_RECOVERY_STORAGE_KEY);
 }
 
 /**
- * Reads a same-tab reconnect proof only when it belongs to the Project that is
+ * Reads a same-browser reconnect proof only when it belongs to the Project that is
  * currently open. Any malformed, expired, or Project-mismatched record is
  * deleted before it can reach the relay.
  */
 export function readAgentSessionRecovery(
-  storage: SessionStorageLike,
+  storage: BrowserStorageLike,
   target: RecoveryTarget,
 ): AgentSessionRecoveryRecord | null {
   const raw = storage.getItem(AGENT_SESSION_RECOVERY_STORAGE_KEY);

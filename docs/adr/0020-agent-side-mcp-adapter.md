@@ -39,13 +39,16 @@ The product gains an **Agent-side MCP adapter** as a new local stdio process,
   `wireIntent`. It never
   re-implements Net/Junction/Route semantics; electrical behavior stays in the
   server-side capabilities (ADR 0019).
-- The default tool surface is ~10 compact tools (`connect`,
-  `connection_status`, `get_context`, `inspect`, `search`, `apply_actions`,
-  `advanced_transact`, `verify`, `render`). Full typed edit unions remain
+- The default tool surface is 12 compact tools (`connect`, `disconnect`,
+  `connection_status`, `export_file`, `import_file`, `get_context`, `inspect`,
+  `search`, `apply_actions`, `advanced_transact`, `verify`, `render`). Full typed edit unions remain
   reachable only through `advanced_transact`, gated on reading the
   `analog-canvas://contract/advanced-edits` resource in the same session.
-- Tokens and claim codes stay inside the Helper process and Authorization
-  headers; they never appear in tool results, resources, logs, or files.
+- Bearers and claim codes stay inside the Helper process and Authorization
+  headers; they never appear in tool results, resources, logs, or files. The
+  Helper persists only a server-issued connector credential in the user's
+  private profile and exchanges it for fresh short-lived bearers. Browser or
+  MCP disconnect revokes the whole session.
 - `docs/agent/resource-manifest.json` is the single declaration of which
   documents project to MCP Resources, the HTTP Kit, and the non-MCP fallback.
   `scripts/generate-mcp-resources.mjs` generates the MCP resource payload from
@@ -108,15 +111,15 @@ MCP is not a fifth Circuit operation.
   (prompts, subscriptions, sampling) fail closed with `method not found`.
 - `render` returns `image/svg+xml`; hosts that only rasterize PNG/JPEG will
   show metadata instead of pixels until a raster step is added.
-- Cross-process persistent pairing (connector credential, web revoke UI, file
-  import/export tools) is intentionally deferred to a follow-up target (design
-  M4); resume today lasts only inside the MCP process while the redeemed token
-  and session stay valid.
+- Hosts must run a local Node.js stdio process. The release therefore ships a
+  self-contained executable package and npm-compatible tarball in addition to
+  the browser assets.
 
 ## Compatibility and migration
 
-- New packages only, plus a catalog re-export from `@icm/agent-adapter/kit`
-  and new CI static checks. No schema, wire format, or editor change.
+- M0-M3 added the Helper/MCP packages. M4 adds one connector-resume transport
+  endpoint and browser-restart recovery without changing the four Circuit
+  operations. M5 packages the adapter and includes it in the release gate.
 - `docs/agent/README.md` now orders entry points: MCP first, Kit + HTTP
   fallback second, direct OpenAPI last.
 - ADR 0005 and ADR 0016 remain accepted; the ADR index notes the partial
@@ -130,6 +133,9 @@ MCP is not a fifth Circuit operation.
 - `apps/mcp-server` contract tests: tool schemas, tool-to-API mapping with an
   in-process fake relay, protocol handshake and dispatch behavior, and
   manifest/source/generated-payload resource consistency.
+- The packaged release smoke proves claim, context, atomic edit, verify,
+  render, export, staged import, process restart, and connector resume against
+  a deterministic local relay.
 
 ## Related documents
 

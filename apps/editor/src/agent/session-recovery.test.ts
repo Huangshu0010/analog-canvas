@@ -5,10 +5,10 @@ import {
   clearAgentSessionRecovery,
   readAgentSessionRecovery,
   writeAgentSessionRecovery,
-  type SessionStorageLike,
+  type BrowserStorageLike,
 } from "./session-recovery";
 
-class MemoryStorage implements SessionStorageLike {
+class MemoryStorage implements BrowserStorageLike {
   readonly values = new Map<string, string>();
 
   getItem(key: string): string | null {
@@ -48,7 +48,7 @@ function record() {
   };
 }
 
-describe("Agent same-tab session recovery", () => {
+describe("Agent same-browser session recovery", () => {
   it("round-trips only the bounded browser reconnect proof", () => {
     const storage = new MemoryStorage();
     writeAgentSessionRecovery(storage, record());

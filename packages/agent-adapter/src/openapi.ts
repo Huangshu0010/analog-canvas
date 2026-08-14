@@ -9,6 +9,8 @@ import {
 } from "./file-resource.js";
 import {
   AgentClaimRequestJsonSchema,
+  AgentConnectionCredentialResponseJsonSchema,
+  AgentConnectorResumeRequestJsonSchema,
   AgentTransportErrorResponseJsonSchema,
 } from "./envelope.js";
 
@@ -62,6 +64,14 @@ const agentFileResourceResponseSchema = componentSchema(
 const agentClaimRequestSchema = componentSchema(
   AgentClaimRequestJsonSchema as Record<string, unknown>,
   "agentClaimRequest",
+);
+const agentConnectorResumeRequestSchema = componentSchema(
+  AgentConnectorResumeRequestJsonSchema as Record<string, unknown>,
+  "agentConnectorResumeRequest",
+);
+const agentConnectionCredentialResponseSchema = componentSchema(
+  AgentConnectionCredentialResponseJsonSchema as Record<string, unknown>,
+  "agentClaimResponse",
 );
 const agentTransportErrorResponseSchema = componentSchema(
   AgentTransportErrorResponseJsonSchema as Record<string, unknown>,
@@ -307,6 +317,24 @@ export const agentCircuitOpenApi = {
         responses: claimResponses,
       },
     },
+    "/api/agent/connectors/resume": {
+      post: {
+        operationId: "agentConnectorResume",
+        description:
+          "Exchange a server-issued persistent connector credential for a fresh short-lived Circuit bearer. The connector remains revocable with its browser session.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/agentConnectorResumeRequest",
+              },
+            },
+          },
+        },
+        responses: claimResponses,
+      },
+    },
     "/api/agent/sessions/{sessionId}/circuit": {
       post: {
         operationId: "agentSessionCircuit",
@@ -363,40 +391,13 @@ export const agentCircuitOpenApi = {
     },
     schemas: {
       agentClaimRequest: agentClaimRequestSchema,
+      agentConnectorResumeRequest: agentConnectorResumeRequestSchema,
       agentTransportErrorResponse: agentTransportErrorResponseSchema,
       agentCircuitRequest: agentCircuitRequestSchema,
       agentCircuitResponse: agentCircuitResponseSchema,
       agentFileResourceRequest: agentFileResourceRequestSchema,
       agentFileResourceResponse: agentFileResourceResponseSchema,
-      agentClaimResponse: {
-        type: "object",
-        additionalProperties: false,
-        required: [
-          "ok",
-          "sessionId",
-          "agentToken",
-          "tokenExpiresAt",
-          "scopes",
-          "projectId",
-          "documentIds",
-        ],
-        properties: {
-          ok: { type: "boolean", const: true },
-          sessionId: { type: "string", minLength: 1 },
-          agentToken: { type: "string", minLength: 1 },
-          tokenExpiresAt: { type: "integer", minimum: 0 },
-          scopes: {
-            type: "array",
-            items: { type: "string", minLength: 1 },
-          },
-          projectId: { type: "string", minLength: 1 },
-          documentIds: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string", minLength: 1 },
-          },
-        },
-      },
+      agentClaimResponse: agentConnectionCredentialResponseSchema,
     },
   },
 } as const;

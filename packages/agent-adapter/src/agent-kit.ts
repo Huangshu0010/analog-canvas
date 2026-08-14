@@ -13,7 +13,7 @@ export { agentRazaviAuthoringCatalog };
  */
 
 export const AGENT_OPERATING_KIT_FORMAT = "icm-agent-kit-v1";
-export const AGENT_OPERATING_KIT_VERSION = "2";
+export const AGENT_OPERATING_KIT_VERSION = "3";
 
 export interface AgentOperatingKitFile {
   path: string;
@@ -68,8 +68,9 @@ before forming requests; it is the wire-contract authority.
   revision conflicts rather than trying to overwrite them.
 - Keep bearer tokens only in memory. Never place a claim code or token in a
   file, URL, log, rendered annotation, or user-visible response.
-- The browser must stay open. Treat a terminal session error as a request for a
-  new human authorization, not permission to reconnect to another Project.
+- The browser must be online while an operation runs; it may reconnect to the
+  same Project/session after a browser restart. Treat a terminal session error
+  as a request for new human authorization, not permission to retarget.
 `,
     },
     {
@@ -79,10 +80,10 @@ before forming requests; it is the wire-contract authority.
 ## Bootstrap
 
 1. Redeem the human-provided claim code at \`/api/agent/claims\` to obtain the
-   initial bearer. If that bearer is lost while the claim is still valid,
-   redeeming it again deliberately replaces the old bearer.
-2. Keep only the latest \`sessionId\`, \`documentIds\`, and bearer token from
-   that response.
+   initial bearer and connector credential.
+2. Keep the bearer only in memory. Store the connector only in private host
+   credential storage, and exchange it through \`/api/agent/connectors/resume\`
+   when the bearer expires. Reusing a live claim rotates both credentials.
 3. Read \`/api/agent/openapi.json\`, then call \`capabilities\` once through
    \`/api/agent/sessions/{sessionId}/circuit\`.
 4. Select only an authorized \`documentId\` and request one complete
@@ -126,9 +127,9 @@ Use the separate \`files\` resource only when capabilities and scope advertise
 it. Staging is not import: a browser human must approve replacement.
 
 On \`STALE_REVISION\`, refresh the Snapshot and reconsider. On an uncertain
-transport result, retry only the exact same request ID and payload. On a token
-loss, redeem a still-valid claim again; on revoked, expired, or replaced
-Project state, stop and ask the human for a new connection.
+transport result, retry only the exact same request ID and payload. On bearer
+loss or expiry, resume once with the connector; on invalid connector, revoked,
+expired, or replaced Project state, stop and ask for a new connection.
 `,
     },
     {

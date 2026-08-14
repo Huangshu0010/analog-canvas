@@ -25,8 +25,11 @@ describe("agent http client", () => {
         expect(body.claimCode).toBe("session-9.code-123");
         return jsonResponse(200, {
           ok: true,
+          sessionId: "session-9",
           agentToken: "tok",
           tokenExpiresAt: 456,
+          connectorToken: "connector",
+          connectorExpiresAt: 789,
           scopes: ["circuit.snapshot"],
           projectId: "project-1",
           documentIds: ["main"],
@@ -52,6 +55,33 @@ describe("agent http client", () => {
       category: "unrecoverable-credential",
       httpStatus: 401,
     });
+  });
+
+  it("exchanges a persistent connector for a fresh bearer", async () => {
+    const http = new AgentHttpClient({
+      baseUrl: BASE,
+      fetch: async (input, init) => {
+        expect(String(input)).toBe(`${BASE}/api/agent/connectors/resume`);
+        expect(JSON.parse(String(init?.body))).toEqual({
+          sessionId: "session-9",
+          connectorToken: "connector-old",
+        });
+        return jsonResponse(200, {
+          ok: true,
+          sessionId: "session-9",
+          agentToken: "fresh-bearer",
+          tokenExpiresAt: 900,
+          connectorToken: "connector-old",
+          connectorExpiresAt: 9_000,
+          scopes: ["circuit.snapshot"],
+          projectId: "project-1",
+          documentIds: ["main"],
+        });
+      },
+    });
+    await expect(
+      http.resumeConnector("session-9", "connector-old"),
+    ).resolves.toMatchObject({ agentToken: "fresh-bearer" });
   });
 
   it("posts four-operation requests with the bearer token and parses responses", async () => {

@@ -14,9 +14,10 @@ import {
   searchSnapshot,
   type SearchKind,
 } from "./results.js";
+import { exportFile, importFile } from "./file-operations.js";
 
 /**
- * The default MCP tool surface (ADR 0020): about ten compact tools. The full
+ * The default MCP tool surface (ADR 0020): 12 compact tools. The full
  * typed edit union is deliberately NOT injected into tool descriptions; it is
  * reachable only through `advanced_transact` after reading the
  * `analog-canvas://contract/advanced-edits` resource in this session.
@@ -33,9 +34,58 @@ const ConnectArgs = z.strictObject({
     .min(1)
     .optional()
     .describe(
-      "Claim code from the editor connect panel. Omit only to re-check a session already active in this MCP process.",
+      "Claim code from the editor connect panel. Omit to resume the browser-approved connector saved for this MCP host.",
     ),
 });
+
+const ExportFileArgs = z
+  .strictObject({
+    artifact: z.enum(["project", "svg", "png", "pdf"]),
+    documentId: z.string().min(1).optional(),
+    outputPath: z.string().min(1),
+  })
+  .superRefine((value, context) => {
+    if (value.artifact !== "project" && !value.documentId) {
+      context.addIssue({
+        code: "custom",
+        path: ["documentId"],
+        message: "documentId is required for visual export",
+      });
+    }
+  });
+
+const ImportFileArgs = z
+  .strictObject({
+    action: z.enum([
+      "stage-project",
+      "stage-spice",
+      "inspect",
+      "discard",
+      "request-approval",
+    ]),
+    path: z.string().min(1).optional(),
+    rootPath: z.string().min(1).optional(),
+    entryPath: z.string().min(1).optional(),
+    includePaths: z.array(z.string().min(1)).max(23).optional(),
+    candidateId: z.string().min(1).optional(),
+  })
+  .superRefine((value, context) => {
+    const required =
+      value.action === "stage-project"
+        ? (["path"] as const)
+        : value.action === "stage-spice"
+          ? (["rootPath", "entryPath"] as const)
+          : (["candidateId"] as const);
+    for (const field of required) {
+      if (!value[field]) {
+        context.addIssue({
+          code: "custom",
+          path: [field],
+          message: `${field} is required for ${value.action}`,
+        });
+      }
+    }
+  });
 
 const DocumentArgs = z.strictObject({
   documentId: z.string().min(1).optional(),
@@ -164,7 +214,7 @@ const TOOLS: readonly ToolEntry[] = [
     definition: {
       name: "connect",
       description:
-        "Pair with the live browser editor. Pass the claim code shown in the editor's Agent connect panel. Within the same MCP process, omit the code to re-check the active session. Cross-process persistent pairing arrives in M4. After connecting, read analog-canvas://reference/quickstart.",
+        "Pair with the live browser editor. Pass its claim code once; later MCP processes can omit it and resume the saved, revocable connector. After connecting, read analog-canvas://reference/quickstart.",
       inputSchema: jsonSchemaOf(ConnectArgs),
     },
     handle: async (args, session) => {
@@ -183,12 +233,67 @@ const TOOLS: readonly ToolEntry[] = [
   },
   {
     definition: {
+      name: "disconnect",
+      description:
+        "Revoke the current browser Agent session and erase this MCP host's saved connector. A fresh editor claim code is required afterwards.",
+      inputSchema: jsonSchemaOf(z.strictObject({})),
+    },
+    handle: async (_args, session) => {
+      await session.client.disconnect();
+      return { ok: true, state: "revoked" };
+    },
+  },
+  {
+    definition: {
       name: "connection_status",
       description:
         "Report pairing and editor-attachment state (unpaired/connecting/online/editor-offline/reconnecting/revoked) plus token validity. Tokens themselves are never returned.",
       inputSchema: jsonSchemaOf(z.strictObject({})),
     },
     handle: async (_args, session) => session.client.status(),
+  },
+  {
+    definition: {
+      name: "export_file",
+      description:
+        "Export the authoritative browser project or a rendered SVG/PNG/PDF to an explicit local path. Visual exports require documentId.",
+      inputSchema: jsonSchemaOf(ExportFileArgs),
+    },
+    handle: async (args, session) =>
+      (() => {
+        const parsed = ExportFileArgs.parse(args);
+        return exportFile(session.client, {
+          artifact: parsed.artifact,
+          outputPath: parsed.outputPath,
+          ...(parsed.documentId ? { documentId: parsed.documentId } : {}),
+        });
+      })(),
+  },
+  {
+    definition: {
+      name: "import_file",
+      description:
+        "Stage a local Analog Canvas project or structural SPICE bundle, inspect/discard the candidate, or request browser approval. Staging never replaces the open project by itself.",
+      inputSchema: jsonSchemaOf(ImportFileArgs),
+    },
+    handle: async (args, session) => {
+      const parsed = ImportFileArgs.parse(args);
+      return importFile(
+        session.client,
+        parsed.action === "stage-project"
+          ? { action: parsed.action, path: parsed.path! }
+          : parsed.action === "stage-spice"
+            ? {
+                action: parsed.action,
+                rootPath: parsed.rootPath!,
+                entryPath: parsed.entryPath!,
+                ...(parsed.includePaths
+                  ? { includePaths: parsed.includePaths }
+                  : {}),
+              }
+            : { action: parsed.action, candidateId: parsed.candidateId! },
+      );
+    },
   },
   {
     definition: {

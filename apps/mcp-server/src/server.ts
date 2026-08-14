@@ -1,4 +1,10 @@
-import { AgentHttpClient, AgentSessionClient } from "@icm/agent-client";
+import { homedir } from "node:os";
+import {
+  AgentHttpClient,
+  AgentSessionClient,
+  ConnectorStore,
+  defaultConnectorFilePath,
+} from "@icm/agent-client";
 import {
   ADVANCED_EDITS_RESOURCE_URI,
   listResourceEntries,
@@ -16,6 +22,7 @@ export const MCP_SERVER_VERSION = "0.1.0";
 
 export interface McpServerConfig {
   apiBaseUrl: string;
+  connectorPath: string;
 }
 
 export function resolveConfig(
@@ -24,6 +31,7 @@ export function resolveConfig(
   return {
     apiBaseUrl:
       env.ANALOG_CANVAS_API_URL ?? "https://analog-canvas.tokenzhang.com",
+    connectorPath: defaultConnectorFilePath(homedir(), env),
   };
 }
 
@@ -47,6 +55,7 @@ export function assembleServer(config: McpServerConfig = resolveConfig()): {
   const http = new AgentHttpClient({ baseUrl: config.apiBaseUrl });
   const client = new AgentSessionClient({
     http,
+    connectorStore: new ConnectorStore(config.connectorPath),
   });
   let advancedContractRead = false;
   const toolSession: ToolSessionState = {

@@ -104,6 +104,102 @@
         }
       }
     },
+    "/api/agent/connectors/resume": {
+      "post": {
+        "operationId": "agentConnectorResume",
+        "description": "Exchange a server-issued persistent connector credential for a fresh short-lived Circuit bearer. The connector remains revocable with its browser session.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/agentConnectorResumeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Claim redeemed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentClaimResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "TOKEN_INVALID",
+                    "message": "Bearer token is missing or unknown"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "SESSION_NOT_FOUND",
+                    "message": "Session is unknown or expired"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_ID_REUSED",
+                    "message": "requestId was already used with a different payload"
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Typed Agent session transport error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/agentTransportErrorResponse"
+                },
+                "example": {
+                  "ok": false,
+                  "error": {
+                    "code": "REQUEST_TOO_LARGE",
+                    "message": "Request exceeds the byte limit"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agent/sessions/{sessionId}/circuit": {
       "post": {
         "operationId": "agentSessionCircuit",
@@ -597,6 +693,28 @@
         ],
         "additionalProperties": false
       },
+      "agentConnectorResumeRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "$ref": "#/components/schemas/agentConnectorResumeRequest/$defs/__schema0"
+          },
+          "connectorToken": {
+            "$ref": "#/components/schemas/agentConnectorResumeRequest/$defs/__schema0"
+          }
+        },
+        "required": [
+          "sessionId",
+          "connectorToken"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
       "agentTransportErrorResponse": {
         "type": "object",
         "properties": {
@@ -618,6 +736,8 @@
                   "CLAIM_INVALID",
                   "CLAIM_EXPIRED",
                   "CLAIM_ALREADY_USED",
+                  "CONNECTOR_INVALID",
+                  "CONNECTOR_EXPIRED",
                   "TOKEN_INVALID",
                   "TOKEN_EXPIRED",
                   "TOKEN_SCOPE_INSUFFICIENT",
@@ -7576,32 +7696,29 @@
       },
       "agentClaimResponse": {
         "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "ok",
-          "sessionId",
-          "agentToken",
-          "tokenExpiresAt",
-          "scopes",
-          "projectId",
-          "documentIds"
-        ],
         "properties": {
           "ok": {
             "type": "boolean",
             "const": true
           },
           "sessionId": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/components/schemas/agentClaimResponse/$defs/__schema0"
           },
           "agentToken": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/components/schemas/agentClaimResponse/$defs/__schema0"
           },
           "tokenExpiresAt": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "connectorToken": {
+            "$ref": "#/components/schemas/agentClaimResponse/$defs/__schema0"
+          },
+          "connectorExpiresAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "scopes": {
             "type": "array",
@@ -7611,16 +7728,32 @@
             }
           },
           "projectId": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/components/schemas/agentClaimResponse/$defs/__schema0"
           },
           "documentIds": {
-            "type": "array",
             "minItems": 1,
+            "type": "array",
             "items": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/agentClaimResponse/$defs/__schema0"
             }
+          }
+        },
+        "required": [
+          "ok",
+          "sessionId",
+          "agentToken",
+          "tokenExpiresAt",
+          "connectorToken",
+          "connectorExpiresAt",
+          "scopes",
+          "projectId",
+          "documentIds"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "__schema0": {
+            "type": "string",
+            "minLength": 1
           }
         }
       }

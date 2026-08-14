@@ -16,7 +16,7 @@ import { sha256Hex } from "@icm/derived";
 export type AgentSessionStatus = "active" | "paused" | "revoked";
 
 export interface AgentSessionLimits {
-  /** One-time claim lifetime (≤ 5 min). */
+  /** Short hand-off claim lifetime. */
   claimTtlMs: number;
   /** Capability token lifetime. */
   tokenTtlMs: number;
@@ -38,7 +38,7 @@ export interface AgentSessionLimits {
 export const DEFAULT_AGENT_SESSION_LIMITS: AgentSessionLimits = {
   claimTtlMs: 30 * 60 * 1000,
   tokenTtlMs: 8 * 60 * 60 * 1000,
-  sessionTtlMs: 8 * 60 * 60 * 1000,
+  sessionTtlMs: 7 * 24 * 60 * 60 * 1000,
   maxRequestBytes: 2_000_000,
   maxMessageBytes: 6_000_000,
   rateLimit: { windowMs: 60_000, maxRequests: 60 },
@@ -60,6 +60,8 @@ export interface CreatedAgentSession {
 export interface RedeemedAgentClaim {
   agentToken: string;
   tokenExpiresAt: number;
+  connectorToken: string;
+  connectorExpiresAt: number;
   scopes: AgentSessionScope[];
 }
 
@@ -88,6 +90,11 @@ interface ClaimRecord {
 interface TokenRecord {
   verifier: string;
   scopes: AgentSessionScope[];
+  expiresAt: number;
+}
+
+interface ConnectorRecord {
+  verifier: string;
   expiresAt: number;
 }
 
@@ -122,6 +129,7 @@ interface SessionInternals {
   expiresAt: number;
   claim: ClaimRecord | null;
   token: TokenRecord | null;
+  connector: ConnectorRecord | null;
   rateWindow: RateWindow;
   cache: Map<string, CachedResult>;
   pending: Map<string, PendingRequest>;
@@ -154,6 +162,8 @@ export interface PersistedAgentSessionState {
   expiresAt: number;
   claim: ClaimRecord | null;
   token: TokenRecord | null;
+  /** Optional for backward-compatible restore of pre-M4 Durable Object state. */
+  connector?: ConnectorRecord | null;
   rateWindow: RateWindow;
   requestLedger?: Array<[string, PendingRequest]>;
 }
@@ -211,6 +221,7 @@ export class AgentSessionMachine {
           used: false,
         },
         token: null,
+        connector: null,
         rateWindow: { windowStart: options.now, count: 0 },
         cache: new Map(),
         pending: new Map(),
@@ -280,6 +291,7 @@ export class AgentSessionMachine {
         token: state.token
           ? { ...state.token, scopes: [...state.token.scopes] }
           : null,
+        connector: state.connector ? { ...state.connector } : null,
         rateWindow: { ...state.rateWindow },
         // Project-bearing responses remain process-local. Only request IDs,
         // payload hashes, and timestamps survive to preserve at-most-once
@@ -308,6 +320,9 @@ export class AgentSessionMachine {
       claim: this.internals.claim ? { ...this.internals.claim } : null,
       token: this.internals.token
         ? { ...this.internals.token, scopes: [...this.internals.token.scopes] }
+        : null,
+      connector: this.internals.connector
+        ? { ...this.internals.connector }
         : null,
       rateWindow: { ...this.internals.rateWindow },
       requestLedger: [...this.internals.pending.entries()].map(
@@ -353,22 +368,48 @@ export class AgentSessionMachine {
     if (now >= claim.expiresAt) return { ok: false, code: "CLAIM_EXPIRED" };
 
     claim.used = true;
-    const agentToken = this.random();
-    const tokenExpiresAt = Math.min(
-      now + this.limits.tokenTtlMs,
-      this.internals.expiresAt,
-    );
-    this.internals.token = {
-      verifier: secretVerifier(agentToken),
-      scopes: [...this.internals.scopes],
-      expiresAt: tokenExpiresAt,
+    const connectorToken = this.random();
+    const connectorExpiresAt = this.internals.expiresAt;
+    this.internals.connector = {
+      verifier: secretVerifier(connectorToken),
+      expiresAt: connectorExpiresAt,
     };
+    const bearer = this.mintBearer(now);
     return {
       ok: true,
       claim: {
-        agentToken,
-        tokenExpiresAt,
-        scopes: this.internals.token.scopes,
+        ...bearer,
+        connectorToken,
+        connectorExpiresAt,
+      },
+    };
+  }
+
+  /** Exchange a persistent connector secret for a fresh short-lived bearer. */
+  resumeConnector(
+    connectorToken: string,
+    now: number,
+  ):
+    | { ok: true; claim: RedeemedAgentClaim }
+    | { ok: false; code: AgentTransportErrorCode } {
+    const lifecycle = this.lifecycleCode(now);
+    if (lifecycle) return { ok: false, code: lifecycle };
+    const connector = this.internals.connector;
+    if (
+      !connector ||
+      !constantTimeEqual(secretVerifier(connectorToken), connector.verifier)
+    ) {
+      return { ok: false, code: "CONNECTOR_INVALID" };
+    }
+    if (now >= connector.expiresAt) {
+      return { ok: false, code: "CONNECTOR_EXPIRED" };
+    }
+    return {
+      ok: true,
+      claim: {
+        ...this.mintBearer(now),
+        connectorToken,
+        connectorExpiresAt: connector.expiresAt,
       },
     };
   }
@@ -565,7 +606,28 @@ export class AgentSessionMachine {
   replaceProject(): void {
     this.internals.status = "revoked";
     this.internals.token = null;
+    this.internals.connector = null;
     this.internals.claim = null;
+  }
+
+  private mintBearer(
+    now: number,
+  ): Pick<RedeemedAgentClaim, "agentToken" | "tokenExpiresAt" | "scopes"> {
+    const agentToken = this.random();
+    const tokenExpiresAt = Math.min(
+      now + this.limits.tokenTtlMs,
+      this.internals.expiresAt,
+    );
+    this.internals.token = {
+      verifier: secretVerifier(agentToken),
+      scopes: [...this.internals.scopes],
+      expiresAt: tokenExpiresAt,
+    };
+    return {
+      agentToken,
+      tokenExpiresAt,
+      scopes: [...this.internals.scopes],
+    };
   }
 
   private lifecycleCode(now: number): AgentTransportErrorCode | null {
