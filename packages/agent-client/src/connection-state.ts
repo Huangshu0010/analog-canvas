@@ -24,7 +24,7 @@ export type ConnectionEvent =
   | "transport-interrupted"
   /** Retry attempts exhausted or the credential is terminally unusable. */
   | "credential-revoked"
-  /** Stored credential removed locally. */
+  /** Process-local credential removed. */
   | "reset";
 
 const TRANSITIONS: Record<

@@ -10,12 +10,6 @@ export {
   type ConnectionSnapshot,
 } from "./connection-state.js";
 export {
-  CredentialStore,
-  defaultCredentialFilePath,
-  CREDENTIAL_FILE_VERSION,
-  type StoredConnectorCredential,
-} from "./credential-store.js";
-export {
   AgentSessionError,
   networkFailure,
   transportFailure,

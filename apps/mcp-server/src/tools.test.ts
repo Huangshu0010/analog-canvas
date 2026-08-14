@@ -1,8 +1,5 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { CredentialStore, AgentSessionClient } from "@icm/agent-client";
+import { describe, expect, it } from "vitest";
+import { AgentSessionClient } from "@icm/agent-client";
 import {
   capabilitiesResponse,
   FakeAgentHttp,
@@ -14,24 +11,11 @@ import { testSnapshot } from "../../../packages/agent-client/src/test-support/sn
 import { callTool, listToolDefinitions } from "./tools.js";
 import type { ToolSessionState } from "./tools.js";
 
-const directories: string[] = [];
-
-afterEach(async () => {
-  await Promise.all(
-    directories
-      .splice(0)
-      .map((dir) => rm(dir, { recursive: true, force: true })),
-  );
-});
-
 async function toolSession(
   http: FakeAgentHttp = new FakeAgentHttp(),
 ): Promise<{ session: ToolSessionState; http: FakeAgentHttp }> {
-  const dir = await mkdtemp(join(tmpdir(), "ac-mcp-"));
-  directories.push(dir);
   const client = new AgentSessionClient({
     http,
-    credentials: new CredentialStore({ filePath: join(dir, "connector.json") }),
   });
   let advancedRead = false;
   const session: ToolSessionState = {
@@ -116,9 +100,15 @@ describe("mcp tool surface", () => {
     });
   });
 
-  it("inspect and search read the cached snapshot", async () => {
-    const { session } = await toolSession();
+  it("inspect and search refresh by default so human edits are visible", async () => {
+    const { session, http } = await toolSession();
     await callTool("connect", { claimCode: "session-1.code" }, session);
+    const after = testSnapshot();
+    after.document.instances[0]!.properties = { w: "4u", humanEdit: true };
+    http.circuitHandler = async ({ request }) =>
+      request.operation === "snapshot"
+        ? snapshotResponse(request.requestId, after)
+        : capabilitiesResponse(request.requestId);
     const instance = parseText(
       await callTool(
         "inspect",
@@ -130,15 +120,19 @@ describe("mcp tool surface", () => {
       id: "instance-1",
       name: "M1",
       symbolId: "nmos",
+      properties: { humanEdit: true },
     });
     const hits = parseText(
       await callTool("search", { query: "vout", limit: 5 }, session),
     ) as { hits: { kind: string; id: string }[] };
     expect(hits.hits.length).toBeGreaterThan(0);
     expect(hits.hits.some((hit) => hit.id === "net-vout")).toBe(true);
+    expect(
+      http.circuitCalls.filter((call) => call.request.operation === "snapshot"),
+    ).toHaveLength(3);
   });
 
-  it("apply_actions compiles and commits through the four-operation API", async () => {
+  it("apply_actions rejects a hidden multi-transaction batch before committing", async () => {
     const http = new FakeAgentHttp();
     const { session } = await toolSession(http);
     await callTool("connect", { claimCode: "session-1.code" }, session);
@@ -181,10 +175,87 @@ describe("mcp tool surface", () => {
       },
       session,
     );
-    const value = parseText(result) as { ok: boolean; transactions: number };
-    expect(value.ok).toBe(true);
-    // dry-run both transactions first, then commit them in order
-    expect(transacts).toEqual([true, true, false, false]);
+    const value = parseText(result) as {
+      ok: boolean;
+      code: string;
+      transactions: number;
+    };
+    expect(result.isError).toBe(true);
+    expect(value).toMatchObject({
+      ok: false,
+      code: "ACTION_BATCH_NOT_ATOMIC",
+      transactions: 2,
+    });
+    expect(transacts).toEqual([]);
+  });
+
+  it("creates visible wire geometry for a pin-to-pin connect", async () => {
+    const http = new FakeAgentHttp();
+    const { session } = await toolSession(http);
+    await callTool("connect", { claimCode: "session-1.code" }, session);
+    const transacts: Extract<
+      (typeof http.circuitCalls)[number]["request"],
+      { operation: "transact" }
+    >[] = [];
+    http.circuitHandler = async ({ request }) => {
+      switch (request.operation) {
+        case "transact":
+          transacts.push(request);
+          return transactSuccessResponse(
+            request.requestId,
+            request.expectedRevision,
+            ["route-new"],
+          );
+        case "snapshot": {
+          const after = testSnapshot();
+          after.document.revision = 6;
+          return snapshotResponse(request.requestId, after, 6);
+        }
+        default:
+          return capabilitiesResponse(request.requestId);
+      }
+    };
+
+    const result = await callTool(
+      "apply_actions",
+      {
+        verify: false,
+        actions: [
+          {
+            kind: "connect",
+            from: { kind: "pin", instance: "M1", pin: "G" },
+            to: { kind: "pin", instance: "R1", pin: "2" },
+            via: [{ x: 360, y: 240 }],
+          },
+        ],
+      },
+      session,
+    );
+
+    expect(parseText(result)).toMatchObject({ ok: true, transactions: 1 });
+    expect(transacts).toHaveLength(2);
+    for (const request of transacts) {
+      expect(request.edits).toBeUndefined();
+      expect(request.wireIntent).toMatchObject({
+        from: {
+          kind: "endpoint",
+          endpoint: {
+            kind: "terminal",
+            instanceId: "instance-1",
+            pinName: "G",
+          },
+        },
+        to: {
+          kind: "endpoint",
+          endpoint: {
+            kind: "terminal",
+            instanceId: "instance-2",
+            pinName: "2",
+          },
+        },
+        waypoints: [{ x: 360, y: 240 }],
+      });
+    }
   });
 
   it("apply_actions surfaces compile failures without sending", async () => {
@@ -209,7 +280,8 @@ describe("mcp tool surface", () => {
     const value = parseText(result) as { ok: boolean; code: string };
     expect(value.ok).toBe(false);
     expect(value.code).toBe("ACTION_COMPILE_FAILED");
-    expect(http.circuitCalls.length).toBe(calls);
+    // Compilation resolves catalog and object names against a fresh Snapshot.
+    expect(http.circuitCalls.length).toBe(calls + 1);
   });
 
   it("gates advanced_transact on reading the contract resource", async () => {

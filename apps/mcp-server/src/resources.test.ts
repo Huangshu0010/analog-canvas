@@ -18,6 +18,7 @@ interface ManifestResource {
   description: string;
   mimeType: string;
   source: { kind: "repo" | "kit"; path: string };
+  projections: string[];
 }
 
 /**
@@ -34,11 +35,14 @@ describe("mcp resources single-source projection", () => {
   ) as { resources: ManifestResource[] };
 
   it("matches every manifest entry with identical content from its source", () => {
-    expect(mcpResources).toHaveLength(manifest.resources.length);
+    const exposed = manifest.resources.filter((entry) =>
+      entry.projections.includes("mcp-resources"),
+    );
+    expect(mcpResources).toHaveLength(exposed.length);
     const kitFiles = new Map(
       agentOperatingKit.files.map((file) => [file.path, file.content]),
     );
-    for (const entry of manifest.resources) {
+    for (const entry of exposed) {
       const projected = mcpResources.find((r) => r.uri === entry.uri);
       expect(projected, `missing resource ${entry.uri}`).toBeDefined();
       const expectedText =
@@ -76,9 +80,7 @@ describe("mcp resources single-source projection", () => {
     const quickstart = readResourceContent(
       "analog-canvas://reference/quickstart",
     );
-    expect(quickstart.text).toContain(
-      "# Interactive Circuit Maker live-session workflow",
-    );
+    expect(quickstart.text).toContain("# Analog Canvas MCP quickstart");
     expect(() => readResourceContent("analog-canvas://reference/nope")).toThrow(
       /Unknown resource/,
     );

@@ -95,6 +95,7 @@ async function main() {
 
   const resources = [];
   for (const resource of manifest.resources) {
+    if (!(resource.projections ?? []).includes("mcp-resources")) continue;
     let text;
     if (resource.source.kind === "repo") {
       text = await readRepoSource(resource);

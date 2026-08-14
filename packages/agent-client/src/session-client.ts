@@ -17,7 +17,6 @@ type AgentCapabilitiesResponse = z.infer<
   typeof AgentCapabilitiesResponseSchema
 >;
 type AgentRenderResponse = z.infer<typeof AgentRenderResponseSchema>;
-import { CredentialStore } from "./credential-store.js";
 import { AgentSessionError } from "./errors.js";
 import { AgentHttpClient, type ClaimSuccess } from "./http-client.js";
 import {
@@ -44,7 +43,6 @@ interface ActiveSession {
 
 export interface AgentSessionClientOptions {
   http: AgentHttpClient;
-  credentials: CredentialStore;
   now?: () => number;
   newRequestId?: () => string;
   /** Automatic exact-payload retry attempts after a local network failure. */
@@ -102,12 +100,13 @@ function baseRequest(requestId: string): {
  * Unified Agent-side Helper (ADR 0020). Owns claim/resume, token and session
  * state, capabilities/revision caches, exact-payload request-ID retry, the
  * Snapshot cache, and compilation-plus-execution of high-level actions.
- * Tokens never leave this class except into the credential store.
+ * Bearer tokens remain process-local and are sent only in Authorization
+ * headers. Cross-process connector credentials are deliberately deferred to
+ * M4.
  */
 export class AgentSessionClient {
   readonly connection: ConnectionTracker;
   private readonly http: AgentHttpClient;
-  private readonly credentials: CredentialStore;
   private readonly cache = new SnapshotCache();
   private readonly now: () => number;
   private readonly newRequestId: () => string;
@@ -119,7 +118,6 @@ export class AgentSessionClient {
 
   constructor(options: AgentSessionClientOptions) {
     this.http = options.http;
-    this.credentials = options.credentials;
     this.now = options.now ?? (() => Date.now());
     this.newRequestId =
       options.newRequestId ?? (() => `req-${crypto.randomUUID()}`);
@@ -129,9 +127,9 @@ export class AgentSessionClient {
   }
 
   /**
-   * Pair or resume. With a claim code, redeem it (replacing any prior local
-   * state). Without one, resume from the stored credential while its token is
-   * still valid; otherwise fail with `CLAIM_REQUIRED`.
+   * Pair or re-check the current process-local session. With a claim code,
+   * redeem it and replace prior local state. Without one, reuse the active
+   * in-memory bearer while valid; otherwise fail with `CLAIM_REQUIRED`.
    */
   async connect(claimCode?: string): Promise<ConnectReport> {
     if (claimCode === undefined || claimCode.trim() === "") {
@@ -139,49 +137,34 @@ export class AgentSessionClient {
       if (resumed === null) {
         throw new AgentSessionError(
           "CLAIM_REQUIRED",
-          "no valid stored pairing; pass a claim code from the editor's connect panel",
+          "no valid process-local pairing; pass a claim code from the editor's connect panel",
           "unrecoverable-credential",
         );
       }
       return resumed;
     }
     this.connection.apply("claim-started");
-    const claim: ClaimSuccess = await this.http.claim(claimCode.trim());
-    this.session = {
-      sessionId: claim.sessionId,
-      agentToken: claim.agentToken,
-      tokenExpiresAt: claim.tokenExpiresAt,
-      scopes: claim.scopes,
-      projectId: claim.projectId,
-      documentIds: claim.documentIds,
-    };
-    await this.credentials.save({
-      version: 1,
-      apiBaseUrl: this.http.baseUrl,
-      sessionId: claim.sessionId,
-      agentToken: claim.agentToken,
-      tokenExpiresAt: claim.tokenExpiresAt,
-      scopes: claim.scopes,
-      projectId: claim.projectId,
-      documentIds: claim.documentIds,
-      storedAt: this.now(),
-    });
-    return this.establishContext("claimed");
+    try {
+      const claim: ClaimSuccess = await this.http.claim(claimCode.trim());
+      this.session = {
+        sessionId: claim.sessionId,
+        agentToken: claim.agentToken,
+        tokenExpiresAt: claim.tokenExpiresAt,
+        scopes: claim.scopes,
+        projectId: claim.projectId,
+        documentIds: claim.documentIds,
+      };
+      return await this.establishContext("claimed");
+    } catch (error) {
+      if (!this.session) this.connection.apply("reset");
+      throw error;
+    }
   }
 
   private async tryResume(): Promise<ConnectReport | null> {
-    const stored = await this.credentials.load();
-    if (!stored || stored.apiBaseUrl !== this.http.baseUrl) return null;
-    if (!this.tokenValid(stored)) return null;
+    const stored = this.session;
+    if (!stored || !this.tokenValid(stored)) return null;
     this.connection.apply("resume-started");
-    this.session = {
-      sessionId: stored.sessionId,
-      agentToken: stored.agentToken,
-      tokenExpiresAt: stored.tokenExpiresAt,
-      scopes: stored.scopes,
-      projectId: stored.projectId,
-      documentIds: stored.documentIds,
-    };
     try {
       return await this.establishContext("resumed");
     } catch (error) {
@@ -189,7 +172,7 @@ export class AgentSessionClient {
         error instanceof AgentSessionError &&
         error.category === "unrecoverable-credential"
       ) {
-        await this.discardCredential(error.code);
+        this.discardCredential(error.code);
       }
       throw error;
     }
@@ -353,10 +336,9 @@ export class AgentSessionClient {
   }
 
   /**
-   * Compile high-level actions against the current Snapshot, dry-run every
-   * produced transaction, then commit them in order. A concurrent human edit
-   * surfaces as `STATE_CHANGED` with the objects that moved, never as a blind
-   * overwrite.
+   * Compile high-level actions against a fresh Snapshot, require one atomic
+   * transaction, dry-run it, then commit it. A concurrent human edit surfaces
+   * as `STATE_CHANGED` with the objects that moved, never as a blind overwrite.
    */
   async applyActions(
     actions: readonly unknown[],
@@ -367,7 +349,7 @@ export class AgentSessionClient {
     } = {},
   ): Promise<ApplyActionsReport> {
     const verify = options.verify ?? true;
-    const entry = await this.snapshot(options.documentId);
+    const entry = await this.snapshot(options.documentId, { refresh: true });
     const documentId = entry.documentId;
     let compiled: CompiledTransaction[];
     try {
@@ -392,64 +374,73 @@ export class AgentSessionClient {
       throw error;
     }
 
+    if (compiled.length !== 1) {
+      return {
+        ok: false,
+        stage: "compile",
+        code: "ACTION_BATCH_NOT_ATOMIC",
+        message:
+          "this action batch requires multiple underlying transactions; split it at the edit/wire boundary and refresh between calls",
+        revision: entry.revision,
+        transactions: compiled.length,
+      };
+    }
+
     let revision = entry.revision;
-    for (const transaction of compiled) {
-      const response = await this.send(
-        this.transactRequest(transaction, revision, true),
-      );
-      if (!response.ok) {
-        return {
-          ok: false,
-          stage: "dry-run",
-          code: response.error.code,
-          message: response.error.message,
-          revision,
-        };
-      }
+    const transaction = compiled[0]!;
+    const dryRunResponse = await this.send(
+      this.transactRequest(transaction, documentId, revision, true),
+    );
+    if (!dryRunResponse.ok) {
+      return {
+        ok: false,
+        stage: "dry-run",
+        code: dryRunResponse.error.code,
+        message: dryRunResponse.error.message,
+        revision,
+      };
     }
     if (options.dryRunOnly) {
       return {
         ok: true,
         stage: "done",
         dryRun: true,
-        transactions: compiled.length,
+        transactions: 1,
         revision,
       };
     }
 
-    for (const transaction of compiled) {
-      const response = await this.send(
-        this.transactRequest(transaction, revision, false),
-      );
-      if (!response.ok) {
-        if (response.error.code === "STALE_REVISION") {
-          return this.stateChangedReport(entry, response.error.message);
-        }
-        return {
-          ok: false,
-          stage: "commit",
-          code: response.error.code,
-          message: response.error.message,
-          revision,
-        };
+    const response = await this.send(
+      this.transactRequest(transaction, documentId, revision, false),
+    );
+    if (!response.ok) {
+      if (response.error.code === "STALE_REVISION") {
+        return this.stateChangedReport(entry, response.error.message);
       }
-      if (response.operation !== "transact") {
-        return {
-          ok: false,
-          stage: "commit",
-          code: "INVALID_RESPONSE",
-          message: "unexpected operation for transact",
-          revision,
-        };
-      }
-      revision = response.revision;
+      return {
+        ok: false,
+        stage: "commit",
+        code: response.error.code,
+        message: response.error.message,
+        revision,
+      };
     }
+    if (response.operation !== "transact") {
+      return {
+        ok: false,
+        stage: "commit",
+        code: "INVALID_RESPONSE",
+        message: "unexpected operation for transact",
+        revision,
+      };
+    }
+    revision = response.revision;
     this.cache.markDirty(documentId, revision);
 
     const report: ApplyActionsReport = {
       ok: true,
       stage: "done",
-      transactions: compiled.length,
+      transactions: 1,
       revision,
     };
     if (verify) {
@@ -470,8 +461,7 @@ export class AgentSessionClient {
     edits: readonly unknown[],
     options: { documentId?: string; dryRun?: boolean } = {},
   ): Promise<ApplyActionsReport> {
-    const entry = await this.snapshot(options.documentId);
-    const documentId = entry.documentId;
+    const cached = this.cachedSnapshot(options.documentId);
     const validated: AgentTransactRequest["edits"] = [];
     for (const edit of edits) {
       const parsed = AgentSchematicEditSchema.safeParse(edit);
@@ -484,7 +474,7 @@ export class AgentSessionClient {
           message: issue
             ? `${issue.path.join(".")}: ${issue.message}`
             : "edit failed contract validation",
-          revision: entry.revision,
+          ...(cached ? { revision: cached.revision } : {}),
         };
       }
       validated.push(parsed.data);
@@ -495,9 +485,11 @@ export class AgentSessionClient {
         stage: "compile",
         code: "EDIT_SCHEMA_INVALID",
         message: "at least one edit is required",
-        revision: entry.revision,
+        ...(cached ? { revision: cached.revision } : {}),
       };
     }
+    const entry = await this.snapshot(options.documentId, { refresh: true });
+    const documentId = entry.documentId;
     const response = await this.send({
       ...baseRequest(this.newRequestId()),
       operation: "transact",
@@ -559,13 +551,14 @@ export class AgentSessionClient {
 
   private transactRequest(
     transaction: CompiledTransaction,
+    documentId: string,
     expectedRevision: number,
     dryRun: boolean,
   ): AgentCircuitRequest {
     return {
       ...baseRequest(this.newRequestId()),
       operation: "transact",
-      documentId: this.defaultDocumentId(),
+      documentId,
       transactionId: `txn-${crypto.randomUUID()}`,
       expectedRevision,
       dryRun,
@@ -586,7 +579,6 @@ export class AgentSessionClient {
     const session = this.requireSession();
     if (!this.tokenValid(session)) {
       this.connection.apply("credential-revoked", "TOKEN_EXPIRED");
-      await this.credentials.clear();
       this.session = null;
       throw new AgentSessionError(
         "TOKEN_EXPIRED",
@@ -634,7 +626,7 @@ export class AgentSessionClient {
           throw error;
         }
         if (error.category === "unrecoverable-credential") {
-          await this.discardCredential(error.code);
+          this.discardCredential(error.code);
           throw error;
         }
         throw error;
@@ -642,11 +634,10 @@ export class AgentSessionClient {
     }
   }
 
-  private async discardCredential(code: string): Promise<void> {
+  private discardCredential(code: string): void {
     this.connection.apply("credential-revoked", code);
     this.session = null;
     this.capabilitiesCache = null;
-    await this.credentials.clear();
   }
 
   private requireSession(): ActiveSession {
@@ -660,9 +651,7 @@ export class AgentSessionClient {
     return this.session;
   }
 
-  private tokenValid(
-    session: { tokenExpiresAt: number } | ActiveSession | StoredLike,
-  ): boolean {
+  private tokenValid(session: { tokenExpiresAt: number }): boolean {
     return this.now() < session.tokenExpiresAt - this.tokenExpiryGraceMs;
   }
 
@@ -677,8 +666,4 @@ export class AgentSessionClient {
     }
     return documentId;
   }
-}
-
-interface StoredLike {
-  tokenExpiresAt: number;
 }

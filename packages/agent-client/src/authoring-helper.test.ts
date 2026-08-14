@@ -123,44 +123,81 @@ describe("authoring helper compilation", () => {
     );
   });
 
-  it("compiles pin-to-pin connect into connect_endpoints with an optional new net", () => {
+  it("compiles pin-to-pin connect into one visible wire intent with waypoints", () => {
     const [transaction] = compile([
       {
         kind: "connect",
         from: { kind: "pin", instance: "R1", pin: "2" },
         to: { kind: "pin", instance: "M1", pin: "S" },
-        net: "Vfb",
+        via: [
+          { x: 460, y: 220 },
+          { x: 300, y: 220 },
+        ],
       },
     ]);
-    const edit = transaction?.edits?.[0];
-    expect(edit?.kind).toBe("connect_endpoints");
-    if (edit?.kind === "connect_endpoints") {
-      expect(edit.from).toEqual({
+    expect(transaction?.form).toBe("wire-intent");
+    expect(transaction?.wireIntent).toMatchObject({
+      from: {
+        kind: "endpoint",
+        endpoint: {
+          kind: "terminal",
+          instanceId: "instance-2",
+          pinName: "2",
+        },
+      },
+      to: {
+        kind: "endpoint",
+        endpoint: {
+          kind: "terminal",
+          instanceId: "instance-1",
+          pinName: "S",
+        },
+      },
+      waypoints: [
+        { x: 460, y: 220 },
+        { x: 300, y: 220 },
+      ],
+    });
+  });
+
+  it("uses a free point, not the page origin, when attaching it to a Net", () => {
+    const [transaction] = compile([
+      {
+        kind: "connect",
+        from: { kind: "point", x: 480, y: 160 },
+        to: { kind: "net", net: "Vout" },
+      },
+    ]);
+    expect(transaction?.wireIntent?.to).toEqual({
+      kind: "route-segment",
+      routeId: "route-1",
+      segmentIndex: 1,
+      point: { x: 460, y: 160 },
+    });
+  });
+
+  it("keeps endpoint identity in the visible pin-to-pin wire intent", () => {
+    const [transaction] = compile([
+      {
+        kind: "connect",
+        from: { kind: "pin", instance: "R1", pin: "2" },
+        to: { kind: "pin", instance: "M1", pin: "S" },
+      },
+    ]);
+    if (transaction?.wireIntent?.from.kind === "endpoint") {
+      expect(transaction.wireIntent.from.endpoint).toEqual({
         kind: "terminal",
         instanceId: "instance-2",
         pinName: "2",
       });
-      expect(edit.to).toEqual({
+    }
+    if (transaction?.wireIntent?.to.kind === "endpoint") {
+      expect(transaction.wireIntent.to.endpoint).toEqual({
         kind: "terminal",
         instanceId: "instance-1",
         pinName: "S",
       });
-      expect(edit.newNetName).toBe("Vfb");
     }
-  });
-
-  it("refuses to connect two pins onto an existing named net", () => {
-    expectCompileError(
-      [
-        {
-          kind: "connect",
-          from: { kind: "pin", instance: "M1", pin: "S" },
-          to: { kind: "pin", instance: "R1", pin: "2" },
-          net: "Vout",
-        },
-      ],
-      "already exists",
-    );
   });
 
   it("compiles pin-to-net connect into a wire intent anchored on the nearest route segment", () => {
@@ -407,6 +444,31 @@ describe("authoring helper compilation", () => {
         kind: "text",
         value: "Vout node",
       });
+    }
+  });
+
+  it("preserves structured RichText instead of flattening it", () => {
+    const content = {
+      runs: [
+        { kind: "text" as const, value: "V" },
+        {
+          kind: "span" as const,
+          style: "subscript" as const,
+          children: [{ kind: "text" as const, value: "out" }],
+        },
+      ],
+    };
+    const [annotated] = compile([
+      { kind: "annotate", text: content, position: { x: 50, y: 400 } },
+    ]);
+    const edit = annotated?.edits?.[0];
+    if (
+      edit?.kind === "upsert_drafting_object" &&
+      edit.object.kind === "text"
+    ) {
+      expect(edit.object.content).toEqual(content);
+    } else {
+      expect.unreachable("expected drafting text edit");
     }
   });
 

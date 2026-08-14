@@ -7,13 +7,15 @@ engine.
 
 ## Choose the entry point
 
-1. **Preferred: local stdio MCP.** Run the Agent-side MCP adapter
+1. **Development preview: local stdio MCP.** Run the Agent-side MCP adapter
    (`apps/mcp-server`, [ADR 0020](../adr/0020-agent-side-mcp-adapter.md)) and
    connect a host such as Codex, Claude Code, or Cursor to it. The adapter
-   owns claim redemption, token resume, revisions, idempotent retries, and
+   owns claim redemption, process-local tokens, revisions, idempotent retries, and
    compact tools; the model never sees tokens or the raw OpenAPI. Build and
-   start it with `pnpm --filter @icm/mcp-server start`.
-2. **Fallback: Kit + HTTP API.** For hosts without MCP, fetch the public
+   start it with `pnpm --filter @icm/mcp-server start`. M5 will package and
+   promote this as the default external entry point.
+2. **Current deployed path: Kit + HTTP API.** For hosts without the packaged
+   MCP entry point, fetch the public
    `GET /api/agent/kit` JSON, write its listed files to a private scratch
    directory, redeem the claim, and call the four operations directly.
 3. **Advanced: direct OpenAPI.** `GET /api/agent/openapi.json` is the
@@ -21,8 +23,8 @@ engine.
    does not need it; `advanced_transact` requires reading the
    `analog-canvas://contract/advanced-edits` resource first.
 
-For an MCP session: start the adapter, call `connect` (claim code only on
-first pairing), read `analog-canvas://reference/quickstart`, call
+For an MCP session: start the adapter, call `connect` with a Claim Code, read
+`analog-canvas://reference/quickstart`, call
 `get_context`, then operate. Knowledge documents surface as MCP Resources
 declared by [`resource-manifest.json`](resource-manifest.json); the same
 manifest projects the shared sources into the HTTP Kit.

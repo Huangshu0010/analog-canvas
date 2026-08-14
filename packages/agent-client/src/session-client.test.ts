@@ -1,7 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { AgentSessionError } from "./errors.js";
 import {
   capabilitiesResponse,
@@ -11,37 +8,21 @@ import {
   transactSuccessResponse,
 } from "./test-support/fake-relay.js";
 import { testSnapshot } from "./test-support/snapshot-fixture.js";
-import { CredentialStore } from "./credential-store.js";
 import { AgentSessionClient } from "./session-client.js";
-
-const directories: string[] = [];
 
 async function freshClient(
   options: { http?: FakeAgentHttp; now?: () => number } = {},
 ): Promise<{
   client: AgentSessionClient;
-  store: CredentialStore;
   http: FakeAgentHttp;
 }> {
-  const dir = await mkdtemp(join(tmpdir(), "ac-session-"));
-  directories.push(dir);
-  const store = new CredentialStore({ filePath: join(dir, "connector.json") });
   const http = options.http ?? new FakeAgentHttp();
   const client = new AgentSessionClient({
     http,
-    credentials: store,
     ...(options.now ? { now: options.now } : {}),
   });
-  return { client, store, http };
+  return { client, http };
 }
-
-afterEach(async () => {
-  await Promise.all(
-    directories
-      .splice(0)
-      .map((dir) => rm(dir, { recursive: true, force: true })),
-  );
-});
 
 describe("agent session client", () => {
   it("claims a code, caches capabilities, snapshots once, and reports online", async () => {
@@ -70,18 +51,13 @@ describe("agent session client", () => {
     expect(status).not.toContain("agentToken");
   });
 
-  it("resumes from the stored credential without a new claim", async () => {
-    const first = await freshClient();
-    await first.client.connect("session-1.claim-code");
-    const http = new FakeAgentHttp();
-    const resumed = new AgentSessionClient({
-      http,
-      credentials: first.store,
-    });
-    const report = await resumed.connect();
+  it("re-checks the process-local session without a new claim", async () => {
+    const { client, http } = await freshClient();
+    await client.connect("session-1.claim-code");
+    const report = await client.connect();
     expect(report.mode).toBe("resumed");
-    expect(http.claims).toEqual([]);
-    expect(http.circuitCalls[0]?.request.operation).toBe("capabilities");
+    expect(http.claims).toEqual(["session-1.claim-code"]);
+    expect(http.circuitCalls.at(-1)?.request.operation).toBe("capabilities");
   });
 
   it("requires a claim code when nothing valid is stored", async () => {
@@ -115,9 +91,9 @@ describe("agent session client", () => {
     expect(client.connection.snapshot.state).toBe("revoked");
   });
 
-  it("clears the stored credential when the server revokes the session", async () => {
+  it("clears the process-local credential when the server revokes the session", async () => {
     let revoked = false;
-    const { client, store } = await freshClient({
+    const { client } = await freshClient({
       http: new FakeAgentHttp({
         circuit: async ({ request }) => {
           if (request.operation === "capabilities" && revoked) {
@@ -136,13 +112,11 @@ describe("agent session client", () => {
       }),
     });
     await client.connect("session-1.code");
-    expect(await store.load()).not.toBeNull();
     revoked = true;
     await expect(client.capabilities({ force: true })).rejects.toMatchObject({
       code: "SESSION_REVOKED",
     });
     expect(client.connection.snapshot.state).toBe("revoked");
-    expect(await store.load()).toBeNull();
     await expect(client.connect()).rejects.toMatchObject({
       code: "CLAIM_REQUIRED",
     });
@@ -176,7 +150,7 @@ describe("agent session client", () => {
           const snapshotCalls = http.circuitCalls.filter(
             (call) => call.request.operation === "snapshot",
           ).length;
-          if (snapshotCalls > 1) {
+          if (snapshotCalls > 2) {
             const after = testSnapshot();
             after.document.revision = 6;
             after.document.instances.push({
@@ -252,7 +226,7 @@ describe("agent session client", () => {
           const snapshotCalls = http.circuitCalls.filter(
             (call) => call.request.operation === "snapshot",
           ).length;
-          if (snapshotCalls > 1) {
+          if (snapshotCalls > 2) {
             const after = testSnapshot();
             after.document.revision = 9;
             after.document.instances = after.document.instances.map(
@@ -292,6 +266,72 @@ describe("agent session client", () => {
     expect(client.summary("main")?.revision).toBe(9);
   });
 
+  it("uses the explicitly selected document for refresh, dry-run, and commit", async () => {
+    const child = testSnapshot();
+    child.document.id = "child";
+    child.document.name = "Child";
+    child.project.documents.push({
+      id: "child",
+      name: "Child",
+      instanceCount: child.document.instances.length,
+      netCount: child.document.nets.length,
+      references: [],
+    });
+    const http = new FakeAgentHttp({
+      claim: () => ({
+        sessionId: "session-1",
+        agentToken: "token-0123456789abcdef0123456789abcdef",
+        tokenExpiresAt: Number.MAX_SAFE_INTEGER,
+        scopes: ["circuit.snapshot", "circuit.edit.geometry"],
+        projectId: "project-1",
+        documentIds: ["main", "child"],
+      }),
+      circuit: async ({ request }) => {
+        switch (request.operation) {
+          case "capabilities":
+            return capabilitiesResponse(request.requestId);
+          case "snapshot":
+            return snapshotResponse(
+              request.requestId,
+              request.documentId === "child" ? child : testSnapshot(),
+            );
+          case "transact":
+            return transactSuccessResponse(
+              request.requestId,
+              request.expectedRevision,
+            );
+          default:
+            return errorResponse(
+              request.requestId,
+              "render",
+              "UNSUPPORTED",
+              "x",
+            );
+        }
+      },
+    });
+    const { client } = await freshClient({ http });
+    await client.connect("session-1.code");
+    const report = await client.applyActions(
+      [
+        {
+          kind: "move",
+          target: { kind: "instance", name: "M1" },
+          position: { x: 340, y: 240 },
+        },
+      ],
+      { documentId: "child", verify: false },
+    );
+    expect(report.ok).toBe(true);
+    const documentIds = http.circuitCalls.flatMap((call) =>
+      call.request.operation === "snapshot" ||
+      call.request.operation === "transact"
+        ? [call.request.documentId]
+        : [],
+    );
+    expect(documentIds.slice(-3)).toEqual(["child", "child", "child"]);
+  });
+
   it("retries the exact same request payload once on a network failure", async () => {
     let failures = 0;
     const payloads: string[] = [];
@@ -317,7 +357,7 @@ describe("agent session client", () => {
   });
 
   it("keeps the pairing but marks the editor offline when the relay reports EDITOR_OFFLINE", async () => {
-    const { client, store } = await freshClient({
+    const { client } = await freshClient({
       http: new FakeAgentHttp({
         circuit: async ({ request }) => {
           if (request.operation === "capabilities") {
@@ -336,8 +376,8 @@ describe("agent session client", () => {
     expect(report.mode).toBe("claimed");
     expect(report.context).toBeNull();
     expect(client.connection.snapshot.state).toBe("editor-offline");
-    // The pairing survives locally for a later resume attempt.
-    expect(await store.load()).not.toBeNull();
+    // The process-local pairing survives for a later connect() re-check.
+    await expect(client.connect()).resolves.toMatchObject({ mode: "resumed" });
   });
 
   it("validates advanced edits against the contract before sending", async () => {

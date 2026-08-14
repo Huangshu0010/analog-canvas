@@ -119,6 +119,9 @@ importers:
       "@icm/agent-adapter":
         specifier: workspace:*
         version: link:../agent-adapter
+      "@icm/model":
+        specifier: workspace:*
+        version: link:../model
       zod:
         specifier: 4.4.3
         version: 4.4.3

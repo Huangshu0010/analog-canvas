@@ -1,10 +1,4 @@
-import { homedir } from "node:os";
-import {
-  AgentHttpClient,
-  AgentSessionClient,
-  CredentialStore,
-  defaultCredentialFilePath,
-} from "@icm/agent-client";
+import { AgentHttpClient, AgentSessionClient } from "@icm/agent-client";
 import {
   ADVANCED_EDITS_RESOURCE_URI,
   listResourceEntries,
@@ -22,7 +16,6 @@ export const MCP_SERVER_VERSION = "0.1.0";
 
 export interface McpServerConfig {
   apiBaseUrl: string;
-  credentialsPath: string;
 }
 
 export function resolveConfig(
@@ -31,7 +24,6 @@ export function resolveConfig(
   return {
     apiBaseUrl:
       env.ANALOG_CANVAS_API_URL ?? "https://analog-canvas.tokenzhang.com",
-    credentialsPath: defaultCredentialFilePath(homedir(), env),
   };
 }
 
@@ -43,7 +35,7 @@ export const MCP_SERVER_INFO: McpServerInfo = {
 };
 
 /**
- * Assemble the MCP handler: one AgentSessionClient Helper plus the
+ * Assemble the MCP handler: one process-local AgentSessionClient Helper plus the
  * advanced-contract read gate that ties `advanced_transact` to actually
  * reading the edit-union resource in this session.
  */
@@ -55,7 +47,6 @@ export function assembleServer(config: McpServerConfig = resolveConfig()): {
   const http = new AgentHttpClient({ baseUrl: config.apiBaseUrl });
   const client = new AgentSessionClient({
     http,
-    credentials: new CredentialStore({ filePath: config.credentialsPath }),
   });
   let advancedContractRead = false;
   const toolSession: ToolSessionState = {

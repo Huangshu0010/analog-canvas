@@ -4,6 +4,7 @@ import {
   type AgentSessionSnapshot,
 } from "@icm/agent-adapter";
 import { agentRazaviAuthoringCatalog } from "@icm/agent-adapter/kit";
+import type { RichTextDocument } from "@icm/model";
 import { z } from "zod";
 import {
   AuthoringActionSchema,
@@ -237,6 +238,12 @@ function terminalEndpoint(
   return { kind: "terminal", instanceId: instance.id, pinName: pin };
 }
 
+function richText(value: string | RichTextDocument): RichTextDocument {
+  return typeof value === "string"
+    ? { runs: [{ kind: "text", value }] }
+    : value;
+}
+
 interface NamedId {
   id: string;
 }
@@ -404,14 +411,7 @@ export function compileActions(
         compileAddPowerRail(index, action, document, allocateId, pushEdit);
         break;
       case "connect":
-        compileConnect(
-          index,
-          action,
-          document,
-          allocateId,
-          pushEdit,
-          pushWireIntent,
-        );
+        compileConnect(index, action, document, allocateId, pushWireIntent);
         break;
       case "disconnect":
         compileDisconnect(index, action, document, pushEdit);
@@ -542,7 +542,7 @@ export function compileActions(
             locked: false,
             zIndex: 0,
             anchor: { kind: "free", position: action.position },
-            content: { runs: [{ kind: "text", value: action.text }] },
+            content: richText(action.text),
             alignment: action.alignment ?? "start",
             rotation: action.rotation ?? 0,
           },
@@ -673,16 +673,9 @@ function compileConnect(
   action: ActionOfKind<"connect">,
   document: ResolvedDocument,
   allocateId: AllocateId,
-  pushEdit: PushEdit,
   pushWireIntent: PushWireIntent,
 ): void {
   const { from, to } = action;
-  const requestedNet = action.net;
-  const existingNet = requestedNet
-    ? document.nets.find(
-        (net) => net.id === requestedNet || net.name === requestedNet,
-      )
-    : undefined;
 
   if (from.kind === "net" && to.kind === "net") {
     throw new ActionCompileError(
@@ -692,50 +685,49 @@ function compileConnect(
     );
   }
 
-  if (from.kind === "pin" && to.kind === "pin") {
-    const fromInstance = resolveInstance(document, index, action.kind, {
-      kind: "instance",
-      name: from.instance,
-    });
-    const toInstance = resolveInstance(document, index, action.kind, {
-      kind: "instance",
-      name: to.instance,
-    });
-    requirePin(index, action.kind, fromInstance, from.pin);
-    requirePin(index, action.kind, toInstance, to.pin);
-    if (existingNet) {
-      throw new ActionCompileError(
-        index,
-        action.kind,
-        `net "${requestedNet}" already exists; connect a pin to it with {kind:"net"} or use advanced edits`,
-      );
-    }
-    pushEdit(index, action.kind, {
-      kind: "connect_endpoints",
-      from: terminalEndpoint(fromInstance, from.pin),
-      to: terminalEndpoint(toInstance, to.pin),
-      ...(requestedNet && !existingNet
-        ? { newNetName: requestedNet, newNetScope: "local" as const }
-        : {}),
-    });
-    return;
-  }
-
-  // Everything else routes through one wireIntent; the server-side proposal
-  // engine owns Net/Junction/Route creation from these anchors.
+  // Every normal connection routes through one wireIntent. In particular,
+  // pin-to-pin must create visible Route geometry rather than only adding the
+  // two terminals to a logical Net.
   const pinSide =
     from.kind === "pin" ? from : to.kind === "pin" ? to : undefined;
   const pinOrigin = (() => {
-    if (!pinSide) return { x: 0, y: 0 };
-    const instance = resolveInstance(document, index, action.kind, {
-      kind: "instance",
-      name: pinSide.instance,
-    });
-    requirePin(index, action.kind, instance, pinSide.pin);
-    const pin = instance.pins.find(
-      (candidate) => candidate.name === pinSide.pin,
+    if (pinSide) {
+      const instance = resolveInstance(document, index, action.kind, {
+        kind: "instance",
+        name: pinSide.instance,
+      });
+      requirePin(index, action.kind, instance, pinSide.pin);
+      const pin = instance.pins.find(
+        (candidate) => candidate.name === pinSide.pin,
+      );
+      if (!pin?.pagePosition) {
+        throw new ActionCompileError(
+          index,
+          action.kind,
+          `pin ${pinSide.instance}.${pinSide.pin} has no resolved page position`,
+        );
+      }
+      return pin.pagePosition;
+    }
+    const geometric = from.kind === "net" ? to : from;
+    if (geometric.kind === "point") {
+      return { x: geometric.x, y: geometric.y };
+    }
+    if (geometric.kind === "junction") {
+      const junction = resolveByIdOrName(
+        index,
+        action.kind,
+        "junction",
+        document.junctions,
+        { id: geometric.junction },
+      );
+      return junction.position;
+    }
+    throw new ActionCompileError(
+      index,
+      action.kind,
+      "a Net connection needs a pin, point, or Junction on its other side",
     );
-    return pin?.pagePosition ?? { x: 0, y: 0 };
   })();
 
   const anchorFor = (target: ConnectTarget): Record<string, unknown> => {
@@ -838,6 +830,7 @@ function compileConnect(
     id: allocateId("wire"),
     from: anchorFor(from),
     to: anchorFor(to),
+    ...(action.via ? { waypoints: action.via } : {}),
   });
 }
 
@@ -925,7 +918,7 @@ function compileAddLabel(
     annotation: {
       id: allocateId("label"),
       kind,
-      content: { runs: [{ kind: "text", value: action.text }] },
+      content: richText(action.text),
       anchor: { kind: "free", position },
       netId: net.id,
       alignment: "middle",
@@ -954,7 +947,7 @@ function compileEditText(
       kind: "upsert_schematic_annotation",
       annotation: {
         ...annotation.entry,
-        content: { runs: [{ kind: "text", value: action.text }] },
+        content: richText(action.text),
       },
     });
     return;
@@ -977,7 +970,7 @@ function compileEditText(
     kind: "upsert_drafting_object",
     object: {
       ...drafting.object,
-      content: { runs: [{ kind: "text", value: action.text }] },
+      content: richText(action.text),
     },
   });
 }

@@ -6762,3 +6762,19 @@ contracts (WP-R1)`.
   workspace builds, golden/export/PWA/production/release checks).
 - Commit status: initial implementation `5be6e16`; golden completion ready to
   commit on `codex/unify-annotation-presentation`.
+
+## 2026-08-14 - Close MCP adapter review gaps
+
+- Target: make the M0-M3 MCP adapter preserve visible wiring and document
+  identity, avoid partial multi-transaction action commits, observe concurrent
+  human edits, and keep bearer credentials process-local until M4.
+- Changed areas: Agent Helper action/session contracts; MCP tool schemas and
+  focused tests; MCP-native quickstart, resource projections, ADR wording, and
+  generated resources.
+- Validation: 129 focused Agent/MCP/adapter tests, generated-resource and
+  Markdown checks, `pnpm typecheck`, `git diff --check`, and
+  `pnpm verify:branch` (112 test files / 638 tests, all workspace builds,
+  static contracts, and editor production smoke) passed.
+- Commit status: ready to commit on `codex/agent-mcp-adapter` as
+  `fix(agent): close MCP adapter review gaps`; intentionally not merging until
+  the separately scoped M4/M5 work is ready.

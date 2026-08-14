@@ -16,9 +16,9 @@ M0-M3:
 - M0: freeze contract/doc boundary — ADR 0020, `docs/agent/resource-manifest.json`,
   manifest-driven resource generator + CI check, docs entry adjustment.
 - M1: `packages/agent-client` — `AgentHttpClient`, connection state machine,
-  `AgentSessionClient` (claim/resume, token/session/documentIds, capabilities
+  `AgentSessionClient` (claim/process-local reuse, token/session/documentIds, capabilities
   and revision caches, requestId idempotent retry, structured error
-  normalization), user-level credential store (token never reaches the model).
+  normalization), with bearer state confined to the MCP process.
 - M2: `SnapshotCache` + `apps/mcp-server` stdio MCP with `connect`,
   `connection_status`, `get_context`, `inspect`, `search`, `verify`, `render`
   and MCP Resources projected from the same sources as the HTTP Kit.
@@ -67,7 +67,7 @@ Read-only:
 ## Work
 
 1. ADR 0020 + resource manifest + generator script + docs entry adjustment.
-2. `packages/agent-client`: http-client, connection-state, credential-store,
+2. `packages/agent-client`: http-client, connection-state,
    snapshot-cache, session-client, authoring-helper.
 3. `apps/mcp-server`: hand-rolled minimal MCP stdio JSON-RPC protocol layer
    (initialize/tools/resources/ping; zero new runtime dependencies to avoid a
@@ -105,8 +105,8 @@ Delivered M0-M3 of the Agent-side MCP adapter on branch
   `pnpm mcp:resources[:check]` generate/verify the MCP resource payload;
   `docs/agent/README.md` entry order is now MCP → Kit/HTTP → OpenAPI.
 - `packages/agent-client` (Node-only Helper): HTTP client, connection state
-  machine, credential store, snapshot cache with changed-object diffing,
-  `AgentSessionClient` (claim/resume, capabilities/revision caches,
+  machine, process-local bearer state, snapshot cache with changed-object diffing,
+  `AgentSessionClient` (claim/process-local reuse, capabilities/revision caches,
   exact-payload network retry, editor-offline/revoked normalization,
   dry-run-then-commit `applyActions` with `STATE_CHANGED` reporting), and the
   action compiler (14 high-level actions → existing typed edits/`wireIntent`,

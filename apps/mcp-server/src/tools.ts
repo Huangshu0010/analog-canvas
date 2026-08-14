@@ -33,15 +33,18 @@ const ConnectArgs = z.strictObject({
     .min(1)
     .optional()
     .describe(
-      "Claim code from the editor connect panel. Omit to resume the stored pairing.",
+      "Claim code from the editor connect panel. Omit only to re-check a session already active in this MCP process.",
     ),
 });
 
 const DocumentArgs = z.strictObject({
   documentId: z.string().min(1).optional(),
+  refresh: z.boolean().optional(),
 });
 
 const InspectArgs = z.strictObject({
+  documentId: z.string().min(1).optional(),
+  refresh: z.boolean().optional(),
   target: z.discriminatedUnion("kind", [
     z.strictObject({ kind: z.literal("document") }),
     z.strictObject({
@@ -65,6 +68,8 @@ const InspectArgs = z.strictObject({
 });
 
 const SearchArgs = z.strictObject({
+  documentId: z.string().min(1).optional(),
+  refresh: z.boolean().optional(),
   query: z.string().min(1),
   kinds: z
     .array(
@@ -84,11 +89,13 @@ const SearchArgs = z.strictObject({
 });
 
 const ApplyActionsArgs = z.strictObject({
+  documentId: z.string().min(1).optional(),
   actions: z.array(AuthoringActionSchema).min(1).max(256),
   verify: z.boolean().optional(),
 });
 
 const AdvancedTransactArgs = z.strictObject({
+  documentId: z.string().min(1).optional(),
   edits: z.array(z.unknown()).min(1).max(256),
   dryRun: z.boolean().optional(),
 });
@@ -157,7 +164,7 @@ const TOOLS: readonly ToolEntry[] = [
     definition: {
       name: "connect",
       description:
-        "Pair with the live browser editor. First time: pass the claim code shown in the editor's Agent connect panel. Later starts resume automatically while the pairing is valid. After connecting, read the analog-canvas://reference/quickstart resource.",
+        "Pair with the live browser editor. Pass the claim code shown in the editor's Agent connect panel. Within the same MCP process, omit the code to re-check the active session. Cross-process persistent pairing arrives in M4. After connecting, read analog-canvas://reference/quickstart.",
       inputSchema: jsonSchemaOf(ConnectArgs),
     },
     handle: async (args, session) => {
@@ -187,12 +194,14 @@ const TOOLS: readonly ToolEntry[] = [
     definition: {
       name: "get_context",
       description:
-        "Compact context for the current document: project/document identity, revision, instance/net counts, and error/warning totals. Fetches and caches a snapshot when needed.",
+        "Compact context for one authorized document: identity, revision, instance/net counts, and error/warning totals. Refreshes by default so concurrent human edits are visible; set refresh:false only for a deliberate cached read.",
       inputSchema: jsonSchemaOf(DocumentArgs),
     },
     handle: async (args, session) => {
       const parsed = DocumentArgs.parse(args ?? {});
-      const entry = await session.client.snapshot(parsed.documentId);
+      const entry = await session.client.snapshot(parsed.documentId, {
+        refresh: parsed.refresh ?? true,
+      });
       const summary = session.client.summary(entry.documentId);
       return {
         ...(summary ?? {}),
@@ -205,12 +214,14 @@ const TOOLS: readonly ToolEntry[] = [
     definition: {
       name: "inspect",
       description:
-        "Read facts from the cached snapshot: a document overview, one object (instance/net/route/junction/annotation), net connectivity, or diagnostics. detail:'full' returns complete instance/net projections.",
+        "Read facts for one authorized document: overview, one object, net connectivity, or diagnostics. Refreshes by default so concurrent human edits are visible; detail:'full' returns complete instance/net projections.",
       inputSchema: jsonSchemaOf(InspectArgs),
     },
     handle: async (args, session) => {
       const parsed = InspectArgs.parse(args);
-      const entry = await session.client.snapshot();
+      const entry = await session.client.snapshot(parsed.documentId, {
+        refresh: parsed.refresh ?? true,
+      });
       switch (parsed.target.kind) {
         case "document":
           return inspectDocument(entry, parsed.detail ?? "compact");
@@ -229,12 +240,14 @@ const TOOLS: readonly ToolEntry[] = [
     definition: {
       name: "search",
       description:
-        "Case-insensitive search over instance names/symbols, nets, routes, junctions, annotations, drafting text, properties, and diagnostics in the cached snapshot.",
+        "Case-insensitive search over one authorized document. Refreshes by default; set refresh:false only for a deliberate cached lookup.",
       inputSchema: jsonSchemaOf(SearchArgs),
     },
     handle: async (args, session) => {
       const parsed = SearchArgs.parse(args);
-      const entry = await session.client.snapshot();
+      const entry = await session.client.snapshot(parsed.documentId, {
+        refresh: parsed.refresh ?? true,
+      });
       return {
         query: parsed.query,
         hits: searchSnapshot(
@@ -250,12 +263,13 @@ const TOOLS: readonly ToolEntry[] = [
     definition: {
       name: "apply_actions",
       description:
-        "Apply compact circuit actions (place-component, add-power-rail, connect, disconnect, move, rotate, mirror, rename, set-property, add-label, edit-text, annotate, arrange, delete). Actions compile to existing typed edits/wire intents, are dry-run first, then committed atomically per transaction with revision checks. Style guidance: analog-canvas://reference/razavi-style; workflow: analog-canvas://reference/workflow.",
+        "Apply one atomic batch of compact circuit actions. The Helper refreshes state, compiles to exactly one typed-edits transaction or one wireIntent, dry-runs it, and commits it with revision checks. Split create/wire phases and mixed edit/wire work across calls. Style: analog-canvas://reference/razavi-style; workflow: analog-canvas://reference/quickstart.",
       inputSchema: jsonSchemaOf(ApplyActionsArgs),
     },
     handle: async (args, session) => {
       const parsed = ApplyActionsArgs.parse(args);
       const report = await session.client.applyActions(parsed.actions, {
+        ...(parsed.documentId ? { documentId: parsed.documentId } : {}),
         verify: parsed.verify ?? true,
       });
       return report;
@@ -281,6 +295,7 @@ const TOOLS: readonly ToolEntry[] = [
       }
       const parsed = AdvancedTransactArgs.parse(args);
       return session.client.advancedTransact(parsed.edits, {
+        ...(parsed.documentId ? { documentId: parsed.documentId } : {}),
         ...(parsed.dryRun !== undefined ? { dryRun: parsed.dryRun } : {}),
       });
     },

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RichTextDocumentSchema } from "@icm/model";
 
 /**
  * Compact high-level actions accepted by `apply_actions`. They are a projection
@@ -68,6 +69,11 @@ const ConnectTargetSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+const TextInputSchema = z.union([
+  z.string().min(1).max(256),
+  RichTextDocumentSchema,
+]);
+
 export const AuthoringActionSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("place-component"),
@@ -91,8 +97,8 @@ export const AuthoringActionSchema = z.discriminatedUnion("kind", [
     kind: z.literal("connect"),
     from: ConnectTargetSchema,
     to: ConnectTargetSchema,
-    /** Name for a Net created by this connection. */
-    net: z.string().min(1).optional(),
+    /** Optional orthogonal interior points for the visible wire. */
+    via: z.array(PointInputSchema).max(256).optional(),
   }),
   z.strictObject({
     kind: z.literal("disconnect"),
@@ -137,7 +143,7 @@ export const AuthoringActionSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("add-label"),
     target: NetRefSchema,
-    text: z.string().min(1).max(256),
+    text: TextInputSchema,
     position: PointInputSchema.optional(),
   }),
   z.strictObject({
@@ -150,11 +156,11 @@ export const AuthoringActionSchema = z.discriminatedUnion("kind", [
         message: "Expected a drafting reference",
       }),
     ]),
-    text: z.string().min(1).max(256),
+    text: TextInputSchema,
   }),
   z.strictObject({
     kind: z.literal("annotate"),
-    text: z.string().min(1).max(256),
+    text: TextInputSchema,
     position: PointInputSchema,
     alignment: z.enum(["start", "middle", "end"]).optional(),
     rotation: RotationInputSchema.optional(),

@@ -32,10 +32,11 @@ The product gains an **Agent-side MCP adapter** as a new local stdio process,
 - The four-operation HTTPS API remains the only machine protocol. The MCP
   server is a client of that API, never a second server. No worker, editor,
   Edit Engine, or domain package learns about MCP.
-- `packages/agent-client` owns connection state, claim redemption and token
-  resume, capabilities/revision caches, exact-payload request-ID retry, a
-  Snapshot cache with `STATE_CHANGED` detection, and compilation of compact
-  high-level actions into existing typed edits and `wireIntent`. It never
+- `packages/agent-client` owns connection state, claim redemption and
+  process-local bearer reuse, capabilities/revision caches, exact-payload
+  request-ID retry, a Snapshot cache with `STATE_CHANGED` detection, and
+  compilation of compact high-level actions into existing typed edits and
+  `wireIntent`. It never
   re-implements Net/Junction/Route semantics; electrical behavior stays in the
   server-side capabilities (ADR 0019).
 - The default tool surface is ~10 compact tools (`connect`,
@@ -43,14 +44,15 @@ The product gains an **Agent-side MCP adapter** as a new local stdio process,
   `advanced_transact`, `verify`, `render`). Full typed edit unions remain
   reachable only through `advanced_transact`, gated on reading the
   `analog-canvas://contract/advanced-edits` resource in the same session.
-- Tokens and claim codes stay inside the Helper and a user-level credential
-  file; they never appear in tool results, resources, or logs.
+- Tokens and claim codes stay inside the Helper process and Authorization
+  headers; they never appear in tool results, resources, logs, or files.
 - `docs/agent/resource-manifest.json` is the single declaration of which
   documents project to MCP Resources, the HTTP Kit, and the non-MCP fallback.
   `scripts/generate-mcp-resources.mjs` generates the MCP resource payload from
-  those exact sources (`pnpm mcp:resources`); a vitest contract test in
-  `ci:unit` rejects drift between the manifest, the sources, and the generated
-  payload.
+  the entries projected to MCP (`pnpm mcp:resources`); transport-specific
+  quickstarts may differ, while shared domain references retain one source. A
+  vitest contract test in `ci:unit` rejects drift between the manifest, the
+  sources, and the generated payload.
 - The MCP stdio protocol layer (initialize/tools/resources/ping,
   newline-delimited JSON-RPC 2.0) is implemented in-repo with zero new runtime
   dependencies. The official SDK was considered; its zod v3 peer requirement
@@ -106,9 +108,10 @@ MCP is not a fifth Circuit operation.
   (prompts, subscriptions, sampling) fail closed with `method not found`.
 - `render` returns `image/svg+xml`; hosts that only rasterize PNG/JPEG will
   show metadata instead of pixels until a raster step is added.
-- Persistent pairing (connector credential, web revoke UI, file import/export
-  tools) is intentionally deferred to a follow-up target (design M4); resume
-  today lasts only while the redeemed token and session stay valid.
+- Cross-process persistent pairing (connector credential, web revoke UI, file
+  import/export tools) is intentionally deferred to a follow-up target (design
+  M4); resume today lasts only inside the MCP process while the redeemed token
+  and session stay valid.
 
 ## Compatibility and migration
 
