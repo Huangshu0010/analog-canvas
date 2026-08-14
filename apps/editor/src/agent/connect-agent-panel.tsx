@@ -263,6 +263,10 @@ function ClaimHandOff({
     );
   }
   if (claimExpired) return null;
+  const instructions = agentConnectionInstructions(
+    typeof window === "undefined" ? "http://localhost" : window.location.origin,
+    claimCode!,
+  );
   return (
     <div className="agent-claim" data-testid="agent-claim">
       <p>
@@ -270,23 +274,45 @@ function ClaimHandOff({
         {formatRemaining(claimExpiresAt, now)}; the connected session lasts{" "}
         {formatRemaining(expiresAt, now)}.
       </p>
-      <button
-        type="button"
-        data-testid="agent-copy-instructions"
-        onClick={() => {
-          void navigator.clipboard
-            .writeText(
-              agentConnectionInstructions(window.location.origin, claimCode!),
-            )
-            .then(() => {
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 2_000);
-            })
-            .catch(() => undefined);
-        }}
-      >
-        {copied ? "Copied ✓ Paste it into your Agent" : "Copy connection setup"}
-      </button>
+      <div className="agent-copy-card">
+        <div className="agent-copy-card-header">
+          <span className="agent-copy-card-label">Plain text</span>
+          <div className="agent-copy-card-action">
+            <span className="agent-copy-feedback" aria-live="polite">
+              {copied ? "Copied" : ""}
+            </span>
+            <button
+              type="button"
+              className="agent-copy-button"
+              data-testid="agent-copy-instructions"
+              aria-label={
+                copied ? "Connection setup copied" : "Copy connection setup"
+              }
+              title={copied ? "Copied" : "Copy connection setup"}
+              onClick={() => {
+                void navigator.clipboard
+                  .writeText(instructions)
+                  .then(() => {
+                    setCopied(true);
+                    window.setTimeout(() => setCopied(false), 2_000);
+                  })
+                  .catch(() => undefined);
+              }}
+            >
+              <svg
+                viewBox="0 0 20 20"
+                width="16"
+                height="16"
+                aria-hidden="true"
+              >
+                <rect x="6.5" y="3.5" width="10" height="11" rx="2" />
+                <path d="M13.5 14.5v.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2h1.5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <pre data-testid="agent-copy-text">{instructions}</pre>
+      </div>
       <details>
         <summary>Show connection code and technical details</summary>
         <code data-testid="agent-claim-code">{claimCode}</code>

@@ -93,11 +93,20 @@ describe("ConnectAgentPanel", () => {
     );
     expect(markup).toContain('data-testid="agent-claim-code"');
     expect(markup).toContain('data-testid="agent-copy-instructions"');
+    expect(markup).toContain('data-testid="agent-copy-text"');
+    expect(markup).toContain('class="agent-copy-card"');
+    expect(markup).toContain("Plain text");
+    expect(markup).toContain(
+      "Connect to the Interactive Circuit Maker Agent API.",
+    );
+    expect(markup).toContain(
+      "POST {&quot;claimCode&quot;:&quot;CLAIM-12345&quot;} to",
+    );
     expect(markup).toContain("CLAIM-12345");
     expect(markup).toContain("circuit.snapshot, circuit.render");
     expect(markup).toContain('data-testid="agent-pause"');
     expect(markup).toContain('data-testid="agent-revoke"');
-    expect(markup).toContain("Copy connection setup");
+    expect(markup).toContain('aria-label="Copy connection setup"');
     // No grant presets after connecting.
     expect(markup).not.toContain('data-testid="agent-grant"');
   });

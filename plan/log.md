@@ -6670,3 +6670,16 @@ contracts (WP-R1)`.
   passed; `git diff --check` passed.
 - Commit status: committed on `codex/fix-mos-external-net-copy` as `766c098`
   (`fix(editor): preserve shared MOS bulk nets during copy`).
+
+## 2026-08-14 - Present Agent hand-off as a copy card
+
+- Target: make the visible Agent connection instructions identical to the
+  clipboard payload and present them in a compact card aligned with the editor
+  theme.
+- Changed areas: Agent connection panel markup, themed copy-card styling,
+  accessible copy feedback, and focused component coverage.
+- Validation: focused `connect-agent-panel` tests and `pnpm typecheck` passed;
+  the local editor shell was inspected in the in-app browser; `git diff
+  --check` passed.
+- Commit status: committed on `codex/agent-copy-card` as
+  `feat(agent): present handoff as copy card`.
