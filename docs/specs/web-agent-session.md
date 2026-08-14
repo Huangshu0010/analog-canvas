@@ -14,11 +14,19 @@ URLs, or displayed by Agents.
 ## Resources
 
 ```text
+GET  /api/agent/kit
 POST /api/agent/claims
 POST /api/agent/sessions/{sessionId}/circuit
 POST /api/agent/sessions/{sessionId}/files
 GET  /api/agent/openapi.json
 ```
+
+`GET /api/agent/kit` is one small public, static JSON download for the Agent's
+private scratch folder. It contains `README.md`, `AGENTS.md`, one session
+`SKILL.md`, and a short reference. It contains no Project data, claim code,
+token, or mutation operation; it is not part of the Circuit OpenAPI. The Agent
+fetches it only when a human gives it a connection setup, then writes the
+listed files locally before redeeming the claim.
 
 The Circuit resource implements only API 2.0
 `capabilities/snapshot/transact/render`. The File Resource implements only

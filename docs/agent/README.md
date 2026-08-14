@@ -5,20 +5,31 @@ Snapshot and typed edits through the same Schematic Edit Engine used by humans;
 it does not bundle an LLM provider, browser automation, or a second command
 engine.
 
+## External Agent bootstrap
+
+An Agent without this repository receives a connection setup from the editor.
+It first fetches the public `GET /api/agent/kit` JSON, writes its listed files
+to a private scratch directory, and reads `README.md` followed by the session
+`SKILL.md`. The Kit is a small operating guide only: it contains neither a
+Project, a token, nor an alternate API. The Agent then redeems the claim and
+uses the published OpenAPI as the wire-contract authority.
+
 ## Read in this order
 
-1. [`../specs/agent-api.md`](../specs/agent-api.md) — normative domain contract.
-2. [`workflow.md`](workflow.md) — required read, edit, refresh, render, and
+1. Kit `README.md` and `skills/icm-circuit-session/SKILL.md` for an external
+   session; repository contributors begin with the next document instead.
+2. [`../specs/agent-api.md`](../specs/agent-api.md) — normative domain contract.
+3. [`workflow.md`](workflow.md) — required read, edit, refresh, render, and
    review loop.
-3. [`tool-behavior.md`](tool-behavior.md) — runtime behavior and transaction
+4. [`tool-behavior.md`](tool-behavior.md) — runtime behavior and transaction
    boundaries.
-4. [`response-semantics.md`](response-semantics.md) — conflicts, diagnostics,
+5. [`response-semantics.md`](response-semantics.md) — conflicts, diagnostics,
    generated artifacts, and completion decisions.
-5. [`api-usage.md`](api-usage.md) — loopback and browser-session requests.
-6. [`circuit-style-knowledge.md`](circuit-style-knowledge.md) and
+6. [`api-usage.md`](api-usage.md) — loopback and browser-session requests.
+7. [`circuit-style-knowledge.md`](circuit-style-knowledge.md) and
    [`knowledge/`](knowledge/README.md) — evidence-first circuit reading and
    on-demand style/pattern guidance.
-7. [`examples.md`](examples.md) — checked, reproducible workflows.
+8. [`examples.md`](examples.md) — checked, reproducible workflows.
 
 The browser-authorized relay adds transport, session, and permission rules in
 [`../specs/web-agent-session.md`](../specs/web-agent-session.md). It carries the

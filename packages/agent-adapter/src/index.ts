@@ -3,6 +3,7 @@
 // loopback transport lives in `./loopback.ts` and the `./loopback` subpath.
 
 export * from "./envelope.js";
+export * from "./agent-kit.js";
 export * from "./file-resource.js";
 export * from "./host.js";
 export * from "./openapi.js";

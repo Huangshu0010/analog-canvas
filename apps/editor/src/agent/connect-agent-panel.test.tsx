@@ -43,17 +43,22 @@ describe("ConnectAgentPanel", () => {
     expect(instructions).toContain(
       'POST {"claimCode":"claim-once"} to https://editor.example/api/agent/claims',
     );
-    expect(instructions).toContain("5. Call capabilities once");
     expect(instructions).toContain(
-      "replace {sessionId} in the Circuit URL with that value",
+      "1. Fetch https://editor.example/api/agent/kit",
+    );
+    expect(instructions).toContain("write every files[].path");
+    expect(instructions).toContain("skills/icm-circuit-session/SKILL.md");
+    expect(instructions).toContain("4. Read the published OpenAPI");
+    expect(instructions).toContain(
+      "Replace {sessionId} in https://editor.example/api/agent/sessions/{sessionId}/circuit",
     );
     expect(instructions).toContain(
-      "8. Use https://editor.example/api/agent/sessions/{sessionId}/files",
+      "6. Use https://editor.example/api/agent/sessions/{sessionId}/files",
     );
-    expect(instructions).toContain("10. Dry-run non-trivial transact requests");
-    expect(instructions).toContain("12. Render, then request a fresh snapshot");
+    expect(instructions).toContain("5. Dry-run non-trivial transact requests");
+    expect(instructions).toContain("Render, then request a fresh snapshot");
     expect(instructions).toContain(
-      "13. Reuse a requestId only when retrying the exact same payload",
+      "7. Reuse a requestId only when retrying the exact same payload",
     );
     expect(instructions).not.toMatch(/Bearer [A-Za-z0-9_-]{20,}/u);
   });
@@ -93,11 +98,20 @@ describe("ConnectAgentPanel", () => {
     );
     expect(markup).toContain('data-testid="agent-claim-code"');
     expect(markup).toContain('data-testid="agent-copy-instructions"');
+    expect(markup).toContain('data-testid="agent-copy-text"');
+    expect(markup).toContain('class="agent-copy-card"');
+    expect(markup).toContain("Plain text");
+    expect(markup).toContain(
+      "Connect to the Interactive Circuit Maker Agent API.",
+    );
+    expect(markup).toContain(
+      "POST {&quot;claimCode&quot;:&quot;CLAIM-12345&quot;} to",
+    );
     expect(markup).toContain("CLAIM-12345");
     expect(markup).toContain("circuit.snapshot, circuit.render");
     expect(markup).toContain('data-testid="agent-pause"');
     expect(markup).toContain('data-testid="agent-revoke"');
-    expect(markup).toContain("Copy connection setup");
+    expect(markup).toContain('aria-label="Copy connection setup"');
     // No grant presets after connecting.
     expect(markup).not.toContain('data-testid="agent-grant"');
   });

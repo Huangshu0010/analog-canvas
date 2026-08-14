@@ -6671,6 +6671,32 @@ contracts (WP-R1)`.
 - Commit status: committed on `codex/fix-mos-external-net-copy` as `766c098`
   (`fix(editor): preserve shared MOS bulk nets during copy`).
 
+## 2026-08-14 - Present Agent hand-off as a copy card
+
+- Target: make the visible Agent connection instructions identical to the
+  clipboard payload and present them in a compact card aligned with the editor
+  theme.
+- Changed areas: Agent connection panel markup, themed copy-card styling,
+  accessible copy feedback, and focused component coverage.
+- Validation: focused `connect-agent-panel` tests and `pnpm typecheck` passed;
+  the local editor shell was inspected in the in-app browser; `git diff
+  --check` passed.
+- Commit status: committed on `codex/agent-copy-card` as
+  `feat(agent): present handoff as copy card`.
+
+## 2026-08-14 - Publish compact Agent operating Kit
+
+- Target: give an external Agent without repository source a minimal private
+  operating folder before claim redemption, without adding a new edit protocol.
+- Changed areas: browser-safe Kit content, public Worker route, compact copied
+  hand-off, relay/component tests, and session/Agent documentation.
+- Validation: 32 focused unit tests, `pnpm typecheck`, `pnpm docs:check`, a
+  dependency-aware editor production build, and `git diff --check` passed. The
+  Kit was confirmed absent from the editor bundle and is transferred only on
+  its explicit route request.
+- Commit status: committed on `codex/agent-copy-card` as
+  `feat(agent): publish compact operating kit`.
+
 ## 2026-08-14 - Unify annotation presentation geometry
 
 - Target: remove divergent text glyph/hit/fallback coordinates after instance
