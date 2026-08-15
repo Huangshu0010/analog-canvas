@@ -218,6 +218,104 @@ describe("routing Edit Engine", () => {
     expect(moved.ok).toBe(true);
   });
 
+  it("moves a three-way Junction with its dragged segment", () => {
+    const document = createEmptyDocument("junction-follow", "Junction follow");
+    document.nets.push({ id: "net-j", scope: "local", terminals: [] });
+    document.junctions.push(
+      { id: "junction-center", netId: "net-j", position: { x: 100, y: 100 } },
+      {
+        id: "junction-right",
+        netId: "net-j",
+        position: { x: 300, y: 100 },
+        role: "route-anchor",
+      },
+      { id: "junction-top", netId: "net-j", position: { x: 100, y: 20 } },
+      { id: "junction-left", netId: "net-j", position: { x: 20, y: 100 } },
+    );
+    document.routes.push(
+      {
+        id: "route-main",
+        netId: "net-j",
+        from: { kind: "junction", junctionId: "junction-center" },
+        to: { kind: "junction", junctionId: "junction-right" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-top",
+        netId: "net-j",
+        from: { kind: "junction", junctionId: "junction-top" },
+        to: { kind: "junction", junctionId: "junction-center" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+      {
+        id: "route-left",
+        netId: "net-j",
+        from: { kind: "junction", junctionId: "junction-left" },
+        to: { kind: "junction", junctionId: "junction-center" },
+        waypoints: [],
+        segmentModes: ["manual"],
+      },
+    );
+
+    const proposal = proposeWireSegmentMove(
+      document,
+      resolver,
+      "route-main",
+      0,
+      { x: 200, y: 60 },
+    );
+    expect(
+      proposal.edits.filter((edit) => edit.kind === "move_junction"),
+    ).toEqual([
+      {
+        kind: "move_junction",
+        junctionId: "junction-center",
+        position: { x: 100, y: 60 },
+      },
+      {
+        kind: "move_junction",
+        junctionId: "junction-right",
+        position: { x: 300, y: 60 },
+      },
+    ]);
+
+    const moved = executeTransaction(
+      document,
+      transaction(document.id, 0, proposal.edits),
+      context,
+    );
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) return;
+    expect(
+      moved.document.junctions.find(
+        (junction) => junction.id === "junction-center",
+      )?.position,
+    ).toEqual({ x: 100, y: 60 });
+    expect(
+      routePolyline(
+        moved.document,
+        resolver,
+        moved.document.routes.find((route) => route.id === "route-main")!,
+      )?.points,
+    ).toEqual([
+      { x: 100, y: 60 },
+      { x: 300, y: 60 },
+    ]);
+    expect(
+      routePolyline(
+        moved.document,
+        resolver,
+        moved.document.routes.find((route) => route.id === "route-left")!,
+      )?.points,
+    ).toEqual([
+      { x: 20, y: 100 },
+      { x: 100, y: 100 },
+      { x: 100, y: 60 },
+    ]);
+  });
+
   it("plans internal group route follow as one engine edit proposal", () => {
     const document = documentFixture();
     const routed = executeTransaction(
