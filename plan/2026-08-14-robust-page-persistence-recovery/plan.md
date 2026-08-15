@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -513,5 +513,39 @@ only after the mainline delivery gate and remote required checks pass.
 
 ## Outcome
 
-Pending implementation. The plan is ready. Start WP-0 from a dedicated review
-branch after the Fit View change is accepted into mainline.
+Delivered on `agent/robust-page-persistence-recovery` (PR #56, merge
+`03d46e6`) as six work packages plus one remote-check repair, each with its
+own plan, tests, and commit:
+
+- WP-0 `5452004` — pure v2 recovery contract (decode with recomputed bytes,
+  corrupt vs unsupported-schema classification, rotation/dedup, two-session
+  and 12 MB retention) and updated persistence/compatibility docs.
+- WP-1 `ee76c1e` — transactional IndexedDB store with scoped deletes and the
+  one-time `icm.recovery.v1` migration (legacy key removed only after
+  commit).
+- WP-2 `88f0b63` — recovery coordinator and App lifecycle rewiring; the
+  localStorage writer is gone, explicit-refresh exact restore preserved.
+- WP-3 `3e83191` — truthful save (confirmed File System Access write vs
+  `download-requested` fallback), staged open diagnostics, file-state
+  machine, dirty-work replacement guard. In-page probes proved Chromium
+  aborts even synchronously dispatched IndexedDB puts during pagehide, so
+  the reload-inside-debounce caveat is accepted and recorded
+  (`experience: candidate` on the WP-3 plan).
+- WP-4 `f825ff3` — recovery banner, dialog (restore/download/delete with
+  damaged-latest fallback and schema-incompatible download-only), persistent
+  storage-failure warning, statusbar label, Help/troubleshooting updates.
+- WP-5 `cb21d5a` — crash/two-tab/quota/Cache-Storage hardening tests,
+  extended production smoke, release note `docs/release/browser-recovery-v2.md`.
+- Repair `bc6c0eb` — the required Browser-tests shard failed on a drag
+  test: every App re-render replaced the formal scene because the inline
+  `dangerouslySetInnerHTML` literal changed prop identity, and the debounced
+  recovery state publication exposed this mid-drag. Memoizing the innerHTML
+  prop objects keeps drag sessions alive across re-renders.
+
+Validation: per-package focused suites; branch `pnpm verify:branch`; and the
+clean-state gate (`pnpm install --frozen-lockfile`, `pnpm ci:check` with
+121/121 E2E) locally, plus green required GitHub Actions checks on the final
+two CI runs before merge (the first run's drag failure is the repair above).
+
+status: completed
+experience: none
