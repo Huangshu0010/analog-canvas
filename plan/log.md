@@ -6887,5 +6887,5 @@ contracts (WP-R1)`.
   regression for a three-way Junction with an orthogonally stretched branch.
 - Validation: focused derived/edit-engine suite (34 tests), typecheck,
   Prettier, and `git diff --check` passed.
-- Commit status: committed as `a345129` on `codex/junction-stretch-semantics`;
-  remote CI pending.
+- Commit status: PR #57 merged to `main` as `16ad036` after all required
+  GitHub Actions checks passed.
