@@ -68,11 +68,14 @@ export function EditorHelpDialog({
             </p>
             <h3>Place, select, and connect</h3>
             <p>
-              Select a symbol in the left library, or a drawing tool from
-              <strong>Draw</strong>, then click the canvas to place or draw.
-              Select objects to move them or reveal selection actions. Choose
-              Wire (or <kbd>W</kbd>), click a terminal to start, click to add
-              bends, then press <kbd>Enter</kbd> to finish. <kbd>Delete</kbd> or
+              Select a symbol in the left Library, or a drawing tool from
+              <strong>Draw</strong>, then click the canvas to place or draw. On
+              compact screens, Library starts folded; use the left
+              <strong>Library</strong> button to open its single-column list.
+              Selecting an object opens Properties on the right; it overlays the
+              canvas and closes Library while compact. Choose Wire (or
+              <kbd>W</kbd>), click a terminal to start, click to add bends, then
+              press <kbd>Enter</kbd> to finish. <kbd>Delete</kbd> or
               <kbd>Backspace</kbd> removes the selection, or removes the latest
               wire bend while drawing.
             </p>
