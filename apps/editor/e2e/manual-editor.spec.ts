@@ -1170,6 +1170,12 @@ test("drags a current marker directly along and around its route", async ({
   const paintedMarker = page.locator(
     '[data-layer="annotations"] [data-object-id="current-1"]',
   );
+  // A live current-marker preview must not replace the formal SVG scene. A
+  // private marker on the existing node lets this assertion distinguish the
+  // intended local transform from a freshly rendered lookalike node.
+  await paintedMarker.evaluate((element) =>
+    element.setAttribute("data-preview-node", "preserved"),
+  );
   const paintedBefore = await paintedMarker.boundingBox();
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
@@ -1177,6 +1183,7 @@ test("drags a current marker directly along and around its route", async ({
   await expect
     .poll(async () => (await paintedMarker.boundingBox())?.x)
     .not.toBe(paintedBefore?.x);
+  await expect(paintedMarker).toHaveAttribute("data-preview-node", "preserved");
   await expect(page.getByTestId("revision")).toHaveText("4");
   await page.mouse.up();
   const after = await hit.boundingBox();

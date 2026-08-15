@@ -7053,7 +7053,7 @@ ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
   orientation and shortcut routing; rotated copy preview/commit behavior;
   editor interaction specification and focused unit/browser regressions.
 - Validation: 30 focused tests, `pnpm typecheck`, `pnpm format:check`, `git
-  diff --check`, and two focused Playwright regressions passed.
+diff --check`, and two focused Playwright regressions passed.
 - Commit status: ready to commit on `codex/label-gap-copy-rotate` as
   `fix(editor): align labels and rotate copy previews`.
 
@@ -7261,3 +7261,17 @@ ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
   `main`.
 - Commit status: rebased branch force-pushed with lease; PR is open with all
   required checks enforced on the final tip.
+
+## 2026-08-15 - Stabilize route current-marker dragging
+
+- Target: prevent a route-attached current arrow from rebuilding the full
+  formal SVG scene while it is dragged.
+- Changed areas: removed annotation-level React preview state for marker
+  movement; the existing imperative visual now temporarily transforms only the
+  marker and its hit target, then restores it before the single route-attachment
+  transaction on release. The focused browser regression asserts the original
+  formal marker node survives preview.
+- Validation: changed-file Prettier, focused current-marker Playwright 1/1,
+  editor TypeScript, editor production build, and `git diff --check` passed.
+- Commit status: prepared on `codex/fix-current-marker-drag-stability` for
+  focused commit and push.

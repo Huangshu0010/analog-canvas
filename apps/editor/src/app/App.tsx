@@ -640,8 +640,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     useState<RouteStretchPreview | null>(null);
   const [draftingHandlePreview, setDraftingHandlePreview] =
     useState<DraftingHandlePreview | null>(null);
-  const [annotationDragPreview, setAnnotationDragPreview] =
-    useState<Annotation | null>(null);
   const snapGuideLayerRef = useRef<SVGGElement | null>(null);
   const {
     getCurrentState: getCurrentInteractionState,
@@ -744,30 +742,19 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   const helpCloseRef = useRef<HTMLButtonElement>(null);
   const documentViewBoxes = useRef(new Map<string, GridRect>());
   const renderedDocument = useMemo(() => {
-    if (!draftingHandlePreview && !annotationDragPreview) return document;
+    if (!draftingHandlePreview || !document.drafting) return document;
     return {
       ...document,
-      annotations: annotationDragPreview
-        ? document.annotations.map((annotation) =>
-            annotation.id === annotationDragPreview.id
-              ? annotationDragPreview
-              : annotation,
-          )
-        : document.annotations,
-      ...(draftingHandlePreview && document.drafting
-        ? {
-            drafting: {
-              ...document.drafting,
-              objects: document.drafting.objects.map((object) =>
-                object.id === draftingHandlePreview.objectId
-                  ? draftingHandlePreview.object
-                  : object,
-              ),
-            },
-          }
-        : {}),
+      drafting: {
+        ...document.drafting,
+        objects: document.drafting.objects.map((object) =>
+          object.id === draftingHandlePreview.objectId
+            ? draftingHandlePreview.object
+            : object,
+        ),
+      },
     };
-  }, [annotationDragPreview, document, draftingHandlePreview]);
+  }, [document, draftingHandlePreview]);
   const scene = useMemo(
     () => buildSvgScene(renderedDocument, resolver, { bounds: viewBox }),
     [renderedDocument, resolver, viewBox],
@@ -2739,12 +2726,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       thresholdPx: DRAG_START_DISTANCE_PX,
       onPreview: (client) => {
         const position = positionAt(client.x, client.y);
-        if (isRoutedMarker(annotation)) {
-          setAnnotationDragPreview(
-            draggedAnnotationAtPosition(annotation, position),
-          );
-          return;
-        }
+        // Route-attached current markers used to preview by replacing their
+        // annotation in `renderedDocument`. That invalidated and rebuilt the
+        // whole formal SVG scene once per pointer frame. A marker is one
+        // indivisible visual object, so a lightweight temporary translation is
+        // sufficient during the gesture; the exact route attachment is still
+        // resolved and persisted once on pointer release below.
         dragVisual().translate({
           x: position.x - preview.originalPosition.x,
           y: position.y - preview.originalPosition.y,
@@ -2753,7 +2740,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       onFinish: ({ client, dragged }) => {
         canvasDragSessionRef.current = null;
         visual?.restore();
-        setAnnotationDragPreview(null);
         if (dragged) {
           completeAnnotationDrag(preview, positionAt(client.x, client.y));
         }
@@ -2761,7 +2747,6 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       onCancel: () => {
         canvasDragSessionRef.current = null;
         visual?.restore();
-        setAnnotationDragPreview(null);
       },
     });
   }
