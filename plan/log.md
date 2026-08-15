@@ -7403,3 +7403,29 @@ diff --check`, and two focused Playwright regressions passed.
   typecheck, 754/754 unit tests, and focused Playwright coverage, all six
   required GitHub Actions checks re-ran green, and PR #75 squash-merged to
   `main` as `449f752`.
+
+## 2026-08-15 - Calibrate Razavi BJT proportions
+
+- Target: adjust only the visible NPN/PNP BJT proportions to the reviewed
+  textbook BJT/MOS coordinate ratios while retaining electrical anchors,
+  strokes, and arrow topology.
+- Changed areas: BJT vector normalization and regenerated assets/catalog;
+  BJT/MOS ratio regression contract; authority manifest hashes, including two
+  pre-existing stale pins for untouched inductor/op-amp evidence that blocked
+  all Razavi generation.
+- Validation: common/full Razavi generation and stale checks, 24 focused
+  authority/catalog tests, Symbols TypeScript build, editor production build,
+  coordinate assertions, and `git diff --check` passed.
+- Commit status: rebased as `91ca914`; PR #78 passed all five required remote
+  checks and is queued for merge.
+
+## 2026-08-15 - Deliver Razavi BJT proportion calibration
+
+- Target: rebase, clean-gate, review, and merge the BJT proportion calibration.
+- Rebase: rebased onto `origin/main` at `f25833f`; only `plan/log.md`
+  conflicted, resolved by retaining both mainline and BJT records.
+- Validation: clean `pnpm install --frozen-lockfile` plus `pnpm ci:check`
+  passed (754 unit and 129 browser tests, workspace build, release contracts,
+  and production smoke). PR #78 passed Static contracts, Unit and integration
+  tests, Release contracts, and both Browser test shards.
+- Commit status: delivery record pending final remote check, then merge.
