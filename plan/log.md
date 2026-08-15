@@ -7468,3 +7468,13 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed locally as
   `feat(editor): add about panel and compact-layout help` on
   `codex/add-about-help-panel`; not pushed.
+## 2026-08-15 - Refine About repository link
+
+- Target: keep repository navigation from replacing the active editor page.
+- Changed areas: visible About URL, new-tab/noreferrer link behavior, shortened
+  description, and focused unit/browser coverage.
+- Validation: focused About unit and Playwright tests, `pnpm typecheck`,
+  Prettier, and `git diff --check` passed.
+- Commit status: committed locally as
+  `fix(editor): refine about repository link` on
+  `codex/refine-about-repository-link`; not pushed.
