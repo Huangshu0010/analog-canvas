@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-15 - Junction-aware VDD rail mainline delivery
+
+- Target: deliver stretchable, junction-aware VDD rail editing from
+  `codex/vdd-rail-editing` through the protected-main gate.
+- Changed areas: delivery evidence only; product change is `01655dc`.
+- Validation: clean frozen install plus complete `pnpm ci:check`; all six PR
+  #62 required GitHub Actions checks passed (scope, static, unit, release, and
+  two browser shards).
+- Commit status: PR #62 merged to `main` as `81d1e8d`; the delivery-record
+  closure remains on this documentation-only commit.
+
 ## 2026-08-15 - Make tapped VDD rails stretchable and junction-aware
 
 - Target: restore usable direct manipulation for VDD rails after an ordinary
