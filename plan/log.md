@@ -1,5 +1,17 @@
 # Maintenance Log
 
+## 2026-08-15 - Make tapped VDD rails stretchable and junction-aware
+
+- Target: restore usable direct manipulation for VDD rails after an ordinary
+  wire tap splits the stored rail at a Junction.
+- Changed areas: connected `power-rail` component derivation; Junction-group
+  route stretching; VDD whole-rail move/end-resize editor gestures; focused
+  routing and browser regressions.
+- Validation: focused routing tests (29), VDD browser regression, typecheck,
+  Prettier, `git diff --check`, and clean branch status passed.
+- Commit status: pending `fix(editor): make VDD rails stretchable after taps`
+  on `codex/vdd-rail-editing`.
+
 ## 2026-08-14 - WP-5 browser hardening and release delivery
 
 - Target: prove the failure matrix (abrupt tab death, two tabs, quota,
