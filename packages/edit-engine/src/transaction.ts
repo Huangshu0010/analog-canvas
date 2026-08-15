@@ -372,7 +372,10 @@ export type EditErrorCode =
   | "EDIT_CONTEXT_REQUIRED"
   | "HISTORY_CONTEXT_REQUIRED"
   | "HISTORY_EMPTY"
-  | "INVALID_RESULT";
+  | "INVALID_RESULT"
+  /** An unexpected runtime exception inside the engine or the editor's
+   * transaction fence; the Project and revision are unchanged. */
+  | "INTERNAL_ERROR";
 
 export interface EditDiagnostic {
   code: string;

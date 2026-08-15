@@ -1,5 +1,26 @@
 # Maintenance Log
 
+## 2026-08-15 - Editor runtime crash safety (minimal three layers)
+
+- Target: keep the page alive through render and transaction crashes with the
+  evidence-bounded minimum — root error boundary, last-good-scene fallback,
+  and an INTERNAL_ERROR transaction fence; full shell split, runCommand
+  executor, and render preflight deliberately deferred
+  (`plan/2026-08-15-editor-runtime-crash-safety/`). Executed in a dedicated
+  worktree because the main worktree holds another worker's active dirty
+  target.
+- Changed areas: new `editor-error-boundary.tsx`, `scene-safety.ts`,
+  `crash-test-hooks.ts` (DEV-only), `runtime-crash-safety.spec.ts`; additive
+  `INTERNAL_ERROR` in `EditErrorCode`; `document-controller.ts` fence +
+  history rebuild; `App.tsx` scene guards and transact fence; `main.tsx`
+  boundary mount; crash-screen CSS.
+- Validation: 736 unit tests green (7 new); 106 E2E green (2 new + drafting,
+  component-insert, full manual-editor); typecheck, prettier,
+  `git diff --check` clean.
+- Commit status: committed as
+  `feat(editor): keep the page alive through render and transaction crashes`
+  on `agent/editor-runtime-crash-safety`.
+
 ## 2026-08-15 - Junction-aware VDD rail mainline delivery
 
 - Target: deliver stretchable, junction-aware VDD rail editing from
