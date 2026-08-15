@@ -7071,6 +7071,20 @@ ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
   both browser shards.
 - Commit status: merged through PR #64 as squash commit `ad604fb`.
 
+## 2026-08-15 - Stabilize label clearance and repeated rotation
+
+- Target: remove the interaction-padding-derived extra label grid cell and
+  make automatic label rotation idempotent, while preserving explicitly moved
+  labels as rigid object-relative offsets.
+- Changed areas: derived ink versus hit bounds, instance-label grid placement,
+  Edit Engine follow behavior, label/routing regressions, and the editor
+  interaction contract.
+- Validation: focused 52-test derived/Edit Engine suite, typecheck, Prettier,
+  `git diff --check`, frozen install, and isolated-port `pnpm ci:check`
+  (728 unit/integration tests, build/release verification, 124 browser tests).
+- Commit status: committed as `3a7719e` on
+  `codex/close-label-gap-delivery`; push and remote review checks pending.
+
 ## 2026-08-15 - Show the complete compact component Library
 
 - Target: replace the eight-item starter subset with the complete quick-place
