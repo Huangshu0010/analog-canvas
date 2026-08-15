@@ -83,6 +83,8 @@ import type {
 import { buildSvgScene } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
 import type { SpiceDiagnostic } from "@icm/spice";
+import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
+import { buildSceneSafely } from "./scene-safety";
 import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
 import {
   clipboardPlacementAnchor,
@@ -481,6 +483,14 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
+/**
+ * DEV-only probe that throws during render so browser tests can exercise the
+ * root error boundary. Never mounted in production builds.
+ */
+function RenderCrashProbe(): never {
+  throw new Error("render crashed (test hook)");
+}
+
 function compactLayoutMatches(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -791,10 +801,27 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       },
     };
   }, [document, draftingHandlePreview]);
-  const scene = useMemo(
-    () => buildSvgScene(renderedDocument, resolver, { bounds: viewBox }),
-    [renderedDocument, resolver, viewBox],
+  const lastGoodSceneRef = useRef<ReturnType<typeof buildSvgScene> | null>(
+    null,
   );
+  const sceneState = useMemo(() => {
+    const outcome = buildSceneSafely(() => {
+      if (sceneCrashRequested()) {
+        throw new Error("scene build crashed (test hook)");
+      }
+      return buildSvgScene(renderedDocument, resolver, { bounds: viewBox });
+    }, lastGoodSceneRef.current);
+    if (!outcome.degraded) lastGoodSceneRef.current = outcome.scene;
+    return outcome;
+  }, [renderedDocument, resolver, viewBox]);
+  const scene = sceneState.scene;
+  useEffect(() => {
+    if (sceneState.degraded) {
+      setStatus(
+        `Scene rendering failed; showing the last good view — ${sceneState.message}`,
+      );
+    }
+  }, [sceneState.degraded, sceneState.message]);
   // React compares dangerouslySetInnerHTML by prop identity, and an inline
   // `{ __html }` literal would force an innerHTML replacement on every App
   // re-render — destroying live drag previews (and pointer capture) whenever
@@ -807,16 +834,21 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       x: copyPlacement.previewPoint.x - copyPlacement.anchor.x,
       y: copyPlacement.previewPoint.y - copyPlacement.anchor.y,
     };
-    return buildSvgScene(
-      clipboardPreviewDocument(
-        document,
-        copyPlacement.clipboard,
-        offset,
-        copyPlacement.rotation,
-      ),
-      resolver,
-      { bounds: viewBox },
-    );
+    try {
+      return buildSvgScene(
+        clipboardPreviewDocument(
+          document,
+          copyPlacement.clipboard,
+          offset,
+          copyPlacement.rotation,
+        ),
+        resolver,
+        { bounds: viewBox },
+      );
+    } catch {
+      // A transient copy preview is never worth crashing the render for.
+      return null;
+    }
   }, [copyPlacement, document, resolver, viewBox]);
   const copyPreviewInnerHtml = useMemo(
     () =>
@@ -1211,7 +1243,16 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     (count, candidate) => count + candidate.instances.length,
     0,
   );
-  const contentScene = buildSvgScene(document, resolver);
+  const contentScene = useMemo(() => {
+    try {
+      return buildSvgScene(document, resolver);
+    } catch {
+      // Fit view falls back to the default framing when the bounds scene
+      // cannot be built; the canvas itself renders through the guarded
+      // formal-scene pipeline above.
+      return null;
+    }
+  }, [document, resolver]);
   const zoomPercent = Math.round((DEFAULT_VIEWBOX.width / viewBox.width) * 100);
   const canvasIsEmpty =
     document.instances.every((instance) => instance.placement === null) &&
@@ -1894,8 +1935,33 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       preserveInteraction?: boolean;
     } = {},
   ): EditTransactionResult {
-    const result = transactDocument(edits);
+    let result: EditTransactionResult;
+    try {
+      result = transactDocument(edits);
+    } catch (error) {
+      // The controller fence normally converts engine failures into typed
+      // rejections; this catch covers the thin React wrapper around it.
+      // Either way the committed circuit is unchanged, so only the transient
+      // interaction state needs to be dropped.
+      cancelAllTransientInteraction();
+      const message =
+        error instanceof Error ? error.message : "unexpected failure";
+      setStatus(
+        `INTERNAL_ERROR: ${message} — operation cancelled; circuit unchanged`,
+      );
+      return {
+        ok: false,
+        applied: false,
+        revision: document.revision,
+        document,
+        error: { code: "INTERNAL_ERROR", message },
+        diagnostics: [],
+      };
+    }
     applyResult(result);
+    if (!result.ok && result.error.code === "INTERNAL_ERROR") {
+      cancelAllTransientInteraction();
+    }
     const currentInteraction = getCurrentInteractionState();
     const preservesCurrentInteraction =
       options.preserveInteraction ||
@@ -5069,7 +5135,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   function fitView(): void {
     setViewBox(
-      fitCameraToBounds(contentScene.viewBox, document.presentation.grid),
+      fitCameraToBounds(
+        contentScene?.viewBox ?? DEFAULT_VIEWBOX,
+        document.presentation.grid,
+      ),
     );
     setStatus("Fit Document");
   }
@@ -6219,6 +6288,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
 
   return (
     <main className="app-shell">
+      {renderCrashRequested() ? <RenderCrashProbe /> : null}
       <header className="app-chrome">
         <div className="app-chrome-main">
           <div className="app-brand">

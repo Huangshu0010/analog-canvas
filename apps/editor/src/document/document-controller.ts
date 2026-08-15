@@ -175,6 +175,12 @@ export class EditorDocumentController {
    * a human commit. `dryRun` mutates no history, Project, resolver, or undo
    * state. Opening or viewing another Document neither retargets nor cancels an
    * explicit dispatch.
+   *
+   * Unexpected runtime exceptions from the engine or from post-commit Project
+   * re-validation are converted into typed `INTERNAL_ERROR` rejections: the
+   * Project and revision keep their previous values and the histories are
+   * rebuilt from that unchanged Project, so a later transaction continues from
+   * a consistent state.
    */
   dispatchTransaction(
     request: EditorTransactionRequest,
@@ -187,18 +193,57 @@ export class EditorDocumentController {
         `Document ${request.documentId} is not present in the Project`,
       );
     }
-    const result = history.transact(request);
-    if (result.ok && result.applied) {
-      this.projectValue = replaceProjectDocument(
-        this.projectValue,
-        result.document,
-      );
-      this.resolverValue = createProjectSymbolResolver(
-        this.projectValue,
-        builtInSymbols,
+    let result: EditTransactionResult;
+    try {
+      result = history.transact(request);
+    } catch (error) {
+      this.resetHistoriesFromProject();
+      return rejectTransaction(
+        this.document,
+        "INTERNAL_ERROR",
+        `Transaction failed with an internal error: ${
+          error instanceof Error ? error.message : "unknown failure"
+        }`,
       );
     }
+    if (result.ok && result.applied) {
+      const previousProject = this.projectValue;
+      try {
+        this.projectValue = replaceProjectDocument(
+          this.projectValue,
+          result.document,
+        );
+        this.resolverValue = createProjectSymbolResolver(
+          this.projectValue,
+          builtInSymbols,
+        );
+      } catch (error) {
+        this.projectValue = previousProject;
+        this.resetHistoriesFromProject();
+        return rejectTransaction(
+          this.document,
+          "INTERNAL_ERROR",
+          `Committed document could not be re-validated into a Project: ${
+            error instanceof Error ? error.message : "unknown failure"
+          }`,
+        );
+      }
+    }
     return result;
+  }
+
+  /**
+   * Rebuild every history from the current (unchanged) Project after an
+   * internal error. The undo history is deliberately sacrificed here: the
+   * histories may hold a partially applied document, and model consistency
+   * outranks undo depth on this rare path.
+   */
+  private resetHistoriesFromProject(): void {
+    const document = this.document;
+    this.historyValue = new DocumentHistory(document, {
+      symbolResolver: this.resolverValue,
+    });
+    this.histories = new Map([[document.id, this.historyValue]]);
   }
 
   /**

@@ -2,6 +2,7 @@ import { lazy, StrictMode, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./app/App";
+import { EditorErrorBoundary } from "./components/editor-error-boundary";
 import "./styles.css";
 
 const container = document.getElementById("root");
@@ -77,7 +78,9 @@ function Root() {
 
 createRoot(container).render(
   <StrictMode>
-    <Root />
+    <EditorErrorBoundary>
+      <Root />
+    </EditorErrorBoundary>
   </StrictMode>,
 );
 
