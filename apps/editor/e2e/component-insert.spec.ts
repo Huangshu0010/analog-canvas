@@ -660,93 +660,37 @@ test("keeps a usable canvas while toggling Library at the narrow breakpoint", as
     chromeBox.x + chromeBox.width,
   );
 
-  const narrowArtwork = await page
-    .locator('[data-testid^="shapes-chip-"]')
-    .evaluateAll((tiles) =>
-      tiles.map((tile) => {
-        const tileBounds = tile.getBoundingClientRect();
-        const artwork = tile.querySelector<SVGElement>(".shapes-chip-art");
-        if (!artwork) throw new Error("Narrow Library artwork is missing");
-        const artworkBounds = artwork.getBoundingClientRect();
-        const label = tile.querySelector<HTMLElement>("span");
-        if (!label) throw new Error("Narrow Library label is missing");
-        const labelBounds = label.getBoundingClientRect();
-        return {
-          centerDeltaX:
-            artworkBounds.left +
-            artworkBounds.width / 2 -
-            (tileBounds.left + tileBounds.width / 2),
-          groupCenterDeltaY:
-            (Math.min(artworkBounds.top, labelBounds.top) +
-              Math.max(artworkBounds.bottom, labelBounds.bottom)) /
-              2 -
-            (tileBounds.top + tileBounds.height / 2),
-          height: artworkBounds.height,
-          labelFits:
-            label.scrollWidth <= label.clientWidth + 1 &&
-            label.scrollHeight <= label.clientHeight + 1,
-          labelCenterDeltaX:
-            labelBounds.left +
-            labelBounds.width / 2 -
-            (tileBounds.left + tileBounds.width / 2),
-          labelHeight: labelBounds.height,
-          separatedFromLabel: artworkBounds.bottom <= labelBounds.top + 0.5,
-          tileHeight: tileBounds.height,
-          withinTile:
-            artworkBounds.left >= tileBounds.left - 0.5 &&
-            artworkBounds.right <= tileBounds.right + 0.5 &&
-            artworkBounds.top >= tileBounds.top - 0.5 &&
-            artworkBounds.bottom <= tileBounds.bottom + 0.5,
-          width: artworkBounds.width,
-        };
-      }),
-    );
-  expect(
-    narrowArtwork.every((artwork) => Math.abs(artwork.width - 46) <= 0.5),
-  ).toBe(true);
-  expect(
-    narrowArtwork.every((artwork) => Math.abs(artwork.height - 36) <= 0.5),
-  ).toBe(true);
-  expect(
-    narrowArtwork.every((artwork) => Math.abs(artwork.centerDeltaX) <= 0.5),
-  ).toBe(true);
-  expect(
-    narrowArtwork.every(
-      (artwork) => Math.abs(artwork.groupCenterDeltaY) <= 0.5,
-    ),
-  ).toBe(true);
-  expect(
-    narrowArtwork.every(
-      (artwork) => Math.abs(artwork.labelCenterDeltaX) <= 0.5,
-    ),
-  ).toBe(true);
-  expect(
-    narrowArtwork.every((artwork) => Math.abs(artwork.tileHeight - 64) <= 0.5),
-  ).toBe(true);
-  expect(narrowArtwork.every((artwork) => artwork.labelFits)).toBe(true);
-  expect(narrowArtwork.every((artwork) => artwork.labelHeight <= 12.5)).toBe(
-    true,
-  );
-  expect(narrowArtwork.every((artwork) => artwork.separatedFromLabel)).toBe(
-    true,
-  );
-  expect(narrowArtwork.every((artwork) => artwork.withinTile)).toBe(true);
-  await expect(page.locator('[data-testid^="shapes-chip-"] span')).toHaveCount(
-    18,
-  );
-
+  const panel = page.getByTestId("shapes-library-panel");
   const canvas = page.getByTestId("schematic-canvas");
-  const openWidth = (await canvas.boundingBox())?.width ?? 0;
-  expect(openWidth).toBeGreaterThan(300);
+  await expect(panel).toHaveAttribute("data-open", "false");
+  const closedWidth = (await canvas.boundingBox())?.width ?? 0;
+  expect(closedWidth).toBeGreaterThan(600);
 
   await page.getByTestId("library-toggle").click();
-  await expect(page.getByTestId("shapes-library-panel")).toHaveAttribute(
-    "data-open",
-    "false",
+  await expect(panel).toHaveAttribute("data-open", "true");
+  await expect(panel.getByText("All", { exact: true })).toBeVisible();
+  expect(
+    await panel
+      .locator(".shapes-grid")
+      .first()
+      .evaluate(
+        (element) =>
+          getComputedStyle(element).gridTemplateColumns.split(" ").length,
+      ),
+  ).toBe(1);
+  const openWidth = (await canvas.boundingBox())?.width ?? 0;
+  expect(openWidth).toBeGreaterThan(450);
+  expect(openWidth).toBeLessThan(closedWidth);
+
+  await page.getByTestId("selection-shelf").click();
+  await expect(panel).toHaveAttribute("data-open", "false");
+  await expect(page.getByTestId("selection-shelf")).toHaveAttribute(
+    "aria-expanded",
+    "true",
   );
-  const closedWidth = (await canvas.boundingBox())?.width ?? 0;
-  expect(closedWidth).toBeCloseTo(openWidth, 0);
-  expect(closedWidth).toBeGreaterThan(300);
+  await expect
+    .poll(async () => (await canvas.boundingBox())?.width ?? 0)
+    .toBeCloseTo(closedWidth, 0);
   expect(
     await page.evaluate(() => ({
       horizontal:
