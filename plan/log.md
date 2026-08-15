@@ -1,5 +1,112 @@
 # Maintenance Log
 
+## 2026-08-14 - WP-5 browser hardening and release delivery
+
+- Target: prove the failure matrix (abrupt tab death, two tabs, quota,
+  Cache Storage isolation) and deliver the release note; final work package
+  of `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `recovery-hardening.spec.ts` (4 tests), recovery dialog
+  generation lines now include the revision (fixes a card-scoping
+  ReferenceError found by the two-tab run), `scripts/editor-production-smoke.mjs`
+  cache-isolation check + regenerated golden report, scheduler comment
+  cleanup, `docs/release/browser-recovery-v2.md`.
+- Validation: hardening spec 4/4; typecheck, prettier, docs links, and the
+  production smoke in both modes against a fresh build green;
+  `git diff --check` clean. Branch gate (`pnpm verify:branch`) and clean-state
+  `pnpm ci:check` (121/121 E2E) passed green.
+- Remote-check repair: the required Browser-tests shard failed on a drag
+  test; instrumented probes traced it to App re-renders replacing the formal
+  scene (inline `dangerouslySetInnerHTML` literal changes prop identity),
+  which the debounced recovery state publication exposed mid-drag. Fixed by
+  memoizing the innerHTML prop objects; the formerly 3/3 failing probe is
+  3/3 green, the flaky test 5/5, and post-repair 271 unit tests plus 102
+  affected E2E tests are green.
+- Commit status: committed as `test(editor): prove project recovery failure
+modes` plus `fix(editor): keep drag sessions alive across app re-renders`
+  on `agent/robust-page-persistence-recovery`.
+
+## 2026-08-14 - WP-4 recovery UX and operational visibility
+
+- Target: non-blocking recovery banner, per-session recovery dialog with
+  Restore/Download/Delete, persistent storage-failure warning, statusbar
+  recovery label, and Help/troubleshooting updates; fifth work package of
+  `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `recent-recovery-dialog.tsx` + `recovery-banners.tsx`,
+  `downloadTextArtifact` in `project-file-service.ts`, `App.tsx` dialog/
+  banner/menu/statusbar wiring, help dialog + troubleshooting docs, new
+  `recovery-dialog.spec.ts` (6 tests) and dialog-based manual-editor flows.
+- Validation: 106 unit tests; 90 E2E tests across manual-editor,
+  recovery-dialog, project-file, component-insert; typecheck, prettier,
+  `git diff --check` clean.
+- Commit status: committed as `feat(editor): add recent-work recovery UX` on
+  `agent/robust-page-persistence-recovery`.
+
+## 2026-08-14 - WP-3 project file service and replacement protection
+
+- Target: truthful Save/Open semantics with File System Access enhancement,
+  staged typed open diagnostics, file-state machine, and dirty-work
+  replacement guard; fourth work package of
+  `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `project-file-service.ts` (+13 unit tests), new
+  `replace-guard-dialog.tsx`, `App.tsx` file-state/guard/save/open wiring,
+  download-only E2E emulation in manual-editor/drafting specs, new
+  `project-file.spec.ts` (7 tests).
+- Investigation: in-page probes proved Chromium aborts even synchronously
+  dispatched IndexedDB puts during pagehide unload; the old
+  reload-inside-debounce durability cannot survive async storage. A
+  trusted-snapshot write path was built, disproven, and fully reverted; the
+  affected E2E now waits for the debounced write before reloading. Recorded
+  as `experience: candidate` on the WP-3 plan for human review.
+- Validation: 106 unit tests; 111 E2E tests across
+  drafting/manual-editor/project-file/component-insert/web-agent-session/
+  chrome-isolation; typecheck, prettier, `git diff --check` clean.
+- Commit status: committed as `feat(editor): harden project open and save` on
+  `agent/robust-page-persistence-recovery`.
+
+## 2026-08-14 - WP-2 recovery coordinator and Project lifecycle
+
+- Target: replace the synchronous localStorage recovery hook with an
+  IndexedDB-backed coordinator; third work package of
+  `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `recovery-coordinator.ts` (+17 unit tests), `App.tsx`
+  recovery/replacement/refresh/restore wiring, `project-recovery.ts` reduced
+  to the legacy migration key (writer hook and test removed),
+  `editor-fixtures.ts` IndexedDB read helper, manual-editor/component-insert
+  recovery E2E updated to retained-recovery semantics.
+- Validation: `pnpm test:local apps/editor/src/document apps/editor/src/app/App.test.tsx`
+  93/93 green; E2E recovery/refresh greps plus full drafting and
+  web-agent-session specs green; typecheck, prettier, `git diff --check`
+  clean.
+- Commit status: committed as
+  `refactor(editor): coordinate durable working copies` on
+  `agent/robust-page-persistence-recovery`.
+
+## 2026-08-14 - WP-1 IndexedDB recovery store and legacy migration
+
+- Target: transactional IndexedDB adapter for the WP-0 recovery contract plus
+  the one-time `icm.recovery.v1` localStorage migration; second work package
+  of `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `apps/editor/src/document/browser-recovery-store.ts`
+  (+18 unit tests on `fake-indexeddb` 6.2.5, new editor dev dependency,
+  lockfile re-verified frozen).
+- Validation: `pnpm test:local apps/editor/src/document` 68/68 green;
+  typecheck, prettier, `git diff --check` clean.
+- Commit status: committed as `feat(editor): persist bounded browser recovery`
+  on `agent/robust-page-persistence-recovery`.
+
+## 2026-08-14 - WP-0 recovery contract and retention core
+
+- Target: freeze the browser-recovery record contract as pure functions before
+  any storage or GUI change; first work package of
+  `plan/2026-08-14-robust-page-persistence-recovery/`.
+- Changed areas: new `apps/editor/src/document/browser-recovery-contract.ts`
+  (+23 unit tests), `docs/specs/persistence-and-recovery.md` v2 contract,
+  user compatibility statement.
+- Validation: `pnpm test:local apps/editor/src/document` 50/50 green;
+  prettier, `tsc` project check, `git diff --check` clean.
+- Commit status: committed as `feat(editor): define bounded recovery records`
+  (`08af5d3`) on `agent/robust-page-persistence-recovery`.
+
 ## 2026-08-14 - Agent-side MCP adapter (M0-M3)
 
 - Target: give Codex/Claude/Cursor hosts a local stdio MCP entry over the
@@ -6729,7 +6836,7 @@ contracts (WP-R1)`.
   accessible copy feedback, and focused component coverage.
 - Validation: focused `connect-agent-panel` tests and `pnpm typecheck` passed;
   the local editor shell was inspected in the in-app browser; `git diff
-  --check` passed.
+--check` passed.
 - Commit status: committed on `codex/agent-copy-card` as
   `feat(agent): present handoff as copy card`.
 
@@ -6755,7 +6862,7 @@ contracts (WP-R1)`.
   hit/marquee/edit geometry; visual-route deletion contract; focused tests and
   current model/editor specifications.
 - Validation: 80 focused derived/editor/edit-engine/render tests, `pnpm
-  typecheck`, `pnpm format:check`, `git diff --check`, and focused Playwright
+typecheck`, `pnpm format:check`, `git diff --check`, and focused Playwright
   VDD rail creation/deletion passed. The reviewed export goldens were
   regenerated to include the true RichText bounds; frozen-lockfile install and
   canonical `pnpm ci:check` then passed (562 unit tests, 103 browser E2E,
@@ -6819,7 +6926,7 @@ contracts (WP-R1)`.
   contract, and a browser regression that fits drafted text through `F`.
 - Validation: focused unit and browser checks, `pnpm typecheck`, formatting,
   full drafting E2E (24 tests), `git diff --check`, and canonical `pnpm
-  ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
+ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
   passed.
 - Commit status: committed on `codex/fix-fit-view-grid-bounds`; remote CI and
   merge remain pending.
@@ -6854,6 +6961,7 @@ contracts (WP-R1)`.
   cases passed locally.
 - Commit status: pending follow-up commit on
   `codex/coordinate-domain-contract`; remote PR checks will decide merge.
+
 ## 2026-08-14 - Restore imported flightline guidance during placement
 
 - Target: keep SPICE-imported routing guidance usable after placement and

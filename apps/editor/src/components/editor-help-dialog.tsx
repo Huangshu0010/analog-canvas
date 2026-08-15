@@ -140,10 +140,17 @@ export function EditorHelpDialog({
           <section id="help-data" className="help-data-note">
             <h3>Project data and recovery</h3>
             <p>
-              This editor runs in your browser. Recovery data may be kept on
-              this device, but it is not cloud storage and can be lost when
-              browser data is cleared. Export a project file whenever you need a
-              durable backup or want to move work to another device.
+              This editor runs in your browser. After each accepted edit it
+              keeps a safety copy of the current Project in this browser's
+              storage: at most two recent working copies, each with a current
+              and a previous generation (at most 4 MB each, 12 MB in total). Use{" "}
+              <strong>File / Recover recent work…</strong> to browse, restore,
+              download, or delete those copies. They are not cloud storage, can
+              be lost when browser data is cleared, and a reload within a
+              fraction of a second of an edit may miss that last edit. Saving or
+              downloading a Project never deletes the safety copies; export a
+              Project file whenever you need a durable backup or want to move
+              work to another device.
             </p>
           </section>
         </div>

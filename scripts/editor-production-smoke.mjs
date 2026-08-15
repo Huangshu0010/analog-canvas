@@ -32,6 +32,7 @@ async function main() {
   let browser;
   const consoleErrors = [];
   let mounted = false;
+  let projectDataIsolation = "unchecked";
   try {
     server = await preview({
       root: editorRoot,
@@ -52,6 +53,26 @@ async function main() {
       timeout: 10_000,
     });
     mounted = true;
+    // Browser recovery is Project data and must never leak into the PWA
+    // asset caches (Cache Storage) or the service-worker precache.
+    projectDataIsolation = await page.evaluate(async () => {
+      if (typeof caches === "undefined") return "caches-unavailable";
+      for (const name of await caches.keys()) {
+        const cache = await caches.open(name);
+        for (const request of await cache.keys()) {
+          const response = await cache.match(request);
+          if (!response) continue;
+          const text = await response.text();
+          if (
+            text.includes('"topDocumentId"') ||
+            text.includes('"schemaVersion"')
+          ) {
+            return `project-data-in-cache:${name}:${request.url}`;
+          }
+        }
+      }
+      return "clean";
+    });
   } finally {
     await browser?.close();
     await server?.close();
@@ -60,7 +81,12 @@ async function main() {
   const nodeCryptoExternalized = await builtJavaScriptContains(
     "node:crypto has been externalized",
   );
-  const report = { mounted, consoleErrors, nodeCryptoExternalized };
+  const report = {
+    mounted,
+    consoleErrors,
+    nodeCryptoExternalized,
+    projectDataIsolation,
+  };
 
   if (check) {
     if (JSON.stringify(expected) !== JSON.stringify(report)) {
@@ -82,6 +108,11 @@ async function main() {
   }
   if (report.nodeCryptoExternalized) {
     throw new Error("node:crypto was externalized in the production build");
+  }
+  if (report.projectDataIsolation !== "clean") {
+    throw new Error(
+      `Project data found in browser caches: ${report.projectDataIsolation}`,
+    );
   }
   console.log("Editor production preview smoke passed");
 }

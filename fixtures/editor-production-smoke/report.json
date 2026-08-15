@@ -1,5 +1,6 @@
 {
   "mounted": true,
   "consoleErrors": [],
-  "nodeCryptoExternalized": false
+  "nodeCryptoExternalized": false,
+  "projectDataIsolation": "clean"
 }

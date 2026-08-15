@@ -1,17 +1,16 @@
 // Recovery persistence scheduler.
 //
-// The editor persists the current Project to localStorage so an unsaved edit can
-// be recovered after a crash or accidental close. Writing synchronously on
-// every committed transaction made large schematics feel janky, because each
-// edit serialized the whole project and blocked the main thread.
-//
-// This module coalesces a burst of successive edits into a single write,
-// delayed by `delayMs`. The latest Project wins; earlier ones are dropped. The
-// single correctness risk this introduces is losing the last pending write when
-// the tab is hidden or closed before the timer fires, so callers MUST flush on
-// `visibilitychange` (→ hidden) and `pagehide`, and MUST cancel before any
-// whole-project replacement (Save/Discard/Open/Import/Restore) so a stale
-// pending write for the old project cannot revive after the user moved on.
+// The editor persists recovery snapshots of committed Projects so unsaved
+// edits survive a crash or accidental close. Writing on every committed
+// transaction made large schematics feel janky, because each edit blocked
+// the main thread, so this module coalesces a burst of successive edits into
+// a single write, delayed by `delayMs`. The latest Project wins; earlier ones
+// are dropped. The single correctness risk this introduces is losing the
+// last pending write when the tab is hidden or closed before the timer
+// fires, so callers MUST flush on `visibilitychange` (→ hidden) and
+// `pagehide`, and MUST cancel before any whole-project replacement
+// (Save/Discard/Open/Import/Restore) so a stale pending write for the old
+// project cannot revive after the user moved on.
 //
 // The scheduler holds no React state: it owns only a timer handle and the most
 // recently scheduled project. It is deliberately injectable (timer + write)

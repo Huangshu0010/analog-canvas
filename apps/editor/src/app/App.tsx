@@ -60,10 +60,8 @@ import type {
 import {
   createEmptyProject,
   flattenRichText,
-  parseProject,
   powerNetNormalizations,
   snapGridPoint,
-  serializeProject,
   semanticTextDocument,
   transformPoint,
 } from "@icm/model";
@@ -147,6 +145,13 @@ import {
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
+import { ReplaceGuardDialog } from "../components/replace-guard-dialog";
+import { RecentRecoveryDialog } from "../components/recent-recovery-dialog";
+import {
+  RecoveryFailureBanner,
+  StartupRecoveryBanner,
+  recoveryStateLabel,
+} from "../components/recovery-banners";
 import { ProjectSearchDialog } from "../features/search/project-search-dialog";
 import {
   AgentPropertiesSection,
@@ -180,7 +185,21 @@ import {
 } from "../features/selection/delete-selection";
 import { createRoutingDemoProject } from "../demos/routing-demo";
 import { createVisualDemoProject } from "../demos/visual-demo";
-import { useProjectRecovery } from "../document/project-recovery";
+import { useRecoveryCoordinator } from "../document/recovery-coordinator";
+import type {
+  BrowserRecoveryFormalFileHint,
+  BrowserRecoverySource,
+} from "../document/browser-recovery-contract";
+import {
+  downloadTextArtifact,
+  formatProjectOpenDiagnostics,
+  requestProjectDownload,
+  saveProjectArtifact,
+  stageProjectFile,
+  type ProjectFileState,
+} from "../document/project-file-service";
+import type { BrowserRecoveryGeneration } from "../document/browser-recovery-contract";
+import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
 import {
   NetTraceSection,
@@ -278,6 +297,11 @@ const EMPTY_SUPPLEMENTAL_SELECTION: SupplementalSelection = {
   annotationIds: [],
   draftingIds: [],
 };
+
+interface ReplaceGuardState {
+  intent: string;
+  perform: () => void | Promise<void>;
+}
 
 export interface AppProps {
   project?: CircuitProject;
@@ -490,14 +514,36 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     return requested;
   });
+  const refreshRestoreAttemptedRef = useRef(false);
+  // Formal-file lifecycle of the current working copy, orthogonal to recovery
+  // state: a commit makes it dirty again, only a confirmed File System
+  // Access close or an explicit download transitions it out of dirty.
+  const [fileState, setFileState] = useState<ProjectFileState>("new");
+  const fileStateBaselineRef = useRef<{
+    session: string;
+    revision: number;
+  } | null>(null);
+  const [replaceGuard, setReplaceGuard] = useState<ReplaceGuardState | null>(
+    null,
+  );
+  const [recoveryDialogOpen, setRecoveryDialogOpen] = useState(false);
+  const [recoveryBannerDismissed, setRecoveryBannerDismissed] = useState(false);
+  const [recoveryFailureDismissed, setRecoveryFailureDismissed] =
+    useState(false);
   const {
-    candidate: recoveryCandidate,
+    state: recoveryState,
+    sessions: recoverySessions,
+    ready: recoveryReady,
+    workingCopyId: recoveryWorkingCopyId,
     stage: stageRecovery,
     cancelPending: cancelRecovery,
-    flush: flushRecovery,
-    clearStored: clearRecovery,
-    consumeCandidate: consumeRecoveryCandidate,
-  } = useProjectRecovery(setStatus);
+    flushNow: flushRecovery,
+    beginWorkingCopy: beginRecoveryWorkingCopy,
+    noteFormalFileHint: noteRecoveryFormalFileHint,
+    discover: discoverRecovery,
+    readSessionProject: readRecoveryProject,
+    deleteSession: deleteRecoverySession,
+  } = useRecoveryCoordinator(setStatus);
   const {
     project,
     document,
@@ -716,6 +762,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     () => buildSvgScene(renderedDocument, resolver, { bounds: viewBox }),
     [renderedDocument, resolver, viewBox],
   );
+  // React compares dangerouslySetInnerHTML by prop identity, and an inline
+  // `{ __html }` literal would force an innerHTML replacement on every App
+  // re-render — destroying live drag previews (and pointer capture) whenever
+  // unrelated state such as recovery status changes. Memoize the prop object
+  // so re-renders with unchanged scene content leave the DOM subtree alone.
+  const sceneInnerHtml = useMemo(() => ({ __html: scene.formalBody }), [scene]);
   const copyPreviewScene = useMemo(() => {
     if (!copyPlacement || !copyPlacement.previewPoint) return null;
     const offset = {
@@ -728,6 +780,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       { bounds: viewBox },
     );
   }, [copyPlacement, document, resolver, viewBox]);
+  const copyPreviewInnerHtml = useMemo(
+    () =>
+      copyPreviewScene === null
+        ? null
+        : { __html: copyPreviewScene.formalBody },
+    [copyPreviewScene],
+  );
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
@@ -1657,11 +1716,23 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function replaceActiveProject(
     nextProject: CircuitProject,
     nextViewBox: GridRect = DEFAULT_VIEWBOX,
+    options: {
+      source?: BrowserRecoverySource;
+      keepWorkingCopy?: boolean;
+      formalFileHint?: BrowserRecoveryFormalFileHint;
+    } = {},
   ): SchematicDocument {
     // Drop any pending recovery write for the outgoing project so it cannot
-    // revive after Save/Discard/Open/Import/Restore/demo-load swaps the project.
-    // Callers that also remove the recovery key do so after this cancels.
+    // revive after Save/Discard/Open/Import/Restore/demo-load swaps the
+    // project, then give the incoming project its own working-copy identity
+    // (an explicit-refresh restore keeps the identity it is continuing).
     cancelRecovery();
+    if (options.keepWorkingCopy !== true) {
+      beginRecoveryWorkingCopy(options.source ?? "new");
+    }
+    if (options.formalFileHint !== undefined) {
+      noteRecoveryFormalFileHint(options.formalFileHint);
+    }
     browserAgentFileHost.clear();
     setAgentFileCandidate(null);
     const prepared = materializeRazaviProjectBulkConnections(nextProject);
@@ -1670,26 +1741,30 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     setDocumentStack([]);
     setViewBox(nextViewBox, nextDocument.presentation.grid);
     resetInteractionState();
+    setFileState(options.source === "opened-file" ? "opened" : "new");
+    // Seed the incoming working copy immediately; the outgoing project's
+    // stored records are retained under its own session.
+    stageRecovery(prepared.project);
     return nextDocument;
   }
 
   function approveAgentFileCandidate(): void {
     if (!agentFileCandidate) return;
-    const candidate = browserAgentFileHost.consumeApproved(
-      agentFileCandidate.candidateId,
-    );
-    setAgentFileCandidate(null);
-    if (!candidate) {
-      setStatus(
-        "Agent file candidate expired; ask the Agent to stage it again",
-      );
-      return;
-    }
-    replaceActiveProject(candidate);
-    stageRecovery(candidate);
-    setStatus(
-      `Accepted Agent ${agentFileCandidate.kind} candidate: ${candidate.name}`,
-    );
+    const meta = agentFileCandidate;
+    void guardDirtyReplacement(`Accept Agent ${meta.kind} candidate`, () => {
+      const candidate = browserAgentFileHost.consumeApproved(meta.candidateId);
+      setAgentFileCandidate(null);
+      if (!candidate) {
+        setStatus(
+          "Agent file candidate expired; ask the Agent to stage it again",
+        );
+        return;
+      }
+      replaceActiveProject(candidate, DEFAULT_VIEWBOX, {
+        source: "opened-file",
+      });
+      setStatus(`Accepted Agent ${meta.kind} candidate: ${candidate.name}`);
+    });
   }
 
   function rejectAgentFileCandidate(): void {
@@ -3625,16 +3700,124 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
-  function saveProjectFile(): void {
-    clearRecovery();
-    download(serializeProject(project), "application/json", "icproj.json");
-    setStatus(`Saved formal Project revision ${document.revision}`);
+  async function saveProjectFile(): Promise<void> {
+    // Saving or downloading never clears the browser recovery copies. Only a
+    // confirmed File System Access close reports a confirmed write; the
+    // fallback download is reported as requested, not saved.
+    const outcome = await saveProjectArtifact(project);
+    if (outcome.status === "write-confirmed") {
+      noteRecoveryFormalFileHint({
+        name: outcome.fileName,
+        lastConfirmedWriteAt: outcome.at,
+      });
+      setFileState("write-confirmed");
+      setStatus(`Saved ${outcome.fileName} (write confirmed)`);
+      return;
+    }
+    if (outcome.status === "download-requested") {
+      noteRecoveryFormalFileHint({
+        name: outcome.fileName,
+        lastDownloadRequestedAt: new Date().toISOString(),
+      });
+      setFileState("download-requested");
+      setStatus(`Download requested: ${outcome.fileName}`);
+      return;
+    }
+    if (outcome.status === "picker-cancelled") {
+      setStatus("Save cancelled");
+      return;
+    }
+    if (outcome.status === "permission-denied") {
+      setStatus(
+        `Save location unavailable and download failed: ${outcome.message}`,
+      );
+      return;
+    }
+    if (outcome.status === "write-failed") {
+      setFileState("write-failed");
+      setStatus(
+        `Save failed at ${outcome.stage}: ${outcome.message} — recovery kept; download the Project instead`,
+      );
+      return;
+    }
+    setStatus(`Project could not be serialized: ${outcome.message}`);
   }
 
-  function restoreRecovery(): void {
-    if (recoveryCandidate) {
+  function isDirtyWork(): boolean {
+    return fileState === "dirty" || fileState === "write-failed";
+  }
+
+  /**
+   * Protect outgoing dirty work before Open/Import/Replace: first confirm the
+   * newest revision is stored in recovery; if recovery cannot confirm, let
+   * the human choose between downloading, replacing anyway, and cancelling.
+   */
+  async function guardDirtyReplacement(
+    intent: string,
+    perform: () => void | Promise<void>,
+  ): Promise<void> {
+    if (!isDirtyWork()) {
+      await perform();
+      return;
+    }
+    stageRecovery(project);
+    const recoveryAfterFlush = await flushRecovery();
+    if (recoveryAfterFlush === "stored") {
+      await perform();
+      return;
+    }
+    setReplaceGuard({ intent, perform });
+  }
+
+  function cancelReplaceGuard(): void {
+    setReplaceGuard(null);
+  }
+
+  function confirmReplaceGuard(): void {
+    const guard = replaceGuard;
+    if (!guard) return;
+    setReplaceGuard(null);
+    void guard.perform();
+  }
+
+  function downloadCurrentProjectFromGuard(): void {
+    const outcome = requestProjectDownload(project);
+    if (outcome.status === "download-requested") {
+      setFileState("download-requested");
+      setStatus(`Download requested: ${outcome.fileName}`);
+    } else {
+      setStatus(`Download failed: ${outcome.message}`);
+    }
+  }
+
+  function openRecoveryDialog(): void {
+    setRecoveryBannerDismissed(true);
+    // Refresh summaries so the dialog reflects records written after the
+    // startup discovery (including this session's own latest commits).
+    void (async () => {
+      await discoverRecovery();
+      setRecoveryDialogOpen(true);
+    })();
+  }
+
+  function restoreRecoverySession(
+    workingCopyId: string,
+    generation: BrowserRecoveryGeneration,
+  ): void {
+    void (async () => {
+      const read = await readRecoveryProject(workingCopyId, generation);
+      if (read.status !== "valid") {
+        setStatus(
+          read.status === "unsupported-schema"
+            ? "Recovery uses a newer Project schema and cannot be restored; download it instead"
+            : `Recovery is not readable: ${
+                read.status === "missing" ? "no stored record" : read.message
+              }`,
+        );
+        return;
+      }
       const unsupported = findUnsupportedProjectSymbolIds(
-        recoveryCandidate,
+        read.project,
         builtInSymbols,
       );
       if (unsupported.length > 0) {
@@ -3643,54 +3826,152 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         );
         return;
       }
-    }
-    const recoveredProject = consumeRecoveryCandidate();
-    if (!recoveredProject) return;
-    const recoveredDocument = replaceActiveProject(recoveredProject);
-    setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
+      // Restoring forks a fresh working copy instead of overwriting the
+      // stored record another tab may still be writing.
+      const recoveredDocument = replaceActiveProject(
+        read.project,
+        DEFAULT_VIEWBOX,
+        { source: "recovered" },
+      );
+      setRecoveryDialogOpen(false);
+      setRecoveryBannerDismissed(true);
+      await discoverRecovery();
+      setStatus(`Restored recovery revision ${recoveredDocument.revision}`);
+    })();
+  }
+
+  function downloadRecoveryBackup(
+    workingCopyId: string,
+    generation: BrowserRecoveryGeneration,
+  ): void {
+    void (async () => {
+      const read = await readRecoveryProject(workingCopyId, generation);
+      const summary = recoverySessions.find(
+        (session) => session.workingCopyId === workingCopyId,
+      );
+      if (read.status === "valid" || read.status === "unsupported-schema") {
+        const text =
+          read.status === "valid" ? read.record.projectText : read.projectText;
+        const name =
+          summary?.projectName ??
+          (read.status === "valid" ? read.record.projectName : "recovery");
+        const fileName = `${projectFileBaseName(name)}-backup.icproj.json`;
+        const outcome = downloadTextArtifact(text, fileName);
+        setStatus(
+          outcome.status === "download-requested"
+            ? `Download requested: ${outcome.fileName}`
+            : `Download failed: ${outcome.message}`,
+        );
+        return;
+      }
+      setStatus(
+        `Backup not available: ${
+          read.status === "missing" ? "no stored record" : read.message
+        }`,
+      );
+    })();
+  }
+
+  function deleteRecoverySessionFromDialog(workingCopyId: string): void {
+    void (async () => {
+      const removed = await deleteRecoverySession(workingCopyId);
+      await discoverRecovery();
+      setStatus(
+        removed ? "Deleted recovery copy" : "Could not delete recovery copy",
+      );
+    })();
   }
 
   useEffect(() => {
-    if (!restoreAfterRefresh || !recoveryCandidate) return;
-    restoreRecovery();
-  }, [recoveryCandidate, restoreAfterRefresh]);
+    if (!restoreAfterRefresh || !recoveryReady) return;
+    if (refreshRestoreAttemptedRef.current) return;
+    refreshRestoreAttemptedRef.current = true;
+    void (async () => {
+      // An explicit in-app Refresh may restore only the exact working copy
+      // recorded for that refresh, validated before installation.
+      const read = await readRecoveryProject(recoveryWorkingCopyId, "latest");
+      if (read.status !== "valid") {
+        setStatus("No restorable recovery was found for this refresh");
+        return;
+      }
+      const unsupported = findUnsupportedProjectSymbolIds(
+        read.project,
+        builtInSymbols,
+      );
+      if (unsupported.length > 0) {
+        setStatus(
+          `Recovery uses unsupported non-Razavi symbols: ${unsupported.join(", ")}`,
+        );
+        return;
+      }
+      const restoredDocument = replaceActiveProject(
+        read.project,
+        DEFAULT_VIEWBOX,
+        { source: "recovered", keepWorkingCopy: true },
+      );
+      setRecoveryBannerDismissed(true);
+      setStatus(`Restored recovery revision ${restoredDocument.revision}`);
+    })();
+  }, [restoreAfterRefresh, recoveryReady, recoveryWorkingCopyId]);
+
+  // Any committed revision inside one Project session makes the working copy
+  // dirty relative to its formal file again. A replacement re-baselines via
+  // its own projectSessionId and sets the state explicitly.
+  useEffect(() => {
+    const baseline = fileStateBaselineRef.current;
+    if (baseline === null || baseline.session !== projectSessionId) {
+      fileStateBaselineRef.current = {
+        session: projectSessionId,
+        revision: document.revision,
+      };
+      return;
+    }
+    if (baseline.revision !== document.revision) {
+      fileStateBaselineRef.current = {
+        session: projectSessionId,
+        revision: document.revision,
+      };
+      setFileState("dirty");
+    }
+  }, [document.revision, projectSessionId]);
 
   function refreshApp(): void {
-    stageRecovery(project);
-    flushRecovery();
-    window.sessionStorage.setItem(REFRESH_RESTORE_STORAGE_KEY, "true");
-    window.location.reload();
-  }
-
-  function discardRecovery(): void {
-    clearRecovery();
-    setStatus("Discarded recovery");
+    void (async () => {
+      stageRecovery(project);
+      // Wait for the IndexedDB write to settle before reloading; recovery
+      // correctness otherwise does not depend on last-moment page events.
+      await flushRecovery();
+      window.sessionStorage.setItem(REFRESH_RESTORE_STORAGE_KEY, "true");
+      window.location.reload();
+    })();
   }
 
   async function openProjectFile(file: File | null): Promise<void> {
     if (!file) return;
-    try {
-      const opened = parseProject(await file.text());
-      const unsupported = findUnsupportedProjectSymbolIds(
-        opened,
-        builtInSymbols,
+    await guardDirtyReplacement(`Open ${file.name}`, async () => {
+      const staged = await stageProjectFile(file, (candidate) =>
+        findUnsupportedProjectSymbolIds(candidate, builtInSymbols),
       );
-      if (unsupported.length > 0) {
-        throw new Error(
-          `Project uses unsupported non-Razavi symbols: ${unsupported.join(", ")}`,
+      if (staged.status === "rejected") {
+        // A rejected user file keeps a code and path in the status line so
+        // the reason survives later status updates.
+        setStatus(
+          `Project not opened — ${formatProjectOpenDiagnostics(staged.diagnostics)}`,
         );
+        return;
       }
-      const openedDocument = opened.documents.find(
-        (candidate) => candidate.id === opened.topDocumentId,
-      )!;
-      replaceActiveProject(opened);
+      // A successful open retains the outgoing Project's recovery records
+      // and immediately seeds the incoming Project's own working copy.
+      replaceActiveProject(staged.project, DEFAULT_VIEWBOX, {
+        source: "opened-file",
+        formalFileHint: { name: staged.fileName },
+      });
       setImportDiagnostics([]);
       setImportReviewOpen(false);
-      clearRecovery();
-      setStatus(`Opened ${file.name} at revision ${openedDocument.revision}`);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Project open failed");
-    }
+      setStatus(
+        `Opened ${staged.fileName} at revision ${staged.topDocumentRevision}`,
+      );
+    });
   }
 
   function loadVisualDemo(): void {
@@ -4652,13 +4933,16 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         (count, candidate) => count + candidate.instances.length,
         0,
       );
-      replaceActiveProject(result.project);
-      stageRecovery(result.project);
-      setImportReviewOpen(true);
-      setSelectionOpen(true);
-      setStatus(
-        `Imported ${result.project.documents.length} Documents and ${instanceCount} Razavi-supported instances`,
-      );
+      await guardDirtyReplacement("Import SPICE sources", () => {
+        replaceActiveProject(result.project!, DEFAULT_VIEWBOX, {
+          source: "spice-import",
+        });
+        setImportReviewOpen(true);
+        setSelectionOpen(true);
+        setStatus(
+          `Imported ${result.project!.documents.length} Documents and ${instanceCount} Razavi-supported instances`,
+        );
+      });
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "SPICE import failed");
     }
@@ -5881,15 +6165,10 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                   >
                     PDF
                   </button>
-                  {recoveryCandidate ? (
-                    <>
-                      <button type="button" onClick={restoreRecovery}>
-                        Restore recovery
-                      </button>
-                      <button type="button" onClick={discardRecovery}>
-                        Discard recovery
-                      </button>
-                    </>
+                  {recoverySessions.length > 0 ? (
+                    <button type="button" onClick={openRecoveryDialog}>
+                      Recover recent work…
+                    </button>
                   ) : null}
                 </div>
               </details>
@@ -6152,6 +6431,49 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       </header>
       {helpOpen ? (
         <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
+      ) : null}
+      {recoveryReady &&
+      recoverySessions.length > 0 &&
+      !recoveryBannerDismissed &&
+      !recoveryDialogOpen ? (
+        <StartupRecoveryBanner
+          onOpen={openRecoveryDialog}
+          onDismiss={() => setRecoveryBannerDismissed(true)}
+        />
+      ) : null}
+      {(recoveryState === "quota-exceeded" ||
+        recoveryState === "unavailable" ||
+        recoveryState === "failed") &&
+      !recoveryFailureDismissed ? (
+        <RecoveryFailureBanner
+          state={recoveryState}
+          onDownload={() => {
+            const outcome = requestProjectDownload(project);
+            setStatus(
+              outcome.status === "download-requested"
+                ? `Download requested: ${outcome.fileName}`
+                : `Download failed: ${outcome.message}`,
+            );
+          }}
+          onDismiss={() => setRecoveryFailureDismissed(true)}
+        />
+      ) : null}
+      {recoveryDialogOpen && recoverySessions.length > 0 ? (
+        <RecentRecoveryDialog
+          sessions={recoverySessions}
+          onRestore={restoreRecoverySession}
+          onDownloadBackup={downloadRecoveryBackup}
+          onDeleteSession={deleteRecoverySessionFromDialog}
+          onClose={() => setRecoveryDialogOpen(false)}
+        />
+      ) : null}
+      {replaceGuard !== null ? (
+        <ReplaceGuardDialog
+          intent={replaceGuard.intent}
+          onCancel={cancelReplaceGuard}
+          onConfirm={confirmReplaceGuard}
+          onDownload={downloadCurrentProjectFromGuard}
+        />
       ) : null}
       <ProjectSearchDialog
         open={searchOpen}
@@ -7296,7 +7618,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               height={viewBox.height}
               fill="url(#grid)"
             />
-            <g dangerouslySetInnerHTML={{ __html: scene.formalBody }} />
+            <g dangerouslySetInnerHTML={sceneInnerHtml} />
             {highlightedNet ? (
               <g
                 data-testid="net-highlight-overlay"
@@ -7357,13 +7679,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 })}
               </g>
             ) : null}
-            {copyPreviewScene ? (
+            {copyPreviewInnerHtml !== null ? (
               <g
                 data-testid="copy-placement-preview"
                 className="copy-placement-preview"
-                dangerouslySetInnerHTML={{
-                  __html: copyPreviewScene.formalBody,
-                }}
+                dangerouslySetInnerHTML={copyPreviewInnerHtml}
               />
             ) : null}
             {tool === "wire" ? (
@@ -8179,6 +8499,15 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                     ? "Line"
                     : tool.charAt(0).toUpperCase() + tool.slice(1)}
           </span>
+          {recoveryStateLabel(recoveryState) === null ? null : (
+            <output
+              className="statusbar-recovery"
+              data-testid="recovery-state"
+              aria-label="Browser recovery state"
+            >
+              {recoveryStateLabel(recoveryState)}
+            </output>
+          )}
         </div>
         <div className="canvas-controls" aria-label="Canvas zoom controls">
           <button

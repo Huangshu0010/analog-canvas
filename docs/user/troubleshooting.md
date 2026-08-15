@@ -17,11 +17,17 @@ Opaque text is preserved exactly but is not editable circuit semantics yet.
 Consult the compatibility matrix and keep the diagnostic when reporting a
 missing vendor construct.
 
-## Recovery is corrupt
+## Recovery copies
 
-The app rejects and discards an invalid browser recovery record; it does not
-touch formal Project downloads. Reopen the last formal `.icproj.json` and
-repeat the unsaved edit.
+Safety copies live in this browser's IndexedDB and are never authoritative.
+Use **File / Recover recent work…** to browse them. A damaged latest copy
+offers the previous generation; a copy from a newer Project schema cannot be
+restored here but can still be downloaded. Deleting one copy never deletes
+another Project's copy. If a warning says recovery cannot be saved (storage
+full or unavailable), download the Project with the button in the warning. A
+reload immediately after an edit may miss that very last edit — the copy
+lands within a fraction of a second; reloading after that restores the
+latest committed state.
 
 ## PNG or PDF export fails
 

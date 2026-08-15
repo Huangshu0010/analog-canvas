@@ -5,7 +5,12 @@ import {
   chooseComponent,
   clickCommand,
   downloadBytes,
+  emulateDownloadOnlyBrowser,
 } from "./editor-fixtures.js";
+
+test.beforeEach(async ({ page }) => {
+  await emulateDownloadOnlyBrowser(page);
+});
 
 // Two-phase drafting creation: click to set the start, move to preview, click to
 // commit. Arrow commits on the second click; construction line commits on the
