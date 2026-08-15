@@ -57,24 +57,13 @@ export interface WireSegmentDragProposal {
   junctions: JunctionMoveProposal[];
 }
 
-function routeJunctionDegree(
-  document: SchematicDocument,
-  junctionId: string,
-): number {
-  return document.routes.filter(
-    (route) =>
-      (route.from.kind === "junction" &&
-        route.from.junctionId === junctionId) ||
-      (route.to.kind === "junction" && route.to.junctionId === junctionId),
-  ).length;
-}
-
 /**
- * Persisted Route boundaries are not automatically visual anchors. A
- * degree-one/two route-anchor is editable geometry; terminals, ports, legacy
- * branch records, and degree-three-or-greater Junctions remain hard anchors.
+ * A persisted Junction is a topological vertex, not an absolute geometric
+ * anchor. Dragging a segment that terminates at one therefore moves the vertex
+ * and lets every incident Route stretch around it. Terminals remain hard
+ * anchors: their positions belong to their Symbols.
  */
-function softRouteAnchorId(
+function movableSegmentJunctionId(
   document: SchematicDocument,
   endpoint: SchematicDocument["routes"][number]["from"],
 ): string | null {
@@ -83,15 +72,7 @@ function softRouteAnchorId(
     (candidate) => candidate.id === endpoint.junctionId,
   );
   if (!junction) return null;
-  const degree = routeJunctionDegree(document, junction.id);
-  if (degree > 2) return null;
-  if (junction.role === "route-anchor") return junction.id;
-  // GUI Projects created before route-anchor roles used an implicit branch
-  // record for a dangling end. Preserve that established loose-end behavior.
-  if ((junction.role ?? "branch") === "branch" && degree === 1) {
-    return junction.id;
-  }
-  return null;
+  return junction.id;
 }
 
 function protectedMode(mode: SegmentMode | undefined): boolean {
@@ -212,21 +193,21 @@ export function proposeWireSegmentDrag(
   }
 
   const lastPointIndex = selectedPolyline.points.length - 1;
-  const selectedEndpointAnchor = (pointIndex: number): string | null => {
+  const selectedEndpointJunction = (pointIndex: number): string | null => {
     if (pointIndex === 0) {
-      return softRouteAnchorId(document, selectedRoute.from);
+      return movableSegmentJunctionId(document, selectedRoute.from);
     }
     if (pointIndex === lastPointIndex) {
-      return softRouteAnchorId(document, selectedRoute.to);
+      return movableSegmentJunctionId(document, selectedRoute.to);
     }
     return null;
   };
-  const leftAnchorId = selectedEndpointAnchor(segmentIndex);
-  const rightAnchorId = selectedEndpointAnchor(segmentIndex + 1);
+  const leftAnchorId = selectedEndpointJunction(segmentIndex);
+  const rightAnchorId = selectedEndpointJunction(segmentIndex + 1);
 
   // Ordinary single-Route bends keep the established dogleg behavior. The
-  // topology-aware path is required only when a soft persisted endpoint makes
-  // the storage partition observable.
+  // topology-aware path is required only when a persisted Junction makes the
+  // graph vertex observable.
   if (!leftAnchorId && !rightAnchorId) {
     return {
       routes: [
@@ -289,8 +270,8 @@ export function proposeWireSegmentDrag(
 
   for (const route of document.routes) {
     if (route.id === routeId) continue;
-    const fromAnchor = softRouteAnchorId(document, route.from);
-    const toAnchor = softRouteAnchorId(document, route.to);
+    const fromAnchor = movableSegmentJunctionId(document, route.from);
+    const toAnchor = movableSegmentJunctionId(document, route.to);
     const movedFrom = fromAnchor ? movedJunctions.get(fromAnchor) : undefined;
     const movedTo = toAnchor ? movedJunctions.get(toAnchor) : undefined;
     if (!movedFrom && !movedTo) continue;
