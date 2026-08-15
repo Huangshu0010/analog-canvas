@@ -47,9 +47,14 @@ test("opens About with the version and repository link", async ({ page }) => {
   const about = page.getByRole("dialog", { name: "About" });
   await expect(about).toContainText("Analog Canvas");
   await expect(about).toContainText("Version 0.1.0");
-  await expect(
-    about.getByRole("link", { name: "GitHub repository" }),
-  ).toHaveAttribute("href", "https://github.com/chenzc24/Analog-Canvas");
+  const repositoryLink = about.getByRole("link", {
+    name: "https://github.com/chenzc24/Analog-Canvas",
+  });
+  await expect(repositoryLink).toHaveAttribute(
+    "href",
+    "https://github.com/chenzc24/Analog-Canvas",
+  );
+  await expect(repositoryLink).toHaveAttribute("target", "_blank");
   await page.keyboard.press("Escape");
   await expect(about).toHaveCount(0);
 });

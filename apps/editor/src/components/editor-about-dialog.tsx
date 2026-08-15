@@ -44,13 +44,15 @@ export function EditorAboutDialog({
         <div className="help-dialog-content">
           <p>
             <strong>Analog Canvas</strong> is a local-first schematic editor for
-            editable circuit design in the browser.
+            editable circuit design.
           </p>
           <p>
             Version <strong>{editorPackage.version}</strong>
           </p>
           <p>
-            <a href={REPOSITORY_URL}>GitHub repository</a>
+            <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">
+              {REPOSITORY_URL}
+            </a>
           </p>
         </div>
       </section>
