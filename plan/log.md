@@ -7275,3 +7275,17 @@ diff --check`, and two focused Playwright regressions passed.
   editor TypeScript, editor production build, and `git diff --check` passed.
 - Commit status: prepared on `codex/fix-current-marker-drag-stability` for
   focused commit and push.
+
+## 2026-08-15 - Compact narrow Library and overlay Properties
+
+- Target: preserve the left Library rail at half-screen widths while avoiding
+  a bottom-stacked Library and Properties layout.
+- Changed areas: compact viewport state, Library/Properties mutual exclusion,
+  one-column left Library with a concise `All` heading, right-side overlay
+  Properties positioning, and focused browser coverage.
+- Validation: focused Library/App unit tests (2 files / 16 tests), focused
+  narrow Library and canvas-width Playwright tests (2 tests), `pnpm typecheck`,
+  Prettier, and `git diff --check` passed.
+- Commit status: committed locally as
+  `fix(editor): compact narrow library and overlay properties` on
+  `codex/compact-library-overlay-properties`; not pushed.
