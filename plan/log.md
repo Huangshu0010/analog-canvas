@@ -7033,3 +7033,40 @@ ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
   tests).
 - Commit status: all six PR #60 GitHub Actions checks passed; squash-merged to
   `main` as `0f45ba5`.
+
+## 2026-08-15 - Snap quick drafting creation to grid
+
+- Target: prevent transient viewport coordinates from causing `T` and drafting
+  creation commits to violate the persisted Document-grid contract.
+- Changed areas: quick drafting creation and final drafting commit boundaries,
+  with a zoomed-viewport Text browser regression.
+- Validation: targeted browser regression, complete drafting suite (25/25),
+  App unit test (12/12), typecheck, formatting, and `git diff --check` passed.
+- Commit status: committed on `codex/label-gap-copy-rotate`; push and review
+  remain pending.
+
+## 2026-08-15 - Align instance labels and rotate copy previews
+
+- Target: make initial and transformed instance labels retain one full grid
+  interval from the visible symbol, and permit `R` before copy placement.
+- Changed areas: derived label clearance/snap policy; transient Copy Placement
+  orientation and shortcut routing; rotated copy preview/commit behavior;
+  editor interaction specification and focused unit/browser regressions.
+- Validation: 30 focused tests, `pnpm typecheck`, `pnpm format:check`, `git
+diff --check`, and two focused Playwright regressions passed.
+- Commit status: ready to commit on `codex/label-gap-copy-rotate` as
+  `fix(editor): align labels and rotate copy previews`.
+
+## 2026-08-15 - Align label-clearance integration contracts
+
+- Target: reconcile the downstream Edit Engine and editor geometry assertions
+  with the completed one-grid visible-glyph clearance policy.
+- Changed areas: MOS rotation placement expectations and the BJT clearance
+  assertion, which now checks the rendered glyph edge rather than an obsolete
+  raw baseline offset.
+- Validation: 51 focused derived/Edit Engine/editor geometry tests, typecheck,
+  Prettier, and `git diff --check` passed. Two overlapping local full-gate
+  E2E runs were stopped because they contended for the same preview port;
+  remote required CI remains the delivery gate.
+- Commit status: active on `codex/label-gap-copy-rotate`; pending commit,
+  push, review, and required GitHub Actions checks.

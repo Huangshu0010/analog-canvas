@@ -671,6 +671,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     completeVddRailPlacement,
     beginCopyPlacement: beginCopyPlacementInteraction,
     setCopyPreviewPoint,
+    rotateCopyPlacement,
     setWireSource,
     setWirePreviewPoint,
     setWireWaypoints,
@@ -784,7 +785,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       y: copyPlacement.previewPoint.y - copyPlacement.anchor.y,
     };
     return buildSvgScene(
-      clipboardPreviewDocument(document, copyPlacement.clipboard, offset),
+      clipboardPreviewDocument(
+        document,
+        copyPlacement.clipboard,
+        offset,
+        copyPlacement.rotation,
+      ),
       resolver,
       { bounds: viewBox },
     );
@@ -1991,6 +1997,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function rotatePendingComponent(delta: 90 | -90): void {
     rotateComponentPlacement(delta);
     setStatus(`Component rotation ${delta > 0 ? "+90°" : "−90°"}`);
+  }
+
+  function rotatePendingCopy(delta: 90 | -90): void {
+    if (!copyPlacement) return;
+    rotateCopyPlacement(delta);
+    setStatus("Place rotated copy · R rotates · Esc cancels");
   }
 
   function loadRoutingDemo(): void {
@@ -4456,10 +4468,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function addPlainText(): void {
     uniqueSuffixCounter.current += 1;
     const id = `note-${uniqueSuffixCounter.current}`;
-    const position = {
-      x: Math.round(viewBox.x + viewBox.width / 2),
-      y: Math.round(viewBox.y + viewBox.height - 20),
-    };
+    const position = snapGridPoint(
+      {
+        x: Math.round(viewBox.x + viewBox.width / 2),
+        y: Math.round(viewBox.y + viewBox.height - 20),
+      },
+      document.presentation.grid,
+    );
     const textObject: Extract<DraftingObject, { kind: "text" }> = {
       id,
       kind: "text",
@@ -4486,10 +4501,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function addConstructionLine(): void {
     uniqueSuffixCounter.current += 1;
     const id = `construction-${uniqueSuffixCounter.current}`;
-    const center = {
-      x: Math.round(viewBox.x + viewBox.width / 2),
-      y: Math.round(viewBox.y + viewBox.height / 2),
-    };
+    const center = snapGridPoint(
+      {
+        x: Math.round(viewBox.x + viewBox.width / 2),
+        y: Math.round(viewBox.y + viewBox.height / 2),
+      },
+      document.presentation.grid,
+    );
     const result = transact([
       {
         kind: "upsert_drafting_object",
@@ -4513,10 +4531,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   function addFreeArrow(): void {
     uniqueSuffixCounter.current += 1;
     const id = `arrow-${uniqueSuffixCounter.current}`;
-    const center = {
-      x: Math.round(viewBox.x + viewBox.width / 2),
-      y: Math.round(viewBox.y + viewBox.height / 2),
-    };
+    const center = snapGridPoint(
+      {
+        x: Math.round(viewBox.x + viewBox.width / 2),
+        y: Math.round(viewBox.y + viewBox.height / 2),
+      },
+      document.presentation.grid,
+    );
     const result = transact([
       {
         kind: "upsert_drafting_object",
@@ -5454,6 +5475,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     end: Point,
   ): void {
     uniqueSuffixCounter.current += 1;
+    const snappedStart = snapGridPoint(start, document.presentation.grid);
+    const snappedEnd = snapGridPoint(end, document.presentation.grid);
     if (activeTool === "construction-line") {
       const id = `construction-${uniqueSuffixCounter.current}`;
       const result = transact([
@@ -5464,11 +5487,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             kind: "construction-line",
             locked: false,
             zIndex: 0,
-            anchor: { kind: "free", position: start },
-            points: [
-              { x: Math.round(start.x), y: Math.round(start.y) },
-              { x: Math.round(end.x), y: Math.round(end.y) },
-            ],
+            anchor: { kind: "free", position: snappedStart },
+            points: [snappedStart, snappedEnd],
             lineStyle: "dashed",
           },
         },
@@ -5484,31 +5504,34 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             kind: "arrow",
             locked: false,
             zIndex: 0,
-            anchor: { kind: "free", position: start },
+            anchor: { kind: "free", position: snappedStart },
             from: {
               kind: "free",
-              position: { x: Math.round(start.x), y: Math.round(start.y) },
+              position: snappedStart,
             },
             to: {
               kind: "free",
-              position: { x: Math.round(end.x), y: Math.round(end.y) },
+              position: snappedEnd,
             },
           },
         },
       ]);
       if (result.ok) setStatus(`Added free arrow ${id}`);
     } else if (activeTool === "rectangle") {
-      const width = Math.round(Math.abs(end.x - start.x));
-      const height = Math.round(Math.abs(end.y - start.y));
+      const width = Math.round(Math.abs(snappedEnd.x - snappedStart.x));
+      const height = Math.round(Math.abs(snappedEnd.y - snappedStart.y));
       if (width < 1 || height < 1) {
         setStatus("Rectangle needs non-zero width and height");
         return;
       }
       const id = `rectangle-${uniqueSuffixCounter.current}`;
-      const center = {
-        x: Math.round((start.x + end.x) / 2),
-        y: Math.round((start.y + end.y) / 2),
-      };
+      const center = snapGridPoint(
+        {
+          x: Math.round((snappedStart.x + snappedEnd.x) / 2),
+          y: Math.round((snappedStart.y + snappedEnd.y) / 2),
+        },
+        document.presentation.grid,
+      );
       const result = transact([
         {
           kind: "upsert_drafting_object",
@@ -5536,6 +5559,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     if (points.length < 2) return;
     uniqueSuffixCounter.current += 1;
     const id = `construction-${uniqueSuffixCounter.current}`;
+    const snappedPoints = points.map((point) =>
+      snapGridPoint(point, document.presentation.grid),
+    );
     const result = transact([
       {
         kind: "upsert_drafting_object",
@@ -5544,11 +5570,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           kind: "construction-line",
           locked: false,
           zIndex: 0,
-          anchor: { kind: "free", position: points[0]! },
-          points: points.map((point) => ({
-            x: Math.round(point.x),
-            y: Math.round(point.y),
-          })),
+          anchor: { kind: "free", position: snappedPoints[0]! },
+          points: snappedPoints,
           lineStyle: "dashed",
         },
       },
@@ -5802,7 +5825,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     paintSnapGuides([]);
     beginCopyPlacementInteraction(copied, anchor);
     setStatus(
-      `Place copy of ${copied.instances.length} components · Esc cancels`,
+      `Place copy of ${copied.instances.length} components · R rotates · Esc cancels`,
     );
   }
 
@@ -5824,7 +5847,20 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       cancelAllTransientInteraction();
       return;
     }
-    const result = transact(proposal.edits, { preserveInteraction: true });
+    const rotationEdits: SchematicEdit[] =
+      copyPlacement.rotation === 0
+        ? []
+        : proposal.instanceIds.map((instanceId, index) => ({
+            kind: "rotate_instance" as const,
+            instanceId,
+            rotation: (((copyPlacement.clipboard.instances[index]?.placement
+              ?.rotation ?? 0) +
+              copyPlacement.rotation) %
+              360) as 0 | 90 | 180 | 270,
+          }));
+    const result = transact([...proposal.edits, ...rotationEdits], {
+      preserveInteraction: true,
+    });
     if (result.ok) {
       selectOnly("instance", proposal.instanceIds);
       setCopyPreviewPoint(point);
@@ -5976,6 +6012,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
           return;
         case "rotate-placement":
           rotatePendingComponent(shortcut.deltaDegrees);
+          return;
+        case "rotate-copy-placement":
+          rotatePendingCopy(shortcut.deltaDegrees);
           return;
         case "rotate":
           rotateSelected(shortcut.deltaDegrees);
