@@ -160,6 +160,7 @@ import {
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
 import { EditorHelpDialog } from "../components/editor-help-dialog";
+import { EditorAboutDialog } from "../components/editor-about-dialog";
 import { ReplaceGuardDialog } from "../components/replace-guard-dialog";
 import { RecentRecoveryDialog } from "../components/recent-recovery-dialog";
 import {
@@ -798,6 +799,7 @@ export function App({
     null,
   );
   const [helpOpen, setHelpOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
@@ -816,6 +818,8 @@ export function App({
   const netLabelEditorInputRef = useRef<HTMLInputElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
   const helpCloseRef = useRef<HTMLButtonElement>(null);
+  const aboutButtonRef = useRef<HTMLButtonElement>(null);
+  const aboutCloseRef = useRef<HTMLButtonElement>(null);
   const documentViewBoxes = useRef(new Map<string, GridRect>());
   const renderedDocument = useMemo(() => {
     if (!draftingHandlePreview || !document.drafting) return document;
@@ -6155,7 +6159,7 @@ export function App({
             tool === "construction-line" ||
             tool === "rectangle") &&
           draftingSource !== null,
-        helpOpen,
+        helpOpen: helpOpen || aboutOpen,
         canvasDragActive: canvasDragSessionRef.current !== null,
         hasClearableDraftingSelection:
           selectedDrafting?.kind === "arrow" ||
@@ -6286,7 +6290,8 @@ export function App({
           finishDraftingCreate();
           return;
         case "close-help":
-          closeHelp();
+          if (helpOpen) closeHelp();
+          else closeAbout();
           return;
         case "cancel-canvas-drag":
           canvasDragSessionRef.current?.cancel();
@@ -6339,9 +6344,18 @@ export function App({
     if (helpOpen) helpCloseRef.current?.focus();
   }, [helpOpen]);
 
+  useEffect(() => {
+    if (aboutOpen) aboutCloseRef.current?.focus();
+  }, [aboutOpen]);
+
   function closeHelp(): void {
     setHelpOpen(false);
     requestAnimationFrame(() => helpButtonRef.current?.focus());
+  }
+
+  function closeAbout(): void {
+    setAboutOpen(false);
+    requestAnimationFrame(() => aboutButtonRef.current?.focus());
   }
 
   function closeSearch(): void {
@@ -6654,6 +6668,17 @@ export function App({
             <button
               type="button"
               className="menubar-help"
+              ref={aboutButtonRef}
+              aria-haspopup="dialog"
+              aria-expanded={aboutOpen}
+              aria-controls="editor-about-dialog"
+              onClick={() => setAboutOpen(true)}
+            >
+              About
+            </button>
+            <button
+              type="button"
+              className="menubar-help"
               ref={helpButtonRef}
               aria-haspopup="dialog"
               aria-expanded={helpOpen}
@@ -6754,6 +6779,12 @@ export function App({
       </header>
       {helpOpen ? (
         <EditorHelpDialog closeButtonRef={helpCloseRef} onClose={closeHelp} />
+      ) : null}
+      {aboutOpen ? (
+        <EditorAboutDialog
+          closeButtonRef={aboutCloseRef}
+          onClose={closeAbout}
+        />
       ) : null}
       {recoveryReady &&
       recoverySessions.length > 0 &&

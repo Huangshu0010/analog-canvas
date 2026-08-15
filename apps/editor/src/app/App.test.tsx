@@ -139,18 +139,21 @@ describe("editor shell", () => {
     expect(markup).toContain("Main (top)");
   });
 
-  it("provides a local-editor quick-start help entry without rendering it by default", () => {
+  it("provides Help and About entries without rendering either dialog by default", () => {
     const project = createEmptyProject("help-tutorial", "Help Tutorial");
     const markup = renderToStaticMarkup(<App project={project} />);
 
     expect(markup).toContain('aria-haspopup="dialog"');
+    expect(markup).toContain(">About</button>");
     expect(markup).toContain(">Help</button>");
     expect(markup).toContain('class="app-chrome-actions"');
     const navigationEnd = markup.indexOf("</nav>");
     const analyticsLink = markup.indexOf('href="/analytics"');
-    const helpButton = markup.indexOf('class="menubar-help"');
+    const aboutButton = markup.indexOf(">About</button>");
+    const helpButton = markup.indexOf(">Help</button>");
     expect(analyticsLink).toBeGreaterThan(navigationEnd);
-    expect(helpButton).toBeGreaterThan(analyticsLink);
+    expect(aboutButton).toBeGreaterThan(analyticsLink);
+    expect(helpButton).toBeGreaterThan(aboutButton);
     expect(markup).not.toContain('role="dialog"');
     // The Connect Agent command is available (WP-WA5), but the authorization
     // panel itself must not render until the user opens it.

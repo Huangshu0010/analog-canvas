@@ -7395,7 +7395,7 @@ diff --check`, and two focused Playwright regressions passed.
   recorded in the plan).
 - Commit status: committed on `agent/per-type-designators-zoom-box` as
   `feat(editor): per-type designators, copy label increment, right-drag zoom
-  box`; branch pushed for review. A concurrent worker's overlapping App.tsx
+box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   hunks were excluded from the commit via selective staging and left dirty
   in the working tree.
 - Mainline delivery: after PR #76 landed, the branch merged `origin/main`
@@ -7455,3 +7455,16 @@ diff --check`, and two focused Playwright regressions passed.
   `feat(editor): alt-drag frame-zoom alias for blocked right buttons`.
 - Mainline delivery: PR #82 passed all six required GitHub Actions checks and
   squash-merged to `main` as `45f5820`.
+
+## 2026-08-15 - Add About panel and compact-layout Help
+
+- Target: make editor identity/version/repository information discoverable and
+  document the compact Library/Properties behavior in Help.
+- Changed areas: top-bar About entry and dialog, package-derived version,
+  repository link, Help placement guidance, and focused unit/browser coverage.
+- Validation: focused About/App unit tests (2 files / 14 tests), full
+  chrome-isolation Playwright spec (3 tests), `pnpm typecheck`, Prettier, and
+  `git diff --check` passed.
+- Commit status: committed locally as
+  `feat(editor): add about panel and compact-layout help` on
+  `codex/add-about-help-panel`; not pushed.
