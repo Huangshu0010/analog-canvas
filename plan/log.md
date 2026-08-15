@@ -13,9 +13,17 @@
 - Validation: hardening spec 4/4; typecheck, prettier, docs links, and the
   production smoke in both modes against a fresh build green;
   `git diff --check` clean. Branch gate (`pnpm verify:branch`) and clean-state
-  `pnpm ci:check` follow as the delivery steps.
+  `pnpm ci:check` (121/121 E2E) passed green.
+- Remote-check repair: the required Browser-tests shard failed on a drag
+  test; instrumented probes traced it to App re-renders replacing the formal
+  scene (inline `dangerouslySetInnerHTML` literal changes prop identity),
+  which the debounced recovery state publication exposed mid-drag. Fixed by
+  memoizing the innerHTML prop objects; the formerly 3/3 failing probe is
+  3/3 green, the flaky test 5/5, and post-repair 271 unit tests plus 102
+  affected E2E tests are green.
 - Commit status: committed as `test(editor): prove project recovery failure
-  modes` on `agent/robust-page-persistence-recovery`.
+modes` plus `fix(editor): keep drag sessions alive across app re-renders`
+  on `agent/robust-page-persistence-recovery`.
 
 ## 2026-08-14 - WP-4 recovery UX and operational visibility
 
@@ -6828,7 +6836,7 @@ contracts (WP-R1)`.
   accessible copy feedback, and focused component coverage.
 - Validation: focused `connect-agent-panel` tests and `pnpm typecheck` passed;
   the local editor shell was inspected in the in-app browser; `git diff
-  --check` passed.
+--check` passed.
 - Commit status: committed on `codex/agent-copy-card` as
   `feat(agent): present handoff as copy card`.
 
@@ -6854,7 +6862,7 @@ contracts (WP-R1)`.
   hit/marquee/edit geometry; visual-route deletion contract; focused tests and
   current model/editor specifications.
 - Validation: 80 focused derived/editor/edit-engine/render tests, `pnpm
-  typecheck`, `pnpm format:check`, `git diff --check`, and focused Playwright
+typecheck`, `pnpm format:check`, `git diff --check`, and focused Playwright
   VDD rail creation/deletion passed. The reviewed export goldens were
   regenerated to include the true RichText bounds; frozen-lockfile install and
   canonical `pnpm ci:check` then passed (562 unit tests, 103 browser E2E,
@@ -6918,7 +6926,7 @@ contracts (WP-R1)`.
   contract, and a browser regression that fits drafted text through `F`.
 - Validation: focused unit and browser checks, `pnpm typecheck`, formatting,
   full drafting E2E (24 tests), `git diff --check`, and canonical `pnpm
-  ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
+ci:check` (651 unit tests, 104 browser tests, builds and release smoke) all
   passed.
 - Commit status: committed on `codex/fix-fit-view-grid-bounds`; remote CI and
   merge remain pending.
@@ -6953,6 +6961,7 @@ contracts (WP-R1)`.
   cases passed locally.
 - Commit status: pending follow-up commit on
   `codex/coordinate-domain-contract`; remote PR checks will decide merge.
+
 ## 2026-08-14 - Restore imported flightline guidance during placement
 
 - Target: keep SPICE-imported routing guidance usable after placement and

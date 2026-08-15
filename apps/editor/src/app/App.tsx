@@ -762,6 +762,12 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     () => buildSvgScene(renderedDocument, resolver, { bounds: viewBox }),
     [renderedDocument, resolver, viewBox],
   );
+  // React compares dangerouslySetInnerHTML by prop identity, and an inline
+  // `{ __html }` literal would force an innerHTML replacement on every App
+  // re-render — destroying live drag previews (and pointer capture) whenever
+  // unrelated state such as recovery status changes. Memoize the prop object
+  // so re-renders with unchanged scene content leave the DOM subtree alone.
+  const sceneInnerHtml = useMemo(() => ({ __html: scene.formalBody }), [scene]);
   const copyPreviewScene = useMemo(() => {
     if (!copyPlacement || !copyPlacement.previewPoint) return null;
     const offset = {
@@ -774,6 +780,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       { bounds: viewBox },
     );
   }, [copyPlacement, document, resolver, viewBox]);
+  const copyPreviewInnerHtml = useMemo(
+    () =>
+      copyPreviewScene === null
+        ? null
+        : { __html: copyPreviewScene.formalBody },
+    [copyPreviewScene],
+  );
   const unplaced = document.instances.filter(
     (instance) => instance.placement === null,
   );
@@ -7605,7 +7618,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
               height={viewBox.height}
               fill="url(#grid)"
             />
-            <g dangerouslySetInnerHTML={{ __html: scene.formalBody }} />
+            <g dangerouslySetInnerHTML={sceneInnerHtml} />
             {highlightedNet ? (
               <g
                 data-testid="net-highlight-overlay"
@@ -7666,13 +7679,11 @@ export function App({ project: initialProject, visitStats }: AppProps) {
                 })}
               </g>
             ) : null}
-            {copyPreviewScene ? (
+            {copyPreviewInnerHtml !== null ? (
               <g
                 data-testid="copy-placement-preview"
                 className="copy-placement-preview"
-                dangerouslySetInnerHTML={{
-                  __html: copyPreviewScene.formalBody,
-                }}
+                dangerouslySetInnerHTML={copyPreviewInnerHtml}
               />
             ) : null}
             {tool === "wire" ? (

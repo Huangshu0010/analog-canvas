@@ -91,10 +91,24 @@ and fails on `project-data-in-cache`, with the golden report regenerated
 localStorage-era header comment and added the
 `docs/release/browser-recovery-v2.md` release note. Local environment note: a
 `pnpm` shim (corepack) was placed on PATH because recursive scripts spawn
-`pnpm` by name. Validation: hardening spec 4/4, typecheck, prettier,
-docs-link check, and the production smoke in both modes against a fresh
-build, all green; `pnpm verify:branch` and the clean-state mainline gate run
-as the delivery step below.
+`pnpm` by name.
+
+Remote-check repair: the required "Browser tests (2/2)" job failed on
+`moves internal wiring ... copies the routed subgraph` (retry included). An
+instrumented probe reproduced it deterministically on this branch (and never
+on main): the debounced recovery write publishes coordinator state, and every
+App re-render was replacing the formal scene because the inline
+`dangerouslySetInnerHTML={{ __html }}` literal changes prop identity each
+render — killing live drag previews and their pointer capture. Fixed by
+memoizing the innerHTML prop objects (`sceneInnerHtml`,
+`copyPreviewInnerHtml`); MutationObserver evidence shows the `<g>` subtree is
+no longer replaced across recovery re-renders, the drag survives the write
+window (probe 3/3, formerly 3/3 failing), and the flaky test passed 5/5 plus
+the 102-test affected E2E regression and 271 unit tests. Validation:
+hardening spec 4/4, typecheck, prettier, docs-link check, and the production
+smoke in both modes against a fresh build, all green; `pnpm verify:branch`
+and the clean-state mainline gate (`pnpm install --frozen-lockfile`,
+`pnpm ci:check`, 121/121 E2E) passed before push.
 
 status: completed
 experience: none
