@@ -128,7 +128,10 @@ export function ShapesPanel({
       <div className="shapes-panel-body">
         <details className="shapes-fold" open data-testid="shapes-fold-library">
           <summary className="shapes-fold-summary">
-            <span className="shapes-fold-label">All devices</span>
+            <span className="shapes-fold-label">
+              <span className="shapes-fold-label-full">All devices</span>
+              <span className="shapes-fold-label-compact">All</span>
+            </span>
             <span className="shapes-fold-count">{librarySymbolCount}</span>
           </summary>
           <div className="shapes-fold-body">

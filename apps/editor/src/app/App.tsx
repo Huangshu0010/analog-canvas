@@ -252,6 +252,7 @@ const DEFAULT_VIEWBOX: GridRect = { x: 0, y: 0, width: 960, height: 640 };
 const RECENT_COMPONENTS_STORAGE_KEY = "icm.recent-components.v1";
 const LIBRARY_PANEL_STORAGE_KEY = "icm.library-panel-open.v1";
 const REFRESH_RESTORE_STORAGE_KEY = "icm.restore-after-refresh.v1";
+const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
@@ -490,6 +491,14 @@ function RenderCrashProbe(): never {
   throw new Error("render crashed (test hook)");
 }
 
+function compactLayoutMatches(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(COMPACT_LAYOUT_MEDIA_QUERY).matches
+  );
+}
+
 export function App({ project: initialProject, visitStats }: AppProps) {
   const [preparedInitialProject] = useState(
     () =>
@@ -510,6 +519,8 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       return true;
     }
   });
+  const [compactLayout, setCompactLayout] = useState(compactLayoutMatches);
+  const [compactLibraryPanelOpen, setCompactLibraryPanelOpen] = useState(false);
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
@@ -533,6 +544,31 @@ export function App({ project: initialProject, visitStats }: AppProps) {
     }
     return requested;
   });
+
+  const visibleLibraryPanelOpen = compactLayout
+    ? compactLibraryPanelOpen
+    : libraryPanelOpen;
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return;
+    }
+    const mediaQuery = window.matchMedia(COMPACT_LAYOUT_MEDIA_QUERY);
+    const updateCompactLayout = (): void => {
+      setCompactLayout(mediaQuery.matches);
+      if (mediaQuery.matches) setCompactLibraryPanelOpen(false);
+    };
+    updateCompactLayout();
+    mediaQuery.addEventListener("change", updateCompactLayout);
+    return () => mediaQuery.removeEventListener("change", updateCompactLayout);
+  }, []);
+
+  useEffect(() => {
+    if (compactLayout && selectionOpen) setCompactLibraryPanelOpen(false);
+  }, [compactLayout, selectionOpen]);
   const refreshRestoreAttemptedRef = useRef(false);
   // Formal-file lifecycle of the current working copy, orthogonal to recovery
   // state: a commit makes it dirty again, only a confirmed File System
@@ -1340,6 +1376,14 @@ export function App({ project: initialProject, visitStats }: AppProps) {
   }
 
   function toggleLibraryPanel(): void {
+    if (compactLayout) {
+      setCompactLibraryPanelOpen((current) => {
+        const next = !current;
+        if (next) setSelectionOpen(false);
+        return next;
+      });
+      return;
+    }
     setLibraryPanelOpen((current) => {
       const next = !current;
       try {
@@ -6734,7 +6778,9 @@ export function App({ project: initialProject, visitStats }: AppProps) {
       ) : null}
       <div
         className={
-          libraryPanelOpen ? "app-workspace" : "app-workspace library-collapsed"
+          visibleLibraryPanelOpen
+            ? "app-workspace"
+            : "app-workspace library-collapsed"
         }
       >
         <aside className="tool-rail" aria-label="Tool rail">
@@ -6742,13 +6788,13 @@ export function App({ project: initialProject, visitStats }: AppProps) {
             type="button"
             className="tool-rail-button"
             title={
-              libraryPanelOpen
+              visibleLibraryPanelOpen
                 ? "Hide component library"
                 : "Show component library"
             }
-            aria-pressed={libraryPanelOpen}
+            aria-pressed={visibleLibraryPanelOpen}
             aria-controls="shapes-library-panel"
-            aria-expanded={libraryPanelOpen}
+            aria-expanded={visibleLibraryPanelOpen}
             data-testid="library-toggle"
             onClick={toggleLibraryPanel}
           >
@@ -6809,7 +6855,7 @@ export function App({ project: initialProject, visitStats }: AppProps) {
         <ShapesPanel
           styleProfileId={document.presentation.styleProfileId}
           recentSymbolIds={recentSymbolIds}
-          open={libraryPanelOpen}
+          open={visibleLibraryPanelOpen}
           onOpenInsert={openInsertComponentDialog}
           onQuickPlace={beginInsertedComponentPlacement}
         />

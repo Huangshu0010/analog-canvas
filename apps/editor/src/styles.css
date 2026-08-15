@@ -861,6 +861,10 @@ body {
   white-space: nowrap;
 }
 
+.shapes-fold-label-compact {
+  display: none;
+}
+
 .shapes-fold-count {
   min-width: 1.25rem;
   padding: 1px 6px;
@@ -2710,19 +2714,14 @@ body {
 
   .app-workspace,
   .app-workspace.library-collapsed {
-    grid-template-rows: minmax(0, 1fr) auto auto;
-    grid-template-columns: var(--icm-rail-width) minmax(0, 1fr);
-    grid-template-areas:
-      "tools canvas"
-      "shapes shapes"
-      "props props";
+    position: relative;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: var(--icm-rail-width) min(8rem, 34vw) minmax(0, 1fr);
+    grid-template-areas: "tools shapes canvas";
   }
 
   .app-workspace.library-collapsed {
-    grid-template-rows: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "tools canvas"
-      "props props";
+    grid-template-columns: var(--icm-rail-width) 0 minmax(0, 1fr);
   }
 
   .app-workspace.library-collapsed .shapes-panel {
@@ -2730,9 +2729,23 @@ body {
   }
 
   .shapes-panel {
-    max-height: 30dvh;
-    border-right: 0;
-    border-top: 1px solid var(--icm-border);
+    border-top: 0;
+  }
+
+  .shapes-kicker {
+    display: none;
+  }
+
+  .shapes-fold-label-full {
+    display: none;
+  }
+
+  .shapes-fold-label-compact {
+    display: inline;
+  }
+
+  .shapes-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .shapes-chip {
@@ -2750,10 +2763,19 @@ body {
 
   .selection-dock,
   .selection-dock.open {
-    width: 100%;
-    max-height: 36dvh;
-    border-left: 0;
-    border-top: 1px solid var(--icm-border);
+    grid-area: auto;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--icm-props-collapsed);
+    max-height: none;
+    border-top: 0;
+    border-left: 1px solid var(--icm-border);
+  }
+
+  .selection-dock.open {
+    width: min(var(--icm-props-open), calc(100% - var(--icm-rail-width)));
   }
 
   .insert-component-dialog {
