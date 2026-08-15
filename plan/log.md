@@ -6878,3 +6878,14 @@ contracts (WP-R1)`.
   tests, typecheck, workspace build, formatting, distribution/release checks,
   and all six PR #54 GitHub Actions checks passed.
 - Commit status: PR #54 merged to `main` as `354cf3a`.
+
+## 2026-08-15 - Make junctions follow dragged wire segments
+
+- Target: correct direct segment movement so a Junction is moved as a
+  topological vertex instead of remaining an absolute geometry anchor.
+- Changed areas: derived wire-segment stretch policy and an edit-engine
+  regression for a three-way Junction with an orthogonally stretched branch.
+- Validation: focused derived/edit-engine suite (34 tests), typecheck,
+  Prettier, and `git diff --check` passed.
+- Commit status: committed as `a345129` on `codex/junction-stretch-semantics`;
+  remote CI pending.
