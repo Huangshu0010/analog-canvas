@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { RichTextDocument } from "@icm/model";
 
 import {
+  containsFractionRun,
   measureRichTextDocument,
   richTextMetrics,
 } from "./rich-text-layout.js";
@@ -69,5 +70,30 @@ describe("shared rich-text layout", () => {
           metrics.subscriptScale + metrics.subscriptBaselineShiftEm,
         ),
     );
+  });
+
+  it("measures a fraction as one taller inline line with bar overhang", () => {
+    const metrics = richTextMetrics(razaviTextbookProfile);
+    const content = {
+      runs: [
+        {
+          kind: "fraction",
+          numerator: { runs: [{ kind: "text", value: "10um" }] },
+          denominator: { runs: [{ kind: "text", value: "150nm" }] },
+        },
+      ],
+    } as RichTextDocument;
+    const layout = measureRichTextDocument(content, metrics);
+    const partFont = metrics.fontSize * metrics.subscriptScale;
+    const widestPart = [..."150nm"].length * partFont * 0.6;
+    expect(layout.width).toBeCloseTo(widestPart + metrics.fontSize * 0.16, 5);
+    expect(layout.height).toBeCloseTo(
+      partFont * metrics.lineHeight * 2 + metrics.fontSize * 0.26,
+      5,
+    );
+    expect(containsFractionRun(content)).toBe(true);
+    expect(
+      containsFractionRun({ runs: [{ kind: "text", value: "plain" }] }),
+    ).toBe(false);
   });
 });

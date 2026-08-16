@@ -31,14 +31,28 @@ function instance(
   };
 }
 
+const bold = (value: string) => ({
+  kind: "span" as const,
+  style: "bold" as const,
+  children: [{ kind: "text" as const, value }],
+});
+
 describe("displayableInstanceValue", () => {
-  it("joins MOS width and length as one upright inline run", () => {
+  it("projects MOS dimensions as a stacked fraction with units", () => {
     const result = displayableInstanceValue(
-      instance("nmos", { w: "10u", l: "0.5u" }),
+      instance("nmos", { w: "10u", l: "150n" }),
     );
     expect(result).toEqual({
       kind: "displayable",
-      content: { runs: [{ kind: "text", value: "10u/0.5u" }] },
+      content: {
+        runs: [
+          {
+            kind: "fraction",
+            numerator: { runs: [bold("10um")] },
+            denominator: { runs: [bold("150nm")] },
+          },
+        ],
+      },
     });
   });
 
@@ -51,31 +65,63 @@ describe("displayableInstanceValue", () => {
     );
   });
 
-  it("shows passive values from the netlist parameters", () => {
+  it("shows passive values bold with their engineering unit", () => {
     expect(
       displayableInstanceValue(instance("resistor", { value: "10k" })),
     ).toEqual({
       kind: "displayable",
-      content: { runs: [{ kind: "text", value: "10k" }] },
+      content: { runs: [bold("10kΩ")] },
     });
     expect(
       displayableInstanceValue(instance("capacitor", { value: "2p" })),
     ).toEqual({
       kind: "displayable",
-      content: { runs: [{ kind: "text", value: "2p" }] },
+      content: { runs: [bold("2pF")] },
+    });
+    expect(
+      displayableInstanceValue(instance("inductor", { value: "3n" })),
+    ).toEqual({
+      kind: "displayable",
+      content: { runs: [bold("3nH")] },
     });
   });
 
-  it("shows independent source dc values", () => {
+  it("shows independent source dc values with their unit", () => {
     expect(
       displayableInstanceValue(instance("voltage-source", { dc: "1.8" })),
     ).toEqual({
       kind: "displayable",
-      content: { runs: [{ kind: "text", value: "1.8" }] },
+      content: { runs: [bold("1.8V")] },
     });
     expect(
-      displayableInstanceValue(instance("current-source", { dc: "1m" })).kind,
-    ).toBe("displayable");
+      displayableInstanceValue(instance("current-source", { dc: "100u" })),
+    ).toEqual({
+      kind: "displayable",
+      content: { runs: [bold("100uA")] },
+    });
+  });
+
+  it("does not double a unit the author already typed", () => {
+    expect(
+      displayableInstanceValue(instance("resistor", { value: "10kΩ" })),
+    ).toEqual({
+      kind: "displayable",
+      content: { runs: [bold("10kΩ")] },
+    });
+    expect(
+      displayableInstanceValue(instance("nmos", { w: "2um", l: "150nm" })),
+    ).toEqual({
+      kind: "displayable",
+      content: {
+        runs: [
+          {
+            kind: "fraction",
+            numerator: { runs: [bold("2um")] },
+            denominator: { runs: [bold("150nm")] },
+          },
+        ],
+      },
+    });
   });
 
   it("falls back to legacy properties when netlist parameters are absent", () => {
@@ -83,7 +129,7 @@ describe("displayableInstanceValue", () => {
       displayableInstanceValue(instance("inductor", {}, { value: "3n" })),
     ).toEqual({
       kind: "displayable",
-      content: { runs: [{ kind: "text", value: "3n" }] },
+      content: { runs: [bold("3nH")] },
     });
   });
 

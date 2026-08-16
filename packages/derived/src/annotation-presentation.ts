@@ -12,6 +12,8 @@ import {
   type ResolvedDocumentRoutingGeometry,
 } from "./resolved-route-geometry.js";
 import {
+  containsFractionRun,
+  fractionGeometry,
   measureRichTextDocument,
   richTextMetrics,
 } from "./rich-text-layout.js";
@@ -49,8 +51,14 @@ export function resolveAnnotationPresentation(
     ...richTextMetrics(styleProfile, "label", sizeScale),
     fontSize,
   });
+  // A stacked fraction raises its numerator past the plain first-line
+  // ascent heuristic; extend the shared bounds so hits and export cover it.
+  const fractionExtraAscent = containsFractionRun(annotation.content)
+    ? fontSize * fractionGeometry.extraAscentEm
+    : 0;
   const width = Math.max(fontSize * 0.6, textLayout.width);
-  const height = Math.max(fontSize * 1.35, textLayout.height);
+  const height =
+    Math.max(fontSize * 1.35, textLayout.height) + fractionExtraAscent;
   const left =
     annotation.alignment === "start"
       ? anchor.position.x
@@ -67,7 +75,7 @@ export function resolveAnnotationPresentation(
         }
       : {
           x: left,
-          y: anchor.position.y - fontSize * 1.05,
+          y: anchor.position.y - fontSize * 1.05 - fractionExtraAscent,
           width,
           height,
         };
