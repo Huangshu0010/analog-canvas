@@ -285,8 +285,7 @@ export function dragNetLabelAttachmentAtPoint(
           // label-position metric lets a perpendicular segment's clamped
           // endpoint steal the drag.
           distanceSquared:
-            (position.x - candidate.x) ** 2 +
-            (position.y - candidate.y) ** 2,
+            (position.x - candidate.x) ** 2 + (position.y - candidate.y) ** 2,
         },
       ];
     })
