@@ -32,6 +32,15 @@ describe("reviewed device netlist definitions", () => {
     expect(deviceNetlistDefinition("vdd")).toBeUndefined();
   });
 
+  it("defines the VDD power port as a non-emitting Net marker", () => {
+    expect(deviceNetlistDefinition("vdd-port")).toMatchObject({
+      deviceClass: "net-marker",
+      referencePrefix: null,
+      pinOrder: ["P"],
+      targetPolicy: "none",
+    });
+  });
+
   it("leaves unsupported catalog blocks explicit instead of guessing", () => {
     for (const symbolId of [
       "opamp",

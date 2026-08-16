@@ -122,7 +122,9 @@ import {
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
+import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
 import {
+  powerConnectionForSymbol,
   proposePlacementContact,
   proposedStandalonePowerConnection,
 } from "../features/component-insert/placement-connectivity";
@@ -3403,6 +3405,17 @@ export function App({
       contact.matched || contact.ambiguous
         ? { edits: [], matched: false, ambiguous: false }
         : proposedStandalonePowerConnection(document, instance);
+    // A placed VDD power port carries no label of its own; emit the shared
+    // power-label typography once its Net identity is actually established.
+    const powerNetId = standalonePower.powerNetId ?? contact.powerNetId;
+    const vddPowerLabel =
+      powerConnectionForSymbol(symbolId)?.domain === "vdd" && powerNetId
+        ? vddPowerLabelAnnotation({
+            instanceId: id,
+            netId: powerNetId,
+            position,
+          })
+        : null;
     // Build only the future global-Net facts needed to decide hidden B policy.
     // The real transaction below remains the sole persistence boundary.
     const projectedDocument = structuredClone(document);
@@ -3444,6 +3457,14 @@ export function App({
         ...contact.edits,
         ...standalonePower.edits,
         ...bulkEdits,
+        ...(vddPowerLabel
+          ? [
+              {
+                kind: "upsert_schematic_annotation" as const,
+                annotation: vddPowerLabel,
+              },
+            ]
+          : []),
         ...(instanceLabel
           ? [
               {

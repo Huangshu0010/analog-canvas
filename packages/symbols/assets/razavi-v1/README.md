@@ -18,10 +18,11 @@ The product set is exactly the reviewed, Reference-calibrated entries:
 
 `nmos` and `pmos` are the only MOS asset IDs. Their default visual variant is
 `textbook-3terminal`; explicit bulk-capable variants remain properties of the
-same canonical assets. VDD is authored as an explicit Net/Route rail, not a
-symbol. There is no legacy symbol catalog or generic fallback. A device without
-a reviewed Razavi symbol is an unsupported import error until its Reference
-calibration is approved and added here.
+same canonical assets. The drawn VDD rail remains the explicit Net/Route
+authoring form; `vdd-port` is its reviewed marker Symbol for placed-device
+authoring on the same global VDD Net. There is no legacy symbol catalog or
+generic fallback. A device without a reviewed Razavi symbol is an unsupported
+import error until its Reference calibration is approved and added here.
 
 The catalog records only runtime electrical pin order and visual authority.
 It does not read or cite VSS/Visio. Historic VSS material is archival evidence
