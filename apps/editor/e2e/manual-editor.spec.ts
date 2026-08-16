@@ -1652,8 +1652,12 @@ test("value display projects MOS W/L and passive values beside the reference", a
   const reference = page.locator('[data-object-id="instance-label-M1"]');
   const value = page.locator('[data-object-id="instance-value-M1"]');
   await expect(reference).toContainText("M1");
-  await expect(value).toContainText("2u/180n");
-  // The value is the second upright row under the reference.
+  // MOS values render as a stacked fraction with engineering units: the
+  // numerator and denominator are separate part texts around a fraction bar.
+  await expect(value).toContainText("2um");
+  await expect(value).toContainText("180nm");
+  await expect(page.locator('[data-role="fraction-bar"]')).toHaveCount(1);
+  // The value block is the second upright row under the reference.
   const referenceBox = await reference.boundingBox();
   const valueBox = await value.boundingBox();
   if (!referenceBox || !valueBox) throw new Error("Labels are not measurable");
@@ -1669,16 +1673,18 @@ test("value display projects MOS W/L and passive values beside the reference", a
   await page.keyboard.press("Escape");
   await expect(
     page.locator('[data-object-id="instance-value-R1"]'),
-  ).toContainText("33k");
+  ).toContainText("33kΩ");
 
-  // The formal SVG export carries the value through the shared annotation
-  // path.
+  // The formal SVG export carries the fraction bar and unit text through the
+  // shared annotation path.
   const svg = (await downloadBytes(page, "File", "Export SVG")).toString(
     "utf8",
   );
   expect(svg).toContain('data-kind="instance-value"');
-  expect(svg).toContain("2u/180n");
-  expect(svg).toContain("33k");
+  expect(svg).toContain('data-role="fraction-bar"');
+  expect(svg).toContain("2um");
+  expect(svg).toContain("180nm");
+  expect(svg).toContain("33kΩ");
 });
 
 test("reference and value toggles refresh content after parameter edits", async ({
@@ -1701,19 +1707,17 @@ test("reference and value toggles refresh content after parameter edits", async 
     page.getByTestId("annotation-hit-instance-value-R1"),
   ).toHaveCount(0);
 
+  // Typing a value enables the toggle immediately from the live draft,
+  // without closing and reopening the properties panel.
   await page.getByLabel("Component value").click();
   await page.getByLabel("Component value").fill("33k");
-  await page
-    .getByTestId("schematic-canvas")
-    .click({ position: { x: 60, y: 60 } });
-
-  await page.getByTestId("hit-R1").click();
-  await openSelectionShelf(page);
   await expect(valueToggle).toBeEnabled();
+  // Checking commits the typed parameters and shows the projected value in
+  // one step.
   await valueToggle.check();
   await expect(
     page.locator('[data-object-id="instance-value-R1"]'),
-  ).toContainText("33k");
+  ).toContainText("33kΩ");
 
   // A later parameter edit re-projects the visible value text.
   await page.getByLabel("Component value").click();
@@ -1723,7 +1727,7 @@ test("reference and value toggles refresh content after parameter edits", async 
     .click({ position: { x: 60, y: 60 } });
   await expect(
     page.locator('[data-object-id="instance-value-R1"]'),
-  ).toContainText("47k");
+  ).toContainText("47kΩ");
 
   // Hiding keeps the annotation recoverable.
   await page.getByTestId("hit-R1").click();
@@ -1752,7 +1756,7 @@ test("reference and value toggles refresh content after parameter edits", async 
     .click();
   await expect(
     page.locator('[data-object-id="instance-value-R1"]'),
-  ).toContainText("47k");
+  ).toContainText("47kΩ");
   await expect(
     page.locator('[data-object-id="instance-value-R2"]'),
   ).toHaveCount(0);
@@ -1775,7 +1779,7 @@ test("drag value annotation keeps the user offset through rotation", async ({
   await page.getByRole("checkbox", { name: "Value", exact: true }).check();
   await expect(
     page.locator('[data-object-id="instance-value-R1"]'),
-  ).toContainText("33k");
+  ).toContainText("33kΩ");
 
   // Drag the value away from its canonical slot.
   const value = page.getByTestId("annotation-hit-instance-value-R1");
@@ -1792,7 +1796,7 @@ test("drag value annotation keeps the user offset through rotation", async ({
   await page.keyboard.press("r");
   await expect(
     page.locator('[data-object-id="instance-value-R1"]'),
-  ).toContainText("33k");
+  ).toContainText("33kΩ");
   const rotated = await value.boundingBox();
   if (!rotated) throw new Error("Rotated value is not measurable");
   // The user vector rotates rigidly; on the drag-clamp circle a quarter turn

@@ -1,6 +1,8 @@
 import { createEmptyDocument, transformPoint } from "@icm/model";
+import type { RichTextDocument } from "@icm/model";
 import {
   defaultInstanceLabelPlacement,
+  displayableInstanceValue,
   resolveSchematicStyleProfile,
   visibleSymbolLocalBounds,
 } from "@icm/derived";
@@ -10,6 +12,21 @@ import { describe, expect, it } from "vitest";
 import { executeTransaction, SchematicEditSchema } from "./transaction.js";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
+
+/** Canonical machine-projected value content for a fixture instance. */
+function canonicalValueContent(instance: {
+  symbolId: string;
+  netlist?: unknown;
+  properties: Record<string, unknown>;
+}): RichTextDocument {
+  const display = displayableInstanceValue(
+    instance as Parameters<typeof displayableInstanceValue>[0],
+  );
+  if (display.kind !== "displayable") {
+    throw new Error("Fixture instance must have a displayable value");
+  }
+  return structuredClone(display.content);
+}
 
 function documentWithInstance() {
   const document = createEmptyDocument("document-main", "Main");
@@ -870,21 +887,22 @@ describe("Edit Transaction envelope", () => {
 
   it("refreshes a canonical instance value after a netlist parameter edit", () => {
     const document = createEmptyDocument("document-main", "Value refresh");
-    document.instances.push({
+    const instance = {
       id: "M1",
       symbolId: "nmos",
       placement: null,
       properties: {},
       netlist: {
         reference: "M1",
-        binding: { kind: "primitive", deviceClass: "mos" },
+        binding: { kind: "primitive" as const, deviceClass: "mos" as const },
         parameters: { w: "10u", l: "0.5u" },
       },
-    });
+    };
+    document.instances.push(instance);
     document.annotations.push({
       id: "instance-value-M1",
       kind: "instance-value",
-      content: { runs: [{ kind: "text", value: "10u/0.5u" }] },
+      content: canonicalValueContent(instance),
       anchor: {
         kind: "object",
         objectId: "M1",
@@ -896,6 +914,13 @@ describe("Edit Transaction envelope", () => {
       locked: false,
     });
 
+    const edited = {
+      ...instance,
+      netlist: {
+        ...instance.netlist,
+        parameters: { w: "20u", l: "0.5u" },
+      },
+    };
     const result = executeTransaction(
       document,
       {
@@ -904,11 +929,7 @@ describe("Edit Transaction envelope", () => {
           {
             kind: "set_instance_netlist",
             instanceId: "M1",
-            netlist: {
-              reference: "M1",
-              binding: { kind: "primitive", deviceClass: "mos" },
-              parameters: { w: "20u", l: "0.5u" },
-            },
+            netlist: edited.netlist,
           },
         ],
       },
@@ -916,9 +937,9 @@ describe("Edit Transaction envelope", () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.document.annotations[0]!.content).toEqual({
-      runs: [{ kind: "text", value: "20u/0.5u" }],
-    });
+    expect(result.document.annotations[0]!.content).toEqual(
+      canonicalValueContent(edited),
+    );
     // The anchor is placement-only and survives the content refresh.
     expect(result.document.annotations[0]!.anchor).toMatchObject({
       localOffset: { x: 30, y: 10 },
@@ -975,17 +996,18 @@ describe("Edit Transaction envelope", () => {
     }
 
     const emptied = createEmptyDocument("document-main", "Emptied");
-    emptied.instances.push({
+    const emptiedInstance = {
       id: "M1",
       symbolId: "nmos",
       placement: null,
       properties: {},
       netlist: baseNetlist({ w: "10u", l: "0.5u" }),
-    });
+    };
+    emptied.instances.push(emptiedInstance);
     emptied.annotations.push({
       id: "instance-value-M1",
       kind: "instance-value",
-      content: { runs: [{ kind: "text", value: "10u/0.5u" }] },
+      content: canonicalValueContent(emptiedInstance),
       anchor: {
         kind: "object",
         objectId: "M1",
@@ -1018,16 +1040,17 @@ describe("Edit Transaction envelope", () => {
 
   it("refreshes an instance value from the properties compatibility surface", () => {
     const document = createEmptyDocument("document-main", "Properties value");
-    document.instances.push({
+    const instance = {
       id: "R1",
       symbolId: "resistor",
       placement: null,
       properties: { value: "10k" },
-    });
+    };
+    document.instances.push(instance);
     document.annotations.push({
       id: "instance-value-R1",
       kind: "instance-value",
-      content: { runs: [{ kind: "text", value: "10k" }] },
+      content: canonicalValueContent(instance),
       anchor: {
         kind: "object",
         objectId: "R1",
@@ -1054,9 +1077,12 @@ describe("Edit Transaction envelope", () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.document.annotations[0]!.content).toEqual({
-      runs: [{ kind: "text", value: "22k" }],
-    });
+    expect(result.document.annotations[0]!.content).toEqual(
+      canonicalValueContent({
+        ...instance,
+        properties: { value: "22k" },
+      }),
+    );
   });
 
   it("rejects a multi-edit transaction atomically after a later precondition failure", () => {

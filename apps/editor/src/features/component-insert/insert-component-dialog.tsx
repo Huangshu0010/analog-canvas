@@ -107,9 +107,7 @@ export function InsertComponentDialog({
   const selectedIsVddRail = selected?.id === "vdd";
   const parameters = componentParameters(selected?.id ?? "");
   const valueDisplay = displayableInstanceValue({
-    id: "preview",
     symbolId: selected?.id ?? "",
-    placement: null,
     properties: Object.fromEntries(
       Object.entries(parameterValues)
         .map(([key, value]) => [key, value.trim()] as const)

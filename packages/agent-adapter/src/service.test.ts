@@ -252,11 +252,14 @@ describe("current Agent Circuit API service", () => {
       }
     }
 
+    // The restored schema-v11 fraction run recursively unfolds into both
+    // part documents, which grows the generated projection past the old
+    // post-retirement budget; the bound still guards accidental bloat.
     expect(JSON.stringify(AgentCircuitRequestJsonSchema).length).toBeLessThan(
-      100_000,
+      120_000,
     );
     expect(JSON.stringify(AgentCircuitResponseJsonSchema).length).toBeLessThan(
-      150_000,
+      180_000,
     );
     expect(JSON.stringify(agentCircuitOpenApi).length).toBeLessThan(500_000);
   });

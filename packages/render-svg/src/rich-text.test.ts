@@ -136,3 +136,25 @@ describe("renderRichTextDocument", () => {
     expect(svg).toContain('dy="1em">line2</tspan>');
   });
 });
+
+describe("fraction rendering", () => {
+  it("renders an inline fraction as centered stacked tspans", () => {
+    const svg = renderRichTextDocument(
+      {
+        runs: [
+          {
+            kind: "fraction",
+            numerator: { runs: [{ kind: "text", value: "10um" }] },
+            denominator: { runs: [{ kind: "text", value: "150nm" }] },
+          },
+        ],
+      },
+      razaviTextbookProfile,
+    );
+    expect(svg).toContain('data-text-run="fraction"');
+    expect(svg).toContain('data-text-run="numerator"');
+    expect(svg).toContain('data-text-run="denominator"');
+    expect(svg).toContain(">10um</tspan>");
+    expect(svg).toContain(">150nm</tspan>");
+  });
+});

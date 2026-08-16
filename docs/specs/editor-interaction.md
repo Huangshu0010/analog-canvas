@@ -174,11 +174,16 @@ selected components: hiding sets the annotation's optional `visible: false`
 flag, which renderers and hit/marquee surfaces skip while the annotation stays
 in the Project, so hiding is recoverable and a missing label can be re-created
 from the same toggle. Component value display is the paired `Value` toggle on
-the same control row: MOS devices project `w/l` inline, passives and
-independent sources project their scalar parameter, and the toggle is disabled
-while no projection exists. Showing a value re-projects its text without
-touching electrical parameters or a user-dragged anchor; the Edit Engine
-refreshes a non-hand-edited value after parameter edits. Net/power labels carry Net identity separately from their
+the same control row: MOS devices project `W/L` as a stacked fraction with a
+fraction bar, passives and independent sources project their scalar parameter,
+and every projected value is upright bold text carrying its engineering unit
+(`150n` displays as `150nm`, `10k` as `10kΩ`). The toggle's availability
+follows the live property draft — typing a value enables it without
+reopening the panel — and checking it commits the typed parameters and shows
+the projected value in one transaction. Showing a value re-projects its text
+without touching electrical parameters or a user-dragged anchor; the Edit
+Engine refreshes a non-hand-edited value after parameter edits. Net/power
+labels carry Net identity separately from their
 visual anchor. A resolved anchor drives both the glyph and every text
 hit/marquee surface; its fallback is only for an orphaned target, never an
 editor-local alternate position. Dragging a route-anchored Net label re-anchors

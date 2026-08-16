@@ -1,5 +1,35 @@
 # Maintenance Log
 
+## 2026-08-16 - Razavi fraction values, engineering units, live Value toggle
+
+- Target: close three review findings on the instance-value display — bold
+  upright value text carrying the engineering unit (`150n` → `150nm`, `10k`
+  → `10kΩ`, `1.8` → `1.8V`), MOS `W/L` as a true stacked fraction with a
+  horizontal fraction bar, and a Value toggle that reacts to the live
+  property draft (`plan/2026-08-16-instance-value-razavi-fraction/`).
+- Changed areas: model restores the `fraction` RichText run retired in
+  `32e256c` at schema v11 (corpus, seven project fixtures re-versioned, the
+  `instance-value-display` fixture value annotations re-projected, agent-api
+  artifacts + MCP resources regenerated; compatibility doc updated);
+  derived `displayableInstanceValue` unit table + bold projection +
+  `fractionGeometry` shared metrics + fraction-aware presentation bounds;
+  render-svg inline fraction tspans plus a structured whole-annotation
+  fraction `<g>` with a real `<line>` bar (non-fraction output byte-identical);
+  editor live-toggle availability from the property draft with a
+  one-transaction commit of typed parameters + value annotation; e2e and
+  specs (editor-interaction) updated to the new projection.
+- Validation: 789 unit tests, full e2e 143/143, `pnpm ci:static`,
+  `pnpm verify:branch` (build + production smoke), `agent-api:artifacts:check`,
+  `mcp:resources:check`, `git diff --check` clean. Four-orientation GUI
+  inspection confirmed M1/M3 stacked fractions with a visible bar stay
+  upright at 0°/90°/180°/270° with no overlap; live-toggle screenshot
+  confirmed typing `150n` then checking Value shows bold `150nF` immediately.
+- Commit status: branch `zcode/instance-value-razavi-fraction` pushed for PR
+  review; commits `a13a6ba` (model + regenerated artifacts), `b51cb5b`
+  (presentation), `a075da5` (render), `ca8d49d` (editor + e2e), `a7984e8`
+  (plan records). The MCP tarball sha256 pin refresh waits for the
+  CI-reported Linux digest per the instance-value precedent (`28e11b3`).
+
 ## 2026-08-16 - Instance value display and property annotations
 
 - Target: opt-in Value annotation beside each instance — MOS inline `w/l`,

@@ -13,6 +13,8 @@ function flattenRun(run: RichTextRun): string {
       return "\n";
     case "span":
       return run.children.map(flattenRun).join("");
+    case "fraction":
+      return `${run.numerator.runs.map(flattenRun).join("")}/${run.denominator.runs.map(flattenRun).join("")}`;
   }
 }
 
@@ -33,6 +35,14 @@ export function normalizeRichText(
       normalized.push({
         ...run,
         children: normalizeRichText({ runs: run.children }).runs,
+      });
+      return;
+    }
+    if (run.kind === "fraction") {
+      normalized.push({
+        kind: "fraction",
+        numerator: normalizeRichText(run.numerator),
+        denominator: normalizeRichText(run.denominator),
       });
       return;
     }

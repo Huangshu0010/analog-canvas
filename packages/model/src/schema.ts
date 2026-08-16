@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 10;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 11;
 
 export const StableIdSchema = z.string().min(1).max(256);
 /** A persisted Document page point before its Document-grid relation is known. */
@@ -407,7 +407,12 @@ export type RichTextStyle = "italic" | "bold" | "subscript" | "superscript";
 export type RichTextRun =
   | { kind: "text"; value: string }
   | { kind: "line-break" }
-  | { kind: "span"; style: RichTextStyle; children: RichTextRun[] };
+  | { kind: "span"; style: RichTextStyle; children: RichTextRun[] }
+  | {
+      kind: "fraction";
+      numerator: RichTextDocument;
+      denominator: RichTextDocument;
+    };
 
 export interface RichTextDocument {
   runs: RichTextRun[];
@@ -436,7 +441,12 @@ function richTextRunSchema(depth: number): z.ZodTypeAny {
       .min(1)
       .max(RICH_TEXT_MAX_RUNS),
   });
-  return z.union([text, lineBreak, span]);
+  const fraction = z.strictObject({
+    kind: z.literal("fraction"),
+    numerator: richTextDocumentSchema(depth + 1),
+    denominator: richTextDocumentSchema(depth + 1),
+  });
+  return z.union([text, lineBreak, span, fraction]);
 }
 
 function richTextDocumentSchema(depth: number): z.ZodTypeAny {

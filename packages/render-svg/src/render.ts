@@ -6,6 +6,7 @@ import {
 import {
   contactRequiresJunctionDot,
   deriveDocumentContactEvidence,
+  fractionGeometry,
   isMosBulkRoute,
   resolvePrimitiveStrokeWidth,
   resolveDraftingObjectGeometry,
@@ -29,6 +30,7 @@ import type {
   DraftingObject,
   GridRect,
   Point,
+  RichTextRun,
   RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
@@ -38,7 +40,10 @@ import type {
   SymbolResolver,
 } from "@icm/symbols";
 
-import { schematicTextSizeAttribute } from "./schematic-text.js";
+import {
+  schematicTextFontSize,
+  schematicTextSizeAttribute,
+} from "./schematic-text.js";
 import { renderRichTextDocument } from "./rich-text.js";
 
 export interface SvgRenderOptions {
@@ -59,6 +64,43 @@ function renderAnnotationText(
   profile: SchematicStyleProfile,
 ): string {
   return renderRichTextDocument(annotation.content, profile);
+}
+
+/**
+ * Structured rendering for a whole-annotation fraction: numerator above,
+ * denominator below, and a real fraction bar between them. A <text> element
+ * cannot host the bar, so the annotation wraps both part texts and the bar
+ * line in one group positioned from the shared deterministic metrics.
+ */
+function renderStackedFractionAnnotation(
+  fraction: Extract<RichTextRun, { kind: "fraction" }>,
+  options: {
+    attributes: string;
+    position: Point;
+    alignment: "start" | "middle" | "end";
+    width: number;
+    fontSize: number;
+    profile: SchematicStyleProfile;
+  },
+): string {
+  const { profile } = options;
+  const fontSize = options.fontSize;
+  const partFont =
+    Math.round(fontSize * profile.typography.subscriptScale * 100) / 100;
+  const halfWidth = options.width / 2;
+  const centerX =
+    options.alignment === "start"
+      ? options.position.x + halfWidth
+      : options.alignment === "end"
+        ? options.position.x - halfWidth
+        : options.position.x;
+  const barY = options.position.y - fontSize * fractionGeometry.barRiseEm;
+  const numeratorY =
+    options.position.y - fontSize * fractionGeometry.numeratorBaselineRiseEm;
+  const denominatorY =
+    options.position.y + fontSize * fractionGeometry.denominatorBaselineDropEm;
+  const partStyle = `font-style:normal;font-weight:${profile.typography.mathWeight}`;
+  return `<g ${options.attributes}><text data-role="fraction-numerator" x="${centerX}" y="${numeratorY}" text-anchor="middle" font-size="${partFont}" style="${partStyle}">${renderRichTextDocument(fraction.numerator, profile, { defaultBold: true })}</text><line data-role="fraction-bar" x1="${centerX - halfWidth}" y1="${barY}" x2="${centerX + halfWidth}" y2="${barY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><text data-role="fraction-denominator" x="${centerX}" y="${denominatorY}" text-anchor="middle" font-size="${partFont}" style="${partStyle}">${renderRichTextDocument(fraction.denominator, profile, { defaultBold: true })}</text></g>`;
 }
 
 function escapeXml(value: string): string {
@@ -687,6 +729,27 @@ export function buildSvgScene(
         annotation.kind === "power-label"
           ? ' font-weight="bold"'
           : "";
+      const fractionRun =
+        annotation.rotation === 0 &&
+        annotation.content.runs.length === 1 &&
+        annotation.content.runs[0]!.kind === "fraction"
+          ? (annotation.content.runs[0] as Extract<
+              RichTextRun,
+              { kind: "fraction" }
+            >)
+          : null;
+      if (fractionRun) {
+        return renderStackedFractionAnnotation(fractionRun, {
+          attributes,
+          position,
+          alignment: annotation.alignment,
+          width: presentation.bounds.width,
+          fontSize:
+            schematicTextFontSize(annotation.kind, profile) *
+            (annotation.sizeScale ?? 1),
+          profile,
+        });
+      }
       return `<text ${attributes} x="${position.x}" y="${position.y}" text-anchor="${annotation.alignment}" transform="${transform}"${emphasis}${schematicTextSizeAttribute(annotation.kind, profile, annotation.sizeScale)}>${renderAnnotationText(annotation, profile)}</text>`;
     })
     .join("");

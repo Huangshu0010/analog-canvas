@@ -47,6 +47,7 @@ import {
   resolveDraftingObjectGeometry,
   resolveElectricalContactTargets,
   displayableInstanceValue,
+  type InstanceValueSource,
   resolveNetLabelBinding,
   resolveMosBulkConnection,
   resolveSchematicStyleProfile,
@@ -526,6 +527,30 @@ function isTypingTarget(target: EventTarget | null): boolean {
     target instanceof Element &&
     Boolean(target.closest("input, textarea, select, [contenteditable='true']"))
   );
+}
+
+/**
+ * Project the instance's not-yet-committed parameter draft into the value
+ * formatter's structural input, using the same merge rule as
+ * `instancePropertyEdits`: typed values replace committed ones, blank values
+ * remove the parameter.
+ */
+function previewInstanceValueSource(
+  instance: SchematicDocument["instances"][number],
+  draft: { instanceId: string | null; parameters: Record<string, string> },
+): InstanceValueSource {
+  if (draft.instanceId !== instance.id) return instance;
+  const parameters = { ...(instance.netlist?.parameters ?? {}) };
+  for (const parameter of componentParameters(instance.symbolId)) {
+    const value = (draft.parameters[parameter.key] ?? "").trim();
+    if (value === "") delete parameters[parameter.key];
+    else parameters[parameter.key] = value;
+  }
+  return {
+    symbolId: instance.symbolId,
+    netlist: Object.keys(parameters).length > 0 ? { parameters } : undefined,
+    properties: instance.properties,
+  };
 }
 
 function instanceLabelAnnotationFor(
@@ -1056,8 +1081,13 @@ export function App({
   const selectedInstanceValue = selectedInstance
     ? instanceValueAnnotation(document, selectedInstance.id)
     : null;
+  // Availability follows the live property draft, not only committed state:
+  // typing a value must enable the Value toggle immediately. Geometry edits
+  // in the draft are irrelevant to the projection.
   const selectedInstanceValueAvailable = selectedInstance
-    ? displayableInstanceValue(selectedInstance).kind === "displayable"
+    ? displayableInstanceValue(
+        previewInstanceValueSource(selectedInstance, instancePropertyDraft),
+      ).kind === "displayable"
     : false;
   const selectedGroupLabelsAllVisible =
     selectedIds.length > 1 &&
@@ -5397,17 +5427,16 @@ export function App({
     }
   }
 
-  function setValueLabelsVisible(
+  function valueVisibilityEdits(
+    source: SchematicDocument,
     instanceIds: readonly string[],
     visible: boolean,
-  ): void {
+  ): SchematicEdit[] {
     const edits: SchematicEdit[] = [];
     for (const instanceId of instanceIds) {
-      const instance = document.instances.find(
-        (item) => item.id === instanceId,
-      );
+      const instance = source.instances.find((item) => item.id === instanceId);
       if (!instance) continue;
-      const value = instanceValueAnnotation(document, instanceId);
+      const value = instanceValueAnnotation(source, instanceId);
       if (value) {
         const { visible: _currentVisibility, ...rest } = value;
         if (visible) {
@@ -5431,7 +5460,7 @@ export function App({
         }
       } else if (visible) {
         const created = defaultInstanceValue(
-          document,
+          source,
           instance,
           resolver,
           styleProfile,
@@ -5444,6 +5473,14 @@ export function App({
         }
       }
     }
+    return edits;
+  }
+
+  function setValueLabelsVisible(
+    instanceIds: readonly string[],
+    visible: boolean,
+  ): void {
+    const edits = valueVisibilityEdits(document, instanceIds, visible);
     if (edits.length === 0) {
       setStatus(
         visible
@@ -5457,6 +5494,43 @@ export function App({
       setStatus(
         `${visible ? "Showing" : "Hiding"} component values on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
       );
+    }
+  }
+
+  /**
+   * Show the selected instance's value from its live property draft. The
+   * typed parameters are committed in the same transaction so the displayed
+   * value is always the committed electrical truth. Geometry edits in the
+   * draft stay uncommitted — only the netlist projection is claimed.
+   */
+  function showSelectedInstanceValue(): void {
+    if (!selectedInstance) return;
+    const propertyEdits =
+      instancePropertyDraft.instanceId === selectedInstance.id
+        ? instancePropertyEdits(instancePropertyDraft).edits.filter(
+            (edit) => edit.kind === "set_instance_netlist",
+          )
+        : [];
+    const projected = structuredClone(document);
+    for (const edit of propertyEdits) {
+      if (edit.kind !== "set_instance_netlist") continue;
+      const target = projected.instances.find(
+        (item) => item.id === edit.instanceId,
+      );
+      if (target) target.netlist = structuredClone(edit.netlist);
+    }
+    const valueEdits = valueVisibilityEdits(
+      projected,
+      [selectedInstance.id],
+      true,
+    );
+    if (propertyEdits.length === 0 && valueEdits.length === 0) {
+      setStatus("No component value is available for this selection");
+      return;
+    }
+    const result = transact([...propertyEdits, ...valueEdits]);
+    if (result.ok) {
+      setStatus(`Showing component value for ${selectedInstance.id}`);
     }
   }
 
@@ -7801,9 +7875,13 @@ export function App({
                           ? undefined
                           : "Set the device parameters first"
                       }
-                      onChange={(checked) =>
-                        setValueLabelsVisible([selectedInstance.id], checked)
-                      }
+                      onChange={(checked) => {
+                        if (checked) {
+                          showSelectedInstanceValue();
+                        } else {
+                          setValueLabelsVisible([selectedInstance.id], false);
+                        }
+                      }}
                     />
                   </div>
                   {componentParameters(selectedInstance.symbolId).map(

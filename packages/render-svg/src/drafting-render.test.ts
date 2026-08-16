@@ -277,3 +277,64 @@ describe("drafting layer rendering", () => {
     expect(svg).toContain(">lost</text>");
   });
 });
+
+describe("instance value fraction rendering", () => {
+  it("renders a whole-annotation fraction with a real fraction bar", () => {
+    const document = createEmptyDocument("doc", "Value fraction");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+    });
+    document.annotations.push({
+      id: "instance-value-M1",
+      kind: "instance-value",
+      content: {
+        runs: [
+          {
+            kind: "fraction",
+            numerator: {
+              runs: [
+                {
+                  kind: "span",
+                  style: "bold",
+                  children: [{ kind: "text", value: "10um" }],
+                },
+              ],
+            },
+            denominator: {
+              runs: [
+                {
+                  kind: "span",
+                  style: "bold",
+                  children: [{ kind: "text", value: "150nm" }],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      anchor: {
+        kind: "object",
+        objectId: "M1",
+        localOffset: { x: 40, y: 30 },
+        fallbackPosition: { x: 140, y: 130 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    const svg = renderDocumentSvg(document, resolver);
+    expect(svg).toContain('data-kind="instance-value"');
+    expect(svg).toContain('data-role="fraction-numerator"');
+    expect(svg).toContain('data-role="fraction-denominator"');
+    expect(svg).toContain('data-role="fraction-bar"');
+    expect(svg).toContain(">10um<");
+    expect(svg).toContain(">150nm<");
+  });
+});

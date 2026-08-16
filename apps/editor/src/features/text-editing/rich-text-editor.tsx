@@ -30,6 +30,11 @@ function toEditableHtml(document: RichTextDocument): string {
         return escapeHtml(run.value);
       case "line-break":
         return "<br>";
+      case "fraction":
+        // Editing surfaces a fraction in its slash form; committing that
+        // text replaces the fraction with plain runs, which the value
+        // refresh deliberately treats as hand-edited content.
+        return `${run.numerator.runs.map(render).join("")}/${run.denominator.runs.map(render).join("")}`;
       case "span": {
         const children = run.children.map(render).join("");
         const tag =

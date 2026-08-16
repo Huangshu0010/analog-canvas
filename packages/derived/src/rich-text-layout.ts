@@ -16,6 +16,35 @@ export interface RichTextLayout {
   lineHeights: number[];
 }
 
+/**
+ * Shared geometry of an inline stacked fraction, in em of the base font.
+ * The renderer, the measurement, and the presentation bounds all derive
+ * from these constants so the fraction bar lands where the metrics say.
+ */
+export const fractionGeometry = {
+  /** Fraction bar height above the anchor baseline. */
+  barRiseEm: 0.3,
+  /** Numerator baseline above the anchor baseline. */
+  numeratorBaselineRiseEm: 0.6,
+  /** Denominator baseline below the anchor baseline. */
+  denominatorBaselineDropEm: 0.42,
+  /** Fraction bar overhang beyond the widest part, per side. */
+  barOverhangEm: 0.08,
+  /** Vertical allowance between the two part lines. */
+  barGapEm: 0.26,
+  /** Ascent a fraction adds beyond the plain first-line ascent heuristic. */
+  extraAscentEm: 0.12,
+} as const;
+
+export function containsFractionRun(document: RichTextDocument): boolean {
+  const visit = (runs: readonly RichTextRun[]): boolean =>
+    runs.some(
+      (run) =>
+        run.kind === "fraction" || (run.kind === "span" && visit(run.children)),
+    );
+  return visit(document.runs);
+}
+
 type Line = { width: number; height: number };
 export function typographyFontSize(
   token: "caption" | "body" | "label",
@@ -97,6 +126,39 @@ function measureRun(run: RichTextRun, metrics: RichTextMetrics): Line[] {
       });
     }
     return child;
+  }
+  if (run.kind === "fraction") {
+    // The parts render at a reduced scale straddling the anchor baseline, so
+    // the whole block is one taller inline line: both part stacks plus the
+    // bar allowance.
+    const partMetrics = {
+      ...metrics,
+      fontSize: metrics.fontSize * metrics.subscriptScale,
+    };
+    const numerator = measureRuns(run.numerator.runs, partMetrics);
+    const denominator = measureRuns(run.denominator.runs, partMetrics);
+    const numeratorHeight = numerator.reduce(
+      (sum, line) => sum + line.height,
+      0,
+    );
+    const denominatorHeight = denominator.reduce(
+      (sum, line) => sum + line.height,
+      0,
+    );
+    return [
+      {
+        width:
+          Math.max(
+            ...numerator.map((line) => line.width),
+            ...denominator.map((line) => line.width),
+          ) +
+          metrics.fontSize * fractionGeometry.barOverhangEm * 2,
+        height:
+          numeratorHeight +
+          denominatorHeight +
+          metrics.fontSize * fractionGeometry.barGapEm,
+      },
+    ];
   }
   const exhaustive: never = run;
   return exhaustive;

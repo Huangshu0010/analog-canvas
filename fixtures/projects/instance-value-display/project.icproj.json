@@ -74,8 +74,35 @@
           "content": {
             "runs": [
               {
-                "kind": "text",
-                "value": "20u/1u"
+                "denominator": {
+                  "runs": [
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "1um"
+                        }
+                      ],
+                      "kind": "span",
+                      "style": "bold"
+                    }
+                  ]
+                },
+                "kind": "fraction",
+                "numerator": {
+                  "runs": [
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "20um"
+                        }
+                      ],
+                      "kind": "span",
+                      "style": "bold"
+                    }
+                  ]
+                }
               }
             ]
           },
@@ -211,8 +238,14 @@
           "content": {
             "runs": [
               {
-                "kind": "text",
-                "value": "10k"
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": "10kΩ"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
               }
             ]
           },
@@ -293,8 +326,14 @@
           "content": {
             "runs": [
               {
-                "kind": "text",
-                "value": "22k"
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": "22kΩ"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
               }
             ]
           },
@@ -375,8 +414,14 @@
           "content": {
             "runs": [
               {
-                "kind": "text",
-                "value": "2p"
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": "2pF"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
               }
             ]
           },
@@ -457,8 +502,14 @@
           "content": {
             "runs": [
               {
-                "kind": "text",
-                "value": "3n"
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": "3nH"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
               }
             ]
           },
@@ -539,8 +590,14 @@
           "content": {
             "runs": [
               {
-                "kind": "text",
-                "value": "1.8"
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": "1.8V"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
               }
             ]
           },
@@ -621,8 +678,14 @@
           "content": {
             "runs": [
               {
-                "kind": "text",
-                "value": "100u"
+                "children": [
+                  {
+                    "kind": "text",
+                    "value": "100uA"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
               }
             ]
           },
@@ -703,8 +766,35 @@
           "content": {
             "runs": [
               {
-                "kind": "text",
-                "value": "10u/0.5u"
+                "denominator": {
+                  "runs": [
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "0.5um"
+                        }
+                      ],
+                      "kind": "span",
+                      "style": "bold"
+                    }
+                  ]
+                },
+                "kind": "fraction",
+                "numerator": {
+                  "runs": [
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "10um"
+                        }
+                      ],
+                      "kind": "span",
+                      "style": "bold"
+                    }
+                  ]
+                }
               }
             ]
           },
@@ -955,7 +1045,7 @@
   ],
   "id": "instance-value-display",
   "name": "Instance Value Display",
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "source": {
     "dialect": "none",
     "entry": null,

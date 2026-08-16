@@ -1,4 +1,6 @@
 import type { SchematicStyleProfile } from "@icm/derived";
+import { fractionGeometry } from "@icm/derived";
+import { flattenRichText } from "@icm/model";
 import type { RichTextDocument, RichTextRun } from "@icm/model";
 
 interface RenderContext {
@@ -61,7 +63,39 @@ function renderRun(node: RichTextRun, ctx: RenderContext): string {
       return "";
     case "span":
       return renderSpan(node, ctx);
+    case "fraction":
+      return renderInlineFraction(node, ctx);
   }
+}
+
+/**
+ * Inline stacked fraction for mixed rich text. The parts are centered on the
+ * block through deterministic dx compensation (0.6 em per code point, the
+ * same model as the shared layout). The fraction bar itself needs a line
+ * element, which a <text> cannot host; annotation-level fractions render
+ * through the structured bar path in render.ts instead.
+ */
+function renderInlineFraction(
+  node: Extract<RichTextRun, { kind: "fraction" }>,
+  ctx: RenderContext,
+): string {
+  const typography = ctx.profile.typography;
+  const scale = typography.subscriptScale;
+  const percent = Math.round(scale * 100);
+  const numerator = renderRuns(node.numerator.runs, ctx);
+  const denominator = renderRuns(node.denominator.runs, ctx);
+  const numeratorWidthEm =
+    [...flattenRichText(node.numerator)].length * 0.6 * scale;
+  const denominatorWidthEm =
+    [...flattenRichText(node.denominator)].length * 0.6 * scale;
+  const blockWidthEm =
+    Math.max(numeratorWidthEm, denominatorWidthEm) +
+    fractionGeometry.barOverhangEm * 2;
+  const numeratorDx = (blockWidthEm - numeratorWidthEm) / 2 / scale;
+  const denominatorDx =
+    ((blockWidthEm - denominatorWidthEm) / 2 - numeratorWidthEm) / scale;
+  const resetDx = (blockWidthEm - denominatorWidthEm) / 2;
+  return `<tspan data-text-run="fraction"><tspan data-text-run="numerator" font-size="${percent}%" dx="${numeratorDx}" dy="${-fractionGeometry.numeratorBaselineRiseEm / scale}em">${numerator}</tspan><tspan data-text-run="denominator" font-size="${percent}%" dx="${denominatorDx}" dy="${(fractionGeometry.numeratorBaselineRiseEm + fractionGeometry.denominatorBaselineDropEm) / scale}em">${denominator}</tspan><tspan dx="${resetDx}" dy="${-fractionGeometry.denominatorBaselineDropEm}em"></tspan></tspan>`;
 }
 
 function renderSpan(
