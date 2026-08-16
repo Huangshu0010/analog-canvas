@@ -23,8 +23,9 @@
   (model + regenerated artifacts), `5df0c4e` (presentation), `ecb30c5`
   (editor), `c4f67d7` (e2e), `0399660` (plan records), `28e11b3` (MCP
   tarball sha256 refresh after the CI-reported Linux digest); all six
-  required remote checks passed. Merge to `main` left to the human per the
-  delivery gate.
+  required remote checks passed and a clean-state local
+  `pnpm install --frozen-lockfile` + `pnpm ci:check` was green before the
+  human merged PR #97 to `main` as `7027f57`.
 
 ## 2026-08-16 - Restore the VDD power-port device beside the rail
 
