@@ -24,11 +24,14 @@
   inspection confirmed M1/M3 stacked fractions with a visible bar stay
   upright at 0°/90°/180°/270° with no overlap; live-toggle screenshot
   confirmed typing `150n` then checking Value shows bold `150nF` immediately.
-- Commit status: branch `zcode/instance-value-razavi-fraction` pushed for PR
-  review; commits `a13a6ba` (model + regenerated artifacts), `b51cb5b`
-  (presentation), `a075da5` (render), `ca8d49d` (editor + e2e), `a7984e8`
-  (plan records). The MCP tarball sha256 pin refresh waits for the
-  CI-reported Linux digest per the instance-value precedent (`28e11b3`).
+- Commit status: PR #99 (`zcode/instance-value-razavi-fraction`), commits
+  `a13a6ba` (model + regenerated artifacts), `b51cb5b` (presentation),
+  `a075da5` (render), `ca8d49d` (editor + e2e), `60abe11` (plan records),
+  `9bbc64a` (MCP tarball sha256 refresh after the CI-reported Linux digest);
+  all six required remote checks passed on PR #99 before the human merged it
+  to `main` as `452099e`. Local pre-delivery validation: 789 unit tests,
+  full e2e 143/143, `pnpm ci:static`, `pnpm verify:branch`,
+  `release:verify:built`, and `git diff --check` all clean.
 
 ## 2026-08-16 - Instance value display and property annotations
 
