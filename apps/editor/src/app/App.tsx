@@ -757,6 +757,7 @@ export function App({
     setDraftingWaypoints,
     setDraftingSnapPoint,
     clearDraftingCreate,
+    beginSelectionMove: beginSelectionMoveInteraction,
     cancelInteraction,
   } = useInteractionState<SchematicClipboard>();
   const [draftingInspectorSegment, setDraftingInspectorSegment] = useState<{
@@ -2401,6 +2402,14 @@ export function App({
     hitTarget: SVGElement = event.currentTarget,
   ): void {
     if (vddRailMode || (pendingSymbolId && pendingComponentPlacement)) return;
+    if (
+      getCurrentInteractionState().kind === "moving-selection" &&
+      selectedIds.length > 0
+    ) {
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
+      return;
+    }
     event.stopPropagation();
     if (event.altKey) {
       setStatus("Snap suppressed while Alt is held");
@@ -2410,7 +2419,7 @@ export function App({
       (candidate) => candidate.route.id === routeId,
     );
     if (!routeRecord) return;
-    const svg = hitTarget.ownerSVGElement!;
+    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
     const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
     const tap = resolveRouteTap(
       routeRecord.polyline.points,
@@ -2419,6 +2428,14 @@ export function App({
     );
     if (tool === "pointer") {
       const segmentIndex = tap?.segmentIndex ?? 0;
+      if (getCurrentInteractionState().kind === "moving-selection") {
+        const movePlan = planSelectionMove(document, visualSelection);
+        if (movePlan.previewObjectIds.length > 0) {
+          beginVisualSelectionMove(event, visualSelection, hitTarget);
+          return;
+        }
+        cancelInteraction();
+      }
       selectRoute(routeId, segmentIndex);
       beginRouteStretch(
         event,
@@ -2831,6 +2848,12 @@ export function App({
     hitTarget: SVGElement = event.currentTarget,
   ): void {
     if (event.button !== 0) return;
+    if (getCurrentInteractionState().kind === "moving-selection") {
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
+      else beginVisualSelectionMove(event, visualSelection, hitTarget);
+      return;
+    }
     event.stopPropagation();
     selectOnly("annotation", [annotation.id]);
     setSelectedEndpoint(null);
@@ -3214,6 +3237,15 @@ export function App({
     ) {
       return;
     }
+    if (getCurrentInteractionState().kind === "moving-selection") {
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) {
+        beginMove(event, primaryInstanceId, event.currentTarget);
+      } else {
+        beginVisualSelectionMove(event, visualSelection, event.currentTarget);
+      }
+      return;
+    }
     if (tool !== "pointer" || event.button !== 0) return;
     if ((event.target as Element).closest(".draft-handle, .route-handle")) {
       return;
@@ -3492,6 +3524,9 @@ export function App({
     hitTarget: SVGElement = event.currentTarget,
   ): void {
     if (tool !== "pointer" || event.button !== 0) return;
+    if (getCurrentInteractionState().kind === "moving-selection") {
+      cancelInteraction();
+    }
     event.stopPropagation();
     const instance = document.instances.find(
       (candidate) => candidate.id === instanceId,
@@ -3522,7 +3557,7 @@ export function App({
     if (!selectedIds.includes(instanceId)) selectInstance(instanceId, false);
     if (movingIds.length === 0) return;
     canvasDragSessionRef.current?.cancel();
-    const svg = hitTarget.ownerSVGElement!;
+    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
     const pointerStart = pointFromClient(
       event.clientX,
       event.clientY,
@@ -3591,6 +3626,143 @@ export function App({
         paintSnapGuides([]);
       },
     });
+  }
+
+  /**
+   * Move selections that contain no placed instance.  Instance-led selections
+   * retain the richer electrical snap path above; visual-only selections still
+   * share the same SelectionMovePlan and one typed transaction on release.
+   */
+  function beginVisualSelectionMove(
+    event: ReactPointerEvent<SVGElement>,
+    selection: VisualSelection,
+    hitTarget: SVGElement = event.currentTarget,
+  ): void {
+    if (tool !== "pointer" || event.button !== 0) return;
+    const movePlan = planSelectionMove(document, selection);
+    if (movePlan.previewObjectIds.length === 0) {
+      cancelInteraction();
+      setStatus("Selected objects are attached or locked and cannot move");
+      return;
+    }
+    cancelInteraction();
+    event.preventDefault();
+    event.stopPropagation();
+    canvasDragSessionRef.current?.cancel();
+    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
+    const start = pointFromClient(event.clientX, event.clientY, svg, false);
+    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    const dragVisual = () =>
+      (visual ??= startCanvasDragVisual(svg, movePlan.previewObjectIds));
+    const deltaAt = (client: Point) => {
+      const point = pointFromClient(client.x, client.y, svg, false);
+      return {
+        x: snapCoordinate(point.x - start.x, document.presentation.grid),
+        y: snapCoordinate(point.y - start.y, document.presentation.grid),
+      };
+    };
+    canvasDragSessionRef.current = startCanvasDragSession({
+      target: hitTarget,
+      pointerId: event.pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      thresholdPx: DRAG_START_DISTANCE_PX,
+      onPreview: (client) => {
+        const delta = deltaAt(client);
+        dragVisual().translate(delta);
+        paintSnapGuides([]);
+      },
+      onFinish: ({ client, dragged }) => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+        paintSnapGuides([]);
+        if (dragged) completeVisualSelectionMove(movePlan, deltaAt(client));
+      },
+      onCancel: () => {
+        canvasDragSessionRef.current = null;
+        visual?.restore();
+        paintSnapGuides([]);
+      },
+    });
+  }
+
+  function selectionVisualMoveEdits(
+    movePlan: SelectionMovePlan,
+    delta: Point,
+  ): SchematicEdit[] {
+    return [
+      ...movePlan.freeAnnotationIds.flatMap((annotationId) => {
+        const annotation = document.annotations.find(
+          (candidate) => candidate.id === annotationId,
+        );
+        if (!annotation || annotation.anchor.kind !== "free") return [];
+        return [
+          {
+            kind: "upsert_schematic_annotation" as const,
+            annotation: {
+              ...annotation,
+              anchor: {
+                kind: "free" as const,
+                position: snapGridPoint(
+                  {
+                    x: annotation.anchor.position.x + delta.x,
+                    y: annotation.anchor.position.y + delta.y,
+                  },
+                  document.presentation.grid,
+                ),
+              },
+            },
+          },
+        ];
+      }),
+      ...movePlan.draftingIds.flatMap((draftingId) => {
+        const object = document.drafting?.objects.find(
+          (candidate) => candidate.id === draftingId,
+        );
+        return object
+          ? [
+              {
+                kind: "upsert_drafting_object" as const,
+                object: translateDraftingObject(
+                  object,
+                  delta,
+                  document.presentation.grid,
+                ),
+              },
+            ]
+          : [];
+      }),
+    ];
+  }
+
+  function completeVisualSelectionMove(
+    movePlan: SelectionMovePlan,
+    delta: Point,
+  ): void {
+    if (delta.x === 0 && delta.y === 0) return;
+    const looseRouteEdits = movePlan.looseRouteIds.flatMap(
+      (routeId) => proposeLooseRouteTranslation(document, routeId, delta).edits,
+    );
+    const result = transact([
+      ...looseRouteEdits,
+      ...selectionVisualMoveEdits(movePlan, delta),
+    ]);
+    if (result.ok && movePlan.fixedObjectIds.length > 0) {
+      setStatus(
+        `Moved selection; ${movePlan.fixedObjectIds.length} attached object(s) remained fixed`,
+      );
+    }
+  }
+
+  function beginKeyboardSelectionMove(): void {
+    const movePlan = planSelectionMove(document, visualSelection);
+    if (movePlan.previewObjectIds.length === 0 && !selectedRoute) {
+      setStatus("Selected objects are attached or locked and cannot move");
+      return;
+    }
+    beginSelectionMoveInteraction();
+    setStatus(
+      "Move: drag the selected objects to a new position (Esc to cancel)",
+    );
   }
 
   function instanceMoveAt(
@@ -3765,46 +3937,7 @@ export function App({
           (routeId) =>
             proposeLooseRouteTranslation(document, routeId, delta).edits,
         );
-        const visualEdits: SchematicEdit[] = [
-          ...preview.movePlan.freeAnnotationIds.flatMap((annotationId) => {
-            const annotation = document.annotations.find(
-              (candidate) => candidate.id === annotationId,
-            );
-            if (!annotation || annotation.anchor.kind !== "free") return [];
-            return [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: {
-                  ...annotation,
-                  anchor: {
-                    kind: "free" as const,
-                    position: {
-                      x: annotation.anchor.position.x + delta.x,
-                      y: annotation.anchor.position.y + delta.y,
-                    },
-                  },
-                },
-              },
-            ];
-          }),
-          ...preview.movePlan.draftingIds.flatMap((draftingId) => {
-            const object = document.drafting?.objects.find(
-              (candidate) => candidate.id === draftingId,
-            );
-            return object
-              ? [
-                  {
-                    kind: "upsert_drafting_object" as const,
-                    object: translateDraftingObject(
-                      object,
-                      delta,
-                      document.presentation.grid,
-                    ),
-                  },
-                ]
-              : [];
-          }),
-        ];
+        const visualEdits = selectionVisualMoveEdits(preview.movePlan, delta);
         const movingElectrical = electricalMatch?.moving.electrical;
         const targetElectrical = electricalMatch?.target.electrical;
         const projected = structuredClone(document);
@@ -4233,6 +4366,12 @@ export function App({
     hitTarget: SVGElement = event.currentTarget,
   ): void {
     if (event.button !== 0 || object.locked) return;
+    if (getCurrentInteractionState().kind === "moving-selection") {
+      const primaryInstanceId = selectedIds.at(-1);
+      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
+      else beginVisualSelectionMove(event, visualSelection, hitTarget);
+      return;
+    }
     const origin = draftingDragOrigin(object);
     if (!origin) {
       selectDraftingObject(object.id);
@@ -6151,6 +6290,7 @@ export function App({
         hasRotatableSelection,
         hasDraftingSelection: Boolean(selectedDrafting),
         hasInspectableSelection,
+        hasMoveSelection: hasVisualSelection(visualSelection),
         hasRouteSelection: Boolean(selectedRoute),
         hasHighlightableNet: selectedHighlightNetId !== null,
         wireReadyToFinish: Boolean(wireSource && wirePreviewPoint),
@@ -6189,6 +6329,12 @@ export function App({
           return;
         case "copy":
           beginCopyPlacement();
+          return;
+        case "begin-selection-move":
+          beginKeyboardSelectionMove();
+          return;
+        case "move-selection-required":
+          setStatus("Select objects before moving them");
           return;
         case "save":
           saveProjectFile();

@@ -13,6 +13,7 @@ const baseContext: EditorShortcutContext = {
   hasRotatableSelection: false,
   hasDraftingSelection: false,
   hasInspectableSelection: false,
+  hasMoveSelection: false,
   hasRouteSelection: false,
   hasHighlightableNet: false,
   wireReadyToFinish: false,
@@ -142,6 +143,10 @@ describe("editor shortcut contract", () => {
       tool: "construction-line",
     });
     expect(resolve("p")).toBeNull();
+    expect(resolve("m")).toEqual({ kind: "move-selection-required" });
+    expect(resolve("m", { hasMoveSelection: true })).toEqual({
+      kind: "begin-selection-move",
+    });
     expect(resolve("l")).toEqual({ kind: "net-label-selection-required" });
     expect(resolve("l", { hasRouteSelection: true })).toEqual({
       kind: "edit-net-label",
@@ -246,6 +251,13 @@ describe("editor shortcut contract", () => {
     });
     expect(resolve("c", { interactionMode: "copy-placement" })).toEqual({
       kind: "copy",
+    });
+    expect(resolve("m", active)).toEqual({
+      kind: "blocked-interaction-command",
+      command: "Move",
+    });
+    expect(resolve("m", { interactionMode: "moving-selection" })).toEqual({
+      kind: "begin-selection-move",
     });
     expect(resolve("q", active)).toEqual({
       kind: "blocked-interaction-command",

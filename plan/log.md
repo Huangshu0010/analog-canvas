@@ -7478,3 +7478,17 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed locally as
   `fix(editor): refine about repository link` on
   `codex/refine-about-repository-link`; not pushed.
+
+## 2026-08-16 - Unify keyboard and pointer selection move
+
+- Target: add `M` as a safe, connectivity-aware entry to existing movement
+  without rejecting mixed visual selection.
+- Changed areas: editor interaction state and shortcut arbitration; shared
+  visual-move edit helper; root-SVG-safe move entry; Help and focused browser
+  regression coverage.
+- Validation: 38 focused unit tests, focused `M` Playwright test, complete
+  manual-editor Playwright suite (67 tests), workspace typecheck, Prettier,
+  and `git diff --check` passed.
+- Commit status: committed as `f07c65c`
+  (`feat(editor): unify keyboard and pointer selection move`) and pushed to
+  `codex/unified-selection-move-20260816`.

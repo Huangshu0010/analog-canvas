@@ -242,4 +242,19 @@ describe("editor interaction state", () => {
       kind: "idle",
     });
   });
+
+  it("owns keyboard selection move as one cancellable pointer-mode interaction", () => {
+    const moving = interactionReducer(
+      { kind: "idle" },
+      { type: "begin-selection-move" },
+    );
+    expect(moving).toEqual({ kind: "moving-selection" });
+    expect(interactionTool(moving)).toBe("pointer");
+    expect(interactionReducer(moving, { type: "begin-selection-move" })).toBe(
+      moving,
+    );
+    expect(interactionReducer(moving, { type: "cancel" })).toEqual({
+      kind: "idle",
+    });
+  });
 });

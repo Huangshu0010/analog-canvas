@@ -16,6 +16,7 @@ export interface EditorShortcutContext {
   hasRotatableSelection: boolean;
   hasDraftingSelection: boolean;
   hasInspectableSelection: boolean;
+  hasMoveSelection: boolean;
   hasRouteSelection: boolean;
   hasHighlightableNet: boolean;
   wireReadyToFinish: boolean;
@@ -30,6 +31,7 @@ export type EditorShortcutIntent =
   | { kind: "block-browser-refresh" }
   | { kind: "undo" | "redo" }
   | { kind: "copy" | "save" | "open" | "select-all" }
+  | { kind: "begin-selection-move" | "move-selection-required" }
   | { kind: "reverse-current-marker" }
   | { kind: "open-component-insert" }
   | { kind: "rotate-placement"; deltaDegrees: 90 | -90 }
@@ -115,6 +117,11 @@ export function resolveEditorShortcut(
         ? { kind: "copy" }
         : { kind: "blocked-interaction-command", command: "Copy" };
     }
+    if (plain && key === "m") {
+      return context.interactionMode === "moving-selection"
+        ? { kind: "begin-selection-move" }
+        : { kind: "blocked-interaction-command", command: "Move" };
+    }
     if (plain && key === "i") return { kind: "open-component-insert" };
     if (plain && key === "w") {
       return { kind: "activate-tool", tool: "wire" };
@@ -173,6 +180,7 @@ export function resolveEditorShortcut(
       c: "Copy",
       q: "Properties",
       l: "Net Label",
+      m: "Move",
       t: "Text",
       h: "Net Highlight",
       x: "Current Marker",
@@ -193,6 +201,11 @@ export function resolveEditorShortcut(
     return { kind: "reverse-current-marker" };
   }
   if (plain && key === "c") return { kind: "copy" };
+  if (plain && key === "m") {
+    return context.hasMoveSelection
+      ? { kind: "begin-selection-move" }
+      : { kind: "move-selection-required" };
+  }
   if (plain && key === "i") return { kind: "open-component-insert" };
   if (plain && key === "r") {
     if (context.interactionMode === "placing-component") {
