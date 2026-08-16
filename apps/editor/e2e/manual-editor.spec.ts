@@ -1552,11 +1552,163 @@ test("L edits a selected route Net Label without opening Properties", async ({
 
   await clickRoute(page, "route-ui-1", 0.5, 0);
   await page.keyboard.press("l");
-  await editor.getByRole("textbox", { name: "Net Label" }).fill("CANCEL");
+  await editor.getByRole("textbox", { name: "Net Label" }).fill("ESCSAVE");
+  // Escape saves the edit like Enter does instead of discarding it.
   await editor.getByRole("textbox", { name: "Net Label" }).press("Escape");
+  await expect(page.locator('[data-layer="annotations"]')).toContainText(
+    "ESCSAVE",
+  );
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await page.keyboard.press("l");
+  await editor.getByRole("textbox", { name: "Net Label" }).fill("");
+  await editor.getByRole("textbox", { name: "Net Label" }).press("Enter");
   await expect(
     page.getByTestId("annotation-hit-net-label-route-ui-1"),
   ).toHaveCount(0);
+});
+
+test("Properties toggles reference label visibility for one or many components", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 280, y: 180 });
+  await placeComponent(page, "resistor", { x: 480, y: 180 });
+
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  const singleToggle = page.getByRole("checkbox", {
+    name: "Show reference label",
+  });
+  await expect(singleToggle).toBeChecked();
+  await singleToggle.uncheck();
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('[data-object-id="instance-label-R1"]'),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R2"),
+  ).toHaveCount(1);
+  // Hiding is recoverable: the annotation is still in the project.
+  await singleToggle.check();
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toHaveCount(1);
+
+  // Marquee both components and toggle the whole group.
+  const canvas = page.getByTestId("schematic-canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Canvas is not measurable");
+  await page.mouse.move(box.x + 200, box.y + 80);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 620, box.y + 320, { steps: 6 });
+  await page.mouse.up();
+  const groupToggle = page.getByRole("checkbox", {
+    name: "Show reference labels",
+  });
+  await expect(groupToggle).toBeVisible();
+  await expect(groupToggle).toBeChecked();
+  await groupToggle.uncheck();
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R2"),
+  ).toHaveCount(0);
+  await groupToggle.check();
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R1"),
+  ).toHaveCount(1);
+  await expect(
+    page.getByTestId("annotation-hit-instance-label-R2"),
+  ).toHaveCount(1);
+});
+
+test("property edits commit on blank click and Escape instead of vanishing", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 320, y: 200 });
+  const canvas = page.getByTestId("schematic-canvas");
+
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  const value = page.getByLabel("Component value");
+  await value.click();
+  await value.fill("33k");
+  await canvas.click({ position: { x: 60, y: 60 } });
+  await expect(page.getByTestId("revision")).toHaveText("2");
+
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  await expect(page.getByLabel("Component value")).toHaveValue("33k");
+
+  await page.getByLabel("Component value").click();
+  await page.getByLabel("Component value").fill("47k");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+
+  await canvas.click({ position: { x: 60, y: 60 } });
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  await expect(page.getByLabel("Component value")).toHaveValue("47k");
+});
+
+test("canvas text editor commits on Escape and on an outside click", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 420, y: 280 });
+  const rendered = page.locator('[data-object-id="instance-label-R1"]');
+
+  await page.getByTestId("annotation-hit-instance-label-R1").dblclick();
+  await page.keyboard.press("Control+a");
+  await page.keyboard.type("RA");
+  await page.keyboard.press("Escape");
+  await expect(rendered).toContainText("RA");
+  await expect(page.getByTestId("revision")).toHaveText("2");
+
+  await page.getByTestId("annotation-hit-instance-label-R1").dblclick();
+  await page.keyboard.press("Control+a");
+  await page.keyboard.type("RB");
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 60, y: 60 } });
+  await expect(rendered).toContainText("RB");
+  await expect(page.getByTestId("revision")).toHaveText("3");
+});
+
+test("a dragged Net label re-anchors along its route and stays released", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 280, y: 180 });
+  await placeComponent(page, "resistor", { x: 520, y: 180 });
+  await clickCommand(page, "Draw", "Wire (W)");
+  await page.getByTestId("terminal-R1-2").click();
+  await page.getByTestId("terminal-R2-1").click();
+  await page.keyboard.press("Escape");
+
+  await clickRoute(page, "route-ui-1", 0.5, 0);
+  await page.keyboard.press("l");
+  const editor = page.getByTestId("net-label-editor");
+  await editor.getByRole("textbox", { name: "Net Label" }).fill("NETA");
+  await editor.getByRole("textbox", { name: "Net Label" }).press("Enter");
+
+  const label = page.getByTestId("annotation-hit-net-label-route-ui-1");
+  const renderedLabel = page.locator('[data-object-id="net-label-route-ui-1"]');
+  await expect(label).toBeVisible();
+  const before = await renderedLabel.boundingBox();
+  if (!before) throw new Error("Net label is not measurable");
+  const revisionBefore = await page.getByTestId("revision").textContent();
+
+  // Well past the old +/-30 clamp: the label must stay below the wire.
+  await dragBy(label, { x: 0, y: 80 });
+  await expect(page.getByTestId("revision")).not.toHaveText(revisionBefore!);
+  const after = await renderedLabel.boundingBox();
+  if (!after) throw new Error("Net label vanished after the drag");
+  expect(after.y - before.y).toBeGreaterThan(60);
 });
 
 test("selects and moves multiple instances while viewport gestures stay transient", async ({

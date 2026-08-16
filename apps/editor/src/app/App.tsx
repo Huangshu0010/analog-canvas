@@ -244,12 +244,14 @@ import {
   annotationHitBox,
   attachmentAtPoint,
   defaultInstanceLabel,
+  dragNetLabelAttachmentAtPoint,
   dragRouteAttachmentAtPoint,
   effectiveRouteAttachment,
   endpointNetId,
   instanceHitBox,
   isRoutedMarker,
   looseRouteAnchorIds,
+  NET_LABEL_MAX_NORMAL_OFFSET,
 } from "../features/wiring/route-interaction-geometry";
 import {
   applyOrientationOperations,
@@ -519,6 +521,18 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
     Boolean(target.closest("input, textarea, select, [contenteditable='true']"))
+  );
+}
+
+function instanceLabelAnnotationFor(
+  document: SchematicDocument,
+  instanceId: string,
+): Annotation | undefined {
+  return document.annotations.find(
+    (annotation) =>
+      annotation.kind === "instance-label" &&
+      annotation.anchor.kind === "object" &&
+      annotation.anchor.objectId === instanceId,
   );
 }
 
@@ -799,6 +813,7 @@ export function App({
     null,
   );
   const [netLabelDraft, setNetLabelDraft] = useState("");
+  const netLabelDraftRouteRef = useRef<string | null>(null);
   const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
   const [instancePropertyDraft, setInstancePropertyDraft] = useState<{
     instanceId: string | null;
@@ -1031,6 +1046,15 @@ export function App({
     selectedDrafting ||
     selectedEndpoint,
   );
+  const selectedInstanceLabel = selectedInstance
+    ? instanceLabelAnnotationFor(document, selectedInstance.id)
+    : undefined;
+  const selectedGroupLabelsAllVisible =
+    selectedIds.length > 1 &&
+    selectedIds.every((id) => {
+      const label = instanceLabelAnnotationFor(document, id);
+      return label !== undefined && label.visible !== false;
+    });
   const styleProfile = resolveSchematicStyleProfile(
     document.presentation.styleProfileId,
   );
@@ -1361,6 +1385,9 @@ export function App({
   }, [document, visualSelection]);
 
   useEffect(() => {
+    // Leaving a route (selection cleared or moved on) commits a pending Net
+    // label draft instead of silently discarding it.
+    commitPendingNetLabelDraft();
     if (!selectedRoute) {
       setNetLabelDraft("");
       setNetLabelEditorOpen(false);
@@ -1371,9 +1398,21 @@ export function App({
         ? flattenRichText(selectedRouteNetLabel.content)
         : "",
     );
+    netLabelDraftRouteRef.current = selectedRoute.id;
   }, [selectedRoute, selectedRouteNetLabel]);
 
+  const lastSelectedInstanceIdRef = useRef<string | null>(null);
   useEffect(() => {
+    // Leaving a component (selection cleared or moved to another instance)
+    // commits pending property edits instead of silently discarding them.
+    // Keying on the id, not the record, keeps unrelated document updates
+    // from replaying a stale draft.
+    const previousInstanceId = lastSelectedInstanceIdRef.current;
+    lastSelectedInstanceIdRef.current = selectedInstance?.id ?? null;
+    if ((selectedInstance?.id ?? null) !== previousInstanceId) {
+      const pending = instancePropertyEdits(instancePropertyDraft);
+      if (pending.edits.length > 0) transact(pending.edits);
+    }
     if (!selectedInstance) {
       setInstancePropertyDraft({
         instanceId: null,
@@ -2789,8 +2828,16 @@ export function App({
       if (closest) {
         return snapGridPoint(
           {
-            x: clamp(candidate.x, closest.x - 30, closest.x + 30),
-            y: clamp(candidate.y, closest.y - 30, closest.y + 30),
+            x: clamp(
+              candidate.x,
+              closest.x - NET_LABEL_MAX_NORMAL_OFFSET,
+              closest.x + NET_LABEL_MAX_NORMAL_OFFSET,
+            ),
+            y: clamp(
+              candidate.y,
+              closest.y - NET_LABEL_MAX_NORMAL_OFFSET,
+              closest.y + NET_LABEL_MAX_NORMAL_OFFSET,
+            ),
           },
           document.presentation.grid,
         );
@@ -2825,6 +2872,24 @@ export function App({
       return {
         ...annotation,
         anchor,
+      };
+    }
+    if (annotation.kind === "net-label" && annotation.anchor.kind === "route") {
+      const attached = dragNetLabelAttachmentAtPoint(
+        routePolylines,
+        candidate,
+        annotation.anchor.routeId,
+      );
+      if (!attached) return annotation;
+      return {
+        ...annotation,
+        anchor: {
+          ...annotation.anchor,
+          segmentIndex: attached.segmentIndex,
+          t: attached.t,
+          normalOffset: attached.normalOffset,
+          fallbackPosition: attached.labelPosition,
+        },
       };
     }
 
@@ -5074,42 +5139,51 @@ export function App({
     }
   }
 
-  function applyNetLabel(): void {
-    if (!selectedRoute) return;
-    const net = document.nets.find(
-      (candidate) => candidate.id === selectedRoute.netId,
+  function netLabelForRoute(
+    route: SchematicDocument["routes"][number],
+  ): Annotation | undefined {
+    const candidates = document.annotations.filter(
+      (annotation) =>
+        annotation.kind === "net-label" && annotation.netId === route.netId,
     );
-    if (!net) return;
-    const existingLabel = selectedRouteNetLabel;
-    const labelId = existingLabel?.id ?? `net-label-${selectedRoute.id}`;
-    const name = netLabelDraft.trim();
+    return (
+      candidates.find(
+        (annotation) => annotation.id === `net-label-${route.id}`,
+      ) ??
+      candidates.find(
+        (annotation) =>
+          resolveNetLabelBinding(document, resolver, annotation)?.routeId ===
+          route.id,
+      )
+    );
+  }
+
+  function netLabelEditsForRoute(
+    route: SchematicDocument["routes"][number],
+    rawName: string,
+  ): SchematicEdit[] | null {
+    const net = document.nets.find((candidate) => candidate.id === route.netId);
+    if (!net) return null;
+    const existingLabel = netLabelForRoute(route);
+    const name = rawName.trim();
     if (!name) {
-      if (existingLabel) {
-        const result = transact([
-          {
-            kind: "remove_schematic_annotation",
-            annotationId: existingLabel.id,
-          },
-        ]);
-        if (result.ok) {
-          replaceSelectionKind("annotation", []);
-          setStatus(
-            `Deleted Net Label ${flattenRichText(existingLabel.content)}`,
-          );
-        }
-      } else {
-        setStatus("Selected Route has no Net Label");
-      }
-      return;
+      return existingLabel
+        ? [
+            {
+              kind: "remove_schematic_annotation",
+              annotationId: existingLabel.id,
+            },
+          ]
+        : null;
     }
     const sameNameNet = document.nets.find(
       (candidate) => candidate.id !== net.id && candidate.name === name,
     );
     const targetNetId = sameNameNet?.id ?? net.id;
     const polyline = routePolylines.find(
-      ({ route }) => route.id === selectedRoute.id,
+      ({ route: candidate }) => candidate.id === route.id,
     )?.polyline;
-    if (!polyline) return;
+    if (!polyline) return null;
     const segment = Math.max(0, Math.floor((polyline.points.length - 1) / 2));
     const from = polyline.points[segment]!;
     const to = polyline.points[segment + 1] ?? from;
@@ -5124,6 +5198,11 @@ export function App({
       },
       document.presentation.grid,
     );
+    const previousAnchor =
+      existingLabel?.anchor.kind === "route" &&
+      existingLabel.anchor.routeId === route.id
+        ? existingLabel.anchor
+        : null;
     const edits: SchematicEdit[] = sameNameNet
       ? [
           {
@@ -5136,34 +5215,80 @@ export function App({
     edits.push({
       kind: "upsert_schematic_annotation",
       annotation: {
-        id: labelId,
+        id: existingLabel?.id ?? `net-label-${route.id}`,
         kind: "net-label",
         content: semanticTextDocument(name, "net-label"),
         netId: targetNetId,
-        anchor: {
-          kind: "route",
-          routeId: selectedRoute.id,
-          segmentIndex: segment,
-          t: 0.5,
-          normalOffset: -8,
-          direction: "forward",
-          orientation: "follow",
-          fallbackPosition: position,
-        },
+        // A dragged route anchor survives a name edit; new labels start at
+        // the middle segment with the default normal offset.
+        anchor: previousAnchor
+          ? { ...previousAnchor, fallbackPosition: position }
+          : {
+              kind: "route",
+              routeId: route.id,
+              segmentIndex: segment,
+              t: 0.5,
+              normalOffset: -8,
+              direction: "forward",
+              orientation: "follow",
+              fallbackPosition: position,
+            },
         alignment: "middle",
         rotation: 0,
         locked: false,
       },
     });
+    return edits;
+  }
+
+  function commitPendingNetLabelDraft(): void {
+    const routeId = netLabelDraftRouteRef.current;
+    netLabelDraftRouteRef.current = null;
+    if (!routeId) return;
+    const route = document.routes.find((candidate) => candidate.id === routeId);
+    if (!route) return;
+    const existing = netLabelForRoute(route);
+    const draftName = netLabelDraft.trim();
+    const currentName = existing
+      ? flattenRichText(existing.content).trim()
+      : "";
+    if (existing ? draftName === currentName : draftName === "") return;
+    const edits = netLabelEditsForRoute(route, netLabelDraft);
+    if (!edits) return;
     const result = transact(edits);
     if (result.ok) {
-      replaceSelectionKind("annotation", [labelId]);
       setStatus(
-        sameNameNet
-          ? `Connected Nets through label ${name}`
-          : `Named Net ${name}`,
+        draftName ? `Saved Net Label ${draftName}` : "Removed Net Label",
       );
     }
+  }
+
+  function applyNetLabel(): void {
+    if (!selectedRoute) return;
+    const existingLabel = netLabelForRoute(selectedRoute);
+    const name = netLabelDraft.trim();
+    if (!name && !existingLabel) {
+      setStatus("Selected Route has no Net Label");
+      return;
+    }
+    const edits = netLabelEditsForRoute(selectedRoute, netLabelDraft);
+    if (!edits) return;
+    const result = transact(edits);
+    if (!result.ok) return;
+    netLabelDraftRouteRef.current = null;
+    if (!name) {
+      replaceSelectionKind("annotation", []);
+      setStatus(`Deleted Net Label ${flattenRichText(existingLabel!.content)}`);
+      return;
+    }
+    replaceSelectionKind("annotation", [
+      existingLabel?.id ?? `net-label-${selectedRoute.id}`,
+    ]);
+    setStatus(
+      edits.some((edit) => edit.kind === "merge_nets")
+        ? `Connected Nets through label ${name}`
+        : `Named Net ${name}`,
+    );
   }
 
   function deleteSelectedRouteNetLabel(): void {
@@ -5187,26 +5312,73 @@ export function App({
     }
   }
 
-  function applyInstanceProperties(): void {
-    if (
-      !selectedInstance ||
-      instancePropertyDraft.instanceId !== selectedInstance.id
-    ) {
+  function setReferenceLabelsVisible(
+    instanceIds: readonly string[],
+    visible: boolean,
+  ): void {
+    const edits: SchematicEdit[] = [];
+    for (const instanceId of instanceIds) {
+      const instance = document.instances.find(
+        (item) => item.id === instanceId,
+      );
+      if (!instance) continue;
+      const label = instanceLabelAnnotationFor(document, instanceId);
+      if (label) {
+        const { visible: _currentVisibility, ...rest } = label;
+        edits.push({
+          kind: "upsert_schematic_annotation",
+          annotation: visible ? rest : { ...rest, visible: false },
+        });
+      } else if (visible) {
+        const created = defaultInstanceLabel(
+          document,
+          instance,
+          resolver,
+          styleProfile,
+        );
+        if (created) {
+          edits.push({
+            kind: "upsert_schematic_annotation",
+            annotation: created,
+          });
+        }
+      }
+    }
+    if (edits.length === 0) {
+      setStatus(
+        visible
+          ? "No reference labels are available for this selection"
+          : "Selected components have no reference labels",
+      );
       return;
     }
+    const result = transact(edits);
+    if (result.ok) {
+      setStatus(
+        `${visible ? "Showing" : "Hiding"} reference labels on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
+      );
+    }
+  }
+
+  function instancePropertyEdits(draft: {
+    instanceId: string | null;
+    parameters: Record<string, string>;
+    x: string;
+    y: string;
+    rotation: "0" | "90" | "180" | "270";
+  }): { edits: SchematicEdit[]; invalidPosition: boolean } {
+    if (!draft.instanceId) return { edits: [], invalidPosition: false };
+    const instance = document.instances.find(
+      (item) => item.id === draft.instanceId,
+    );
+    if (!instance) return { edits: [], invalidPosition: false };
     const edits: SchematicEdit[] = [];
     const baseNetlist =
-      selectedInstance.netlist ??
-      initialInstanceNetlist(
-        document,
-        selectedInstance.symbolId,
-        selectedInstance.properties,
-      );
+      instance.netlist ??
+      initialInstanceNetlist(document, instance.symbolId, instance.properties);
     const netlistParameters = { ...baseNetlist.parameters };
-    for (const parameter of componentParameters(selectedInstance.symbolId)) {
-      const value = (
-        instancePropertyDraft.parameters[parameter.key] ?? ""
-      ).trim();
+    for (const parameter of componentParameters(instance.symbolId)) {
+      const value = (draft.parameters[parameter.key] ?? "").trim();
       if (value === "") delete netlistParameters[parameter.key];
       else netlistParameters[parameter.key] = value;
     }
@@ -5215,48 +5387,70 @@ export function App({
       ...baseNetlist,
       parameters: netlistParameters,
     };
-    if (
-      JSON.stringify(nextNetlist) !== JSON.stringify(selectedInstance.netlist)
-    ) {
+    if (JSON.stringify(nextNetlist) !== JSON.stringify(instance.netlist)) {
       edits.push({
         kind: "set_instance_netlist",
-        instanceId: selectedInstance.id,
+        instanceId: instance.id,
         netlist: nextNetlist,
       });
     }
 
-    if (selectedInstance.placement) {
-      const x = Number(instancePropertyDraft.x);
-      const y = Number(instancePropertyDraft.y);
+    let invalidPosition = false;
+    if (instance.placement) {
+      const x = Number(draft.x);
+      const y = Number(draft.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        setStatus("Position must contain finite X and Y coordinates");
-        return;
+        invalidPosition = true;
+      } else {
+        const position = {
+          x: snapCoordinate(x, document.presentation.grid),
+          y: snapCoordinate(y, document.presentation.grid),
+        };
+        if (
+          position.x !== instance.placement.position.x ||
+          position.y !== instance.placement.position.y
+        ) {
+          edits.push({
+            kind: "move_instance",
+            instanceId: instance.id,
+            position,
+          });
+        }
       }
-      const position = {
-        x: snapCoordinate(x, document.presentation.grid),
-        y: snapCoordinate(y, document.presentation.grid),
-      };
-      if (
-        position.x !== selectedInstance.placement.position.x ||
-        position.y !== selectedInstance.placement.position.y
-      ) {
-        edits.push({
-          kind: "move_instance",
-          instanceId: selectedInstance.id,
-          position,
-        });
-      }
-      const rotation = Number(instancePropertyDraft.rotation) as
-        0 | 90 | 180 | 270;
-      if (rotation !== selectedInstance.placement.rotation) {
+      const rotation = Number(draft.rotation) as 0 | 90 | 180 | 270;
+      if (rotation !== instance.placement.rotation) {
         edits.push({
           kind: "rotate_instance",
-          instanceId: selectedInstance.id,
+          instanceId: instance.id,
           rotation,
         });
       }
     }
+    return { edits, invalidPosition };
+  }
 
+  function commitInstancePropertyDraft(): boolean {
+    const { edits, invalidPosition } = instancePropertyEdits(
+      instancePropertyDraft,
+    );
+    if (invalidPosition || edits.length === 0) return false;
+    return transact(edits).ok;
+  }
+
+  function applyInstanceProperties(): void {
+    if (
+      !selectedInstance ||
+      instancePropertyDraft.instanceId !== selectedInstance.id
+    ) {
+      return;
+    }
+    const { edits, invalidPosition } = instancePropertyEdits(
+      instancePropertyDraft,
+    );
+    if (invalidPosition) {
+      setStatus("Position must contain finite X and Y coordinates");
+      return;
+    }
     if (edits.length === 0) {
       setStatus("Component properties are unchanged");
       return;
@@ -5773,22 +5967,24 @@ export function App({
             .filter((junction) => pointInRect(junction.position, rect))
             .map((junction) => junction.id),
           annotationIds: document.annotations
-            .filter((annotation) =>
-              rectsIntersect(
-                annotationHitBox(
-                  annotation,
-                  annotationAnchor(
-                    document,
-                    resolver,
+            .filter(
+              (annotation) =>
+                annotation.visible !== false &&
+                rectsIntersect(
+                  annotationHitBox(
                     annotation,
+                    annotationAnchor(
+                      document,
+                      resolver,
+                      annotation,
+                      routePolylines,
+                      styleProfile,
+                    ),
                     routePolylines,
                     styleProfile,
                   ),
-                  routePolylines,
-                  styleProfile,
+                  rect,
                 ),
-                rect,
-              ),
             )
             .map((annotation) => annotation.id),
           draftingIds: (document.drafting?.objects ?? [])
@@ -6409,7 +6605,9 @@ export function App({
         textEditing &&
         !targetElement?.closest('[data-testid="canvas-text-editor"]')
       ) {
-        setTextEditing(null);
+        // Leaving the canvas text editor commits the session; emptying the
+        // text still deletes the annotation, matching the Apply button.
+        commitTextEditing();
       }
       const openMenus = Array.from(
         globalThis.document.querySelectorAll<HTMLDetailsElement>(
@@ -6458,8 +6656,23 @@ export function App({
       }
       if (event.key === "Escape" && textEditing) {
         event.preventDefault();
-        setTextEditing(null);
-        setStatus("Cancelled text editing");
+        // Escape commits the session; emptying the text still deletes the
+        // annotation, matching the Apply button.
+        commitTextEditing();
+        return;
+      }
+      if (
+        event.key === "Escape" &&
+        isTypingTarget(event.target) &&
+        event.target instanceof Element &&
+        event.target.closest(".selection-dock") !== null
+      ) {
+        // Escape inside Properties commits pending drafts instead of losing
+        // them; a second Escape resumes normal canvas cancel behavior.
+        event.preventDefault();
+        commitInstancePropertyDraft();
+        commitPendingNetLabelDraft();
+        if (event.target instanceof HTMLElement) event.target.blur();
         return;
       }
       const currentInteraction = getCurrentInteractionState();
@@ -7416,6 +7629,19 @@ export function App({
                   <span>Component group</span>
                   <h2>{selectedIds.length} components</h2>
                   <p>{selectedIds.join(", ")}</p>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={selectedGroupLabelsAllVisible}
+                      onChange={(event) =>
+                        setReferenceLabelsVisible(
+                          selectedIds,
+                          event.currentTarget.checked,
+                        )
+                      }
+                    />{" "}
+                    Show reference labels
+                  </label>
                 </section>
               ) : null}
               {selectedInstance?.placement ? (
@@ -7434,6 +7660,22 @@ export function App({
                   aria-label="Component properties"
                 >
                   <h2>Component properties</h2>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedInstanceLabel !== undefined &&
+                        selectedInstanceLabel.visible !== false
+                      }
+                      onChange={(event) =>
+                        setReferenceLabelsVisible(
+                          [selectedInstance.id],
+                          event.currentTarget.checked,
+                        )
+                      }
+                    />{" "}
+                    Show reference label
+                  </label>
                   {componentParameters(selectedInstance.symbolId).map(
                     (parameter, index) => (
                       <label key={parameter.key} title={parameter.help}>
@@ -8017,23 +8259,18 @@ export function App({
                   </button>
                 </section>
               ) : null}
-              {selectedAnnotation && !isRoutedMarker(selectedAnnotation) ? (
+              {selectedAnnotation &&
+              !isRoutedMarker(selectedAnnotation) &&
+              selectedNetLabelBinding ? (
                 <section
                   className="context-actions"
                   aria-label="Annotation actions"
                 >
                   <h2>Annotation</h2>
-                  {selectedNetLabelBinding ? (
-                    <button type="button" onClick={toggleHighlightedNet}>
-                      {selectedHighlightIsActive
-                        ? "Clear Net highlight (H)"
-                        : "Highlight Net (H)"}
-                    </button>
-                  ) : null}
-                  <button type="button" onClick={deleteSelectedAnnotation}>
-                    {selectedAnnotation.kind === "net-label"
-                      ? "Delete selected Net label"
-                      : "Delete annotation"}
+                  <button type="button" onClick={toggleHighlightedNet}>
+                    {selectedHighlightIsActive
+                      ? "Clear Net highlight (H)"
+                      : "Highlight Net (H)"}
                   </button>
                 </section>
               ) : null}
@@ -8540,6 +8777,8 @@ export function App({
                             onKeyDown={(event) => {
                               if (event.key === "Escape") {
                                 event.preventDefault();
+                                // Escape saves the edit like Enter does.
+                                applyNetLabel();
                                 setNetLabelEditorOpen(false);
                               }
                             }}
@@ -8865,48 +9104,50 @@ export function App({
                   />
                 );
               })}
-              {document.annotations.map((annotation) => {
-                const anchor = annotationAnchor(
-                  document,
-                  resolver,
-                  annotation,
-                  routePolylines,
-                  styleProfile,
-                );
-                const hitBox = annotationHitBox(
-                  annotation,
-                  anchor,
-                  routePolylines,
-                  styleProfile,
-                );
-                const selected =
-                  selectedAnnotationId === annotation.id ||
-                  supplementalSelection.annotationIds.includes(annotation.id);
-                return (
-                  <rect
-                    key={`annotation-hit-${annotation.id}`}
-                    data-testid={`annotation-hit-${annotation.id}`}
-                    data-canvas-hit-kind="annotation"
-                    data-canvas-hit-id={annotation.id}
-                    data-drag-object-id={annotation.id}
-                    className={
-                      selected
-                        ? "hit-target annotation-text-hit selected"
-                        : "hit-target annotation-text-hit"
-                    }
-                    {...hitBox}
-                    onClick={(event) => event.stopPropagation()}
-                    onPointerDown={(event) =>
-                      beginAnnotationDrag(event, annotation)
-                    }
-                    pointerEvents={tool === "wire" ? "none" : undefined}
-                    onDoubleClick={(event) => {
-                      event.stopPropagation();
-                      beginAnnotationTextEditing(annotation);
-                    }}
-                  />
-                );
-              })}
+              {document.annotations
+                .filter((annotation) => annotation.visible !== false)
+                .map((annotation) => {
+                  const anchor = annotationAnchor(
+                    document,
+                    resolver,
+                    annotation,
+                    routePolylines,
+                    styleProfile,
+                  );
+                  const hitBox = annotationHitBox(
+                    annotation,
+                    anchor,
+                    routePolylines,
+                    styleProfile,
+                  );
+                  const selected =
+                    selectedAnnotationId === annotation.id ||
+                    supplementalSelection.annotationIds.includes(annotation.id);
+                  return (
+                    <rect
+                      key={`annotation-hit-${annotation.id}`}
+                      data-testid={`annotation-hit-${annotation.id}`}
+                      data-canvas-hit-kind="annotation"
+                      data-canvas-hit-id={annotation.id}
+                      data-drag-object-id={annotation.id}
+                      className={
+                        selected
+                          ? "hit-target annotation-text-hit selected"
+                          : "hit-target annotation-text-hit"
+                      }
+                      {...hitBox}
+                      onClick={(event) => event.stopPropagation()}
+                      onPointerDown={(event) =>
+                        beginAnnotationDrag(event, annotation)
+                      }
+                      pointerEvents={tool === "wire" ? "none" : undefined}
+                      onDoubleClick={(event) => {
+                        event.stopPropagation();
+                        beginAnnotationTextEditing(annotation);
+                      }}
+                    />
+                  );
+                })}
               {(document.drafting?.objects ?? []).map((object) => {
                 // WP-R5/P1: every drafting object gets a selectable/deletable hit
                 // shape derived from the shared geometry. P1: use the object's
@@ -9330,7 +9571,6 @@ export function App({
                   disabled={textEditingLocked}
                   onUpdate={updateTextEditing}
                   onCommit={commitTextEditing}
-                  onCancel={() => setTextEditing(null)}
                   onDelete={deleteTextEditing}
                   {...(editingAnnotation &&
                   isRoutedMarker(editingAnnotation) &&

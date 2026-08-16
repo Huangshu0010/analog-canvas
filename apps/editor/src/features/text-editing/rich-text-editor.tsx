@@ -11,7 +11,6 @@ export interface RichTextEditorProps {
   onChange(content: RichTextDocument): void;
   onSizeChange(sizeScale: number): void;
   onCommit(): void;
-  onCancel(): void;
   onDelete(): void;
   onReverseCurrentArrow?(): void;
 }
@@ -100,7 +99,6 @@ export function RichTextEditor({
   onChange,
   onSizeChange,
   onCommit,
-  onCancel,
   onDelete,
   onReverseCurrentArrow,
 }: RichTextEditorProps) {
@@ -265,7 +263,8 @@ export function RichTextEditor({
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             event.preventDefault();
-            onCancel();
+            // Escape saves the session, matching click-away and Ctrl+Enter.
+            onCommit();
           } else if (event.key === "Enter" && event.ctrlKey) {
             event.preventDefault();
             onCommit();

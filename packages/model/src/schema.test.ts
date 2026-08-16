@@ -119,4 +119,23 @@ describe("CircuitProject schema", () => {
     };
     expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
   });
+  it("accepts an optional presentation-only visible flag on annotations", () => {
+    const project = createEmptyProject("project-visible", "Visible");
+    const document = project.documents[0]!;
+    const label = {
+      id: "label-1",
+      kind: "instance-label" as const,
+      content: { runs: [{ kind: "text" as const, value: "R1" }] },
+      anchor: { kind: "free" as const, position: { x: 20, y: 20 } },
+      alignment: "middle" as const,
+      rotation: 0 as const,
+      locked: false,
+    };
+    document.annotations.push(label);
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+    document.annotations[0] = { ...label, visible: false };
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+    document.annotations[0] = { ...label, visible: true };
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+  });
 });

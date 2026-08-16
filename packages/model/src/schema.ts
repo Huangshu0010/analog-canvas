@@ -362,6 +362,9 @@ export const AnnotationSchema = z
     sizeScale: z.number().finite().positive().optional(),
     // SchematicAnnotation route-marker discriminator (ADR 0010).
     markerKind: RouteMarkerKindSchema.optional(),
+    // Presentation-only switch: hidden annotations stay in the document
+    // (recoverable) but renderers and hit surfaces skip them.
+    visible: z.boolean().optional(),
   })
   .superRefine((annotation, context) => {
     if (annotation.markerKind && annotation.kind !== "route-marker") {
