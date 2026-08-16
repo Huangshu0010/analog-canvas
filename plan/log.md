@@ -7540,3 +7540,18 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   Playwright run (17/17), and `git diff --check` passed.
 - Commit status: committed on `codex/insert-dialog-list-default-expanded` and
   merged to `main` after the mainline gate.
+
+## 2026-08-16 - Q toggles the Properties dock closed
+
+- Target: make `Q` close the open Properties dock as well as open it,
+  including while focus sits in a dock text input (keypress swallowed;
+  `Shift+Q` still types).
+- Changed areas: shortcut arbitration (`close-properties` intent with
+  `propertiesOpen` / `typingInProperties` context), App dispatch and dock
+  testid, Help wording, shortcut unit contracts, and two Q-touching Playwright
+  specs (one rewritten for toggle semantics).
+- Validation: 28 focused unit tests, workspace typecheck, Prettier, extended
+  Q property-editing contract, full drafting spec (25), two remaining
+  component-insert Q tests, and `git diff --check` passed.
+- Commit status: committed on `zcode/q-toggles-properties`; mainline merge
+  awaits the delivery gate.

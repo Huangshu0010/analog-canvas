@@ -757,7 +757,16 @@ test("drawing Properties follows selection and closes with the dock", async ({
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("drafting-properties")).toHaveCount(0);
 
+  // Escape leaves the dock open, so reselecting restores Properties without
+  // Q, and the next Q collapses the dock instead of reopening it.
   await hit.click({ force: true });
+  await expect(page.getByTestId("drafting-properties")).toBeVisible();
+  await page.keyboard.press("q");
+  await expect(page.getByTestId("selection-shelf")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(page.getByTestId("drafting-properties")).toBeHidden();
   await page.keyboard.press("q");
   await expect(page.getByTestId("drafting-properties")).toBeVisible();
   await page
