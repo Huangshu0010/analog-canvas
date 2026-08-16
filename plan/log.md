@@ -1,5 +1,20 @@
 # Maintenance Log
 
+## 2026-08-16 - Grid-dots toggle icon clarity
+
+- Target: the background-dots toggle in the bottom-right canvas controls had
+  an unclear icon — its 3×3 dots at `r=0.9` collapsed to ~1.4px at the 16px
+  tool-icon and read as noise.
+- Changed areas: `tool-icon.tsx` grid glyph dots calibrated to `r=1.4`
+  (~2.2px), a clear dot field that still matches the thin-stroke icon family;
+  `aria-label` untouched so the e2e contract holds.
+- Validation: pixel measurement (new icon = 9 solid ~2px dot clusters; old =
+  none visible), editor unit tests 305/305, grid e2e 1/1, typecheck +
+  Prettier, CI six checks green.
+- Commit status: PR #103 (`zcode/grid-icon-clarity`), commit `e3bd2ae`;
+  all six required remote checks passed and the human merged it to `main`
+  as `eac9c40`.
+
 ## 2026-08-16 - Fraction parts three A+ levels larger
 
 - Target: the stacked-fraction parts in value annotations rendered at the
