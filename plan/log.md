@@ -7553,5 +7553,5 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Validation: 28 focused unit tests, workspace typecheck, Prettier, extended
   Q property-editing contract, full drafting spec (25), two remaining
   component-insert Q tests, and `git diff --check` passed.
-- Commit status: committed on `zcode/q-toggles-properties`; mainline merge
-  awaits the delivery gate.
+- Commit status: merged to `main` via #91 after the mainline gate (clean-state
+  local `pnpm ci:check` and green GitHub Actions checks).
