@@ -21,7 +21,8 @@
 - Commit status: PR #89 (`codex/vdd-power-port-device`), commits `681477c`
   (device), `00cb181` (regenerated MCP resources after the agent catalog
   grew), `d76bd24` (refreshed MCP tarball sha256 pin from the CI-reported
-  Linux digest); all six required remote checks pass.
+  Linux digest); all six required remote checks passed and PR #89 merged to
+  `main` as `37fced5`.
 
 ## 2026-08-15 - Editor runtime crash safety (minimal three layers)
 
