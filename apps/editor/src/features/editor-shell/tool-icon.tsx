@@ -90,15 +90,18 @@ export function ToolIcon({ name }: { name: ToolIconName }) {
       ) : null}
       {name === "grid" ? (
         <>
-          <circle cx="5" cy="5" r="0.9" fill="currentColor" />
-          <circle cx="10" cy="5" r="0.9" fill="currentColor" />
-          <circle cx="15" cy="5" r="0.9" fill="currentColor" />
-          <circle cx="5" cy="10" r="0.9" fill="currentColor" />
-          <circle cx="10" cy="10" r="0.9" fill="currentColor" />
-          <circle cx="15" cy="10" r="0.9" fill="currentColor" />
-          <circle cx="5" cy="15" r="0.9" fill="currentColor" />
-          <circle cx="10" cy="15" r="0.9" fill="currentColor" />
-          <circle cx="15" cy="15" r="0.9" fill="currentColor" />
+          {/* 3x3 dot field = background-dots toggle; the 0.9-radius dots
+              collapsed to ~1.4px at the 16px icon and read as noise, so the
+              dots are calibrated to r=1.4 (~2.2px, still clearly spaced). */}
+          <circle cx="5" cy="5" r="1.4" fill="currentColor" />
+          <circle cx="10" cy="5" r="1.4" fill="currentColor" />
+          <circle cx="15" cy="5" r="1.4" fill="currentColor" />
+          <circle cx="5" cy="10" r="1.4" fill="currentColor" />
+          <circle cx="10" cy="10" r="1.4" fill="currentColor" />
+          <circle cx="15" cy="10" r="1.4" fill="currentColor" />
+          <circle cx="5" cy="15" r="1.4" fill="currentColor" />
+          <circle cx="10" cy="15" r="1.4" fill="currentColor" />
+          <circle cx="15" cy="15" r="1.4" fill="currentColor" />
         </>
       ) : null}
       {name === "inspect" ? (
