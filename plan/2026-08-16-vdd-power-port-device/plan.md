@@ -125,5 +125,16 @@ render-svg tests, workspace typecheck, `pnpm symbols:razavi:check` (18 assets),
 `pnpm agent-kit:catalog:check`, `pnpm agent-api:artifacts:check`, the full
 `component-insert.spec.ts` (18/18, including the new device spec) plus the four
 VDD rail specs in `manual-editor.spec.ts`, targeted Prettier,
-`git diff --check`, and `git status --short --branch`. Ready to deliver through
-the protected-main gate.
+`git diff --check`, and `git status --short --branch`. A full clean-state
+`pnpm install --frozen-lockfile && pnpm ci:check` also passed locally.
+
+Delivery repair loop on PR #89 (first remote run): the regenerated agent
+authoring catalog made `apps/mcp-server/src/resources.generated.ts` stale
+(unit job) and changed the MCP tarball (Release contracts sha256 pin). Fixed
+by `pnpm mcp:resources` (commit `00cb181`) and refreshing
+`config/agent-mcp-distribution.json` `release.sha256` with the Linux-built
+digest reported by CI (commit `d76bd24`, the same repair pattern as
+`c954e85`). Windows-built tarballs are not byte-identical to the Linux
+canonical artifact, so the pin can only be refreshed from the CI-reported
+digest. All six required GitHub Actions checks then passed on
+`codex/vdd-power-port-device`.

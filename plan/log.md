@@ -16,8 +16,12 @@
 - Validation: 344 editor+symbols unit tests, 138 agent tests, render-svg,
   typecheck, `symbols:razavi:check`, `agent-kit:catalog:check`,
   `agent-api:artifacts:check`, full `component-insert.spec.ts` (18/18) plus
-  the four VDD rail specs, prettier, `git diff --check` clean.
-- Commit status: committed on `codex/vdd-power-port-device`.
+  the four VDD rail specs, prettier, `git diff --check` clean; clean-state
+  local `pnpm ci:check` green.
+- Commit status: PR #89 (`codex/vdd-power-port-device`), commits `681477c`
+  (device), `00cb181` (regenerated MCP resources after the agent catalog
+  grew), `d76bd24` (refreshed MCP tarball sha256 pin from the CI-reported
+  Linux digest); all six required remote checks pass.
 
 ## 2026-08-15 - Editor runtime crash safety (minimal three layers)
 
