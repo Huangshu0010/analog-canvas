@@ -7,6 +7,7 @@ import {
   contactRequiresJunctionDot,
   deriveDocumentContactEvidence,
   fractionGeometry,
+  fractionPartScale,
   isMosBulkRoute,
   resolvePrimitiveStrokeWidth,
   resolveDraftingObjectGeometry,
@@ -85,8 +86,8 @@ function renderStackedFractionAnnotation(
 ): string {
   const { profile } = options;
   const fontSize = options.fontSize;
-  const partFont =
-    Math.round(fontSize * profile.typography.subscriptScale * 100) / 100;
+  const partScale = fractionPartScale(profile.typography.subscriptScale);
+  const partFont = Math.round(fontSize * partScale * 100) / 100;
   const halfWidth = options.width / 2;
   const centerX =
     options.alignment === "start"
@@ -94,11 +95,15 @@ function renderStackedFractionAnnotation(
       : options.alignment === "end"
         ? options.position.x - halfWidth
         : options.position.x;
-  const barY = options.position.y - fontSize * fractionGeometry.barRiseEm;
+  // Geometry offsets are in em of the part font; scale to the base font.
+  const barY =
+    options.position.y - fontSize * partScale * fractionGeometry.barRiseEm;
   const numeratorY =
-    options.position.y - fontSize * fractionGeometry.numeratorBaselineRiseEm;
+    options.position.y -
+    fontSize * partScale * fractionGeometry.numeratorBaselineRiseEm;
   const denominatorY =
-    options.position.y + fontSize * fractionGeometry.denominatorBaselineDropEm;
+    options.position.y +
+    fontSize * partScale * fractionGeometry.denominatorBaselineDropEm;
   const partStyle = `font-style:normal;font-weight:${profile.typography.mathWeight}`;
   return `<g ${options.attributes}><text data-role="fraction-numerator" x="${centerX}" y="${numeratorY}" text-anchor="middle" font-size="${partFont}" style="${partStyle}">${renderRichTextDocument(fraction.numerator, profile, { defaultBold: true })}</text><line data-role="fraction-bar" x1="${centerX - halfWidth}" y1="${barY}" x2="${centerX + halfWidth}" y2="${barY}" stroke="${profile.foreground}" stroke-width="${profile.strokes.annotation}"/><text data-role="fraction-denominator" x="${centerX}" y="${denominatorY}" text-anchor="middle" font-size="${partFont}" style="${partStyle}">${renderRichTextDocument(fraction.denominator, profile, { defaultBold: true })}</text></g>`;
 }

@@ -1,5 +1,5 @@
 import type { SchematicStyleProfile } from "@icm/derived";
-import { fractionGeometry } from "@icm/derived";
+import { fractionGeometry, fractionPartScale } from "@icm/derived";
 import { flattenRichText } from "@icm/model";
 import type { RichTextDocument, RichTextRun } from "@icm/model";
 
@@ -80,22 +80,27 @@ function renderInlineFraction(
   ctx: RenderContext,
 ): string {
   const typography = ctx.profile.typography;
-  const scale = typography.subscriptScale;
+  const scale = fractionPartScale(typography.subscriptScale);
   const percent = Math.round(scale * 100);
   const numerator = renderRuns(node.numerator.runs, ctx);
   const denominator = renderRuns(node.denominator.runs, ctx);
+  // Part widths are measured in base em (char count × 0.6 × part scale); the
+  // overhang is in em of the part font, so scale it back to base em too. The
+  // dx compensation then converts base-em offsets to the part tspans' own em.
   const numeratorWidthEm =
     [...flattenRichText(node.numerator)].length * 0.6 * scale;
   const denominatorWidthEm =
     [...flattenRichText(node.denominator)].length * 0.6 * scale;
   const blockWidthEm =
     Math.max(numeratorWidthEm, denominatorWidthEm) +
-    fractionGeometry.barOverhangEm * 2;
+    fractionGeometry.barOverhangEm * scale * 2;
   const numeratorDx = (blockWidthEm - numeratorWidthEm) / 2 / scale;
   const denominatorDx =
     ((blockWidthEm - denominatorWidthEm) / 2 - numeratorWidthEm) / scale;
   const resetDx = (blockWidthEm - denominatorWidthEm) / 2;
-  return `<tspan data-text-run="fraction"><tspan data-text-run="numerator" font-size="${percent}%" dx="${numeratorDx}" dy="${-fractionGeometry.numeratorBaselineRiseEm / scale}em">${numerator}</tspan><tspan data-text-run="denominator" font-size="${percent}%" dx="${denominatorDx}" dy="${(fractionGeometry.numeratorBaselineRiseEm + fractionGeometry.denominatorBaselineDropEm) / scale}em">${denominator}</tspan><tspan dx="${resetDx}" dy="${-fractionGeometry.denominatorBaselineDropEm}em"></tspan></tspan>`;
+  // Vertical offsets are in em of the part font, so they need no /scale in
+  // the part tspans' own units; the base-font reset tspan scales its drop.
+  return `<tspan data-text-run="fraction"><tspan data-text-run="numerator" font-size="${percent}%" dx="${numeratorDx}" dy="${-fractionGeometry.numeratorBaselineRiseEm}em">${numerator}</tspan><tspan data-text-run="denominator" font-size="${percent}%" dx="${denominatorDx}" dy="${fractionGeometry.numeratorBaselineRiseEm + fractionGeometry.denominatorBaselineDropEm}em">${denominator}</tspan><tspan dx="${resetDx}" dy="${-fractionGeometry.denominatorBaselineDropEm * scale}em"></tspan></tspan>`;
 }
 
 function renderSpan(
