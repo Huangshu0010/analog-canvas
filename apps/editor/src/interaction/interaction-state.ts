@@ -28,6 +28,7 @@ export interface PendingComponentPlacement {
   initialRotation: 0 | 90 | 180 | 270;
   showReference: boolean;
   referenceText: string | null;
+  showValue: boolean;
 }
 
 export interface CopyPlacement<TClipboard> {
@@ -150,7 +151,8 @@ function sameComponentPlacement(
     left.symbolId !== right.symbolId ||
     left.initialRotation !== right.initialRotation ||
     left.showReference !== right.showReference ||
-    left.referenceText !== right.referenceText
+    left.referenceText !== right.referenceText ||
+    left.showValue !== right.showValue
   ) {
     return false;
   }

@@ -1,5 +1,6 @@
 import {
   defaultInstanceLabelPlacement,
+  displayableInstanceValue,
   measureRichTextDocument,
   richTextMetrics,
   resolveAnnotationPresentation,
@@ -507,6 +508,68 @@ export function defaultInstanceLabel(
         },
       ],
     },
+    anchor: {
+      kind: "object",
+      objectId: instance.id,
+      localOffset: {
+        x: position.x - instance.placement.position.x,
+        y: position.y - instance.placement.position.y,
+      },
+      fallbackPosition: position,
+    },
+    alignment: placement.alignment,
+    rotation: 0,
+    locked: false,
+  };
+}
+
+export function instanceValueAnnotation(
+  document: SchematicDocument,
+  instanceId: string,
+): Annotation | null {
+  return (
+    document.annotations.find(
+      (annotation) =>
+        annotation.kind === "instance-value" &&
+        annotation.anchor.kind === "object" &&
+        annotation.anchor.objectId === instanceId,
+    ) ?? null
+  );
+}
+
+/**
+ * Projects the instance's electrical parameters into a fresh Value annotation
+ * at the value slot. Returns null when no projection exists or one is already
+ * present; callers that need to refresh content should refresh explicitly.
+ */
+export function defaultInstanceValue(
+  document: SchematicDocument,
+  instance: SchematicDocument["instances"][number],
+  resolver: SymbolResolver,
+  styleProfile: SchematicStyleProfile,
+): Annotation | null {
+  if (!instance.placement) return null;
+  if (instanceValueAnnotation(document, instance.id)) return null;
+  const display = displayableInstanceValue(instance);
+  if (display.kind !== "displayable") return null;
+  const resolved = resolver.resolve(
+    instance.symbolId,
+    instance.symbolVariantId,
+  );
+  if (!resolved) return null;
+  const placement = defaultInstanceLabelPlacement(
+    instance,
+    resolved,
+    styleProfile,
+    document.presentation.grid,
+    "value",
+  );
+  if (!placement) return null;
+  const position = placement.position;
+  return {
+    id: `instance-value-${instance.id}`,
+    kind: "instance-value",
+    content: structuredClone(display.content),
     anchor: {
       kind: "object",
       objectId: instance.id,

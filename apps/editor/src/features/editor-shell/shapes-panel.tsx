@@ -57,6 +57,7 @@ export function quickPlaceRequest(
     initialRotation: 0,
     showReference: true,
     referenceText: null,
+    showValue: false,
   };
 }
 

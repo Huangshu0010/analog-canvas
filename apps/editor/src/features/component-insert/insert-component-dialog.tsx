@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { displayableInstanceValue } from "@icm/derived";
 import { renderSymbolDefinitionBody } from "@icm/render-svg";
 
 import { defaultRazaviSymbolVariantId } from "../../presentation/razavi-presentation";
@@ -13,6 +14,7 @@ import {
   flattenComponentCatalog,
 } from "./symbol-catalog";
 import type { ComponentInsertRequest } from "./component-insert-request";
+import { DisplayToggle } from "./display-toggle";
 import { SymbolArtwork } from "./symbol-artwork";
 
 export type { ComponentInsertRequest } from "./component-insert-request";
@@ -93,6 +95,7 @@ export function InsertComponentDialog({
   const [initialRotation, setInitialRotation] = useState<0 | 90 | 180 | 270>(0);
   const [showReference, setShowReference] = useState(true);
   const [referenceText, setReferenceText] = useState("");
+  const [showValue, setShowValue] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const groups = useMemo(
     () => componentCatalog(styleProfileId, query, recentSymbolIds),
@@ -103,6 +106,17 @@ export function InsertComponentDialog({
     symbols.find((symbol) => symbol.id === selectedId) ?? symbols[0] ?? null;
   const selectedIsVddRail = selected?.id === "vdd";
   const parameters = componentParameters(selected?.id ?? "");
+  const valueDisplay = displayableInstanceValue({
+    id: "preview",
+    symbolId: selected?.id ?? "",
+    placement: null,
+    properties: Object.fromEntries(
+      Object.entries(parameterValues)
+        .map(([key, value]) => [key, value.trim()] as const)
+        .filter(([, value]) => value !== ""),
+    ),
+  });
+  const valueAvailable = valueDisplay.kind === "displayable";
 
   useEffect(() => {
     if (!open) return;
@@ -112,6 +126,7 @@ export function InsertComponentDialog({
     setInitialRotation(0);
     setShowReference(true);
     setReferenceText("");
+    setShowValue(false);
     const frame = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [initialSymbols, open]);
@@ -178,6 +193,7 @@ export function InsertComponentDialog({
       initialRotation,
       showReference,
       referenceText: trimmedReference === "" ? null : trimmedReference,
+      showValue: showValue && valueAvailable,
     });
   };
 
@@ -343,24 +359,30 @@ export function InsertComponentDialog({
                   </select>
                 </label>
                 <div className="insert-label-control">
-                  <label className="insert-reference-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showReference}
-                      onChange={(event) =>
-                        setShowReference(event.currentTarget.checked)
-                      }
-                    />
-                    <span>Label</span>
-                  </label>
+                  <DisplayToggle
+                    label="Reference"
+                    checked={showReference}
+                    onChange={setShowReference}
+                  />
                   <input
-                    aria-label="Label name"
+                    aria-label="Reference name"
                     value={referenceText}
                     disabled={!showReference}
                     placeholder="Name (auto)"
                     onChange={(event) =>
                       setReferenceText(event.currentTarget.value)
                     }
+                  />
+                  <DisplayToggle
+                    label="Value"
+                    checked={showValue}
+                    disabled={!valueAvailable}
+                    help={
+                      valueAvailable
+                        ? undefined
+                        : "Fill the device parameters first"
+                    }
+                    onChange={setShowValue}
                   />
                 </div>
               </section>
