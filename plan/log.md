@@ -7585,5 +7585,6 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Validation: 511 unit tests across editor/model/render-svg/edit-engine/
   derived, workspace typecheck, Prettier, full manual-editor (74), drafting
   (25), and component-insert (18) Playwright specs, `git diff --check`.
-- Commit status: committed on `zcode/text-system-improvements`; mainline
-  merge awaits the delivery gate.
+- Commit status: merged to `main` via #95 after the mainline gate (clean-state
+  local `pnpm ci:check`, green GitHub Actions checks after refreshing the
+  Linux MCP tarball checksum recorded in `config/agent-mcp-distribution.json`).
