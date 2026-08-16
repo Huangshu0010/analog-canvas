@@ -26,7 +26,6 @@ export interface EditorShortcutContext {
   hasClearableDraftingSelection: boolean;
   hasRemovableWireWaypoint: boolean;
   propertiesOpen: boolean;
-  typingInProperties: boolean;
 }
 
 export type EditorShortcutIntent =
@@ -112,19 +111,9 @@ export function resolveEditorShortcut(
       : { kind: "block-browser-bookmark" };
   }
 
+  if (context.isTyping) return null;
+
   const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
-  // Q toggles the Properties dock: while typing inside the dock, plain q
-  // still closes it; Shift+Q keeps typing an uppercase letter.
-  const closesPropertiesWhileTyping =
-    plain &&
-    !event.shiftKey &&
-    key === "q" &&
-    context.interactionMode === "idle" &&
-    context.propertiesOpen &&
-    context.typingInProperties;
-
-  if (context.isTyping && !closesPropertiesWhileTyping) return null;
-
   const interactionActive = context.interactionMode !== "idle";
 
   if (plain && key === "u") {

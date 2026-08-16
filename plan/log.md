@@ -7555,3 +7555,18 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   component-insert Q tests, and `git diff --check` passed.
 - Commit status: merged to `main` via #91 after the mainline gate (clean-state
   local `pnpm ci:check` and green GitHub Actions checks).
+
+## 2026-08-16 - Q opens Properties without input auto-focus
+
+- Target: stop `Q`-opened Properties from focusing the first text input (e.g.
+  the MOS W field); focus the shelf header instead so Q stays a pure toggle,
+  and remove the previous in-input Q interception so clicked fields type
+  normally.
+- Changed areas: `openProperties` focus target, shortcut typing-suppression
+  revert (`typingInProperties` removed), shortcut unit contracts, and the
+  Q property-editing Playwright focus contract.
+- Validation: 28 focused unit tests, workspace typecheck, Prettier, Q
+  property-editing + drafting dock + double-click inspect Playwright
+  contracts, and `git diff --check` passed.
+- Commit status: committed on `zcode/q-open-without-input-focus`; mainline
+  merge awaits the delivery gate.

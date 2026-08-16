@@ -378,10 +378,11 @@ test("carries a manual Value through placement and Q property editing", async ({
     page.locator(".selection-overview").filter({ hasText: "ComponentR1" }),
   ).not.toContainText("Position");
   const propertyValue = page.getByLabel("Component value");
-  await expect(propertyValue).toBeFocused();
+  // Opening focuses the shelf header, never the first field: Q stays a pure
+  // toggle and editing starts only when the user clicks an input.
+  await expect(page.getByTestId("selection-shelf")).toBeFocused();
+  await expect(propertyValue).not.toBeFocused();
   await expect(propertyValue).toHaveValue("10k");
-  // Q toggles the dock closed even while focus sits in the value input, and
-  // the swallowed keypress never types into the field.
   await page.keyboard.press("q");
   await expect(page.getByTestId("selection-shelf")).toHaveAttribute(
     "aria-expanded",
@@ -392,8 +393,10 @@ test("carries a manual Value through placement and Q property editing", async ({
     "aria-expanded",
     "true",
   );
-  await expect(propertyValue).toBeFocused();
+  await expect(propertyValue).not.toBeFocused();
   await expect(propertyValue).toHaveValue("10k");
+  await propertyValue.click();
+  await expect(propertyValue).toBeFocused();
   await propertyValue.fill("12k");
   await page
     .getByRole("button", { name: "Apply component properties" })
