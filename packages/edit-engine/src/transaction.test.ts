@@ -765,6 +765,300 @@ describe("Edit Transaction envelope", () => {
     expect(label.alignment).toBe(initial.alignment);
   });
 
+  it("returns a canonical instance value to its slot after four quarter turns", () => {
+    let document = createEmptyDocument("document-main", "Stable value");
+    const instance = {
+      id: "M1",
+      symbolId: "nmos",
+      symbolVariantId: "textbook-3terminal",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    };
+    document.instances.push(instance);
+    const resolved = resolver.resolve("nmos", "textbook-3terminal");
+    if (!resolved) throw new Error("missing nmos");
+    const profile = resolveSchematicStyleProfile(
+      document.presentation.styleProfileId,
+    );
+    const reference = defaultInstanceLabelPlacement(
+      instance,
+      resolved,
+      profile,
+      document.presentation.grid,
+      "reference",
+    );
+    const value = defaultInstanceLabelPlacement(
+      instance,
+      resolved,
+      profile,
+      document.presentation.grid,
+      "value",
+    );
+    if (!reference || !value) throw new Error("missing default placements");
+    document.annotations.push(
+      {
+        id: "instance-label-M1",
+        kind: "instance-label",
+        content: { runs: [{ kind: "text", value: "M1" }] },
+        anchor: {
+          kind: "object",
+          objectId: "M1",
+          localOffset: {
+            x: reference.position.x - instance.placement.position.x,
+            y: reference.position.y - instance.placement.position.y,
+          },
+          fallbackPosition: reference.position,
+        },
+        alignment: reference.alignment,
+        rotation: 0,
+        locked: false,
+      },
+      {
+        id: "instance-value-M1",
+        kind: "instance-value",
+        content: { runs: [{ kind: "text", value: "10u/0.5u" }] },
+        anchor: {
+          kind: "object",
+          objectId: "M1",
+          localOffset: {
+            x: value.position.x - instance.placement.position.x,
+            y: value.position.y - instance.placement.position.y,
+          },
+          fallbackPosition: value.position,
+        },
+        alignment: value.alignment,
+        rotation: 0,
+        locked: false,
+      },
+    );
+
+    for (const rotation of [90, 180, 270, 0] as const) {
+      const result = executeTransaction(
+        document,
+        {
+          ...transaction(document.revision),
+          edits: [{ kind: "rotate_instance", instanceId: "M1", rotation }],
+        },
+        { symbolResolver: resolver },
+      );
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      document = result.document;
+    }
+
+    const [label, valueAnnotation] = document.annotations;
+    if (!label || !valueAnnotation) throw new Error("missing annotations");
+    if (
+      label.anchor.kind !== "object" ||
+      valueAnnotation.anchor.kind !== "object"
+    ) {
+      throw new Error("Canonical slot annotations must keep object anchors");
+    }
+    expect(label.anchor.fallbackPosition).toEqual(reference.position);
+    expect(valueAnnotation.anchor.fallbackPosition).toEqual(value.position);
+    // The two rows stay a fixed grid-quantized distance apart at every
+    // orientation, so they can never overlap.
+    expect(valueAnnotation.anchor.fallbackPosition.y).toBe(
+      label.anchor.fallbackPosition.y + 30,
+    );
+    expect(valueAnnotation.alignment).toBe(label.alignment);
+  });
+
+  it("refreshes a canonical instance value after a netlist parameter edit", () => {
+    const document = createEmptyDocument("document-main", "Value refresh");
+    document.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: null,
+      properties: {},
+      netlist: {
+        reference: "M1",
+        binding: { kind: "primitive", deviceClass: "mos" },
+        parameters: { w: "10u", l: "0.5u" },
+      },
+    });
+    document.annotations.push({
+      id: "instance-value-M1",
+      kind: "instance-value",
+      content: { runs: [{ kind: "text", value: "10u/0.5u" }] },
+      anchor: {
+        kind: "object",
+        objectId: "M1",
+        localOffset: { x: 30, y: 10 },
+        fallbackPosition: { x: 130, y: 110 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "set_instance_netlist",
+            instanceId: "M1",
+            netlist: {
+              reference: "M1",
+              binding: { kind: "primitive", deviceClass: "mos" },
+              parameters: { w: "20u", l: "0.5u" },
+            },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.annotations[0]!.content).toEqual({
+      runs: [{ kind: "text", value: "20u/0.5u" }],
+    });
+    // The anchor is placement-only and survives the content refresh.
+    expect(result.document.annotations[0]!.anchor).toMatchObject({
+      localOffset: { x: 30, y: 10 },
+    });
+  });
+
+  it("preserves a hand-edited instance value and hides an emptied projection", () => {
+    const baseNetlist = (parameters: Record<string, string>) => ({
+      reference: "M1",
+      binding: { kind: "primitive" as const, deviceClass: "mos" as const },
+      parameters,
+    });
+    const handEdited = createEmptyDocument("document-main", "Hand edited");
+    handEdited.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: null,
+      properties: {},
+      netlist: baseNetlist({ w: "10u", l: "0.5u" }),
+    });
+    handEdited.annotations.push({
+      id: "instance-value-M1",
+      kind: "instance-value",
+      content: { runs: [{ kind: "text", value: "MY_BIAS_DEVICE" }] },
+      anchor: {
+        kind: "object",
+        objectId: "M1",
+        localOffset: { x: 30, y: 10 },
+        fallbackPosition: { x: 130, y: 110 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    const handEditedResult = executeTransaction(
+      handEdited,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "set_instance_netlist",
+            instanceId: "M1",
+            netlist: baseNetlist({ w: "40u", l: "1u" }),
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(handEditedResult.ok).toBe(true);
+    if (handEditedResult.ok) {
+      expect(handEditedResult.document.annotations[0]!.content).toEqual({
+        runs: [{ kind: "text", value: "MY_BIAS_DEVICE" }],
+      });
+    }
+
+    const emptied = createEmptyDocument("document-main", "Emptied");
+    emptied.instances.push({
+      id: "M1",
+      symbolId: "nmos",
+      placement: null,
+      properties: {},
+      netlist: baseNetlist({ w: "10u", l: "0.5u" }),
+    });
+    emptied.annotations.push({
+      id: "instance-value-M1",
+      kind: "instance-value",
+      content: { runs: [{ kind: "text", value: "10u/0.5u" }] },
+      anchor: {
+        kind: "object",
+        objectId: "M1",
+        localOffset: { x: 30, y: 10 },
+        fallbackPosition: { x: 130, y: 110 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    const emptiedResult = executeTransaction(
+      emptied,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "set_instance_netlist",
+            instanceId: "M1",
+            netlist: baseNetlist({ w: "10u" }),
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(emptiedResult.ok).toBe(true);
+    if (emptiedResult.ok) {
+      expect(emptiedResult.document.annotations[0]!.visible).toBe(false);
+    }
+  });
+
+  it("refreshes an instance value from the properties compatibility surface", () => {
+    const document = createEmptyDocument("document-main", "Properties value");
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: null,
+      properties: { value: "10k" },
+    });
+    document.annotations.push({
+      id: "instance-value-R1",
+      kind: "instance-value",
+      content: { runs: [{ kind: "text", value: "10k" }] },
+      anchor: {
+        kind: "object",
+        objectId: "R1",
+        localOffset: { x: 30, y: 0 },
+        fallbackPosition: { x: 130, y: 100 },
+      },
+      alignment: "start",
+      rotation: 0,
+      locked: false,
+    });
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "patch_instance_properties",
+            instanceId: "R1",
+            set: { value: "22k" },
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.annotations[0]!.content).toEqual({
+      runs: [{ kind: "text", value: "22k" }],
+    });
+  });
+
   it("rejects a multi-edit transaction atomically after a later precondition failure", () => {
     const document = documentWithInstance();
     const before = JSON.stringify(document);

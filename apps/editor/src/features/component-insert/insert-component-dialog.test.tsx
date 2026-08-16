@@ -27,9 +27,14 @@ describe("InsertComponentDialog", () => {
     expect(markup).toContain('aria-label="Component m"');
     expect(markup).toContain('aria-label="Placement options"');
     expect(markup).toContain('aria-label="Initial rotation"');
-    expect(markup).toContain('aria-label="Label name"');
+    expect(markup).toContain('aria-label="Reference name"');
     expect(markup).toContain("W / m");
     expect(markup).toContain("(Channel width)");
+    // The default is Reference on, Value off and disabled until the device
+    // parameters carry a displayable projection.
+    expect(markup).toContain(">Reference</span>");
+    expect(markup).toContain(">Value</span>");
+    expect(markup).toContain('disabled=""');
     expect(markup).not.toContain("library-component-");
   });
 

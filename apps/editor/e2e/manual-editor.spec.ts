@@ -1577,7 +1577,8 @@ test("Properties toggles reference label visibility for one or many components",
   await page.getByTestId("hit-R1").click();
   await openSelectionShelf(page);
   const singleToggle = page.getByRole("checkbox", {
-    name: "Show reference label",
+    name: "Reference",
+    exact: true,
   });
   await expect(singleToggle).toBeChecked();
   await singleToggle.uncheck();
@@ -1605,7 +1606,8 @@ test("Properties toggles reference label visibility for one or many components",
   await page.mouse.move(box.x + 620, box.y + 320, { steps: 6 });
   await page.mouse.up();
   const groupToggle = page.getByRole("checkbox", {
-    name: "Show reference labels",
+    name: "Reference",
+    exact: true,
   });
   await expect(groupToggle).toBeVisible();
   await expect(groupToggle).toBeChecked();
@@ -1623,6 +1625,181 @@ test("Properties toggles reference label visibility for one or many components",
   await expect(
     page.getByTestId("annotation-hit-instance-label-R2"),
   ).toHaveCount(1);
+});
+
+test("value display projects MOS W/L and passive values beside the reference", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByLabel("Component search").fill("nmos");
+  // The Value toggle is disabled until both W and L carry a projection.
+  const valueToggle = dialog.getByRole("checkbox", {
+    name: "Value",
+    exact: true,
+  });
+  await expect(valueToggle).toBeDisabled();
+  await dialog.getByLabel("Component w", { exact: true }).fill("2u");
+  await dialog.getByLabel("Component l", { exact: true }).fill("180n");
+  await expect(valueToggle).toBeEnabled();
+  await valueToggle.check();
+  await dialog.getByRole("button", { name: "Apply" }).click();
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 360, y: 240 } });
+  await page.keyboard.press("Escape");
+
+  const reference = page.locator('[data-object-id="instance-label-M1"]');
+  const value = page.locator('[data-object-id="instance-value-M1"]');
+  await expect(reference).toContainText("M1");
+  await expect(value).toContainText("2u/180n");
+  // The value is the second upright row under the reference.
+  const referenceBox = await reference.boundingBox();
+  const valueBox = await value.boundingBox();
+  if (!referenceBox || !valueBox) throw new Error("Labels are not measurable");
+  expect(valueBox.y).toBeGreaterThan(referenceBox.y);
+
+  // A passive value projects the same way from the insert dialog.
+  await page.keyboard.press("i");
+  await dialog.getByLabel("Component search").fill("resistor");
+  await dialog.getByLabel("Component value", { exact: true }).fill("33k");
+  await dialog.getByRole("checkbox", { name: "Value", exact: true }).check();
+  await dialog.getByRole("button", { name: "Apply" }).click();
+  await canvas.click({ position: { x: 560, y: 240 } });
+  await page.keyboard.press("Escape");
+  await expect(
+    page.locator('[data-object-id="instance-value-R1"]'),
+  ).toContainText("33k");
+
+  // The formal SVG export carries the value through the shared annotation
+  // path.
+  const svg = (await downloadBytes(page, "File", "Export SVG")).toString(
+    "utf8",
+  );
+  expect(svg).toContain('data-kind="instance-value"');
+  expect(svg).toContain("2u/180n");
+  expect(svg).toContain("33k");
+});
+
+test("reference and value toggles refresh content after parameter edits", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 300, y: 200 });
+  await placeComponent(page, "resistor", { x: 500, y: 200 });
+
+  // Quick-place leaves the parameters blank, so the Value toggle starts
+  // disabled and no hidden annotation exists at all.
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  const valueToggle = page.getByRole("checkbox", {
+    name: "Value",
+    exact: true,
+  });
+  await expect(valueToggle).toBeDisabled();
+  await expect(
+    page.getByTestId("annotation-hit-instance-value-R1"),
+  ).toHaveCount(0);
+
+  await page.getByLabel("Component value").click();
+  await page.getByLabel("Component value").fill("33k");
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 60, y: 60 } });
+
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  await expect(valueToggle).toBeEnabled();
+  await valueToggle.check();
+  await expect(
+    page.locator('[data-object-id="instance-value-R1"]'),
+  ).toContainText("33k");
+
+  // A later parameter edit re-projects the visible value text.
+  await page.getByLabel("Component value").click();
+  await page.getByLabel("Component value").fill("47k");
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 60, y: 60 } });
+  await expect(
+    page.locator('[data-object-id="instance-value-R1"]'),
+  ).toContainText("47k");
+
+  // Hiding keeps the annotation recoverable.
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  await page.getByRole("checkbox", { name: "Value", exact: true }).uncheck();
+  await expect(
+    page.getByTestId("annotation-hit-instance-value-R1"),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('[data-object-id="instance-value-R1"]'),
+  ).toHaveCount(0);
+
+  // The group toggle applies the same value display to every component that
+  // has a projection; R2 keeps none because its parameters stay blank. The
+  // mixed group can never read back as all-visible, so click (not check).
+  const canvas = page.getByTestId("schematic-canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Canvas is not measurable");
+  await page.mouse.move(box.x + 200, box.y + 80);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 620, box.y + 320, { steps: 6 });
+  await page.mouse.up();
+  await page
+    .getByRole("checkbox", { name: "Value", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.locator('[data-object-id="instance-value-R1"]'),
+  ).toContainText("47k");
+  await expect(
+    page.locator('[data-object-id="instance-value-R2"]'),
+  ).toHaveCount(0);
+});
+
+test("drag value annotation keeps the user offset through rotation", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 360, y: 220 });
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  await page.getByLabel("Component value").click();
+  await page.getByLabel("Component value").fill("33k");
+  await page
+    .getByTestId("schematic-canvas")
+    .click({ position: { x: 60, y: 60 } });
+  await page.getByTestId("hit-R1").click();
+  await openSelectionShelf(page);
+  await page.getByRole("checkbox", { name: "Value", exact: true }).check();
+  await expect(
+    page.locator('[data-object-id="instance-value-R1"]'),
+  ).toContainText("33k");
+
+  // Drag the value away from its canonical slot.
+  const value = page.getByTestId("annotation-hit-instance-value-R1");
+  await value.click({ modifiers: ["Alt"] });
+  await value.dragTo(page.getByTestId("schematic-canvas"), {
+    targetPosition: { x: 200, y: 360 },
+  });
+  const dragged = await value.boundingBox();
+  if (!dragged) throw new Error("Dragged value is not measurable");
+
+  // A user-moved value is an authored vector: rotation transforms it rigidly
+  // instead of pulling it back onto the automatic second row.
+  await page.getByTestId("hit-R1").click();
+  await page.keyboard.press("r");
+  await expect(
+    page.locator('[data-object-id="instance-value-R1"]'),
+  ).toContainText("33k");
+  const rotated = await value.boundingBox();
+  if (!rotated) throw new Error("Rotated value is not measurable");
+  // The user vector rotates rigidly; on the drag-clamp circle a quarter turn
+  // may keep one coordinate, so assert total displacement instead.
+  expect(
+    Math.hypot(rotated.x - dragged.x, rotated.y - dragged.y),
+  ).toBeGreaterThan(10);
 });
 
 test("property edits commit on blank click and Escape instead of vanishing", async ({

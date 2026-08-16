@@ -140,6 +140,7 @@ describe("editor interaction state", () => {
           initialRotation: 90,
           showReference: false,
           referenceText: "MIN",
+          showValue: true,
         },
       },
     );
@@ -151,6 +152,7 @@ describe("editor interaction state", () => {
         initialRotation: 90,
         showReference: false,
         referenceText: "MIN",
+        showValue: true,
       },
       rotation: 90,
       mirror: "none",

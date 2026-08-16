@@ -75,8 +75,8 @@ construction, and pixel-alignment rules live in
 Formal SVG has stable groups for routes, Junctions, symbols, and annotations.
 The editor creates its grid and interaction overlay outside the formal group.
 
-Annotations are semantic `instance-label`, `net-label`, `power-label`,
-`plain-text`, `current`, `voltage`, and `figure-caption` objects. Current
+Annotations are semantic `instance-label`, `instance-value`, `net-label`,
+`power-label`, and `route-marker` objects. Current
 annotations rotate the arrow independently so their text stays upright.
 Explicit instance labels suppress only the renderer's default instance ID.
 Their text and position are editable without changing stable instance IDs.

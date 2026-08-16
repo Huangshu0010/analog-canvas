@@ -47,6 +47,22 @@ const MOS_PARAMETERS = [
   },
 ] satisfies readonly ComponentParameter[];
 
+const SOURCE_DC_PARAMETERS = (
+  unit: string,
+  help: string,
+  placeholder: string,
+) =>
+  [
+    {
+      key: "dc",
+      label: "Value",
+      unit,
+      placeholder,
+      help,
+      inputMode: "text" as const,
+    },
+  ] satisfies readonly ComponentParameter[];
+
 const PARAMETERS_BY_SYMBOL: Readonly<
   Record<string, readonly ComponentParameter[]>
 > = {
@@ -55,6 +71,8 @@ const PARAMETERS_BY_SYMBOL: Readonly<
   inductor: passiveValue("H", "Inductance", "3n"),
   nmos: MOS_PARAMETERS,
   pmos: MOS_PARAMETERS,
+  "voltage-source": SOURCE_DC_PARAMETERS("V", "DC voltage", "1.8"),
+  "current-source": SOURCE_DC_PARAMETERS("A", "DC current", "1m"),
 };
 
 export function componentParameters(

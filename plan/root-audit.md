@@ -1,6 +1,6 @@
 # Root Plan Audit
 
-Snapshot: 2026-08-15. The root `plan/` directory is an operational queue, not
+Snapshot: 2026-08-16. The root `plan/` directory is an operational queue, not
 an archive. Completed plans with resolved experience are stored under
 [`archived/2026-08/`](archived/2026-08/).
 
@@ -8,7 +8,7 @@ an archive. Completed plans with resolved experience are stored under
 
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
-| `active`                  |     0 | No active targets.                                                                |
+| `active`                  |     0 | `2026-08-16-instance-value-display` completed on `zcode/instance-value-display`; awaiting PR/CI delivery. |
 | `completed` + `none`      |    34 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |

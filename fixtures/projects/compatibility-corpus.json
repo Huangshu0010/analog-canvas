@@ -1,11 +1,12 @@
 {
   "schemaVersion": 2,
-  "description": "Current-only Project corpus. Every accepted file is canonical schema-v9; older versions are unsupported.",
+  "description": "Current-only Project corpus. Every accepted file is canonical schema-v10; older versions are unsupported.",
   "current": [
     "fixtures/projects/minimal/project.icproj.json",
     "fixtures/projects/phase-1-manual/project.icproj.json",
     "fixtures/projects/phase-3-routing/project.icproj.json",
-    "fixtures/projects/phase-5-dense-analog/project.icproj.json"
+    "fixtures/projects/phase-5-dense-analog/project.icproj.json",
+    "fixtures/projects/instance-value-display/project.icproj.json"
   ],
   "rejected": [
     {

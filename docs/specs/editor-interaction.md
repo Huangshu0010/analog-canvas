@@ -165,13 +165,20 @@ without requiring an Alt cycle.
 ## Text and presentation
 
 Every visible editable label is one persisted RichText annotation. Component
-insertion creates an `instance-label` only when reference display is requested.
+insertion creates an `instance-label` only when reference display is requested,
+and an `instance-value` only when value display is requested and the device
+parameters have a display projection.
 The renderer never synthesizes text from Instance IDs and no empty suppressor
 label exists. Reference label display is a Properties toggle for one or many
 selected components: hiding sets the annotation's optional `visible: false`
 flag, which renderers and hit/marquee surfaces skip while the annotation stays
 in the Project, so hiding is recoverable and a missing label can be re-created
-from the same toggle. Net/power labels carry Net identity separately from their
+from the same toggle. Component value display is the paired `Value` toggle on
+the same control row: MOS devices project `w/l` inline, passives and
+independent sources project their scalar parameter, and the toggle is disabled
+while no projection exists. Showing a value re-projects its text without
+touching electrical parameters or a user-dragged anchor; the Edit Engine
+refreshes a non-hand-edited value after parameter edits. Net/power labels carry Net identity separately from their
 visual anchor. A resolved anchor drives both the glyph and every text
 hit/marquee surface; its fallback is only for an orphaned target, never an
 editor-local alternate position. Dragging a route-anchored Net label re-anchors

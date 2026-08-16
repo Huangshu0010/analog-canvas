@@ -86,6 +86,7 @@ function annotationFontSize(
 ): number {
   switch (annotation.kind) {
     case "instance-label":
+    case "instance-value":
       return profile.typography.instanceFontSize;
     case "net-label":
       return profile.typography.netFontSize;

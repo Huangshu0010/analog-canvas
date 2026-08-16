@@ -46,6 +46,7 @@ import {
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
   resolveElectricalContactTargets,
+  displayableInstanceValue,
   resolveNetLabelBinding,
   resolveMosBulkConnection,
   resolveSchematicStyleProfile,
@@ -121,6 +122,7 @@ import {
   InsertComponentDialog,
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
+import { DisplayToggle } from "../features/component-insert/display-toggle";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
 import {
@@ -244,11 +246,13 @@ import {
   annotationHitBox,
   attachmentAtPoint,
   defaultInstanceLabel,
+  defaultInstanceValue,
   dragNetLabelAttachmentAtPoint,
   dragRouteAttachmentAtPoint,
   effectiveRouteAttachment,
   endpointNetId,
   instanceHitBox,
+  instanceValueAnnotation,
   isRoutedMarker,
   looseRouteAnchorIds,
   NET_LABEL_MAX_NORMAL_OFFSET,
@@ -1049,12 +1053,30 @@ export function App({
   const selectedInstanceLabel = selectedInstance
     ? instanceLabelAnnotationFor(document, selectedInstance.id)
     : undefined;
+  const selectedInstanceValue = selectedInstance
+    ? instanceValueAnnotation(document, selectedInstance.id)
+    : null;
+  const selectedInstanceValueAvailable = selectedInstance
+    ? displayableInstanceValue(selectedInstance).kind === "displayable"
+    : false;
   const selectedGroupLabelsAllVisible =
     selectedIds.length > 1 &&
     selectedIds.every((id) => {
       const label = instanceLabelAnnotationFor(document, id);
       return label !== undefined && label.visible !== false;
     });
+  const selectedGroupValuesAllVisible =
+    selectedIds.length > 1 &&
+    selectedIds.every((id) => {
+      const value = instanceValueAnnotation(document, id);
+      return value !== null && value.visible !== false;
+    });
+  const selectedGroupValueAvailable = selectedIds.some((id) => {
+    const instance = document.instances.find((item) => item.id === id);
+    return instance
+      ? displayableInstanceValue(instance).kind === "displayable"
+      : false;
+  });
   const styleProfile = resolveSchematicStyleProfile(
     document.presentation.styleProfileId,
   );
@@ -2767,7 +2789,8 @@ export function App({
     candidate: DerivedPoint,
   ): Point {
     if (
-      annotation.kind === "instance-label" &&
+      (annotation.kind === "instance-label" ||
+        annotation.kind === "instance-value") &&
       annotation.anchor.kind === "object"
     ) {
       const anchor = annotation.anchor;
@@ -3456,6 +3479,12 @@ export function App({
             ),
           }
         : null;
+    // A default-off Value is never materialized as a hidden annotation:
+    // hidden annotations still extend export bounds. It is created on first
+    // show by the display toggle instead.
+    const instanceValue = placementRequest.showValue
+      ? defaultInstanceValue(document, instance, resolver, styleProfile)
+      : null;
     const contact = proposePlacementContact(
       document,
       resolver,
@@ -3531,6 +3560,14 @@ export function App({
               {
                 kind: "upsert_schematic_annotation" as const,
                 annotation: instanceLabel,
+              },
+            ]
+          : []),
+        ...(instanceValue
+          ? [
+              {
+                kind: "upsert_schematic_annotation" as const,
+                annotation: instanceValue,
               },
             ]
           : []),
@@ -5356,6 +5393,69 @@ export function App({
     if (result.ok) {
       setStatus(
         `${visible ? "Showing" : "Hiding"} reference labels on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
+      );
+    }
+  }
+
+  function setValueLabelsVisible(
+    instanceIds: readonly string[],
+    visible: boolean,
+  ): void {
+    const edits: SchematicEdit[] = [];
+    for (const instanceId of instanceIds) {
+      const instance = document.instances.find(
+        (item) => item.id === instanceId,
+      );
+      if (!instance) continue;
+      const value = instanceValueAnnotation(document, instanceId);
+      if (value) {
+        const { visible: _currentVisibility, ...rest } = value;
+        if (visible) {
+          // Showing re-projects the parameter text (the Value toggle's whole
+          // purpose) while preserving any user-dragged anchor. A visible,
+          // hand-edited Value is only rewritten by this explicit toggle.
+          const display = displayableInstanceValue(instance);
+          if (display.kind !== "displayable") continue;
+          edits.push({
+            kind: "upsert_schematic_annotation",
+            annotation: {
+              ...rest,
+              content: structuredClone(display.content),
+            },
+          });
+        } else {
+          edits.push({
+            kind: "upsert_schematic_annotation",
+            annotation: { ...rest, visible: false },
+          });
+        }
+      } else if (visible) {
+        const created = defaultInstanceValue(
+          document,
+          instance,
+          resolver,
+          styleProfile,
+        );
+        if (created) {
+          edits.push({
+            kind: "upsert_schematic_annotation",
+            annotation: created,
+          });
+        }
+      }
+    }
+    if (edits.length === 0) {
+      setStatus(
+        visible
+          ? "No component values are available for this selection"
+          : "Selected components have no value displays",
+      );
+      return;
+    }
+    const result = transact(edits);
+    if (result.ok) {
+      setStatus(
+        `${visible ? "Showing" : "Hiding"} component values on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
       );
     }
   }
@@ -7629,19 +7729,31 @@ export function App({
                   <span>Component group</span>
                   <h2>{selectedIds.length} components</h2>
                   <p>{selectedIds.join(", ")}</p>
-                  <label>
-                    <input
-                      type="checkbox"
+                  <div
+                    className="display-toggle-row"
+                    aria-label="Group display toggles"
+                  >
+                    <DisplayToggle
+                      label="Reference"
                       checked={selectedGroupLabelsAllVisible}
-                      onChange={(event) =>
-                        setReferenceLabelsVisible(
-                          selectedIds,
-                          event.currentTarget.checked,
-                        )
+                      onChange={(checked) =>
+                        setReferenceLabelsVisible(selectedIds, checked)
                       }
-                    />{" "}
-                    Show reference labels
-                  </label>
+                    />
+                    <DisplayToggle
+                      label="Value"
+                      checked={selectedGroupValuesAllVisible}
+                      disabled={!selectedGroupValueAvailable}
+                      help={
+                        selectedGroupValueAvailable
+                          ? undefined
+                          : "Fill device parameters first"
+                      }
+                      onChange={(checked) =>
+                        setValueLabelsVisible(selectedIds, checked)
+                      }
+                    />
+                  </div>
                 </section>
               ) : null}
               {selectedInstance?.placement ? (
@@ -7660,22 +7772,40 @@ export function App({
                   aria-label="Component properties"
                 >
                   <h2>Component properties</h2>
-                  <label>
-                    <input
-                      type="checkbox"
+                  <div
+                    className="display-toggle-row"
+                    aria-label="Component display toggles"
+                  >
+                    <DisplayToggle
+                      label="Reference"
                       checked={
                         selectedInstanceLabel !== undefined &&
                         selectedInstanceLabel.visible !== false
                       }
-                      onChange={(event) =>
+                      onChange={(checked) =>
                         setReferenceLabelsVisible(
                           [selectedInstance.id],
-                          event.currentTarget.checked,
+                          checked,
                         )
                       }
-                    />{" "}
-                    Show reference label
-                  </label>
+                    />
+                    <DisplayToggle
+                      label="Value"
+                      checked={
+                        selectedInstanceValue !== null &&
+                        selectedInstanceValue.visible !== false
+                      }
+                      disabled={!selectedInstanceValueAvailable}
+                      help={
+                        selectedInstanceValueAvailable
+                          ? undefined
+                          : "Set the device parameters first"
+                      }
+                      onChange={(checked) =>
+                        setValueLabelsVisible([selectedInstance.id], checked)
+                      }
+                    />
+                  </div>
                   {componentParameters(selectedInstance.symbolId).map(
                     (parameter, index) => (
                       <label key={parameter.key} title={parameter.help}>

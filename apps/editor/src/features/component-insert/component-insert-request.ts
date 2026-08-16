@@ -6,6 +6,7 @@ export interface SymbolInsertRequest {
   initialRotation: 0 | 90 | 180 | 270;
   showReference: boolean;
   referenceText: string | null;
+  showValue: boolean;
 }
 
 export interface VddRailInsertRequest {

@@ -2489,22 +2489,41 @@ body {
 
 .insert-label-control {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: end;
   gap: 0.45rem;
 }
 
-.insert-reference-toggle {
-  display: flex !important;
+/* One compact Reference/Value switch shared by the insert dialog, the
+   component properties panel, and group selection. */
+.display-toggle-row {
+  display: flex;
   align-items: center;
-  min-height: var(--icm-control-h-lg);
-  gap: 0.45rem;
-  color: var(--icm-text) !important;
+  gap: 0.75rem;
 }
 
-.insert-reference-toggle input {
+.display-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 0;
+  color: var(--icm-text);
+  font-size: var(--icm-font-sm);
+  cursor: pointer;
+}
+
+.display-toggle input {
   min-height: 0;
   width: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  accent-color: var(--icm-accent);
+}
+
+.display-toggle.disabled {
+  color: var(--icm-text-muted);
+  cursor: help;
 }
 
 .insert-parameter-name {

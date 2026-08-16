@@ -67,8 +67,8 @@ upsert_drafting_object     | remove_drafting_object
 ```
 
 `upsert_schematic_annotation` / `remove_schematic_annotation` replace the
-narrowed SchematicAnnotation set (`instance-label | net-label | power-label |
-route-marker`). `upsert_drafting_object` / `remove_drafting_object` accept the
+narrowed SchematicAnnotation set (`instance-label | instance-value |
+net-label | power-label | route-marker`). `upsert_drafting_object` / `remove_drafting_object` accept the
 `DraftingObject` union (text, arrow, leader, callout, construction-line,
 floating-symbol) with the shared `VisualAnchor`. None of these edits creates or
 modifies a Net, Route,

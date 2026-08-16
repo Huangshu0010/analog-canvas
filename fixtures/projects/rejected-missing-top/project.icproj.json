@@ -29,7 +29,7 @@
   ],
   "id": "project-rejected",
   "name": "Rejected",
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "source": {
     "dialect": "none",
     "entry": null,
