@@ -7505,3 +7505,14 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: `3af1a7b` pushed on `codex/command-move-shortcuts`. The first
   remote browser run exposed two stale `Shift+V` assertions; the branch now
   updates them to `Ctrl+R` and awaits repeated remote checks.
+
+## 2026-08-16 - Insert dialog component list default expanded
+
+- Target: make the `I` (Insert Component) dialog open with its device list
+  expanded; no other behavior change.
+- Changed areas: insert dialog picker default state plus its unit and e2e
+  contracts.
+- Validation: insert-dialog unit test (2/2), full `component-insert.spec.ts`
+  Playwright run (17/17), and `git diff --check` passed.
+- Commit status: committed on `codex/insert-dialog-list-default-expanded` and
+  merged to `main` after the mainline gate.

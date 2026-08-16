@@ -156,7 +156,7 @@ test("inserts from the master-detail dialog with keyboard and live placement pre
 
   await page.keyboard.press("i");
   const reopened = page.getByRole("dialog", { name: "Insert Component" });
-  await reopened.getByRole("button", { name: "Expand component list" }).click();
+  await expect(reopened.locator(".insert-component-options")).toBeVisible();
   const passives = reopened
     .locator(".insert-option-group")
     .filter({ hasText: "Passives" });
@@ -359,7 +359,9 @@ test("keeps preview fixed while the compact catalog expands and collapses", asyn
   const artwork = dialog.locator(".insert-symbol-artwork");
   const cancel = dialog.getByRole("button", { name: "Cancel" });
   const apply = dialog.getByRole("button", { name: "Apply" });
-  const toggle = dialog.getByRole("button", { name: "Expand component list" });
+  const toggle = dialog.getByRole("button", {
+    name: "Collapse component list",
+  });
 
   const measure = () =>
     dialog.evaluate((element) => {
@@ -387,14 +389,16 @@ test("keeps preview fixed while the compact catalog expands and collapses", asyn
   await expect(cancel).toBeVisible();
   await expect(apply).toBeVisible();
   expect(before.footer.bottom).toBeLessThanOrEqual(before.dialog.bottom);
-  await expect(dialog.locator(".insert-component-options")).toHaveCount(0);
-
-  await toggle.click();
   const options = dialog.locator(".insert-component-options");
   await expect(options).toBeVisible();
   expect(
     await options.evaluate((element) => getComputedStyle(element).overflowY),
   ).toBe("auto");
+
+  await toggle.click();
+  await expect(options).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Expand component list" }).click();
+  await expect(options).toBeVisible();
   await dialog.getByTestId("insert-component-inductor").click();
   const after = await measure();
   expect(after.dialog.height).toBeCloseTo(before.dialog.height, 0);

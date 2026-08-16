@@ -83,7 +83,7 @@ export function InsertComponentDialog({
     [recentSymbolIds, styleProfileId],
   );
   const [query, setQuery] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(true);
   const [selectedId, setSelectedId] = useState(
     () => initialSymbols[0]?.id ?? null,
   );
@@ -107,7 +107,7 @@ export function InsertComponentDialog({
   useEffect(() => {
     if (!open) return;
     setQuery("");
-    setPickerOpen(false);
+    setPickerOpen(true);
     setSelectedId(initialSymbols[0]?.id ?? null);
     setInitialRotation(0);
     setShowReference(true);
