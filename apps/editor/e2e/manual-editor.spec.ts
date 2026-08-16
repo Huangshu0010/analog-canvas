@@ -400,7 +400,7 @@ test("cancels VDD rail placement before or after its first endpoint", async ({
   ).toHaveCount(0);
 });
 
-test("uses M to arm the existing connectivity-aware move gesture", async ({
+test("command move follows the pointer and commits on one click", async ({
   page,
 }) => {
   await page.goto("/");
@@ -412,12 +412,51 @@ test("uses M to arm the existing connectivity-aware move gesture", async ({
 
   await page.keyboard.press("m");
   await expect(page.getByTestId("status")).toContainText("Move:");
-  await dragBy(resistor, { x: 40, y: 20 });
+  await page.mouse.move(before.x + 40, before.y + 20);
+  await page.mouse.click(before.x + 40, before.y + 20);
 
   const after = await resistor.boundingBox();
   if (!after) throw new Error("Moved resistor is not measurable");
   expect(after.x).toBeGreaterThan(before.x + 20);
-  expect(after.y).toBeGreaterThan(before.y + 5);
+});
+
+test("Port shortcut starts ordinary component placement", async ({ page }) => {
+  await page.goto("/");
+  const canvas = page.getByTestId("schematic-canvas");
+  await page.keyboard.press("p");
+  await canvas.hover({ position: { x: 320, y: 180 } });
+  await expect(page.getByTestId("component-placement-preview")).toBeVisible();
+  await canvas.click({ position: { x: 320, y: 180 } });
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("hit-P1")).toBeVisible();
+});
+
+test("Ctrl+D deselects without allowing browser bookmarking", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  await page.getByTestId("hit-R1").click();
+  await page.keyboard.press("Control+d");
+  await expect(page.getByTestId("status")).toHaveText("Selection cleared");
+  await page.keyboard.press("Delete");
+  await expect(page.getByTestId("hit-R1")).toBeVisible();
+});
+
+test("Ctrl+R mirrors a selected component instead of refreshing", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "nmos", { x: 340, y: 220 });
+  await page.getByTestId("hit-M1").click();
+  await page.keyboard.press("Control+r");
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  );
+  expect(saved.documents[0].instances[0].placement).toMatchObject({
+    rotation: 180,
+    mirror: "x",
+  });
 });
 
 test("treats hollow and filled Ports as ordinary wired components", async ({
@@ -1588,7 +1627,7 @@ test("R rotates a selected component instead of entering Rectangle", async ({
 
   await page.keyboard.press("Shift+R");
   await expect(page.getByTestId("revision")).toHaveText("3");
-  await page.keyboard.press("Shift+V");
+  await page.keyboard.press("Control+r");
   await expect(page.getByTestId("revision")).toHaveText("4");
 });
 

@@ -63,7 +63,7 @@ describe("editor shortcut contract", () => {
     expect(resolve("v", {}, { ctrlKey: true })).toBeNull();
   });
 
-  it("blocks browser refresh chords even while an editor field owns focus", () => {
+  it("arbitrates browser refresh chords before blocking their defaults", () => {
     for (const modifiers of [
       { ctrlKey: true },
       { ctrlKey: true, shiftKey: true },
@@ -75,6 +75,26 @@ describe("editor shortcut contract", () => {
     }
     expect(resolve("F5", { isTyping: true })).toEqual({
       kind: "block-browser-refresh",
+    });
+    expect(
+      resolve("r", { hasRotatableSelection: true }, { ctrlKey: true }),
+    ).toEqual({ kind: "mirror", direction: "top-bottom" });
+    expect(
+      resolve("r", { interactionMode: "placing-component" }, { ctrlKey: true }),
+    ).toEqual({ kind: "mirror-placement", direction: "top-bottom" });
+  });
+
+  it("maps Ctrl+D to idle deselection while always blocking browser bookmarking", () => {
+    expect(resolve("d", {}, { ctrlKey: true })).toEqual({
+      kind: "clear-selection",
+    });
+    expect(
+      resolve("d", { interactionMode: "wire" }, { ctrlKey: true }),
+    ).toEqual({
+      kind: "block-browser-bookmark",
+    });
+    expect(resolve("d", { isTyping: true }, { ctrlKey: true })).toEqual({
+      kind: "block-browser-bookmark",
     });
   });
 
@@ -95,10 +115,7 @@ describe("editor shortcut contract", () => {
     });
     expect(
       resolve("v", { hasRotatableSelection: true }, { shiftKey: true }),
-    ).toEqual({
-      kind: "mirror",
-      direction: "top-bottom",
-    });
+    ).toBeNull();
   });
 
   it("opens insertion with I and gives placement rotation priority", () => {
@@ -121,18 +138,11 @@ describe("editor shortcut contract", () => {
       ),
     ).toEqual({ kind: "mirror-placement", direction: "left-right" });
     expect(
-      resolve(
-        "v",
-        { interactionMode: "placing-component" },
-        { shiftKey: true },
-      ),
-    ).toEqual({ kind: "mirror-placement", direction: "top-bottom" });
-    expect(
       resolve("r", { interactionMode: "copy-placement" }, { shiftKey: true }),
     ).toEqual({ kind: "mirror-copy-placement", direction: "left-right" });
     expect(
       resolve("v", { interactionMode: "copy-placement" }, { shiftKey: true }),
-    ).toEqual({ kind: "mirror-copy-placement", direction: "top-bottom" });
+    ).toBeNull();
   });
 
   it("maps creation, fit, and marker commands", () => {
@@ -142,7 +152,7 @@ describe("editor shortcut contract", () => {
       kind: "activate-tool",
       tool: "construction-line",
     });
-    expect(resolve("p")).toBeNull();
+    expect(resolve("p")).toEqual({ kind: "place-port" });
     expect(resolve("m")).toEqual({ kind: "move-selection-required" });
     expect(resolve("m", { hasMoveSelection: true })).toEqual({
       kind: "begin-selection-move",
