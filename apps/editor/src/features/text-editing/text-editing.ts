@@ -109,7 +109,7 @@ export function proposeTextEditingCommit(
       sizeScale: session.sizeScale,
     };
     if (
-      annotation.sizeScale === next.sizeScale &&
+      (annotation.sizeScale ?? 1) === next.sizeScale &&
       richTextEqual(annotation.content, next.content)
     ) {
       return { kind: "unchanged" };
@@ -130,8 +130,10 @@ export function proposeTextEditingCommit(
       sizeScale: session.sizeScale,
     },
   };
+  // Sessions normalize an absent scale to 1; compare the same way so an
+  // untouched session stays revision-free.
   if (
-    object.styleOverride?.sizeScale === next.styleOverride.sizeScale &&
+    (object.styleOverride?.sizeScale ?? 1) === next.styleOverride.sizeScale &&
     richTextEqual(object.content, next.content)
   ) {
     return { kind: "unchanged" };

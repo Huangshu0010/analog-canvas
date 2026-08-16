@@ -587,6 +587,7 @@ export function buildSvgScene(
     })
     .join("");
   const annotations = [...document.annotations]
+    .filter((annotation) => annotation.visible !== false)
     .sort((left, right) => left.id.localeCompare(right.id, "en"))
     .map((annotation) => {
       const attachment = ` data-anchor-kind="${annotation.anchor.kind}"`;

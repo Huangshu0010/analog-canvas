@@ -27,6 +27,10 @@ export interface RoutePolylineRecord {
 
 export const ROUTED_MARKER_MIN_NORMAL_OFFSET = 12;
 export const ROUTED_MARKER_MAX_NORMAL_OFFSET = 40;
+// Net labels keep their electrical binding to the route but may be placed in
+// a much wider band around it than the tight current-marker label band.
+export const NET_LABEL_MIN_NORMAL_OFFSET = 8;
+export const NET_LABEL_MAX_NORMAL_OFFSET = 200;
 
 export function endpointNetId(
   document: SchematicDocument,
@@ -218,6 +222,78 @@ export function dragRouteAttachmentAtPoint(
         position: closest.position,
       }
     : null;
+}
+
+/**
+ * Reposition a route-attached Net label from the desired label position. The
+ * label stays bound to its own route: it may slide along any segment and
+ * offset across the conductor within the generous Net-label band. Crossing
+ * the conductor flips the offset side directly, unlike the sticky
+ * current-marker band.
+ */
+export function dragNetLabelAttachmentAtPoint(
+  routePolylines: readonly RoutePolylineRecord[],
+  candidate: Point,
+  routeId: string,
+): {
+  segmentIndex: number;
+  t: number;
+  normalOffset: number;
+  labelPosition: Point;
+} | null {
+  const record = routePolylines.find(({ route }) => route.id === routeId);
+  if (!record) return null;
+  const candidates = record.polyline.points
+    .slice(0, -1)
+    .flatMap((from, segmentIndex) => {
+      const to = record.polyline.points[segmentIndex + 1]!;
+      const position = closestPointOnSegment(candidate, from, to);
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const lengthSquared = dx * dx + dy * dy;
+      if (lengthSquared === 0) return [];
+      const length = Math.sqrt(lengthSquared);
+      const t = clamp(
+        ((position.x - from.x) * dx + (position.y - from.y) * dy) /
+          lengthSquared,
+        0,
+        1,
+      );
+      const normal = { x: -dy / length, y: dx / length };
+      const rawNormalOffset =
+        (candidate.x - position.x) * normal.x +
+        (candidate.y - position.y) * normal.y;
+      const normalOffset =
+        Math.sign(rawNormalOffset || 1) *
+        clamp(
+          Math.abs(rawNormalOffset),
+          NET_LABEL_MIN_NORMAL_OFFSET,
+          NET_LABEL_MAX_NORMAL_OFFSET,
+        );
+      const labelPosition = {
+        x: Math.round(position.x + normal.x * normalOffset),
+        y: Math.round(position.y + normal.y * normalOffset),
+      };
+      return [
+        {
+          segmentIndex,
+          t,
+          normalOffset,
+          labelPosition,
+          // Pick the segment whose on-conductor projection is nearest to the
+          // pointer, not the nearest final label position: near corners the
+          // label-position metric lets a perpendicular segment's clamped
+          // endpoint steal the drag.
+          distanceSquared:
+            (position.x - candidate.x) ** 2 + (position.y - candidate.y) ** 2,
+        },
+      ];
+    })
+    .sort((left, right) => left.distanceSquared - right.distanceSquared);
+  const closest = candidates[0];
+  if (!closest) return null;
+  const { segmentIndex, t, normalOffset, labelPosition } = closest;
+  return { segmentIndex, t, normalOffset, labelPosition };
 }
 
 export function effectiveRouteAttachment(

@@ -7570,3 +7570,20 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   contracts, and `git diff --check` passed.
 - Commit status: merged to `main` via #93 after the mainline gate (clean-state
   local `pnpm ci:check` and green GitHub Actions checks).
+
+## 2026-08-16 - Text system: label visibility, edit auto-commit, movable net labels
+
+- Target: Virtuoso-style reference-label visibility toggles in Properties for
+  single and multi selection (replacing the broken annotation delete button),
+  commit-on-exit for all text/property editing (blank click and Escape save),
+  and draggable route-anchored Net labels with a generous band.
+- Changed areas: model annotation `visible` flag, render/hit/marquee skip,
+  Properties panel toggles, instance/net-label draft commit effects and
+  Escape handlers, canvas text editor commit semantics (plus a latent
+  phantom-revision fix in `proposeTextEditingCommit`), net-label drag
+  re-anchoring geometry, editor-interaction spec, and focused contracts.
+- Validation: 511 unit tests across editor/model/render-svg/edit-engine/
+  derived, workspace typecheck, Prettier, full manual-editor (74), drafting
+  (25), and component-insert (18) Playwright specs, `git diff --check`.
+- Commit status: committed on `zcode/text-system-improvements`; mainline
+  merge awaits the delivery gate.

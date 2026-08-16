@@ -167,11 +167,17 @@ without requiring an Alt cycle.
 Every visible editable label is one persisted RichText annotation. Component
 insertion creates an `instance-label` only when reference display is requested.
 The renderer never synthesizes text from Instance IDs and no empty suppressor
-label exists. Net/power labels carry Net identity separately from their visual
-anchor. A resolved anchor drives both the glyph and every text hit/marquee
-surface; its fallback is only for an orphaned target, never an editor-local
-alternate position. Selecting a `power-rail` together with its power label is
-one visual deletion: the label removal is planned once, so the atomic
+label exists. Reference label display is a Properties toggle for one or many
+selected components: hiding sets the annotation's optional `visible: false`
+flag, which renderers and hit/marquee surfaces skip while the annotation stays
+in the Project, so hiding is recoverable and a missing label can be re-created
+from the same toggle. Net/power labels carry Net identity separately from their
+visual anchor. A resolved anchor drives both the glyph and every text
+hit/marquee surface; its fallback is only for an orphaned target, never an
+editor-local alternate position. Dragging a route-anchored Net label re-anchors
+it along its own Route (segment, t, and a generous normal-offset band) instead
+of moving a fallback position. Selecting a `power-rail` together with its power
+label is one visual deletion: the label removal is planned once, so the atomic
 transaction cannot reject a duplicated annotation removal. Drafting text has
 no electrical meaning.
 

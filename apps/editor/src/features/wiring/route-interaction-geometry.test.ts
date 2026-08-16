@@ -8,6 +8,7 @@ import {
   annotationAnchor,
   attachmentAtPoint,
   defaultInstanceLabel,
+  dragNetLabelAttachmentAtPoint,
   dragRouteAttachmentAtPoint,
   effectiveRouteAttachment,
   looseRouteAnchorIds,
@@ -167,6 +168,42 @@ describe("route interaction geometry", () => {
       dragRouteAttachmentAtPoint([record], { x: 60, y: 90 }, current)
         ?.routeAttachment,
     ).toMatchObject({ t: 0.6, normalOffset: 40 });
+  });
+
+  it("slides a dragged Net label along its route in a wide offset band", () => {
+    const document = looseRouteDocument();
+    const record = {
+      route: document.routes[0]!,
+      polyline: {
+        routeId: "route-1",
+        netId: "net-1",
+        points: [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 100 },
+        ],
+        segmentModes: ["manual" as const, "manual" as const],
+      },
+    };
+    // Above the first segment, well past the old +/-30 clamp.
+    expect(
+      dragNetLabelAttachmentAtPoint([record], { x: 30, y: -40 }, "route-1"),
+    ).toMatchObject({ segmentIndex: 0, t: 0.3, normalOffset: -40 });
+    // Near or across the conductor keeps a readable offset and flips sides.
+    expect(
+      dragNetLabelAttachmentAtPoint([record], { x: 40, y: -2 }, "route-1"),
+    ).toMatchObject({ normalOffset: -8 });
+    // The band tops out at the generous maximum.
+    expect(
+      dragNetLabelAttachmentAtPoint([record], { x: 30, y: -500 }, "route-1"),
+    ).toMatchObject({ normalOffset: -200 });
+    // Around the corner the nearest segment wins.
+    expect(
+      dragNetLabelAttachmentAtPoint([record], { x: 108, y: 40 }, "route-1"),
+    ).toMatchObject({ segmentIndex: 1, t: 0.4, normalOffset: -8 });
+    expect(
+      dragNetLabelAttachmentAtPoint([record], { x: 0, y: 0 }, "route-2"),
+    ).toBeNull();
   });
 
   it("builds an implicit instance label only while no explicit label exists", () => {
