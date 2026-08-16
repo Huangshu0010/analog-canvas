@@ -12,6 +12,20 @@ export interface InstanceLabelPlacement {
 
 export type InstanceLabelSide = "left" | "right" | "top" | "bottom";
 
+/** The two upright text slots that share an instance's label side. */
+export type InstanceLabelSlot = "reference" | "value";
+
+/**
+ * Vertical distance between the reference row and the value row, quantized to
+ * whole grid multiples so snapping cannot pull the two rows into each other.
+ */
+export function instanceLabelRowOffset(
+  profile: SchematicStyleProfile,
+  grid: number,
+): number {
+  return Math.ceil((profile.typography.instanceFontSize * 1.35) / grid) * grid;
+}
+
 const SIDE_LABEL_SYMBOLS = new Set([
   "resistor",
   "capacitor",
@@ -155,6 +169,7 @@ export function placeUprightInstanceLabel(
   localSide: InstanceLabelSide,
   grid: number,
   sizeScale = 1,
+  rowOffset = 0,
 ): InstanceLabelPlacement | null {
   if (!instance.placement) return null;
   const localBounds = visibleSymbolInkBounds(resolved);
@@ -178,7 +193,7 @@ export function placeUprightInstanceLabel(
       return {
         position: {
           x: snap(worldBounds.x + worldBounds.width + clearance),
-          y: snap(semanticPosition.y),
+          y: snap(semanticPosition.y + rowOffset),
         },
         alignment: "start",
       };
@@ -186,7 +201,7 @@ export function placeUprightInstanceLabel(
       return {
         position: {
           x: snap(worldBounds.x - clearance),
-          y: snap(semanticPosition.y),
+          y: snap(semanticPosition.y + rowOffset),
         },
         alignment: "end",
       };
@@ -195,7 +210,11 @@ export function placeUprightInstanceLabel(
         position: {
           x: snap(semanticPosition.x),
           y: snap(
-            worldBounds.y + worldBounds.height + clearance + fontSize * 1.05,
+            worldBounds.y +
+              worldBounds.height +
+              clearance +
+              fontSize * 1.05 +
+              rowOffset,
           ),
         },
         alignment: "middle",
@@ -204,7 +223,7 @@ export function placeUprightInstanceLabel(
       return {
         position: {
           x: snap(semanticPosition.x),
-          y: snap(worldBounds.y - clearance - fontSize * 0.3),
+          y: snap(worldBounds.y - clearance - fontSize * 0.3 + rowOffset),
         },
         alignment: "middle",
       };
@@ -217,6 +236,7 @@ export function defaultInstanceLabelPlacement(
   resolved: ResolvedSymbol,
   profile: SchematicStyleProfile,
   grid: number,
+  slot: InstanceLabelSlot = "reference",
 ): InstanceLabelPlacement | null {
   if (!instance.placement) return null;
   const localBounds = visibleSymbolInkBounds(resolved);
@@ -226,6 +246,10 @@ export function defaultInstanceLabelPlacement(
   // than the padded hit envelope.
   const compactSideGap = grid;
   const baselineOffset = profile.typography.instanceFontSize * 0.35;
+  // The value slot is the second upright row under the reference on the same
+  // side; see instanceLabelRowOffset.
+  const rowOffset =
+    slot === "value" ? instanceLabelRowOffset(profile, grid) : 0;
 
   if (instance.symbolId === "port" || instance.symbolId === "port-filled") {
     const localPosition = {
@@ -239,6 +263,8 @@ export function defaultInstanceLabelPlacement(
       localPosition,
       "left",
       grid,
+      1,
+      rowOffset,
     );
   }
 
@@ -254,6 +280,8 @@ export function defaultInstanceLabelPlacement(
       localPosition,
       "right",
       grid,
+      1,
+      rowOffset,
     );
   }
 
@@ -269,6 +297,8 @@ export function defaultInstanceLabelPlacement(
       localPosition,
       "right",
       grid,
+      1,
+      rowOffset,
     );
   }
 
@@ -279,5 +309,7 @@ export function defaultInstanceLabelPlacement(
     { x: middleX, y: localBounds.y + localBounds.height + compactSideGap },
     "bottom",
     grid,
+    1,
+    rowOffset,
   );
 }

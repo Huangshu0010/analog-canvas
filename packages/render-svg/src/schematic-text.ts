@@ -3,6 +3,7 @@ import type { SchematicStyleProfile } from "@icm/derived";
 export type SchematicTextKind =
   | "default-instance"
   | "instance-label"
+  | "instance-value"
   | "net-label"
   | "power-label"
   | "pin-name"
@@ -16,6 +17,7 @@ export function schematicTextFontSize(
   switch (kind) {
     case "default-instance":
     case "instance-label":
+    case "instance-value":
       return typography.instanceFontSize;
     case "net-label":
     case "pin-name":

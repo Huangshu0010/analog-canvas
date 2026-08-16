@@ -40,6 +40,7 @@ import {
   endpointKey,
   endpointBelongsToNet,
   inferInstanceLabelSide,
+  instanceLabelRowOffset,
   isMosBulkRoute,
   isOrthogonal,
   netEndpoints,
@@ -52,6 +53,7 @@ import {
   routePolyline,
   visibleSymbolInkBounds,
 } from "@icm/derived";
+import { displayableInstanceValue } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
 import { z } from "zod";
 
@@ -1559,11 +1561,64 @@ function translateObjectAnchoredAnnotation(
   }
 }
 
+/** The upright text slot an annotation occupies beside its instance. */
+function instanceAnnotationSlot(
+  annotation: Annotation,
+): "reference" | "value" | null {
+  if (annotation.anchor.kind !== "object") return null;
+  if (annotation.kind === "instance-label") return "reference";
+  if (annotation.kind === "instance-value") return "value";
+  return null;
+}
+
 /**
- * A reference label is renderer-managed only while it exactly agrees with the
- * current canonical default. A user-moved label remains an authored
- * object-relative vector and must not be pulled back onto the automatic side
- * when its instance is rotated or mirrored.
+ * Re-project the machine-managed Value annotation after a parameter edit.
+ * A Value whose text no longer equals the previous projection is treated as
+ * hand-edited and left untouched (the clipboard instance-label precedent).
+ * When the new projection is undisplayable the annotation keeps its text but
+ * hides itself instead of showing stale electrical claims; the editor's show
+ * toggle re-projects fresh content.
+ */
+function refreshInstanceValueAnnotation(
+  draft: SchematicDocument,
+  before: SchematicDocument["instances"][number],
+  instanceId: string,
+  changedObjectIds: Set<string>,
+): void {
+  const instance = draft.instances.find(
+    (candidate) => candidate.id === instanceId,
+  );
+  if (!instance) return;
+  const previous = displayableInstanceValue(before);
+  if (previous.kind !== "displayable") return;
+  for (const annotation of draft.annotations) {
+    if (
+      annotation.kind !== "instance-value" ||
+      annotation.anchor.kind !== "object" ||
+      annotation.anchor.objectId !== instanceId
+    ) {
+      continue;
+    }
+    if (
+      JSON.stringify(annotation.content) !== JSON.stringify(previous.content)
+    ) {
+      continue;
+    }
+    const next = displayableInstanceValue(instance);
+    if (next.kind === "displayable") {
+      annotation.content = structuredClone(next.content);
+    } else {
+      annotation.visible = false;
+    }
+    changedObjectIds.add(annotation.id);
+  }
+}
+
+/**
+ * A reference or value label is renderer-managed only while it exactly agrees
+ * with the current canonical default for its slot. A user-moved label remains
+ * an authored object-relative vector and must not be pulled back onto the
+ * automatic side when its instance is rotated or mirrored.
  */
 function isCanonicalInstanceLabel(
   annotation: Annotation,
@@ -1573,10 +1628,8 @@ function isCanonicalInstanceLabel(
   oldPosition: Point,
   oldOrientation: Orientation,
 ): boolean {
-  if (
-    annotation.kind !== "instance-label" ||
-    annotation.anchor.kind !== "object"
-  ) {
+  const slot = instanceAnnotationSlot(annotation);
+  if (!slot || annotation.anchor.kind !== "object") {
     return false;
   }
   const placement = { position: oldPosition, ...oldOrientation };
@@ -1585,6 +1638,7 @@ function isCanonicalInstanceLabel(
     resolved,
     resolveSchematicStyleProfile(document.presentation.styleProfileId),
     document.presentation.grid,
+    slot,
   );
   if (!expected) return false;
   const visiblePosition = {
@@ -1679,8 +1733,9 @@ function followAttachedAnnotations(
     );
     let position = transformedAnchor;
     let transformedAlignment: "start" | "middle" | "end" | null = null;
+    const slot = instanceAnnotationSlot(annotation);
     if (
-      annotation.kind === "instance-label" &&
+      slot !== null &&
       instance &&
       resolved &&
       isCanonicalInstanceLabel(
@@ -1692,8 +1747,26 @@ function followAttachedAnnotations(
         oldOrientation,
       )
     ) {
+      const styleProfile = resolveSchematicStyleProfile(
+        draft.presentation.styleProfileId,
+      );
+      // Upright rows stack along world y regardless of orientation, so the
+      // value slot's row offset is stripped from the recovered anchor in world
+      // space before side inference and re-added by the upright placer.
+      const rowOffset =
+        slot === "value"
+          ? instanceLabelRowOffset(styleProfile, draft.presentation.grid)
+          : 0;
+      const slotAnchor = rowOffset
+        ? { x: visiblePosition.x, y: visiblePosition.y - rowOffset }
+        : visiblePosition;
+      const slotLocal = inverseTransformPoint(
+        slotAnchor,
+        oldPosition,
+        oldOrientation,
+      );
       const localSide = inferInstanceLabelSide(
-        local,
+        slotLocal,
         visibleSymbolInkBounds(resolved),
       );
       if (localSide) {
@@ -1701,11 +1774,12 @@ function followAttachedAnnotations(
           const placement = placeUprightInstanceLabel(
             instance,
             resolved,
-            resolveSchematicStyleProfile(draft.presentation.styleProfileId),
-            local,
+            styleProfile,
+            slotLocal,
             localSide,
             draft.presentation.grid,
             annotation.sizeScale,
+            rowOffset,
           );
           if (placement) {
             position = placement.position;
@@ -1729,7 +1803,7 @@ function followAttachedAnnotations(
       },
       fallbackPosition: position,
     };
-    if (annotation.kind === "instance-label") {
+    if (slot !== null) {
       annotation.rotation = 0;
       annotation.alignment = transformedAlignment ?? annotation.alignment;
     } else {
@@ -2371,6 +2445,8 @@ export function executeTransaction(
           );
         }
         let changed = false;
+        const before: SchematicDocument["instances"][number] =
+          structuredClone(instance);
         for (const [key, value] of Object.entries(set)) {
           if (instance.properties[key] !== value) {
             instance.properties[key] = value;
@@ -2391,6 +2467,12 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
+        refreshInstanceValueAnnotation(
+          draft,
+          before,
+          edit.instanceId,
+          changedObjectIds,
+        );
         changedObjectIds.add(edit.instanceId);
         break;
       }
@@ -2417,7 +2499,15 @@ export function executeTransaction(
             [edit.instanceId],
           );
         }
+        const before: SchematicDocument["instances"][number] =
+          structuredClone(instance);
         instance.netlist = structuredClone(edit.netlist);
+        refreshInstanceValueAnnotation(
+          draft,
+          before,
+          edit.instanceId,
+          changedObjectIds,
+        );
         changedObjectIds.add(edit.instanceId);
         connectivityChanged = true;
         break;
