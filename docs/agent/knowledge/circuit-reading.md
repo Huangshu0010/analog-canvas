@@ -8,8 +8,9 @@ preclassified circuit or Layout Intent.
 
 ## Evidence order
 
-1. Read Document ports, global Nets, Project references, and source binding to
-   establish boundaries and hierarchy.
+1. Read `Document.netlist.terminals`, global Nets, Project references, and
+   source binding to establish boundaries and hierarchy. Treat any `port` or
+   `port-filled` canvas marker as an ordinary Instance terminal.
 2. Read each device's source name, model/target, parameters, symbol, and complete
    pin-to-Net map. Resolve device semantics before assigning a functional role.
 3. Mark directly evidenced supply, ground, bias, clock/control, differential,

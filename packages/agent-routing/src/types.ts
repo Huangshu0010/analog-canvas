@@ -26,7 +26,8 @@ export type { SegmentMode };
 
 /**
  * The role of a node in the Route graph.
- * - `endpoint`: binds to an existing terminal/port; no object is created.
+ * - `endpoint`: binds to an existing Instance terminal or Junction; no object
+ *   is created.
  * - `tap` / `junction`: created by the helper as electrical branch points.
  * - `bend`: created as a degree-two route anchor without a connection dot.
  * - `label-anchor`: a junction positioned where a Net label should appear.
@@ -43,12 +44,12 @@ export type AlignAxis = "x" | "y";
 
 /**
  * A node the Agent places in the Route graph. Endpoint nodes reference existing
- * terminals/ports; positioned nodes are created by the helper.
+ * Instance terminals; positioned nodes are created by the helper.
  */
 export interface RouteGraphNode {
   id: string;
   role: RouteGraphNodeRole;
-  /** Required for role:"endpoint": the existing terminal/port to bind to. */
+  /** Required for role:"endpoint": the existing Instance terminal to bind to. */
   endpoint?: RouteEndpoint;
   /**
    * For any non-endpoint role. Exactly one positioning hint:
@@ -95,7 +96,7 @@ export interface RouteGraph {
 
 /**
  * A resolved endpoint the helper reads. Built by the caller from the Snapshot:
- * page coordinate and outward escape unit vector (`null` for ports/junctions).
+ * page coordinate and outward escape unit vector (`null` for Junctions).
  */
 export interface ResolvedEndpoint {
   id: string;

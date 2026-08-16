@@ -60,7 +60,7 @@ A persisted Route has:
 ```
 
 The effective polyline is `[resolved(from), ...waypoints, resolved(to)]`.
-Endpoint coordinates come from terminal, port, or Junction objects; they are
+Endpoint coordinates come from Instance terminals or Junctions; they are
 not duplicated in `waypoints`. The route must be orthogonal, and
 `segmentModes.length` must equal the number of polyline segments.
 
@@ -87,7 +87,7 @@ placement, or reroutes around a conflict.
 
 | Role           | Persisted result      | Meaning                                                                 |
 | -------------- | --------------------- | ----------------------------------------------------------------------- |
-| `endpoint`     | none                  | Bind an existing terminal or port and use its resolved page coordinate. |
+| `endpoint`     | none                  | Bind an Instance terminal or Junction at its resolved coordinate.           |
 | `bend`         | Route waypoint        | Degree-two, dot-free change of direction.                               |
 | `tap`          | branch Junction       | Real electrical branch point.                                           |
 | `junction`     | branch Junction       | Real electrical branch point.                                           |
@@ -135,11 +135,13 @@ boundary connections.
 The formal renderer consumes persisted model objects. It does not infer
 electrical connectivity from pixels:
 
-- explicit branch Junctions and placed signal Ports draw dots;
+- explicit branch Junctions draw branch dots;
+- `port` and `port-filled` Instances render their own reviewed symbol artwork
+  and participate electrically only through pin `P`;
 - label-anchor Junctions provide attachment without adding a branch dot;
 - a normal bend or disconnected crossing draws no dot;
 - device pin anchors remain invisible;
-- a power Port with an attached power label uses the supply presentation;
+- a power label renders from its explicit Net and rail Route/Junction geometry;
 - formal render excludes selection, grid, flightline, preview, and diagnostic
   overlay layers.
 

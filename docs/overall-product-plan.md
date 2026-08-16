@@ -50,13 +50,14 @@ revision, lock, or transaction invariants.
 
 ## Core invariants
 
-- Net membership, explicit Junctions, formal ports, and typed terminals are
+- Net membership, explicit Junctions, formal cell terminals, and typed Instance
+  terminals are
   electrical facts; drawing geometry never silently creates a connection.
 - A Crossing is not a Junction. Ambiguous intersections are rejected rather
   than guessed.
 - Routes describe visible geometry; they may stretch locally during movement
   without changing logical connectivity.
-- A Project is a canonical schema-v5 JSON file. Browser recovery is an
+- A Project is a canonical schema-11 JSON file. Browser recovery is an
   origin-local, non-authoritative copy.
 - Visual variants may change presentation but never remove electrical terminal
   semantics. The Razavi raster manifest is the sole visual authority; Visio/VSS

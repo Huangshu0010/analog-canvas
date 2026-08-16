@@ -52,7 +52,7 @@ export interface HierarchyNetTrace {
   primary: NetHighlight;
   /** One highlight for every reachable logical net, including the primary. */
   highlights: readonly NetHighlight[];
-  /** Every concrete parent-instance/child-port traversal edge. */
+  /** Every concrete parent-instance/child-formal-terminal traversal edge. */
   hops: readonly HierarchyNetTraceHop[];
 }
 

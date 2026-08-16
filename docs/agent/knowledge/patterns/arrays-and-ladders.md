@@ -8,7 +8,8 @@ or serial branches supported by connectivity or parameters.
 - repeated branches have the same connectivity shape with systematic parameter,
   count, bit, weight, or tap variation;
 - adjacent elements form a serial ladder or repeated shunt/tap relationship;
-- switch controls or ports provide an ordering independent of instance names;
+- switch controls or formal boundary terminals provide an ordering independent
+  of instance names;
 - boundary Nets reveal shared top/bottom plates, references, terminations, or
   output summing nodes.
 
@@ -25,8 +26,8 @@ Lay repeated units on a stable row or column and order them by evidenced bit,
 weight, stage, or physical tap direction. Use consistent branch geometry and a
 clear shared trunk/plate/rail. Show ratios or multiplicity in labels. Place bridge,
 termination, dummy, or common-mode elements where their exceptional role is
-obvious. Hierarchically represent a repeated unit only when its ports remain
-clear and the parent still exposes array order and weighting.
+obvious. Hierarchically represent a repeated unit only when its formal terminals
+remain clear and the parent still exposes array order and weighting.
 
 When a single row/column becomes much wider or taller than the useful page,
 wrap it into a compact matrix while keeping explicit reading order and identical

@@ -13,8 +13,8 @@ references, connect/disconnect storage elements, or repeat across bits/phases.
 
 Trace each switch's possible endpoints from connectivity. Distinguish signal,
 reference, common-mode, reset, precharge, and clock paths from pin evidence and
-external ports. For MOS switches, body and complementary devices may be part of
-the safe switch structure rather than the main signal path.
+formal boundary terminals. For MOS switches, body and complementary devices may
+be part of the safe switch structure rather than the main signal path.
 
 ## Expression
 

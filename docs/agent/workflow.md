@@ -74,8 +74,9 @@ artifacts before editing.
 ### 2. Read electrical facts before drawing
 
 Read one complete selected Document Snapshot. Build an internal graph from all
-instances, resolved pins, Nets, terminals, ports, hierarchy references, Routes,
-Junctions, annotations, placements, locks, and diagnostics. For a repository
+instances, resolved pins, Nets, terminal membership, formal cell-terminal
+mappings, hierarchy references, Routes, Junctions, annotations, placements,
+locks, and diagnostics. For a repository
 recipe, inspect the imported Document with the same completeness.
 
 Separate:

@@ -39,7 +39,7 @@ Snapshot connectivity is bidirectional: every resolved Instance pin reports
 its `netId`, and every Net reports its complete terminal membership. Canvas
 `port` and `port-filled` are ordinary single-pin Instances. Formal cell
 terminal mappings, when present for netlist export, are reported separately and
-never materialize canvas Port objects.
+never materialize a separate canvas object class.
 
 VDD is an explicit global Net with Route/Junction rail geometry and an
 annotation. It is never a symbol. MOS Instances use canonical `nmos`/`pmos`

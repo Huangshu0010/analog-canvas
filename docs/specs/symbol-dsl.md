@@ -15,10 +15,10 @@ The product library is exactly the reviewed Razavi catalog: `nmos`, `pmos`,
 sources, op-amp, switches, voltage amplifier, `port`, and `port-filled`.
 VDD is not an asset; the editor constructs an explicit Net/Route rail.
 
-Both Port assets are ordinary single-pin components with pin `P`. Their future
-selection policy is intentionally unspecified; both remain manually reachable
-through the same insertion, placement, snapping, wiring, transform, and delete
-mechanisms as every other component.
+Both interface-marker assets are ordinary single-pin components with pin `P`.
+Their future selection policy is intentionally unspecified; both remain
+manually reachable through the same insertion, placement, snapping, wiring,
+transform, and delete mechanisms as every other component.
 
 Canonical `nmos` and `pmos` retain D/G/S/B electrical pins. Their
 `textbook-3terminal` visual variant is the deterministic default and may hide

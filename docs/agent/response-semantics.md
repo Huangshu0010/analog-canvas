@@ -62,7 +62,7 @@ edits when any conflict is present.
 | Conflict                                     | Meaning                                                            | Repair direction                                        |
 | -------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------- |
 | `DUPLICATE_NODE_ID` / `DUPLICATE_EDGE_ID`    | Graph identifiers are not unique.                                  | Generate stable unique IDs.                             |
-| `MISSING_ENDPOINT_REF` / `MISSING_ENDPOINT`  | Endpoint node lacks a valid Snapshot endpoint.                     | Resolve exact terminal/port identity.                   |
+| `MISSING_ENDPOINT_REF` / `MISSING_ENDPOINT`  | Endpoint node lacks a valid Snapshot endpoint.                     | Resolve the exact Instance terminal or Junction.        |
 | `MISSING_NODE_POSITION`                      | A positioned node cannot resolve `at` or relative positioning.     | Supply a valid position/reference.                      |
 | `EDGE_UNRESOLVED_NODE`                       | Edge references an unresolved node.                                | Repair node IDs/positions first.                        |
 | `MISALIGNED_EDGE`                            | Edge endpoints differ on both axes.                                | Add an explicit degree-two bend or change placement.    |

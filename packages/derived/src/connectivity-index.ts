@@ -36,18 +36,18 @@ import {
 export type EndpointRef = RouteEndpoint;
 
 export interface VirtualConnectivityEdge {
-  kind: "net-label" | "power-label" | "hierarchy-port";
+  kind: "net-label" | "power-label";
   from: EndpointRef;
   to: EndpointRef;
-  /** Label text or the parent-pin → child-port mapping evidence. */
+  /** Label text binding the two endpoints. */
   evidence: string;
 }
 
 export interface NetConnectivityRecord {
   netId: string;
-  /** Terminals + ports — electrical truth, independent of geometry. */
+  /** Instance terminals — electrical truth, independent of geometry. */
   logicalEndpoints: readonly EndpointRef[];
-  /** Visible graph participants (visible terminals/ports + the net's junctions). */
+  /** Visible graph participants (visible terminals + the Net's Junctions). */
   visibleEndpoints: readonly EndpointRef[];
   routedComponents: readonly RoutedComponent[];
   routes: readonly string[];

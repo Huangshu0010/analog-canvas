@@ -36,6 +36,10 @@ domain-independence judgments) is
 [`0020-agent-side-mcp-adapter.md`](0020-agent-side-mcp-adapter.md).
 The coordinate-domain and current-only grid-normalization decision is
 [`0021-coordinate-domains-and-grid-normalization.md`](0021-coordinate-domains-and-grid-normalization.md).
+The current Project schema, ordinary Port-symbol Instance, typed-edit, and
+Agent credential-lifetime baseline—partially superseding clauses in ADR
+0010/0013/0014/0015/0016—is
+[`0022-current-protocol-baseline.md`](0022-current-protocol-baseline.md).
 
 Use [`adr.template.md`](adr.template.md) for new decisions.
 

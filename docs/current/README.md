@@ -7,18 +7,21 @@ repository search, completed roadmaps, target plans, or `docs/archive/`.
 
 1. [`../overall-product-plan.md`](../overall-product-plan.md) — product
    boundary, system shape, and source-of-truth map.
-2. [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
+2. [`../adr/0022-current-protocol-baseline.md`](../adr/0022-current-protocol-baseline.md)
+   — current Project schema, Port-symbol, edit-union, and Agent credential
+   contract; identifies the superseded clauses in older ADRs.
+3. [`../adr/0011-retire-visio-vss-as-visual-authority.md`](../adr/0011-retire-visio-vss-as-visual-authority.md)
    and [`../specs/razavi-visual-contract.md`](../specs/razavi-visual-contract.md)
    — the Razavi raster is the sole visual authority.
-3. [`../specs/schematic-model.md`](../specs/schematic-model.md),
+4. [`../specs/schematic-model.md`](../specs/schematic-model.md),
    [`../specs/edit-engine.md`](../specs/edit-engine.md), and
    [`../specs/connectivity-and-routing.md`](../specs/connectivity-and-routing.md)
    — electrical and editing invariants.
-4. [`../specs/editor-interaction.md`](../specs/editor-interaction.md),
+5. [`../specs/editor-interaction.md`](../specs/editor-interaction.md),
    [`../specs/agent-api.md`](../specs/agent-api.md), and
    [`../specs/web-agent-session.md`](../specs/web-agent-session.md) — human
    and Agent entry points.
-5. [`../agent/workflow.md`](../agent/workflow.md) — required Agent execution
+6. [`../agent/workflow.md`](../agent/workflow.md) — required Agent execution
    and visual review loop.
 
 Read a targeted roadmap, plan, user guide, or archive item only when the

@@ -52,6 +52,23 @@ Resource staging is isolated and does not replace the Project. A valid staged
 candidate can replace it only after explicit human approval in the editor;
 replacement then revokes the session and requires a new authorization.
 
+## Credential lifetimes and rotation
+
+The deployed defaults are part of the accepted transport contract:
+
+- a Claim remains redeemable for 30 minutes;
+- an Agent bearer remains valid for at most 8 hours and is never persisted;
+- the session and its connector expire after 7 days;
+- a completed request result remains in the idempotency cache for 5 minutes,
+  still subject to the configured entry-count and byte ceilings.
+
+No credential outlives its containing session. Redeeming a still-valid Claim
+rotates both the connector and bearer; connector resume rotates the bearer.
+Each rotation invalidates the previous credential. Session revoke, expiry, or
+Project replacement invalidates the Claim, bearer, and connector together. The
+local MCP Helper may persist only the connector in its private user profile;
+browser recovery persists neither Agent credential.
+
 ## Transport state machine
 
 The official thin browser states are:
@@ -94,7 +111,8 @@ enters undo history, or changes Project data.
 
 ## Security and failure behavior
 
-- Claim codes and tokens use constant-time comparison and redacted telemetry.
+- Claims, bearer tokens, and connectors use constant-time comparison and
+  redacted telemetry; the relay persists verifiers rather than raw secrets.
 - Responses use `Cache-Control: no-store`; payloads and secrets are excluded
   from analytics and recovery.
 - Browser offline, revoked, expired, replaced, connector-invalid, permission-denied, stale-

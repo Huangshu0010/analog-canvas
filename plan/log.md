@@ -7682,3 +7682,18 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: merged to `main` via #95 after the mainline gate (clean-state
   local `pnpm ci:check`, green GitHub Actions checks after refreshing the
   Linux MCP tarball checksum recorded in `config/agent-mcp-distribution.json`).
+
+## 2026-08-17 - Ratify the current protocol baseline
+
+- Target: make schema 11, ordinary Port-symbol Instances, the Engine-derived
+  edit union, and deployed Agent credential lifetimes one explicit current
+  contract while leaving ADR 0014/R10 migration for separate review.
+- Changed areas: accepted ADR 0022 and current reading set; model/persistence,
+  interaction, visual, Agent, and session specs; stale derived/Agent-routing
+  Port terms; MCP generated resources; schema/edit/TTL documentation drift tests.
+- Validation: 82 focused tests; Agent API, authoring-catalog, MCP-resource, and
+  Markdown-link checks; `pnpm verify:branch` with static/type checks, 793 unit
+  tests, workspace build, and production smoke; `git diff --check`.
+- Commit status: committed locally as
+  `docs(protocol): ratify current schema and agent contracts` on
+  `chore/unify-current-protocol-baseline`; not pushed.

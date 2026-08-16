@@ -4,13 +4,13 @@ Status: `accepted`
 
 Primary owner: `packages/model` and the editor document lifecycle
 
-Portable Projects use canonical schema-9 `.icproj.json`. Persistence validates
+Portable Projects use canonical schema-11 `.icproj.json`. Persistence validates
 the complete current schema before open or save and writes atomically where the
 platform supports it. Non-current versions are rejected; no migration or
 compatibility reader runs during open, recovery, staging, or save.
 
 Recovery state is a non-authoritative browser safety copy. It may restore only
-a complete schema-9 Project associated with a recorded working-copy session.
+a complete schema-11 Project associated with a recorded working-copy session.
 Corrupt, incompatible, or partial recovery data is discarded or retained as raw
 data without changing the live Project. Credentials, Agent bearer tokens,
 selection, viewport, overlays, and pending external approvals are never

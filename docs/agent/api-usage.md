@@ -125,6 +125,9 @@ placement; the next Snapshot is authoritative for the live Document.
    returns a fresh bearer, and immediately invalidates the earlier credentials.
    A non-MCP client may exchange the connector for a fresh bearer through
    `POST /api/agent/connectors/resume`; persist the connector, never the bearer.
+   The bearer lasts at most 8 hours; the connector and containing session last
+   at most 7 days. Revoke, session expiry, or Project replacement invalidates
+   both immediately.
 
 2. **Call the Circuit API** through the session. The body is the same Circuit
    request schema as the loopback adapter; the relay forwards it to the live

@@ -5,8 +5,8 @@ Status: `accepted`
 Primary owners: `packages/model`, `packages/edit-engine`, `packages/derived`
 
 `Net.terminals` is logical connectivity. A terminal is an Instance pin; both
-`port` and `port-filled` participate through their ordinary pin `P`. There is
-no first-class Port membership or Port Route endpoint.
+`port` and `port-filled` participate through their ordinary pin `P`. Routes use
+the same terminal endpoint for those Instances and every other component.
 
 A Route belongs to one Net and connects terminal or Junction endpoints. Its
 editable centerline is endpoint, zero or more waypoints, endpoint;
