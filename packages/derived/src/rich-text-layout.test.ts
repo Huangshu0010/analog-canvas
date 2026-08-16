@@ -4,6 +4,8 @@ import type { RichTextDocument } from "@icm/model";
 
 import {
   containsFractionRun,
+  fractionGeometry,
+  fractionPartScale,
   measureRichTextDocument,
   richTextMetrics,
 } from "./rich-text-layout.js";
@@ -84,16 +86,29 @@ describe("shared rich-text layout", () => {
       ],
     } as RichTextDocument;
     const layout = measureRichTextDocument(content, metrics);
-    const partFont = metrics.fontSize * metrics.subscriptScale;
+    const partScale = fractionPartScale(metrics.subscriptScale);
+    const partFont = metrics.fontSize * partScale;
     const widestPart = [..."150nm"].length * partFont * 0.6;
-    expect(layout.width).toBeCloseTo(widestPart + metrics.fontSize * 0.16, 5);
+    expect(layout.width).toBeCloseTo(
+      widestPart +
+        metrics.fontSize * partScale * fractionGeometry.barOverhangEm * 2,
+      5,
+    );
     expect(layout.height).toBeCloseTo(
-      partFont * metrics.lineHeight * 2 + metrics.fontSize * 0.26,
+      partFont * metrics.lineHeight * 2 +
+        metrics.fontSize * partScale * fractionGeometry.barGapEm,
       5,
     );
     expect(containsFractionRun(content)).toBe(true);
     expect(
       containsFractionRun({ runs: [{ kind: "text", value: "plain" }] }),
     ).toBe(false);
+  });
+
+  it("renders fraction parts three A+ levels above the subscript scale", () => {
+    expect(fractionPartScale(0.76)).toBeCloseTo(0.988, 6);
+    // The boost is a multiplier, so any profile's subscript scale keeps the
+    // 30% proportion rather than a fixed pixel offset.
+    expect(fractionPartScale(0.5)).toBeCloseTo(0.65, 6);
   });
 });

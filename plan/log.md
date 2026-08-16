@@ -1,5 +1,22 @@
 # Maintenance Log
 
+## 2026-08-16 - Fraction parts three A+ levels larger
+
+- Target: the stacked-fraction parts in value annotations rendered at the
+  profile subscript scale (76% of the base font), visibly smaller than the
+  reference label; render them three A+ size steps larger so they sit level
+  with the label.
+- Changed areas: `fractionGeometry` offsets converted to em of the part font
+  with `partScaleMultiplier: 1.3`; one `fractionPartScale` helper drives the
+  layout measure, the inline tspan render, the structured annotation render,
+  and the presentation-bounds ascent so the bar and part baselines scale with
+  the larger parts instead of colliding.
+- Validation: 790 unit tests, `pnpm ci:static`, `pnpm verify:branch`
+  (build + production smoke), focused value e2e 3/3, and a pixel-level check
+  of the rendered fraction (parts ≈ 99% of the label height, clean gaps
+  above and below the bar).
+- Commit status: branch `zcode/fraction-part-scale` pushed for PR review.
+
 ## 2026-08-16 - Razavi fraction values, engineering units, live Value toggle
 
 - Target: close three review findings on the instance-value display — bold

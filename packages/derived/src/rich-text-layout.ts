@@ -17,24 +17,38 @@ export interface RichTextLayout {
 }
 
 /**
- * Shared geometry of an inline stacked fraction, in em of the base font.
- * The renderer, the measurement, and the presentation bounds all derive
- * from these constants so the fraction bar lands where the metrics say.
+ * Shared geometry of an inline stacked fraction. All offsets are in em of
+ * the PART font (the fraction parts render at `fractionPartScale`), so the
+ * block grows with the parts and the bar always lands where the metrics say.
+ * At the reference subscript scale (0.76) these reproduce the original
+ * base-font offsets (bar 0.3, numerator rise 0.6, denominator drop 0.42,
+ * overhang 0.08, gap 0.26, ascent 0.12).
  */
 export const fractionGeometry = {
-  /** Fraction bar height above the anchor baseline. */
-  barRiseEm: 0.3,
-  /** Numerator baseline above the anchor baseline. */
-  numeratorBaselineRiseEm: 0.6,
-  /** Denominator baseline below the anchor baseline. */
-  denominatorBaselineDropEm: 0.42,
-  /** Fraction bar overhang beyond the widest part, per side. */
-  barOverhangEm: 0.08,
-  /** Vertical allowance between the two part lines. */
-  barGapEm: 0.26,
-  /** Ascent a fraction adds beyond the plain first-line ascent heuristic. */
-  extraAscentEm: 0.12,
+  /** Fraction parts render three A+ levels (30%) above the profile subscript scale. */
+  partScaleMultiplier: 1.3,
+  /** Fraction bar height above the anchor baseline, em of the part font. */
+  barRiseEm: 0.395,
+  /** Numerator baseline above the anchor baseline, em of the part font. */
+  numeratorBaselineRiseEm: 0.789,
+  /** Denominator baseline below the anchor baseline, em of the part font. */
+  denominatorBaselineDropEm: 0.553,
+  /** Fraction bar overhang beyond the widest part, per side, em of the part font. */
+  barOverhangEm: 0.105,
+  /** Vertical allowance between the two part lines, em of the part font. */
+  barGapEm: 0.342,
+  /** Ascent a fraction adds beyond the plain first-line ascent heuristic, em of the part font. */
+  extraAscentEm: 0.52,
 } as const;
+
+/**
+ * Fraction part font scale relative to the base font: three A+ levels above
+ * the profile subscript scale. The single knob behind every fraction render
+ * and measure so the parts stay proportionally large.
+ */
+export function fractionPartScale(subscriptScale: number): number {
+  return subscriptScale * fractionGeometry.partScaleMultiplier;
+}
 
 export function containsFractionRun(document: RichTextDocument): boolean {
   const visit = (runs: readonly RichTextRun[]): boolean =>
@@ -128,12 +142,13 @@ function measureRun(run: RichTextRun, metrics: RichTextMetrics): Line[] {
     return child;
   }
   if (run.kind === "fraction") {
-    // The parts render at a reduced scale straddling the anchor baseline, so
-    // the whole block is one taller inline line: both part stacks plus the
-    // bar allowance.
+    // The parts straddle the anchor baseline, so the whole block is one
+    // taller inline line: both part stacks plus the bar allowance. Geometry
+    // offsets are in em of the part font, so the spacing scales with them.
+    const partScale = fractionPartScale(metrics.subscriptScale);
     const partMetrics = {
       ...metrics,
-      fontSize: metrics.fontSize * metrics.subscriptScale,
+      fontSize: metrics.fontSize * partScale,
     };
     const numerator = measureRuns(run.numerator.runs, partMetrics);
     const denominator = measureRuns(run.denominator.runs, partMetrics);
@@ -152,11 +167,11 @@ function measureRun(run: RichTextRun, metrics: RichTextMetrics): Line[] {
             ...numerator.map((line) => line.width),
             ...denominator.map((line) => line.width),
           ) +
-          metrics.fontSize * fractionGeometry.barOverhangEm * 2,
+          metrics.fontSize * partScale * fractionGeometry.barOverhangEm * 2,
         height:
           numeratorHeight +
           denominatorHeight +
-          metrics.fontSize * fractionGeometry.barGapEm,
+          metrics.fontSize * partScale * fractionGeometry.barGapEm,
       },
     ];
   }

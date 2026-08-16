@@ -14,6 +14,7 @@ import {
 import {
   containsFractionRun,
   fractionGeometry,
+  fractionPartScale,
   measureRichTextDocument,
   richTextMetrics,
 } from "./rich-text-layout.js";
@@ -53,8 +54,11 @@ export function resolveAnnotationPresentation(
   });
   // A stacked fraction raises its numerator past the plain first-line
   // ascent heuristic; extend the shared bounds so hits and export cover it.
+  // The extra ascent is in em of the part font, so it tracks the part scale.
   const fractionExtraAscent = containsFractionRun(annotation.content)
-    ? fontSize * fractionGeometry.extraAscentEm
+    ? fontSize *
+      fractionPartScale(styleProfile.typography.subscriptScale) *
+      fractionGeometry.extraAscentEm
     : 0;
   const width = Math.max(fontSize * 0.6, textLayout.width);
   const height =
