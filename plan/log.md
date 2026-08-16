@@ -1,5 +1,27 @@
 # Maintenance Log
 
+## 2026-08-16 - Instance value display and property annotations
+
+- Target: opt-in Value annotation beside each instance — MOS inline `w/l`,
+  passive/source scalar — reusing the SchematicAnnotation protocol
+  (`plan/2026-08-16-instance-value-display/`).
+- Changed areas: model `instance-value` kind + schema v10 (corpus, five
+  project fixtures, agent-api artifacts, MCP resources regenerated;
+  compatibility doc updated); derived `displayableInstanceValue` formatter +
+  reference/value placement slots; edit-engine slot-aware reflow and
+  canonical content refresh on parameter edits; render-svg font routing;
+  editor insert-dialog/Properties/group `DisplayToggle` pairs, source `dc`
+  parameter entries, value create/show/hide helpers; new
+  `fixtures/projects/instance-value-display` fixture; specs
+  (edit-engine/visual-language/editor-interaction).
+- Validation: 784 unit tests, full e2e 143/143 (four new value-display
+  tests), `pnpm ci:static`, `pnpm verify:branch`, four-orientation GUI
+  inspection of the fixture, `git diff --check` clean. Code audit corrected
+  the plan before implementation: retired `fraction` kind → inline `<w>/<l>`,
+  source key `dc` not `value`, version bump + regeneration required.
+- Commit status: branch `zcode/instance-value-display` pushed for PR review;
+  delivery to `main` pending green GitHub Actions per the mainline gate.
+
 ## 2026-08-16 - Restore the VDD power-port device beside the rail
 
 - Target: bring back the deleted VDD symbol device as catalog symbol

@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -45,6 +45,15 @@ fixtures, netlist import/export contract, and existing Reference Label flow.
 
 ## Frozen Design
 
+Verification corrections (2026-08-16, after code audit on this branch):
+
+- `RichTextRun.kind: "fraction"` was retired in `32e256c`; the MOS display
+  uses inline `<w>/<l>` text instead. The slot distinction keys off
+  `annotation.kind` (the object anchor has no `role` field).
+- Source electrical key is `dc`, not `value`.
+- Schema change means version 9 → 10 plus corpus/fixture regeneration.
+- Value refresh lives in the Edit Engine and is canonical-only.
+
 ### Reuse one annotation protocol
 
 Do not create a renderer-only property text, a DraftingObject, or a second
@@ -74,14 +83,20 @@ canonical RichText or a non-displayable reason:
 
 | Symbol class | RichText display | Requirement |
 | --- | --- | --- |
-| NMOS / PMOS / 3-terminal MOS | fraction(`w`, `l`) | both non-empty |
-| resistor / capacitor / inductor | text `value` | non-empty `value` |
-| voltage/current source | text `value` | non-empty `value` |
+| NMOS / PMOS / 3-terminal MOS | upright inline text `<w>/<l>` | both non-empty |
+| resistor / capacitor / inductor | upright text `value` | non-empty `value` |
+| voltage/current source | upright text `dc` | non-empty `dc` |
 | unsupported/incomplete | no annotation | formatter reports reason |
 
-The MOS display uses existing `RichTextRun.kind: "fraction"` and Razavi
-schematic typography; it is not HTML/CSS fraction rendering. `m` stays
-electrical-only in this release: do not invent a `xM` notation rule.
+The MOS display joins the raw `w` and `l` parameter strings with `/` (for
+example `10u/0.5u`) as one plain text run in the active RichText contract
+(`text | line-break | span`). The stacked `fraction` run kind cited by the
+original draft does not exist: it was retired with the markup editor in
+`32e256c` and is explicitly rejected by `packages/model/src/rich-text.test.ts`.
+The Razavi six-panel visual authority contains no W/L annotation at all, so
+inline slash notation is the minimal faithful reading; a human may still veto
+this correction. `m` stays electrical-only in this release: do not invent a
+`xM` notation rule.
 
 ### Placement is a second slot in current derived geometry
 
@@ -108,23 +123,36 @@ changes. Existing transforms follow both attached roles.
 
 ### Source values
 
-Extend `componentParameters()` with a `value` parameter for independent
-voltage/current source symbols, with correct unit/help and placeholder.
-Preserve existing waveform-specific typed fields; do not flatten a waveform
-into a scalar display without an approved format rule.
+Add source parameter entries to `componentParameters()` under the key `dc` —
+the netlist contract (`requiredParameters: ["dc"]`, printers emit `DC <dc>`)
+makes `dc` the electrical key; the UI label reads "Value" with correct
+unit/help/placeholder. There are no waveform-specific typed fields today;
+do not invent any.
 
 ## Implementation Sequence
 
 1. **Model and formatter**
-   - Add `instance-value` to schema/migration/Agent artifacts as required.
-   - Implement/test the pure formatter: MOS fraction, passive/source values,
-     missing W/L, compatibility fallback and RichText output.
+   - Add `instance-value` to `AnnotationKindSchema` and bump
+     `CURRENT_PROJECT_SCHEMA_VERSION` 9 → 10. No migration reader exists;
+     the compatibility corpus and every tracked `.icproj.json` fixture must
+     be regenerated to v10, and the agent-api generated schema artifacts
+     refreshed. Update `docs/user/project-compatibility.md`.
+   - Implement/test the pure formatter: MOS inline `w/l`, passive/source
+     values, missing W/L, compatibility fallback and RichText output.
 
 2. **Shared presentation and transactions**
    - Generalize default label placement into reference/value slots.
-   - Add shared find/create/show/hide/refresh helpers.
-   - Refresh Value after parameter/netlist edits while preserving anchor
-     offsets; ensure transforms, undo/redo and clipboard retain both roles.
+   - Add shared find/create/show/hide/refresh helpers. A hidden Value is
+     never materialized at insert: the annotation is created on first show
+     (hidden annotations still extend export bounds, so default-off must not
+     persist a placeholder).
+   - Refresh Value content inside the Edit Engine
+     `set_instance_netlist` / `patch_instance_properties` handlers so editor,
+     Agent, and external clients stay in sync; refresh only when the current
+     content still equals the formatter's output for the previous parameters
+     (hand-edited RichText is preserved, mirroring the clipboard
+     `rewriteInstanceLabelText` precedent). Anchor offsets survive.
+   - Ensure transforms, undo/redo and clipboard retain both roles.
 
 3. **Renderer and editor**
    - Render `instance-value` through current annotation presentation, text
@@ -164,4 +192,25 @@ test(editor): cover draggable Razavi value annotations
 
 ## Outcome
 
-Planning complete; implementation has not started.
+Delivered on branch `zcode/instance-value-display`. The code audit found four
+planning errors recorded under Frozen Design: the retired `fraction` run kind
+(replaced by inline `<w>/<l>` upright text, flagged for human veto), the
+source electrical key `dc`, schema version 9 → 10 with corpus/fixture/agent-api
+plus MCP-resource regeneration, and an Edit-Engine canonical-only refresh.
+
+Implemented: `instance-value` annotation kind; pure
+`displayableInstanceValue` formatter (MOS `w/l`, passive/source scalar,
+properties fallback); reference/value placement slots with a grid-quantized
+row offset; engine reflow for both slots and canonical content refresh after
+`set_instance_netlist`/`patch_instance_properties` (hand-edited text
+preserved, emptied projections hide); renderer font routing; insert-dialog
+paired Reference/Value toggles, Properties and group toggles through one
+`DisplayToggle` component; source `dc` parameter entries; quick-place
+`showValue: false`; hidden values are never materialized at insert.
+
+Validation: 784 unit tests, full e2e suite 143/143, `pnpm ci:static`,
+`pnpm verify:branch` (build + production smoke), four-orientation GUI
+inspection of the new `instance-value-display` fixture (no text/symbol
+overlap in any orientation), `git diff --check` clean. Four-orientation
+visual evidence: no stacked-fraction authority exists in the Razavi
+six-panel reference; the inline slash reading awaits human confirmation.

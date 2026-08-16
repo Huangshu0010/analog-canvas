@@ -8,7 +8,7 @@ an archive. Completed plans with resolved experience are stored under
 
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
-| `active`                  |     1 | `2026-08-16-instance-value-display` is planning-ready; implementation has not started. |
+| `active`                  |     0 | `2026-08-16-instance-value-display` completed on `zcode/instance-value-display`; awaiting PR/CI delivery. |
 | `completed` + `none`      |    34 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
