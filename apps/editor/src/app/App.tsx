@@ -1406,14 +1406,10 @@ export function App({
   function openProperties(): void {
     setImportReviewOpen(false);
     setSelectionOpen(true);
+    // Focus the header, not the first field: Q stays a pure toggle and
+    // editing starts only when the user clicks an input.
     requestAnimationFrame(() => {
-      if (selectedRoute) {
-        netLabelPropertyInputRef.current?.focus();
-      } else if (selectedInstance) {
-        instanceValueInputRef.current?.focus();
-      } else {
-        selectionShelfRef.current?.focus();
-      }
+      selectionShelfRef.current?.focus();
     });
   }
 
@@ -6495,10 +6491,6 @@ export function App({
           wireSource && wireWaypoints.length > 0,
         ),
         propertiesOpen: selectionOpen,
-        typingInProperties:
-          isTypingTarget(event.target) &&
-          event.target instanceof Element &&
-          event.target.closest('[data-testid="selection-dock"]') !== null,
       });
       if (!shortcut) return;
 
@@ -7369,7 +7361,6 @@ export function App({
           className={selectionOpen ? "selection-dock open" : "selection-dock"}
           aria-label="Properties"
           role="complementary"
-          data-testid="selection-dock"
         >
           <section className="selection-shelf" aria-label="Selection">
             <button

@@ -23,7 +23,6 @@ const baseContext: EditorShortcutContext = {
   hasClearableDraftingSelection: false,
   hasRemovableWireWaypoint: false,
   propertiesOpen: false,
-  typingInProperties: false,
 };
 
 function key(
@@ -321,25 +320,8 @@ describe("editor shortcut contract", () => {
     expect(resolve("s", { isTyping: true }, { ctrlKey: true })).toBeNull();
   });
 
-  it("closes an open Properties dock with Q while typing inside it", () => {
-    expect(
-      resolve("q", {
-        propertiesOpen: true,
-        isTyping: true,
-        typingInProperties: true,
-      }),
-    ).toEqual({ kind: "close-properties" });
+  it("keeps typing suppressed with the Properties dock open, and Q blocked while interacting", () => {
     expect(resolve("q", { propertiesOpen: true, isTyping: true })).toBeNull();
-    expect(
-      resolve(
-        "q",
-        { propertiesOpen: true, isTyping: true, typingInProperties: true },
-        { shiftKey: true },
-      ),
-    ).toBeNull();
-    expect(
-      resolve("q", { isTyping: true, typingInProperties: true }),
-    ).toBeNull();
     expect(
       resolve("q", { propertiesOpen: true, interactionMode: "drawing" }),
     ).toEqual({ kind: "blocked-interaction-command", command: "Properties" });
