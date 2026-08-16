@@ -29,11 +29,13 @@ export interface EditorShortcutContext {
 
 export type EditorShortcutIntent =
   | { kind: "block-browser-refresh" }
+  | { kind: "block-browser-bookmark" }
   | { kind: "undo" | "redo" }
-  | { kind: "copy" | "save" | "open" | "select-all" }
+  | { kind: "copy" | "save" | "open" | "select-all" | "clear-selection" }
   | { kind: "begin-selection-move" | "move-selection-required" }
   | { kind: "reverse-current-marker" }
   | { kind: "open-component-insert" }
+  | { kind: "place-port" }
   | { kind: "rotate-placement"; deltaDegrees: 90 | -90 }
   | { kind: "rotate-copy-placement"; deltaDegrees: 90 | -90 }
   | { kind: "mirror-placement"; direction: ScreenFlip }
@@ -79,8 +81,30 @@ export function resolveEditorShortcut(
   context: EditorShortcutContext,
 ): EditorShortcutIntent | null {
   const key = event.key.toLowerCase();
-  if (((event.ctrlKey || event.metaKey) && key === "r") || event.key === "F5") {
-    return { kind: "block-browser-refresh" };
+  const commandModifier = event.ctrlKey || event.metaKey;
+  if (event.key === "F5") return { kind: "block-browser-refresh" };
+  if (commandModifier && key === "r") {
+    if (context.isTyping) return { kind: "block-browser-refresh" };
+    if (
+      context.interactionMode === "placing-component" ||
+      context.interactionMode === "copy-placement"
+    ) {
+      return context.interactionMode === "placing-component"
+        ? { kind: "mirror-placement", direction: "top-bottom" }
+        : { kind: "mirror-copy-placement", direction: "top-bottom" };
+    }
+    if (context.interactionMode !== "idle") {
+      return { kind: "block-browser-refresh" };
+    }
+    return context.hasRotatableSelection
+      ? { kind: "mirror", direction: "top-bottom" }
+      : { kind: "block-browser-refresh" };
+  }
+  if (commandModifier && key === "d") {
+    if (context.isTyping) return { kind: "block-browser-bookmark" };
+    return context.interactionMode === "idle"
+      ? { kind: "clear-selection" }
+      : { kind: "block-browser-bookmark" };
   }
 
   if (context.isTyping) return null;
@@ -135,14 +159,13 @@ export function resolveEditorShortcut(
     if (
       plain &&
       event.shiftKey &&
-      (key === "r" || key === "v") &&
+      key === "r" &&
       (context.interactionMode === "placing-component" ||
         context.interactionMode === "copy-placement")
     ) {
-      const direction: ScreenFlip = key === "r" ? "left-right" : "top-bottom";
       return context.interactionMode === "placing-component"
-        ? { kind: "mirror-placement", direction }
-        : { kind: "mirror-copy-placement", direction };
+        ? { kind: "mirror-placement", direction: "left-right" }
+        : { kind: "mirror-copy-placement", direction: "left-right" };
     }
     if (plain && key === "r") {
       if (context.interactionMode === "placing-component") {
@@ -185,7 +208,6 @@ export function resolveEditorShortcut(
       h: "Net Highlight",
       x: "Current Marker",
       r: "Rotate or Mirror",
-      v: "Mirror",
       "[": "Drafting Style",
       "]": "Drafting Style",
       delete: "Delete",
@@ -207,6 +229,7 @@ export function resolveEditorShortcut(
       : { kind: "move-selection-required" };
   }
   if (plain && key === "i") return { kind: "open-component-insert" };
+  if (plain && key === "p") return { kind: "place-port" };
   if (plain && key === "r") {
     if (context.interactionMode === "placing-component") {
       return {
@@ -222,11 +245,6 @@ export function resolveEditorShortcut(
     return context.hasRotatableSelection
       ? { kind: "rotate", deltaDegrees: 90 }
       : { kind: "activate-tool", tool: "rectangle" };
-  }
-  if (plain && key === "v" && event.shiftKey) {
-    return context.hasRotatableSelection
-      ? { kind: "mirror", direction: "top-bottom" }
-      : null;
   }
   if (plain && key === "w") {
     return { kind: "activate-tool", tool: "wire" };

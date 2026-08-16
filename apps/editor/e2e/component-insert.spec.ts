@@ -65,7 +65,7 @@ test("mirrors component and copy placement previews before their commits", async
     .getByTestId("copy-placement-preview")
     .locator('[data-object-id="R1"] > g')
     .first();
-  await page.keyboard.press("Shift+V");
+  await page.keyboard.press("Control+r");
   await expect(copyPreview).toHaveAttribute("transform", /rotate\(180\)/u);
   await canvas.click({ position: { x: 520, y: 220 } });
   await expect(

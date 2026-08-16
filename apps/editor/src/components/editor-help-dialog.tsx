@@ -91,11 +91,11 @@ export function EditorHelpDialog({
               also contains Wire, Text, Arrow, Construction line, and Rectangle.
               With no rotatable selection, <kbd>R</kbd> starts Rectangle; with a
               component or drawing selected it rotates clockwise.{" "}
-              <kbd>Shift+R</kbd> mirrors left/right; <kbd>Shift+V</kbd> mirrors
-              top/bottom. <kbd>M</kbd> arms a connectivity-aware move for the
-              current selection; drag to place it, or press <kbd>Esc</kbd> to
-              cancel. <kbd>F</kbd> always fits the circuit in view. <kbd>C</kbd>{" "}
-              starts a mouse-following copy; click places it and
+              <kbd>Shift+R</kbd> mirrors left/right; <kbd>Ctrl+R</kbd> mirrors
+              top/bottom. <kbd>M</kbd> makes the current selection follow the
+              pointer; click to place it, or press <kbd>Esc</kbd> to cancel.{" "}
+              <kbd>F</kbd> always fits the circuit in view. <kbd>C</kbd> starts
+              a mouse-following copy; click places it and
               <kbd>Esc</kbd> cancels.
             </p>
           </section>
@@ -119,14 +119,16 @@ export function EditorHelpDialog({
                   <kbd>C</kbd> copy-place (click to place, <kbd>Esc</kbd> to
                   cancel); <kbd>M</kbd> move/stretch the current selection;
                   <kbd>R</kbd> rotate; <kbd>Shift</kbd> + <kbd>R</kbd>
-                  mirror left/right; <kbd>Shift</kbd> + <kbd>V</kbd> mirror
-                  top/bottom; <kbd>F</kbd> fit view;
+                  mirror left/right; <kbd>Ctrl</kbd> + <kbd>R</kbd> mirror
+                  top/bottom; <kbd>Ctrl</kbd> + <kbd>D</kbd> deselect;{" "}
+                  <kbd>F</kbd> fit view;
                   <kbd>Delete</kbd> or <kbd>Backspace</kbd> delete.
                 </dd>
               </div>
               <div>
                 <dt>Tools and view</dt>
                 <dd>
+                  <kbd>I</kbd> insert a component; <kbd>P</kbd> place a Port;
                   <kbd>W</kbd> wire; <kbd>L</kbd> edits a selected Net Label;
                   <kbd>T</kbd> text; <kbd>A</kbd> arrow; <kbd>K</kbd>
                   construction line; <kbd>Q</kbd> Properties; <kbd>Home</kbd>

@@ -136,7 +136,10 @@ import {
   nextInstanceDesignator,
 } from "../features/netlist-export/netlist-authoring";
 import { ToolIcon } from "../features/editor-shell/tool-icon";
-import { ShapesPanel } from "../features/editor-shell/shapes-panel";
+import {
+  quickPlaceRequest,
+  ShapesPanel,
+} from "../features/editor-shell/shapes-panel";
 import { useDocumentController } from "../document/document-controller";
 import {
   applyDraftingHandle,
@@ -281,6 +284,18 @@ interface DragPreview {
   originalPositions: Record<string, Point>;
   pointerStart: DerivedPoint;
   movePlan: SelectionMovePlan;
+}
+
+/** A click-to-place Move command snapshot; never persisted. */
+interface CommandMoveSession {
+  documentId: string;
+  revision: number;
+  movePlan: SelectionMovePlan;
+  instancePreview: DragPreview | null;
+  pointerOrigin: Point;
+  visual: ReturnType<typeof startCanvasDragVisual> | null;
+  lastSnap?: SnapResult;
+  lastDelta: Point;
 }
 interface BoxPreview {
   start: DerivedPoint;
@@ -810,6 +825,7 @@ export function App({
   } | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
+  const commandMoveSessionRef = useRef<CommandMoveSession | null>(null);
   const copyCounter = useRef(0);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
@@ -1439,6 +1455,7 @@ export function App({
   }
 
   function cancelAllTransientInteraction(): void {
+    clearCommandMoveSession();
     canvasDragSessionRef.current?.cancel();
     clearTransientCanvasState();
     paintSnapGuides([]);
@@ -2118,7 +2135,7 @@ export function App({
     }
     beginComponentPlacement(request);
     setStatus(
-      `Place ${symbolName} on the canvas · R rotates · Shift+R/V mirrors · Esc cancels`,
+      `Place ${symbolName} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
     );
   }
 
@@ -3759,10 +3776,149 @@ export function App({
       setStatus("Selected objects are attached or locked and cannot move");
       return;
     }
+    const primaryInstanceId =
+      selectedIds.at(-1) ?? movePlan.instanceIds.at(0) ?? null;
+    const instancePreview = primaryInstanceId
+      ? (() => {
+          const primary = document.instances.find(
+            (instance) => instance.id === primaryInstanceId,
+          );
+          if (!primary?.placement) return null;
+          const originalPositions = Object.fromEntries(
+            movePlan.instanceIds.flatMap((id) => {
+              const instance = document.instances.find(
+                (candidate) => candidate.id === id,
+              );
+              return instance?.placement
+                ? [[id, { ...instance.placement.position }] as const]
+                : [];
+            }),
+          );
+          return {
+            instanceIds: movePlan.instanceIds,
+            primaryInstanceId,
+            originalPositions,
+            // The primary origin is the command's mouse-following anchor.
+            pointerStart: { ...primary.placement.position },
+            movePlan,
+          } satisfies DragPreview;
+        })()
+      : null;
+    const freeAnnotation = movePlan.freeAnnotationIds
+      .map((id) =>
+        document.annotations.find((annotation) => annotation.id === id),
+      )
+      .find((annotation) => annotation?.anchor.kind === "free");
+    const visualOrigin = movePlan.draftingIds
+      .flatMap((id) => {
+        const object = document.drafting?.objects.find(
+          (candidate) => candidate.id === id,
+        );
+        const origin = object ? draftingDragOrigin(object) : null;
+        return origin ? [origin] : [];
+      })
+      .find((point): point is Point => point !== null) ??
+      (freeAnnotation?.anchor.kind === "free"
+        ? freeAnnotation.anchor.position
+        : undefined) ??
+      movePlan.looseRouteIds
+        .map(
+          (id) =>
+            routePolylines.find((record) => record.route.id === id)?.polyline
+              .points[0],
+        )
+        .find((point): point is Point => point !== undefined) ?? { x: 0, y: 0 };
+    commandMoveSessionRef.current = {
+      documentId: document.id,
+      revision: document.revision,
+      movePlan,
+      instancePreview,
+      pointerOrigin: instancePreview
+        ? instancePreview.pointerStart
+        : visualOrigin,
+      visual: null,
+      lastDelta: { x: 0, y: 0 },
+    };
     beginSelectionMoveInteraction();
-    setStatus(
-      "Move: drag the selected objects to a new position (Esc to cancel)",
-    );
+    setStatus("Move: move the pointer, then click to place (Esc to cancel)");
+  }
+
+  function clearCommandMoveSession(): void {
+    commandMoveSessionRef.current?.visual?.restore();
+    commandMoveSessionRef.current = null;
+  }
+
+  function updateCommandMovePreview(
+    point: DerivedPoint,
+    svg: SVGSVGElement,
+    suppressSnap: boolean,
+  ): CommandMoveSession | null {
+    const session = commandMoveSessionRef.current;
+    if (!session || session.documentId !== document.id) return null;
+    if (!session.visual) {
+      session.visual = startCanvasDragVisual(
+        svg,
+        session.movePlan.previewObjectIds,
+      );
+    }
+    if (session.instancePreview) {
+      const resolved = instanceMoveAt(
+        session.instancePreview,
+        point,
+        logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
+        suppressSnap,
+        session.lastSnap,
+      );
+      session.lastSnap = resolved.snap;
+      const primary = resolved.moves.find(
+        (move) =>
+          move.instanceId === session.instancePreview!.primaryInstanceId,
+      );
+      const original =
+        session.instancePreview.originalPositions[
+          session.instancePreview.primaryInstanceId
+        ];
+      if (!primary || !original) return null;
+      session.lastDelta = {
+        x: primary.position.x - original.x,
+        y: primary.position.y - original.y,
+      };
+      paintSnapGuides(resolved.snap.guides);
+    } else {
+      session.lastDelta = {
+        x: snapCoordinate(
+          point.x - session.pointerOrigin.x,
+          document.presentation.grid,
+        ),
+        y: snapCoordinate(
+          point.y - session.pointerOrigin.y,
+          document.presentation.grid,
+        ),
+      };
+      paintSnapGuides([]);
+    }
+    session.visual.translate(session.lastDelta);
+    return session;
+  }
+
+  function commitCommandMove(point: DerivedPoint, svg: SVGSVGElement): void {
+    const session = updateCommandMovePreview(point, svg, false);
+    if (!session) return;
+    session.visual?.restore();
+    commandMoveSessionRef.current = null;
+    if (session.instancePreview) {
+      completeInstanceMove(
+        session.instancePreview,
+        point,
+        logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
+        false,
+        session.lastSnap,
+      );
+    } else {
+      completeVisualSelectionMove(session.movePlan, session.lastDelta);
+    }
+    paintSnapGuides([]);
+    cancelInteraction();
   }
 
   function instanceMoveAt(
@@ -5362,6 +5518,7 @@ export function App({
   }
 
   function beginCanvasGesture(event: ReactPointerEvent<SVGSVGElement>): void {
+    if (getCurrentInteractionState().kind === "moving-selection") return;
     if (event.button === 1) {
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -5454,6 +5611,14 @@ export function App({
   function continueCanvasGesture(
     event: ReactPointerEvent<SVGSVGElement>,
   ): void {
+    if (getCurrentInteractionState().kind === "moving-selection") {
+      updateCommandMovePreview(
+        pointFromClient(event.clientX, event.clientY, event.currentTarget),
+        event.currentTarget,
+        event.altKey,
+      );
+      return;
+    }
     if (panPreview?.pointerId === event.pointerId) {
       const bounds = event.currentTarget.getBoundingClientRect();
       const dx =
@@ -6153,7 +6318,7 @@ export function App({
     paintSnapGuides([]);
     beginCopyPlacementInteraction(copied, anchor);
     setStatus(
-      `Place copy of ${copied.instances.length} components · R rotates · Shift+R/V mirrors · Esc cancels`,
+      `Place copy of ${copied.instances.length} components · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
     );
   }
 
@@ -6323,6 +6488,9 @@ export function App({
         case "block-browser-refresh":
           setStatus("Refresh blocked to protect the current circuit");
           return;
+        case "block-browser-bookmark":
+          setStatus("Browser bookmark shortcut blocked while editing");
+          return;
         case "undo":
         case "redo":
           transact([{ kind: shortcut.kind }]);
@@ -6358,12 +6526,27 @@ export function App({
           });
           setSelectedEndpoint(null);
           return;
+        case "clear-selection":
+          resetSelection();
+          setSelectedEndpoint(null);
+          setSelectedRouteSegmentIndex(null);
+          setStatus("Selection cleared");
+          return;
         case "reverse-current-marker":
           reverseSelectedCurrentArrow();
           return;
         case "open-component-insert":
           openInsertComponentDialog();
           return;
+        case "place-port": {
+          const request = quickPlaceRequest(
+            document.presentation.styleProfileId,
+            "port",
+          );
+          if (request) beginInsertedComponentPlacement(request);
+          else setStatus("Port is unavailable in this style profile");
+          return;
+        }
         case "rotate-placement":
           rotatePendingComponent(shortcut.deltaDegrees);
           return;
@@ -6704,7 +6887,7 @@ export function App({
                     onClick={() => mirrorSelected("top-bottom")}
                     disabled={selectedIds.length === 0}
                   >
-                    Mirror top/bottom (Shift+V)
+                    Mirror top/bottom (Ctrl+R)
                   </button>
                   {selectedIds.length > 1 ? (
                     <button type="button" onClick={alignSelectedInstances}>
@@ -7331,11 +7514,11 @@ export function App({
                         </button>
                         <button
                           type="button"
-                          aria-label="Mirror component top to bottom, Shift+V"
-                          title="Mirror top/bottom (Shift+V)"
+                          aria-label="Mirror component top to bottom, Ctrl+R"
+                          title="Mirror top/bottom (Ctrl+R)"
                           onClick={() => mirrorSelected("top-bottom")}
                         >
-                          ↕ Shift+V
+                          ↕ Ctrl+R
                         </button>
                       </div>
                     </>
@@ -7942,6 +8125,21 @@ export function App({
             viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
             onWheel={handleWheel}
             onClickCapture={(event) => {
+              if (getCurrentInteractionState().kind === "moving-selection") {
+                if (event.detail === 1) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  commitCommandMove(
+                    pointFromClient(
+                      event.clientX,
+                      event.clientY,
+                      event.currentTarget,
+                    ),
+                    event.currentTarget,
+                  );
+                }
+                return;
+              }
               if (
                 !vddRailMode &&
                 (!pendingSymbolId || !pendingComponentPlacement)
@@ -7960,6 +8158,10 @@ export function App({
               });
             }}
             onPointerDownCapture={(event) => {
+              if (getCurrentInteractionState().kind === "moving-selection") {
+                event.stopPropagation();
+                return;
+              }
               const target = event.target as Element;
               if (
                 selectedDrafting &&

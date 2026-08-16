@@ -7492,3 +7492,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed as `f07c65c`
   (`feat(editor): unify keyboard and pointer selection move`) and pushed to
   `codex/unified-selection-move-20260816`.
+
+## 2026-08-16 - Complete command move shortcuts
+
+- Target: replace the drag-after-`M` bridge with click-to-place Move and make
+  browser-conflicting `Ctrl+R` / `Ctrl+D` valid editor commands where allowed.
+- Changed areas: shortcut arbitration, canvas command-move preview/commit,
+  direct Port placement, Help, and focused browser contracts.
+- Validation: 24 focused shortcut/state tests, 37 focused unit tests including
+  App, four dedicated Playwright contracts, workspace typecheck, Prettier, and
+  `git diff --check` passed.
+- Commit status: `3af1a7b` pushed on `codex/command-move-shortcuts`. The first
+  remote browser run exposed two stale `Shift+V` assertions; the branch now
+  updates them to `Ctrl+R` and awaits repeated remote checks.
