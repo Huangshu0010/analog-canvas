@@ -131,8 +131,9 @@ export function EditorHelpDialog({
                   <kbd>I</kbd> insert a component; <kbd>P</kbd> place a Port;
                   <kbd>W</kbd> wire; <kbd>L</kbd> edits a selected Net Label;
                   <kbd>T</kbd> text; <kbd>A</kbd> arrow; <kbd>K</kbd>
-                  construction line; <kbd>Q</kbd> Properties; <kbd>Home</kbd>
-                  fit view; <kbd>X</kbd> reverses a selected current arrow.
+                  construction line; <kbd>Q</kbd> Properties open/close;{" "}
+                  <kbd>Home</kbd> fit view; <kbd>X</kbd> reverses a selected
+                  current arrow.
                 </dd>
               </div>
               <div>

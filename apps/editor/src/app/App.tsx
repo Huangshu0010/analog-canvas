@@ -6494,6 +6494,11 @@ export function App({
         hasRemovableWireWaypoint: Boolean(
           wireSource && wireWaypoints.length > 0,
         ),
+        propertiesOpen: selectionOpen,
+        typingInProperties:
+          isTypingTarget(event.target) &&
+          event.target instanceof Element &&
+          event.target.closest('[data-testid="selection-dock"]') !== null,
       });
       if (!shortcut) return;
 
@@ -6594,6 +6599,10 @@ export function App({
           return;
         case "open-properties":
           openProperties();
+          return;
+        case "close-properties":
+          setSelectionOpen(false);
+          setImportReviewOpen(false);
           return;
         case "property-selection-required":
           setStatus("Select an object before opening Properties");
@@ -7360,6 +7369,7 @@ export function App({
           className={selectionOpen ? "selection-dock open" : "selection-dock"}
           aria-label="Properties"
           role="complementary"
+          data-testid="selection-dock"
         >
           <section className="selection-shelf" aria-label="Selection">
             <button
