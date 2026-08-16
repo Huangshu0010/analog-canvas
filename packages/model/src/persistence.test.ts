@@ -73,9 +73,9 @@ describe("Project persistence", () => {
     const project = createEmptyProject("project-test", "Test Project");
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 99 })),
-    ).toThrow(/exactly 10/);
+    ).toThrow(/exactly 11/);
     expect(() =>
       parseProject(JSON.stringify({ ...project, schemaVersion: 9 })),
-    ).toThrow(/exactly 10/);
+    ).toThrow(/exactly 11/);
   });
 });

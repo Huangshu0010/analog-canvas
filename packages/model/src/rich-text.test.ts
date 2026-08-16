@@ -37,14 +37,35 @@ describe("canonical RichText helpers", () => {
     expect(RichTextDocumentSchema.safeParse(normalized).success).toBe(true);
   });
 
-  it("rejects the retired fraction node", () => {
+  it("accepts the restored fraction node and flattens it with a slash", () => {
+    const content: RichTextDocument = {
+      runs: [
+        {
+          kind: "span",
+          style: "bold",
+          children: [
+            {
+              kind: "fraction",
+              numerator: { runs: [{ kind: "text", value: "10um" }] },
+              denominator: { runs: [{ kind: "text", value: "150nm" }] },
+            },
+          ],
+        },
+      ],
+    };
+    expect(RichTextDocumentSchema.safeParse(content).success).toBe(true);
+    expect(flattenRichText(content)).toBe("10um/150nm");
+    expect(flattenRichText(normalizeRichText(content))).toBe("10um/150nm");
+  });
+
+  it("rejects an empty fraction side", () => {
     expect(
       RichTextDocumentSchema.safeParse({
         runs: [
           {
             kind: "fraction",
             numerator: { runs: [{ kind: "text", value: "1" }] },
-            denominator: { runs: [{ kind: "text", value: "2" }] },
+            denominator: { runs: [] },
           },
         ],
       }).success,
