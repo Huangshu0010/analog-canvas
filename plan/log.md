@@ -7682,3 +7682,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: merged to `main` via #95 after the mainline gate (clean-state
   local `pnpm ci:check`, green GitHub Actions checks after refreshing the
   Linux MCP tarball checksum recorded in `config/agent-mcp-distribution.json`).
+
+## 2026-08-17 - Test-system rationalization
+
+- Target: make test responsibility explicit and enforce an evidence-based
+  decision whenever implementation code changes, while removing a dead surface
+  and strengthening current high-value contracts.
+- Changed areas: test-system guide and contract matrix; target-plan and Agent
+  rules; CI test-impact check and its unit contract; coordinate-domain,
+  topology-hash, and Netlist extraction contracts; unused style-profile token.
+- Validation: focused contracts; `pnpm test:impact -- --base main`;
+  `pnpm ci:static`; full `pnpm test:local` (129 files / 801 tests); and
+  `pnpm verify:branch` including workspace build and production smoke.
+- Commit status: committed and pushed on `chore/test-system-rationalization`.

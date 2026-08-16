@@ -13,7 +13,7 @@ Project file, and export formal drawings.
   and [documentation map](docs/README.md).
 - **Develop or contribute:** [working rules](AGENTS.md),
   [current development reading set](docs/current/README.md), and
-  [validation commands](#validation).
+  [validation commands](#validation) and the [test system](docs/testing/README.md).
 
 ## Run locally
 

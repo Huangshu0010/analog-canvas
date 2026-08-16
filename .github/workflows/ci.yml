@@ -32,6 +32,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
         shell: bash
         run: |
           heavy=true
@@ -45,6 +46,16 @@ jobs:
             done < <(git diff --name-only "$BASE_SHA" HEAD)
           fi
           echo "heavy=$heavy" >> "$GITHUB_OUTPUT"
+      - name: Check test-impact declaration
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        shell: bash
+        run: |
+          base="$BEFORE_SHA"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then base="$BASE_SHA"; fi
+          node scripts/check-test-impact.mjs --base "$base"
       - name: Check local Markdown links
         run: node scripts/check-markdown-links.mjs
 
