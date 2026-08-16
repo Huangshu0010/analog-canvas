@@ -15,7 +15,9 @@
   (build + production smoke), focused value e2e 3/3, and a pixel-level check
   of the rendered fraction (parts ≈ 99% of the label height, clean gaps
   above and below the bar).
-- Commit status: branch `zcode/fraction-part-scale` pushed for PR review.
+- Commit status: PR #101 (`zcode/fraction-part-scale`), commits `cec8cbc`
+  (feat) and `db12782` (plan record); all six required remote checks passed
+  and the human merged PR #101 to `main` as `d414bdd`.
 
 ## 2026-08-16 - Razavi fraction values, engineering units, live Value toggle
 
