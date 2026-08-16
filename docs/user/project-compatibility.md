@@ -1,7 +1,8 @@
 # Project File Compatibility
 
-The released Project schema version is `9`. A canonical v9 file can be opened,
-saved, reopened, and saved again without byte drift. Older and newer schema
+The released Project schema version is `10` (it adds the `instance-value`
+annotation kind). A canonical v10 file can be opened, saved, reopened, and
+saved again without byte drift. Older and newer schema
 versions are rejected; the editor has no compatibility reader or migration
 registry.
 
@@ -13,7 +14,7 @@ files from named rejected inputs. Retired fields such as first-class
 
 An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
-produce and validate a complete v9 candidate before a human chooses to load it.
+produce and validate a complete v10 candidate before a human chooses to load it.
 
 Viewport, selection, canvas overlays, import compiler state, Agent session
 credentials, and recovery envelopes are not part of the Project file. Browser

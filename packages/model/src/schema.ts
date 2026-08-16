@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 9;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 10;
 
 export const StableIdSchema = z.string().min(1).max(256);
 /** A persisted Document page point before its Document-grid relation is known. */
@@ -330,6 +330,7 @@ export const NoConnectSchema = z.strictObject({
 
 export const AnnotationKindSchema = z.enum([
   "instance-label",
+  "instance-value",
   "net-label",
   "power-label",
   "route-marker",

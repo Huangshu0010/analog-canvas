@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createEmptyProject } from "./factories.js";
 import {
+  AnnotationSchema,
   CircuitProjectJsonSchema,
   CircuitProjectSchema,
   SchematicDocumentSchema,
@@ -118,6 +119,36 @@ describe("CircuitProject schema", () => {
       kind: "instance-label",
     };
     expect(CircuitProjectSchema.safeParse(project).success).toBe(false);
+  });
+  it("accepts an instance-value annotation without a Net relation", () => {
+    const project = createEmptyProject("project-value", "Value");
+    const document = project.documents[0]!;
+    document.instances.push({
+      id: "R1",
+      symbolId: "resistor",
+      placement: null,
+      properties: {},
+    });
+    const value = {
+      id: "instance-value-R1",
+      kind: "instance-value" as const,
+      content: { runs: [{ kind: "text" as const, value: "10k" }] },
+      anchor: {
+        kind: "object" as const,
+        objectId: "R1",
+        localOffset: { x: 40, y: 0 },
+        fallbackPosition: { x: 140, y: 100 },
+      },
+      alignment: "start" as const,
+      rotation: 0 as const,
+      locked: false,
+    };
+    document.annotations.push(value);
+    expect(CircuitProjectSchema.safeParse(project).success).toBe(true);
+    // instance-value is not a Net-bound kind.
+    expect(
+      AnnotationSchema.safeParse({ ...value, netId: "net-1" }).success,
+    ).toBe(false);
   });
   it("accepts an optional presentation-only visible flag on annotations", () => {
     const project = createEmptyProject("project-visible", "Visible");

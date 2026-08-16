@@ -1,0 +1,971 @@
+{
+  "documents": [
+    {
+      "annotations": [
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 160,
+              "y": 150
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 10
+            },
+            "objectId": "M1"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "M"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-M1",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 160,
+              "y": 180
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 40
+            },
+            "objectId": "M1"
+          },
+          "content": {
+            "runs": [
+              {
+                "kind": "text",
+                "value": "20u/1u"
+              }
+            ]
+          },
+          "id": "instance-value-M1",
+          "kind": "instance-value",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 320,
+              "y": 150
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 10
+            },
+            "objectId": "M2"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "M"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "2"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-M2",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 160,
+              "y": 290
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 10
+            },
+            "objectId": "R1"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "R"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-R1",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 160,
+              "y": 320
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 40
+            },
+            "objectId": "R1"
+          },
+          "content": {
+            "runs": [
+              {
+                "kind": "text",
+                "value": "10k"
+              }
+            ]
+          },
+          "id": "instance-value-R1",
+          "kind": "instance-value",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 320,
+              "y": 290
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 10
+            },
+            "objectId": "R2"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "R"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "2"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-R2",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "end",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 280,
+              "y": 330
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": -20,
+              "y": 50
+            },
+            "objectId": "R2"
+          },
+          "content": {
+            "runs": [
+              {
+                "kind": "text",
+                "value": "22k"
+              }
+            ]
+          },
+          "id": "instance-value-R2",
+          "kind": "instance-value",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "middle",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 450,
+              "y": 310
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": -10,
+              "y": 30
+            },
+            "objectId": "C1"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "C"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-C1",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "middle",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 450,
+              "y": 340
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": -10,
+              "y": 60
+            },
+            "objectId": "C1"
+          },
+          "content": {
+            "runs": [
+              {
+                "kind": "text",
+                "value": "2p"
+              }
+            ]
+          },
+          "id": "instance-value-C1",
+          "kind": "instance-value",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 630,
+              "y": 290
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 30,
+              "y": 10
+            },
+            "objectId": "L1"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "L"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-L1",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 630,
+              "y": 320
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 30,
+              "y": 40
+            },
+            "objectId": "L1"
+          },
+          "content": {
+            "runs": [
+              {
+                "kind": "text",
+                "value": "3n"
+              }
+            ]
+          },
+          "id": "instance-value-L1",
+          "kind": "instance-value",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 160,
+              "y": 430
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 10
+            },
+            "objectId": "V1"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "V"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-V1",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 160,
+              "y": 460
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 40
+            },
+            "objectId": "V1"
+          },
+          "content": {
+            "runs": [
+              {
+                "kind": "text",
+                "value": "1.8"
+              }
+            ]
+          },
+          "id": "instance-value-V1",
+          "kind": "instance-value",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 320,
+              "y": 430
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 10
+            },
+            "objectId": "I1"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "I"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-I1",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 320,
+              "y": 460
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 40
+            },
+            "objectId": "I1"
+          },
+          "content": {
+            "runs": [
+              {
+                "kind": "text",
+                "value": "100u"
+              }
+            ]
+          },
+          "id": "instance-value-I1",
+          "kind": "instance-value",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "end",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 440,
+              "y": 150
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": -20,
+              "y": 10
+            },
+            "objectId": "M3"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "M"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "3"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-M3",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0
+        },
+        {
+          "alignment": "end",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 440,
+              "y": 180
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": -20,
+              "y": 40
+            },
+            "objectId": "M3"
+          },
+          "content": {
+            "runs": [
+              {
+                "kind": "text",
+                "value": "10u/0.5u"
+              }
+            ]
+          },
+          "id": "instance-value-M3",
+          "kind": "instance-value",
+          "locked": false,
+          "rotation": 0
+        }
+      ],
+      "constraints": [],
+      "drafting": {
+        "objects": []
+      },
+      "id": "document-main",
+      "instances": [
+        {
+          "id": "M1",
+          "netlist": {
+            "binding": {
+              "deviceClass": "mos",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "l": "1u",
+              "w": "20u"
+            },
+            "reference": "M1"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 140,
+              "y": 140
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "M2",
+          "netlist": {
+            "binding": {
+              "deviceClass": "mos",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "l": "1u",
+              "w": "40u"
+            },
+            "reference": "M2"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 300,
+              "y": 140
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "pmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "R1",
+          "netlist": {
+            "binding": {
+              "deviceClass": "resistor",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "value": "10k"
+            },
+            "reference": "R1"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 140,
+              "y": 280
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "resistor"
+        },
+        {
+          "id": "R2",
+          "netlist": {
+            "binding": {
+              "deviceClass": "resistor",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "value": "22k"
+            },
+            "reference": "R2"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 300,
+              "y": 280
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "resistor"
+        },
+        {
+          "id": "C1",
+          "netlist": {
+            "binding": {
+              "deviceClass": "capacitor",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "value": "2p"
+            },
+            "reference": "C1"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 460,
+              "y": 280
+            },
+            "rotation": 90
+          },
+          "properties": {},
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "L1",
+          "netlist": {
+            "binding": {
+              "deviceClass": "inductor",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "value": "3n"
+            },
+            "reference": "L1"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 600,
+              "y": 280
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "inductor"
+        },
+        {
+          "id": "V1",
+          "netlist": {
+            "binding": {
+              "deviceClass": "voltage-source",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "dc": "1.8"
+            },
+            "reference": "V1"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 140,
+              "y": 420
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "voltage-source"
+        },
+        {
+          "id": "I1",
+          "netlist": {
+            "binding": {
+              "deviceClass": "current-source",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "dc": "100u"
+            },
+            "reference": "I1"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 300,
+              "y": 420
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "current-source"
+        },
+        {
+          "id": "M3",
+          "netlist": {
+            "binding": {
+              "deviceClass": "mos",
+              "kind": "primitive"
+            },
+            "parameters": {
+              "l": "0.5u",
+              "w": "10u"
+            },
+            "reference": "M3"
+          },
+          "placement": {
+            "mirror": "x",
+            "position": {
+              "x": 460,
+              "y": 140
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        }
+      ],
+      "junctions": [],
+      "layoutGroups": [],
+      "name": "Main",
+      "netlist": {
+        "name": "Main",
+        "terminals": []
+      },
+      "nets": [],
+      "noConnects": [],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "razavi-textbook-v1"
+      },
+      "revision": 0,
+      "routes": [],
+      "sourceStatus": "in-sync"
+    }
+  ],
+  "id": "instance-value-display",
+  "name": "Instance Value Display",
+  "schemaVersion": 10,
+  "source": {
+    "dialect": "none",
+    "entry": null,
+    "files": [],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "razavi-reference-v1",
+    "id": "razavi-symbols",
+    "version": "1"
+  },
+  "topDocumentId": "document-main"
+}
