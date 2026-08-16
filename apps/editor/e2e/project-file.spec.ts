@@ -28,7 +28,7 @@ test("downloads the canonical Project when File System Access is unavailable", a
   const parsed = JSON.parse(bytes.toString("utf8")) as {
     schemaVersion: number;
   };
-  expect(parsed.schemaVersion).toBe(10);
+  expect(parsed.schemaVersion).toBe(11);
   await expect(page.getByTestId("status")).toContainText("Download requested");
   // A download never clears the browser recovery copies.
   await expect
@@ -64,7 +64,7 @@ test("reports a confirmed File System Access save", async ({ page }) => {
         .__fsaWrites[0] ?? null,
   );
   expect(write).not.toBeNull();
-  expect(JSON.parse(write!.text).schemaVersion).toBe(10);
+  expect(JSON.parse(write!.text).schemaVersion).toBe(11);
 });
 
 test("falls back to download when the save location is denied", async ({
@@ -78,7 +78,7 @@ test("falls back to download when the save location is denied", async ({
   });
   await page.goto("/");
   const bytes = await downloadBytes(page, "File", "Save Project");
-  expect(JSON.parse(bytes.toString("utf8")).schemaVersion).toBe(10);
+  expect(JSON.parse(bytes.toString("utf8")).schemaVersion).toBe(11);
   await expect(page.getByTestId("status")).toContainText("Download requested");
 });
 
