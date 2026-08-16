@@ -7568,5 +7568,5 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Validation: 28 focused unit tests, workspace typecheck, Prettier, Q
   property-editing + drafting dock + double-click inspect Playwright
   contracts, and `git diff --check` passed.
-- Commit status: committed on `zcode/q-open-without-input-focus`; mainline
-  merge awaits the delivery gate.
+- Commit status: merged to `main` via #93 after the mainline gate (clean-state
+  local `pnpm ci:check` and green GitHub Actions checks).
