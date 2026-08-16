@@ -7489,4 +7489,6 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Validation: 38 focused unit tests, focused `M` Playwright test, complete
   manual-editor Playwright suite (67 tests), workspace typecheck, Prettier,
   and `git diff --check` passed.
-- Commit status: pending commit on `codex/unified-selection-move`.
+- Commit status: committed as `f07c65c`
+  (`feat(editor): unify keyboard and pointer selection move`) and pushed to
+  `codex/unified-selection-move-20260816`.

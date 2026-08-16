@@ -85,3 +85,7 @@ browser coverage exposed the old child-element-only assumption.
 Validation passed: focused unit tests (38), focused Playwright `M` test, the
 complete manual-editor Playwright suite (67), workspace typecheck, Prettier,
 and `git diff --check`.
+
+Committed as `f07c65c` (`feat(editor): unify keyboard and pointer selection
+move`) and pushed to `codex/unified-selection-move-20260816` after an existing
+remote branch claimed the shorter name.
