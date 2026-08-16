@@ -20,6 +20,7 @@ const COMPACT_LIBRARY_LABELS: Readonly<Record<string, string>> = {
   "port-filled": "Filled",
   resistor: "Res",
   vdd: "VDD",
+  "vdd-port": "V Port",
   "voltage-amplifier": "V Amp",
   "voltage-source": "V Src",
 };

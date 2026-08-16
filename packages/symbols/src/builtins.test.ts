@@ -22,6 +22,7 @@ const PRODUCT_IDS = [
   "port",
   "port-filled",
   "resistor",
+  "vdd-port",
   "voltage-amplifier",
   "voltage-source",
 ] as const;

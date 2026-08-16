@@ -19,7 +19,19 @@ import type { SymbolResolver } from "@icm/symbols";
 
 const POWER_CONNECTION_BY_SYMBOL = {
   ground: { name: "0", pinName: "0", domain: "ground" },
+  "vdd-port": { name: "VDD", pinName: "P", domain: "vdd" },
 } as const;
+
+export type SymbolPowerConnection =
+  (typeof POWER_CONNECTION_BY_SYMBOL)[keyof typeof POWER_CONNECTION_BY_SYMBOL];
+
+export function powerConnectionForSymbol(
+  symbolId: string,
+): SymbolPowerConnection | undefined {
+  return POWER_CONNECTION_BY_SYMBOL[
+    symbolId as keyof typeof POWER_CONNECTION_BY_SYMBOL
+  ];
+}
 
 export interface PlacementContactProposal {
   edits: readonly SchematicEdit[];
@@ -190,6 +202,9 @@ export function proposePlacementContact(
           : {}),
       });
       if (power && createsNet) powerNetId = newNetId;
+      else if (power && target.endpoint.netId) {
+        powerNetId = target.endpoint.netId;
+      }
     } else if (target.route) {
       edits.push(
         ...proposeEndpointRouteAttachment(
@@ -202,6 +217,7 @@ export function proposePlacementContact(
           `contact-${instance.id.toLowerCase()}-${source.endpoint.kind === "terminal" ? source.endpoint.pinName.toLowerCase() : "pin"}`,
         ).edits,
       );
+      if (power) powerNetId = target.route.netId;
     }
     if (power) powerEndpoint = source.endpoint;
   }

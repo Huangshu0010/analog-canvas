@@ -97,6 +97,15 @@ const definitions = [
     requiredParameters: [],
     dialects: ["spice", "spectre"],
   },
+  {
+    symbolId: "vdd-port",
+    deviceClass: "net-marker",
+    referencePrefix: null,
+    pinOrder: ["P"],
+    targetPolicy: "none",
+    requiredParameters: [],
+    dialects: ["spice", "spectre"],
+  },
 ] satisfies readonly DeviceNetlistDefinition[];
 
 export const deviceNetlistDefinitions: readonly DeviceNetlistDefinition[] =

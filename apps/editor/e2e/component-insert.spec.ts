@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { chooseComponent, clickCommand } from "./editor-fixtures.js";
+import {
+  chooseComponent,
+  clickCommand,
+  downloadBytes,
+  emulateDownloadOnlyBrowser,
+} from "./editor-fixtures.js";
 
 test("blocks destructive browser refresh shortcuts and uses the stronger grid", async ({
   page,
@@ -184,6 +189,74 @@ test("offers VDD rail in I with preview-only symbol artwork", async ({
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("component-input-plane")).toHaveCount(0);
   await expect(page.getByTestId("instance-count")).toHaveText("0");
+});
+
+test("places the VDD power-port device as the default VDD entry", async ({
+  page,
+}) => {
+  await emulateDownloadOnlyBrowser(page);
+  await page.goto("/");
+  await page.keyboard.press("i");
+  const dialog = page.getByRole("dialog", { name: "Insert Component" });
+  await dialog.getByLabel("Component search").fill("vdd");
+  const vddEntries = await dialog
+    .locator(
+      '[data-testid="insert-component-vdd-port"], [data-testid="insert-component-vdd"]',
+    )
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("data-testid")),
+    );
+  expect(vddEntries).toEqual([
+    "insert-component-vdd-port",
+    "insert-component-vdd",
+  ]);
+  await dialog.getByTestId("insert-component-vdd-port").click();
+  await expect(dialog.locator("svg.insert-symbol-artwork")).toBeVisible();
+  await dialog.getByRole("button", { name: "Apply" }).click();
+
+  const canvas = page.getByTestId("schematic-canvas");
+  await canvas.click({ position: { x: 300, y: 160 } });
+  await canvas.click({ position: { x: 480, y: 260 } });
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByTestId("hit-VDD1")).toBeVisible();
+  await expect(page.getByTestId("hit-VDD2")).toBeVisible();
+  await expect(canvas.locator('[data-symbol-id="vdd-port"]')).toHaveCount(2);
+  await expect(canvas.getByText("VDD", { exact: true })).toHaveCount(2);
+  await expect(page.getByTestId("instance-count")).toHaveText("2");
+
+  const saved = JSON.parse(
+    (await downloadBytes(page, "File", "Save Project")).toString("utf8"),
+  ) as {
+    documents: Array<{
+      instances: Array<{ id: string; symbolId: string }>;
+      nets: Array<{
+        id: string;
+        name?: string;
+        scope: string;
+        powerDomain?: string;
+        terminals: Array<{ instanceId: string; pinName: string }>;
+      }>;
+      annotations: Array<{ id: string; kind: string; netId: string }>;
+    }>;
+  };
+  const document = saved.documents[0]!;
+  expect(document.instances.map((instance) => instance.symbolId)).toEqual([
+    "vdd-port",
+    "vdd-port",
+  ]);
+  const vddNets = document.nets.filter((net) => net.powerDomain === "vdd");
+  expect(vddNets).toHaveLength(1);
+  expect(vddNets[0]).toMatchObject({ name: "VDD", scope: "global" });
+  expect(vddNets[0]!.terminals).toEqual([
+    { instanceId: "VDD1", pinName: "P" },
+    { instanceId: "VDD2", pinName: "P" },
+  ]);
+  expect(
+    document.annotations
+      .filter((annotation) => annotation.kind === "power-label")
+      .map((annotation) => annotation.id),
+  ).toEqual(["power-label-vdd1", "power-label-vdd2"]);
 });
 
 test("reopens I and starts Copy from retained selection without stacking modes", async ({
@@ -508,7 +581,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   const categories = panel.locator('[data-testid^="shapes-category-"]');
 
   await expect(panel).toHaveAttribute("data-open", "true");
-  await expect(libraryChips).toHaveCount(18);
+  await expect(libraryChips).toHaveCount(19);
   await expect(categories).toHaveCount(6);
   const transistorCategory = page.getByTestId("shapes-category-transistors");
   const transistorChips = transistorCategory.locator(
@@ -615,7 +688,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
   expect(artworkGeometry.every((artwork) => artwork.separatedFromLabel)).toBe(
     true,
   );
-  await expect(libraryChips.locator("span")).toHaveCount(18);
+  await expect(libraryChips.locator("span")).toHaveCount(19);
   await expect(transistorCategory).toHaveJSProperty("open", true);
   await transistorCategory.locator("summary").click();
   await expect(transistorCategory).toHaveJSProperty("open", false);
@@ -626,7 +699,7 @@ test("shows the complete foldable categorized Library, quick-places a device, an
     page
       .getByTestId("shapes-category-power-and-ports")
       .locator('[data-testid^="shapes-chip-"]'),
-  ).toHaveCount(4);
+  ).toHaveCount(5);
   await expect(
     panel.getByRole("button", { name: "Place Independent Voltage Source" }),
   ).toBeAttached();

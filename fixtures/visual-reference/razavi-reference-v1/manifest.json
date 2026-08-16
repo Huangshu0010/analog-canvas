@@ -18,6 +18,11 @@
         "current-source geometry",
         "hollow port origin"
       ]
+    },
+    {
+      "path": "vdd-reference.png",
+      "sha256": "fae2ed83a534e62bfdb9f0f7cef97892ef46fa8630be481ad1d8a83611361f84",
+      "scope": ["VDD supply marker geometry"]
     }
   ],
   "vectorEvidence": [
@@ -166,6 +171,8 @@
   "capacitorGeometrySha256": "9137e7a492c6a5e66ae0476618942f099899260a09e80f47b3d5ebe57c97cf6a",
   "currentPortGeometryPath": "current-port-geometry.json",
   "currentPortGeometrySha256": "182bc62fdec937cec49051ba5ad1ff802b8d23a576ff2695f8fdce02b0fa66fd",
+  "vddGeometryPath": "vdd-geometry.json",
+  "vddGeometrySha256": "3c10d5be30fef640734aef44225a534a83ea510620fdc2b8f26a7abf161b3ff8",
   "inductorGeometryPath": "inductor-geometry.json",
   "inductorGeometrySha256": "a45c05a9335545e202626bae7e0da1bcbbc314ab46e0b964522dccd0cee55b19",
   "opampGeometryPath": "opamp-geometry.json",
@@ -173,7 +180,7 @@
   "commonSymbolGeometryPath": "common-symbol-geometry.json",
   "commonSymbolGeometrySha256": "de9531139628f23ecdadf7dbc51d64ad176d790cb17f6929ef7fbaae597c398a",
   "fidelityTargetsPath": "fidelity-targets.json",
-  "fidelityTargetsSha256": "2d13bc726b52d072c64d7c06296259d3caefe6eeae040838c1e1db577c903e87",
+  "fidelityTargetsSha256": "5d04ed4de4f2d7a5ca6fe8efcd933fe394ed42c0e65858e3de7f85965c66c56d",
   "pixels": {
     "width": 1204,
     "height": 794

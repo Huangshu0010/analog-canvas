@@ -148,4 +148,102 @@ describe("component placement electrical contacts", () => {
       ]),
     });
   });
+
+  it("creates a standalone global VDD Net from a placed power port", () => {
+    const vddPort = {
+      id: "VDD1",
+      symbolId: "vdd-port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    };
+    const document = createEmptyDocument("main", "Main");
+    const proposal = proposedStandalonePowerConnection(document, vddPort);
+    expect(proposal).toMatchObject({
+      powerNetId: "net-power-vdd1",
+      powerEndpoint: {
+        kind: "terminal",
+        instanceId: "VDD1",
+        pinName: "P",
+      },
+      edits: [
+        {
+          kind: "connect_endpoints",
+          newNetName: "VDD",
+          newNetScope: "global",
+          from: { kind: "terminal", instanceId: "VDD1", pinName: "P" },
+        },
+        {
+          kind: "set_net_power_domain",
+          netId: "net-power-vdd1",
+          powerDomain: "vdd",
+        },
+      ],
+    });
+    const connected = executeTransaction(
+      document,
+      transaction(0, [
+        { kind: "add_instance", instance: vddPort },
+        ...proposal.edits,
+      ]),
+      context,
+    );
+    expect(connected.ok).toBe(true);
+    if (!connected.ok) return;
+    expect(connected.document.nets).toContainEqual({
+      id: "net-power-vdd1",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [{ instanceId: "VDD1", pinName: "P" }],
+    });
+  });
+
+  it("merges a later VDD power port into the rail's global supply Net", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.nets.push({
+      id: "net-power-vdd1",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
+    const vddPort = {
+      id: "VDD2",
+      symbolId: "vdd-port",
+      placement: {
+        position: { x: 100, y: 100 },
+        rotation: 0 as const,
+        mirror: "none" as const,
+      },
+      properties: {},
+    };
+    const proposal = proposedStandalonePowerConnection(document, vddPort);
+
+    expect(proposal.powerNetId).toBe("net-power-vdd1");
+    expect(proposal.edits.at(-1)).toEqual({
+      kind: "merge_nets",
+      targetNetId: "net-power-vdd1",
+      sourceNetId: "net-power-vdd2",
+    });
+    const connected = executeTransaction(
+      document,
+      transaction(0, [
+        { kind: "add_instance", instance: vddPort },
+        ...proposal.edits,
+      ]),
+      context,
+    );
+    expect(connected.ok).toBe(true);
+    if (!connected.ok) return;
+    expect(connected.document.nets).toHaveLength(1);
+    expect(connected.document.nets[0]).toMatchObject({
+      id: "net-power-vdd1",
+      powerDomain: "vdd",
+      terminals: [{ instanceId: "VDD2", pinName: "P" }],
+    });
+  });
 });
