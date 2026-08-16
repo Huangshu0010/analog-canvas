@@ -400,6 +400,26 @@ test("cancels VDD rail placement before or after its first endpoint", async ({
   ).toHaveCount(0);
 });
 
+test("uses M to arm the existing connectivity-aware move gesture", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 340, y: 220 });
+  const resistor = page.getByTestId("hit-R1");
+  await resistor.click();
+  const before = await resistor.boundingBox();
+  if (!before) throw new Error("Placed resistor is not measurable");
+
+  await page.keyboard.press("m");
+  await expect(page.getByTestId("status")).toContainText("Move:");
+  await dragBy(resistor, { x: 40, y: 20 });
+
+  const after = await resistor.boundingBox();
+  if (!after) throw new Error("Moved resistor is not measurable");
+  expect(after.x).toBeGreaterThan(before.x + 20);
+  expect(after.y).toBeGreaterThan(before.y + 5);
+});
+
 test("treats hollow and filled Ports as ordinary wired components", async ({
   page,
 }) => {

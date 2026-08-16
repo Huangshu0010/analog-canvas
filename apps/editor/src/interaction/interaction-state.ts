@@ -55,6 +55,7 @@ export type InteractionState<TClipboard = never> =
       kind: "copy-placement";
       copy: CopyPlacement<TClipboard>;
     }
+  | { kind: "moving-selection" }
   | {
       kind: "wire";
       source: WireSource | null;
@@ -89,6 +90,7 @@ export type InteractionAction<TClipboard = never> =
   | { type: "set-copy-preview"; point: Point | null }
   | { type: "rotate-copy"; deltaDegrees: 90 | -90 }
   | { type: "mirror-copy"; direction: ScreenFlip }
+  | { type: "begin-selection-move" }
   | {
       type: "set-wire-source";
       source: WireSource | null;
@@ -267,6 +269,10 @@ export function interactionReducer<TClipboard>(
             },
           }
         : state;
+    case "begin-selection-move":
+      return state.kind === "moving-selection"
+        ? state
+        : { kind: "moving-selection" };
     case "set-wire-source":
       return state.kind === "wire"
         ? {
@@ -324,6 +330,7 @@ export function interactionTool<TClipboard>(
     case "placing-component":
     case "placing-vdd-rail":
     case "copy-placement":
+    case "moving-selection":
       return "pointer";
     case "wire":
       return "wire";
@@ -399,6 +406,7 @@ export function useInteractionState<TClipboard>() {
       dispatch({ type: "rotate-copy", deltaDegrees }),
     mirrorCopyPlacement: (direction: ScreenFlip) =>
       dispatch({ type: "mirror-copy", direction }),
+    beginSelectionMove: () => dispatch({ type: "begin-selection-move" }),
     setWireSource: (source: WireSource | null, sourceRevision: number | null) =>
       dispatch({ type: "set-wire-source", source, sourceRevision }),
     setWirePreviewPoint: (point: Point | null) =>

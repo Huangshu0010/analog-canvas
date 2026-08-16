@@ -92,8 +92,10 @@ export function EditorHelpDialog({
               With no rotatable selection, <kbd>R</kbd> starts Rectangle; with a
               component or drawing selected it rotates clockwise.{" "}
               <kbd>Shift+R</kbd> mirrors left/right; <kbd>Shift+V</kbd> mirrors
-              top/bottom. <kbd>F</kbd> always fits the circuit in view.{" "}
-              <kbd>C</kbd> starts a mouse-following copy; click places it and
+              top/bottom. <kbd>M</kbd> arms a connectivity-aware move for the
+              current selection; drag to place it, or press <kbd>Esc</kbd> to
+              cancel. <kbd>F</kbd> always fits the circuit in view. <kbd>C</kbd>{" "}
+              starts a mouse-following copy; click places it and
               <kbd>Esc</kbd> cancels.
             </p>
           </section>
@@ -115,7 +117,8 @@ export function EditorHelpDialog({
                 <dd>
                   <kbd>Ctrl</kbd> + <kbd>A</kbd> selects all placed components;
                   <kbd>C</kbd> copy-place (click to place, <kbd>Esc</kbd> to
-                  cancel); <kbd>R</kbd> rotate; <kbd>Shift</kbd> + <kbd>R</kbd>
+                  cancel); <kbd>M</kbd> move/stretch the current selection;
+                  <kbd>R</kbd> rotate; <kbd>Shift</kbd> + <kbd>R</kbd>
                   mirror left/right; <kbd>Shift</kbd> + <kbd>V</kbd> mirror
                   top/bottom; <kbd>F</kbd> fit view;
                   <kbd>Delete</kbd> or <kbd>Backspace</kbd> delete.
