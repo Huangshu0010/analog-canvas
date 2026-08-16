@@ -526,7 +526,9 @@ test("places MOS parameters and orientation without a hidden-label suppressor", 
   await expect(dialog.getByLabel("Initial rotation")).toHaveValue("180");
   await expect(dialogArtwork).toHaveAttribute("data-rotation", "180");
   await dialog.getByLabel("Initial rotation").selectOption("90");
-  await dialog.getByRole("checkbox", { name: "Label" }).uncheck();
+  await dialog
+    .getByRole("checkbox", { name: "Reference", exact: true })
+    .uncheck();
   await expect(dialog.locator(".insert-parameter-name").first()).toHaveText(
     "W / m(Channel width)",
   );
