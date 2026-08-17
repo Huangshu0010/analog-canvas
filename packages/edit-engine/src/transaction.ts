@@ -25,10 +25,7 @@ import {
   resolveMosBulkConnection,
 } from "@icm/derived";
 import type { SymbolResolver } from "@icm/symbols";
-import {
-  EditTransactionSchema,
-  type EditTransaction,
-} from "./edit-schema.js";
+import { EditTransactionSchema, type EditTransaction } from "./edit-schema.js";
 import {
   buildOrthogonalEscapeRoute,
   normalizeRouteGeometry,

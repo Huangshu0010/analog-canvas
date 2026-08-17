@@ -8124,3 +8124,18 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: staged for
   `refactor(editor): complete editor panel state hook` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete editor interaction controller migration
+
+- Target: complete the five flat interaction Hook extractions and perform the
+  branch-level delivery audit.
+- Changed areas: final shell state/focus ownership and the branch-owned
+  transaction entry point's five-line Prettier repair; no protocol behavior
+  changed in the latter.
+- Validation: static branch checks, 139 unit files / 828 tests, focused
+  Playwright coverage for wire, selection, placement, properties, and shell,
+  Editor build, production smoke, test-impact, duplicate-owner search, and
+  `git diff --check` passed. `App.tsx` is 8,078 lines versus 9,563 at plan
+  start, with moved interaction ownership as the acceptance evidence.
+- Commit status: staged for final plan/log/formatting commit on
+  `codex/app-transaction-module-layers`.

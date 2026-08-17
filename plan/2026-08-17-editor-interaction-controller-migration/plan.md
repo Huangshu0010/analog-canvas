@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -80,7 +80,10 @@ Shared dependencies:
   `canvas/` remain the calculation layer.
 - `packages/edit-engine/` and persisted model protocols are read-only unless
   a migration exposes an actual contract defect; any such expansion requires
-  updating this plan before editing.
+  updating this plan before editing. Final branch verification found the
+  branch-owned `packages/edit-engine/src/transaction.ts` outside Prettier's
+  required style, so this target additionally owns a formatting-only repair
+  for that file; no edit-engine behavior or protocol changes are authorized.
 
 ## Flat Design Rules
 
@@ -374,5 +377,11 @@ Steps 1–5 move editor interaction state, effects, and transactional lifecycle
 ownership into their flat domain Hooks. `App.tsx` now composes those Hooks,
 keeps page-level JSX and cross-domain shortcut/pointer arbitration, and retains
 pure calculation helpers until a separate calculation-layer target owns them.
-Keep `status: active` until final branch validation, duplicate-owner audit, and
-delivery record are complete.
+
+Final verification passed: branch static checks; 139 unit files / 828 tests;
+focused browser coverage for every interaction domain; production smoke;
+`pnpm test:impact -- --base origin/main`; and duplicate-owner/diff audits.
+`App.tsx` decreased from 9,563 to 8,078 lines; the acceptance criterion is the
+removed ownership, rather than that line count alone. The final Prettier repair
+in `packages/edit-engine/src/transaction.ts` changes five whitespace-only
+lines so `pnpm verify:branch` can pass its formatting prerequisite.
