@@ -1,5 +1,6 @@
 import type {
   MouseEvent as ReactMouseEvent,
+  MutableRefObject,
   PointerEvent as ReactPointerEvent,
 } from "react";
 
@@ -15,13 +16,24 @@ import {
   type SchematicEdit,
   type WireSource,
 } from "@icm/edit-engine";
-import { endpointKey, isMosBulkTerminal } from "@icm/derived";
+import {
+  derivePowerRailComponent,
+  endpointKey,
+  isMosBulkTerminal,
+  resolveElectricalContactTargets,
+  resolveRouteTap,
+} from "@icm/derived";
 import { snapCoordinate } from "../../snap/engine";
 import { transformPoint } from "@icm/model";
 import type { Flightline } from "@icm/derived";
 import type { Point, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
+import {
+  startCanvasDragSession,
+  type CanvasDragSession,
+} from "../../canvas/canvas-drag-session";
+import { startCanvasDragVisual } from "../../canvas/canvas-drag-visual";
 import {
   endpointNetId,
   looseRouteAnchorIds,
@@ -74,11 +86,26 @@ export interface UseWireInteractionOptions {
   selectOnly: (kind: "route", ids: readonly string[]) => void;
   setSelectedRouteSegmentIndex: (segmentIndex: number | null) => void;
   setSelectedEndpoint: (endpoint: WireSource | null) => void;
+  canvasDragSessionRef: MutableRefObject<CanvasDragSession | null>;
+  setRouteStretchPreview: (preview: RouteStretchPreview | null) => void;
+  pointFromClient: (
+    clientX: number,
+    clientY: number,
+    svg: SVGSVGElement,
+    snapToGrid: false,
+  ) => Point;
+  logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
+  contactComponents: Parameters<typeof resolveElectricalContactTargets>[3];
+  createRouteAnchor: (
+    routeId: string,
+    point: Point,
+    segmentIndex: number,
+  ) => WireSource;
 }
 
 /**
- * Owns the active Wire session only. Route hit testing and canvas drag
- * arbitration remain with the App until their selection/movement migration.
+ * Owns wire sessions and route-specific drag lifecycles. The App remains the
+ * cross-domain canvas pointer arbiter.
  */
 export function useWireInteraction(options: UseWireInteractionOptions) {
   const freeWireAnchor = (
@@ -298,37 +325,276 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     try {
       if (preview.intent === "move-loose-route") {
         const anchorIds = looseRouteAnchorIds(options.document, record.route);
-        if (!anchorIds) throw new Error("Only a route with two loose ends can move as a whole");
+        if (!anchorIds)
+          throw new Error(
+            "Only a route with two loose ends can move as a whole",
+          );
         const delta = {
-          x: snapCoordinate(point.x - preview.start.x, options.document.presentation.grid),
-          y: snapCoordinate(point.y - preview.start.y, options.document.presentation.grid),
+          x: snapCoordinate(
+            point.x - preview.start.x,
+            options.document.presentation.grid,
+          ),
+          y: snapCoordinate(
+            point.y - preview.start.y,
+            options.document.presentation.grid,
+          ),
         };
         if (delta.x !== 0 || delta.y !== 0) {
-          const result = options.transact(proposeLooseRouteTranslation(options.document, record.route.id, delta).edits);
-          if (result.ok) options.setStatus(`Moved loose route ${record.route.id}`);
+          const result = options.transact(
+            proposeLooseRouteTranslation(
+              options.document,
+              record.route.id,
+              delta,
+            ).edits,
+          );
+          if (result.ok)
+            options.setStatus(`Moved loose route ${record.route.id}`);
         }
       } else if (preview.intent === "move-power-rail") {
         const delta = {
-          x: snapCoordinate(point.x - preview.start.x, options.document.presentation.grid),
-          y: snapCoordinate(point.y - preview.start.y, options.document.presentation.grid),
+          x: snapCoordinate(
+            point.x - preview.start.x,
+            options.document.presentation.grid,
+          ),
+          y: snapCoordinate(
+            point.y - preview.start.y,
+            options.document.presentation.grid,
+          ),
         };
         if (delta.x !== 0 || delta.y !== 0) {
-          const result = options.transact(proposePowerRailTranslation(options.document, options.resolver, record.route.id, delta).edits);
+          const result = options.transact(
+            proposePowerRailTranslation(
+              options.document,
+              options.resolver,
+              record.route.id,
+              delta,
+            ).edits,
+          );
           if (result.ok) options.setStatus(`Moved VDD rail ${record.route.id}`);
         }
-      } else if (preview.intent === "resize-power-rail-start" || preview.intent === "resize-power-rail-end") {
-        const result = options.transact(proposePowerRailEndpointResize(options.document, options.resolver, record.route.id, preview.intent === "resize-power-rail-start" ? "start" : "end", snapCoordinate(point.x, options.document.presentation.grid)).edits);
+      } else if (
+        preview.intent === "resize-power-rail-start" ||
+        preview.intent === "resize-power-rail-end"
+      ) {
+        const result = options.transact(
+          proposePowerRailEndpointResize(
+            options.document,
+            options.resolver,
+            record.route.id,
+            preview.intent === "resize-power-rail-start" ? "start" : "end",
+            snapCoordinate(point.x, options.document.presentation.grid),
+          ).edits,
+        );
         if (result.ok) options.setStatus(`Resized VDD rail ${record.route.id}`);
       } else {
-        const result = options.transact(proposeWireSegmentMove(options.document, options.resolver, record.route.id, preview.segmentIndex, {
-          x: snapCoordinate(point.x, options.document.presentation.grid),
-          y: snapCoordinate(point.y, options.document.presentation.grid),
-        }).edits);
-        if (result.ok) options.setStatus(`Moved route segment ${record.route.id}`);
+        const result = options.transact(
+          proposeWireSegmentMove(
+            options.document,
+            options.resolver,
+            record.route.id,
+            preview.segmentIndex,
+            {
+              x: snapCoordinate(point.x, options.document.presentation.grid),
+              y: snapCoordinate(point.y, options.document.presentation.grid),
+            },
+          ).edits,
+        );
+        if (result.ok)
+          options.setStatus(`Moved route segment ${record.route.id}`);
       }
     } catch (error) {
-      options.setStatus(error instanceof Error ? error.message : "Route move failed");
+      options.setStatus(
+        error instanceof Error ? error.message : "Route move failed",
+      );
     }
+  };
+
+  const beginRouteStretch = (
+    event: ReactPointerEvent<SVGElement>,
+    routeId: string,
+    segmentIndex: number,
+    intent: RouteStretchPreview["intent"] = "stretch-segment",
+    hitTarget: SVGElement = event.currentTarget,
+  ): void => {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    options.canvasDragSessionRef.current?.cancel();
+    const svg = hitTarget.ownerSVGElement!;
+    const start = options.pointFromClient(
+      event.clientX,
+      event.clientY,
+      svg,
+      false,
+    );
+    const record = options.routeGeometryRecords.find(
+      (candidate) => candidate.route.id === routeId,
+    );
+    if (!record) return;
+    const powerRail =
+      intent === "move-power-rail" ||
+      intent === "resize-power-rail-start" ||
+      intent === "resize-power-rail-end"
+        ? derivePowerRailComponent(options.document, routeId)
+        : null;
+    const anchorIds =
+      intent === "move-loose-route"
+        ? (looseRouteAnchorIds(options.document, record.route) ?? [])
+        : (powerRail?.junctionIds ?? []);
+    const translatedRouteIds =
+      intent === "move-power-rail"
+        ? (powerRail?.routeIds ?? [routeId])
+        : [routeId];
+    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
+    const dragVisual = () =>
+      (visual ??= startCanvasDragVisual(svg, [
+        ...translatedRouteIds,
+        ...anchorIds,
+      ]));
+    const preview: RouteStretchPreview = {
+      routeId,
+      segmentIndex,
+      intent,
+      start,
+      point: start,
+    };
+    options.setRouteStretchPreview(preview);
+    options.canvasDragSessionRef.current = startCanvasDragSession({
+      target: hitTarget,
+      pointerId: event.pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      thresholdPx: 4,
+      onPreview: (client) => {
+        const point = options.pointFromClient(client.x, client.y, svg, false);
+        if (intent === "move-loose-route" || intent === "move-power-rail") {
+          dragVisual().translate({
+            x: point.x - start.x,
+            y: point.y - start.y,
+          });
+          return;
+        }
+        if (
+          intent === "resize-power-rail-start" ||
+          intent === "resize-power-rail-end"
+        ) {
+          return;
+        }
+        try {
+          const plan = proposeWireSegmentMove(
+            options.document,
+            options.resolver,
+            routeId,
+            segmentIndex,
+            point,
+          );
+          const proposal = plan.preview?.routes.find(
+            (candidate) => candidate.routeId === routeId,
+          );
+          if (!proposal) return;
+          dragVisual().setPolyline([
+            record.geometry.centerline[0]!,
+            ...proposal.waypoints,
+            record.geometry.centerline.at(-1)!,
+          ]);
+        } catch {
+          // Keep the last valid preview; commit reports the geometry error.
+        }
+      },
+      onFinish: ({ client, dragged }) => {
+        options.canvasDragSessionRef.current = null;
+        visual?.restore();
+        if (dragged) {
+          completeRouteStretch(
+            preview,
+            options.pointFromClient(client.x, client.y, svg, false),
+          );
+        }
+        options.setRouteStretchPreview(null);
+      },
+      onCancel: () => {
+        options.canvasDragSessionRef.current = null;
+        visual?.restore();
+        options.setRouteStretchPreview(null);
+      },
+    });
+  };
+
+  const handleWireRoutePointerDown = (
+    event: ReactPointerEvent<SVGElement>,
+    routeId: string,
+    hitTarget: SVGElement = event.currentTarget,
+  ): void => {
+    event.stopPropagation();
+    if (event.altKey) {
+      options.setStatus("Snap suppressed while Alt is held");
+      return;
+    }
+    const record = options.routeGeometryRecords.find(
+      (candidate) => candidate.route.id === routeId,
+    );
+    if (!record) return;
+    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
+    const pointer = options.pointFromClient(
+      event.clientX,
+      event.clientY,
+      svg,
+      false,
+    );
+    const tap = resolveRouteTap(
+      record.geometry,
+      pointer,
+      options.logicalRadiusForPixels(svg, 7),
+    );
+    if (!tap) {
+      options.setStatus("Wire must start or end inside a route segment");
+      return;
+    }
+    const overlappingTargets = options.routeGeometryRecords.flatMap(
+      (candidate) => {
+        const candidateTap = resolveRouteTap(
+          candidate.geometry,
+          pointer,
+          options.logicalRadiusForPixels(svg, 7),
+        );
+        return candidateTap
+          ? [
+              {
+                kind: "route" as const,
+                id: `route:${candidate.route.id}:${candidateTap.address.segmentIndex}`,
+                point: candidateTap.point,
+                netId: candidate.route.netId,
+                routeId: candidate.route.id,
+                segmentIndex: candidateTap.address.segmentIndex,
+              },
+            ]
+          : [];
+      },
+    );
+    if (
+      resolveElectricalContactTargets(
+        options.document,
+        options.resolver,
+        overlappingTargets,
+        options.contactComponents,
+      ).length > 1
+    ) {
+      options.setStatus(
+        "Ambiguous intersection: choose one conductor away from the crossing",
+      );
+      return;
+    }
+    const anchor = options.createRouteAnchor(
+      routeId,
+      tap.point,
+      tap.address.segmentIndex,
+    );
+    if (!options.wireSource) {
+      options.setWireSource(anchor, options.document.revision);
+      options.setWirePreviewPoint(tap.point);
+      options.setWireWaypoints([]);
+      options.setStatus(`Wire source: route ${routeId}`);
+      return;
+    }
+    commitWire(anchor);
   };
 
   const fixWirePoint = (point: Point): void => {
@@ -367,6 +633,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
   };
 
   return {
+    beginRouteStretch,
     commitWire,
     completeRouteStretch,
     deleteSelectedRouteConnection,
@@ -374,6 +641,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     fixWirePoint,
     finishWireAtPoint,
     handleFlightline,
+    handleWireRoutePointerDown,
     handleWireEndpoint,
     selectRoute,
   };

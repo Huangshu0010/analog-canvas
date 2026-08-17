@@ -7985,3 +7985,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: included in
   `refactor(editor): extract wire session hook` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete Editor Wiring interaction Hook
+
+- Target: finish Step 1 by giving `useWireInteraction` sole ownership of
+  route-origin Wire creation and route stretch drag lifecycle.
+- Changed areas: moved route tap ambiguity checks, route Wire activation,
+  pointer drag sessions, visual previews, cancellation, and transactional
+  stretch commits from `App.tsx` into the flat wiring Hook.
+- Validation: focused wiring contracts (4 files / 51 tests), focused
+  Playwright Wire/route scenarios, Editor build, `pnpm typecheck`,
+  `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
+- Commit status: staged for `refactor(editor): extract wire interaction hook`
+  on `codex/app-transaction-module-layers`.

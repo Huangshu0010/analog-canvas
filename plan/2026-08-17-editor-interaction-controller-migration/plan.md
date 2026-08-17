@@ -24,7 +24,7 @@ The five domains are:
 
 | Step | Domain                            | State                                         | Commit                                                 |
 | ---: | --------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
-|    1 | Wiring                            | in progress: wire session and route deletion extracted; route selection/stretch pending | `refactor(editor): extract wire interaction hook`      |
+|    1 | Wiring                            | completed                                     | `refactor(editor): extract wire interaction hook`      |
 |    2 | Selection and movement            | pending                                       | `refactor(editor): extract selection interaction hook` |
 |    3 | Component insertion and placement | pending                                       | `refactor(editor): extract component placement hook`   |
 |    4 | Property editing                  | pending                                       | `refactor(editor): extract properties editor hook`     |
@@ -339,7 +339,9 @@ After all five steps:
 
 ## Test Impact
 
-- Decision: tests-updated
+- Decision: no-test-change for Step 1. Existing unit and browser contracts
+  cover the moved Wire behavior; the extraction does not change its protocol
+  or user-visible result.
 - Contracts: wire creation/editing, selection/movement/copy, component/VDD
   placement, property/text editing, and panel/dialog behavior remain unchanged
   while their React ownership moves.
@@ -348,6 +350,15 @@ After all five steps:
 - Test rule: add a new Hook test only for a state transition not already
   protected by a pure-domain, App, or browser contract. Do not duplicate
   existing behavior across test layers.
+
+### Step 1 validation
+
+- `pnpm test:local apps/editor/src/app/App.test.tsx apps/editor/src/features/wiring/route-interaction-geometry.test.ts packages/edit-engine/src/wire-editing.test.ts packages/edit-engine/src/routing.test.ts` — 4 files / 51 tests passed.
+- Focused Playwright Wire/route scenarios passed, including route tap,
+  repeated Wire, route deletion, flightlines, free-route movement, and
+  selected-segment stretch.
+- `pnpm --filter @icm/editor build`, `pnpm typecheck`,
+  `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
 
 ## Commit Intent
 
@@ -359,6 +370,6 @@ plan(editor): define flat interaction hook migration
 
 ## Outcome
 
-Plan accepted for execution on `codex/app-transaction-module-layers`.
-Implementation has not started. Keep `status: active` until all five steps
-and the final branch validation complete.
+Step 1 moved route-specific Wire creation and drag orchestration into
+`useWireInteraction`; `App.tsx` retains only cross-domain pointer arbitration.
+Keep `status: active` until all five steps and final branch validation complete.

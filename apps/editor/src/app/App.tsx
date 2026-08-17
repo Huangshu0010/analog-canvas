@@ -108,7 +108,7 @@ import {
   resolveCanvasHitAtPoint,
 } from "../canvas/canvas-hit-resolver";
 import {
-  type RouteStretchPreview as WireRouteStretchPreview,
+  type RouteStretchPreview,
   useWireInteraction,
 } from "../features/wiring/use-wire-interaction";
 import {
@@ -349,14 +349,6 @@ interface PanPreview {
   clientStart: Point;
   viewBoxStart: GridRect;
   pointerId: number;
-}
-
-interface RouteStretchPreview extends WireRouteStretchPreview {
-  routeId: string;
-  segmentIndex: number;
-  intent: Exclude<SchematicMoveIntent, "move-selection">;
-  start: DerivedPoint;
-  point: DerivedPoint;
 }
 
 interface AnnotationDragPreview {
@@ -1130,14 +1122,15 @@ export function App({
     [document.id, projectConnectivityIndex],
   );
   const {
+    beginRouteStretch,
     drawSelectedMosBulk,
     deleteSelectedRouteConnection,
     fixWirePoint,
     finishWireAtPoint,
     handleFlightline,
+    handleWireRoutePointerDown,
     handleWireEndpoint,
     commitWire,
-    completeRouteStretch,
     selectRoute,
   } = useWireInteraction({
     document,
@@ -1165,6 +1158,12 @@ export function App({
     selectOnly,
     setSelectedRouteSegmentIndex,
     setSelectedEndpoint,
+    canvasDragSessionRef,
+    setRouteStretchPreview,
+    pointFromClient,
+    logicalRadiusForPixels,
+    contactComponents,
+    createRouteAnchor: routeAnchor,
   });
 
   const textEditingTarget = textEditing
@@ -2197,6 +2196,10 @@ export function App({
       if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
       return;
     }
+    if (tool !== "pointer") {
+      handleWireRoutePointerDown(event, routeId, hitTarget);
+      return;
+    }
     event.stopPropagation();
     if (event.altKey) {
       setStatus("Snap suppressed while Alt is held");
@@ -2206,197 +2209,34 @@ export function App({
       (candidate) => candidate.route.id === routeId,
     );
     if (!routeRecord) return;
-    const routeGeometry = projectConnectivityIndex.documents
-      .get(document.id)
-      ?.routingGeometry.routes.get(routeId);
-    if (!routeGeometry) return;
     const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
     const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
     const tap = resolveRouteTap(
-      routeGeometry,
+      routeRecord.geometry,
       pointer,
       logicalRadiusForPixels(svg, 7),
     );
-    if (tool === "pointer") {
-      const segmentIndex = tap?.address.segmentIndex ?? 0;
-      if (getCurrentInteractionState().kind === "moving-selection") {
-        const movePlan = planSelectionMove(document, visualSelection);
-        if (movePlan.previewObjectIds.length > 0) {
-          beginVisualSelectionMove(event, visualSelection, hitTarget);
-          return;
-        }
-        cancelInteraction();
+    const segmentIndex = tap?.address.segmentIndex ?? 0;
+    if (getCurrentInteractionState().kind === "moving-selection") {
+      const movePlan = planSelectionMove(document, visualSelection);
+      if (movePlan.previewObjectIds.length > 0) {
+        beginVisualSelectionMove(event, visualSelection, hitTarget);
+        return;
       }
-      selectRoute(routeId, segmentIndex);
-      beginRouteStretch(
-        event,
-        routeId,
-        segmentIndex,
-        routeRecord.route.presentation === "power-rail"
-          ? "move-power-rail"
-          : looseRouteAnchorIds(document, routeRecord.route) !== null
-            ? "move-loose-route"
-            : "stretch-segment",
-        hitTarget,
-      );
-      return;
+      cancelInteraction();
     }
-    if (!tap) {
-      setStatus("Wire must start or end inside a route segment");
-      return;
-    }
-    const overlappingTargets = routeGeometryRecords.flatMap((candidate) => {
-      const candidateGeometry = projectConnectivityIndex.documents
-        .get(document.id)
-        ?.routingGeometry.routes.get(candidate.route.id);
-      if (!candidateGeometry) return [];
-      const candidateTap = resolveRouteTap(
-        candidateGeometry,
-        pointer,
-        logicalRadiusForPixels(svg, 7),
-      );
-      return candidateTap
-        ? [
-            {
-              kind: "route" as const,
-              id: `route:${candidate.route.id}:${candidateTap.address.segmentIndex}`,
-              point: candidateTap.point,
-              netId: candidate.route.netId,
-              routeId: candidate.route.id,
-              segmentIndex: candidateTap.address.segmentIndex,
-            },
-          ]
-        : [];
-    });
-    if (
-      resolveElectricalContactTargets(
-        document,
-        resolver,
-        overlappingTargets,
-        contactComponents,
-      ).length > 1
-    ) {
-      setStatus(
-        "Ambiguous intersection: choose one conductor away from the crossing",
-      );
-      return;
-    }
-    const anchor = routeAnchor(routeId, tap.point, tap.address.segmentIndex);
-    if (!wireSource) {
-      setWireSource(anchor, document.revision);
-      setWirePreviewPoint(tap.point);
-      setWireWaypoints([]);
-      setStatus(`Wire source: route ${routeId}`);
-    } else {
-      commitWire(anchor);
-    }
-  }
-
-  function beginRouteStretch(
-    event: ReactPointerEvent<SVGElement>,
-    routeId: string,
-    segmentIndex: number,
-    intent: RouteStretchPreview["intent"] = "stretch-segment",
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (event.button !== 0) return;
-    event.stopPropagation();
-    canvasDragSessionRef.current?.cancel();
-    const svg = hitTarget.ownerSVGElement!;
-    const start = pointFromClient(event.clientX, event.clientY, svg, false);
-    const record = routeGeometryRecords.find(
-      (candidate) => candidate.route.id === routeId,
-    );
-    if (!record) return;
-    const powerRail =
-      intent === "move-power-rail" ||
-      intent === "resize-power-rail-start" ||
-      intent === "resize-power-rail-end"
-        ? derivePowerRailComponent(document, routeId)
-        : null;
-    const anchorIds =
-      intent === "move-loose-route"
-        ? (looseRouteAnchorIds(document, record.route) ?? [])
-        : (powerRail?.junctionIds ?? []);
-    const translatedRouteIds =
-      intent === "move-power-rail"
-        ? (powerRail?.routeIds ?? [routeId])
-        : [routeId];
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, [
-        ...translatedRouteIds,
-        ...anchorIds,
-      ]));
-    const preview: RouteStretchPreview = {
+    selectRoute(routeId, segmentIndex);
+    beginRouteStretch(
+      event,
       routeId,
       segmentIndex,
-      intent,
-      start,
-      point: start,
-    };
-    setRouteStretchPreview(preview);
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const point = pointFromClient(client.x, client.y, svg, false);
-        if (intent === "move-loose-route" || intent === "move-power-rail") {
-          dragVisual().translate({
-            x: point.x - start.x,
-            y: point.y - start.y,
-          });
-          return;
-        }
-        if (
-          intent === "resize-power-rail-start" ||
-          intent === "resize-power-rail-end"
-        ) {
-          // The persisted proposal resizes the outer rail fragment, which may
-          // differ from the selected fragment after a tap. Avoid previewing a
-          // misleading single-segment drag; the end handle remains the cue.
-          return;
-        }
-        try {
-          const plan = proposeWireSegmentMove(
-            document,
-            resolver,
-            routeId,
-            segmentIndex,
-            point,
-          );
-          const proposal = plan.preview?.routes.find(
-            (candidate) => candidate.routeId === routeId,
-          );
-          if (!proposal) return;
-          dragVisual().setPolyline([
-            record.geometry.centerline[0]!,
-            ...proposal.waypoints,
-            record.geometry.centerline.at(-1)!,
-          ]);
-        } catch {
-          // Keep the last valid preview; commit reports the geometry error.
-        }
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        if (dragged) {
-          completeRouteStretch(
-            preview,
-            pointFromClient(client.x, client.y, svg, false),
-          );
-        }
-        setRouteStretchPreview(null);
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        setRouteStretchPreview(null);
-      },
-    });
+      routeRecord.route.presentation === "power-rail"
+        ? "move-power-rail"
+        : looseRouteAnchorIds(document, routeRecord.route) !== null
+          ? "move-loose-route"
+          : "stretch-segment",
+      hitTarget,
+    );
   }
 
   function constrainAnnotationPosition(
