@@ -196,6 +196,13 @@ placement is directly covered through the normal proposal and transaction
 boundary, including AVDD/DVDD separation; validation and commit evidence are
 recorded in `plan/log.md`.
 
+## 2026-08-17 Net contract roadmap closure
+
+`2026-08-17-net-contract-n10-roadmap-closure` is completed on
+`codex/net-contract-unification-plan`. The roadmap now records the compact
+module split, explicit non-goals, and final branch verification; it is eligible
+for normal completed-plan retention handling.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

@@ -1,6 +1,6 @@
 # Net Contract Unification Plan
 
-Status: `active`
+Status: `completed` on `codex/net-contract-unification-plan`
 
 Primary owners: `packages/model`, `packages/edit-engine`, `packages/derived`,
 `packages/netlist`, `apps/editor`
@@ -359,3 +359,25 @@ Focused implementation targets must cover:
 No full-suite requirement is attached to the documentation slice. Runtime
 slices expand validation only when their owned contracts cross package or
 public API boundaries.
+
+## 12. Delivery record
+
+The completed implementation keeps the protocol deliberately small:
+
+| Concern | Owner | Delivered boundary |
+| --- | --- | --- |
+| Name equivalence and document validity | `packages/model` | `foldNetName` and `validateNetContract`; authored spelling remains persisted unchanged. |
+| Authoring | `packages/edit-engine` | Existing typed edits plus the named-Net and power-Net planners; the latter is only a role-aware wrapper and does not define a second Net identity. |
+| Read-side electrical equivalence | `packages/derived` | `ProjectConnectivityIndex` local, hierarchy, and named-global edges; semantic flightline and trace consumers. |
+| Export and diagnostics | `packages/netlist`, `packages/derived` | Shared contract validation, deterministic local generated names, and explicit global emission. |
+| Legacy entry | `apps/editor` | Deterministic compatible duplicate-power repair through the same `merge_nets` transaction, with explicit save-needed state. |
+| Agent intent | `packages/agent-client`, `packages/agent-adapter` | Semantic Net rename reuses the same named-Net planner as GUI; raw typed transactions remain strict. |
+
+Final branch verification passed on 2026-08-17: `pnpm verify:branch` completed
+static checks, 144 test files / 866 tests, all workspace builds, and the
+editor production-preview smoke check. The size warning emitted by Vite is
+non-blocking and is unrelated to Net semantics.
+
+The adjacent routing/debugging roadmap remains independent: this delivery does
+not claim completion of route-geometry redesign, broader ERC policy, search,
+or visual diagnostics.

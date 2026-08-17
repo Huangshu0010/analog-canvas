@@ -8294,3 +8294,13 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   checks passed.
 - Commit status: pending `test(net): cover repeated canonical power placement`
   on `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N10 roadmap closure
+
+- Target: close the implemented Net-contract roadmap with a compact ownership
+  and verification record.
+- Changed areas: Net-contract roadmap and factual planning records only.
+- Validation: Markdown-link and diff checks passed; preceding branch gate
+  passed 144 test files / 866 tests, workspace builds, and production smoke.
+- Commit status: pending `docs(net): close contract unification roadmap` on
+  `codex/net-contract-unification-plan`.
