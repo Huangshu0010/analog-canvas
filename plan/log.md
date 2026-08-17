@@ -7932,3 +7932,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: included in
   `refactor(editor): extract App canvas geometry helpers` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Layer Edit Engine execution helpers
+
+- Target: separate transaction preflight, routing, route-follow, and instance
+  annotation-follow behavior from atomic transaction dispatch.
+- Changed areas: added focused internal helper modules and reduced
+  `transaction.ts` to transaction orchestration and edit dispatch.
+- Validation: focused transaction/protocol suite (3 files / 30 tests), Edit
+  Engine build, `pnpm typecheck`, `pnpm test:impact -- --base origin/main`,
+  and `git diff --check` passed.
+- Commit status: included in
+  `refactor(edit-engine): layer transaction execution helpers` on
+  `codex/app-transaction-module-layers`.
