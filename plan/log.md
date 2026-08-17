@@ -7998,3 +7998,19 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
 - Commit status: staged for `refactor(editor): extract wire interaction hook`
   on `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Extract Editor selection command and pointer sessions checkpoint
+
+- Target: begin Step 2 by moving selection-owned commands and pointer drag
+  sessions out of `App.tsx`.
+- Changed areas: added `useSelectionInteraction` for deletion, No Connect,
+  copy placement, selection mutation, visual selection movement, and
+  instance pointer-drag lifecycle; App retains pure movement calculations and
+  the keyboard Move session for the next checkpoint.
+- Validation: focused selection/clipboard contracts (5 files / 33 tests),
+  representative Playwright copy, deletion, junction, visual selection, and
+  instance-drag scenarios, Editor build, `pnpm typecheck`, and
+  `git diff --check` passed.
+- Commit status: staged for
+  `refactor(editor): extract selection interaction checkpoint` on
+  `codex/app-transaction-module-layers`.

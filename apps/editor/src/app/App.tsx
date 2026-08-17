@@ -20,7 +20,6 @@ import {
   proposePowerRailTranslation,
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
-  proposeVisualRouteDeletion,
   type EditTransactionResult,
   type SchematicEdit,
   type WireSource,
@@ -87,12 +86,7 @@ import type { SpiceDiagnostic } from "@icm/spice";
 import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
 import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
-import {
-  clipboardPlacementAnchor,
-  clipboardPreviewDocument,
-  copySelection,
-  proposePaste,
-} from "../features/clipboard/clipboard";
+import { clipboardPreviewDocument } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
 import {
@@ -233,10 +227,6 @@ import {
   razaviManualBulkConnectionEdits,
   razaviMosPresentationEdits,
 } from "../presentation/razavi-presentation";
-import {
-  explicitAnnotationRemovals,
-  proposeConnectedInstanceDeletion,
-} from "../features/selection/delete-selection";
 import { createRoutingDemoProject } from "../demos/routing-demo";
 import { createVisualDemoProject } from "../demos/visual-demo";
 import { useRecoveryCoordinator } from "../document/recovery-coordinator";
@@ -255,6 +245,10 @@ import {
 import type { BrowserRecoveryGeneration } from "../document/browser-recovery-contract";
 import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
+import {
+  type InstanceMovePreview,
+  useSelectionInteraction,
+} from "../features/selection/use-selection-interaction";
 import {
   NetTraceSection,
   ProjectDiagnosticsSection,
@@ -315,13 +309,7 @@ const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
-interface DragPreview {
-  instanceIds: string[];
-  primaryInstanceId: string;
-  originalPositions: Record<string, Point>;
-  pointerStart: DerivedPoint;
-  movePlan: SelectionMovePlan;
-}
+type DragPreview = InstanceMovePreview;
 
 /** A click-to-place Move command snapshot; never persisted. */
 interface CommandMoveSession {
@@ -682,7 +670,6 @@ export function App({
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
   const commandMoveSessionRef = useRef<CommandMoveSession | null>(null);
-  const copyCounter = useRef(0);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const selectionShelfRef = useRef<HTMLButtonElement>(null);
@@ -1164,6 +1151,62 @@ export function App({
     logicalRadiusForPixels,
     contactComponents,
     createRouteAnchor: routeAnchor,
+  });
+  const {
+    beginCopyPlacement: beginCopyPlacementFromSelection,
+    beginMove: beginMoveFromSelection,
+    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+    commitCopyPlacement: commitCopyPlacementFromSelection,
+    deleteSelectedJunction: deleteSelectedJunctionFromSelection,
+    deleteSelection: deleteSelectionFromSelection,
+    selectInstance: selectInstanceFromSelection,
+    toggleSelectedNoConnect: toggleSelectedNoConnectFromSelection,
+  } = useSelectionInteraction({
+    document,
+    resolver,
+    visualSelection,
+    selectedIds,
+    selectedRouteId,
+    selectedAnnotationId,
+    selectedDraftingId,
+    selectedEndpoint,
+    selectedNoConnect,
+    selectedEndpointNetId,
+    copyPlacement,
+    interactionKind: getCurrentInteractionState().kind,
+    transact,
+    setStatus,
+    setSelectedEndpoint,
+    resetSelection,
+    replaceSelectionKind,
+    selectOnly,
+    deleteSelectedRouteConnection,
+    deleteSelectedAnnotation,
+    clearTransientCanvasState,
+    cancelAllTransientInteraction,
+    cancelInteraction,
+    cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
+    paintSnapGuides,
+    beginCopyPlacementInteraction,
+    setCopyPreviewPoint,
+    applyOrientationOperations,
+    nextUniqueSuffix: () => {
+      uniqueSuffixCounter.current += 1;
+      return uniqueSuffixCounter.current;
+    },
+    nextNoConnectId,
+    endpointTestId,
+    tool,
+    canvasDragSessionRef,
+    pointFromClient,
+    completeVisualSelectionMove,
+    snapCoordinate,
+    updateInstanceSelection,
+    suppressInstanceClickRef: suppressInstanceClick,
+    resolveInstanceMove: instanceMoveAt,
+    completeInstanceMove,
+    logicalRadiusForPixels,
+    snapGuides: paintSnapGuides,
   });
 
   const textEditingTarget = textEditing
@@ -2193,7 +2236,8 @@ export function App({
       selectedIds.length > 0
     ) {
       const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
+      if (primaryInstanceId)
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
       return;
     }
     if (tool !== "pointer") {
@@ -2220,7 +2264,11 @@ export function App({
     if (getCurrentInteractionState().kind === "moving-selection") {
       const movePlan = planSelectionMove(document, visualSelection);
       if (movePlan.previewObjectIds.length > 0) {
-        beginVisualSelectionMove(event, visualSelection, hitTarget);
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
         return;
       }
       cancelInteraction();
@@ -2408,8 +2456,14 @@ export function App({
     if (event.button !== 0) return;
     if (getCurrentInteractionState().kind === "moving-selection") {
       const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
-      else beginVisualSelectionMove(event, visualSelection, hitTarget);
+      if (primaryInstanceId)
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      else
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
       return;
     }
     event.stopPropagation();
@@ -2798,9 +2852,13 @@ export function App({
     if (getCurrentInteractionState().kind === "moving-selection") {
       const primaryInstanceId = selectedIds.at(-1);
       if (primaryInstanceId) {
-        beginMove(event, primaryInstanceId, event.currentTarget);
+        beginMoveFromSelection(event, primaryInstanceId, event.currentTarget);
       } else {
-        beginVisualSelectionMove(event, visualSelection, event.currentTarget);
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          event.currentTarget,
+        );
       }
       return;
     }
@@ -2831,13 +2889,13 @@ export function App({
     ) {
       const primaryInstanceId = selectedIds.at(-1);
       if (primaryInstanceId) {
-        beginMove(event, primaryInstanceId, hitTarget);
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
         return;
       }
     }
 
     if (hit.kind === "instance") {
-      beginMove(event, hit.id, hitTarget);
+      beginMoveFromSelection(event, hit.id, hitTarget);
       return;
     }
     if (hit.kind === "annotation") {
@@ -3102,178 +3160,6 @@ export function App({
     }
     if (!pendingSymbolId || !pendingComponentPlacement) return;
     placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
-  }
-
-  function selectInstance(instanceId: string, additive: boolean): void {
-    setSelectedEndpoint(null);
-    updateInstanceSelection(instanceId, additive);
-  }
-
-  function beginMove(
-    event: ReactPointerEvent<SVGElement>,
-    instanceId: string,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (tool !== "pointer" || event.button !== 0) return;
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      cancelInteraction();
-    }
-    event.stopPropagation();
-    const instance = document.instances.find(
-      (candidate) => candidate.id === instanceId,
-    );
-    if (!instance?.placement) {
-      return;
-    }
-    const hasSelectionModifier =
-      event.shiftKey || event.ctrlKey || event.metaKey;
-    suppressInstanceClick.current =
-      hitTarget.getAttribute("data-canvas-hit-kind") === "instance";
-    if (hasSelectionModifier) {
-      selectInstance(instanceId, hasSelectionModifier);
-      setStatus(`Selected ${instanceId}`);
-      return;
-    }
-    const movingSelection: VisualSelection = selectedIds.includes(instanceId)
-      ? visualSelection
-      : {
-          instanceIds: [instanceId],
-          routeIds: [],
-          junctionIds: [],
-          annotationIds: [],
-          draftingIds: [],
-        };
-    const movePlan = planSelectionMove(document, movingSelection);
-    const movingIds = movePlan.instanceIds;
-    if (!selectedIds.includes(instanceId)) selectInstance(instanceId, false);
-    if (movingIds.length === 0) return;
-    canvasDragSessionRef.current?.cancel();
-    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
-    const pointerStart = pointFromClient(
-      event.clientX,
-      event.clientY,
-      svg,
-      false,
-    );
-    const preview: DragPreview = {
-      instanceIds: movingIds,
-      primaryInstanceId: instanceId,
-      originalPositions: Object.fromEntries(
-        movingIds.map((id) => {
-          const candidate = document.instances.find((item) => item.id === id)!;
-          return [id, { ...candidate.placement!.position }];
-        }),
-      ),
-      pointerStart,
-      movePlan,
-    };
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, movePlan.previewObjectIds));
-    const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
-    let lastSnap: SnapResult | undefined;
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const position = pointFromClient(client.x, client.y, svg, false);
-        const resolved = instanceMoveAt(
-          preview,
-          position,
-          tolerance,
-          Boolean(client.altKey),
-          lastSnap,
-        );
-        lastSnap = resolved.snap;
-        paintSnapGuides(resolved.snap.guides);
-        const primary = resolved.moves.find(
-          (move) => move.instanceId === preview.primaryInstanceId,
-        )!;
-        const original = preview.originalPositions[preview.primaryInstanceId]!;
-        dragVisual().translate({
-          x: primary.position.x - original.x,
-          y: primary.position.y - original.y,
-        });
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-        if (dragged) {
-          completeInstanceMove(
-            preview,
-            pointFromClient(client.x, client.y, svg, false),
-            tolerance,
-            Boolean(client.altKey),
-            lastSnap,
-          );
-        }
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-      },
-    });
-  }
-
-  /**
-   * Move selections that contain no placed instance.  Instance-led selections
-   * retain the richer electrical snap path above; visual-only selections still
-   * share the same SelectionMovePlan and one typed transaction on release.
-   */
-  function beginVisualSelectionMove(
-    event: ReactPointerEvent<SVGElement>,
-    selection: VisualSelection,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (tool !== "pointer" || event.button !== 0) return;
-    const movePlan = planSelectionMove(document, selection);
-    if (movePlan.previewObjectIds.length === 0) {
-      cancelInteraction();
-      setStatus("Selected objects are attached or locked and cannot move");
-      return;
-    }
-    cancelInteraction();
-    event.preventDefault();
-    event.stopPropagation();
-    canvasDragSessionRef.current?.cancel();
-    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
-    const start = pointFromClient(event.clientX, event.clientY, svg, false);
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, movePlan.previewObjectIds));
-    const deltaAt = (client: Point) => {
-      const point = pointFromClient(client.x, client.y, svg, false);
-      return {
-        x: snapCoordinate(point.x - start.x, document.presentation.grid),
-        y: snapCoordinate(point.y - start.y, document.presentation.grid),
-      };
-    };
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const delta = deltaAt(client);
-        dragVisual().translate(delta);
-        paintSnapGuides([]);
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-        if (dragged) completeVisualSelectionMove(movePlan, deltaAt(client));
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-      },
-    });
   }
 
   function selectionVisualMoveEdits(
@@ -4101,8 +3987,14 @@ export function App({
     if (event.button !== 0 || object.locked) return;
     if (getCurrentInteractionState().kind === "moving-selection") {
       const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
-      else beginVisualSelectionMove(event, visualSelection, hitTarget);
+      if (primaryInstanceId)
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      else
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
       return;
     }
     const origin = draftingDragOrigin(object);
@@ -5893,140 +5785,6 @@ export function App({
     }
   }
 
-  function deleteSelection(): void {
-    const initialRouteIds = new Set(visualSelection.routeIds);
-    const selectedAnnotationIds = new Set(visualSelection.annotationIds);
-    const selectedDraftingIds = new Set(visualSelection.draftingIds);
-    const selectedJunctionIds = new Set([
-      ...visualSelection.junctionIds,
-      ...(selectedEndpoint?.endpoint.kind === "junction"
-        ? [selectedEndpoint.endpoint.junctionId]
-        : []),
-    ]);
-    const hasMixedSelection =
-      initialRouteIds.size > 0 ||
-      selectedAnnotationIds.size > 0 ||
-      selectedDraftingIds.size > 0 ||
-      selectedJunctionIds.size > 0;
-    if (
-      initialRouteIds.size === 1 &&
-      selectedAnnotationIds.size === 0 &&
-      selectedDraftingIds.size === 0 &&
-      selectedJunctionIds.size === 0 &&
-      selectedIds.length === 0
-    ) {
-      deleteSelectedRouteConnection();
-      return;
-    }
-    if (hasMixedSelection) {
-      const visualRouteDeletion = proposeVisualRouteDeletion(
-        document,
-        [...initialRouteIds],
-        [...selectedJunctionIds],
-      );
-      uniqueSuffixCounter.current += 1;
-      try {
-        const instanceEdits =
-          selectedIds.length > 0
-            ? proposeConnectedInstanceDeletion(
-                document,
-                resolver,
-                selectedIds,
-                uniqueSuffixCounter.current,
-              )
-            : [];
-        // Instance deletion already removes every annotation attached to the
-        // instance. A marquee can select both visual objects, but emitting the
-        // same remove_schematic_annotation edit twice makes the second
-        // operation fail
-        // with OBJECT_NOT_FOUND and rolls back the whole transaction.
-        const explicitAnnotationIds = explicitAnnotationRemovals(
-          document,
-          selectedIds,
-          [...selectedAnnotationIds].filter(
-            (annotationId) =>
-              !visualRouteDeletion.annotationIds.includes(annotationId),
-          ),
-        );
-        const result = transact([
-          ...instanceEdits,
-          ...visualRouteDeletion.edits,
-          ...explicitAnnotationIds.map((annotationId): SchematicEdit => ({
-            kind: "remove_schematic_annotation",
-            annotationId,
-          })),
-          ...[...selectedDraftingIds].map((objectId): SchematicEdit => ({
-            kind: "remove_drafting_object",
-            objectId,
-          })),
-        ]);
-        if (result.ok) {
-          resetSelection();
-          setSelectedEndpoint(null);
-          setStatus("Deleted selected schematic objects");
-        }
-      } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Delete failed");
-      }
-      return;
-    }
-    if (selectedEndpoint?.endpoint.kind === "junction") {
-      deleteSelectedJunction();
-      return;
-    }
-    if (selectedAnnotationId) {
-      deleteSelectedAnnotation();
-      return;
-    }
-    if (selectedDraftingId) {
-      const result = transact([
-        { kind: "remove_drafting_object", objectId: selectedDraftingId },
-      ]);
-      if (result.ok) {
-        replaceSelectionKind("drafting", []);
-        setStatus(`Deleted drafting object ${selectedDraftingId}`);
-      }
-      return;
-    }
-    if (selectedRouteId) {
-      deleteSelectedRouteConnection();
-      return;
-    }
-    if (selectedIds.length === 0) return;
-    uniqueSuffixCounter.current += 1;
-    try {
-      const result = transact(
-        proposeConnectedInstanceDeletion(
-          document,
-          resolver,
-          selectedIds,
-          uniqueSuffixCounter.current,
-        ),
-      );
-      if (result.ok) {
-        replaceSelectionKind("instance", []);
-        setStatus(
-          "Deleted component selection; connected wires remain dangling",
-        );
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Delete failed");
-    }
-  }
-
-  function deleteSelectedJunction(): void {
-    if (selectedEndpoint?.endpoint.kind !== "junction") return;
-    const junctionId = selectedEndpoint.endpoint.junctionId;
-    const proposal = proposeVisualRouteDeletion(document, [], [junctionId]);
-    const result = transact(proposal.edits);
-    if (result.ok) {
-      setSelectedEndpoint(null);
-      setStatus(
-        `Deleted junction and ${proposal.routeIds.length} attached routes`,
-      );
-    }
-  }
-
   function disconnectSelectedEndpoint(removeRoutes: boolean): void {
     if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
       return;
@@ -6074,130 +5832,6 @@ export function App({
       id = `no-connect-ui-${uniqueSuffixCounter.current}`;
     } while (occupied.has(id));
     return id;
-  }
-
-  function toggleSelectedNoConnect(): void {
-    if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
-      return;
-    }
-    if (selectedNoConnect) {
-      const result = transact([
-        { kind: "remove_no_connect", noConnectId: selectedNoConnect.id },
-      ]);
-      if (result.ok) {
-        setStatus(
-          `Cleared No Connect on ${endpointTestId(selectedEndpoint.endpoint)}`,
-        );
-      }
-      return;
-    }
-    if (selectedEndpointNetId) {
-      setStatus("Disconnect this endpoint before marking it No Connect");
-      return;
-    }
-    const result = transact([
-      {
-        kind: "add_no_connect",
-        noConnect: {
-          id: nextNoConnectId(),
-          endpoint: selectedEndpoint.endpoint,
-        },
-      },
-    ]);
-    if (result.ok) {
-      setStatus(
-        `Marked ${endpointTestId(selectedEndpoint.endpoint)} No Connect`,
-      );
-    }
-  }
-
-  function beginCopyPlacement(): void {
-    const currentInteraction = getCurrentInteractionState();
-    if (currentInteraction.kind === "copy-placement") {
-      setStatus("Copy placement is already active · Esc cancels");
-      return;
-    }
-    if (currentInteraction.kind !== "idle") {
-      setStatus("Finish or cancel the active tool before copying");
-      return;
-    }
-    const copied = copySelection(document, selectedIds);
-    if (!copied) {
-      setStatus("Select at least one component to copy");
-      return;
-    }
-    const anchor = clipboardPlacementAnchor(copied);
-    if (!anchor) {
-      setStatus("Selected components have no placeable origin");
-      return;
-    }
-    canvasDragSessionRef.current?.cancel();
-    clearTransientCanvasState();
-    paintSnapGuides([]);
-    beginCopyPlacementInteraction(copied, anchor);
-    setStatus(
-      `Place copy of ${copied.instances.length} components · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
-    );
-  }
-
-  function commitCopyPlacement(point: Point): void {
-    if (!copyPlacement) return;
-    copyCounter.current += 1;
-    const proposal = proposePaste(
-      document,
-      copyPlacement.clipboard,
-      {
-        x: point.x - copyPlacement.anchor.x,
-        y: point.y - copyPlacement.anchor.y,
-      },
-      copyCounter.current,
-    );
-    if (proposal.errors.length > 0) {
-      copyCounter.current -= 1;
-      setStatus(proposal.errors[0]!);
-      cancelAllTransientInteraction();
-      return;
-    }
-    const orientationEdits = proposal.instanceIds.flatMap(
-      (instanceId, index): SchematicEdit[] => {
-        const source = copyPlacement.clipboard.instances[index]?.placement;
-        if (!source) return [];
-        const orientation = applyOrientationOperations(
-          source,
-          copyPlacement.orientationOperations,
-        );
-        return [
-          ...(orientation.mirror === source.mirror
-            ? []
-            : [
-                {
-                  kind: "mirror_instance" as const,
-                  instanceId,
-                  mirror: orientation.mirror,
-                },
-              ]),
-          ...(orientation.rotation === source.rotation
-            ? []
-            : [
-                {
-                  kind: "rotate_instance" as const,
-                  instanceId,
-                  rotation: orientation.rotation,
-                },
-              ]),
-        ];
-      },
-    );
-    const result = transact([...proposal.edits, ...orientationEdits], {
-      preserveInteraction: true,
-    });
-    if (result.ok) {
-      selectOnly("instance", proposal.instanceIds);
-      setCopyPreviewPoint(point);
-      setStatus(
-        `Copied ${proposal.instanceIds.length} components · click to place another · Esc exits`,
-      );
-    }
   }
 
   useEffect(() => {
@@ -6332,7 +5966,7 @@ export function App({
           transact([{ kind: shortcut.kind }]);
           return;
         case "copy":
-          beginCopyPlacement();
+          beginCopyPlacementFromSelection();
           return;
         case "begin-selection-move":
           beginKeyboardSelectionMove();
@@ -6501,7 +6135,7 @@ export function App({
           );
           return;
         case "delete-selection":
-          deleteSelection();
+          deleteSelectionFromSelection();
           return;
       }
     }
@@ -6693,7 +6327,7 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    onClick={deleteSelection}
+                    onClick={deleteSelectionFromSelection}
                     disabled={
                       !hasVisualSelection(visualSelection) && !selectedEndpoint
                     }
@@ -7882,7 +7516,7 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    onClick={toggleSelectedNoConnect}
+                    onClick={toggleSelectedNoConnectFromSelection}
                     disabled={
                       !selectedNoConnect && selectedEndpointNetId !== null
                     }
@@ -7902,7 +7536,10 @@ export function App({
                   aria-label="Junction actions"
                 >
                   <h2>Junction</h2>
-                  <button type="button" onClick={deleteSelectedJunction}>
+                  <button
+                    type="button"
+                    onClick={deleteSelectedJunctionFromSelection}
+                  >
                     Delete junction and attached wires
                   </button>
                 </section>
@@ -8118,7 +7755,7 @@ export function App({
                   event.clientY,
                   event.currentTarget,
                 );
-                commitCopyPlacement({
+                commitCopyPlacementFromSelection({
                   x: snapCoordinate(point.x, document.presentation.grid),
                   y: snapCoordinate(point.y, document.presentation.grid),
                 });
@@ -8528,7 +8165,7 @@ export function App({
                       primaryInstanceId &&
                       compositeSelectionOwnsHit("route", route.id)
                     ) {
-                      beginMove(event, primaryInstanceId);
+                      beginMoveFromSelection(event, primaryInstanceId);
                       return;
                     }
                     beginRouteStretch(event, route.id, segmentIndex, intent);
@@ -8623,7 +8260,7 @@ export function App({
                           suppressInstanceClick.current = false;
                           return;
                         }
-                        selectInstance(
+                        selectInstanceFromSelection(
                           instance.id,
                           event.shiftKey || event.ctrlKey,
                         );
@@ -8636,7 +8273,9 @@ export function App({
                         }
                         inspectInstance(instance.id);
                       }}
-                      onPointerDown={(event) => beginMove(event, instance.id)}
+                      onPointerDown={(event) =>
+                        beginMoveFromSelection(event, instance.id)
+                      }
                       pointerEvents={tool === "wire" ? "none" : undefined}
                     />
                   );
