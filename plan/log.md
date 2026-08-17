@@ -7813,3 +7813,17 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed and pushed on
   `codex/device-protocol-compatibility-plan`; remote required checks remain the
   mainline delivery gate.
+
+## 2026-08-17 - Refresh Project protocol MCP checksum
+
+- Target: refresh the Linux MCP release integrity pin after the Project
+  protocol split changed the packaged artifact.
+- Changed areas: canonical MCP distribution SHA-256 and target-plan records.
+- Validation: the CI Release contracts Linux build reported
+  `83f59d02f32c9bf4e9e5bcda91f9e8c74f731bc7778787303f8649d24ad4944b` for the
+  current merge candidate; `pnpm mcp:distribution:check` and
+  `pnpm build && pnpm release:verify:built` passed locally; `git diff --check`
+  passed.
+- Commit status: committed and pushed on
+  `codex/device-protocol-compatibility-plan`; remote required checks remain the
+  mainline delivery gate.

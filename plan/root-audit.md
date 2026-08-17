@@ -9,7 +9,7 @@ an archive. Completed plans with resolved experience are stored under
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
 | `active`                  |     0 | No active root plan remains.                                                       |
-| `completed` + `none`      |    41 | Verify commit/log evidence, then archive according to routine retention policy.   |
+| `completed` + `none`      |    42 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
@@ -98,6 +98,13 @@ retaining the current fixture and single-adapter compatibility policy.
 experience. It restores the release scripts' Project persistence imports after
 the Project-protocol boundary split; local release verification passed and the
 target is awaiting commit and remote required-check evidence.
+
+## 2026-08-17 Project protocol MCP checksum refresh
+
+`2026-08-17-refresh-protocol-mcp-checksum` is completed with resolved
+experience. It aligns the Linux MCP artifact integrity pin with the Project
+protocol release candidate; local release verification passed and remote Linux
+validation remains the delivery gate.
 
 ## Legacy Metadata Sweep
 
