@@ -4,10 +4,12 @@ Status: `accepted`
 
 Current Project schema: `11`
 
-Primary owner: `packages/model`
+Primary owners: `packages/model` (current shape) and
+`packages/project-protocol` (file boundary)
 
 An `.icproj.json` file is canonical JSON for one complete `CircuitProject`.
-`parseProject` accepts Project schema 11 and schema 10. Schema 10 advances
+`@icm/project-protocol` exposes `parseProject` and accepts Project schema 11
+and schema 10. Schema 10 advances
 directly to 11 without rewriting content, then passes the full strict current
 validation. Every reader returns the sole schema-11 in-memory Project shape;
 schema 9 and older and all future versions are rejected. There is no sequential

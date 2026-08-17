@@ -13,6 +13,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@icm/model": "workspace:*"
+    "@icm/model": "workspace:*",
+    "@icm/project-protocol": "workspace:*"
   }
 }

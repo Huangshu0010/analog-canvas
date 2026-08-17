@@ -10,10 +10,12 @@
   "dependencies": {
     "@fontsource-variable/google-sans-code": "^5.3.0",
     "@icm/agent-adapter": "workspace:*",
+    "@icm/devices": "workspace:*",
     "@icm/derived": "workspace:*",
     "@icm/edit-engine": "workspace:*",
     "@icm/exporters": "workspace:*",
     "@icm/model": "workspace:*",
+    "@icm/project-protocol": "workspace:*",
     "@icm/render-svg": "workspace:*",
     "@icm/spice": "workspace:*",
     "@icm/symbols": "workspace:*",

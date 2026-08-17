@@ -2,7 +2,8 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { createEmptyProject, loadProject, saveProject } from "@icm/model";
+import { createEmptyProject } from "@icm/model";
+import { loadProject, saveProject } from "@icm/project-protocol";
 import { describe, expect, it } from "vitest";
 
 import { RecoveryStore } from "./recovery.js";

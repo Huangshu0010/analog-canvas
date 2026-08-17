@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 
 import { executeTransaction, SchematicEditSchema } from "@icm/edit-engine";
 import { resolveDocumentRoutingGeometry } from "@icm/derived";
-import { createEmptyDocument, parseProject } from "@icm/model";
+import { createEmptyDocument } from "@icm/model";
+import { parseProject } from "@icm/project-protocol";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";

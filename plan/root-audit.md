@@ -8,8 +8,8 @@ an archive. Completed plans with resolved experience are stored under
 
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
-| `active`                  |     0 | `2026-08-16-instance-value-display` delivered: PR #97 merged to `main` as `7027f57`. `2026-08-16-instance-value-razavi-fraction` delivered: PR #99 merged to `main` as `452099e`. |
-| `completed` + `none`      |    37 | Verify commit/log evidence, then archive according to routine retention policy.   |
+| `active`                  |     0 | No active root plan remains.                                                       |
+| `completed` + `none`      |    42 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
@@ -69,6 +69,42 @@ experience. ADR 0023, the direct model adapter, formal-file and recovery
 integration, synthetic compatibility tests, browser evidence, and branch-wide
 verification are present; it is eligible for normal completed-plan retention
 handling after commit evidence is recorded.
+
+## 2026-08-17 Device protocol and compatibility architecture planning closure
+
+`2026-08-17-device-protocol-compatibility-architecture` is a completed
+planning record with resolved experience. It defines the behavior-preserving
+module boundaries and bounded compatibility policy; ADR 0024 accepted that
+architecture before the foundation implementation began.
+
+## 2026-08-17 Device protocol foundation closure
+
+`2026-08-17-device-protocol-foundation` is completed with resolved experience.
+The single device descriptor registry, current-only modular model, bounded
+Project protocol adapter, editor/recovery migration, focused browser evidence,
+and branch-wide verification are present; it is eligible for normal completed
+plan retention after commit evidence is recorded.
+
+## 2026-08-17 Protocol architecture gap closure
+
+`2026-08-17-protocol-architecture-gap-closure` is completed with resolved
+experience. It reconciles the previously delivered foundation with the accepted
+fine-grained device, model-schema, and Project-protocol architecture, while
+retaining the current fixture and single-adapter compatibility policy.
+
+## 2026-08-17 Project protocol release-contract repair
+
+`2026-08-17-fix-protocol-release-contract` is completed with resolved
+experience. It restores the release scripts' Project persistence imports after
+the Project-protocol boundary split; local release verification passed and the
+target is awaiting commit and remote required-check evidence.
+
+## 2026-08-17 Project protocol MCP checksum refresh
+
+`2026-08-17-refresh-protocol-mcp-checksum` is completed with resolved
+experience. It aligns the Linux MCP artifact integrity pin with the Project
+protocol release candidate; local release verification passed and remote Linux
+validation remains the delivery gate.
 
 ## Legacy Metadata Sweep
 

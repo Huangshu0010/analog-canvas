@@ -53,8 +53,10 @@ Document style profile. Raw per-asset compatibility widths are not accepted.
 - Geometry contains no placement, Net, model, or reference-label authority.
 - PDK mappings name an exact canonical symbol, terminal count, and full ordered
   pin list; no mapping is inferred from model spelling alone.
-- Netlist device definitions separately own class, reference prefix, canonical
-  pin order, target policy, and required parameters.
+- `@icm/devices` separately owns class, reference prefix, canonical pin order,
+  target policy, required parameters, dialects, and capabilities. Symbols own
+  artwork and anchors only; registry/Symbol pin parity is a cross-package
+  contract.
 
 The application ships the compiled catalog and a Project persists only exact
 symbol and optional variant IDs plus its library lock. Generated catalog tests

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { AGENT_API_VERSION, base64EncodeBytes } from "@icm/agent-adapter";
-import { createEmptyProject, serializeProject } from "@icm/model";
+import { createEmptyProject } from "@icm/model";
+import { serializeProject } from "@icm/project-protocol";
 import type { SymbolResolver } from "@icm/symbols";
 
 import { BrowserAgentFileHost } from "./browser-agent-file-host";

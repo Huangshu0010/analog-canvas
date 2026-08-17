@@ -17,9 +17,11 @@
 // Storage (WP-1) and React coordination (WP-2) build on these functions; they
 // must not re-implement the rules independently.
 
-import { parseProjectWithMetadata } from "@icm/model";
+import {
+  parseProjectWithMetadata,
+  ProjectFormatError,
+} from "@icm/project-protocol";
 import type { CircuitProject } from "@icm/model";
-import { ProjectFormatError } from "@icm/model";
 
 export const BROWSER_RECOVERY_FORMAT = "analog-canvas-browser-recovery-v2";
 

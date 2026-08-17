@@ -7750,3 +7750,80 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   contracts, 804 unit tests, build and release/package smoke, and 143 browser
   tests; `git diff --check` passed.
 - Commit status: pending push and remote GitHub Actions verification on PR 105.
+
+## 2026-08-17 - Plan device protocol and compatibility architecture
+
+- Target: record an implementation-ready architecture for independently
+  maintained device descriptors and Project compatibility without changing
+  current device behavior or schema-11 persistence.
+- Changed areas: target architecture/implementation sequence, behavior-lock
+  invariants, model/devices/symbols/project-protocol ownership boundaries,
+  rolling N-1 direct-adapter policy, test ownership, and explicit non-goals.
+- Validation: reviewed against ADR 0022, ADR 0023, current model,
+  connectivity, and Edit Engine contracts; `pnpm docs:check`,
+  `pnpm test:impact -- --base main`, and `git diff --check` passed.
+- Commit status: committed on `codex/device-protocol-compatibility-plan` as a
+  planning-only record; no executable protocol or device behavior changed.
+
+## 2026-08-17 - Establish device protocol and compatibility foundation
+
+- Target: implement the accepted independent device registry and bounded
+  Project compatibility boundary without changing schema-11 serialization or
+  existing device behavior.
+- Changed areas: `@icm/devices` descriptor authority and Symbol/netlist
+  consumers; `@icm/project-protocol` parse/direct-v10-upgrade/serialize API;
+  current-only modular model schema; editor file/recovery, node storage, tests,
+  package boundaries, and current documentation.
+- Validation: focused model/device/protocol/editor tests; schema-10
+  open-and-save Playwright workflow; `pnpm test:impact -- --base main`; and
+  `pnpm verify:branch` (134 files / 815 tests, workspace build, production
+  smoke); `git diff --check` passed.
+- Commit status: committed locally as
+  `feat(protocol): isolate device and project compatibility` on
+  `codex/device-protocol-compatibility-plan` and pushed; remote required checks
+  remain the mainline delivery gate.
+
+## 2026-08-17 - Close device and Project protocol architecture gaps
+
+- Target: reconcile the executable implementation with the final modular
+  architecture without changing built-in device behavior or schema-11 Project
+  data.
+- Changed areas: per-device descriptor files and self-validating registry;
+  removal of Symbols electrical-definition facade with retained parity test;
+  fine-grained model schema and Project-protocol source boundaries; explicit
+  no-historic-fixture audit; current architecture/spec wording.
+- Validation: focused device/Symbol/model/protocol contracts; schema-10
+  Project-file browser flow; `pnpm test:impact -- --base main`; and
+  `pnpm verify:branch` (134 files / 816 tests, workspace build, production
+  smoke); `git diff --check` passed.
+- Commit status: committed locally as
+  `refactor(protocol): complete device and compatibility boundaries` on
+  `codex/device-protocol-compatibility-plan` and pushed; remote required checks
+  remain the mainline delivery gate.
+
+## 2026-08-17 - Repair Project protocol release imports
+
+- Target: restore release verification after persistence moved from model to
+  the Project-protocol module.
+- Changed areas: performance-baseline, export-golden, and visual-golden script
+  imports; target plan and root queue record.
+- Validation: `pnpm build && pnpm release:verify:built` passed, covering the
+  performance baseline, golden checks, editor production smoke, package
+  creation, and both release smoke checks; `git diff --check` passed.
+- Commit status: committed and pushed on
+  `codex/device-protocol-compatibility-plan`; remote required checks remain the
+  mainline delivery gate.
+
+## 2026-08-17 - Refresh Project protocol MCP checksum
+
+- Target: refresh the Linux MCP release integrity pin after the Project
+  protocol split changed the packaged artifact.
+- Changed areas: canonical MCP distribution SHA-256 and target-plan records.
+- Validation: the CI Release contracts Linux build reported
+  `83f59d02f32c9bf4e9e5bcda91f9e8c74f731bc7778787303f8649d24ad4944b` for the
+  current merge candidate; `pnpm mcp:distribution:check` and
+  `pnpm build && pnpm release:verify:built` passed locally; `git diff --check`
+  passed.
+- Commit status: committed and pushed on
+  `codex/device-protocol-compatibility-plan`; remote required checks remain the
+  mainline delivery gate.

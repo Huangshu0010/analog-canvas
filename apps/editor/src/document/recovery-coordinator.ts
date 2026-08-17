@@ -21,7 +21,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { serializeProject } from "@icm/model";
+import { serializeProject } from "@icm/project-protocol";
 import type { CircuitProject } from "@icm/model";
 
 import {

@@ -27,37 +27,40 @@ outside this contract.
 ## Consumers
 
 - `packages/model`: persisted cell and instance electrical facts
-- `packages/symbols`: reviewed device-to-netlist definitions
+- `packages/devices`: reviewed device descriptors (class, prefix, pin order,
+  target policy, parameters, dialects, and capabilities)
+- `packages/symbols`: artwork, pin anchors, and Symbol variants validated
+  against the device registry
 - `packages/netlist`: extraction, validation, IR, and dialect printers
 - `apps/editor`: authoring, diagnostics, and downloads
 - `packages/spice`: structural reparse validation for generated `.spi`
 
 ## Terminology
 
-| Term | Meaning |
-| --- | --- |
-| Design netlist | Structural hierarchy and device connectivity, without simulator setup |
-| Simulation deck | Design netlist plus libraries, process selection, stimuli, analyses, and outputs |
-| Explicit name | User/import-authored electrical identifier persisted in the Project |
-| Generated Net name | Deterministic transient identifier assigned to one unnamed local Net |
-| Device definition | Reviewed mapping from one Symbol to device class, prefix, pin order, target policy, and required parameters |
-| Export IR | Transient dialect-neutral normalized structure consumed by pure printers |
+| Term               | Meaning                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Design netlist     | Structural hierarchy and device connectivity, without simulator setup                                       |
+| Simulation deck    | Design netlist plus libraries, process selection, stimuli, analyses, and outputs                            |
+| Explicit name      | User/import-authored electrical identifier persisted in the Project                                         |
+| Generated Net name | Deterministic transient identifier assigned to one unnamed local Net                                        |
+| Device definition  | Reviewed mapping from one Symbol to device class, prefix, pin order, target policy, and required parameters |
+| Export IR          | Transient dialect-neutral normalized structure consumed by pure printers                                    |
 
 ## Authorities
 
 Every emitted token has exactly one authority:
 
-| Fact | Authority | Never inferred from |
-| --- | --- | --- |
-| Cell name | `Document.netlist.name` | Document title or filename |
-| Cell interface order | `Document.netlist.terminals` | coordinates or alphabetical order |
-| Connectivity | `Net.terminals` | Routes, Junction geometry, labels, or overlap |
-| Explicit Net name/scope | `Net.name` and `Net.scope` | artwork or text appearance |
-| Instance reference | `Instance.netlist.reference` | instance-label annotation |
-| Device class and pin order | reviewed device definition or child interface | `symbolId` string conventions or orientation |
-| Model/subcircuit target | typed instance binding | symbol name or PDK search |
-| Parameters | typed raw parameter record | rendered text or numeric evaluation |
-| Dialect syntax | requested printer | persisted source lines |
+| Fact                       | Authority                                     | Never inferred from                           |
+| -------------------------- | --------------------------------------------- | --------------------------------------------- |
+| Cell name                  | `Document.netlist.name`                       | Document title or filename                    |
+| Cell interface order       | `Document.netlist.terminals`                  | coordinates or alphabetical order             |
+| Connectivity               | `Net.terminals`                               | Routes, Junction geometry, labels, or overlap |
+| Explicit Net name/scope    | `Net.name` and `Net.scope`                    | artwork or text appearance                    |
+| Instance reference         | `Instance.netlist.reference`                  | instance-label annotation                     |
+| Device class and pin order | reviewed device definition or child interface | `symbolId` string conventions or orientation  |
+| Model/subcircuit target    | typed instance binding                        | symbol name or PDK search                     |
+| Parameters                 | typed raw parameter record                    | rendered text or numeric evaluation           |
+| Dialect syntax             | requested printer                             | persisted source lines                        |
 
 Retired `spice.name`, `spice.target`, `spice.pin.Pn`, and `spice.param.*`
 properties are invalid. Export extraction and printers do not read them.

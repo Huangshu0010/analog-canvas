@@ -44,6 +44,9 @@ importers:
       "@icm/derived":
         specifier: workspace:*
         version: link:../../packages/derived
+      "@icm/devices":
+        specifier: workspace:*
+        version: link:../../packages/devices
       "@icm/edit-engine":
         specifier: workspace:*
         version: link:../../packages/edit-engine
@@ -53,6 +56,9 @@ importers:
       "@icm/model":
         specifier: workspace:*
         version: link:../../packages/model
+      "@icm/project-protocol":
+        specifier: workspace:*
+        version: link:../../packages/project-protocol
       "@icm/render-svg":
         specifier: workspace:*
         version: link:../../packages/render-svg
@@ -107,6 +113,9 @@ importers:
       "@icm/model":
         specifier: workspace:*
         version: link:../model
+      "@icm/project-protocol":
+        specifier: workspace:*
+        version: link:../project-protocol
       "@icm/render-svg":
         specifier: workspace:*
         version: link:../render-svg
@@ -140,21 +149,36 @@ importers:
       "@icm/model":
         specifier: workspace:*
         version: link:../model
+      "@icm/project-protocol":
+        specifier: workspace:*
+        version: link:../project-protocol
       "@icm/symbols":
         specifier: workspace:*
         version: link:../symbols
 
   packages/derived:
     dependencies:
+      "@icm/devices":
+        specifier: workspace:*
+        version: link:../devices
       "@icm/model":
         specifier: workspace:*
         version: link:../model
+      "@icm/project-protocol":
+        specifier: workspace:*
+        version: link:../project-protocol
       "@icm/symbols":
         specifier: workspace:*
         version: link:../symbols
       zod:
         specifier: ^4.3.6
         version: 4.4.3
+
+  packages/devices:
+    dependencies:
+      "@icm/model":
+        specifier: workspace:*
+        version: link:../model
 
   packages/edit-engine:
     dependencies:
@@ -164,6 +188,9 @@ importers:
       "@icm/model":
         specifier: workspace:*
         version: link:../model
+      "@icm/project-protocol":
+        specifier: workspace:*
+        version: link:../project-protocol
       "@icm/symbols":
         specifier: workspace:*
         version: link:../symbols
@@ -176,6 +203,9 @@ importers:
       "@icm/model":
         specifier: workspace:*
         version: link:../model
+      "@icm/project-protocol":
+        specifier: workspace:*
+        version: link:../project-protocol
       "@icm/render-svg":
         specifier: workspace:*
         version: link:../render-svg
@@ -200,6 +230,9 @@ importers:
 
   packages/netlist:
     dependencies:
+      "@icm/devices":
+        specifier: workspace:*
+        version: link:../devices
       "@icm/model":
         specifier: workspace:*
         version: link:../model
@@ -212,6 +245,15 @@ importers:
         version: link:../spice
 
   packages/platform-node:
+    dependencies:
+      "@icm/model":
+        specifier: workspace:*
+        version: link:../model
+      "@icm/project-protocol":
+        specifier: workspace:*
+        version: link:../project-protocol
+
+  packages/project-protocol:
     dependencies:
       "@icm/model":
         specifier: workspace:*
@@ -249,6 +291,10 @@ importers:
       zod:
         specifier: 4.4.3
         version: 4.4.3
+    devDependencies:
+      "@icm/devices":
+        specifier: workspace:*
+        version: link:../devices
 
 packages:
   "@fontsource-variable/google-sans-code@5.3.0":

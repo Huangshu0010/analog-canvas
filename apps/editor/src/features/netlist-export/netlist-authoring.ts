@@ -4,10 +4,10 @@ import type {
   InstanceNetlistData,
   SchematicDocument,
 } from "@icm/model";
-import { deviceNetlistDefinition } from "@icm/symbols";
+import { deviceDescriptor } from "@icm/devices";
 
 function referencePrefix(symbolId: string): string {
-  return deviceNetlistDefinition(symbolId)?.referencePrefix ?? "X";
+  return deviceDescriptor(symbolId)?.referencePrefix ?? "X";
 }
 
 /**
@@ -54,7 +54,7 @@ export function nextInstanceDesignator(
  * one designator can serve as both the instance id and its netlist reference.
  */
 export function netlistReferenceMatchesPlacement(symbolId: string): boolean {
-  const netlistPrefix = deviceNetlistDefinition(symbolId)?.referencePrefix;
+  const netlistPrefix = deviceDescriptor(symbolId)?.referencePrefix;
   if (!netlistPrefix) return false;
   return (
     netlistPrefix.toLowerCase() ===
@@ -97,7 +97,7 @@ function rawParameters(
 }
 
 function defaultBinding(symbolId: string): InstanceNetlistBinding | undefined {
-  const definition = deviceNetlistDefinition(symbolId);
+  const definition = deviceDescriptor(symbolId);
   if (!definition || definition.targetPolicy === "required-model") {
     return undefined;
   }
@@ -131,7 +131,7 @@ export function bindingForEditedModel(
   symbolId: string,
   modelName: string,
 ): InstanceNetlistBinding | undefined {
-  const definition = deviceNetlistDefinition(symbolId);
+  const definition = deviceDescriptor(symbolId);
   if (!definition) return undefined;
   if (definition.targetPolicy === "required-model") {
     return modelName.trim()

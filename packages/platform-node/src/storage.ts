@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
-import type { ProjectStorage } from "@icm/model";
+import type { ProjectStorage } from "@icm/project-protocol";
 
 export type AtomicWriteFaultPoint = "after-flush-before-replace";
 

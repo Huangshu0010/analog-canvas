@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { parseProject, saveProject, serializeProject } from "@icm/model";
+import {
+  parseProject,
+  saveProject,
+  serializeProject,
+} from "@icm/project-protocol";
 import type { CircuitProject } from "@icm/model";
 
 import { RootedProjectStorage } from "./storage.js";

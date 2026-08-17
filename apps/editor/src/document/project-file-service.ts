@@ -19,11 +19,10 @@
 // handle into Project JSON or a recovery record.
 
 import {
-  parseProjectWithMetadata,
   serializeProject,
-  ProjectFormatError,
-  type CircuitProject,
-} from "@icm/model";
+  tryParseProjectWithMetadata,
+} from "@icm/project-protocol";
+import type { CircuitProject } from "@icm/model";
 
 export type ProjectFileState =
   | "new"
@@ -39,6 +38,9 @@ export interface ProjectFileOpenDiagnostic {
     | "INVALID_JSON"
     | "INVALID_PROJECT"
     | "UNSUPPORTED_SCHEMA_VERSION"
+    | "UNKNOWN_DEVICE"
+    | "INVALID_DEVICE_PIN"
+    | "UNRESOLVED_REFERENCE"
     | "UNSUPPORTED_SYMBOL";
   message: string;
   path?: ReadonlyArray<string | number>;
@@ -330,30 +332,15 @@ export async function stageProjectFile(
       diagnostics: [{ code: "READ_FAILED", message: errorMessage(error) }],
     };
   }
-  let parsedProject;
-  try {
-    parsedProject = parseProjectWithMetadata(serialized);
-  } catch (error) {
-    if (error instanceof ProjectFormatError) {
-      return {
-        status: "rejected",
-        diagnostics: error.diagnostics.map((diagnostic) => ({
-          code: diagnostic.code,
-          message: diagnostic.message,
-          ...(diagnostic.path.length === 0
-            ? {}
-            : { path: [...diagnostic.path] }),
-        })),
-      };
-    }
+  const parsedProject = tryParseProjectWithMetadata(serialized);
+  if (!parsedProject.ok) {
     return {
       status: "rejected",
-      diagnostics: [
-        {
-          code: "INVALID_JSON",
-          message: errorMessage(error),
-        },
-      ],
+      diagnostics: parsedProject.diagnostics.map((diagnostic) => ({
+        code: diagnostic.code,
+        message: diagnostic.message,
+        ...(diagnostic.path.length === 0 ? {} : { path: [...diagnostic.path] }),
+      })),
     };
   }
   const project = parsedProject.project;

@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { createEmptyDocument, parseProject } from "@icm/model";
+import { createEmptyDocument } from "@icm/model";
+import { parseProject } from "@icm/project-protocol";
 import {
   deriveCrossings,
   deriveFlightlines,

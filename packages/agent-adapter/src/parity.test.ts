@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { executeTransaction } from "@icm/edit-engine";
-import { parseProject, serializeProject } from "@icm/model";
+import { parseProject, serializeProject } from "@icm/project-protocol";
 import { renderDocumentSvg } from "@icm/render-svg";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 import { describe, expect, it } from "vitest";

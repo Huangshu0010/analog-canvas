@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 import { createFormalExportSource } from "../packages/exporters/dist/index.js";
 import { exportFormalArtifacts } from "../packages/exporters/dist/node.js";
-import { parseProject } from "../packages/model/dist/index.js";
+import { parseProject } from "../packages/project-protocol/dist/index.js";
 import {
   InMemorySymbolResolver,
   builtInSymbols,

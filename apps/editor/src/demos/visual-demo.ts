@@ -1,4 +1,4 @@
-import { parseProject } from "@icm/model";
+import { parseProject } from "@icm/project-protocol";
 import type { CircuitProject } from "@icm/model";
 
 import denseAnalogProject from "../../../../fixtures/projects/phase-5-dense-analog/project.icproj.json";

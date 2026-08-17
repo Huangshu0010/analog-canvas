@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { parseProject } from "../packages/model/dist/index.js";
+import { parseProject } from "../packages/project-protocol/dist/index.js";
 import { renderDocumentSvg } from "../packages/render-svg/dist/index.js";
 import {
   InMemorySymbolResolver,

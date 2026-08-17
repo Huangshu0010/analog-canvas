@@ -1,0 +1,528 @@
+import { z } from "zod";
+
+import { StableIdSchema } from "./common.js";
+import { SourceSpanSchema } from "./source.js";
+import { InstanceSchema, NetlistIdentifierSchema } from "./instance.js";
+import { NetSchema, NoConnectSchema } from "./connectivity.js";
+import { JunctionSchema, RouteBranchSchema } from "./routing.js";
+import { AnnotationSchema, VisualAnchorSchema } from "./annotations.js";
+import { DraftingLayerSchema } from "./drafting.js";
+import {
+  LayoutConstraintSchema,
+  LayoutGroupSchema,
+  MosBulkDefaultsSchema,
+  PresentationIntentSchema,
+} from "./presentation.js";
+import type { DraftingObject, GridPoint, VisualAnchor } from "./types.js";
+import { reportDuplicateIds } from "./validation.js";
+export const SourceBindingSchema = z.strictObject({
+  cellName: z.string().min(1),
+  sourceRef: SourceSpanSchema,
+});
+/**
+ * Imported SPICE topology can remain electrically authoritative after manual
+ * placement and partial routing. This state owns only the optional dashed
+ * routing guidance; it must not be inferred from source synchronization.
+ */
+export const FlightlineGuidanceSchema = z.enum(["active", "dismissed"]);
+export const CellNetlistTerminalSchema = z.strictObject({
+  name: NetlistIdentifierSchema,
+  netId: StableIdSchema,
+});
+export const CellNetlistInterfaceSchema = z.strictObject({
+  name: NetlistIdentifierSchema,
+  terminals: z.array(CellNetlistTerminalSchema),
+});
+
+const SchematicDocumentBaseSchema = z.strictObject({
+  id: StableIdSchema,
+  name: z.string().min(1),
+  revision: z.number().int().nonnegative(),
+  sourceBinding: SourceBindingSchema.optional(),
+  sourceStatus: z.enum([
+    "in-sync",
+    "geometry-only-changed",
+    "connectivity-modified",
+  ]),
+  flightlineGuidance: FlightlineGuidanceSchema.optional(),
+  netlist: CellNetlistInterfaceSchema.optional(),
+  instances: z.array(InstanceSchema),
+  nets: z.array(NetSchema),
+  routes: z.array(RouteBranchSchema),
+  junctions: z.array(JunctionSchema),
+  annotations: z.array(AnnotationSchema),
+  presentation: PresentationIntentSchema,
+  // Stable Net references for explicit cell-level well/substrate intent.
+  mosBulkDefaults: MosBulkDefaultsSchema.optional(),
+  layoutGroups: z.array(LayoutGroupSchema),
+  constraints: z.array(LayoutConstraintSchema),
+  noConnects: z.array(NoConnectSchema).default([]),
+  // Drafting remains optional for programmatic in-memory Documents; canonical
+  // factories and persisted fixtures write an explicit empty layer.
+  drafting: DraftingLayerSchema.optional(),
+});
+
+function reportGridPoint(
+  point: GridPoint,
+  grid: number,
+  path: ReadonlyArray<string | number>,
+  context: z.RefinementCtx,
+): void {
+  for (const axis of ["x", "y"] as const) {
+    if (point[axis] % grid === 0) continue;
+    context.addIssue({
+      code: "custom",
+      message: `Document page coordinates must align to grid ${grid}`,
+      path: [...path, axis],
+    });
+  }
+}
+
+function reportVisualAnchorGridAlignment(
+  anchor: VisualAnchor,
+  grid: number,
+  path: ReadonlyArray<string | number>,
+  context: z.RefinementCtx,
+): void {
+  switch (anchor.kind) {
+    case "free":
+      reportGridPoint(anchor.position, grid, [...path, "position"], context);
+      return;
+    case "object":
+      reportGridPoint(
+        anchor.localOffset,
+        grid,
+        [...path, "localOffset"],
+        context,
+      );
+      reportGridPoint(
+        anchor.fallbackPosition,
+        grid,
+        [...path, "fallbackPosition"],
+        context,
+      );
+      return;
+    case "route":
+      // `t` and normalOffset are parametric scalars, not page coordinates.
+      reportGridPoint(
+        anchor.fallbackPosition,
+        grid,
+        [...path, "fallbackPosition"],
+        context,
+      );
+  }
+}
+
+function reportDraftingObjectGridAlignment(
+  object: DraftingObject,
+  grid: number,
+  path: ReadonlyArray<string | number>,
+  context: z.RefinementCtx,
+): void {
+  reportVisualAnchorGridAlignment(
+    object.anchor,
+    grid,
+    [...path, "anchor"],
+    context,
+  );
+  switch (object.kind) {
+    case "text":
+    case "floating-symbol":
+      return;
+    case "arrow":
+      reportVisualAnchorGridAlignment(
+        object.from,
+        grid,
+        [...path, "from"],
+        context,
+      );
+      reportVisualAnchorGridAlignment(
+        object.to,
+        grid,
+        [...path, "to"],
+        context,
+      );
+      object.waypoints?.forEach((point, index) =>
+        reportGridPoint(point, grid, [...path, "waypoints", index], context),
+      );
+      object.curveControls?.forEach((point, index) => {
+        if (point) {
+          reportGridPoint(
+            point,
+            grid,
+            [...path, "curveControls", index],
+            context,
+          );
+        }
+      });
+      return;
+    case "leader":
+      reportVisualAnchorGridAlignment(
+        object.target,
+        grid,
+        [...path, "target"],
+        context,
+      );
+      return;
+    case "callout":
+      reportVisualAnchorGridAlignment(
+        object.target,
+        grid,
+        [...path, "target"],
+        context,
+      );
+      return;
+    case "construction-line":
+      object.points.forEach((point, index) =>
+        reportGridPoint(point, grid, [...path, "points", index], context),
+      );
+      object.curveControls?.forEach((point, index) => {
+        if (point) {
+          reportGridPoint(
+            point,
+            grid,
+            [...path, "curveControls", index],
+            context,
+          );
+        }
+      });
+      return;
+    case "rectangle":
+      reportGridPoint(object.center, grid, [...path, "center"], context);
+  }
+}
+
+export const SchematicDocumentSchema = SchematicDocumentBaseSchema.superRefine(
+  (document, context) => {
+    const objectCollections = [
+      ...document.instances,
+      ...document.nets,
+      ...document.routes,
+      ...document.junctions,
+      ...document.annotations,
+      ...document.layoutGroups,
+      ...document.constraints,
+      ...(document.drafting?.objects ?? []),
+    ];
+    for (const [key, netId] of Object.entries(document.mosBulkDefaults ?? {})) {
+      if (!document.nets.some((net) => net.id === netId)) {
+        context.addIssue({
+          code: "custom",
+          message: `MOS bulk default references an unknown Net: ${netId}`,
+          path: ["mosBulkDefaults", key],
+        });
+      }
+    }
+    if (document.netlist) {
+      const terminalNames = new Set<string>();
+      for (const [
+        terminalIndex,
+        terminal,
+      ] of document.netlist.terminals.entries()) {
+        const normalizedName = terminal.name.toLowerCase();
+        if (terminalNames.has(normalizedName)) {
+          context.addIssue({
+            code: "custom",
+            message: `Duplicate netlist terminal name: ${terminal.name}`,
+            path: ["netlist", "terminals", terminalIndex, "name"],
+          });
+        }
+        terminalNames.add(normalizedName);
+        if (!document.nets.some((net) => net.id === terminal.netId)) {
+          context.addIssue({
+            code: "custom",
+            message: `Unknown netlist terminal Net: ${terminal.netId}`,
+            path: ["netlist", "terminals", terminalIndex, "netId"],
+          });
+        }
+      }
+    }
+    const netlistReferences = new Set<string>();
+    for (const [instanceIndex, instance] of document.instances.entries()) {
+      const reference = instance.netlist?.reference.toLowerCase();
+      if (!reference) continue;
+      if (netlistReferences.has(reference)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate netlist instance reference: ${instance.netlist!.reference}`,
+          path: ["instances", instanceIndex, "netlist", "reference"],
+        });
+      }
+      netlistReferences.add(reference);
+    }
+    for (const [instanceIndex, instance] of document.instances.entries()) {
+      const binding = instance.mosBulkBinding;
+      if (!binding) continue;
+      const net = document.nets.find(
+        (candidate) => candidate.id === binding.netId,
+      );
+      if (
+        !net?.terminals.some(
+          (terminal) =>
+            terminal.instanceId === instance.id && terminal.pinName === "B",
+        )
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: `MOS bulk binding is not materialized on Net: ${binding.netId}`,
+          path: ["instances", instanceIndex, "mosBulkBinding"],
+        });
+      }
+    }
+    reportDuplicateIds(objectCollections, "objects", context);
+    const grid = document.presentation.grid;
+    document.instances.forEach((instance, index) => {
+      if (instance.placement) {
+        reportGridPoint(
+          instance.placement.position,
+          grid,
+          ["instances", index, "placement", "position"],
+          context,
+        );
+      }
+    });
+    document.routes.forEach((route, routeIndex) => {
+      route.waypoints.forEach((point, pointIndex) =>
+        reportGridPoint(
+          point,
+          grid,
+          ["routes", routeIndex, "waypoints", pointIndex],
+          context,
+        ),
+      );
+    });
+    document.junctions.forEach((junction, index) =>
+      reportGridPoint(
+        junction.position,
+        grid,
+        ["junctions", index, "position"],
+        context,
+      ),
+    );
+    document.annotations.forEach((annotation, index) =>
+      reportVisualAnchorGridAlignment(
+        annotation.anchor,
+        grid,
+        ["annotations", index, "anchor"],
+        context,
+      ),
+    );
+    document.drafting?.objects.forEach((object, index) =>
+      reportDraftingObjectGridAlignment(
+        object,
+        grid,
+        ["drafting", "objects", index],
+        context,
+      ),
+    );
+
+    const instanceIds = new Set(
+      document.instances.map((instance) => instance.id),
+    );
+    const netIds = new Set(document.nets.map((net) => net.id));
+    const netById = new Map(document.nets.map((net) => [net.id, net]));
+    const junctionById = new Map(
+      document.junctions.map((junction) => [junction.id, junction]),
+    );
+    const anchorObjectIds = new Set([
+      ...document.instances.map((item) => item.id),
+      ...document.junctions.map((item) => item.id),
+    ]);
+    const attachableIds = new Set([
+      ...anchorObjectIds,
+      ...document.nets.map((item) => item.id),
+      ...document.routes.map((item) => item.id),
+    ]);
+    const layoutObjectIds = new Set([
+      ...attachableIds,
+      ...document.annotations.map((item) => item.id),
+    ]);
+    const terminalNetByKey = new Map<string, string>();
+
+    for (const [
+      annotationIndex,
+      annotation,
+    ] of document.annotations.entries()) {
+      const anchor = annotation.anchor;
+      if (anchor.kind === "object" && !anchorObjectIds.has(anchor.objectId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown annotation anchor target: ${anchor.objectId}`,
+          path: ["annotations", annotationIndex, "anchor", "objectId"],
+        });
+      }
+      if (
+        anchor.kind === "route" &&
+        !document.routes.some((route) => route.id === anchor.routeId)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown annotation route anchor: ${anchor.routeId}`,
+          path: ["annotations", annotationIndex, "anchor", "routeId"],
+        });
+      }
+      if (annotation.netId !== undefined && !netIds.has(annotation.netId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown annotation Net: ${annotation.netId}`,
+          path: ["annotations", annotationIndex, "netId"],
+        });
+      }
+    }
+    for (const [collectionName, collection] of [
+      ["layoutGroups", document.layoutGroups],
+      ["constraints", document.constraints],
+    ] as const) {
+      for (const [collectionIndex, item] of collection.entries()) {
+        const seen = new Set<string>();
+        for (const [objectIndex, objectId] of item.objectIds.entries()) {
+          if (seen.has(objectId)) {
+            context.addIssue({
+              code: "custom",
+              message: `Duplicate layout object: ${objectId}`,
+              path: [collectionName, collectionIndex, "objectIds", objectIndex],
+            });
+          }
+          seen.add(objectId);
+          if (!layoutObjectIds.has(objectId)) {
+            context.addIssue({
+              code: "custom",
+              message: `Unknown layout object: ${objectId}`,
+              path: [collectionName, collectionIndex, "objectIds", objectIndex],
+            });
+          }
+        }
+      }
+    }
+
+    for (const [netIndex, net] of document.nets.entries()) {
+      const terminalKeys = new Set<string>();
+      for (const [terminalIndex, terminal] of net.terminals.entries()) {
+        const terminalKey = `${terminal.instanceId}\u0000${terminal.pinName}`;
+        if (terminalKeys.has(terminalKey)) {
+          context.addIssue({
+            code: "custom",
+            message: `Duplicate terminal on net: ${terminal.instanceId}.${terminal.pinName}`,
+            path: ["nets", netIndex, "terminals", terminalIndex],
+          });
+        }
+        terminalKeys.add(terminalKey);
+        const terminalOwner = terminalNetByKey.get(terminalKey);
+        if (terminalOwner && terminalOwner !== net.id) {
+          context.addIssue({
+            code: "custom",
+            message: `Terminal belongs to multiple nets: ${terminal.instanceId}.${terminal.pinName}`,
+            path: ["nets", netIndex, "terminals", terminalIndex],
+          });
+        } else {
+          terminalNetByKey.set(terminalKey, net.id);
+        }
+        if (!instanceIds.has(terminal.instanceId)) {
+          context.addIssue({
+            code: "custom",
+            message: `Unknown terminal instance: ${terminal.instanceId}`,
+            path: ["nets", netIndex, "terminals", terminalIndex, "instanceId"],
+          });
+        }
+      }
+    }
+
+    const noConnectEndpointKeys = new Set<string>();
+    for (const [noConnectIndex, noConnect] of document.noConnects.entries()) {
+      const endpoint = noConnect.endpoint;
+      let key: string;
+      let netOwner: string | undefined;
+      if (!instanceIds.has(endpoint.instanceId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown NoConnect terminal instance: ${endpoint.instanceId}`,
+          path: ["noConnects", noConnectIndex, "endpoint", "instanceId"],
+        });
+      }
+      key = `${endpoint.instanceId}\u0000${endpoint.pinName}`;
+      netOwner = terminalNetByKey.get(key);
+      if (netOwner) {
+        context.addIssue({
+          code: "custom",
+          message: `NoConnect endpoint is already connected to net: ${netOwner}`,
+          path: ["noConnects", noConnectIndex, "endpoint"],
+        });
+      }
+      if (noConnectEndpointKeys.has(key)) {
+        context.addIssue({
+          code: "custom",
+          message: "Duplicate NoConnect on the same endpoint",
+          path: ["noConnects", noConnectIndex, "endpoint"],
+        });
+      }
+      noConnectEndpointKeys.add(key);
+    }
+
+    for (const [junctionIndex, junction] of document.junctions.entries()) {
+      if (!netIds.has(junction.netId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown junction net: ${junction.netId}`,
+          path: ["junctions", junctionIndex, "netId"],
+        });
+      }
+    }
+
+    for (const [routeIndex, route] of document.routes.entries()) {
+      if (!netIds.has(route.netId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Unknown route net: ${route.netId}`,
+          path: ["routes", routeIndex, "netId"],
+        });
+        continue;
+      }
+      const routeNet = netById.get(route.netId);
+      for (const endpointName of ["from", "to"] as const) {
+        const endpoint = route[endpointName];
+        if (
+          endpoint.kind === "terminal" &&
+          !instanceIds.has(endpoint.instanceId)
+        ) {
+          context.addIssue({
+            code: "custom",
+            message: `Unknown route terminal instance: ${endpoint.instanceId}`,
+            path: ["routes", routeIndex, endpointName, "instanceId"],
+          });
+        } else if (
+          endpoint.kind === "terminal" &&
+          routeNet &&
+          !routeNet.terminals.some(
+            (terminal) =>
+              terminal.instanceId === endpoint.instanceId &&
+              terminal.pinName === endpoint.pinName,
+          )
+        ) {
+          context.addIssue({
+            code: "custom",
+            message:
+              "Route terminal endpoint must be a member of the route net",
+            path: ["routes", routeIndex, endpointName],
+          });
+        }
+        if (endpoint.kind === "junction") {
+          const junction = junctionById.get(endpoint.junctionId);
+          if (!junction) {
+            context.addIssue({
+              code: "custom",
+              message: `Unknown route junction: ${endpoint.junctionId}`,
+              path: ["routes", routeIndex, endpointName, "junctionId"],
+            });
+          } else if (junction.netId !== route.netId) {
+            context.addIssue({
+              code: "custom",
+              message:
+                "Route and endpoint junction must belong to the same net",
+              path: ["routes", routeIndex, endpointName, "junctionId"],
+            });
+          }
+        }
+      }
+    }
+  },
+);

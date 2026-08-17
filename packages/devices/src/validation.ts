@@ -1,0 +1,143 @@
+import type {
+  DeviceDescriptor,
+  DeviceDescriptorIssue,
+  DeviceRegistry,
+  DeviceSymbolContract,
+} from "./contract.js";
+
+export function validateDeviceDescriptors(
+  descriptors: readonly DeviceDescriptor[],
+): DeviceDescriptorIssue[] {
+  const issues: DeviceDescriptorIssue[] = [];
+  const seenIds = new Set<string>();
+  const seenSymbolIds = new Set<string>();
+  for (const descriptor of descriptors) {
+    if (seenIds.has(descriptor.id)) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: "Duplicate device descriptor ID",
+      });
+    }
+    seenIds.add(descriptor.id);
+    if (seenSymbolIds.has(descriptor.symbolId)) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: `Duplicate device Symbol: ${descriptor.symbolId}`,
+      });
+    }
+    seenSymbolIds.add(descriptor.symbolId);
+    if (
+      descriptor.referencePrefix !== null &&
+      !/^[A-Z][A-Z0-9_]*$/u.test(descriptor.referencePrefix)
+    ) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: `Invalid reference prefix: ${descriptor.referencePrefix}`,
+      });
+    }
+    if (descriptor.pinOrder.length === 0) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: "A device descriptor requires at least one pin",
+      });
+    }
+    const pinNames = new Set<string>();
+    for (const pinName of descriptor.pinOrder) {
+      if (pinNames.has(pinName)) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: `Duplicate device pin: ${pinName}`,
+        });
+      }
+      pinNames.add(pinName);
+    }
+    const parameterNames = new Set<string>();
+    for (const parameter of descriptor.requiredParameters) {
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/u.test(parameter)) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: `Invalid required parameter name: ${parameter}`,
+        });
+      } else if (parameterNames.has(parameter.toLowerCase())) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: `Duplicate required parameter: ${parameter}`,
+        });
+      }
+      parameterNames.add(parameter.toLowerCase());
+    }
+    if (
+      (descriptor.targetPolicy === "required-model") !==
+      descriptor.capabilities.supportsModel
+    ) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: "Model capability must match the target policy",
+      });
+    }
+    if (
+      descriptor.capabilities.supportsBulkBinding &&
+      descriptor.deviceClass !== "mos"
+    ) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: "Only MOS devices may support bulk binding",
+      });
+    }
+    if (descriptor.deviceClass === "net-marker") {
+      if (
+        descriptor.referencePrefix !== null ||
+        descriptor.capabilities.supportsModel ||
+        descriptor.capabilities.supportsBulkBinding ||
+        descriptor.capabilities.supportsValueAnnotation
+      ) {
+        issues.push({
+          deviceId: descriptor.id,
+          message: "Net markers cannot emit, model, bulk-bind, or own values",
+        });
+      }
+    }
+    if (
+      descriptor.dialects.length !== 2 ||
+      descriptor.dialects[0] !== "spice" ||
+      descriptor.dialects[1] !== "spectre"
+    ) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: "Built-in devices must declare SPICE and Spectre support",
+      });
+    }
+  }
+  return issues;
+}
+
+export function validateDeviceRegistry(
+  registry: DeviceRegistry,
+  symbols: readonly DeviceSymbolContract[],
+): DeviceDescriptorIssue[] {
+  const issues = validateDeviceDescriptors(registry.descriptors);
+  const symbolsById = new Map(symbols.map((symbol) => [symbol.id, symbol]));
+  for (const descriptor of registry.descriptors) {
+    const symbol = symbolsById.get(descriptor.symbolId);
+    if (!symbol) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: `Device descriptor references an unknown Symbol: ${descriptor.symbolId}`,
+      });
+      continue;
+    }
+    const symbolPins = symbol.pins.map((pin) => pin.name);
+    if (
+      symbolPins.length !== descriptor.pinOrder.length ||
+      symbolPins.some(
+        (pinName, index) => pinName !== descriptor.pinOrder[index],
+      )
+    ) {
+      issues.push({
+        deviceId: descriptor.id,
+        message: `Device pin order ${descriptor.pinOrder.join(",")} does not match Symbol pin order ${symbolPins.join(",")}`,
+      });
+    }
+  }
+  return issues;
+}
