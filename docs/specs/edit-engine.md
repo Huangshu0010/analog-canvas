@@ -155,6 +155,11 @@ Phase 8 topology operations have these preconditions:
   cannot change directly between non-`none` roles. Canonical power authoring
   selects by global Net name (`0` or `VDD`) before applying this edit; a power
   role alone never selects a Net.
+- `normalize_power_nets` remains a typed compatibility operation for an
+  explicit caller; the editor never invokes it automatically on a loaded
+  Document. Normal production authoring uses the name-first power and named-Net
+  planners, while Project entry performs only the documented legacy duplicate
+  repair.
 - `move_junction` preserves topology and must be paired with `set_route_points`
   edits for every incident Route whose geometry changes in the same
   transaction. GUI movement planners always author those Route edits; Routes

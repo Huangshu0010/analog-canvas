@@ -66,7 +66,6 @@ import {
   createEmptyProject,
   defaultDraftTextDocument,
   flattenRichText,
-  powerNetNormalizations,
   snapGridPoint,
   semanticTextDocument,
   transformPoint,
@@ -1072,19 +1071,6 @@ export function App({
     }
     return [...byKey.values()];
   }, [visibleBulkEndpoints, visibleEndpoints]);
-  useEffect(() => {
-    const normalizationEdits = powerNetNormalizations(document).length
-      ? [{ kind: "normalize_power_nets" as const }]
-      : [];
-    const edits = normalizationEdits;
-    if (edits.length === 0) return;
-    const result = transact(edits);
-    if (result.ok) {
-      setStatus(
-        `Normalized ${normalizationEdits.length} explicit power-Net rule(s)`,
-      );
-    }
-  }, [document, resolver, visibleEndpoints]);
   const routeGeometryRecords = useMemo(
     () =>
       document.routes.flatMap((route) => {

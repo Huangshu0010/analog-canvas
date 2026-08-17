@@ -63,6 +63,11 @@ that Net's authored name; a matching folded name emits an explicit compatible
 Net merge through the Edit Engine, choosing the stable lowest Net ID. Raw
 `set_net_name` remains deliberately strict and rejects an ambiguous rename.
 
+The editor does not silently normalize a loaded Document from `powerDomain`
+alone. Regular authoring chooses an explicit canonical name first; the bounded
+Project-entry repair only coalesces compatible legacy duplicate canonical
+supply Nets and then requires an explicit save.
+
 Canonical MOS Instances use `nmos`/`pmos` with D/G/S/B electrical pins. The
 default `textbook-3terminal` variant is presentation-only. B membership is
 explicit first, then materialized from a configured cell-default Net, then

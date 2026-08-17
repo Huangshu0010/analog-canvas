@@ -8247,3 +8247,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   production smoke) passed.
 - Commit status: pending `feat(net): unify named net authoring` on
   `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N6 retire editor power normalizer
+
+- Target: remove hidden editor power-role normalization without retiring the
+  explicit typed compatibility edit.
+- Changed areas: App startup effect removal and current Net authoring/repair
+  contract documentation.
+- Validation: focused 3-file Vitest run (32 tests), production-call-site
+  search, editor build, typecheck, docs check, test-impact, `git diff --check`,
+  and `pnpm verify:branch` (144 unit files / 862 tests, full workspace build,
+  production smoke) passed.
+- Commit status: pending `refactor(net): retire editor power normalization` on
+  `codex/net-contract-unification-plan`.

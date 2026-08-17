@@ -292,8 +292,9 @@ flightlines, and exported netlist.
 
 ### N4 — Consumer cleanup
 
-- Remove superseded editor-local power orchestration and compatibility helpers
-  only after `rg` proves no production consumers.
+- Remove superseded editor-local power orchestration after `rg` proves no
+  production consumer. Retain `normalize_power_nets` as an explicit typed
+  compatibility edit; do not run it as a hidden editor load effect.
 - Update current specs, Agent documentation, and user-facing repair guidance.
 - Run branch integration verification.
 
