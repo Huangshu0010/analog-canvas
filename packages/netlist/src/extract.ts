@@ -5,7 +5,7 @@ import type {
   SchematicDocument,
   StableId,
 } from "@icm/model";
-import { deviceNetlistDefinition } from "@icm/symbols";
+import { deviceDescriptor } from "@icm/devices";
 
 import type {
   DesignNetlistCell,
@@ -210,7 +210,7 @@ function buildNetContext(
             : undefined;
         const allowedPins =
           child?.netlist?.terminals.map((terminal) => terminal.name) ??
-          deviceNetlistDefinition(instance.symbolId)?.pinOrder;
+          deviceDescriptor(instance.symbolId)?.pinOrder;
         if (allowedPins && !allowedPins.includes(terminal.pinName)) {
           diagnostic(
             diagnostics,
@@ -358,7 +358,7 @@ function extractDeviceInstance(
   context: CellNetContext,
   diagnostics: NetlistDiagnostic[],
 ): DesignNetlistInstance | null {
-  const definition = deviceNetlistDefinition(instance.symbolId);
+  const definition = deviceDescriptor(instance.symbolId);
   if (!definition) {
     diagnostic(
       diagnostics,

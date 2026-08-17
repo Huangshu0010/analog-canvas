@@ -1,5 +1,5 @@
 import type { RichTextDocument } from "@icm/model";
-import { deviceNetlistDefinition } from "@icm/symbols";
+import { deviceDescriptor } from "@icm/devices";
 
 export type InstanceValueDisplay =
   | { readonly kind: "displayable"; readonly content: RichTextDocument }
@@ -67,7 +67,7 @@ function boldDocument(value: string): RichTextDocument {
 export function displayableInstanceValue(
   instance: InstanceValueSource,
 ): InstanceValueDisplay {
-  const definition = deviceNetlistDefinition(instance.symbolId);
+  const definition = deviceDescriptor(instance.symbolId);
   if (!definition) {
     return {
       kind: "undisplayable",

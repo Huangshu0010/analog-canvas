@@ -1,5 +1,5 @@
 {
-  "name": "@icm/netlist",
+  "name": "@icm/devices",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,11 +14,6 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@icm/devices": "workspace:*",
-    "@icm/model": "workspace:*",
-    "@icm/symbols": "workspace:*"
-  },
-  "devDependencies": {
-    "@icm/spice": "workspace:*"
+    "@icm/model": "workspace:*"
   }
 }
