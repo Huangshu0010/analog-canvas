@@ -10,15 +10,11 @@ describe("ExamplesPanel", () => {
     const markup = renderToStaticMarkup(
       createElement(ExamplesPanel, {
         open: true,
-        onShowLibrary: () => undefined,
         onOpenExample: () => undefined,
       }),
     );
 
     expect(markup).toContain('data-testid="examples-panel"');
-    expect(markup).toContain('data-testid="library-panel-tab"');
-    expect(markup).toContain('data-testid="examples-panel-tab"');
-    expect(markup).toContain('aria-current="page"');
     expect(markup).not.toContain('data-testid="shapes-fold-library"');
     expect(markup.match(/data-testid="shapes-example-/g)).toHaveLength(
       libraryProjectExamples.length,

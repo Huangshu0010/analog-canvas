@@ -7737,6 +7737,23 @@ export function App({
         <aside className="tool-rail" aria-label="Tool rail">
           <button
             type="button"
+            className="tool-rail-button examples-toggle"
+            title="Show circuit examples"
+            aria-pressed={
+              leftPanelMode === "examples" && visibleLibraryPanelOpen
+            }
+            aria-controls="examples-panel"
+            aria-expanded={
+              leftPanelMode === "examples" && visibleLibraryPanelOpen
+            }
+            data-testid="examples-toggle"
+            onClick={showExamplesPanel}
+          >
+            <ToolIcon name="examples" />
+            <span>Examples</span>
+          </button>
+          <button
+            type="button"
             className="tool-rail-button"
             title={
               visibleLibraryPanelOpen
@@ -7815,7 +7832,6 @@ export function App({
         ) : (
           <ExamplesPanel
             open={visibleLibraryPanelOpen}
-            onShowLibrary={showLibraryPanel}
             onOpenExample={openLibraryExample}
           />
         )}

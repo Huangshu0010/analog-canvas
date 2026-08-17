@@ -663,6 +663,11 @@ body {
   white-space: nowrap;
 }
 
+.tool-rail-button.examples-toggle {
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
 .tool-rail-divider {
   height: 1px;
   margin: var(--icm-space-1) var(--icm-space-2);
@@ -707,6 +712,13 @@ body {
   background: var(--icm-surface-hover);
 }
 
+.shapes-panel-static-title {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--icm-space-1);
+}
+
 .shapes-panel-header {
   display: flex;
   align-items: flex-start;
@@ -714,41 +726,6 @@ body {
   gap: var(--icm-space-2);
   padding: var(--icm-space-3) var(--icm-space-3) var(--icm-space-2);
   border-bottom: 1px solid var(--icm-border);
-}
-
-.left-panel-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  width: 100%;
-  gap: var(--icm-space-1);
-}
-
-.left-panel-tab {
-  display: grid;
-  align-content: center;
-  min-width: 0;
-  min-height: 44px;
-  padding: var(--icm-space-2);
-  border: 1px solid transparent;
-  border-radius: var(--icm-radius-sm);
-  background: transparent;
-  box-shadow: none;
-  color: var(--icm-text-muted);
-  font-size: var(--icm-font-sm);
-  font-weight: 600;
-  line-height: var(--icm-line-tight);
-  text-align: left;
-}
-
-.left-panel-tab:hover:not(:disabled) {
-  background: var(--icm-surface-hover);
-  color: var(--icm-text);
-}
-
-.left-panel-tab.active {
-  border-color: var(--icm-border);
-  background: var(--icm-surface-muted);
-  color: var(--icm-text);
 }
 
 .shapes-panel-header h2,

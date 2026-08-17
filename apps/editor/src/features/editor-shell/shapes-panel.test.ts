@@ -18,7 +18,6 @@ describe("shapes quick-place", () => {
         recentSymbolIds: [],
         open: true,
         onOpenInsert: () => undefined,
-        onShowExamples: () => undefined,
         onQuickPlace: () => undefined,
       }),
     );
@@ -67,7 +66,6 @@ describe("shapes quick-place", () => {
     expect(markup).toContain('title="Place Capacitor"');
     expect(markup).toContain(">V Src</span>");
     expect(markup).toContain(">Cap</span>");
-    expect(markup).toContain('data-testid="examples-panel-toggle"');
     expect(markup).not.toContain('data-testid="shapes-example-');
   });
 

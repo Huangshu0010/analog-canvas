@@ -66,7 +66,6 @@ export interface ShapesPanelProps {
   recentSymbolIds: readonly string[];
   open: boolean;
   onOpenInsert(): void;
-  onShowExamples(): void;
   onQuickPlace(request: ComponentInsertRequest): void;
 }
 
@@ -75,7 +74,6 @@ export function ShapesPanel({
   recentSymbolIds,
   open,
   onOpenInsert,
-  onShowExamples,
   onQuickPlace,
 }: ShapesPanelProps) {
   const libraryGroups = componentCatalog(styleProfileId, "");
@@ -118,28 +116,15 @@ export function ShapesPanel({
       data-open={open ? "true" : "false"}
     >
       <header className="shapes-panel-header">
-        <div className="left-panel-tabs" aria-label="Library panels">
-          <button
-            type="button"
-            className="left-panel-tab active"
-            data-testid="library-panel-tab"
-            aria-current="page"
-            onClick={onOpenInsert}
-            title="Open insert dialog (I)"
-          >
-            <span className="shapes-kicker">Quick place</span>
-            <span className="shapes-panel-heading">Library</span>
-          </button>
-          <button
-            type="button"
-            className="left-panel-tab"
-            data-testid="examples-panel-toggle"
-            onClick={onShowExamples}
-            title="Show circuit examples"
-          >
-            Examples
-          </button>
-        </div>
+        <button
+          type="button"
+          className="shapes-panel-title"
+          onClick={onOpenInsert}
+          title="Open insert dialog (I)"
+        >
+          <span className="shapes-kicker">Quick place</span>
+          <span className="shapes-panel-heading">Library</span>
+        </button>
       </header>
 
       <div className="shapes-panel-body">

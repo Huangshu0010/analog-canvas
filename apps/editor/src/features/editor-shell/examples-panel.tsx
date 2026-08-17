@@ -5,15 +5,10 @@ import {
 
 export interface ExamplesPanelProps {
   open: boolean;
-  onShowLibrary(): void;
   onOpenExample(example: LibraryProjectExample): void;
 }
 
-export function ExamplesPanel({
-  open,
-  onShowLibrary,
-  onOpenExample,
-}: ExamplesPanelProps) {
+export function ExamplesPanel({ open, onOpenExample }: ExamplesPanelProps) {
   return (
     <aside
       id="examples-panel"
@@ -27,26 +22,9 @@ export function ExamplesPanel({
       data-open={open ? "true" : "false"}
     >
       <header className="shapes-panel-header">
-        <div className="left-panel-tabs" aria-label="Library panels">
-          <button
-            type="button"
-            className="left-panel-tab"
-            data-testid="library-panel-tab"
-            onClick={onShowLibrary}
-            title="Show component library"
-          >
-            Library
-          </button>
-          <button
-            type="button"
-            className="left-panel-tab active"
-            data-testid="examples-panel-tab"
-            aria-current="page"
-            title="Circuit examples"
-          >
-            <span className="shapes-kicker">Quick place</span>
-            <span className="shapes-panel-heading">Examples</span>
-          </button>
+        <div className="shapes-panel-static-title">
+          <span className="shapes-kicker">Quick place</span>
+          <span className="shapes-panel-heading">Examples</span>
         </div>
       </header>
 

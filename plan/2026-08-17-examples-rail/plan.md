@@ -7,8 +7,8 @@ experience: none
 
 ## Goal
 
-Present Examples as its own left-side panel selected by a top-level control to
-the right of Library, rather than as a fold inside the Library device panel.
+Present Examples as its own left-side panel selected from the far-left tool
+rail alongside Library, rather than as a fold inside the Library device panel.
 
 ## State and Ownership
 
@@ -26,6 +26,7 @@ Library/Examples panel composition and its direct coverage.
 
 - `apps/editor/src/app/App.tsx`
 - `apps/editor/src/app/App.test.tsx`
+- `apps/editor/src/features/editor-shell/tool-icon.tsx`
 - `apps/editor/src/features/editor-shell/shapes-panel.tsx`
 - `apps/editor/src/features/editor-shell/shapes-panel.test.ts`
 - `apps/editor/src/features/editor-shell/examples-panel.tsx`
@@ -45,8 +46,8 @@ Library/Examples panel composition and its direct coverage.
 
 1. Extract the examples display into an independent left panel while retaining
    the existing Project-open behavior.
-2. Put a top-level Examples control to the right of Library and make the two
-   controls switch the shared left-panel slot.
+2. Put a top-level Examples control in the far-left tool rail alongside
+   Library and make the two controls switch the shared left-panel slot.
 3. Preserve desktop and compact layout behavior, then cover the control
    placement and direct example-open path.
 
@@ -61,8 +62,8 @@ Library/Examples panel composition and its direct coverage.
 ## Test Impact
 
 - Decision: tests-updated
-- Contracts: Examples is a separate left-panel surface reached by the control
-  beside Library; selecting an example still uses the guarded Project-open
+- Contracts: Examples is a separate left-panel surface reached by a far-left
+  tool-rail button alongside Library; selecting an example still uses the guarded Project-open
   lifecycle.
 - Primary checks: App/panel unit tests and the Examples browser workflow.
 

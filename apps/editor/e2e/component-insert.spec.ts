@@ -774,31 +774,28 @@ test("shows the complete foldable categorized Library, quick-places a device, an
     .toContain("resistor");
 });
 
-test("opens named full-width Project examples beside Library", async ({
+test("opens named full-width Project examples from the left tool rail", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 720 });
   await page.goto("/");
 
-  const libraryPanel = page.getByTestId("shapes-library-panel");
-  const libraryTab = libraryPanel.getByTestId("library-panel-tab");
-  const examplesToggle = libraryPanel.getByTestId("examples-panel-toggle");
-  const libraryTabBox = await libraryTab.boundingBox();
+  const libraryToggle = page.getByTestId("library-toggle");
+  const examplesToggle = page.getByTestId("examples-toggle");
+  const libraryTabBox = await libraryToggle.boundingBox();
   const examplesToggleBox = await examplesToggle.boundingBox();
   if (!libraryTabBox || !examplesToggleBox) {
     throw new Error("Library and Examples controls are not measurable");
   }
-  expect(examplesToggleBox.x).toBeGreaterThan(libraryTabBox.x);
+  expect(examplesToggleBox.x).toBeLessThanOrEqual(8);
+  expect(examplesToggleBox.x).toBe(libraryTabBox.x);
+  expect(examplesToggleBox.y).toBeLessThan(libraryTabBox.y);
 
   await examplesToggle.click();
   const panel = page.getByTestId("examples-panel");
   const exampleList = panel.locator(".shapes-example-list");
   const examples = exampleList.locator(".shapes-example-card");
   await expect(panel).toHaveAttribute("data-open", "true");
-  await expect(panel.getByTestId("examples-panel-tab")).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
   await expect(examples).toHaveCount(2);
   expect(
     await exampleList.evaluate(
