@@ -8175,3 +8175,181 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   (including final Playwright status `passed`), and diff checks passed.
 - Commit status: staged for `fix(editor): restore connected wire drag previews`
   on `codex/app-transaction-module-layers`; GitHub required checks pending.
+
+## 2026-08-17 - Plan unified Net contract
+
+- Target: define the minimal shared Net identity, naming, scope, power-role,
+  hierarchy, authoring, ERC, tracing, and deterministic-export contract.
+- Changed areas: added the Net contract unification roadmap, its staged
+  acceptance matrix and non-goals, and linked it from the roadmap index.
+- Validation: documentation review, `pnpm test:impact -- --base main`, and
+  `git diff --check` passed.
+- Commit status: staged for `docs(net): plan unified connectivity contract` on
+  `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N1 primitives
+
+- Target: unify folded Net-name comparison and complete atomic Net merge
+  reference closure.
+- Changed areas: model Net contract helper, transaction name validation,
+  formal-interface retargeting, and focused model/edit-engine regressions.
+- Validation: focused 2-file Vitest run (13 tests), model and edit-engine
+  builds, test-impact, and diff checks passed.
+- Commit status: staged for `feat(net): add canonical name and merge
+  primitives` on `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N2 power producers
+
+- Target: route Ground/VDD authoring and MOS supply selection through one
+  name-first power-Net planner.
+- Changed areas: Edit Engine power planner and role guard; power normalization,
+  MOS fallback, component placement, VDD rail construction, current contracts,
+  and focused regressions.
+- Validation: focused 5-file Vitest run (49 tests), Edit Engine/Derived/Editor
+  builds, test-impact, Prettier, documentation-link, and diff checks passed.
+- Commit status: staged for `feat(net): unify power net authoring` on
+  `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N3 derived and export convergence
+
+- Target: make global Net equivalence, ERC, and netlist export consume one
+  folded-name/global-name contract.
+- Changed areas: model validation, Project Connectivity Index global groups,
+  global trace hops, ERC, netlist extraction, and focused regressions.
+- Validation: focused 4-file Vitest run (21 tests), Model/Derived/Netlist
+  builds, and diff checks passed.
+- Commit status: staged for `feat(net): converge derived and export semantics`
+  on `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N4 legacy repair and delivery
+
+- Target: repair compatible legacy canonical Ground/VDD duplicates at Project
+  entry and make named-global visible connectivity explicit.
+- Changed areas: deterministic Edit Engine repair plan and entry installation,
+  save-needed status, global Net flightline semantics and trace presentation,
+  power-normalization no-op guard, current contract/user docs, and Vite's
+  post-write service-worker versioning hook.
+- Validation: focused 6-file Vitest run (62 tests), test-impact, typecheck,
+  `git diff --check`, and `pnpm verify:branch` (143 unit files / 859 tests,
+  full workspace build, production smoke) passed.
+- Commit status: pending `feat(net): repair legacy power net duplicates` on
+  `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N5 named Net authoring
+
+- Target: complete the generic high-level naming boundary without weakening the
+  raw `set_net_name` contract.
+- Changed areas: pure Edit Engine named-Net planner, GUI Net-label integration,
+  planner regressions, and corresponding model/edit-engine/roadmap guidance.
+- Validation: focused 3-file Vitest run (19 tests), package/editor builds,
+  typecheck, docs check, test-impact, `git diff --check`, and
+  `pnpm verify:branch` (144 unit files / 862 tests, full workspace build,
+  production smoke) passed.
+- Commit status: pending `feat(net): unify named net authoring` on
+  `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N6 retire editor power normalizer
+
+- Target: remove hidden editor power-role normalization without retiring the
+  explicit typed compatibility edit.
+- Changed areas: App startup effect removal and current Net authoring/repair
+  contract documentation.
+- Validation: focused 3-file Vitest run (32 tests), production-call-site
+  search, editor build, typecheck, docs check, test-impact, `git diff --check`,
+  and `pnpm verify:branch` (144 unit files / 862 tests, full workspace build,
+  production smoke) passed.
+- Commit status: pending `refactor(net): retire editor power normalization` on
+  `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N7 repair reference closure
+
+- Target: directly prove Project-entry duplicate supply repair retargets the
+  full Net reference closure.
+- Changed areas: valid legacy Ground repair fixture/regression and acceptance
+  matrix evidence.
+- Validation: focused 2-file Vitest run (18 tests), docs check, test-impact,
+  `git diff --check`, and `pnpm verify:branch` (144 unit files / 863 tests,
+  full workspace build, production smoke) passed.
+- Commit status: pending `test(net): cover repair reference closure` on
+  `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N8 Agent named-Net parity
+
+- Target: make semantic Agent rename use the same named-Net authoring planner
+  as GUI, without changing the raw Agent transaction API.
+- Changed areas: browser-safe adapter planner re-export, Agent client semantic
+  rename compilation, parity regression, and Agent/roadmap guidance.
+- Validation: focused 3-file Vitest run (39 tests), package builds, typecheck,
+  docs check, test-impact, `git diff --check`, and `pnpm verify:branch` (144
+  unit files / 864 tests, full workspace build, production smoke) passed.
+- Commit status: pending `feat(agent): share named net authoring planner` on
+  `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N9 acceptance matrix
+
+- Target: prove repeated canonical Ground/VDD placement converges through the
+  normal UI proposal and Edit Engine transaction boundary.
+- Changed areas: placement connectivity integration regressions.
+- Validation: focused placement Vitest run (8 tests), test-impact, and diff
+  checks passed.
+- Commit status: pending `test(net): cover repeated canonical power placement`
+  on `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N10 roadmap closure
+
+- Target: close the implemented Net-contract roadmap with a compact ownership
+  and verification record.
+- Changed areas: Net-contract roadmap and factual planning records only.
+- Validation: Markdown-link and diff checks passed; preceding branch gate
+  passed 144 test files / 866 tests, workspace builds, and production smoke.
+- Commit status: pending `docs(net): close contract unification roadmap` on
+  `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N11 legacy compatibility retirement
+
+- Target: remove the obsolete power normalizer and Project-entry duplicate-Net
+  repair rather than retain old Project or raw edit compatibility.
+- Changed areas: model/Edit Engine normalizer path, Agent schema and generated
+  artifacts, editor entry presentation, current contract docs, and focused
+  regressions.
+- Validation: focused 4-file Vitest (46 tests), generated Agent/MCP checks,
+  typecheck, test-impact, diff check, and `pnpm verify:branch` (143 test files
+  / 860 tests, workspace build, production smoke) passed.
+- Commit status: pending `refactor(net): retire legacy normalization
+  compatibility` on `codex/net-contract-unification-plan`.
+
+## 2026-08-18 - Diagnostic lifecycle and report separation
+
+- Target: make current diagnostics revision-scoped evidence and separate them
+  from historical import messages.
+- Changed areas: Derived live diagnostic snapshot/presentation policy, editor
+  diagnostic workbench and import report lifecycle, accepted diagnostic ADR,
+  and unit/controller/browser lifecycle regressions.
+- Validation: focused 3-file Vitest (25 tests), diagnostic-focused Playwright
+  (4 tests), test-impact, typecheck, diff checks, and `pnpm verify:branch` (143
+  test files / 863 tests, workspace build, production smoke) passed.
+- Commit status: committed and pushed as `refactor(diagnostics): separate live
+  findings from import reports` on `codex/diagnostic-lifecycle`.
+
+## 2026-08-18 - Net-contract Ground route-placement E2E
+
+- Target: align the Route-split browser scenario with the frozen rule that
+  Ground cannot silently claim a differently named ordinary Net.
+- Changed areas: one test-local canonical Ground Net fixture and the target
+  plan/log record.
+- Validation: focused Playwright, test-impact, diff checks, frozen install,
+  and `pnpm ci:check` passed (143 unit files / 863 tests; 148 Playwright
+  scenarios).
+- Commit status: pending `test(net): align ground route placement with
+  contract` on `codex/diagnostic-lifecycle`.
+
+## 2026-08-18 - Net and diagnostics MCP checksum refresh
+
+- Target: refresh the canonical Linux MCP tarball SHA-256 after the integrated
+  API/resource changes invalidated the prior release pin.
+- Changed areas: MCP distribution checksum plus the target plan/log record.
+- Validation: `pnpm mcp:distribution:check`, workspace build, release
+  verification, and diff checks passed locally; a new remote Linux Release
+  contracts check remains required for delivery.
+- Commit status: pending `fix(release): refresh MCP checksum` on
+  `codex/diagnostic-lifecycle`.

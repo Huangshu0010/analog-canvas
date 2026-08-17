@@ -45,8 +45,28 @@ separate canvas Port collection or Port-specific Net membership.
 
 `Net.powerDomain` is persisted explicitly. VDD consists of a global VDD Net,
 editable Route/Junction rail geometry, and a power-label annotation. Ground is
-an ordinary `ground` Instance attached through pin `0`. No runtime path infers
-supply identity from names, IDs, labels, or retired assets.
+an ordinary `ground` Instance attached through pin `0`. Supply role is never
+inferred from a marker, label, or fixed ID; canonical authoring selects an
+explicit global Net by normalized name and then verifies its persisted role.
+
+`powerDomain` is role metadata, not Net identity: `AVDD` and `DVDD` may both
+have role `vdd` while remaining distinct Nets. Net names are unique within one
+Document under trimmed case-folding; a named global Net is an explicit semantic
+connection even when its marker geometry is separate. Canonical Ground and VDD
+attachment reuses a matching global Net by normalized name (`0` or `VDD`) and
+then checks its role; it never chooses the first Net with a matching role.
+Changing between non-`none` power roles is rejected atomically. The authored
+Net spelling remains persisted; normalized comparison is derived only.
+
+High-level naming starts from an existing candidate Net. An unused name changes
+that Net's authored name; a matching folded name emits an explicit compatible
+Net merge through the Edit Engine, choosing the stable lowest Net ID. Raw
+`set_net_name` remains deliberately strict and rejects an ambiguous rename.
+
+The editor does not silently normalize a loaded Document from `powerDomain`
+metadata or coalesce duplicate canonical supply Nets. A duplicate folded name
+is invalid input and remains a shared diagnostic for the author to resolve with
+an explicit rename or merge.
 
 Canonical MOS Instances use `nmos`/`pmos` with D/G/S/B electrical pins. The
 default `textbook-3terminal` variant is presentation-only. B membership is

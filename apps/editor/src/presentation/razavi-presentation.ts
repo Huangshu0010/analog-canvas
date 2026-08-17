@@ -58,21 +58,21 @@ export function materializeRazaviProjectBulkConnections(
   let nextProject = structuredClone(project);
   let instanceCount = 0;
   for (const sourceDocument of [...nextProject.documents]) {
-    const edits = razaviManualBulkConnectionEdits(
-      sourceDocument,
-      sourceDocument.instances,
-    );
+    const document = nextProject.documents.find(
+      (candidate) => candidate.id === sourceDocument.id,
+    )!;
+    const edits = razaviManualBulkConnectionEdits(document, document.instances);
     if (edits.length === 0) continue;
     const affectedCount =
       edits[0]?.kind === "reconcile_mos_bulk"
         ? (edits[0].instanceIds?.length ?? sourceDocument.instances.length)
         : 0;
     const result = executeTransaction(
-      sourceDocument,
+      document,
       {
-        transactionId: `razavi-bulk-entry-${sourceDocument.id}`,
-        documentId: sourceDocument.id,
-        expectedRevision: sourceDocument.revision,
+        transactionId: `razavi-bulk-entry-${document.id}`,
+        documentId: document.id,
+        expectedRevision: document.revision,
         // This deterministic default transform executes before user
         // history is installed; it is not an Agent request.
         actor: { kind: "human", id: "razavi-bulk-entry" },
@@ -87,7 +87,7 @@ export function materializeRazaviProjectBulkConnections(
     );
     if (!result.ok) {
       throw new Error(
-        `Cannot materialize Razavi bulk defaults for ${sourceDocument.id}: ${result.error.message}`,
+        `Cannot materialize Razavi bulk defaults for ${document.id}: ${result.error.message}`,
       );
     }
     nextProject = replaceProjectDocument(nextProject, result.document);

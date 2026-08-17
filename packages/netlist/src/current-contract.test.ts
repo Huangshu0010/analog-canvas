@@ -89,4 +89,23 @@ describe("current formal cell interface", () => {
       }),
     ]);
   });
+
+  it("reports the shared global-name contract violation", () => {
+    const project = createEmptyProject("project", "Project");
+    project.documents[0]!.nets.push({
+      id: "net-global",
+      scope: "global",
+      terminals: [],
+    });
+
+    const result = extractDesignNetlist(project);
+
+    expect(result.ir).toBeNull();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "UNNAMED_GLOBAL_NET",
+        objectIds: ["net-global"],
+      }),
+    );
+  });
 });

@@ -33,6 +33,39 @@ export interface Diagnostic {
   parameters: Readonly<Record<string, string | number | boolean>>;
 }
 
+export interface DiagnosticDocumentRevision {
+  documentId: string;
+  revision: number;
+}
+
+/**
+ * Ephemeral evidence for the current Project only. The stamp lets every
+ * consumer prove which Document revisions were evaluated without persisting
+ * diagnostics or confusing them with an import/operation report.
+ */
+export interface LiveDiagnosticSnapshot {
+  source: "live";
+  projectId: string;
+  documentRevisions: readonly DiagnosticDocumentRevision[];
+  diagnostics: readonly Diagnostic[];
+}
+
+export type DiagnosticPresentationGroup = "actionable" | "observation";
+
+/**
+ * Electrical findings and structural gate failures are actionable by default.
+ * Non-gating routing/visual heuristics remain available as observations, but
+ * must not look like unresolved electrical failures in the default UI.
+ */
+export function diagnosticPresentationGroup(
+  diagnostic: Diagnostic,
+): DiagnosticPresentationGroup {
+  return (diagnostic.domain === "routing" || diagnostic.domain === "visual") &&
+    !diagnostic.gateEligible
+    ? "observation"
+    : "actionable";
+}
+
 const SEVERITY_RANK: Record<DiagnosticSeverity, number> = {
   error: 0,
   warning: 1,
@@ -141,4 +174,25 @@ export function diagnoseProject(
     ),
   );
   return mergeDiagnostics(runErcChecks(project, index, resolver), visual);
+}
+
+/** Build one revision-stamped, non-persisted snapshot of current evidence. */
+export function diagnoseProjectSnapshot(
+  project: CircuitProject,
+  resolver: SymbolResolver,
+  index = buildProjectConnectivityIndex(project, resolver),
+): LiveDiagnosticSnapshot {
+  return {
+    source: "live",
+    projectId: project.id,
+    documentRevisions: project.documents
+      .map((document) => ({
+        documentId: document.id,
+        revision: document.revision,
+      }))
+      .sort((left, right) =>
+        left.documentId.localeCompare(right.documentId, "en"),
+      ),
+    diagnostics: diagnoseProject(project, resolver, index),
+  };
 }

@@ -7,7 +7,7 @@ import {
 import { createEmptyDocument } from "@icm/model";
 import { builtInSymbols, InMemorySymbolResolver } from "@icm/symbols";
 
-import { constructVddRailEdits } from "./vdd-rail";
+import { constructVddRailEdits, planVddRailEdits } from "./vdd-rail";
 
 const resolver = new InMemorySymbolResolver(builtInSymbols);
 
@@ -45,6 +45,34 @@ describe("drawn VDD rail construction", () => {
       kind: "add_power_rail",
       startJunctionId: "junction-vdd4-start",
       endJunctionId: "junction-vdd4-end",
+    });
+  });
+
+  it("does not reuse AVDD when constructing a VDD rail", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.nets.push({
+      id: "net-avdd",
+      name: "AVDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
+
+    const plan = planVddRailEdits(document, {
+      instanceId: "VDD1",
+      start: { x: 40, y: 20 },
+      end: { x: 180, y: 20 },
+    });
+
+    expect(plan).toMatchObject({
+      ok: true,
+      netId: "net-power-vdd1",
+      edits: [
+        {
+          kind: "add_power_rail",
+          netId: "net-power-vdd1",
+        },
+      ],
     });
   });
 

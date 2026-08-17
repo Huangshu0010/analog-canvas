@@ -152,6 +152,65 @@ repairs are completed mainline work and remain part of this merge baseline.
 drag projection and refreshes the Linux MCP integrity pin; the repair is
 awaiting its remote required-check result before PR #117 can merge.
 
+## 2026-08-17 Net contract unification closure
+
+`2026-08-17-net-contract-n4-repair-delivery` is completed on
+`codex/net-contract-unification-plan`. Its entry repair, global-Net visible
+connectivity semantics, current contract/user guidance, and branch validation
+are recorded in `plan/log.md`; it is eligible for normal completed-plan
+retention after commit evidence is recorded.
+
+## 2026-08-17 Net contract named-authoring closure
+
+`2026-08-17-net-contract-n5-named-net-planner` is completed on
+`codex/net-contract-unification-plan`. The generic named-Net planner now owns
+GUI Net-label rename-or-merge intent, while the raw transaction stays strict;
+validation and commit evidence are recorded in `plan/log.md`.
+
+## 2026-08-17 Net contract editor-normalizer closure
+
+`2026-08-17-net-contract-n6-retire-editor-power-normalizer` is completed on
+`codex/net-contract-unification-plan`. The editor no longer mutates loaded
+power Nets through an implicit normalization effect; retained compatibility
+behavior and validation are recorded in `plan/log.md`.
+
+## 2026-08-17 Net contract repair-reference closure
+
+`2026-08-17-net-contract-n7-repair-reference-closure` is completed on
+`codex/net-contract-unification-plan`. Project-entry repair now has direct
+regression evidence for every persisted source-Net reference class; validation
+and commit evidence are recorded in `plan/log.md`.
+
+## 2026-08-17 Net contract Agent named-authoring closure
+
+`2026-08-17-net-contract-n8-agent-named-net-parity` is completed on
+`codex/net-contract-unification-plan`. Semantic Agent naming now shares GUI
+planner behavior while raw API transaction behavior remains strict; validation
+and commit evidence are recorded in `plan/log.md`.
+
+## 2026-08-17 Net contract acceptance-matrix closure
+
+`2026-08-17-net-contract-n9-acceptance-matrix` is completed on
+`codex/net-contract-unification-plan`. Repeated canonical Ground/VDD symbol
+placement is directly covered through the normal proposal and transaction
+boundary, including AVDD/DVDD separation; validation and commit evidence are
+recorded in `plan/log.md`.
+
+## 2026-08-17 Net contract roadmap closure
+
+`2026-08-17-net-contract-n10-roadmap-closure` is completed on
+`codex/net-contract-unification-plan`. The roadmap now records the compact
+module split, explicit non-goals, and final branch verification; it is eligible
+for normal completed-plan retention handling.
+
+## 2026-08-17 Net contract legacy-compatibility retirement
+
+`2026-08-17-net-contract-n11-retire-legacy-compat` is completed on
+`codex/net-contract-unification-plan`. It supersedes the earlier compatibility
+decision: no legacy power-normalization edit or Project-entry duplicate-Net
+repair remains; normal authoring uses only current typed planners and explicit
+merges. Validation and commit evidence are recorded in `plan/log.md`.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

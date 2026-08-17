@@ -11,8 +11,9 @@ import {
   powerConnectionForSymbol,
   proposePlacementContact,
   proposedStandalonePowerConnection,
+  type PlacementContactProposal,
 } from "./placement-connectivity";
-import { constructVddRailEdits } from "./vdd-rail";
+import { planVddRailEdits } from "./vdd-rail";
 import { vddPowerLabelAnnotation } from "./vdd-power-label";
 import {
   defaultInstanceLabel,
@@ -137,10 +138,15 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       instance,
       options.visibleEndpoints,
     );
-    const standalonePower =
+    const standalonePower: PlacementContactProposal =
       contact.matched || contact.ambiguous
         ? { edits: [], matched: false, ambiguous: false }
         : proposedStandalonePowerConnection(options.document, instance);
+    const powerRejection = contact.rejected ?? standalonePower.rejected;
+    if (powerRejection) {
+      options.setStatus(`Cannot place ${id}: ${powerRejection}`);
+      return;
+    }
     const powerNetId = standalonePower.powerNetId ?? contact.powerNetId;
     const vddPowerLabel =
       powerConnectionForSymbol(symbolId)?.domain === "vdd" && powerNetId
@@ -248,25 +254,16 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     while (idsExist(`VDD${sequence}`)) sequence += 1;
     const instanceId = `VDD${sequence}`;
     const routeId = `route-${instanceId.toLowerCase()}-rail`;
-    const existingVddNet =
-      options.document.nets.find(
-        (net) =>
-          net.id === "net-global-vdd" &&
-          net.scope === "global" &&
-          (net.powerDomain ?? "none") === "vdd",
-      ) ??
-      options.document.nets.find(
-        (net) =>
-          net.scope === "global" && (net.powerDomain ?? "none") === "vdd",
-      );
-    const result = options.transact(
-      constructVddRailEdits({
-        instanceId,
-        start,
-        end,
-        ...(existingVddNet ? { netId: existingVddNet.id } : {}),
-      }),
-    );
+    const railPlan = planVddRailEdits(options.document, {
+      instanceId,
+      start,
+      end,
+    });
+    if (!railPlan.ok) {
+      options.setStatus(`Cannot add VDD rail: ${railPlan.message}`);
+      return;
+    }
+    const result = options.transact([...railPlan.edits]);
     if (!result.ok) return;
     options.selectOnly("route", [routeId]);
     options.completeVddRailPlacement();

@@ -5,7 +5,12 @@ import { describe, expect, it } from "vitest";
 import { buildProjectConnectivityIndex } from "../connectivity-index.js";
 import type { VisualDiagnostic } from "../visual.js";
 import { runErcChecks } from "./erc.js";
-import { adaptVisualDiagnostic, mergeDiagnostics } from "./diagnostic.js";
+import {
+  adaptVisualDiagnostic,
+  diagnoseProjectSnapshot,
+  diagnosticPresentationGroup,
+  mergeDiagnostics,
+} from "./diagnostic.js";
 
 const dual = {
   schemaVersion: 1 as const,
@@ -139,6 +144,59 @@ describe("diagnostic aggregation", () => {
     const visual = [adaptVisualDiagnostic(shortSegment, "doc", index)];
     expect(mergeDiagnostics(visual, erc)).toEqual(
       mergeDiagnostics(erc, visual),
+    );
+  });
+
+  it("stamps current Document revisions and drops resolved live findings", () => {
+    const unresolved = projectWithInstance();
+    unresolved.documents[0]!.revision = 3;
+    const before = diagnoseProjectSnapshot(unresolved, resolver);
+    expect(before).toMatchObject({
+      source: "live",
+      projectId: "d",
+      documentRevisions: [{ documentId: "doc", revision: 3 }],
+    });
+    expect(before.diagnostics.map((item) => item.code)).toContain(
+      "ERC_UNCONNECTED_PIN",
+    );
+
+    const resolved = structuredClone(unresolved);
+    resolved.documents[0]!.revision = 4;
+    resolved.documents[0]!.nets = [
+      {
+        id: "net-left",
+        scope: "local",
+        terminals: [{ instanceId: "I1", pinName: "L" }],
+      },
+      {
+        id: "net-right",
+        scope: "local",
+        terminals: [{ instanceId: "I1", pinName: "R" }],
+      },
+    ];
+    const after = diagnoseProjectSnapshot(resolved, resolver);
+    expect(after.documentRevisions).toEqual([
+      { documentId: "doc", revision: 4 },
+    ]);
+    expect(after.diagnostics.map((item) => item.code)).not.toContain(
+      "ERC_UNCONNECTED_PIN",
+    );
+  });
+
+  it("separates non-gating visual heuristics from actionable findings", () => {
+    const project = projectWithInstance();
+    const index = buildProjectConnectivityIndex(project, resolver);
+    const observationDiagnostic = adaptVisualDiagnostic(
+      shortSegment,
+      "doc",
+      index,
+    );
+    const [electricalDiagnostic] = runErcChecks(project, index, resolver);
+    expect(diagnosticPresentationGroup(observationDiagnostic)).toBe(
+      "observation",
+    );
+    expect(diagnosticPresentationGroup(electricalDiagnostic!)).toBe(
+      "actionable",
     );
   });
 });

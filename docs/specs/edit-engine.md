@@ -62,7 +62,7 @@ for readability; these groups do not create separate mutation endpoints:
   `move_junction`, `make_flightline`, `cut_connection`, `connect_endpoints`,
   `disconnect_endpoint`;
 - Net/power/MOS: `add_power_rail`, `merge_nets`, `set_net_name`,
-  `set_net_power_domain`, `normalize_power_nets`, `set_mos_bulk_defaults`,
+  `set_net_power_domain`, `set_mos_bulk_defaults`,
   `reconcile_mos_bulk`, `clear_mos_bulk_default`;
 - explicit open terminal: `add_no_connect`, `remove_no_connect`;
 - presentation/layout: `set_presentation_style`,
@@ -144,7 +144,21 @@ Phase 8 topology operations have these preconditions:
 - `connect_endpoints` creates a caller-named local Net when both endpoints are
   unowned, or attaches an unowned endpoint to the other endpoint's Net.
 - `set_net_name` requires a non-empty trimmed name. A name already owned by a
-  different Net is rejected; the caller must explicitly `merge_nets`.
+  different Net after case-folded comparison is rejected; the caller must
+  explicitly `merge_nets`.
+- `planEnsureNamedNet` is the pure high-level companion for an existing
+  candidate Net. It returns only `set_net_name` or `merge_nets` edits: an
+  unused name renames the candidate, while an existing same-folded name selects
+  a deterministic target and explicitly merges compatible Nets. It does not
+  weaken the raw edit's rejection rule or create another mutation endpoint.
+- `set_net_power_domain` may classify an unclassified Net or clear a role, but
+  cannot change directly between non-`none` roles. Canonical power authoring
+  selects by global Net name (`0` or `VDD`) before applying this edit; a power
+  role alone never selects a Net.
+- Power-Net normalization is not an edit operation. Normal production
+  authoring uses the name-first power and named-Net planners; a transaction
+  cannot silently add a canonical name, change scope, or repair a duplicate
+  Net after the caller's explicit edits have run.
 - `move_junction` preserves topology and must be paired with `set_route_points`
   edits for every incident Route whose geometry changes in the same
   transaction. GUI movement planners always author those Route edits; Routes

@@ -1,10 +1,15 @@
-import { hasBlockingVisualDiagnostics } from "@icm/derived";
+import {
+  diagnosticPresentationGroup,
+  hasBlockingVisualDiagnostics,
+} from "@icm/derived";
 import type {
   Diagnostic,
   DiagnosticDomain,
   DiagnosticSeverity,
+  GlobalNetTraceHop,
   HierarchyNetTrace,
   HierarchyNetTraceHop,
+  LiveDiagnosticSnapshot,
   VisualDiagnostic,
 } from "@icm/derived";
 import { useMemo, useState } from "react";
@@ -38,9 +43,12 @@ export interface VisualDiagnosticSummary {
 
 export interface SelectionInspectorDetailsProps {
   snapshot: SelectionInspectorSnapshot;
-  importDiagnostics: readonly SpiceDiagnostic[];
-  visualSummary: VisualDiagnosticSummary;
-  onSelectVisualDiagnostic(diagnostic: VisualDiagnostic): void;
+  importReport: SpiceImportReport | null;
+}
+
+export interface SpiceImportReport {
+  entryPath: string;
+  diagnostics: readonly SpiceDiagnostic[];
 }
 
 export function summarizeVisualDiagnostics(
@@ -62,9 +70,7 @@ export function summarizeVisualDiagnostics(
 
 export function SelectionInspectorDetails({
   snapshot,
-  importDiagnostics,
-  visualSummary,
-  onSelectVisualDiagnostic,
+  importReport,
 }: SelectionInspectorDetailsProps) {
   return (
     <>
@@ -99,26 +105,21 @@ export function SelectionInspectorDetails({
         <dd data-testid="crossing-count">{snapshot.crossingCount}</dd>
         <dt>Annotations</dt>
         <dd data-testid="annotation-count">{snapshot.annotationCount}</dd>
-        <dt>Structural diagnostics</dt>
-        <dd data-testid="structural-diagnostic-count">
-          {visualSummary.structural.length}
-        </dd>
-        <dt>Visual observations</dt>
-        <dd data-testid="visual-diagnostic-count">
-          {visualSummary.observations.length}
-        </dd>
-        <dt>Blocking diagnostics</dt>
-        <dd data-testid="blocking-diagnostic-count">
-          {visualSummary.blockingCount}
-        </dd>
         <dt>Status</dt>
         <dd aria-live="polite">{snapshot.status}</dd>
       </dl>
-      <section aria-label="Import diagnostics" className="diagnostics">
-        <h2>Import Diagnostics</h2>
-        {importDiagnostics.length === 0 ? <p>No import diagnostics</p> : null}
-        <ul data-testid="import-diagnostics">
-          {importDiagnostics.map((diagnostic, index) => (
+      <section aria-label="SPICE import report" className="diagnostics">
+        <h2>SPICE Import Report</h2>
+        <p data-testid="import-report-lifecycle">
+          Historical messages captured while importing{" "}
+          {importReport?.entryPath ?? "the current source"}; they are not
+          current ERC results.
+        </p>
+        {!importReport || importReport.diagnostics.length === 0 ? (
+          <p>No import messages</p>
+        ) : null}
+        <ul data-testid="import-report-diagnostics">
+          {importReport?.diagnostics.map((diagnostic, index) => (
             <li
               key={`${diagnostic.code}-${index}`}
               data-severity={diagnostic.severity}
@@ -128,65 +129,12 @@ export function SelectionInspectorDetails({
           ))}
         </ul>
       </section>
-      <section aria-label="Visual diagnostics" className="diagnostics">
-        <h2>Diagnostics</h2>
-        {visualSummary.all.length === 0 ? <p>No visual diagnostics</p> : null}
-        {visualSummary.structural.length > 0 ? (
-          <h3>Structural issues</h3>
-        ) : null}
-        <ul data-testid="visual-diagnostics">
-          {visualSummary.structural.map((diagnostic, index) => (
-            <li
-              key={`${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
-              data-severity={diagnostic.severity}
-              data-category={diagnostic.category}
-              data-confidence={diagnostic.confidence}
-            >
-              <button
-                type="button"
-                data-testid={`diagnostic-${index}`}
-                onClick={() => onSelectVisualDiagnostic(diagnostic)}
-              >
-                <strong>{diagnostic.code}</strong>
-                {diagnostic.objectIds.length > 0
-                  ? `: ${diagnostic.objectIds.join(", ")}`
-                  : ""}
-              </button>
-            </li>
-          ))}
-        </ul>
-        {visualSummary.observations.length > 0 ? (
-          <h3>Visual observations</h3>
-        ) : null}
-        <ul data-testid="visual-observations">
-          {visualSummary.observations.map((diagnostic, index) => (
-            <li
-              key={`observation-${diagnostic.code}-${diagnostic.objectIds.join("-")}-${index}`}
-              data-severity={diagnostic.severity}
-              data-category={diagnostic.category}
-              data-confidence={diagnostic.confidence}
-            >
-              <button
-                type="button"
-                data-testid={`observation-${index}`}
-                onClick={() => onSelectVisualDiagnostic(diagnostic)}
-              >
-                <strong>{diagnostic.code}</strong>
-                {diagnostic.objectIds.length > 0
-                  ? `: ${diagnostic.objectIds.join(", ")}`
-                  : ""}
-                {` (${diagnostic.confidence} confidence)`}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
     </>
   );
 }
 
 export interface ProjectDiagnosticsSectionProps {
-  diagnostics: readonly Diagnostic[];
+  snapshot: LiveDiagnosticSnapshot;
   documentLabel(documentId: string): string;
   onSelectDiagnostic(diagnostic: Diagnostic): void;
 }
@@ -194,7 +142,20 @@ export interface ProjectDiagnosticsSectionProps {
 export interface NetTraceSectionProps {
   trace: HierarchyNetTrace;
   documentLabel(documentId: string): string;
-  onNavigateHop(hop: HierarchyNetTraceHop): void;
+  onNavigateHop(hop: HierarchyNetTraceHop | GlobalNetTraceHop): void;
+}
+
+type NetTraceHop = HierarchyNetTraceHop | GlobalNetTraceHop;
+
+function netTraceHopDetail(hop: NetTraceHop): string {
+  return hop.direction === "global"
+    ? hop.foldedName
+    : `${hop.frame.instanceId}.${hop.frame.parentPinName}`;
+}
+
+function netTraceHopAction(hop: NetTraceHop): string {
+  if (hop.direction === "global") return "Global";
+  return hop.direction === "down" ? "Enter" : "Return";
 }
 
 /** Concrete hierarchy edges for the currently highlighted logical Net. */
@@ -212,16 +173,16 @@ export function NetTraceSection({
       <ul data-testid="net-trace-hops">
         {trace.hops.map((hop, index) => (
           <li
-            key={`${hop.direction}-${hop.from.documentId}-${hop.from.netId}-${hop.frame.instanceId}-${hop.frame.parentPinName}-${index}`}
+            key={`${hop.direction}-${hop.from.documentId}-${hop.from.netId}-${netTraceHopDetail(hop)}-${index}`}
           >
             <button
               type="button"
               data-testid={`net-trace-hop-${index}`}
               onClick={() => onNavigateHop(hop)}
             >
-              <strong>{hop.direction === "down" ? "Enter" : "Return"}</strong>:{" "}
-              {hop.frame.instanceId}.{hop.frame.parentPinName} →{" "}
-              {documentLabel(hop.to.documentId)} / {hop.to.netId}
+              <strong>{netTraceHopAction(hop)}</strong>:{" "}
+              {netTraceHopDetail(hop)} → {documentLabel(hop.to.documentId)} /{" "}
+              {hop.to.netId}
             </button>
           </li>
         ))}
@@ -307,21 +268,44 @@ function DiagnosticFilters({
 
 /** Project-wide diagnostic workbench for compatible, locator-backed domains. */
 export function ProjectDiagnosticsSection({
-  diagnostics,
+  snapshot,
   documentLabel,
   onSelectDiagnostic,
 }: ProjectDiagnosticsSectionProps) {
+  const diagnostics = snapshot.diagnostics;
   const [domainFilter, setDomainFilter] = useState<ProjectDomainFilter>("all");
   const [severityFilter, setSeverityFilter] =
     useState<DiagnosticSeverityFilter>("all");
+  const [showObservations, setShowObservations] = useState(false);
+  const observationCount = diagnostics.filter(
+    (diagnostic) => diagnosticPresentationGroup(diagnostic) === "observation",
+  ).length;
+  const availableDiagnostics = useMemo(
+    () =>
+      showObservations
+        ? diagnostics
+        : diagnostics.filter(
+            (diagnostic) =>
+              diagnosticPresentationGroup(diagnostic) === "actionable",
+          ),
+    [diagnostics, showObservations],
+  );
+  const availableDomains = new Set(
+    availableDiagnostics.map((diagnostic) => diagnostic.domain),
+  );
+  const effectiveDomainFilter =
+    domainFilter === "all" || availableDomains.has(domainFilter)
+      ? domainFilter
+      : "all";
   const visibleDiagnostics = useMemo(
     () =>
-      diagnostics.filter(
+      availableDiagnostics.filter(
         (diagnostic) =>
-          (domainFilter === "all" || diagnostic.domain === domainFilter) &&
+          (effectiveDomainFilter === "all" ||
+            diagnostic.domain === effectiveDomainFilter) &&
           (severityFilter === "all" || diagnostic.severity === severityFilter),
       ),
-    [diagnostics, domainFilter, severityFilter],
+    [availableDiagnostics, effectiveDomainFilter, severityFilter],
   );
   return (
     <section
@@ -329,15 +313,45 @@ export function ProjectDiagnosticsSection({
       className="diagnostics erc-diagnostics"
     >
       <h2>
-        Schematic diagnostics ({visibleDiagnostics.length}/{diagnostics.length})
+        Current schematic diagnostics ({visibleDiagnostics.length}/
+        {availableDiagnostics.length})
       </h2>
+      <p data-testid="current-diagnostic-revisions">
+        Live evidence for {snapshot.projectId}:{" "}
+        {snapshot.documentRevisions
+          .map(
+            ({ documentId, revision }) =>
+              `${documentLabel(documentId)} r${revision}`,
+          )
+          .join(", ")}
+      </p>
+      {observationCount > 0 ? (
+        <button
+          type="button"
+          data-testid="diagnostic-observations-toggle"
+          aria-pressed={showObservations}
+          onClick={() => setShowObservations((current) => !current)}
+        >
+          {showObservations ? "Hide" : "Show"} non-blocking observations (
+          {observationCount})
+        </button>
+      ) : null}
       <DiagnosticFilters
-        diagnostics={diagnostics}
-        domainFilter={domainFilter}
+        diagnostics={availableDiagnostics}
+        domainFilter={effectiveDomainFilter}
         severityFilter={severityFilter}
         onDomainFilterChange={setDomainFilter}
         onSeverityFilterChange={setSeverityFilter}
       />
+      {availableDiagnostics.length === 0 ? (
+        <p data-testid="no-current-diagnostics">
+          No current actionable diagnostics
+        </p>
+      ) : visibleDiagnostics.length === 0 ? (
+        <p data-testid="no-matching-diagnostics">
+          No diagnostics match the current filters
+        </p>
+      ) : null}
       <ul data-testid="project-diagnostics">
         {visibleDiagnostics.map((diagnostic) => (
           <li
@@ -346,6 +360,7 @@ export function ProjectDiagnosticsSection({
             data-document-id={diagnostic.primary.documentId}
             data-severity={diagnostic.severity}
             data-confidence={diagnostic.confidence}
+            data-presentation={diagnosticPresentationGroup(diagnostic)}
           >
             <button
               type="button"

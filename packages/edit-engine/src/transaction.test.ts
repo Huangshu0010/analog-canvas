@@ -64,6 +64,9 @@ describe("Edit Transaction envelope", () => {
         annotationId: "label",
       }).success,
     ).toBe(false);
+    expect(
+      SchematicEditSchema.safeParse({ kind: "normalize_power_nets" }).success,
+    ).toBe(false);
   });
 
   it("rejects an invalid power rail atomically", () => {
@@ -126,6 +129,37 @@ describe("Edit Transaction envelope", () => {
 
     expect(result).toMatchObject({ ok: false, applied: false, revision: 0 });
     expect(JSON.stringify(document)).toBe(before);
+  });
+
+  it("rejects reassignment between non-empty power roles atomically", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push({
+      id: "net-vdd",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
+    const result = executeTransaction(
+      document,
+      {
+        ...transaction(),
+        edits: [
+          {
+            kind: "set_net_power_domain",
+            netId: "net-vdd",
+            powerDomain: "ground",
+          },
+        ],
+      },
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "EDIT_PRECONDITION" },
+      document,
+    });
   });
 
   it("sets a Cell bulk default by stable Net id before reconciliation", () => {
@@ -413,7 +447,7 @@ describe("Edit Transaction envelope", () => {
     expect(document.revision).toBe(0);
   });
 
-  it("normalizes an explicitly tagged supply Net without a supply symbol", () => {
+  it("does not silently normalize an explicitly tagged supply Net", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push({
       id: "M2",
@@ -449,8 +483,7 @@ describe("Edit Transaction envelope", () => {
         nets: [
           {
             id: "net-ui-2",
-            name: "VDD",
-            scope: "global",
+            scope: "local",
             powerDomain: "vdd",
             terminals: [],
           },

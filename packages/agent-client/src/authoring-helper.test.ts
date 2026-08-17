@@ -5,13 +5,17 @@ import {
   type CompiledTransaction,
 } from "./authoring-helper.js";
 import { testSnapshot } from "./test-support/snapshot-fixture.js";
+import type { AgentSessionSnapshot } from "@icm/agent-adapter";
 
 let idCounter = 0;
 const allocateId = (prefix: string) => `${prefix}-alloc-${(idCounter += 1)}`;
 
-function compile(actions: unknown[]): CompiledTransaction[] {
+function compile(
+  actions: unknown[],
+  snapshot: AgentSessionSnapshot = testSnapshot(),
+): CompiledTransaction[] {
   return compileActions(actions, {
-    snapshot: testSnapshot(),
+    snapshot,
     allocateId,
   });
 }
@@ -351,6 +355,38 @@ describe("authoring helper compilation", () => {
       netId: "net-vout",
       name: "Vfb",
     });
+  });
+
+  it("compiles semantic same-folded Net rename into the shared explicit merge", () => {
+    const snapshot = testSnapshot();
+    snapshot.document.nets.push({
+      id: "net-bias",
+      name: "BIAS",
+      scope: "local",
+      powerDomain: "none",
+      terminals: [],
+      routeIds: [],
+      junctionIds: [],
+    });
+
+    const [transaction] = compile(
+      [
+        {
+          kind: "rename",
+          target: { kind: "net", name: "Vout" },
+          name: "bias",
+        },
+      ],
+      snapshot,
+    );
+
+    expect(transaction?.edits).toEqual([
+      {
+        kind: "merge_nets",
+        targetNetId: "net-bias",
+        sourceNetId: "net-vout",
+      },
+    ]);
   });
 
   it("compiles set-property and rejects spice.* keys", () => {

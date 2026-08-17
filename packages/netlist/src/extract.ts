@@ -1,3 +1,4 @@
+import { foldNetName, validateNetContract } from "@icm/model";
 import type {
   CircuitProject,
   Instance,
@@ -124,21 +125,29 @@ function buildNetContext(
   }
   const explicitNames = new Map<string, string>();
   const occupiedNames = new Set<string>();
-  for (const net of document.nets) {
-    if (!net.name) continue;
-    const folded = net.name.toLowerCase();
-    const prior = explicitNames.get(folded);
-    if (prior) {
+  for (const issue of validateNetContract(document)) {
+    if (issue.code === "DUPLICATE_NET_NAME") {
       diagnostic(
         diagnostics,
         document.id,
-        "DUPLICATE_NET_NAME",
-        `Net name ${net.name} duplicates Net ${prior} under case folding`,
-        [prior, net.id],
+        issue.code,
+        `Net name ${issue.foldedName} is shared under case folding`,
+        [...issue.netIds],
       );
     } else {
-      explicitNames.set(folded, net.id);
+      diagnostic(
+        diagnostics,
+        document.id,
+        issue.code,
+        "A global Net requires an explicit name",
+        [...issue.netIds],
+      );
     }
+  }
+  for (const net of document.nets) {
+    if (!net.name) continue;
+    const folded = foldNetName(net.name);
+    if (!explicitNames.has(folded)) explicitNames.set(folded, net.id);
     occupiedNames.add(folded);
     if (!isIdentifier(net.name, true)) {
       diagnostic(
@@ -160,22 +169,13 @@ function buildNetContext(
       nameByNetId.set(net.id, net.name);
       continue;
     }
-    if (net.scope === "global") {
-      diagnostic(
-        diagnostics,
-        document.id,
-        "UNNAMED_GLOBAL_NET",
-        "A global Net requires an explicit name",
-        [net.id],
-      );
-      continue;
-    }
+    if (net.scope === "global") continue;
     let generated = "";
     do {
       generated = `N${String(generatedIndex).padStart(4, "0")}`;
       generatedIndex += 1;
-    } while (occupiedNames.has(generated.toLowerCase()));
-    occupiedNames.add(generated.toLowerCase());
+    } while (occupiedNames.has(foldNetName(generated)));
+    occupiedNames.add(foldNetName(generated));
     nameByNetId.set(net.id, generated);
     diagnostic(
       diagnostics,

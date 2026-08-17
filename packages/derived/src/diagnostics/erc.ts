@@ -1,4 +1,4 @@
-import type { CircuitProject } from "@icm/model";
+import { validateNetContract, type CircuitProject } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
 import type { ProjectConnectivityIndex } from "../connectivity-index.js";
@@ -28,14 +28,6 @@ function noConnectKey(endpoint: {
   pinName: string;
 }): string {
   return `terminal:${endpoint.instanceId}:${endpoint.pinName}`;
-}
-
-function isRepeatedGlobalPowerNet(
-  nets: readonly CircuitProject["documents"][number]["nets"][number][],
-): boolean {
-  if (!nets.every((net) => net.scope === "global")) return false;
-  const domains = new Set(nets.map((net) => net.powerDomain ?? "none"));
-  return domains.size === 1 && (domains.has("vdd") || domains.has("ground"));
 }
 
 function terminalLocator(
@@ -293,36 +285,37 @@ export function runErcChecks(
       });
     }
 
-    // ERC_DUPLICATE_NET_NAME
-    const netsByName = new Map<string, typeof document.nets>();
-    for (const net of document.nets) {
-      if (!net.name) continue;
-      const name = net.name.toLowerCase();
-      const group = netsByName.get(name) ?? [];
-      group.push(net);
-      netsByName.set(name, group);
-    }
-    for (const [name, nets] of netsByName) {
-      if (nets.length < 2 || isRepeatedGlobalPowerNet(nets)) {
-        continue;
+    for (const issue of validateNetContract(document)) {
+      const [primaryId, ...relatedIds] = issue.netIds;
+      if (issue.code === "DUPLICATE_NET_NAME") {
+        diagnostics.push({
+          id: `erc:dup-net:${document.id}:${issue.foldedName}`,
+          domain: "erc",
+          code: "ERC_DUPLICATE_NET_NAME",
+          severity: "error",
+          confidence: "high",
+          gateEligible: true,
+          message: `Net name "${issue.foldedName}" is shared by ${issue.netIds.length} Nets in document ${document.id} without an explicit merge`,
+          primary: directObjectLocator(document.id, "net", primaryId!),
+          related: relatedIds.map((netId) =>
+            directObjectLocator(document.id, "net", netId),
+          ),
+          parameters: { name: issue.foldedName, count: issue.netIds.length },
+        });
+      } else {
+        diagnostics.push({
+          id: `erc:unnamed-global-net:${document.id}:${primaryId}`,
+          domain: "erc",
+          code: "ERC_UNNAMED_GLOBAL_NET",
+          severity: "error",
+          confidence: "high",
+          gateEligible: true,
+          message: `Global Net ${primaryId} requires an explicit name`,
+          primary: directObjectLocator(document.id, "net", primaryId!),
+          related: [],
+          parameters: { netId: primaryId! },
+        });
       }
-      const [primary, ...rest] = [...nets].sort((a, b) =>
-        a.id.localeCompare(b.id, "en"),
-      );
-      diagnostics.push({
-        id: `erc:dup-net:${document.id}:${name}`,
-        domain: "erc",
-        code: "ERC_DUPLICATE_NET_NAME",
-        severity: "error",
-        confidence: "high",
-        gateEligible: true,
-        message: `Net name "${name}" is shared by ${nets.length} nets in document ${document.id} without an explicit merge`,
-        primary: directObjectLocator(document.id, "net", primary!.id),
-        related: rest.map((net) =>
-          directObjectLocator(document.id, "net", net.id),
-        ),
-        parameters: { name, count: nets.length },
-      });
     }
 
     // ERC_NO_CONNECT_CONFLICT

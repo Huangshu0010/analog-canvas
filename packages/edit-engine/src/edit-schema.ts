@@ -190,9 +190,6 @@ export const SetNetNameEditSchema = z.strictObject({
   netId: StableIdSchema,
   name: z.string().trim().min(1).max(256),
 });
-export const NormalizePowerNetsEditSchema = z.strictObject({
-  kind: z.literal("normalize_power_nets"),
-});
 export const SetMosBulkDefaultsEditSchema = z.strictObject({
   kind: z.literal("set_mos_bulk_defaults"),
   nmosNetId: StableIdSchema.nullable().optional(),
@@ -292,7 +289,6 @@ export const SchematicEditSchema = z.discriminatedUnion("kind", [
   MergeNetsEditSchema,
   SetNetNameEditSchema,
   SetNetPowerDomainEditSchema,
-  NormalizePowerNetsEditSchema,
   SetMosBulkDefaultsEditSchema,
   ReconcileMosBulkEditSchema,
   ClearMosBulkDefaultEditSchema,

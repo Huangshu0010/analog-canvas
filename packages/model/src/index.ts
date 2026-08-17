@@ -3,6 +3,7 @@ export * from "./coordinate-domain.js";
 export * from "./factories.js";
 export * from "./geometry.js";
 export * from "./ids.js";
+export * from "./net-contract.js";
 export * from "./power-domain.js";
 export * from "./rich-text.js";
 export * from "./semantic-text.js";

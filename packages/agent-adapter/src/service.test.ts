@@ -209,7 +209,7 @@ describe("current Agent Circuit API service", () => {
       ]),
     );
     expect(AGENT_EDIT_KINDS).not.toEqual(
-      expect.arrayContaining(["undo", "redo"]),
+      expect.arrayContaining(["undo", "redo", "normalize_power_nets"]),
     );
   });
 

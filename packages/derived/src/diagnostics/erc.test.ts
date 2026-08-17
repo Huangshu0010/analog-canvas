@@ -343,7 +343,7 @@ describe("ERC engine", () => {
     expect(diagnostic!.severity).toBe("error");
   });
 
-  it("accepts repeated global ground-symbol Nets", () => {
+  it("reports repeated global ground Nets until the deterministic repair merges them", () => {
     const project = emptyProject();
     project.documents[0]!.instances = [
       {
@@ -389,7 +389,7 @@ describe("ERC engine", () => {
       },
     ];
 
-    expect(codes(project)).not.toContain("ERC_DUPLICATE_NET_NAME");
+    expect(codes(project)).toContain("ERC_DUPLICATE_NET_NAME");
   });
 
   it("defensively reports a NoConnect endpoint that is also on a Net", () => {

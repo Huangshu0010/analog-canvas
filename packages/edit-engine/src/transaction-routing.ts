@@ -1,4 +1,4 @@
-import { powerDomainForNet, powerNetNormalizations } from "@icm/model";
+import { powerDomainForNet } from "@icm/model";
 import type {
   Annotation,
   Point,
@@ -173,31 +173,6 @@ export function addEndpointToNet(
       });
     }
   }
-}
-
-export function normalizePowerNets(
-  document: SchematicDocument,
-  changedObjectIds: Set<string>,
-): boolean {
-  let changed = false;
-  for (const normalization of powerNetNormalizations(document)) {
-    const net = document.nets.find(
-      (candidate) => candidate.id === normalization.netId,
-    )!;
-    let netChanged = false;
-    if (net.scope !== "global") {
-      net.scope = "global";
-      changed = true;
-      netChanged = true;
-    }
-    if (normalization.name && net.name !== normalization.name) {
-      net.name = normalization.name;
-      changed = true;
-      netChanged = true;
-    }
-    if (netChanged) changedObjectIds.add(net.id);
-  }
-  return changed;
 }
 
 export function replaceLayoutReference(

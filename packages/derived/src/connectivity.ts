@@ -216,6 +216,10 @@ export function deriveFlightlines(
   for (const net of [...document.nets].sort((left, right) =>
     left.id.localeCompare(right.id, "en"),
   )) {
+    // A named global Net is already an explicit semantic bridge. Multiple
+    // Ground/VDD markers may intentionally have no visible trunk between them;
+    // a flightline would wrongly describe that representation as incomplete.
+    if (net.scope === "global" && net.name) continue;
     const components = deriveNetConnectivity(document, resolver, net)
       .components.map((component) => ({
         ...component,

@@ -9,6 +9,9 @@ import {
   NoConnectSchema,
   SchematicDocumentSchema,
   deriveStableId,
+  foldNetName,
+  netContractIssueKey,
+  validateNetContract,
 } from "@icm/model";
 import type {
   Annotation,
@@ -58,7 +61,6 @@ import {
   endpointOwnerNetId,
   lockedLayoutOwner,
   netEndpointGroups,
-  normalizePowerNets,
   pointOnSegment,
   replaceLayoutReference,
   routeFromEdit,
@@ -139,6 +141,9 @@ export function executeTransaction(
 
   const proposedRevision = document.revision + 1;
   const draft = structuredClone(document);
+  const originalNetContractIssueKeys = new Set(
+    validateNetContract(document).map(netContractIssueKey),
+  );
   const explicitlyAuthoredRouteIds = new Set(
     transaction.edits.flatMap((edit) =>
       edit.kind === "set_route_points" || edit.kind === "route_orthogonal"
@@ -1434,7 +1439,9 @@ export function executeTransaction(
         if (
           existingSupplyNet &&
           (existingSupplyNet.scope !== "global" ||
-            (existingSupplyNet.powerDomain ?? "none") !== edit.domain)
+            (existingSupplyNet.powerDomain ?? "none") !== edit.domain ||
+            !existingSupplyNet.name ||
+            foldNetName(existingSupplyNet.name) !== foldNetName("VDD"))
         ) {
           return rejectAt(
             "EDIT_PRECONDITION",
@@ -1588,6 +1595,11 @@ export function executeTransaction(
         if (draft.mosBulkDefaults?.pmosNetId === source.id) {
           draft.mosBulkDefaults.pmosNetId = target.id;
         }
+        for (const terminal of draft.netlist?.terminals ?? []) {
+          if (terminal.netId === source.id) {
+            terminal.netId = target.id;
+          }
+        }
         for (const terminal of source.terminals) {
           if (
             !target.terminals.some(
@@ -1651,7 +1663,9 @@ export function executeTransaction(
         }
         const conflicting = draft.nets.find(
           (candidate) =>
-            candidate.id !== net.id && candidate.name === edit.name,
+            candidate.id !== net.id &&
+            candidate.name !== undefined &&
+            foldNetName(candidate.name) === foldNetName(edit.name),
         );
         if (conflicting) {
           return rejectAt(
@@ -1680,15 +1694,20 @@ export function executeTransaction(
             [net.id],
           );
         }
+        if (
+          (net.powerDomain ?? "none") !== "none" &&
+          edit.powerDomain !== "none"
+        ) {
+          return rejectAt(
+            "EDIT_PRECONDITION",
+            `Cannot reassign Net power role from ${net.powerDomain} to ${edit.powerDomain}; merge or rename explicitly`,
+            [],
+            [net.id],
+          );
+        }
         net.powerDomain = NetPowerDomainSchema.parse(edit.powerDomain);
         changedObjectIds.add(net.id);
         connectivityChanged = true;
-        break;
-      }
-      case "normalize_power_nets": {
-        if (normalizePowerNets(draft, changedObjectIds)) {
-          connectivityChanged = true;
-        }
         break;
       }
       case "set_mos_bulk_defaults": {
@@ -2134,11 +2153,21 @@ export function executeTransaction(
     geometryChanged = true;
   }
 
-  // A power symbol's terminal membership, rather than an incidental Net name
-  // or the specific UI operation used to create it, owns power-Net semantics.
-  // This catches wiring, endpoint joins, and merges through the same boundary.
-  if (normalizePowerNets(draft, changedObjectIds)) {
-    connectivityChanged = true;
+  const introducedNetContractIssue = validateNetContract(draft).find(
+    (issue) => !originalNetContractIssueKeys.has(netContractIssueKey(issue)),
+  );
+  if (introducedNetContractIssue) {
+    const message =
+      introducedNetContractIssue.code === "UNNAMED_GLOBAL_NET"
+        ? `Transaction introduces unnamed global Net ${introducedNetContractIssue.netIds[0]}`
+        : `Transaction introduces duplicate Net name ${introducedNetContractIssue.foldedName}; merge explicitly`;
+    return rejectTransaction(
+      document,
+      "INVALID_RESULT",
+      message,
+      [],
+      introducedNetContractIssue.netIds,
+    );
   }
 
   if (resolver) {

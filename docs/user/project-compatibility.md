@@ -21,6 +21,10 @@ An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
 produce and validate a complete v11 candidate before a human chooses to load it.
 
+The editor never silently merges duplicate canonical Ground (`0`) or VDD Nets.
+Duplicate folded Net names are invalid and remain diagnostics until the author
+explicitly corrects the Project.
+
 Viewport, selection, canvas overlays, import compiler state, Agent session
 credentials, and recovery envelopes are not part of the Project file. Browser
 recovery is a non-authoritative safety copy kept in this browser's IndexedDB:

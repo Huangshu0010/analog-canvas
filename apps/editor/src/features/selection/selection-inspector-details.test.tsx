@@ -63,7 +63,7 @@ describe("selection inspector details", () => {
     });
   });
 
-  it("renders each diagnostic category once from the shared summary", () => {
+  it("renders an explicitly historical import report without duplicating live visual findings", () => {
     const markup = renderToStaticMarkup(
       <SelectionInspectorDetails
         snapshot={{
@@ -82,34 +82,29 @@ describe("selection inspector details", () => {
           annotationCount: 2,
           status: "Selected route-1",
         }}
-        importDiagnostics={[
-          {
-            code: "SPICE_NOTE",
-            severity: "info",
-            stage: "import",
-            message: "Imported",
-          },
-        ]}
-        visualSummary={summarizeVisualDiagnostics([structural, observation])}
-        onSelectVisualDiagnostic={() => undefined}
+        importReport={{
+          entryPath: "circuit.spi",
+          diagnostics: [
+            {
+              code: "SPICE_NOTE",
+              severity: "info",
+              stage: "import",
+              message: "Imported",
+            },
+          ],
+        }}
       />,
     );
 
-    const structuralList = markup.match(
-      /<ul data-testid="visual-diagnostics">.*?<\/ul>/u,
-    )?.[0];
-    const observationList = markup.match(
-      /<ul data-testid="visual-observations">.*?<\/ul>/u,
-    )?.[0];
-    expect(structuralList).toContain("BROKEN_ROUTE");
-    expect(structuralList).not.toContain("CROWDED_LABEL");
-    expect(observationList).toContain("CROWDED_LABEL");
-    expect(observationList).not.toContain("BROKEN_ROUTE");
+    expect(markup).toContain("SPICE Import Report");
+    expect(markup).toContain("Historical messages captured while importing");
+    expect(markup).toContain("circuit.spi");
     expect(markup).toContain("SPICE_NOTE");
-    expect(markup).toContain('data-testid="blocking-diagnostic-count">1');
+    expect(markup).not.toContain("BROKEN_ROUTE");
+    expect(markup).not.toContain("CROWDED_LABEL");
   });
 
-  it("renders locator-backed domains in one filterable project panel", () => {
+  it("renders revision-stamped actionable findings and hides observations by default", () => {
     const visualDiagnostic: Diagnostic = {
       ...ercDiagnostic,
       id: "visual:fixture",
@@ -119,7 +114,12 @@ describe("selection inspector details", () => {
     };
     const markup = renderToStaticMarkup(
       <ProjectDiagnosticsSection
-        diagnostics={[ercDiagnostic, visualDiagnostic]}
+        snapshot={{
+          source: "live",
+          projectId: "project-fixture",
+          documentRevisions: [{ documentId: "document-child", revision: 7 }],
+          diagnostics: [ercDiagnostic, visualDiagnostic],
+        }}
         documentLabel={(documentId) =>
           documentId === "document-child" ? "Bias Child Cell" : "Main Cell"
         }
@@ -128,12 +128,16 @@ describe("selection inspector details", () => {
     );
     expect(markup).toContain('data-testid="project-diagnostics"');
     expect(markup).toContain('data-testid="diagnostic-domain-erc"');
-    expect(markup).toContain('data-testid="diagnostic-domain-visual"');
+    expect(markup).not.toContain('data-testid="diagnostic-domain-visual"');
     expect(markup).toContain('data-testid="diagnostic-severity-warning"');
     expect(markup).toContain('data-document-id="document-child"');
     expect(markup).toContain("Cell: Bias Child Cell");
     expect(markup).toContain("ERC / ERC_UNCONNECTED_PIN");
-    expect(markup).toContain("VISUAL / VISUAL_SHORT_SEGMENT");
+    expect(markup).not.toContain("VISUAL / VISUAL_SHORT_SEGMENT");
+    expect(markup).toContain('data-testid="diagnostic-observations-toggle"');
+    expect(markup).toContain("Show non-blocking observations (1)");
+    expect(markup).toContain("Live evidence for project-fixture");
+    expect(markup).toContain("Bias Child Cell r7");
   });
 
   it("renders concrete, navigable hierarchy Net hops", () => {
@@ -197,5 +201,39 @@ describe("selection inspector details", () => {
     expect(markup).toContain("Enter");
     expect(markup).toContain("XBIAS.OUT");
     expect(markup).toContain("Bias Child Cell / net-child");
+  });
+
+  it("renders a global Net trace hop without requiring a hierarchy frame", () => {
+    const trace: HierarchyNetTrace = {
+      primary: {
+        documentId: "document-top",
+        netId: "net-vdd-top",
+        visibleEndpoints: [],
+        routes: [],
+        junctions: [],
+        virtualEdges: [],
+        flightlines: [],
+      },
+      highlights: [],
+      hops: [
+        {
+          direction: "global",
+          from: { documentId: "document-top", netId: "net-vdd-top" },
+          to: { documentId: "document-child", netId: "net-vdd-child" },
+          foldedName: "vdd",
+        },
+      ],
+    };
+    const markup = renderToStaticMarkup(
+      <NetTraceSection
+        trace={trace}
+        documentLabel={(documentId) => documentId}
+        onNavigateHop={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain("Global");
+    expect(markup).toContain("vdd");
+    expect(markup).toContain("document-child / net-vdd-child");
   });
 });

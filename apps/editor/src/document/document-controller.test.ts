@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import type { SchematicDocument } from "@icm/model";
+import { diagnoseProjectSnapshot } from "@icm/derived";
 import { hierarchicalSymbolId } from "@icm/symbols";
 
 import { EditorDocumentController } from "./document-controller";
@@ -74,6 +75,36 @@ describe("EditorDocumentController", () => {
     controller.openDocument("document-child");
     expect(controller.document.instances).toContainEqual(instance("Rchild"));
     expect(controller.canUndo).toBe(true);
+  });
+
+  it("re-derives resolved diagnostics across undo and redo revisions", () => {
+    const controller = new EditorDocumentController(hierarchicalProject());
+    controller.transact([{ kind: "add_instance", instance: instance("R1") }]);
+    const codes = () =>
+      diagnoseProjectSnapshot(controller.project, controller.resolver)
+        .diagnostics.filter(
+          (diagnostic) =>
+            diagnostic.primary.documentId === controller.document.id,
+        )
+        .map((diagnostic) => diagnostic.code);
+
+    expect(codes()).toContain("ERC_UNCONNECTED_PIN");
+
+    controller.transact([
+      {
+        kind: "connect_endpoints",
+        from: { kind: "terminal", instanceId: "R1", pinName: "1" },
+        to: { kind: "terminal", instanceId: "R1", pinName: "2" },
+        newNetId: "net-r1-loop",
+      },
+    ]);
+    expect(codes()).not.toContain("ERC_UNCONNECTED_PIN");
+
+    controller.transact([{ kind: "undo" }]);
+    expect(codes()).toContain("ERC_UNCONNECTED_PIN");
+
+    controller.transact([{ kind: "redo" }]);
+    expect(codes()).not.toContain("ERC_UNCONNECTED_PIN");
   });
 
   it("rejects missing documents without changing the active history", () => {

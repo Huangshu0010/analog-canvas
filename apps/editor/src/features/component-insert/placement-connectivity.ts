@@ -1,4 +1,5 @@
 import {
+  planEnsurePowerNet,
   proposeEndpointRouteAttachment,
   type SchematicEdit,
   type WireSource,
@@ -36,6 +37,7 @@ export interface PlacementContactProposal {
   edits: readonly SchematicEdit[];
   matched: boolean;
   ambiguous: boolean;
+  rejected?: string;
   powerNetId?: string;
   powerEndpoint?: RouteEndpoint;
 }
@@ -152,6 +154,7 @@ export function proposePlacementContact(
     ];
   const edits: SchematicEdit[] = [];
   let powerNetId: string | undefined;
+  let powerCandidateState: "existing" | "pending-connection" | undefined;
   let powerEndpoint: RouteEndpoint | undefined;
   for (const contact of contacts) {
     const { source, target } = contact;
@@ -178,6 +181,9 @@ export function proposePlacementContact(
       else if (power && target.endpoint.netId) {
         powerNetId = target.endpoint.netId;
       }
+      if (power) {
+        powerCandidateState = createsNet ? "pending-connection" : "existing";
+      }
     } else if (target.route) {
       edits.push(
         ...proposeEndpointRouteAttachment(
@@ -191,17 +197,26 @@ export function proposePlacementContact(
         ).edits,
       );
       if (power) powerNetId = target.route.netId;
+      if (power) powerCandidateState = "existing";
     }
     if (power) powerEndpoint = source.endpoint;
   }
-  // A visual marker may name a new Net, but it never remains the runtime
-  // source of electrical truth: persist that identity in the same edit batch.
-  if (power && powerNetId) {
-    edits.push({
-      kind: "set_net_power_domain",
-      netId: powerNetId,
-      powerDomain: power.domain,
+  if (power && powerNetId && powerCandidateState) {
+    const plan = planEnsurePowerNet(document, {
+      candidateNetId: powerNetId,
+      candidateState: powerCandidateState,
+      domain: power.domain,
     });
+    if (!plan.ok) {
+      return {
+        edits: [],
+        matched: false,
+        ambiguous: false,
+        rejected: plan.message,
+      };
+    }
+    edits.push(...plan.edits);
+    powerNetId = plan.netId;
   }
   return {
     edits,
@@ -227,10 +242,19 @@ export function proposedStandalonePowerConnection(
     pinName: power.pinName,
   };
   const netId = `net-power-${instance.id.toLowerCase()}`;
-  const existingSupplyNet = document.nets.find(
-    (net) =>
-      net.scope === "global" && (net.powerDomain ?? "none") === power.domain,
-  );
+  const plan = planEnsurePowerNet(document, {
+    candidateNetId: netId,
+    candidateState: "pending-connection",
+    domain: power.domain,
+  });
+  if (!plan.ok) {
+    return {
+      edits: [],
+      matched: false,
+      ambiguous: false,
+      rejected: plan.message,
+    };
+  }
   return {
     edits: [
       {
@@ -241,24 +265,11 @@ export function proposedStandalonePowerConnection(
         newNetName: power.name,
         newNetScope: "global",
       },
-      {
-        kind: "set_net_power_domain",
-        netId,
-        powerDomain: power.domain,
-      },
-      ...(existingSupplyNet
-        ? [
-            {
-              kind: "merge_nets" as const,
-              targetNetId: existingSupplyNet.id,
-              sourceNetId: netId,
-            },
-          ]
-        : []),
+      ...plan.edits,
     ],
     matched: false,
     ambiguous: false,
-    powerNetId: existingSupplyNet?.id ?? netId,
+    powerNetId: plan.netId,
     powerEndpoint: endpoint,
   };
 }

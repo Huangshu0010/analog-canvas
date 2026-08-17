@@ -307,6 +307,39 @@ describe("semantic authoring", () => {
     });
   });
 
+  it("retargets formal cell-interface Nets when merging", () => {
+    const document = createEmptyDocument("document-main", "Main");
+    document.nets.push(
+      { id: "net-a", scope: "local", terminals: [] },
+      { id: "net-b", scope: "local", terminals: [] },
+    );
+    document.netlist!.terminals = [
+      { name: "IN", netId: "net-a" },
+      { name: "OUT", netId: "net-b" },
+    ];
+
+    const result = executeTransaction(
+      document,
+      transaction([
+        { kind: "merge_nets", targetNetId: "net-a", sourceNetId: "net-b" },
+      ]),
+      { symbolResolver: resolver },
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      document: {
+        nets: [{ id: "net-a" }],
+        netlist: {
+          terminals: [
+            { name: "IN", netId: "net-a" },
+            { name: "OUT", netId: "net-a" },
+          ],
+        },
+      },
+    });
+  });
+
   it("rejects a connected instance removal without partial mutation", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.instances.push(addInstance("R1", "resistor", 100).instance);
@@ -328,7 +361,7 @@ describe("semantic authoring", () => {
     expect(document).toEqual(before);
   });
 
-  it("names Nets uniquely and requires an explicit merge for electrical label reuse", () => {
+  it("names Nets uniquely under case folding and requires an explicit merge", () => {
     const document = createEmptyDocument("document-main", "Main");
     document.nets.push(
       { id: "net-a", name: "SIGNAL", scope: "local", terminals: [] },
@@ -336,7 +369,7 @@ describe("semantic authoring", () => {
     );
     const rejected = executeTransaction(
       document,
-      transaction([{ kind: "set_net_name", netId: "net-b", name: "SIGNAL" }]),
+      transaction([{ kind: "set_net_name", netId: "net-b", name: "signal" }]),
       { symbolResolver: resolver },
     );
     expect(rejected).toMatchObject({
