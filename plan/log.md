@@ -7939,5 +7939,18 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   typecheck, build/release verification, test-impact, formatting, and diff
   checks passed. The full browser run passed 145/146; its sole unrelated narrow
   Library timing failure passed in isolation and is tracked separately.
-- Commit status: ready to commit on `codex/connected-wire-move-delete`; remote
-  required checks remain the mainline delivery gate.
+- Commit status: committed as `4c11e7a` on
+  `codex/connected-wire-move-delete`; remote required checks remain the
+  mainline delivery gate.
+
+## 2026-08-17 - Stabilize narrow Library browser timing
+
+- Target: remove an immediate layout-width sample from the existing narrow
+  Library browser test without changing its product assertion.
+- Changed areas: Playwright Library layout timing assertion and target records.
+- Validation: the focused scenario passed three repeated runs; the complete
+  `pnpm ci:check` gate passed static contracts, 824 unit/integration tests,
+  build/release verification, and all 146 browser tests.
+- Commit status: ready to commit separately on
+  `codex/connected-wire-move-delete`; remote required checks remain the
+  mainline delivery gate.

@@ -132,7 +132,13 @@ plan retention handling.
 `2026-08-17-connected-wire-move-delete` is completed with resolved experience.
 Connected Route drag previews, local endpoint stretch, and branch-isolated
 visual deletion have focused unit and browser regression evidence; the target
-is ready for its review commit and remote required checks.
+is committed as `4c11e7a` and awaits remote required checks.
+
+## 2026-08-17 Narrow Library browser-test stabilization closure
+
+`2026-08-17-stabilize-narrow-library-e2e` is completed with resolved
+experience. Its layout poll passed three repeated focused runs and the complete
+local delivery gate, and is ready for its separate test-only commit.
 
 ## Legacy Metadata Sweep
 

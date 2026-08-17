@@ -93,4 +93,5 @@ verification passed, all 824 unit/integration tests passed, test-impact and
 diff checks passed, and 145 of 146 full browser tests passed. The sole browser
 failure was the unrelated pre-existing narrow Library layout timing assertion;
 its isolated rerun passed and it is being stabilized as a separate target
-before delivery. Remote required checks remain the mainline gate.
+before delivery. The target was committed as `4c11e7a`; remote required checks
+remain the mainline gate.
