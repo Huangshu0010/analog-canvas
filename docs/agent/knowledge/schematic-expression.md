@@ -29,16 +29,17 @@ weight, stage, tap, or signal direction. Keep exceptions near the branch they
 modify rather than forcing them into a false regular template.
 
 Use a child Document when it represents a reusable or cognitively independent
-block and its ports tell a clearer story than flattened wiring. Do not create
-hierarchy only to hide an unresolved layout problem.
+block and its formal terminals tell a clearer story than flattened wiring. Do
+not create hierarchy only to hide an unresolved layout problem.
 
-## Labels and ports
+## Labels and interface markers
 
 - Keep instance names, values, and Net labels readable and attached to the
   intended object.
 - Move label text within a small local area before moving the electrical object.
-- Prefer a label or port over a long cross-page wire when connectivity remains
-  unambiguous and the signal is meaningfully named.
+- Prefer a label or an ordinary `port` / `port-filled` Instance over a long
+  cross-page wire when connectivity remains unambiguous and the signal is
+  meaningfully named.
 - Make inputs, outputs, clocks, references, and supplies visually discoverable.
 - Do not use identical nearby labels as a substitute for an actual Net relation.
 - A label-based connection is readable only when the label is attached to the
@@ -46,8 +47,9 @@ hierarchy only to hide an unresolved layout problem.
   the relation; prefer one compact rail/trunk or a clear repeated-block boundary
   over labels at every device pin. A page heading or prose caption is not a Net
   label.
-- At hierarchy boundaries, show or locally label every visible child port role;
-  do not leave common supply, bias, clock, or input pins as unexplained stubs.
+- At hierarchy boundaries, show or locally label every visible child-block pin
+  role; do not leave common supply, bias, clock, or input pins as unexplained
+  stubs.
 - Use plain ASCII punctuation for generated explanatory captions unless the
   final render confirms every non-ASCII glyph. Remove any corrupted/missing
   glyph before completion.
@@ -59,9 +61,10 @@ symbols, orientation, labels, Junction dots, crossings, hierarchy blocks, and
 wire endpoints remain legible. A perfectly aligned drawing that hides feedback,
 weights, or device asymmetry is not a successful expression.
 
-Perform a final port-label inventory: for every Document port, locate its visible
-port symbol and name or an attached local label/rail in the render. Perform the
-same check for each shared Net represented by disconnected labeled branches.
-Then remove redundant text and check that no label overlaps a symbol, instance
-name, wire, or neighboring label. Port completeness and low label density are
-joint goals.
+Perform a final boundary inventory: map every `Document.netlist.terminals`
+entry to its Net and parent block pin, and verify every placed `port` or
+`port-filled` Instance through its ordinary pin `P`. Perform the same check for
+each shared Net represented by disconnected labeled branches. Then remove
+redundant text and check that no label overlaps a symbol, instance name, wire,
+or neighboring label. Boundary completeness and low label density are joint
+goals.

@@ -16,6 +16,7 @@ contracts, delivery planning, and explicitly non-authoritative history.
 | [`roadmap/`](roadmap/README.md)                      | Remaining cross-module work and its acceptance boundaries                   |
 | [`release/`](release/v0.1-checklist.md)              | Release checklist and known accessibility limits                            |
 | [`experience/`](experience/README.md)                | Human-requested, evidence-backed reusable lessons                           |
+| [`testing/`](testing/README.md)                       | Test layers, change-impact discipline, and contract ownership matrix        |
 | [`archive/`](archive/README.md)                      | Historical records; excluded from default task context                      |
 | [`../plan/`](../plan/README.md)                      | Bounded execution plans and factual maintenance log                         |
 

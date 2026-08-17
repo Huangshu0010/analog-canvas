@@ -1,6 +1,6 @@
 # Root Plan Audit
 
-Snapshot: 2026-08-16. The root `plan/` directory is an operational queue, not
+Snapshot: 2026-08-17. The root `plan/` directory is an operational queue, not
 an archive. Completed plans with resolved experience are stored under
 [`archived/2026-08/`](archived/2026-08/).
 
@@ -9,7 +9,7 @@ an archive. Completed plans with resolved experience are stored under
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
 | `active`                  |     0 | `2026-08-16-instance-value-display` delivered: PR #97 merged to `main` as `7027f57`. `2026-08-16-instance-value-razavi-fraction` delivered: PR #99 merged to `main` as `452099e`. |
-| `completed` + `none`      |    35 | Verify commit/log evidence, then archive according to routine retention policy.   |
+| `completed` + `none`      |    36 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
@@ -54,6 +54,13 @@ it is eligible for normal completed-plan retention handling.
 
 `2026-08-15-placement-mirror-grid-toggle` passed its remote gate and merged as
 PR #72; its completed delivery record is present.
+
+## 2026-08-17 Current protocol baseline closure
+
+`2026-08-17-current-protocol-baseline` is completed with resolved experience.
+ADR 0022, current specs, generated Agent knowledge, deterministic drift tests,
+and branch-verification evidence are present; the local target commit is ready
+for normal completed-plan retention handling.
 
 ## Legacy Metadata Sweep
 

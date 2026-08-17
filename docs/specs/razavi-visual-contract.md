@@ -18,9 +18,10 @@ remain in their owning specifications and are not duplicated here.
 
 `fixtures/visual-reference/razavi-reference-v1/manifest.json` and the evidence
 it hash-pins are the sole visual authority. They control component geometry,
-stroke hierarchy, node and Port treatment, arrows, typography, annotations,
-and visual acceptance. Supplemental rasters and PDF vector extracts are scoped
-evidence inside the same authority, not competing authorities.
+stroke hierarchy, node and interface-symbol treatment, arrows, typography,
+annotations, and visual acceptance. Supplemental rasters and PDF vector
+extracts are scoped evidence inside the same authority, not competing
+authorities.
 
 Existing raster targets remain raster-owned. A `pdf-vector-extract` entry is
 allowed only when the approved raster set lacks the component and the manifest
@@ -88,22 +89,22 @@ Junction semantics. Review `lineCap`, `lineJoin`, stroke width, `miterLimit`,
 render order, and viewBox together. For acute corners, calibrate centerline
 points first, then cap/join, then miter limit, and only then outline amplitude.
 
-## Port and node semantics
+## Interface symbols and node semantics
 
 The following are distinct reviewed presentations and must not be conflated:
 
 | Object                                    | Presentation                                       | Meaning                                     |
 | ----------------------------------------- | -------------------------------------------------- | ------------------------------------------- |
-| Formal model `Port`                       | Hollow origin with a junction-sized outside radius | Document boundary/connectivity object       |
 | `port` symbol                             | Hollow circle and lead                             | Explicit hollow interface symbol            |
 | `port-filled` symbol (`solid-port` alias) | Filled circle and lead                             | Explicit manual solid-endpoint symbol       |
 | Explicit `Junction`                       | Filled solid dot                                   | Route-graph branch/join object              |
 | Device pin, bend, or crossing             | No automatic dot                                   | Geometry alone never creates node semantics |
-| Port with `power-label`                   | Supply bar instead of origin circle                | Mutually exclusive power presentation       |
 
-Both `port` and `port-filled` are reviewed palette symbols. `port-filled` is
-manual-only and has no automatic SPICE mapping. Hollow versus filled is
-explicit product intent, not a style-profile fallback.
+Both `port` and `port-filled` are reviewed palette symbols and ordinary
+single-pin Instances. `port-filled` is manual-only and has no automatic SPICE
+mapping. Hollow versus filled is explicit product intent, not a style-profile
+fallback. A power label belongs to an explicit Net and rail Route/Junction
+geometry; it does not replace either symbol presentation.
 
 ## Style, text, and rendering
 
@@ -282,9 +283,9 @@ of another registered sample.
 
 ## Valid and rejected examples
 
-A valid filled Port is the reviewed `port-filled` symbol with its own explicit
-catalog identity and manual-only exposure. It does not change the formal model
-Port into a filled origin.
+A valid filled interface marker is the reviewed `port-filled` symbol with its
+own explicit catalog identity and manual-only exposure. It remains an ordinary
+Instance with pin `P`.
 
 A valid seam repair joins one resistor stroke into a continuous path or adds a
 render-only bridge between separate route objects while preserving endpoints.
@@ -313,8 +314,8 @@ symbol set has been separately approved.
 Schema-version-1 manifests without `vectorEvidence` remain valid. PDF-derived
 symbols extend the palette without changing persisted Project schema; only an
 explicit reviewed mapping may extend SPICE import behavior. The hollow `port`,
-filled `port-filled`, formal Port, Junction, and all existing symbol behavior
-remain distinct. The former Razavi style and component-extension specifications
+filled `port-filled`, Junction, and all existing symbol behavior remain
+distinct. The former Razavi style and component-extension specifications
 are superseded by this document and retained as redirects.
 
 Related decisions and explanatory evidence:

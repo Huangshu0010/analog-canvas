@@ -8,13 +8,13 @@ The browser editor is a direct-manipulation client over one current
 `SchematicDocument`. Human and Agent mutations enter the same Edit Engine,
 revision, validation, undo, rendering, and recovery boundaries.
 
-## Components and Ports
+## Components and interface markers
 
 The insertion UI lists only exact reviewed Symbol IDs. Both `port` and
 `port-filled` remain ordinary manually reachable components. Choosing either
 starts the same placement state as any component; terminal `P` participates in
 ordinary snap, wire, move/stretch, selection, clipboard, and delete behavior.
-No canvas interaction creates a first-class Port object.
+Placement creates an ordinary Instance and uses no Port-specific edit path.
 
 Canonical `nmos`/`pmos` use the asset's `textbook-3terminal` visual variant by
 default while retaining D/G/S/B electrically. A manual MOS uses explicit B
@@ -198,7 +198,7 @@ no electrical meaning.
 Open, demo load, restore, and human-approved staged import replace the entire
 Project through one replacement boundary; they are not Edit Engine
 transactions. Replacement cancels pending recovery for the outgoing Project
-and terminates its Agent session. Only complete schema-9 Projects are accepted;
+and terminates its Agent session. Only complete schema-11 Projects are accepted;
 the editor performs no migration.
 
 Selection, viewport, active tool, previews, Agent tokens, and approval UI are
@@ -218,7 +218,8 @@ topology hash, history, recovery, or formal export.
 - state-transition, shortcut focus-guard, and command-by-interaction matrix
   tests, including repeated C/W/A/K, I/Escape/re-entry, and render-free
   `Escape -> C` bursts after NMOS, PMOS, and passive placement;
-- component placement and ordinary terminal connectivity for both Port assets;
+- component placement and ordinary terminal connectivity for both
+  interface-marker assets;
 - VDD rail picker/Library preview, cancellation at both phases, creation with no
   VDD Instance or annotation-owned stub, bold italic subscript label, default
   exit, selection, and complete visual deletion;

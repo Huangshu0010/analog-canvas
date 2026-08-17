@@ -7682,3 +7682,54 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: merged to `main` via #95 after the mainline gate (clean-state
   local `pnpm ci:check`, green GitHub Actions checks after refreshing the
   Linux MCP tarball checksum recorded in `config/agent-mcp-distribution.json`).
+
+## 2026-08-17 - Ratify the current protocol baseline
+
+- Target: make schema 11, ordinary Port-symbol Instances, the Engine-derived
+  edit union, and deployed Agent credential lifetimes one explicit current
+  contract while leaving ADR 0014/R10 migration for separate review.
+- Changed areas: accepted ADR 0022 and current reading set; model/persistence,
+  interaction, visual, Agent, and session specs; stale derived/Agent-routing
+  Port terms; MCP generated resources; schema/edit/TTL documentation drift tests.
+- Validation: 82 focused tests; Agent API, authoring-catalog, MCP-resource, and
+  Markdown-link checks; `pnpm verify:branch` with static/type checks, 793 unit
+  tests, workspace build, and production smoke; `git diff --check`.
+- Commit status: committed locally as
+  `docs(protocol): ratify current schema and agent contracts` on
+  `chore/unify-current-protocol-baseline`; not pushed.
+
+## 2026-08-17 - Test-system rationalization
+
+- Target: make test responsibility explicit and enforce an evidence-based
+  decision whenever implementation code changes, while removing a dead surface
+  and strengthening current high-value contracts.
+- Changed areas: test-system guide and contract matrix; target-plan and Agent
+  rules; CI test-impact check and its unit contract; coordinate-domain,
+  topology-hash, and Netlist extraction contracts; unused style-profile token.
+- Validation: focused contracts; `pnpm test:impact -- --base main`;
+  `pnpm ci:static`; full `pnpm test:local` (129 files / 801 tests); and
+  `pnpm verify:branch` including workspace build and production smoke.
+- Commit status: committed and pushed on `chore/test-system-rationalization`.
+
+## 2026-08-17 - Merge protocol baseline and test system
+
+- Target: integrate the current-protocol baseline with the test-system
+  rationalization without losing either target's contract or factual history.
+- Changed areas: merge-only integration; retained both `plan/log.md` entries
+  after resolving their concurrent append.
+- Validation: `pnpm test:impact -- --base main`; `pnpm verify:branch` with
+  static checks, 132 test files / 804 tests, workspace build, and production
+  smoke.
+- Commit status: committed and pushed on `agent/merge-protocol-test-system`.
+
+## 2026-08-17 - Refresh MCP release checksum for combined branch
+
+- Target: align the canonical Linux MCP artifact integrity pin with the
+  protocol-resource-bearing integration commit so the release gate can verify
+  the exact published tarball.
+- Changed areas: `config/agent-mcp-distribution.json` checksum plus this target
+  plan and delivery record.
+- Validation: from a frozen dependency install, `pnpm ci:check` passed static
+  contracts, 804 unit tests, build and release/package smoke, and 143 browser
+  tests; `git diff --check` passed.
+- Commit status: pending push and remote GitHub Actions verification on PR 105.

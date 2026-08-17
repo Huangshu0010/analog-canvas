@@ -5,7 +5,7 @@ Status: `accepted`
 Primary owner: `packages/model`
 
 The Project contains Documents; each Document owns revisioned electrical,
-geometric, and presentation facts. The current model is strict schema 9 and has
+geometric, and presentation facts. The current model is strict schema 11 and has
 no compatibility shape.
 
 ## Coordinate domains
@@ -38,9 +38,10 @@ migration. Invalid coordinates are rejected with their data path.
 - `Document.netlist.terminals` is a private ordered mapping from formal
   cell-terminal names to Net IDs for structural export.
 
-There is no first-class Port collection or Port endpoint. `port` and
-`port-filled` are ordinary single-pin Instances with pin `P`; their electrical
-membership is represented exactly like any other component terminal.
+Canvas interface markers `port` and `port-filled` are ordinary single-pin
+Instances with pin `P`; their electrical membership and Route endpoints are
+represented exactly like every other component terminal. The model has no
+separate canvas Port collection or Port-specific Net membership.
 
 `Net.powerDomain` is persisted explicitly. VDD consists of a global VDD Net,
 editable Route/Junction rail geometry, and a power-label annotation. Ground is
@@ -86,4 +87,4 @@ objects are visual-only and cannot create connectivity.
 
 Mutation occurs only through atomic Edit Engine transactions against an exact
 Document revision. GUI and Agent writes use the same schema and invariants.
-Persistence accepts and writes only schema 9; no migration is performed.
+Persistence accepts and writes only schema 11; no migration is performed.

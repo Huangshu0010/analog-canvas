@@ -56,13 +56,14 @@ or emphasis widths until the source asset is explicitly migrated. Reviewed
 Razavi assets use semantic roles and retain measured finite-decimal geometry;
 retired source weights remain provenance evidence only.
 
-For Razavi formal output, a positioned model Port renders as a hollow origin
-with the same outside radius as a solid Junction. The reviewed `port` and
-`port-filled` Symbol assets separately provide explicit hollow and filled
-palette presentations; they do not change formal model-Port semantics. A Port
-attached to a `power-label` renders a supply bar instead of an origin circle.
-Explicit Junctions render independently; device-pin anchors, ordinary corners,
-and geometric crossings never acquire a dot from appearance or degree alone.
+For Razavi formal output, the reviewed `port` and `port-filled` Symbol assets
+provide explicit hollow and filled interface presentations. Each is an
+ordinary single-pin Instance whose pin `P` uses normal terminal connectivity;
+the renderer does not replace either symbol with a separate model-level Port
+shape. Power labels belong to explicit Nets and Route/Junction rail geometry,
+not to a Port-specific presentation. Explicit Junctions render independently;
+device-pin anchors, ordinary corners, and geometric crossings never acquire a
+dot from appearance or degree alone.
 An explicit branch Junction on a valid VDD Net that contains a `power-rail`
 Route remains electrically and interactively real but renders without a dot;
 the rail itself uses the supply stroke. This is a Razavi supply-presentation
@@ -125,9 +126,8 @@ active symbol variant's visible geometry and clusters repeated overlaps.
   together and emits no `vector-effect="non-scaling-stroke"`.
 - Annotation attachment moves with an edited instance while its offset and
   semantic kind remain persisted.
-- Hollow model-Port origins and supply bars are mutually exclusive
-  presentations of their attached semantic Port. Explicit `port` and
-  `port-filled` Symbol instances remain independent component presentations.
+- Hollow `port`, filled `port-filled`, and supply-rail presentations remain
+  distinct authored objects; presentation never creates another endpoint kind.
 - Instance-label drag is bounded around its symbol and Net-label drag is
   bounded around attached route geometry; free text is unconstrained.
 - Visual goldens use original project fixtures, not copied textbook artwork.

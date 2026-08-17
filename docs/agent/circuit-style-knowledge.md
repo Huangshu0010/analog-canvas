@@ -23,7 +23,8 @@ geometry helper to recover a functional interpretation that the Agent omitted.
 
 ## Read the circuit
 
-- Establish Document ports, supply/ground Nets, hierarchy, and source binding.
+- Establish formal cell terminals, ordinary interface-marker Instances,
+  supply/ground Nets, hierarchy, and source binding.
 - Resolve device type, symbol variant, pin roles, body/bulk connection, model,
   and parameters before assigning function.
 - Trace likely signal paths from input to output, then feedback, bias, clock,
@@ -49,7 +50,7 @@ Document graph available while focusing on one electrically coherent region.
 - Reserve whitespace between functional neighborhoods and reserve explicit
   horizontal/vertical corridors before routing.
 - Align repeated cells by semantic order such as bit, weight, stage, or tap.
-- Use hierarchy when ports tell a clearer story; use flat views when the user
+- Use hierarchy when formal terminals tell a clearer story; use flat views when the user
   needs transistor-level inspection.
 
 ## Express nodes honestly

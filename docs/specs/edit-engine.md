@@ -2,7 +2,7 @@
 
 Status: `accepted`
 
-Version: `1.9`
+Version: `1.10`
 
 Owning phase: `Phase 0/1/8`
 
@@ -47,24 +47,36 @@ interface EditTransaction {
 }
 ```
 
-The executable union contains `noop`, `add_instance`, `remove_instance`,
-`set_instance_symbol`, `place_instance`, `move_instance`,
-`rotate_instance`, `mirror_instance`, `set_route_points`, `add_junction`,
-`remove_junction`, `move_junction`, `cut_connection`, `make_flightline`, `connect_endpoints`,
-`merge_nets`, `set_net_name`, `disconnect_endpoint`,
-`upsert_schematic_annotation`, `remove_schematic_annotation`,
-`set_layout_group`, `remove_layout_group`,
-`set_layout_constraint`, `remove_layout_constraint`, `align_instances`,
-`place_port`, `move_port`, `clear_document`, `undo`, and `redo`. Later phases extend the typed union and versioned schemas;
-they do not create separate mutation endpoints.
+`packages/edit-engine/src/transaction.ts` exports `SchematicEditSchema`, the
+sole executable list of typed edit kinds. The current union is grouped below
+for readability; these groups do not create separate mutation endpoints:
 
-The Text & Peripheral Editing System (ADR 0010) adds four edit kinds, all
-strict-JSON-Schema validated members of the same union:
+<!-- schematic-edit-kinds:start -->
 
-```text
-upsert_schematic_annotation | remove_schematic_annotation
-upsert_drafting_object     | remove_drafting_object
-```
+- control/history: `noop`, `clear_document`, `undo`, `redo`;
+- Instance: `add_instance`, `remove_instance`, `set_instance_symbol`,
+  `place_instance`, `move_instance`, `rotate_instance`, `mirror_instance`,
+  `patch_instance_properties`, `set_instance_netlist`;
+- Route/Junction/connectivity: `set_route_points`, `route_orthogonal`,
+  `add_junction`, `attach_endpoint_to_route`, `remove_junction`,
+  `move_junction`, `make_flightline`, `cut_connection`, `connect_endpoints`,
+  `disconnect_endpoint`;
+- Net/power/MOS: `add_power_rail`, `merge_nets`, `set_net_name`,
+  `set_net_power_domain`, `normalize_power_nets`, `set_mos_bulk_defaults`,
+  `reconcile_mos_bulk`, `clear_mos_bulk_default`;
+- explicit open terminal: `add_no_connect`, `remove_no_connect`;
+- presentation/layout: `set_presentation_style`,
+  `upsert_schematic_annotation`, `remove_schematic_annotation`,
+  `upsert_drafting_object`, `remove_drafting_object`, `set_layout_group`,
+  `remove_layout_group`, `set_layout_constraint`,
+  `remove_layout_constraint`, `align_instances`.
+
+<!-- schematic-edit-kinds:end -->
+
+The Agent transaction schema is derived from this union, applies its scope
+restrictions, and excludes unsupported history kinds. Agent capability `wire`
+advertises the mutually exclusive high-level `wireIntent` transaction form; it
+is not another `SchematicEdit` member.
 
 `upsert_schematic_annotation` / `remove_schematic_annotation` replace the
 narrowed SchematicAnnotation set (`instance-label | instance-value |
@@ -77,7 +89,7 @@ resolved anchors, invalid/unresolved attachments, possible overlaps with
 electrical objects, and the actual changed IDs.
 
 Deleting an anchor target is non-cascading and non-rejecting: the same
-transaction that removes a Route or Instance/Port/Junction updates each
+transaction that removes a Route or Instance/Junction updates each
 attached object's `fallbackPosition` and marks its anchor unresolved, but does
 not delete the attached object and does not reject the delete. Content locks do
 not block this fallback maintenance. `upsert_drafting_object` for a
@@ -124,9 +136,9 @@ Phase 8 topology operations have these preconditions:
   connected or routed source pin must either already exist on that Symbol or be
   covered by an explicit one-to-one `pinMap`; the edit atomically updates Net,
   Route, and preserved `spice.pin.*` references without changing Net ownership.
-- `place_port` requires an unplaced Port; `move_port` requires a placed Port.
-  Moving a Port translates its attached annotations and preserves Route endpoint
-  identity.
+- `port` and `port-filled` use the ordinary `add_instance`, `place_instance`,
+  `move_instance`, and terminal-connectivity edit paths; there is no
+  Port-specific edit kind.
 - `remove_instance` requires no Net, annotation, group, or constraint
   reference.
 - `connect_endpoints` creates a caller-named local Net when both endpoints are
@@ -167,7 +179,7 @@ Phase 8 topology operations have these preconditions:
 - `make_flightline` remains the explicit geometry-only operation: it removes a
   Route while preserving its logical Net membership. It is intended for
   advanced rerouting clients, not ordinary Delete.
-- symbol and Port edits honor the same locked layout groups/constraints as
+- symbol and Instance edits honor the same locked layout groups/constraints as
   instance transforms and reject the complete transaction on conflict.
 
 ## Operations and state transitions

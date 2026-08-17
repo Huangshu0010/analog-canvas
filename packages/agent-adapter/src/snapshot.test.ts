@@ -266,6 +266,45 @@ describe("Agent Document Snapshot", () => {
     expect(after.electricalTopologyHash).not.toBe(base.electricalTopologyHash);
   });
 
+  it("includes NoConnect declarations but excludes Route and Junction geometry from electricalTopologyHash", () => {
+    const project = fixtureProject();
+    const document = project.documents[0]!;
+    const base = buildAgentSessionSnapshot({ project, document, resolver });
+
+    const withNoConnect = structuredClone(project);
+    const noConnectDocument = withNoConnect.documents[0]!;
+    noConnectDocument.noConnects.push({
+      id: "nc-hash-contract",
+      endpoint: { kind: "terminal", instanceId: "M1", pinName: "B" },
+    });
+    const declared = buildAgentSessionSnapshot({
+      project: withNoConnect,
+      document: noConnectDocument,
+      resolver,
+    });
+    expect(declared.electricalTopologyHash).not.toBe(
+      base.electricalTopologyHash,
+    );
+
+    const geometryOnly = structuredClone(withNoConnect);
+    const geometryDocument = geometryOnly.documents[0]!;
+    geometryDocument.routes[0]!.segmentModes = ["locked"];
+    geometryDocument.junctions.push({
+      id: "junction-hash-contract",
+      netId: geometryDocument.nets[0]!.id,
+      position: { x: 10, y: 10 },
+      role: "route-anchor",
+    });
+    const afterGeometry = buildAgentSessionSnapshot({
+      project: geometryOnly,
+      document: geometryDocument,
+      resolver,
+    });
+    expect(afterGeometry.electricalTopologyHash).toBe(
+      declared.electricalTopologyHash,
+    );
+  });
+
   it("exposes resolved drafting geometry matching the persisted anchor", () => {
     const project = fixtureProject();
     const document = project.documents[0]!;

@@ -30,7 +30,7 @@ only on commit, and formal topology remains unchanged by presentation edits.
    `pmos`, `nmos`, `ground`, `port`, and the `vdd-rail` primitive. Do not infer
    their IDs or pins from appearance.
 2. Read the blank Document Snapshot. Dry-run then commit placement of the two
-   MOS instances, ground, input/output Ports, and a VDD rail. `vdd` is not a
+   MOS instances, ground, input/output `port` Instances, and a VDD rail. `vdd` is not a
    Symbol: submit the catalog-defined `add_power_rail` primitive.
 3. Read a new Snapshot. Use its returned terminal IDs and positions to submit
    ordinary `wireIntent` connections for gates, drains/output, NMOS source to

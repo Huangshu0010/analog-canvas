@@ -57,6 +57,7 @@
     "visual:golden:check": "pnpm build && node scripts/visual-golden.mjs --check",
     "test": "vitest run",
     "test:local": "vitest run --maxWorkers=2",
+    "test:impact": "node scripts/check-test-impact.mjs",
     "test:e2e": "playwright test",
     "test:e2e:local": "playwright test --workers=1",
     "test:production-smoke": "pnpm --filter @icm/editor build && node scripts/editor-production-smoke.mjs",
