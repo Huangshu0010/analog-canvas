@@ -1,0 +1,301 @@
+import { powerDomainForNet, powerNetNormalizations } from "@icm/model";
+import type {
+  Annotation,
+  Point,
+  RouteBranch,
+  RouteEndpoint,
+  SchematicDocument,
+} from "@icm/model";
+import {
+  endpointBelongsToNet,
+  endpointKey,
+  netEndpoints,
+  resolveEndpointOutwardDirection,
+} from "@icm/derived";
+import type { SymbolResolver } from "@icm/symbols";
+
+import type { SchematicEdit } from "./edit-schema.js";
+import { isOrthogonal } from "./route-geometry-edit.js";
+import { resolveRouteEditPath } from "./route-operations.js";
+
+export function pointOnSegment(point: Point, from: Point, to: Point): boolean {
+  if (from.x === to.x) {
+    return (
+      point.x === from.x &&
+      point.y > Math.min(from.y, to.y) &&
+      point.y < Math.max(from.y, to.y)
+    );
+  }
+  if (from.y === to.y) {
+    return (
+      point.y === from.y &&
+      point.x > Math.min(from.x, to.x) &&
+      point.x < Math.max(from.x, to.x)
+    );
+  }
+  return false;
+}
+
+export function routeIsProtected(route: RouteBranch): boolean {
+  return route.segmentModes.includes("locked");
+}
+
+export function endpointOwnerNetId(
+  document: SchematicDocument,
+  endpoint: RouteEndpoint,
+): string | null {
+  switch (endpoint.kind) {
+    case "terminal":
+      return (
+        document.nets.find((net) =>
+          net.terminals.some(
+            (terminal) =>
+              terminal.instanceId === endpoint.instanceId &&
+              terminal.pinName === endpoint.pinName,
+          ),
+        )?.id ?? null
+      );
+    case "junction":
+      return (
+        document.junctions.find(
+          (junction) => junction.id === endpoint.junctionId,
+        )?.netId ?? null
+      );
+  }
+}
+
+export function netEndpointGroups(
+  document: SchematicDocument,
+  netId: string,
+): string[][] {
+  const net = document.nets.find((candidate) => candidate.id === netId);
+  if (!net) return [];
+  const keys = netEndpoints(document, net).map(endpointKey);
+  const parent = new Map(keys.map((key) => [key, key]));
+  const find = (key: string): string => {
+    const current = parent.get(key);
+    if (!current) throw new Error(`Unknown Net endpoint ${key}`);
+    if (current === key) return key;
+    const root = find(current);
+    parent.set(key, root);
+    return root;
+  };
+  const union = (left: string, right: string): void => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot === rightRoot) return;
+    const [first, second] = [leftRoot, rightRoot].sort((a, b) =>
+      a.localeCompare(b, "en"),
+    );
+    parent.set(second!, first!);
+  };
+  for (const route of document.routes.filter(
+    (candidate) => candidate.netId === netId,
+  )) {
+    union(endpointKey(route.from), endpointKey(route.to));
+  }
+  const grouped = new Map<string, string[]>();
+  for (const key of keys) {
+    const root = find(key);
+    const group = grouped.get(root) ?? [];
+    group.push(key);
+    grouped.set(root, group);
+  }
+  return [...grouped.values()]
+    .map((group) =>
+      group.sort((left, right) => left.localeCompare(right, "en")),
+    )
+    .sort((left, right) => left[0]!.localeCompare(right[0]!, "en"));
+}
+
+export function validateConnectableEndpoint(
+  document: SchematicDocument,
+  endpoint: RouteEndpoint,
+  resolver: SymbolResolver | undefined,
+): string | null {
+  switch (endpoint.kind) {
+    case "terminal": {
+      const instance = document.instances.find(
+        (candidate) => candidate.id === endpoint.instanceId,
+      );
+      if (!instance) return `Instance does not exist: ${endpoint.instanceId}`;
+      if (!resolver) return "Terminal edits require a Symbol Resolver";
+      const symbol = resolver.resolve(
+        instance.symbolId,
+        instance.symbolVariantId,
+      );
+      if (
+        !symbol?.definition.pins.some((pin) => pin.name === endpoint.pinName)
+      ) {
+        return `Symbol pin does not exist: ${endpoint.instanceId}.${endpoint.pinName}`;
+      }
+      return null;
+    }
+    case "junction":
+      return document.junctions.some(
+        (junction) => junction.id === endpoint.junctionId,
+      )
+        ? null
+        : `Junction does not exist: ${endpoint.junctionId}`;
+  }
+}
+
+export function validateNetLabelBinding(
+  document: SchematicDocument,
+  annotation: Annotation,
+): string | null {
+  if (annotation.kind !== "net-label") return null;
+  if (!annotation.netId) {
+    return `Net Label requires a Net identity: ${annotation.id}`;
+  }
+  return document.nets.some((net) => net.id === annotation.netId)
+    ? null
+    : `Net Label identity is not a Net: ${annotation.netId}`;
+}
+
+export function addEndpointToNet(
+  document: SchematicDocument,
+  netId: string,
+  endpoint: RouteEndpoint,
+): void {
+  const net = document.nets.find((candidate) => candidate.id === netId)!;
+  if (endpoint.kind === "terminal") {
+    if (
+      !net.terminals.some(
+        (terminal) =>
+          terminal.instanceId === endpoint.instanceId &&
+          terminal.pinName === endpoint.pinName,
+      )
+    ) {
+      net.terminals.push({
+        instanceId: endpoint.instanceId,
+        pinName: endpoint.pinName,
+      });
+    }
+  }
+}
+
+export function normalizePowerNets(
+  document: SchematicDocument,
+  changedObjectIds: Set<string>,
+): boolean {
+  let changed = false;
+  for (const normalization of powerNetNormalizations(document)) {
+    const net = document.nets.find(
+      (candidate) => candidate.id === normalization.netId,
+    )!;
+    let netChanged = false;
+    if (net.scope !== "global") {
+      net.scope = "global";
+      changed = true;
+      netChanged = true;
+    }
+    if (normalization.name && net.name !== normalization.name) {
+      net.name = normalization.name;
+      changed = true;
+      netChanged = true;
+    }
+    if (netChanged) changedObjectIds.add(net.id);
+  }
+  return changed;
+}
+
+export function replaceLayoutReference(
+  objectIds: string[],
+  sourceId: string,
+  targetId: string,
+): string[] {
+  return [...new Set(objectIds.map((id) => (id === sourceId ? targetId : id)))];
+}
+
+export function lockedLayoutOwner(
+  document: SchematicDocument,
+  objectId: string,
+): string | null {
+  return (
+    [...document.layoutGroups, ...document.constraints].find(
+      (item) => item.locked && item.objectIds.includes(objectId),
+    )?.id ?? null
+  );
+}
+
+export function routeFromEdit(
+  edit: Extract<SchematicEdit, { kind: "set_route_points" }>,
+): RouteBranch {
+  return {
+    id: edit.routeId,
+    netId: edit.netId,
+    from: structuredClone(edit.from),
+    to: structuredClone(edit.to),
+    waypoints: structuredClone(edit.waypoints),
+    segmentModes: [...edit.segmentModes],
+    ...(edit.presentation ? { presentation: edit.presentation } : {}),
+  };
+}
+
+export function validateRoute(
+  document: SchematicDocument,
+  route: RouteBranch,
+  resolver: SymbolResolver,
+): string | null {
+  if (route.segmentModes.length !== route.waypoints.length + 1) {
+    return `Route ${route.id} requires one segment mode per geometric segment`;
+  }
+  const net = document.nets.find((candidate) => candidate.id === route.netId);
+  if (!net) return `Route net does not exist: ${route.netId}`;
+  if (route.presentation === "power-rail" && powerDomainForNet(net) !== "vdd") {
+    return `Power rail ${route.id} must belong to a VDD Net`;
+  }
+  if (!endpointBelongsToNet(document, net, route.from)) {
+    return `Route from endpoint is not a member of ${route.netId}`;
+  }
+  if (!endpointBelongsToNet(document, net, route.to)) {
+    return `Route to endpoint is not a member of ${route.netId}`;
+  }
+  const polyline = resolveRouteEditPath(document, resolver, route);
+  if (!polyline) return `Route ${route.id} has an unresolved endpoint`;
+  if (!isOrthogonal(polyline.points)) {
+    return `Route ${route.id} must contain only non-zero orthogonal segments`;
+  }
+  for (const [endpoint, point, adjacent, mode] of [
+    [
+      route.from,
+      polyline.points[0]!,
+      polyline.points[1]!,
+      route.segmentModes[0],
+    ],
+    [
+      route.to,
+      polyline.points.at(-1)!,
+      polyline.points.at(-2)!,
+      route.segmentModes.at(-1),
+    ],
+  ] as const) {
+    if (endpoint.kind !== "terminal" || mode !== "escape") continue;
+    const outward = resolveEndpointOutwardDirection(
+      document,
+      resolver,
+      endpoint,
+    );
+    if (!outward) return `Route ${route.id} has an unresolved pin direction`;
+    const departure = { x: adjacent.x - point.x, y: adjacent.y - point.y };
+    if (departure.x * outward.x + departure.y * outward.y <= 0) {
+      return `Route ${route.id} escape segment must leave ${endpoint.instanceId}.${endpoint.pinName} outward`;
+    }
+  }
+  return null;
+}
+
+export function sameResolvedRoutePoints(
+  left: readonly Point[] | null,
+  right: readonly Point[] | null,
+): boolean {
+  if (left === null || right === null) return left === right;
+  return (
+    left.length === right.length &&
+    left.every(
+      (point, index) =>
+        point.x === right[index]!.x && point.y === right[index]!.y,
+    )
+  );
+}

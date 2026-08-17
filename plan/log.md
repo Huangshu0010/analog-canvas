@@ -7904,68 +7904,274 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed and pushed as
   `feat(editor): add Library project examples` on `codex/library-examples`.
 
-## 2026-08-17 - Snap Wire to rectangle edge centers
+## 2026-08-17 - Separate Edit Engine transaction protocol layers
 
-- Target: let Wire geometry snap to the midpoint of each drafting rectangle
-  edge without creating implicit electrical contact.
-- Changed areas: Editor Snap candidate construction, Wire snap profile and
-  target collection, focused Snap regression tests, and target plan.
-- Validation: focused Snap suites (2 files / 15 tests), `pnpm typecheck`,
-  `pnpm build`, formatting check, `pnpm test:impact -- --base origin/main`, and
+- Target: separate transaction input and result contracts from Edit Engine
+  execution without changing protocol shape, exports, or mutation behavior.
+- Changed areas: added dedicated edit-schema and transaction-result modules;
+  reduced `transaction.ts` to execution/domain validation with compatibility
+  re-exports.
+- Validation: focused transaction/protocol suite (3 files / 30 tests), Edit
+  Engine build, `pnpm typecheck`, `pnpm test:impact -- --base origin/main`,
+  and `git diff --check` passed.
+- Commit status: included in
+  `refactor(edit-engine): separate transaction protocol layers` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Extract Editor App pure geometry layers
+
+- Target: remove stateless canvas-selection and drafting-path calculations
+  from `App.tsx` without changing React state, interaction timing, or edit
+  dispatch.
+- Changed areas: expanded the canvas geometry module; added a drafting path
+  module; switched App call sites to imports; added direct unit coverage for
+  the extracted contracts.
+- Validation: focused canvas/drafting/App suite (3 files / 22 tests), Editor
+  production build, `pnpm typecheck`, `pnpm test:impact -- --base
+  origin/main`, and `git diff --check` passed.
+- Commit status: included in
+  `refactor(editor): extract App canvas geometry helpers` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Layer Edit Engine execution helpers
+
+- Target: separate transaction preflight, routing, route-follow, and instance
+  annotation-follow behavior from atomic transaction dispatch.
+- Changed areas: added focused internal helper modules and reduced
+  `transaction.ts` to transaction orchestration and edit dispatch.
+- Validation: focused transaction/protocol suite (3 files / 30 tests), Edit
+  Engine build, `pnpm typecheck`, `pnpm test:impact -- --base origin/main`,
+  and `git diff --check` passed.
+- Commit status: included in
+  `refactor(edit-engine): layer transaction execution helpers` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Layer Editor App document and runtime helpers
+
+- Target: remove remaining file-level document-query and browser-runtime
+  helpers from `App.tsx` without altering editor state orchestration.
+- Changed areas: added document and runtime helper modules, switched App
+  imports, and added direct document-helper contracts.
+- Validation: focused App/helper suite (2 files / 16 tests), Editor production
+  build, `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
   `git diff --check` passed.
-- Commit status: committed on `codex/wire-snap-rectangle-edge-centers`;
-  remote required checks remain the mainline delivery gate.
+- Commit status: included in
+  `refactor(editor): layer App document runtime helpers` on
+  `codex/app-transaction-module-layers`.
 
-## 2026-08-17 - Expand rectangle-edge Wire snap fractions
+## 2026-08-17 - Define flat Editor interaction migration
 
-- Target: expose `1/4`, `1/3`, `1/2`, `2/3`, and `3/4` Wire snap positions on
-  every drafting rectangle edge while preserving the non-electrical boundary.
-- Changed areas: rectangle-edge Snap candidate interpolation, axis-aligned and
-  rotated regression coverage, and target plan.
-- Validation: focused Snap suites (2 files / 16 tests), `pnpm typecheck`,
-  `pnpm build`, formatting check, `pnpm test:impact -- --base origin/main`, and
+- Target: define the bounded five-step extraction of wiring,
+  selection/movement, component placement, property editing, and panel state
+  from `App.tsx`.
+- Changed areas: active implementation plan and root-plan audit; no product
+  code changed.
+- Validation: `pnpm docs:check`, `git diff --check`, and worktree scope
+  review.
+- Commit status: included in
+  `plan(editor): define flat interaction hook migration` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Extract Editor Wire session hook checkpoint
+
+- Target: begin the active flat interaction migration by moving Wire session
+  orchestration from `App.tsx` into the wiring feature.
+- Changed areas: endpoint/flightline/free-point Wire initiation, MOS bulk Wire
+  initiation, commit, and stale-revision cancellation now live in
+  `useWireInteraction`; route click/stretch remains the pending second part
+  of Step 1.
+- Validation: focused wiring contracts (4 files / 51 tests), 17 focused
+  browser Wire/route tests, Editor build, and `pnpm typecheck` passed.
+- Commit status: included in
+  `refactor(editor): extract wire session hook` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete Editor Wiring interaction Hook
+
+- Target: finish Step 1 by giving `useWireInteraction` sole ownership of
+  route-origin Wire creation and route stretch drag lifecycle.
+- Changed areas: moved route tap ambiguity checks, route Wire activation,
+  pointer drag sessions, visual previews, cancellation, and transactional
+  stretch commits from `App.tsx` into the flat wiring Hook.
+- Validation: focused wiring contracts (4 files / 51 tests), focused
+  Playwright Wire/route scenarios, Editor build, `pnpm typecheck`,
+  `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
+- Commit status: staged for `refactor(editor): extract wire interaction hook`
+  on `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Extract Editor selection command and pointer sessions checkpoint
+
+- Target: begin Step 2 by moving selection-owned commands and pointer drag
+  sessions out of `App.tsx`.
+- Changed areas: added `useSelectionInteraction` for deletion, No Connect,
+  copy placement, selection mutation, visual selection movement, and
+  instance pointer-drag lifecycle; App retains pure movement calculations and
+  the keyboard Move session for the next checkpoint.
+- Validation: focused selection/clipboard contracts (5 files / 33 tests),
+  representative Playwright copy, deletion, junction, visual selection, and
+  instance-drag scenarios, Editor build, `pnpm typecheck`, and
   `git diff --check` passed.
-- Commit status: committed on `codex/wire-snap-rectangle-edge-fractions`;
-  remote required checks remain the mainline delivery gate.
+- Commit status: staged for
+  `refactor(editor): extract selection interaction checkpoint` on
+  `codex/app-transaction-module-layers`.
 
-## 2026-08-17 - Stabilize connected Wire move and deletion
+## 2026-08-17 - Extract Editor placement dialog checkpoint
 
-- Target: make connected Routes follow Instance drags predictably and isolate
-  deletion to explicitly selected Wire branches.
-- Changed areas: Edit Engine endpoint/group stretch planning; Editor live Route
-  preview and visual deletion normalization; focused unit and browser coverage.
-- Validation: focused route/selection suites (4 files / 46 tests), targeted
-  connected and group-move browser scenarios, all 824 unit/integration tests,
-  typecheck, build/release verification, test-impact, formatting, and diff
-  checks passed. The full browser run passed 145/146; its sole unrelated narrow
-  Library timing failure passed in isolation and is tracked separately.
-- Commit status: committed as `4c11e7a` on
-  `codex/connected-wire-move-delete`; remote required checks remain the
-  mainline delivery gate.
+- Target: start Step 3 by moving component-insert dialog state, recency, and
+  mode commands into the flat placement Hook.
+- Changed areas: added `useComponentPlacement`; it owns Insert visibility,
+  local-storage recency, insertion requests, VDD-mode start, and placement
+  orientation actions. Selection commands now read the synchronous interaction
+  getter, preserving rapid Escape-to-Copy transitions.
+- Validation: focused selection/placement contracts (9 files / 49 tests),
+  fast Escape-to-Copy Playwright regression, Editor build, and `pnpm typecheck`
+  passed.
+- Commit status: staged for
+  `refactor(editor): extract placement interaction checkpoint` on
+  `codex/app-transaction-module-layers`.
 
-## 2026-08-17 - Stabilize narrow Library browser timing
+## 2026-08-17 - Extract placement commit and properties draft checkpoints
 
-- Target: remove an immediate layout-width sample from the existing narrow
-  Library browser test without changing its product assertion.
-- Changed areas: Playwright Library layout timing assertion and target records.
-- Validation: the focused scenario passed three repeated runs; the complete
-  `pnpm ci:check` gate passed static contracts, 824 unit/integration tests,
-  build/release verification, and all 146 browser tests.
-- Commit status: ready to commit separately on
-  `codex/connected-wire-move-delete`; remote required checks remain the
-  mainline delivery gate.
+- Target: continue placement and properties migration without changing the
+  edit-engine transaction boundary.
+- Changed areas: placement Hook now routes component/VDD canvas commits; the
+  properties Hook owns instance and Net Label draft state.
+- Validation: focused properties contracts (3 files / 22 tests), focused
+  insertion/VDD and property Playwright scenarios, Editor build, and
+  `pnpm typecheck` passed.
+- Commit status: staged for
+  `refactor(editor): continue placement and properties migration` on
+  `codex/app-transaction-module-layers`.
 
-## 2026-08-17 - Add manual hierarchical Cell editing
+## 2026-08-17 - Extract editor shell panel state checkpoint
 
-- Target: convert a selected rectangle into a formal child Cell and provide
-  direct keyboard, toolbar, and double-click hierarchy navigation.
-- Changed areas: validated Project-structure conversion, zero-terminal
-  hierarchy symbols, Editor controller/session integration, shortcuts, Help,
-  and focused unit/browser coverage including save and reopen.
-- Validation: 39 focused unit tests, the focused hierarchy browser flow,
-  `pnpm test:impact -- --base origin/main`, locked dependency installation,
-  and the complete `pnpm ci:check` gate (831 unit/integration tests and 147
-  browser tests) passed.
-- Commit status: ready to commit on
-  `codex/manual-hierarchy-from-rectangle`; remote required checks remain the
-  mainline delivery gate.
+- Target: start Step 5 by moving generic panel and dialog visibility state out
+  of the App composition root.
+- Changed areas: added and connected `useEditorPanels` for Library,
+  responsive shell, selection shelf, Help, About, and project-search state.
+- Validation: focused shell/search contracts (4 files / 19 tests), 3 focused
+  Playwright command-menu/search/layout scenarios, `pnpm typecheck`, and
+  `git diff --check` passed.
+- Commit status: staged for
+  `refactor(editor): extract editor shell panel state` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete selection and placement interaction Hooks
+
+- Target: finish the selection keyboard Move session and component/VDD
+  placement transaction ownership in their flat Hooks.
+- Changed areas: removed the last duplicate App move/placement handlers;
+  `useComponentPlacement` now builds and commits component connectivity,
+  labels, bulk reconciliation, and VDD rails directly.
+- Validation: focused component contracts (6 files / 31 tests), 3 focused
+  Playwright component/VDD/cancellation scenarios, Editor build,
+  `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
+- Commit status: staged for
+  `refactor(editor): complete selection and component placement hooks` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Continue properties interaction Hook
+
+- Target: move property-draft, Net Label, and canvas text session lifecycles
+  out of `App.tsx` without changing the transaction boundary.
+- Changed areas: `usePropertiesEditor` now owns selection-transition commits,
+  Net Label open/apply/delete, instance apply/cancel, and text editing
+  sessions; the remaining label visibility actions stay explicitly pending.
+- Validation: focused properties/text contracts (3 files / 22 tests), 5
+  focused Playwright property/Net Label/text scenarios, and `pnpm typecheck`
+  passed.
+- Commit status: staged for
+  `refactor(editor): continue properties editor hook` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete properties interaction Hook
+
+- Target: give `usePropertiesEditor` the remaining reference/value display
+  action ownership while retaining its pure edit planners.
+- Changed areas: reference visibility, value visibility, and live-draft value
+  projection now commit through the properties Hook; App retains only pure
+  edit construction and JSX wiring.
+- Validation: focused Playwright reference/value projection passed, together
+  with `pnpm typecheck` and formatting.
+- Commit status: staged for
+  `refactor(editor): complete properties editor hook` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Continue editor shell Hook
+
+- Target: move responsive Library lifecycle and storage persistence out of
+  the App composition root.
+- Changed areas: `useEditorPanels` now owns compact media-query updates,
+  compact Library/Selection arbitration, persisted Library state, and
+  Library/Examples panel commands.
+- Validation: focused narrow-breakpoint Playwright scenario and
+  `pnpm typecheck` passed.
+- Commit status: staged for
+  `refactor(editor): continue editor panel state hook` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete editor shell Hook
+
+- Target: finish the flat shell ownership by moving dialog focus and Agent
+  panel state into `useEditorPanels`.
+- Changed areas: the Hook now owns storage initialization, Help/About focus
+  restoration, Search close/reset, and Agent panel/detail/dismissal state;
+  App remains the JSX and external Agent-session composition root.
+- Validation: focused shell/search unit contracts (4 files / 19 tests), 4
+  Library/catalog Playwright scenarios, 3 command/search/layout scenarios,
+  Editor build, and `pnpm typecheck` passed.
+- Commit status: staged for
+  `refactor(editor): complete editor panel state hook` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Complete editor interaction controller migration
+
+- Target: complete the five flat interaction Hook extractions and perform the
+  branch-level delivery audit.
+- Changed areas: final shell state/focus ownership and the branch-owned
+  transaction entry point's five-line Prettier repair; no protocol behavior
+  changed in the latter.
+- Validation: static branch checks, 139 unit files / 828 tests, focused
+  Playwright coverage for wire, selection, placement, properties, and shell,
+  Editor build, production smoke, test-impact, duplicate-owner search, and
+  `git diff --check` passed. `App.tsx` is 8,078 lines versus 9,563 at plan
+  start, with moved interaction ownership as the acceptance evidence.
+- Commit status: staged for final plan/log/formatting commit on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Mainline merge records preserved
+
+- Snap Wire to rectangle edge centers and expanded rectangle-edge snap
+  fractions were validated with focused Snap contracts.
+- Connected-Wire move/deletion stabilization and its narrow-Library browser
+  timing repair were validated before mainline integration.
+- Manual hierarchical Cell editing converted rectangles into child Cells with
+  focused controller, hierarchy, shortcut, save/reopen, and browser coverage.
+
+## 2026-08-17 - Integrate manual hierarchy with interaction Hooks
+
+- Target: integrate current mainline manual Cell editing without restoring
+  pre-Hook interaction owners.
+- Changed areas: manually resolved `App.tsx` by retaining the five Hook
+  composition boundaries and adding rectangle-to-Cell conversion, navigation,
+  shortcut, and toolbar integration; mainline conflict records were retained.
+- Validation: 4 focused unit files / 44 tests, hierarchy Playwright workflow,
+  Editor build, typecheck, diff checks, and `pnpm verify:branch` (140 unit
+  files / 840 tests, full build, production smoke) passed.
+- Commit status: included in
+  `merge: integrate manual hierarchy with interaction hooks` on
+  `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Repair PR 117 CI contracts
+
+- Target: restore the connected-route drag preview and update the MCP release
+  integrity pin reported by PR #117's Linux CI.
+- Changed areas: `useSelectionInteraction` now projects planned moved route
+  endpoints and waypoints during an instance-led drag; the MCP distribution
+  SHA-256 matches the CI-produced Linux artifact.
+- Validation: the 2 targeted connected-route Playwright tests, release
+  verification, test-impact, frozen dependency install, full `pnpm ci:check`
+  (including final Playwright status `passed`), and diff checks passed.
+- Commit status: staged for `fix(editor): restore connected wire drag previews`
+  on `codex/app-transaction-module-layers`; GitHub required checks pending.

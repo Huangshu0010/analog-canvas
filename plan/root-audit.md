@@ -8,17 +8,10 @@ an archive. Completed plans with resolved experience are stored under
 
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
-| `active`                  |     0 | No active root plan remains.                                                       |
+| `active`                  |     1 | PR #117 CI repair is awaiting its remote required checks.                          |
 | `completed` + `none`      |    42 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
-
-## 2026-08-17 Manual hierarchical Cell editing closure
-
-`2026-08-17-manual-hierarchy-from-rectangle` is completed with resolved
-experience. Rectangle-to-Cell conversion, formal hierarchy navigation, and
-save/reopen regression coverage passed the complete local delivery gate and
-are ready for remote review.
 
 ### Completed plans awaiting an experience decision
 
@@ -134,18 +127,30 @@ placed the Examples entry in the far-left tool rail, passed local and remote
 delivery gates, and merged as `f7d961c`; it is eligible for normal completed-
 plan retention handling.
 
-## 2026-08-17 Connected-Wire editing stabilization closure
+## 2026-08-17 Editor interaction controller migration
 
-`2026-08-17-connected-wire-move-delete` is completed with resolved experience.
-Connected Route drag previews, local endpoint stretch, and branch-isolated
-visual deletion have focused unit and browser regression evidence; the target
-is committed as `4c11e7a` and awaits remote required checks.
+`2026-08-17-editor-interaction-controller-migration` is completed on
+`codex/app-transaction-module-layers`. Its five flat Hook extractions passed
+the branch validation and ownership audit; it is eligible for normal completed
+plan retention handling.
 
-## 2026-08-17 Narrow Library browser-test stabilization closure
+## 2026-08-17 Manual hierarchical Cell editing closure
 
-`2026-08-17-stabilize-narrow-library-e2e` is completed with resolved
-experience. Its layout poll passed three repeated focused runs and the complete
-local delivery gate, and is ready for its separate test-only commit.
+`2026-08-17-manual-hierarchy-from-rectangle` is completed on main. Its
+rectangle-to-Cell conversion and navigation behavior is retained during the
+interaction-Hook integration target.
+
+## 2026-08-17 Connected-Wire and Library stabilization closure
+
+The connected Route edit stabilization and narrow Library browser timing
+repairs are completed mainline work and remain part of this merge baseline.
+
+## 2026-08-17 PR 117 CI repair
+
+`2026-08-17-fix-pr117-ci` is locally validated and remains active on
+`codex/app-transaction-module-layers`. It restores the merged connected-route
+drag projection and refreshes the Linux MCP integrity pin; the repair is
+awaiting its remote required-check result before PR #117 can merge.
 
 ## Legacy Metadata Sweep
 

@@ -20,7 +20,6 @@ import {
   proposePowerRailTranslation,
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
-  proposeVisualRouteDeletion,
   type EditTransactionResult,
   type SchematicEdit,
   type WireSource,
@@ -46,7 +45,6 @@ import {
   resolveDraftingObjectGeometry,
   resolveElectricalContactTargets,
   displayableInstanceValue,
-  type InstanceValueSource,
   resolveNetLabelBinding,
   resolveMosBulkConnection,
   resolveSchematicStyleProfile,
@@ -88,12 +86,7 @@ import type { SpiceDiagnostic } from "@icm/spice";
 import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
 import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
-import {
-  clipboardPlacementAnchor,
-  clipboardPreviewDocument,
-  copySelection,
-  proposePaste,
-} from "../features/clipboard/clipboard";
+import { clipboardPreviewDocument } from "../features/clipboard/clipboard";
 import type { SchematicClipboard } from "../features/clipboard/clipboard";
 import { startCanvasDragSession } from "../canvas/canvas-drag-session";
 import {
@@ -109,11 +102,20 @@ import {
   resolveCanvasHitAtPoint,
 } from "../canvas/canvas-hit-resolver";
 import {
+  type RouteStretchPreview,
+  useWireInteraction,
+} from "../features/wiring/use-wire-interaction";
+import {
   centerOfBounds,
   clamp,
   closestPointOnSegment,
   normalizedBearing,
   normalizedRect,
+  pointInRect,
+  polylineBounds,
+  rectangleBoundaryIntersectsRect,
+  rectsIntersect,
+  segmentIntersectsRect,
   serializePolylinePoints,
 } from "../canvas/canvas-geometry";
 import { CanvasTextEditorOverlay } from "../features/text-editing/canvas-text-editor-overlay";
@@ -122,6 +124,7 @@ import {
   InsertComponentDialog,
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
+import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
@@ -130,10 +133,19 @@ import {
   proposePlacementContact,
   proposedStandalonePowerConnection,
 } from "../features/component-insert/placement-connectivity";
+import { componentParameters } from "../features/component-insert/component-parameters";
 import {
-  componentParameters,
-  effectiveComponentParameterValue,
-} from "../features/component-insert/component-parameters";
+  endpointTestId,
+  instanceLabelAnnotationFor,
+  maxRoutingCounter,
+  previewInstanceValueSource,
+} from "./editor-document-helpers";
+import {
+  compactLayoutMatches,
+  dismissOpenCommandMenus,
+  isTypingTarget,
+  RenderCrashProbe,
+} from "./editor-runtime-helpers";
 import {
   initialInstanceNetlist,
   netlistReferenceMatchesPlacement,
@@ -169,6 +181,11 @@ import type {
 } from "../features/drafting/drafting-manipulation";
 import { DraftingCreatePreview } from "../features/drafting/drafting-create-preview";
 import {
+  draftingPathData,
+  quadraticMidpoint,
+  quadraticTangentAngle,
+} from "../features/drafting/drafting-path";
+import {
   resolveEditorShortcut,
   stepBoundedScale,
 } from "../interaction/editor-shortcuts";
@@ -194,14 +211,7 @@ import type { AgentFileCandidateSummary } from "@icm/agent-adapter";
 import { referencedDocumentId } from "../document/editor-session";
 import { useInteractionState } from "../interaction/interaction-state";
 import type { EditorTool } from "../interaction/interaction-state";
-import {
-  createTextEditingSession,
-  proposeTextEditingCommit,
-  resolveTextEditingTarget,
-  textDeletionEdit,
-  updateTextEditingSession,
-} from "../features/text-editing/text-editing";
-import type { TextEditingSession } from "../features/text-editing/text-editing";
+import { resolveTextEditingTarget } from "../features/text-editing/text-editing";
 import {
   defaultRazaviSymbolVariantId,
   materializeRazaviProjectBulkConnections,
@@ -209,11 +219,6 @@ import {
   razaviManualBulkConnectionEdits,
   razaviMosPresentationEdits,
 } from "../presentation/razavi-presentation";
-import {
-  explicitAnnotationRemovals,
-  proposeConnectedInstanceDeletion,
-  proposeSelectionRouteDeletion,
-} from "../features/selection/delete-selection";
 import { createRoutingDemoProject } from "../demos/routing-demo";
 import { createVisualDemoProject } from "../demos/visual-demo";
 import { useRecoveryCoordinator } from "../document/recovery-coordinator";
@@ -232,6 +237,12 @@ import {
 import type { BrowserRecoveryGeneration } from "../document/browser-recovery-contract";
 import { projectFileBaseName } from "../document/project-file-service";
 import { useSelectionController } from "../features/selection/selection-controller";
+import { usePropertiesEditor } from "../features/properties/use-properties-editor";
+import { useEditorPanels } from "../features/editor-shell/use-editor-panels";
+import {
+  type InstanceMovePreview,
+  useSelectionInteraction,
+} from "../features/selection/use-selection-interaction";
 import {
   NetTraceSection,
   ProjectDiagnosticsSection,
@@ -272,7 +283,6 @@ import type { ScreenFlip } from "../interaction/shortcut-orientation";
 import {
   buildDraftingAnchors,
   buildInstanceAnchors,
-  buildRectangleEdgeSnapAnchors,
   buildSceneSnapTargets,
   endpointSnapAnchor,
 } from "../snap/candidates";
@@ -293,25 +303,8 @@ const COMPACT_LAYOUT_MEDIA_QUERY = "(max-width: 860px)";
 const DRAG_START_DISTANCE_PX = 4;
 const SNAP_CAPTURE_RADIUS_PX = 7;
 
-interface DragPreview {
-  instanceIds: string[];
-  primaryInstanceId: string;
-  originalPositions: Record<string, Point>;
-  pointerStart: DerivedPoint;
-  movePlan: SelectionMovePlan;
-}
+type DragPreview = InstanceMovePreview;
 
-/** A click-to-place Move command snapshot; never persisted. */
-interface CommandMoveSession {
-  documentId: string;
-  revision: number;
-  movePlan: SelectionMovePlan;
-  instancePreview: DragPreview | null;
-  pointerOrigin: Point;
-  visual: ReturnType<typeof startCanvasDragVisual> | null;
-  lastSnap?: SnapResult;
-  lastDelta: Point;
-}
 interface BoxPreview {
   start: DerivedPoint;
   end: DerivedPoint;
@@ -327,14 +320,6 @@ interface PanPreview {
   clientStart: Point;
   viewBoxStart: GridRect;
   pointerId: number;
-}
-
-interface RouteStretchPreview {
-  routeId: string;
-  segmentIndex: number;
-  intent: Exclude<SchematicMoveIntent, "move-selection">;
-  start: DerivedPoint;
-  point: DerivedPoint;
 }
 
 interface AnnotationDragPreview {
@@ -372,221 +357,6 @@ export interface AppProps {
   publicAgentUiEnabled?: boolean;
 }
 
-function dismissOpenCommandMenus(): boolean {
-  const openMenus = Array.from(
-    globalThis.document.querySelectorAll<HTMLDetailsElement>(
-      ".command-menu[open]",
-    ),
-  );
-  for (const menu of openMenus) menu.open = false;
-  return openMenus.length > 0;
-}
-
-function endpointTestId(endpoint: RouteEndpoint): string {
-  switch (endpoint.kind) {
-    case "terminal":
-      return `terminal-${endpoint.instanceId}-${endpoint.pinName}`;
-    case "junction":
-      return `junction-${endpoint.junctionId}`;
-  }
-}
-
-function draftingPathData(
-  points: readonly Point[],
-  curveControls: readonly (Point | null)[],
-): string {
-  const start = points[0]!;
-  let data = `M ${start.x} ${start.y}`;
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const end = points[index + 1]!;
-    const control = curveControls[index];
-    data += control
-      ? ` Q ${control.x} ${control.y} ${end.x} ${end.y}`
-      : ` L ${end.x} ${end.y}`;
-  }
-  return data;
-}
-
-function quadraticMidpoint(
-  from: Point,
-  control: Point | null,
-  to: Point,
-): Point {
-  return control
-    ? {
-        x: (from.x + 2 * control.x + to.x) / 4,
-        y: (from.y + 2 * control.y + to.y) / 4,
-      }
-    : { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
-}
-
-// A quadratic Bézier evaluated at t=0.5 is (P0 + 2C + P1)/4. Inverting it
-// makes the visible midpoint the direct manipulation handle the user drags.
-function quadraticTangentAngle(
-  from: Point,
-  control: Point | null,
-  to: Point,
-): number {
-  if (!control) return 0;
-  const start = { x: control.x - from.x, y: control.y - from.y };
-  const end = { x: to.x - control.x, y: to.y - control.y };
-  const startLength = Math.hypot(start.x, start.y);
-  const endLength = Math.hypot(end.x, end.y);
-  if (startLength < 1e-6 || endLength < 1e-6) return 0;
-  const cosine = Math.max(
-    -1,
-    Math.min(
-      1,
-      (start.x * end.x + start.y * end.y) / (startLength * endLength),
-    ),
-  );
-  return (Math.acos(cosine) * 180) / Math.PI;
-}
-
-function maxRoutingCounter(document: SchematicDocument): number {
-  const ids = [
-    ...document.instances.map((item) => item.id),
-    ...document.nets.map((item) => item.id),
-    ...document.routes.map((item) => item.id),
-    ...document.junctions.map((item) => item.id),
-    ...document.annotations.map((item) => item.id),
-    ...document.layoutGroups.map((item) => item.id),
-    ...document.constraints.map((item) => item.id),
-  ];
-  let maximum = 0;
-  for (const id of ids) {
-    for (const match of id.matchAll(
-      /(?:route-ui|junction-ui|net-ui)-(\d+)/gu,
-    )) {
-      maximum = Math.max(maximum, Number(match[1]));
-    }
-  }
-  return maximum;
-}
-
-function rectsIntersect(left: Rect, right: Rect): boolean {
-  return (
-    left.x <= right.x + right.width &&
-    left.x + left.width >= right.x &&
-    left.y <= right.y + right.height &&
-    left.y + left.height >= right.y
-  );
-}
-
-function pointInRect(point: Point, rect: Rect): boolean {
-  return (
-    point.x >= rect.x &&
-    point.x <= rect.x + rect.width &&
-    point.y >= rect.y &&
-    point.y <= rect.y + rect.height
-  );
-}
-
-function segmentIntersectsRect(from: Point, to: Point, rect: Rect): boolean {
-  if (pointInRect(from, rect) || pointInRect(to, rect)) return true;
-
-  const delta = { x: to.x - from.x, y: to.y - from.y };
-  let entry = 0;
-  let exit = 1;
-  const boundaries: ReadonlyArray<readonly [number, number]> = [
-    [-delta.x, from.x - rect.x],
-    [delta.x, rect.x + rect.width - from.x],
-    [-delta.y, from.y - rect.y],
-    [delta.y, rect.y + rect.height - from.y],
-  ];
-
-  for (const [direction, distance] of boundaries) {
-    if (direction === 0) {
-      if (distance < 0) return false;
-      continue;
-    }
-    const ratio = distance / direction;
-    if (direction < 0) entry = Math.max(entry, ratio);
-    else exit = Math.min(exit, ratio);
-    if (entry > exit) return false;
-  }
-  return true;
-}
-
-function rectangleBoundaryIntersectsRect(
-  corners: readonly Point[],
-  rect: Rect,
-): boolean {
-  return corners.some((corner, index) =>
-    segmentIntersectsRect(corner, corners[(index + 1) % corners.length]!, rect),
-  );
-}
-
-function polylineBounds(points: readonly Point[]): Rect {
-  const xs = points.map((point) => point.x);
-  const ys = points.map((point) => point.y);
-  return {
-    x: Math.min(...xs),
-    y: Math.min(...ys),
-    width: Math.max(1, Math.max(...xs) - Math.min(...xs)),
-    height: Math.max(1, Math.max(...ys) - Math.min(...ys)),
-  };
-}
-
-function isTypingTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    Boolean(target.closest("input, textarea, select, [contenteditable='true']"))
-  );
-}
-
-/**
- * Project the instance's not-yet-committed parameter draft into the value
- * formatter's structural input, using the same merge rule as
- * `instancePropertyEdits`: typed values replace committed ones, blank values
- * remove the parameter.
- */
-function previewInstanceValueSource(
-  instance: SchematicDocument["instances"][number],
-  draft: { instanceId: string | null; parameters: Record<string, string> },
-): InstanceValueSource {
-  if (draft.instanceId !== instance.id) return instance;
-  const parameters = { ...(instance.netlist?.parameters ?? {}) };
-  for (const parameter of componentParameters(instance.symbolId)) {
-    const value = (draft.parameters[parameter.key] ?? "").trim();
-    if (value === "") delete parameters[parameter.key];
-    else parameters[parameter.key] = value;
-  }
-  return {
-    symbolId: instance.symbolId,
-    netlist: Object.keys(parameters).length > 0 ? { parameters } : undefined,
-    properties: instance.properties,
-  };
-}
-
-function instanceLabelAnnotationFor(
-  document: SchematicDocument,
-  instanceId: string,
-): Annotation | undefined {
-  return document.annotations.find(
-    (annotation) =>
-      annotation.kind === "instance-label" &&
-      annotation.anchor.kind === "object" &&
-      annotation.anchor.objectId === instanceId,
-  );
-}
-
-/**
- * DEV-only probe that throws during render so browser tests can exercise the
- * root error boundary. Never mounted in production builds.
- */
-function RenderCrashProbe(): never {
-  throw new Error("render crashed (test hook)");
-}
-
-function compactLayoutMatches(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia(COMPACT_LAYOUT_MEDIA_QUERY).matches
-  );
-}
-
 export function App({
   project: initialProject,
   visitStats,
@@ -599,36 +369,48 @@ export function App({
       ).project,
   );
   const [status, setStatus] = useState("Ready");
-  const [insertDialogOpen, setInsertDialogOpen] = useState(false);
-  const [agentPanelOpen, setAgentPanelOpen] = useState(false);
-  const [agentDetailsOpen, setAgentDetailsOpen] = useState(false);
-  const [agentStatusDismissed, setAgentStatusDismissed] = useState(false);
-  const [libraryPanelOpen, setLibraryPanelOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      return window.localStorage.getItem(LIBRARY_PANEL_STORAGE_KEY) !== "false";
-    } catch {
-      return true;
-    }
-  });
-  const [compactLayout, setCompactLayout] = useState(compactLayoutMatches);
-  const [compactLibraryPanelOpen, setCompactLibraryPanelOpen] = useState(false);
-  const [leftPanelMode, setLeftPanelMode] = useState<"library" | "examples">(
-    "library",
-  );
-  const [selectionOpen, setSelectionOpen] = useState(false);
-  const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = JSON.parse(
-        window.localStorage.getItem(RECENT_COMPONENTS_STORAGE_KEY) ?? "[]",
-      );
-      return Array.isArray(stored)
-        ? stored.filter((item): item is string => typeof item === "string")
-        : [];
-    } catch {
-      return [];
-    }
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const helpCloseRef = useRef<HTMLButtonElement>(null);
+  const aboutButtonRef = useRef<HTMLButtonElement>(null);
+  const aboutCloseRef = useRef<HTMLButtonElement>(null);
+  const {
+    libraryPanelOpen,
+    setLibraryPanelOpen,
+    compactLayout,
+    setCompactLayout,
+    compactLibraryPanelOpen,
+    setCompactLibraryPanelOpen,
+    leftPanelMode,
+    setLeftPanelMode,
+    selectionOpen,
+    setSelectionOpen,
+    helpOpen,
+    setHelpOpen,
+    aboutOpen,
+    setAboutOpen,
+    searchOpen,
+    setSearchOpen,
+    searchQuery,
+    setSearchQuery,
+    agentPanelOpen,
+    setAgentPanelOpen,
+    agentDetailsOpen,
+    setAgentDetailsOpen,
+    agentStatusDismissed,
+    setAgentStatusDismissed,
+    closeHelp,
+    closeAbout,
+    closeSearch,
+    showLeftPanel,
+    toggleLibraryPanel,
+  } = useEditorPanels({
+    initialCompact: compactLayoutMatches(COMPACT_LAYOUT_MEDIA_QUERY),
+    compactMediaQuery: COMPACT_LAYOUT_MEDIA_QUERY,
+    libraryStorageKey: LIBRARY_PANEL_STORAGE_KEY,
+    helpButtonRef,
+    helpCloseRef,
+    aboutButtonRef,
+    aboutCloseRef,
   });
   const [restoreAfterRefresh] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -644,26 +426,6 @@ export function App({
     ? compactLibraryPanelOpen
     : libraryPanelOpen;
 
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-    const mediaQuery = window.matchMedia(COMPACT_LAYOUT_MEDIA_QUERY);
-    const updateCompactLayout = (): void => {
-      setCompactLayout(mediaQuery.matches);
-      if (mediaQuery.matches) setCompactLibraryPanelOpen(false);
-    };
-    updateCompactLayout();
-    mediaQuery.addEventListener("change", updateCompactLayout);
-    return () => mediaQuery.removeEventListener("change", updateCompactLayout);
-  }, []);
-
-  useEffect(() => {
-    if (compactLayout && selectionOpen) setCompactLibraryPanelOpen(false);
-  }, [compactLayout, selectionOpen]);
   const refreshRestoreAttemptedRef = useRef(false);
   // Formal-file lifecycle of the current working copy, orthogonal to recovery
   // state: a commit makes it dirty again, only a confirmed File System
@@ -851,29 +613,6 @@ export function App({
   const [bulkDrawInstanceId, setBulkDrawInstanceId] = useState<string | null>(
     null,
   );
-  const [netLabelDraft, setNetLabelDraft] = useState("");
-  const netLabelDraftRouteRef = useRef<string | null>(null);
-  const [netLabelEditorOpen, setNetLabelEditorOpen] = useState(false);
-  const [instancePropertyDraft, setInstancePropertyDraft] = useState<{
-    instanceId: string | null;
-    parameters: Record<string, string>;
-    x: string;
-    y: string;
-    rotation: "0" | "90" | "180" | "270";
-  }>({
-    instanceId: null,
-    parameters: {},
-    x: "",
-    y: "",
-    rotation: "0",
-  });
-  const [textEditing, setTextEditing] = useState<TextEditingSession | null>(
-    null,
-  );
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [highlightedNetOrigin, setHighlightedNetOrigin] = useState<{
     documentId: string;
     netId: string;
@@ -881,18 +620,12 @@ export function App({
   } | null>(null);
   const routeCounter = useRef(0);
   const canvasDragSessionRef = useRef<CanvasDragSession | null>(null);
-  const commandMoveSessionRef = useRef<CommandMoveSession | null>(null);
-  const copyCounter = useRef(0);
   const suppressInstanceClick = useRef(false);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const selectionShelfRef = useRef<HTMLButtonElement>(null);
   const instanceValueInputRef = useRef<HTMLInputElement>(null);
   const netLabelPropertyInputRef = useRef<HTMLInputElement>(null);
   const netLabelEditorInputRef = useRef<HTMLInputElement>(null);
-  const helpButtonRef = useRef<HTMLButtonElement>(null);
-  const helpCloseRef = useRef<HTMLButtonElement>(null);
-  const aboutButtonRef = useRef<HTMLButtonElement>(null);
-  const aboutCloseRef = useRef<HTMLButtonElement>(null);
   const documentViewBoxes = useRef(new Map<string, GridRect>());
   const renderedDocument = useMemo(() => {
     if (!draftingHandlePreview || !document.drafting) return document;
@@ -1066,6 +799,51 @@ export function App({
     (selectedInstance && referencedDocumentId(project, selectedInstance)) ||
     selectedDrafting?.kind === "rectangle",
   );
+  const {
+    applyInstanceProperties,
+    applyNetLabel,
+    beginAnnotationTextEditing,
+    beginDraftingTextEditing,
+    beginNetLabelEditing,
+    commitInstancePropertyDraft,
+    commitNetLabelEditing,
+    commitPendingNetLabelDraft,
+    commitTextEditing,
+    clearTextEditing,
+    deleteSelectedRouteNetLabel,
+    deleteTextEditing,
+    discardInstancePropertyDraft,
+    instancePropertyDraft,
+    netLabelDraft,
+    netLabelEditorOpen,
+    setInstancePropertyDraft,
+    setNetLabelDraft,
+    setNetLabelEditorOpen,
+    setReferenceLabelsVisible,
+    setValueLabelsVisible,
+    showSelectedInstanceValue,
+    textEditing,
+    updateTextEditing,
+  } = usePropertiesEditor({
+    document,
+    selectedRoute,
+    selectedRouteNetLabel: selectedRouteNetLabel ?? null,
+    selectedRouteNetLabels,
+    selectedInstance,
+    wireSourceActive: wireSource !== null,
+    netLabelEditorInputRef,
+    transact,
+    setStatus,
+    replaceSelectionKind: (kind, ids) => replaceSelectionKind(kind, ids),
+    selectOnly: (kind, ids) => selectOnly(kind, ids),
+    selectDraftingObject,
+    clearSelectionKinds,
+    netLabelForRoute,
+    netLabelEditsForRoute,
+    instancePropertyEdits,
+    referenceLabelVisibilityEdits,
+    valueVisibilityEdits,
+  });
   const hasRotatableSelection =
     selectedIds.some((id) =>
       document.instances.some(
@@ -1325,6 +1103,153 @@ export function App({
       ].flatMap((net) => net.routedComponents),
     [document.id, projectConnectivityIndex],
   );
+  const {
+    beginRouteStretch,
+    drawSelectedMosBulk,
+    deleteSelectedRouteConnection,
+    fixWirePoint,
+    finishWireAtPoint,
+    handleFlightline,
+    handleWireRoutePointerDown,
+    handleWireEndpoint,
+    commitWire,
+    selectRoute,
+  } = useWireInteraction({
+    document,
+    resolver,
+    selectedInstance,
+    selectedRouteId,
+    visibleEndpoints,
+    routeGeometryRecords,
+    wireSource,
+    wireSourceRevision,
+    wireWaypoints,
+    nextRoutingSuffix,
+    transact,
+    setStatus,
+    setTool,
+    setWireSource,
+    setWirePreviewPoint,
+    setWireWaypoints,
+    completeWire,
+    clearTransientCanvasState,
+    cancelInteraction,
+    setBulkDrawInstanceId,
+    replaceRouteSelection: (routeIds) =>
+      replaceSelectionKind("route", routeIds),
+    selectOnly,
+    setSelectedRouteSegmentIndex,
+    setSelectedEndpoint,
+    canvasDragSessionRef,
+    setRouteStretchPreview,
+    pointFromClient,
+    logicalRadiusForPixels,
+    contactComponents,
+    createRouteAnchor: routeAnchor,
+  });
+  const {
+    beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
+    cancelComponentInsert: cancelComponentInsertFromHook,
+    commitPendingPlacementAt: commitPendingPlacementAtFromHook,
+    closeInsertDialog: closeInsertDialogFromHook,
+    insertDialogOpen,
+    openInsertComponentDialog: openInsertComponentDialogFromHook,
+    recentSymbolIds,
+    rotatePendingComponent: rotatePendingComponentFromHook,
+    mirrorPendingComponent: mirrorPendingComponentFromHook,
+  } = useComponentPlacement({
+    recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
+    document,
+    resolver,
+    styleProfile,
+    visibleEndpoints,
+    transact,
+    selectOnly,
+    cancelAllTransientInteraction,
+    cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
+    clearTransientCanvasState,
+    paintSnapGuides,
+    beginVddRailInteraction,
+    beginComponentPlacement: (request) => {
+      if (request.kind !== "vdd-rail") beginComponentPlacement(request);
+    },
+    rotateComponentPlacement,
+    mirrorComponentPlacement,
+    componentPlacementRotation,
+    componentPlacementMirror,
+    completeVddRailPlacement,
+    setComponentPreviewPoint,
+    setStatus,
+    vddRailMode,
+    vddRailStart,
+    pendingSymbolId,
+    pendingComponentPlacement,
+    setVddRailStart,
+    setVddRailPreviewPoint,
+  });
+  const {
+    beginCopyPlacement: beginCopyPlacementFromSelection,
+    beginKeyboardSelectionMove: beginKeyboardSelectionMoveFromSelection,
+    beginMove: beginMoveFromSelection,
+    beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
+    commitCopyPlacement: commitCopyPlacementFromSelection,
+    commitCommandMove: commitCommandMoveFromSelection,
+    clearCommandMoveSession: clearCommandMoveSessionFromSelection,
+    deleteSelectedJunction: deleteSelectedJunctionFromSelection,
+    deleteSelection: deleteSelectionFromSelection,
+    selectInstance: selectInstanceFromSelection,
+    toggleSelectedNoConnect: toggleSelectedNoConnectFromSelection,
+    updateCommandMovePreview: updateCommandMovePreviewFromSelection,
+  } = useSelectionInteraction({
+    document,
+    resolver,
+    visualSelection,
+    selectedIds,
+    selectedRouteId,
+    selectedAnnotationId,
+    selectedDraftingId,
+    selectedEndpoint,
+    selectedNoConnect,
+    selectedEndpointNetId,
+    copyPlacement,
+    getInteractionKind: () => getCurrentInteractionState().kind,
+    transact,
+    setStatus,
+    setSelectedEndpoint,
+    resetSelection,
+    replaceSelectionKind,
+    selectOnly,
+    deleteSelectedRouteConnection,
+    deleteSelectedAnnotation,
+    clearTransientCanvasState,
+    cancelAllTransientInteraction,
+    cancelInteraction,
+    cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
+    paintSnapGuides,
+    beginCopyPlacementInteraction,
+    setCopyPreviewPoint,
+    applyOrientationOperations,
+    nextUniqueSuffix: () => {
+      uniqueSuffixCounter.current += 1;
+      return uniqueSuffixCounter.current;
+    },
+    nextNoConnectId,
+    endpointTestId,
+    tool,
+    canvasDragSessionRef,
+    pointFromClient,
+    completeVisualSelectionMove,
+    snapCoordinate,
+    updateInstanceSelection,
+    suppressInstanceClickRef: suppressInstanceClick,
+    resolveInstanceMove: instanceMoveAt,
+    completeInstanceMove,
+    logicalRadiusForPixels,
+    snapGuides: paintSnapGuides,
+    beginSelectionMoveInteraction,
+    hasSelectedRoute: Boolean(selectedRoute),
+    visualMoveOrigin: commandMoveVisualOrigin,
+  });
 
   const textEditingTarget = textEditing
     ? resolveTextEditingTarget(document, textEditing)
@@ -1449,64 +1374,6 @@ export function App({
     if (pruned !== visualSelection) replaceSelection(pruned);
   }, [document, visualSelection]);
 
-  useEffect(() => {
-    // Leaving a route (selection cleared or moved on) commits a pending Net
-    // label draft instead of silently discarding it.
-    commitPendingNetLabelDraft();
-    if (!selectedRoute) {
-      setNetLabelDraft("");
-      setNetLabelEditorOpen(false);
-      return;
-    }
-    setNetLabelDraft(
-      selectedRouteNetLabel
-        ? flattenRichText(selectedRouteNetLabel.content)
-        : "",
-    );
-    netLabelDraftRouteRef.current = selectedRoute.id;
-  }, [selectedRoute, selectedRouteNetLabel]);
-
-  const lastSelectedInstanceIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    // Leaving a component (selection cleared or moved to another instance)
-    // commits pending property edits instead of silently discarding them.
-    // Keying on the id, not the record, keeps unrelated document updates
-    // from replaying a stale draft.
-    const previousInstanceId = lastSelectedInstanceIdRef.current;
-    lastSelectedInstanceIdRef.current = selectedInstance?.id ?? null;
-    if ((selectedInstance?.id ?? null) !== previousInstanceId) {
-      const pending = instancePropertyEdits(instancePropertyDraft);
-      if (pending.edits.length > 0) transact(pending.edits);
-    }
-    if (!selectedInstance) {
-      setInstancePropertyDraft({
-        instanceId: null,
-        parameters: {},
-        x: "",
-        y: "",
-        rotation: "0",
-      });
-      return;
-    }
-    setInstancePropertyDraft({
-      instanceId: selectedInstance.id,
-      parameters: Object.fromEntries(
-        componentParameters(selectedInstance.symbolId).map((parameter) => [
-          parameter.key,
-          effectiveComponentParameterValue(selectedInstance, parameter),
-        ]),
-      ),
-      x: selectedInstance.placement
-        ? String(selectedInstance.placement.position.x)
-        : "",
-      y: selectedInstance.placement
-        ? String(selectedInstance.placement.position.y)
-        : "",
-      rotation: String(selectedInstance.placement?.rotation ?? 0) as
-        "0" | "90" | "180" | "270",
-    });
-  }, [selectedInstance]);
-
   function openProperties(): void {
     setImportReviewOpen(false);
     setSelectionOpen(true);
@@ -1528,45 +1395,6 @@ export function App({
     });
   }
 
-  function toggleLibraryPanel(): void {
-    if (leftPanelMode === "examples") {
-      showLibraryPanel();
-      return;
-    }
-    if (compactLayout) {
-      setCompactLibraryPanelOpen((current) => {
-        const next = !current;
-        if (next) setSelectionOpen(false);
-        return next;
-      });
-      return;
-    }
-    setLibraryPanelOpen((current) => {
-      const next = !current;
-      try {
-        window.localStorage.setItem(LIBRARY_PANEL_STORAGE_KEY, String(next));
-      } catch {
-        // The Library remains usable when storage is unavailable.
-      }
-      return next;
-    });
-  }
-
-  function showLeftPanel(mode: "library" | "examples"): void {
-    setLeftPanelMode(mode);
-    if (compactLayout) {
-      setCompactLibraryPanelOpen(true);
-      setSelectionOpen(false);
-      return;
-    }
-    setLibraryPanelOpen(true);
-    try {
-      window.localStorage.setItem(LIBRARY_PANEL_STORAGE_KEY, "true");
-    } catch {
-      // The left panel remains usable when storage is unavailable.
-    }
-  }
-
   function showLibraryPanel(): void {
     showLeftPanel("library");
   }
@@ -1579,12 +1407,13 @@ export function App({
     cancelAllTransientInteraction();
     resetSelection();
     setSelectedRouteSegmentIndex(null);
-    setTextEditing(null);
+    clearTextEditing();
     setSelectedEndpoint(null);
   }
 
   function cancelAllTransientInteraction(): void {
-    clearCommandMoveSession();
+    closeInsertDialogFromHook();
+    clearCommandMoveSessionFromSelection();
     canvasDragSessionRef.current?.cancel();
     clearTransientCanvasState();
     paintSnapGuides([]);
@@ -1983,7 +1812,6 @@ export function App({
       );
       return;
     }
-
     try {
       const converted = convertRectangleToHierarchy(
         project,
@@ -2270,12 +2098,6 @@ export function App({
     );
   }
 
-  function openInsertComponentDialog(): void {
-    cancelAllTransientInteraction();
-    setInsertDialogOpen(true);
-    setStatus("Choose a component to place");
-  }
-
   function openLibraryExample(example: LibraryProjectExample): void {
     void guardDirtyReplacement(`Open ${example.name} example`, () => {
       const nextProject = createLibraryExampleProject(example.id);
@@ -2288,57 +2110,6 @@ export function App({
       setImportReviewOpen(false);
       setStatus(`Opened example: ${example.name}`);
     });
-  }
-
-  function beginInsertedComponentPlacement(
-    request: ComponentInsertRequest,
-  ): void {
-    const { symbolId, symbolName } = request;
-    const nextRecent = [
-      symbolId,
-      ...recentSymbolIds.filter((candidate) => candidate !== symbolId),
-    ].slice(0, 8);
-    setRecentSymbolIds(nextRecent);
-    try {
-      window.localStorage.setItem(
-        RECENT_COMPONENTS_STORAGE_KEY,
-        JSON.stringify(nextRecent),
-      );
-    } catch {
-      // Browsers may deny storage in private or embedded contexts. Recency is
-      // convenience-only and must never block component placement.
-    }
-    setInsertDialogOpen(false);
-    canvasDragSessionRef.current?.cancel();
-    clearTransientCanvasState();
-    paintSnapGuides([]);
-    if (request.kind === "vdd-rail") {
-      beginVddRailInteraction();
-      setStatus("Place VDD Rail: click the first end · Esc cancels");
-      return;
-    }
-    beginComponentPlacement(request);
-    setStatus(
-      `Place ${symbolName} on the canvas · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
-    );
-  }
-
-  function cancelComponentInsert(): void {
-    setInsertDialogOpen(false);
-    cancelAllTransientInteraction();
-    setStatus("Component insertion cancelled");
-  }
-
-  function rotatePendingComponent(delta: 90 | -90): void {
-    rotateComponentPlacement(delta);
-    setStatus(`Component rotation ${delta > 0 ? "+90°" : "−90°"}`);
-  }
-
-  function mirrorPendingComponent(direction: ScreenFlip): void {
-    mirrorComponentPlacement(direction);
-    setStatus(
-      `Place component mirrored ${direction === "left-right" ? "left/right" : "top/bottom"} · R rotates · Esc cancels`,
-    );
   }
 
   function rotatePendingCopy(delta: 90 | -90): void {
@@ -2359,220 +2130,6 @@ export function App({
     const demo = createRoutingDemoProject();
     replaceActiveProject(demo);
     setStatus("Loaded Phase 3 routing demo");
-  }
-
-  function handleWireEndpoint(
-    event: ReactPointerEvent<SVGCircleElement>,
-    candidate: WireSource,
-  ): void {
-    event.stopPropagation();
-    if (event.altKey) {
-      setStatus("Snap suppressed while Alt is held");
-      return;
-    }
-    setTool("wire");
-    if (!wireSource) {
-      setWireSource(candidate, document.revision);
-      setWirePreviewPoint(candidate.point);
-      setWireWaypoints([]);
-      setStatus(`Wire source: ${endpointTestId(candidate.endpoint)}`);
-      return;
-    }
-    if (endpointKey(wireSource.endpoint) === endpointKey(candidate.endpoint)) {
-      setStatus("Choose a different endpoint");
-      return;
-    }
-    commitWire(candidate);
-  }
-
-  function handleFlightline(
-    event: ReactMouseEvent<SVGLineElement>,
-    flightline: Flightline,
-  ): void {
-    event.stopPropagation();
-    const from: WireSource = {
-      endpoint: flightline.from,
-      netId: flightline.netId,
-      point: flightline.fromPoint,
-      preludeEdits: [],
-      ...(isMosBulkTerminal(document, flightline.from)
-        ? { routePresentation: "bulk-dashed" }
-        : {}),
-    };
-    const to: WireSource = {
-      endpoint: flightline.to,
-      netId: flightline.netId,
-      point: flightline.toPoint,
-      preludeEdits: [],
-      ...(isMosBulkTerminal(document, flightline.to)
-        ? { routePresentation: "bulk-dashed" }
-        : {}),
-    };
-    setTool("wire");
-    if (wireSource) {
-      const candidate =
-        endpointKey(wireSource.endpoint) === endpointKey(from.endpoint)
-          ? to
-          : from;
-      if (
-        endpointKey(wireSource.endpoint) !== endpointKey(candidate.endpoint)
-      ) {
-        commitWire(candidate);
-      }
-      return;
-    }
-    setWireSource(from, document.revision);
-    setWirePreviewPoint(to.point);
-    setWireWaypoints([]);
-    setStatus(`Wire source: flightline on ${flightline.netId}`);
-  }
-
-  function commitWire(candidate: WireSource): void {
-    if (!wireSource) return;
-    if (wireSourceRevision !== document.revision) {
-      clearTransientCanvasState();
-      cancelInteraction();
-      setBulkDrawInstanceId(null);
-      setStatus("Wire cancelled because its source revision is stale");
-      return;
-    }
-    const suffix = nextRoutingSuffix();
-    const proposal = proposeWireCommitThroughContacts(
-      wireSource,
-      candidate,
-      wireWaypoints,
-      visibleEndpoints.filter(
-        (endpoint) => endpoint.endpoint.kind === "terminal",
-      ),
-      suffix,
-    );
-    const bulkEndpoint = [wireSource.endpoint, candidate.endpoint].find(
-      (endpoint) => endpoint.kind === "terminal" && endpoint.pinName === "B",
-    );
-    const defaultBoundInstance =
-      bulkEndpoint?.kind === "terminal"
-        ? document.instances.find(
-            (instance) => instance.id === bulkEndpoint.instanceId,
-          )
-        : undefined;
-    const edits = defaultBoundInstance?.mosBulkBinding
-      ? [
-          {
-            kind: "clear_mos_bulk_default" as const,
-            instanceId: defaultBoundInstance.id,
-          },
-          ...proposal.edits.map((edit) => {
-            if (edit.kind !== "connect_endpoints") return edit;
-            const target =
-              edit.from.kind === "terminal" && edit.from.pinName === "B"
-                ? edit.to
-                : edit.from;
-            return {
-              ...edit,
-              from: target,
-              to: {
-                kind: "terminal" as const,
-                instanceId: defaultBoundInstance.id,
-                pinName: "B",
-              },
-            };
-          }),
-        ]
-      : proposal.edits;
-    const result = transact(edits, { completesWireSession: true });
-    if (result.ok) {
-      completeWire();
-      setBulkDrawInstanceId(null);
-      setStatus(
-        `Committed route at revision ${result.revision} · Wire remains active · Esc exits`,
-      );
-    }
-  }
-
-  function drawSelectedMosBulk(): void {
-    if (!selectedInstance?.placement) return;
-    const resolved = resolver.resolve(
-      selectedInstance.symbolId,
-      selectedInstance.symbolVariantId,
-    );
-    const anchor = resolved?.variant?.auxiliaryPins?.find(
-      (pin) => pin.name === "B",
-    );
-    if (!anchor) {
-      setStatus("Selected instance has no Razavi bulk anchor");
-      return;
-    }
-    const endpoint: RouteEndpoint = {
-      kind: "terminal",
-      instanceId: selectedInstance.id,
-      pinName: "B",
-    };
-    const source: WireSource = {
-      endpoint,
-      // A materialized default is cleared in the same commit before the new
-      // explicit route is connected. Treat it as unowned while planning so
-      // the planner cannot merge VSS/VDD with the chosen body-bias Net.
-      netId: selectedInstance.mosBulkBinding
-        ? null
-        : endpointNetId(document, endpoint),
-      point: transformPoint(
-        anchor.at,
-        selectedInstance.placement.position,
-        selectedInstance.placement,
-      ),
-      preludeEdits: document.noConnects.flatMap((noConnect) =>
-        noConnect.endpoint.kind === "terminal" &&
-        noConnect.endpoint.instanceId === selectedInstance.id &&
-        noConnect.endpoint.pinName === "B"
-          ? [{ kind: "remove_no_connect" as const, noConnectId: noConnect.id }]
-          : [],
-      ),
-      routePresentation: "bulk-dashed",
-    };
-    setBulkDrawInstanceId(selectedInstance.id);
-    setTool("wire");
-    setWireSource(source, document.revision);
-    setWirePreviewPoint(source.point);
-    setWireWaypoints([]);
-    setStatus(`Drawing ${selectedInstance.id}.B bulk connection`);
-  }
-
-  function freeWireAnchor(
-    point: Point,
-    netId: string,
-    createNet: boolean,
-  ): WireSource {
-    return createFreeWireAnchor(point, netId, createNet, nextRoutingSuffix());
-  }
-
-  function fixWirePoint(point: Point): void {
-    if (!wireSource) {
-      const netId = `net-ui-${nextRoutingSuffix()}`;
-      const source = freeWireAnchor(point, netId, true);
-      setWireSource(source, document.revision);
-      setWirePreviewPoint(point);
-      setWireWaypoints([]);
-      setStatus("Wire source: free grid point");
-      return;
-    }
-    const fixed = buildManualWirePath(wireSource, { point }, wireWaypoints);
-    // Keep the clicked point as an in-progress waypoint. The path builder
-    // treats it as a fixed bend on the next click while retaining the source
-    // terminal's escape segment.
-    setWireWaypoints(fixed.points.slice(1));
-    setWirePreviewPoint(point);
-    setStatus(
-      `Wire bend ${fixed.points.length - 1}; double-click or Enter to finish`,
-    );
-  }
-
-  function finishWireAtPoint(point: Point): void {
-    if (!wireSource) {
-      fixWirePoint(point);
-      return;
-    }
-    const netId = wireSource.netId ?? `net-ui-${nextRoutingSuffix()}`;
-    commitWire(freeWireAnchor(point, netId, wireSource.netId === null));
   }
 
   function routeAnchor(
@@ -2608,7 +2165,12 @@ export function App({
       selectedIds.length > 0
     ) {
       const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
+      if (primaryInstanceId)
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      return;
+    }
+    if (tool !== "pointer") {
+      handleWireRoutePointerDown(event, routeId, hitTarget);
       return;
     }
     event.stopPropagation();
@@ -2620,307 +2182,38 @@ export function App({
       (candidate) => candidate.route.id === routeId,
     );
     if (!routeRecord) return;
-    const routeGeometry = projectConnectivityIndex.documents
-      .get(document.id)
-      ?.routingGeometry.routes.get(routeId);
-    if (!routeGeometry) return;
     const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
     const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
     const tap = resolveRouteTap(
-      routeGeometry,
+      routeRecord.geometry,
       pointer,
       logicalRadiusForPixels(svg, 7),
     );
-    if (tool === "pointer") {
-      const segmentIndex = tap?.address.segmentIndex ?? 0;
-      if (getCurrentInteractionState().kind === "moving-selection") {
-        const movePlan = planSelectionMove(document, visualSelection);
-        if (movePlan.previewObjectIds.length > 0) {
-          beginVisualSelectionMove(event, visualSelection, hitTarget);
-          return;
-        }
-        cancelInteraction();
+    const segmentIndex = tap?.address.segmentIndex ?? 0;
+    if (getCurrentInteractionState().kind === "moving-selection") {
+      const movePlan = planSelectionMove(document, visualSelection);
+      if (movePlan.previewObjectIds.length > 0) {
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
+        return;
       }
-      selectRoute(routeId, segmentIndex);
-      beginRouteStretch(
-        event,
-        routeId,
-        segmentIndex,
-        routeRecord.route.presentation === "power-rail"
-          ? "move-power-rail"
-          : looseRouteAnchorIds(document, routeRecord.route) !== null
-            ? "move-loose-route"
-            : "stretch-segment",
-        hitTarget,
-      );
-      return;
+      cancelInteraction();
     }
-    if (!tap) {
-      setStatus("Wire must start or end inside a route segment");
-      return;
-    }
-    const overlappingTargets = routeGeometryRecords.flatMap((candidate) => {
-      const candidateGeometry = projectConnectivityIndex.documents
-        .get(document.id)
-        ?.routingGeometry.routes.get(candidate.route.id);
-      if (!candidateGeometry) return [];
-      const candidateTap = resolveRouteTap(
-        candidateGeometry,
-        pointer,
-        logicalRadiusForPixels(svg, 7),
-      );
-      return candidateTap
-        ? [
-            {
-              kind: "route" as const,
-              id: `route:${candidate.route.id}:${candidateTap.address.segmentIndex}`,
-              point: candidateTap.point,
-              netId: candidate.route.netId,
-              routeId: candidate.route.id,
-              segmentIndex: candidateTap.address.segmentIndex,
-            },
-          ]
-        : [];
-    });
-    if (
-      resolveElectricalContactTargets(
-        document,
-        resolver,
-        overlappingTargets,
-        contactComponents,
-      ).length > 1
-    ) {
-      setStatus(
-        "Ambiguous intersection: choose one conductor away from the crossing",
-      );
-      return;
-    }
-    const anchor = routeAnchor(routeId, tap.point, tap.address.segmentIndex);
-    if (!wireSource) {
-      setWireSource(anchor, document.revision);
-      setWirePreviewPoint(tap.point);
-      setWireWaypoints([]);
-      setStatus(`Wire source: route ${routeId}`);
-    } else {
-      commitWire(anchor);
-    }
-  }
-
-  function selectRoute(routeId: string, segmentIndex = 0): void {
-    selectOnly("route", [routeId]);
-    setSelectedRouteSegmentIndex(segmentIndex);
-    setSelectedEndpoint(null);
-    setStatus(`Selected route ${routeId}, segment ${segmentIndex + 1}`);
-  }
-
-  function deleteSelectedRouteConnection(): void {
-    if (!selectedRouteId) return;
-    const route = document.routes.find(
-      (candidate) => candidate.id === selectedRouteId,
-    );
-    if (!route) return;
-    const result = transact(
-      proposeVisualRouteDeletion(document, [route.id], []).edits,
-    );
-    if (result.ok) {
-      replaceSelectionKind("route", []);
-      setStatus(`Deleted wire ${route.id}`);
-    }
-  }
-
-  function beginRouteStretch(
-    event: ReactPointerEvent<SVGElement>,
-    routeId: string,
-    segmentIndex: number,
-    intent: RouteStretchPreview["intent"] = "stretch-segment",
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (event.button !== 0) return;
-    event.stopPropagation();
-    canvasDragSessionRef.current?.cancel();
-    const svg = hitTarget.ownerSVGElement!;
-    const start = pointFromClient(event.clientX, event.clientY, svg, false);
-    const record = routeGeometryRecords.find(
-      (candidate) => candidate.route.id === routeId,
-    );
-    if (!record) return;
-    const powerRail =
-      intent === "move-power-rail" ||
-      intent === "resize-power-rail-start" ||
-      intent === "resize-power-rail-end"
-        ? derivePowerRailComponent(document, routeId)
-        : null;
-    const anchorIds =
-      intent === "move-loose-route"
-        ? (looseRouteAnchorIds(document, record.route) ?? [])
-        : (powerRail?.junctionIds ?? []);
-    const translatedRouteIds =
-      intent === "move-power-rail"
-        ? (powerRail?.routeIds ?? [routeId])
-        : [routeId];
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, [
-        ...translatedRouteIds,
-        ...anchorIds,
-      ]));
-    const preview: RouteStretchPreview = {
+    selectRoute(routeId, segmentIndex);
+    beginRouteStretch(
+      event,
       routeId,
       segmentIndex,
-      intent,
-      start,
-      point: start,
-    };
-    setRouteStretchPreview(preview);
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const point = pointFromClient(client.x, client.y, svg, false);
-        if (intent === "move-loose-route" || intent === "move-power-rail") {
-          dragVisual().translate({
-            x: point.x - start.x,
-            y: point.y - start.y,
-          });
-          return;
-        }
-        if (
-          intent === "resize-power-rail-start" ||
-          intent === "resize-power-rail-end"
-        ) {
-          // The persisted proposal resizes the outer rail fragment, which may
-          // differ from the selected fragment after a tap. Avoid previewing a
-          // misleading single-segment drag; the end handle remains the cue.
-          return;
-        }
-        try {
-          const plan = proposeWireSegmentMove(
-            document,
-            resolver,
-            routeId,
-            segmentIndex,
-            point,
-          );
-          const proposal = plan.preview?.routes.find(
-            (candidate) => candidate.routeId === routeId,
-          );
-          if (!proposal) return;
-          dragVisual().setPolyline([
-            record.geometry.centerline[0]!,
-            ...proposal.waypoints,
-            record.geometry.centerline.at(-1)!,
-          ]);
-        } catch {
-          // Keep the last valid preview; commit reports the geometry error.
-        }
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        if (dragged) {
-          completeRouteStretch(
-            preview,
-            pointFromClient(client.x, client.y, svg, false),
-          );
-        }
-        setRouteStretchPreview(null);
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        setRouteStretchPreview(null);
-      },
-    });
-  }
-
-  function completeRouteStretch(
-    preview: RouteStretchPreview,
-    point: DerivedPoint,
-  ): void {
-    const record = routeGeometryRecords.find(
-      (candidate) => candidate.route.id === preview.routeId,
+      routeRecord.route.presentation === "power-rail"
+        ? "move-power-rail"
+        : looseRouteAnchorIds(document, routeRecord.route) !== null
+          ? "move-loose-route"
+          : "stretch-segment",
+      hitTarget,
     );
-    if (!record) return;
-    try {
-      if (preview.intent === "move-loose-route") {
-        const anchorIds = looseRouteAnchorIds(document, record.route);
-        if (!anchorIds) {
-          throw new Error(
-            "Only a route with two loose ends can move as a whole",
-          );
-        }
-        const delta = {
-          x: snapCoordinate(
-            point.x - preview.start.x,
-            document.presentation.grid,
-          ),
-          y: snapCoordinate(
-            point.y - preview.start.y,
-            document.presentation.grid,
-          ),
-        };
-        if (delta.x !== 0 || delta.y !== 0) {
-          const result = transact(
-            proposeLooseRouteTranslation(document, record.route.id, delta)
-              .edits,
-          );
-          if (result.ok) setStatus(`Moved loose route ${record.route.id}`);
-        }
-      } else if (preview.intent === "move-power-rail") {
-        const delta = {
-          x: snapCoordinate(
-            point.x - preview.start.x,
-            document.presentation.grid,
-          ),
-          y: snapCoordinate(
-            point.y - preview.start.y,
-            document.presentation.grid,
-          ),
-        };
-        if (delta.x !== 0 || delta.y !== 0) {
-          const result = transact(
-            proposePowerRailTranslation(
-              document,
-              resolver,
-              record.route.id,
-              delta,
-            ).edits,
-          );
-          if (result.ok) setStatus(`Moved VDD rail ${record.route.id}`);
-        }
-      } else if (
-        preview.intent === "resize-power-rail-start" ||
-        preview.intent === "resize-power-rail-end"
-      ) {
-        const result = transact(
-          proposePowerRailEndpointResize(
-            document,
-            resolver,
-            record.route.id,
-            preview.intent === "resize-power-rail-start" ? "start" : "end",
-            snapCoordinate(point.x, document.presentation.grid),
-          ).edits,
-        );
-        if (result.ok) setStatus(`Resized VDD rail ${record.route.id}`);
-      } else {
-        const proposal = proposeWireSegmentMove(
-          document,
-          resolver,
-          record.route.id,
-          preview.segmentIndex,
-          {
-            x: snapCoordinate(point.x, document.presentation.grid),
-            y: snapCoordinate(point.y, document.presentation.grid),
-          },
-        );
-        const result = transact(proposal.edits);
-        if (result.ok) setStatus(`Moved route segment ${record.route.id}`);
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Route move failed");
-    }
   }
 
   function constrainAnnotationPosition(
@@ -3092,8 +2385,14 @@ export function App({
     if (event.button !== 0) return;
     if (getCurrentInteractionState().kind === "moving-selection") {
       const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
-      else beginVisualSelectionMove(event, visualSelection, hitTarget);
+      if (primaryInstanceId)
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      else
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
       return;
     }
     event.stopPropagation();
@@ -3341,10 +2640,6 @@ export function App({
       source,
       anchor: endpointSnapAnchor(source),
     }));
-    const rectangleEdgeTargets = buildRectangleEdgeSnapAnchors(
-      document,
-      resolver,
-    );
     const activeSourceAnchorId = wireSource
       ? endpointSnapAnchor(wireSource).id
       : null;
@@ -3353,7 +2648,6 @@ export function App({
       [
         ...endpointTargets.map((candidate) => candidate.anchor),
         ...routeTargets.map((candidate) => candidate.anchor),
-        ...rectangleEdgeTargets,
       ],
       {
         grid: document.presentation.grid,
@@ -3487,9 +2781,13 @@ export function App({
     if (getCurrentInteractionState().kind === "moving-selection") {
       const primaryInstanceId = selectedIds.at(-1);
       if (primaryInstanceId) {
-        beginMove(event, primaryInstanceId, event.currentTarget);
+        beginMoveFromSelection(event, primaryInstanceId, event.currentTarget);
       } else {
-        beginVisualSelectionMove(event, visualSelection, event.currentTarget);
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          event.currentTarget,
+        );
       }
       return;
     }
@@ -3520,13 +2818,13 @@ export function App({
     ) {
       const primaryInstanceId = selectedIds.at(-1);
       if (primaryInstanceId) {
-        beginMove(event, primaryInstanceId, hitTarget);
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
         return;
       }
     }
 
     if (hit.kind === "instance") {
-      beginMove(event, hit.id, hitTarget);
+      beginMoveFromSelection(event, hit.id, hitTarget);
       return;
     }
     if (hit.kind === "annotation") {
@@ -3580,444 +2878,6 @@ export function App({
       },
     ]);
     selectOnly("instance", [instanceId]);
-  }
-
-  function placeNewComponent(
-    symbolId: string,
-    position: Point,
-    placementRequest: NonNullable<typeof pendingComponentPlacement>,
-  ): void {
-    const id = nextInstanceDesignator(document, symbolId);
-    const symbolVariantId = defaultRazaviSymbolVariantId(symbolId);
-    const instance = {
-      id,
-      symbolId,
-      ...(symbolVariantId ? { symbolVariantId } : {}),
-      placement: {
-        position,
-        rotation: componentPlacementRotation,
-        mirror: componentPlacementMirror,
-      },
-      properties: placementRequest.properties,
-      netlist: initialInstanceNetlist(
-        document,
-        symbolId,
-        placementRequest.properties,
-        netlistReferenceMatchesPlacement(symbolId) ? id : undefined,
-      ),
-    };
-    // The persisted annotation is the only visible instance-label authority.
-    const defaultLabel = defaultInstanceLabel(
-      document,
-      instance,
-      resolver,
-      styleProfile,
-    );
-    const instanceLabel =
-      placementRequest.showReference && defaultLabel
-        ? {
-            ...defaultLabel,
-            content: semanticTextDocument(
-              placementRequest.referenceText ?? instance.id,
-              "instance-label",
-            ),
-          }
-        : null;
-    // A default-off Value is never materialized as a hidden annotation:
-    // hidden annotations still extend export bounds. It is created on first
-    // show by the display toggle instead.
-    const instanceValue = placementRequest.showValue
-      ? defaultInstanceValue(document, instance, resolver, styleProfile)
-      : null;
-    const contact = proposePlacementContact(
-      document,
-      resolver,
-      instance,
-      visibleEndpoints,
-    );
-    const standalonePower =
-      contact.matched || contact.ambiguous
-        ? { edits: [], matched: false, ambiguous: false }
-        : proposedStandalonePowerConnection(document, instance);
-    // A placed VDD power port carries no label of its own; emit the shared
-    // power-label typography once its Net identity is actually established.
-    const powerNetId = standalonePower.powerNetId ?? contact.powerNetId;
-    const vddPowerLabel =
-      powerConnectionForSymbol(symbolId)?.domain === "vdd" && powerNetId
-        ? vddPowerLabelAnnotation({
-            instanceId: id,
-            netId: powerNetId,
-            position,
-          })
-        : null;
-    // Build only the future global-Net facts needed to decide hidden B policy.
-    // The real transaction below remains the sole persistence boundary.
-    const projectedDocument = structuredClone(document);
-    projectedDocument.instances.push(instance);
-    for (const edit of [...contact.edits, ...standalonePower.edits]) {
-      if (edit.kind !== "connect_endpoints" || !edit.newNetId) continue;
-      projectedDocument.nets.push({
-        id: edit.newNetId,
-        ...(edit.newNetName ? { name: edit.newNetName } : {}),
-        scope: edit.newNetScope ?? "local",
-        terminals: [edit.from, edit.to]
-          .filter(
-            (
-              endpoint,
-            ): endpoint is Extract<RouteEndpoint, { kind: "terminal" }> =>
-              endpoint.kind === "terminal",
-          )
-          .map(({ instanceId, pinName }) => ({ instanceId, pinName }))
-          .filter(
-            (terminal, index, terminals) =>
-              terminals.findIndex(
-                (candidate) =>
-                  candidate.instanceId === terminal.instanceId &&
-                  candidate.pinName === terminal.pinName,
-              ) === index,
-          ),
-      });
-    }
-    const bulkEdits = razaviManualBulkConnectionEdits(
-      projectedDocument,
-      projectedDocument.instances,
-    );
-    const result = transact(
-      [
-        {
-          kind: "add_instance",
-          instance,
-        },
-        ...contact.edits,
-        ...standalonePower.edits,
-        ...bulkEdits,
-        ...(vddPowerLabel
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: vddPowerLabel,
-              },
-            ]
-          : []),
-        ...(instanceLabel
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: instanceLabel,
-              },
-            ]
-          : []),
-        ...(instanceValue
-          ? [
-              {
-                kind: "upsert_schematic_annotation" as const,
-                annotation: instanceValue,
-              },
-            ]
-          : []),
-      ],
-      { preserveInteraction: true },
-    );
-    if (result.ok) {
-      selectOnly("instance", [id]);
-      setComponentPreviewPoint(position);
-      setStatus(
-        contact.ambiguous
-          ? `Added ${id} (${symbolId}); overlapping pins are ambiguous, wire explicitly · click to place another · Esc exits`
-          : contact.matched
-            ? `Added ${id} (${symbolId}) and connected its contacted pin · click to place another · Esc exits`
-            : `Added ${id} (${symbolId}) · click to place another · Esc exits`,
-      );
-    }
-  }
-
-  function placeVddRail(start: Point, end: Point): void {
-    const vddRailIdsExist = (candidate: string): boolean => {
-      const key = candidate.toLowerCase();
-      return (
-        document.instances.some((instance) => instance.id === candidate) ||
-        document.routes.some((route) => route.id === `route-${key}-rail`) ||
-        document.junctions.some(
-          (junction) =>
-            junction.id === `junction-${key}-start` ||
-            junction.id === `junction-${key}-end`,
-        ) ||
-        document.annotations.some(
-          (annotation) => annotation.id === `label-${candidate}`,
-        )
-      );
-    };
-    let sequence = 1;
-    while (vddRailIdsExist(`VDD${sequence}`)) sequence += 1;
-    const instanceId = `VDD${sequence}`;
-    const routeId = `route-${instanceId.toLowerCase()}-rail`;
-    const existingVddNet =
-      document.nets.find(
-        (net) =>
-          net.id === "net-global-vdd" &&
-          net.scope === "global" &&
-          (net.powerDomain ?? "none") === "vdd",
-      ) ??
-      document.nets.find(
-        (net) =>
-          net.scope === "global" && (net.powerDomain ?? "none") === "vdd",
-      );
-    const result = transact(
-      constructVddRailEdits({
-        instanceId,
-        start,
-        end,
-        ...(existingVddNet ? { netId: existingVddNet.id } : {}),
-      }),
-    );
-    if (!result.ok) return;
-    selectOnly("route", [routeId]);
-    completeVddRailPlacement();
-    setStatus(`Added VDD rail ${instanceId}`);
-  }
-
-  function commitPendingPlacementAt(point: Point): void {
-    if (vddRailMode) {
-      if (!vddRailStart) {
-        setVddRailStart(point);
-        setVddRailPreviewPoint(point);
-        setStatus("VDD rail: click the right end (Esc cancels)");
-      } else if (point.x === vddRailStart.x) {
-        setStatus("VDD rail needs a non-zero horizontal length");
-      } else {
-        placeVddRail(vddRailStart, { x: point.x, y: vddRailStart.y });
-      }
-      return;
-    }
-    if (!pendingSymbolId || !pendingComponentPlacement) return;
-    placeNewComponent(pendingSymbolId, point, pendingComponentPlacement);
-  }
-
-  function selectInstance(instanceId: string, additive: boolean): void {
-    setSelectedEndpoint(null);
-    updateInstanceSelection(instanceId, additive);
-  }
-
-  function beginMove(
-    event: ReactPointerEvent<SVGElement>,
-    instanceId: string,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (tool !== "pointer" || event.button !== 0) return;
-    if (getCurrentInteractionState().kind === "moving-selection") {
-      cancelInteraction();
-    }
-    event.stopPropagation();
-    const instance = document.instances.find(
-      (candidate) => candidate.id === instanceId,
-    );
-    if (!instance?.placement) {
-      return;
-    }
-    const hasSelectionModifier =
-      event.shiftKey || event.ctrlKey || event.metaKey;
-    suppressInstanceClick.current =
-      hitTarget.getAttribute("data-canvas-hit-kind") === "instance";
-    if (hasSelectionModifier) {
-      selectInstance(instanceId, hasSelectionModifier);
-      setStatus(`Selected ${instanceId}`);
-      return;
-    }
-    const movingSelection: VisualSelection = selectedIds.includes(instanceId)
-      ? visualSelection
-      : {
-          instanceIds: [instanceId],
-          routeIds: [],
-          junctionIds: [],
-          annotationIds: [],
-          draftingIds: [],
-        };
-    const movePlan = planSelectionMove(document, movingSelection);
-    const movingIds = movePlan.instanceIds;
-    if (!selectedIds.includes(instanceId)) selectInstance(instanceId, false);
-    if (movingIds.length === 0) return;
-    canvasDragSessionRef.current?.cancel();
-    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
-    const pointerStart = pointFromClient(
-      event.clientX,
-      event.clientY,
-      svg,
-      false,
-    );
-    const preview: DragPreview = {
-      instanceIds: movingIds,
-      primaryInstanceId: instanceId,
-      originalPositions: Object.fromEntries(
-        movingIds.map((id) => {
-          const candidate = document.instances.find((item) => item.id === id)!;
-          return [id, { ...candidate.placement!.position }];
-        }),
-      ),
-      pointerStart,
-      movePlan,
-    };
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    let routeVisual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const routeIdSet = new Set(document.routes.map((route) => route.id));
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(
-        svg,
-        movePlan.previewObjectIds.filter((id) => !routeIdSet.has(id)),
-      ));
-    const paintMovePreview = (
-      moves: readonly { instanceId: string; position: Point }[],
-      delta: Point,
-    ) => {
-      dragVisual().translate(delta);
-      const groupMove = proposeGroupMoveEdits(document, resolver, moves);
-      if (groupMove.preview.routes.length === 0) return;
-      routeVisual ??= startCanvasDragVisual(
-        svg,
-        groupMove.preview.routes.map((route) => route.routeId),
-      );
-      const projected = structuredClone(document);
-      for (const move of moves) {
-        const instance = projected.instances.find(
-          (candidate) => candidate.id === move.instanceId,
-        );
-        if (instance?.placement) instance.placement.position = move.position;
-      }
-      for (const move of groupMove.preview.junctions) {
-        const junction = projected.junctions.find(
-          (candidate) => candidate.id === move.junctionId,
-        );
-        if (junction) junction.position = move.position;
-      }
-      for (const routeMove of groupMove.preview.routes) {
-        const route = projected.routes.find(
-          (candidate) => candidate.id === routeMove.routeId,
-        );
-        if (!route) continue;
-        const from = resolveEndpointPoint(projected, resolver, route.from);
-        const to = resolveEndpointPoint(projected, resolver, route.to);
-        if (!from || !to) continue;
-        routeVisual.setObjectPolyline(route.id, [
-          from,
-          ...routeMove.waypoints,
-          to,
-        ]);
-      }
-    };
-    const tolerance = logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX);
-    let lastSnap: SnapResult | undefined;
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const position = pointFromClient(client.x, client.y, svg, false);
-        const resolved = instanceMoveAt(
-          preview,
-          position,
-          tolerance,
-          Boolean(client.altKey),
-          lastSnap,
-        );
-        lastSnap = resolved.snap;
-        paintSnapGuides(resolved.snap.guides);
-        const primary = resolved.moves.find(
-          (move) => move.instanceId === preview.primaryInstanceId,
-        )!;
-        const original = preview.originalPositions[preview.primaryInstanceId]!;
-        try {
-          paintMovePreview(resolved.moves, {
-            x: primary.position.x - original.x,
-            y: primary.position.y - original.y,
-          });
-        } catch {
-          // The transaction reports protected or unresolved geometry on
-          // release; keep the Instance preview responsive in the meantime.
-          dragVisual().translate({
-            x: primary.position.x - original.x,
-            y: primary.position.y - original.y,
-          });
-        }
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        routeVisual?.restore();
-        paintSnapGuides([]);
-        if (dragged) {
-          completeInstanceMove(
-            preview,
-            pointFromClient(client.x, client.y, svg, false),
-            tolerance,
-            Boolean(client.altKey),
-            lastSnap,
-          );
-        }
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        routeVisual?.restore();
-        paintSnapGuides([]);
-      },
-    });
-  }
-
-  /**
-   * Move selections that contain no placed instance.  Instance-led selections
-   * retain the richer electrical snap path above; visual-only selections still
-   * share the same SelectionMovePlan and one typed transaction on release.
-   */
-  function beginVisualSelectionMove(
-    event: ReactPointerEvent<SVGElement>,
-    selection: VisualSelection,
-    hitTarget: SVGElement = event.currentTarget,
-  ): void {
-    if (tool !== "pointer" || event.button !== 0) return;
-    const movePlan = planSelectionMove(document, selection);
-    if (movePlan.previewObjectIds.length === 0) {
-      cancelInteraction();
-      setStatus("Selected objects are attached or locked and cannot move");
-      return;
-    }
-    cancelInteraction();
-    event.preventDefault();
-    event.stopPropagation();
-    canvasDragSessionRef.current?.cancel();
-    const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
-    const start = pointFromClient(event.clientX, event.clientY, svg, false);
-    let visual: ReturnType<typeof startCanvasDragVisual> | null = null;
-    const dragVisual = () =>
-      (visual ??= startCanvasDragVisual(svg, movePlan.previewObjectIds));
-    const deltaAt = (client: Point) => {
-      const point = pointFromClient(client.x, client.y, svg, false);
-      return {
-        x: snapCoordinate(point.x - start.x, document.presentation.grid),
-        y: snapCoordinate(point.y - start.y, document.presentation.grid),
-      };
-    };
-    canvasDragSessionRef.current = startCanvasDragSession({
-      target: hitTarget,
-      pointerId: event.pointerId,
-      startClient: { x: event.clientX, y: event.clientY },
-      thresholdPx: DRAG_START_DISTANCE_PX,
-      onPreview: (client) => {
-        const delta = deltaAt(client);
-        dragVisual().translate(delta);
-        paintSnapGuides([]);
-      },
-      onFinish: ({ client, dragged }) => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-        if (dragged) completeVisualSelectionMove(movePlan, deltaAt(client));
-      },
-      onCancel: () => {
-        canvasDragSessionRef.current = null;
-        visual?.restore();
-        paintSnapGuides([]);
-      },
-    });
   }
 
   function selectionVisualMoveEdits(
@@ -4088,54 +2948,22 @@ export function App({
     }
   }
 
-  function beginKeyboardSelectionMove(): void {
-    const movePlan = planSelectionMove(document, visualSelection);
-    if (movePlan.previewObjectIds.length === 0 && !selectedRoute) {
-      setStatus("Selected objects are attached or locked and cannot move");
-      return;
-    }
-    const primaryInstanceId =
-      selectedIds.at(-1) ?? movePlan.instanceIds.at(0) ?? null;
-    const instancePreview = primaryInstanceId
-      ? (() => {
-          const primary = document.instances.find(
-            (instance) => instance.id === primaryInstanceId,
-          );
-          if (!primary?.placement) return null;
-          const originalPositions = Object.fromEntries(
-            movePlan.instanceIds.flatMap((id) => {
-              const instance = document.instances.find(
-                (candidate) => candidate.id === id,
-              );
-              return instance?.placement
-                ? [[id, { ...instance.placement.position }] as const]
-                : [];
-            }),
-          );
-          return {
-            instanceIds: movePlan.instanceIds,
-            primaryInstanceId,
-            originalPositions,
-            // The primary origin is the command's mouse-following anchor.
-            pointerStart: { ...primary.placement.position },
-            movePlan,
-          } satisfies DragPreview;
-        })()
-      : null;
+  function commandMoveVisualOrigin(movePlan: SelectionMovePlan): Point {
     const freeAnnotation = movePlan.freeAnnotationIds
       .map((id) =>
         document.annotations.find((annotation) => annotation.id === id),
       )
       .find((annotation) => annotation?.anchor.kind === "free");
-    const visualOrigin = movePlan.draftingIds
-      .flatMap((id) => {
-        const object = document.drafting?.objects.find(
-          (candidate) => candidate.id === id,
-        );
-        const origin = object ? draftingDragOrigin(object) : null;
-        return origin ? [origin] : [];
-      })
-      .find((point): point is Point => point !== null) ??
+    return (
+      movePlan.draftingIds
+        .flatMap((id) => {
+          const object = document.drafting?.objects.find(
+            (candidate) => candidate.id === id,
+          );
+          const origin = object ? draftingDragOrigin(object) : null;
+          return origin ? [origin] : [];
+        })
+        .find((point): point is Point => point !== null) ??
       (freeAnnotation?.anchor.kind === "free"
         ? freeAnnotation.anchor.position
         : undefined) ??
@@ -4145,98 +2973,8 @@ export function App({
             routeGeometryRecords.find((record) => record.route.id === id)
               ?.geometry.centerline[0],
         )
-        .find((point): point is Point => point !== undefined) ?? { x: 0, y: 0 };
-    commandMoveSessionRef.current = {
-      documentId: document.id,
-      revision: document.revision,
-      movePlan,
-      instancePreview,
-      pointerOrigin: instancePreview
-        ? instancePreview.pointerStart
-        : visualOrigin,
-      visual: null,
-      lastDelta: { x: 0, y: 0 },
-    };
-    beginSelectionMoveInteraction();
-    setStatus("Move: move the pointer, then click to place (Esc to cancel)");
-  }
-
-  function clearCommandMoveSession(): void {
-    commandMoveSessionRef.current?.visual?.restore();
-    commandMoveSessionRef.current = null;
-  }
-
-  function updateCommandMovePreview(
-    point: DerivedPoint,
-    svg: SVGSVGElement,
-    suppressSnap: boolean,
-  ): CommandMoveSession | null {
-    const session = commandMoveSessionRef.current;
-    if (!session || session.documentId !== document.id) return null;
-    if (!session.visual) {
-      session.visual = startCanvasDragVisual(
-        svg,
-        session.movePlan.previewObjectIds,
-      );
-    }
-    if (session.instancePreview) {
-      const resolved = instanceMoveAt(
-        session.instancePreview,
-        point,
-        logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-        suppressSnap,
-        session.lastSnap,
-      );
-      session.lastSnap = resolved.snap;
-      const primary = resolved.moves.find(
-        (move) =>
-          move.instanceId === session.instancePreview!.primaryInstanceId,
-      );
-      const original =
-        session.instancePreview.originalPositions[
-          session.instancePreview.primaryInstanceId
-        ];
-      if (!primary || !original) return null;
-      session.lastDelta = {
-        x: primary.position.x - original.x,
-        y: primary.position.y - original.y,
-      };
-      paintSnapGuides(resolved.snap.guides);
-    } else {
-      session.lastDelta = {
-        x: snapCoordinate(
-          point.x - session.pointerOrigin.x,
-          document.presentation.grid,
-        ),
-        y: snapCoordinate(
-          point.y - session.pointerOrigin.y,
-          document.presentation.grid,
-        ),
-      };
-      paintSnapGuides([]);
-    }
-    session.visual.translate(session.lastDelta);
-    return session;
-  }
-
-  function commitCommandMove(point: DerivedPoint, svg: SVGSVGElement): void {
-    const session = updateCommandMovePreview(point, svg, false);
-    if (!session) return;
-    session.visual?.restore();
-    commandMoveSessionRef.current = null;
-    if (session.instancePreview) {
-      completeInstanceMove(
-        session.instancePreview,
-        point,
-        logicalRadiusForPixels(svg, SNAP_CAPTURE_RADIUS_PX),
-        false,
-        session.lastSnap,
-      );
-    } else {
-      completeVisualSelectionMove(session.movePlan, session.lastDelta);
-    }
-    paintSnapGuides([]);
-    cancelInteraction();
+        .find((point): point is Point => point !== undefined) ?? { x: 0, y: 0 }
+    );
   }
 
   function instanceMoveAt(
@@ -4845,8 +3583,14 @@ export function App({
     if (event.button !== 0 || object.locked) return;
     if (getCurrentInteractionState().kind === "moving-selection") {
       const primaryInstanceId = selectedIds.at(-1);
-      if (primaryInstanceId) beginMove(event, primaryInstanceId, hitTarget);
-      else beginVisualSelectionMove(event, visualSelection, hitTarget);
+      if (primaryInstanceId)
+        beginMoveFromSelection(event, primaryInstanceId, hitTarget);
+      else
+        beginVisualSelectionMoveFromSelection(
+          event,
+          visualSelection,
+          hitTarget,
+        );
       return;
     }
     const origin = draftingDragOrigin(object);
@@ -5483,81 +4227,10 @@ export function App({
     return edits;
   }
 
-  function commitPendingNetLabelDraft(): void {
-    const routeId = netLabelDraftRouteRef.current;
-    netLabelDraftRouteRef.current = null;
-    if (!routeId) return;
-    const route = document.routes.find((candidate) => candidate.id === routeId);
-    if (!route) return;
-    const existing = netLabelForRoute(route);
-    const draftName = netLabelDraft.trim();
-    const currentName = existing
-      ? flattenRichText(existing.content).trim()
-      : "";
-    if (existing ? draftName === currentName : draftName === "") return;
-    const edits = netLabelEditsForRoute(route, netLabelDraft);
-    if (!edits) return;
-    const result = transact(edits);
-    if (result.ok) {
-      setStatus(
-        draftName ? `Saved Net Label ${draftName}` : "Removed Net Label",
-      );
-    }
-  }
-
-  function applyNetLabel(): void {
-    if (!selectedRoute) return;
-    const existingLabel = netLabelForRoute(selectedRoute);
-    const name = netLabelDraft.trim();
-    if (!name && !existingLabel) {
-      setStatus("Selected Route has no Net Label");
-      return;
-    }
-    const edits = netLabelEditsForRoute(selectedRoute, netLabelDraft);
-    if (!edits) return;
-    const result = transact(edits);
-    if (!result.ok) return;
-    netLabelDraftRouteRef.current = null;
-    if (!name) {
-      replaceSelectionKind("annotation", []);
-      setStatus(`Deleted Net Label ${flattenRichText(existingLabel!.content)}`);
-      return;
-    }
-    replaceSelectionKind("annotation", [
-      existingLabel?.id ?? `net-label-${selectedRoute.id}`,
-    ]);
-    setStatus(
-      edits.some((edit) => edit.kind === "merge_nets")
-        ? `Connected Nets through label ${name}`
-        : `Named Net ${name}`,
-    );
-  }
-
-  function deleteSelectedRouteNetLabel(): void {
-    if (!selectedRoute) return;
-    const label = selectedRouteNetLabel;
-    if (!label) {
-      setStatus(
-        selectedRouteNetLabels.length > 1
-          ? "This Net has multiple labels; select the label to delete"
-          : "Selected Route has no Net Label",
-      );
-      return;
-    }
-    const result = transact([
-      { kind: "remove_schematic_annotation", annotationId: label.id },
-    ]);
-    if (result.ok) {
-      replaceSelectionKind("annotation", []);
-      setNetLabelDraft("");
-      setStatus(`Deleted Net Label ${flattenRichText(label.content)}`);
-    }
-  }
-
-  function setReferenceLabelsVisible(
+  function referenceLabelVisibilityEdits(
     instanceIds: readonly string[],
     visible: boolean,
-  ): void {
+  ): SchematicEdit[] {
     const edits: SchematicEdit[] = [];
     for (const instanceId of instanceIds) {
       const instance = document.instances.find(
@@ -5586,20 +4259,7 @@ export function App({
         }
       }
     }
-    if (edits.length === 0) {
-      setStatus(
-        visible
-          ? "No reference labels are available for this selection"
-          : "Selected components have no reference labels",
-      );
-      return;
-    }
-    const result = transact(edits);
-    if (result.ok) {
-      setStatus(
-        `${visible ? "Showing" : "Hiding"} reference labels on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
-      );
-    }
+    return edits;
   }
 
   function valueVisibilityEdits(
@@ -5649,64 +4309,6 @@ export function App({
       }
     }
     return edits;
-  }
-
-  function setValueLabelsVisible(
-    instanceIds: readonly string[],
-    visible: boolean,
-  ): void {
-    const edits = valueVisibilityEdits(document, instanceIds, visible);
-    if (edits.length === 0) {
-      setStatus(
-        visible
-          ? "No component values are available for this selection"
-          : "Selected components have no value displays",
-      );
-      return;
-    }
-    const result = transact(edits);
-    if (result.ok) {
-      setStatus(
-        `${visible ? "Showing" : "Hiding"} component values on ${edits.length} component${edits.length === 1 ? "" : "s"}`,
-      );
-    }
-  }
-
-  /**
-   * Show the selected instance's value from its live property draft. The
-   * typed parameters are committed in the same transaction so the displayed
-   * value is always the committed electrical truth. Geometry edits in the
-   * draft stay uncommitted — only the netlist projection is claimed.
-   */
-  function showSelectedInstanceValue(): void {
-    if (!selectedInstance) return;
-    const propertyEdits =
-      instancePropertyDraft.instanceId === selectedInstance.id
-        ? instancePropertyEdits(instancePropertyDraft).edits.filter(
-            (edit) => edit.kind === "set_instance_netlist",
-          )
-        : [];
-    const projected = structuredClone(document);
-    for (const edit of propertyEdits) {
-      if (edit.kind !== "set_instance_netlist") continue;
-      const target = projected.instances.find(
-        (item) => item.id === edit.instanceId,
-      );
-      if (target) target.netlist = structuredClone(edit.netlist);
-    }
-    const valueEdits = valueVisibilityEdits(
-      projected,
-      [selectedInstance.id],
-      true,
-    );
-    if (propertyEdits.length === 0 && valueEdits.length === 0) {
-      setStatus("No component value is available for this selection");
-      return;
-    }
-    const result = transact([...propertyEdits, ...valueEdits]);
-    if (result.ok) {
-      setStatus(`Showing component value for ${selectedInstance.id}`);
-    }
   }
 
   function instancePropertyEdits(draft: {
@@ -5776,131 +4378,6 @@ export function App({
       }
     }
     return { edits, invalidPosition };
-  }
-
-  function commitInstancePropertyDraft(): boolean {
-    const { edits, invalidPosition } = instancePropertyEdits(
-      instancePropertyDraft,
-    );
-    if (invalidPosition || edits.length === 0) return false;
-    return transact(edits).ok;
-  }
-
-  function applyInstanceProperties(): void {
-    if (
-      !selectedInstance ||
-      instancePropertyDraft.instanceId !== selectedInstance.id
-    ) {
-      return;
-    }
-    const { edits, invalidPosition } = instancePropertyEdits(
-      instancePropertyDraft,
-    );
-    if (invalidPosition) {
-      setStatus("Position must contain finite X and Y coordinates");
-      return;
-    }
-    if (edits.length === 0) {
-      setStatus("Component properties are unchanged");
-      return;
-    }
-    const result = transact(edits);
-    if (result.ok) setStatus(`Updated properties for ${selectedInstance.id}`);
-  }
-
-  function discardInstancePropertyDraft(): void {
-    if (!selectedInstance) return;
-    setInstancePropertyDraft({
-      instanceId: selectedInstance.id,
-      parameters: Object.fromEntries(
-        componentParameters(selectedInstance.symbolId).map((parameter) => [
-          parameter.key,
-          effectiveComponentParameterValue(selectedInstance, parameter),
-        ]),
-      ),
-      x: selectedInstance.placement
-        ? String(selectedInstance.placement.position.x)
-        : "",
-      y: selectedInstance.placement
-        ? String(selectedInstance.placement.position.y)
-        : "",
-      rotation: String(selectedInstance.placement?.rotation ?? 0) as
-        "0" | "90" | "180" | "270",
-    });
-    setStatus(`Discarded property edits for ${selectedInstance.id}`);
-  }
-
-  function beginNetLabelEditing(): void {
-    if (!selectedRoute || wireSource) {
-      setStatus("Select a wire segment before adding a Net Label");
-      return;
-    }
-    setNetLabelEditorOpen(true);
-    requestAnimationFrame(() => netLabelEditorInputRef.current?.focus());
-  }
-
-  function commitNetLabelEditing(): void {
-    applyNetLabel();
-    setNetLabelEditorOpen(false);
-  }
-
-  function beginAnnotationTextEditing(annotation: Annotation): void {
-    selectOnly("annotation", [annotation.id]);
-    setTextEditing(
-      createTextEditingSession({
-        owner: "annotation",
-        object: annotation,
-      }),
-    );
-  }
-
-  function beginDraftingTextEditing(
-    object: Extract<DraftingObject, { kind: "text" }>,
-  ): void {
-    selectDraftingObject(object.id);
-    setTextEditing(
-      createTextEditingSession({
-        owner: "drafting",
-        object,
-      }),
-    );
-  }
-
-  function updateTextEditing(
-    change: Partial<Pick<TextEditingSession, "content" | "sizeScale">>,
-  ): void {
-    setTextEditing((current) =>
-      current ? updateTextEditingSession(current, change) : null,
-    );
-  }
-
-  function deleteTextEditing(): void {
-    if (!textEditing) return;
-    const result = transact([textDeletionEdit(textEditing)]);
-    if (result.ok) {
-      clearSelectionKinds(["annotation", "drafting"]);
-      setTextEditing(null);
-      setStatus(`Deleted text ${textEditing.id}`);
-    }
-  }
-
-  function commitTextEditing(): void {
-    if (!textEditing) return;
-    const proposal = proposeTextEditingCommit(document, textEditing);
-    if (proposal.kind === "blocked") return;
-    if (proposal.kind === "unchanged") {
-      setTextEditing(null);
-      return;
-    }
-    const result = transact([proposal.edit]);
-    if (!result.ok) return;
-    if (proposal.kind === "delete") {
-      clearSelectionKinds(["annotation", "drafting"]);
-      setStatus(`Deleted text ${proposal.id}`);
-    } else {
-      setStatus(`Updated text ${proposal.id}`);
-    }
-    setTextEditing(null);
   }
 
   /*
@@ -6172,7 +4649,7 @@ export function App({
     event: ReactPointerEvent<SVGSVGElement>,
   ): void {
     if (getCurrentInteractionState().kind === "moving-selection") {
-      updateCommandMovePreview(
+      updateCommandMovePreviewFromSelection(
         pointFromClient(event.clientX, event.clientY, event.currentTarget),
         event.currentTarget,
         event.altKey,
@@ -6637,140 +5114,6 @@ export function App({
     }
   }
 
-  function deleteSelection(): void {
-    const initialRouteIds = new Set(visualSelection.routeIds);
-    const selectedAnnotationIds = new Set(visualSelection.annotationIds);
-    const selectedDraftingIds = new Set(visualSelection.draftingIds);
-    const selectedJunctionIds = new Set([
-      ...visualSelection.junctionIds,
-      ...(selectedEndpoint?.endpoint.kind === "junction"
-        ? [selectedEndpoint.endpoint.junctionId]
-        : []),
-    ]);
-    const hasMixedSelection =
-      initialRouteIds.size > 0 ||
-      selectedAnnotationIds.size > 0 ||
-      selectedDraftingIds.size > 0 ||
-      selectedJunctionIds.size > 0;
-    if (
-      initialRouteIds.size === 1 &&
-      selectedAnnotationIds.size === 0 &&
-      selectedDraftingIds.size === 0 &&
-      selectedJunctionIds.size === 0 &&
-      selectedIds.length === 0
-    ) {
-      deleteSelectedRouteConnection();
-      return;
-    }
-    if (hasMixedSelection) {
-      const visualRouteDeletion = proposeSelectionRouteDeletion(
-        document,
-        [...initialRouteIds],
-        [...selectedJunctionIds],
-      );
-      uniqueSuffixCounter.current += 1;
-      try {
-        const instanceEdits =
-          selectedIds.length > 0
-            ? proposeConnectedInstanceDeletion(
-                document,
-                resolver,
-                selectedIds,
-                uniqueSuffixCounter.current,
-              )
-            : [];
-        // Instance deletion already removes every annotation attached to the
-        // instance. A marquee can select both visual objects, but emitting the
-        // same remove_schematic_annotation edit twice makes the second
-        // operation fail
-        // with OBJECT_NOT_FOUND and rolls back the whole transaction.
-        const explicitAnnotationIds = explicitAnnotationRemovals(
-          document,
-          selectedIds,
-          [...selectedAnnotationIds].filter(
-            (annotationId) =>
-              !visualRouteDeletion.annotationIds.includes(annotationId),
-          ),
-        );
-        const result = transact([
-          ...instanceEdits,
-          ...visualRouteDeletion.edits,
-          ...explicitAnnotationIds.map((annotationId): SchematicEdit => ({
-            kind: "remove_schematic_annotation",
-            annotationId,
-          })),
-          ...[...selectedDraftingIds].map((objectId): SchematicEdit => ({
-            kind: "remove_drafting_object",
-            objectId,
-          })),
-        ]);
-        if (result.ok) {
-          resetSelection();
-          setSelectedEndpoint(null);
-          setStatus("Deleted selected schematic objects");
-        }
-      } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Delete failed");
-      }
-      return;
-    }
-    if (selectedEndpoint?.endpoint.kind === "junction") {
-      deleteSelectedJunction();
-      return;
-    }
-    if (selectedAnnotationId) {
-      deleteSelectedAnnotation();
-      return;
-    }
-    if (selectedDraftingId) {
-      const result = transact([
-        { kind: "remove_drafting_object", objectId: selectedDraftingId },
-      ]);
-      if (result.ok) {
-        replaceSelectionKind("drafting", []);
-        setStatus(`Deleted drafting object ${selectedDraftingId}`);
-      }
-      return;
-    }
-    if (selectedRouteId) {
-      deleteSelectedRouteConnection();
-      return;
-    }
-    if (selectedIds.length === 0) return;
-    uniqueSuffixCounter.current += 1;
-    try {
-      const result = transact(
-        proposeConnectedInstanceDeletion(
-          document,
-          resolver,
-          selectedIds,
-          uniqueSuffixCounter.current,
-        ),
-      );
-      if (result.ok) {
-        replaceSelectionKind("instance", []);
-        setStatus(
-          "Deleted component selection; connected wires remain dangling",
-        );
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Delete failed");
-    }
-  }
-
-  function deleteSelectedJunction(): void {
-    if (selectedEndpoint?.endpoint.kind !== "junction") return;
-    const junctionId = selectedEndpoint.endpoint.junctionId;
-    const proposal = proposeVisualRouteDeletion(document, [], [junctionId]);
-    const result = transact(proposal.edits);
-    if (result.ok) {
-      setSelectedEndpoint(null);
-      setStatus(
-        `Deleted junction and ${proposal.routeIds.length} attached routes`,
-      );
-    }
-  }
-
   function disconnectSelectedEndpoint(removeRoutes: boolean): void {
     if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
       return;
@@ -6818,130 +5161,6 @@ export function App({
       id = `no-connect-ui-${uniqueSuffixCounter.current}`;
     } while (occupied.has(id));
     return id;
-  }
-
-  function toggleSelectedNoConnect(): void {
-    if (!selectedEndpoint || selectedEndpoint.endpoint.kind === "junction") {
-      return;
-    }
-    if (selectedNoConnect) {
-      const result = transact([
-        { kind: "remove_no_connect", noConnectId: selectedNoConnect.id },
-      ]);
-      if (result.ok) {
-        setStatus(
-          `Cleared No Connect on ${endpointTestId(selectedEndpoint.endpoint)}`,
-        );
-      }
-      return;
-    }
-    if (selectedEndpointNetId) {
-      setStatus("Disconnect this endpoint before marking it No Connect");
-      return;
-    }
-    const result = transact([
-      {
-        kind: "add_no_connect",
-        noConnect: {
-          id: nextNoConnectId(),
-          endpoint: selectedEndpoint.endpoint,
-        },
-      },
-    ]);
-    if (result.ok) {
-      setStatus(
-        `Marked ${endpointTestId(selectedEndpoint.endpoint)} No Connect`,
-      );
-    }
-  }
-
-  function beginCopyPlacement(): void {
-    const currentInteraction = getCurrentInteractionState();
-    if (currentInteraction.kind === "copy-placement") {
-      setStatus("Copy placement is already active · Esc cancels");
-      return;
-    }
-    if (currentInteraction.kind !== "idle") {
-      setStatus("Finish or cancel the active tool before copying");
-      return;
-    }
-    const copied = copySelection(document, selectedIds);
-    if (!copied) {
-      setStatus("Select at least one component to copy");
-      return;
-    }
-    const anchor = clipboardPlacementAnchor(copied);
-    if (!anchor) {
-      setStatus("Selected components have no placeable origin");
-      return;
-    }
-    canvasDragSessionRef.current?.cancel();
-    clearTransientCanvasState();
-    paintSnapGuides([]);
-    beginCopyPlacementInteraction(copied, anchor);
-    setStatus(
-      `Place copy of ${copied.instances.length} components · R rotates · Shift+R / Ctrl+R mirrors · Esc cancels`,
-    );
-  }
-
-  function commitCopyPlacement(point: Point): void {
-    if (!copyPlacement) return;
-    copyCounter.current += 1;
-    const proposal = proposePaste(
-      document,
-      copyPlacement.clipboard,
-      {
-        x: point.x - copyPlacement.anchor.x,
-        y: point.y - copyPlacement.anchor.y,
-      },
-      copyCounter.current,
-    );
-    if (proposal.errors.length > 0) {
-      copyCounter.current -= 1;
-      setStatus(proposal.errors[0]!);
-      cancelAllTransientInteraction();
-      return;
-    }
-    const orientationEdits = proposal.instanceIds.flatMap(
-      (instanceId, index): SchematicEdit[] => {
-        const source = copyPlacement.clipboard.instances[index]?.placement;
-        if (!source) return [];
-        const orientation = applyOrientationOperations(
-          source,
-          copyPlacement.orientationOperations,
-        );
-        return [
-          ...(orientation.mirror === source.mirror
-            ? []
-            : [
-                {
-                  kind: "mirror_instance" as const,
-                  instanceId,
-                  mirror: orientation.mirror,
-                },
-              ]),
-          ...(orientation.rotation === source.rotation
-            ? []
-            : [
-                {
-                  kind: "rotate_instance" as const,
-                  instanceId,
-                  rotation: orientation.rotation,
-                },
-              ]),
-        ];
-      },
-    );
-    const result = transact([...proposal.edits, ...orientationEdits], {
-      preserveInteraction: true,
-    });
-    if (result.ok) {
-      selectOnly("instance", proposal.instanceIds);
-      setCopyPreviewPoint(point);
-      setStatus(
-        `Copied ${proposal.instanceIds.length} components · click to place another · Esc exits`,
-      );
-    }
   }
 
   useEffect(() => {
@@ -7078,10 +5297,10 @@ export function App({
           transact([{ kind: shortcut.kind }]);
           return;
         case "copy":
-          beginCopyPlacement();
+          beginCopyPlacementFromSelection();
           return;
         case "begin-selection-move":
-          beginKeyboardSelectionMove();
+          beginKeyboardSelectionMoveFromSelection();
           return;
         case "move-selection-required":
           setStatus("Select objects before moving them");
@@ -7118,25 +5337,25 @@ export function App({
           reverseSelectedCurrentArrow();
           return;
         case "open-component-insert":
-          openInsertComponentDialog();
+          openInsertComponentDialogFromHook();
           return;
         case "place-port": {
           const request = quickPlaceRequest(
             document.presentation.styleProfileId,
             "port",
           );
-          if (request) beginInsertedComponentPlacement(request);
+          if (request) beginInsertedComponentPlacementFromHook(request);
           else setStatus("Port is unavailable in this style profile");
           return;
         }
         case "rotate-placement":
-          rotatePendingComponent(shortcut.deltaDegrees);
+          rotatePendingComponentFromHook(shortcut.deltaDegrees);
           return;
         case "rotate-copy-placement":
           rotatePendingCopy(shortcut.deltaDegrees);
           return;
         case "mirror-placement":
-          mirrorPendingComponent(shortcut.direction);
+          mirrorPendingComponentFromHook(shortcut.direction);
           return;
         case "mirror-copy-placement":
           mirrorPendingCopy(shortcut.direction);
@@ -7258,36 +5477,13 @@ export function App({
           );
           return;
         case "delete-selection":
-          deleteSelection();
+          deleteSelectionFromSelection();
           return;
       }
     }
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   });
-
-  useEffect(() => {
-    if (helpOpen) helpCloseRef.current?.focus();
-  }, [helpOpen]);
-
-  useEffect(() => {
-    if (aboutOpen) aboutCloseRef.current?.focus();
-  }, [aboutOpen]);
-
-  function closeHelp(): void {
-    setHelpOpen(false);
-    requestAnimationFrame(() => helpButtonRef.current?.focus());
-  }
-
-  function closeAbout(): void {
-    setAboutOpen(false);
-    requestAnimationFrame(() => aboutButtonRef.current?.focus());
-  }
-
-  function closeSearch(): void {
-    setSearchOpen(false);
-    setSearchQuery("");
-  }
 
   function selectSearchResult(result: SearchResult): void {
     navigateToLocator(
@@ -7450,7 +5646,7 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    onClick={deleteSelection}
+                    onClick={deleteSelectionFromSelection}
                     disabled={
                       !hasVisualSelection(visualSelection) && !selectedEndpoint
                     }
@@ -7518,7 +5714,10 @@ export function App({
               <details className="command-menu" name="editor-command-menu">
                 <summary>Draw</summary>
                 <div className="command-popover">
-                  <button type="button" onClick={openInsertComponentDialog}>
+                  <button
+                    type="button"
+                    onClick={openInsertComponentDialogFromHook}
+                  >
                     <ToolIcon name="insert" />
                     Insert component (I)
                   </button>
@@ -7762,8 +5961,8 @@ export function App({
         open={insertDialogOpen}
         styleProfileId={document.presentation.styleProfileId}
         recentSymbolIds={recentSymbolIds}
-        onApply={beginInsertedComponentPlacement}
-        onCancel={cancelComponentInsert}
+        onApply={beginInsertedComponentPlacementFromHook}
+        onCancel={cancelComponentInsertFromHook}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel
@@ -7942,8 +6141,8 @@ export function App({
             styleProfileId={document.presentation.styleProfileId}
             recentSymbolIds={recentSymbolIds}
             open={visibleLibraryPanelOpen}
-            onOpenInsert={openInsertComponentDialog}
-            onQuickPlace={beginInsertedComponentPlacement}
+            onOpenInsert={openInsertComponentDialogFromHook}
+            onQuickPlace={beginInsertedComponentPlacementFromHook}
           />
         ) : (
           <ExamplesPanel
@@ -8634,7 +6833,7 @@ export function App({
                   </button>
                   <button
                     type="button"
-                    onClick={toggleSelectedNoConnect}
+                    onClick={toggleSelectedNoConnectFromSelection}
                     disabled={
                       !selectedNoConnect && selectedEndpointNetId !== null
                     }
@@ -8654,7 +6853,10 @@ export function App({
                   aria-label="Junction actions"
                 >
                   <h2>Junction</h2>
-                  <button type="button" onClick={deleteSelectedJunction}>
+                  <button
+                    type="button"
+                    onClick={deleteSelectedJunctionFromSelection}
+                  >
                     Delete junction and attached wires
                   </button>
                 </section>
@@ -8803,7 +7005,7 @@ export function App({
                 if (event.detail === 1) {
                   event.preventDefault();
                   event.stopPropagation();
-                  commitCommandMove(
+                  commitCommandMoveFromSelection(
                     pointFromClient(
                       event.clientX,
                       event.clientY,
@@ -8826,7 +7028,7 @@ export function App({
                 event.clientY,
                 event.currentTarget,
               );
-              commitPendingPlacementAt({
+              commitPendingPlacementAtFromHook({
                 x: snapCoordinate(rawPoint.x, document.presentation.grid),
                 y: snapCoordinate(rawPoint.y, document.presentation.grid),
               });
@@ -8870,7 +7072,7 @@ export function App({
                   event.clientY,
                   event.currentTarget,
                 );
-                commitCopyPlacement({
+                commitCopyPlacementFromSelection({
                   x: snapCoordinate(point.x, document.presentation.grid),
                   y: snapCoordinate(point.y, document.presentation.grid),
                 });
@@ -9280,7 +7482,7 @@ export function App({
                       primaryInstanceId &&
                       compositeSelectionOwnsHit("route", route.id)
                     ) {
-                      beginMove(event, primaryInstanceId);
+                      beginMoveFromSelection(event, primaryInstanceId);
                       return;
                     }
                     beginRouteStretch(event, route.id, segmentIndex, intent);
@@ -9375,7 +7577,7 @@ export function App({
                           suppressInstanceClick.current = false;
                           return;
                         }
-                        selectInstance(
+                        selectInstanceFromSelection(
                           instance.id,
                           event.shiftKey || event.ctrlKey,
                         );
@@ -9388,7 +7590,9 @@ export function App({
                         }
                         inspectInstance(instance.id);
                       }}
-                      onPointerDown={(event) => beginMove(event, instance.id)}
+                      onPointerDown={(event) =>
+                        beginMoveFromSelection(event, instance.id)
+                      }
                       pointerEvents={tool === "wire" ? "none" : undefined}
                     />
                   );
