@@ -9,7 +9,7 @@ an archive. Completed plans with resolved experience are stored under
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
 | `active`                  |     0 | No active root plan remains.                                                       |
-| `completed` + `none`      |    40 | Verify commit/log evidence, then archive according to routine retention policy.   |
+| `completed` + `none`      |    41 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
@@ -91,6 +91,13 @@ plan retention after commit evidence is recorded.
 experience. It reconciles the previously delivered foundation with the accepted
 fine-grained device, model-schema, and Project-protocol architecture, while
 retaining the current fixture and single-adapter compatibility policy.
+
+## 2026-08-17 Project protocol release-contract repair
+
+`2026-08-17-fix-protocol-release-contract` is completed with resolved
+experience. It restores the release scripts' Project persistence imports after
+the Project-protocol boundary split; local release verification passed and the
+target is awaiting commit and remote required-check evidence.
 
 ## Legacy Metadata Sweep
 

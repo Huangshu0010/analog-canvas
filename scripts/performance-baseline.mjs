@@ -7,9 +7,11 @@ import { createAgentCircuitService } from "../packages/agent-adapter/dist/index.
 import {
   CircuitProjectSchema,
   createEmptyProject,
+} from "../packages/model/dist/index.js";
+import {
   saveProject,
   serializeProject,
-} from "../packages/model/dist/index.js";
+} from "../packages/project-protocol/dist/index.js";
 import { RootedProjectStorage } from "../packages/platform-node/dist/index.js";
 import { renderDocumentSvg } from "../packages/render-svg/dist/index.js";
 import { importSpiceSources } from "../packages/spice/dist/index.js";

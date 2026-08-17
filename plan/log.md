@@ -7800,3 +7800,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `refactor(protocol): complete device and compatibility boundaries` on
   `codex/device-protocol-compatibility-plan` and pushed; remote required checks
   remain the mainline delivery gate.
+
+## 2026-08-17 - Repair Project protocol release imports
+
+- Target: restore release verification after persistence moved from model to
+  the Project-protocol module.
+- Changed areas: performance-baseline, export-golden, and visual-golden script
+  imports; target plan and root queue record.
+- Validation: `pnpm build && pnpm release:verify:built` passed, covering the
+  performance baseline, golden checks, editor production smoke, package
+  creation, and both release smoke checks; `git diff --check` passed.
+- Commit status: committed and pushed on
+  `codex/device-protocol-compatibility-plan`; remote required checks remain the
+  mainline delivery gate.
