@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -24,6 +24,7 @@ This target owns only its integration record and the branch/PR lifecycle.
 
 - `plan/2026-08-17-merge-library-examples/plan.md`
 - `plan/log.md` (close-out entry only)
+- `plan/root-audit.md` (close-out entry only)
 - `apps/editor/src/examples/common-source-amplifier.icproj.json`
 - `apps/editor/src/examples/two-stage-op-amp.icproj.json`
 
@@ -64,4 +65,20 @@ validation and merge.
 
 ## Outcome
 
-Pending.
+Rebased the review branch onto the latest `main`, preserved both concurrent
+factual log entries, corrected the bundled JSON formatting required by CI, and
+merged PR #109 into `main` as `cd1cddd`. The first remote run failed only for
+the integration plan's incomplete `no-test-change` declaration; after adding
+the required reason and existing protection, all required checks passed.
+
+Validation passed:
+
+- `pnpm install --frozen-lockfile`
+- `pnpm ci:check` on the rebased branch (136 test files / 818 tests and 145
+  browser tests)
+- `pnpm test:impact -- --base origin/main`
+- GitHub Actions Change scope, Static contracts, Unit and integration tests,
+  Release contracts, and both Browser test shards on PR #109
+- `git diff --check`
+
+Commit status: integrated into `main` through PR #109.
