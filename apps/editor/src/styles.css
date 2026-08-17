@@ -977,6 +977,64 @@ body {
   gap: 4px;
 }
 
+.shapes-example-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--icm-space-2);
+}
+
+.shapes-example-card {
+  display: block;
+  width: 100%;
+  min-height: 76px;
+  padding: var(--icm-space-3);
+  border: 1px solid var(--icm-border);
+  border-radius: var(--icm-radius-sm);
+  background: var(--icm-surface-muted);
+  box-shadow: none;
+  color: var(--icm-text);
+  text-align: left;
+}
+
+.shapes-example-card:hover:not(:disabled) {
+  border-color: var(--icm-border-hover);
+  background: #fff;
+  box-shadow: var(--icm-shadow-sm);
+}
+
+.shapes-example-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.shapes-example-kicker {
+  color: var(--icm-text-muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.shapes-example-name {
+  overflow: hidden;
+  font-size: var(--icm-font-sm);
+  font-weight: 650;
+  line-height: var(--icm-line-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shapes-example-description {
+  overflow: hidden;
+  color: var(--icm-text-muted);
+  font-size: var(--icm-font-xs);
+  line-height: var(--icm-line-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .shapes-chip {
   display: grid;
   grid-template-rows: 32px 1.15em;

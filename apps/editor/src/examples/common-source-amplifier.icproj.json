@@ -1,0 +1,1286 @@
+{
+  "documents": [
+    {
+      "annotations": [
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 400,
+              "y": 340
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 10,
+              "y": 10
+            },
+            "objectId": "C1"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "C"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "italic"
+                  },
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "GS"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "subscript"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
+              }
+            ]
+          },
+          "id": "instance-label-C1",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0,
+          "sizeScale": 1.1
+        },
+        {
+          "alignment": "middle",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 480,
+              "y": 220
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 0,
+              "y": -20
+            },
+            "objectId": "C1-copy-1"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "C"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "italic"
+                  },
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "GD"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "subscript"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
+              }
+            ]
+          },
+          "id": "instance-label-C1-copy-1",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0,
+          "sizeScale": 1.1
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 540,
+              "y": 300
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 20,
+              "y": 10
+            },
+            "objectId": "M2"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "M"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "instance-label-M2",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0,
+          "sizeScale": 1
+        },
+        {
+          "alignment": "end",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 560,
+              "y": 210
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 30,
+              "y": 10
+            },
+            "objectId": "R3"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "R"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "italic"
+                  },
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "D"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "subscript"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
+              }
+            ]
+          },
+          "id": "instance-label-R3",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0,
+          "sizeScale": 1.1
+        },
+        {
+          "alignment": "middle",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 340,
+              "y": 270
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 0,
+              "y": -20
+            },
+            "objectId": "R3-copy-5"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "R"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "italic"
+                  },
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "S"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "subscript"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
+              }
+            ]
+          },
+          "id": "instance-label-R3-copy-5",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0,
+          "sizeScale": 1.1
+        },
+        {
+          "alignment": "end",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 280,
+              "y": 340
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": -10,
+              "y": 10
+            },
+            "objectId": "V6"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "V"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "italic"
+                  },
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "in"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "subscript"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
+              }
+            ]
+          },
+          "id": "instance-label-V6",
+          "kind": "instance-label",
+          "locked": false,
+          "rotation": 0,
+          "sizeScale": 1.1
+        },
+        {
+          "alignment": "start",
+          "anchor": {
+            "fallbackPosition": {
+              "x": 550,
+              "y": 160
+            },
+            "kind": "object",
+            "localOffset": {
+              "x": 10,
+              "y": 10
+            },
+            "objectId": "junction-vdd7-end"
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "V"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "italic"
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "children": [
+                          {
+                            "kind": "text",
+                            "value": "DD"
+                          }
+                        ],
+                        "kind": "span",
+                        "style": "italic"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "bold"
+                  }
+                ],
+                "kind": "span",
+                "style": "subscript"
+              }
+            ]
+          },
+          "id": "label-VDD7",
+          "kind": "power-label",
+          "locked": false,
+          "netId": "net-power-vdd7",
+          "rotation": 0,
+          "sizeScale": 1.1
+        },
+        {
+          "alignment": "middle",
+          "anchor": {
+            "direction": "forward",
+            "fallbackPosition": {
+              "x": 590,
+              "y": 270
+            },
+            "kind": "route",
+            "normalOffset": -40,
+            "orientation": "follow",
+            "routeId": "route-ui-25",
+            "segmentIndex": 1,
+            "t": 0.6996025085449219
+          },
+          "content": {
+            "runs": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "I"
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "italic"
+                  },
+                  {
+                    "children": [
+                      {
+                        "kind": "text",
+                        "value": "out "
+                      }
+                    ],
+                    "kind": "span",
+                    "style": "subscript"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "= 0"
+                  }
+                ],
+                "kind": "span",
+                "style": "bold"
+              }
+            ]
+          },
+          "id": "current-4",
+          "kind": "route-marker",
+          "locked": false,
+          "markerKind": "current",
+          "rotation": 0,
+          "sizeScale": 1.1
+        }
+      ],
+      "constraints": [],
+      "drafting": {
+        "objects": [
+          {
+            "alignment": "middle",
+            "anchor": {
+              "kind": "free",
+              "position": {
+                "x": 480,
+                "y": 310
+              }
+            },
+            "content": {
+              "runs": [
+                {
+                  "kind": "text",
+                  "value": "+"
+                }
+              ]
+            },
+            "id": "note-5",
+            "kind": "text",
+            "locked": false,
+            "rotation": 0,
+            "styleOverride": {
+              "sizeScale": 1
+            },
+            "typographyToken": "label",
+            "zIndex": 0
+          },
+          {
+            "alignment": "middle",
+            "anchor": {
+              "kind": "free",
+              "position": {
+                "x": 500,
+                "y": 350
+              }
+            },
+            "content": {
+              "runs": [
+                {
+                  "kind": "text",
+                  "value": "_"
+                }
+              ]
+            },
+            "id": "note-6",
+            "kind": "text",
+            "locked": false,
+            "rotation": 0,
+            "styleOverride": {
+              "sizeScale": 1
+            },
+            "typographyToken": "label",
+            "zIndex": 0
+          },
+          {
+            "alignment": "middle",
+            "anchor": {
+              "kind": "free",
+              "position": {
+                "x": 490,
+                "y": 340
+              }
+            },
+            "content": {
+              "runs": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "V"
+                        }
+                      ],
+                      "kind": "span",
+                      "style": "italic"
+                    }
+                  ],
+                  "kind": "span",
+                  "style": "bold"
+                },
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "1"
+                        }
+                      ],
+                      "kind": "span",
+                      "style": "bold"
+                    }
+                  ],
+                  "kind": "span",
+                  "style": "subscript"
+                }
+              ]
+            },
+            "id": "note-7",
+            "kind": "text",
+            "locked": false,
+            "rotation": 0,
+            "styleOverride": {
+              "sizeScale": 1.2
+            },
+            "typographyToken": "label",
+            "zIndex": 0
+          }
+        ]
+      },
+      "id": "document-main",
+      "instances": [
+        {
+          "id": "C1",
+          "netlist": {
+            "binding": {
+              "deviceClass": "capacitor",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "C1"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 390,
+              "y": 330
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "C1-copy-1",
+          "netlist": {
+            "binding": {
+              "deviceClass": "capacitor",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "C2"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 480,
+              "y": 240
+            },
+            "rotation": 90
+          },
+          "properties": {},
+          "symbolId": "capacitor"
+        },
+        {
+          "id": "M2",
+          "mosBulkBinding": {
+            "netId": "net-global-0",
+            "origin": "supply-default"
+          },
+          "netlist": {
+            "parameters": {},
+            "reference": "M1"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 520,
+              "y": 290
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "nmos",
+          "symbolVariantId": "textbook-3terminal"
+        },
+        {
+          "id": "R3",
+          "netlist": {
+            "binding": {
+              "deviceClass": "resistor",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "R1"
+          },
+          "placement": {
+            "mirror": "x",
+            "position": {
+              "x": 530,
+              "y": 200
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "resistor"
+        },
+        {
+          "id": "VDD4",
+          "netlist": {
+            "binding": {
+              "deviceClass": "net-marker",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "PWR1"
+          },
+          "placement": null,
+          "properties": {},
+          "symbolId": "vdd-port"
+        },
+        {
+          "id": "GND5",
+          "netlist": {
+            "binding": {
+              "deviceClass": "net-marker",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "PWR2"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 590,
+              "y": 290
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "ground"
+        },
+        {
+          "id": "GND5-copy-2",
+          "netlist": {
+            "binding": {
+              "deviceClass": "net-marker",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "PWR3"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 530,
+              "y": 360
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "ground"
+        },
+        {
+          "id": "GND5-copy-2-copy-3",
+          "netlist": {
+            "binding": {
+              "deviceClass": "net-marker",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "PWR4"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 390,
+              "y": 360
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "ground"
+        },
+        {
+          "id": "GND5-copy-2-copy-3-copy-4",
+          "netlist": {
+            "binding": {
+              "deviceClass": "net-marker",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "PWR5"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 290,
+              "y": 360
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "ground"
+        },
+        {
+          "id": "R3-copy-5",
+          "netlist": {
+            "binding": {
+              "deviceClass": "resistor",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "R2"
+          },
+          "placement": {
+            "mirror": "none",
+            "position": {
+              "x": 340,
+              "y": 290
+            },
+            "rotation": 90
+          },
+          "properties": {},
+          "symbolId": "resistor"
+        },
+        {
+          "id": "V6",
+          "netlist": {
+            "parameters": {},
+            "reference": "V1"
+          },
+          "placement": {
+            "mirror": "x",
+            "position": {
+              "x": 290,
+              "y": 330
+            },
+            "rotation": 0
+          },
+          "properties": {},
+          "symbolId": "voltage-source"
+        },
+        {
+          "id": "VDD7",
+          "netlist": {
+            "binding": {
+              "deviceClass": "net-marker",
+              "kind": "primitive"
+            },
+            "parameters": {},
+            "reference": "PWR6"
+          },
+          "placement": null,
+          "properties": {},
+          "symbolId": "vdd-port"
+        }
+      ],
+      "junctions": [
+        {
+          "id": "junction-vdd4-end",
+          "netId": "net-power-vdd7",
+          "position": {
+            "x": 540,
+            "y": 160
+          },
+          "role": "route-anchor"
+        },
+        {
+          "id": "junction-ui-10",
+          "netId": "net-split-1143160ec6fc8d88",
+          "position": {
+            "x": 390,
+            "y": 290
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-ui-12",
+          "netId": "net-split-1143160ec6fc8d88",
+          "position": {
+            "x": 430,
+            "y": 290
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-ui-15",
+          "netId": "net-split-315c27b4f6e1c409",
+          "position": {
+            "x": 530,
+            "y": 240
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-vdd7-start",
+          "netId": "net-power-vdd7",
+          "position": {
+            "x": 520,
+            "y": 160
+          },
+          "role": "route-anchor"
+        },
+        {
+          "id": "junction-vdd7-end",
+          "netId": "net-power-vdd7",
+          "position": {
+            "x": 540,
+            "y": 160
+          },
+          "role": "route-anchor"
+        },
+        {
+          "id": "junction-ui-21",
+          "netId": "net-power-vdd7",
+          "position": {
+            "x": 530,
+            "y": 160
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-ui-26",
+          "netId": "net-split-1143160ec6fc8d88",
+          "position": {
+            "x": 440,
+            "y": 290
+          },
+          "role": "branch"
+        },
+        {
+          "id": "junction-ui-29",
+          "netId": "net-split-1143160ec6fc8d88",
+          "position": {
+            "x": 450,
+            "y": 290
+          },
+          "role": "branch"
+        }
+      ],
+      "layoutGroups": [],
+      "name": "Main",
+      "netlist": {
+        "name": "Main",
+        "terminals": []
+      },
+      "nets": [
+        {
+          "id": "net-global-0",
+          "name": "0",
+          "powerDomain": "ground",
+          "scope": "global",
+          "terminals": [
+            {
+              "instanceId": "M2",
+              "pinName": "B"
+            },
+            {
+              "instanceId": "GND5-copy-2",
+              "pinName": "0"
+            },
+            {
+              "instanceId": "M2",
+              "pinName": "S"
+            }
+          ]
+        },
+        {
+          "id": "net-ui-4",
+          "powerDomain": "ground",
+          "scope": "global",
+          "terminals": [
+            {
+              "instanceId": "GND5-copy-2-copy-3-copy-4",
+              "pinName": "0"
+            },
+            {
+              "instanceId": "V6",
+              "pinName": "-"
+            }
+          ]
+        },
+        {
+          "id": "net-ui-5",
+          "powerDomain": "none",
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "V6",
+              "pinName": "+"
+            },
+            {
+              "instanceId": "R3-copy-5",
+              "pinName": "2"
+            }
+          ]
+        },
+        {
+          "id": "net-ui-9",
+          "powerDomain": "ground",
+          "scope": "global",
+          "terminals": [
+            {
+              "instanceId": "C1",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "GND5-copy-2-copy-3",
+              "pinName": "0"
+            }
+          ]
+        },
+        {
+          "id": "net-split-315c27b4f6e1c409",
+          "powerDomain": "ground",
+          "scope": "global",
+          "terminals": [
+            {
+              "instanceId": "R3",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "C1-copy-1",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "M2",
+              "pinName": "D"
+            },
+            {
+              "instanceId": "GND5",
+              "pinName": "0"
+            }
+          ]
+        },
+        {
+          "id": "net-power-vdd7",
+          "name": "VDD",
+          "powerDomain": "vdd",
+          "scope": "global",
+          "terminals": [
+            {
+              "instanceId": "VDD7",
+              "pinName": "P"
+            },
+            {
+              "instanceId": "VDD4",
+              "pinName": "P"
+            },
+            {
+              "instanceId": "R3",
+              "pinName": "1"
+            }
+          ]
+        },
+        {
+          "id": "net-split-1143160ec6fc8d88",
+          "powerDomain": "none",
+          "scope": "local",
+          "terminals": [
+            {
+              "instanceId": "C1-copy-1",
+              "pinName": "2"
+            },
+            {
+              "instanceId": "R3-copy-5",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "C1",
+              "pinName": "1"
+            },
+            {
+              "instanceId": "M2",
+              "pinName": "G"
+            }
+          ]
+        }
+      ],
+      "noConnects": [],
+      "presentation": {
+        "compactness": "normal",
+        "grid": 10,
+        "styleProfileId": "razavi-textbook-v1"
+      },
+      "revision": 166,
+      "routes": [
+        {
+          "from": {
+            "instanceId": "V6",
+            "kind": "terminal",
+            "pinName": "+"
+          },
+          "id": "route-ui-5",
+          "netId": "net-ui-5",
+          "segmentModes": ["manual", "manual"],
+          "to": {
+            "instanceId": "R3-copy-5",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "waypoints": [
+            {
+              "x": 290,
+              "y": 290
+            }
+          ]
+        },
+        {
+          "from": {
+            "instanceId": "R3-copy-5",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "id": "route-ui-8-a-10",
+          "netId": "net-split-1143160ec6fc8d88",
+          "segmentModes": ["manual"],
+          "to": {
+            "junctionId": "junction-ui-10",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-10",
+            "kind": "junction"
+          },
+          "id": "route-ui-8-b-10",
+          "netId": "net-split-1143160ec6fc8d88",
+          "segmentModes": ["manual"],
+          "to": {
+            "instanceId": "C1",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-10",
+            "kind": "junction"
+          },
+          "id": "route-ui-11-a-12",
+          "netId": "net-split-1143160ec6fc8d88",
+          "segmentModes": ["manual"],
+          "to": {
+            "junctionId": "junction-ui-12",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-12",
+            "kind": "junction"
+          },
+          "id": "route-ui-11-b-12-a-26",
+          "netId": "net-split-1143160ec6fc8d88",
+          "segmentModes": ["manual"],
+          "to": {
+            "junctionId": "junction-ui-26",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-26",
+            "kind": "junction"
+          },
+          "id": "route-ui-11-b-12-b-26-a-29",
+          "netId": "net-split-1143160ec6fc8d88",
+          "segmentModes": ["manual"],
+          "to": {
+            "junctionId": "junction-ui-29",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-29",
+            "kind": "junction"
+          },
+          "id": "route-ui-11-b-12-b-26-b-29",
+          "netId": "net-split-1143160ec6fc8d88",
+          "segmentModes": ["manual"],
+          "to": {
+            "instanceId": "M2",
+            "kind": "terminal",
+            "pinName": "G"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "M2",
+            "kind": "terminal",
+            "pinName": "S"
+          },
+          "id": "route-ui-19",
+          "netId": "net-global-0",
+          "segmentModes": ["manual"],
+          "to": {
+            "instanceId": "GND5-copy-2",
+            "kind": "terminal",
+            "pinName": "0"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-vdd7-start",
+            "kind": "junction"
+          },
+          "id": "route-vdd7-rail-a-21",
+          "netId": "net-power-vdd7",
+          "presentation": "power-rail",
+          "segmentModes": ["manual"],
+          "to": {
+            "junctionId": "junction-ui-21",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-21",
+            "kind": "junction"
+          },
+          "id": "route-vdd7-rail-b-21",
+          "netId": "net-power-vdd7",
+          "presentation": "power-rail",
+          "segmentModes": ["manual"],
+          "to": {
+            "junctionId": "junction-vdd7-end",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-21",
+            "kind": "junction"
+          },
+          "id": "route-ui-22",
+          "netId": "net-power-vdd7",
+          "segmentModes": ["manual"],
+          "to": {
+            "instanceId": "R3",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "instanceId": "R3",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-ui-23",
+          "netId": "net-split-315c27b4f6e1c409",
+          "segmentModes": ["manual"],
+          "to": {
+            "junctionId": "junction-ui-15",
+            "kind": "junction"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-15",
+            "kind": "junction"
+          },
+          "id": "route-ui-24",
+          "netId": "net-split-315c27b4f6e1c409",
+          "segmentModes": ["manual"],
+          "to": {
+            "instanceId": "M2",
+            "kind": "terminal",
+            "pinName": "D"
+          },
+          "waypoints": []
+        },
+        {
+          "from": {
+            "junctionId": "junction-ui-15",
+            "kind": "junction"
+          },
+          "id": "route-ui-25",
+          "netId": "net-split-315c27b4f6e1c409",
+          "segmentModes": ["manual", "manual"],
+          "to": {
+            "instanceId": "GND5",
+            "kind": "terminal",
+            "pinName": "0"
+          },
+          "waypoints": [
+            {
+              "x": 590,
+              "y": 240
+            }
+          ]
+        },
+        {
+          "from": {
+            "instanceId": "C1-copy-1",
+            "kind": "terminal",
+            "pinName": "2"
+          },
+          "id": "route-ui-30",
+          "netId": "net-split-1143160ec6fc8d88",
+          "segmentModes": ["manual", "manual"],
+          "to": {
+            "junctionId": "junction-ui-29",
+            "kind": "junction"
+          },
+          "waypoints": [
+            {
+              "x": 450,
+              "y": 240
+            }
+          ]
+        },
+        {
+          "from": {
+            "instanceId": "C1-copy-1",
+            "kind": "terminal",
+            "pinName": "1"
+          },
+          "id": "route-ui-31",
+          "netId": "net-split-315c27b4f6e1c409",
+          "segmentModes": ["manual"],
+          "to": {
+            "junctionId": "junction-ui-15",
+            "kind": "junction"
+          },
+          "waypoints": []
+        }
+      ],
+      "sourceStatus": "connectivity-modified"
+    }
+  ],
+  "id": "project-main",
+  "name": "New Circuit",
+  "schemaVersion": 11,
+  "source": {
+    "dialect": "none",
+    "entry": null,
+    "files": [],
+    "sourcePolicy": "copy"
+  },
+  "symbolLibrary": {
+    "hash": "razavi-reference-v1",
+    "id": "razavi-symbols",
+    "version": "1"
+  },
+  "topDocumentId": "document-main"
+}
