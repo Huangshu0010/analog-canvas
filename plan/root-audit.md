@@ -160,6 +160,13 @@ connectivity semantics, current contract/user guidance, and branch validation
 are recorded in `plan/log.md`; it is eligible for normal completed-plan
 retention after commit evidence is recorded.
 
+## 2026-08-17 Net contract named-authoring closure
+
+`2026-08-17-net-contract-n5-named-net-planner` is completed on
+`codex/net-contract-unification-plan`. The generic named-Net planner now owns
+GUI Net-label rename-or-merge intent, while the raw transaction stays strict;
+validation and commit evidence are recorded in `plan/log.md`.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

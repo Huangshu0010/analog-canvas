@@ -20,6 +20,7 @@ import {
   proposePowerRailTranslation,
   proposeWireCommitThroughContacts,
   proposeWireSegmentMove,
+  planEnsureNamedNet,
   type EditTransactionResult,
   type SchematicEdit,
   type WireSource,
@@ -4168,10 +4169,12 @@ export function App({
           ]
         : null;
     }
-    const sameNameNet = document.nets.find(
-      (candidate) => candidate.id !== net.id && candidate.name === name,
-    );
-    const targetNetId = sameNameNet?.id ?? net.id;
+    const namedNetPlan = planEnsureNamedNet(document, {
+      candidateNetId: net.id,
+      name,
+    });
+    if (!namedNetPlan.ok) return null;
+    const targetNetId = namedNetPlan.netId;
     const geometry = routeGeometryRecords.find(
       ({ route: candidate }) => candidate.id === route.id,
     )?.geometry;
@@ -4198,21 +4201,13 @@ export function App({
       existingLabel.anchor.routeId === route.id
         ? existingLabel.anchor
         : null;
-    const edits: SchematicEdit[] = sameNameNet
-      ? [
-          {
-            kind: "merge_nets",
-            targetNetId,
-            sourceNetId: net.id,
-          },
-        ]
-      : [{ kind: "set_net_name", netId: net.id, name }];
+    const edits: SchematicEdit[] = [...namedNetPlan.edits];
     edits.push({
       kind: "upsert_schematic_annotation",
       annotation: {
         id: existingLabel?.id ?? `net-label-${route.id}`,
         kind: "net-label",
-        content: semanticTextDocument(name, "net-label"),
+        content: semanticTextDocument(namedNetPlan.name, "net-label"),
         netId: targetNetId,
         // A dragged route anchor survives a name edit; new labels start at
         // the middle segment with the default normal offset.

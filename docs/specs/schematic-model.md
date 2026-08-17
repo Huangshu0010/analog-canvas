@@ -58,6 +58,11 @@ then checks its role; it never chooses the first Net with a matching role.
 Changing between non-`none` power roles is rejected atomically. The authored
 Net spelling remains persisted; normalized comparison is derived only.
 
+High-level naming starts from an existing candidate Net. An unused name changes
+that Net's authored name; a matching folded name emits an explicit compatible
+Net merge through the Edit Engine, choosing the stable lowest Net ID. Raw
+`set_net_name` remains deliberately strict and rejects an ambiguous rename.
+
 Canonical MOS Instances use `nmos`/`pmos` with D/G/S/B electrical pins. The
 default `textbook-3terminal` variant is presentation-only. B membership is
 explicit first, then materialized from a configured cell-default Net, then

@@ -8234,3 +8234,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   full workspace build, production smoke) passed.
 - Commit status: pending `feat(net): repair legacy power net duplicates` on
   `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N5 named Net authoring
+
+- Target: complete the generic high-level naming boundary without weakening the
+  raw `set_net_name` contract.
+- Changed areas: pure Edit Engine named-Net planner, GUI Net-label integration,
+  planner regressions, and corresponding model/edit-engine/roadmap guidance.
+- Validation: focused 3-file Vitest run (19 tests), package/editor builds,
+  typecheck, docs check, test-impact, `git diff --check`, and
+  `pnpm verify:branch` (144 unit files / 862 tests, full workspace build,
+  production smoke) passed.
+- Commit status: pending `feat(net): unify named net authoring` on
+  `codex/net-contract-unification-plan`.

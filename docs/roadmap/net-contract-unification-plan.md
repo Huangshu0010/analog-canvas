@@ -1,6 +1,6 @@
 # Net Contract Unification Plan
 
-Status: `proposed`
+Status: `active`
 
 Primary owners: `packages/model`, `packages/edit-engine`, `packages/derived`,
 `packages/netlist`, `apps/editor`
@@ -138,11 +138,9 @@ gesture:
 
 ```ts
 planEnsureNamedNet(document, {
+  candidateNetId,
   name,
-  scope,
-  powerDomain?,
-  contactedNetIds?,
-}) -> { netId, edits, diagnostics }
+}) -> { netId, name, edits }
 ```
 
 It emits existing typed edits; no new mutation language is introduced.
@@ -151,13 +149,13 @@ Planner behavior:
 
 1. Fold the requested name once.
 2. Find the one matching Net in the current Document.
-3. Reuse it, or create it when absent.
-4. Merge compatible contacted or legacy duplicate Nets into that canonical Net.
+3. Preserve the candidate when it already matches, or rename it when the name
+   is unused.
+4. Merge the candidate into a compatible same-folded-name Net when one exists.
 5. Retarget every reference through the existing `merge_nets` implementation,
    including Routes, Junctions, annotations, MOS defaults/bindings, layout
    references, and formal cell-terminal Net IDs.
-6. Reject different authored names or incompatible power roles instead of
-   overwriting them.
+6. Reject incompatible power roles instead of overwriting them.
 7. Return an ordered edit list so preview, dry-run, undo, GUI, and Agent all use
    the same atomic transaction.
 

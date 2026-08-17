@@ -146,6 +146,11 @@ Phase 8 topology operations have these preconditions:
 - `set_net_name` requires a non-empty trimmed name. A name already owned by a
   different Net after case-folded comparison is rejected; the caller must
   explicitly `merge_nets`.
+- `planEnsureNamedNet` is the pure high-level companion for an existing
+  candidate Net. It returns only `set_net_name` or `merge_nets` edits: an
+  unused name renames the candidate, while an existing same-folded name selects
+  a deterministic target and explicitly merges compatible Nets. It does not
+  weaken the raw edit's rejection rule or create another mutation endpoint.
 - `set_net_power_domain` may classify an unclassified Net or clear a role, but
   cannot change directly between non-`none` roles. Canonical power authoring
   selects by global Net name (`0` or `VDD`) before applying this edit; a power
