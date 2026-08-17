@@ -42,6 +42,16 @@ is credible:
 Add test rationale or broader-suite justification only when it is not obvious
 from the changed behavior and risk.
 
+## Test Impact
+
+- Decision: `<tests-updated | no-test-change>`
+- Contracts: `<current behavior or invariant>`
+- Primary checks: `<test paths and commands>`
+
+For `no-test-change`, replace the last two lines with an evidence-based reason
+and existing protection where applicable. Do not use this section to justify
+unreviewed behavior changes.
+
 ## Commit Intent
 
 Commit as:

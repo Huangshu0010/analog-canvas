@@ -56,6 +56,14 @@ the owned set without updating the plan first.
 - Add tests when behavior changes, a regression needs protection, or a
   contract is best demonstrated automatically. Do not add tests that merely
   restate an implementation.
+- Record `## Test Impact` in every implementation target plan: name changed
+  tests and protected contracts, or use `Decision: no-test-change` with
+  evidence that behavior is unchanged or protected elsewhere. Run
+  `pnpm test:impact -- --base <base-ref>` before delivery; see
+  `docs/testing/README.md` and its contract matrix.
+- Keep one primary test layer per behavior. A test mentioning retired input is
+  not automatically dead: retain reachable rejection, migration, history, and
+  safety boundaries until their replacement is explicit.
 - Do not run a full suite by default. Expand from focused checks when the
   change crosses shared contracts or subsystems, carries broader risk, or a
   project gate requires it.

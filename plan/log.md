@@ -7714,3 +7714,38 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `chore/unify-current-protocol-baseline` as
   `feat(model): accept schema v10 through a direct v11 upgrade`; push status is
   recorded in the handoff.
+## 2026-08-17 - Test-system rationalization
+
+- Target: make test responsibility explicit and enforce an evidence-based
+  decision whenever implementation code changes, while removing a dead surface
+  and strengthening current high-value contracts.
+- Changed areas: test-system guide and contract matrix; target-plan and Agent
+  rules; CI test-impact check and its unit contract; coordinate-domain,
+  topology-hash, and Netlist extraction contracts; unused style-profile token.
+- Validation: focused contracts; `pnpm test:impact -- --base main`;
+  `pnpm ci:static`; full `pnpm test:local` (129 files / 801 tests); and
+  `pnpm verify:branch` including workspace build and production smoke.
+- Commit status: committed and pushed on `chore/test-system-rationalization`.
+
+## 2026-08-17 - Merge protocol baseline and test system
+
+- Target: integrate the current-protocol baseline with the test-system
+  rationalization without losing either target's contract or factual history.
+- Changed areas: merge-only integration; retained both `plan/log.md` entries
+  after resolving their concurrent append.
+- Validation: `pnpm test:impact -- --base main`; `pnpm verify:branch` with
+  static checks, 132 test files / 804 tests, workspace build, and production
+  smoke.
+- Commit status: committed and pushed on `agent/merge-protocol-test-system`.
+
+## 2026-08-17 - Refresh MCP release checksum for combined branch
+
+- Target: align the canonical Linux MCP artifact integrity pin with the
+  protocol-resource-bearing integration commit so the release gate can verify
+  the exact published tarball.
+- Changed areas: `config/agent-mcp-distribution.json` checksum plus this target
+  plan and delivery record.
+- Validation: from a frozen dependency install, `pnpm ci:check` passed static
+  contracts, 804 unit tests, build and release/package smoke, and 143 browser
+  tests; `git diff --check` passed.
+- Commit status: pending push and remote GitHub Actions verification on PR 105.

@@ -432,8 +432,27 @@ function extractDeviceInstance(
       [instance.id],
     );
   }
+  const parameterByFoldedName = new Map<
+    string,
+    { name: string; rawValue: string }
+  >();
+  for (const [parameter, rawValue] of Object.entries(netlist.parameters)) {
+    const folded = parameter.toLowerCase();
+    const prior = parameterByFoldedName.get(folded);
+    if (prior) {
+      diagnostic(
+        diagnostics,
+        document.id,
+        "DUPLICATE_PARAMETER_NAME",
+        `Parameter ${parameter} duplicates parameter ${prior.name} under case folding`,
+        [instance.id],
+      );
+    } else {
+      parameterByFoldedName.set(folded, { name: parameter, rawValue });
+    }
+  }
   for (const parameter of definition.requiredParameters) {
-    if (!netlist.parameters[parameter]?.trim()) {
+    if (!parameterByFoldedName.get(parameter.toLowerCase())?.rawValue.trim()) {
       diagnostic(
         diagnostics,
         document.id,
