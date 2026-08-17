@@ -168,7 +168,7 @@ Net sequence:
 - component placement contact when the component declares a named global Net;
 - SPICE import normalization;
 - MOS supply-default materialization;
-- Agent high-level wire/power intents.
+- Agent semantic naming actions; raw typed Agent transactions remain strict.
 
 Ordinary unnamed wire authoring continues to use the routing planner. It does
 not need the named-Net planner until a label, global attachment, or explicit

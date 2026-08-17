@@ -62,6 +62,12 @@ After commit, render and then request a fresh Snapshot for final verification.
 On a stale revision or uncertain transport result, refresh state and reconcile;
 do not replay a changed or obsolete transaction.
 
+The reviewed Agent client may compile a semantic Net rename through the same
+pure named-Net planner used by GUI label authoring. An unused name becomes a
+typed rename; a compatible same-folded-name Net becomes an explicit typed merge.
+The wire API itself remains raw and strict: a directly submitted ambiguous
+`set_net_name` edit is rejected by the Edit Engine.
+
 ## File Resource boundary
 
 `POST /api/agent/sessions/{sessionId}/files` is separate from Circuit

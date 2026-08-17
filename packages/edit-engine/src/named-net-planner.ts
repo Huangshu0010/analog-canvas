@@ -1,4 +1,4 @@
-import { foldNetName, type SchematicDocument } from "@icm/model";
+import { foldNetName } from "@icm/model";
 
 import type { SchematicEdit } from "./edit-schema.js";
 
@@ -6,13 +6,22 @@ export type EnsureNamedNetPlan =
   | { ok: true; netId: string; name: string; edits: readonly SchematicEdit[] }
   | { ok: false; message: string; relatedNetIds: readonly string[] };
 
+/** Minimal read contract keeps planner consumers independent of Document I/O. */
+export interface NamedNetPlannerDocument {
+  nets: readonly {
+    id: string;
+    name?: string | undefined;
+    powerDomain?: "none" | "vdd" | "ground" | "conflict" | undefined;
+  }[];
+}
+
 /**
  * Name-first authoring over one existing candidate Net. The returned edits are
  * ordinary typed edits: low-level callers still retain the raw rename/merge
  * contract, while GUI-level label authoring gets one deterministic operation.
  */
 export function planEnsureNamedNet(
-  document: SchematicDocument,
+  document: NamedNetPlannerDocument,
   request: { candidateNetId: string; name: string },
 ): EnsureNamedNetPlan {
   const candidate = document.nets.find(

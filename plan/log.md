@@ -8272,3 +8272,15 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   full workspace build, production smoke) passed.
 - Commit status: pending `test(net): cover repair reference closure` on
   `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N8 Agent named-Net parity
+
+- Target: make semantic Agent rename use the same named-Net authoring planner
+  as GUI, without changing the raw Agent transaction API.
+- Changed areas: browser-safe adapter planner re-export, Agent client semantic
+  rename compilation, parity regression, and Agent/roadmap guidance.
+- Validation: focused 3-file Vitest run (39 tests), package builds, typecheck,
+  docs check, test-impact, `git diff --check`, and `pnpm verify:branch` (144
+  unit files / 864 tests, full workspace build, production smoke) passed.
+- Commit status: pending `feat(agent): share named net authoring planner` on
+  `codex/net-contract-unification-plan`.

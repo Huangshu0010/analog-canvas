@@ -181,6 +181,13 @@ behavior and validation are recorded in `plan/log.md`.
 regression evidence for every persisted source-Net reference class; validation
 and commit evidence are recorded in `plan/log.md`.
 
+## 2026-08-17 Net contract Agent named-authoring closure
+
+`2026-08-17-net-contract-n8-agent-named-net-parity` is completed on
+`codex/net-contract-unification-plan`. Semantic Agent naming now shares GUI
+planner behavior while raw API transaction behavior remains strict; validation
+and commit evidence are recorded in `plan/log.md`.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on
