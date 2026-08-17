@@ -7,17 +7,39 @@ import {
   buildManualWirePath,
   createFreeWireAnchor,
   proposeVisualRouteDeletion,
+  proposeLooseRouteTranslation,
+  proposePowerRailEndpointResize,
+  proposePowerRailTranslation,
+  proposeWireSegmentMove,
   proposeWireCommitThroughContacts,
   type SchematicEdit,
   type WireSource,
 } from "@icm/edit-engine";
 import { endpointKey, isMosBulkTerminal } from "@icm/derived";
+import { snapCoordinate } from "../../snap/engine";
 import { transformPoint } from "@icm/model";
 import type { Flightline } from "@icm/derived";
 import type { Point, RouteEndpoint, SchematicDocument } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { endpointNetId } from "./route-interaction-geometry";
+import {
+  endpointNetId,
+  looseRouteAnchorIds,
+  type RouteGeometryRecord,
+} from "./route-interaction-geometry";
+
+export interface RouteStretchPreview {
+  routeId: string;
+  segmentIndex: number;
+  intent:
+    | "stretch-segment"
+    | "move-loose-route"
+    | "move-power-rail"
+    | "resize-power-rail-start"
+    | "resize-power-rail-end";
+  start: Point;
+  point: Point;
+}
 
 type TransactionResult = {
   ok: boolean;
@@ -30,6 +52,7 @@ export interface UseWireInteractionOptions {
   selectedInstance: SchematicDocument["instances"][number] | undefined;
   selectedRouteId: string | null;
   visibleEndpoints: readonly WireSource[];
+  routeGeometryRecords: readonly RouteGeometryRecord[];
   wireSource: WireSource | null;
   wireSourceRevision: number | null;
   wireWaypoints: readonly Point[];
@@ -264,6 +287,50 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
     options.setStatus(`Selected route ${routeId}, segment ${segmentIndex + 1}`);
   };
 
+  const completeRouteStretch = (
+    preview: RouteStretchPreview,
+    point: Point,
+  ): void => {
+    const record = options.routeGeometryRecords.find(
+      (candidate) => candidate.route.id === preview.routeId,
+    );
+    if (!record) return;
+    try {
+      if (preview.intent === "move-loose-route") {
+        const anchorIds = looseRouteAnchorIds(options.document, record.route);
+        if (!anchorIds) throw new Error("Only a route with two loose ends can move as a whole");
+        const delta = {
+          x: snapCoordinate(point.x - preview.start.x, options.document.presentation.grid),
+          y: snapCoordinate(point.y - preview.start.y, options.document.presentation.grid),
+        };
+        if (delta.x !== 0 || delta.y !== 0) {
+          const result = options.transact(proposeLooseRouteTranslation(options.document, record.route.id, delta).edits);
+          if (result.ok) options.setStatus(`Moved loose route ${record.route.id}`);
+        }
+      } else if (preview.intent === "move-power-rail") {
+        const delta = {
+          x: snapCoordinate(point.x - preview.start.x, options.document.presentation.grid),
+          y: snapCoordinate(point.y - preview.start.y, options.document.presentation.grid),
+        };
+        if (delta.x !== 0 || delta.y !== 0) {
+          const result = options.transact(proposePowerRailTranslation(options.document, options.resolver, record.route.id, delta).edits);
+          if (result.ok) options.setStatus(`Moved VDD rail ${record.route.id}`);
+        }
+      } else if (preview.intent === "resize-power-rail-start" || preview.intent === "resize-power-rail-end") {
+        const result = options.transact(proposePowerRailEndpointResize(options.document, options.resolver, record.route.id, preview.intent === "resize-power-rail-start" ? "start" : "end", snapCoordinate(point.x, options.document.presentation.grid)).edits);
+        if (result.ok) options.setStatus(`Resized VDD rail ${record.route.id}`);
+      } else {
+        const result = options.transact(proposeWireSegmentMove(options.document, options.resolver, record.route.id, preview.segmentIndex, {
+          x: snapCoordinate(point.x, options.document.presentation.grid),
+          y: snapCoordinate(point.y, options.document.presentation.grid),
+        }).edits);
+        if (result.ok) options.setStatus(`Moved route segment ${record.route.id}`);
+      }
+    } catch (error) {
+      options.setStatus(error instanceof Error ? error.message : "Route move failed");
+    }
+  };
+
   const fixWirePoint = (point: Point): void => {
     if (!options.wireSource) {
       const source = freeWireAnchor(
@@ -301,6 +368,7 @@ export function useWireInteraction(options: UseWireInteractionOptions) {
 
   return {
     commitWire,
+    completeRouteStretch,
     deleteSelectedRouteConnection,
     drawSelectedMosBulk,
     fixWirePoint,

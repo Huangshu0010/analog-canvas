@@ -107,7 +107,10 @@ import {
   rankCanvasHits,
   resolveCanvasHitAtPoint,
 } from "../canvas/canvas-hit-resolver";
-import { useWireInteraction } from "../features/wiring/use-wire-interaction";
+import {
+  type RouteStretchPreview as WireRouteStretchPreview,
+  useWireInteraction,
+} from "../features/wiring/use-wire-interaction";
 import {
   centerOfBounds,
   clamp,
@@ -348,7 +351,7 @@ interface PanPreview {
   pointerId: number;
 }
 
-interface RouteStretchPreview {
+interface RouteStretchPreview extends WireRouteStretchPreview {
   routeId: string;
   segmentIndex: number;
   intent: Exclude<SchematicMoveIntent, "move-selection">;
@@ -1134,6 +1137,7 @@ export function App({
     handleFlightline,
     handleWireEndpoint,
     commitWire,
+    completeRouteStretch,
     selectRoute,
   } = useWireInteraction({
     document,
@@ -1141,6 +1145,7 @@ export function App({
     selectedInstance,
     selectedRouteId,
     visibleEndpoints,
+    routeGeometryRecords,
     wireSource,
     wireSourceRevision,
     wireWaypoints,
@@ -2392,94 +2397,6 @@ export function App({
         setRouteStretchPreview(null);
       },
     });
-  }
-
-  function completeRouteStretch(
-    preview: RouteStretchPreview,
-    point: DerivedPoint,
-  ): void {
-    const record = routeGeometryRecords.find(
-      (candidate) => candidate.route.id === preview.routeId,
-    );
-    if (!record) return;
-    try {
-      if (preview.intent === "move-loose-route") {
-        const anchorIds = looseRouteAnchorIds(document, record.route);
-        if (!anchorIds) {
-          throw new Error(
-            "Only a route with two loose ends can move as a whole",
-          );
-        }
-        const delta = {
-          x: snapCoordinate(
-            point.x - preview.start.x,
-            document.presentation.grid,
-          ),
-          y: snapCoordinate(
-            point.y - preview.start.y,
-            document.presentation.grid,
-          ),
-        };
-        if (delta.x !== 0 || delta.y !== 0) {
-          const result = transact(
-            proposeLooseRouteTranslation(document, record.route.id, delta)
-              .edits,
-          );
-          if (result.ok) setStatus(`Moved loose route ${record.route.id}`);
-        }
-      } else if (preview.intent === "move-power-rail") {
-        const delta = {
-          x: snapCoordinate(
-            point.x - preview.start.x,
-            document.presentation.grid,
-          ),
-          y: snapCoordinate(
-            point.y - preview.start.y,
-            document.presentation.grid,
-          ),
-        };
-        if (delta.x !== 0 || delta.y !== 0) {
-          const result = transact(
-            proposePowerRailTranslation(
-              document,
-              resolver,
-              record.route.id,
-              delta,
-            ).edits,
-          );
-          if (result.ok) setStatus(`Moved VDD rail ${record.route.id}`);
-        }
-      } else if (
-        preview.intent === "resize-power-rail-start" ||
-        preview.intent === "resize-power-rail-end"
-      ) {
-        const result = transact(
-          proposePowerRailEndpointResize(
-            document,
-            resolver,
-            record.route.id,
-            preview.intent === "resize-power-rail-start" ? "start" : "end",
-            snapCoordinate(point.x, document.presentation.grid),
-          ).edits,
-        );
-        if (result.ok) setStatus(`Resized VDD rail ${record.route.id}`);
-      } else {
-        const proposal = proposeWireSegmentMove(
-          document,
-          resolver,
-          record.route.id,
-          preview.segmentIndex,
-          {
-            x: snapCoordinate(point.x, document.presentation.grid),
-            y: snapCoordinate(point.y, document.presentation.grid),
-          },
-        );
-        const result = transact(proposal.edits);
-        if (result.ok) setStatus(`Moved route segment ${record.route.id}`);
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Route move failed");
-    }
   }
 
   function constrainAnnotationPosition(
