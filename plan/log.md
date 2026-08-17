@@ -7796,5 +7796,6 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   Project-file browser flow; `pnpm test:impact -- --base main`; and
   `pnpm verify:branch` (134 files / 816 tests, workspace build, production
   smoke); `git diff --check` passed.
-- Commit status: pending target commit on
-  `codex/device-protocol-compatibility-plan`.
+- Commit status: committed locally as
+  `refactor(protocol): complete device and compatibility boundaries` on
+  `codex/device-protocol-compatibility-plan`; pending push and remote checks.
