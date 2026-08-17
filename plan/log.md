@@ -8260,3 +8260,15 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   production smoke) passed.
 - Commit status: pending `refactor(net): retire editor power normalization` on
   `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N7 repair reference closure
+
+- Target: directly prove Project-entry duplicate supply repair retargets the
+  full Net reference closure.
+- Changed areas: valid legacy Ground repair fixture/regression and acceptance
+  matrix evidence.
+- Validation: focused 2-file Vitest run (18 tests), docs check, test-impact,
+  `git diff --check`, and `pnpm verify:branch` (144 unit files / 863 tests,
+  full workspace build, production smoke) passed.
+- Commit status: pending `test(net): cover repair reference closure` on
+  `codex/net-contract-unification-plan`.

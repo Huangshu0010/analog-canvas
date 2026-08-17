@@ -319,6 +319,9 @@ semantics.
 | Unnamed global Net | Shared blocking diagnostic in ERC and export |
 | Repair of legacy duplicate power Nets | All Routes, Junctions, annotations, MOS bindings, and formal terminals retarget |
 
+The Project-entry repair regression exercises this full reference set directly;
+the repair itself remains an ordinary Edit Engine `merge_nets` transaction.
+
 ## 10. Explicit non-goals
 
 This work does not add:

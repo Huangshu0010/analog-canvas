@@ -174,6 +174,13 @@ validation and commit evidence are recorded in `plan/log.md`.
 power Nets through an implicit normalization effect; retained compatibility
 behavior and validation are recorded in `plan/log.md`.
 
+## 2026-08-17 Net contract repair-reference closure
+
+`2026-08-17-net-contract-n7-repair-reference-closure` is completed on
+`codex/net-contract-unification-plan`. Project-entry repair now has direct
+regression evidence for every persisted source-Net reference class; validation
+and commit evidence are recorded in `plan/log.md`.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on
