@@ -9,7 +9,7 @@ an archive. Completed plans with resolved experience are stored under
 | State                     | Count | Required disposition                                                              |
 | ------------------------- | ----: | --------------------------------------------------------------------------------- |
 | `active`                  |     0 | `2026-08-16-instance-value-display` delivered: PR #97 merged to `main` as `7027f57`. `2026-08-16-instance-value-razavi-fraction` delivered: PR #99 merged to `main` as `452099e`. |
-| `completed` + `none`      |    37 | Verify commit/log evidence, then archive according to routine retention policy.   |
+| `completed` + `none`      |    38 | Verify commit/log evidence, then archive according to routine retention policy.   |
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
@@ -69,6 +69,13 @@ experience. ADR 0023, the direct model adapter, formal-file and recovery
 integration, synthetic compatibility tests, browser evidence, and branch-wide
 verification are present; it is eligible for normal completed-plan retention
 handling after commit evidence is recorded.
+
+## 2026-08-17 Device protocol and compatibility architecture planning closure
+
+`2026-08-17-device-protocol-compatibility-architecture` is a completed
+planning record with resolved experience. It defines the behavior-preserving
+module boundaries and bounded compatibility policy; an accepted ADR is required
+before its future executable implementation starts.
 
 ## Legacy Metadata Sweep
 

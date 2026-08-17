@@ -7750,3 +7750,17 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   contracts, 804 unit tests, build and release/package smoke, and 143 browser
   tests; `git diff --check` passed.
 - Commit status: pending push and remote GitHub Actions verification on PR 105.
+
+## 2026-08-17 - Plan device protocol and compatibility architecture
+
+- Target: record an implementation-ready architecture for independently
+  maintained device descriptors and Project compatibility without changing
+  current device behavior or schema-11 persistence.
+- Changed areas: target architecture/implementation sequence, behavior-lock
+  invariants, model/devices/symbols/project-protocol ownership boundaries,
+  rolling N-1 direct-adapter policy, test ownership, and explicit non-goals.
+- Validation: reviewed against ADR 0022, ADR 0023, current model,
+  connectivity, and Edit Engine contracts; `pnpm docs:check`,
+  `pnpm test:impact -- --base main`, and `git diff --check` passed.
+- Commit status: committed on `codex/device-protocol-compatibility-plan` as a
+  planning-only record; no executable protocol or device behavior changed.
