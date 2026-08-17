@@ -1,5 +1,18 @@
 # Maintenance Log
 
+## 2026-08-17 - Move Examples to the left tool rail
+
+- Target: promote bundled circuit examples from a Library fold to an
+  independent panel reached from the far-left tool rail.
+- Changed areas: Examples rail button and icon, left-panel mode switching,
+  independent examples panel, Library cleanup, and focused unit/browser
+  coverage.
+- Validation: focused panel/App tests (3 files / 18 tests), focused browser
+  workflow, `pnpm test:impact -- --base origin/main`, `pnpm ci:check` (819
+  unit and 145 browser tests), desktop visual review, and all six PR #111
+  GitHub Actions checks passed.
+- Commit status: merged to `main` as PR #111 (`f7d961c`).
+
 ## 2026-08-17 - Merge Library Project examples
 
 - Target: integrate the Library Project examples review branch into `main`.

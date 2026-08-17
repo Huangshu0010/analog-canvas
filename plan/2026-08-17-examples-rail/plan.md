@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -77,4 +77,20 @@ feat(editor): move Examples beside Library
 
 ## Outcome
 
-Pending.
+Moved the two bundled circuit examples out of the Library device panel and
+into their own Examples panel. The Examples button now sits at the top of the
+far-left tool rail, directly above Library, and its label remains fully visible
+within the existing rail width. Selecting an example retains the guarded
+Project-open lifecycle.
+
+Validation passed:
+
+- focused panel/App tests (3 files / 18 tests)
+- focused Examples browser workflow
+- `pnpm test:impact -- --base origin/main`
+- `pnpm install --frozen-lockfile` and `pnpm ci:check` (137 test files / 819
+  tests and 145 browser tests)
+- all required GitHub Actions checks on PR #111
+- desktop visual review of the tool-rail placement and panel switch
+
+Commit status: integrated into `main` through PR #111 (`f7d961c`).
