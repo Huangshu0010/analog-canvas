@@ -13,6 +13,13 @@ an archive. Completed plans with resolved experience are stored under
 | `completed` + `candidate` |    17 | Human decides whether to extract, reject, or defer the experience signal.         |
 | missing metadata          |    71 | Audit against outcome text and Git evidence; never archive merely because of age. |
 
+## 2026-08-17 Manual hierarchical Cell editing closure
+
+`2026-08-17-manual-hierarchy-from-rectangle` is completed with resolved
+experience. Rectangle-to-Cell conversion, formal hierarchy navigation, and
+save/reopen regression coverage passed the complete local delivery gate and
+are ready for remote review.
+
 ### Completed plans awaiting an experience decision
 
 - `2026-08-14-current-contract-clean-break`

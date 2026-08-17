@@ -84,6 +84,14 @@ export function EditorHelpDialog({
               active Cell in one operation. It asks for confirmation and can be
               restored with Undo.
             </p>
+            <h3>Hierarchical Cells</h3>
+            <p>
+              Select a rectangle and press <kbd>E</kbd> to convert it into a
+              hierarchical block and enter its new child Cell. Select an
+              existing hierarchical block and press <kbd>E</kbd>, or
+              double-click it, to enter it. Use <strong>Up</strong> or
+              <kbd>Shift+E</kbd> to return to the parent Cell.
+            </p>
             <h3>View and drawing tools</h3>
             <p>
               With the pointer over the canvas, use the mouse wheel to zoom and
@@ -122,6 +130,8 @@ export function EditorHelpDialog({
                   mirror left/right; <kbd>Ctrl</kbd> + <kbd>R</kbd> mirror
                   top/bottom; <kbd>Ctrl</kbd> + <kbd>D</kbd> deselect;{" "}
                   <kbd>F</kbd> fit view;
+                  <kbd>E</kbd> enter or create a hierarchical Cell;{" "}
+                  <kbd>Shift</kbd> + <kbd>E</kbd> return to its parent;
                   <kbd>Delete</kbd> or <kbd>Backspace</kbd> delete.
                 </dd>
               </div>

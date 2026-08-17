@@ -23,6 +23,8 @@ const baseContext: EditorShortcutContext = {
   hasClearableDraftingSelection: false,
   hasRemovableWireWaypoint: false,
   propertiesOpen: false,
+  hasHierarchyEnterSelection: false,
+  canReturnToParent: false,
 };
 
 function key(
@@ -193,6 +195,17 @@ describe("editor shortcut contract", () => {
     expect(resolve("x")).toBeNull();
   });
 
+  it("enters a selected Cell with E and returns to its parent with Shift+E", () => {
+    expect(resolve("e")).toEqual({ kind: "hierarchy-selection-required" });
+    expect(resolve("e", { hasHierarchyEnterSelection: true })).toEqual({
+      kind: "enter-hierarchy",
+    });
+    expect(
+      resolve("e", { canReturnToParent: true }, { shiftKey: true }),
+    ).toEqual({ kind: "return-to-parent" });
+    expect(resolve("e", {}, { shiftKey: true })).toBeNull();
+  });
+
   it("gives Ctrl+A selection precedence over the plain Arrow shortcut", () => {
     expect(resolve("a", {}, { ctrlKey: true })).toEqual({
       kind: "select-all",
@@ -279,6 +292,10 @@ describe("editor shortcut contract", () => {
     expect(resolve("q", active)).toEqual({
       kind: "blocked-interaction-command",
       command: "Properties",
+    });
+    expect(resolve("e", active)).toEqual({
+      kind: "blocked-interaction-command",
+      command: "Enter Cell",
     });
     expect(resolve("Delete", active)).toEqual({
       kind: "blocked-interaction-command",

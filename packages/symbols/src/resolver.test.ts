@@ -84,4 +84,13 @@ describe("Symbol Resolver boundary", () => {
       "diode",
     ]);
   });
+
+  it("does not derive an unreferenced manual top Cell over a catalog symbol", () => {
+    const project = createEmptyProject("coverage", "Coverage");
+    project.documents[0]!.netlist = { name: "resistor", terminals: [] };
+
+    const resolver = createProjectSymbolResolver(project, [resistor]);
+
+    expect(resolver.resolve("resistor")?.definition.name).toBe("Resistor");
+  });
 });
