@@ -8186,3 +8186,14 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   `git diff --check` passed.
 - Commit status: staged for `docs(net): plan unified connectivity contract` on
   `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N1 primitives
+
+- Target: unify folded Net-name comparison and complete atomic Net merge
+  reference closure.
+- Changed areas: model Net contract helper, transaction name validation,
+  formal-interface retargeting, and focused model/edit-engine regressions.
+- Validation: focused 2-file Vitest run (13 tests), model and edit-engine
+  builds, test-impact, and diff checks passed.
+- Commit status: staged for `feat(net): add canonical name and merge
+  primitives` on `codex/net-contract-unification-plan`.

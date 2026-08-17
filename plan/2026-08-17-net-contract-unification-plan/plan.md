@@ -61,9 +61,10 @@ Read-only shared contracts:
 ## Test Impact
 
 - Decision: no-test-change
-- This target changes planning documentation only. The plan names the
-  implementation tests required by later targets; it does not change runtime
-  behavior or existing contracts in this branch.
+- Reason: this target changes planning documentation only; it does not change
+  runtime behavior or existing contracts.
+- Existing protection: the implementation targets named by this plan own their
+  behavior-specific tests and validation before delivery.
 
 ## Commit Intent
 

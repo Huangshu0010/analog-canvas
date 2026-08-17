@@ -9,6 +9,9 @@ import {
   NoConnectSchema,
   SchematicDocumentSchema,
   deriveStableId,
+  foldNetName,
+  netContractIssueKey,
+  validateNetContract,
 } from "@icm/model";
 import type {
   Annotation,
@@ -139,6 +142,9 @@ export function executeTransaction(
 
   const proposedRevision = document.revision + 1;
   const draft = structuredClone(document);
+  const originalNetContractIssueKeys = new Set(
+    validateNetContract(document).map(netContractIssueKey),
+  );
   const explicitlyAuthoredRouteIds = new Set(
     transaction.edits.flatMap((edit) =>
       edit.kind === "set_route_points" || edit.kind === "route_orthogonal"
@@ -1588,6 +1594,11 @@ export function executeTransaction(
         if (draft.mosBulkDefaults?.pmosNetId === source.id) {
           draft.mosBulkDefaults.pmosNetId = target.id;
         }
+        for (const terminal of draft.netlist?.terminals ?? []) {
+          if (terminal.netId === source.id) {
+            terminal.netId = target.id;
+          }
+        }
         for (const terminal of source.terminals) {
           if (
             !target.terminals.some(
@@ -1651,7 +1662,9 @@ export function executeTransaction(
         }
         const conflicting = draft.nets.find(
           (candidate) =>
-            candidate.id !== net.id && candidate.name === edit.name,
+            candidate.id !== net.id &&
+            candidate.name !== undefined &&
+            foldNetName(candidate.name) === foldNetName(edit.name),
         );
         if (conflicting) {
           return rejectAt(
@@ -2139,6 +2152,19 @@ export function executeTransaction(
   // This catches wiring, endpoint joins, and merges through the same boundary.
   if (normalizePowerNets(draft, changedObjectIds)) {
     connectivityChanged = true;
+  }
+
+  const introducedNetContractIssue = validateNetContract(draft).find(
+    (issue) => !originalNetContractIssueKeys.has(netContractIssueKey(issue)),
+  );
+  if (introducedNetContractIssue) {
+    return rejectTransaction(
+      document,
+      "INVALID_RESULT",
+      `Transaction introduces duplicate Net name ${introducedNetContractIssue.foldedName}; merge explicitly`,
+      [],
+      introducedNetContractIssue.netIds,
+    );
   }
 
   if (resolver) {
