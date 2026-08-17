@@ -10,7 +10,7 @@ import {
   resolveDocumentRoutingGeometry,
   type ResolvedDocumentRoutingGeometry,
 } from "./resolved-route-geometry.js";
-import { routeAttachmentPlacement } from "./routes.js";
+import { resolveRouteAttachment } from "./route-attachment.js";
 
 // ADR 0010 general VisualAnchor resolver. It generalizes the existing
 // routeAttachmentPlacement() (current-marker-specific) to the free | object |
@@ -40,9 +40,8 @@ export interface AnchorDiagnostic {
 }
 
 /**
- * Resolve a VisualAnchor against a Document. A `route` anchor reuses the
- * existing routeAttachmentPlacement math so its result is identical to the
- * legacy current-marker path; an `object` anchor resolves to the target's
+ * Resolve a VisualAnchor against a Document. A `route` anchor resolves against
+ * canonical route geometry; an `object` anchor resolves to the target's
  * placement plus localOffset; a `free` anchor is its own position.
  */
 export function resolveVisualAnchor(
@@ -111,21 +110,13 @@ function resolveRouteAnchor(
       `Route ${anchor.routeId} has no resolvable polyline; using fallback position.`,
     );
   }
-  const placement = routeAttachmentPlacement(
-    {
-      routeId: geometry.routeId,
-      netId: geometry.netId,
-      points: [...geometry.centerline],
-      segmentModes: geometry.segments.map((segment) => segment.mode),
-    },
-    {
-      routeId: anchor.routeId,
-      segmentIndex: anchor.segmentIndex,
-      t: anchor.t,
-      normalOffset: anchor.normalOffset,
-      direction: anchor.direction,
-    },
-  );
+  const placement = resolveRouteAttachment(geometry, {
+    routeId: anchor.routeId,
+    segmentIndex: anchor.segmentIndex,
+    t: anchor.t,
+    normalOffset: anchor.normalOffset,
+    direction: anchor.direction,
+  });
   if (!placement) {
     // P2: a valid route whose segment is gone/out-of-range is a distinct,
     // actionable failure (re-select the segment), not a missing target.
@@ -138,8 +129,8 @@ function resolveRouteAnchor(
   return {
     position:
       anchor.orientation === "horizontal"
-        ? placement.position
-        : placement.labelPosition,
+        ? placement.conductorPoint
+        : placement.labelPoint,
     rotation: anchor.orientation === "horizontal" ? 0 : placement.rotation,
     resolved: true,
   };

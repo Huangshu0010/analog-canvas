@@ -65,9 +65,24 @@ describe("resolved route geometry", () => {
         { x: 100, y: 100 },
       ],
       segments: [
-        { index: 0, from: { x: 0, y: 0 }, to: { x: 50, y: 0 }, mode: "manual" },
-        { index: 1, from: { x: 50, y: 0 }, to: { x: 50, y: 100 }, mode: "auto" },
-        { index: 2, from: { x: 50, y: 100 }, to: { x: 100, y: 100 }, mode: "escape" },
+        {
+          address: { routeId: "route-1", segmentIndex: 0 },
+          from: { x: 0, y: 0 },
+          to: { x: 50, y: 0 },
+          mode: "manual",
+        },
+        {
+          address: { routeId: "route-1", segmentIndex: 1 },
+          from: { x: 50, y: 0 },
+          to: { x: 50, y: 100 },
+          mode: "auto",
+        },
+        {
+          address: { routeId: "route-1", segmentIndex: 2 },
+          from: { x: 50, y: 100 },
+          to: { x: 100, y: 100 },
+          mode: "escape",
+        },
       ],
       vertices: [
         { index: 0, kind: "junction", point: { x: 0, y: 0 } },

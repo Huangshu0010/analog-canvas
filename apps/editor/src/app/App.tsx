@@ -52,6 +52,7 @@ import {
   resolveMosBulkConnection,
   resolveSchematicStyleProfile,
   routeAttachmentPlacement,
+  resolveRouteTap,
   traceHierarchyNet,
 } from "@icm/derived";
 import type {
@@ -263,7 +264,6 @@ import {
   reflectOrientation,
 } from "../interaction/shortcut-orientation";
 import type { ScreenFlip } from "../interaction/shortcut-orientation";
-import { resolveRouteTap, type RouteTap } from "../features/wiring/route-tap";
 import {
   buildDraftingAnchors,
   buildInstanceAnchors,
@@ -1164,8 +1164,13 @@ export function App({
     return flightlines;
   }, [document, flightlines, highlightedNetId]);
   const crossings = useMemo(
-    () => deriveCrossings(document, resolver),
-    [document, resolver],
+    () =>
+      deriveCrossings(
+        document,
+        resolver,
+        projectConnectivityIndex.documents.get(document.id)?.routingGeometry,
+      ),
+    [document, projectConnectivityIndex, resolver],
   );
   const visualDiagnostics = useMemo(
     () => diagnoseVisualQuality(document, resolver),
@@ -1291,7 +1296,7 @@ export function App({
       document.routes.flatMap((route) => {
         const geometry = projectConnectivityIndex.documents
           .get(document.id)
-          ?.routeGeometry.get(route.id);
+          ?.routingGeometry.routes.get(route.id);
         if (!geometry) return [];
         const polyline: RoutePolyline = {
           routeId: geometry.routeId,
@@ -1672,7 +1677,7 @@ export function App({
       const centerline = route
         ? projectConnectivityIndex.documents
             .get(opened.id)
-            ?.routeGeometry.get(route.id)?.centerline
+            ?.routingGeometry.routes.get(route.id)?.centerline
         : undefined;
       if (centerline?.[0]) focusPoint(centerline[0]);
     } else if (locator.kind === "junction") {
@@ -1702,7 +1707,7 @@ export function App({
       const centerline = route
         ? projectConnectivityIndex.documents
             .get(opened.id)
-            ?.routeGeometry.get(route.id)?.centerline
+            ?.routingGeometry.routes.get(route.id)?.centerline
         : undefined;
       if (centerline?.[0]) focusPoint(centerline[0]);
     }
@@ -2525,15 +2530,19 @@ export function App({
       (candidate) => candidate.route.id === routeId,
     );
     if (!routeRecord) return;
+    const routeGeometry = projectConnectivityIndex.documents
+      .get(document.id)
+      ?.routingGeometry.routes.get(routeId);
+    if (!routeGeometry) return;
     const svg = (hitTarget.ownerSVGElement ?? hitTarget) as SVGSVGElement;
     const pointer = pointFromClient(event.clientX, event.clientY, svg, false);
     const tap = resolveRouteTap(
-      routeRecord.polyline.points,
+      routeGeometry,
       pointer,
       logicalRadiusForPixels(svg, 7),
     );
     if (tool === "pointer") {
-      const segmentIndex = tap?.segmentIndex ?? 0;
+      const segmentIndex = tap?.address.segmentIndex ?? 0;
       if (getCurrentInteractionState().kind === "moving-selection") {
         const movePlan = planSelectionMove(document, visualSelection);
         if (movePlan.previewObjectIds.length > 0) {
@@ -2561,8 +2570,12 @@ export function App({
       return;
     }
     const overlappingTargets = routePolylines.flatMap((candidate) => {
+      const candidateGeometry = projectConnectivityIndex.documents
+        .get(document.id)
+        ?.routingGeometry.routes.get(candidate.route.id);
+      if (!candidateGeometry) return [];
       const candidateTap = resolveRouteTap(
-        candidate.polyline.points,
+        candidateGeometry,
         pointer,
         logicalRadiusForPixels(svg, 7),
       );
@@ -2570,11 +2583,11 @@ export function App({
         ? [
             {
               kind: "route" as const,
-              id: `route:${candidate.route.id}:${candidateTap.segmentIndex}`,
+              id: `route:${candidate.route.id}:${candidateTap.address.segmentIndex}`,
               point: candidateTap.point,
               netId: candidate.route.netId,
               routeId: candidate.route.id,
-              segmentIndex: candidateTap.segmentIndex,
+              segmentIndex: candidateTap.address.segmentIndex,
             },
           ]
         : [];
@@ -2592,7 +2605,7 @@ export function App({
       );
       return;
     }
-    const anchor = routeAnchor(routeId, tap.point, tap.segmentIndex);
+    const anchor = routeAnchor(routeId, tap.point, tap.address.segmentIndex);
     if (!wireSource) {
       setWireSource(anchor, document.revision);
       setWirePreviewPoint(tap.point);

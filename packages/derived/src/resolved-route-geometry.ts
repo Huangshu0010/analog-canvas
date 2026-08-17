@@ -1,36 +1,27 @@
-import type { Point, RouteEndpoint, SchematicDocument } from "@icm/model";
+import type {
+  Point,
+  RouteBranch,
+  RouteEndpoint,
+  SchematicDocument,
+} from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { resolveEndpointOutwardDirection } from "./endpoint.js";
-import { routePolyline, type SegmentMode } from "./routes.js";
+import {
+  resolveEndpointOutwardDirection,
+  resolveEndpointPoint,
+} from "./endpoint.js";
 
-/**
- * Unified resolved geometry for one Route (ADR 0014). Single geometry truth for
- * rendering, hit testing, segment drag, marker attachment, diagnostics, and
- * formal export. Never persisted.
- *
- * `centerline` keeps the accepted `[from, …waypoints, to]` shape and strictly
- * terminates at real Pin/Port/Junction origins. `endpointJoins` carry the raw
- * geometric ingredients of the renderer's private terminal miter bridge (the
- * renderer applies its own profile-scaled overlap to produce the final stroke).
- * Cross-route route-anchor joins are produced separately by
- * `resolveRouteAnchorJoins`, since they aggregate two route ends at a shared
- * degree-2 anchor. Production consumers keep using `routePolyline` and the
- * renderer's private bridges until the R10 migration.
- */
+/** A segment address is valid only for the current document revision. */
+export interface RouteSegmentAddress {
+  routeId: string;
+  segmentIndex: number;
+}
 
 export interface ResolvedRouteSegment {
-  /** Positional compatibility index within this resolved route revision. */
-  index: number;
-  /**
-   * Address valid only while the owning Document stays at `documentRevision`.
-   * Stored-route mutations must return an explicit remap; array position alone
-   * is never a cross-edit attachment identity.
-   */
-  ref: RouteSegmentRef;
+  address: RouteSegmentAddress;
   from: Point;
   to: Point;
-  mode: SegmentMode;
+  mode: RouteBranch["segmentModes"][number];
 }
 
 export type ResolvedRouteVertexKind =
@@ -38,7 +29,6 @@ export type ResolvedRouteVertexKind =
 
 export interface ResolvedRouteVertex {
   index: number;
-  ref: RouteVertexRef;
   point: Point;
   kind: ResolvedRouteVertexKind;
 }
@@ -47,30 +37,16 @@ export type EndpointJoin =
   | {
       kind: "terminal-miter";
       routeId: string;
-      /** Real Pin origin. */
       at: Point;
-      /** Outward pin direction (terminal only). */
       pinOutward: Point;
-      /** Sign of the adjacent route segment leaving the terminal. */
       routeDirection: Point;
     }
   | {
       kind: "route-anchor-miter";
       junctionId: string;
-      /** Real Junction origin. */
       at: Point;
-      /** The two route-end directions meeting at the degree-2 anchor. */
       directions: readonly [Point, Point];
     };
-
-export interface HitSegment {
-  segmentIndex: number;
-  segmentRef: RouteSegmentRef;
-  from: Point;
-  to: Point;
-  /** Consumer applies screen tolerance; this never moves the centerline. */
-  horizontal: boolean;
-}
 
 export interface ResolvedRouteGeometry {
   routeId: string;
@@ -79,33 +55,6 @@ export interface ResolvedRouteGeometry {
   segments: readonly ResolvedRouteSegment[];
   vertices: readonly ResolvedRouteVertex[];
   endpointJoins: readonly EndpointJoin[];
-  hitGeometry: readonly HitSegment[];
-  bounds: { min: Point; max: Point };
-}
-
-export interface RouteSegmentRef {
-  documentId: string;
-  documentRevision: number;
-  routeId: string;
-  index: number;
-}
-
-export interface RouteVertexRef {
-  documentId: string;
-  documentRevision: number;
-  routeId: string;
-  index: number;
-}
-
-/**
- * A mutation-owned mapping from a route segment before an edit to the segment
- * that carries its attachment afterwards. Pure geometry resolution never
- * invents this mapping; C5 planners must emit it alongside split/normalise/
- * stretch operations.
- */
-export interface RouteAttachmentRemap {
-  from: RouteSegmentRef;
-  to: RouteSegmentRef | null;
 }
 
 /** Complete pure routing read model for one Document. */
@@ -113,11 +62,9 @@ export interface ResolvedDocumentRoutingGeometry {
   documentId: string;
   documentRevision: number;
   routes: ReadonlyMap<string, ResolvedRouteGeometry>;
-  /** Terminal and cross-route anchor joins in deterministic order. */
   endpointJoins: readonly EndpointJoin[];
 }
 
-/** Sign direction of an axis-aligned segment, or null if diagonal/zero. */
 function axisDirection(from: Point, to: Point): Point | null {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -142,121 +89,78 @@ export function resolveRouteGeometry(
   resolver: SymbolResolver,
   route: SchematicDocument["routes"][number],
 ): ResolvedRouteGeometry | null {
-  const polyline = routePolyline(document, resolver, route);
-  if (!polyline) return null;
-  const points = polyline.points;
-
-  const segments: ResolvedRouteSegment[] = [];
-  const hitGeometry: HitSegment[] = [];
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const from = points[index]!;
-    const to = points[index + 1]!;
-    const horizontal = from.y === to.y;
-    segments.push({
-      index,
-      ref: {
-        documentId: document.id,
-        documentRevision: document.revision,
-        routeId: route.id,
-        index,
-      },
-      from,
-      to,
-      mode: polyline.segmentModes[index] ?? "auto",
-    });
-    hitGeometry.push({
-      segmentIndex: index,
-      segmentRef: {
-        documentId: document.id,
-        documentRevision: document.revision,
-        routeId: route.id,
-        index,
-      },
-      from,
-      to,
-      horizontal,
-    });
-  }
-
-  const vertices: ResolvedRouteVertex[] = points.map((point, index) => {
-    let kind: ResolvedRouteVertexKind;
-    if (index === 0) kind = vertexKindForEndpoint(document, route.from);
-    else if (index === points.length - 1)
-      kind = vertexKindForEndpoint(document, route.to);
-    else kind = "bend";
-    return {
-      index,
-      ref: {
-        documentId: document.id,
-        documentRevision: document.revision,
-        routeId: route.id,
-        index,
-      },
-      point,
-      kind,
-    };
-  });
+  const from = resolveEndpointPoint(document, resolver, route.from);
+  const to = resolveEndpointPoint(document, resolver, route.to);
+  if (!from || !to) return null;
+  const centerline = [from, ...route.waypoints, to];
+  const segments: ResolvedRouteSegment[] = centerline
+    .slice(0, -1)
+    .map((segmentFrom, segmentIndex) => ({
+      address: { routeId: route.id, segmentIndex },
+      from: segmentFrom,
+      to: centerline[segmentIndex + 1]!,
+      mode: route.segmentModes[segmentIndex] ?? "auto",
+    }));
+  const vertices: ResolvedRouteVertex[] = centerline.map((point, index) => ({
+    index,
+    point,
+    kind:
+      index === 0
+        ? vertexKindForEndpoint(document, route.from)
+        : index === centerline.length - 1
+          ? vertexKindForEndpoint(document, route.to)
+          : "bend",
+  }));
 
   const endpointJoins: EndpointJoin[] = [];
-  if (route.from.kind === "terminal" && points.length >= 2) {
+  if (route.from.kind === "terminal" && centerline.length >= 2) {
     const pinOutward = resolveEndpointOutwardDirection(
       document,
       resolver,
       route.from,
     );
-    const routeDirection = axisDirection(points[0]!, points[1]!);
+    const routeDirection = axisDirection(centerline[0]!, centerline[1]!);
     if (pinOutward && routeDirection) {
       endpointJoins.push({
         kind: "terminal-miter",
         routeId: route.id,
-        at: points[0]!,
+        at: centerline[0]!,
         pinOutward,
         routeDirection,
       });
     }
   }
-  if (route.to.kind === "terminal" && points.length >= 2) {
+  if (route.to.kind === "terminal" && centerline.length >= 2) {
     const pinOutward = resolveEndpointOutwardDirection(
       document,
       resolver,
       route.to,
     );
-    const routeDirection = axisDirection(points.at(-1)!, points.at(-2)!);
+    const routeDirection = axisDirection(
+      centerline.at(-1)!,
+      centerline.at(-2)!,
+    );
     if (pinOutward && routeDirection) {
       endpointJoins.push({
         kind: "terminal-miter",
         routeId: route.id,
-        at: points.at(-1)!,
+        at: centerline.at(-1)!,
         pinOutward,
         routeDirection,
       });
     }
   }
 
-  const xs = points.map((point) => point.x);
-  const ys = points.map((point) => point.y);
-  const bounds = {
-    min: { x: Math.min(...xs), y: Math.min(...ys) },
-    max: { x: Math.max(...xs), y: Math.max(...ys) },
-  };
-
   return {
-    routeId: polyline.routeId,
-    netId: polyline.netId,
-    centerline: points,
+    routeId: route.id,
+    netId: route.netId,
+    centerline,
     segments,
     vertices,
     endpointJoins,
-    hitGeometry,
-    bounds,
   };
 }
 
-/**
- * Resolve all routable geometry in one Document. This is the only geometry
- * result that includes cross-route joins, avoiding a second consumer-specific
- * traversal for route-anchor bridges.
- */
 export function resolveDocumentRoutingGeometry(
   document: SchematicDocument,
   resolver: SymbolResolver,
@@ -277,22 +181,26 @@ export function resolveDocumentRoutingGeometry(
     routes,
     endpointJoins: [
       ...terminalJoins,
-      ...resolveRouteAnchorJoins(document, resolver),
+      ...resolveRouteAnchorJoinsFromGeometry(document, routes),
     ],
   };
 }
 
-/**
- * Cross-route route-anchor miter joins for one Document (ADR 0014). A
- * `route-anchor` Junction shared by exactly two axis-aligned route ends renders
- * dotless as one sharp path; degree-1 (free end) and degree-≥3 (real branch)
- * anchors are excluded, mirroring the renderer's
- * `renderRouteAnchorMiterBridges` filter. Each join carries the two route-end
- * direction vectors; the renderer applies its profile-scaled overlap.
- */
 export function resolveRouteAnchorJoins(
   document: SchematicDocument,
   resolver: SymbolResolver,
+): EndpointJoin[] {
+  const routes = new Map<string, ResolvedRouteGeometry>();
+  for (const route of document.routes) {
+    const geometry = resolveRouteGeometry(document, resolver, route);
+    if (geometry) routes.set(route.id, geometry);
+  }
+  return resolveRouteAnchorJoinsFromGeometry(document, routes);
+}
+
+function resolveRouteAnchorJoinsFromGeometry(
+  document: SchematicDocument,
+  routes: ReadonlyMap<string, ResolvedRouteGeometry>,
 ): EndpointJoin[] {
   const anchors = new Map<string, { point: Point; directions: Point[] }>();
   for (const junction of document.junctions) {
@@ -312,10 +220,10 @@ export function resolveRouteAnchorJoins(
     if (direction) anchor.directions.push(direction);
   };
   for (const route of document.routes) {
-    const polyline = routePolyline(document, resolver, route);
-    if (!polyline || polyline.points.length < 2) continue;
-    record(route.from, polyline.points[0]!, polyline.points[1]!);
-    record(route.to, polyline.points.at(-1)!, polyline.points.at(-2)!);
+    const centerline = routes.get(route.id)?.centerline;
+    if (!centerline || centerline.length < 2) continue;
+    record(route.from, centerline[0]!, centerline[1]!);
+    record(route.to, centerline.at(-1)!, centerline.at(-2)!);
   }
   return [...anchors.entries()]
     .filter(([, anchor]) => anchor.directions.length === 2)

@@ -7835,4 +7835,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Changed areas: direct derived resolved-route geometry tests and target plan.
 - Validation: focused routing suite (9 files / 73 tests),
   `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
+- Commit status: committed as `66c44cd` on
+  `codex/routing-protocol-unification`.
+
+## 2026-08-17 - Establish canonical routing read protocol
+
+- Target: remove parallel route-read facts and route all pure geometry queries
+  through one resolved document aggregate.
+- Changed areas: derived resolved geometry/query/attachment surfaces; renderer,
+  editor route hit/placement, Net Label binding, crossings, and connectivity
+  index consumers.
+- Validation: focused routing suite (11 files / 82 tests), `pnpm typecheck`,
+  `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
 - Commit status: pending commit on `codex/routing-protocol-unification`.

@@ -2,12 +2,11 @@ import type {
   Point,
   RouteAnnotationAttachment,
   RouteBranch,
-  RouteEndpoint,
   SchematicDocument,
 } from "@icm/model";
 import type { SymbolResolver } from "@icm/symbols";
 
-import { endpointKey, resolveEndpointPoint } from "./endpoint.js";
+import { resolveEndpointPoint } from "./endpoint.js";
 
 export type SegmentMode = RouteBranch["segmentModes"][number];
 
@@ -33,15 +32,6 @@ export interface OrthogonalEscapeRoute {
   points: Point[];
   waypoints: Point[];
   segmentModes: SegmentMode[];
-}
-
-export interface Crossing {
-  routeAId: string;
-  routeBId: string;
-  netAId: string;
-  netBId: string;
-  point: Point;
-  kind: "crossing" | "overlap";
 }
 
 function samePoint(left: Point, right: Point): boolean {
@@ -368,113 +358,4 @@ export function moveRouteSegment(
     waypoints: normalized.points.slice(1, -1),
     segmentModes: normalized.segmentModes,
   };
-}
-
-function sharedExplicitEndpoint(
-  left: RouteBranch,
-  right: RouteBranch,
-): RouteEndpoint | null {
-  for (const leftEndpoint of [left.from, left.to]) {
-    for (const rightEndpoint of [right.from, right.to]) {
-      if (endpointKey(leftEndpoint) === endpointKey(rightEndpoint)) {
-        return leftEndpoint;
-      }
-    }
-  }
-  return null;
-}
-
-function between(value: number, first: number, second: number): boolean {
-  return value >= Math.min(first, second) && value <= Math.max(first, second);
-}
-
-function segmentIntersection(
-  a: Point,
-  b: Point,
-  c: Point,
-  d: Point,
-): { point: Point; kind: Crossing["kind"] } | null {
-  const abHorizontal = a.y === b.y;
-  const cdHorizontal = c.y === d.y;
-  if (abHorizontal !== cdHorizontal) {
-    const horizontalA = abHorizontal ? a : c;
-    const horizontalB = abHorizontal ? b : d;
-    const verticalA = abHorizontal ? c : a;
-    const verticalB = abHorizontal ? d : b;
-    const point = { x: verticalA.x, y: horizontalA.y };
-    return between(point.x, horizontalA.x, horizontalB.x) &&
-      between(point.y, verticalA.y, verticalB.y)
-      ? { point, kind: "crossing" }
-      : null;
-  }
-  if (abHorizontal && a.y === c.y) {
-    const start = Math.max(Math.min(a.x, b.x), Math.min(c.x, d.x));
-    const end = Math.min(Math.max(a.x, b.x), Math.max(c.x, d.x));
-    return start <= end
-      ? { point: { x: start, y: a.y }, kind: "overlap" }
-      : null;
-  }
-  if (!abHorizontal && a.x === c.x) {
-    const start = Math.max(Math.min(a.y, b.y), Math.min(c.y, d.y));
-    const end = Math.min(Math.max(a.y, b.y), Math.max(c.y, d.y));
-    return start <= end
-      ? { point: { x: a.x, y: start }, kind: "overlap" }
-      : null;
-  }
-  return null;
-}
-
-export function deriveCrossings(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-): Crossing[] {
-  const routes = [...document.routes].sort((left, right) =>
-    left.id.localeCompare(right.id, "en"),
-  );
-  const result: Crossing[] = [];
-  for (let leftIndex = 0; leftIndex < routes.length; leftIndex += 1) {
-    for (
-      let rightIndex = leftIndex + 1;
-      rightIndex < routes.length;
-      rightIndex += 1
-    ) {
-      const left = routes[leftIndex]!;
-      const right = routes[rightIndex]!;
-      const leftPolyline = routePolyline(document, resolver, left);
-      const rightPolyline = routePolyline(document, resolver, right);
-      if (!leftPolyline || !rightPolyline) continue;
-      const shared = sharedExplicitEndpoint(left, right);
-      const sharedPoint = shared
-        ? resolveEndpointPoint(document, resolver, shared)
-        : null;
-      for (let a = 1; a < leftPolyline.points.length; a += 1) {
-        for (let b = 1; b < rightPolyline.points.length; b += 1) {
-          const intersection = segmentIntersection(
-            leftPolyline.points[a - 1]!,
-            leftPolyline.points[a]!,
-            rightPolyline.points[b - 1]!,
-            rightPolyline.points[b]!,
-          );
-          if (!intersection) continue;
-          if (sharedPoint && samePoint(sharedPoint, intersection.point))
-            continue;
-          result.push({
-            routeAId: left.id,
-            routeBId: right.id,
-            netAId: left.netId,
-            netBId: right.netId,
-            point: intersection.point,
-            kind: intersection.kind,
-          });
-        }
-      }
-    }
-  }
-  return result.sort(
-    (left, right) =>
-      left.routeAId.localeCompare(right.routeAId, "en") ||
-      left.routeBId.localeCompare(right.routeBId, "en") ||
-      left.point.x - right.point.x ||
-      left.point.y - right.point.y,
-  );
 }

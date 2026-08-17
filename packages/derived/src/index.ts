@@ -18,6 +18,8 @@ export * from "./object-locator.js";
 export * from "./project-search.js";
 export * from "./routes.js";
 export * from "./resolved-route-geometry.js";
+export * from "./route-query.js";
+export * from "./route-attachment.js";
 export * from "./rich-text-layout.js";
 export * from "./style-profile.js";
 export * from "./stretch.js";

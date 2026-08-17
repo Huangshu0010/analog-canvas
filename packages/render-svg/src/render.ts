@@ -15,7 +15,7 @@ import {
   resolveDocumentRoutingGeometry,
   resolveAnnotationPresentation,
   resolveSchematicStyleProfile,
-  routeAttachmentPlacement,
+  resolveRouteAttachment,
   textbookMonochromeProfile,
 } from "@icm/derived";
 import { flattenRichText } from "@icm/model";
@@ -23,7 +23,6 @@ import type {
   EndpointJoin,
   ResolvedDocumentRoutingGeometry,
   ResolvedDraftingGeometry,
-  ResolvedRouteGeometry,
   SchematicStyleProfile,
 } from "@icm/derived";
 import type {
@@ -193,15 +192,6 @@ function renderRouteAnchorMiterBridges(
       return `<path data-role="route-anchor-miter-bridge" data-junction-id="${escapeXml(join.junctionId)}" d="M ${join.at.x + first.x * overlap} ${join.at.y + first.y * overlap} L ${join.at.x} ${join.at.y} L ${join.at.x + second.x * overlap} ${join.at.y + second.y * overlap}" fill="none" stroke="${profile.foreground}" stroke-width="${profile.strokes.wire}" stroke-linecap="${profile.lineCap}" stroke-linejoin="miter"${profileMiterAttribute(profile)}/>`;
     })
     .join("");
-}
-
-function routeAttachmentPolyline(geometry: ResolvedRouteGeometry) {
-  return {
-    routeId: geometry.routeId,
-    netId: geometry.netId,
-    points: [...geometry.centerline],
-    segmentModes: geometry.segments.map((segment) => segment.mode),
-  };
 }
 
 function profileMiterAttribute(profile: SchematicStyleProfile): string {
@@ -765,9 +755,7 @@ export function buildSvgScene(
   };
 }
 
-// Resolve a route-marker route VisualAnchor to a render position/rotation,
-// reusing the legacy routeAttachmentPlacement math so a migrated current
-// marker renders identically to its pre-migration form.
+// Resolve a route-marker route VisualAnchor to a render position/rotation.
 function resolveRouteMarkerPlacement(
   routingGeometry: ResolvedDocumentRoutingGeometry,
   anchor: Extract<
@@ -786,7 +774,7 @@ function resolveRouteMarkerPlacement(
       labelPosition: anchor.fallbackPosition,
       rotation: 0,
     };
-  const placement = routeAttachmentPlacement(routeAttachmentPolyline(route), {
+  const placement = resolveRouteAttachment(route, {
     routeId: anchor.routeId,
     segmentIndex: anchor.segmentIndex,
     t: anchor.t,
@@ -803,11 +791,11 @@ function resolveRouteMarkerPlacement(
   // attachment point; the label rides on the normal offset. This mirrors the
   // legacy current-arrow rendering exactly.
   return {
-    position: placement.position,
+    position: placement.conductorPoint,
     labelPosition:
       anchor.orientation === "horizontal"
-        ? placement.position
-        : placement.labelPosition,
+        ? placement.conductorPoint
+        : placement.labelPoint,
     rotation: anchor.orientation === "horizontal" ? 0 : placement.rotation,
   };
 }
