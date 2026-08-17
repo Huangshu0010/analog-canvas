@@ -36,12 +36,12 @@ import {
   deriveCrossings,
   deriveInternalGroupSelection,
   derivePowerRailComponent,
+  diagnoseProjectSnapshot,
   diagnoseVisualQuality,
   endpointKey,
   findHierarchyPath,
   isMosBulkTerminal,
   isVisibleEndpoint,
-  diagnoseProject,
   resolveEndpointPoint,
   resolveDraftingObjectGeometry,
   resolveElectricalContactTargets,
@@ -83,7 +83,6 @@ import type {
 } from "@icm/model";
 import { buildSvgScene } from "@icm/render-svg";
 import { importSpiceSources } from "@icm/spice";
-import type { SpiceDiagnostic } from "@icm/spice";
 import { renderCrashRequested, sceneCrashRequested } from "./crash-test-hooks";
 import { buildSceneSafely } from "./scene-safety";
 import { builtInSymbols, findUnsupportedProjectSymbolIds } from "@icm/symbols";
@@ -250,6 +249,7 @@ import {
   SelectionInspectorDetails,
   summarizeVisualDiagnostics,
 } from "../features/selection/selection-inspector-details";
+import type { SpiceImportReport } from "../features/selection/selection-inspector-details";
 import {
   hasVisualSelection,
   pruneVisualSelection,
@@ -511,8 +511,8 @@ export function App({
       ),
     );
   };
-  const [importDiagnostics, setImportDiagnostics] = useState<SpiceDiagnostic[]>(
-    [],
+  const [importReport, setImportReport] = useState<SpiceImportReport | null>(
+    null,
   );
   const [importReviewOpen, setImportReviewOpen] = useState(false);
   const [agentFileCandidate, setAgentFileCandidate] =
@@ -726,8 +726,8 @@ export function App({
     [document.id, highlightedTrace],
   );
   const highlightedNetId = highlightedNet?.netId ?? null;
-  const projectDiagnostics = useMemo(
-    () => diagnoseProject(project, resolver, projectConnectivityIndex),
+  const liveDiagnosticSnapshot = useMemo(
+    () => diagnoseProjectSnapshot(project, resolver, projectConnectivityIndex),
     [project, projectConnectivityIndex, resolver],
   );
   const searchResults = useMemo(
@@ -973,8 +973,6 @@ export function App({
     () => summarizeVisualDiagnostics(visualDiagnostics),
     [visualDiagnostics],
   );
-  const structuralDiagnostics = visualDiagnosticSummary.structural;
-  const visualObservations = visualDiagnosticSummary.observations;
   const visibleEndpoints: WireSource[] = useMemo(
     () => [
       ...document.instances.flatMap((instance) => {
@@ -1860,6 +1858,8 @@ export function App({
     }
     browserAgentFileHost.clear();
     setAgentFileCandidate(null);
+    setImportReport(null);
+    setImportReviewOpen(false);
     const prepared = materializeRazaviProjectBulkConnections(nextProject);
     const nextDocument = replaceProject(prepared.project);
     documentViewBoxes.current = new Map();
@@ -1897,49 +1897,6 @@ export function App({
     browserAgentFileHost.discard(agentFileCandidate.candidateId);
     setAgentFileCandidate(null);
     setStatus("Rejected Agent file candidate");
-  }
-
-  function jumpToVisualDiagnostic(
-    diagnostic: (typeof visualDiagnostics)[number],
-  ): void {
-    const ids = diagnostic.objectIds;
-    const instanceIds = ids.filter((id) =>
-      document.instances.some((instance) => instance.id === id),
-    );
-    const routeId = ids.find((id) =>
-      document.routes.some((route) => route.id === id),
-    );
-    const annotationId = ids.find((id) =>
-      document.annotations.some((annotation) => annotation.id === id),
-    );
-    replaceSelection({
-      instanceIds,
-      routeIds: routeId ? [routeId] : [],
-      junctionIds: [],
-      annotationIds: annotationId ? [annotationId] : [],
-      draftingIds: [],
-    });
-    setSelectedEndpoint(null);
-    const target =
-      diagnostic.bounds ??
-      (diagnostic.point
-        ? {
-            x: diagnostic.point.x - 60,
-            y: diagnostic.point.y - 60,
-            width: 120,
-            height: 120,
-          }
-        : null);
-    if (target) {
-      const padding = 30;
-      setViewBox({
-        x: target.x - padding,
-        y: target.y - padding,
-        width: Math.max(160, target.width + padding * 2),
-        height: Math.max(120, target.height + padding * 2),
-      });
-    }
-    setStatus(`${diagnostic.code}: ${ids.join(", ") || "Document"}`);
   }
 
   function jumpToProjectDiagnostic(diagnostic: Diagnostic): void {
@@ -2094,8 +2051,6 @@ export function App({
         return;
       }
       replaceActiveProject(nextProject);
-      setImportDiagnostics([]);
-      setImportReviewOpen(false);
       setStatus(`Opened example: ${example.name}`);
     });
   }
@@ -3534,8 +3489,6 @@ export function App({
         formalFileHint: { name: staged.fileName },
       });
       if (staged.migrated) setFileState("dirty");
-      setImportDiagnostics([]);
-      setImportReviewOpen(false);
       setStatus(
         staged.migrated
           ? `Opened and upgraded ${staged.fileName} from schema ${staged.sourceSchemaVersion} to schema ${staged.project.schemaVersion} — save the Project to keep the upgrade`
@@ -4478,8 +4431,14 @@ export function App({
         sourceInputs,
         entryCandidates[0]!.path,
       );
-      setImportDiagnostics(result.diagnostics);
+      const nextImportReport: SpiceImportReport = {
+        entryPath: entryCandidates[0]!.path,
+        diagnostics: result.diagnostics,
+      };
       if (!result.project || !result.successful) {
+        setImportReport(nextImportReport);
+        setImportReviewOpen(true);
+        setSelectionOpen(true);
         const firstError = result.diagnostics.find(
           (item) => item.severity === "error",
         );
@@ -4494,6 +4453,7 @@ export function App({
         replaceActiveProject(result.project!, DEFAULT_VIEWBOX, {
           source: "spice-import",
         });
+        setImportReport(nextImportReport);
         setImportReviewOpen(true);
         setSelectionOpen(true);
         setStatus(
@@ -6877,17 +6837,15 @@ export function App({
                   </button>
                 </section>
               ) : null}
-              {projectDiagnostics.length > 0 ? (
-                <ProjectDiagnosticsSection
-                  diagnostics={projectDiagnostics}
-                  documentLabel={(documentId) =>
-                    project.documents.find(
-                      (candidate) => candidate.id === documentId,
-                    )?.name ?? documentId
-                  }
-                  onSelectDiagnostic={jumpToProjectDiagnostic}
-                />
-              ) : null}
+              <ProjectDiagnosticsSection
+                snapshot={liveDiagnosticSnapshot}
+                documentLabel={(documentId) =>
+                  project.documents.find(
+                    (candidate) => candidate.id === documentId,
+                  )?.name ?? documentId
+                }
+                onSelectDiagnostic={jumpToProjectDiagnostic}
+              />
               {highlightedTrace && highlightedTrace.hops.length > 0 ? (
                 <NetTraceSection
                   trace={highlightedTrace}
@@ -6922,9 +6880,7 @@ export function App({
                       annotationCount: document.annotations.length,
                       status,
                     }}
-                    importDiagnostics={importDiagnostics}
-                    visualSummary={visualDiagnosticSummary}
-                    onSelectVisualDiagnostic={jumpToVisualDiagnostic}
+                    importReport={importReport}
                   />
                 </section>
               ) : null}

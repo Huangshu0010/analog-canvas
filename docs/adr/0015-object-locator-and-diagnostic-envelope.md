@@ -46,14 +46,14 @@ interface ObjectLocator {
     | "annotation"
     | "no-connect"; // see ADR 0013 / schematic-model NoConnect (R7)
   objectId: string;
-  endpoint?: EndpointRef;   // present for terminal/port/junction targets
-  sourceRef?: SourceSpan;   // present for SPICE-originated objects
+  endpoint?: EndpointRef; // present for terminal/port/junction targets
+  sourceRef?: SourceSpan; // present for SPICE-originated objects
 }
 
 interface HierarchyFrame {
   parentDocumentId: string;
-  instanceId: string;       // the parent subcircuit instance
-  childDocumentId: string;  // the Document the instance instantiates
+  instanceId: string; // the parent subcircuit instance
+  childDocumentId: string; // the Document the instance instantiates
 }
 ```
 
@@ -71,7 +71,7 @@ interface HierarchyFrame {
 interface Diagnostic {
   id: string;
   domain: "schema" | "spice" | "erc" | "routing" | "visual";
-  code: string;            // e.g. ERC_FLOATING_GATE, VISUAL_ROUTE_OVERLAP
+  code: string; // e.g. ERC_FLOATING_GATE, VISUAL_ROUTE_OVERLAP
   severity: "error" | "warning" | "info";
   confidence: "high" | "medium" | "low";
   gateEligible: boolean;
@@ -92,6 +92,41 @@ interface Diagnostic {
 - The envelope is a derived diagnostic: never persisted, never exported, never
   mutates the Project. Suppressing a diagnostic from the UI hides its display;
   it never deletes the underlying fact.
+
+### Diagnostic lifecycle amendment (2026-08-18)
+
+The envelope above describes one finding, but not its lifetime. Current
+schematic evidence is published only inside a transient `LiveDiagnosticSnapshot`:
+
+```ts
+interface LiveDiagnosticSnapshot {
+  source: "live";
+  projectId: string;
+  documentRevisions: readonly {
+    documentId: string;
+    revision: number;
+  }[];
+  diagnostics: readonly Diagnostic[];
+}
+```
+
+- A live snapshot is derived from exactly the listed Document revisions. A
+  successful transaction, undo, redo, or Project replacement publishes a new
+  Project value and therefore a new snapshot.
+- Live findings are never appended to UI state. When a producer no longer
+  emits a finding for the current revisions, it disappears. Undo may emit the
+  same stable diagnostic identity again; that is new current evidence, not a
+  retained historical row.
+- Import, file-open, migration, and rejected-operation messages are operation
+  reports. They describe an event and may remain available for review, but are
+  not live schematic diagnostics, do not contribute to the current count, and
+  must be labelled with their historical source.
+- Non-gating routing/visual heuristics are observations. The editor keeps them
+  available behind an explicit control; the default current view contains ERC
+  and gate-eligible structural findings.
+- The editor exposes one Project-wide live diagnostic surface. A contextual
+  import report must not independently re-render the same current visual
+  findings.
 
 ### navigateTo (frozen semantics)
 

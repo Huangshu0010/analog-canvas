@@ -8317,3 +8317,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   / 860 tests, workspace build, production smoke) passed.
 - Commit status: pending `refactor(net): retire legacy normalization
   compatibility` on `codex/net-contract-unification-plan`.
+
+## 2026-08-18 - Diagnostic lifecycle and report separation
+
+- Target: make current diagnostics revision-scoped evidence and separate them
+  from historical import messages.
+- Changed areas: Derived live diagnostic snapshot/presentation policy, editor
+  diagnostic workbench and import report lifecycle, accepted diagnostic ADR,
+  and unit/controller/browser lifecycle regressions.
+- Validation: focused 3-file Vitest (25 tests), diagnostic-focused Playwright
+  (4 tests), test-impact, typecheck, diff checks, and `pnpm verify:branch` (143
+  test files / 863 tests, workspace build, production smoke) passed.
+- Commit status: committed and pushed as `refactor(diagnostics): separate live
+  findings from import reports` on `codex/diagnostic-lifecycle`.

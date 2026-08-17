@@ -2468,7 +2468,7 @@ test("connects every compatible pin crossed by one wire", async ({ page }) => {
   }
 });
 
-test("rejects a SPICE netlist that needs unsupported symbols", async ({
+test("keeps rejected SPICE import diagnostics in a historical report", async ({
   page,
 }) => {
   await page.goto("/");
@@ -2483,8 +2483,26 @@ test("rejects a SPICE netlist that needs unsupported symbols", async ({
   await expect(page.getByTestId("status")).toContainText(
     "approved Razavi catalog has no symbol",
   );
-  await expect(page.getByTestId("document-count")).toHaveText("1");
-  await expect(page.getByTestId("instance-count")).toHaveText("0");
+  const telemetry = page.getByTestId("editor-test-telemetry");
+  await expect(telemetry.getByTestId("document-count")).toHaveText("1");
+  await expect(telemetry.getByTestId("instance-count")).toHaveText("0");
+  await expect(page.getByTestId("import-report-lifecycle")).toContainText(
+    "they are not current ERC results",
+  );
+  await expect(page.getByTestId("import-report-diagnostics")).toContainText(
+    "approved Razavi catalog has no symbol",
+  );
+  await expect(page.getByTestId("project-diagnostics")).not.toContainText(
+    "approved Razavi catalog has no symbol",
+  );
+
+  const replacement = createEmptyProject("replacement", "Replacement");
+  await page.getByTestId("project-file").setInputFiles({
+    name: "replacement.icproj.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(replacement)),
+  });
+  await expect(page.getByTestId("import-report-lifecycle")).toHaveCount(0);
 });
 
 test("exports one formal visual scene as Project, SVG, PNG, and PDF", async ({
@@ -3045,6 +3063,29 @@ test("surfaces and locates current-document ERC diagnostics", async ({
   ).toBeVisible();
 });
 
+test("removes resolved live diagnostics and restores them through undo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await placeComponent(page, "resistor", { x: 380, y: 260 });
+  await openSelectionShelf(page);
+  const diagnostics = page.getByTestId("project-diagnostics");
+  await expect(diagnostics).toContainText("ERC_UNCONNECTED_PIN");
+
+  for (const pinName of ["1", "2"]) {
+    await page.getByTestId(`terminal-R1-${pinName}`).click({ button: "right" });
+    await page.getByRole("button", { name: "Mark No Connect" }).click();
+  }
+  await expect(diagnostics).not.toContainText("ERC_UNCONNECTED_PIN");
+  await expect(page.getByTestId("no-current-diagnostics")).toBeVisible();
+
+  await page.keyboard.press("Control+z");
+  await expect(diagnostics).toContainText("ERC_UNCONNECTED_PIN");
+
+  await page.keyboard.press("Control+y");
+  await expect(diagnostics).not.toContainText("ERC_UNCONNECTED_PIN");
+});
+
 test("filters and navigates locator-backed visual diagnostics", async ({
   page,
 }) => {
@@ -3053,6 +3094,8 @@ test("filters and navigates locator-backed visual diagnostics", async ({
   await placeComponent(page, "resistor", { x: 420, y: 300 });
   await openSelectionShelf(page);
 
+  await expect(page.getByTestId("diagnostic-domain-visual")).toHaveCount(0);
+  await page.getByTestId("diagnostic-observations-toggle").click();
   await page.getByTestId("diagnostic-domain-visual").click();
   const diagnostics = page.getByTestId("project-diagnostics");
   await expect(diagnostics).toContainText("VISUAL_SYMBOL_OVERLAP");
