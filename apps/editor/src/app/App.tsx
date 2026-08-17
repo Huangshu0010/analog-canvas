@@ -124,6 +124,7 @@ import {
   InsertComponentDialog,
 } from "../features/component-insert/insert-component-dialog";
 import type { ComponentInsertRequest } from "../features/component-insert/insert-component-dialog";
+import { useComponentPlacement } from "../features/component-insert/use-component-placement";
 import { DisplayToggle } from "../features/component-insert/display-toggle";
 import { constructVddRailEdits } from "../features/component-insert/vdd-rail";
 import { vddPowerLabelAnnotation } from "../features/component-insert/vdd-power-label";
@@ -386,7 +387,7 @@ export function App({
       ).project,
   );
   const [status, setStatus] = useState("Ready");
-  const [insertDialogOpen, setInsertDialogOpen] = useState(false);
+  const [, setInsertDialogOpen] = useState(false);
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
   const [agentDetailsOpen, setAgentDetailsOpen] = useState(false);
   const [agentStatusDismissed, setAgentStatusDismissed] = useState(false);
@@ -406,19 +407,7 @@ export function App({
     "library",
   );
   const [selectionOpen, setSelectionOpen] = useState(false);
-  const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = JSON.parse(
-        window.localStorage.getItem(RECENT_COMPONENTS_STORAGE_KEY) ?? "[]",
-      );
-      return Array.isArray(stored)
-        ? stored.filter((item): item is string => typeof item === "string")
-        : [];
-    } catch {
-      return [];
-    }
-  });
+  const [, setRecentSymbolIds] = useState<string[]>([]);
   const [restoreAfterRefresh] = useState(() => {
     if (typeof window === "undefined") return false;
     const requested =
@@ -1153,14 +1142,41 @@ export function App({
     createRouteAnchor: routeAnchor,
   });
   const {
+    beginInsertedComponentPlacement: beginInsertedComponentPlacementFromHook,
+    cancelComponentInsert: cancelComponentInsertFromHook,
+    closeInsertDialog: closeInsertDialogFromHook,
+    insertDialogOpen,
+    openInsertComponentDialog: openInsertComponentDialogFromHook,
+    recentSymbolIds,
+    rotatePendingComponent: rotatePendingComponentFromHook,
+    mirrorPendingComponent: mirrorPendingComponentFromHook,
+  } = useComponentPlacement({
+    recentStorageKey: RECENT_COMPONENTS_STORAGE_KEY,
+    cancelAllTransientInteraction,
+    cancelCanvasDrag: () => canvasDragSessionRef.current?.cancel(),
+    clearTransientCanvasState,
+    paintSnapGuides,
+    beginVddRailInteraction,
+    beginComponentPlacement: (request) => {
+      if (request.kind !== "vdd-rail") beginComponentPlacement(request);
+    },
+    rotateComponentPlacement,
+    mirrorComponentPlacement,
+    setStatus,
+  });
+  const {
     beginCopyPlacement: beginCopyPlacementFromSelection,
+    beginKeyboardSelectionMove: beginKeyboardSelectionMoveFromSelection,
     beginMove: beginMoveFromSelection,
     beginVisualSelectionMove: beginVisualSelectionMoveFromSelection,
     commitCopyPlacement: commitCopyPlacementFromSelection,
+    commitCommandMove: commitCommandMoveFromSelection,
+    clearCommandMoveSession: clearCommandMoveSessionFromSelection,
     deleteSelectedJunction: deleteSelectedJunctionFromSelection,
     deleteSelection: deleteSelectionFromSelection,
     selectInstance: selectInstanceFromSelection,
     toggleSelectedNoConnect: toggleSelectedNoConnectFromSelection,
+    updateCommandMovePreview: updateCommandMovePreviewFromSelection,
   } = useSelectionInteraction({
     document,
     resolver,
@@ -1173,7 +1189,7 @@ export function App({
     selectedNoConnect,
     selectedEndpointNetId,
     copyPlacement,
-    interactionKind: getCurrentInteractionState().kind,
+    getInteractionKind: () => getCurrentInteractionState().kind,
     transact,
     setStatus,
     setSelectedEndpoint,
@@ -1207,6 +1223,9 @@ export function App({
     completeInstanceMove,
     logicalRadiusForPixels,
     snapGuides: paintSnapGuides,
+    beginSelectionMoveInteraction,
+    hasSelectedRoute: Boolean(selectedRoute),
+    visualMoveOrigin: commandMoveVisualOrigin,
   });
 
   const textEditingTarget = textEditing
@@ -1467,7 +1486,8 @@ export function App({
   }
 
   function cancelAllTransientInteraction(): void {
-    clearCommandMoveSession();
+    closeInsertDialogFromHook();
+    clearCommandMoveSessionFromSelection();
     canvasDragSessionRef.current?.cancel();
     clearTransientCanvasState();
     paintSnapGuides([]);
@@ -3230,6 +3250,36 @@ export function App({
     }
   }
 
+  function commandMoveVisualOrigin(movePlan: SelectionMovePlan): Point {
+    const freeAnnotation = movePlan.freeAnnotationIds
+      .map((id) =>
+        document.annotations.find((annotation) => annotation.id === id),
+      )
+      .find((annotation) => annotation?.anchor.kind === "free");
+    return (
+      movePlan.draftingIds
+        .flatMap((id) => {
+          const object = document.drafting?.objects.find(
+            (candidate) => candidate.id === id,
+          );
+          const origin = object ? draftingDragOrigin(object) : null;
+          return origin ? [origin] : [];
+        })
+        .find((point): point is Point => point !== null) ??
+      (freeAnnotation?.anchor.kind === "free"
+        ? freeAnnotation.anchor.position
+        : undefined) ??
+      movePlan.looseRouteIds
+        .map(
+          (id) =>
+            routeGeometryRecords.find((record) => record.route.id === id)
+              ?.geometry.centerline[0],
+        )
+        .find((point): point is Point => point !== undefined) ?? { x: 0, y: 0 }
+    );
+  }
+
+  /* Migrated to useSelectionInteraction; retained temporarily for diff review.
   function beginKeyboardSelectionMove(): void {
     const movePlan = planSelectionMove(document, visualSelection);
     if (movePlan.previewObjectIds.length === 0 && !selectedRoute) {
@@ -3380,6 +3430,8 @@ export function App({
     paintSnapGuides([]);
     cancelInteraction();
   }
+
+  */
 
   function instanceMoveAt(
     preview: DragPreview,
@@ -5320,7 +5372,7 @@ export function App({
     event: ReactPointerEvent<SVGSVGElement>,
   ): void {
     if (getCurrentInteractionState().kind === "moving-selection") {
-      updateCommandMovePreview(
+      updateCommandMovePreviewFromSelection(
         pointFromClient(event.clientX, event.clientY, event.currentTarget),
         event.currentTarget,
         event.altKey,
@@ -5969,7 +6021,7 @@ export function App({
           beginCopyPlacementFromSelection();
           return;
         case "begin-selection-move":
-          beginKeyboardSelectionMove();
+          beginKeyboardSelectionMoveFromSelection();
           return;
         case "move-selection-required":
           setStatus("Select objects before moving them");
@@ -6006,25 +6058,25 @@ export function App({
           reverseSelectedCurrentArrow();
           return;
         case "open-component-insert":
-          openInsertComponentDialog();
+          openInsertComponentDialogFromHook();
           return;
         case "place-port": {
           const request = quickPlaceRequest(
             document.presentation.styleProfileId,
             "port",
           );
-          if (request) beginInsertedComponentPlacement(request);
+          if (request) beginInsertedComponentPlacementFromHook(request);
           else setStatus("Port is unavailable in this style profile");
           return;
         }
         case "rotate-placement":
-          rotatePendingComponent(shortcut.deltaDegrees);
+          rotatePendingComponentFromHook(shortcut.deltaDegrees);
           return;
         case "rotate-copy-placement":
           rotatePendingCopy(shortcut.deltaDegrees);
           return;
         case "mirror-placement":
-          mirrorPendingComponent(shortcut.direction);
+          mirrorPendingComponentFromHook(shortcut.direction);
           return;
         case "mirror-copy-placement":
           mirrorPendingCopy(shortcut.direction);
@@ -6395,7 +6447,7 @@ export function App({
               <details className="command-menu" name="editor-command-menu">
                 <summary>Draw</summary>
                 <div className="command-popover">
-                  <button type="button" onClick={openInsertComponentDialog}>
+                  <button type="button" onClick={openInsertComponentDialogFromHook}>
                     <ToolIcon name="insert" />
                     Insert component (I)
                   </button>
@@ -6644,8 +6696,8 @@ export function App({
         open={insertDialogOpen}
         styleProfileId={document.presentation.styleProfileId}
         recentSymbolIds={recentSymbolIds}
-        onApply={beginInsertedComponentPlacement}
-        onCancel={cancelComponentInsert}
+        onApply={beginInsertedComponentPlacementFromHook}
+        onCancel={cancelComponentInsertFromHook}
       />
       {publicAgentUiEnabled ? (
         <ConnectAgentPanel
@@ -6824,8 +6876,8 @@ export function App({
             styleProfileId={document.presentation.styleProfileId}
             recentSymbolIds={recentSymbolIds}
             open={visibleLibraryPanelOpen}
-            onOpenInsert={openInsertComponentDialog}
-            onQuickPlace={beginInsertedComponentPlacement}
+            onOpenInsert={openInsertComponentDialogFromHook}
+            onQuickPlace={beginInsertedComponentPlacementFromHook}
           />
         ) : (
           <ExamplesPanel
@@ -7688,7 +7740,7 @@ export function App({
                 if (event.detail === 1) {
                   event.preventDefault();
                   event.stopPropagation();
-                  commitCommandMove(
+                  commitCommandMoveFromSelection(
                     pointFromClient(
                       event.clientX,
                       event.clientY,

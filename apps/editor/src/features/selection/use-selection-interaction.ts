@@ -49,6 +49,16 @@ export interface InstanceMovePreview {
   movePlan: SelectionMovePlan;
 }
 
+interface CommandMoveSession {
+  documentId: string;
+  movePlan: SelectionMovePlan;
+  instancePreview: InstanceMovePreview | null;
+  pointerOrigin: Point;
+  visual: ReturnType<typeof startCanvasDragVisual> | null;
+  lastSnap?: SnapResult;
+  lastDelta: Point;
+}
+
 export interface UseSelectionInteractionOptions {
   document: SchematicDocument;
   resolver: SymbolResolver;
@@ -61,7 +71,7 @@ export interface UseSelectionInteractionOptions {
   selectedNoConnect: SchematicDocument["noConnects"][number] | undefined;
   selectedEndpointNetId: string | null;
   copyPlacement: CopyPlacement<SchematicClipboard> | null;
-  interactionKind: InteractionState["kind"];
+  getInteractionKind: () => InteractionState["kind"];
   transact: (
     edits: SchematicEdit[],
     options?: { preserveInteraction?: boolean },
@@ -124,6 +134,9 @@ export interface UseSelectionInteractionOptions {
   ) => void;
   logicalRadiusForPixels: (svg: SVGSVGElement, pixels: number) => number;
   snapGuides: (guides: SnapGuideLine[]) => void;
+  beginSelectionMoveInteraction: () => void;
+  hasSelectedRoute: boolean;
+  visualMoveOrigin: (movePlan: SelectionMovePlan) => Point;
 }
 
 /**
@@ -135,6 +148,133 @@ export function useSelectionInteraction(
   options: UseSelectionInteractionOptions,
 ) {
   const copyCounter = useRef(0);
+  const commandMoveSessionRef = useRef<CommandMoveSession | null>(null);
+
+  const clearCommandMoveSession = (): void => {
+    commandMoveSessionRef.current?.visual?.restore();
+    commandMoveSessionRef.current = null;
+  };
+
+  const beginKeyboardSelectionMove = (): void => {
+    const movePlan = planSelectionMove(
+      options.document,
+      options.visualSelection,
+    );
+    if (movePlan.previewObjectIds.length === 0 && !options.hasSelectedRoute) {
+      options.setStatus(
+        "Selected objects are attached or locked and cannot move",
+      );
+      return;
+    }
+    const primaryInstanceId =
+      options.selectedIds.at(-1) ?? movePlan.instanceIds.at(0) ?? null;
+    const primary = primaryInstanceId
+      ? options.document.instances.find((item) => item.id === primaryInstanceId)
+      : undefined;
+    const instancePreview = primary?.placement
+      ? {
+          instanceIds: movePlan.instanceIds,
+          primaryInstanceId: primaryInstanceId!,
+          originalPositions: Object.fromEntries(
+            movePlan.instanceIds.flatMap((id) => {
+              const item = options.document.instances.find(
+                (candidate) => candidate.id === id,
+              );
+              return item?.placement
+                ? [[id, { ...item.placement.position }] as const]
+                : [];
+            }),
+          ),
+          pointerStart: { ...primary.placement.position },
+          movePlan,
+        }
+      : null;
+    commandMoveSessionRef.current = {
+      documentId: options.document.id,
+      movePlan,
+      instancePreview,
+      pointerOrigin: instancePreview
+        ? instancePreview.pointerStart
+        : options.visualMoveOrigin(movePlan),
+      visual: null,
+      lastDelta: { x: 0, y: 0 },
+    };
+    options.beginSelectionMoveInteraction();
+    options.setStatus(
+      "Move: move the pointer, then click to place (Esc to cancel)",
+    );
+  };
+
+  const updateCommandMovePreview = (
+    point: Point,
+    svg: SVGSVGElement,
+    suppressSnap: boolean,
+  ): boolean => {
+    const session = commandMoveSessionRef.current;
+    if (!session || session.documentId !== options.document.id) return false;
+    session.visual ??= startCanvasDragVisual(
+      svg,
+      session.movePlan.previewObjectIds,
+    );
+    if (session.instancePreview) {
+      const resolved = options.resolveInstanceMove(
+        session.instancePreview,
+        point,
+        options.logicalRadiusForPixels(svg, 7),
+        suppressSnap,
+        session.lastSnap,
+      );
+      session.lastSnap = resolved.snap;
+      const primary = resolved.moves.find(
+        (move) =>
+          move.instanceId === session.instancePreview!.primaryInstanceId,
+      );
+      const original =
+        session.instancePreview.originalPositions[
+          session.instancePreview.primaryInstanceId
+        ];
+      if (!primary || !original) return false;
+      session.lastDelta = {
+        x: primary.position.x - original.x,
+        y: primary.position.y - original.y,
+      };
+      options.snapGuides(resolved.snap.guides);
+    } else {
+      session.lastDelta = {
+        x: options.snapCoordinate(
+          point.x - session.pointerOrigin.x,
+          options.document.presentation.grid,
+        ),
+        y: options.snapCoordinate(
+          point.y - session.pointerOrigin.y,
+          options.document.presentation.grid,
+        ),
+      };
+      options.snapGuides([]);
+    }
+    session.visual.translate(session.lastDelta);
+    return true;
+  };
+
+  const commitCommandMove = (point: Point, svg: SVGSVGElement): void => {
+    if (!updateCommandMovePreview(point, svg, false)) return;
+    const session = commandMoveSessionRef.current!;
+    session.visual?.restore();
+    commandMoveSessionRef.current = null;
+    if (session.instancePreview) {
+      options.completeInstanceMove(
+        session.instancePreview,
+        point,
+        options.logicalRadiusForPixels(svg, 7),
+        false,
+        session.lastSnap,
+      );
+    } else {
+      options.completeVisualSelectionMove(session.movePlan, session.lastDelta);
+    }
+    options.snapGuides([]);
+    options.cancelInteraction();
+  };
 
   const selectInstance = (instanceId: string, additive: boolean): void => {
     options.setSelectedEndpoint(null);
@@ -147,7 +287,7 @@ export function useSelectionInteraction(
     hitTarget: SVGElement = event.currentTarget,
   ): void => {
     if (options.tool !== "pointer" || event.button !== 0) return;
-    if (options.interactionKind === "moving-selection") {
+    if (options.getInteractionKind() === "moving-selection") {
       options.cancelInteraction();
     }
     event.stopPropagation();
@@ -498,11 +638,12 @@ export function useSelectionInteraction(
   };
 
   const beginCopyPlacement = (): void => {
-    if (options.interactionKind === "copy-placement") {
+    const interactionKind = options.getInteractionKind();
+    if (interactionKind === "copy-placement") {
       options.setStatus("Copy placement is already active · Esc cancels");
       return;
     }
-    if (options.interactionKind !== "idle") {
+    if (interactionKind !== "idle") {
       options.setStatus("Finish or cancel the active tool before copying");
       return;
     }
@@ -588,12 +729,16 @@ export function useSelectionInteraction(
 
   return {
     beginCopyPlacement,
+    beginKeyboardSelectionMove,
     beginMove,
     beginVisualSelectionMove,
     commitCopyPlacement,
+    commitCommandMove,
+    clearCommandMoveSession,
     deleteSelectedJunction,
     deleteSelection,
     toggleSelectedNoConnect,
+    updateCommandMovePreview,
     selectInstance,
   };
 }
