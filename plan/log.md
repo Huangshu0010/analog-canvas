@@ -8097,3 +8097,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: staged for
   `refactor(editor): complete properties editor hook` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Continue editor shell Hook
+
+- Target: move responsive Library lifecycle and storage persistence out of
+  the App composition root.
+- Changed areas: `useEditorPanels` now owns compact media-query updates,
+  compact Library/Selection arbitration, persisted Library state, and
+  Library/Examples panel commands.
+- Validation: focused narrow-breakpoint Playwright scenario and
+  `pnpm typecheck` passed.
+- Commit status: staged for
+  `refactor(editor): continue editor panel state hook` on
+  `codex/app-transaction-module-layers`.

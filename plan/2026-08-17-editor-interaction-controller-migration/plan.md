@@ -28,7 +28,7 @@ The five domains are:
 |    2 | Selection and movement            | completed: commands, pointer drags, and keyboard Move session have one Hook owner | `refactor(editor): complete selection interaction hook` |
 |    3 | Component insertion and placement | completed: dialog, recents, component/VDD placement, and transactions have one Hook owner | `refactor(editor): complete component placement hook`   |
 |    4 | Property editing                  | completed: drafts, Net Label, text, and label-visibility actions have one Hook owner | `refactor(editor): complete properties editor hook`     |
-|    5 | Panels and dialogs                | in progress: generic shell state extracted; focus/persistence cleanup pending | `refactor(editor): extract editor panel state hook`    |
+|    5 | Panels and dialogs                | in progress: Library persistence and responsive shell ownership extracted; dialog focus and Agent state pending | `refactor(editor): continue editor panel state hook`    |
 
 ## State and Ownership
 

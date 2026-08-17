@@ -398,11 +398,14 @@ export function App({
     setSearchOpen,
     searchQuery,
     setSearchQuery,
-  } = useEditorPanels(
-    initialLibraryPanelOpen,
-    compactLayoutMatches(COMPACT_LAYOUT_MEDIA_QUERY),
-  );
-  const [, setRecentSymbolIds] = useState<string[]>([]);
+    showLeftPanel,
+    toggleLibraryPanel,
+  } = useEditorPanels({
+    initialLibraryOpen: initialLibraryPanelOpen,
+    initialCompact: compactLayoutMatches(COMPACT_LAYOUT_MEDIA_QUERY),
+    compactMediaQuery: COMPACT_LAYOUT_MEDIA_QUERY,
+    libraryStorageKey: LIBRARY_PANEL_STORAGE_KEY,
+  });
   const [restoreAfterRefresh] = useState(() => {
     if (typeof window === "undefined") return false;
     const requested =
@@ -417,26 +420,6 @@ export function App({
     ? compactLibraryPanelOpen
     : libraryPanelOpen;
 
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-    const mediaQuery = window.matchMedia(COMPACT_LAYOUT_MEDIA_QUERY);
-    const updateCompactLayout = (): void => {
-      setCompactLayout(mediaQuery.matches);
-      if (mediaQuery.matches) setCompactLibraryPanelOpen(false);
-    };
-    updateCompactLayout();
-    mediaQuery.addEventListener("change", updateCompactLayout);
-    return () => mediaQuery.removeEventListener("change", updateCompactLayout);
-  }, []);
-
-  useEffect(() => {
-    if (compactLayout && selectionOpen) setCompactLibraryPanelOpen(false);
-  }, [compactLayout, selectionOpen]);
   const refreshRestoreAttemptedRef = useRef(false);
   // Formal-file lifecycle of the current working copy, orthogonal to recovery
   // state: a commit makes it dirty again, only a confirmed File System
@@ -1403,45 +1386,6 @@ export function App({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => instanceValueInputRef.current?.focus());
     });
-  }
-
-  function toggleLibraryPanel(): void {
-    if (leftPanelMode === "examples") {
-      showLibraryPanel();
-      return;
-    }
-    if (compactLayout) {
-      setCompactLibraryPanelOpen((current) => {
-        const next = !current;
-        if (next) setSelectionOpen(false);
-        return next;
-      });
-      return;
-    }
-    setLibraryPanelOpen((current) => {
-      const next = !current;
-      try {
-        window.localStorage.setItem(LIBRARY_PANEL_STORAGE_KEY, String(next));
-      } catch {
-        // The Library remains usable when storage is unavailable.
-      }
-      return next;
-    });
-  }
-
-  function showLeftPanel(mode: "library" | "examples"): void {
-    setLeftPanelMode(mode);
-    if (compactLayout) {
-      setCompactLibraryPanelOpen(true);
-      setSelectionOpen(false);
-      return;
-    }
-    setLibraryPanelOpen(true);
-    try {
-      window.localStorage.setItem(LIBRARY_PANEL_STORAGE_KEY, "true");
-    } catch {
-      // The left panel remains usable when storage is unavailable.
-    }
   }
 
   function showLibraryPanel(): void {
