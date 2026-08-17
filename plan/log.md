@@ -8330,3 +8330,15 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   test files / 863 tests, workspace build, production smoke) passed.
 - Commit status: committed and pushed as `refactor(diagnostics): separate live
   findings from import reports` on `codex/diagnostic-lifecycle`.
+
+## 2026-08-18 - Net-contract Ground route-placement E2E
+
+- Target: align the Route-split browser scenario with the frozen rule that
+  Ground cannot silently claim a differently named ordinary Net.
+- Changed areas: one test-local canonical Ground Net fixture and the target
+  plan/log record.
+- Validation: focused Playwright, test-impact, diff checks, frozen install,
+  and `pnpm ci:check` passed (143 unit files / 863 tests; 148 Playwright
+  scenarios).
+- Commit status: pending `test(net): align ground route placement with
+  contract` on `codex/diagnostic-lifecycle`.

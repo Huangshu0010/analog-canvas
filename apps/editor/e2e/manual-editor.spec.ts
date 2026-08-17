@@ -2312,12 +2312,20 @@ test("derives crossings and creates junctions only when a wire ends on a route",
   await expect(page.getByTestId("revision")).toHaveText("4");
 });
 
-test("places a component pin onto a Route and keeps real split topology", async ({
+test("places a Ground pin onto a canonical Route and keeps real split topology", async ({
   page,
 }) => {
   await page.goto("/");
   const project = createRoutingDemoProject();
-  project.documents[0]!.routes.push({
+  const document = project.documents[0]!;
+  const horizontalNet = document.nets.find((net) => net.id === "net-h");
+  if (!horizontalNet) throw new Error("Routing demo is missing net-h");
+  Object.assign(horizontalNet, {
+    name: "0",
+    scope: "global" as const,
+    powerDomain: "ground" as const,
+  });
+  document.routes.push({
     id: "route-base",
     netId: "net-h",
     from: { kind: "terminal", instanceId: "A", pinName: "P" },
