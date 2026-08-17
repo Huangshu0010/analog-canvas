@@ -8342,3 +8342,14 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   scenarios).
 - Commit status: pending `test(net): align ground route placement with
   contract` on `codex/diagnostic-lifecycle`.
+
+## 2026-08-18 - Net and diagnostics MCP checksum refresh
+
+- Target: refresh the canonical Linux MCP tarball SHA-256 after the integrated
+  API/resource changes invalidated the prior release pin.
+- Changed areas: MCP distribution checksum plus the target plan/log record.
+- Validation: `pnpm mcp:distribution:check`, workspace build, release
+  verification, and diff checks passed locally; a new remote Linux Release
+  contracts check remains required for delivery.
+- Commit status: pending `fix(release): refresh MCP checksum` on
+  `codex/diagnostic-lifecycle`.
