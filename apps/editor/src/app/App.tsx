@@ -7826,7 +7826,6 @@ export function App({
             recentSymbolIds={recentSymbolIds}
             open={visibleLibraryPanelOpen}
             onOpenInsert={openInsertComponentDialog}
-            onShowExamples={showExamplesPanel}
             onQuickPlace={beginInsertedComponentPlacement}
           />
         ) : (
