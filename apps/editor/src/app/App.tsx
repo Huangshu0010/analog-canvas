@@ -107,6 +107,7 @@ import {
   rankCanvasHits,
   resolveCanvasHitAtPoint,
 } from "../canvas/canvas-hit-resolver";
+import { useWireInteraction } from "../features/wiring/use-wire-interaction";
 import {
   centerOfBounds,
   clamp,
@@ -1125,6 +1126,33 @@ export function App({
       ].flatMap((net) => net.routedComponents),
     [document.id, projectConnectivityIndex],
   );
+  const {
+    drawSelectedMosBulk,
+    fixWirePoint,
+    finishWireAtPoint,
+    handleFlightline,
+    handleWireEndpoint,
+    commitWire,
+  } = useWireInteraction({
+    document,
+    resolver,
+    selectedInstance,
+    visibleEndpoints,
+    wireSource,
+    wireSourceRevision,
+    wireWaypoints,
+    nextRoutingSuffix,
+    transact,
+    setStatus,
+    setTool,
+    setWireSource,
+    setWirePreviewPoint,
+    setWireWaypoints,
+    completeWire,
+    clearTransientCanvasState,
+    cancelInteraction,
+    setBulkDrawInstanceId,
+  });
 
   const textEditingTarget = textEditing
     ? resolveTextEditingTarget(document, textEditing)
@@ -2118,220 +2146,6 @@ export function App({
     const demo = createRoutingDemoProject();
     replaceActiveProject(demo);
     setStatus("Loaded Phase 3 routing demo");
-  }
-
-  function handleWireEndpoint(
-    event: ReactPointerEvent<SVGCircleElement>,
-    candidate: WireSource,
-  ): void {
-    event.stopPropagation();
-    if (event.altKey) {
-      setStatus("Snap suppressed while Alt is held");
-      return;
-    }
-    setTool("wire");
-    if (!wireSource) {
-      setWireSource(candidate, document.revision);
-      setWirePreviewPoint(candidate.point);
-      setWireWaypoints([]);
-      setStatus(`Wire source: ${endpointTestId(candidate.endpoint)}`);
-      return;
-    }
-    if (endpointKey(wireSource.endpoint) === endpointKey(candidate.endpoint)) {
-      setStatus("Choose a different endpoint");
-      return;
-    }
-    commitWire(candidate);
-  }
-
-  function handleFlightline(
-    event: ReactMouseEvent<SVGLineElement>,
-    flightline: Flightline,
-  ): void {
-    event.stopPropagation();
-    const from: WireSource = {
-      endpoint: flightline.from,
-      netId: flightline.netId,
-      point: flightline.fromPoint,
-      preludeEdits: [],
-      ...(isMosBulkTerminal(document, flightline.from)
-        ? { routePresentation: "bulk-dashed" }
-        : {}),
-    };
-    const to: WireSource = {
-      endpoint: flightline.to,
-      netId: flightline.netId,
-      point: flightline.toPoint,
-      preludeEdits: [],
-      ...(isMosBulkTerminal(document, flightline.to)
-        ? { routePresentation: "bulk-dashed" }
-        : {}),
-    };
-    setTool("wire");
-    if (wireSource) {
-      const candidate =
-        endpointKey(wireSource.endpoint) === endpointKey(from.endpoint)
-          ? to
-          : from;
-      if (
-        endpointKey(wireSource.endpoint) !== endpointKey(candidate.endpoint)
-      ) {
-        commitWire(candidate);
-      }
-      return;
-    }
-    setWireSource(from, document.revision);
-    setWirePreviewPoint(to.point);
-    setWireWaypoints([]);
-    setStatus(`Wire source: flightline on ${flightline.netId}`);
-  }
-
-  function commitWire(candidate: WireSource): void {
-    if (!wireSource) return;
-    if (wireSourceRevision !== document.revision) {
-      clearTransientCanvasState();
-      cancelInteraction();
-      setBulkDrawInstanceId(null);
-      setStatus("Wire cancelled because its source revision is stale");
-      return;
-    }
-    const suffix = nextRoutingSuffix();
-    const proposal = proposeWireCommitThroughContacts(
-      wireSource,
-      candidate,
-      wireWaypoints,
-      visibleEndpoints.filter(
-        (endpoint) => endpoint.endpoint.kind === "terminal",
-      ),
-      suffix,
-    );
-    const bulkEndpoint = [wireSource.endpoint, candidate.endpoint].find(
-      (endpoint) => endpoint.kind === "terminal" && endpoint.pinName === "B",
-    );
-    const defaultBoundInstance =
-      bulkEndpoint?.kind === "terminal"
-        ? document.instances.find(
-            (instance) => instance.id === bulkEndpoint.instanceId,
-          )
-        : undefined;
-    const edits = defaultBoundInstance?.mosBulkBinding
-      ? [
-          {
-            kind: "clear_mos_bulk_default" as const,
-            instanceId: defaultBoundInstance.id,
-          },
-          ...proposal.edits.map((edit) => {
-            if (edit.kind !== "connect_endpoints") return edit;
-            const target =
-              edit.from.kind === "terminal" && edit.from.pinName === "B"
-                ? edit.to
-                : edit.from;
-            return {
-              ...edit,
-              from: target,
-              to: {
-                kind: "terminal" as const,
-                instanceId: defaultBoundInstance.id,
-                pinName: "B",
-              },
-            };
-          }),
-        ]
-      : proposal.edits;
-    const result = transact(edits, { completesWireSession: true });
-    if (result.ok) {
-      completeWire();
-      setBulkDrawInstanceId(null);
-      setStatus(
-        `Committed route at revision ${result.revision} · Wire remains active · Esc exits`,
-      );
-    }
-  }
-
-  function drawSelectedMosBulk(): void {
-    if (!selectedInstance?.placement) return;
-    const resolved = resolver.resolve(
-      selectedInstance.symbolId,
-      selectedInstance.symbolVariantId,
-    );
-    const anchor = resolved?.variant?.auxiliaryPins?.find(
-      (pin) => pin.name === "B",
-    );
-    if (!anchor) {
-      setStatus("Selected instance has no Razavi bulk anchor");
-      return;
-    }
-    const endpoint: RouteEndpoint = {
-      kind: "terminal",
-      instanceId: selectedInstance.id,
-      pinName: "B",
-    };
-    const source: WireSource = {
-      endpoint,
-      // A materialized default is cleared in the same commit before the new
-      // explicit route is connected. Treat it as unowned while planning so
-      // the planner cannot merge VSS/VDD with the chosen body-bias Net.
-      netId: selectedInstance.mosBulkBinding
-        ? null
-        : endpointNetId(document, endpoint),
-      point: transformPoint(
-        anchor.at,
-        selectedInstance.placement.position,
-        selectedInstance.placement,
-      ),
-      preludeEdits: document.noConnects.flatMap((noConnect) =>
-        noConnect.endpoint.kind === "terminal" &&
-        noConnect.endpoint.instanceId === selectedInstance.id &&
-        noConnect.endpoint.pinName === "B"
-          ? [{ kind: "remove_no_connect" as const, noConnectId: noConnect.id }]
-          : [],
-      ),
-      routePresentation: "bulk-dashed",
-    };
-    setBulkDrawInstanceId(selectedInstance.id);
-    setTool("wire");
-    setWireSource(source, document.revision);
-    setWirePreviewPoint(source.point);
-    setWireWaypoints([]);
-    setStatus(`Drawing ${selectedInstance.id}.B bulk connection`);
-  }
-
-  function freeWireAnchor(
-    point: Point,
-    netId: string,
-    createNet: boolean,
-  ): WireSource {
-    return createFreeWireAnchor(point, netId, createNet, nextRoutingSuffix());
-  }
-
-  function fixWirePoint(point: Point): void {
-    if (!wireSource) {
-      const netId = `net-ui-${nextRoutingSuffix()}`;
-      const source = freeWireAnchor(point, netId, true);
-      setWireSource(source, document.revision);
-      setWirePreviewPoint(point);
-      setWireWaypoints([]);
-      setStatus("Wire source: free grid point");
-      return;
-    }
-    const fixed = buildManualWirePath(wireSource, { point }, wireWaypoints);
-    // Keep the clicked point as an in-progress waypoint. The path builder
-    // treats it as a fixed bend on the next click while retaining the source
-    // terminal's escape segment.
-    setWireWaypoints(fixed.points.slice(1));
-    setWirePreviewPoint(point);
-    setStatus(
-      `Wire bend ${fixed.points.length - 1}; double-click or Enter to finish`,
-    );
-  }
-
-  function finishWireAtPoint(point: Point): void {
-    if (!wireSource) {
-      fixWirePoint(point);
-      return;
-    }
-    const netId = wireSource.netId ?? `net-ui-${nextRoutingSuffix()}`;
-    commitWire(freeWireAnchor(point, netId, wireSource.netId === null));
   }
 
   function routeAnchor(

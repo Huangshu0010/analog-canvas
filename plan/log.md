@@ -7971,3 +7971,17 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: included in
   `plan(editor): define flat interaction hook migration` on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Extract Editor Wire session hook checkpoint
+
+- Target: begin the active flat interaction migration by moving Wire session
+  orchestration from `App.tsx` into the wiring feature.
+- Changed areas: endpoint/flightline/free-point Wire initiation, MOS bulk Wire
+  initiation, commit, and stale-revision cancellation now live in
+  `useWireInteraction`; route click/stretch remains the pending second part
+  of Step 1.
+- Validation: focused wiring contracts (4 files / 51 tests), 17 focused
+  browser Wire/route tests, Editor build, and `pnpm typecheck` passed.
+- Commit status: included in
+  `refactor(editor): extract wire session hook` on
+  `codex/app-transaction-module-layers`.

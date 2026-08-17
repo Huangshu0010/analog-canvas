@@ -22,13 +22,13 @@ The five domains are:
 
 ## Progress
 
-| Step | Domain                            | State   | Commit                                                 |
-| ---: | --------------------------------- | ------- | ------------------------------------------------------ |
-|    1 | Wiring                            | pending | `refactor(editor): extract wire interaction hook`      |
-|    2 | Selection and movement            | pending | `refactor(editor): extract selection interaction hook` |
-|    3 | Component insertion and placement | pending | `refactor(editor): extract component placement hook`   |
-|    4 | Property editing                  | pending | `refactor(editor): extract properties editor hook`     |
-|    5 | Panels and dialogs                | pending | `refactor(editor): extract editor panel state hook`    |
+| Step | Domain                            | State                                         | Commit                                                 |
+| ---: | --------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
+|    1 | Wiring                            | in progress: wire session extracted; route selection/stretch pending | `refactor(editor): extract wire interaction hook`      |
+|    2 | Selection and movement            | pending                                       | `refactor(editor): extract selection interaction hook` |
+|    3 | Component insertion and placement | pending                                       | `refactor(editor): extract component placement hook`   |
+|    4 | Property editing                  | pending                                       | `refactor(editor): extract properties editor hook`     |
+|    5 | Panels and dialogs                | pending                                       | `refactor(editor): extract editor panel state hook`    |
 
 ## State and Ownership
 
@@ -140,6 +140,12 @@ Commit:
 
 ```text
 refactor(editor): extract wire interaction hook
+```
+
+Checkpoint delivered before the remaining route-selection/stretch migration:
+
+```text
+refactor(editor): extract wire session hook
 ```
 
 ## Step 2 - Selection and movement
