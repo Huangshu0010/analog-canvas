@@ -1,26 +1,10 @@
-import type {
-  Point,
-  RouteAnnotationAttachment,
-  RouteBranch,
-  SchematicDocument,
-} from "@icm/model";
-import type { SymbolResolver } from "@icm/symbols";
-
-import { resolveEndpointPoint } from "./endpoint.js";
+import type { Point, RouteBranch } from "@icm/model";
 
 export type SegmentMode = RouteBranch["segmentModes"][number];
 
-export interface RoutePolyline {
-  routeId: string;
-  netId: string;
-  points: Point[];
-  segmentModes: SegmentMode[];
-}
-
-export interface RouteAttachmentPlacement {
-  position: Point;
-  labelPosition: Point;
-  rotation: 0 | 90 | 180 | 270;
+export interface RouteEditPath {
+  points: readonly Point[];
+  segmentModes: readonly SegmentMode[];
 }
 
 export interface RoutedEndpointGeometry {
@@ -36,67 +20,6 @@ export interface OrthogonalEscapeRoute {
 
 function samePoint(left: Point, right: Point): boolean {
   return left.x === right.x && left.y === right.y;
-}
-
-export function routePolyline(
-  document: SchematicDocument,
-  resolver: SymbolResolver,
-  route: RouteBranch,
-): RoutePolyline | null {
-  const from = resolveEndpointPoint(document, resolver, route.from);
-  const to = resolveEndpointPoint(document, resolver, route.to);
-  if (!from || !to) return null;
-  return {
-    routeId: route.id,
-    netId: route.netId,
-    points: [from, ...route.waypoints, to],
-    segmentModes: [...route.segmentModes],
-  };
-}
-
-/**
- * Resolves a visual annotation attachment against the current derived route
- * geometry. `t` survives segment stretching; the route remains electrically
- * untouched. An invalid segment is deliberately unresolved rather than
- * silently moving an annotation to a different conductor.
- */
-export function routeAttachmentPlacement(
-  polyline: RoutePolyline,
-  attachment: RouteAnnotationAttachment,
-): RouteAttachmentPlacement | null {
-  const from = polyline.points[attachment.segmentIndex];
-  const to = polyline.points[attachment.segmentIndex + 1];
-  if (!from || !to) return null;
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy);
-  if (length === 0) return null;
-  const position = {
-    x: from.x + dx * attachment.t,
-    y: from.y + dy * attachment.t,
-  };
-  const normal = { x: -dy / length, y: dx / length };
-  const direction = attachment.direction === "forward" ? 1 : -1;
-  const angle = Math.round(
-    (Math.atan2(dy * direction, dx * direction) * 180) / Math.PI,
-  );
-  const rotation = ((angle % 360) + 360) % 360;
-  if (
-    rotation !== 0 &&
-    rotation !== 90 &&
-    rotation !== 180 &&
-    rotation !== 270
-  ) {
-    return null;
-  }
-  return {
-    position,
-    labelPosition: {
-      x: position.x + normal.x * attachment.normalOffset,
-      y: position.y + normal.y * attachment.normalOffset,
-    },
-    rotation,
-  };
 }
 
 export function isOrthogonal(points: readonly Point[]): boolean {
@@ -277,7 +200,7 @@ export function buildOrthogonalEscapeRoute(
 }
 
 export function moveRouteSegment(
-  polyline: RoutePolyline,
+  polyline: RouteEditPath,
   segmentIndex: number,
   target: Point,
 ): { waypoints: Point[]; segmentModes: SegmentMode[] } {

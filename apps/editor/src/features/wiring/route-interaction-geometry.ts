@@ -4,9 +4,12 @@ import {
   measureRichTextDocument,
   richTextMetrics,
   resolveAnnotationPresentation,
-  routeAttachmentPlacement,
+  resolveRouteAttachment,
 } from "@icm/derived";
-import type { RoutePolyline, SchematicStyleProfile } from "@icm/derived";
+import type {
+  ResolvedRouteGeometry,
+  SchematicStyleProfile,
+} from "@icm/derived";
 import type {
   Annotation,
   Point,
@@ -21,9 +24,9 @@ import type { SymbolResolver } from "@icm/symbols";
 import { clamp, closestPointOnSegment } from "../../canvas/canvas-geometry";
 import { instanceVisibleHitBox } from "../../canvas/instance-geometry";
 
-export interface RoutePolylineRecord {
+export interface RouteGeometryRecord {
   route: SchematicDocument["routes"][number];
-  polyline: RoutePolyline;
+  geometry: ResolvedRouteGeometry;
 }
 
 export const ROUTED_MARKER_MIN_NORMAL_OFFSET = 12;
@@ -99,16 +102,16 @@ export function looseRouteAnchorIds(
 }
 
 export function attachmentAtPoint(
-  routePolylines: readonly RoutePolylineRecord[],
+  routeGeometryRecords: readonly RouteGeometryRecord[],
   candidate: Point,
   routeId?: string,
   normalOffset = -14,
 ): { routeAttachment: RouteAnnotationAttachment; position: Point } | null {
-  const candidates = routePolylines
+  const candidates = routeGeometryRecords
     .filter((record) => !routeId || record.route.id === routeId)
-    .flatMap(({ route, polyline }) =>
-      polyline.points.slice(0, -1).map((from, segmentIndex) => {
-        const to = polyline.points[segmentIndex + 1]!;
+    .flatMap(({ route, geometry }) =>
+      geometry.segments.map(({ address, from, to }) => {
+        const segmentIndex = address.segmentIndex;
         const position = closestPointOnSegment(candidate, from, to);
         const dx = to.x - from.x;
         const dy = to.y - from.y;
@@ -154,18 +157,17 @@ export function attachmentAtPoint(
  * pointer crossing the conductor does not make the label flicker.
  */
 export function dragRouteAttachmentAtPoint(
-  routePolylines: readonly RoutePolylineRecord[],
+  routeGeometryRecords: readonly RouteGeometryRecord[],
   candidate: Point,
   current: RouteAnnotationAttachment,
 ): { routeAttachment: RouteAnnotationAttachment; position: Point } | null {
-  const record = routePolylines.find(
+  const record = routeGeometryRecords.find(
     ({ route }) => route.id === current.routeId,
   );
   if (!record) return null;
-  const candidates = record.polyline.points
-    .slice(0, -1)
-    .flatMap((from, segmentIndex) => {
-      const to = record.polyline.points[segmentIndex + 1]!;
+  const candidates = record.geometry.segments
+    .flatMap(({ address, from, to }) => {
+      const segmentIndex = address.segmentIndex;
       const position = closestPointOnSegment(candidate, from, to);
       const dx = to.x - from.x;
       const dy = to.y - from.y;
@@ -233,7 +235,7 @@ export function dragRouteAttachmentAtPoint(
  * current-marker band.
  */
 export function dragNetLabelAttachmentAtPoint(
-  routePolylines: readonly RoutePolylineRecord[],
+  routeGeometryRecords: readonly RouteGeometryRecord[],
   candidate: Point,
   routeId: string,
 ): {
@@ -242,12 +244,11 @@ export function dragNetLabelAttachmentAtPoint(
   normalOffset: number;
   labelPosition: Point;
 } | null {
-  const record = routePolylines.find(({ route }) => route.id === routeId);
+  const record = routeGeometryRecords.find(({ route }) => route.id === routeId);
   if (!record) return null;
-  const candidates = record.polyline.points
-    .slice(0, -1)
-    .flatMap((from, segmentIndex) => {
-      const to = record.polyline.points[segmentIndex + 1]!;
+  const candidates = record.geometry.segments
+    .flatMap(({ address, from, to }) => {
+      const segmentIndex = address.segmentIndex;
       const position = closestPointOnSegment(candidate, from, to);
       const dx = to.x - from.x;
       const dy = to.y - from.y;
@@ -326,7 +327,7 @@ export function annotationAnchor(
   document: SchematicDocument,
   resolver: SymbolResolver,
   annotation: Annotation,
-  routePolylines: readonly RoutePolylineRecord[],
+  routeGeometryRecords: readonly RouteGeometryRecord[],
   styleProfile: SchematicStyleProfile,
 ): Point {
   const attachment = effectiveRouteAttachment(annotation);
@@ -338,12 +339,12 @@ export function annotationAnchor(
       styleProfile,
     ).position;
   }
-  const record = routePolylines.find(
+  const record = routeGeometryRecords.find(
     ({ route }) => route.id === attachment.routeId,
   );
   return (
     (record &&
-      routeAttachmentPlacement(record.polyline, attachment)?.position) ??
+      resolveRouteAttachment(record.geometry, attachment)?.conductorPoint) ??
     resolveAnnotationPresentation(document, resolver, annotation, styleProfile)
       .position
   );
@@ -352,7 +353,7 @@ export function annotationAnchor(
 export function annotationHitBox(
   annotation: Annotation,
   anchor: Point,
-  routePolylines: readonly RoutePolylineRecord[],
+  routeGeometryRecords: readonly RouteGeometryRecord[],
   styleProfile: SchematicStyleProfile,
 ): Rect {
   const sizeScale = annotation.sizeScale ?? 1;
@@ -370,15 +371,17 @@ export function annotationHitBox(
   if (isRoutedMarker(annotation)) {
     const routeAttachment = effectiveRouteAttachment(annotation);
     const record = routeAttachment
-      ? routePolylines.find(({ route }) => route.id === routeAttachment.routeId)
+      ? routeGeometryRecords.find(
+          ({ route }) => route.id === routeAttachment.routeId,
+        )
       : undefined;
     const placement =
       record && routeAttachment
-        ? routeAttachmentPlacement(record.polyline, routeAttachment)
+        ? resolveRouteAttachment(record.geometry, routeAttachment)
         : null;
     rotation = placement?.rotation ?? annotation.rotation;
     const vertical = rotation === 90 || rotation === 270;
-    labelPosition = placement?.labelPosition ?? {
+    labelPosition = placement?.labelPoint ?? {
       x: anchor.x + (vertical ? 15 : 0),
       y: anchor.y + (vertical ? 4 : -7),
     };

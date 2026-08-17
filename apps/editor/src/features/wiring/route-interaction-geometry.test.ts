@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createEmptyDocument } from "@icm/model";
-import { resolveSchematicStyleProfile } from "@icm/derived";
+import {
+  resolveRouteGeometry,
+  resolveSchematicStyleProfile,
+} from "@icm/derived";
 import { InMemorySymbolResolver, builtInSymbols } from "@icm/symbols";
 
 import {
@@ -48,6 +51,13 @@ function looseRouteDocument() {
   return document;
 }
 
+function routeRecord(document: ReturnType<typeof looseRouteDocument>) {
+  const route = document.routes[0]!;
+  const geometry = resolveRouteGeometry(document, resolver, route);
+  if (!geometry) throw new Error("Fixture route must resolve");
+  return { route, geometry };
+}
+
 describe("route interaction geometry", () => {
   it("recognizes a free route backed by two loose route anchors", () => {
     const document = looseRouteDocument();
@@ -67,18 +77,7 @@ describe("route interaction geometry", () => {
 
   it("projects to the nearest route segment and resolves a route VisualAnchor", () => {
     const document = looseRouteDocument();
-    const record = {
-      route: document.routes[0]!,
-      polyline: {
-        routeId: "route-1",
-        netId: "net-1",
-        points: [
-          { x: 0, y: 0 },
-          { x: 100, y: 0 },
-        ],
-        segmentModes: ["manual" as const],
-      },
-    };
+    const record = routeRecord(document);
     const attached = attachmentAtPoint([record], { x: 75, y: 12 });
     expect(attached).toEqual({
       routeAttachment: {
@@ -141,18 +140,7 @@ describe("route interaction geometry", () => {
 
   it("keeps a dragged marker label in a stable bounded halo around its route", () => {
     const document = looseRouteDocument();
-    const record = {
-      route: document.routes[0]!,
-      polyline: {
-        routeId: "route-1",
-        netId: "net-1",
-        points: [
-          { x: 0, y: 0 },
-          { x: 100, y: 0 },
-        ],
-        segmentModes: ["manual" as const],
-      },
-    };
+    const record = routeRecord(document);
     const current = {
       routeId: "route-1",
       segmentIndex: 0,
@@ -172,19 +160,10 @@ describe("route interaction geometry", () => {
 
   it("slides a dragged Net label along its route in a wide offset band", () => {
     const document = looseRouteDocument();
-    const record = {
-      route: document.routes[0]!,
-      polyline: {
-        routeId: "route-1",
-        netId: "net-1",
-        points: [
-          { x: 0, y: 0 },
-          { x: 100, y: 0 },
-          { x: 100, y: 100 },
-        ],
-        segmentModes: ["manual" as const, "manual" as const],
-      },
-    };
+    document.junctions[1]!.position = { x: 100, y: 100 };
+    document.routes[0]!.waypoints = [{ x: 100, y: 0 }];
+    document.routes[0]!.segmentModes = ["manual", "manual"];
+    const record = routeRecord(document);
     // Above the first segment, well past the old +/-30 clamp.
     expect(
       dragNetLabelAttachmentAtPoint([record], { x: 30, y: -40 }, "route-1"),

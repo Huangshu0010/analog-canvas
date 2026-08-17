@@ -112,7 +112,7 @@ export interface ExpansionConflict {
   objectIds?: string[];
 }
 
-export interface ResolvedRouteGeometry {
+export interface PlannedRouteGeometry {
   routeId: string;
   points: Point[];
 }
@@ -133,7 +133,7 @@ export interface ExpansionMetrics {
 export interface RouteGraphExpansion {
   edits: SchematicEdit[];
   generatedObjectIds: string[];
-  resolvedGeometry: ResolvedRouteGeometry[];
+  resolvedGeometry: PlannedRouteGeometry[];
   metrics: ExpansionMetrics;
   assumptions: string[];
   conflicts: ExpansionConflict[];

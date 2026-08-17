@@ -7847,4 +7847,20 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   index consumers.
 - Validation: focused routing suite (11 files / 82 tests), `pnpm typecheck`,
   `pnpm test:impact -- --base origin/main`, and `git diff --check` passed.
+- Commit status: committed as `0b425c8` on
+  `codex/routing-protocol-unification`.
+
+## 2026-08-17 - Unify route edit planning and remove compatibility paths
+
+- Target: make resolved geometry the sole read protocol and the Edit Engine the
+  sole route-writing owner without changing route, attachment, or power-rail
+  behavior.
+- Changed areas: moved route mutation/authoring helpers and their tests to
+  Edit Engine; deleted the `RoutePolyline` bridge; added `RouteEditPlan`
+  preview/commit parity; migrated editor and Agent names; updated current ADR,
+  spec, and recovery-status records.
+- Validation: focused route suite (8 files / 71 tests); targeted editor browser
+  route interaction (3 tests); `pnpm build`, `pnpm docs:check`,
+  `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
+  `git diff --check` passed.
 - Commit status: pending commit on `codex/routing-protocol-unification`.

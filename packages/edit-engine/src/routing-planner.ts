@@ -2,13 +2,19 @@ import {
   derivePowerRailComponent,
   isMosBulkRoute,
   isMosBulkTerminal,
+  resolveEndpointPoint,
+} from "@icm/derived";
+import {
   normalizeRouteGeometry,
+  type SegmentMode,
+} from "./route-geometry-edit.js";
+import {
   proposeGroupMove,
   proposeJunctionGroupTranslation,
   proposeWireSegmentDrag,
-  resolveEndpointPoint,
-  type SegmentMode,
-} from "@icm/derived";
+  type JunctionMoveProposal,
+  type RouteStretchProposal,
+} from "./route-operations.js";
 import type {
   Point,
   RouteEndpoint,
@@ -113,9 +119,14 @@ export interface VisualRouteDeletion {
   edits: SchematicEdit[];
 }
 
-export interface WireManipulationProposal {
+/** The exact edit payload and preview produced by one routed interaction. */
+export interface RouteEditPlan {
   routeId: string;
   edits: SchematicEdit[];
+  preview?: {
+    routes: readonly RouteStretchProposal[];
+    junctions: readonly JunctionMoveProposal[];
+  };
 }
 
 export interface GroupMoveEditProposal {
@@ -194,7 +205,7 @@ export function proposeWireSegmentMove(
   routeId: string,
   segmentIndex: number,
   target: Point,
-): WireManipulationProposal {
+): RouteEditPlan {
   const proposal = proposeWireSegmentDrag(
     document,
     resolver,
@@ -211,6 +222,7 @@ export function proposeWireSegmentMove(
       })),
       ...routeEdits(document, proposal.routes),
     ],
+    preview: proposal,
   };
 }
 
@@ -252,7 +264,7 @@ export function proposeLooseRouteTranslation(
   document: SchematicDocument,
   routeId: string,
   delta: Point,
-): WireManipulationProposal {
+): RouteEditPlan {
   const route = document.routes.find((candidate) => candidate.id === routeId);
   if (!route) throw new Error(`Route not found: ${routeId}`);
   const anchors = looseRouteAnchorIds(document, route);
@@ -304,7 +316,7 @@ export function proposePowerRailTranslation(
   resolver: SymbolResolver,
   routeId: string,
   delta: Point,
-): WireManipulationProposal {
+): RouteEditPlan {
   const component = derivePowerRailComponent(document, routeId);
   if (!component) {
     throw new Error(`Route ${routeId} is not a power rail`);
@@ -345,7 +357,7 @@ export function proposePowerRailEndpointResize(
   routeId: string,
   side: "start" | "end",
   x: number,
-): WireManipulationProposal {
+): RouteEditPlan {
   const component = derivePowerRailComponent(document, routeId);
   if (!component || component.endpointJunctionIds.length !== 2) {
     throw new Error("VDD rail must have exactly two editable ends");

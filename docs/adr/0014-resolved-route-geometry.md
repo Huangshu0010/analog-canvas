@@ -7,9 +7,12 @@ Date: `2026-08-12`
 Owners: `packages/derived` (geometry), `packages/render-svg` + editor + export
 (consumers)
 
+Implementation status: `implemented` (R10, 2026-08-17)
+
 ## Context
 
-There is no single resolved geometry for a Route. Today the stored centerline,
+At the time of this decision there was no single resolved geometry for a Route.
+The stored centerline,
 manual path, Agent escape, local/group stretch, the SVG renderer's private
 terminal and route-anchor miter bridges (`packages/render-svg/src/render.ts`
 `renderTerminalMiterBridges` at `:85` and `renderRouteAnchorMiterBridges` at
@@ -29,7 +32,7 @@ route-anchor").
 ## Decision
 
 Introduce one derived `ResolvedRouteGeometry` per Route, owned by
-`packages/derived` and evolved from the existing `routePolyline`. It is the
+`packages/derived`. It is the
 single geometry truth for rendering, hit testing, segment drag, marker
 attachment, visual/routing diagnostics, and formal export. It is never
 persisted.
@@ -43,34 +46,27 @@ interface ResolvedRouteGeometry {
   centerline: readonly Point[];          // strictly [from, …waypoints, to]
   segments: readonly ResolvedRouteSegment[];
   vertices: readonly ResolvedRouteVertex[];
-  endpointJoins: readonly EndpointJoin[]; // terminal + route-anchor miter bridges
-  hitGeometry: readonly HitSegment[];     // screen-tolerant, does not move centerline
-  bounds: Rect;
+  endpointJoins: readonly EndpointJoin[]; // terminal miter recipes
 }
 
 interface ResolvedRouteSegment {
-  index: number;             // stable identity across split/normalize/stretch
+  address: { routeId: string; segmentIndex: number };
   from: Point;
   to: Point;
   mode: SegmentMode;
-  attachmentRemap?: AttachmentRemap; // marker position survives edits
 }
 
 interface ResolvedRouteVertex {
   index: number;
   point: Point;
-  kind: "terminal" | "port" | "junction" | "bend" | "route-anchor";
+  kind: "terminal" | "junction" | "bend" | "route-anchor";
 }
 
 interface EndpointJoin {
   kind: "terminal-miter" | "route-anchor-miter";
-  at: Point;                 // real Pin/Port/Junction origin
-  path: readonly Point[];    // the miter bridge stroke the renderer currently emits privately
-}
-
-interface HitSegment {
-  segmentIndex: number;
-  // widened axis-aligned hit region with screen tolerance; never alters centerline
+  at: Point;
+  // terminal joins carry pinOutward + routeDirection;
+  // route-anchor joins carry junctionId + the two incident directions.
 }
 ```
 
@@ -84,32 +80,27 @@ interface HitSegment {
   seam, and the degree-2 route-anchor bridge that renders two stored Routes as
   one continuous dotless wire. Moving the bridges out of the renderer does not
   add waypoints, change topology, or persist extra points.
-- `hitGeometry` permits screen tolerance (zoom-stable pixels) but never moves
-  the electrical centerline.
-- `bounds` is produced once from this result, not re-estimated by each consumer.
-- `segments` carry stable identity and `attachmentRemap` so route markers follow
-  physical position across split/normalize/stretch rather than jumping to
-  another conductor.
+- A segment address is revision-scoped and positional. It is never persisted as
+  an identity across split, insertion, normalization, or stretch.
+- Hit tolerance and bounds are consumer-local view concerns; they are not part
+  of the electrical route geometry protocol.
 
 ### Ownership and consumer boundary
 
 - Owner: `packages/derived` resolves geometry from the connectivity index
   (ADR 0013) and stored Routes.
-- Consumers (read-only): SVG renderer, editor hit testing, segment drag, marker
-  attachment, visual/routing diagnostics, formal SVG/PNG/PDF export.
-- Mutators: only the Edit Engine changes stored Routes; the resolver is pure.
+- Consumers (read-only): SVG renderer, editor hit testing, marker attachment,
+  visual/routing diagnostics, formal SVG/PNG/PDF export.
+- Mutators: only the Edit Engine changes stored Routes. Its `RouteEditPlan`
+  derives the transaction edits and pointer preview from one proposal; the
+  geometry resolver remains pure.
 
-### Migration order and deletion gate
+### Implemented migration and deletion gate
 
-1. R3 implements `resolveRouteGeometry` additively alongside `routePolyline`.
-2. The renderer computes both the private bridges and `endpointJoins`, and
-   asserts they agree on existing golden SVGs.
-3. One consumer switches at a time (renderer → editor hit/marker → drag →
-   export → diagnostics).
-4. The renderer's private `renderTerminalMiterBridges` /
-   `renderRouteAnchorMiterBridges` and the `data-role="terminal-miter-bridge"` /
-   `route-anchor-miter-bridge` private paths are deleted only after the SVG/PNG
-   golden and a pixel seam regression pass against `endpointJoins`.
+R10 completed the migration. `routePolyline`, `routeAttachmentPlacement`, and
+the derived-package mutation helpers were deleted. Render, editor interaction,
+attachment placement, query/tap/crossing reads, and diagnostics consume
+resolved geometry; editing operations live in `@icm/edit-engine`.
 
 ## Amendment — 2026-08-12 recovery semantics
 
@@ -119,23 +110,12 @@ particular, an array `index` is **not** stable across split, insertion,
 normalization, or stretch. It is only a revision-scoped positional index and
 must not be used as a persistent attachment identity.
 
-C3 shall replace that ambiguity with a revision-scoped `SegmentRef` and an
-explicit edit/planner-produced `AttachmentRemap`. The remap belongs to the
-operation that changes a stored Route; a pure resolver cannot reconstruct every
-semantic split after the fact. Marker, hit and drag consumers remain on their
-compatibility paths until that contract is implemented and migrated.
-
-`EndpointJoin` is also a raw geometry recipe (`at` and incident directions),
-not a profile-specific SVG `path`: stroke overlap is resolved by the renderer's
-active style profile. Route-anchor joins are document-level facts, therefore
-the final C3 result is a document routing-geometry aggregate containing both
-per-route geometry and cross-route joins. The resolver is pure over the
-Document and SymbolResolver; C4 may then expose its results through ADR 0013's
-index without creating a geometry-to-index dependency cycle.
-
-Accordingly, the dual-compute assertion and consumer migration listed below
-are C3/C10 exit conditions, not properties already guaranteed by the current
-prototype.
+R10 deliberately keeps the revision-scoped positional `RouteSegmentAddress`.
+It does not introduce synthetic stable IDs or an attachment-remap protocol:
+after a structural edit, existing marker recovery follows the persisted anchor
+and fallback semantics. `EndpointJoin` remains a raw recipe; the renderer
+resolves profile-specific stroke overlap. Document-level route-anchor joins are
+exposed by the document routing-geometry aggregate carried by ADR 0013's index.
 
 ## Alternatives considered
 
@@ -165,25 +145,22 @@ prototype.
 
 ### Negative or limiting
 
-- The renderer loses two private helpers; the seam golden must be re-validated
-  against `endpointJoins` before deletion.
-- Until R10, both `routePolyline` and `resolveRouteGeometry` coexist.
+- Segment address remains revision-scoped; a future stable attachment identity
+  needs a deliberate schema and edit migration, not an inferred adapter.
 
 ## Compatibility and migration
 
-Additive only. `routePolyline`, `routeAttachmentPlacement`, `moveRouteSegment`,
-and the stretch planners keep their shapes and remain the production path until
-their consumers migrate. No schema, fixture, or Project-file change. The bridge
-`d` strings currently pinned by `render.test.ts` are preserved verbatim by
-`EndpointJoin.path` until a deliberate, golden-backed switch.
+R10 is a clean cut with no Project-file change: the legacy read and mutation
+exports are removed. The renderer consumes `EndpointJoin` recipes directly;
+the Edit Engine owns normalization, escape authoring, segment movement, and
+stretch planning.
 
 ## Validation
 
-- WP-R0 `routePolyline` characterization keeps passing.
-- R3 dual-compute assertion: renderer private bridge output === `endpointJoins`
-  on `phase-1-manual`, `phase-3-crossing`, and `phase-5-dense-analog` goldens.
-- Pixel seam regression: rendered SVG/PNG identical before and after the
-  consumer switch.
+- Characterization tests pin centerline, endpoint joins, route tap, and
+  attachment behavior.
+- Edit Engine tests pin plan preview/commit parity and orthogonal mutation.
+- SVG renderer tests retain the terminal and route-anchor miter seam behavior.
 - Negative test: `centerline` is unchanged by adding/removing a terminal bridge.
 
 ## Related documents

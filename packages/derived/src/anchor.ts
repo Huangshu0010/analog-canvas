@@ -13,7 +13,7 @@ import {
 import { resolveRouteAttachment } from "./route-attachment.js";
 
 // ADR 0010 general VisualAnchor resolver. It generalizes the existing
-// routeAttachmentPlacement() (current-marker-specific) to the free | object |
+// route attachment resolution (current-marker-specific) to the free | object |
 // route union. Anchor resolution reads derived geometry only; it never mutates
 // a Route or Net. An unresolved anchor returns the last-known fallbackPosition
 // and a diagnostic; it never silently re-attaches to another conductor.
