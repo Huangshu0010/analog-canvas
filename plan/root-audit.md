@@ -113,6 +113,13 @@ isolated worktree. The completed behavior-baseline target restores direct
 geometry characterization before the active read, edit, and attachment
 clean-cut targets. No legacy routing surface is yet removed.
 
+## 2026-08-17 Library examples integration closure
+
+`2026-08-17-merge-library-examples` is completed with resolved experience.
+PR #109 rebased the Library example cards onto current `main`, passed the full
+local and remote delivery gates, and merged as `cd1cddd`; it is eligible for
+normal completed-plan retention handling.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

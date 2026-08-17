@@ -1,5 +1,16 @@
 # Maintenance Log
 
+## 2026-08-17 - Merge Library Project examples
+
+- Target: integrate the Library Project examples review branch into `main`.
+- Changed areas: rebased the example feature onto current routing work,
+  resolved the shared maintenance-log append, normalized bundled JSON format,
+  and completed the review/merge lifecycle.
+- Validation: `pnpm install --frozen-lockfile`; `pnpm ci:check` (818 unit and
+  145 browser tests); `pnpm test:impact -- --base origin/main`; and all six
+  required GitHub Actions checks on PR #109 passed.
+- Commit status: merged to `main` as PR #109 (`cd1cddd`).
+
 ## 2026-08-16 - Grid-dots toggle icon clarity
 
 - Target: the background-dots toggle in the bottom-right canvas controls had
