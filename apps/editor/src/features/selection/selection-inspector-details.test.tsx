@@ -198,4 +198,38 @@ describe("selection inspector details", () => {
     expect(markup).toContain("XBIAS.OUT");
     expect(markup).toContain("Bias Child Cell / net-child");
   });
+
+  it("renders a global Net trace hop without requiring a hierarchy frame", () => {
+    const trace: HierarchyNetTrace = {
+      primary: {
+        documentId: "document-top",
+        netId: "net-vdd-top",
+        visibleEndpoints: [],
+        routes: [],
+        junctions: [],
+        virtualEdges: [],
+        flightlines: [],
+      },
+      highlights: [],
+      hops: [
+        {
+          direction: "global",
+          from: { documentId: "document-top", netId: "net-vdd-top" },
+          to: { documentId: "document-child", netId: "net-vdd-child" },
+          foldedName: "vdd",
+        },
+      ],
+    };
+    const markup = renderToStaticMarkup(
+      <NetTraceSection
+        trace={trace}
+        documentLabel={(documentId) => documentId}
+        onNavigateHop={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain("Global");
+    expect(markup).toContain("vdd");
+    expect(markup).toContain("document-child / net-vdd-child");
+  });
 });

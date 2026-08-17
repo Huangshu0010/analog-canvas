@@ -1,4 +1,8 @@
-import { executeTransaction, type SchematicEdit } from "@icm/edit-engine";
+import {
+  executeTransaction,
+  planRepairPowerNetDuplicates,
+  type SchematicEdit,
+} from "@icm/edit-engine";
 import { mosBulkShouldBeVisible, resolveMosBulkConnection } from "@icm/derived";
 import { replaceProjectDocument } from "../document/editor-session";
 import type { CircuitProject, SchematicDocument } from "@icm/model";
@@ -54,25 +58,54 @@ export function razaviManualBulkConnectionEdits(
  */
 export function materializeRazaviProjectBulkConnections(
   project: CircuitProject,
-): { project: CircuitProject; instanceCount: number } {
+): { project: CircuitProject; instanceCount: number; repairCount: number } {
   let nextProject = structuredClone(project);
   let instanceCount = 0;
+  let repairCount = 0;
   for (const sourceDocument of [...nextProject.documents]) {
-    const edits = razaviManualBulkConnectionEdits(
-      sourceDocument,
-      sourceDocument.instances,
-    );
+    const repairEdits = planRepairPowerNetDuplicates(sourceDocument);
+    if (repairEdits.length > 0) {
+      const repair = executeTransaction(
+        sourceDocument,
+        {
+          transactionId: `net-contract-entry-${sourceDocument.id}`,
+          documentId: sourceDocument.id,
+          expectedRevision: sourceDocument.revision,
+          actor: { kind: "human", id: "net-contract-entry" },
+          edits: repairEdits,
+        },
+        {
+          symbolResolver: createProjectSymbolResolver(
+            nextProject,
+            builtInSymbols,
+          ),
+        },
+      );
+      if (!repair.ok) {
+        throw new Error(
+          `Cannot repair legacy power Nets for ${sourceDocument.id}: ${repair.error.message}`,
+        );
+      }
+      nextProject = replaceProjectDocument(nextProject, repair.document);
+      repairCount += repairEdits.filter(
+        (edit) => edit.kind === "merge_nets",
+      ).length;
+    }
+    const document = nextProject.documents.find(
+      (candidate) => candidate.id === sourceDocument.id,
+    )!;
+    const edits = razaviManualBulkConnectionEdits(document, document.instances);
     if (edits.length === 0) continue;
     const affectedCount =
       edits[0]?.kind === "reconcile_mos_bulk"
         ? (edits[0].instanceIds?.length ?? sourceDocument.instances.length)
         : 0;
     const result = executeTransaction(
-      sourceDocument,
+      document,
       {
-        transactionId: `razavi-bulk-entry-${sourceDocument.id}`,
-        documentId: sourceDocument.id,
-        expectedRevision: sourceDocument.revision,
+        transactionId: `razavi-bulk-entry-${document.id}`,
+        documentId: document.id,
+        expectedRevision: document.revision,
         // This deterministic default transform executes before user
         // history is installed; it is not an Agent request.
         actor: { kind: "human", id: "razavi-bulk-entry" },
@@ -87,13 +120,13 @@ export function materializeRazaviProjectBulkConnections(
     );
     if (!result.ok) {
       throw new Error(
-        `Cannot materialize Razavi bulk defaults for ${sourceDocument.id}: ${result.error.message}`,
+        `Cannot materialize Razavi bulk defaults for ${document.id}: ${result.error.message}`,
       );
     }
     nextProject = replaceProjectDocument(nextProject, result.document);
     instanceCount += affectedCount;
   }
-  return { project: nextProject, instanceCount };
+  return { project: nextProject, instanceCount, repairCount };
 }
 
 export function razaviBulkAnchorIsVisible(

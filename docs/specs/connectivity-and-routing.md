@@ -43,6 +43,11 @@ two route-anchor Junctions, the rail Route, and one attached RichText power
 label. It creates no VDD Instance. Branch wires on the same Net use ordinary
 wire presentation and explicit contact evidence.
 
+A named global Net is itself an explicit semantic bridge. Separate Ground or
+VDD markers on that Net do not require a drawn trunk or matching label and do
+not produce a flightline. Named local Nets still require route, contact, or
+label evidence for their visible connectivity.
+
 ## Derived read models
 
 `ProjectConnectivityIndex` is the shared logical/routed connectivity view.

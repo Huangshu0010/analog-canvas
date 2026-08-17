@@ -21,6 +21,12 @@ An incompatible Project is rejected before it can replace the current browser
 Project. Conversion, when needed, is an explicit external operation that must
 produce and validate a complete v11 candidate before a human chooses to load it.
 
+When opening an older working file, the editor also merges compatible duplicate
+canonical Ground (`0`) or VDD Nets in its in-memory copy. The source file is
+not changed automatically: the editor marks the Project as needing save, and
+only **File / Save Project** writes the repaired copy. Ambiguous or incompatible
+Net-role evidence remains a diagnostic instead of being silently guessed.
+
 Viewport, selection, canvas overlays, import compiler state, Agent session
 credentials, and recovery envelopes are not part of the Project file. Browser
 recovery is a non-authoritative safety copy kept in this browser's IndexedDB:

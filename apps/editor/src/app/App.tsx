@@ -55,6 +55,7 @@ import {
 import type {
   Diagnostic,
   Flightline,
+  GlobalNetTraceHop,
   HierarchyFrame,
   HierarchyNetTraceHop,
   ObjectLocator,
@@ -1858,7 +1859,7 @@ export function App({
       keepWorkingCopy?: boolean;
       formalFileHint?: BrowserRecoveryFormalFileHint;
     } = {},
-  ): SchematicDocument {
+  ): { document: SchematicDocument; repairCount: number } {
     // Drop any pending recovery write for the outgoing project so it cannot
     // revive after Save/Discard/Open/Import/Restore/demo-load swaps the
     // project, then give the incoming project its own working-copy identity
@@ -1878,11 +1879,17 @@ export function App({
     setDocumentStack([]);
     setViewBox(nextViewBox, nextDocument.presentation.grid);
     resetInteractionState();
-    setFileState(options.source === "opened-file" ? "opened" : "new");
+    setFileState(
+      options.source === "opened-file"
+        ? prepared.repairCount > 0
+          ? "dirty"
+          : "opened"
+        : "new",
+    );
     // Seed the incoming working copy immediately; the outgoing project's
     // stored records are retained under its own session.
     stageRecovery(prepared.project);
-    return nextDocument;
+    return { document: nextDocument, repairCount: prepared.repairCount };
   }
 
   function approveAgentFileCandidate(): void {
@@ -3407,7 +3414,7 @@ export function App({
       }
       // Restoring forks a fresh working copy instead of overwriting the
       // stored record another tab may still be writing.
-      const recoveredDocument = replaceActiveProject(
+      const { document: recoveredDocument } = replaceActiveProject(
         read.project,
         DEFAULT_VIEWBOX,
         { source: "recovered" },
@@ -3483,7 +3490,7 @@ export function App({
         );
         return;
       }
-      const restoredDocument = replaceActiveProject(
+      const { document: restoredDocument } = replaceActiveProject(
         read.project,
         DEFAULT_VIEWBOX,
         { source: "recovered", keepWorkingCopy: true },
@@ -3541,7 +3548,7 @@ export function App({
       }
       // A successful open retains the outgoing Project's recovery records
       // and immediately seeds the incoming Project's own working copy.
-      replaceActiveProject(staged.project, DEFAULT_VIEWBOX, {
+      const opened = replaceActiveProject(staged.project, DEFAULT_VIEWBOX, {
         source: "opened-file",
         formalFileHint: { name: staged.fileName },
       });
@@ -3551,7 +3558,9 @@ export function App({
       setStatus(
         staged.migrated
           ? `Opened and upgraded ${staged.fileName} from schema ${staged.sourceSchemaVersion} to schema ${staged.project.schemaVersion} — save the Project to keep the upgrade`
-          : `Opened ${staged.fileName} at revision ${staged.topDocumentRevision}`,
+          : opened.repairCount > 0
+            ? `Opened ${staged.fileName} and repaired ${opened.repairCount} duplicate canonical supply Net${opened.repairCount === 1 ? "" : "s"} — save the Project to keep the repair`
+            : `Opened ${staged.fileName} at revision ${staged.topDocumentRevision}`,
       );
     });
   }
@@ -5522,7 +5531,9 @@ export function App({
     highlightNet(netId, document.id, selectedHighlightEndpoint);
   }
 
-  function navigateTraceHop(hop: HierarchyNetTraceHop): void {
+  function navigateTraceHop(
+    hop: HierarchyNetTraceHop | GlobalNetTraceHop,
+  ): void {
     navigateToLocator(
       {
         documentId: hop.to.documentId,
@@ -5530,7 +5541,9 @@ export function App({
         kind: "net",
         objectId: hop.to.netId,
       },
-      `Traced Net ${hop.to.netId} via ${hop.frame.instanceId}.${hop.frame.parentPinName}`,
+      hop.direction === "global"
+        ? `Traced global Net ${hop.foldedName} to ${hop.to.netId}`
+        : `Traced Net ${hop.to.netId} via ${hop.frame.instanceId}.${hop.frame.parentPinName}`,
     );
   }
 

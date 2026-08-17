@@ -3,6 +3,7 @@ import type {
   Diagnostic,
   DiagnosticDomain,
   DiagnosticSeverity,
+  GlobalNetTraceHop,
   HierarchyNetTrace,
   HierarchyNetTraceHop,
   VisualDiagnostic,
@@ -194,7 +195,20 @@ export interface ProjectDiagnosticsSectionProps {
 export interface NetTraceSectionProps {
   trace: HierarchyNetTrace;
   documentLabel(documentId: string): string;
-  onNavigateHop(hop: HierarchyNetTraceHop): void;
+  onNavigateHop(hop: HierarchyNetTraceHop | GlobalNetTraceHop): void;
+}
+
+type NetTraceHop = HierarchyNetTraceHop | GlobalNetTraceHop;
+
+function netTraceHopDetail(hop: NetTraceHop): string {
+  return hop.direction === "global"
+    ? hop.foldedName
+    : `${hop.frame.instanceId}.${hop.frame.parentPinName}`;
+}
+
+function netTraceHopAction(hop: NetTraceHop): string {
+  if (hop.direction === "global") return "Global";
+  return hop.direction === "down" ? "Enter" : "Return";
 }
 
 /** Concrete hierarchy edges for the currently highlighted logical Net. */
@@ -212,16 +226,16 @@ export function NetTraceSection({
       <ul data-testid="net-trace-hops">
         {trace.hops.map((hop, index) => (
           <li
-            key={`${hop.direction}-${hop.from.documentId}-${hop.from.netId}-${hop.frame.instanceId}-${hop.frame.parentPinName}-${index}`}
+            key={`${hop.direction}-${hop.from.documentId}-${hop.from.netId}-${netTraceHopDetail(hop)}-${index}`}
           >
             <button
               type="button"
               data-testid={`net-trace-hop-${index}`}
               onClick={() => onNavigateHop(hop)}
             >
-              <strong>{hop.direction === "down" ? "Enter" : "Return"}</strong>:{" "}
-              {hop.frame.instanceId}.{hop.frame.parentPinName} →{" "}
-              {documentLabel(hop.to.documentId)} / {hop.to.netId}
+              <strong>{netTraceHopAction(hop)}</strong>:{" "}
+              {netTraceHopDetail(hop)} → {documentLabel(hop.to.documentId)} /{" "}
+              {hop.to.netId}
             </button>
           </li>
         ))}

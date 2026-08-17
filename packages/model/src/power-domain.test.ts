@@ -44,9 +44,7 @@ describe("power-domain facts", () => {
     document.nets.push(net);
 
     expect(powerDomainForNet(net)).toBe("none");
-    expect(powerNetNormalizations(document)).toEqual([
-      { netId: "net-pending", domain: "vdd" },
-    ]);
+    expect(powerNetNormalizations(document)).toEqual([]);
   });
 
   it("treats canonical supply names case-insensitively when normalizing", () => {
@@ -66,6 +64,19 @@ describe("power-domain facts", () => {
         terminals: [],
       },
     );
+
+    expect(powerNetNormalizations(document)).toEqual([]);
+  });
+
+  it("does not schedule a no-op for an already-normalized named global supply", () => {
+    const document = createEmptyDocument("main", "Main");
+    document.nets.push({
+      id: "net-vdd",
+      name: "VDD",
+      scope: "global",
+      powerDomain: "vdd",
+      terminals: [],
+    });
 
     expect(powerNetNormalizations(document)).toEqual([]);
   });

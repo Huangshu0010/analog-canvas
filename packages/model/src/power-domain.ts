@@ -28,10 +28,14 @@ export function powerNetNormalizations(
         candidate.name !== undefined &&
         foldNetName(candidate.name) === foldNetName(canonicalName),
     );
+    // A role-bearing local Net may only be promoted when it can receive an
+    // explicit canonical name. Promoting it unnamed would violate the global
+    // Net contract, while reusing the existing named Net requires an explicit
+    // merge chosen by the authoring planner.
+    if (!hasName && canonicalNameAlreadyUsed) return [];
     const name =
       hasName || canonicalNameAlreadyUsed ? undefined : canonicalName;
-    return net.scope === "global" && !name
-      ? []
-      : [{ netId: net.id, domain, ...(name ? { name } : {}) }];
+    if (net.scope === "global" && !name) return [];
+    return [{ netId: net.id, domain, ...(name ? { name } : {}) }];
   });
 }

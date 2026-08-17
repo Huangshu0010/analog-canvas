@@ -45,11 +45,14 @@ separate canvas Port collection or Port-specific Net membership.
 
 `Net.powerDomain` is persisted explicitly. VDD consists of a global VDD Net,
 editable Route/Junction rail geometry, and a power-label annotation. Ground is
-an ordinary `ground` Instance attached through pin `0`. No runtime path infers
-supply identity from names, IDs, labels, or retired assets.
+an ordinary `ground` Instance attached through pin `0`. Supply role is never
+inferred from a marker, label, or fixed ID; canonical authoring selects an
+explicit global Net by normalized name and then verifies its persisted role.
 
 `powerDomain` is role metadata, not Net identity: `AVDD` and `DVDD` may both
-have role `vdd` while remaining distinct Nets. Canonical Ground and VDD
+have role `vdd` while remaining distinct Nets. Net names are unique within one
+Document under trimmed case-folding; a named global Net is an explicit semantic
+connection even when its marker geometry is separate. Canonical Ground and VDD
 attachment reuses a matching global Net by normalized name (`0` or `VDD`) and
 then checks its role; it never chooses the first Net with a matching role.
 Changing between non-`none` power roles is rejected atomically. The authored

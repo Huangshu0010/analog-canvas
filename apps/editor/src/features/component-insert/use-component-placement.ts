@@ -263,7 +263,7 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
       options.setStatus(`Cannot add VDD rail: ${railPlan.message}`);
       return;
     }
-    const result = options.transact(railPlan.edits);
+    const result = options.transact([...railPlan.edits]);
     if (!result.ok) return;
     options.selectOnly("route", [routeId]);
     options.completeVddRailPlacement();

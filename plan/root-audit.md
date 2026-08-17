@@ -152,6 +152,14 @@ repairs are completed mainline work and remain part of this merge baseline.
 drag projection and refreshes the Linux MCP integrity pin; the repair is
 awaiting its remote required-check result before PR #117 can merge.
 
+## 2026-08-17 Net contract unification closure
+
+`2026-08-17-net-contract-n4-repair-delivery` is completed on
+`codex/net-contract-unification-plan`. Its entry repair, global-Net visible
+connectivity semantics, current contract/user guidance, and branch validation
+are recorded in `plan/log.md`; it is eligible for normal completed-plan
+retention after commit evidence is recorded.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

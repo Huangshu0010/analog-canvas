@@ -8220,3 +8220,17 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   builds, and diff checks passed.
 - Commit status: staged for `feat(net): converge derived and export semantics`
   on `codex/net-contract-unification-plan`.
+
+## 2026-08-17 - Net contract N4 legacy repair and delivery
+
+- Target: repair compatible legacy canonical Ground/VDD duplicates at Project
+  entry and make named-global visible connectivity explicit.
+- Changed areas: deterministic Edit Engine repair plan and entry installation,
+  save-needed status, global Net flightline semantics and trace presentation,
+  power-normalization no-op guard, current contract/user docs, and Vite's
+  post-write service-worker versioning hook.
+- Validation: focused 6-file Vitest run (62 tests), test-impact, typecheck,
+  `git diff --check`, and `pnpm verify:branch` (143 unit files / 859 tests,
+  full workspace build, production smoke) passed.
+- Commit status: pending `feat(net): repair legacy power net duplicates` on
+  `codex/net-contract-unification-plan`.

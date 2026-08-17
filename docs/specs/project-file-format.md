@@ -25,7 +25,8 @@ migration registry or second in-memory Project shape.
 - `Net.terminals` is the electrical membership authority.
 - Route endpoints are terminal or Junction references only.
 - `Net.powerDomain` explicitly records `none`, `vdd`, `ground`, or diagnostic
-  `conflict`; it is never inferred from a name, symbol, or fixed ID.
+  `conflict`; canonical authoring verifies this persisted role after matching
+  an explicit global Net by normalized name, never by symbol or fixed ID.
 - VDD uses an explicit global Net, Route/Junction rail geometry, and RichText
   annotation. There is no VDD symbol Instance.
 - Every visible editable label is a RichText annotation. Renderers do not
@@ -48,6 +49,13 @@ after explicit human approval in the editor.
 A migrated formal file is marked as needing save. The editor does not silently
 overwrite the source selected through the browser file input. Browser recovery
 records may be canonicalized to v11 only after a successful validated write.
+
+At editor entry, compatible legacy duplicate canonical supply Nets (`0` or
+`VDD` with the same compatible role in one Document) are deterministically
+merged through the Edit Engine before history is installed. This only changes
+the in-memory working copy; an opened file is marked as needing save and is
+never overwritten without an explicit **Save Project** action. Incompatible
+role evidence remains rejected/diagnosed rather than being guessed.
 
 Canonical serialization ends with one newline and is byte-stable across
 save/load/save. The current corpus is listed in

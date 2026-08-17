@@ -1425,6 +1425,17 @@ describe("routing Edit Engine", () => {
     expect(deriveFlightlines(result.document, resolver)).toHaveLength(1);
   });
 
+  it("does not derive flightlines across separately drawn named global Net markers", () => {
+    const document = documentFixture();
+    const globalNet = document.nets.find((net) => net.id === "net-h")!;
+    globalNet.name = "VDD";
+    globalNet.scope = "global";
+
+    expect(deriveFlightlines(document, resolver)).not.toContainEqual(
+      expect.objectContaining({ netId: "net-h" }),
+    );
+  });
+
   it("atomically splits a route through an explicit Junction", () => {
     const document = documentFixture();
     document.routes = [

@@ -1,4 +1,8 @@
-import { createEmptyDocument, createEmptyProject } from "@icm/model";
+import {
+  createEmptyDocument,
+  createEmptyProject,
+  validateNetContract,
+} from "@icm/model";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -133,5 +137,35 @@ describe("Razavi hidden bulk policy", () => {
         }),
       ]),
     );
+  });
+
+  it("repairs compatible legacy ground duplicates before installing the Project", () => {
+    const project = createEmptyProject("project-entry", "Entry");
+    const document = project.documents[0]!;
+    document.nets.push(
+      {
+        id: "net-ground-a",
+        name: "0",
+        scope: "global",
+        powerDomain: "ground",
+        terminals: [],
+      },
+      {
+        id: "net-ground-b",
+        name: "0",
+        scope: "global",
+        powerDomain: "ground",
+        terminals: [],
+      },
+    );
+
+    const prepared = materializeRazaviProjectBulkConnections(project);
+
+    expect(prepared.repairCount).toBe(1);
+    expect(prepared.project.documents[0]!.nets).toEqual([
+      expect.objectContaining({ id: "net-ground-a", name: "0" }),
+    ]);
+    expect(validateNetContract(prepared.project.documents[0]!)).toEqual([]);
+    expect(project.documents[0]!.nets).toHaveLength(2);
   });
 });

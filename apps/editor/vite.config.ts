@@ -13,7 +13,7 @@ function versionStaticServiceWorker() {
   return {
     name: "version-static-service-worker",
     apply: "build" as const,
-    async closeBundle() {
+    async writeBundle() {
       const indexPath = new URL("./dist/index.html", import.meta.url);
       const workerPath = new URL("./dist/sw.js", import.meta.url);
       const index = await readFile(indexPath);
