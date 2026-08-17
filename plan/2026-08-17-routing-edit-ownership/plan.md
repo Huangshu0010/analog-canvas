@@ -92,4 +92,5 @@ records now match the implemented R10 boundary.
 Validation passed: focused route suite (8 files / 71 tests), targeted editor
 browser route interaction (3 tests), `pnpm build`, `pnpm docs:check`,
 `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
-`git diff --check`.
+`git diff --check`. Implementation committed as `2f210c3` and pushed to
+`origin/codex/routing-protocol-unification`.

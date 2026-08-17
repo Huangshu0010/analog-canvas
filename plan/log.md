@@ -7863,4 +7863,6 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   route interaction (3 tests); `pnpm build`, `pnpm docs:check`,
   `pnpm typecheck`, `pnpm test:impact -- --base origin/main`, and
   `git diff --check` passed.
-- Commit status: pending commit on `codex/routing-protocol-unification`.
+- Commit status: committed as `2f210c3` and pushed to
+  `origin/codex/routing-protocol-unification`; remote review checks remain the
+  mainline delivery gate.
