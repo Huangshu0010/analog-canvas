@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { createEmptyProject } from "@icm/model";
+import { createEmptyDocument, createEmptyProject } from "@icm/model";
 import type { SchematicDocument } from "@icm/model";
+import { hierarchicalSymbolId } from "@icm/symbols";
 
 import { EditorDocumentController } from "./document-controller";
 
@@ -98,6 +99,45 @@ describe("EditorDocumentController", () => {
     expect(controller.projectSessionId).not.toBe(originalSessionId);
     expect(controller.canUndo).toBe(false);
     expect(controller.canRedo).toBe(false);
+  });
+
+  it("commits a new child Cell without replacing the Project session", () => {
+    const controller = new EditorDocumentController(hierarchicalProject());
+    const sessionId = controller.projectSessionId;
+    controller.transact([{ kind: "add_instance", instance: instance("Rold") }]);
+    const project = structuredClone(controller.project);
+    const child = createEmptyDocument("document-cell-1", "Cell1");
+    project.documents.push(child);
+    project.documents[0]!.instances.push({
+      id: "X1",
+      symbolId: hierarchicalSymbolId("Cell1"),
+      placement: {
+        position: { x: 0, y: 0 },
+        rotation: 0,
+        mirror: "none",
+      },
+      properties: {},
+      netlist: {
+        reference: "X1",
+        parameters: {},
+        terminals: [],
+        binding: {
+          kind: "subcircuit",
+          name: "Cell1",
+          childDocumentId: child.id,
+        },
+      },
+    });
+
+    const active = controller.commitProjectStructure(project);
+
+    expect(active.id).toBe(controller.project.topDocumentId);
+    expect(controller.projectSessionId).toBe(sessionId);
+    expect(
+      controller.resolver.resolve(hierarchicalSymbolId("Cell1")),
+    ).toBeDefined();
+    expect(controller.canUndo).toBe(false);
+    expect(controller.openDocument(child.id)?.id).toBe(child.id);
   });
 
   it("dispatches an Agent transaction as one undo item and refreshes state", () => {

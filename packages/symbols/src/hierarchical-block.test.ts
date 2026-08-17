@@ -25,4 +25,18 @@ describe("hierarchical block formal terminals", () => {
 
     expect(symbol?.pins.map((pin) => pin.name)).toEqual(["IN", "OUT"]);
   });
+
+  it("creates a formal zero-terminal block for a manual Cell", () => {
+    const symbol = createHierarchicalBlockSymbol({
+      name: "Cell1",
+      netlist: { name: "Cell1", terminals: [] },
+    });
+
+    expect(symbol).toMatchObject({
+      name: "Cell1",
+      hierarchicalBlock: true,
+      viewBox: { x: -40, y: -20, width: 80, height: 40 },
+      pins: [],
+    });
+  });
 });

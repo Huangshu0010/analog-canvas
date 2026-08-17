@@ -7954,3 +7954,18 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: ready to commit separately on
   `codex/connected-wire-move-delete`; remote required checks remain the
   mainline delivery gate.
+
+## 2026-08-17 - Add manual hierarchical Cell editing
+
+- Target: convert a selected rectangle into a formal child Cell and provide
+  direct keyboard, toolbar, and double-click hierarchy navigation.
+- Changed areas: validated Project-structure conversion, zero-terminal
+  hierarchy symbols, Editor controller/session integration, shortcuts, Help,
+  and focused unit/browser coverage including save and reopen.
+- Validation: 39 focused unit tests, the focused hierarchy browser flow,
+  `pnpm test:impact -- --base origin/main`, locked dependency installation,
+  and the complete `pnpm ci:check` gate (831 unit/integration tests and 147
+  browser tests) passed.
+- Commit status: ready to commit on
+  `codex/manual-hierarchy-from-rectangle`; remote required checks remain the
+  mainline delivery gate.

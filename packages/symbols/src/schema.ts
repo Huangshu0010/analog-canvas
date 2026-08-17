@@ -112,8 +112,18 @@ export const SymbolDefinitionSchema = z
     // ADR 0010: a decorative symbol is a non-electrical catalog entry usable
     // only as a DraftFloatingSymbol. It must carry no terminals (pins).
     decorative: z.boolean().optional(),
+    // A derived subcircuit container may legitimately expose an empty formal
+    // interface before ports are authored in its child Cell.
+    hierarchicalBlock: z.literal(true).optional(),
   })
   .superRefine((symbol, context) => {
+    if (symbol.decorative && symbol.hierarchicalBlock) {
+      context.addIssue({
+        code: "custom",
+        path: ["hierarchicalBlock"],
+        message: "A decorative symbol cannot be a hierarchical block",
+      });
+    }
     if (symbol.decorative && symbol.pins.length > 0) {
       context.addIssue({
         code: "custom",
@@ -121,7 +131,11 @@ export const SymbolDefinitionSchema = z
         message: "A decorative symbol must contain no terminals (pins)",
       });
     }
-    if (!symbol.decorative && symbol.pins.length === 0) {
+    if (
+      !symbol.decorative &&
+      !symbol.hierarchicalBlock &&
+      symbol.pins.length === 0
+    ) {
       context.addIssue({
         code: "custom",
         path: ["pins"],

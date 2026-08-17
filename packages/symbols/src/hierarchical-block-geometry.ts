@@ -1,6 +1,7 @@
 import type { SymbolDefinition, SymbolPin } from "./schema.js";
 
 function distribute(count: number, start: number, end: number): number[] {
+  if (count === 0) return [];
   if (count <= 1) return [(start + end) / 2];
   return Array.from(
     { length: count },
@@ -12,8 +13,8 @@ function distribute(count: number, start: number, end: number): number[] {
 export function createHierarchicalBlockGeometry(
   pinCount: number,
 ): SymbolDefinition {
-  if (!Number.isInteger(pinCount) || pinCount < 1) {
-    throw new Error("Hierarchical block pin count must be positive");
+  if (!Number.isInteger(pinCount) || pinCount < 0) {
+    throw new Error("Hierarchical block pin count must be non-negative");
   }
   const leftCount = Math.ceil(pinCount / 2);
   const rightCount = pinCount - leftCount;
