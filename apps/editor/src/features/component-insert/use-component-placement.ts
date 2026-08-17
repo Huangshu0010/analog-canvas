@@ -36,7 +36,9 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
   const [recentSymbolIds, setRecentSymbolIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      const stored = JSON.parse(window.localStorage.getItem(options.recentStorageKey) ?? "[]");
+      const stored = JSON.parse(
+        window.localStorage.getItem(options.recentStorageKey) ?? "[]",
+      );
       return Array.isArray(stored)
         ? stored.filter((item): item is string => typeof item === "string")
         : [];
@@ -51,14 +53,19 @@ export function useComponentPlacement(options: UseComponentPlacementOptions) {
     options.setStatus("Choose a component to place");
   };
 
-  const beginInsertedComponentPlacement = (request: ComponentInsertRequest): void => {
+  const beginInsertedComponentPlacement = (
+    request: ComponentInsertRequest,
+  ): void => {
     const nextRecent = [
       request.symbolId,
       ...recentSymbolIds.filter((symbolId) => symbolId !== request.symbolId),
     ].slice(0, 8);
     setRecentSymbolIds(nextRecent);
     try {
-      window.localStorage.setItem(options.recentStorageKey, JSON.stringify(nextRecent));
+      window.localStorage.setItem(
+        options.recentStorageKey,
+        JSON.stringify(nextRecent),
+      );
     } catch {
       // Recency is convenience-only and must never block placement.
     }

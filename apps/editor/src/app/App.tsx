@@ -6450,7 +6450,10 @@ export function App({
               <details className="command-menu" name="editor-command-menu">
                 <summary>Draw</summary>
                 <div className="command-popover">
-                  <button type="button" onClick={openInsertComponentDialogFromHook}>
+                  <button
+                    type="button"
+                    onClick={openInsertComponentDialogFromHook}
+                  >
                     <ToolIcon name="insert" />
                     Insert component (I)
                   </button>
