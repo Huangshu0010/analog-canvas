@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 experience: none
 ---
 
@@ -69,4 +69,10 @@ merge: integrate manual hierarchy with interaction hooks
 
 ## Outcome
 
-Pending merge and validation.
+Merged `origin/main` through `a742ba2` and resolved the App conflict by keeping
+the domain-Hook composition while restoring manual rectangle-to-Cell conversion,
+Cell navigation, keyboard commands, and toolbar behavior. Mainline test and
+plan records were retained. Focused hierarchy contracts (44 tests), the
+rectangle-to-Cell browser workflow, Editor build, typecheck, and diff audit
+passed. The merged branch also passed `pnpm verify:branch`: static checks, 140
+unit files / 840 tests, full workspace build, and production smoke.

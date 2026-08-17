@@ -716,6 +716,56 @@ describe("routing Edit Engine", () => {
     }
   });
 
+  it("keeps the fixed side of a direct Route in place during a local move", () => {
+    const document = documentFixture();
+    const routed = executeTransaction(
+      document,
+      transaction(document.id, 0, [
+        {
+          kind: "set_route_points",
+          routeId: "route-h",
+          netId: "net-h",
+          from: terminal("A"),
+          to: terminal("B"),
+          waypoints: [],
+          segmentModes: ["manual"],
+        },
+      ]),
+      context,
+    );
+    expect(routed.ok).toBe(true);
+    if (!routed.ok) return;
+
+    const plan = proposeGroupMoveEdits(routed.document, resolver, [
+      { instanceId: "A", position: { x: 160, y: 320 } },
+    ]);
+    expect(plan.preview.routes).toEqual([
+      {
+        routeId: "route-h",
+        waypoints: [{ x: 170, y: 300 }],
+        segmentModes: ["manual", "manual"],
+      },
+    ]);
+    const moved = executeTransaction(
+      routed.document,
+      transaction(routed.document.id, 1, plan.edits),
+      context,
+    );
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) return;
+    expect(
+      resolveRouteGeometry(
+        moved.document,
+        resolver,
+        moved.document.routes.find((route) => route.id === "route-h")!,
+      )?.centerline,
+    ).toEqual([
+      { x: 170, y: 320 },
+      { x: 170, y: 300 },
+      { x: 450, y: 300 },
+    ]);
+  });
+
   it("moves a net label with its reshaped wire segment", () => {
     const document = documentFixture();
     const routed = executeTransaction(

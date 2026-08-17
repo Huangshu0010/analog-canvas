@@ -131,6 +131,10 @@ export interface RouteEditPlan {
 
 export interface GroupMoveEditProposal {
   edits: SchematicEdit[];
+  preview: {
+    routes: readonly RouteStretchProposal[];
+    junctions: readonly JunctionMoveProposal[];
+  };
 }
 
 /** Plan instance-group movement and all internal route/Junction/label follow edits. */
@@ -141,6 +145,10 @@ export function proposeGroupMoveEdits(
 ): GroupMoveEditProposal {
   const proposal = proposeGroupMove(document, resolver, moves);
   return {
+    preview: {
+      routes: proposal.routes,
+      junctions: proposal.junctions,
+    },
     edits: [
       ...moves.map((move): SchematicEdit => ({
         kind: "move_instance",

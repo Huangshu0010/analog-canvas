@@ -26,6 +26,8 @@ export interface EditorShortcutContext {
   hasClearableDraftingSelection: boolean;
   hasRemovableWireWaypoint: boolean;
   propertiesOpen: boolean;
+  hasHierarchyEnterSelection: boolean;
+  canReturnToParent: boolean;
 }
 
 export type EditorShortcutIntent =
@@ -50,6 +52,10 @@ export type EditorShortcutIntent =
     }
   | { kind: "edit-net-label" | "net-label-selection-required" }
   | { kind: "toggle-net-highlight" }
+  | {
+      kind:
+        "enter-hierarchy" | "return-to-parent" | "hierarchy-selection-required";
+    }
   | { kind: "mirror"; direction: ScreenFlip }
   | { kind: "fit-view" }
   | {
@@ -211,6 +217,7 @@ export function resolveEditorShortcut(
       t: "Text",
       h: "Net Highlight",
       x: "Current Marker",
+      e: "Enter Cell",
       r: "Rotate or Mirror",
       "[": "Drafting Style",
       "]": "Drafting Style",
@@ -222,6 +229,15 @@ export function resolveEditorShortcut(
   }
 
   if (event.ctrlKey && key === "a") return { kind: "select-all" };
+
+  if (plain && key === "e") {
+    if (event.shiftKey) {
+      return context.canReturnToParent ? { kind: "return-to-parent" } : null;
+    }
+    return context.hasHierarchyEnterSelection
+      ? { kind: "enter-hierarchy" }
+      : { kind: "hierarchy-selection-required" };
+  }
 
   if (plain && key === "x" && context.hasRoutedMarkerSelection) {
     return { kind: "reverse-current-marker" };

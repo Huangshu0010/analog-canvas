@@ -157,6 +157,7 @@ import {
   ShapesPanel,
 } from "../features/editor-shell/shapes-panel";
 import { ExamplesPanel } from "../features/editor-shell/examples-panel";
+import { convertRectangleToHierarchy } from "../features/hierarchy/rectangle-to-cell";
 import {
   createLibraryExampleProject,
   type LibraryProjectExample,
@@ -463,6 +464,7 @@ export function App({
     canRedo,
     openDocument,
     replaceProject,
+    commitProjectStructure,
     transact: transactDocument,
     controller: editorDocumentController,
     projectSessionId,
@@ -748,7 +750,7 @@ export function App({
     selectedIds.length === 1
       ? document.instances.find((instance) => instance.id === selectedId)
       : undefined;
-  const hasImportedHierarchy = useMemo(
+  const hasHierarchy = useMemo(
     () =>
       project.documents.some((candidate) =>
         candidate.instances.some(
@@ -793,6 +795,10 @@ export function App({
         (object) => object.id === selectedDraftingId,
       )
     : undefined;
+  const hasHierarchyEnterSelection = Boolean(
+    (selectedInstance && referencedDocumentId(project, selectedInstance)) ||
+    selectedDrafting?.kind === "rectangle",
+  );
   const {
     applyInstanceProperties,
     applyNetLabel,
@@ -1778,7 +1784,7 @@ export function App({
     );
     const targetId = instance ? referencedDocumentId(project, instance) : null;
     if (!targetId) {
-      setStatus(`${instanceId} has no imported child Cell`);
+      setStatus(`${instanceId} has no child Cell`);
       return;
     }
     setDocumentStack((current) => [
@@ -1790,6 +1796,46 @@ export function App({
       },
     ]);
     switchDocument(targetId);
+  }
+
+  function enterSelectedHierarchy(): void {
+    if (
+      selectedInstance &&
+      referencedDocumentId(project, selectedInstance) !== null
+    ) {
+      enterHierarchy(selectedInstance.id);
+      return;
+    }
+    if (selectedDrafting?.kind !== "rectangle") {
+      setStatus(
+        "Select a rectangle or hierarchical block before entering a Cell",
+      );
+      return;
+    }
+    try {
+      const converted = convertRectangleToHierarchy(
+        project,
+        document.id,
+        selectedDrafting.id,
+      );
+      commitProjectStructure(converted.project, document.id);
+      setDocumentStack((current) => [
+        ...current,
+        {
+          parentDocumentId: converted.parentDocumentId,
+          instanceId: converted.instanceId,
+          childDocumentId: converted.childDocumentId,
+        },
+      ]);
+      switchDocument(converted.childDocumentId);
+      setStatus(`Created and entered Cell ${converted.cellName}`);
+    } catch (error) {
+      setStatus(
+        `Could not create Cell: ${
+          error instanceof Error ? error.message : "unexpected failure"
+        }`,
+      );
+    }
   }
 
   function returnToParentDocument(): void {
@@ -5226,6 +5272,8 @@ export function App({
           wireSource && wireWaypoints.length > 0,
         ),
         propertiesOpen: selectionOpen,
+        hasHierarchyEnterSelection,
+        canReturnToParent: documentStack.length > 0,
       });
       if (!shortcut) return;
 
@@ -5342,6 +5390,17 @@ export function App({
           return;
         case "toggle-net-highlight":
           toggleHighlightedNet();
+          return;
+        case "enter-hierarchy":
+          enterSelectedHierarchy();
+          return;
+        case "return-to-parent":
+          returnToParentDocument();
+          return;
+        case "hierarchy-selection-required":
+          setStatus(
+            "Select a rectangle or hierarchical block before entering a Cell",
+          );
           return;
         case "fit-view":
           fitView();
@@ -5755,18 +5814,18 @@ export function App({
             </button>
           </div>
         </div>
-        {hasImportedHierarchy ? (
+        {hasHierarchy ? (
           <div className="toolbar-row" aria-label="Document hierarchy">
             <div
               className="document-nav"
-              aria-label="Imported cell navigation"
+              aria-label="Cell navigation"
               data-testid="cell-navigation"
             >
               <button
                 type="button"
                 onClick={returnToParentDocument}
                 disabled={documentStack.length === 0}
-                title="Return to the parent imported cell"
+                title="Return to the parent Cell (Shift+E)"
               >
                 Up
               </button>
@@ -5774,12 +5833,12 @@ export function App({
                 type="button"
                 onClick={returnToTopDocument}
                 disabled={document.id === project.topDocumentId}
-                title="Return to the top imported cell"
+                title="Return to the top Cell"
               >
                 Top
               </button>
               <select
-                aria-label="Imported Cells"
+                aria-label="Cells"
                 data-testid="document-selector"
                 value={document.id}
                 onChange={(event) => {
@@ -5797,14 +5856,9 @@ export function App({
               </select>
               <button
                 type="button"
-                onClick={() =>
-                  selectedInstance && enterHierarchy(selectedInstance.id)
-                }
-                disabled={
-                  !selectedInstance ||
-                  referencedDocumentId(project, selectedInstance) === null
-                }
-                title="Enter the selected imported subcircuit"
+                onClick={enterSelectedHierarchy}
+                disabled={!hasHierarchyEnterSelection}
+                title="Enter the selected Cell, or create one from a rectangle (E)"
               >
                 Enter Cell
               </button>

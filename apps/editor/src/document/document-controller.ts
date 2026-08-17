@@ -156,6 +156,39 @@ export class EditorDocumentController {
     return document;
   }
 
+  /**
+   * Commit a validated structural update within the current Project session.
+   * Adding a child Document changes the symbol resolver and invalidates every
+   * DocumentHistory context, so histories are deliberately rebuilt while the
+   * active Document and recovery/session identity remain stable.
+   */
+  commitProjectStructure(
+    nextProject: CircuitProject,
+    activeDocumentId = this.activeDocumentIdValue,
+  ): SchematicDocument {
+    const parsed = CircuitProjectSchema.parse(structuredClone(nextProject));
+    if (parsed.id !== this.projectValue.id) {
+      throw new Error(
+        `Structural commit cannot replace Project ${this.projectValue.id} with ${parsed.id}`,
+      );
+    }
+    if (
+      !parsed.documents.some((document) => document.id === activeDocumentId)
+    ) {
+      throw new Error(
+        `Document ${activeDocumentId} is not present in the Project`,
+      );
+    }
+    this.projectValue = parsed;
+    this.activeDocumentIdValue = activeDocumentId;
+    this.resolverValue = createProjectSymbolResolver(
+      this.projectValue,
+      builtInSymbols,
+    );
+    this.resetHistoriesFromProject();
+    return this.document;
+  }
+
   transact(edits: readonly SchematicEdit[]): EditTransactionResult {
     this.transactionCounter += 1;
     return this.dispatchTransaction({
@@ -292,6 +325,18 @@ export function useDocumentController(
     replaceProject: (project: CircuitProject) => {
       const document = controller.replaceProject(project);
       synchronize();
+      return document;
+    },
+    commitProjectStructure: (
+      project: CircuitProject,
+      activeDocumentId?: string,
+    ) => {
+      const document = controller.commitProjectStructure(
+        project,
+        activeDocumentId,
+      );
+      synchronize();
+      onCommittedRef.current(controller.project);
       return document;
     },
     transact: (edits: readonly SchematicEdit[]) => {

@@ -134,6 +134,17 @@ plan retention handling.
 the branch validation and ownership audit; it is eligible for normal completed
 plan retention handling.
 
+## 2026-08-17 Manual hierarchical Cell editing closure
+
+`2026-08-17-manual-hierarchy-from-rectangle` is completed on main. Its
+rectangle-to-Cell conversion and navigation behavior is retained during the
+interaction-Hook integration target.
+
+## 2026-08-17 Connected-Wire and Library stabilization closure
+
+The connected Route edit stabilization and narrow Library browser timing
+repairs are completed mainline work and remain part of this merge baseline.
+
 ## Legacy Metadata Sweep
 
 The first 50 oldest pre-metadata records were individually classified on

@@ -8139,3 +8139,26 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
   start, with moved interaction ownership as the acceptance evidence.
 - Commit status: staged for final plan/log/formatting commit on
   `codex/app-transaction-module-layers`.
+
+## 2026-08-17 - Mainline merge records preserved
+
+- Snap Wire to rectangle edge centers and expanded rectangle-edge snap
+  fractions were validated with focused Snap contracts.
+- Connected-Wire move/deletion stabilization and its narrow-Library browser
+  timing repair were validated before mainline integration.
+- Manual hierarchical Cell editing converted rectangles into child Cells with
+  focused controller, hierarchy, shortcut, save/reopen, and browser coverage.
+
+## 2026-08-17 - Integrate manual hierarchy with interaction Hooks
+
+- Target: integrate current mainline manual Cell editing without restoring
+  pre-Hook interaction owners.
+- Changed areas: manually resolved `App.tsx` by retaining the five Hook
+  composition boundaries and adding rectangle-to-Cell conversion, navigation,
+  shortcut, and toolbar integration; mainline conflict records were retained.
+- Validation: 4 focused unit files / 44 tests, hierarchy Playwright workflow,
+  Editor build, typecheck, diff checks, and `pnpm verify:branch` (140 unit
+  files / 840 tests, full build, production smoke) passed.
+- Commit status: included in
+  `merge: integrate manual hierarchy with interaction hooks` on
+  `codex/app-transaction-module-layers`.

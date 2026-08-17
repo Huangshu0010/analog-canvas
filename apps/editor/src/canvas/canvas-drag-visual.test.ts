@@ -50,16 +50,22 @@ describe("startCanvasDragVisual", () => {
       "data-object-id": "route-1",
       points: "0,0 10,0",
     });
+    const sibling = new FakeElement({
+      "data-object-id": "route-2",
+      points: "0,10 10,10",
+    });
     const root = {
-      querySelectorAll: () => [route],
+      querySelectorAll: () => [route, sibling],
     } as unknown as ParentNode;
-    const visual = startCanvasDragVisual(root, ["route-1"]);
-    visual.setPolyline([
+    const visual = startCanvasDragVisual(root, ["route-1", "route-2"]);
+    visual.setObjectPolyline("route-1", [
       { x: 0, y: 5 },
       { x: 10, y: 5 },
     ]);
     expect(route.getAttribute("points")).toBe("0,5 10,5");
+    expect(sibling.getAttribute("points")).toBe("0,10 10,10");
     visual.restore();
     expect(route.getAttribute("points")).toBe("0,0 10,0");
+    expect(sibling.getAttribute("points")).toBe("0,10 10,10");
   });
 });

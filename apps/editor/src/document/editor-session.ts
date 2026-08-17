@@ -27,7 +27,7 @@ export function resolveActiveDocument(
   );
 }
 
-/** Resolve only the stable imported hierarchy link written by the importer. */
+/** Resolve a stable persisted hierarchy link to a child Document. */
 export function referencedDocumentId(
   project: CircuitProject,
   instance: SchematicDocument["instances"][number],
