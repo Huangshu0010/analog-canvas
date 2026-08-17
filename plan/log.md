@@ -7697,3 +7697,27 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed locally as
   `docs(protocol): ratify current schema and agent contracts` on
   `chore/unify-current-protocol-baseline`; not pushed.
+
+## 2026-08-17 - Test-system rationalization
+
+- Target: make test responsibility explicit and enforce an evidence-based
+  decision whenever implementation code changes, while removing a dead surface
+  and strengthening current high-value contracts.
+- Changed areas: test-system guide and contract matrix; target-plan and Agent
+  rules; CI test-impact check and its unit contract; coordinate-domain,
+  topology-hash, and Netlist extraction contracts; unused style-profile token.
+- Validation: focused contracts; `pnpm test:impact -- --base main`;
+  `pnpm ci:static`; full `pnpm test:local` (129 files / 801 tests); and
+  `pnpm verify:branch` including workspace build and production smoke.
+- Commit status: committed and pushed on `chore/test-system-rationalization`.
+
+## 2026-08-17 - Merge protocol baseline and test system
+
+- Target: integrate the current-protocol baseline with the test-system
+  rationalization without losing either target's contract or factual history.
+- Changed areas: merge-only integration; retained both `plan/log.md` entries
+  after resolving their concurrent append.
+- Validation: `pnpm test:impact -- --base main`; `pnpm verify:branch` with
+  static checks, 132 test files / 804 tests, workspace build, and production
+  smoke.
+- Commit status: committed and pushed on `agent/merge-protocol-test-system`.
