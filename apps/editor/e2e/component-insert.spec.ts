@@ -774,6 +774,46 @@ test("shows the complete foldable categorized Library, quick-places a device, an
     .toContain("resistor");
 });
 
+test("opens named full-width Project examples from Library", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 720 });
+  await page.goto("/");
+
+  const panel = page.getByTestId("shapes-library-panel");
+  const exampleList = panel.locator(".shapes-example-list");
+  const examples = exampleList.locator(".shapes-example-card");
+  await expect(panel.getByTestId("shapes-fold-examples")).toHaveJSProperty(
+    "open",
+    true,
+  );
+  await expect(examples).toHaveCount(2);
+  expect(
+    await exampleList.evaluate(
+      (element) =>
+        getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(1);
+  await expect(
+    panel.getByTestId("shapes-example-common-source-amplifier"),
+  ).toContainText("Common-Source Amplifier");
+  await expect(
+    panel.getByTestId("shapes-example-two-stage-op-amp"),
+  ).toContainText("Two-Stage Op Amp");
+
+  await panel.getByTestId("shapes-example-common-source-amplifier").click();
+  await expect(page.getByTestId("status")).toHaveText(
+    "Opened example: Common-Source Amplifier",
+  );
+  await expect(page.getByTestId("hit-M2")).toBeVisible();
+
+  await panel.getByTestId("shapes-example-two-stage-op-amp").click();
+  await expect(page.getByTestId("status")).toHaveText(
+    "Opened example: Two-Stage Op Amp",
+  );
+  await expect(page.getByTestId("hit-X7")).toBeVisible();
+});
+
 test("keeps a usable canvas while toggling Library at the narrow breakpoint", async ({
   page,
 }) => {

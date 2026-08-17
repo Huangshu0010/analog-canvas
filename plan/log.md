@@ -7866,3 +7866,16 @@ box`; branch pushed for review. A concurrent worker's overlapping App.tsx
 - Commit status: committed as `2f210c3` and pushed to
   `origin/codex/routing-protocol-unification`; remote review checks remain the
   mainline delivery gate.
+## 2026-08-17 - Add Library Project examples
+
+- Target: expose supplied schema-11 Project fixtures as named, directly
+  openable examples in the Editor's left Library.
+- Changed areas: bundled Common-Source Amplifier and Two-Stage Op Amp Project
+  assets; Examples Library fold/cards; guarded Project replacement; focused
+  panel, App, asset, and browser-flow coverage.
+- Validation: focused Editor/example tests (3 files / 19 tests), one
+  Playwright Library-open flow, `pnpm test:impact -- --base
+  origin/codex/device-protocol-compatibility-plan`, a desktop visual review,
+  and `git diff --check` passed.
+- Commit status: committed and pushed as
+  `feat(editor): add Library project examples` on `codex/library-examples`.

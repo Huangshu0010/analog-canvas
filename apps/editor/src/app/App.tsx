@@ -144,6 +144,10 @@ import {
   quickPlaceRequest,
   ShapesPanel,
 } from "../features/editor-shell/shapes-panel";
+import {
+  createLibraryExampleProject,
+  type LibraryProjectExample,
+} from "../examples/library-examples";
 import { useDocumentController } from "../document/document-controller";
 import {
   applyDraftingHandle,
@@ -2190,6 +2194,20 @@ export function App({
     cancelAllTransientInteraction();
     setInsertDialogOpen(true);
     setStatus("Choose a component to place");
+  }
+
+  function openLibraryExample(example: LibraryProjectExample): void {
+    void guardDirtyReplacement(`Open ${example.name} example`, () => {
+      const nextProject = createLibraryExampleProject(example.id);
+      if (!nextProject) {
+        setStatus(`Example is unavailable: ${example.name}`);
+        return;
+      }
+      replaceActiveProject(nextProject);
+      setImportDiagnostics([]);
+      setImportReviewOpen(false);
+      setStatus(`Opened example: ${example.name}`);
+    });
   }
 
   function beginInsertedComponentPlacement(
@@ -7759,6 +7777,7 @@ export function App({
           recentSymbolIds={recentSymbolIds}
           open={visibleLibraryPanelOpen}
           onOpenInsert={openInsertComponentDialog}
+          onOpenExample={openLibraryExample}
           onQuickPlace={beginInsertedComponentPlacement}
         />
         <aside
